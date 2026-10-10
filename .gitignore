@@ -1,0 +1,14 @@
+# Ignore local env files. Keep templates.
+**/.env
+**/.env.*
+!**/.env.example
+
+node_modules/
+dist/
+**/src/generated/
+.venv/
+.ruff_cache/
+.pytest_cache/
+
+# Local docs quarry (superseded / migration ledger — not authority)
+.local/
