@@ -1,0 +1,89 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: chronicler
+      POSTGRES_PASSWORD: chronicler
+      POSTGRES_DB: chronicler
+    ports:
+      - "5432:5432"
+    volumes:
+      - chronicler_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chronicler"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  migrate:
+    image: golang:1.26-bookworm
+    working_dir: /work
+    volumes:
+      - ../apps/api:/work
+    environment:
+      DATABASE_URL: postgres://chronicler:chronicler@postgres:5432/chronicler?sslmode=disable
+    command: >
+      bash -c "go install github.com/pressly/goose/v3/cmd/goose@v3.24.1 &&
+      bash scripts/migrate.sh up &&
+      apt-get update -qq && apt-get install -y -qq postgresql-client > /dev/null &&
+      psql $$DATABASE_URL -f db/seed/local.sql"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  api:
+    build:
+      context: ../apps/api
+    environment:
+      API_ADDR: ":8080"
+      DATABASE_URL: postgres://chronicler:chronicler@postgres:5432/chronicler?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:-dev-only-change-me}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET:-dev}
+      DISCORD_REDIRECT_URI: ${DISCORD_REDIRECT_URI:-http://localhost:8080/auth/discord/callback}
+      INGEST_SECRET: ${INGEST_SECRET:-dev-ingest-secret}
+      AGENT_INLINE_COMPLETE: ${AGENT_INLINE_COMPLETE:-1}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
+    ports:
+      - "8080:8080"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # Worker posts quest announcements to Discord REST (D1: bot does not announce).
+  # Without DISCORD_BOT_TOKEN + DISCORD_ANNOUNCE_CHANNEL_ID, set DISCORD_DELIVERY_DRY_RUN=1
+  # so applied revision advances locally; otherwise jobs retry / dead-letter.
+  worker:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile.worker
+    environment:
+      DATABASE_URL: postgres://chronicler:chronicler@postgres:5432/chronicler?sslmode=disable
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+      DISCORD_ANNOUNCE_CHANNEL_ID: ${DISCORD_ANNOUNCE_CHANNEL_ID:-}
+      DISCORD_DELIVERY_DRY_RUN: ${DISCORD_DELIVERY_DRY_RUN:-1}
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+
+  # Gateway sensor only. BOT_DISCORD_TOKEN is the Gateway token (not the worker REST token).
+  # Real gateway needs a real token; the default is a placeholder for compose bring-up.
+  discord:
+    build:
+      context: ..
+      dockerfile: apps/discord/Dockerfile
+    environment:
+      AGENT_ENABLED: "false"
+      API_URL: http://api:8080
+      BOT_ALLOW_INSECURE_API_URL: "true"
+      BOT_API_ALLOWED_ORIGIN: http://api:8080
+      INGEST_SECRET: ${INGEST_SECRET:-dev-ingest-secret}
+      GUILD_ID: ${GUILD_ID:-0}
+      BOT_CLIENT_ID: ${BOT_CLIENT_ID:-0}
+      BOT_DISCORD_TOKEN: ${BOT_DISCORD_TOKEN:-dev-token}
+    depends_on:
+      api:
+        condition: service_started
+
+volumes:
+  chronicler_pg:

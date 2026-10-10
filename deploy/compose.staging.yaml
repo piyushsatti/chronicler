@@ -1,0 +1,46 @@
+# Staging: long-lived droplet stack. Caddy strangler routes finished slices to Go.
+# Flip a slice by updating the Caddyfile path matchers (see deploy/docs/strangler.md).
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: chronicler
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: chronicler
+    volumes:
+      - staging_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U chronicler"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: ../apps/api
+    environment:
+      API_ADDR: ":8080"
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
+      DISCORD_REDIRECT_URI: ${DISCORD_REDIRECT_URI}
+      INGEST_SECRET: ${INGEST_SECRET}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  worker:
+    build:
+      context: ../apps/api
+      dockerfile: Dockerfile.worker
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  staging_pg:

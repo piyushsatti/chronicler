@@ -1,0 +1,37 @@
+name: web
+
+on:
+  push:
+    paths:
+      - 'apps/web/**'
+      - 'packages/contracts/**'
+      - 'scripts/design-gates/**'
+      - 'package.json'
+      - 'bun.lock'
+      - '.github/workflows/web.yml'
+  pull_request:
+    paths:
+      - 'apps/web/**'
+      - 'packages/contracts/**'
+      - 'scripts/design-gates/**'
+      - 'package.json'
+      - 'bun.lock'
+      - '.github/workflows/web.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.3.14
+      - run: bun install --frozen-lockfile
+      - run: bun run --filter @pi/contracts build
+      - run: bun run --filter @pi/web typecheck
+      - run: bun run --filter @pi/web lint
+      - run: bun run --filter @pi/web test
+      - run: bunx playwright install chromium
+      - run: bun run --filter @pi/web test:e2e
+        env:
+          VITE_API_MODE: mock

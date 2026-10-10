@@ -1,0 +1,21 @@
+# Production: deployed only via GitHub Actions (D33).
+services:
+  api:
+    image: ${API_IMAGE}
+    environment:
+      API_ADDR: ":8080"
+      DATABASE_URL: ${DATABASE_URL}
+      JWT_SECRET: ${JWT_SECRET}
+      DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}
+      DISCORD_CLIENT_SECRET: ${DISCORD_CLIENT_SECRET}
+      DISCORD_REDIRECT_URI: ${DISCORD_REDIRECT_URI}
+      INGEST_SECRET: ${INGEST_SECRET}
+      CORS_ORIGINS: ${CORS_ORIGINS}
+    restart: unless-stopped
+
+  worker:
+    image: ${WORKER_IMAGE}
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN}
+    restart: unless-stopped

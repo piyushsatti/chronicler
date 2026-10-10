@@ -1,0 +1,52 @@
+name: deploy-api
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Target environment
+        required: true
+        type: choice
+        options:
+          - staging
+          - production
+
+# Production promotions run only through this workflow (D33).
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.x"
+          cache-dependency-path: apps/api/go.sum
+      - name: Test
+        working-directory: apps/api
+        run: go test ./...
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push api image
+        run: |
+          IMAGE=ghcr.io/${{ github.repository }}/api
+          docker build -t "$IMAGE:${{ github.sha }}" -t "$IMAGE:${{ inputs.environment }}-latest" apps/api
+          docker push "$IMAGE:${{ github.sha }}"
+          docker push "$IMAGE:${{ inputs.environment }}-latest"
+      - name: Build and push worker image
+        run: |
+          IMAGE=ghcr.io/${{ github.repository }}/worker
+          docker build -f apps/api/Dockerfile.worker -t "$IMAGE:${{ github.sha }}" -t "$IMAGE:${{ inputs.environment }}-latest" apps/api
+          docker push "$IMAGE:${{ github.sha }}"
+          docker push "$IMAGE:${{ inputs.environment }}-latest"
+      - name: Summary
+        run: |
+          echo "Pushed api and worker images for ${{ inputs.environment }} at ${{ github.sha }}."
+          echo "Promote on droplet: docker compose -f deploy/compose.production.yaml pull && up -d"
