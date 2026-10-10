@@ -1,0 +1,6 @@
+{
+  "activeAlertCount": 1,
+  "pendingDeliveryCount": 2,
+  "deliveryTotal": 5,
+  "deliveries": [{ "id": "job-1" }]
+}

@@ -1,0 +1,13 @@
+{
+  "hasMore": false,
+  "items": [
+    {
+      "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "kind": "quest_signup",
+      "title": "Seat confirmed",
+      "summary": "You are on Q-101.",
+      "label": "Quest signup",
+      "readAt": null
+    }
+  ]
+}

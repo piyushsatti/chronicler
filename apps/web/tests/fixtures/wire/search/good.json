@@ -1,0 +1,20 @@
+{
+  "query": "tree",
+  "documents": [
+    {
+      "id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      "kind": "codex",
+      "slug": "tree-of-light",
+      "title": "Tree of Light",
+      "snippet": "The Tree stands…",
+      "questShortCode": null
+    }
+  ],
+  "members": [
+    {
+      "memberId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "handle": "ashwin",
+      "displayName": "Ashwin"
+    }
+  ]
+}

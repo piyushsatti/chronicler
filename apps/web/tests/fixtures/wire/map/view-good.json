@@ -1,0 +1,15 @@
+{
+  "mapId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "name": "Lightfall",
+  "atlasCode": "LFC",
+  "places": [
+    {
+      "hexId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "hexcode": "C0R0",
+      "documentId": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      "slug": "tree-of-light",
+      "title": "Tree of Light",
+      "category": "Feature"
+    }
+  ]
+}

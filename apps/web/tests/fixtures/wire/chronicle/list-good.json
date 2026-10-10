@@ -1,0 +1,16 @@
+{
+  "items": [
+    {
+      "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "slug": "vault-delve-summary",
+      "kind": "summary",
+      "category": "session",
+      "status": "published",
+      "visibility": "public",
+      "title": "Vault Delve — Session recap",
+      "effectiveBody": "The vault door finally gave way.",
+      "author": { "handle": "mira" }
+    }
+  ],
+  "total": 1
+}

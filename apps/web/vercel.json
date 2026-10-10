@@ -1,0 +1,20 @@
+{
+  "rewrites": [
+    {
+      "source": "/v1/:path*",
+      "destination": "https://api.chronicler.smokebombstudios.com/v1/:path*"
+    },
+    {
+      "source": "/auth/:path*",
+      "destination": "https://api.chronicler.smokebombstudios.com/auth/:path*"
+    },
+    {
+      "source": "/health",
+      "destination": "https://api.chronicler.smokebombstudios.com/health"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}

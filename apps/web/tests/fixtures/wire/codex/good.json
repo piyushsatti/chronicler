@@ -1,0 +1,17 @@
+{
+  "items": [
+    {
+      "id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      "slug": "tree-of-light",
+      "title": "Tree of Light",
+      "category": "Feature"
+    },
+    {
+      "id": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+      "slug": "weeping-continent",
+      "title": "The Continent of Weeping",
+      "category": "Locations"
+    }
+  ],
+  "total": 2
+}

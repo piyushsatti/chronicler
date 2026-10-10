@@ -1,0 +1,23 @@
+{
+  "questBoard": {
+    "items": [
+      {
+        "id": "not-a-uuid",
+        "shortCode": "Q-101",
+        "status": "open",
+        "scheduledAt": "2026-10-20T19:00:00Z",
+        "slotsMax": 4,
+        "filledCount": 1,
+        "discordDelivery": {
+          "desiredRevision": 1,
+          "appliedRevision": 1,
+          "overallStatus": "applied"
+        }
+      }
+    ],
+    "total": 1
+  },
+  "quests": { "items": [], "total": 0 },
+  "recentlyClosedQuests": { "items": [], "total": 0 },
+  "communityDirectory": { "entries": [], "total": 0 }
+}

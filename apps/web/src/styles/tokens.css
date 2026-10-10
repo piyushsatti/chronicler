@@ -1,0 +1,90 @@
+/* Sole place for raw color and type literals under apps/web/src.
+   Live Chronicler: warm charcoal, bronze, Fraunces, Geist. */
+
+:root {
+  color-scheme: dark;
+  font-size: 16px;
+
+  --font-display: 'Fraunces Variable', 'Fraunces', Georgia, serif;
+  --font-heading: var(--font-display);
+  --font-narrative: var(--font-display);
+  --font-body: 'Geist', system-ui, sans-serif;
+  --font-mono: 'Geist Mono', ui-monospace, monospace;
+  --font-title: var(--font-display);
+
+  --color-bg-deep: #0f0e0c;
+  --color-bg-panel: #16140f;
+  --color-bg-surface: #1e1b16;
+  --color-border: #3d3527;
+  --color-border-2: #2a251d;
+  --color-text: #f5ebdc;
+  --color-text-muted: #958777;
+  --color-text-2: #958777;
+  --color-text-3: #908171;
+  --color-text-4: #4d453a;
+  --color-accent: #c8956d;
+  --color-accent-hover: #d9a579;
+  --color-danger: #d36a59;
+  --color-good: #5a8f60;
+  --color-hero-on-brand-ink: #0f0e0c;
+  --color-backdrop: rgba(0, 0, 0, 0.55);
+
+  --color-bg: var(--color-bg-deep);
+  --color-card: var(--color-bg-panel);
+  --color-ink: var(--color-text);
+  --color-muted: var(--color-text-muted);
+  --color-line: var(--color-border);
+  --color-accent-ink: var(--color-hero-on-brand-ink);
+
+  --color-bar: color-mix(in srgb, var(--color-bg-deep) 88%, transparent);
+  --color-bar-bottom: color-mix(in srgb, var(--color-bg-deep) 92%, transparent);
+
+  --discord-brand: #5865f2;
+  --discord-brand-hover: #4752c4;
+  --discord-ink: #ffffff;
+
+  --shadow-card: 0 1px 2px rgba(33, 28, 22, 0.04), 0 4px 16px rgba(33, 28, 22, 0.05);
+  --shadow-lift: 0 2px 6px rgba(33, 28, 22, 0.06), 0 12px 32px rgba(33, 28, 22, 0.1);
+
+  --radius-sm: 0.5625rem;
+  --radius-card: 0.875rem;
+  --radius-btn: 0.5rem;
+  --radius-pill: 999px;
+  --radius-mark: 0.5rem;
+
+  --chrome-bar: 4rem;
+  --chrome-bar-thin: 3rem;
+  --chrome-bottom: 3.5rem;
+
+  --sp-1: 0.25rem;
+  --sp-2: 0.5rem;
+  --sp-3: 0.75rem;
+  --sp-4: 1rem;
+  --sp-5: 1.5rem;
+  --sp-6: 2rem;
+  --sp-7: 3rem;
+  --sp-8: 4rem;
+}
+
+@media (prefers-color-scheme: light) {
+  /* Preference only — not a layout breakpoint. */
+  :root {
+    color-scheme: light;
+    --color-bg-deep: #f3efe6;
+    --color-bg-panel: #faf7f0;
+    --color-bg-surface: #ffffff;
+    --color-border: #d6c9b3;
+    --color-border-2: #e6ddc9;
+    --color-text: #1b1712;
+    --color-text-muted: #6e5f4c;
+    --color-text-2: #6e5f4c;
+    --color-text-3: #776957;
+    --color-text-4: #b5a88f;
+    --color-accent: #85592f;
+    --color-accent-hover: #6f4a26;
+    --color-danger: #8a2a1e;
+    --color-good: #3a6e3f;
+    --color-hero-on-brand-ink: #f3efe6;
+    --color-backdrop: rgba(27, 23, 18, 0.3);
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "items": [
+    {
+      "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+      "shortCode": "Q-101",
+      "status": "open",
+      "scheduledAt": "2026-10-20T19:00:00Z",
+      "slotsMax": 4,
+      "filledCount": 1,
+      "displayStatus": "open",
+      "dm": { "handle": "mira", "displayName": "Mira" },
+      "briefDocument": {
+        "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "slug": "siege-brief",
+        "title": "Siege of Kraghold"
+      },
+      "discordDelivery": {
+        "desiredRevision": 2,
+        "appliedRevision": 1,
+        "overallStatus": "pending",
+        "nextRetryAt": null,
+        "errorMessage": null
+      }
+    },
+    {
+      "id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "shortCode": "Q-202",
+      "status": "open",
+      "scheduledAt": "2026-11-02T19:00:00Z",
+      "slotsMax": 5,
+      "filledCount": 2,
+      "displayStatus": "scheduled",
+      "dm": { "handle": "fen", "displayName": "Fen" },
+      "briefDocument": {
+        "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "slug": "festival-brief",
+        "title": "Festival Run"
+      },
+      "discordDelivery": {
+        "desiredRevision": 1,
+        "appliedRevision": 1,
+        "overallStatus": "applied",
+        "nextRetryAt": null,
+        "errorMessage": null
+      }
+    },
+    {
+      "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      "shortCode": "Q-303",
+      "status": "open",
+      "scheduledAt": "2026-10-10T18:00:00Z",
+      "slotsMax": 4,
+      "filledCount": 4,
+      "displayStatus": "live",
+      "dm": { "handle": "mira", "displayName": "Mira" },
+      "briefDocument": {
+        "id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+        "slug": "live-brief",
+        "title": "Live at the Gate"
+      },
+      "discordDelivery": {
+        "desiredRevision": 1,
+        "appliedRevision": 1,
+        "overallStatus": "applied",
+        "nextRetryAt": null,
+        "errorMessage": null
+      }
+    }
+  ],
+  "total": 3
+}

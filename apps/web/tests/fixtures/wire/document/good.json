@@ -1,0 +1,11 @@
+{
+  "id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+  "slug": "tree-of-light",
+  "kind": "codex",
+  "category": "Feature",
+  "status": "published",
+  "visibility": "public",
+  "title": "Tree of Light",
+  "effectiveBody": "The Tree stands at the heart of Lightfall.",
+  "author": { "handle": "lorekeeper" }
+}

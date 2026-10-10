@@ -1,0 +1,11 @@
+{
+  "items": [
+    {
+      "id": "not-a-uuid",
+      "slug": "",
+      "kind": "summary",
+      "title": "Broken"
+    }
+  ],
+  "total": 1
+}

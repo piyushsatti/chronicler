@@ -1,0 +1,15 @@
+{
+  "items": [
+    {
+      "id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "shortCode": "C-101",
+      "name": "Lyra Storm",
+      "status": "active",
+      "backstoryId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      "description": "A wanderer of Lightfall.",
+      "ddbUrl": "https://example.com/ddb/lyra",
+      "displayIcon": null
+    }
+  ],
+  "total": 1
+}

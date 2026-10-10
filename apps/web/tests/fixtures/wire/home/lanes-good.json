@@ -1,0 +1,90 @@
+{
+  "questBoard": {
+    "items": [
+      {
+        "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        "shortCode": "Q-101",
+        "status": "open",
+        "scheduledAt": "2026-10-20T19:00:00Z",
+        "slotsMax": 4,
+        "filledCount": 1,
+        "displayStatus": "open",
+        "dm": { "handle": "mira", "displayName": "Mira" },
+        "briefDocument": {
+          "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+          "slug": "siege-brief",
+          "title": "Siege of Kraghold"
+        },
+        "discordDelivery": {
+          "desiredRevision": 2,
+          "appliedRevision": 2,
+          "overallStatus": "applied"
+        }
+      }
+    ],
+    "total": 1
+  },
+  "quests": {
+    "items": [
+      {
+        "id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "shortCode": "Q-202",
+        "status": "scheduled",
+        "scheduledAt": "2026-10-12T19:00:00Z",
+        "slotsMax": 5,
+        "filledCount": 2,
+        "displayStatus": "scheduled",
+        "dm": { "handle": "fen", "displayName": "Fen" },
+        "briefDocument": {
+          "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+          "slug": "festival-brief",
+          "title": "Festival Run"
+        },
+        "discordDelivery": {
+          "desiredRevision": 1,
+          "appliedRevision": 1,
+          "overallStatus": "applied"
+        }
+      }
+    ],
+    "total": 1
+  },
+  "recentlyClosedQuests": {
+    "items": [
+      {
+        "id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+        "shortCode": "Q-099",
+        "status": "closed",
+        "scheduledAt": "2026-10-01T19:00:00Z",
+        "slotsMax": 4,
+        "filledCount": 4,
+        "displayStatus": "closed",
+        "dm": { "handle": "mira", "displayName": "Mira" },
+        "briefDocument": {
+          "id": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+          "slug": "vault-brief",
+          "title": "Vault Delve"
+        },
+        "discordDelivery": {
+          "desiredRevision": 1,
+          "appliedRevision": 1,
+          "overallStatus": "applied"
+        }
+      }
+    ],
+    "total": 1
+  },
+  "communityDirectory": {
+    "entries": [
+      {
+        "memberId": "11111111-1111-4111-8111-111111111111",
+        "handle": "mira",
+        "displayName": "Mira",
+        "acceptingPlayers": true,
+        "tagline": "Horror & heists",
+        "isDm": true
+      }
+    ],
+    "total": 1
+  }
+}

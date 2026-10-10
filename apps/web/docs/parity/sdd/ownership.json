@@ -3,7 +3,7 @@
   "tasks": {
     "T001": {
       "wave": "W0",
-      "title": "Phase 0 integrator — matrices, routes, SDD catalog",
+      "title": "Phase 0 integrator \u2014 matrices, routes, SDD catalog",
       "allowed_globs": [
         "apps/web/docs/parity/**",
         "apps/web/src/routes/**",
@@ -15,12 +15,15 @@
         "apps/web/scripts/gen-*.mjs",
         "apps/web/tests/routes/**"
       ],
-      "forbidden_globs": ["apps/web/package.json", "scripts/verify"],
+      "forbidden_globs": [
+        "apps/web/package.json",
+        "scripts/verify"
+      ],
       "depends_on": []
     },
     "T010": {
       "wave": "W1",
-      "title": "Shell parity — contexts, SiteChrome, Redux",
+      "title": "Shell parity \u2014 contexts, SiteChrome, Redux",
       "allowed_globs": [
         "apps/web/src/App.tsx",
         "apps/web/src/chrome/**",
@@ -31,8 +34,13 @@
         "apps/web/tests/chrome/**",
         "apps/web/tests/store/**"
       ],
-      "forbidden_globs": ["apps/web/src/features/**", "apps/web/src/styles/**"],
-      "depends_on": ["T001"]
+      "forbidden_globs": [
+        "apps/web/src/features/**",
+        "apps/web/src/styles/**"
+      ],
+      "depends_on": [
+        "T001"
+      ]
     },
     "T020": {
       "wave": "W2",
@@ -43,8 +51,13 @@
         "apps/web/public/**",
         "apps/web/tests/styles/**"
       ],
-      "forbidden_globs": ["apps/web/src/features/**", "apps/web/src/components/**"],
-      "depends_on": ["T010"]
+      "forbidden_globs": [
+        "apps/web/src/features/**",
+        "apps/web/src/components/**"
+      ],
+      "depends_on": [
+        "T010"
+      ]
     },
     "T110-primitives-core": {
       "wave": "W3",
@@ -54,8 +67,12 @@
         "apps/web/src/components/primitives/hooks/**",
         "apps/web/tests/components/primitives/**"
       ],
-      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
-      "depends_on": ["T020"]
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T020"
+      ]
     },
     "T111-primitives-overlay": {
       "wave": "W3",
@@ -64,8 +81,12 @@
         "apps/web/src/components/primitives/{Modal,Popover,Toast,Tabs,Listbox,SegmentedControl,LoadMore,ColorSwatch,StatTile,FieldDateTime}.tsx",
         "apps/web/tests/components/primitives/**"
       ],
-      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
-      "depends_on": ["T020"]
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T020"
+      ]
     },
     "T112-primitives-layout": {
       "wave": "W3",
@@ -74,8 +95,12 @@
         "apps/web/src/components/primitives/{Table,SplitPane,MasterDetail,WeekGrid,Calendar}.tsx",
         "apps/web/tests/components/primitives/**"
       ],
-      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
-      "depends_on": ["T020"]
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T020"
+      ]
     },
     "T120-interactive": {
       "wave": "W3",
@@ -84,8 +109,12 @@
         "apps/web/src/components/interactive/**",
         "apps/web/tests/components/interactive/**"
       ],
-      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
-      "depends_on": ["T020"]
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T020"
+      ]
     },
     "T121-foundation": {
       "wave": "W3",
@@ -94,8 +123,12 @@
         "apps/web/src/components/foundation/**",
         "apps/web/tests/components/foundation/**"
       ],
-      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
-      "depends_on": ["T020"]
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T020"
+      ]
     },
     "T122-data": {
       "wave": "W3",
@@ -104,22 +137,42 @@
         "apps/web/src/components/data/**",
         "apps/web/tests/components/data/**"
       ],
-      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
-      "depends_on": ["T020"]
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T020"
+      ]
     },
     "T310-feat-home": {
       "wave": "W5",
       "title": "Home route parity",
-      "allowed_globs": ["apps/web/src/features/home/**", "apps/web/tests/features/home/**"],
-      "forbidden_globs": ["apps/web/src/chrome/SiteChrome.tsx"],
-      "depends_on": ["T010", "IG1"]
+      "allowed_globs": [
+        "apps/web/src/features/home/**",
+        "apps/web/tests/features/home/**"
+      ],
+      "forbidden_globs": [
+        "apps/web/src/chrome/SiteChrome.tsx"
+      ],
+      "depends_on": [
+        "T010",
+        "IG1"
+      ]
     },
     "T311-feat-quest": {
       "wave": "W5",
       "title": "Quest routes parity",
-      "allowed_globs": ["apps/web/src/features/quest/**", "apps/web/tests/features/quest/**"],
-      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
-      "depends_on": ["T010", "IG1"]
+      "allowed_globs": [
+        "apps/web/src/features/quest/**",
+        "apps/web/tests/features/quest/**"
+      ],
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T010",
+        "IG1"
+      ]
     },
     "T312-feat-character": {
       "wave": "W5",
@@ -128,8 +181,13 @@
         "apps/web/src/features/character/**",
         "apps/web/tests/features/character/**"
       ],
-      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
-      "depends_on": ["T010", "IG1"]
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T010",
+        "IG1"
+      ]
     },
     "T313-feat-community": {
       "wave": "W5",
@@ -140,22 +198,43 @@
         "apps/web/tests/features/community/**",
         "apps/web/tests/features/profile/**"
       ],
-      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
-      "depends_on": ["T010", "IG1"]
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T010",
+        "IG1"
+      ]
     },
     "T314-feat-codex": {
       "wave": "W5",
       "title": "Codex typed routes",
-      "allowed_globs": ["apps/web/src/features/codex/**", "apps/web/tests/features/codex/**"],
-      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
-      "depends_on": ["T010", "IG1"]
+      "allowed_globs": [
+        "apps/web/src/features/codex/**",
+        "apps/web/tests/features/codex/**"
+      ],
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T010",
+        "IG1"
+      ]
     },
     "T315-feat-map": {
       "wave": "W5",
       "title": "Map and region hub",
-      "allowed_globs": ["apps/web/src/features/map/**", "apps/web/tests/features/map/**"],
-      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
-      "depends_on": ["T010", "IG1"]
+      "allowed_globs": [
+        "apps/web/src/features/map/**",
+        "apps/web/tests/features/map/**"
+      ],
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T010",
+        "IG1"
+      ]
     },
     "T316-feat-chronicle": {
       "wave": "W5",
@@ -164,15 +243,28 @@
         "apps/web/src/features/chronicle/**",
         "apps/web/tests/features/chronicle/**"
       ],
-      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
-      "depends_on": ["T010", "IG1"]
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T010",
+        "IG1"
+      ]
     },
     "T317-feat-rules": {
       "wave": "W5",
       "title": "Rules guides and rulings",
-      "allowed_globs": ["apps/web/src/features/rules/**", "apps/web/tests/features/rules/**"],
-      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
-      "depends_on": ["T010", "IG1"]
+      "allowed_globs": [
+        "apps/web/src/features/rules/**",
+        "apps/web/tests/features/rules/**"
+      ],
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T010",
+        "IG1"
+      ]
     },
     "T318-feat-misc-pages": {
       "wave": "W5",
@@ -184,8 +276,13 @@
         "apps/web/tests/features/onboarding/**",
         "apps/web/tests/features/errors/**"
       ],
-      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
-      "depends_on": ["T010", "IG1"]
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T010",
+        "IG1"
+      ]
     },
     "T319-feat-search": {
       "wave": "W5",
@@ -194,8 +291,341 @@
         "apps/web/src/features/search/**",
         "apps/web/tests/features/search/**"
       ],
-      "forbidden_globs": ["apps/web/src/chrome/SiteChrome.tsx"],
-      "depends_on": ["T010", "IG1"]
+      "forbidden_globs": [
+        "apps/web/src/chrome/SiteChrome.tsx"
+      ],
+      "depends_on": [
+        "T010",
+        "IG1"
+      ]
+    },
+    "T210-domain-core": {
+      "wave": "W4",
+      "title": "Port domain components (except audienceBlocks)",
+      "allowed_globs": [
+        "apps/web/src/components/domain/**",
+        "apps/web/tests/components/domain/**"
+      ],
+      "forbidden_globs": [
+        "apps/web/src/components/domain/audienceBlocks/**",
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T020"
+      ]
+    },
+    "T211-domain-audience": {
+      "wave": "W4",
+      "title": "Port audienceBlocks",
+      "allowed_globs": [
+        "apps/web/src/components/domain/audienceBlocks/**",
+        "apps/web/tests/components/domain/audienceBlocks/**"
+      ],
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T020"
+      ]
+    },
+    "T220-utils-permissions": {
+      "wave": "W4",
+      "title": "Port permissions utils",
+      "allowed_globs": [
+        "apps/web/src/utils/permissions.ts",
+        "apps/web/tests/utils/permissions.test.ts"
+      ],
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T020"
+      ]
+    },
+    "T221-utils-errors": {
+      "wave": "W4",
+      "title": "Port errorCopy and lazyWithReload",
+      "allowed_globs": [
+        "apps/web/src/utils/errorCopy.ts",
+        "apps/web/src/utils/lazyWithReload.ts",
+        "apps/web/tests/utils/**"
+      ],
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T020"
+      ]
+    },
+    "T230-motion-effects": {
+      "wave": "W4",
+      "title": "Port motion and AmbientLayer",
+      "allowed_globs": [
+        "apps/web/src/motion/**",
+        "apps/web/src/effects/**",
+        "apps/web/tests/motion/**",
+        "apps/web/tests/effects/**"
+      ],
+      "forbidden_globs": [
+        "apps/web/src/styles/**"
+      ],
+      "depends_on": [
+        "T020"
+      ]
+    },
+    "T410-auth-plumbing": {
+      "wave": "W6",
+      "title": "Auth plumbing ProtectedRoute storeIntendedPath",
+      "allowed_globs": [
+        "apps/web/src/features/member/auth/**",
+        "apps/web/src/auth/**",
+        "apps/web/src/features/member/pages/LoginPage.tsx",
+        "apps/web/src/features/member/pages/AuthCallbackPage.tsx",
+        "apps/web/src/features/member/feature.ts",
+        "apps/web/tests/features/member/**",
+        "apps/web/tests/auth/**"
+      ],
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T010"
+      ]
+    },
+    "T411-me": {
+      "wave": "W6",
+      "title": "MyPage /me",
+      "allowed_globs": [
+        "apps/web/src/features/member/pages/MePage.tsx",
+        "apps/web/src/features/member/adapters/**",
+        "apps/web/src/features/member/hooks/**",
+        "apps/web/tests/features/member/**"
+      ],
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T410-auth-plumbing"
+      ]
+    },
+    "T412-notifications": {
+      "wave": "W6",
+      "title": "Notifications page",
+      "allowed_globs": [
+        "apps/web/src/features/notifications/**",
+        "apps/web/tests/features/notifications/**"
+      ],
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T410-auth-plumbing"
+      ]
+    },
+    "T413-personalize": {
+      "wave": "W6",
+      "title": "Personalize page",
+      "allowed_globs": [
+        "apps/web/src/features/personalize/**",
+        "apps/web/tests/features/personalize/**"
+      ],
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T410-auth-plumbing"
+      ]
+    },
+    "T510-editor-core": {
+      "wave": "W7",
+      "title": "Editor shell and route registry",
+      "allowed_globs": [
+        "apps/web/src/features/editor/**",
+        "apps/web/tests/features/editor/**"
+      ],
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "IG2"
+      ]
+    },
+    "T511-editor-quest": {
+      "wave": "W7",
+      "title": "Quest editor new/edit",
+      "allowed_globs": [
+        "apps/web/src/features/editor/quest/**",
+        "apps/web/tests/features/editor/quest/**"
+      ],
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T510-editor-core"
+      ]
+    },
+    "T512-editor-codex": {
+      "wave": "W7",
+      "title": "Codex editor paths",
+      "allowed_globs": [
+        "apps/web/src/features/editor/codex/**",
+        "apps/web/tests/features/editor/codex/**"
+      ],
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T510-editor-core"
+      ]
+    },
+    "T513-editor-summary-rules": {
+      "wave": "W7",
+      "title": "Summary guide ruling editors",
+      "allowed_globs": [
+        "apps/web/src/features/editor/summary/**",
+        "apps/web/src/features/editor/guide/**",
+        "apps/web/src/features/editor/ruling/**",
+        "apps/web/tests/features/editor/**"
+      ],
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T510-editor-core"
+      ]
+    },
+    "T514-editor-dmtable": {
+      "wave": "W7",
+      "title": "DM table editor gate",
+      "allowed_globs": [
+        "apps/web/src/features/editor/dm-table/**",
+        "apps/web/tests/features/editor/dm-table/**"
+      ],
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T510-editor-core"
+      ]
+    },
+    "T610-admin-shell": {
+      "wave": "W8",
+      "title": "AdminWorkspaceShell",
+      "allowed_globs": [
+        "apps/web/src/features/admin/shell/**",
+        "apps/web/src/features/admin/AdminWorkspaceShell.tsx",
+        "apps/web/src/features/admin/feature.ts",
+        "apps/web/tests/features/admin/**"
+      ],
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "IG2"
+      ]
+    },
+    "T611-admin-today": {
+      "wave": "W8",
+      "title": "Admin today section",
+      "allowed_globs": [
+        "apps/web/src/features/admin/pages/AdminTodayPage.tsx",
+        "apps/web/src/features/admin/panels/today/**"
+      ],
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T610-admin-shell"
+      ]
+    },
+    "T617-admin-review": {
+      "wave": "W8",
+      "title": "Admin review + verify tabs",
+      "allowed_globs": [
+        "apps/web/src/features/admin/pages/AdminReviewPage.tsx",
+        "apps/web/src/features/admin/pages/VerifyPage.tsx",
+        "apps/web/src/features/verify/**",
+        "apps/web/tests/features/admin/**",
+        "apps/web/tests/features/verify/**"
+      ],
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T610-admin-shell"
+      ]
+    },
+    "T619-admin-gallery": {
+      "wave": "W8",
+      "title": "Gallery design QA",
+      "allowed_globs": [
+        "apps/web/src/features/gallery/**",
+        "apps/web/src/pages/gallery/**",
+        "apps/web/tests/features/gallery/**"
+      ],
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T610-admin-shell"
+      ]
+    },
+    "T620-dm-dashboard": {
+      "wave": "W8",
+      "title": "DM dashboard",
+      "allowed_globs": [
+        "apps/web/src/features/admin/pages/DMDashboardPage.tsx",
+        "apps/web/tests/features/admin/DMDashboardPage.test.tsx"
+      ],
+      "forbidden_globs": [
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "depends_on": [
+        "T610-admin-shell"
+      ]
+    },
+    "T900": {
+      "wave": "W9",
+      "title": "Integration \u2014 e2e, verify, walkthrough",
+      "allowed_globs": [
+        "apps/web/tests/e2e/**",
+        "apps/web/docs/parity/**",
+        "apps/web/playwright.config.ts",
+        "scripts/verify"
+      ],
+      "forbidden_globs": [],
+      "depends_on": [
+        "T610-admin-shell",
+        "T510-editor-core"
+      ]
+    },
+    "IG1": {
+      "wave": "IG1",
+      "title": "Integrator gate after Waves 3\u20134",
+      "allowed_globs": [
+        "apps/web/docs/parity/*.csv",
+        "apps/web/docs/parity/sdd/progress.md",
+        "apps/web/src/chrome/featureRegistry.ts"
+      ],
+      "forbidden_globs": [],
+      "depends_on": [
+        "T122-data",
+        "T210-domain-core"
+      ]
+    },
+    "IG2": {
+      "wave": "IG2",
+      "title": "Integrator gate after Waves 5\u20136",
+      "allowed_globs": [
+        "apps/web/docs/parity/*.csv",
+        "apps/web/docs/parity/sdd/progress.md",
+        "apps/web/src/mocks/**"
+      ],
+      "forbidden_globs": [],
+      "depends_on": [
+        "T319-feat-search",
+        "T413-personalize"
+      ]
     }
   }
 }

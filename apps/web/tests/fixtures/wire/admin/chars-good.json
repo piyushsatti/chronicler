@@ -1,0 +1,13 @@
+{
+  "total": 1,
+  "items": [
+    {
+      "id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+      "shortCode": "C-101",
+      "name": "Lyra Storm",
+      "ownerHandle": "ashwin",
+      "status": "active",
+      "verificationStatus": "verified"
+    }
+  ]
+}
