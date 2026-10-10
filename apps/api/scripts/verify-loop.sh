@@ -18,4 +18,5 @@ go test ./...
 # -tags=integration: Postgres via testcontainers (needs Docker daemon)
 go test -tags=integration ./test/integration/... ./internal/quest/... ./internal/document/...
 
-( cd "$repo/apps/discord" && bun test )
+# package script runs vitest. `bun test` is Bun's runner and skips vitest aliases.
+( cd "$repo/apps/discord" && bun run test )

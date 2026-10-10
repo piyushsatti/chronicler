@@ -23,6 +23,27 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
 )
 
+var errNoDocker = fmt.Errorf("Docker is not running. Start Docker Desktop (or Colima), then re-run. Integration tests start Postgres themselves via testcontainers")
+
+func dockerSocket() error {
+	if os.Getenv("DOCKER_HOST") != "" {
+		return nil
+	}
+	home, _ := os.UserHomeDir()
+	candidates := []string{
+		"/var/run/docker.sock",
+		filepath.Join(home, ".docker", "run", "docker.sock"),
+		filepath.Join(home, ".colima", "default", "docker.sock"),
+		filepath.Join(home, ".orbstack", "run", "docker.sock"),
+	}
+	for _, path := range candidates {
+		if _, err := os.Stat(path); err == nil {
+			return nil
+		}
+	}
+	return errNoDocker
+}
+
 var (
 	startOnce sync.Once
 	dsn       string
@@ -53,16 +74,19 @@ func Pool(t testing.TB) *db.Pool {
 }
 
 func start(ctx context.Context) (err error) {
-	// testcontainers can panic when the Docker socket is missing; turn that into an error.
+	// testcontainers panics with "rootless Docker not found" when no daemon socket exists.
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("docker unavailable for testcontainers: %v", r)
+			err = errNoDocker
 		}
 	}()
 
 	if override := os.Getenv("DATABASE_URL"); override != "" {
 		dsn = override
 		return prepare(ctx, dsn)
+	}
+	if err := dockerSocket(); err != nil {
+		return err
 	}
 
 	pgCtx, cancel := context.WithTimeout(ctx, 2*time.Minute)
