@@ -1,0 +1,11 @@
+{
+  "description": "Quest signup accepts character id",
+  "request": {
+    "method": "POST",
+    "path": "/v1/quests/{id}/signup",
+    "body": { "characterId": "33333333-3333-4333-8333-333333333333" }
+  },
+  "expect": {
+    "status": 204
+  }
+}

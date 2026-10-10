@@ -10,12 +10,11 @@ import { describe, expect, it } from 'vitest';
 
 const srcRoot = fileURLToPath(new URL('../../../src', import.meta.url));
 
-/** Routes this process may call. A new one fails until the interface allows it. */
-const ALLOWED_API_PATHS = [
-  '/v1/ingest/discord-event',
-  '/v1/ingest/heartbeat',
-  '/v1/agent/questions',
-];
+/** Routes the sensor calls while the agent flag is off. */
+const SENSOR_API_PATHS = ['/v1/ingest/discord-event', '/v1/ingest/heartbeat'];
+
+/** Routes the agent module may call once AGENT_ENABLED turns it on. */
+const AGENT_API_PATHS = [...SENSOR_API_PATHS, '/v1/agent/questions'];
 
 const FORBIDDEN: Array<{ name: string; pattern: RegExp }> = [
   { name: 'graphql', pattern: /\bgraphql\b/i },
@@ -64,7 +63,7 @@ export function stripComments(source: string): string {
   return out;
 }
 
-export function sensorViolations(source: string): string[] {
+export function sensorViolations(source: string, allowed: readonly string[] = SENSOR_API_PATHS): string[] {
   const code = stripComments(source);
   const found: string[] = [];
   for (const rule of FORBIDDEN) {
@@ -72,7 +71,7 @@ export function sensorViolations(source: string): string[] {
   }
   const paths = code.match(/\/v1\/[A-Za-z0-9_./{}-]*/g) ?? [];
   for (const apiPath of paths) {
-    if (!ALLOWED_API_PATHS.includes(apiPath)) found.push(`undeclared route ${apiPath}`);
+    if (!allowed.includes(apiPath)) found.push(`undeclared route ${apiPath}`);
   }
   return found;
 }
@@ -101,12 +100,34 @@ describe('discord-sensor', () => {
     expect(sensorViolations('// GuildScheduledEvents was removed\nconst ok = 1;')).toEqual([]);
   });
 
-  it('the Discord app source stays inside the sensor rule', () => {
-    const violations = sourceFiles(srcRoot).flatMap((file) =>
+  it('the default bot does not call the agent question route', () => {
+    expect(sensorViolations("fetch('/v1/agent/questions')")).toContain(
+      'undeclared route /v1/agent/questions',
+    );
+    const files = sourceFiles(srcRoot).filter((file) => !file.includes(`${path.sep}agent${path.sep}`));
+    const violations = files.flatMap((file) =>
       sensorViolations(readFileSync(file, 'utf8')).map(
         (violation) => `${path.relative(srcRoot, file)}: ${violation}`,
       ),
     );
     expect(violations).toEqual([]);
+    for (const file of files) {
+      expect(readFileSync(file, 'utf8')).not.toContain('/v1/agent/questions');
+    }
+  });
+
+  it('the agent module may call /v1/agent/questions when the flag turns it on', () => {
+    expect(sensorViolations("fetch('/v1/agent/questions')", AGENT_API_PATHS)).toEqual([]);
+    const agentRoot = path.join(srcRoot, 'agent');
+    const violations = sourceFiles(agentRoot).flatMap((file) =>
+      sensorViolations(readFileSync(file, 'utf8'), AGENT_API_PATHS).map(
+        (violation) => `${path.relative(srcRoot, file)}: ${violation}`,
+      ),
+    );
+    expect(violations).toEqual([]);
+    const mentionsAgent = sourceFiles(agentRoot).some((file) =>
+      readFileSync(file, 'utf8').includes('/v1/agent/questions'),
+    );
+    expect(mentionsAgent).toBe(true);
   });
 });

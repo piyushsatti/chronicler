@@ -1,0 +1,15 @@
+{
+  "name": "transitionQuestStatus open to played",
+  "request": {
+    "method": "POST",
+    "path": "/v1/quests/{id}/transition",
+    "body": { "to": "played" }
+  },
+  "expect": {
+    "status": 200,
+    "body": {
+      "status": "played"
+    }
+  },
+  "notes": "Replaces GraphQL transitionQuestStatusV2. Closing still requires POST /close."
+}

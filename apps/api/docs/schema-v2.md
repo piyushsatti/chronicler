@@ -1,0 +1,255 @@
+As-built living note. Scrubbed from quarry; prefer durable symbol/schema names over path:line.
+Interfaces: see [docs/interfaces/](/docs/interfaces/README.md).
+
+# Schema v2 — Database Schema Reference
+
+Current backend database schema (package `pi.chronicler.api`; `lorekeep` is retired). Lives on its own SQLAlchemy v2 SQLAlchemy metadata (`apps/api` v2 models (`db/v2/`base.py`), separate from the legacy v1 schema — v1 and v2 tables can coexist in one process during the migration window; several table names collide (`quests`, `hexes`, `regions`, `characters`).
+
+**Source of truth for DDL**: `Alembic migrations under `apps/api` / historical SQL in quarry — 002_schema_v2_init.sql` (raw, idempotent SQL — 48 tables + 23 enum types + 1 view, applied out-of-band; migration `a319b3db4e38` is a documented no-op baseline over it). ORM models in `apps/api` v2 models (`db/v2/`models/*.py` mirror that DDL column-for-column; Successive Alembic migrations amend it further (full list below). Table count is deliberately not hardcoded here — it keeps drifting as migrations land. Live truth: the v2 metadata table set (the model set) verified by full structural parity against the real database — table set, columns, primary keys, foreign keys, and unique constraints, not just a count — in DDL parity tests under `apps/api` tests. At time of writing that set has 51 tables + the `quest_display_status` view; re-run the parity test (or count `_MODEL_TABLES`) for the current number rather than trusting a number pasted here.
+
+### Migration inventory
+
+Chain order (`a319b3db4e38` is the root, `down_revision = None`; each row's parent is the row above it). One line per migration, id + what it does:
+
+| Revision | Purpose |
+|---|---|
+| `a319b3db4e38` | Baseline no-op over the raw 001–003 SQL (48 tables + `quest_display_status` view). The raw `003_default_deny_rls.sql` script applied default-deny RLS out-of-band at the time, kept only for deploy-history documentation and no longer executed; that RLS is now applied in-chain by `7a39aafbcea6`. Root of the chain. |
+| `ec9dac5ca384` | `documents` soft-delete tombstone: `deleted_at`/`deleted_by`/`restored_at`/`restored_by`, orthogonal to `status`/`visibility`. |
+| `7cff7a6e2d9f` | Quest multi-kind/region: `quests.kind` (enum) → `quests.kinds` (`text[]`); `quests.region_id` → new `quest_regions` M:N join table (+1 table); adds `genres text[]`, `apl`, `signup_type`. |
+| `cf3a98e36288` | Data-only backfill: existing `document_links` rows for quest summaries move from `relation='subject'` to the new `relation='summarizes'` vocabulary entry. |
+| `084a888d42b7` | `quest_participants.attested_by` (nullable FK to `members`) — DM-attested manual participation, backs `manual` on the participant type. |
+| `22c9c6594355` | `quests` gains `discord_event_id`, `event_url`, and an announce-failure signal column for the Discord scheduled-event leg of quest announce. |
+| `b14da02609bf` | `documents.policy` (nullable JSONB) — audience-policy engine slot 1 (#143); `NULL` means the policy is compiled from the legacy `visibility` enum at read time. |
+| `884f2a49bb05` | Marker-agnostic fix to `ck_documents_publish_redaction`/body_public invariant — the original CHECK only matched the literal `[!dm]` substring and missed the amended `[!dm:@handle]` marker. |
+| `cb5b0efd33d5` | Adds the `community` document kind; partial unique index enforcing one `dm_table`-category community doc per member. |
+| `98139f6800f3` | Space-block cleanup (epic-137 last slot): makes `hex_entry_links` (`relation='location'`) the only hex↔document link mechanism (drops `hexes.document_id`); **deletes the fog/discovery machinery outright** — drops `hex_discoveries`, `hexes.discovered_at`, `pointcrawl_nodes.discovered_at`. Destructive, one-way in practice. |
+| `e4e752b3102b` | `member_settings` gains 5 flair equip-slot `uuid` FK columns (title/badge/frame/nameplate/token → `unlockables`). |
+| `314fbbc57a45` | Data-only seed: 44 `unlockables` rows (2 theme, 6 palette, 11 font, 25 flair) for the personalization release slice. |
+| `36dfeff3c714` | Social block ships: new `follows` + `requests` tables (+2 tables), `request_kind`/`request_status` enums — a member follows a DM, or asks a DM for a quest/seat. |
+| `802132b16f96` | Enables + forces RLS on `quest_regions` — the one v2 table `7cff7a6e2d9f` left uncovered by the default-deny invariant. |
+| `ceae7bebb565` | `quests.slots_max` gets a DB `CHECK` ceiling (100) as a backstop alongside the existing service-layer cap. |
+| `f4637706b1c7` | New append-only `discord_activity_events` table (+1 table) — per-event engagement ledger (last message time, per-channel voice minutes), sibling to the weekly `member_activity_rollups` cache. |
+| `1aab1cf9d123` | Notifications epic storage root (#365): `notifications` + `notification_deliveries` tables (+2 tables), 3 new enums, 6 `notify_*` prefs on `member_settings`. RLS enabled + forced on both new tables inline. |
+| `be0a267dadb8` | `document_revisions.reason` (`publish`\|`visibility_edit`) column (#379) -- makes `set_visibility`'s extra full-body snapshot writes visible/countable; retention stays forever. |
+| `c7e1b4a92f30` | Indexes 3 read-path FK gap columns (#429): `quest_participants.member_id`, `pois.hex_id`, `maps.region_id`. |
+| `a1b2c3d4e5f6` | Ruled 5-theme catalog seed fix (#467/#496): adds `midnight`/`ember`/`vegan` catalog rows, renames the legacy `dracula` slug to `dracula-pixel` and inserts the new ruled `dracula`. |
+| `87a12635feaa` | M1 personalization (#472/#494/#502): new `member_settings.color_mode`/`bg_effect` columns; deactivates 6 dropped cosmetic catalog rows + their `member_unlocks`. |
+| `6f1e0aa9d3c2` | obs0001 (#441): 3 new tables — `job_runs`, `bot_heartbeat`, `work_queue` — RLS enabled + forced on all three inline. |
+| `7a39aafbcea6` | #527/M5 default-deny RLS baseline: enables + forces RLS on every remaining `public` table with zero policies (the 002-baseline set), excluding `alembic_version` and extension-owned tables. |
+| `9c2d8f1a7b6e` | Character submission boundary: `characters.verification_submitted_at`, preserving rejected-character explicit resubmission. Every-edit reapproval reuses this column. |
+| `d5f0b7a9c1e2` | DM review revision and append-only `dm_profile_review_events`, with RLS enabled and forced. Existing profiles receive an explicit baseline only after cached-status/verdict agreement checks. Current source head. |
+
+Single head, confirmed by `alembic heads`.
+
+## Core blocks
+
+### Documents substrate (`apps/api` v2 models (`db/v2/`models/documents.py`)
+
+The shared prose/media substrate every other block hangs lore off of.
+
+| Table | Purpose |
+|---|---|
+| `documents` | One row per lore/rule/summary/quest-brief document. `kind` is `CHECK`-constrained to `codex_entry`/`rule`/`summary`/`quest_brief`. `category` is free text. `slug` is `text NOT NULL UNIQUE` (global, not partial) — a deleted doc keeps its slug reserved, so a stale external link never silently resolves to a different newer doc; `get_by_slug`/the slug allocator stay unfiltered by `deleted_at` for that reason, while public reads filter at the query layer. `status`: `draft`→`published` (PG enum `document_status`). `visibility`: `public`/`dm_only`/`restricted` (PG enum `document_visibility`) — governs who may see a *published* doc. Soft-delete tombstone: `deleted_at`/`deleted_by`/`restored_at`/`restored_by`, all nullable, added in `ec9dac5ca384`. |
+| `document_revisions` | Append-only published snapshots, unique on `(document_id, rev)`. `visibility` is snapshotted per-revision too — secrecy state at publish time is part of the historical record. |
+| `document_links` | Polymorphic edge `document → (target_type, target_id)` with a `relation` label, natural composite PK. |
+| `document_readers` | Grants a specific DM read access to a `dm_only`/`restricted` document; FK to `dm_profiles.member_id` is existence-only — approval is a runtime check against `dm_profiles.status`. |
+| `assets` | Uploaded binaries (images, map tiles). |
+| `asset_links` | Polymorphic edge `asset → target`, with a partial unique index enforcing at most one `display_icon` asset per target. |
+
+**State model — three orthogonal axes** (see superseded design spec in git history if needed): lifecycle (`status`), scoping (`visibility`), and soft-delete (`deleted_at`/…) never collapse into one enum. `documents.id` is referenced NOT-NULL-without-cascade across ~14 other tables, so tombstoning never rewrites FKs or forces a cascade — it just hides the row (`ix_documents_active … WHERE deleted_at IS NULL`) while preserving the pre-delete lifecycle for restore. `deleteDocument` refuses `kind='quest_brief'` (a live quest's `document_id` is NOT NULL); `restoreDocument` is admin-only.
+
+**Redaction fail-closed check**: `ck_documents_publish_redaction` — a `published` document whose `body` contains a `[!dm]` marker MUST have a non-null `body_public`. This guarantees the redacted public-facing body can never silently go missing once a DM-only-annotated doc is published.
+
+Per-kind create/publish gates (`KIND_GATES`/`KIND_PUBLISH_GATES`, service layer — not schema-enforced): `codex_entry` open create, author-or-`document.publish` publish; `rule` fully open for both (marked TESTING, to be tightened later); `quest_brief` has no direct create mutation — it's created inside the quest-creation flow; `summary` has its own gated path (`upsertQuestSummaryV2` / `summary.write`) rather than the generic document mutations, since summary writes need object-level ownership (own character, or a quest you DM) that the generic kind-based gate can't express.
+
+### Quests (`apps/api` v2 models (`db/v2/`models/quest.py`)
+
+| Table | Purpose |
+|---|---|
+| `quest_arcs` | Named storyline grouping quests. |
+| `quests` | A quest on the board. `short_code` unique. `kinds text[]` (was a single `quest_kind` enum column before `#138`/migration `7cff7a6e2d9f` — moved to array storage like `tags`, still code-validated against the `QuestKind` vocab, but the column is no longer enum-typed). `genres text[]` is a genuinely open, uncontrolled tag vocab. `status` (PG enum `quest_status`: open/full/played/closed/cancelled). `dm_id`, `arc_id` (nullable), `scheduled_at`, `duration_hours`, `slots_max`, `filled_count` (cache; truth = `COUNT(quest_participants WHERE status='signed_up')`, same-txn update — the `filled_count_range` CHECK is a backstop, not the concurrency mechanism; the signup path must use an atomic `UPDATE … WHERE filled_count < slots_max`), `document_id` (the quest brief), `apl`, `signup_type`. |
+| `quest_regions` | Many-to-many join `(quest_id, region_id)` — replaced the single `quests.region_id` FK in `#138` so a quest can touch more than one region. No audit columns (unlike `ArchonAssignment`): a DM authors their own quest's region set freely, it isn't a granted privilege. |
+| `quest_participants` | Composite PK `(quest_id, character_id)`; `member_id` is a plain FK, not part of the key. `status` (PG enum `participant_status`: signed_up/waitlisted/withdrawn/played/no_show — `waitlisted` went live in `#34`: a full quest waitlists a new signup rather than rejecting it; promotion off the waitlist on withdraw is always FIFO-automatic, no schema change needed since `waitlisted` was already a defined enum value — a DM-driven manual-promotion mode is deferred to `#67`). |
+| `quest_hexes` | Composite PK `(quest_id, hex_id, role)`; `role` is `expected` or `visited` (PG enum `quest_hex_role`). |
+
+**Derived display status**: the `quest_display_status` view (raw migration 002, "decision 67") layers a `live`/`filling`/`scheduled` label over `quests.status` using `now()` against `scheduled_at`/`duration_hours` — `live` is checked *before* `filling` so an open quest inside its play window reads as live, not filling.
+
+**Quest creation is strictly `dm`-role gated** (`services/quests_v2.py`, `#148 R1`): `require_role(Role6.DM)` — any multi-role member with `dm` among their roles qualifies. `dm_id` defaults to the caller but any `dm`-role creator may set it to a *different* member, provided that member also holds `dm` — validated by loading the target member and checking their `roles`.
+
+### Members / actor (`apps/api` v2 models (`db/v2/`models/actor.py`)
+
+| Table | Purpose |
+|---|---|
+| `members` | A person known to the guild. `discord_id`/`handle` unique. `roles` — `member_role[]` (PG enum array: `player`/`dm`/`archon`/`lieutenant`/`verifier`/`admin`), default `{player}`. `status` (`active`/`inactive`/`banned`). |
+| `role_changes` | Audit log of a member's role set changing (`old_roles`→`new_roles`, `changed_by`) — "decision 75", privilege-change audit. |
+| `dm_profiles` | Public-facing DM profile, PK = `member_id`. `status` (`draft`/`pending`/`approved`/`rejected`) and `review_revision` are caches backed by `dm_profile_review_events`. |
+| `dm_profile_review_events` | Append-only baseline/create/edit/submit/decide snapshots, uniquely ordered by `(member_id, revision)`. Decisions link `verifications`; baseline links may preserve a prior verdict. Reconciliation uses greatest revision, with verdict fallback only for legacy rows without history. |
+| `verifications` | A verifier's approve/reject verdict against any `(target_type, target_id)` — used for DM-profile approval, character approval, etc. |
+| `member_availability` | Recurring weekly window (`day` + local `start_time`/`end_time`) — weekday+local-time, not a `tstzrange`; member timezone lives in `member_settings`. |
+| `archon_assignments` | Member assigned Archon of a region; carries `granted_by`/`granted_at` audit. |
+| `lieutenant_assignments` | Member assigned Lieutenant tied to an NPC document; same audit shape. |
+| `hexcrawl_council` | Composite PK `(region_id, member_id, cohort)` — council seat per region per cohort. |
+
+### Spatial / hex (`apps/api` v2 models (`db/v2/`models/space.py`)
+
+No PostGIS — hexes are plain axial integer columns (`col`, `row`).
+
+| Table | Purpose |
+|---|---|
+| `maps` | A hexgrid or pointcrawl atlas (`family` PG enum). `region_id` only valid when `family = 'hexgrid'` (CHECK `region_hexgrid`). |
+| `map_changes` | Append-only replay log of map edits. |
+| `terrain_movement_rules` | Movement-cost rule keyed by terrain name (`hexes.terrain` FKs here). |
+| `hexes` | A cell in a hexgrid map; `hexcode` is a `GENERATED`/computed column (`lpad(col)`+`lpad(row)`). `col`/`row` constrained `0..99`. Composite unique `(map_id, col, row)` and `(map_id, id)` (the latter is the FK target for same-map edge guards). |
+| `hex_edges` | Typed edge (`road`/`trail`/`river`/`pass`/`wall`/`ford`) between two hexes on the *same* map — enforced via composite FKs `(map_id, hex_a)`/`(map_id, hex_b)` → `hexes(map_id, id)`, plus `hex_a < hex_b` canonical ordering to make A–B/B–A duplicates impossible. |
+| `pois` | A point of interest on a hex, typed (`poi_type`) with a `discovery_tier` (`landmark`/`hidden`/`secret`). |
+| `hex_entry_links` | Hex → document lore link, typed `relation`. Since `98139f6800f3`, `relation='location'` is the ONLY hex↔document link mechanism (strict 1:1 both ways via partial unique indexes); unique per `(hex, document, relation)`. |
+| `pointcrawl_nodes` / `pointcrawl_edges` | Non-hex map variant: freeform `(x, y)` nodes and typed edges, same same-map-guard + canonical-ordering pattern as hex edges. |
+| `node_entry_links` | Pointcrawl-node equivalent of `hex_entry_links`. |
+| `hex_changes` | Append-only replay log of hex edits (terrain change, document repoint, razed, renamed, …; `hex_change_kind` enum). |
+
+### Regions + time (`apps/api` v2 models (`db/v2/`models/regions_time.py`)
+
+| Table | Purpose |
+|---|---|
+| `regions` | Administrative/hexcrawl region. `kind` (`server`/`archon`/`uncharted`) is a cache; truth = `region_transitions`. |
+| `region_transitions` | Audited `region_kind` change event: `from_kind`→`to_kind`, `trigger` (`hexcrawl_cleared`/`storyline_complete`/`admin_override`), `declared_by`/`confirmed_by`. |
+| `time_anchors` | Real-UTC ↔ epoch-day calibration point for in-fiction game time, with a `rate`. |
+| `game_time_map` | Real date → in-fiction game day, PK = `real_date`. |
+| `game_calendar` | Singleton row (`id = 1`, enforced by CHECK) holding the calendar `definition` JSON. Optional `epoch` provides explicit game-day/year/period/day calibration for named-date formatting; it does not replace `game_time_map`. |
+
+### Personalization + ops (`apps/api` v2 models (`db/v2/`models/personalization_ops.py`)
+
+| Table | Purpose |
+|---|---|
+| `member_settings` | One row per member (PK = `member_id`): theme, font, colorblind-safe flag, timezone. |
+| `unlockables` | Cosmetic-unlock catalog entry (`cosmetic_type`, `payload`, optional `unlock_rule`). |
+| `member_unlocks` | Join table (composite PK `member_id, unlockable_id`), `source` enum (`milestone`/`event`/`cohort`/`grant`/`purchase`). |
+| `member_activity_rollups` | Periodic activity aggregate. No DDL primary key — only `UNIQUE(member_id, period_start)`; the ORM uses `__mapper_args__["primary_key"]` to give the mapper an identity key without emitting a `PrimaryKeyConstraint`, to stay faithful to the DDL for the parity harness. |
+| `idempotency_keys` | Request-level dedup for ledger-appending mutations; PK is the caller-supplied `key` (no server default). |
+
+### Characters (`apps/api` v2 models (`db/v2/`models/character.py`)
+
+`creation_catalog` (species/class/background catalog), `backstories`, `characters` (`pcxp` is a cache; truth = `character_progression_ledger`), `character_ddb_mirror` + `character_ddb_proficiencies` (cached D&D Beyond sheet sync), `downtime_projects`, `character_progression_ledger` (append-only pcxp/status/item-grant ledger), `character_logs` (freeform session/roleplay log, optionally tied to a `quest_id`).
+
+`characters.verification_submitted_at` is the durable review submission boundary
+(migration `9c2d8f1a7b6e`). Approval/rejection history remains in `verifications`;
+the boundary distinguishes a rejected review from a later owner resubmission.
+It also versions approved/pending human edits independently of lifecycle:
+an `active` character can await reapproval while retaining signup eligibility.
+Profile edits, guild changes and review decisions lock the same character row;
+decisions must match the submission boundary actually observed by the client.
+See the [GraphQL review contract](/apps/api/docs/graphql-contract.md#character-review-and-resubmission).
+
+## Taxonomy (enum reference)
+
+All 30 Postgres enum types (`apps/api` v2 models (`db/v2/`enums.py`, mirrored 1:1 as Python `StrEnum`):
+
+| Block | Enum | Values |
+|---|---|---|
+| actor | `member_role` | player, dm, archon, lieutenant, verifier, admin |
+| actor | `member_status` | active, inactive, banned |
+| actor | `dm_profile_status` | draft, pending, approved, rejected |
+| actor | `weekday` | mon…sun |
+| actor | `verification_verdict` | approved, rejected |
+| actor | `unlock_source` | milestone, event, cohort, grant, purchase |
+| character | `character_status` | active, retired, dead, pending_approval |
+| character | `progression_kind` | pcxp_award, status_change, item_grant |
+| character | `proficiency_kind` | skill, tool, language |
+| character | `downtime_status` | active, completed, abandoned |
+| documents | `document_status` | draft, published |
+| documents | `document_visibility` | public, dm_only, restricted |
+| regions/time | `region_kind` | server, archon, uncharted |
+| regions/time | `region_trigger` | hexcrawl_cleared, storyline_complete, admin_override |
+| maps/hexes | `map_family` | hexgrid, pointcrawl |
+| maps/hexes | `poi_type` | landmark, settlement, lair, dungeon_site, regional_feature |
+| maps/hexes | `discovery_tier` | landmark, hidden, secret |
+| maps/hexes | `hex_edge_type` | road, trail, river, pass, wall, ford |
+| maps/hexes | `hex_change_kind` | terrain_change, image_change, document_repoint, submap_change, entry_linked, entry_unlinked, feature_added, razed, renamed |
+| quest | `quest_kind` | standard, event, lieutenant, hexcrawl, one_shot, mini_campaign — retained as a type but no column is enum-typed against it after `#138` (see below); values still validated at the service boundary against `quests.kinds text[]` |
+| quest | `quest_status` | open, full, played, closed, cancelled |
+| quest | `participant_status` | signed_up, waitlisted, withdrawn, played, no_show |
+| quest | `quest_hex_role` | expected, visited |
+
+`documents.kind` (`codex_entry`/`rule`/`summary`/`quest_brief`) is a `CHECK` constraint, not one of these 23 — new prose kinds don't need an `ALTER TYPE`/migration.
+
+## Key relationships
+
+- **`quests.document_id → documents.id`**: every quest's brief is itself a `documents` row (`kind='quest_brief'`); soft-delete refuses this kind specifically so a live quest can't lose its brief.
+- **`quest_regions` (M:N) replaces the old `quests.region_id` FK** (`#138`, migration `7cff7a6e2d9f`) — a quest can now span multiple regions; the migration backfills every existing single `region_id` into one `quest_regions` row before dropping the column.
+- **`characters.backstory_id → backstories.id`, `characters.region_id → regions.id`, `characters.guild_id → documents.id`** (a "guild" is itself a document, not its own table).
+- **`hexes.terrain → terrain_movement_rules.terrain`**; **`quest_hexes`** links a quest to the hexes it expects/visited (`role`).
+- **`document_readers.member_id → dm_profiles.member_id`**: restricted/dm_only read grants are scoped to *DM profiles specifically*, not arbitrary members.
+- **`archon_assignments`/`lieutenant_assignments`/`hexcrawl_council`** are the three ways a member acquires a region- or NPC-scoped privilege beyond their base `members.roles` — each carries its own grant audit trail.
+- **Quest creation trust boundary**: `quests.dm_id` need not be the creating member, but both the creator and the assignee must hold the `dm` role (`services/quests_v2.py`, `#148 R1`) — enforced in application code, not a DB constraint.
+
+## Events, revisions & audit trails
+
+Schema v2's append-only tables, grouped by what they replay:
+
+| Table | Replays / audits |
+|---|---|
+| `document_revisions` | Published snapshots of a document (`rev` monotonic per `document_id`) |
+| `role_changes` | A member's `roles` array changing over time |
+| `region_transitions` | A region's `kind` changing (server/archon/uncharted) |
+| `map_changes` | Edits to a map |
+| `hex_changes` | Edits to a hex (terrain, document repoint, razed, renamed, …) |
+| `character_progression_ledger` | pcxp awards / status changes / item grants (source of truth for `characters.pcxp`) |
+| `character_logs` | Freeform per-character session/roleplay entries |
+| `member_activity_rollups` | Periodic (voice minutes / messages / reactions) activity aggregates |
+
+Common shape: a mutable "current state" table carries a denormalized cache column, and a paired append-only table is the named source of truth for that cache — never the reverse.
+
+## Row-level security
+
+Alembic migration `7a39aafbcea6` (#527/M5) enables + forces RLS on every table in `public` with zero policies. It closes the last uncovered set, the tables the 002 baseline created, which the historical out-of-band script `003_default_deny_rls.sql` covered before this migration existed (that script is kept only for deploy-history documentation and is no longer executed). Every migration that creates a new table must still enable + force RLS itself (`ALTER TABLE ... ENABLE/FORCE ROW LEVEL SECURITY`, zero policies); see `follows`/`requests` (migration `36dfeff3c714`) and `quest_regions` (migration `802132b16f96`, closing a gap left by `7cff7a6e2d9f`) for the pattern. The FastAPI backend connects as `service_role` (bypasses RLS entirely); this guarantees Supabase's PostgREST data API exposes nothing to `anon`/`authenticated` keys unless a surface is deliberately opened later with an explicit policy.
+
+## GraphQL surface (packages/contracts/schema.graphql)
+
+The v2 GraphQL types (`QuestV2Type`, `CharacterV2Type`, `MemberType`, `DocumentType`, `HexV2Type`, `MapV2Type`, `RegionV2Type`, `DmProfileV2Type`, …) map field-for-field onto the ORM columns above (e.g. `QuestV2Type.kinds: [String!]!` / `regions: [ID!]!` mirror `quests.kinds text[]` / `quest_regions`; `DocumentType.kind`/`category`/`visibility`/`deletedAt`/`deletedBy` mirror `documents` directly). Mutations of note: `createQuestV2`, `announceQuestV2`, `createDocument`/`publishDocument`/`setDocumentVisibility`/`deleteDocument`/`restoreDocument`, `assignArchon`/`assignLieutenant`, `transitionRegion`. The schema file also still carries a large set of legacy v1 types (`QuestType`, `CharacterType`, `HexType`, `PersonType`, …, without the `V2` suffix) — those describe the pre-migration schema, not the tables documented on this page.
+
+## Access control today (#143, shipped)
+
+`documents.policy` (nullable JSONB, migration `b14da02609bf`) is the unified audience-policy engine: a flat list of signed principals (`role:R` / `!role:R` / `member:X` / `!member:X`), resolved in fixed order — author always sees their own doc, `!member` deny beats `member` allow, then `!role`/`role`, default deny (`chronicler/services/documents_v2/audience.py`, `resolve_audience`). `policy IS NULL` falls back to the legacy `visibility` enum (+ `document_readers` for `restricted`) via `compile_legacy_visibility`, so old- and new-model documents share one engine. Admin override is caller-applied and audited (`audience.admin_override`), never baked into `resolve_audience` itself, so a bypass is never silent. Exposed in GraphQL as `DocumentType.policy` and the `policy` arg on `setDocumentVisibility`. `ROLE_PERMS`/`KIND_GATES` (create/publish gates, described above) sit on top of this and are unchanged. Design record: issue #143, architecture docs.
+
+## Social block (#103, shipped)
+
+Follows and quest/seat requests are live: `follows` + `requests` tables, `request_kind`/`request_status` enums, migration `36dfeff3c714`, service layer `chronicler/services/social_v2.py`. A member follows a DM (binary, idempotent, no approval) or asks a DM for a quest/seat (`requests`, `kind`-tagged, pending → approved/declined/withdrawn).
+
+| Table | Purpose |
+|---|---|
+| `follows` | PK `(follower_id, followed_id)`, both FK `members.id`. `CHECK (follower_id <> followed_id)`. `follow` = `INSERT ... ON CONFLICT DO NOTHING` (idempotent); `unfollow` = `DELETE` (idempotent no-op on a missing row). No status column. `INDEX idx_follows_followed (followed_id)` backs the inbox reverse lookup (the PK alone can't prune on the second column). |
+| `requests` | One row per quest/seat ask. `target_dm_id` FKs to **`dm_profiles(member_id)`, not `members.id`** — the DB guarantees every request targets a member who actually holds a DM profile. `kind` (`request_kind`: quest/seat), `note` (`text NULL`, `CHECK char_length <= 2000`), `status` (`request_status`: pending/approved/declined/withdrawn, default pending). `CHECK (requester_id <> target_dm_id)`; `CHECK` ties `resolved_by`/`resolved_at` non-null-ness to `status <> 'pending'`. `UNIQUE INDEX ux_requests_pending (requester_id, target_dm_id, kind) WHERE status = 'pending'` — partial index enforcing one open ask per (requester, DM, kind) while allowing re-request after resolution. `INDEX idx_requests_target_dm_status (target_dm_id, status)` (DM inbox read); `INDEX idx_requests_requester_target (requester_id, target_dm_id)` (requester self-read). |
+
+Every write is a single guarded UPDATE keyed on `id AND status = 'pending'` (approve/decline additionally require `target_dm_id = caller OR admin`; withdraw requires `requester_id = caller`) — makes every resolved state terminal, no re-resolving. There is no dedicated inbox table: the DM inbox is `requests WHERE target_dm_id = :me` (grouped by status) plus `follows WHERE followed_id = :me`. Design record: schema-v2 social design (#170, adversarial DB/abuse/lifecycle review) — durable facts are in this section; full spec not vendored in repo.
+
+## Deferred triggers (watchlist)
+
+Schema/perf work intentionally not built yet, with the condition that starts it.
+
+| Trigger | Condition to implement | Related |
+|---|---|---|
+| Hex snapshots | Implement once a given hex accumulates ~100 changes. | `hex_changes` |
+| Path-cost precompute | Implement when the route planner feature ships. | `terrain_movement_rules`, `hexes`, `hex_edges` |
+| Co-play rollups | Implement when the profile widget (that surfaces them) ships. | `member_activity_rollups` |
+
+## Sources verified
+
+- ``apps/api`/db/v2/models/documents.py`
+- ``apps/api`/db/v2/models/quest.py`
+- ``apps/api`/db/v2/models/actor.py`
+- ``apps/api`/db/v2/models/character.py`
+- ``apps/api`/db/v2/models/space.py`
+- ``apps/api`/db/v2/models/regions_time.py`
+- ``apps/api`/db/v2/models/personalization_ops.py`
+- ``apps/api`/db/v2/models/__init__.py`
+- ``apps/api`/db/v2/base.py`
+- ``apps/api`/db/v2/enums.py`
+- ``apps/api`/db/migrations/versions/` (all 22 non-baseline revisions, one per migration-inventory row above, plus `a319b3db4e38` the baseline)
+- `Alembic migrations under `apps/api` / historical SQL in quarry — 002_schema_v2_init.sql`
+- `Alembic migrations under `apps/api` / historical SQL in quarry — 003_default_deny_rls.sql`
+- Superseded schema-v2 design specs (document model, social design) — facts folded above; not vendored in repo.
+- `packages/contracts/schema.graphql`
+- ``apps/api`/services/quests_v2.py`
+- ``apps/api`/services/social_v2.py`
+- ``apps/api`/services/documents_v2/audience.py`
+- `tests/backend/v2/test_ddl_parity.py` (full structural-parity harness: table set, columns, PK, FK, unique constraints — not a count; live count verified 2026-07-21 via direct the v2 metadata table set introspection: 51 tables)
