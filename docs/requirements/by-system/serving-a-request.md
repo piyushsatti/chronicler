@@ -1,0 +1,22 @@
+# Requirements — Serving a request: session per task, no lock
+
+System: [serving-a-request.md](/docs/systems/serving-a-request.md)
+
+## Requirements
+
+| # | Requirement | Because |
+| --- | --- | --- |
+| R1 | The target is session per task, no lock at all. | Every resolver field, DataLoader batch function, and look-ahead prefetch opens its own `AsyncSession` via `with_resolver_session`, because nothing is shared between them to reenter. |
+| R2 | This is the unit of work pattern applied per task, not per request. | Each task's session is its own transaction boundary; nothing coordinates across tasks because nothing needs to. |
+| R3 | Expected failures are values, not exceptions. | [`D25`](/apps/api/docs/decisions/D25-Expected-Failures-Are-Values.md) returns `Document / NotFound / NotOwner` from services; at the schema edge that becomes a union payload arm and the client switches on `__typename`. Only unauthenticated calls and genuine bugs cross the boundary as GraphQL errors. |
+| R4 | Query cost analysis, complexity budgets, and depth limiting are rejected. | Each guards a resource, rows or query shape, that is not scarce here. They reopen only if the surface is exposed to untrusted clients. |
+
+## Assumptions
+
+| # | Assumption | If wrong |
+| --- | --- | --- |
+| A1 | No task does slow non-database work while holding its session open | The session stays open longer than intended, holding a pool slot and narrowing headroom for concurrent requests |
+| A2 | Every task that needs a session opens its own, and no task is handed another task's session | Reintroduces the exact reentrancy hazard this design exists to avoid |
+| A3 | The only caller of this GraphQL surface is the project's own frontend | Depth limiting and complexity budgets were rejected on this premise. Opening the surface to untrusted clients is the stated trigger to reopen both |
+| A4 | Every scoped entity load goes through the ORM | Raw `text()` calls bypass the `do_orm_execute` listener entirely; [`D12`](/docs/decisions/D12-Scope-Predicate-At-The-Session.md) names such calls in `quests_repo.py` as a residual hole the listener alone does not close |
+| A5 | A hand-picked pool size, once set, stays close enough to real concurrent load | A wrong guess either wastes headroom or narrows the concurrency ceiling unexpectedly |

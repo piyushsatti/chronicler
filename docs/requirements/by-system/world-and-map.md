@@ -1,0 +1,22 @@
+# Requirements — Knowing a place exists is the same question as reading its document
+
+System: [world-and-map.md](/docs/systems/world-and-map.md)
+
+## Requirements
+
+| # | Requirement | Because |
+| --- | --- | --- |
+| R1 | The world is a containment hierarchy, not a flat table set. | A region groups maps, a map holds hexes or pointcrawl nodes, a hex holds POIs, and a hex or node reaches its location entry through one typed link table rather than owning it. [`D26`](/apps/api/docs/decisions/D26-Ten-Roots-Not-Forty-Five-Repos.md) |
+| R2 | One link mechanism, not two. `hex_entry_links` is the sole way a hex claims a location document; the older scalar FK bypass is dropped from the schema entirely. [`D6`](/apps/api/docs/decisions/D6-Hex-Location-Link-Canon.md) | Distilled from system Verdict. |
+| R3 | The map is stateless. It stores no discovery, no fog flag, no per-member "has seen this" row. "Reveal" is archon editing the linked document's audience, the same mechanism [Documents and audience](/docs/requirements/by-system/documents-and-audience.md) uses for every other read. [`D7`](/apps/api/docs/decisions/D7-Location-Gate-And-Fog-Cleanup.md) | Distilled from system Verdict. |
+| R4 | Archon is supposed to own every location-entry mutation, create, edit, link, set-audience, but a 2026-07-25 compliance audit found only two of the four verbs actually gated in code. | The owner ruled this an oversight to close, not a narrowing of the decision. [`D7`](/apps/api/docs/decisions/D7-Location-Gate-And-Fog-Cleanup.md) |
+| R5 | Map absorbs nine model files into one aggregate root: hexes, edges, POIs, links, pointcrawl nodes and edges, and the change ledgers are reachable only through the Map repository, nowhere else. | [`D26`](/apps/api/docs/decisions/D26-Ten-Roots-Not-Forty-Five-Repos.md) |
+
+## Assumptions
+
+| # | Assumption | If wrong |
+| --- | --- | --- |
+| A1 | Every "may this viewer see this place" question is answerable from the same audience engine [Documents and audience](/docs/requirements/by-system/documents-and-audience.md) already resolves, with no place-specific exception | Fog needs a second, map-specific policy layer, and [`D7`](/apps/api/docs/decisions/D7-Location-Gate-And-Fog-Cleanup.md)'s central claim, one mechanism rather than two, breaks |
+| A2 | D7a's four gated verbs (create, edit, link, set-audience) will be closed to the two the 2026-07-25 audit found ungated, before "archon owns every location-entry mutation" is fully true in code | `editPublishedDocument` and `setDocumentVisibility` on a location entry stay reachable by any `document.publish` holder, DM or lieutenant included, not just the region's archon |
+| A3 | A hex's machine terrain (`hexes.terrain`, a vocabulary lookup) and its published location entry (`hex_entry_links`, `relation='location'`) never need to disagree, since one is movement data and the other is prose | A hex could show terrain incompatible with its own location description, with no rule saying which one is authoritative |
+| A4 | `maps.region_id` is a plain cross-root reference and never needs same-transaction consistency with the region row it points at | Map and Region should have been drawn as one aggregate root instead of two, and [`D26`](/apps/api/docs/decisions/D26-Ten-Roots-Not-Forty-Five-Repos.md)'s nine-file Map / three-file Region split sits in the wrong place |
