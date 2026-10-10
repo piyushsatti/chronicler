@@ -28,6 +28,10 @@ Default URL if unset: `postgres://chronicler:chronicler@127.0.0.1:5432/chronicle
 
 Tooling choice: [D42](../docs/decisions/D42-Worker-And-Migrations.md).
 
+## Tests
+
+Integration tests (`go test -tags=integration …`) start Postgres with testcontainers, run goose + seed themselves. Docker required; no compose DB. See [`internal/platform/dbtest`](../internal/platform/dbtest).
+
 ## Seed (local)
 
 After migrate, apply fixtures (safe to re-run; pins stable `public_id`s):

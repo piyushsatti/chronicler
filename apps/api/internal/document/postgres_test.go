@@ -4,23 +4,15 @@ package document_test
 
 import (
 	"context"
-	"os"
 	"testing"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
-	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbtest"
 )
 
 func TestPostgresDocumentBySlug(t *testing.T) {
-	if os.Getenv("DATABASE_URL") == "" {
-		t.Skip("DATABASE_URL not set")
-	}
 	ctx := context.Background()
-	pool, err := db.Connect(ctx, os.Getenv("DATABASE_URL"))
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer pool.Close()
+	pool := dbtest.Pool(t)
 
 	repo := document.NewPostgresReadRepo(pool.Pool)
 	q := document.Queries{Repo: repo}

@@ -20,22 +20,8 @@ jobs:
     defaults:
       run:
         working-directory: apps/api
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: chronicler
-          POSTGRES_PASSWORD: chronicler
-          POSTGRES_DB: chronicler
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U chronicler"
-          --health-interval 5s
-          --health-timeout 3s
-          --health-retries 10
-    env:
-      DATABASE_URL: postgres://chronicler:chronicler@localhost:5432/chronicler?sslmode=disable
+    # Integration tests own Postgres via testcontainers (Docker on the runner).
+    # No pre-started DATABASE_URL service.
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -48,12 +34,6 @@ jobs:
       - name: Schema drift
         working-directory: .
         run: git diff --exit-code -- packages/contracts/schema.graphql
-      - name: Install goose
-        run: go install github.com/pressly/goose/v3/cmd/goose@v3.24.1
-      - name: Migrate
-        run: bash scripts/migrate.sh up
-      - name: Seed
-        run: psql "$DATABASE_URL" -f db/seed/local.sql
       - name: Install codegen tools
         run: |
           go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.29.0
@@ -72,10 +52,11 @@ jobs:
       - name: Install JS workspace (discord sensor tests)
         working-directory: .
         run: bun install --frozen-lockfile
-      - name: Verify loop (unit, contract, integration, discord sensor)
+      - name: Verify loop (unit, contract, integration via testcontainers, discord sensor)
         run: bash scripts/verify-loop.sh
-      - name: Document integration extras
-        run: go test -tags=integration ./internal/document/...
+        env:
+          # Force testcontainers; do not reuse a host DB in CI.
+          DATABASE_URL: ""
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v6
         with:

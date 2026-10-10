@@ -27,7 +27,7 @@ func TestSchemaInvariants(t *testing.T) {
 	var handle string
 	err := pool.QueryRow(ctx, `SELECT handle FROM members WHERE public_id = $1`, seedAdmin).Scan(&handle)
 	if err != nil {
-		t.Fatalf("seed member missing (goose up && seed first): %v", err)
+		t.Fatalf("seed member missing: %v", err)
 	}
 	if handle != "admin" {
 		t.Fatalf("seed handle=%s", handle)

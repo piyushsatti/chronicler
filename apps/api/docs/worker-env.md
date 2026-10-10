@@ -31,6 +31,12 @@ Local stack: [deploy/compose.yaml](/deploy/compose.yaml).
 
 Staging E2E against a live channel needs a real worker token + channel id and `DISCORD_DELIVERY_DRY_RUN` unset/false. No live Discord test runs in CI (httptest mocks).
 
+## Integration tests
+
+Postgres-backed Go tests (`-tags=integration`) start an ephemeral `postgres:16-alpine` with [testcontainers-go](https://golang.testcontainers.org/), run goose + seed, then connect. Docker must be running. They do **not** require a pre-started compose DB.
+
+Optional: set `DATABASE_URL` to reuse an existing Postgres (migrate+seed still applied). Leave it unset for the default container path.
+
 ## API process
 
 | Variable | Purpose |
