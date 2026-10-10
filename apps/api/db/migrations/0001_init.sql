@@ -656,7 +656,7 @@ CREATE TABLE agent_questions (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     CONSTRAINT agent_questions_state_check CHECK (
-        state IN ('queued', 'answered', 'failed', 'cancelled')
+        state IN ('queued', 'claimed', 'answered', 'failed', 'cancelled')
     )
 );
 

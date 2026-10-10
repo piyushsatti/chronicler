@@ -18,3 +18,4 @@ Short ADRs that apply only inside `apps/api`. Boundary decisions: [docs/decision
 | [D40](/apps/api/docs/decisions/D40-GraphQL-Versus-REST.md) | GraphQL for trees; REST for commands and fixed shapes |
 | [D41](/apps/api/docs/decisions/D41-Go-API-Token-Claims.md) | JWT claims and anonymous-on-bad-token |
 | [D42](/apps/api/docs/decisions/D42-Worker-And-Migrations.md) | Worker binary, goose migrations, agent boundary |
+| [D43](/apps/api/docs/decisions/D43-Agent-Worker-HTTP-Claim.md) | Agent worker claims jobs over HTTP |

@@ -28,11 +28,10 @@ var httpMethods = []string{"get", "post", "put", "patch", "delete"}
 // openapi.yaml paths. Quest loop + ingest paths must NOT appear here — they
 // are real OpenAPI entries. Keep this list shrinking as OpenAPI catches up.
 var muxOnlyAllowlist = map[string]struct{}{
-	"POST /v1/graphql":                       {}, // described in openapi info; not a REST path entry
-	"GET /v1/members/me":                     {}, // field-routing; OpenAPI pending
-	"GET /v1/documents/{id}/revisions":       {}, // field-routing; OpenAPI pending
-	"GET /v1/documents/trash":                {}, // field-routing; OpenAPI pending
-	"POST /v1/agent/questions/{id}/complete": {}, // agent completion; OpenAPI pending until agent ships
+	"POST /v1/graphql":                 {}, // described in openapi info; not a REST path entry
+	"GET /v1/members/me":               {}, // field-routing; OpenAPI pending
+	"GET /v1/documents/{id}/revisions": {}, // field-routing; OpenAPI pending
+	"GET /v1/documents/trash":          {}, // field-routing; OpenAPI pending
 }
 
 func TestOpenAPIMatchesMux(t *testing.T) {

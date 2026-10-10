@@ -1,11 +1,11 @@
 # Mentions (`apps/discord`)
 
 **App:** `apps/discord`  
-**Implements:** n/a
+**Implements:** [agent-qa-http](/docs/interfaces/agent-qa-http.md)
 
 ## Verdict
 
-When `AGENT_ENABLED=true`, `mountAgent` accepts an allowlisted mention, posts one question to the API, and replies in Discord. The listener is off unless that flag is set. This path does not announce quests.
+When `AGENT_ENABLED=true`, `mountAgent` accepts an allowlisted mention, posts one question to the API, and replies in Discord. The listener is off unless that flag is set. This path does not announce quests. Jobs move over HTTP only (no RabbitMQ).
 
 ## How it works
 

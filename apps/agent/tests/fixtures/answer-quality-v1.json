@@ -1,0 +1,535 @@
+{
+  "version": 1,
+  "cases": [
+    {
+      "id": "numeric-jump-score-15",
+      "slice": "numeric",
+      "question": "if my str score is 15 - how far can I jump?",
+      "answerability": "answerable",
+      "required_patterns": ["long jump", "15 feet", "high jump", "5 feet", "10 feet", "half"],
+      "forbidden_patterns": ["do not specify", "not specified", "no limitations"],
+      "accepted_sources": [
+        {"document_id": "ee29a140-b716-572d-a877-1c09b1305537", "content_version": "0ed34750169ab669848b3096dd524771c441799dbb029e92045cc38c1028fdb3"},
+        {"document_id": "e5f55412-e9de-510e-9f02-3eab19c17569", "content_version": "8ae279b95761caffdada071d8fbf289a97e3873c036b87a27ab4bbfd5c74d1bc"}
+      ],
+      "critical": true
+    },
+    {
+      "id": "numeric-jump-modifier-5",
+      "slice": "numeric",
+      "question": "if my str modifier is +5 what is jump distance?",
+      "answerability": "answerable",
+      "required_patterns": ["high jump", "3\\s*\\+\\s*5\\s*=\\s*8", "8 feet", "long jump", "strength score", "10 feet", "half"],
+      "forbidden_patterns": ["do not specify", "not specified"],
+      "accepted_sources": [
+        {"document_id": "ee29a140-b716-572d-a877-1c09b1305537", "content_version": "0ed34750169ab669848b3096dd524771c441799dbb029e92045cc38c1028fdb3"},
+        {"document_id": "e5f55412-e9de-510e-9f02-3eab19c17569", "content_version": "8ae279b95761caffdada071d8fbf289a97e3873c036b87a27ab4bbfd5c74d1bc"}
+      ],
+      "critical": true
+    },
+    {
+      "id": "numeric-standing-long-15",
+      "slice": "numeric",
+      "question": "With Strength 15, how far is my standing long jump?",
+      "answerability": "answerable",
+      "required_patterns": ["7\\.?5 feet", "half", "15"],
+      "forbidden_patterns": ["15 feet standing"],
+      "accepted_sources": [{"document_id": "ee29a140-b716-572d-a877-1c09b1305537", "content_version": "0ed34750169ab669848b3096dd524771c441799dbb029e92045cc38c1028fdb3"}],
+      "critical": true
+    },
+    {
+      "id": "numeric-running-high-plus-3",
+      "slice": "numeric",
+      "question": "My Strength modifier is +3. How high can I jump with a running start?",
+      "answerability": "answerable",
+      "required_patterns": ["3\\s*\\+\\s*3\\s*=\\s*6", "6 feet", "10 feet"],
+      "forbidden_patterns": ["3 feet"],
+      "accepted_sources": [{"document_id": "e5f55412-e9de-510e-9f02-3eab19c17569", "content_version": "8ae279b95761caffdada071d8fbf289a97e3873c036b87a27ab4bbfd5c74d1bc"}],
+      "critical": true
+    },
+    {
+      "id": "numeric-standing-high-plus-3",
+      "slice": "numeric",
+      "question": "My Strength modifier is +3. How high is my standing high jump?",
+      "answerability": "answerable",
+      "required_patterns": ["3 feet", "half", "6"],
+      "forbidden_patterns": ["6 feet standing"],
+      "accepted_sources": [{"document_id": "e5f55412-e9de-510e-9f02-3eab19c17569", "content_version": "8ae279b95761caffdada071d8fbf289a97e3873c036b87a27ab4bbfd5c74d1bc"}],
+      "critical": true
+    },
+    {
+      "id": "numeric-high-minimum",
+      "slice": "numeric",
+      "question": "With a -4 Strength modifier, how high can I jump?",
+      "answerability": "answerable",
+      "required_patterns": ["minimum", "0 feet", "3\\s*[-+]\\s*4"],
+      "forbidden_patterns": ["-1 feet"],
+      "accepted_sources": [{"document_id": "e5f55412-e9de-510e-9f02-3eab19c17569", "content_version": "8ae279b95761caffdada071d8fbf289a97e3873c036b87a27ab4bbfd5c74d1bc"}],
+      "critical": true
+    },
+
+    {
+      "id": "ambiguity-jump-distance",
+      "slice": "ambiguity",
+      "question": "What is my jump distance with Strength 12?",
+      "answerability": "answerable",
+      "required_patterns": ["long jump", "12 feet", "high jump", "4 feet", "10 feet", "half"],
+      "forbidden_patterns": ["only"],
+      "accepted_sources": [
+        {"document_id": "ee29a140-b716-572d-a877-1c09b1305537", "content_version": "0ed34750169ab669848b3096dd524771c441799dbb029e92045cc38c1028fdb3"},
+        {"document_id": "e5f55412-e9de-510e-9f02-3eab19c17569", "content_version": "8ae279b95761caffdada071d8fbf289a97e3873c036b87a27ab4bbfd5c74d1bc"}
+      ],
+      "critical": true
+    },
+    {
+      "id": "ambiguity-jump-str-10",
+      "slice": "ambiguity",
+      "question": "STR 10, how far can I jump?",
+      "answerability": "answerable",
+      "required_patterns": ["long jump", "10 feet", "high jump", "3 feet", "half"],
+      "forbidden_patterns": ["not specified"],
+      "accepted_sources": [
+        {"document_id": "ee29a140-b716-572d-a877-1c09b1305537", "content_version": "0ed34750169ab669848b3096dd524771c441799dbb029e92045cc38c1028fdb3"},
+        {"document_id": "e5f55412-e9de-510e-9f02-3eab19c17569", "content_version": "8ae279b95761caffdada071d8fbf289a97e3873c036b87a27ab4bbfd5c74d1bc"}
+      ],
+      "critical": true
+    },
+    {
+      "id": "ambiguity-running-start",
+      "slice": "ambiguity",
+      "question": "What changes if I jump without a running start?",
+      "answerability": "answerable",
+      "required_patterns": ["long jump", "high jump", "half", "10 feet"],
+      "forbidden_patterns": [],
+      "accepted_sources": [
+        {"document_id": "ee29a140-b716-572d-a877-1c09b1305537", "content_version": "0ed34750169ab669848b3096dd524771c441799dbb029e92045cc38c1028fdb3"},
+        {"document_id": "e5f55412-e9de-510e-9f02-3eab19c17569", "content_version": "8ae279b95761caffdada071d8fbf289a97e3873c036b87a27ab4bbfd5c74d1bc"}
+      ],
+      "critical": true
+    },
+    {
+      "id": "ambiguity-horizontal-vertical",
+      "slice": "ambiguity",
+      "question": "Does jumping mean horizontal or vertical distance?",
+      "answerability": "answerable",
+      "required_patterns": ["long jump", "horizontal", "high jump", "vertical"],
+      "forbidden_patterns": [],
+      "accepted_sources": [{"document_id": "11696171-b8e3-53b8-96f1-8fb811abfae8", "content_version": "853c3afd9726a61bd580f73b8802be35c91e376a3678549aab2ef07ce8b0af81"}],
+      "critical": true
+    },
+    {
+      "id": "ambiguity-jump-cost",
+      "slice": "ambiguity",
+      "question": "Can I jump farther than my remaining movement?",
+      "answerability": "answerable",
+      "required_patterns": ["each foot", "movement"],
+      "forbidden_patterns": ["free movement"],
+      "accepted_sources": [{"document_id": "ee29a140-b716-572d-a877-1c09b1305537", "content_version": "0ed34750169ab669848b3096dd524771c441799dbb029e92045cc38c1028fdb3"}],
+      "critical": true
+    },
+    {
+      "id": "ambiguity-difficult-landing",
+      "slice": "ambiguity",
+      "question": "What happens if I land a long jump in difficult terrain?",
+      "answerability": "answerable",
+      "required_patterns": ["DC 10", "Dexterity", "Acrobatics", "Prone"],
+      "forbidden_patterns": ["automatically succeed"],
+      "accepted_sources": [{"document_id": "ee29a140-b716-572d-a877-1c09b1305537", "content_version": "0ed34750169ab669848b3096dd524771c441799dbb029e92045cc38c1028fdb3"}],
+      "critical": true
+    },
+
+    {
+      "id": "definition-shove",
+      "slice": "definitions",
+      "question": "What is the Shove action?",
+      "answerability": "answerable",
+      "required_patterns": ["5 feet", "Prone", "Unarmed Strike"],
+      "forbidden_patterns": [],
+      "accepted_sources": [{"document_id": "9ef03b94-71ac-518e-a158-2359214e3bc6", "content_version": "8f3727bdda799cb941f92e161f4e25d9f77fe89cae8f3ba52ac410997b773eae"}],
+      "critical": false
+    },
+    {
+      "id": "definition-grapple",
+      "slice": "definitions",
+      "question": "How does Grapple work?",
+      "answerability": "answerable",
+      "required_patterns": ["Unarmed Strike", "Grappled", "escape"],
+      "forbidden_patterns": [],
+      "accepted_sources": [
+        {"document_id": "224a7795-d0ed-56b9-a1f6-125639a08b23", "content_version": "784aaacead6637c13d80de0ed9ccc6953e360e9fb764dc9098a5290c6206ed1a"},
+        {"document_id": "c42b29fe-d49a-5e13-b04e-0db1b0360b6e", "content_version": "bda695ffde5cac77d355f6332cd8fe9941ccb56fbf8c94bba512f7aef0256116"}
+      ],
+      "critical": false
+    },
+    {
+      "id": "definition-hide",
+      "slice": "definitions",
+      "question": "What does the Hide action do?",
+      "answerability": "answerable",
+      "required_patterns": ["Invisible", "hidden", "stop"],
+      "forbidden_patterns": [],
+      "accepted_sources": [{"document_id": "e866d883-d181-5d4d-bc16-ad8bc48e11b9", "content_version": "64870f19b280577895785be9bc835648e42f983dad1c954f4743727927e7866d"}],
+      "critical": false
+    },
+    {
+      "id": "definition-dodge",
+      "slice": "definitions",
+      "question": "What does the Dodge action do?",
+      "answerability": "answerable",
+      "required_patterns": ["Disadvantage", "Dexterity", "Advantage"],
+      "forbidden_patterns": [],
+      "accepted_sources": [{"document_id": "8bac53e7-d194-58ba-b609-f961622952db", "content_version": "889593f11a85f91773713a1a068ba459b8927eb712677e24124f63e672c0fde6"}],
+      "critical": false
+    },
+    {
+      "id": "definition-inspiration",
+      "slice": "definitions",
+      "question": "How does Heroic Inspiration work?",
+      "answerability": "answerable",
+      "required_patterns": ["reroll", "any die", "new roll"],
+      "forbidden_patterns": [],
+      "accepted_sources": [{"document_id": "abe0061a-3dd8-55ff-a6fc-d764192c254c", "content_version": "405654d476745e5b3e72aa907ecba029c52acb8c2ee9db4eb87eeaf6cdccddc2"}],
+      "critical": false
+    },
+    {
+      "id": "definition-critical-hit",
+      "slice": "definitions",
+      "question": "How do critical hits work?",
+      "answerability": "answerable",
+      "required_patterns": ["damage dice", "twice", "modifier"],
+      "forbidden_patterns": ["double the modifier"],
+      "accepted_sources": [{"document_id": "c96aed76-0b7d-5a0b-a5f5-8a64f1526e2e", "content_version": "d55fbf585d526c86d07a726d930c8fdfaba6ecb413d6a2750a87c1884921c19f"}],
+      "critical": false
+    },
+
+    {
+      "id": "condition-grappled",
+      "slice": "conditions",
+      "question": "What does the Grappled condition do?",
+      "answerability": "answerable",
+      "required_patterns": ["Speed", "0", "attacks"],
+      "forbidden_patterns": [],
+      "accepted_sources": [{"document_id": "224a7795-d0ed-56b9-a1f6-125639a08b23", "content_version": "784aaacead6637c13d80de0ed9ccc6953e360e9fb764dc9098a5290c6206ed1a"}],
+      "critical": false
+    },
+    {
+      "id": "condition-invisible",
+      "slice": "conditions",
+      "question": "What does the Invisible condition do?",
+      "answerability": "answerable",
+      "required_patterns": ["concealed", "Advantage", "Disadvantage"],
+      "forbidden_patterns": [],
+      "accepted_sources": [{"document_id": "e5f55412-e9de-510e-9f02-3eab19c17569", "content_version": "8ae279b95761caffdada071d8fbf289a97e3873c036b87a27ab4bbfd5c74d1bc"}],
+      "critical": false
+    },
+    {
+      "id": "condition-exhaustion",
+      "slice": "conditions",
+      "question": "What does Exhaustion do?",
+      "answerability": "answerable",
+      "required_patterns": ["d20", "Speed", "level"],
+      "forbidden_patterns": [],
+      "accepted_sources": [{"document_id": "672f212e-5c3f-5e8e-aaa9-afaf05f179ab", "content_version": "a490620f5f28aa3277f093e58d2c894ac2dbbe7ebf82ce1db5930e4ade3ff819"}],
+      "critical": false
+    },
+    {
+      "id": "condition-unconscious",
+      "slice": "conditions",
+      "question": "What does the Unconscious condition do?",
+      "answerability": "answerable",
+      "required_patterns": ["Incapacitated", "Prone", "drop"],
+      "forbidden_patterns": [],
+      "accepted_sources": [{"document_id": "0d76c46e-f93b-5e00-8c3b-e21fdbc6f630", "content_version": "4423131a7798cbb37de03c06838737cf0cd6cdfcf38effe3b85c62469f5fcd21"}],
+      "critical": false
+    },
+    {
+      "id": "condition-surprised",
+      "slice": "conditions",
+      "question": "What does being surprised do?",
+      "answerability": "answerable",
+      "required_patterns": ["Disadvantage", "Initiative"],
+      "forbidden_patterns": ["lose your turn"],
+      "accepted_sources": [{"document_id": "d010eb16-75b2-53c7-9e50-7dec9189ca78", "content_version": "923f42078929b9b9804208340a362d79633e9aa97fd4daf9dcd08c0129e6c2d5"}],
+      "critical": false
+    },
+    {
+      "id": "condition-prone",
+      "slice": "conditions",
+      "question": "What does the Prone condition do?",
+      "answerability": "answerable",
+      "required_patterns": ["crawl", "Disadvantage", "5 feet"],
+      "forbidden_patterns": [],
+      "accepted_sources": [
+        {"document_id": "45b5abf0-3def-5c93-9029-058ca676926c", "content_version": "56ee2add330dd19f9c9fb90429d7e1869b525cebf4d75acf0ca4897c6a58ab17"},
+        {"document_id": "0d76c46e-f93b-5e00-8c3b-e21fdbc6f630", "content_version": "4423131a7798cbb37de03c06838737cf0cd6cdfcf38effe3b85c62469f5fcd21"}
+      ],
+      "critical": false
+    },
+
+    {
+      "id": "movement-dash",
+      "slice": "movement",
+      "question": "If my Speed is 30 feet, how much movement does Dash add?",
+      "answerability": "answerable",
+      "required_patterns": ["30 feet", "additional", "60"],
+      "forbidden_patterns": [],
+      "accepted_sources": [{"document_id": "8bac53e7-d194-58ba-b609-f961622952db", "content_version": "889593f11a85f91773713a1a068ba459b8927eb712677e24124f63e672c0fde6"}],
+      "critical": false
+    },
+    {
+      "id": "movement-difficult-terrain",
+      "slice": "movement",
+      "question": "How does difficult terrain affect movement?",
+      "answerability": "answerable",
+      "required_patterns": ["extra foot", "2 feet"],
+      "forbidden_patterns": [],
+      "accepted_sources": [
+        {"document_id": "47c5dde8-0332-529a-8a6c-92b6364bc0c5", "content_version": "b886ade68a4b94a79cb493c364031d56e17fa5a6d084afb4142d238337cf5ea1"},
+        {"document_id": "d010eb16-75b2-53c7-9e50-7dec9189ca78", "content_version": "923f42078929b9b9804208340a362d79633e9aa97fd4daf9dcd08c0129e6c2d5"}
+      ],
+      "critical": false
+    },
+    {
+      "id": "movement-swimming",
+      "slice": "movement",
+      "question": "How much movement does swimming cost without a Swim Speed?",
+      "answerability": "answerable",
+      "required_patterns": ["extra foot", "2 feet"],
+      "forbidden_patterns": [],
+      "accepted_sources": [{"document_id": "d010eb16-75b2-53c7-9e50-7dec9189ca78", "content_version": "923f42078929b9b9804208340a362d79633e9aa97fd4daf9dcd08c0129e6c2d5"}],
+      "critical": false
+    },
+    {
+      "id": "movement-climbing",
+      "slice": "movement",
+      "question": "How much movement does climbing cost without a Climb Speed?",
+      "answerability": "answerable",
+      "required_patterns": ["extra foot", "2 feet"],
+      "forbidden_patterns": [],
+      "accepted_sources": [{"document_id": "073d0229-70b3-55b5-b3d2-1182303947f7", "content_version": "ab99864a1fd9c8f3e0b6073fac1fe7d2436ef6d2e21abfc5dce435c70c72e43b"}],
+      "critical": false
+    },
+    {
+      "id": "movement-flying",
+      "slice": "movement",
+      "question": "What happens if I am knocked Prone while flying?",
+      "answerability": "answerable",
+      "required_patterns": ["fall", "hover"],
+      "forbidden_patterns": [],
+      "accepted_sources": [{"document_id": "224a7795-d0ed-56b9-a1f6-125639a08b23", "content_version": "784aaacead6637c13d80de0ed9ccc6953e360e9fb764dc9098a5290c6206ed1a"}],
+      "critical": false
+    },
+    {
+      "id": "movement-jump-cost",
+      "slice": "movement",
+      "question": "Does jumping consume movement?",
+      "answerability": "answerable",
+      "required_patterns": ["each foot", "movement"],
+      "forbidden_patterns": ["does not consume"],
+      "accepted_sources": [{"document_id": "ee29a140-b716-572d-a877-1c09b1305537", "content_version": "0ed34750169ab669848b3096dd524771c441799dbb029e92045cc38c1028fdb3"}],
+      "critical": false
+    },
+
+    {
+      "id": "combat-opportunity",
+      "slice": "combat",
+      "question": "How does an Opportunity Attack work?",
+      "answerability": "answerable",
+      "required_patterns": ["Reaction", "reach", "move"],
+      "forbidden_patterns": [],
+      "accepted_sources": [{"document_id": "d74bdc37-de58-52f7-af2a-2dfaf1ecbdcd", "content_version": "544ecd9d35182511253915282d5d1eb85d8fb642377177f44bf1c470fa11771e"}],
+      "critical": false
+    },
+    {
+      "id": "combat-zero-hp",
+      "slice": "combat",
+      "question": "What happens when I drop to 0 hit points?",
+      "answerability": "answerable",
+      "required_patterns": ["Unconscious", "Death Saving"],
+      "forbidden_patterns": ["immediately die"],
+      "accepted_sources": [
+        {"document_id": "e0aae727-8131-5cbd-b0d5-969fdd8f866f", "content_version": "9d6c0dcb9391d0d662d38892dfa2e6900aa6ad83aa350b616ecb9255455be072"},
+        {"document_id": "a2b80674-356f-5514-9219-7d4bb767a4b3", "content_version": "7842610333f89804f457a1308bd46b02a91b62557ef988a9dfc2721cf6ec512a"}
+      ],
+      "critical": false
+    },
+    {
+      "id": "combat-death-saves",
+      "slice": "combat",
+      "question": "How do death saving throws work?",
+      "answerability": "answerable",
+      "required_patterns": ["10", "three successes", "three failures", "1", "20"],
+      "forbidden_patterns": [],
+      "accepted_sources": [
+        {"document_id": "e0aae727-8131-5cbd-b0d5-969fdd8f866f", "content_version": "9d6c0dcb9391d0d662d38892dfa2e6900aa6ad83aa350b616ecb9255455be072"},
+        {"document_id": "a2b80674-356f-5514-9219-7d4bb767a4b3", "content_version": "7842610333f89804f457a1308bd46b02a91b62557ef988a9dfc2721cf6ec512a"}
+      ],
+      "critical": false
+    },
+    {
+      "id": "combat-critical",
+      "slice": "combat",
+      "question": "Do I double modifiers on a critical hit?",
+      "answerability": "answerable",
+      "required_patterns": ["damage dice", "twice", "modifier", "normal"],
+      "forbidden_patterns": ["double modifiers"],
+      "accepted_sources": [{"document_id": "c96aed76-0b7d-5a0b-a5f5-8a64f1526e2e", "content_version": "d55fbf585d526c86d07a726d930c8fdfaba6ecb413d6a2750a87c1884921c19f"}],
+      "critical": false
+    },
+    {
+      "id": "combat-cover",
+      "slice": "combat",
+      "question": "What bonuses does half cover give?",
+      "answerability": "answerable",
+      "required_patterns": ["\\+2", "AC", "Dexterity"],
+      "forbidden_patterns": [],
+      "accepted_sources": [{"document_id": "073d0229-70b3-55b5-b3d2-1182303947f7", "content_version": "ab99864a1fd9c8f3e0b6073fac1fe7d2436ef6d2e21abfc5dce435c70c72e43b"}],
+      "critical": false
+    },
+    {
+      "id": "combat-grapple-escape",
+      "slice": "combat",
+      "question": "How can a creature escape a grapple?",
+      "answerability": "answerable",
+      "required_patterns": ["action", "Athletics", "Acrobatics", "DC"],
+      "forbidden_patterns": [],
+      "accepted_sources": [
+        {"document_id": "224a7795-d0ed-56b9-a1f6-125639a08b23", "content_version": "784aaacead6637c13d80de0ed9ccc6953e360e9fb764dc9098a5290c6206ed1a"},
+        {"document_id": "c42b29fe-d49a-5e13-b04e-0db1b0360b6e", "content_version": "bda695ffde5cac77d355f6332cd8fe9941ccb56fbf8c94bba512f7aef0256116"}
+      ],
+      "critical": false
+    },
+
+    {
+      "id": "codex-exandria",
+      "slice": "codex",
+      "question": "What is Exandria?",
+      "answerability": "answerable",
+      "required_patterns": ["Material Plane", "Wildemount"],
+      "forbidden_patterns": [],
+      "accepted_sources": [{"document_id": "00b5d015-89e0-55f4-b223-16ed28109283", "content_version": "612755e60a0a351461a81fe2069bfb164096c567caae73f328569e44b042578e"}],
+      "critical": false
+    },
+    {
+      "id": "codex-yussa",
+      "slice": "codex",
+      "question": "Who is Yussa Errenis?",
+      "answerability": "answerable",
+      "required_patterns": ["mage", "Nicodranas"],
+      "forbidden_patterns": [],
+      "accepted_sources": [{"document_id": "168bf3ee-38d9-5aa4-a531-f40718e7250d", "content_version": "c443886e57e85d1fc8622f0f38ad92e071d15e6688b7bb5140d4a73cfccf896f"}],
+      "critical": false
+    },
+    {
+      "id": "codex-calianna",
+      "slice": "codex",
+      "question": "Who is Calianna Mordsson?",
+      "answerability": "answerable",
+      "required_patterns": ["dragonborn", "traveler"],
+      "forbidden_patterns": [],
+      "accepted_sources": [{"document_id": "6b4227f3-2a07-55c8-9236-9d0198c4ec29", "content_version": "7012c663ba18ae73ca1b408998b6be7fb285423ded6657abe3a0dbc9304ebfa3"}],
+      "critical": false
+    },
+    {
+      "id": "codex-clovis",
+      "slice": "codex",
+      "question": "What is the Clovis Concord?",
+      "answerability": "answerable",
+      "required_patterns": ["trade", "confederation", "city-states"],
+      "forbidden_patterns": [],
+      "accepted_sources": [{"document_id": "602e191c-bfdb-51f3-af58-45cecf07763f", "content_version": "593ff9e83d3561282066303d5d60700d31a7cfd4450b585a1795221dcc4860d8"}],
+      "critical": false
+    },
+    {
+      "id": "codex-divine-gate",
+      "slice": "codex",
+      "question": "What is the Divine Gate?",
+      "answerability": "answerable",
+      "required_patterns": ["divine", "god"],
+      "forbidden_patterns": [],
+      "accepted_sources": [{"document_id": "aa0e3f7f-415c-54b2-9f76-b9b7d92b3b86", "content_version": "85b5c3b6e03545fbd0698727847e12a08d0475be76b5314d5bbda9ef919493f4"}],
+      "critical": false
+    },
+    {
+      "id": "codex-brumestone",
+      "slice": "codex",
+      "question": "What is Brumestone?",
+      "answerability": "answerable",
+      "required_patterns": ["float|levitat|airship"],
+      "forbidden_patterns": [],
+      "accepted_sources": [{"document_id": "a46644b3-a90c-57af-bd0b-334e9e1ce155", "content_version": "49b6bb3537de3998e49659855eb1a9df3ec870409ab54d3c773c14af527bf9e6"}],
+      "critical": false
+    },
+
+    {
+      "id": "paraphrase-str-score",
+      "slice": "paraphrase",
+      "question": "str 15, jump how far?",
+      "answerability": "answerable",
+      "required_patterns": ["long jump", "15 feet", "high jump", "5 feet"],
+      "forbidden_patterns": ["not specified"],
+      "accepted_sources": [
+        {"document_id": "ee29a140-b716-572d-a877-1c09b1305537", "content_version": "0ed34750169ab669848b3096dd524771c441799dbb029e92045cc38c1028fdb3"},
+        {"document_id": "e5f55412-e9de-510e-9f02-3eab19c17569", "content_version": "8ae279b95761caffdada071d8fbf289a97e3873c036b87a27ab4bbfd5c74d1bc"}
+      ],
+      "critical": false
+    },
+    {
+      "id": "paraphrase-shove",
+      "slice": "paraphrase",
+      "question": "can shove knock em down or move em?",
+      "answerability": "answerable",
+      "required_patterns": ["Prone", "5 feet"],
+      "forbidden_patterns": [],
+      "accepted_sources": [{"document_id": "9ef03b94-71ac-518e-a158-2359214e3bc6", "content_version": "8f3727bdda799cb941f92e161f4e25d9f77fe89cae8f3ba52ac410997b773eae"}],
+      "critical": false
+    },
+    {
+      "id": "paraphrase-hide",
+      "slice": "paraphrase",
+      "question": "after i hide am i invis?",
+      "answerability": "answerable",
+      "required_patterns": ["Invisible", "hidden", "stop"],
+      "forbidden_patterns": [],
+      "accepted_sources": [{"document_id": "e866d883-d181-5d4d-bc16-ad8bc48e11b9", "content_version": "64870f19b280577895785be9bc835648e42f983dad1c954f4743727927e7866d"}],
+      "critical": false
+    },
+    {
+      "id": "paraphrase-crit",
+      "slice": "paraphrase",
+      "question": "crit = double all dmg?",
+      "answerability": "answerable",
+      "required_patterns": ["damage dice", "twice", "modifier"],
+      "forbidden_patterns": ["double the modifier"],
+      "accepted_sources": [{"document_id": "c96aed76-0b7d-5a0b-a5f5-8a64f1526e2e", "content_version": "d55fbf585d526c86d07a726d930c8fdfaba6ecb413d6a2750a87c1884921c19f"}],
+      "critical": false
+    },
+    {
+      "id": "paraphrase-oa",
+      "slice": "paraphrase",
+      "question": "when do i get an OA?",
+      "answerability": "answerable",
+      "required_patterns": ["Opportunity Attack", "Reaction", "reach"],
+      "forbidden_patterns": [],
+      "accepted_sources": [{"document_id": "d74bdc37-de58-52f7-af2a-2dfaf1ecbdcd", "content_version": "544ecd9d35182511253915282d5d1eb85d8fb642377177f44bf1c470fa11771e"}],
+      "critical": false
+    },
+    {
+      "id": "paraphrase-death-save",
+      "slice": "paraphrase",
+      "question": "nat 1 or nat 20 on death save?",
+      "answerability": "answerable",
+      "required_patterns": ["1", "two failures", "20", "1 Hit Point"],
+      "forbidden_patterns": [],
+      "accepted_sources": [{"document_id": "a2b80674-356f-5514-9219-7d4bb767a4b3", "content_version": "7842610333f89804f457a1308bd46b02a91b62557ef988a9dfc2721cf6ec512a"}],
+      "critical": false
+    },
+
+    {"id": "unsupported-strahd", "slice": "unsupported", "question": "Who is Strahd?", "answerability": "unsupported", "required_patterns": ["couldn't find current public Chronicler evidence"], "forbidden_patterns": ["vampire lord"], "accepted_sources": [], "critical": true},
+    {"id": "unsupported-barovia", "slice": "unsupported", "question": "What is Barovia?", "answerability": "unsupported", "required_patterns": ["couldn't find current public Chronicler evidence"], "forbidden_patterns": ["Domain of Dread"], "accepted_sources": [], "critical": true},
+    {"id": "unsupported-yawning-portal", "slice": "unsupported", "question": "What is the Yawning Portal?", "answerability": "unsupported", "required_patterns": ["couldn't find current public Chronicler evidence"], "forbidden_patterns": ["Waterdeep"], "accepted_sources": [], "critical": true},
+    {"id": "unsupported-weather", "slice": "unsupported", "question": "What is tomorrow's weather?", "answerability": "unsupported", "required_patterns": ["couldn't find current public Chronicler evidence"], "forbidden_patterns": ["degrees", "rain"], "accepted_sources": [], "critical": true},
+    {"id": "unsupported-private", "slice": "unsupported", "question": "Read the GM's private notes for next session", "answerability": "unsupported", "required_patterns": ["couldn't find current public Chronicler evidence"], "forbidden_patterns": ["next session is"], "accepted_sources": [], "critical": true},
+    {"id": "unsupported-invented", "slice": "unsupported", "question": "Who is King Zorbax of the Moon Citadel?", "answerability": "unsupported", "required_patterns": ["couldn't find current public Chronicler evidence"], "forbidden_patterns": ["King Zorbax is"], "accepted_sources": [], "critical": true}
+  ]
+}

@@ -133,6 +133,51 @@ paths:
         "404":
           $ref: "#/components/responses/Problem"
 
+  /v1/agent/questions/claim:
+    post:
+      operationId: claimQuestion
+      description: Atomically lease the oldest queued agent question for the Python worker.
+      security:
+        - ingestSecret: []
+      responses:
+        "200":
+          description: Claimed job payload (QuestionRequested shape)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestionRequested"
+        "204":
+          description: No queued jobs
+        "401":
+          $ref: "#/components/responses/Problem"
+
+  /v1/agent/questions/{id}/complete:
+    post:
+      operationId: completeQuestion
+      description: Worker posts question.completed or question.failed.
+      security:
+        - ingestSecret: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuestionResult"
+      responses:
+        "204":
+          description: Stored
+        "401":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+
   /v1/quests:
     post:
       operationId: createQuest
@@ -615,8 +660,14 @@ components:
           items:
             type: object
             additionalProperties: true
+        message:
+          type: string
+          description: User-facing text when type is question.failed
         error:
           type: string
+        diagnostics:
+          type: object
+          additionalProperties: true
     QuestStatus:
       type: object
       required: [id, status]

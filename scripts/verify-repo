@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Repo tooling gate. Does not typecheck or test apps/web or apps/agent.
-# The full gate, including those apps, remains scripts/verify.
+# Full gate: scripts/verify. Agent CI: .github/workflows/agent.yml.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"

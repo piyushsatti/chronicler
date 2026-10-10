@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Agent HTTP-first port: `apps/agent` uv project (`pi.chronicler.agent` / `archive` / `qa`), API claim/complete job pipeline, Archive MCP + LanceDB, deploy compose without RabbitMQ, `agent.yml` CI. Docs: [agent-qa-http](docs/interfaces/agent-qa-http.md), D43.
 - Repo CI scaffold: `.github/workflows/repo.yml` and `scripts/verify-repo` (docs lint, Prettier, Ruff, Pyright). Web and agent apps stay out of that job.
 - Monorepo scaffold: `apps/api`, `apps/web`, `apps/discord`, `apps/agent`, `packages/contracts`.
 - Root tooling: Bun workspaces, uv dev group, `scripts/setup`, `scripts/verify`, GraphQL `export-schema` / `check-schema`.

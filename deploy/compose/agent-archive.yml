@@ -1,0 +1,62 @@
+# HTTP-first agent + archive stack (no RabbitMQ).
+# Requires a running API with ingest secret and public GraphQL.
+# Usage:
+#   export INGEST_SECRET=... ARCHIVE_MCP_TOKEN=... LITELLM_BASE_URL=... LITELLM_API_KEY=...
+#   docker compose -f deploy/compose/agent-archive.yml up --build
+name: chronicler-agent-archive
+
+services:
+  archive:
+    build:
+      context: ../../apps/agent
+      dockerfile: Dockerfile.archive
+      args:
+        CHRONICLER_BUILD_SHA: ${CHRONICLER_BUILD_SHA:-unknown}
+    environment:
+      PUBLIC_GRAPHQL_URL: ${PUBLIC_GRAPHQL_URL:-http://host.docker.internal:8080/graphql}
+      PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:-http://localhost:3000}
+      ARCHIVE_MCP_TOKEN: ${ARCHIVE_MCP_TOKEN:?set ARCHIVE_MCP_TOKEN}
+      LANCEDB_PATH: /var/lib/chronicler/archive/lancedb
+      LITELLM_BASE_URL: ${LITELLM_BASE_URL:?set LITELLM_BASE_URL}
+      LITELLM_API_KEY: ${LITELLM_API_KEY:?set LITELLM_API_KEY}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-chronicler-embed-v1}
+      ARCHIVE_HOST: 0.0.0.0
+      ARCHIVE_PORT: "8000"
+      INDEX_INTERVAL_SECONDS: ${INDEX_INTERVAL_SECONDS:-3600}
+    volumes:
+      - archive-data:/var/lib/chronicler/archive
+    ports:
+      - "8090:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  agent:
+    build:
+      context: ../../apps/agent
+      dockerfile: Dockerfile
+      args:
+        CHRONICLER_BUILD_SHA: ${CHRONICLER_BUILD_SHA:-unknown}
+    environment:
+      API_URL: ${API_URL:-http://host.docker.internal:8080}
+      INGEST_SECRET: ${INGEST_SECRET:?set INGEST_SECRET}
+      ARCHIVE_MCP_URL: http://archive:8000/mcp
+      ARCHIVE_MCP_TOKEN: ${ARCHIVE_MCP_TOKEN:?set ARCHIVE_MCP_TOKEN}
+      LITELLM_BASE_URL: ${LITELLM_BASE_URL:?set LITELLM_BASE_URL}
+      LITELLM_API_KEY: ${LITELLM_API_KEY:?set LITELLM_API_KEY}
+      AGENT_MODEL: ${AGENT_MODEL:?set AGENT_MODEL}
+      AGENT_CONTEXT_FILE: /app/context.md
+      AGENT_TOKENIZER_PATH: ${AGENT_TOKENIZER_PATH:-/model-cache/tokenizer}
+      AGENT_TOKENIZER_SHA256: ${AGENT_TOKENIZER_SHA256:?set AGENT_TOKENIZER_SHA256}
+      AGENT_TOKENIZER_CONFIG_SHA256: ${AGENT_TOKENIZER_CONFIG_SHA256:?set AGENT_TOKENIZER_CONFIG_SHA256}
+      AGENT_CHAT_TEMPLATE_SHA256: ${AGENT_CHAT_TEMPLATE_SHA256:?set AGENT_CHAT_TEMPLATE_SHA256}
+      AGENT_CLAIM_INTERVAL_SECONDS: "2"
+    depends_on:
+      - archive
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    # Mount tokenizer assets in real deploys:
+    # volumes:
+    #   - ${AGENT_TOKENIZER_HOST_PATH}:/model-cache/tokenizer:ro
+
+volumes:
+  archive-data: {}

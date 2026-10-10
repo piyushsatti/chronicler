@@ -1,6 +1,6 @@
 # Install: uv run pre-commit install
-# apps/web and apps/agent are owned by other sessions.
-exclude: ^(apps/web/|apps/agent/)
+# apps/web remains excluded (owned by a separate session).
+exclude: ^(apps/web/)
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.11.13

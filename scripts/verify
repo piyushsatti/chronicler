@@ -9,6 +9,7 @@ bun run lint
 bun run format:check
 bun run typecheck
 bun run test
+uv run --directory apps/agent ruff format --check .
 uv run pre-commit run --all-files
 python3 scripts/docs-lint.py
 

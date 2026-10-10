@@ -1,0 +1,28 @@
+name: agent
+
+on:
+  push:
+    paths:
+      - '.github/workflows/agent.yml'
+      - 'apps/agent/**'
+      - 'packages/contracts/openapi.yaml'
+  pull_request:
+    paths:
+      - '.github/workflows/agent.yml'
+      - 'apps/agent/**'
+      - 'packages/contracts/openapi.yaml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - name: Sync agent
+        run: uv sync --directory apps/agent --frozen --all-groups
+      - name: Ruff
+        run: uv run --directory apps/agent ruff check . && uv run --directory apps/agent ruff format --check .
+      - name: Pyright
+        run: uv run --directory apps/agent pyright
+      - name: Pytest
+        run: uv run --directory apps/agent pytest -q

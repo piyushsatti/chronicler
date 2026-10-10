@@ -14,6 +14,7 @@ Templates: [../templates/interface.md](/docs/templates/interface.md).
 | [scoped-body](/docs/interfaces/scoped-body.md) | Renderers receive a body already scoped; they never learn the viewer | not enforced |
 | [discord-sensor](/docs/interfaces/discord-sensor.md) | Bot observes and forwards; never announces or authors facts | **enforced** ([sensor.test.ts](/apps/discord/tests/unit/interface/sensor.test.ts)) |
 | [discord-ingest](/docs/interfaces/discord-ingest.md) | Bot → API observation contract (normalized events) | **enforced** ([ingest.test.ts](/apps/discord/tests/unit/interface/ingest.test.ts)) |
+| [agent-qa-http](/docs/interfaces/agent-qa-http.md) | Discord and agent move Q&A jobs over ingest-secret REST (no broker) | **enforced** |
 | [work-queue-durability](/docs/interfaces/work-queue-durability.md) | API owns durable retry work; alerts are out of band | not enforced |
 | [actions-releases](/docs/interfaces/actions-releases.md) | Production deploy/promote/rollback only via GitHub Actions | not enforced (policy + workflow ownership) |
 | [media-linked](/docs/interfaces/media-linked.md) | Media is linked, not hosted by Chronicler | not enforced |

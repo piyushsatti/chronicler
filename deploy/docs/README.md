@@ -18,5 +18,6 @@ How Chronicler **ships, backs up, and recovers**. Lives next to Compose files in
 | [vercel-promotion.md](/deploy/docs/vercel-promotion.md) | Frontend promotion |
 | [discord-repair.md](/deploy/docs/discord-repair.md) | Discord projection repair |
 | [secrets-overview.md](/deploy/docs/secrets-overview.md) | Where secrets live (no secret values) |
+| [agent-archive-local.md](/deploy/docs/agent-archive-local.md) | Agent + Archive local stack (HTTP; no Rabbit) |
 
 **Rule:** production deploy/promote/rollback is GitHub Actions only.

@@ -8,9 +8,8 @@ uv.lock
 **/src/generated/
 packages/contracts/schema.graphql
 
-# Other sessions own these trees.
+# Web tree owned by a separate session.
 apps/web/
-apps/agent/
 
 # Generated fixture and SQL stay as authored.
 apps/api/db/seed/qa.jsonl

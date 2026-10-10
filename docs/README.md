@@ -8,7 +8,7 @@ Use [start-here.md](/docs/start-here.md) for the human path. This page is the in
 | --- | --- | --- |
 | **Requirements** | [requirements/](/docs/requirements/README.md) | R-id index and by-system extracts |
 | **Semantics** | [semantics/](/docs/semantics/README.md) | Actors, nouns, verbs, goals, taxonomy, mereology, invariants |
-| **Systems** | [systems.md](/docs/systems.md) | Thin map of fourteen product areas |
+| **Systems** | [systems.md](/docs/systems.md) | Thin map of product areas (including Agent Q&A) |
 | **Interfaces** | [interfaces/](/docs/interfaces/README.md) | Boundaries both sides must honor |
 | **Decisions** | [decisions/](/docs/decisions/README.md) | Short boundary ADRs (D-ids) |
 

@@ -17,22 +17,25 @@ type QuestionRequested struct {
 	Type     string          `json:"type"`
 	JobID    string          `json:"job_id"`
 	Question string          `json:"question"`
-	History  json.RawMessage `json:"history"`
+	History  json.RawMessage `json:"history,omitempty"`
 }
 
 type QuestionResult struct {
-	Version int             `json:"version"`
-	Type    string          `json:"type"`
-	JobID   string          `json:"job_id"`
-	Answer  string          `json:"answer,omitempty"`
-	Sources json.RawMessage `json:"sources,omitempty"`
-	Error   string          `json:"error,omitempty"`
+	Version     int             `json:"version"`
+	Type        string          `json:"type"`
+	JobID       string          `json:"job_id"`
+	Answer      string          `json:"answer,omitempty"`
+	Sources     json.RawMessage `json:"sources,omitempty"`
+	Message     string          `json:"message,omitempty"`
+	Error       string          `json:"error,omitempty"`
+	Diagnostics json.RawMessage `json:"diagnostics,omitempty"`
 }
 
 type job struct {
-	req    QuestionRequested
-	result *QuestionResult
-	done   bool
+	req     QuestionRequested
+	result  *QuestionResult
+	state   string
+	claimed bool
 }
 
 type Service struct {
@@ -59,6 +62,7 @@ func New(secret string, store Store) *Service {
 
 func (s *Service) Routes(mux httpserver.Router) {
 	mux.HandleFunc("POST /v1/agent/questions", s.submit)
+	mux.HandleFunc("POST /v1/agent/questions/claim", s.claim)
 	mux.HandleFunc("GET /v1/agent/questions/{id}", s.get)
 	mux.HandleFunc("POST /v1/agent/questions/{id}/complete", s.completeHTTP)
 }
@@ -101,6 +105,24 @@ func (s *Service) submit(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusAccepted)
 }
 
+func (s *Service) claim(w http.ResponseWriter, r *http.Request) {
+	if err := s.authorize(r); err != nil {
+		apierr.Write(w, r, err)
+		return
+	}
+	req, ok, err := s.store.Claim(r.Context())
+	if err != nil {
+		apierr.Write(w, r, err)
+		return
+	}
+	if !ok {
+		w.WriteHeader(http.StatusNoContent)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(req)
+}
+
 func (s *Service) completeHTTP(w http.ResponseWriter, r *http.Request) {
 	if err := s.authorize(r); err != nil {
 		apierr.Write(w, r, err)
@@ -113,6 +135,10 @@ func (s *Service) completeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	if result.JobID == "" {
 		result.JobID = r.PathValue("id")
+	}
+	if result.Version != 1 || (result.Type != "question.completed" && result.Type != "question.failed") {
+		apierr.Write(w, r, apierr.New(apierr.Invalid, "version and type required"))
+		return
 	}
 	if err := s.Complete(r.Context(), result); err != nil {
 		apierr.Write(w, r, err)
@@ -136,7 +162,7 @@ func (s *Service) get(w http.ResponseWriter, r *http.Request) {
 		apierr.Write(w, r, apierr.New(apierr.NotFound, "question not found"))
 		return
 	}
-	if state != "completed" {
+	if state != "answered" && state != "failed" {
 		w.WriteHeader(http.StatusAccepted)
 		return
 	}
@@ -148,7 +174,7 @@ func (s *Service) get(w http.ResponseWriter, r *http.Request) {
 	s.mu.Lock()
 	j, memOk := s.mem[id]
 	s.mu.Unlock()
-	if memOk && j.done && j.result != nil {
+	if memOk && j.result != nil {
 		_ = json.NewEncoder(w).Encode(j.result)
 	}
 }
@@ -165,7 +191,7 @@ type memoryStore struct {
 func (m *memoryStore) Create(_ context.Context, req QuestionRequested) error {
 	m.mu.Lock()
 	defer m.mu.Unlock()
-	m.m[req.JobID] = &job{req: req}
+	m.m[req.JobID] = &job{req: req, state: "queued"}
 	return nil
 }
 
@@ -176,11 +202,24 @@ func (m *memoryStore) Get(_ context.Context, jobID string) (string, json.RawMess
 	if !ok {
 		return "", nil, false, nil
 	}
-	if !j.done {
-		return "queued", nil, true, nil
+	if j.result == nil {
+		return j.state, nil, true, nil
 	}
 	raw, _ := json.Marshal(j.result)
-	return "completed", raw, true, nil
+	return j.state, raw, true, nil
+}
+
+func (m *memoryStore) Claim(_ context.Context) (QuestionRequested, bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, j := range m.m {
+		if j.state == "queued" {
+			j.state = "claimed"
+			j.claimed = true
+			return j.req, true, nil
+		}
+	}
+	return QuestionRequested{}, false, nil
 }
 
 func (m *memoryStore) Complete(_ context.Context, result QuestionResult) error {
@@ -190,7 +229,13 @@ func (m *memoryStore) Complete(_ context.Context, result QuestionResult) error {
 	if !ok {
 		return apierr.New(apierr.NotFound, "question not found")
 	}
+	if result.Type == "question.failed" {
+		j.state = "failed"
+	} else if result.Type == "question.completed" {
+		j.state = "answered"
+	} else {
+		return apierr.New(apierr.Invalid, "type must be question.completed or question.failed")
+	}
 	j.result = &result
-	j.done = true
 	return nil
 }

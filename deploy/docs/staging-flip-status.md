@@ -10,6 +10,6 @@ Caddy changes on the droplet are manual; this file tracks **in-repo readiness** 
 | site | Yes — `/v1/stats`, `/v1/search/kinds`; GraphQL home/search | Pending operator |
 | spatial | Yes — time + hex/region/map REST; GQL `mapView`/`hex`/maps/regions | Pending operator |
 | character | Yes — GQL reads + progression/logs/verification REST | Pending operator |
-| ingest/agent | Yes — persist + agent complete route; run `apps/agent` worker for async | Pending operator |
+| ingest/agent | Yes — submit/claim/complete HTTP path; run `apps/agent` + Archive compose ([agent-qa-http](/docs/interfaces/agent-qa-http.md)) | Pending operator |
 
-Update [strangler.md](./strangler.md) on the droplet when a row moves to flipped.
+Update [strangler.md](/deploy/docs/strangler.md) on the droplet when a row moves to flipped.

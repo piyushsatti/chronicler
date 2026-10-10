@@ -28,9 +28,9 @@ func (p *PostgresStore) Create(ctx context.Context, req QuestionRequested) error
 	}
 	history := req.History
 	if history == nil {
-		history = json.RawMessage("[]")
+		history = json.RawMessage("null")
 	}
-	return p.q.UpsertAgentQuestion(ctx, dbgen.UpsertAgentQuestionParams{
+	return p.q.CreateAgentQuestion(ctx, dbgen.CreateAgentQuestionParams{
 		JobID:    uid,
 		Question: req.Question,
 		History:  history,
@@ -52,10 +52,37 @@ func (p *PostgresStore) Get(ctx context.Context, jobID string) (string, json.Raw
 	return row.State, row.Result, true, nil
 }
 
+func (p *PostgresStore) Claim(ctx context.Context) (QuestionRequested, bool, error) {
+	row, err := p.q.ClaimAgentQuestion(ctx)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return QuestionRequested{}, false, nil
+		}
+		return QuestionRequested{}, false, err
+	}
+	jobID := db.UUIDString(row.JobID)
+	if jobID == "" {
+		return QuestionRequested{}, false, apierr.New(apierr.Internal, "claimed job missing public_id")
+	}
+	return QuestionRequested{
+		Version:  1,
+		Type:     "question.requested",
+		JobID:    jobID,
+		Question: row.Question,
+		History:  json.RawMessage(row.History),
+	}, true, nil
+}
+
 func (p *PostgresStore) Complete(ctx context.Context, result QuestionResult) error {
 	uid, err := db.ParseUUID(result.JobID)
 	if err != nil {
 		return apierr.New(apierr.NotFound, "question not found")
+	}
+	state := "answered"
+	if result.Type == "question.failed" {
+		state = "failed"
+	} else if result.Type != "question.completed" {
+		return apierr.New(apierr.Invalid, "type must be question.completed or question.failed")
 	}
 	raw, err := json.Marshal(result)
 	if err != nil {
@@ -63,6 +90,7 @@ func (p *PostgresStore) Complete(ctx context.Context, result QuestionResult) err
 	}
 	return p.q.CompleteAgentQuestion(ctx, dbgen.CompleteAgentQuestionParams{
 		JobID:  uid,
+		State:  state,
 		Result: raw,
 	})
 }

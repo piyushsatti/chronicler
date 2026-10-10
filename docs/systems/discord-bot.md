@@ -4,7 +4,7 @@
 
 ## What it is
 
-Post-#300 the bot is a pure activity sensor: zero commands, zero interaction router, zero DB access, zero GraphQL client. It listens to 3 gateway events and POSTs them to one REST endpoint.
+The bot is primarily an activity sensor: no slash-command product surface, no DB access, no GraphQL client. It forwards gateway observations to ingest REST. Separately, when `AGENT_ENABLED=true`, an allowlisted mention path submits Q&A jobs over HTTP (see [agent-qa](/docs/systems/agent-qa.md)).
 
 ## Interfaces
 
@@ -12,6 +12,7 @@ Post-#300 the bot is a pure activity sensor: zero commands, zero interaction rou
 | --- | --- |
 | [discord-sensor](/docs/interfaces/discord-sensor.md) | Bot is a sensor |
 | [discord-ingest](/docs/interfaces/discord-ingest.md) | Observation forward path |
+| [agent-qa-http](/docs/interfaces/agent-qa-http.md) | Optional mention → API question path |
 
 ## Implemented by
 

@@ -6,10 +6,11 @@ Chronicler is the record-keeping platform for a West Marches D&D community. Memb
 
 - **Authoring is website-first.** Discord is a notification surface and activity sensor. Nothing the bot observes is authoritative.
 - **One API, one web app, one bot, one scheduler, one database.** No service mesh; no queue broker by default.
+- **Agent Q&A is HTTP-first.** Discord submits and polls the API; `apps/agent` claims and completes jobs. Archive + LiteLLM sit beside the API — still no RabbitMQ on this path.
 - **Access control is the hardest product problem**, not the infrastructure.
 - **Boundaries live in [interfaces/](/docs/interfaces).** System pages are thin maps that point at interfaces and owning apps.
 
-## The fourteen systems
+## The fifteen systems
 
 | System | Answers | Page |
 | --- | --- | --- |
@@ -23,6 +24,7 @@ Chronicler is the record-keeping platform for a West Marches D&D community. Memb
 | Request path | What happens between a click and a row | [systems/serving-a-request.md](/docs/systems/serving-a-request.md) |
 | Frontend | How the browser fetches, caches, and renders | [systems/frontend.md](/docs/systems/frontend.md) |
 | Discord | What the bot may and may not do | [systems/discord-bot.md](/docs/systems/discord-bot.md) |
+| Agent Q&A | How a mention becomes a grounded public answer | [systems/agent-qa.md](/docs/systems/agent-qa.md) |
 | Work and scheduling | What runs without a person asking | [systems/work-and-scheduling.md](/docs/systems/work-and-scheduling.md) |
 | Operations | How it ships, backs up, and tells you it broke | [systems/operations.md](/docs/systems/operations.md) |
 | Community and social | How members find, follow, and ask things of each other | [systems/community-and-social.md](/docs/systems/community-and-social.md) |
@@ -36,6 +38,7 @@ Chronicler is the record-keeping platform for a West Marches D&D community. Memb
 | API to database (one session; audience bound) | [session-audience](/docs/interfaces/session-audience.md) |
 | Document to reader (body already scoped) | [scoped-body](/docs/interfaces/scoped-body.md) |
 | Discord to the record (observations, never facts) | [discord-sensor](/docs/interfaces/discord-sensor.md) |
+| Discord / agent / API Q&A jobs (HTTP, no broker) | [agent-qa-http](/docs/interfaces/agent-qa-http.md) |
 | Shared GraphQL SDL | [graphql-schema](/docs/interfaces/graphql-schema.md) |
 | Production releases | [actions-releases](/docs/interfaces/actions-releases.md) |
 

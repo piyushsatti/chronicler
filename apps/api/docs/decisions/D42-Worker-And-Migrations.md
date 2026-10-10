@@ -25,7 +25,7 @@ Discord delivery and scheduled jobs (reconcile, game-time fill, idempotency purg
 
 ## Consequences
 
-Compose runs `api` and `worker`. Staging and production run both. Agent routes enqueue work for `apps/agent`.
+Compose runs `api` and `worker`. Staging and production run both. Agent routes enqueue work for `apps/agent` over HTTP claim/complete ([D43](/apps/api/docs/decisions/D43-Agent-Worker-HTTP-Claim.md)); no RabbitMQ.
 
 ## Enforced by
 

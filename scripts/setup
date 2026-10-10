@@ -7,6 +7,7 @@ bun install
 
 if command -v uv >/dev/null 2>&1; then
   uv sync --group dev
+  uv sync --directory apps/agent --all-groups
 else
   echo "uv not found; install from https://docs.astral.sh/uv/ then re-run scripts/setup" >&2
   exit 1

@@ -1,0 +1,27 @@
+FROM python:3.12-slim@sha256:2fe5997d249a808b8eeea52c58a1dbffbba28754dc11699ef5c029f2d818ce79
+
+RUN pip install --no-cache-dir uv==0.11.3
+WORKDIR /app
+
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev --no-install-project
+
+COPY src/pi/chronicler/qa/ ./src/pi/chronicler/qa/
+COPY src/pi/chronicler/archive/ ./src/pi/chronicler/archive/
+RUN uv sync --frozen --no-dev
+
+ARG CHRONICLER_BUILD_SHA=unknown
+LABEL org.opencontainers.image.revision="${CHRONICLER_BUILD_SHA}"
+ENV CHRONICLER_BUILD_SHA=${CHRONICLER_BUILD_SHA} \
+    HOME=/tmp \
+    XDG_CACHE_HOME=/tmp/.cache \
+    PATH=/app/.venv/bin:${PATH} \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+RUN groupadd --gid 65532 chronicler \
+    && useradd --no-create-home --uid 65532 --gid 65532 --shell /usr/sbin/nologin chronicler \
+    && install -d -o 65532 -g 65532 -m 0700 /var/lib/chronicler/archive
+
+USER 65532:65532
+CMD ["chronicler-archive"]
