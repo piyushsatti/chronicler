@@ -16,7 +16,6 @@ Exit 0 if clean, 1 if findings.
 from __future__ import annotations
 
 import re
-import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
@@ -113,7 +112,9 @@ def check_decision_size(findings: list[str]) -> None:
         for p in base.glob("D*.md"):
             n = len(p.read_text(encoding="utf-8").splitlines())
             if n > 100:
-                findings.append(f"{p.relative_to(REPO)}: decision has {n} lines (cap 100)")
+                findings.append(
+                    f"{p.relative_to(REPO)}: decision has {n} lines (cap 100)"
+                )
 
 
 def check_interfaces(findings: list[str]) -> None:
@@ -179,20 +180,25 @@ def check_links_and_patterns(findings: list[str]) -> None:
                 findings.append(f"{rel}: link escapes git root → {file_part}")
                 continue
             if not resolved.exists():
-                findings.append(f"{rel}: broken link (missing under git root) → {file_part}")
+                findings.append(
+                    f"{rel}: broken link (missing under git root) → {file_part}"
+                )
                 continue
             if not content_ok(resolved):
-                kind = "directory without README.md" if resolved.is_dir() else "empty or placeholder"
-                findings.append(
-                    f"{rel}: link target {kind} → {file_part}"
+                kind = (
+                    "directory without README.md"
+                    if resolved.is_dir()
+                    else "empty or placeholder"
                 )
+                findings.append(f"{rel}: link target {kind} → {file_part}")
 
         if str(rel).startswith("apps/") and "/docs/" in str(rel):
             for m in LINK_RE.finditer(text):
                 t = m.group(2)
                 if SYSTEM_ESSAY_LINK.search(t):
                     findings.append(
-                        f"{rel}: app doc links to system essay ({t}) — link interfaces only"
+                        f"{rel}: app doc links to system essay ({t}) — "
+                        "link interfaces only"
                     )
 
 

@@ -1,0 +1,17 @@
+node_modules/
+dist/
+coverage/
+pnpm-lock.yaml
+bun.lock
+uv.lock
+**/.venv/
+**/src/generated/
+packages/contracts/schema.graphql
+
+# Other sessions own these trees.
+apps/web/
+apps/agent/
+
+# Generated fixture and SQL stay as authored.
+apps/api/db/seed/qa.jsonl
+**/*.sql

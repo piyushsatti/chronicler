@@ -27,15 +27,15 @@ Do not ask the owner to perform raw SSH or on-server file edits for routine oper
 
 ## Pointer map
 
-| Resource | Holds | Consult when |
-| --- | --- | --- |
-| [README.md](/README.md) | Setup, verify, monorepo layout | Running tooling or finding an app |
-| [CONTRIBUTING.md](/CONTRIBUTING.md) | PR gate, doc ownership model | Before pushing or changing docs |
-| [docs/start-here.md](/docs/start-here.md) | Human onboarding path | First read |
-| [docs/systems.md](/docs/systems.md) | Product systems map | Shaping the product |
-| [docs/interfaces/](/docs/interfaces/README.md) | Boundaries both sides must honor | Changing a seam |
-| [docs/semantics/](/docs/semantics/README.md) | Product semantics | Naming concepts |
-| [docs/requirements/](/docs/requirements/README.md) | R-id verdict index | Flipping met/partial/absent |
+| Resource                                           | Holds                            | Consult when                      |
+| -------------------------------------------------- | -------------------------------- | --------------------------------- |
+| [README.md](/README.md)                            | Setup, verify, monorepo layout   | Running tooling or finding an app |
+| [CONTRIBUTING.md](/CONTRIBUTING.md)                | PR gate, doc ownership model     | Before pushing or changing docs   |
+| [docs/start-here.md](/docs/start-here.md)          | Human onboarding path            | First read                        |
+| [docs/systems.md](/docs/systems.md)                | Product systems map              | Shaping the product               |
+| [docs/interfaces/](/docs/interfaces/README.md)     | Boundaries both sides must honor | Changing a seam                   |
+| [docs/semantics/](/docs/semantics/README.md)       | Product semantics                | Naming concepts                   |
+| [docs/requirements/](/docs/requirements/README.md) | R-id verdict index               | Flipping met/partial/absent       |
 
 ## Verify before claiming done
 

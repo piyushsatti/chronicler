@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+
+bun install
+
+if command -v uv >/dev/null 2>&1; then
+  uv sync --group dev
+else
+  echo "uv not found; install from https://docs.astral.sh/uv/ then re-run scripts/setup" >&2
+  exit 1
+fi
+
+echo "Setup complete. Run scripts/verify before pushing."

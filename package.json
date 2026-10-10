@@ -28,7 +28,8 @@
     "test:web": "bun run --filter @pi/web test",
     "lint:discord": "bun run --filter @pi/discord lint",
     "lint:web": "bun run --filter @pi/web lint",
-    "verify": "bash scripts/verify"
+    "verify": "bash scripts/verify",
+    "verify:repo": "bash scripts/verify-repo"
   },
   "devDependencies": {
     "@eslint/js": "^9.0.0",

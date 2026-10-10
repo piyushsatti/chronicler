@@ -24,15 +24,15 @@ Equivalent: `bun run verify` after setup. Tooling and hooks: [CONTRIBUTING.md](/
 
 ### Monorepo layout
 
-| Path | Role |
-| --- | --- |
-| `apps/api` | Go GraphQL + REST API and worker |
-| `apps/web` | React SPA (`@pi/web`) |
-| `apps/discord` | discord.js sensor and mention agent (`@pi/discord`) |
-| `apps/agent` | Server-side agent (`pi.chronicler.agent`) for Discord and future callers |
-| `packages/contracts` | GraphQL SDL (`graphql/`), OpenAPI, field routing (`@pi/contracts`) |
-| `scripts/` | `setup`, `verify`, automation |
-| `docs/` | Product intent + as-built documentation ([start here](/docs/start-here.md)) |
+| Path                 | Role                                                                        |
+| -------------------- | --------------------------------------------------------------------------- |
+| `apps/api`           | Go GraphQL + REST API and worker                                            |
+| `apps/web`           | React SPA (`@pi/web`)                                                       |
+| `apps/discord`       | discord.js sensor and mention agent (`@pi/discord`)                         |
+| `apps/agent`         | Server-side agent (`pi.chronicler.agent`) for Discord and future callers    |
+| `packages/contracts` | GraphQL SDL (`graphql/`), OpenAPI, field routing (`@pi/contracts`)          |
+| `scripts/`           | `setup`, `verify`, automation                                               |
+| `docs/`              | Product intent + as-built documentation ([start here](/docs/start-here.md)) |
 
 ### Contracts
 

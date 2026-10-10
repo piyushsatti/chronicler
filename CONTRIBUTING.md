@@ -48,13 +48,13 @@ Or: `bun run verify`. This runs JavaScript and Python lint, format check, typech
 
 ### Tooling reference
 
-| Tool | Scope | Command |
-| --- | --- | --- |
-| ESLint | TypeScript / JavaScript | `bun run lint:js` |
-| Prettier | Formatted text in repo | `bun run format:check` |
-| Ruff | Python | `bun run lint:py` |
-| Pyright | Python types | `bun run typecheck:py` |
-| Vitest | `@pi/discord` (more apps later) | `bun run test` |
+| Tool     | Scope                           | Command                |
+| -------- | ------------------------------- | ---------------------- |
+| ESLint   | TypeScript / JavaScript         | `bun run lint:js`      |
+| Prettier | Formatted text in repo          | `bun run format:check` |
+| Ruff     | Python                          | `bun run lint:py`      |
+| Pyright  | Python types                    | `bun run typecheck:py` |
+| Vitest   | `@pi/discord` (more apps later) | `bun run test`         |
 
 Format fix: `bun run format`. Full lint: `bun run lint`. Full typecheck: `bun run typecheck`.
 
@@ -75,13 +75,13 @@ Templates (frozen): [docs/templates/](/docs/templates/README.md). Index: [docs/R
 
 ### Ownership
 
-| Owner | Paths | Holds |
-| --- | --- | --- |
-| Product (global) | `docs/requirements/`, `docs/semantics/`, `docs/systems/`, `docs/interfaces/` | What we owe, vocabulary, thin system map, boundaries |
-| Boundary decisions | `docs/decisions/` (D-ids that cross apps) | Short ADRs linked from an interface |
-| App | `apps/<app>/docs/` | Design, internals, local decisions, as-built for that app |
-| Deploy | `deploy/` (runbooks next to compose) | Ship, backup, repair steps |
-| Repo | this file, [AGENTS.md](/AGENTS.md) | How to change the monorepo |
+| Owner              | Paths                                                                        | Holds                                                     |
+| ------------------ | ---------------------------------------------------------------------------- | --------------------------------------------------------- |
+| Product (global)   | `docs/requirements/`, `docs/semantics/`, `docs/systems/`, `docs/interfaces/` | What we owe, vocabulary, thin system map, boundaries      |
+| Boundary decisions | `docs/decisions/` (D-ids that cross apps)                                    | Short ADRs linked from an interface                       |
+| App                | `apps/<app>/docs/`                                                           | Design, internals, local decisions, as-built for that app |
+| Deploy             | `deploy/` (runbooks next to compose)                                         | Ship, backup, repair steps                                |
+| Repo               | this file, [AGENTS.md](/AGENTS.md)                                           | How to change the monorepo                                |
 
 ### Acceptance rules (checks, not conventions)
 
@@ -95,12 +95,12 @@ Templates (frozen): [docs/templates/](/docs/templates/README.md). Index: [docs/R
 
 ### Stages (architecture and epics)
 
-| Stage | Outcome |
-| --- | --- |
-| Interface / system | Update interface or thin system page; keep [systems.md](/docs/systems.md) linked |
-| Epic cut | Trace R-ids in [requirements/index.md](/docs/requirements/index.md); open issues with acceptance tied to those rows |
-| Issue build | Plan → implement → `scripts/verify` → PR with verification named |
-| Close | Distill durable conclusions into the owning path; leave scratch outside the clone |
+| Stage              | Outcome                                                                                                             |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------- |
+| Interface / system | Update interface or thin system page; keep [systems.md](/docs/systems.md) linked                                    |
+| Epic cut           | Trace R-ids in [requirements/index.md](/docs/requirements/index.md); open issues with acceptance tied to those rows |
+| Issue build        | Plan → implement → `scripts/verify` → PR with verification named                                                    |
+| Close              | Distill durable conclusions into the owning path; leave scratch outside the clone                                   |
 
 ### Writing rules
 

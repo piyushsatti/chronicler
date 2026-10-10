@@ -1,0 +1,6 @@
+{
+  "_comment": "Allowlists for apps/web design gates. Lengths may only shrink (ratchet).",
+  "tokens": [],
+  "boundary": [],
+  "responsive": []
+}

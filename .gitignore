@@ -9,6 +9,9 @@ dist/
 .venv/
 .ruff_cache/
 .pytest_cache/
+**/test-results/
+**/playwright-report/
+**/blob-report/
 
 # Local docs quarry (superseded / migration ledger — not authority)
 .local/

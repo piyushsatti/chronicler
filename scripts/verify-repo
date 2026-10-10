@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+# Repo tooling gate. Does not typecheck or test apps/web or apps/agent.
+# The full gate, including those apps, remains scripts/verify.
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+
+python3 scripts/docs-lint.py
+
+bunx prettier --check \
+  prettier.config.js \
+  eslint.config.js \
+  package.json \
+  CHANGELOG.md \
+  README.md \
+  CONTRIBUTING.md \
+  AGENTS.md \
+  scripts \
+  .github
+
+uv run ruff check scripts
+uv run ruff format --check scripts
+uv run pyright
+
+bunx eslint scripts prettier.config.js eslint.config.js
+
+echo "verify-repo: ok"

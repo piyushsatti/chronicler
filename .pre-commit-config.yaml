@@ -1,0 +1,24 @@
+# Install: uv run pre-commit install
+# apps/web and apps/agent are owned by other sessions.
+exclude: ^(apps/web/|apps/agent/)
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.13
+    hooks:
+      - id: ruff
+        args: [--fix]
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-prettier
+    rev: v4.0.0-alpha.8
+    hooks:
+      - id: prettier
+
+  - repo: local
+    hooks:
+      - id: eslint
+        name: eslint
+        entry: bunx eslint
+        language: system
+        types_or: [javascript, ts, tsx]
+        pass_filenames: true

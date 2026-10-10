@@ -1,0 +1,66 @@
+[project]
+name = "chronicler-repo"
+version = "0.0.0"
+description = "Chronicler monorepo tooling (Python apps live under apps/)"
+license = "GPL-2.0-only"
+requires-python = ">=3.12"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pre-commit>=4.0",
+    "pyright>=1.1",
+    "ruff>=0.9",
+]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+extend-exclude = [
+    "**/node_modules",
+    "**/dist",
+    "**/.venv",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",
+    "F",
+    "I",
+    "N",
+    "W",
+    "UP",
+    "B",
+    "SIM",
+    "RUF",
+    "ANN",
+    "C4",
+    "DTZ",
+    "T20",
+    "PT",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"apps/**/tests/**/*.py" = [
+    "ANN",
+    "PT011",
+    "E501",
+    "DTZ001",
+    "N806",
+    "F841",
+]
+"apps/**/src/**/db/migrations/**/*.py" = ["E501", "I001", "UP", "ANN", "W291"]
+"scripts/**/*.py" = ["ANN", "T20"]
+
+[tool.pyright]
+pythonVersion = "3.12"
+typeCheckingMode = "strict"
+reportMissingTypeStubs = false
+include = [
+    "scripts",
+]
+exclude = [
+    "**/node_modules",
+    "**/__pycache__",
+    "**/db/migrations/versions",
+]

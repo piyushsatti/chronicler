@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Full gate, including the web and Discord workspaces.
+# Repo tooling without those apps: scripts/verify-repo
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$ROOT"
+
+bun run lint
+bun run format:check
+bun run typecheck
+bun run test
+uv run pre-commit run --all-files
+python3 scripts/docs-lint.py
+
+echo "verify: ok"
