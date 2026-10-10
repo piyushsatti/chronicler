@@ -1,0 +1,173 @@
+package main
+
+type prose struct {
+	Title string
+	Body  string
+}
+
+var entityCodex = []prose{
+	{"Mara Vellum", "Mara keeps the salt ledgers for the lower wharf and will not open them after the ferry bell. She knows which boats paid the tower and which ones only waved."},
+	{"Osric Dane", "Osric counts wagons on the river road and writes the number in chalk before he writes it in ink. A missing wagon is a conversation, not a rumor."},
+	{"Sister Halve", "Sister Halve rings the chapel bell when the fog sits on the ford. She loans candles to night travelers and expects the stubs returned."},
+	{"The Wharf Compact", "Three families and the ferry share one seal. They settle theft at the compact table before anyone walks up to the Kept Tower."},
+	{"Captain Voss", "Voss ran the coast patrol until the knee failed. The current patrol still uses his marks on the channel posts."},
+	{"Nim the Ferry", "Nim takes coin, dried fish, or a true name. The true-name fare is written once and never repeated aloud on the water."},
+	{"Ash Choir", "A funeral society that sings the drowned by their work, not their family. They keep a book of occupations in the chapel loft."},
+	{"Red Mile Gang", "Not bandits so much as a toll no charter recognizes. They paint a red stake at the mile where the road leaves the trees."},
+	{"Clerk Pellan", "Pellan copies charter notices onto the tower door and keeps the mis-copies. The mis-copies are where the interesting bargains hide."},
+	{"Old Silt", "A mudlark who sells what the tide files down. Silt can tell a coin's mint by the taste of the salt still in the groove."},
+	{"The Lampwrights", "They trim the tower lamp and the smaller lamps along the stair. A dark lamp is a report, not a chore."},
+	{"Bridget Holm", "Holm maps gardens, not roads. Her orchard plans show which trees belong to the compact and which were planted as apologies."},
+	{"Warden Pell", "Pell walks the charter boundary with a knotted rope. Each knot is a dispute that has not been written up yet."},
+	{"Ivo the Marker", "Ivo cuts trail blazes that only make sense if you are walking back. Outward travelers are meant to ask."},
+	{"The Glass Fen Covenant", "Fishers who share one net and one story about what lives under the black water. Outsiders may buy fish, not the story."},
+	{"Dame Quill", "Quill notarizes wills for people who do not trust the tower. Her copies are stored in waxed cloth above the ford."},
+	{"Sable Moth", "A collector of ruined paper. Sable pays for margins, not for text, and has reconstructed two burned notices from the notes in them."},
+	{"Brother Est the Elder", "The elder Est keeps the uncharted list: places the charter has named and not yet walked. The list is not for the door."},
+	{"The Kept Seal", "Not a person. The seal is an office passed with the lamp key. Whoever holds it can open the salt ledgers at noon."},
+	{"Ysolde of the Stair", "Ysolde sells passage up the salt stair and stories about who last slipped. She refunds the passage, never the story."},
+}
+
+var locationCodex = []prose{
+	{"Kept Tower", "The first lamp on the Lightfall Coast. Low hills behind it, a river road in front, and a stair that smells of fish even in winter."},
+	{"Salt Stair", "Cut steps from the wharf to the tower door. The middle landing floods on a hard tide and keeps a ring of salt when it drains."},
+	{"Low Ford", "The wagon crossing south of the tower. Stones shift after Harrow rains, and Osric rewrites the safe line in chalk."},
+	{"Ash Orchard", "Holm's trees, planted in rows that dodge old graves. The fruit is small and the charcoal from prunings is sold to the lampwrights."},
+	{"Glass Fen", "Black water and a single plank road. The covenant fishes at dawn and pulls the planks up if a stranger comes with a net."},
+	{"Red Mile", "The first mile of road under trees. A red stake marks where the unofficial toll begins and where the charter's patience ends."},
+	{"Crow Market", "Saturday stalls between the ford and the chapel. You can buy nails, names of boats, and last week's mis-copied notices."},
+	{"Bell Cut", "A notch in the hill where the chapel bell can be heard on the water. Fishers use it as the turn for home."},
+	{"Harrow Bridge", "Stone bridge over a stream that is a river after storms. The downstream side is carved with the years it held."},
+	{"Pale Wharf", "The working dock. Nim's ferry ties at the north bollard. The south bollard is for boats that have not paid."},
+	{"Moth Archive", "Sable's loft above a net loft. Drawers of burned edges, wax tablets, and one window that faces the tower lamp."},
+	{"Iron Garden", "A walled plot of rusted tools used as trellises. Nothing edible grows there on purpose. The compact meets when the gate is latched."},
+	{"Silt Chapel", "Chapel of the Ash Choir, floor always damp. The occupation book lives in the loft, away from the spray."},
+	{"Channel Posts", "Painted posts in the shallows, Voss's old marks still visible under newer white. A missing post is a patrol matter."},
+	{"Grey Lip", "The last mapped rise before Grey Reach. The path beyond is a rumor with footprints. The charter has not claimed it."},
+	{"Counting House", "The archon's room in the tower, not a separate building. Pellan's desk faces the door so every visitor is a pause in the copying."},
+	{"Winter Loft", "Where the lampwrights sleep during Ember. It smells of oil and wool. The lamp key is not kept here."},
+	{"Apology Row", "Six trees Holm planted for six broken bargains. Each tree has a nail and a scrap of the original argument."},
+	{"The Unwalked", "A blank on the coast map the elder Est refuses to ink. People still camp there. The blank is the point."},
+	{"Ferry Bell", "A bell on the north bollard, not the chapel. Nim rings it twice for a paid crossing and once for a debt."},
+}
+
+var featureCodex = []prose{
+	{"Tower Lamp", "A whale-oil lamp in a cage of iron. It is lit from dusk until the ferry bell, unless the charter posts a dark night."},
+	{"Salt Ledger", "A bound book of boat names, fares, and excuses. Noon openings only, and only with the Kept Seal in the room."},
+	{"Chalk Line", "Osric's safe path across the Low Ford, redrawn after rain. Walking beside it is how wagons lose a wheel."},
+	{"Red Stake", "A painted stake at the Red Mile. Pulling it up does not end the toll. It only makes the next one harder to see."},
+	{"Occupation Book", "The Ash Choir's list of the drowned, sorted by work. Families may add a line. They may not remove one."},
+	{"Waxed Wills", "Dame Quill's copies, cloth-wrapped, above the ford. They are valid to the compact and a nuisance to the tower."},
+	{"Mis-copies", "Pellan's rejected notices. The interesting bargains are in the words that were not allowed on the door."},
+	{"Channel Mark", "White paint over Voss's older color. Patrol boats steer by the newest coat and argue about the one beneath."},
+	{"Plank Road", "Removable boards across Glass Fen. The covenant takes them up at night and after uninvited nets."},
+	{"Apology Nails", "Iron nails in the Apology Row trees, each holding a scrap of a broken bargain. Holm will not say which scrap is hers."},
+	{"Lamp Key", "The key that travels with the Kept Seal. It opens the lamp cage and the noon latch on the salt ledgers."},
+	{"Ferry Tariff", "A board on the north bollard: coin, fish, or a true name. The true-name line is blank on purpose."},
+	{"Charter Rope", "Warden Pell's knotted rope. Knots are unwritten disputes. A cut knot means someone paid or someone left."},
+	{"Backward Blaze", "Ivo's trail marks, readable on the return walk. The outward face is plain wood."},
+	{"Net Loft Stairs", "Stairs to the Moth Archive. They creak in a pattern Sable trusts more than a lock."},
+	{"Dark Night Board", "A slate by the tower door announcing when the lamp stays cold. Fishers hate it. The patrol requires it."},
+	{"Compact Seal", "A shared stamp of three families and the ferry. It is not the Kept Seal, and using it on a tower notice is a fight."},
+	{"Tide Ring", "The salt crust on the Salt Stair's middle landing. Nim reads the thickness to guess tomorrow's fare in fish."},
+	{"Uncharted List", "Elder Est's list of named, unwalked places. It is not posted. Lieutenants may ask. The door may not."},
+	{"Grave Dodging Rows", "The orchard layout that bends around unmarked graves. Holm sells the plan, not the permission to dig."},
+}
+
+var ruleCodex = []prose{
+	{"Noon Latch", "The salt ledgers open at noon and at no other hour. A night request is written down and answered after the bell, not before."},
+	{"True Name Fare", "A true name pays for one crossing. Repeating it on the water voids the fare and the crossing both."},
+	{"Chalk Before Ink", "Road counts are chalk first. Ink is for the number that survived an hour. Disputes use the chalk if it is still there."},
+	{"Dark Night", "The tower may post a dark night. Boats already in the channel finish. Boats at the wharf wait for the slate to clear."},
+	{"Knot Law", "A knot on the charter rope is a dispute. Cutting it without a payment or a departure is a second dispute, written this time."},
+	{"Plank Courtesy", "Strangers may walk the Glass Fen planks. They may not fish from them. Nets come up with the boards."},
+	{"Mis-copy Privilege", "Rejected notices stay in Pellan's drawer. Anyone may read them in the counting house. Nobody may post them."},
+	{"Occupation Lines", "The choir adds the dead by the work they did. Family names are optional. Erasure is not offered."},
+	{"Seal Separation", "The Compact Seal binds the wharf. The Kept Seal binds the tower. A document with both is torn and rewritten as two."},
+	{"Backward Trails", "Blazes on the coast paths are for the walk home. Marking the outward face is vandalism, even if it is helpful."},
+	{"Apology Timber", "Trees in Apology Row are not firewood. The nail and the scrap stay until both parties say the bargain is done."},
+	{"Patrol Paint", "The newest coat on a channel post is the steering mark. Painting over it without the patrol's knot is a toll of a different kind."},
+	{"Loft Silence", "The Moth Archive is a reading room. Bargains are not struck there. Sable will sell a margin and will not witness a deal."},
+	{"Charter Blank", "The Unwalked stays blank on the public map. Naming it on a notice is a claim. Claims are walked, or they are lies."},
+	{"Ferry Twice", "Two rings: paid. One ring: debt. No ring: the boat is not Nim's, and the bollard is not yours."},
+	{"Winter Oil", "Ember oil is rationed to the tower lamp first, the stair lamps second, and celebrations never. The lampwrights keep the tally."},
+	{"Visitor Pause", "Everyone who enters the counting house waits until Pellan lifts the pen. Speaking over a copy ruins the copy."},
+	{"Grave Bend", "Orchard rows bend for graves. Straightening a row is digging. Digging needs Holm and the choir in the same afternoon."},
+	{"Stake Law", "The red stake is not charter law and not quite crime. Moving it is recorded. Ignoring it is also recorded, by Osric, in chalk."},
+	{"List Asking", "Lieutenants may ask to see the uncharted list. They may not copy it onto a door, a map, or a song."},
+}
+
+var loreCodex = []prose{
+	{"Year of the Kept Tower", "The coast counts years from the winter the lamp was first caged. Earlier winters are 'before the cage' and are somebody's guess."},
+	{"The Drowned Occupation", "A storm year when the choir stopped listing families and started listing work, because the families could not agree who had been on which boat."},
+	{"Voss's Last Patrol", "Voss marked the channel in a color the current paint does not match. The patrol still finds his posts by the wrong red under the white."},
+	{"How the Compact Started", "Three families lost a cargo and blamed the ferry. They stamped one seal so the next loss would have a table instead of a drowning."},
+	{"The Blank on Purpose", "The Unwalked was mapped once. The map started a fight about taxes. Est's predecessor scraped the ink and left the name off."},
+	{"True Names", "The fare is older than Nim. A name given on the water was once a rescue oath. It became a price when rescues turned into a route."},
+	{"Apology Season", "After a bad charter year, Holm planted a tree for each bargain the tower had forced. The row is shorter than the year deserved."},
+	{"Dark Night of Salt", "A year the lamp stayed cold for nine nights. Boats stacked at the Pale Wharf until the slate was stolen and the lamp was lit anyway."},
+	{"The Mis-copied War", "Two notices contradicted each other on the door. Pellan kept both rejects. The compact still quotes the one that was never posted."},
+	{"Choir and Tower", "The choir will sing a tower clerk. They will not store the body in the counting house. That argument is older than the occupation book."},
+	{"What Grey Reach Owes", "Nothing, officially. Unofficially, two patrols did not come back, and the charter has not decided whether that is a debt or a border."},
+	{"The Ferry's Debt Book", "Separate from the salt ledger. One ring means a name is in Nim's book. The tower cannot collect it. The compact can."},
+	{"Lampwright Winter", "Ember is when the stair lamps go hungry. The stories from the winter loft are the ones the door never hears."},
+	{"Knots Cut at Dusk", "Pell once cut three knots at dusk without writing them up. The rope was shorter in the morning. So was the list of residents."},
+	{"Sable's Margins", "A burned charter was rebuilt from notes Sable bought as scrap. The tower uses the reconstruction and will not say so on the door."},
+	{"The Second Seal", "Someone stamped compact and Kept Seal on one fare sheet. Both offices tore it. The fare is still unpaid, on purpose, by both."},
+	{"Orchard Graves", "The bends in Ash Orchard are people the choir could not name even by work. Holm will not number them."},
+	{"Stake Red", "The red is the same pigment Voss used. The gang says that is respect. The patrol says that is theft of a color."},
+	{"Bell Over Water", "On still nights the chapel bell and the ferry bell can be told apart. On fog nights people follow the wrong one and end at the ford."},
+	{"Before the Cage", "Stories from before the lamp was locked. They disagree on the year and agree that someone used the dark as a toll."},
+}
+
+var tableRules = []prose{
+	{"Be at the Recap", "The first ten minutes are the recap. If you miss them, you get the recap from another player, not a private briefing from the DM."},
+	{"Sheets on the Table", "Verification looks at the sheet you brought. A feature invented mid-scene waits until the next pause."},
+	{"Phones Down", "Brune's table parks phones at the recap. Checking a rule is fine. Checking a chat is a scene break."},
+	{"Marching Order", "Cox calls marching order before the first hex. Changing it mid-hex is a new decision and costs the time of a decision."},
+	{"Lines and Veils", "Posted in the quest brief. Adding one mid-session is allowed. Arguing someone out of one is not."},
+	{"Written Bargains", "Pell's table writes bargains down. A bargain that is only spoken can be forgotten on purpose, and that is the point of writing."},
+	{"Late Arrival", "Quill's table seats late players at the next scene break. The scene in progress does not rewind."},
+	{"Safety Pause", "Any player can call a pause. The pause is not discussed as part of the fiction. Play resumes when the caller says so."},
+}
+
+var sessionNotes = []prose{
+	{"Session at the Ford", "The party redrew Osric's chalk line and lost a wheel anyway. They paid the compact in nails and a true story about the Red Mile."},
+	{"Session in the Loft", "Sable sold a margin that named a boat the salt ledger does not have. The tower has not been told. The choir has."},
+	{"Session on the Stair", "The middle landing was flooded. Nim charged fish, not coin. Ysolde refunded a passage and kept the story of who slipped."},
+	{"Session after Dark Night", "The slate went up. Two boats waited. One did not. The patrol's note is in the counting house and the compact's note disagrees."},
+	{"Session in Grey Lip", "They camped on the last mapped rise. Something walked the unmapped side and did not cross. Est added a line to a list nobody posted."},
+	{"Session of the Two Seals", "A fare sheet arrived with both seals. Both offices tore it. The party still has a third copy, and has not decided who to anger."},
+}
+
+var communityNotes = []prose{
+	{"Thursday Coast Table", "Brune runs the coast road on Thursdays. Recap at the start. Five seats. One is open after Ember."},
+	{"Charter Review Night", "Pell's archon table reads bargains aloud. Bring the writing. Spoken deals are treated as drafts."},
+	{"Verifier Hours", "Sable and Marr check sheets before the session, not during the first scene. Book a quarter hour."},
+	{"Hexcrawl Interest", "Cox is not taking new players until the current march reaches Grey Lip. Ask anyway if you already have a coast character."},
+	{"New Player Note", "Start with a published character or a pending sheet. The Kept Tower brief is the usual first quest."},
+	{"Inactive Seats", "Inactive members keep their characters. They do not keep a seat on an open quest. Write the DM before you return."},
+}
+
+var questBriefs = []prose{
+	{"The Salt Stair", "A fare went unpaid in a way both seals refuse to own. Walk the stair, read the tide ring, and decide which office is lying by omission."},
+	{"Chalk and Wheel", "Osric's line failed a wagon. Find out whether the rain moved the stones or someone moved the chalk."},
+	{"Planks Up", "The Glass Fen covenant pulled the road. A charter clerk is on the wrong side. Get them back without a net and without a new tax."},
+	{"Red Stake Evening", "The toll stake moved overnight. The gang says the patrol did it. The patrol says the color was stolen years ago. Walk the mile."},
+	{"Dark Night Slate", "Someone stole the dark-night board and lit the lamp. The boats that left need a story that the tower and the wharf can both stand."},
+	{"Margins for Sale", "Sable is selling a burned edge that names a living sailor as drowned. Buy it, or decide who else gets to read it."},
+	{"Two Seals", "A third copy of the double-sealed fare still exists. Carry it to one office and be ready to explain why not the other."},
+	{"Apology Nails", "One scrap in the orchard names a bargain the compact thought was finished. Holm will open the gate if the party brings both parties."},
+	{"Backward Blazes", "Ivo marked a path that returns to the tower by a route the map does not have. Walk it out and back before Grey Lip."},
+	{"Occupation Line", "The choir was asked to erase a line. They will not. Someone is willing to pay a party to ask more carefully."},
+	{"Winter Oil", "The lampwright tally says the stair lamps were burned during a celebration. Ember rationing starts early if the tally is true."},
+	{"Ferry Debt", "A one-ring crossing put a name in Nim's book. The tower cannot collect it. The person named wants the party to."},
+	{"Full Table at the Ford", "Every seat on the ford job is taken. The work is still the chalk line, and the table is closed to new names."},
+	{"Full Watch on the Posts", "The channel posts need a night watch and the watch is already four. This one is not accepting another name."},
+	{"Played Crossing", "The party already took a boat across on a true name. These notes are what they brought back, not an open seat."},
+	{"Played Orchard", "Apology Row was walked, the scrap was read, and the nail stayed. The session is over. The tree is not."},
+	{"Closed Charter Count", "Pellan closed the counting house early. The mis-copies from that afternoon are filed. The quest is not open."},
+	{"Closed Patrol", "The white paint is dry. Voss's color is recorded and then left alone. The patrol marked this job closed."},
+	{"Cancelled Bell", "A fog crossing was called and then uncalled. The chapel bell and the ferry bell were both silent. No one is owed a seat."},
+	{"Cancelled Reach", "The walk to Grey Lip was posted and withdrawn before anyone left the wharf. The blank on the map stayed blank."},
+}

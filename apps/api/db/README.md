@@ -42,6 +42,19 @@ psql "$DATABASE_URL" -f db/seed/local.sql
 
 Seed resolves FKs via `public_id` / natural-key subqueries — never hard-code internal `id`.
 
+## QA / UI fixture
+
+[`seed/qa.jsonl`](seed/qa.jsonl) is a varied world for looking at the UI: codex entries across Entities, Locations, Feature, Rules, and Lore, plus other document kinds, members and DMs, characters, quests, and the Lightfall Coast map. It is not the integration-test seed (`local.sql` stays small).
+
+```bash
+# from apps/api, after migrate
+./scripts/load-qa.sh
+```
+
+The script checks that Postgres is reachable and that `goose_db_version` matches the latest file in `db/migrations`, then loads the JSONL. Each line is `{table, conflict, refs, row}`. `refs` point at another row's `public_id`. `ON CONFLICT DO NOTHING`, so loading twice does not duplicate rows.
+
+Regenerate the file from the built-in world with `go run ./cmd/seedqa -write`.
+
 ## Dual-key (one-liner)
 
 | Column | Role |
