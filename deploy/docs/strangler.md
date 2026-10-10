@@ -2,6 +2,8 @@
 
 Until P7, staging may run the old Python API beside Go. Caddy splits by path.
 
+**Readiness (in-repo):** see [staging-flip-status.md](./staging-flip-status.md). Rows below describe target routing once flipped.
+
 | Path prefix | Target when the slice is done |
 | --- | --- |
 | `/v1/stats`, `/v1/search/kinds`, `/v1/site-settings/*` | Go (`site`) |

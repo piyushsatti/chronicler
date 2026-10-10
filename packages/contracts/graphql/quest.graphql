@@ -1,0 +1,242 @@
+input CreateQuestV2Input {
+  title: String!
+  regionIds: [ID!]!
+  scheduledAt: DateTime!
+  durationHours: Float!
+  briefBody: String! = ""
+  dmId: ID = null
+  kinds: [String!]! = ["standard"]
+  slotsMax: Int! = 4
+  arcId: ID = null
+  tags: [String!]! = []
+  genres: [String!]! = []
+  apl: Int = null
+  signupType: String = null
+  additionalInfo: String = null
+}
+
+type OpenQuestSeatV2Type {
+  questId: ID!
+  shortCode: String!
+  dmId: ID!
+  regionIds: [ID!]!
+  scheduledAt: DateTime!
+  status: String!
+  slotsMax: Int!
+  filledCount: Int!
+  openSeats: Int!
+}
+
+type OpenQuestSeatsV2Result {
+  entries: [OpenQuestSeatV2Type!]!
+  total: Int!
+}
+
+type QuestAnnounceOutcomeV2Type {
+  messageId: String
+  threadCreated: Boolean!
+  alreadyAnnounced: Boolean!
+  error: String
+  eventId: String
+  eventUrl: String
+  accepted: Boolean
+  jobId: ID
+  desiredRevision: Int
+  appliedRevision: Int
+  deliveryStatus: String
+  nextRetryAt: DateTime
+}
+
+type QuestAnnouncementRoleSettingType {
+  enabled: Boolean!
+  roleId: String
+}
+
+type QuestArcV2ListResult {
+  items: [QuestArcV2Type!]!
+  total: Int!
+}
+
+type QuestArcV2Type {
+  id: ID!
+  name: String!
+  createdBy: ID!
+  createdAt: DateTime!
+  quests: [QuestV2Type!]!
+  questCount: Int!
+}
+
+type QuestBoardEntryType {
+  id: ID!
+  title: String!
+}
+
+type QuestDiscordDeliveryV2Type {
+  jobId: ID
+  desiredRevision: Int!
+  appliedRevision: Int!
+  overallStatus: String!
+  messageState: String
+  threadState: String
+  eventState: String
+  nextRetryAt: DateTime
+  errorCode: String
+  errorMessage: String
+}
+
+type QuestDiscordSyncLegOutcomeV2Type {
+  state: QuestDiscordSyncLegStateV2!
+  remoteId: String
+  error: String
+  retryAfterSeconds: Int
+}
+
+enum QuestDiscordSyncLegStateV2 {
+  CREATED
+  UPDATED
+  UNCHANGED
+  NOT_CONFIGURED
+  FAILED
+  RATE_LIMITED
+  REPAIR_REQUIRED
+}
+
+type QuestDiscordSyncOutcomeV2Type {
+  success: Boolean
+  message: QuestDiscordSyncLegOutcomeV2Type
+  thread: QuestDiscordSyncLegOutcomeV2Type
+  event: QuestDiscordSyncLegOutcomeV2Type
+  error: String
+  accepted: Boolean
+  jobId: ID
+  desiredRevision: Int
+  appliedRevision: Int
+  deliveryStatus: String
+  nextRetryAt: DateTime
+}
+
+type QuestDmV2Type {
+  handle: String!
+  displayName: String!
+  avatarUrl: String
+}
+
+type QuestHexV2Type {
+  questId: ID!
+  hexId: ID!
+  role: String!
+}
+
+type QuestParticipantV2Type {
+  questId: ID!
+  memberId: ID!
+  characterId: ID!
+  status: String!
+  manual: Boolean!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  characterName: String!
+  memberHandle: String!
+  memberDisplayName: String!
+  memberAvatarUrl: String
+}
+
+input QuestRewardV2Input {
+  kind: String!
+  amount: Int = null
+  note: String = null
+}
+
+type QuestStateCountV2Type {
+  state: String!
+  count: Int!
+}
+
+input QuestStateCountsFiltersV2Input {
+  kind: String = null
+  dmId: ID = null
+  regionId: ID = null
+  arcId: ID = null
+  tag: String = null
+}
+
+type QuestSummariesV2Result {
+  summaries: [DocumentType!]!
+  totals: QuestSummaryTotalsV2Type!
+}
+
+type QuestSummaryTotalsV2Type {
+  totalPcxpAwarded: Int!
+  itemGrants: [String!]!
+}
+
+input QuestV2FiltersInput {
+  status: String = null
+  kind: String = null
+  dmId: ID = null
+  regionId: ID = null
+  arcId: ID = null
+  tag: String = null
+  genre: String = null
+  shortCodes: [String!] = null
+  search: String = null
+  displayStatus: String = null
+  scheduledFrom: DateTime = null
+  scheduledTo: DateTime = null
+}
+
+type QuestV2ListResult {
+  items: [QuestV2Type!]!
+  total: Int!
+}
+
+type QuestV2Type {
+  id: ID!
+  shortCode: String!
+  kinds: [String!]!
+  status: String!
+  dmId: ID!
+  arcId: ID
+  scheduledAt: DateTime!
+  durationHours: Float!
+  slotsMax: Int!
+  filledCount: Int!
+  documentId: ID!
+  discordMessageId: String
+  discordEventId: String
+  eventUrl: String
+  announceError: String
+  tags: [String!]!
+  genres: [String!]!
+  apl: Int
+  signupType: String
+  createdBy: ID!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  displayStatus: String
+  dm: QuestDmV2Type
+  briefDocument: DocumentType
+  participants(status: String = null): [QuestParticipantV2Type!]!
+  hexes(role: String = null): [QuestHexV2Type!]!
+  arc: QuestArcV2Type
+  dmTable: DocumentType
+  regions: [ID!]!
+  discordDelivery: QuestDiscordDeliveryV2Type!
+}
+
+type RegionActivityQuestRefV2Type {
+  id: ID!
+  shortCode: String!
+  scheduledAt: DateTime!
+  slotsMax: Int!
+  filledCount: Int!
+}
+
+type RequestV2Type {
+  id: ID!
+  requesterId: ID!
+  targetDmId: ID!
+  kind: String!
+  note: String
+  status: String!
+}

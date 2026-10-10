@@ -1,0 +1,234 @@
+type ActivityEventType {
+  kind: String!
+  channelId: String!
+  occurredAt: DateTime!
+  amount: Int!
+}
+
+type ActivitySummaryType {
+  voiceMinutes: Int!
+  messages: Int!
+  reactions: Int!
+}
+
+input AvailabilitySlotInput {
+  day: String!
+  startTime: Time!
+  endTime: Time!
+  note: String = null
+}
+
+type AvailabilitySlotType {
+  day: String!
+  startTime: Time!
+  endTime: Time!
+  note: String
+}
+
+input CommunityDirectoryFiltersInput {
+  role: String = null
+  acceptingPlayers: Boolean = null
+  search: String = null
+  dmProfileStatus: String = null
+}
+
+type CommunityDirectoryResult {
+  entries: [DirectoryEntryType!]!
+  total: Int!
+}
+
+type DirectoryEntryType {
+  memberId: ID!
+  handle: String!
+  displayName: String!
+  avatarUrl: String
+  roles: [String!]!
+  status: String!
+  isDm: Boolean!
+  tagline: String
+  acceptingPlayers: Boolean
+  dmProfileStatus: String
+  dmProfileReviewRevision: Int
+  tableInfo: JSON
+  availableDays: [String!]!
+  lookingToPlay: Boolean!
+}
+
+type DmProfileV2Type {
+  memberId: ID!
+  tagline: String
+  philosophy: String
+  houseRules: String
+  tableInfo: JSON
+  acceptingPlayers: Boolean!
+  status: String!
+  reviewRevision: Int!
+}
+
+type DriverProgressType {
+  tenureMonths: Int!
+  playerQuestsCount: Int!
+  dmSessionsCount: Int!
+}
+
+type MemberActivityStatsType {
+  voiceMinutes: Int!
+  messages: Int!
+  questsPlayed: Int!
+  longestSessionHours: Float
+  summariesAuthored: Int!
+  lastMessageAt: DateTime
+  voiceByChannel: [ChannelVoiceMinutesType!]!
+  recentSessions: [ActivityEventType!]!
+}
+
+input MemberFiltersInput {
+  role: String = null
+  status: String = null
+  search: String = null
+}
+
+type MemberListResult {
+  items: [MemberType!]!
+  total: Int!
+}
+
+type MemberProfileType {
+  member: MemberType!
+  dmProfile: DmProfileV2Type
+  availability: [AvailabilitySlotType!]!
+  activitySummary: ActivitySummaryType!
+  recentWeeks: [WeekActivityType!]!
+}
+
+input MemberRoleBatchInput {
+  memberId: ID!
+  roles: [String!]!
+  note: String = null
+}
+
+type MemberRoleBatchResultType {
+  memberId: ID!
+  ok: Boolean!
+  error: String
+  member: MemberType
+}
+
+type MemberSearchHitType {
+  memberId: ID!
+  handle: String!
+  displayName: String!
+  avatarUrl: String
+}
+
+type MemberSettingsType {
+  memberId: ID!
+  themeMode: String
+  colorMode: String!
+  bgEffect: String!
+  themePalette: String
+  bodyFont: String
+  colorblindSafe: Boolean!
+  timezone: String
+  updatedAt: DateTime!
+  flairTitle: ID
+  flairBadge: ID
+  flairFrame: ID
+  flairNameplate: ID
+  flairToken: ID
+  notifyCharacterVerification: Boolean
+  notifyQuestSignup: Boolean
+  notifyDocumentActivity: Boolean
+  notifyQuestScheduled: Boolean
+  notifyDmMentioned: Boolean
+  notifyDmRequestDecided: Boolean
+}
+
+enum MemberSortInput {
+  HANDLE
+  JOINED_AT_ASC
+  JOINED_AT_DESC
+}
+
+type MemberType {
+  id: ID!
+  handle: String!
+  displayName: String!
+  avatarUrl: String
+  roles: [String!]!
+  status: String!
+  joinedAt: DateTime!
+  discordId: String
+}
+
+type MemberUnlockType {
+  memberId: ID!
+  unlockableId: ID!
+  unlockedAt: DateTime!
+  source: String!
+  grantedBy: ID
+}
+
+type MyPersonalizationType {
+  settings: MemberSettingsType
+  unlocks: [MemberUnlockType!]!
+  catalog: [UnlockableType!]!
+  driverProgress: DriverProgressType!
+  unlockedAchievements: [String!]!
+  dmTier: String!
+}
+
+type NotificationConnection {
+  items: [NotificationType!]!
+  hasMore: Boolean!
+  nextBefore: DateTime
+}
+
+type NotificationType {
+  id: ID!
+  kind: String!
+  subjectType: String!
+  subjectId: ID!
+  createdAt: DateTime!
+  readAt: DateTime
+  title: String
+  summary: String
+  label: String!
+  subjectCode: String
+}
+
+type RoleChangeType {
+  id: ID!
+  memberId: ID!
+  oldRoles: [String!]!
+  newRoles: [String!]!
+  changedBy: ID!
+  occurredAt: DateTime!
+  note: String
+}
+
+type UnlockableType {
+  id: ID!
+  cosmeticType: String!
+  name: String!
+  description: String
+  payload: JSON!
+  unlockRule: JSON
+  active: Boolean!
+}
+
+input UpsertUnlockableInput {
+  cosmeticType: String!
+  name: String!
+  payload: JSON!
+  description: String = null
+  unlockRule: JSON = null
+  active: Boolean! = true
+}
+
+type WeekActivityType {
+  periodStart: Date!
+  voiceMinutes: Int!
+  messages: Int!
+  reactions: Int!
+}

@@ -1,0 +1,208 @@
+type AdminCharacterDirectoryEntryV2Type {
+  id: ID!
+  shortCode: String!
+  name: String!
+  ownerId: ID!
+  ownerHandle: String!
+  ownerDisplayName: String!
+  ownerAvatarUrl: String
+  regionId: ID!
+  regionName: String!
+  guildId: ID
+  status: String!
+  verificationStatus: String!
+  verificationSubmittedAt: DateTime!
+  updatedAt: DateTime!
+}
+
+input AdminCharacterDirectoryFiltersInput {
+  namePrefix: String = null
+  regionId: ID = null
+  status: String = null
+}
+
+type AdminCharacterDirectoryV2Type {
+  items: [AdminCharacterDirectoryEntryV2Type!]!
+  total: Int!
+}
+
+input BackstoryFiltersInput {
+  cohort: String = null
+  regionId: ID = null
+  includeRetired: Boolean! = false
+}
+
+type BackstoryType {
+  id: ID!
+  name: String!
+  lore: String!
+  cohort: String!
+  sourceRegionId: ID!
+  retired: Boolean!
+}
+
+type CharacterDDBMirrorType {
+  characterId: ID!
+  level: Int
+  xp: Int
+  armorClass: Int
+  maxHp: Int
+  species: String
+  classes: String
+  background: String
+  syncedAt: DateTime
+}
+
+type CharacterLogListResult {
+  items: [CharacterLogType!]!
+  total: Int!
+}
+
+type CharacterLogType {
+  id: ID!
+  characterId: ID!
+  body: String!
+  questId: ID
+  createdBy: ID!
+  createdAt: DateTime!
+}
+
+enum CharacterReviewStatus {
+  PENDING
+  REJECTED
+  APPROVED
+  UNKNOWN
+}
+
+input CharacterV2FiltersInput {
+  ownerId: ID = null
+  guildId: ID = null
+  regionId: ID = null
+  namePrefix: String = null
+  status: String = null
+}
+
+type CharacterV2ListResult {
+  items: [CharacterV2Type!]!
+  total: Int!
+}
+
+type CharacterV2Type {
+  id: ID!
+  ownerId: ID!
+  shortCode: String!
+  name: String!
+  status: String!
+  regionId: ID!
+  guildId: ID
+  backstoryId: ID!
+  pcxp: Int!
+  description: String
+  backgroundText: String
+  ddbUrl: String
+  createdAt: DateTime!
+  updatedAt: DateTime!
+  verificationSubmittedAt: DateTime!
+  verificationStatus: CharacterReviewStatus!
+  ddbMirror: CharacterDDBMirrorType
+  proficiencies: [DDBProficiencyType!]!
+  displayIcon: String
+  daysActive: Int!
+}
+
+type CoPlayerV2Type {
+  characterId: ID!
+  memberId: ID!
+  questCount: Int!
+}
+
+input CreateCharacterV2Input {
+  name: String!
+  regionId: ID!
+  backstoryId: ID!
+  catalogPickIds: [ID!]! = []
+  guildId: ID = null
+  description: String = null
+  backgroundText: String = null
+  ddbUrl: String = null
+  shortCode: String = null
+}
+
+type CreationCatalogEntryType {
+  id: ID!
+  kind: String!
+  name: String!
+  description: String
+  available: Boolean!
+  retired: Boolean!
+  introducedByRegionId: ID
+}
+
+input CreationCatalogFiltersInput {
+  kind: String = null
+  regionId: ID = null
+  includeAll: Boolean! = false
+}
+
+type DDBProficiencyType {
+  kind: String!
+  name: String!
+}
+
+type DowntimeProjectListResult {
+  items: [DowntimeProjectType!]!
+  total: Int!
+}
+
+type DowntimeProjectType {
+  id: ID!
+  characterId: ID!
+  name: String!
+  goal: String
+  progress: Int!
+  target: Int!
+  status: String!
+  notes: String
+  updatedAt: DateTime!
+}
+
+type ProgressionEntryType {
+  id: ID!
+  characterId: ID!
+  kind: String!
+  amount: Int
+  questId: ID
+  note: String
+  recordedBy: ID!
+  recordedAt: DateTime!
+}
+
+type ProgressionListResult {
+  items: [ProgressionEntryType!]!
+  total: Int!
+}
+
+input UpdateCharacterProfileV2Input {
+  description: String = null
+  backgroundText: String = null
+}
+
+input UpsertCreationCatalogEntryInput {
+  kind: String!
+  name: String!
+  optionId: ID = null
+  description: String = null
+  available: Boolean! = false
+  retired: Boolean! = false
+  introducedByRegionId: ID = null
+}
+
+type VerificationType {
+  id: ID!
+  targetType: String!
+  targetId: ID!
+  verdict: String!
+  note: String
+  verifiedBy: ID!
+  recordedAt: DateTime!
+}

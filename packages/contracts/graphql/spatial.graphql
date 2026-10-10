@@ -1,0 +1,173 @@
+type ArchonAssignmentType {
+  memberId: ID!
+  regionId: ID!
+  grantedAt: DateTime!
+  grantedBy: ID!
+}
+
+type GameCalendarV2Type {
+  definition: JSON
+  currentGameDay: Int
+  currentGameDate: GameDateV2Type
+  monthGrid: [GameDayCellType!]!
+}
+
+type GameDateV2Type {
+  eraAbbrev: String!
+  year: Int!
+  periodName: String!
+  periodIndex: Int!
+  periodType: String!
+  day: Int!
+}
+
+type HexChangeV2Type {
+  id: ID!
+  hexId: ID!
+  occurredAt: DateTime!
+  kind: String!
+  oldValue: String
+  newValue: String
+  causedByQuest: ID
+  causedByMember: ID
+  note: String
+}
+
+type HexEdgeV2Type {
+  id: ID!
+  mapId: ID!
+  hexA: ID!
+  hexB: ID!
+  edgeType: String!
+  aSide: String
+  documentId: ID
+}
+
+type HexEntryLinkV2Type {
+  id: ID!
+  hexId: ID!
+  documentId: ID!
+  relation: String!
+  createdAt: DateTime!
+}
+
+type HexV2Type {
+  id: ID!
+  mapId: ID!
+  col: Int!
+  row: Int!
+  hexcode: String
+  terrain: String!
+  elevation: String
+  climate: String
+  submapId: ID
+  tileAssetId: ID
+  createdAt: DateTime!
+  linkedEntries: [HexEntryLinkV2Type!]!
+}
+
+type MapPlaceV2Type {
+  hexId: ID!
+  hexcode: String!
+  documentId: ID!
+  slug: String!
+  title: String!
+  category: String!
+}
+
+type MapV2Type {
+  id: ID!
+  name: String!
+  atlasCode: String!
+  family: String!
+  assetPath: String
+  cols: Int
+  rows: Int
+  regionId: ID
+  createdBy: ID!
+  createdAt: DateTime!
+  hexes(limit: Int! = 200, offset: Int! = 0): [HexV2Type!]!
+  edges: [HexEdgeV2Type!]!
+  pointcrawlNodes: [PointcrawlNodeV2Type!]!
+  pointcrawlEdges: [PointcrawlEdgeV2Type!]!
+}
+
+type MapViewV2Type {
+  mapId: ID!
+  name: String!
+  atlasCode: String!
+  cols: Int
+  rows: Int
+  places: [MapPlaceV2Type!]!
+  totalPlaces: Int!
+}
+
+type PoiV2Type {
+  id: ID!
+  hexId: ID!
+  poiType: String!
+  discoveryTier: String!
+  isCharterObjective: Boolean!
+  documentId: ID
+}
+
+type PointcrawlEdgeV2Type {
+  id: ID!
+  mapId: ID!
+  nodeA: ID!
+  nodeB: ID!
+  directed: Boolean!
+  kind: String!
+  label: String
+  documentId: ID
+}
+
+type PointcrawlNodeV2Type {
+  id: ID!
+  mapId: ID!
+  x: Float!
+  y: Float!
+  name: String!
+  documentId: ID
+  submapId: ID
+  createdAt: DateTime!
+}
+
+type RegionActivityV2Type {
+  regionId: ID!
+  regionName: String!
+  fillingCount: Int!
+  scheduledCount: Int!
+  liveCount: Int!
+  openQuests: [RegionActivityQuestRefV2Type!]!
+  liveQuests: [RegionActivityQuestRefV2Type!]!
+}
+
+type RegionArchonAssignmentsType {
+  regionId: ID!
+  archons: [ArchonAssignmentType!]!
+}
+
+type RegionCountsV2Type {
+  regionId: ID!
+  questCount: Int!
+  hexCount: Int!
+  featureCount: Int!
+}
+
+type RegionV2Type {
+  id: ID!
+  name: String!
+  kind: String!
+  charterDeadline: DateTime
+  documentId: ID
+  createdAt: DateTime!
+}
+
+type TimeAnchorV2Type {
+  id: ID!
+  realUtc: DateTime!
+  epochDay: Int!
+  rate: Float!
+  note: String
+}

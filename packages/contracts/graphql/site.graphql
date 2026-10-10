@@ -1,0 +1,158 @@
+type AdminDeliveryConfigV2Type {
+  publicOrigin: String!
+  publicOriginHealthy: Boolean!
+  deliveryMode: String!
+  announcementRoleId: String
+  announcementRoleSource: String!
+  announcementRoleHealthy: Boolean!
+}
+
+type AdminDeliveryJobV2Type {
+  id: ID!
+  questId: ID
+  questShortCode: String
+  questTitle: String
+  questLink: String
+  eventLink: String
+  messageId: String
+  state: String!
+  desiredRevision: Int
+  appliedRevision: Int
+  failureStreak: Int!
+  maxAttempts: Int!
+  nextAttemptAt: DateTime!
+  safeError: String
+  historicalRoleNotificationMissed: Boolean!
+  redriveCount: Int!
+  createdAt: DateTime!
+  updatedAt: DateTime!
+}
+
+type AdminHealthAlertV2Type {
+  key: String!
+  label: String!
+  severity: String!
+  remediationHref: String!
+  firstSeenAt: DateTime
+  lastSeenAt: DateTime
+}
+
+type AdminOperationsV2Type {
+  config: AdminDeliveryConfigV2Type!
+  activeAlertCount: Int!
+  pendingDeliveryCount: Int!
+  terminalDeliveryCount: Int!
+  deliveryTotal: Int!
+  deliveries: [AdminDeliveryJobV2Type!]!
+  activeAlerts: [AdminHealthAlertV2Type!]!
+}
+
+type CategoryCountType {
+  category: String!
+  count: Int!
+}
+
+type ChannelVoiceMinutesType {
+  channelId: String!
+  minutes: Int!
+}
+
+type CountByKeyType {
+  key: String!
+  count: Int!
+}
+
+type DmLastSessionV2Type {
+  quest: QuestV2Type!
+  recapDocument: DocumentType
+}
+
+type DmSessionHistoryV2Result {
+  items: [DmLastSessionV2Type!]!
+  total: Int!
+}
+
+type DmStatsV2Type {
+  sessionCount: Int!
+  lastSession: DmLastSessionV2Type
+}
+
+input DmSummaryFiltersV2Input {
+  questId: ID = null
+  search: String = null
+}
+
+type GameDayCellType {
+  realDate: Date!
+  gameDay: Int
+}
+
+type HomeBannerType {
+  enabled: Boolean!
+  title: String
+  body: String
+  ctaLabel: String
+  ctaHref: String
+  mediaKind: String
+  mediaUrl: String
+  mediaLabel: String
+}
+
+type HomeBucketType {
+  category: String!
+  documents: [DocumentType!]!
+}
+
+type HomeV2Type {
+  recentByCategory: [HomeBucketType!]!
+  communityStats: SiteStatsV2Type!
+  questBoard: [QuestBoardEntryType!]!
+}
+
+type SearchKindType {
+  key: String!
+  label: String!
+  searchable: Boolean!
+  exclusionReason: String
+}
+
+type SearchResultV2Type {
+  query: String!
+  documents: [DocumentSearchHitType!]!
+  documentTotal: Int!
+  documentOrder: String!
+  members: [MemberSearchHitType!]!
+  memberTotal: Int!
+  memberOrder: String!
+}
+
+type SiteStatsV2Type {
+  totalMembers: Int!
+  membersByRole: [CountByKeyType!]!
+  totalDirectors: Int!
+  activeCharacters: Int!
+  publishedDocumentsByKind: [CountByKeyType!]!
+  publishedDocumentsByCategory: [CountByKeyType!]!
+  totalMaps: Int!
+  totalHexes: Int!
+  totalRegions: Int!
+  totalQuests: Int!
+  totalDms: Int!
+  beginnerFriendlyQuestCount: Int!
+  monthsOfHistory: Int!
+  activity: ActivitySummaryType!
+}
+
+enum UnknownReason {
+  DM_SUMMARY_MISSING
+  CHARACTER_SHEET_MISSING
+  QUEST_SUMMARY_MISSING
+  REGION_UNASSIGNED
+  NPC_OWNER_MISSING
+  FACTION_LEADER_MISSING
+  NEVER_SCRAPED
+  ARCHIVE_GAP
+  AMBIGUOUS_NAME
+  TIMELINE_GAP
+  OTHER
+}

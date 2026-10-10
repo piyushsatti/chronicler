@@ -1,0 +1,530 @@
+openapi: 3.1.0
+info:
+  title: Chronicler API
+  version: "2.0.0"
+  description: |
+    REST surface under /v1. GraphQL trees live at POST /v1/graphql.
+    Field routing: packages/contracts/field-routing.md
+servers:
+  - url: /
+paths:
+  /health:
+    get:
+      operationId: health
+      responses:
+        "204":
+          description: Process is up
+
+  /auth/discord:
+    get:
+      operationId: discordOAuthRedirect
+      parameters:
+        - name: state
+          in: query
+          schema:
+            type: string
+      responses:
+        "302":
+          description: Redirect to Discord
+
+  /auth/discord/callback:
+    post:
+      operationId: discordOAuthCallback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [code]
+              properties:
+                code:
+                  type: string
+                state:
+                  type: string
+      responses:
+        "200":
+          description: JWT minted
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [token]
+                properties:
+                  token:
+                    type: string
+
+  /v1/ingest/discord-event:
+    post:
+      operationId: ingestDiscordEvent
+      security:
+        - ingestSecret: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DiscordEvent"
+      responses:
+        "200":
+          description: Accepted
+        "401":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+
+  /v1/ingest/heartbeat:
+    post:
+      operationId: ingestHeartbeat
+      security:
+        - ingestSecret: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Heartbeat"
+      responses:
+        "200":
+          description: Accepted
+        "401":
+          $ref: "#/components/responses/Problem"
+
+  /v1/agent/questions:
+    post:
+      operationId: submitQuestion
+      security:
+        - ingestSecret: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QuestionRequested"
+      responses:
+        "202":
+          description: Accepted for processing
+        "401":
+          $ref: "#/components/responses/Problem"
+
+  /v1/agent/questions/{id}:
+    get:
+      operationId: getQuestion
+      security:
+        - ingestSecret: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Completed or failed result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestionResult"
+        "202":
+          description: Still running
+        "204":
+          description: Still running (no body)
+        "404":
+          $ref: "#/components/responses/Problem"
+
+  /v1/quests/{id}/transition:
+    post:
+      operationId: transitionQuestStatus
+      security:
+        - bearer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [to]
+              properties:
+                to:
+                  type: string
+                  enum: [open, full, played, cancelled]
+      responses:
+        "200":
+          description: Quest after transition
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuestStatus"
+        "401":
+          $ref: "#/components/responses/Problem"
+        "403":
+          $ref: "#/components/responses/Problem"
+        "404":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+        "422":
+          $ref: "#/components/responses/Problem"
+
+  /v1/quests/{id}/close:
+    post:
+      operationId: closeQuest
+      security:
+        - bearer: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [idempotencyKey, rewards]
+              properties:
+                idempotencyKey:
+                  type: string
+                  format: uuid
+                rewards:
+                  type: array
+                  items:
+                    type: object
+                    required: [kind]
+                    properties:
+                      kind:
+                        type: string
+                      amount:
+                        type: integer
+                      note:
+                        type: string
+      responses:
+        "200":
+          description: Quest closed
+        "401":
+          $ref: "#/components/responses/Problem"
+        "409":
+          $ref: "#/components/responses/Problem"
+
+  /v1/me/notifications/acknowledge-suppressed:
+    post:
+      operationId: acknowledgeSuppressedNotifications
+      security:
+        - bearer: []
+      responses:
+        "204":
+          description: Suppressed rows marked read
+
+  /v1/me/personalization/reconcile:
+    post:
+      operationId: reconcileUnlocks
+      security:
+        - bearer: []
+      responses:
+        "200":
+          description: Grants applied
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  grantedCount:
+                    type: integer
+
+  /v1/stats:
+    get:
+      operationId: siteStats
+      responses:
+        "200":
+          description: Fixed public aggregates
+
+  /v1/search/kinds:
+    get:
+      operationId: searchableKinds
+      responses:
+        "200":
+          description: Static searchable kind catalog
+
+  /v1/time/game-date:
+    get:
+      operationId: gameDate
+      parameters:
+        - name: realDate
+          in: query
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        "200":
+          description: Game day
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [gameDay]
+                properties:
+                  gameDay:
+                    type: integer
+        "404":
+          $ref: "#/components/responses/Problem"
+
+  /v1/members/by-discord/{discordId}:
+    get:
+      operationId: memberByDiscordId
+      parameters:
+        - name: discordId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Member row
+        "404":
+          $ref: "#/components/responses/Problem"
+
+  /v1/members/{id}/role-history:
+    get:
+      operationId: memberRoleHistory
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Role change ledger
+
+  /v1/members/{id}/availability:
+    get:
+      operationId: memberAvailability
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Weekly availability windows
+
+  /v1/hexes/{id}/history:
+    get:
+      operationId: hexHistory
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Hex change log
+
+  /v1/regions/{id}/counts:
+    get:
+      operationId: regionCounts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Hex and open-quest counts
+
+  /v1/maps/{atlasCode}/activity:
+    get:
+      operationId: regionActivity
+      parameters:
+        - name: atlasCode
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Recent map edit activity
+
+  /v1/characters/{id}/progression:
+    get:
+      operationId: characterProgression
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: PCXP ledger entries
+
+  /v1/characters/{id}/logs:
+    get:
+      operationId: characterLogs
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Character session logs
+
+  /v1/characters/{id}/verification-history:
+    get:
+      operationId: characterVerificationHistory
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        "200":
+          description: Verification decisions
+
+  /v1/time/real-dates:
+    get:
+      operationId: realDate
+      parameters:
+        - name: gameDay
+          in: query
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Zero or more real dates
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [dates]
+                properties:
+                  dates:
+                    type: array
+                    items:
+                      type: string
+                      format: date
+
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    ingestSecret:
+      type: apiKey
+      in: header
+      name: X-Ingest-Secret
+  responses:
+    Problem:
+      description: Expected failure
+      content:
+        application/problem+json:
+          schema:
+            $ref: "#/components/schemas/Problem"
+  schemas:
+    Problem:
+      type: object
+      required: [title, status, code]
+      properties:
+        title:
+          type: string
+        status:
+          type: integer
+        code:
+          type: string
+          enum: [INVALID, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, CONFLICT, INTERNAL]
+    DiscordEvent:
+      type: object
+      required: [event_id, kind, discord_user_id, channel_id, occurred_at, amount]
+      properties:
+        event_id:
+          type: string
+        kind:
+          type: string
+          enum: [message, voice, reaction]
+        discord_user_id:
+          type: string
+        channel_id:
+          type: string
+        occurred_at:
+          type: string
+          format: date-time
+        amount:
+          type: number
+    Heartbeat:
+      type: object
+      additionalProperties: true
+    QuestionRequested:
+      type: object
+      required: [version, type, job_id, question]
+      properties:
+        version:
+          type: integer
+          const: 1
+        type:
+          type: string
+          const: question.requested
+        job_id:
+          type: string
+          format: uuid
+        question:
+          type: string
+        history:
+          type: object
+          additionalProperties: true
+    QuestionResult:
+      type: object
+      required: [version, type, job_id]
+      properties:
+        version:
+          type: integer
+        type:
+          type: string
+          enum: [question.completed, question.failed]
+        job_id:
+          type: string
+          format: uuid
+        answer:
+          type: string
+        sources:
+          type: array
+          items:
+            type: object
+            additionalProperties: true
+        error:
+          type: string
+    QuestStatus:
+      type: object
+      required: [id, status]
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [open, full, played, closed, cancelled]

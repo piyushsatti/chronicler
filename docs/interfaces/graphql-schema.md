@@ -17,7 +17,7 @@ There is one GraphQL schema for the product. Clients consume the committed SDL i
 
 ## Provider
 
-API owns the Strawberry schema and is the only writer of the committed SDL.
+Split SDL under `packages/contracts/graphql/` is the source; `scripts/merge-graphql-schema` produces the committed `schema.graphql`. The Go API generates handlers from that contract via gqlgen.
 
 ## Consumers
 

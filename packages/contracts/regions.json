@@ -1,0 +1,182 @@
+{
+  "_meta": {
+    "scraped_at": "2026-04-04",
+    "method": "Aggregated from quest_board, adventure_summaries, world_narrative, dm_announcements",
+    "data_type": "curated_analysis",
+    "source_files": [
+      "data/discord/quest_board.json (100 raw messages, Region: fields extracted from content)",
+      "data/discord/adventure_summaries.json (data.samples[].region, 5 samples)",
+      "data/discord/world_narrative.json (data.active_world_events_in_window[].region + data.regions_mentioned)",
+      "data/discord/dm_announcements.json (data.announcements[] topic/summary text)"
+    ],
+    "notes": "quest_board.json contains raw Discord messages, not pre-parsed quests. Region values were extracted manually from **Region:** fields in message content. Many region strings include sub-location prefixes (e.g. 'Sinnacar, Dalmond'), hex codes (e.g. 'H20'), or are freeform and ambiguous."
+  },
+  "data": {
+    "canonical_regions": [
+      "Dalmond",
+      "Dunnshore",
+      "Hollow Highlands",
+      "Pawluck",
+      "Viceroc",
+      "Esparithen",
+      "Pelsand"
+    ],
+    "aliases": {
+      "Dalmond": [
+        "Sinnacar, Dalmond",
+        "Sinners Wood, Dalmond",
+        "Liltiple, Dalmond",
+        "Silvershroud Sentinel, Dalmond",
+        "Sinnacar/Silvershroud, Dalmond",
+        "Sinnacar, Dalmond... And beyond",
+        "Dalmond"
+      ],
+      "Dunnshore": [
+        "Dunn",
+        "Dunn, Pelsand",
+        "Dunn, Honeydew Village",
+        "D1, Dunn",
+        "D6, Dunn",
+        "D8, Dunn",
+        "Blackmoor, Dunn",
+        "Dunnshore"
+      ],
+      "Hollow Highlands": [
+        "HH",
+        "Hollow Highland",
+        "Hollo Highlands",
+        "Hollowhighland",
+        "Highlands",
+        "Hollow Highlands, H7",
+        "Hollow Highlands, HH15",
+        "Hollow Highlands, H20",
+        "Hollo Highlands, H20",
+        "Hollow Highlands, h,20",
+        "Hollow Highlands, Esparithen",
+        "H8 Hollowhighland",
+        "HH15",
+        "HH20",
+        "HH6, Blue Zone",
+        "Highlands, HH6, Blue Zone",
+        "H7",
+        "H15",
+        "H20",
+        "H8",
+        "N1, Hollow Highlands",
+        "Nonzfyr, Hollow Highlands",
+        "Nonzfyr, N1/N10, HH",
+        "San Tumb, Hollow Highlands",
+        "San Tumb",
+        "Nonzfyr",
+        "In the middle of Nowhere, HH",
+        "an underground lake in the middle of somewhere. HH",
+        "Hillspass Village, Hollow Highlands",
+        "far North West of Hillspass village. Red zone, Hollow Highlands"
+      ],
+      "Pawluck": [
+        "Pawluck Valley",
+        "Pawluck Valley, Esparithen",
+        "Pawluck, Esparithen",
+        "Tallvane, Pawluck",
+        "Pawluck, Songsnest",
+        "Pawluck"
+      ],
+      "Viceroc": [
+        "Aurelia, Viceroc",
+        "Viceroc, V4 - Pelsand",
+        "Viceroc Hex Number",
+        "Faw's Luck, Viceroc",
+        "V9, Menmar",
+        "Viceroc"
+      ],
+      "Esparithen": [
+        "Esp E51 [Autumn]",
+        "E51",
+        "E44",
+        "E49",
+        "E50",
+        "E14",
+        "E9",
+        "E10",
+        "Winter Enclave, Esparithen",
+        "Esparithen"
+      ],
+      "Pelsand": ["Pelsand"]
+    },
+    "sub_locations": {
+      "Songnest": "Pawluck",
+      "Songsnest": "Pawluck",
+      "Song's Nest": "Pawluck",
+      "Tallvane": "Pawluck",
+      "Yeshara": "Pawluck",
+      "Hamlet of Derry": "Pawluck",
+      "Pawluck Valley": "Pawluck",
+      "Dinoland": "Hollow Highlands",
+      "Hills Pass": "Hollow Highlands",
+      "Hillspass Village": "Hollow Highlands",
+      "Hillspass": "Hollow Highlands",
+      "Nonzfyr": "Hollow Highlands",
+      "Onnswall": "Hollow Highlands",
+      "San Tumb": "Hollow Highlands",
+      "N1": "Hollow Highlands",
+      "Dunn": "Dunnshore",
+      "Pelsand (Dunn)": "Pelsand",
+      "Blackmoor": "Dunnshore",
+      "Honeydew Village": "Dunnshore",
+      "Sinnacar": "Dalmond",
+      "Gatehaven": "Dalmond",
+      "Felunia": "Dalmond",
+      "Silvershroud": "Dalmond",
+      "Liltiple": "Dalmond",
+      "Sinners Wood": "Dalmond",
+      "Aurelia": "Viceroc",
+      "Faw's Luck": "Viceroc",
+      "Menmar": "Viceroc",
+      "Pelsand (Viceroc)": "Pelsand",
+      "Oakbark": "Viceroc",
+      "Winter Enclave": "Esparithen",
+      "Autumn Nexus": "Esparithen",
+      "Hillfall": "Hollow Highlands",
+      "Grundholm": "Pawluck",
+      "Mudsparal": "Hollow Highlands"
+    },
+    "hex_code_schema": {
+      "note": "Hex codes follow a [Region Letter][Number] pattern observed across quest posts and dm_announcements.",
+      "D_prefix": "Dunnshore (D1, D6, D8 confirmed)",
+      "H_prefix": "Hollow Highlands (H7, H8, H15, H20 confirmed; HH-prefix also used: HH6, HH15, HH20)",
+      "N_prefix": "Hollow Highlands / Nonzfyr sub-zone (N1, N10 confirmed)",
+      "E_prefix": "Esparithen (E44, E49, E50 from dm_announcements; E51 from quest_board; E9, E10, E14 from dm_announcements)",
+      "V_prefix": "Viceroc (V4, V9 confirmed)"
+    },
+    "unresolved": [
+      "Vast Swamp — outside Sunndi, no canonical region mapping possible",
+      "Outside of Sunndi — explicitly out-of-region, not mappable",
+      "bed of lake Onedris — sub-location used by kd29 (Pawluck DM), likely Pawluck but unconfirmed",
+      "Fallinaust — single occurrence, no corroborating data",
+      "Speckled forest — single occurrence, no region context given",
+      "East of Grundholm — directional only; Grundholm itself may be Pawluck",
+      "Flowheart Woods — from dm_announcements (Flowheart Woods off limits, Saint of Death), no region attributed",
+      "??? — used twice in quest posts for patron-related quests (Trials of the Knight), intentionally unspecified"
+    ],
+    "region_director_map": {
+      "note": "Cross-referenced from world_narrative.json authors_and_roles. Helps validate region assignments.",
+      "Dalmond": "codebreaker1011",
+      "Hollow Highlands": ".rainthunder",
+      "Pawluck": "kd29",
+      "Esparithen": "itz_paper",
+      "Viceroc": "edeacilys",
+      "Dunnshore": "smolcop (primary DM)",
+      "Sinnacar": "codebreaker1011 (sub-region of Dalmond)",
+      "Pelsand": "unknown"
+    },
+    "conformance_notes": {
+      "region_field_format": "No enforced format. Values range from clean canonical names ('Hollow Highlands') to compound strings ('Sinnacar, Dalmond'), hex-prefixed ('H20, Hollow Highlands'), freeform prose ('far North West of Hillspass village. Red zone, Hollow Highlands'), or missing entirely.",
+      "sinnacar_dalmond_overlap": "Sinnacar is a settlement within Dalmond, not a separate region. Reclassified from canonical region to Dalmond sub-location.",
+      "pelsand_own_region": "Pelsand declared its own region. Previously ambiguous between Dunnshore and Viceroc.",
+      "gatehaven_felunia_reclassified": "Gatehaven and Felunia had zero data presence in scraped files. Reclassified as Dalmond settlements, not separate regions.",
+      "pawluck_esparithen_compound": "Multiple quests list 'Pawluck, Esparithen' or 'Pawluck Valley, Esparithen' — Pawluck Valley appears to be geographically inside or bordering Esparithen per world_narrative regions_mentioned.",
+      "songnest_status": "Listed as its own region in world_narrative.json regions_mentioned ('Songnest: Region where Black Hole appeared') and in dm_announcements as a restricted zone. However, quest posts use 'Pawluck, Songsnest' suggesting it is a sub-location of Pawluck. Mapped to Pawluck pending confirmation.",
+      "gatehaven_felunia_reclassified_note": "Gatehaven and Felunia had zero data presence. Now classified as Dalmond settlements (Features), not canonical regions."
+    }
+  }
+}

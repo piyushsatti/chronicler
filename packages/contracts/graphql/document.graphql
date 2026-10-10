@@ -1,0 +1,125 @@
+type CodexDirectoryResult {
+  items: [DocumentType!]!
+  total: Int!
+}
+
+type CodexEntryCardType {
+  document: DocumentType!
+  backlinkCount: Int!
+  subjects: [DocumentLinkType!]!
+}
+
+type DocumentAuthorType {
+  handle: String!
+}
+
+input DocumentFiltersInput {
+  kind: String = null
+  category: String = null
+  status: String = null
+  visibility: String = null
+  search: String = null
+  region: String = null
+  createdBy: ID = null
+}
+
+type DocumentLinkType {
+  documentId: ID!
+  targetType: String!
+  targetId: ID!
+  relation: String!
+}
+
+type DocumentListResult {
+  items: [DocumentType!]!
+  total: Int!
+}
+
+type DocumentRevisionType {
+  id: ID!
+  documentId: ID!
+  rev: Int!
+  title: String!
+  frontmatter: JSON!
+  body: String!
+  visibility: String!
+  publishedAt: DateTime!
+  publishedBy: ID!
+}
+
+type DocumentSearchHitType {
+  id: ID!
+  kind: String!
+  category: String
+  slug: String!
+  title: String!
+  snippet: String!
+  questShortCode: String
+}
+
+type DocumentType {
+  id: ID!
+  slug: String!
+  kind: String!
+  category: String
+  status: String!
+  visibility: String!
+  policy: [String!]
+  title: String!
+  frontmatter: JSON!
+  authorId: ID!
+  updatedAt: DateTime!
+  deletedAt: DateTime
+  deletedBy: ID
+  effectiveBody: String
+  author: DocumentAuthorType
+  publishedAt: DateTime
+  summaryDerived: SummaryDerivedV2Type
+}
+
+type LieutenantAssignmentType {
+  memberId: ID!
+  npcDocumentId: ID!
+  grantedAt: DateTime!
+  grantedBy: ID!
+}
+
+enum PreviewAudience {
+  PLAYER
+  DM
+}
+
+type SummaryDerivedV2Type {
+  regions: [SummaryRegionV2Type!]!
+  hexes: [SummaryHexV2Type!]!
+  dms: [SummaryDmV2Type!]!
+  players: [SummaryPlayerV2Type!]!
+  occurredAt: DateTime
+  arc: String
+  gameDay: Int
+  gameDate: GameDateV2Type
+}
+
+type SummaryDmV2Type {
+  id: ID!
+  displayName: String!
+}
+
+type SummaryHexV2Type {
+  id: ID!
+  mapId: ID!
+  hexcode: String
+}
+
+type SummaryPlayerV2Type {
+  characterId: ID!
+  characterShortCode: String!
+  characterName: String!
+  memberId: ID!
+  manual: Boolean!
+}
+
+type SummaryRegionV2Type {
+  id: ID!
+  name: String!
+}
