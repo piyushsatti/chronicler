@@ -28,7 +28,7 @@ Announce and scheduled-event creation live only on the API. The Discord app is a
 
 ## Enforced by
 
-**not enforced** — no CI gate that the Discord app cannot call announce APIs. See [discord-sensor](/docs/interfaces/discord-sensor.md).
+[sensor.test.ts](/apps/discord/tests/unit/interface/sensor.test.ts) fails if the Discord app calls announce, scheduled-event, GraphQL, or database APIs. See [discord-sensor](/docs/interfaces/discord-sensor.md).
 
 ## Reopen triggers
 

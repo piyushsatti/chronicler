@@ -1,0 +1,26 @@
+FROM oven/bun:1.3.14 AS build
+WORKDIR /app
+
+COPY package.json bun.lock ./
+COPY packages/contracts/package.json ./packages/contracts/
+COPY apps/discord/package.json ./apps/discord/
+COPY packages/contracts/ ./packages/contracts/
+COPY apps/discord/ ./apps/discord/
+
+RUN bun install --frozen-lockfile
+RUN bun run --filter @pi/contracts build
+RUN bun run --filter @pi/discord build
+
+FROM oven/bun:1.3.14-slim AS runtime
+WORKDIR /app
+ENV NODE_ENV=production
+
+COPY --from=build --chown=bun:bun /app/node_modules ./node_modules
+COPY --from=build --chown=bun:bun /app/packages/contracts ./packages/contracts
+COPY --from=build --chown=bun:bun /app/apps/discord/package.json ./apps/discord/package.json
+COPY --from=build --chown=bun:bun /app/apps/discord/node_modules ./apps/discord/node_modules
+COPY --from=build --chown=bun:bun /app/apps/discord/dist ./apps/discord/dist
+
+USER bun
+
+CMD ["bun", "apps/discord/dist/index.js"]

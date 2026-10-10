@@ -12,7 +12,7 @@ The Discord bot is a read-only sensor and activity forwarder. It never announces
 
 | Mechanism | Location | Status |
 | --- | --- | --- |
-| No announce / write-back mutations for bot principal | GraphQL auth registry / bot code review | **not enforced** |
+| No announce, scheduled-event, GraphQL, or database client in the Discord app | [sensor.test.ts](/apps/discord/tests/unit/interface/sensor.test.ts) | **enforced** |
 
 ## Provider
 
@@ -20,7 +20,7 @@ API announce paths and Discord webhook/outbound calls. Local design: `apps/api/d
 
 ## Consumers
 
-Discord app docs: [durable spool](/apps/discord/docs/durable-spool.md), [service notes](/apps/discord/docs/service-notes.md).
+Gateway observation: [activity](/apps/discord/docs/activity.md).
 
 ## Related decisions
 

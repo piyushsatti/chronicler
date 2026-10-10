@@ -12,11 +12,11 @@ The bot forwards **normalized observations** to the API. Observations are not fa
 
 | Mechanism | Location | Status |
 | --- | --- | --- |
-| Shared payload schema in contracts or OpenAPI | `packages/contracts/openapi.yaml` (`DiscordEvent`, `Heartbeat`) | **accepted** |
+| Activity and heartbeat bodies match `DiscordEvent` and `Heartbeat` | [ingest.test.ts](/apps/discord/tests/unit/interface/ingest.test.ts) against [openapi.yaml](/packages/contracts/openapi.yaml) | **enforced** |
 
 ## Provider
 
-Normalization and forward path: `apps/discord/docs/`.
+Normalization and forward path: [activity](/apps/discord/docs/activity.md). Heartbeat: [heartbeat](/apps/discord/docs/heartbeat.md).
 
 ## Consumers
 
