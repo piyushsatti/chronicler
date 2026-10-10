@@ -1,0 +1,126 @@
+{
+  "schemaVersion": 1,
+  "source": "apps/api/db/seed/qa.jsonl",
+  "routes": [
+    {
+      "label": "home",
+      "path": "/",
+      "expectText": "Lightfall",
+      "note": "War-room home (MSW or live stats)"
+    },
+    {
+      "label": "quest-board",
+      "path": "/quests",
+      "expectText": "Salt Stair",
+      "note": "Board lists seeded open quests"
+    },
+    {
+      "label": "quest-qa-the-salt-stair",
+      "path": "/quests/qa-the-salt-stair",
+      "expectText": "The Salt Stair",
+      "note": "seedqa quest short_code"
+    },
+    {
+      "label": "quest-qa-chalk-and-wheel",
+      "path": "/quests/qa-chalk-and-wheel",
+      "expectText": "Chalk and Wheel",
+      "note": "seedqa quest short_code"
+    },
+    {
+      "label": "quest-qa-planks-up",
+      "path": "/quests/qa-planks-up",
+      "expectText": "Planks Up",
+      "note": "seedqa quest short_code"
+    },
+    {
+      "label": "quest-qa-red-stake-evening",
+      "path": "/quests/qa-red-stake-evening",
+      "expectText": "Red Stake Evening",
+      "note": "seedqa quest short_code"
+    },
+    {
+      "label": "character-qa-bram-holt",
+      "path": "/characters/qa-bram-holt",
+      "expectText": "Bram Holt",
+      "note": "seedqa character short_code"
+    },
+    {
+      "label": "character-qa-nell-holt",
+      "path": "/characters/qa-nell-holt",
+      "expectText": "Nell Holt",
+      "note": "seedqa character short_code"
+    },
+    {
+      "label": "character-qa-nessa-quill",
+      "path": "/characters/qa-nessa-quill",
+      "expectText": "Nessa Quill",
+      "note": "seedqa character short_code"
+    },
+    {
+      "label": "character-qa-dove-rusk",
+      "path": "/characters/qa-dove-rusk",
+      "expectText": "Dove Rusk",
+      "note": "seedqa character short_code"
+    },
+    {
+      "label": "codex-npc-mara",
+      "path": "/codex/npc/mara-vellum",
+      "expectText": "Mara Vellum",
+      "note": "NPC slug"
+    },
+    {
+      "label": "npc-short-mara",
+      "path": "/npcs/mara-vellum",
+      "expectText": "Mara Vellum",
+      "note": "NPC directory path"
+    },
+    {
+      "label": "codex-location-tower",
+      "path": "/codex/location/kept-tower",
+      "expectText": "Kept Tower",
+      "note": "Location slug"
+    },
+    {
+      "label": "region-hub-kept",
+      "path": "/regions/kept-tower",
+      "expectText": "Lightfall Coast",
+      "note": "Region hub uses location slug"
+    },
+    {
+      "label": "chronicles-list",
+      "path": "/chronicles",
+      "expectText": "Chronicle",
+      "note": "Timeline list (adapter fixtures until live)"
+    },
+    {
+      "label": "codex-hub",
+      "path": "/codex",
+      "expectText": "Codex",
+      "note": "Directory hub"
+    },
+    {
+      "label": "rules-hub",
+      "path": "/rules",
+      "expectText": "Rules",
+      "note": "Rules hub page"
+    },
+    {
+      "label": "community-hub",
+      "path": "/community",
+      "expectText": "Community",
+      "note": "Community directory"
+    },
+    {
+      "label": "map-stub",
+      "path": "/map",
+      "expectText": "Coming soon",
+      "note": "Legacy ComingSoon copy"
+    },
+    {
+      "label": "not-found",
+      "path": "/this-route-does-not-exist-qa",
+      "expectText": "Page not found",
+      "note": "404 catch-all"
+    }
+  ]
+}

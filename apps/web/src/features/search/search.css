@@ -1,0 +1,15 @@
+.search-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: start center;
+  padding: var(--sp-8) var(--sp-4);
+  background: color-mix(in srgb, var(--color-bg-deep) 55%, transparent);
+}
+
+.search-dialog {
+  width: min(40rem, 100%);
+  max-height: calc(100vh - var(--sp-8));
+  overflow: auto;
+}

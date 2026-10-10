@@ -1,0 +1,201 @@
+{
+  "plan": "full_frontend_one_to_one_port_f8a3c21e.plan.md",
+  "tasks": {
+    "T001": {
+      "wave": "W0",
+      "title": "Phase 0 integrator — matrices, routes, SDD catalog",
+      "allowed_globs": [
+        "apps/web/docs/parity/**",
+        "apps/web/src/routes/**",
+        "apps/web/src/chrome/featureRegistry.ts",
+        "apps/web/src/chrome/routeBuilders.tsx",
+        "apps/web/src/routes.tsx",
+        "apps/web/src/features/**/feature.ts",
+        "apps/web/src/features/errors/**",
+        "apps/web/scripts/gen-*.mjs",
+        "apps/web/tests/routes/**"
+      ],
+      "forbidden_globs": ["apps/web/package.json", "scripts/verify"],
+      "depends_on": []
+    },
+    "T010": {
+      "wave": "W1",
+      "title": "Shell parity — contexts, SiteChrome, Redux",
+      "allowed_globs": [
+        "apps/web/src/App.tsx",
+        "apps/web/src/chrome/**",
+        "apps/web/src/context/**",
+        "apps/web/src/store/**",
+        "apps/web/src/main.tsx",
+        "apps/web/src/providers.tsx",
+        "apps/web/tests/chrome/**",
+        "apps/web/tests/store/**"
+      ],
+      "forbidden_globs": ["apps/web/src/features/**", "apps/web/src/styles/**"],
+      "depends_on": ["T001"]
+    },
+    "T020": {
+      "wave": "W2",
+      "title": "Tokens, atlas, design gates, public assets",
+      "allowed_globs": [
+        "apps/web/src/styles/**",
+        "apps/web/scripts/design-gates/**",
+        "apps/web/public/**",
+        "apps/web/tests/styles/**"
+      ],
+      "forbidden_globs": ["apps/web/src/features/**", "apps/web/src/components/**"],
+      "depends_on": ["T010"]
+    },
+    "T110-primitives-core": {
+      "wave": "W3",
+      "title": "Port primitives core",
+      "allowed_globs": [
+        "apps/web/src/components/primitives/{Button,Card,Field,Chip,Avatar,AvatarGroup,EmptyState,ErrorState,Skeleton,StubNotice,Legend,ListRow,cx,useControllable}.tsx",
+        "apps/web/src/components/primitives/hooks/**",
+        "apps/web/tests/components/primitives/**"
+      ],
+      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
+      "depends_on": ["T020"]
+    },
+    "T111-primitives-overlay": {
+      "wave": "W3",
+      "title": "Port overlay primitives",
+      "allowed_globs": [
+        "apps/web/src/components/primitives/{Modal,Popover,Toast,Tabs,Listbox,SegmentedControl,LoadMore,ColorSwatch,StatTile,FieldDateTime}.tsx",
+        "apps/web/tests/components/primitives/**"
+      ],
+      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
+      "depends_on": ["T020"]
+    },
+    "T112-primitives-layout": {
+      "wave": "W3",
+      "title": "Port layout primitives",
+      "allowed_globs": [
+        "apps/web/src/components/primitives/{Table,SplitPane,MasterDetail,WeekGrid,Calendar}.tsx",
+        "apps/web/tests/components/primitives/**"
+      ],
+      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
+      "depends_on": ["T020"]
+    },
+    "T120-interactive": {
+      "wave": "W3",
+      "title": "Port interactive components",
+      "allowed_globs": [
+        "apps/web/src/components/interactive/**",
+        "apps/web/tests/components/interactive/**"
+      ],
+      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
+      "depends_on": ["T020"]
+    },
+    "T121-foundation": {
+      "wave": "W3",
+      "title": "Port foundation components",
+      "allowed_globs": [
+        "apps/web/src/components/foundation/**",
+        "apps/web/tests/components/foundation/**"
+      ],
+      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
+      "depends_on": ["T020"]
+    },
+    "T122-data": {
+      "wave": "W3",
+      "title": "Port data components",
+      "allowed_globs": [
+        "apps/web/src/components/data/**",
+        "apps/web/tests/components/data/**"
+      ],
+      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
+      "depends_on": ["T020"]
+    },
+    "T310-feat-home": {
+      "wave": "W5",
+      "title": "Home route parity",
+      "allowed_globs": ["apps/web/src/features/home/**", "apps/web/tests/features/home/**"],
+      "forbidden_globs": ["apps/web/src/chrome/SiteChrome.tsx"],
+      "depends_on": ["T010", "IG1"]
+    },
+    "T311-feat-quest": {
+      "wave": "W5",
+      "title": "Quest routes parity",
+      "allowed_globs": ["apps/web/src/features/quest/**", "apps/web/tests/features/quest/**"],
+      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
+      "depends_on": ["T010", "IG1"]
+    },
+    "T312-feat-character": {
+      "wave": "W5",
+      "title": "Character routes parity",
+      "allowed_globs": [
+        "apps/web/src/features/character/**",
+        "apps/web/tests/features/character/**"
+      ],
+      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
+      "depends_on": ["T010", "IG1"]
+    },
+    "T313-feat-community": {
+      "wave": "W5",
+      "title": "Community and profile public routes",
+      "allowed_globs": [
+        "apps/web/src/features/community/**",
+        "apps/web/src/features/profile/**",
+        "apps/web/tests/features/community/**",
+        "apps/web/tests/features/profile/**"
+      ],
+      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
+      "depends_on": ["T010", "IG1"]
+    },
+    "T314-feat-codex": {
+      "wave": "W5",
+      "title": "Codex typed routes",
+      "allowed_globs": ["apps/web/src/features/codex/**", "apps/web/tests/features/codex/**"],
+      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
+      "depends_on": ["T010", "IG1"]
+    },
+    "T315-feat-map": {
+      "wave": "W5",
+      "title": "Map and region hub",
+      "allowed_globs": ["apps/web/src/features/map/**", "apps/web/tests/features/map/**"],
+      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
+      "depends_on": ["T010", "IG1"]
+    },
+    "T316-feat-chronicle": {
+      "wave": "W5",
+      "title": "Chronicles and summaries",
+      "allowed_globs": [
+        "apps/web/src/features/chronicle/**",
+        "apps/web/tests/features/chronicle/**"
+      ],
+      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
+      "depends_on": ["T010", "IG1"]
+    },
+    "T317-feat-rules": {
+      "wave": "W5",
+      "title": "Rules guides and rulings",
+      "allowed_globs": ["apps/web/src/features/rules/**", "apps/web/tests/features/rules/**"],
+      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
+      "depends_on": ["T010", "IG1"]
+    },
+    "T318-feat-misc-pages": {
+      "wave": "W5",
+      "title": "Welcome, settings, 404, ComingSoon",
+      "allowed_globs": [
+        "apps/web/src/features/onboarding/**",
+        "apps/web/src/features/errors/**",
+        "apps/web/src/pages/**",
+        "apps/web/tests/features/onboarding/**",
+        "apps/web/tests/features/errors/**"
+      ],
+      "forbidden_globs": ["apps/web/src/chrome/featureRegistry.ts"],
+      "depends_on": ["T010", "IG1"]
+    },
+    "T319-feat-search": {
+      "wave": "W5",
+      "title": "Search page and palette wiring",
+      "allowed_globs": [
+        "apps/web/src/features/search/**",
+        "apps/web/tests/features/search/**"
+      ],
+      "forbidden_globs": ["apps/web/src/chrome/SiteChrome.tsx"],
+      "depends_on": ["T010", "IG1"]
+    }
+  }
+}
