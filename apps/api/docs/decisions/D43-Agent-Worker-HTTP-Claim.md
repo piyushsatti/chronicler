@@ -23,11 +23,11 @@ D42 gave the API the agent question table and left answering to `apps/agent`. Di
 
 ## Consequences
 
-OpenAPI documents claim and complete. Terminal DB states use the CHECK vocabulary (`answered` / `failed`). `AGENT_INLINE_COMPLETE` remains a local stub only.
+[D44](/apps/api/docs/decisions/D44-Leased-Work-With-Fencing.md) specifies protocol 1 claim/renew/retry/complete, monotonic receipt fencing and fixed question deadlines. `background_jobs` owns terminal state; question reads derive `answered` / `failed`. `AGENT_INLINE_COMPLETE` remains a local stub only.
 
 ## Enforced by
 
-OpenAPI paths for claim/complete (Phase B stub, Phase C implemented). Integration tests for submit → claim → complete → GET (Phase C). Interface [agent-qa-http](/docs/interfaces/agent-qa-http.md).
+OpenAPI/mux tests and agent HTTP lifecycle tests cover the seam. Disposable Postgres lease integration tests cover persistence and concurrency when executed. Interface [agent-qa-http](/docs/interfaces/agent-qa-http.md).
 
 ## Reopen triggers
 

@@ -11,119 +11,65 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const claimAgentQuestion = `-- name: ClaimAgentQuestion :one
-WITH next AS (
-    SELECT aq.id
-    FROM agent_questions aq
-    WHERE aq.state = 'queued'
-    ORDER BY aq.created_at
-    FOR UPDATE SKIP LOCKED
-    LIMIT 1
-)
-UPDATE agent_questions aq
-SET state = 'claimed', updated_at = now()
-FROM next
-WHERE aq.id = next.id
-RETURNING
-    (SELECT b.public_id FROM background_jobs b WHERE b.id = aq.job_id) AS job_id,
-    aq.question,
-    aq.history
-`
-
-type ClaimAgentQuestionRow struct {
-	JobID    pgtype.UUID `json:"job_id"`
-	Question string      `json:"question"`
-	History  []byte      `json:"history"`
-}
-
-func (q *Queries) ClaimAgentQuestion(ctx context.Context) (ClaimAgentQuestionRow, error) {
-	row := q.db.QueryRow(ctx, claimAgentQuestion)
-	var i ClaimAgentQuestionRow
-	err := row.Scan(&i.JobID, &i.Question, &i.History)
-	return i, err
-}
-
-const completeAgentQuestion = `-- name: CompleteAgentQuestion :exec
-UPDATE agent_questions
-SET state = $1,
-    result = $2,
-    updated_at = now()
-WHERE job_id = (SELECT b.id FROM background_jobs b WHERE b.public_id = $3)
-  AND state IN ('queued', 'claimed')
-`
-
-type CompleteAgentQuestionParams struct {
-	State  string      `json:"state"`
-	Result []byte      `json:"result"`
-	JobID  pgtype.UUID `json:"job_id"`
-}
-
-func (q *Queries) CompleteAgentQuestion(ctx context.Context, arg CompleteAgentQuestionParams) error {
-	_, err := q.db.Exec(ctx, completeAgentQuestion, arg.State, arg.Result, arg.JobID)
-	return err
-}
-
-const createAgentQuestion = `-- name: CreateAgentQuestion :exec
-WITH inserted_job AS (
-    INSERT INTO background_jobs (public_id, job_key, kind, lane, state, payload)
-    VALUES (
-        $3,
-        'agent:' || $3::text,
-        'agent_question',
-        'agent',
-        'queued',
-        '{}'::jsonb
-    )
-    ON CONFLICT (public_id) DO NOTHING
-    RETURNING id
-),
-job_row AS (
-    SELECT id FROM inserted_job
-    UNION ALL
-    SELECT id FROM background_jobs WHERE public_id = $3
-    LIMIT 1
-)
-INSERT INTO agent_questions (job_id, question, history, state)
-SELECT job_row.id, $1, $2, 'queued'
-FROM job_row
-ON CONFLICT (job_id) DO NOTHING
-`
-
-type CreateAgentQuestionParams struct {
-	Question string      `json:"question"`
-	History  []byte      `json:"history"`
-	JobID    pgtype.UUID `json:"job_id"`
-}
-
-func (q *Queries) CreateAgentQuestion(ctx context.Context, arg CreateAgentQuestionParams) error {
-	_, err := q.db.Exec(ctx, createAgentQuestion, arg.Question, arg.History, arg.JobID)
-	return err
-}
-
 const getAgentQuestion = `-- name: GetAgentQuestion :one
-SELECT b.public_id AS job_id, aq.question, aq.history, aq.state, aq.result
-FROM agent_questions aq
-JOIN background_jobs b ON b.id = aq.job_id
-WHERE b.public_id = $1
+SELECT b.id,b.public_id AS job_id,aq.question,aq.history,b.question_deadline_at,
+ CASE WHEN b.state='succeeded' THEN 'answered' WHEN b.state IN ('dead','repair_required','cancelled') THEN 'failed'
+ WHEN b.state='running' THEN 'claimed' ELSE 'queued' END::text AS state,aq.result
+FROM agent_questions aq JOIN background_jobs b ON b.id=aq.job_id WHERE b.public_id=$1
 `
 
 type GetAgentQuestionRow struct {
-	JobID    pgtype.UUID `json:"job_id"`
-	Question string      `json:"question"`
-	History  []byte      `json:"history"`
-	State    string      `json:"state"`
-	Result   []byte      `json:"result"`
+	ID                 int64              `json:"id"`
+	JobID              pgtype.UUID        `json:"job_id"`
+	Question           string             `json:"question"`
+	History            []byte             `json:"history"`
+	QuestionDeadlineAt pgtype.Timestamptz `json:"question_deadline_at"`
+	State              string             `json:"state"`
+	Result             []byte             `json:"result"`
 }
 
 func (q *Queries) GetAgentQuestion(ctx context.Context, jobID pgtype.UUID) (GetAgentQuestionRow, error) {
 	row := q.db.QueryRow(ctx, getAgentQuestion, jobID)
 	var i GetAgentQuestionRow
 	err := row.Scan(
+		&i.ID,
 		&i.JobID,
 		&i.Question,
 		&i.History,
+		&i.QuestionDeadlineAt,
 		&i.State,
 		&i.Result,
 	)
 	return i, err
+}
+
+const insertAgentQuestion = `-- name: InsertAgentQuestion :exec
+INSERT INTO agent_questions(job_id,question,history) VALUES($1,$2,$3)
+`
+
+type InsertAgentQuestionParams struct {
+	JobID    int64  `json:"job_id"`
+	Question string `json:"question"`
+	History  []byte `json:"history"`
+}
+
+func (q *Queries) InsertAgentQuestion(ctx context.Context, arg InsertAgentQuestionParams) error {
+	_, err := q.db.Exec(ctx, insertAgentQuestion, arg.JobID, arg.Question, arg.History)
+	return err
+}
+
+const insertQuestionJob = `-- name: InsertQuestionJob :exec
+INSERT INTO background_jobs(public_id,job_key,kind,lane,state,payload,question_deadline_at)
+VALUES($1::uuid,'agent:'||$1::uuid::text,'agent_question','agent','queued',$2,clock_timestamp()+interval '100 seconds')
+ON CONFLICT(public_id) DO NOTHING
+`
+
+type InsertQuestionJobParams struct {
+	JobID   pgtype.UUID `json:"job_id"`
+	Payload []byte      `json:"payload"`
+}
+
+func (q *Queries) InsertQuestionJob(ctx context.Context, arg InsertQuestionJobParams) error {
+	_, err := q.db.Exec(ctx, insertQuestionJob, arg.JobID, arg.Payload)
+	return err
 }

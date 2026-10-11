@@ -33,26 +33,27 @@ func (h *MaintenanceHandler) ProcessOne(ctx context.Context) (bool, error) {
 	if job.ID == "" {
 		return false, nil
 	}
-	var errRun error
-	switch job.Kind {
-	case "purge_idempotency":
-		errRun = dbgen.New(h.pool).PurgeIdempotencyKeys(ctx)
-	case "gametime_fill":
-		errRun = h.gametimeFill(ctx)
-	case "reconcile_dry_run":
-		errRun = h.reconcileDryRun(ctx)
-	default:
-		slog.InfoContext(ctx, "unknown maintenance job", "kind", job.Kind)
-	}
-	if errRun != nil {
-		if job.Attempts+1 >= jobs.MaxAttempts {
-			_ = h.store.Fail(ctx, job.ID, jobs.Dead, errRun.Error())
-			return true, nil
+	errRun := jobs.RunLeased(ctx, h.store, job, func(ctx context.Context) error {
+		var errRun error
+		switch job.Kind {
+		case "purge_idempotency":
+			errRun = dbgen.New(h.pool).PurgeIdempotencyKeys(ctx)
+		case "gametime_fill":
+			errRun = h.gametimeFill(ctx)
+		case "reconcile_dry_run":
+			errRun = h.reconcileDryRun(ctx)
+		default:
+			slog.InfoContext(ctx, "unknown maintenance job", "kind", job.Kind)
 		}
-		_ = h.store.Retry(ctx, job.ID, jobs.Backoff(job.Attempts+1), errRun.Error())
-		return true, nil
+		return errRun
+	})
+	if errRun != nil {
+		if job.Attempts >= jobs.MaxAttempts {
+			return true, h.store.Fail(ctx, job.Receipt(), jobs.Dead, errRun.Error())
+		}
+		return true, h.store.Retry(ctx, job.Receipt(), jobs.Backoff(job.Attempts), errRun.Error())
 	}
-	if err := h.store.Succeed(ctx, job.ID); err != nil {
+	if err := h.store.Succeed(ctx, job.Receipt()); err != nil {
 		return true, err
 	}
 	slog.InfoContext(ctx, "maintenance job succeeded", "kind", job.Kind, "key", job.Key)

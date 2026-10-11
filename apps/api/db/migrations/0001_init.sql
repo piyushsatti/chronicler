@@ -623,6 +623,13 @@ CREATE TABLE background_jobs (
     attempts INT NOT NULL DEFAULT 0,
     payload JSONB NOT NULL DEFAULT '{}',
     error_message TEXT,
+    lease_token BIGINT NOT NULL DEFAULT 0 CHECK (lease_token >= 0),
+    lease_expires_at TIMESTAMPTZ,
+    claimed_at TIMESTAMPTZ,
+    attempt_deadline_at TIMESTAMPTZ,
+    question_deadline_at TIMESTAMPTZ,
+    completion_operation TEXT,
+    completion_payload JSONB,
     next_run_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -631,11 +638,23 @@ CREATE TABLE background_jobs (
             'queued', 'running', 'succeeded', 'retry_wait',
             'repair_required', 'dead', 'cancelled'
         )
-    )
+    ),
+    CONSTRAINT job_lease_state CHECK (
+        (state = 'running' AND lease_expires_at IS NOT NULL AND claimed_at IS NOT NULL AND attempt_deadline_at IS NOT NULL) OR
+        (state <> 'running' AND lease_expires_at IS NULL AND claimed_at IS NULL AND attempt_deadline_at IS NULL)
+    ),
+    CONSTRAINT job_completion_pair CHECK ((completion_operation IS NULL) = (completion_payload IS NULL)),
+    CONSTRAINT agent_question_deadline CHECK ((kind = 'agent_question') = (question_deadline_at IS NOT NULL))
 );
 
 CREATE INDEX background_jobs_claim_idx
     ON background_jobs (lane, state, next_run_at);
+
+CREATE INDEX background_jobs_expiry_idx
+    ON background_jobs (lease_expires_at) WHERE state = 'running';
+CREATE INDEX background_jobs_question_deadline_idx
+    ON background_jobs (question_deadline_at)
+    WHERE kind = 'agent_question' AND state IN ('queued', 'retry_wait', 'running');
 
 CREATE TABLE idempotency_keys (
     endpoint TEXT NOT NULL,
@@ -651,13 +670,9 @@ CREATE TABLE agent_questions (
     job_id BIGINT NOT NULL UNIQUE REFERENCES background_jobs (id),
     question TEXT NOT NULL,
     history JSONB,
-    state TEXT NOT NULL DEFAULT 'queued',
     result JSONB,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-    CONSTRAINT agent_questions_state_check CHECK (
-        state IN ('queued', 'claimed', 'answered', 'failed', 'cancelled')
-    )
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE discord_activity_events (
@@ -683,7 +698,78 @@ CREATE TABLE site_settings (
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Specification SQL interpreter for the outer document audience (D3/D28).
+-- Tokens are signed by a leading !; no cryptographic signature is implied.
+-- +goose StatementBegin
+CREATE FUNCTION document_readable(
+    document_id UUID, author_id UUID, document_status TEXT,
+    legacy_visibility TEXT, audience JSONB,
+    viewer_id UUID, viewer_roles TEXT[], viewer_handle TEXT,
+    viewer_admin BOOLEAN, viewer_live_dm BOOLEAN, reader_ids UUID[]
+) RETURNS BOOLEAN LANGUAGE plpgsql IMMUTABLE AS $$
+DECLARE
+    token JSONB;
+    body TEXT;
+    principal_kind TEXT;
+    principal_value TEXT;
+    denied BOOLEAN;
+    member_deny BOOLEAN := FALSE;
+    member_allow BOOLEAN := FALSE;
+    role_deny BOOLEAN := FALSE;
+    role_allow BOOLEAN := FALSE;
+    legacy_dm_tier BOOLEAN;
+BEGIN
+    IF viewer_id IS NOT NULL AND (COALESCE(viewer_admin, FALSE) OR author_id = viewer_id) THEN
+        RETURN TRUE;
+    END IF;
+    IF document_status IS DISTINCT FROM 'published' THEN
+        RETURN FALSE;
+    END IF;
+    IF audience IS NULL OR audience = 'null'::jsonb THEN
+        -- Approved role-DM retains the current profile repair; active archon
+        -- independently retains the source's legacy tier. This does not grant
+        -- role:dm to archons or change command authority.
+        legacy_dm_tier := viewer_id IS NOT NULL AND (
+            COALESCE(viewer_live_dm, FALSE) OR COALESCE('archon' = ANY(viewer_roles), FALSE)
+        );
+        RETURN CASE legacy_visibility
+            WHEN 'public' THEN TRUE
+            WHEN 'dm_only' THEN legacy_dm_tier
+            WHEN 'restricted' THEN legacy_dm_tier
+                AND COALESCE(document_id = ANY(reader_ids), FALSE)
+            ELSE FALSE END;
+    END IF;
+    IF jsonb_typeof(audience) <> 'array' THEN
+        RETURN FALSE;
+    END IF;
+    FOR token IN SELECT value FROM jsonb_array_elements(audience) LOOP
+        IF jsonb_typeof(token) <> 'string' THEN RETURN FALSE; END IF;
+        body := token #>> '{}';
+        denied := left(body, 1) = '!';
+        IF denied THEN body := substr(body, 2); END IF;
+        principal_kind := split_part(body, ':', 1);
+        principal_value := substr(body, strpos(body, ':') + 1);
+        IF strpos(body, ':') = 0 OR principal_kind NOT IN ('role', 'member') OR principal_value = '' THEN
+            RETURN FALSE;
+        END IF;
+        IF viewer_id IS NULL THEN CONTINUE; END IF;
+        IF principal_kind = 'member' AND (
+            principal_value = viewer_id::text OR
+            (COALESCE(viewer_handle, '') <> '' AND principal_value = '@' || viewer_handle)
+        ) THEN
+            IF denied THEN member_deny := TRUE; ELSE member_allow := TRUE; END IF;
+        ELSIF principal_kind = 'role' AND COALESCE(principal_value = ANY(viewer_roles), FALSE) THEN
+            IF denied THEN role_deny := TRUE; ELSE role_allow := TRUE; END IF;
+        END IF;
+    END LOOP;
+    RETURN NOT member_deny AND (member_allow OR (NOT role_deny AND role_allow));
+END;
+$$;
+-- +goose StatementEnd
+
+
 -- +goose Down
+DROP FUNCTION document_readable(UUID, UUID, TEXT, TEXT, JSONB, UUID, TEXT[], TEXT, BOOLEAN, BOOLEAN, UUID[]);
 DROP TABLE IF EXISTS site_settings;
 DROP TABLE IF EXISTS bot_heartbeats;
 DROP TABLE IF EXISTS discord_activity_events;

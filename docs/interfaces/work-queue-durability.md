@@ -20,7 +20,7 @@ Work queue worker and alert emitter: `apps/api/docs/`.
 
 ## Consumers
 
-Discord spool remains non-durable across redeploy: `apps/discord/docs/durable-spool.md`.
+A failed activity POST is dropped. There is no bot-local spool: [activity](/apps/discord/docs/activity.md).
 
 ## Related decisions
 

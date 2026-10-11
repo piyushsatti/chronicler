@@ -50,15 +50,21 @@ class AgentSettings:
     model_seed: int = 0
     model_enable_thinking: bool = False
     build_sha: str = "unknown"
+    http_timeout_seconds: float = 5.0
 
     def __post_init__(self) -> None:
         for timeout in (
             self.model_timeout_seconds,
             self.archive_timeout_seconds,
             self.claim_interval_seconds,
+            self.http_timeout_seconds,
         ):
             if not math.isfinite(timeout) or timeout <= 0:
                 raise ValueError("Per-call timeout must be positive and finite")
+        if self.http_timeout_seconds > 5.0:
+            raise ValueError(
+                "Worker HTTP timeout must fit the 5 second delivery reserve"
+            )
         if not 0 < self.max_completion_tokens < self.context_tokens:
             raise ValueError("Output reserve must be positive and below total context")
         if not math.isfinite(self.model_temperature) or self.model_temperature < 0:
@@ -110,6 +116,7 @@ class AgentSettings:
             context_tokens=int(os.getenv("AGENT_CONTEXT_TOKENS", "16384")),
             max_completion_tokens=int(os.getenv("AGENT_MAX_COMPLETION_TOKENS", "512")),
             model_timeout_seconds=float(os.getenv("AGENT_MODEL_TIMEOUT_SECONDS", "60")),
+            http_timeout_seconds=float(os.getenv("AGENT_HTTP_TIMEOUT_SECONDS", "5")),
             archive_passage_reads=os.getenv("ARCHIVE_PASSAGE_READS", "true").lower()
             == "true",
             archive_timeout_seconds=float(

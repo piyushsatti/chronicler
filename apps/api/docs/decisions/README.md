@@ -19,3 +19,4 @@ Short ADRs that apply only inside `apps/api`. Boundary decisions: [docs/decision
 | [D41](/apps/api/docs/decisions/D41-Go-API-Token-Claims.md) | JWT claims and anonymous-on-bad-token |
 | [D42](/apps/api/docs/decisions/D42-Worker-And-Migrations.md) | Worker binary, goose migrations, agent boundary |
 | [D43](/apps/api/docs/decisions/D43-Agent-Worker-HTTP-Claim.md) | Agent worker claims jobs over HTTP |
+| [D44](/apps/api/docs/decisions/D44-Leased-Work-With-Fencing.md) | Leased work queue, fencing and bounded question journey |

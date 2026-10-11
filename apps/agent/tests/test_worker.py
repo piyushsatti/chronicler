@@ -188,10 +188,21 @@ async def test_claim_and_complete_http(tmp_path) -> None:
         "type": "question.requested",
         "job_id": job_id,
         "question": "Rules?",
+        "question_deadline_at": "2026-10-10T12:01:40Z",
+        "lease": {
+            "token": "1",
+            "attempt": 1,
+            "expires_at": "2026-10-10T12:00:30Z",
+            "renew_after_seconds": 10,
+            "attempt_deadline_at": "2026-10-10T12:01:40Z",
+            "remaining_budget_seconds": 100,
+        },
     }
 
     def handler(request: httpx.Request) -> httpx.Response:
+        assert request.headers["X-Ingest-Secret"] == "secret"
         if str(request.url) == "http://api.test/v1/agent/questions/claim":
+            assert json.loads(request.content) == {"lease_protocol": 1}
             return httpx.Response(200, json=payload)
         if str(request.url).endswith("/complete"):
             return httpx.Response(204)
@@ -199,7 +210,9 @@ async def test_claim_and_complete_http(tmp_path) -> None:
 
     async with httpx.AsyncClient(transport=httpx.MockTransport(handler)) as client:
         job = await claim_job(client, settings)
-        assert job == QuestionJob(job_id, "Rules?")
+        assert job is not None
+        assert job.job == QuestionJob(job_id, "Rules?")
+        assert job.lease.token == "1"
         await complete_job(
             client,
             settings,
@@ -209,6 +222,7 @@ async def test_claim_and_complete_http(tmp_path) -> None:
                 "job_id": job_id,
                 "answer": "ok",
                 "sources": [],
+                "lease_token": "1",
             },
         )
 
@@ -226,6 +240,7 @@ async def test_claim_empty_queue(tmp_path) -> None:
 
 def test_completed_payload_shape() -> None:
     answer = Answer("answered", "text", (), {"outcome": "answered"})
-    payload = completed_payload(QuestionJob("job", "q"), answer)
+    payload = completed_payload(QuestionJob("job", "q"), answer, "1")
+    assert payload["lease_token"] == "1"
     assert payload["type"] == "question.completed"
     assert json.dumps(payload)

@@ -14,7 +14,6 @@ type AgentQuestion struct {
 	JobID     int64              `json:"job_id"`
 	Question  string             `json:"question"`
 	History   []byte             `json:"history"`
-	State     string             `json:"state"`
 	Result    []byte             `json:"result"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
@@ -27,18 +26,25 @@ type ArchonAssignment struct {
 }
 
 type BackgroundJob struct {
-	ID           int64              `json:"id"`
-	PublicID     pgtype.UUID        `json:"public_id"`
-	JobKey       string             `json:"job_key"`
-	Kind         string             `json:"kind"`
-	Lane         string             `json:"lane"`
-	State        string             `json:"state"`
-	Attempts     int32              `json:"attempts"`
-	Payload      []byte             `json:"payload"`
-	ErrorMessage pgtype.Text        `json:"error_message"`
-	NextRunAt    pgtype.Timestamptz `json:"next_run_at"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+	ID                  int64              `json:"id"`
+	PublicID            pgtype.UUID        `json:"public_id"`
+	JobKey              string             `json:"job_key"`
+	Kind                string             `json:"kind"`
+	Lane                string             `json:"lane"`
+	State               string             `json:"state"`
+	Attempts            int32              `json:"attempts"`
+	Payload             []byte             `json:"payload"`
+	ErrorMessage        pgtype.Text        `json:"error_message"`
+	NextRunAt           pgtype.Timestamptz `json:"next_run_at"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	LeaseToken          int64              `json:"lease_token"`
+	LeaseExpiresAt      pgtype.Timestamptz `json:"lease_expires_at"`
+	ClaimedAt           pgtype.Timestamptz `json:"claimed_at"`
+	AttemptDeadlineAt   pgtype.Timestamptz `json:"attempt_deadline_at"`
+	QuestionDeadlineAt  pgtype.Timestamptz `json:"question_deadline_at"`
+	CompletionOperation pgtype.Text        `json:"completion_operation"`
+	CompletionPayload   []byte             `json:"completion_payload"`
 }
 
 type Backstory struct {

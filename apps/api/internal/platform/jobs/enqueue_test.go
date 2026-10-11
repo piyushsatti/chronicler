@@ -18,11 +18,11 @@ func (r *recStore) Enqueue(_ context.Context, job jobs.Job) error {
 	return nil
 }
 func (r *recStore) ClaimOne(context.Context, string) (jobs.Job, error) { return jobs.Job{}, nil }
-func (r *recStore) Succeed(context.Context, string) error              { return nil }
-func (r *recStore) Retry(context.Context, string, time.Duration, string) error {
+func (r *recStore) Succeed(context.Context, jobs.Receipt) error        { return nil }
+func (r *recStore) Retry(context.Context, jobs.Receipt, time.Duration, string) error {
 	return nil
 }
-func (r *recStore) Fail(context.Context, string, jobs.State, string) error { return nil }
+func (r *recStore) Fail(context.Context, jobs.Receipt, jobs.State, string) error { return nil }
 
 func TestEnqueueQuestDiscordUsesPublicKeyAndRevision(t *testing.T) {
 	store := &recStore{}
@@ -48,3 +48,5 @@ func TestEnqueueQuestDiscordUsesPublicKeyAndRevision(t *testing.T) {
 		t.Fatalf("payload=%+v", body)
 	}
 }
+
+func (r *recStore) Renew(context.Context, jobs.Receipt) (jobs.Lease, error) { return jobs.Lease{}, nil }

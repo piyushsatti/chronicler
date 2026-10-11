@@ -11,57 +11,12 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const claimJob = `-- name: ClaimJob :one
-UPDATE background_jobs AS j
-SET state = 'running', attempts = j.attempts + 1, updated_at = now()
-WHERE j.id = (
-    SELECT b.id FROM background_jobs AS b
-    WHERE b.lane = $1 AND b.state IN ('queued', 'retry_wait') AND b.next_run_at <= now()
-    ORDER BY b.next_run_at
-    FOR UPDATE SKIP LOCKED
-    LIMIT 1
-)
-RETURNING j.id, j.job_key, j.kind, j.lane, j.state, j.attempts, j.payload, j.next_run_at
-`
-
-type ClaimJobRow struct {
-	ID        int64              `json:"id"`
-	JobKey    string             `json:"job_key"`
-	Kind      string             `json:"kind"`
-	Lane      string             `json:"lane"`
-	State     string             `json:"state"`
-	Attempts  int32              `json:"attempts"`
-	Payload   []byte             `json:"payload"`
-	NextRunAt pgtype.Timestamptz `json:"next_run_at"`
-}
-
-func (q *Queries) ClaimJob(ctx context.Context, lane string) (ClaimJobRow, error) {
-	row := q.db.QueryRow(ctx, claimJob, lane)
-	var i ClaimJobRow
-	err := row.Scan(
-		&i.ID,
-		&i.JobKey,
-		&i.Kind,
-		&i.Lane,
-		&i.State,
-		&i.Attempts,
-		&i.Payload,
-		&i.NextRunAt,
-	)
-	return i, err
-}
-
 const enqueueJob = `-- name: EnqueueJob :exec
-INSERT INTO background_jobs (job_key, kind, lane, state, payload, next_run_at)
-VALUES ($1, $2, $3, 'queued', $4, now())
-ON CONFLICT (job_key) DO UPDATE
-SET state = 'queued',
-    payload = EXCLUDED.payload,
-    attempts = 0,
-    error_message = NULL,
-    next_run_at = now(),
-    updated_at = now()
-WHERE background_jobs.state <> 'running'
+INSERT INTO background_jobs (job_key,kind,lane,state,payload,next_run_at)
+VALUES ($1,$2,$3,'queued',$4,clock_timestamp())
+ON CONFLICT(job_key) DO UPDATE SET state='queued',payload=EXCLUDED.payload,attempts=0,error_message=NULL,
+ next_run_at=clock_timestamp(),updated_at=clock_timestamp(),completion_operation=NULL,completion_payload=NULL
+WHERE background_jobs.state<>'running' AND background_jobs.kind<>'agent_question'
 `
 
 type EnqueueJobParams struct {
@@ -81,45 +36,201 @@ func (q *Queries) EnqueueJob(ctx context.Context, arg EnqueueJobParams) error {
 	return err
 }
 
-const failJob = `-- name: FailJob :exec
-UPDATE background_jobs
-SET state = $2, error_message = $3, updated_at = now()
-WHERE id = $1
+const jobClock = `-- name: JobClock :one
+SELECT clock_timestamp()::timestamptz AS now
 `
 
-type FailJobParams struct {
-	ID           int64       `json:"id"`
-	State        string      `json:"state"`
-	ErrorMessage pgtype.Text `json:"error_message"`
+func (q *Queries) JobClock(ctx context.Context) (pgtype.Timestamptz, error) {
+	row := q.db.QueryRow(ctx, jobClock)
+	var now pgtype.Timestamptz
+	err := row.Scan(&now)
+	return now, err
 }
 
-func (q *Queries) FailJob(ctx context.Context, arg FailJobParams) error {
-	_, err := q.db.Exec(ctx, failJob, arg.ID, arg.State, arg.ErrorMessage)
-	return err
-}
-
-const retryJob = `-- name: RetryJob :exec
-UPDATE background_jobs
-SET state = 'retry_wait', next_run_at = $2, error_message = $3, updated_at = now()
-WHERE id = $1
+const lockClaimableJob = `-- name: LockClaimableJob :one
+SELECT id, public_id, job_key, kind, lane, state, attempts, payload, error_message, next_run_at, created_at, updated_at, lease_token, lease_expires_at, claimed_at, attempt_deadline_at, question_deadline_at, completion_operation, completion_payload FROM background_jobs
+WHERE lane=$1 AND ((state IN ('queued','retry_wait') AND next_run_at<=clock_timestamp()) OR (state='running' AND lease_expires_at<=clock_timestamp()))
+ORDER BY next_run_at,id FOR UPDATE SKIP LOCKED LIMIT 1
 `
 
-type RetryJobParams struct {
-	ID           int64              `json:"id"`
-	NextRunAt    pgtype.Timestamptz `json:"next_run_at"`
-	ErrorMessage pgtype.Text        `json:"error_message"`
+func (q *Queries) LockClaimableJob(ctx context.Context, lane string) (BackgroundJob, error) {
+	row := q.db.QueryRow(ctx, lockClaimableJob, lane)
+	var i BackgroundJob
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.JobKey,
+		&i.Kind,
+		&i.Lane,
+		&i.State,
+		&i.Attempts,
+		&i.Payload,
+		&i.ErrorMessage,
+		&i.NextRunAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LeaseToken,
+		&i.LeaseExpiresAt,
+		&i.ClaimedAt,
+		&i.AttemptDeadlineAt,
+		&i.QuestionDeadlineAt,
+		&i.CompletionOperation,
+		&i.CompletionPayload,
+	)
+	return i, err
 }
 
-func (q *Queries) RetryJob(ctx context.Context, arg RetryJobParams) error {
-	_, err := q.db.Exec(ctx, retryJob, arg.ID, arg.NextRunAt, arg.ErrorMessage)
-	return err
-}
-
-const succeedJob = `-- name: SucceedJob :exec
-UPDATE background_jobs SET state = 'succeeded', updated_at = now() WHERE id = $1
+const lockExpiredQuestion = `-- name: LockExpiredQuestion :one
+SELECT id, public_id, job_key, kind, lane, state, attempts, payload, error_message, next_run_at, created_at, updated_at, lease_token, lease_expires_at, claimed_at, attempt_deadline_at, question_deadline_at, completion_operation, completion_payload FROM background_jobs WHERE kind='agent_question' AND state IN ('queued','running','retry_wait')
+ AND question_deadline_at<=clock_timestamp() ORDER BY question_deadline_at,id FOR UPDATE SKIP LOCKED LIMIT 1
 `
 
-func (q *Queries) SucceedJob(ctx context.Context, id int64) error {
-	_, err := q.db.Exec(ctx, succeedJob, id)
-	return err
+func (q *Queries) LockExpiredQuestion(ctx context.Context) (BackgroundJob, error) {
+	row := q.db.QueryRow(ctx, lockExpiredQuestion)
+	var i BackgroundJob
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.JobKey,
+		&i.Kind,
+		&i.Lane,
+		&i.State,
+		&i.Attempts,
+		&i.Payload,
+		&i.ErrorMessage,
+		&i.NextRunAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LeaseToken,
+		&i.LeaseExpiresAt,
+		&i.ClaimedAt,
+		&i.AttemptDeadlineAt,
+		&i.QuestionDeadlineAt,
+		&i.CompletionOperation,
+		&i.CompletionPayload,
+	)
+	return i, err
+}
+
+const lockJob = `-- name: LockJob :one
+SELECT id, public_id, job_key, kind, lane, state, attempts, payload, error_message, next_run_at, created_at, updated_at, lease_token, lease_expires_at, claimed_at, attempt_deadline_at, question_deadline_at, completion_operation, completion_payload FROM background_jobs WHERE id=$1 FOR UPDATE
+`
+
+func (q *Queries) LockJob(ctx context.Context, id int64) (BackgroundJob, error) {
+	row := q.db.QueryRow(ctx, lockJob, id)
+	var i BackgroundJob
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.JobKey,
+		&i.Kind,
+		&i.Lane,
+		&i.State,
+		&i.Attempts,
+		&i.Payload,
+		&i.ErrorMessage,
+		&i.NextRunAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LeaseToken,
+		&i.LeaseExpiresAt,
+		&i.ClaimedAt,
+		&i.AttemptDeadlineAt,
+		&i.QuestionDeadlineAt,
+		&i.CompletionOperation,
+		&i.CompletionPayload,
+	)
+	return i, err
+}
+
+const lockPublicJob = `-- name: LockPublicJob :one
+SELECT id, public_id, job_key, kind, lane, state, attempts, payload, error_message, next_run_at, created_at, updated_at, lease_token, lease_expires_at, claimed_at, attempt_deadline_at, question_deadline_at, completion_operation, completion_payload FROM background_jobs WHERE public_id=$1 FOR UPDATE
+`
+
+func (q *Queries) LockPublicJob(ctx context.Context, publicID pgtype.UUID) (BackgroundJob, error) {
+	row := q.db.QueryRow(ctx, lockPublicJob, publicID)
+	var i BackgroundJob
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.JobKey,
+		&i.Kind,
+		&i.Lane,
+		&i.State,
+		&i.Attempts,
+		&i.Payload,
+		&i.ErrorMessage,
+		&i.NextRunAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.LeaseToken,
+		&i.LeaseExpiresAt,
+		&i.ClaimedAt,
+		&i.AttemptDeadlineAt,
+		&i.QuestionDeadlineAt,
+		&i.CompletionOperation,
+		&i.CompletionPayload,
+	)
+	return i, err
+}
+
+const projectQuestionResult = `-- name: ProjectQuestionResult :execrows
+UPDATE agent_questions SET result=$2,updated_at=clock_timestamp() WHERE job_id=$1
+`
+
+type ProjectQuestionResultParams struct {
+	JobID  int64  `json:"job_id"`
+	Result []byte `json:"result"`
+}
+
+func (q *Queries) ProjectQuestionResult(ctx context.Context, arg ProjectQuestionResultParams) (int64, error) {
+	result, err := q.db.Exec(ctx, projectQuestionResult, arg.JobID, arg.Result)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const saveLeasedJob = `-- name: SaveLeasedJob :execrows
+UPDATE background_jobs SET state=$1,attempts=$2,lease_token=$3,
+ lease_expires_at=$4,claimed_at=$5,attempt_deadline_at=$6,
+ next_run_at=$7,completion_operation=$8,completion_payload=$9,
+ error_message=$10,updated_at=$11
+WHERE id=$12
+`
+
+type SaveLeasedJobParams struct {
+	State               string             `json:"state"`
+	Attempts            int32              `json:"attempts"`
+	LeaseToken          int64              `json:"lease_token"`
+	LeaseExpiresAt      pgtype.Timestamptz `json:"lease_expires_at"`
+	ClaimedAt           pgtype.Timestamptz `json:"claimed_at"`
+	AttemptDeadlineAt   pgtype.Timestamptz `json:"attempt_deadline_at"`
+	NextRunAt           pgtype.Timestamptz `json:"next_run_at"`
+	CompletionOperation pgtype.Text        `json:"completion_operation"`
+	CompletionPayload   []byte             `json:"completion_payload"`
+	ErrorMessage        pgtype.Text        `json:"error_message"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
+	ID                  int64              `json:"id"`
+}
+
+func (q *Queries) SaveLeasedJob(ctx context.Context, arg SaveLeasedJobParams) (int64, error) {
+	result, err := q.db.Exec(ctx, saveLeasedJob,
+		arg.State,
+		arg.Attempts,
+		arg.LeaseToken,
+		arg.LeaseExpiresAt,
+		arg.ClaimedAt,
+		arg.AttemptDeadlineAt,
+		arg.NextRunAt,
+		arg.CompletionOperation,
+		arg.CompletionPayload,
+		arg.ErrorMessage,
+		arg.UpdatedAt,
+		arg.ID,
+	)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

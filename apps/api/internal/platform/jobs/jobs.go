@@ -18,23 +18,33 @@ const (
 )
 
 type Job struct {
-	ID        string
-	Key       string
-	Kind      string
-	Lane      string
-	State     State
-	Attempts  int
-	Payload   []byte
-	NextRunAt time.Time
+	ID                  string
+	Key                 string
+	Kind                string
+	Lane                string
+	State               State
+	Attempts            int
+	Payload             []byte
+	NextRunAt           time.Time
+	PublicID            string
+	Token               int64
+	LeaseExpiresAt      time.Time
+	ClaimedAt           time.Time
+	AttemptDeadlineAt   time.Time
+	QuestionDeadlineAt  time.Time
+	CompletionOperation string
+	CompletionPayload   []byte
+	ErrorMessage        string
 }
 
 // Store is the job table used by the worker.
 type Store interface {
 	Enqueue(ctx context.Context, job Job) error
 	ClaimOne(ctx context.Context, lane string) (Job, error)
-	Succeed(ctx context.Context, id string) error
-	Retry(ctx context.Context, id string, after time.Duration, reason string) error
-	Fail(ctx context.Context, id string, state State, reason string) error
+	Renew(ctx context.Context, receipt Receipt) (Lease, error)
+	Succeed(ctx context.Context, receipt Receipt) error
+	Retry(ctx context.Context, receipt Receipt, after time.Duration, reason string) error
+	Fail(ctx context.Context, receipt Receipt, state State, reason string) error
 }
 
 // QuestDiscordPayload is the discord-lane body. ID is the internal quest

@@ -26,14 +26,14 @@ func TestSubmitClaimCompleteGet(t *testing.T) {
 		t.Fatalf("submit status=%d", rec.Code)
 	}
 
-	claim := httptest.NewRequest(http.MethodPost, "/v1/agent/questions/claim", nil)
+	claim := httptest.NewRequest(http.MethodPost, "/v1/agent/questions/claim", strings.NewReader(`{"lease_protocol":1}`))
 	claim.Header.Set("X-Ingest-Secret", "secret")
 	recClaim := httptest.NewRecorder()
 	mux.ServeHTTP(recClaim, claim)
 	if recClaim.Code != http.StatusOK {
 		t.Fatalf("claim status=%d", recClaim.Code)
 	}
-	var claimed agent.QuestionRequested
+	var claimed agent.ClaimedQuestion
 	if err := json.NewDecoder(recClaim.Body).Decode(&claimed); err != nil {
 		t.Fatal(err)
 	}
@@ -41,7 +41,7 @@ func TestSubmitClaimCompleteGet(t *testing.T) {
 		t.Fatalf("claimed=%+v", claimed)
 	}
 
-	completeBody := `{"version":1,"type":"question.completed","job_id":"` + jobID + `","answer":"ok","sources":[]}`
+	completeBody := `{"version":1,"type":"question.completed","job_id":"` + jobID + `","lease_token":"` + claimed.Lease.Token + `","answer":"ok","sources":[]}`
 	complete := httptest.NewRequest(http.MethodPost, "/v1/agent/questions/"+jobID+"/complete", strings.NewReader(completeBody))
 	complete.Header.Set("X-Ingest-Secret", "secret")
 	recComplete := httptest.NewRecorder()
@@ -70,7 +70,7 @@ func TestClaimEmptyReturns204(t *testing.T) {
 	svc := agent.New("secret", nil)
 	mux := http.NewServeMux()
 	svc.Routes(mux)
-	claim := httptest.NewRequest(http.MethodPost, "/v1/agent/questions/claim", nil)
+	claim := httptest.NewRequest(http.MethodPost, "/v1/agent/questions/claim", strings.NewReader(`{"lease_protocol":1}`))
 	claim.Header.Set("X-Ingest-Secret", "secret")
 	rec := httptest.NewRecorder()
 	mux.ServeHTTP(rec, claim)
@@ -89,7 +89,15 @@ func TestFailedCompleteReturnsOnGet(t *testing.T) {
 	req.Header.Set("X-Ingest-Secret", "secret")
 	mux.ServeHTTP(httptest.NewRecorder(), req)
 
-	failBody := `{"version":1,"type":"question.failed","job_id":"` + jobID + `","message":"I couldn't finish this request. Please try again."}`
+	claim := httptest.NewRequest(http.MethodPost, "/v1/agent/questions/claim", strings.NewReader(`{"lease_protocol":1}`))
+	claim.Header.Set("X-Ingest-Secret", "secret")
+	claimedRec := httptest.NewRecorder()
+	mux.ServeHTTP(claimedRec, claim)
+	var claimed agent.ClaimedQuestion
+	if err := json.Unmarshal(claimedRec.Body.Bytes(), &claimed); err != nil {
+		t.Fatal(err)
+	}
+	failBody := `{"version":1,"type":"question.failed","job_id":"` + jobID + `","lease_token":"` + claimed.Lease.Token + `","message":"I couldn't finish this request. Please try again."}`
 	complete := httptest.NewRequest(http.MethodPost, "/v1/agent/questions/"+jobID+"/complete", strings.NewReader(failBody))
 	complete.Header.Set("X-Ingest-Secret", "secret")
 	rec := httptest.NewRecorder()

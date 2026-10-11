@@ -1,0 +1,97 @@
+{
+  "cases": [
+    {
+      "name": "F3_lt_3000",
+      "unit": "\u003c",
+      "repeat": 3000,
+      "padding": "",
+      "go_normalized_bytes": 18011,
+      "go_normalized_sha256": "4f59ff7aa13e6d2a4389564fd525411dc17750ff8785169af35e61ef708c88d1",
+      "valid": false
+    },
+    {
+      "name": "F3_gt_3000",
+      "unit": "\u003e",
+      "repeat": 3000,
+      "padding": "",
+      "go_normalized_bytes": 18011,
+      "go_normalized_sha256": "71e6b4e791bd17718856b987bddb593848c6ffcc19f5f09fc690e1d093bc37bd",
+      "valid": false
+    },
+    {
+      "name": "F3_amp_3000",
+      "unit": "\u0026",
+      "repeat": 3000,
+      "padding": "",
+      "go_normalized_bytes": 18011,
+      "go_normalized_sha256": "55187a6144a23e84bdcee4a52dba22aa38ec8dee6b22dc0de1563e65ed6b2771",
+      "valid": false
+    },
+    {
+      "name": "F3_u2028_2730",
+      "unit": "\u2028",
+      "repeat": 2730,
+      "padding": "",
+      "go_normalized_bytes": 16391,
+      "go_normalized_sha256": "5c68f2f109f08dddd5d21c611ade447a7621846ccd218e73c3ce0665440080bc",
+      "valid": false
+    },
+    {
+      "name": "F3_u2029_2730",
+      "unit": "\u2029",
+      "repeat": 2730,
+      "padding": "",
+      "go_normalized_bytes": 16391,
+      "go_normalized_sha256": "6a2b9cf03311a5bfbaf07b5e92b909aa1e8435bc8024a5f312d66f8dd7333b54",
+      "valid": false
+    },
+    {
+      "name": "F3_exact_16384",
+      "unit": "\u003c",
+      "repeat": 2728,
+      "padding": "aaaaa",
+      "go_normalized_bytes": 16384,
+      "go_normalized_sha256": "7013a6130e72ee18d0abbf721170d62b2259549e3cd902fe80a5265e1b57ec0d",
+      "valid": true
+    },
+    {
+      "name": "F3_over_16385",
+      "unit": "\u003c",
+      "repeat": 2728,
+      "padding": "aaaaaa",
+      "go_normalized_bytes": 16385,
+      "go_normalized_sha256": "606e4c9b2d59a02dc9bcbe7bfb3636460bc7b6631bd406721b895bd110253107",
+      "valid": false
+    },
+    {
+      "name": "F3_multibyte_valid",
+      "unit": "🪐",
+      "repeat": 4093,
+      "padding": "",
+      "go_normalized_bytes": 16383,
+      "go_normalized_sha256": "b35a930cd2b8bd10e8dc543fb0e1ec266342db140530dfc683a8ead4e288312c",
+      "valid": true
+    },
+    {
+      "name": "F3_multibyte_over",
+      "unit": "🪐",
+      "repeat": 4094,
+      "padding": "",
+      "go_normalized_bytes": 16387,
+      "go_normalized_sha256": "1a676c288f18830a4ae7b56652bc05a53457d06a07a8942890594e05cf17e578",
+      "valid": false
+    },
+    {
+      "name": "F3_literal_escape_mixed",
+      "unit": "\\u003c\u003c\u003e\u0026\u2028\u2029\u0000\n\t🪐",
+      "repeat": 1,
+      "padding": "",
+      "go_normalized_bytes": 62,
+      "go_normalized_sha256": "c0f995940058c6310169d6c7b3474f7354fa6522ffc9925ac13278154bc5f12b",
+      "valid": true
+    }
+  ],
+  "diagnostics_limit_bytes": 16384,
+  "go_version": "go1.26.2",
+  "normalizer": "encoding/json.Decoder.UseNumber then json.Marshal"
+}

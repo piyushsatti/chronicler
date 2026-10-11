@@ -1,6 +1,6 @@
 [project]
 name = "chronicler-repo"
-version = "0.0.0"
+version = "0.1.0"
 description = "Chronicler monorepo tooling (Python apps live under apps/)"
 license = "GPL-2.0-only"
 requires-python = ">=3.12"

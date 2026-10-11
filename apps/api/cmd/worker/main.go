@@ -63,6 +63,14 @@ func main() {
 	ticker := time.NewTicker(2 * time.Second)
 	defer ticker.Stop()
 
+	// Deadline sweeping has independent progress even while a lane performs slow I/O.
+	sweepDone := make(chan struct{})
+	if pool != nil {
+		go func() { defer close(sweepDone); worker.RunQuestionDeadlineSweep(ctx, jobs.NewPostgresStore(pool.Pool)) }()
+	} else {
+		close(sweepDone)
+	}
+
 	schedule := time.NewTicker(time.Hour)
 	defer schedule.Stop()
 
@@ -70,12 +78,16 @@ func main() {
 		select {
 		case <-ctx.Done():
 			slog.Info("worker shutting down")
+			<-sweepDone
 			if pool != nil {
 				pool.Close()
 			}
 			return
 		case <-ticker.C:
-			for {
+			for range 1 {
+				if ctx.Err() != nil {
+					break
+				}
 				ok, err := handler.ProcessOne(ctx)
 				if err != nil {
 					slog.Error("discord job failed", "error", err)
@@ -86,7 +98,10 @@ func main() {
 				}
 			}
 			if maintenance != nil {
-				for {
+				for range 1 {
+					if ctx.Err() != nil {
+						break
+					}
 					ok, err := maintenance.ProcessOne(ctx)
 					if err != nil {
 						slog.Error("maintenance job failed", "error", err)

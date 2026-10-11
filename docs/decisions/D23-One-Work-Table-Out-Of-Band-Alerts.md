@@ -29,7 +29,7 @@ One durability mechanism; alert path survives bot death; simultaneous bot+API ou
 
 ## Enforced by
 
-**not enforced** — work table / worker contract tests not named in CI. Design detail: `apps/api/docs/` (background work). Bot buffer: `apps/discord/docs/durable-spool.md`.
+**not enforced** — work table / worker contract tests not named in CI. Design detail: `apps/api/docs/` (background work). Bot forwarding: [activity](/apps/discord/docs/activity.md).
 
 ## Reopen triggers
 

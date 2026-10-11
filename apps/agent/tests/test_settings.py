@@ -26,6 +26,7 @@ def environment(monkeypatch, tmp_path):
         "AGENT_CONTEXT_TOKENS",
         "AGENT_MAX_COMPLETION_TOKENS",
         "AGENT_MODEL_TIMEOUT_SECONDS",
+        "AGENT_HTTP_TIMEOUT_SECONDS",
         "AGENT_CLAIM_INTERVAL_SECONDS",
         "AGENT_MODEL_TEMPERATURE",
         "AGENT_MODEL_TOP_P",
@@ -47,6 +48,7 @@ def test_defaults_and_required_tokenizer_contract(monkeypatch, tmp_path):
     assert settings.claim_interval_seconds == 2.0
     assert settings.context_tokens == 16384
     assert settings.max_completion_tokens == 512
+    assert settings.http_timeout_seconds == 5
     assert settings.model_timeout_seconds == 60
     assert settings.model_temperature == 0.7
     assert settings.model_top_p == 0.8
@@ -74,6 +76,9 @@ def test_build_identity_is_injected_from_deployment_environment(monkeypatch, tmp
         ("AGENT_CONTEXT_TOKENS", "0"),
         ("AGENT_MODEL_TIMEOUT_SECONDS", "nan"),
         ("AGENT_MODEL_TIMEOUT_SECONDS", "0"),
+        ("AGENT_HTTP_TIMEOUT_SECONDS", "nan"),
+        ("AGENT_HTTP_TIMEOUT_SECONDS", "0"),
+        ("AGENT_HTTP_TIMEOUT_SECONDS", "5.01"),
         ("AGENT_CLAIM_INTERVAL_SECONDS", "0"),
         ("AGENT_MODEL_TEMPERATURE", "nan"),
         ("AGENT_MODEL_TEMPERATURE", "-0.1"),
@@ -89,3 +94,9 @@ def test_invalid_runtime_budgets_rejected(monkeypatch, tmp_path, name, value):
     monkeypatch.setenv(name, value)
     with pytest.raises(ValueError):
         AgentSettings.from_env()
+
+
+def test_http_timeout_can_be_shortened(monkeypatch, tmp_path):
+    environment(monkeypatch, tmp_path)
+    monkeypatch.setenv("AGENT_HTTP_TIMEOUT_SECONDS", "0.25")
+    assert AgentSettings.from_env().http_timeout_seconds == 0.25
