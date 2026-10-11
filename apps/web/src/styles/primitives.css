@@ -1,0 +1,779 @@
+/**
+ * primitives.css — one CSS home for app/components/primitives/**. Each
+ * builder appends their own group's section; never rewrite another
+ * group's section (Epic B parallel-wave collision note).
+ */
+
+/* Shared focus ring for every interactive primitive part. */
+.pr-modal__close:focus-visible,
+.pr-toast__dismiss:focus-visible,
+.pr-avatar:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Button state aliases complete the visual variants that the typed Button
+   API already exposes, without adding palette literals at the component
+   layer. */
+.btn[data-primitive='button'][data-variant='danger'],
+.btn[data-primitive='button'][data-variant='danger-armed'] {
+  background: var(--color-danger);
+  border-color: var(--color-danger);
+  color: var(--color-bg-deep);
+}
+
+.btn[data-primitive='button'][data-variant='danger']:hover,
+.btn[data-primitive='button'][data-variant='danger-armed']:hover {
+  background: color-mix(in srgb, var(--color-danger) 88%, var(--color-bg-deep));
+  border-color: color-mix(in srgb, var(--color-danger) 88%, var(--color-bg-deep));
+}
+
+.btn[data-primitive='button']:disabled,
+.btn[data-primitive='button'][aria-busy='true'],
+.btn[data-primitive='button'][aria-disabled='true'] {
+  background: var(--control-disabled-bg);
+  border-color: var(--control-disabled-border);
+  color: var(--control-disabled-fg);
+  cursor: not-allowed;
+}
+
+/* Card restores the retained slot/link treatment on top of the shared Atlas
+   surface. Compound slots stay non-interactive; the optional action overlay
+   is a sibling so nested controls never sit inside a link or button. */
+.card[data-pad='0'] {
+  padding: 0;
+}
+.card[data-pad='3'] {
+  padding: var(--sp-3);
+}
+.card[data-pad='5'] {
+  padding: var(--sp-5);
+}
+.card[data-pad='6'] {
+  padding: var(--sp-6);
+}
+.card[data-tone='1'] {
+  background: var(--color-bg-panel);
+}
+.card[data-tone='3'] {
+  background: var(--color-bg-deep);
+}
+.card[data-tone='flat'] {
+  box-shadow: none;
+}
+.card--clickable {
+  appearance: none;
+  display: block;
+  width: 100%;
+  text-align: start;
+  font: inherit;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+.card--clickable:focus-visible,
+.card__action-overlay:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+.card--sidebar {
+  position: sticky;
+  top: 0;
+}
+.card__header,
+.card__footer {
+  display: flex;
+  align-items: center;
+}
+.card__eyebrow {
+  margin-bottom: var(--sp-2);
+}
+.card__action-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: inherit;
+  background: transparent;
+  cursor: pointer;
+}
+.card__interactive-layer {
+  position: relative;
+  z-index: 2;
+}
+
+/* === B4: Modal / Toast / Avatar === */
+
+/* Clickable avatars render as <button class="av pr-avatar">; .av (atlas.css)
+   only sets the size/font cascade, not UA button resets. Scoped before the
+   .av[data-size] rules so the font-size cascade there still wins. */
+button.pr-avatar {
+  appearance: none;
+  font: inherit;
+  padding: 0;
+}
+
+.pr-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--color-backdrop);
+}
+
+.pr-modal__dialog {
+  background-color: var(--overlay-bg);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--rad-sm);
+  box-shadow: var(--overlay-shadow);
+  padding: var(--sp-5);
+  min-width: 0;
+  max-width: 560px;
+  width: 90%;
+  max-height: calc(100dvh - var(--sp-8));
+  overflow-y: auto;
+}
+
+.pr-modal__dialog[data-size='sm'] {
+  max-width: 400px;
+}
+
+.pr-modal__dialog[data-size='lg'] {
+  max-width: 720px;
+}
+
+.pr-modal__header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--sp-4);
+}
+
+.pr-modal__close {
+  cursor: pointer;
+  color: var(--color-text-muted);
+  background: none;
+  border: none;
+}
+
+.pr-modal__close:disabled {
+  cursor: not-allowed;
+  color: var(--control-disabled-fg);
+}
+
+.pr-modal__description {
+  margin: 0 0 var(--sp-3);
+  color: var(--color-text-muted);
+}
+
+.pr-modal__footer {
+  margin-top: var(--sp-4);
+}
+
+.pr-toast__stack {
+  position: fixed;
+  bottom: var(--sp-4);
+  right: var(--sp-4);
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.pr-toast {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  background-color: var(--raised-bg);
+  color: var(--color-text);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--raised-border);
+  border-inline-start: 3px solid var(--raised-border);
+  border-radius: var(--rad-sm);
+  box-shadow: var(--raised-shadow);
+  width: min(360px, calc(100vw - 2 * var(--sp-4)));
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.pr-toast > span {
+  min-width: 0;
+}
+
+.pr-toast[data-type='info'] {
+  border-inline-start-color: var(--color-accent);
+}
+
+.pr-toast[data-type='success'] {
+  border-inline-start-color: var(--status-success-indicator);
+}
+
+.pr-toast[data-type='error'] {
+  border-inline-start-color: var(--status-danger-indicator);
+}
+
+.pr-toast[data-type='warning'] {
+  border-inline-start-color: var(--status-warning-indicator);
+}
+
+.pr-toast__dismiss {
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: var(--color-text-muted);
+}
+
+.pr-toast__dismiss:hover {
+  color: var(--color-text);
+}
+
+.pr-avatar[data-ring='accent'] {
+  box-shadow: 0 0 0 2px var(--color-accent);
+  border-radius: 50%;
+}
+
+.pr-avatar[data-ring='role'] {
+  box-shadow: 0 0 0 2px var(--color-status-alive);
+  border-radius: 50%;
+}
+
+.pr-avatar[data-ring='selected'] {
+  box-shadow: 0 0 0 2px var(--color-accent), 0 0 0 4px var(--color-bg-deep);
+  border-radius: 50%;
+}
+
+/* 96px size for the CharToken consumer, issue 508. Named "token" at the
+   data-size layer since "xl" already means 40px (see Avatar.tsx). */
+.av[data-size='token'] {
+  width: 96px;
+  height: 96px;
+  font-size: 30px;
+}
+
+/* Framed variant, issue 508: CharToken's double-ring, drawn INSIDE the box
+   (CharToken circles are r=45 solid + r=40 dashed on a 96px viewBox) and
+   never with border-width (Avatar's must-not). inset box-shadow + a
+   negative-offset outline both paint inside the padding box, so neither is
+   clipped by the root's overflow:hidden and neither causes reflow. */
+.pr-avatar-framed {
+  position: relative;
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1.5px var(--color-border-2);
+  outline: 2px dashed var(--color-accent);
+  outline-offset: -6px;
+}
+
+/* === B3: Table === */
+
+/* Adaptive shape (mobile-adaptive spike).
+ *
+ * NOTE: no `container-type` here, deliberately. Table measures its own inline
+ * size with a ResizeObserver and renders ONE shape. The CSS-only alternative
+ * — `container-type` on the root plus an `@container` rule switching two
+ * always-rendered forms — was built first and reverted, for two measured
+ * reasons:
+ *
+ *   1. jsdom applies no stylesheets, so both forms were always present and
+ *      `getByText` found every cell twice. 9 test failures across 4 files
+ *      from converting this one primitive.
+ *   2. `container-type` applies size containment, which starves every
+ *      content-sized ANCESTOR up to the nearest definitely-sized box — at any
+ *      nesting depth. `.row` (288 usages, 97 files) is content-sized, so a
+ *      Table declaring a container would collapse in most of the app.
+ *
+ * Measuring instead of declaring costs one ResizeObserver and buys immunity
+ * from both. See tests/frontend/e2e/container-safety.spec.ts. */
+.pr-table__cards {
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.pr-table__card {
+  border: 1px solid var(--color-border-2);
+  border-radius: var(--rad-sm);
+  padding: var(--sp-3);
+  background: var(--color-bg-panel);
+}
+
+.pr-table__card[data-clickable='1'] {
+  cursor: pointer;
+  width: 100%;
+  text-align: start;
+  font: inherit;
+  color: inherit;
+}
+
+.pr-table__card[data-clickable='1']:hover {
+  border-color: var(--color-border);
+}
+
+.pr-table__card[data-clickable='1']:focus-visible {
+  box-shadow: var(--focus-ring);
+}
+
+/* Label/value pairs. `dl` keeps the column semantics the <th> carried. */
+.pr-table__fields {
+  margin: 0;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--sp-1) var(--sp-3);
+}
+
+.pr-table__fields dt {
+  color: var(--color-text-muted);
+}
+
+.pr-table__fields dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.pr-table__row:hover {
+  background-color: var(--color-bg-surface);
+}
+
+/* === B3: WeekGrid === */
+/* Headless contract (design-language.md:221): chrome applies ONLY to the
+   built-in DefaultCell skin. A caller-supplied renderCell owns its own box. */
+
+[data-el="week-grid.cell"][data-skin="default"] {
+  appearance: none;
+  background: var(--color-bg-surface);
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  border: 1px solid var(--color-border);
+  border-radius: var(--rad-sm);
+  padding: var(--sp-2) var(--sp-1);
+  cursor: default;
+}
+
+[data-el="week-grid.cell.button"] {
+  appearance: none;
+  background: none;
+  border: none;
+  color: inherit;
+  font: inherit;
+  padding: 0;
+  width: 100%;
+  cursor: pointer;
+}
+
+[data-el="week-grid.cell"][data-skin="default"][data-heat="0"],
+[data-el="calendar.cell"][data-heat="0"] {
+  background-color: var(--color-bg-surface);
+}
+
+[data-el="week-grid.cell"][data-skin="default"][data-heat="1"],
+[data-el="calendar.cell"][data-heat="1"] {
+  background-color: var(--color-accent-2);
+}
+
+[data-el="week-grid.cell"][data-skin="default"][data-heat="2"],
+[data-el="calendar.cell"][data-heat="2"] {
+  background-color: var(--color-accent);
+}
+
+[data-el="week-grid.cell"][data-skin="default"][data-heat="3"],
+[data-el="calendar.cell"][data-heat="3"] {
+  background-color: var(--color-accent-hover);
+  color: var(--color-bg);
+}
+
+[data-el="week-grid.cell"][data-skin="default"][data-heat="4"],
+[data-el="calendar.cell"][data-heat="4"] {
+  background-color: var(--color-text);
+  color: var(--color-bg);
+}
+
+[data-el="calendar.cell"] {
+  border: 1px solid var(--color-border);
+  border-radius: var(--rad-sm);
+  padding: var(--sp-2) var(--sp-1);
+  text-align: center;
+}
+
+[data-el="calendar.cell"]:hover {
+  border-color: var(--color-text-muted);
+}
+
+[data-el="calendar.cell"][data-in-range] {
+  border-color: var(--color-accent);
+}
+
+[data-el="calendar.cell"][aria-selected="true"] {
+  border-color: var(--color-accent);
+  border-width: 2px;
+}
+
+[data-el="calendar.cell"][aria-current="date"] {
+  outline: 1px dashed var(--color-text-muted);
+  outline-offset: -2px;
+}
+
+[data-el="calendar.cell"][aria-disabled="true"] {
+  opacity: 0.5;
+}
+
+[data-el="calendar.month.body"] {
+  /* positioned so day cells' offsetParent IS this scroll container:
+     Calendar.tsx's scrollIntoBand reads el.offsetTop, which is relative to
+     the nearest positioned ancestor. Left static, offsetTop is measured
+     against the page (or the .pop root inside FieldDateTime's popover) and
+     the first arrow key slams scrollTop to the end of the month. */
+  position: relative;
+  max-height: 22rem;
+  overflow-y: auto;
+}
+
+/* === B2: Button / Chip / Field / Popover / Listbox ===
+   File as-landed is unlayered throughout (no @layer components block above),
+   so this section stays unlayered too, matching every other section here —
+   not the plan's original @layer assumption, which predates B1/B3/B4
+   landing. The focus ring still gets its own explanatory comment below
+   since it is the one rule for which layering matters. */
+
+/* Reuses .btn geometry from atlas.css; primitives.css only adds what
+   atlas lacks: variant-aware legacy class sync is done in Button.tsx. */
+
+/* Intentionally unlayered, beside (not under) atlas.css's unlayered a11y
+   baseline at atlas.css:570-590. Both unlayered, ordinary cascade order
+   applies: primitives.css is imported after atlas.css, so this wins. */
+.btn:focus-visible,
+.chip:focus-visible,
+[data-primitive]:focus-visible,
+[data-primitive] :focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.chip[data-tone='accent'] {
+  border-color: var(--color-accent);
+}
+
+.chip[data-tone='status'] {
+  border: 1px solid var(--color-border-2);
+}
+
+.chip[data-tone='category'] {
+  background: var(--color-bg-surface);
+}
+
+.chip[data-selected='1'] {
+  background: var(--color-accent);
+  color: var(--color-bg-deep);
+}
+
+.chip[data-size='sm'] {
+  height: 20px;
+  padding: 0 8px;
+  font-size: 10.5px;
+}
+
+/* Field */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.field-label {
+  font-size: 12px;
+  font-weight: 550;
+  color: var(--color-text-muted);
+}
+
+.field-input {
+  height: 36px;
+  padding: 0 var(--sp-3);
+  border-radius: var(--rad-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg-surface);
+  color: var(--color-text);
+}
+
+.field-input[data-mono='1'] {
+  font-family: var(--font-mono);
+}
+
+textarea.field-input {
+  height: auto;
+  min-height: 36px;
+  padding: var(--sp-2) var(--sp-3);
+  line-height: 1.45;
+  resize: vertical;
+}
+
+.field-input[data-state='error'] {
+  border-color: var(--field-border-error);
+  box-shadow: 0 0 0 1px var(--field-border-error);
+}
+
+.field-input[data-state='valid'] {
+  border-color: var(--field-border-valid);
+}
+
+.field-input[data-state='pending'] {
+  border-color: var(--field-border-pending);
+}
+
+.field-input:disabled,
+.field-check input:disabled {
+  cursor: not-allowed;
+  background: var(--control-disabled-bg);
+  color: var(--control-disabled-fg);
+  border-color: var(--control-disabled-border);
+}
+
+.field-help {
+  color: var(--color-text-muted);
+}
+
+.field-error {
+  color: var(--field-border-error);
+}
+
+.field-check {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+/* Popover */
+
+/* The trigger is a bare <button>; without this reset it renders with UA chrome
+   (grey ButtonFace, 2px outset border, Arial) around the caller's own trigger
+   markup. */
+.pop-trigger {
+  appearance: none;
+  background: none;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  display: inline-flex;
+}
+
+.pop-content {
+  z-index: 40;
+  background: var(--overlay-bg);
+  border: 1px solid var(--overlay-border);
+  border-radius: var(--rad-sm);
+  box-shadow: var(--overlay-shadow);
+  padding: var(--sp-2);
+  min-width: 160px;
+}
+
+.pop-content[data-variant='tooltip'] {
+  padding: var(--sp-1) var(--sp-2);
+  min-width: unset;
+  width: max-content;
+  white-space: normal;
+  pointer-events: none;
+  max-width: min(32rem, calc(100vw - 1rem));
+  overflow-wrap: anywhere;
+}
+
+.pop-content[data-variant='menu'] {
+  max-width: min(36rem, calc(100vw - 1rem));
+  max-height: min(70dvh, 32rem);
+  overflow: auto;
+}
+
+.pop-content[data-variant='menu'] :is(button, [role='menuitem'], a):focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Tabs skins. The default `.chip` remains the backwards-compatible skin. */
+[data-el='tabs.list'][data-variant='line'] {
+  border-bottom: 1px solid var(--color-border-2);
+  gap: 0;
+}
+
+.pr-tabs__tab {
+  appearance: none;
+  border: 0;
+  color: var(--color-text-muted);
+  background: transparent;
+  cursor: pointer;
+  font: inherit;
+  min-height: 36px;
+  padding: var(--sp-2) var(--sp-3);
+  position: relative;
+}
+
+.pr-tabs__tab[data-variant='line'][aria-selected='true'] {
+  color: var(--color-text);
+}
+
+.pr-tabs__tab[data-variant='line'][aria-selected='true']::after {
+  background: var(--color-accent);
+  bottom: -1px;
+  content: '';
+  height: 2px;
+  inset-inline: var(--sp-2);
+  position: absolute;
+}
+
+[data-el='tabs.list'][data-variant='segmented'] {
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border-2);
+  border-radius: var(--rad-pill);
+  display: inline-flex;
+  gap: 2px;
+  max-width: 100%;
+  overflow-x: auto;
+  padding: 3px;
+}
+
+.pr-tabs__tab[data-variant='segmented'] {
+  border-radius: var(--rad-pill);
+  flex: none;
+  min-height: 30px;
+  padding: var(--sp-1) var(--sp-3);
+}
+
+.pr-tabs__tab[data-variant='segmented'][aria-selected='true'] {
+  background: var(--raised-bg);
+  box-shadow: var(--raised-shadow);
+  color: var(--color-text);
+}
+
+/* Listbox */
+
+.listbox {
+  list-style: none;
+  margin: 0;
+  padding: var(--sp-1) 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-bg-panel);
+  border: 1px solid var(--color-border);
+  border-radius: var(--rad-sm);
+}
+
+.listbox-option {
+  padding: var(--sp-2) var(--sp-3);
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.listbox-option:hover {
+  background: var(--color-bg-surface);
+}
+
+.listbox-option[data-selected='1'] {
+  background: var(--color-accent);
+  color: var(--color-bg-deep);
+}
+
+.listbox-option[aria-disabled='true'] {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.pr-avatar-group {
+  display: inline-flex;
+  align-items: center;
+  position: relative;
+}
+
+.pr-avatar-group > * {
+  flex: 0 0 auto;
+}
+
+.pr-avatar-group > *:focus-visible {
+  box-shadow: var(--focus-ring);
+  position: relative;
+  z-index: 1;
+}
+
+/* === B1: StubNotice / ColorSwatch === */
+
+.stub-notice {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-1);
+  padding: var(--badge-pad, 4px 8px);
+  border-radius: var(--badge-radius, var(--rad-xs));
+  background: var(--color-bg-surface);
+  border: 1px solid var(--color-border);
+}
+
+.stub-notice__dot {
+  width: var(--sp-1);
+  height: var(--sp-1);
+  border-radius: 50%;
+  background: var(--color-text-3);
+  flex-shrink: 0;
+}
+
+.stub-notice__label {
+  white-space: nowrap;
+  color: var(--color-text-3);
+}
+
+.color-swatch {
+  display: inline-block;
+  width: 48px;
+  height: 48px;
+  border-radius: var(--rad-xs);
+  background: var(--swatch-color);
+  border: 1px solid var(--color-border);
+}
+
+.color-swatch-wrap {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.split-pane {
+  display: flex;
+  width: 100%;
+  min-height: 120px;
+  gap: var(--sp-2);
+}
+
+.split-pane__pane {
+  flex: 1;
+  min-width: 0;
+}
+
+.master-detail {
+  display: flex;
+  width: 100%;
+  gap: var(--sp-3);
+}
+
+.master-detail__list {
+  flex: 0 0 140px;
+}
+
+.master-detail__detail {
+  flex: 1;
+  min-width: 0;
+}
+
+.legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.calendar-surface {
+  display: grid;
+  gap: var(--sp-2);
+}

@@ -3,6 +3,9 @@ package quest
 import (
 	"context"
 	"errors"
+	"fmt"
+	"math"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -335,26 +338,71 @@ func (r *ReadModel) ListParticipants(ctx context.Context, questID string, status
 	return repo.ListParticipants(ctx, questID, status)
 }
 
-func (r *ReadModel) List(ctx context.Context, status *string, limit, offset int) ([]QuestView, int64, error) {
-	filter := ""
-	if status != nil {
-		filter = *status
+// ListOrder is internal to quest reads; it does not expose a public sort API.
+type ListOrder uint8
+
+const (
+	OldestFirst ListOrder = iota
+	NewestFirst
+)
+
+type ListFilter struct {
+	Status, DisplayStatus      *string
+	ScheduledFrom, ScheduledTo *time.Time
+	Limit, Offset              int
+	Order                      ListOrder
+}
+
+func (r *ReadModel) List(ctx context.Context, filter ListFilter) ([]QuestView, int64, error) {
+	if r == nil || r.q == nil {
+		return nil, 0, errors.New("quest read model is not configured")
+	}
+	if filter.Limit < math.MinInt32 || filter.Limit > math.MaxInt32 || filter.Offset < math.MinInt32 || filter.Offset > math.MaxInt32 {
+		return nil, 0, errors.New("quest pagination exceeds database integer range")
+	}
+	if filter.Order != OldestFirst && filter.Order != NewestFirst {
+		return nil, 0, errors.New("unknown quest list order")
+	}
+	var machine, display pgtype.Text
+	if filter.Status != nil {
+		status := strings.ToLower(*filter.Status)
+		switch Status(status) {
+		case Open, Full, Played, Closed, Cancelled:
+			machine = pgtype.Text{String: status, Valid: true}
+		default:
+			return []QuestView{}, 0, nil
+		}
+	}
+	if filter.DisplayStatus != nil {
+		display = pgtype.Text{String: strings.ToLower(*filter.DisplayStatus), Valid: true}
+		// Legacy display filtering takes precedence, after machine validation.
+		machine = pgtype.Text{}
+	}
+	var from, to pgtype.Timestamptz
+	if filter.ScheduledFrom != nil {
+		from = pgtype.Timestamptz{Time: *filter.ScheduledFrom, Valid: true}
+	}
+	if filter.ScheduledTo != nil {
+		to = pgtype.Timestamptz{Time: *filter.ScheduledTo, Valid: true}
 	}
 	rows, err := r.q.ListQuests(ctx, dbgen.ListQuestsParams{
-		Status:    filter,
-		RowLimit:  int32(limit),
-		RowOffset: int32(offset),
+		MachineStatus: machine, DisplayStatus: display,
+		ScheduledFrom: from, ScheduledTo: to,
+		NewestFirst: filter.Order == NewestFirst,
+		RowLimit:    int32(filter.Limit), RowOffset: int32(filter.Offset),
 	})
 	if err != nil {
-		return nil, 0, err
-	}
-	total, err := r.q.CountQuests(ctx, filter)
-	if err != nil {
-		return nil, 0, err
+		return nil, 0, fmt.Errorf("list quests: %w", err)
 	}
 	out := make([]QuestView, 0, len(rows))
+	var total int64
 	for _, row := range rows {
-		out = append(out, mapListRow(row))
+		total = row.Total
+		// The count/page join yields one carrier when the page is empty.
+		// Its defaults are never a quest or public identity.
+		if row.HasItem {
+			out = append(out, mapListRow(row))
+		}
 	}
 	return out, total, nil
 }
@@ -363,6 +411,8 @@ type QuestView struct {
 	ID                     string
 	ShortCode              string
 	Status                 Status
+	DisplayStatus          string
+	DurationHours          float64
 	DMID                   string
 	ScheduledAt            time.Time
 	SlotsMax               int
@@ -372,7 +422,7 @@ type QuestView struct {
 	DiscordAppliedRevision int
 }
 
-func questView(publicID, dmID, documentID pgtype.UUID, shortCode, status string, scheduled pgtype.Timestamptz, filled, slots, desired, applied int32) QuestView {
+func questView(publicID, dmID, documentID pgtype.UUID, shortCode, status, displayStatus string, scheduled pgtype.Timestamptz, duration float64, filled, slots, desired, applied int32) QuestView {
 	var at time.Time
 	if scheduled.Valid {
 		at = scheduled.Time
@@ -381,6 +431,8 @@ func questView(publicID, dmID, documentID pgtype.UUID, shortCode, status string,
 		ID:                     db.UUIDString(publicID),
 		ShortCode:              shortCode,
 		Status:                 Status(status),
+		DisplayStatus:          displayStatus,
+		DurationHours:          duration,
 		DMID:                   db.UUIDString(dmID),
 		ScheduledAt:            at,
 		SlotsMax:               int(slots),
@@ -392,15 +444,15 @@ func questView(publicID, dmID, documentID pgtype.UUID, shortCode, status string,
 }
 
 func mapQuestView(row dbgen.GetQuestRow) QuestView {
-	return questView(row.PublicID, row.DmPublicID, row.DocumentPublicID, row.ShortCode, row.Status, row.ScheduledAt, row.FilledCount, row.SlotsMax, row.DiscordDesiredRevision, row.DiscordAppliedRevision)
+	return questView(row.PublicID, row.DmPublicID, row.DocumentPublicID, row.ShortCode, row.Status, row.DisplayStatus, row.ScheduledAt, row.DurationHours, row.FilledCount, row.SlotsMax, row.DiscordDesiredRevision, row.DiscordAppliedRevision)
 }
 
 func mapShortRow(row dbgen.GetQuestByShortCodeRow) QuestView {
-	return questView(row.PublicID, row.DmPublicID, row.DocumentPublicID, row.ShortCode, row.Status, row.ScheduledAt, row.FilledCount, row.SlotsMax, row.DiscordDesiredRevision, row.DiscordAppliedRevision)
+	return questView(row.PublicID, row.DmPublicID, row.DocumentPublicID, row.ShortCode, row.Status, row.DisplayStatus, row.ScheduledAt, row.DurationHours, row.FilledCount, row.SlotsMax, row.DiscordDesiredRevision, row.DiscordAppliedRevision)
 }
 
 func mapListRow(row dbgen.ListQuestsRow) QuestView {
-	return questView(row.PublicID, row.DmPublicID, row.DocumentPublicID, row.ShortCode, row.Status, row.ScheduledAt, row.FilledCount, row.SlotsMax, row.DiscordDesiredRevision, row.DiscordAppliedRevision)
+	return questView(row.PublicID, row.DmPublicID, row.DocumentPublicID, row.ShortCode, row.Status, row.DisplayStatus, row.ScheduledAt, row.DurationHours, row.FilledCount, row.SlotsMax, row.DiscordDesiredRevision, row.DiscordAppliedRevision)
 }
 
 // Queries exposes quest reads to GraphQL.
@@ -422,11 +474,8 @@ func (q Queries) Get(ctx context.Context, id, shortCode *string) (QuestView, err
 	return QuestView{}, ErrNotFound
 }
 
-func (q Queries) List(ctx context.Context, status *string, limit, offset int) ([]QuestView, int64, error) {
-	if q.Read == nil {
-		return nil, 0, nil
-	}
-	return q.Read.List(ctx, status, limit, offset)
+func (q Queries) List(ctx context.Context, filter ListFilter) ([]QuestView, int64, error) {
+	return q.Read.List(ctx, filter)
 }
 
 func (q Queries) Participants(ctx context.Context, questID string, status *string) ([]Participant, error) {

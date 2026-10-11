@@ -2,11 +2,11 @@
 
 High-signal notes for the Postgres schema under `apps/api/db/`. Truth for columns and constraints remains in `migrations/0001_init.sql`.
 
-| Doc | Covers |
-| --- | --- |
-| [design.md](design.md) | Why: dual-key, greenfield goose, TEXT+CHECK, axial hex (no PostGIS), API never sees bigint |
-| [patterns.md](patterns.md) | Locked naming / table patterns; when `public_id` applies |
-| [tables.md](tables.md) | Inventory by domain section — purpose + pattern tag |
+| Doc                        | Covers                                                                                     |
+| -------------------------- | ------------------------------------------------------------------------------------------ |
+| [design.md](design.md)     | Why: dual-key, greenfield goose, TEXT+CHECK, axial hex (no PostGIS), API never sees bigint |
+| [patterns.md](patterns.md) | Locked naming / table patterns; when `public_id` applies                                   |
+| [tables.md](tables.md)     | Inventory by domain section — purpose + pattern tag                                        |
 
 Related decisions (do not duplicate here):
 

@@ -1,5 +1,10 @@
 import { EventEmitter } from 'node:events';
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import {
+  createServer,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse,
+} from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { ChannelType } from 'discord.js';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -111,13 +116,17 @@ it('stays up when ingest returns 500 and still posts the next message', async ()
   const { start } = await import('@discord/session.js');
   const session = await start({ client: client as never, exit });
   client.emit('messageCreate', guildMessage());
-  await vi.waitFor(() => expect(posts.filter((p) => p.includes('discord-event'))).toHaveLength(1));
+  await vi.waitFor(() =>
+    expect(posts.filter((p) => p.includes('discord-event'))).toHaveLength(1),
+  );
   status = 200;
   client.emit('messageCreate', {
     ...guildMessage(),
     id: '112233445566778800',
   });
-  await vi.waitFor(() => expect(posts.filter((p) => p.includes('discord-event'))).toHaveLength(2));
+  await vi.waitFor(() =>
+    expect(posts.filter((p) => p.includes('discord-event'))).toHaveLength(2),
+  );
   expect(exit).not.toHaveBeenCalled();
   await session.stop();
 });
@@ -226,7 +235,9 @@ it('exits on terminal shardDisconnect without flushing', async () => {
   const { start } = await import('@discord/session.js');
   await start({ client: client as never, exit });
   client.emit('messageCreate', mentionMessage(reply));
-  await vi.waitFor(() => expect(posts.some((entry) => entry.startsWith('GET '))).toBe(true));
+  await vi.waitFor(() =>
+    expect(posts.some((entry) => entry.startsWith('GET '))).toBe(true),
+  );
   client.emit('shardDisconnect', { code: 4004, reason: '', wasClean: false }, 0);
   await new Promise((resolve) => setTimeout(resolve, 50));
   expect(exit).toHaveBeenCalledWith(1);

@@ -364,3 +364,202 @@ func TestAgentLeaseJSONBNumericStorageAdmission(t *testing.T) {
 		})
 	}
 }
+
+func TestAgentLeaseHTTPRenewal(t *testing.T) {
+	t.Setenv("AGENT_INLINE_COMPLETE", "0")
+	pool := integrationPool(t)
+	ctx := context.Background()
+	mux := http.NewServeMux()
+	agent.New("test", agent.NewPostgresStore(pool.Pool)).Routes(mux)
+	const requestTimeout = 5 * time.Second
+	send := func(t *testing.T, path, body string, want int) *httptest.ResponseRecorder {
+		t.Helper()
+		requestCtx, cancel := context.WithTimeout(ctx, requestTimeout)
+		defer cancel()
+		r := httptest.NewRequestWithContext(requestCtx, "POST", path, strings.NewReader(body))
+		r.Header.Set("X-Ingest-Secret", "test")
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, r)
+		if w.Code != want {
+			t.Fatalf("%s: status=%d want=%d body=%s", path, w.Code, want, w.Body.String())
+		}
+		return w
+	}
+	base := "/v1/agent/questions"
+	claim := func(t *testing.T, id string) agent.ClaimedQuestion {
+		t.Helper()
+		var out agent.ClaimedQuestion
+		if err := json.Unmarshal(send(t, base+"/claim", `{"lease_protocol":1}`, 200).Body.Bytes(), &out); err != nil || out.JobID != id {
+			t.Fatalf("claim: %+v error=%v want job %s", out, err, id)
+		}
+		return out
+	}
+	create := func(t *testing.T) (string, agent.ClaimedQuestion) {
+		t.Helper()
+		id := uuid.NewString()
+		t.Cleanup(func() {
+			pool.Exec(context.Background(), `DELETE FROM agent_questions WHERE job_id=(SELECT id FROM background_jobs WHERE public_id=$1)`, id)
+			pool.Exec(context.Background(), `DELETE FROM background_jobs WHERE public_id=$1`, id)
+		})
+		send(t, base, `{"version":1,"type":"question.requested","job_id":"`+id+`","question":"renewal regression"}`, 202)
+		return id, claim(t, id)
+	}
+	renew := func(t *testing.T, id, token string) jobs.Lease {
+		t.Helper()
+		var out jobs.Lease
+		w := send(t, base+"/"+id+"/renew", `{"lease_token":"`+token+`"}`, 200)
+		if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil {
+			t.Fatal(err)
+		}
+		return out
+	}
+	complete := func(t *testing.T, id, token string, want int) {
+		t.Helper()
+		send(t, base+"/"+id+"/complete", `{"version":1,"type":"question.completed","job_id":"`+id+`","lease_token":"`+token+`","answer":"renewed answer"}`, want)
+	}
+	type runningRow struct {
+		state, token                                                     string
+		attempt                                                          int
+		expiresAt, claimedAt, attemptDeadline, questionDeadline, updated time.Time
+		now                                                              time.Time
+	}
+	readRunning := func(t *testing.T, id string) runningRow {
+		t.Helper()
+		var out runningRow
+		if err := pool.QueryRow(ctx, `SELECT state,lease_token::text,attempts,lease_expires_at,claimed_at,attempt_deadline_at,question_deadline_at,updated_at,clock_timestamp() FROM background_jobs WHERE public_id=$1`, id).Scan(&out.state, &out.token, &out.attempt, &out.expiresAt, &out.claimedAt, &out.attemptDeadline, &out.questionDeadline, &out.updated, &out.now); err != nil {
+			t.Fatal(err)
+		}
+		return out
+	}
+	assertRenewed := func(t *testing.T, before, after runningRow, response jobs.Lease) {
+		t.Helper()
+		if after.state != "running" || after.token != before.token || after.attempt != before.attempt || !after.claimedAt.Equal(before.claimedAt) || !after.attemptDeadline.Equal(before.attemptDeadline) || !after.questionDeadline.Equal(before.questionDeadline) {
+			t.Fatalf("renewal changed ownership or deadlines: before=%+v after=%+v", before, after)
+		}
+		if response.Token != after.token || response.Attempt != after.attempt || !response.ExpiresAt.Equal(after.expiresAt) || !response.AttemptDeadlineAt.Equal(after.attemptDeadline) {
+			t.Fatalf("response differs from persisted lease: response=%+v row=%+v", response, after)
+		}
+		if response.RenewAfterSeconds != int(jobs.AgentLease.Seconds()/3) || response.RemainingBudgetSeconds != after.attemptDeadline.Sub(after.updated).Seconds() {
+			t.Fatalf("response timing differs from renewal clock: response=%+v row=%+v", response, after)
+		}
+		if !after.expiresAt.After(before.expiresAt) {
+			t.Fatalf("renewal did not extend lease: before=%+v after=%+v", before, after)
+		}
+	}
+	snapshot := func(t *testing.T, id string) []byte {
+		t.Helper()
+		var raw []byte
+		if err := pool.QueryRow(ctx, `SELECT jsonb_build_object('job',to_jsonb(b),'question',to_jsonb(a)) FROM background_jobs b JOIN agent_questions a ON a.job_id=b.id WHERE b.public_id=$1`, id).Scan(&raw); err != nil {
+			t.Fatal(err)
+		}
+		return raw
+	}
+
+	t.Run("extends_lease_and_completes_after_prior_expiry", func(t *testing.T) {
+		id, initial := create(t)
+		// Shorten only this fixture's first lease. Renewal still uses the real
+		// AgentLease policy and both original question/attempt deadlines.
+		if _, err := pool.Exec(ctx, `UPDATE background_jobs SET lease_expires_at=clock_timestamp()+interval '2 seconds' WHERE public_id=$1`, id); err != nil {
+			t.Fatal(err)
+		}
+		before := readRunning(t, id)
+		if !before.questionDeadline.Equal(initial.QuestionDeadlineAt) || !before.attemptDeadline.Equal(initial.Lease.AttemptDeadlineAt) {
+			t.Fatal("fixture changed the claim deadlines")
+		}
+		response := renew(t, id, initial.Lease.Token)
+		after := readRunning(t, id)
+		assertRenewed(t, before, after, response)
+		if !after.expiresAt.Equal(after.updated.Add(jobs.AgentLease)) {
+			t.Fatalf("uncapped renewal did not use the real lease duration: %+v", after)
+		}
+		// Crossing the saved prior expiry requires real clock progress. Wait
+		// against the same database clock, with one bounded wait and no poll.
+		waitCtx, cancel := context.WithTimeout(ctx, requestTimeout)
+		defer cancel()
+		if _, err := pool.Exec(waitCtx, `SELECT pg_sleep(GREATEST(0,EXTRACT(EPOCH FROM ($1::timestamptz-clock_timestamp()))))`, before.expiresAt); err != nil {
+			t.Fatal(err)
+		}
+		var completionStart time.Time
+		if err := pool.QueryRow(ctx, `SELECT clock_timestamp()`).Scan(&completionStart); err != nil {
+			t.Fatal(err)
+		}
+		if completionStart.Before(before.expiresAt) || !completionStart.Add(requestTimeout).Before(after.expiresAt) {
+			t.Fatalf("completion window unavailable: now=%s prior=%s renewed=%s", completionStart, before.expiresAt, after.expiresAt)
+		}
+		complete(t, id, response.Token, 204)
+		var state string
+		var completedAt time.Time
+		var raw []byte
+		if err := pool.QueryRow(ctx, `SELECT b.state,b.updated_at,a.result FROM background_jobs b JOIN agent_questions a ON a.job_id=b.id WHERE b.public_id=$1`, id).Scan(&state, &completedAt, &raw); err != nil {
+			t.Fatal(err)
+		}
+		var result agent.QuestionResult
+		if err := json.Unmarshal(raw, &result); err != nil || state != "succeeded" || result.Type != "question.completed" || result.JobID != id || result.Answer != "renewed answer" {
+			t.Fatalf("completion projection: state=%s result=%+v error=%v", state, result, err)
+		}
+		if completedAt.Before(before.expiresAt) || !completedAt.Before(after.expiresAt) {
+			t.Fatalf("completion was outside renewed-only window: completed=%s prior=%s renewed=%s", completedAt, before.expiresAt, after.expiresAt)
+		}
+	})
+
+	t.Run("caps_at_existing_deadline_and_rejects_expired_work", func(t *testing.T) {
+		id, initial := create(t)
+		// Move this fixture near its deadline without waiting through the
+		// whole question budget; the current deadline is the renewal ceiling.
+		if _, err := pool.Exec(ctx, `WITH clock AS MATERIALIZED (SELECT clock_timestamp() AS now) UPDATE background_jobs SET question_deadline_at=clock.now+$2::bigint*interval '1 microsecond',attempt_deadline_at=clock.now+$2::bigint*interval '1 microsecond',lease_expires_at=clock.now+($2::bigint/2)*interval '1 microsecond' FROM clock WHERE public_id=$1`, id, (jobs.AgentLease / 2).Microseconds()); err != nil {
+			t.Fatal(err)
+		}
+		before := readRunning(t, id)
+		response := renew(t, id, initial.Lease.Token)
+		after := readRunning(t, id)
+		assertRenewed(t, before, after, response)
+		if !after.expiresAt.Equal(before.questionDeadline) || !response.ExpiresAt.Equal(before.attemptDeadline) {
+			t.Fatalf("renewal exceeded or missed deadline cap: before=%+v response=%+v", before, response)
+		}
+		if _, err := pool.Exec(ctx, `WITH clock AS MATERIALIZED (SELECT clock_timestamp()-interval '1 second' AS expired) UPDATE background_jobs SET question_deadline_at=clock.expired,attempt_deadline_at=clock.expired,lease_expires_at=clock.expired FROM clock WHERE public_id=$1`, id); err != nil {
+			t.Fatal(err)
+		}
+		send(t, base+"/"+id+"/renew", `{"lease_token":"`+initial.Lease.Token+`"}`, 409)
+		var state, operation string
+		var released bool
+		var raw []byte
+		if err := pool.QueryRow(ctx, `SELECT b.state,b.completion_operation,b.lease_expires_at IS NULL AND b.claimed_at IS NULL AND b.attempt_deadline_at IS NULL,a.result FROM background_jobs b JOIN agent_questions a ON a.job_id=b.id WHERE b.public_id=$1`, id).Scan(&state, &operation, &released, &raw); err != nil {
+			t.Fatal(err)
+		}
+		var result agent.QuestionResult
+		if err := json.Unmarshal(raw, &result); err != nil || state != "dead" || operation != "deadline" || !released || result.Type != "question.failed" || result.JobID != id || result.Message == "" {
+			t.Fatalf("deadline was not projected atomically: state=%s operation=%s released=%v result=%+v error=%v", state, operation, released, result, err)
+		}
+		terminal := snapshot(t, id)
+		complete(t, id, initial.Lease.Token, 409)
+		if !jobs.EqualJSON(terminal, snapshot(t, id)) {
+			t.Fatal("expired completion rewrote the deadline result or job")
+		}
+	})
+
+	t.Run("stale_receipt_cannot_mutate_current_lease", func(t *testing.T) {
+		id, initial := create(t)
+		if _, err := pool.Exec(ctx, `UPDATE background_jobs SET lease_expires_at=clock_timestamp()-interval '1 second' WHERE public_id=$1`, id); err != nil {
+			t.Fatal(err)
+		}
+		current := claim(t, id)
+		oldToken, err := jobs.ParseToken(initial.Lease.Token)
+		if err != nil {
+			t.Fatal(err)
+		}
+		newToken, err := jobs.ParseToken(current.Lease.Token)
+		if err != nil || newToken != oldToken+1 || current.Lease.Attempt != initial.Lease.Attempt+1 || !current.QuestionDeadlineAt.Equal(initial.QuestionDeadlineAt) {
+			t.Fatalf("reclaim: initial=%+v current=%+v error=%v", initial, current, err)
+		}
+		authoritative := snapshot(t, id)
+		send(t, base+"/"+id+"/renew", `{"lease_token":"`+initial.Lease.Token+`"}`, 409)
+		if !jobs.EqualJSON(authoritative, snapshot(t, id)) {
+			t.Fatal("stale renewal mutated current job or question")
+		}
+		complete(t, id, initial.Lease.Token, 409)
+		if !jobs.EqualJSON(authoritative, snapshot(t, id)) {
+			t.Fatal("stale completion mutated current job or question")
+		}
+		complete(t, id, current.Lease.Token, 204)
+	})
+}

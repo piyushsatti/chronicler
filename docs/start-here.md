@@ -28,14 +28,14 @@ Per-app entrypoints: `apps/*/README.md`. Discord is the first app covered by roo
 
 ## Where to put new docs
 
-| Kind | Put it here |
-| --- | --- |
-| Requirement / R-id | `docs/requirements/` |
-| Meaning (actors, nouns, verbs) | `docs/semantics/` |
-| Boundary rule | `docs/interfaces/` (+ short decision in `docs/decisions/` if needed) |
-| Thin system map entry | `docs/systems/` |
-| App design / as-built | `apps/<app>/docs/` |
-| Deploy / backup / on-call steps | `deploy/docs/` |
-| Monorepo / PR / verify rules | [CONTRIBUTING.md](/CONTRIBUTING.md) |
+| Kind                            | Put it here                                                          |
+| ------------------------------- | -------------------------------------------------------------------- |
+| Requirement / R-id              | `docs/requirements/`                                                 |
+| Meaning (actors, nouns, verbs)  | `docs/semantics/`                                                    |
+| Boundary rule                   | `docs/interfaces/` (+ short decision in `docs/decisions/` if needed) |
+| Thin system map entry           | `docs/systems/`                                                      |
+| App design / as-built           | `apps/<app>/docs/`                                                   |
+| Deploy / backup / on-call steps | `deploy/docs/`                                                       |
+| Monorepo / PR / verify rules    | [CONTRIBUTING.md](/CONTRIBUTING.md)                                  |
 
 One canonical page per topic. Links flow down: map → interfaces → app docs.

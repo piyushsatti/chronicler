@@ -6,14 +6,17 @@ SELECT q.id,
        q.public_id,
        q.short_code,
        q.status,
+       v.display_status,
        dm.public_id AS dm_public_id,
        q.scheduled_at,
+       q.duration_hours,
        q.filled_count,
        q.slots_max,
        doc.public_id AS document_public_id,
        q.discord_desired_revision,
        q.discord_applied_revision
 FROM quests q
+JOIN quest_display_status v ON v.id = q.id
 JOIN members dm ON dm.id = q.dm_id
 JOIN documents doc ON doc.id = q.document_id
 WHERE q.public_id = sqlc.arg(public_id);
@@ -23,14 +26,17 @@ SELECT q.id,
        q.public_id,
        q.short_code,
        q.status,
+       v.display_status,
        dm.public_id AS dm_public_id,
        q.scheduled_at,
+       q.duration_hours,
        q.filled_count,
        q.slots_max,
        doc.public_id AS document_public_id,
        q.discord_desired_revision,
        q.discord_applied_revision
 FROM quests q
+JOIN quest_display_status v ON v.id = q.id
 JOIN members dm ON dm.id = q.dm_id
 JOIN documents doc ON doc.id = q.document_id
 WHERE q.short_code = sqlc.arg(short_code);
@@ -47,28 +53,51 @@ WHERE public_id = sqlc.arg(public_id)
 RETURNING id, public_id, discord_desired_revision;
 
 -- name: ListQuests :many
-SELECT q.id,
-       q.public_id,
-       q.short_code,
-       q.status,
-       dm.public_id AS dm_public_id,
-       q.scheduled_at,
-       q.filled_count,
-       q.slots_max,
-       doc.public_id AS document_public_id,
-       q.discord_desired_revision,
-       q.discord_applied_revision
-FROM quests q
-JOIN members dm ON dm.id = q.dm_id
-JOIN documents doc ON doc.id = q.document_id
-WHERE (sqlc.arg(status)::text = '' OR q.status = sqlc.arg(status))
-ORDER BY q.scheduled_at DESC
-LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
-
--- name: CountQuests :one
-SELECT count(*)::bigint
-FROM quests
-WHERE (sqlc.arg(status)::text = '' OR status = sqlc.arg(status));
+WITH filtered AS (
+  SELECT q.id, q.public_id, q.short_code, q.status, v.display_status,
+    dm.public_id AS dm_public_id, q.scheduled_at, q.duration_hours,
+    q.filled_count, q.slots_max, doc.public_id AS document_public_id,
+    q.discord_desired_revision, q.discord_applied_revision
+  FROM quests q
+  JOIN quest_display_status v ON v.id = q.id
+  JOIN members dm ON dm.id = q.dm_id
+  JOIN documents doc ON doc.id = q.document_id
+  WHERE (sqlc.narg(machine_status)::text IS NULL OR q.status = sqlc.narg(machine_status))
+    AND (sqlc.narg(display_status)::text IS NULL OR v.display_status = sqlc.narg(display_status))
+    AND (sqlc.narg(scheduled_from)::timestamptz IS NULL OR q.scheduled_at >= sqlc.narg(scheduled_from))
+    AND (sqlc.narg(scheduled_to)::timestamptz IS NULL OR q.scheduled_at <= sqlc.narg(scheduled_to))
+), counted AS (
+  SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+  SELECT * FROM filtered
+  ORDER BY
+    CASE WHEN sqlc.arg(newest_first)::boolean THEN scheduled_at END DESC,
+    CASE WHEN sqlc.arg(newest_first)::boolean THEN public_id END DESC,
+    CASE WHEN NOT sqlc.arg(newest_first)::boolean THEN scheduled_at END ASC,
+    CASE WHEN NOT sqlc.arg(newest_first)::boolean THEN public_id END ASC
+  LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset)
+)
+SELECT counted.total, (page.public_id IS NOT NULL)::boolean AS has_item,
+  COALESCE(page.id, 0)::bigint AS id,
+  COALESCE(page.public_id, '00000000-0000-0000-0000-000000000000'::uuid)::uuid AS public_id,
+  COALESCE(page.short_code, '')::text AS short_code,
+  COALESCE(page.status, '')::text AS status,
+  COALESCE(page.display_status, '')::text AS display_status,
+  COALESCE(page.dm_public_id, '00000000-0000-0000-0000-000000000000'::uuid)::uuid AS dm_public_id,
+  COALESCE(page.scheduled_at, 'epoch'::timestamptz)::timestamptz AS scheduled_at,
+  COALESCE(page.duration_hours, 0)::double precision AS duration_hours,
+  COALESCE(page.filled_count, 0)::integer AS filled_count,
+  COALESCE(page.slots_max, 0)::integer AS slots_max,
+  COALESCE(page.document_public_id, '00000000-0000-0000-0000-000000000000'::uuid)::uuid AS document_public_id,
+  COALESCE(page.discord_desired_revision, 0)::integer AS discord_desired_revision,
+  COALESCE(page.discord_applied_revision, 0)::integer AS discord_applied_revision
+FROM counted
+LEFT JOIN page ON TRUE
+ORDER BY
+  CASE WHEN sqlc.arg(newest_first)::boolean THEN page.scheduled_at END DESC,
+  CASE WHEN sqlc.arg(newest_first)::boolean THEN page.public_id END DESC,
+  CASE WHEN NOT sqlc.arg(newest_first)::boolean THEN page.scheduled_at END ASC,
+  CASE WHEN NOT sqlc.arg(newest_first)::boolean THEN page.public_id END ASC;
 
 -- name: InsertQuest :one
 INSERT INTO quests (

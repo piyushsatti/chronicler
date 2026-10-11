@@ -1,0 +1,128 @@
+/*
+ * typography.css — 10 semantic typography tiers
+ *
+ * Components pick a tier class; the CSS cascade handles font, size, color.
+ * NEVER set font-family, font-size, or text-color inline in a component.
+ *
+ * Refined-modern stack:
+ *   Display / heading / narrative  — Fraunces Variable (serif, expressive)
+ *   Title / label / body / caption — Geist (clean humanist sans)
+ *   Code / value                   — Geist Mono / Geist tabular-nums
+ *
+ * Sizes use clamp() for fluid response; contexts.css overrides
+ * per-context CSS vars (--type-*-size) for fine-grained control.
+ */
+
+/* ---- Display — page hero titles ----------------------------------------- */
+
+.type-display {
+  font-family: var(--font-display);
+  font-size: var(--type-display-size, clamp(1.75rem, 4vw, 3rem));
+  font-weight: 600;
+  font-variation-settings: 'SOFT' 50, 'opsz' 60;
+  line-height: 1.08;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+}
+
+/* ---- Heading — section titles -------------------------------------------- */
+
+.type-heading {
+  font-family: var(--font-display);
+  font-size: var(--type-heading-size, clamp(0.875rem, 1.5vw, 1.25rem));
+  font-weight: 500;
+  font-variation-settings: 'SOFT' 20, 'opsz' 30;
+  line-height: 1.3;
+  letter-spacing: 0.04em;
+  color: var(--color-text);
+  text-transform: uppercase;
+}
+
+/* ---- Title — entity / card names ----------------------------------------- */
+
+.type-title {
+  font-family: var(--font-body);
+  font-size: var(--type-title-size, 1rem);
+  font-weight: 600;
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  color: var(--color-text);
+}
+
+/* ---- Label — micro uppercase labels -------------------------------------- */
+
+.type-label {
+  font-family: var(--font-body);
+  font-size: var(--type-label-size, 0.6875rem);
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.08em;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}
+
+/* ---- Body — paragraph text ----------------------------------------------- */
+
+.type-body {
+  font-family: var(--font-body);
+  font-size: var(--type-body-size, 0.9375rem);
+  font-weight: 400;
+  line-height: 1.6;
+  color: var(--color-text);
+}
+
+/* ---- Narrative — long-form prose (quest summaries, lore) ----------------- */
+
+.type-narrative {
+  font-family: var(--font-narrative);
+  font-size: var(--type-narrative-size, 1.0625rem);
+  font-weight: 400;
+  font-variation-settings: 'SOFT' 0, 'opsz' 144;
+  line-height: 1.75;
+  color: var(--color-text);
+}
+
+/* ---- Caption — helper text, dates, counts -------------------------------- */
+
+.type-caption {
+  font-family: var(--font-body);
+  font-size: var(--type-caption-size, 0.8125rem);
+  font-weight: 400;
+  line-height: 1.5;
+  color: var(--color-text-muted);
+}
+
+/* ---- Code — short codes like Q-42, C-131 --------------------------------- */
+
+.type-code {
+  font-family: var(--font-mono);
+  font-size: var(--type-code-size, 0.75rem);
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.02em;
+  color: var(--color-text-muted);
+}
+
+/* ---- Value — large stat numbers ------------------------------------------ */
+
+.type-value {
+  font-family: var(--font-body);
+  font-size: var(--type-value-size, clamp(1.25rem, 2vw, 1.75rem));
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--color-accent);
+}
+
+/* ---- UI — interactive text (tabs, filters, buttons) ---------------------- */
+
+.type-ui {
+  font-family: var(--font-body);
+  font-size: var(--type-ui-size, 0.8125rem);
+  font-weight: 500;
+  line-height: 1.4;
+  letter-spacing: 0.04em;
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+}

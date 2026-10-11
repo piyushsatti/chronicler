@@ -17,15 +17,15 @@ Examples from the survey: pure date helpers → `domain/`; SQL `LIKE` escaping �
 
 **STRUCT-2:** **no backend reuse gate now** — duplications traced to structural causes already addressed by in-flight decisions (auth consolidation, ledger shape, placement rule). **Revisit** after PRs 1–4 if any function still has **three or more copies**.
 
-*(Amended 2026-07-28: STRUCT-2 reopened for frontend reuse gate; backend ruling unchanged.)*
+_(Amended 2026-07-28: STRUCT-2 reopened for frontend reuse gate; backend ruling unchanged.)_
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
-| Shared `utils` / grab-bag module | No position in dependency graph; hides unlike concerns; becomes cycle magnet |
+| Alternative                               | Why not                                                                         |
+| ----------------------------------------- | ------------------------------------------------------------------------------- |
+| Shared `utils` / grab-bag module          | No position in dependency graph; hides unlike concerns; becomes cycle magnet    |
 | Backend duplication lint gate immediately | Catches symptoms while causes are being removed; no AST lint infrastructure yet |
-| Pre-emptive shared auth helpers | Would be deleted by PR 1 / D14 |
+| Pre-emptive shared auth helpers           | Would be deleted by PR 1 / D14                                                  |
 
 ## Consequences
 

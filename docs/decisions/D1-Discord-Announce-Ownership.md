@@ -17,10 +17,10 @@ The API already announced quests. Epic work assumed the bot would post and write
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
-| Bot owns announce | Requires bot write auth and splits announce ownership |
-| Bot adds event + writes refs only | Still gives the bot a write path; rejected |
+| Alternative                       | Why not                                               |
+| --------------------------------- | ----------------------------------------------------- |
+| Bot owns announce                 | Requires bot write auth and splits announce ownership |
+| Bot adds event + writes refs only | Still gives the bot a write path; rejected            |
 
 ## Consequences
 

@@ -21,12 +21,12 @@ Accepted limitation: shared secret can post activity for any Discord id; mitigat
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
+| Alternative                                    | Why not                                                                      |
+| ---------------------------------------------- | ---------------------------------------------------------------------------- |
 | Postgres RLS policies as primary authorization | Requires per-principal DB roles not present; app already bypasses FORCEd RLS |
-| Bot as member through Identify | Bot has no member row; conflates machine and human authority |
-| Gateway before measuring GraphQL floor | Floor was TCP/TLS setup; premature gateway adds forgeable trust boundary |
-| Operator secret header as bot gate | Dead wiring; not adopted for AUTH-3 |
+| Bot as member through Identify                 | Bot has no member row; conflates machine and human authority                 |
+| Gateway before measuring GraphQL floor         | Floor was TCP/TLS setup; premature gateway adds forgeable trust boundary     |
+| Operator secret header as bot gate             | Dead wiring; not adopted for AUTH-3                                          |
 
 ## Consequences
 

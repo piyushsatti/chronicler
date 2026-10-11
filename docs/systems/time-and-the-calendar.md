@@ -8,14 +8,14 @@ One clock, table not formula. An admin-set `time_anchors` calibration point feed
 
 ## Interfaces
 
-| Interface | Role |
-| --- | --- |
-| — | No dedicated interface yet |
+| Interface | Role                       |
+| --------- | -------------------------- |
+| —         | No dedicated interface yet |
 
 ## Implemented by
 
-| App | Local docs |
-| --- | --- |
+| App        | Local docs                       |
+| ---------- | -------------------------------- |
 | `apps/api` | [apps/api/docs/](/apps/api/docs) |
 | `apps/web` | [apps/web/docs/](/apps/web/docs) |
 

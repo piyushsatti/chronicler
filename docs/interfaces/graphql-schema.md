@@ -10,10 +10,10 @@ There is one GraphQL schema for the product. Clients consume the committed SDL i
 
 ## Enforcement
 
-| Mechanism | Location | Status |
-| --- | --- | --- |
+| Mechanism                     | Location                | Status   |
+| ----------------------------- | ----------------------- | -------- |
 | Export from API schema module | `bun run export-schema` | enforced |
-| Drift check vs committed SDL | `bun run check-schema` | enforced |
+| Drift check vs committed SDL  | `bun run check-schema`  | enforced |
 
 ## Provider
 

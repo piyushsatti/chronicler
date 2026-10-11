@@ -6,6 +6,7 @@ export default tseslint.config(
     ignores: [
       '**/node_modules/**',
       '**/dist/**',
+      '**/.venv/**',
       '**/.git/**',
       '**/src/generated/**',
       '**/coverage/**',
@@ -61,6 +62,14 @@ export default tseslint.config(
       globals: {
         console: 'readonly',
         process: 'readonly',
+      },
+    },
+  },
+  {
+    files: ['apps/web/scripts/**/*.{mjs,js}'],
+    languageOptions: {
+      globals: {
+        console: 'readonly',
       },
     },
   },

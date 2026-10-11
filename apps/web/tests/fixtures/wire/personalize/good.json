@@ -1,0 +1,46 @@
+{
+  "settings": {
+    "memberId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+    "colorMode": "system",
+    "bgEffect": "none",
+    "themePalette": "parchment",
+    "flairTitle": null,
+    "flairBadge": null,
+    "flairFrame": null,
+    "flairNameplate": null,
+    "flairToken": null
+  },
+  "unlocks": [
+    {
+      "memberId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "unlockableId": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      "unlockedAt": "2026-01-01T00:00:00Z",
+      "source": "seed"
+    }
+  ],
+  "catalog": [
+    {
+      "id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      "cosmeticType": "theme",
+      "name": "Parchment",
+      "description": "Warm paper look",
+      "payload": { "slug": "parchment", "rarity": "common" },
+      "active": true
+    },
+    {
+      "id": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+      "cosmeticType": "badge",
+      "name": "Founder",
+      "description": "Early adventurer",
+      "payload": { "rarity": "rare", "unlockHint": "Play 10 quests" },
+      "active": true
+    }
+  ],
+  "driverProgress": {
+    "tenureMonths": 3,
+    "playerQuestsCount": 4,
+    "dmSessionsCount": 1
+  },
+  "unlockedAchievements": [],
+  "dmTier": "apprentice"
+}

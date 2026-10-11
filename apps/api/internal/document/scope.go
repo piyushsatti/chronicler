@@ -1,9 +1,8 @@
 package document
 
 import (
-	"slices"
-
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
+	"slices"
 )
 
 // Visibility of a published document.
@@ -15,9 +14,10 @@ const (
 	VisibilityRestricted Visibility = "restricted"
 )
 
-// ViewerScope is the single specification for document visibility (SQL and in-memory).
+// ViewerScope is request-local viewer authority for the audience Specification.
 type ViewerScope struct {
 	MemberID  string
+	Handle    string // exact current members.handle, never token-provided
 	Roles     []auth.Role
 	IsAdmin   bool
 	IsDM      bool
@@ -31,39 +31,35 @@ func ScopeFromClaims(c auth.Claims) ViewerScope {
 	}
 	return ViewerScope{
 		MemberID:  c.MemberID,
-		Roles:     c.Roles,
-		IsAdmin:   c.Has(auth.Admin),
-		IsDM:      c.Has(auth.DM),
 		ReaderOf:  map[string]struct{}{},
 		Anonymous: false,
 	}
 }
 
-// Allows reports whether the viewer may read a published document with the given visibility.
-// Drafts are author/admin only and are handled by the caller before this check.
-func (s ViewerScope) Allows(visibility Visibility, authorID string, policyAudiences []string) bool {
-	if s.IsAdmin {
-		return true
-	}
-	if authorID != "" && authorID == s.MemberID {
-		return true
-	}
-	switch visibility {
-	case VisibilityPublic:
-		return true
-	case VisibilityDMOnly:
-		return s.IsDM || slices.Contains(policyAudiences, "dm")
-	case VisibilityRestricted:
-		if _, ok := s.ReaderOf[authorID]; ok {
-			return true
-		}
-		for _, a := range policyAudiences {
-			if a == "member:"+s.MemberID {
-				return true
-			}
-		}
-		return false
-	default:
-		return false
-	}
+func ScopeFromAuthority(a auth.Authority) ViewerScope {
+	c := a.Claims()
+	scope := ScopeFromClaims(c)
+	scope.Roles = c.Roles
+	scope.Handle = a.Handle()
+	scope.IsAdmin = c.Has(auth.Admin)
+	scope.IsDM = a.LiveDM()
+	return scope
+}
+
+func (s ViewerScope) Authenticated() bool { return !s.Anonymous && s.MemberID != "" }
+func (s ViewerScope) Privileged() bool    { return s.Authenticated() && s.IsAdmin }
+
+// LegacyDMTier preserves the source's separate archon legacy grant. It does
+// not establish command authority or imply a hierarchy for explicit roles.
+func (s ViewerScope) LegacyDMTier() bool {
+	return s.Authenticated() && (s.IsDM || slices.Contains(s.Roles, auth.Role("archon")))
+}
+func (s ViewerScope) IsAuthor(id string) bool {
+	return s.Authenticated() && id != "" && id == s.MemberID
+}
+
+// Allows is the compatibility entry point for the legacy visibility compiler.
+// New reads always specify the full Document, including its nullable policy.
+func (s ViewerScope) Allows(visibility Visibility, documentID, authorID string, _ []string) bool {
+	return Specify(Document{ID: documentID, AuthorID: authorID, Status: StatusPublished, Visibility: visibility}).Allows(s)
 }

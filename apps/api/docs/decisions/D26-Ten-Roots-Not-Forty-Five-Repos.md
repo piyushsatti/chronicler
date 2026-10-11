@@ -13,14 +13,14 @@ Forty-five repository classes map ~one table each. Same-transaction pairs and co
 
 **Collapse to 10 aggregate roots** (plus plain lookup tables and `idempotency_keys` infrastructure). Boundaries are transcribed from documented same-transaction writes and DDL — not invented.
 
-| Root | Absorbs (count today) |
-| --- | --- |
-| Map | hexes, edges, POIs, pointcrawl, map changes (**9**) |
-| Member | profiles, availability, roles, settings, unlocks, verifications (**7**) |
-| Document | revisions, readers, links, assets, asset_links, lieutenant assignments (**6**) |
-| Character | DDB mirror, downtime, progression ledger, logs (**5**) |
-| Quest | regions, participants, hexes (**4**) |
-| Region, Activity, Time, Social, QuestArc | smaller pairs |
+| Root                                     | Absorbs (count today)                                                          |
+| ---------------------------------------- | ------------------------------------------------------------------------------ |
+| Map                                      | hexes, edges, POIs, pointcrawl, map changes (**9**)                            |
+| Member                                   | profiles, availability, roles, settings, unlocks, verifications (**7**)        |
+| Document                                 | revisions, readers, links, assets, asset_links, lieutenant assignments (**6**) |
+| Character                                | DDB mirror, downtime, progression ledger, logs (**5**)                         |
+| Quest                                    | regions, participants, hexes (**4**)                                           |
+| Region, Activity, Time, Social, QuestArc | smaller pairs                                                                  |
 
 **Reference data** (`unlockables`, `backstories`, `creation_catalog`, terrain rules) — lookups only, no root.
 
@@ -32,12 +32,12 @@ Migrate **one root completely per change** ([D25](/apps/api/docs/decisions/D25-E
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
-| Generic repository / shared `get_by_id` mixin | Leaves any code reaching any table; same-transaction pairs stay "by hope" |
-| 45 repos with better docstrings | Survey shows conventions decay; not enforceable |
-| Event sourcing aggregates | State lives in rows; consistent with [D16](/apps/api/docs/decisions/D16-Ledgers-Share-A-Shape-Not-A-Table.md) |
-| ORM relationships across aggregate edges | Hole in boundary — enables `quest.document.revisions` writes |
+| Alternative                                   | Why not                                                                                                       |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Generic repository / shared `get_by_id` mixin | Leaves any code reaching any table; same-transaction pairs stay "by hope"                                     |
+| 45 repos with better docstrings               | Survey shows conventions decay; not enforceable                                                               |
+| Event sourcing aggregates                     | State lives in rows; consistent with [D16](/apps/api/docs/decisions/D16-Ledgers-Share-A-Shape-Not-A-Table.md) |
+| ORM relationships across aggregate edges      | Hole in boundary — enables `quest.document.revisions` writes                                                  |
 
 ## Consequences
 

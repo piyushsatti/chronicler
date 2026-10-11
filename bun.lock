@@ -39,9 +39,9 @@
       "version": "0.1.0",
       "dependencies": {
         "@pi/contracts": "workspace:*",
+        "@pi/react-imposition": "github:piyushsatti/imposition#v0.1.0",
         "@reduxjs/toolkit": "^2.12.0",
         "@tanstack/react-query": "^5.60.0",
-        "imposition": "file:./vendor/imposition-0.1.0.tgz",
         "react": "^19.0.0",
         "react-dom": "^19.0.0",
         "react-redux": "^9.3.0",
@@ -373,6 +373,8 @@
     "@pi/contracts": ["@pi/contracts@workspace:packages/contracts"],
 
     "@pi/discord": ["@pi/discord@workspace:apps/discord"],
+
+    "@pi/react-imposition": ["@pi/react-imposition@github:piyushsatti/imposition#39ec338", { "peerDependencies": { "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" }, "optionalPeers": ["react-dom"] }, "piyushsatti-imposition-39ec338", "sha512-KVGgPX0xJez8TsKeTBe6DaG5WLdcVgOXc20kIQPIRQ4V7aMzq2cyvXXDmwRxoUZD+iuYeREyhylFOn4KkYLOTQ=="],
 
     "@pi/web": ["@pi/web@workspace:apps/web"],
 
@@ -807,8 +809,6 @@
     "import-fresh": ["import-fresh@3.3.1", "", { "dependencies": { "parent-module": "^1.0.0", "resolve-from": "^4.0.0" } }, "sha512-TR3KfrTZTYLPB6jUjfx6MF9WcWrHL9su5TObK4ZkYgBdWKPOFoSoQIdEuTuR82pmtxH2spWG9h6etwfr1pLBqQ=="],
 
     "import-from": ["import-from@4.0.0", "", {}, "sha512-P9J71vT5nLlDeV8FHs5nNxaLbrpfAV5cF5srvbZfpwpcJoM/xZR3hiv+q+SAnuSmuGbXMWud063iIMx/V/EWZQ=="],
-
-    "imposition": ["imposition@./vendor/imposition-0.1.0.tgz", { "peerDependencies": { "react": "^18.0.0 || ^19.0.0", "react-dom": "^18.0.0 || ^19.0.0" }, "optionalPeers": ["react-dom"] }, "sha512-tdf+dOdTJr+XXLU/f7+QLi3bCdALVqXWz/mMRrlWUVsEbkxeK3M62CAfH/odioWkMY4//JnDB1O+IEoveQyQsw=="],
 
     "imurmurhash": ["imurmurhash@0.1.4", "", {}, "sha512-JmXMZ6wuvDmLiHEml9ykzqO6lwFbof0GG4IkcGaENdCRDDmMVnny7s5HsIgHCbaq0w2MyPhDqkhTUgS2LU2PHA=="],
 

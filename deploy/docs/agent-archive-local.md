@@ -8,12 +8,12 @@ Compose: [../compose/agent-archive.yml](/deploy/compose/agent-archive.yml).
 
 ## Services
 
-| Service | Build | Role |
-| --- | --- | --- |
-| `archive` | `apps/agent/Dockerfile.archive` | LanceDB index + MCP tools |
-| `agent` | `apps/agent/Dockerfile` | Claim/complete worker + harness |
-| API (external) | existing API compose / process | Job store + anonymous GraphQL |
-| LiteLLM (external) | operator gateway | Chat + embeddings |
+| Service            | Build                           | Role                            |
+| ------------------ | ------------------------------- | ------------------------------- |
+| `archive`          | `apps/agent/Dockerfile.archive` | LanceDB index + MCP tools       |
+| `agent`            | `apps/agent/Dockerfile`         | Claim/complete worker + harness |
+| API (external)     | existing API compose / process  | Job store + anonymous GraphQL   |
+| LiteLLM (external) | operator gateway                | Chat + embeddings               |
 
 ## Bootstrap
 

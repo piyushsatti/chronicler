@@ -18,8 +18,8 @@ The ruling in plain words. Preserve owner-ruling quotes and dates verbatim when 
 ## Alternatives rejected
 
 | Alternative | Why not |
-| --- | --- |
-| … | … |
+| ----------- | ------- |
+| …           | …       |
 
 ## Consequences
 

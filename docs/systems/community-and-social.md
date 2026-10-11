@@ -8,14 +8,14 @@ Profiles, availability, directories, follows, and requests work end to end, wire
 
 ## Interfaces
 
-| Interface | Role |
-| --- | --- |
+| Interface                                            | Role                              |
+| ---------------------------------------------------- | --------------------------------- |
 | [live-authority](/docs/interfaces/live-authority.md) | Social actions gated by authority |
 
 ## Implemented by
 
-| App | Local docs |
-| --- | --- |
+| App        | Local docs                       |
+| ---------- | -------------------------------- |
 | `apps/api` | [apps/api/docs/](/apps/api/docs) |
 | `apps/web` | [apps/web/docs/](/apps/web/docs) |
 

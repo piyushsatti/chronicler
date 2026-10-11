@@ -10,8 +10,8 @@ One database session per request. The audience (visibility) predicate is bound t
 
 ## Enforcement
 
-| Mechanism | Location | Status |
-| --- | --- | --- |
+| Mechanism                      | Location              | Status           |
+| ------------------------------ | --------------------- | ---------------- |
 | Session-scoped listener / gate | API ORM session setup | **not enforced** |
 
 ## Provider

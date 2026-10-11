@@ -1,0 +1,7 @@
+import { useEffect, useState } from 'react';
+import { loadEditorRecord } from './adapters/editorLoad.js';
+export function EditorRoute() {
+  const [record, setRecord] = useState(null);
+  useEffect(() => { void loadEditorRecord().then(setRecord); }, []);
+  return <EditorWorkspace initial={record} />;
+}

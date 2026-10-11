@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/piyushsatti/chronicler/apps/api/internal/document"
+
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 )
 
@@ -25,15 +27,16 @@ type Region struct {
 }
 
 type Queries struct {
-	MapByAtlas    func(ctx context.Context, code string) (MapView, error)
-	ListMapsFn    func(ctx context.Context, family *string) ([]MapView, error)
-	ListRegionsFn func(ctx context.Context, kind *string) ([]Region, error)
-	GameDay       func(ctx context.Context, realDate time.Time) (int, error)
-	MapViewFn     func(ctx context.Context, atlasCode string, limit, offset int) (MapViewPage, error)
-	HexFn         func(ctx context.Context, mapID string, col, row int) (Hex, error)
+	DocumentScope  func(context.Context) (document.ViewerScope, error)
+	MapByAtlas     func(ctx context.Context, code string) (MapView, error)
+	ListMapsFn     func(ctx context.Context, family *string) ([]MapView, error)
+	ListRegionsFn  func(ctx context.Context, kind *string) ([]Region, error)
+	GameDay        func(ctx context.Context, realDate time.Time) (int, error)
+	MapViewFn      func(ctx context.Context, scope document.ViewerScope, atlasCode string, limit, offset int) (MapViewPage, error)
+	HexFn          func(ctx context.Context, mapID string, col, row int) (Hex, error)
 	RegionCountsFn func(ctx context.Context, regionID string) (RegionCounts, error)
-	MapActivityFn func(ctx context.Context, atlasCode string) (MapActivity, error)
-	HexHistoryFn  func(ctx context.Context, hexID string, limit int) ([]HexChange, error)
+	MapActivityFn  func(ctx context.Context, atlasCode string) (MapActivity, error)
+	HexHistoryFn   func(ctx context.Context, hexID string, limit int) ([]HexChange, error)
 }
 
 func (q Queries) Map(ctx context.Context, atlasCode string) (MapView, error) {
@@ -61,7 +64,15 @@ func (q Queries) MapView(ctx context.Context, atlasCode string, limit, offset in
 	if q.MapViewFn == nil {
 		return MapViewPage{}, ErrNotFound
 	}
-	return q.MapViewFn(ctx, atlasCode, limit, offset)
+	scope := document.ViewerScope{Anonymous: true}
+	if q.DocumentScope != nil {
+		var err error
+		scope, err = q.DocumentScope(ctx)
+		if err != nil {
+			return MapViewPage{}, err
+		}
+	}
+	return q.MapViewFn(ctx, scope, atlasCode, limit, offset)
 }
 
 func (q Queries) Hex(ctx context.Context, mapID string, col, row int) (Hex, error) {

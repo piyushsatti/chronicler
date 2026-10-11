@@ -92,19 +92,6 @@ func (q *Queries) CountQuestParticipants(ctx context.Context, questID int64) (in
 	return column_1, err
 }
 
-const countQuests = `-- name: CountQuests :one
-SELECT count(*)::bigint
-FROM quests
-WHERE ($1::text = '' OR status = $1)
-`
-
-func (q *Queries) CountQuests(ctx context.Context, status string) (int64, error) {
-	row := q.db.QueryRow(ctx, countQuests, status)
-	var column_1 int64
-	err := row.Scan(&column_1)
-	return column_1, err
-}
-
 const documentInternalID = `-- name: DocumentInternalID :one
 SELECT id FROM documents WHERE public_id = $1
 `
@@ -122,14 +109,17 @@ SELECT q.id,
        q.public_id,
        q.short_code,
        q.status,
+       v.display_status,
        dm.public_id AS dm_public_id,
        q.scheduled_at,
+       q.duration_hours,
        q.filled_count,
        q.slots_max,
        doc.public_id AS document_public_id,
        q.discord_desired_revision,
        q.discord_applied_revision
 FROM quests q
+JOIN quest_display_status v ON v.id = q.id
 JOIN members dm ON dm.id = q.dm_id
 JOIN documents doc ON doc.id = q.document_id
 WHERE q.public_id = $1
@@ -140,8 +130,10 @@ type GetQuestRow struct {
 	PublicID               pgtype.UUID        `json:"public_id"`
 	ShortCode              string             `json:"short_code"`
 	Status                 string             `json:"status"`
+	DisplayStatus          string             `json:"display_status"`
 	DmPublicID             pgtype.UUID        `json:"dm_public_id"`
 	ScheduledAt            pgtype.Timestamptz `json:"scheduled_at"`
+	DurationHours          float64            `json:"duration_hours"`
 	FilledCount            int32              `json:"filled_count"`
 	SlotsMax               int32              `json:"slots_max"`
 	DocumentPublicID       pgtype.UUID        `json:"document_public_id"`
@@ -159,8 +151,10 @@ func (q *Queries) GetQuest(ctx context.Context, publicID pgtype.UUID) (GetQuestR
 		&i.PublicID,
 		&i.ShortCode,
 		&i.Status,
+		&i.DisplayStatus,
 		&i.DmPublicID,
 		&i.ScheduledAt,
+		&i.DurationHours,
 		&i.FilledCount,
 		&i.SlotsMax,
 		&i.DocumentPublicID,
@@ -175,14 +169,17 @@ SELECT q.id,
        q.public_id,
        q.short_code,
        q.status,
+       v.display_status,
        dm.public_id AS dm_public_id,
        q.scheduled_at,
+       q.duration_hours,
        q.filled_count,
        q.slots_max,
        doc.public_id AS document_public_id,
        q.discord_desired_revision,
        q.discord_applied_revision
 FROM quests q
+JOIN quest_display_status v ON v.id = q.id
 JOIN members dm ON dm.id = q.dm_id
 JOIN documents doc ON doc.id = q.document_id
 WHERE q.short_code = $1
@@ -193,8 +190,10 @@ type GetQuestByShortCodeRow struct {
 	PublicID               pgtype.UUID        `json:"public_id"`
 	ShortCode              string             `json:"short_code"`
 	Status                 string             `json:"status"`
+	DisplayStatus          string             `json:"display_status"`
 	DmPublicID             pgtype.UUID        `json:"dm_public_id"`
 	ScheduledAt            pgtype.Timestamptz `json:"scheduled_at"`
+	DurationHours          float64            `json:"duration_hours"`
 	FilledCount            int32              `json:"filled_count"`
 	SlotsMax               int32              `json:"slots_max"`
 	DocumentPublicID       pgtype.UUID        `json:"document_public_id"`
@@ -210,8 +209,10 @@ func (q *Queries) GetQuestByShortCode(ctx context.Context, shortCode string) (Ge
 		&i.PublicID,
 		&i.ShortCode,
 		&i.Status,
+		&i.DisplayStatus,
 		&i.DmPublicID,
 		&i.ScheduledAt,
+		&i.DurationHours,
 		&i.FilledCount,
 		&i.SlotsMax,
 		&i.DocumentPublicID,
@@ -363,38 +364,74 @@ func (q *Queries) ListQuestParticipants(ctx context.Context, arg ListQuestPartic
 }
 
 const listQuests = `-- name: ListQuests :many
-SELECT q.id,
-       q.public_id,
-       q.short_code,
-       q.status,
-       dm.public_id AS dm_public_id,
-       q.scheduled_at,
-       q.filled_count,
-       q.slots_max,
-       doc.public_id AS document_public_id,
-       q.discord_desired_revision,
-       q.discord_applied_revision
-FROM quests q
-JOIN members dm ON dm.id = q.dm_id
-JOIN documents doc ON doc.id = q.document_id
-WHERE ($1::text = '' OR q.status = $1)
-ORDER BY q.scheduled_at DESC
-LIMIT $3 OFFSET $2
+WITH filtered AS (
+  SELECT q.id, q.public_id, q.short_code, q.status, v.display_status,
+    dm.public_id AS dm_public_id, q.scheduled_at, q.duration_hours,
+    q.filled_count, q.slots_max, doc.public_id AS document_public_id,
+    q.discord_desired_revision, q.discord_applied_revision
+  FROM quests q
+  JOIN quest_display_status v ON v.id = q.id
+  JOIN members dm ON dm.id = q.dm_id
+  JOIN documents doc ON doc.id = q.document_id
+  WHERE ($2::text IS NULL OR q.status = $2)
+    AND ($3::text IS NULL OR v.display_status = $3)
+    AND ($4::timestamptz IS NULL OR q.scheduled_at >= $4)
+    AND ($5::timestamptz IS NULL OR q.scheduled_at <= $5)
+), counted AS (
+  SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+  SELECT id, public_id, short_code, status, display_status, dm_public_id, scheduled_at, duration_hours, filled_count, slots_max, document_public_id, discord_desired_revision, discord_applied_revision FROM filtered
+  ORDER BY
+    CASE WHEN $1::boolean THEN scheduled_at END DESC,
+    CASE WHEN $1::boolean THEN public_id END DESC,
+    CASE WHEN NOT $1::boolean THEN scheduled_at END ASC,
+    CASE WHEN NOT $1::boolean THEN public_id END ASC
+  LIMIT $7 OFFSET $6
+)
+SELECT counted.total, (page.public_id IS NOT NULL)::boolean AS has_item,
+  COALESCE(page.id, 0)::bigint AS id,
+  COALESCE(page.public_id, '00000000-0000-0000-0000-000000000000'::uuid)::uuid AS public_id,
+  COALESCE(page.short_code, '')::text AS short_code,
+  COALESCE(page.status, '')::text AS status,
+  COALESCE(page.display_status, '')::text AS display_status,
+  COALESCE(page.dm_public_id, '00000000-0000-0000-0000-000000000000'::uuid)::uuid AS dm_public_id,
+  COALESCE(page.scheduled_at, 'epoch'::timestamptz)::timestamptz AS scheduled_at,
+  COALESCE(page.duration_hours, 0)::double precision AS duration_hours,
+  COALESCE(page.filled_count, 0)::integer AS filled_count,
+  COALESCE(page.slots_max, 0)::integer AS slots_max,
+  COALESCE(page.document_public_id, '00000000-0000-0000-0000-000000000000'::uuid)::uuid AS document_public_id,
+  COALESCE(page.discord_desired_revision, 0)::integer AS discord_desired_revision,
+  COALESCE(page.discord_applied_revision, 0)::integer AS discord_applied_revision
+FROM counted
+LEFT JOIN page ON TRUE
+ORDER BY
+  CASE WHEN $1::boolean THEN page.scheduled_at END DESC,
+  CASE WHEN $1::boolean THEN page.public_id END DESC,
+  CASE WHEN NOT $1::boolean THEN page.scheduled_at END ASC,
+  CASE WHEN NOT $1::boolean THEN page.public_id END ASC
 `
 
 type ListQuestsParams struct {
-	Status    string `json:"status"`
-	RowOffset int32  `json:"row_offset"`
-	RowLimit  int32  `json:"row_limit"`
+	NewestFirst   bool               `json:"newest_first"`
+	MachineStatus pgtype.Text        `json:"machine_status"`
+	DisplayStatus pgtype.Text        `json:"display_status"`
+	ScheduledFrom pgtype.Timestamptz `json:"scheduled_from"`
+	ScheduledTo   pgtype.Timestamptz `json:"scheduled_to"`
+	RowOffset     int32              `json:"row_offset"`
+	RowLimit      int32              `json:"row_limit"`
 }
 
 type ListQuestsRow struct {
+	Total                  int64              `json:"total"`
+	HasItem                bool               `json:"has_item"`
 	ID                     int64              `json:"id"`
 	PublicID               pgtype.UUID        `json:"public_id"`
 	ShortCode              string             `json:"short_code"`
 	Status                 string             `json:"status"`
+	DisplayStatus          string             `json:"display_status"`
 	DmPublicID             pgtype.UUID        `json:"dm_public_id"`
 	ScheduledAt            pgtype.Timestamptz `json:"scheduled_at"`
+	DurationHours          float64            `json:"duration_hours"`
 	FilledCount            int32              `json:"filled_count"`
 	SlotsMax               int32              `json:"slots_max"`
 	DocumentPublicID       pgtype.UUID        `json:"document_public_id"`
@@ -403,7 +440,15 @@ type ListQuestsRow struct {
 }
 
 func (q *Queries) ListQuests(ctx context.Context, arg ListQuestsParams) ([]ListQuestsRow, error) {
-	rows, err := q.db.Query(ctx, listQuests, arg.Status, arg.RowOffset, arg.RowLimit)
+	rows, err := q.db.Query(ctx, listQuests,
+		arg.NewestFirst,
+		arg.MachineStatus,
+		arg.DisplayStatus,
+		arg.ScheduledFrom,
+		arg.ScheduledTo,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -412,12 +457,16 @@ func (q *Queries) ListQuests(ctx context.Context, arg ListQuestsParams) ([]ListQ
 	for rows.Next() {
 		var i ListQuestsRow
 		if err := rows.Scan(
+			&i.Total,
+			&i.HasItem,
 			&i.ID,
 			&i.PublicID,
 			&i.ShortCode,
 			&i.Status,
+			&i.DisplayStatus,
 			&i.DmPublicID,
 			&i.ScheduledAt,
+			&i.DurationHours,
 			&i.FilledCount,
 			&i.SlotsMax,
 			&i.DocumentPublicID,

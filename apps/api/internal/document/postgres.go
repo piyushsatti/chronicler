@@ -20,23 +20,17 @@ func NewPostgresReadRepo(pool *pgxpool.Pool) *PostgresReadRepo {
 	return &PostgresReadRepo{q: dbgen.New(pool)}
 }
 
-func mapDoc(id pgtype.UUID, kind, slug, title, status, visibility, body string, authorID pgtype.UUID) Document {
-	var vis Visibility
-	switch visibility {
-	case string(VisibilityDMOnly), string(VisibilityRestricted), string(VisibilityPublic):
-		vis = Visibility(visibility)
-	default:
-		vis = VisibilityPublic
-	}
+func mapDoc(id pgtype.UUID, kind, slug, title, status, visibility, body string, authorID pgtype.UUID, policy []byte) Document {
 	return Document{
 		ID:         db.UUIDString(id),
 		Kind:       kind,
 		Slug:       slug,
 		Title:      title,
 		Status:     Status(status),
-		Visibility: vis,
+		Visibility: Visibility(visibility),
 		AuthorID:   db.UUIDString(authorID),
 		Body:       body,
+		Policy:     policy,
 	}
 }
 
@@ -52,7 +46,7 @@ func (p *PostgresReadRepo) ByID(ctx context.Context, id string) (Document, error
 		}
 		return Document{}, err
 	}
-	return mapDoc(row.ID, row.Kind, row.Slug, row.Title, row.Status, row.Visibility, row.Body, row.AuthorID), nil
+	return mapDoc(row.ID, row.Kind, row.Slug, row.Title, row.Status, row.Visibility, row.Body, row.AuthorID, row.Policy), nil
 }
 
 func (p *PostgresReadRepo) BySlug(ctx context.Context, slug string) (Document, error) {
@@ -63,38 +57,42 @@ func (p *PostgresReadRepo) BySlug(ctx context.Context, slug string) (Document, e
 		}
 		return Document{}, err
 	}
-	return mapDoc(row.ID, row.Kind, row.Slug, row.Title, row.Status, row.Visibility, row.Body, row.AuthorID), nil
+	return mapDoc(row.ID, row.Kind, row.Slug, row.Title, row.Status, row.Visibility, row.Body, row.AuthorID, row.Policy), nil
 }
 
-func (p *PostgresReadRepo) List(ctx context.Context, f ListFilter) ([]Document, int64, error) {
+func (p *PostgresReadRepo) List(ctx context.Context, scope ViewerScope, f ListFilter) ([]Document, int64, error) {
+	viewer := SQLScope(scope)
 	params := dbgen.ListDocumentsParams{
-		Column1: db.OptString(f.Kind),
-		Column2: db.OptString(f.Category),
-		Column3: db.OptString(f.Status),
-		Column4: db.OptString(f.Visibility),
-		Column5: db.OptString(f.Search),
-		Limit:   int32(f.Limit),
-		Offset:  int32(f.Offset),
+		Kind: optionalText(f.Kind), Category: optionalText(f.Category), Status: optionalText(f.Status),
+		Visibility: optionalText(f.Visibility), Search: optionalText(f.Search),
+		RowLimit: int32(f.Limit), RowOffset: int32(f.Offset),
+		ViewerID: viewer.ID, ViewerRoles: viewer.Roles, ViewerHandle: viewer.Handle,
+		ViewerAdmin: viewer.Admin, ViewerLiveDm: viewer.LiveDM, ReaderIds: viewer.Readers,
 	}
 	rows, err := p.q.ListDocuments(ctx, params)
 	if err != nil {
 		return nil, 0, err
 	}
 	total, err := p.q.CountDocuments(ctx, dbgen.CountDocumentsParams{
-		Column1: params.Column1,
-		Column2: params.Column2,
-		Column3: params.Column3,
-		Column4: params.Column4,
-		Column5: params.Column5,
+		Kind: params.Kind, Category: params.Category, Status: params.Status,
+		Visibility: params.Visibility, Search: params.Search,
+		ViewerID: viewer.ID, ViewerRoles: viewer.Roles, ViewerHandle: viewer.Handle,
+		ViewerAdmin: viewer.Admin, ViewerLiveDm: viewer.LiveDM, ReaderIds: viewer.Readers,
 	})
 	if err != nil {
 		return nil, 0, err
 	}
 	out := make([]Document, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, mapDoc(row.ID, row.Kind, row.Slug, row.Title, row.Status, row.Visibility, row.Body, row.AuthorID))
+		out = append(out, mapDoc(row.ID, row.Kind, row.Slug, row.Title, row.Status, row.Visibility, row.Body, row.AuthorID, row.Policy))
 	}
-	return out, total, nil
+	overridden := false
+	for _, row := range rows {
+		overridden = overridden || row.AdminOverride
+	}
+	AuditSQLOverride(ctx, scope, overridden, "documents", "list")
+	AuditSQLOverride(ctx, scope, total.AdminOverride, "documents", "count")
+	return out, total.Total, nil
 }
 
 func (p *PostgresReadRepo) ReaderIDs(ctx context.Context, memberID string) (map[string]struct{}, error) {
@@ -139,6 +137,21 @@ func (p *PostgresReadRepo) ListRevisions(ctx context.Context, documentID string,
 	return out, nil
 }
 
+func (p *PostgresReadRepo) RevisionAuthor(ctx context.Context, id string) (string, error) {
+	uid, err := db.ParseUUID(id)
+	if err != nil {
+		return "", ErrNotFound
+	}
+	authorID, err := p.q.GetDocumentRevisionAuthor(ctx, uid)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrNotFound
+	}
+	if err != nil {
+		return "", err
+	}
+	return db.UUIDString(authorID), nil
+}
+
 func (p *PostgresReadRepo) ListTrash(ctx context.Context, limit, offset int) ([]TrashItem, error) {
 	rows, err := p.q.ListDocumentsTrash(ctx, dbgen.ListDocumentsTrashParams{
 		Limit:  int32(limit),
@@ -159,8 +172,12 @@ func (p *PostgresReadRepo) ListTrash(ctx context.Context, limit, offset int) ([]
 	return out, nil
 }
 
-func (p *PostgresReadRepo) Backlinks(ctx context.Context, slug string) ([]Link, error) {
-	rows, err := p.q.ListDocumentBacklinksBySlug(ctx, slug)
+func (p *PostgresReadRepo) Backlinks(ctx context.Context, scope ViewerScope, slug string) ([]Link, error) {
+	viewer := SQLScope(scope)
+	rows, err := p.q.ListDocumentBacklinksBySlug(ctx, dbgen.ListDocumentBacklinksBySlugParams{
+		Slug: slug, ViewerID: viewer.ID, ViewerRoles: viewer.Roles, ViewerHandle: viewer.Handle,
+		ViewerAdmin: viewer.Admin, ViewerLiveDm: viewer.LiveDM, ReaderIds: viewer.Readers,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -173,5 +190,61 @@ func (p *PostgresReadRepo) Backlinks(ctx context.Context, slug string) ([]Link, 
 			Relation:   row.Relation,
 		})
 	}
+	overridden := false
+	for _, row := range rows {
+		overridden = overridden || row.AdminOverride
+	}
+	AuditSQLOverride(ctx, scope, overridden, "backlinks", "list")
 	return out, nil
+}
+
+// SQLViewer is the input to the Specification SQL interpreter. All consumers
+// (including adjacent map-place projections) use this conversion.
+type SQLViewer struct {
+	ID            pgtype.UUID
+	Roles         []string
+	Handle        string
+	Admin, LiveDM bool
+	Readers       []pgtype.UUID
+}
+
+func SQLScope(scope ViewerScope) SQLViewer {
+	v := SQLViewer{Roles: []string{}, Readers: []pgtype.UUID{}}
+	if !scope.Authenticated() {
+		return v
+	}
+	id, err := db.ParseUUID(scope.MemberID)
+	if err != nil {
+		return v
+	}
+	v.ID, v.Handle, v.Admin, v.LiveDM = id, scope.Handle, scope.Privileged(), scope.IsDM
+	for _, role := range scope.Roles {
+		v.Roles = append(v.Roles, string(role))
+	}
+	for reader := range scope.ReaderOf {
+		if id, err := db.ParseUUID(reader); err == nil {
+			v.Readers = append(v.Readers, id)
+		}
+	}
+	return v
+}
+
+func optionalText(value *string) pgtype.Text {
+	if value == nil {
+		return pgtype.Text{}
+	}
+	return pgtype.Text{String: *value, Valid: true}
+}
+
+func (p *PostgresReadRepo) CountBacklinks(ctx context.Context, scope ViewerScope, slug string) (int64, error) {
+	viewer := SQLScope(scope)
+	row, err := p.q.CountDocumentBacklinks(ctx, dbgen.CountDocumentBacklinksParams{
+		Slug: slug, ViewerID: viewer.ID, ViewerRoles: viewer.Roles, ViewerHandle: viewer.Handle,
+		ViewerAdmin: viewer.Admin, ViewerLiveDm: viewer.LiveDM, ReaderIds: viewer.Readers,
+	})
+	if err != nil {
+		return 0, err
+	}
+	AuditSQLOverride(ctx, scope, row.AdminOverride, "backlinks", "count")
+	return row.Total, nil
 }

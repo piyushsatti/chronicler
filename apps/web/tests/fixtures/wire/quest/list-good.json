@@ -1,0 +1,205 @@
+{
+  "items": [
+    {
+      "id": "00000000-0000-4000-8000-000000000001",
+      "shortCode": "Q-401",
+      "status": "draft",
+      "scheduledAt": "2026-10-02T19:00:00Z",
+      "slotsMax": 4,
+      "filledCount": 1,
+      "displayStatus": "draft",
+      "dm": {
+        "handle": "mira",
+        "displayName": "Mira"
+      },
+      "briefDocument": {
+        "id": "10000000-0000-4000-8000-000000000001",
+        "slug": "quest-q-401",
+        "title": "Unpublished expedition"
+      },
+      "discordDelivery": {
+        "desiredRevision": 2,
+        "appliedRevision": 1,
+        "overallStatus": "pending",
+        "nextRetryAt": null,
+        "errorMessage": null
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000002",
+      "shortCode": "Q-402",
+      "status": "played",
+      "scheduledAt": "2026-10-03T19:00:00Z",
+      "slotsMax": 4,
+      "filledCount": 1,
+      "displayStatus": "played",
+      "dm": {
+        "handle": "mira",
+        "displayName": "Mira"
+      },
+      "briefDocument": {
+        "id": "10000000-0000-4000-8000-000000000002",
+        "slug": "quest-q-402",
+        "title": "Returned expedition"
+      },
+      "discordDelivery": {
+        "desiredRevision": 2,
+        "appliedRevision": 1,
+        "overallStatus": "pending",
+        "nextRetryAt": null,
+        "errorMessage": null
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000003",
+      "shortCode": "Q-403",
+      "status": "cancelled",
+      "scheduledAt": "2026-10-04T19:00:00Z",
+      "slotsMax": 4,
+      "filledCount": 1,
+      "displayStatus": "cancelled",
+      "dm": {
+        "handle": "mira",
+        "displayName": "Mira"
+      },
+      "briefDocument": {
+        "id": "10000000-0000-4000-8000-000000000003",
+        "slug": "quest-q-403",
+        "title": "Cancelled expedition"
+      },
+      "discordDelivery": {
+        "desiredRevision": 2,
+        "appliedRevision": 1,
+        "overallStatus": "pending",
+        "nextRetryAt": null,
+        "errorMessage": null
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000004",
+      "shortCode": "Q-404",
+      "status": "closed",
+      "scheduledAt": "2026-10-05T19:00:00Z",
+      "slotsMax": 4,
+      "filledCount": 1,
+      "displayStatus": "closed",
+      "dm": {
+        "handle": "mira",
+        "displayName": "Mira"
+      },
+      "briefDocument": {
+        "id": "10000000-0000-4000-8000-000000000004",
+        "slug": "quest-q-404",
+        "title": "Settled expedition"
+      },
+      "discordDelivery": {
+        "desiredRevision": 2,
+        "appliedRevision": 1,
+        "overallStatus": "pending",
+        "nextRetryAt": null,
+        "errorMessage": null
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000005",
+      "shortCode": "Q-303",
+      "status": "open",
+      "scheduledAt": "2026-10-06T19:00:00Z",
+      "slotsMax": 4,
+      "filledCount": 1,
+      "displayStatus": "live",
+      "dm": {
+        "handle": "mira",
+        "displayName": "Mira"
+      },
+      "briefDocument": {
+        "id": "10000000-0000-4000-8000-000000000005",
+        "slug": "quest-q-303",
+        "title": "Live at the Gate"
+      },
+      "discordDelivery": {
+        "desiredRevision": 2,
+        "appliedRevision": 1,
+        "overallStatus": "pending",
+        "nextRetryAt": null,
+        "errorMessage": null
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000006",
+      "shortCode": "Q-304",
+      "status": "full",
+      "scheduledAt": "2026-10-07T19:00:00Z",
+      "slotsMax": 4,
+      "filledCount": 4,
+      "displayStatus": "live",
+      "dm": {
+        "handle": "mira",
+        "displayName": "Mira"
+      },
+      "briefDocument": {
+        "id": "10000000-0000-4000-8000-000000000006",
+        "slug": "quest-q-304",
+        "title": "Full party at the Gate"
+      },
+      "discordDelivery": {
+        "desiredRevision": 2,
+        "appliedRevision": 1,
+        "overallStatus": "pending",
+        "nextRetryAt": null,
+        "errorMessage": null
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000007",
+      "shortCode": "Q-101",
+      "status": "open",
+      "scheduledAt": "2026-10-08T19:00:00Z",
+      "slotsMax": 4,
+      "filledCount": 1,
+      "displayStatus": "filling",
+      "dm": {
+        "handle": "mira",
+        "displayName": "Mira"
+      },
+      "briefDocument": {
+        "id": "10000000-0000-4000-8000-000000000007",
+        "slug": "quest-q-101",
+        "title": "Siege of Kraghold"
+      },
+      "discordDelivery": {
+        "desiredRevision": 2,
+        "appliedRevision": 1,
+        "overallStatus": "pending",
+        "nextRetryAt": null,
+        "errorMessage": null
+      }
+    },
+    {
+      "id": "00000000-0000-4000-8000-000000000008",
+      "shortCode": "Q-202",
+      "status": "full",
+      "scheduledAt": "2026-10-09T19:00:00Z",
+      "slotsMax": 4,
+      "filledCount": 4,
+      "displayStatus": "scheduled",
+      "dm": {
+        "handle": "mira",
+        "displayName": "Mira"
+      },
+      "briefDocument": {
+        "id": "10000000-0000-4000-8000-000000000008",
+        "slug": "quest-q-202",
+        "title": "Festival Run"
+      },
+      "discordDelivery": {
+        "desiredRevision": 2,
+        "appliedRevision": 1,
+        "overallStatus": "pending",
+        "nextRetryAt": null,
+        "errorMessage": null
+      }
+    }
+  ],
+  "total": 8
+}

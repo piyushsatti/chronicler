@@ -56,7 +56,10 @@ export async function mountAgent(client: Client): Promise<MountedAgent> {
     return { close: async () => undefined };
   }
 
-  const publisherQueue = new AgentQueue(config.agentMaxConcurrent, config.agentQueueCapacity);
+  const publisherQueue = new AgentQueue(
+    config.agentMaxConcurrent,
+    config.agentQueueCapacity,
+  );
   const pending = new Map<string, PendingQuestion>();
   const completed = new Set<string>();
   const abortController = new AbortController();

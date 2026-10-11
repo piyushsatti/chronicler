@@ -15,6 +15,7 @@ export function useQuestMutations(shortCode: string, questId: string) {
   const invalidate = async (): Promise<void> => {
     await client.invalidateQueries({ queryKey: queryKeys.quest(shortCode) });
     await client.invalidateQueries({ queryKey: queryKeys.questBoard });
+    await client.invalidateQueries({ queryKey: queryKeys.questLists });
   };
 
   const onError = (err: unknown): void => {

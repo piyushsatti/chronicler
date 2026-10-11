@@ -152,12 +152,16 @@ describe('config', () => {
     vi.stubEnv('AGENT_ENABLED', 'true');
     vi.stubEnv('AGENT_ALLOWED_GUILD_IDS', '789');
     vi.stubEnv('AGENT_ALLOWED_CHANNEL_IDS', '');
-    await expect(import('@discord/config.js')).rejects.toThrow('AGENT_ALLOWED_CHANNEL_IDS');
+    await expect(import('@discord/config.js')).rejects.toThrow(
+      'AGENT_ALLOWED_CHANNEL_IDS',
+    );
 
     vi.resetModules();
     vi.stubEnv('AGENT_ALLOWED_CHANNEL_IDS', '123,456');
     vi.stubEnv('AGENT_ALLOWED_GUILD_IDS', '');
-    await expect(import('@discord/config.js')).rejects.toThrow('AGENT_ALLOWED_GUILD_IDS');
+    await expect(import('@discord/config.js')).rejects.toThrow(
+      'AGENT_ALLOWED_GUILD_IDS',
+    );
 
     vi.resetModules();
     vi.stubEnv('AGENT_ALLOWED_GUILD_IDS', '789');

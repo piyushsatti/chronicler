@@ -3,6 +3,13 @@ SELECT public_id AS id, discord_id, handle, display_name, avatar_url, roles, sta
 FROM members
 WHERE public_id = $1;
 
+-- name: GetMemberAuthority :one
+SELECT m.public_id AS id, m.roles, m.status, m.handle,
+       COALESCE(dp.status, '')::text AS dm_status
+FROM members m
+LEFT JOIN dm_profiles dp ON dp.member_id = m.id
+WHERE m.public_id = $1;
+
 -- name: GetMemberByHandle :one
 SELECT public_id AS id, discord_id, handle, display_name, avatar_url, roles, status
 FROM members
@@ -17,10 +24,8 @@ WHERE discord_id = $1;
 INSERT INTO members (discord_id, handle, display_name, avatar_url, roles)
 VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT (discord_id) DO UPDATE
-SET handle = EXCLUDED.handle,
-    display_name = EXCLUDED.display_name,
+SET display_name = EXCLUDED.display_name,
     avatar_url = EXCLUDED.avatar_url,
-    roles = EXCLUDED.roles,
     updated_at = now()
 RETURNING public_id AS id, discord_id, handle, display_name, avatar_url, roles, status;
 

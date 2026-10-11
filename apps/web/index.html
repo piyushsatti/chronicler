@@ -2,11 +2,59 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // Keep first paint aligned with context/theme.utils.ts. This bootstrap
+      // reads the existing preference record; runtime helpers own persistence.
+      (function () {
+        var mode = 'system';
+        var theme = 'parchment';
+        var colorblindSafe = false;
+        var bgEffect = 'none';
+        try {
+          var raw = localStorage.getItem('chronicler-prefs');
+          if (raw) {
+            var prefs = JSON.parse(raw);
+            // Null records fall back as a whole, matching loadPrefs().
+            if (prefs === null) throw new Error('Invalid preference record');
+            if (['dark', 'light', 'system'].indexOf(prefs.mode) !== -1) {
+              mode = prefs.mode;
+            }
+            if (['parchment', 'midnight', 'ember', 'dracula', 'vegan', 'atlas', 'default'].indexOf(String(prefs.theme)) !== -1) {
+              theme = prefs.theme;
+            }
+            colorblindSafe = Boolean(prefs.colorblindSafe);
+            if (['none', 'starfield-twinkle', 'glow-pulse', 'gradient-sweep'].indexOf(String(prefs.bgEffect)) !== -1) {
+              bgEffect = prefs.bgEffect;
+            }
+          }
+        } catch (_error) {
+          // Invalid records and blocked storage both use the runtime defaults.
+          mode = 'system';
+          theme = 'parchment';
+          colorblindSafe = false;
+          bgEffect = 'none';
+        }
+        var systemMode = 'dark';
+        if (window.matchMedia) {
+          systemMode = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        var resolvedMode = mode === 'system' ? systemMode : mode;
+        var root = document.documentElement;
+        root.setAttribute('data-mode', resolvedMode);
+        root.setAttribute('data-mode-pref', mode);
+        root.setAttribute('data-theme', theme);
+        root.setAttribute('data-colorblind', colorblindSafe ? 'safe' : 'off');
+        root.setAttribute('data-bg-effect', bgEffect);
+        root.style.colorScheme = resolvedMode;
+      })();
+    </script>
     <meta
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
     <link rel="icon" type="image/webp" href="/lc-logo.webp" />
+    <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/fraunces-latin-full-normal.woff2" as="font" type="font/woff2" crossorigin />
     <title>Chronicler</title>
   </head>
   <body>

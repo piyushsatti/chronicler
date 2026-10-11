@@ -14,8 +14,12 @@ export type CharacterViewModel = {
   shortCode: string;
   name: string;
   status: string;
+  ownerId: string | null;
+  verificationStatus: string | null;
   backstoryId: string;
   backstoryName: string | null;
+  regionId: string | null;
+  regionName: string | null;
   description: string | null;
   ddbUrl: string | null;
   displayIcon: string | null;
@@ -28,7 +32,10 @@ const CHARACTER_QUERY = `
       shortCode
       name
       status
+      ownerId
+      verificationStatus
       backstoryId
+      regionId
       description
       ddbUrl
       displayIcon
@@ -44,7 +51,10 @@ const MY_CHARACTERS_QUERY = `
         shortCode
         name
         status
+        ownerId
+        verificationStatus
         backstoryId
+        regionId
         description
         ddbUrl
         displayIcon
@@ -54,9 +64,19 @@ const MY_CHARACTERS_QUERY = `
   }
 `;
 
+const REGION_NAME_QUERY = `
+  query CharacterRegionName($id: ID!) {
+    region(id: $id) {
+      id
+      name
+    }
+  }
+`;
+
 export function parseCharacter(
   wire: unknown,
   backstoryName: string | null = null,
+  regionName: string | null = null,
 ): AdapterResult<CharacterViewModel> {
   const parsed = characterWireSchema.safeParse(wire);
   if (!parsed.success) {
@@ -69,8 +89,12 @@ export function parseCharacter(
       shortCode: parsed.data.shortCode,
       name: parsed.data.name,
       status: parsed.data.status,
+      ownerId: parsed.data.ownerId ?? null,
+      verificationStatus: parsed.data.verificationStatus ?? null,
       backstoryId: parsed.data.backstoryId,
       backstoryName,
+      regionId: parsed.data.regionId ?? null,
+      regionName,
       description: parsed.data.description ?? null,
       ddbUrl: parsed.data.ddbUrl ?? null,
       displayIcon: parsed.data.displayIcon ?? null,
@@ -92,6 +116,19 @@ export async function loadBackstoryName(id: string): Promise<string | null> {
   }
 }
 
+export async function loadRegionName(id: string | null): Promise<string | null> {
+  if (!id) return null;
+  try {
+    const data = await graphqlRequest<{ region: { name?: string } | null }>(
+      REGION_NAME_QUERY,
+      { id },
+    );
+    return data.region?.name ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function loadCharacter(opts: {
   id?: string;
   shortCode?: string;
@@ -108,8 +145,11 @@ export async function loadCharacter(opts: {
     if (!draft.ok) {
       throw toAppError({ failure: draft.failure }, 'character:load');
     }
-    const backstoryName = await loadBackstoryName(draft.data.backstoryId);
-    return { ...draft.data, backstoryName };
+    const [backstoryName, regionName] = await Promise.all([
+      loadBackstoryName(draft.data.backstoryId),
+      loadRegionName(draft.data.regionId),
+    ]);
+    return { ...draft.data, backstoryName, regionName };
   } catch (err) {
     throw toAppError(err, 'character:load');
   }

@@ -17,10 +17,10 @@ A quest summary’s identity is a nullable **`documentId`**, never a slug or a `
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
-| Create-only, drop upsert | Not chosen; no rejection rationale recorded beyond being unchosen |
-| Key on `(category, character)` | Contradicts summaries that span several games |
+| Alternative                    | Why not                                                           |
+| ------------------------------ | ----------------------------------------------------------------- |
+| Create-only, drop upsert       | Not chosen; no rejection rationale recorded beyond being unchosen |
+| Key on `(category, character)` | Contradicts summaries that span several games                     |
 
 ## Consequences
 

@@ -1,7 +1,7 @@
 import { HttpResponse } from 'msw';
 import type { FeatureGraphql, FeatureHandlers, FeatureRoute } from '../../chrome/featureModule.js';
 import { lazyElement } from '../../chrome/lazyElement.js';
-import { redirectRoute, stubRoute } from '../../chrome/routeBuilders.js';
+import { redirectRoute } from '../../chrome/routeBuilders.js';
 import goodChronicleList from '../../../tests/fixtures/wire/chronicle/list-good.json';
 import goodDocument from '../../../tests/fixtures/wire/document/good.json';
 
@@ -38,5 +38,12 @@ export const routes: readonly FeatureRoute[] = [
     ),
   },
   redirectRoute('/timeline', '/chronicles'),
-  stubRoute('/summaries/:slug', 'Summary detail'),
+  {
+    path: '/summaries/:slug',
+    element: lazyElement(() =>
+      import('./pages/SummaryDetailPage.js').then((module) => ({
+        default: module.SummaryDetailPage,
+      })),
+    ),
+  },
 ];

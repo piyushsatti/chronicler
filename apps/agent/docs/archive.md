@@ -11,12 +11,12 @@ Archive retains **canonical public document projections** as token-bounded passa
 
 ## Responsibilities
 
-| Concern | Owner |
-| --- | --- |
-| Eligibility / projection digest | `pi.chronicler.qa` helpers |
-| Chunking + embeddings + Lance index | `pi.chronicler.archive` |
-| Live corpus snapshot | Anonymous GraphQL (`documents` / `documentById`) on `apps/api` |
-| MCP tools | `search_documents`, `read_document` (passage-aware when enabled) |
+| Concern                             | Owner                                                            |
+| ----------------------------------- | ---------------------------------------------------------------- |
+| Eligibility / projection digest     | `pi.chronicler.qa` helpers                                       |
+| Chunking + embeddings + Lance index | `pi.chronicler.archive`                                          |
+| Live corpus snapshot                | Anonymous GraphQL (`documents` / `documentById`) on `apps/api`   |
+| MCP tools                           | `search_documents`, `read_document` (passage-aware when enabled) |
 
 ## Retrieval profile (inherited)
 

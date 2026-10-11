@@ -14,6 +14,8 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/graph"
 	"github.com/piyushsatti/chronicler/apps/api/internal/ingest"
 	"github.com/piyushsatti/chronicler/apps/api/internal/member"
+	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/config"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbgen"
@@ -24,16 +26,19 @@ import (
 )
 
 type API struct {
-	Pool      *db.Pool
-	QuestCmd  quest.Commands
-	Resolver  *graph.Resolver
-	Ingest    ingest.Store
-	Agent     *agent.Service
-	JobStore  jobs.Store
-	Members   *member.PostgresStore
-	Documents document.Queries
-	SiteStats func() site.Stats
-	MemberMe  func(string) (member.Member, error)
+	Authority       auth.AuthorityResolver
+	Pool            *db.Pool
+	QuestCmd        quest.Commands
+	Resolver        *graph.Resolver
+	Ingest          ingest.Store
+	Agent           *agent.Service
+	JobStore        jobs.Store
+	Members         *member.PostgresStore
+	Notifications   notification.Queries
+	NotificationCmd notification.Commands
+	Documents       document.Queries
+	SiteStats       func() site.Stats
+	MemberMe        func(string) (member.Member, error)
 }
 
 func Wire(ctx context.Context, cfg config.Config) API {
@@ -86,12 +91,14 @@ func wirePostgres(_ context.Context, cfg config.Config, pool *db.Pool, base API)
 	questCmd := quest.NewCommands(questRunner, time.Now)
 
 	memStore := member.NewPostgresStore(pgxPool)
+	base.Authority = memStore.ResolveAuthority
 	docRepo := document.NewPostgresReadRepo(pgxPool)
 	docQ := document.Queries{
-		Repo:        docRepo,
-		Revisions:   docRepo.ListRevisions,
-		Trash:       docRepo.ListTrash,
-		BacklinksFn: docRepo.Backlinks,
+		Repo:            docRepo,
+		Revisions:       docRepo.ListRevisions,
+		Trash:           docRepo.ListTrash,
+		BacklinksFn:     docRepo.Backlinks,
+		BacklinkCountFn: docRepo.CountBacklinks,
 	}
 	questRead := quest.NewReadModel(q)
 	spatialPG := spatial.NewPostgresQueries(pgxPool)
@@ -112,6 +119,7 @@ func wirePostgres(_ context.Context, cfg config.Config, pool *db.Pool, base API)
 		},
 		Site: site.Queries{Stats: sitePG.Stats},
 		Spatial: spatial.Queries{
+			DocumentScope:  docQ.Scope,
 			MapByAtlas:     spatialPG.MapByAtlas,
 			ListMapsFn:     spatialPG.ListMaps,
 			ListRegionsFn:  spatialPG.ListRegions,
@@ -135,6 +143,10 @@ func wirePostgres(_ context.Context, cfg config.Config, pool *db.Pool, base API)
 	base.QuestCmd = questCmd
 	base.Resolver = &graph.Resolver{Services: services}
 	base.Documents = docQ
+	base.Notifications = notification.Queries{Repo: notification.NewPostgresRepository(q)}
+	base.NotificationCmd = notification.NewCommands(db.NewRunner(pool, func(tx pgx.Tx) notification.CommandRepository {
+		return notification.NewPostgresRepository(dbgen.New(tx))
+	}))
 	base.Ingest = ingest.NewPostgresStore(pgxPool)
 	base.Agent = agent.New(cfg.IngestSecret, agent.NewPostgresStore(pgxPool))
 	base.JobStore = jobStore

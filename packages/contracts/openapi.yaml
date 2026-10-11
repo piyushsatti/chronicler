@@ -465,6 +465,78 @@ paths:
         '409':
           $ref: '#/components/responses/Problem'
 
+  /v1/me/notifications/unread-count:
+    get:
+      operationId: myUnreadNotificationCount
+      description: Count the verified current member's notification rows with read_at null. This read does not acknowledge, suppress or mark notifications read.
+      security:
+        - bearer: []
+      responses:
+        '200':
+          description: Current member unread count
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [count]
+                properties:
+                  count:
+                    type: integer
+                    minimum: 0
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+
+  /v1/me/notifications/read:
+    post:
+      operationId: markNotificationsRead
+      description: >-
+        Mark only the current active member's addressed unread notifications read.
+        Accept exactly one JSON object with ids, no duplicate keys or trailing value,
+        and at most 8192 request-body bytes. Enforce the 100-entry bound before
+        case-insensitive UUID deduplication. Unknown, foreign and already-read IDs
+        are ignored without disclosure. Empty ids is a valid no-op. One transaction
+        timestamp is used for new read_at values; existing timestamps never change.
+        Success follows commit acknowledgement. A lost commit acknowledgement can
+        have an unknown outcome; retry is idempotent. Atomicity is per request.
+      security:
+        - bearer: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [ids]
+              properties:
+                ids:
+                  type: array
+                  maxItems: 100
+                  items:
+                    type: string
+                    format: uuid
+                    pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
+      responses:
+        '204':
+          description: Command committed; no response body or per-ID outcomes
+        '401':
+          $ref: '#/components/responses/Problem'
+        '403':
+          $ref: '#/components/responses/Problem'
+        '422':
+          description: Invalid notification read request; fixed INVALID problem, with no request data echoed
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/Problem'
+        '500':
+          $ref: '#/components/responses/Problem'
+
   /v1/me/notifications/acknowledge-suppressed:
     post:
       operationId: acknowledgeSuppressedNotifications

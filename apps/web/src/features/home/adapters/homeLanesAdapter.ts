@@ -14,10 +14,14 @@ export type DmAcceptingView = {
   tagline: string | null;
 };
 
+export type HomeQuestView = QuestCardView & {
+  machineStatus: string;
+};
+
 export type HomeLanesViewModel = {
-  recruiting: QuestCardView[];
-  upcoming: QuestCardView[];
-  recentlyClosed: QuestCardView[];
+  recruiting: HomeQuestView[];
+  upcoming: HomeQuestView[];
+  recentlyClosed: HomeQuestView[];
   dmsAccepting: DmAcceptingView[];
 };
 
@@ -25,13 +29,14 @@ const TERMINAL_DELIVERY = new Set(['applied', 'failed', 'cancelled', 'skipped'])
 
 function mapQuestItem(
   item: (typeof questListWireSchema)['_output']['items'][number],
-): QuestCardView {
+): HomeQuestView {
   const status = item.displayStatus ?? item.status;
   const deliveryStatus = item.discordDelivery.overallStatus.toLowerCase();
   return {
     shortCode: item.shortCode,
     title: item.briefDocument?.title ?? item.shortCode,
     status,
+    machineStatus: item.status,
     slotsMax: item.slotsMax,
     filledCount: item.filledCount,
     dmName: item.dm?.displayName ?? item.dm?.handle ?? null,
@@ -46,7 +51,7 @@ function mapQuestItem(
   };
 }
 
-function parseQuestList(wire: unknown): AdapterResult<QuestCardView[]> {
+function parseQuestList(wire: unknown): AdapterResult<HomeQuestView[]> {
   const parsed = questListWireSchema.safeParse(wire);
   if (!parsed.success) {
     return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
@@ -144,7 +149,7 @@ export function parseHomeLanesWire(wire: {
   return {
     ok: true,
     data: {
-      recruiting: recruiting.data.filter((q) => q.status.toLowerCase().includes('open')),
+      recruiting: recruiting.data.filter((q) => q.machineStatus === 'open'),
       upcoming: upcoming.data,
       recentlyClosed: recentlyClosed.data,
       dmsAccepting: dmsAccepting.data,

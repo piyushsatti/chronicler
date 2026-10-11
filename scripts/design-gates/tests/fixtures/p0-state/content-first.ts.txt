@@ -1,0 +1,8 @@
+type Query = { isError: boolean; isLoading: boolean; data?: string[] };
+export function project(heading: Query, details: Query) {
+  if (heading.isError || details.isError) return { status: 'error' };
+  if (heading.isLoading || details.isLoading) return { status: 'loading' };
+  if (heading.data) return { status: 'ready' };
+  if (heading.data?.length === 0) return { status: 'empty' };
+  return { status: 'ready' };
+}

@@ -4,11 +4,14 @@ import { Link } from 'react-router-dom';
 import { QuestCard } from '../../../components/domain/QuestCard.js';
 import { PageShell } from '../../../components/foundation/PageShell.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
+import { useHomeBanner } from '../hooks/useHomeBanner.js';
 import { useHomePage } from '../hooks/useHomePage.js';
+import { useSiteStats } from '../hooks/useSiteStats.js';
 
 const HOME_DECLARATION: PageDeclaration = {
   page: 'home',
   regions: [
+    { role: 'banner', priority: 0 },
     { role: 'heading', priority: 1 },
     { role: 'lane-recruiting', priority: 2 },
     { role: 'lane-upcoming', priority: 3 },
@@ -21,12 +24,35 @@ function emptyRegion(): React.JSX.Element {
   return <div hidden />;
 }
 
+function HomeBannerRegion(): React.JSX.Element {
+  const banner = useHomeBanner();
+  if (banner.isLoading || banner.isError || !banner.data?.enabled) {
+    return emptyRegion();
+  }
+  const b = banner.data;
+  return (
+    <section className="home-banner card stack" data-el="home.banner" aria-label="Featured">
+      {b.title ? <h2 className="type-heading">{b.title}</h2> : null}
+      {b.body ? <p className="type-body">{b.body}</p> : null}
+      {b.ctaLabel && b.ctaHref ? (
+        <Link className="btn primary" to={b.ctaHref}>
+          {b.ctaLabel}
+        </Link>
+      ) : null}
+    </section>
+  );
+}
+
 export function HomePage(): React.JSX.Element {
   const page = useHomePage();
+  const stats = useSiteStats();
+  const memberCount =
+    stats.data != null ? `${stats.data.totalMembers} members on the server` : null;
 
   let regions: PageRegionRenderers;
   if (page.status === 'error') {
     regions = {
+      banner: () => <HomeBannerRegion />,
       heading: () => <StatePanel status="error" error={page.error} />,
       'lane-recruiting': emptyRegion,
       'lane-upcoming': emptyRegion,
@@ -35,6 +61,7 @@ export function HomePage(): React.JSX.Element {
     };
   } else if (page.status === 'loading') {
     regions = {
+      banner: () => <HomeBannerRegion />,
       heading: () => <StatePanel status="loading" />,
       'lane-recruiting': emptyRegion,
       'lane-upcoming': emptyRegion,
@@ -43,6 +70,7 @@ export function HomePage(): React.JSX.Element {
     };
   } else if (page.status === 'empty') {
     regions = {
+      banner: () => <HomeBannerRegion />,
       heading: () => (
         <StatePanel status="empty" emptyMessage="The war room is quiet for now." />
       ),
@@ -54,10 +82,12 @@ export function HomePage(): React.JSX.Element {
   } else {
     const lanes = page.view;
     regions = {
+      banner: () => <HomeBannerRegion />,
       heading: () => (
         <div className="stack">
           <p className="eyebrow">Chronicler</p>
           <h1 className="type-display">Welcome to Chronicler.</h1>
+          {memberCount ? <p className="type-caption">{memberCount}</p> : null}
           <Link className="btn primary" to="/quests">
             Open quests
           </Link>

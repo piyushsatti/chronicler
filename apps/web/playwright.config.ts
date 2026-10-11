@@ -22,9 +22,18 @@ export default defineConfig({
   projects: [
     {
       name: 'phone-chromium',
+      testIgnore: '**/desktop/**',
       use: {
         ...devices['Pixel 5'],
         viewport: { width: 390, height: 844 },
+      },
+    },
+    {
+      name: 'desktop-chromium',
+      testMatch: '**/desktop/**/*.spec.ts',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1920, height: 1080 },
       },
     },
   ],

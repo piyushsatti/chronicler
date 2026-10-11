@@ -1,0 +1,57 @@
+/* ============================================================
+   atlas-map.css — /map screen styles
+   Provides CSS classes for SVG <text> font families (avoids
+   inline font-family which fails the check:tokens gate) and
+   centralises the inspector slide-in motion.
+   ============================================================ */
+
+/* --- Font classes for SVG <text> map labels --- */
+
+.map-label-mono {
+  font-family: var(--font-mono); /* Fixed Geist Mono application value. */
+}
+
+.map-label-display {
+  font-family: var(--font-display); /* Fraunces Variable */
+}
+
+.map-label-body {
+  font-family: var(--font-body); /* Fixed Geist application value. */
+}
+
+/* --- Inspector inner panel: neutral content container --- */
+/* Slide motion now owned by .map-inspector-dock (below).
+   .map-inspector is just a pass-through sizing container.   */
+
+.map-inspector {
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* --- Inspector dock: owns all slide/position/z-index --- */
+/* Desktop: right-anchored panel, slides in from the right.
+   Mobile: full-width bottom sheet, slides up from bottom.  */
+
+.map-inspector-dock {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  bottom: 8px;
+  width: 320px;
+  overflow-y: auto;
+  border-radius: 12px;
+  z-index: 30;
+  pointer-events: none;
+  transform: translateX(344px);
+  transition: transform 260ms cubic-bezier(.16, 1, .3, 1);
+}
+
+.map-inspector-dock.is-open {
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+/* --- Mobile: bottom sheet under 768px --- */
+/* viewport queries removed — use Imposition navPatternFor / declarations */
+

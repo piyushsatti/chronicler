@@ -9,14 +9,14 @@
 
 ## Components
 
-| Component | Package / binary | Role |
-| --- | --- | --- |
-| Answer harness | `pi.chronicler.agent` | Admit question, research loop, validate citations |
-| Worker process | `chronicler-agent` | Claim jobs from API, run harness, POST result |
-| Archive MCP | `pi.chronicler.archive` (Phase C) | Index public docs; serve search/read tools |
-| Shared QA contracts | `pi.chronicler.qa` (Phase C) | Public document eligibility, chunking helpers |
-| Inference gateway | LiteLLM (external) | Chat + embeddings |
-| Job store | `apps/api` `internal/agent` | Persist queued / terminal question rows |
+| Component           | Package / binary                  | Role                                              |
+| ------------------- | --------------------------------- | ------------------------------------------------- |
+| Answer harness      | `pi.chronicler.agent`             | Admit question, research loop, validate citations |
+| Worker process      | `chronicler-agent`                | Claim jobs from API, run harness, POST result     |
+| Archive MCP         | `pi.chronicler.archive` (Phase C) | Index public docs; serve search/read tools        |
+| Shared QA contracts | `pi.chronicler.qa` (Phase C)      | Public document eligibility, chunking helpers     |
+| Inference gateway   | LiteLLM (external)                | Chat + embeddings                                 |
+| Job store           | `apps/api` `internal/agent`       | Persist queued / terminal question rows           |
 
 ## Trust boundaries
 
@@ -44,21 +44,21 @@ flowchart LR
 
 ## Failure modes
 
-| Outcome | Worker publishes | Discord sees |
-| --- | --- | --- |
-| Supported / unsupported / routed answer | `question.completed` with answer + sources | Rendered reply |
-| Archive or model timeout/error; validation or context exhaustion | `question.failed` with stable user message | Failure reply |
-| Invalid job payload | Reject / leave unclaimed per claim semantics | N/A |
+| Outcome                                                          | Worker publishes                             | Discord sees   |
+| ---------------------------------------------------------------- | -------------------------------------------- | -------------- |
+| Supported / unsupported / routed answer                          | `question.completed` with answer + sources   | Rendered reply |
+| Archive or model timeout/error; validation or context exhaustion | `question.failed` with stable user message   | Failure reply  |
+| Invalid job payload                                              | Reject / leave unclaimed per claim semantics | N/A            |
 
 **Diagnostics** (trace, admission category, timings) may be stored on the result JSON for operators. Discord `parseQuestionResult` does not require diagnostics today.
 
 ## Packages on disk
 
-| Path | Status |
-| --- | --- |
-| `src/pi/chronicler/agent/` | Harness + HTTP claim/complete worker |
-| `src/pi/chronicler/archive/` | MCP server + LanceDB indexer |
-| `src/pi/chronicler/qa/` | Contracts, chunking, GraphQL source helpers |
+| Path                         | Status                                      |
+| ---------------------------- | ------------------------------------------- |
+| `src/pi/chronicler/agent/`   | Harness + HTTP claim/complete worker        |
+| `src/pi/chronicler/archive/` | MCP server + LanceDB indexer                |
+| `src/pi/chronicler/qa/`      | Contracts, chunking, GraphQL source helpers |
 
 ## Related
 

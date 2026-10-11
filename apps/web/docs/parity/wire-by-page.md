@@ -19,7 +19,7 @@ Derived from legacy `app/api/queries/*` and `app/hooks/*`. Rows marked **TBD** u
 | `/characters/:code` | `Character`, progression, logs | profile, verification | character | T312-feat-character |
 | `/community`, `/players`, `/dms` | `CommunityDirectory`, member lists | — | — | T313-feat-community |
 | `/players/:shortCode`, `/dms/:shortCode` | profile hooks | social requests | profiles | T313-feat-community |
-| `/community/dm-table/:slug` | `useDmTable` | TBD | TBD | T313-feat-community |
+| `/community/dm-table/:slug` | `loadDmTableBySlug` + `loadCommunityHub` + `loadDmTableSchedule` (questBoard filter by dm handle) | none (read-only) | document / communityHub / questBoard | T313 + FINAL-GAPS |
 
 ## Codex and regions
 

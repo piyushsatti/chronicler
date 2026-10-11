@@ -13,31 +13,31 @@ Production lost provider-side backups and CI backup minutes. A durable, operator
 
 The **owner’s workstation** is the durable backup store. Dumps run **nightly** and **before every deployment**.
 
-| Question | Ruling |
-| --- | --- |
-| Where backups durably live | Owner’s Mac, pulled from Supabase — off-provider and off-droplet |
-| Primary mechanism | Workstation pull is primary; GitHub Actions backup is a redundant second copy when minutes return, not load-bearing |
+| Question                   | Ruling                                                                                                              |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Where backups durably live | Owner’s Mac, pulled from Supabase — off-provider and off-droplet                                                    |
+| Primary mechanism          | Workstation pull is primary; GitHub Actions backup is a redundant second copy when minutes return, not load-bearing |
 
 **Patterns (minimal):** pull-based backup (workstation initiates; compromised server cannot reach backup target); pre-change checkpoint dump before `migrate` on deploy.
 
-**Mechanism:** reuse `supabase_backup.sh`; Mac wrapper runs `pg_dump` in a pinned Postgres container, credentials from `~/.config/chronicler/backup.env` (mode 600). Nightly and pre-deploy differ only by `BACKUP_TAG`.
+**Historical mechanism:** `supabase_backup.sh` and the Mac wrapper implemented the pull policy. Those helpers are absent from the rebuild; their old configuration and transcripts do not establish a currently running backup. The accepted store and cadence remain binding. Current tooling, isolated recovery proof and admission of pre-deployment evidence into Actions remain work; see [backup guidance](/deploy/docs/supabase-backups.md).
 
 **Explicit limits:** one copy, one site — not 3-2-1; sufficient pre-launch; second copy before real users stays open. Accepted risks: sleeping laptop (mitigate with `launchd` wake scheduling), plaintext dump on portable machine (FileVault, no cloud sync), single-copy loss.
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
-| Push backup from server to workstation | Compromised droplet could reach and destroy backups |
-| Rely on GitHub Actions as primary | Billing gap made it non-load-bearing; workstation pull needs no billing |
+| Alternative                            | Why not                                                                 |
+| -------------------------------------- | ----------------------------------------------------------------------- |
+| Push backup from server to workstation | Compromised droplet could reach and destroy backups                     |
+| Rely on GitHub Actions as primary      | Billing gap made it non-load-bearing; workstation pull needs no billing |
 
 ## Consequences
 
-Deploy path includes a restore point before migrations. Worst-case data loss is bounded by nightly cadence plus per-deploy checkpoints.
+Deploy admission requires a current restore point before migrations. When the required backups run and restore successfully, nightly cadence and pre-deployment checkpoints bound the intended recovery window; current operation and a measured RPO remain unverified.
 
 ## Enforced by
 
-`mac_backup.sh` / `supabase_backup.sh`; deploy gating on backup tag.
+**Not enforced by current repository tooling.** The named legacy helpers are absent. The Actions release contract requires current restore-point evidence; its backup-evidence handoff is not implemented. Workstation pull backup does not authorize workstation deployment ([D33](/docs/decisions/D33-GitHub-Actions-Owns-Production-Releases.md)).
 
 ## Reopen triggers
 

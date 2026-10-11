@@ -8,14 +8,14 @@ The target is ten aggregate roots, not forty-five table-scoped repositories.
 
 ## Interfaces
 
-| Interface | Role |
-| --- | --- |
+| Interface                                            | Role              |
+| ---------------------------------------------------- | ----------------- |
 | [graphql-schema](/docs/interfaces/graphql-schema.md) | Nouns on the wire |
 
 ## Implemented by
 
-| App | Local docs |
-| --- | --- |
+| App        | Local docs                       |
+| ---------- | -------------------------------- |
 | `apps/api` | [apps/api/docs/](/apps/api/docs) |
 
 ## Requirements

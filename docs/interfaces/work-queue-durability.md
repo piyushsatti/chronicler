@@ -10,8 +10,8 @@ The API owns durable retryable work in one Postgres work table. Operator alerts 
 
 ## Enforcement
 
-| Mechanism | Location | Status |
-| --- | --- | --- |
+| Mechanism                          | Location  | Status           |
+| ---------------------------------- | --------- | ---------------- |
 | Work table + worker contract tests | API tests | **not enforced** |
 
 ## Provider

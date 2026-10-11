@@ -12,52 +12,108 @@ import (
 )
 
 const countDocumentBacklinks = `-- name: CountDocumentBacklinks :one
-SELECT count(*)::bigint
-FROM document_links
-WHERE target_id = (SELECT id FROM documents WHERE slug = $1 AND deleted_at IS NULL)
+SELECT count(*)::bigint AS total,
+       COALESCE(bool_or($1::boolean AND NOT document_readable(src.public_id, author.public_id, src.status, src.visibility, src.policy,
+      $2::uuid, $3::text[], $4::text,
+      FALSE, $5::boolean, $6::uuid[])), FALSE)::boolean AS admin_override
+FROM document_links dl
+JOIN documents src ON src.id = dl.source_id AND src.deleted_at IS NULL
+LEFT JOIN members author ON author.id = src.author_id
+JOIN documents tgt ON tgt.id = dl.target_id AND tgt.deleted_at IS NULL
+WHERE tgt.slug = $7
+  AND document_readable(src.public_id, author.public_id, src.status, src.visibility, src.policy,
+      $2::uuid, $3::text[], $4::text,
+      $1::boolean, $5::boolean, $6::uuid[])
 `
 
-func (q *Queries) CountDocumentBacklinks(ctx context.Context, slug string) (int64, error) {
-	row := q.db.QueryRow(ctx, countDocumentBacklinks, slug)
-	var column_1 int64
-	err := row.Scan(&column_1)
-	return column_1, err
+type CountDocumentBacklinksParams struct {
+	ViewerAdmin  bool          `json:"viewer_admin"`
+	ViewerID     pgtype.UUID   `json:"viewer_id"`
+	ViewerRoles  []string      `json:"viewer_roles"`
+	ViewerHandle string        `json:"viewer_handle"`
+	ViewerLiveDm bool          `json:"viewer_live_dm"`
+	ReaderIds    []pgtype.UUID `json:"reader_ids"`
+	Slug         string        `json:"slug"`
+}
+
+type CountDocumentBacklinksRow struct {
+	Total         int64 `json:"total"`
+	AdminOverride bool  `json:"admin_override"`
+}
+
+func (q *Queries) CountDocumentBacklinks(ctx context.Context, arg CountDocumentBacklinksParams) (CountDocumentBacklinksRow, error) {
+	row := q.db.QueryRow(ctx, countDocumentBacklinks,
+		arg.ViewerAdmin,
+		arg.ViewerID,
+		arg.ViewerRoles,
+		arg.ViewerHandle,
+		arg.ViewerLiveDm,
+		arg.ReaderIds,
+		arg.Slug,
+	)
+	var i CountDocumentBacklinksRow
+	err := row.Scan(&i.Total, &i.AdminOverride)
+	return i, err
 }
 
 const countDocuments = `-- name: CountDocuments :one
-SELECT count(*)::bigint
-FROM documents
-WHERE deleted_at IS NULL
-  AND ($1::text IS NULL OR kind = $1)
-  AND ($2::text IS NULL OR category = $2)
-  AND ($3::text IS NULL OR status = $3)
-  AND ($4::text IS NULL OR visibility = $4)
-  AND ($5::text IS NULL OR title ILIKE '%' || $5 || '%')
+SELECT count(*)::bigint AS total,
+       COALESCE(bool_or($1::boolean AND NOT document_readable(d.public_id, m.public_id, d.status, d.visibility, d.policy,
+      $2::uuid, $3::text[], $4::text,
+      FALSE, $5::boolean, $6::uuid[])), FALSE)::boolean AS admin_override
+FROM documents d
+LEFT JOIN members m ON m.id = d.author_id
+WHERE d.deleted_at IS NULL
+  AND ($7::text IS NULL OR d.kind = $7)
+  AND ($8::text IS NULL OR d.category = $8)
+  AND ($9::text IS NULL OR d.status = $9)
+  AND ($10::text IS NULL OR d.visibility = $10)
+  AND ($11::text IS NULL OR d.title ILIKE '%' || $11 || '%')
+  AND document_readable(d.public_id, m.public_id, d.status, d.visibility, d.policy,
+      $2::uuid, $3::text[], $4::text,
+      $1::boolean, $5::boolean, $6::uuid[])
 `
 
 type CountDocumentsParams struct {
-	Column1 string `json:"column_1"`
-	Column2 string `json:"column_2"`
-	Column3 string `json:"column_3"`
-	Column4 string `json:"column_4"`
-	Column5 string `json:"column_5"`
+	ViewerAdmin  bool          `json:"viewer_admin"`
+	ViewerID     pgtype.UUID   `json:"viewer_id"`
+	ViewerRoles  []string      `json:"viewer_roles"`
+	ViewerHandle string        `json:"viewer_handle"`
+	ViewerLiveDm bool          `json:"viewer_live_dm"`
+	ReaderIds    []pgtype.UUID `json:"reader_ids"`
+	Kind         pgtype.Text   `json:"kind"`
+	Category     pgtype.Text   `json:"category"`
+	Status       pgtype.Text   `json:"status"`
+	Visibility   pgtype.Text   `json:"visibility"`
+	Search       pgtype.Text   `json:"search"`
 }
 
-func (q *Queries) CountDocuments(ctx context.Context, arg CountDocumentsParams) (int64, error) {
+type CountDocumentsRow struct {
+	Total         int64 `json:"total"`
+	AdminOverride bool  `json:"admin_override"`
+}
+
+func (q *Queries) CountDocuments(ctx context.Context, arg CountDocumentsParams) (CountDocumentsRow, error) {
 	row := q.db.QueryRow(ctx, countDocuments,
-		arg.Column1,
-		arg.Column2,
-		arg.Column3,
-		arg.Column4,
-		arg.Column5,
+		arg.ViewerAdmin,
+		arg.ViewerID,
+		arg.ViewerRoles,
+		arg.ViewerHandle,
+		arg.ViewerLiveDm,
+		arg.ReaderIds,
+		arg.Kind,
+		arg.Category,
+		arg.Status,
+		arg.Visibility,
+		arg.Search,
 	)
-	var column_1 int64
-	err := row.Scan(&column_1)
-	return column_1, err
+	var i CountDocumentsRow
+	err := row.Scan(&i.Total, &i.AdminOverride)
+	return i, err
 }
 
 const getDocumentByID = `-- name: GetDocumentByID :one
-SELECT d.public_id AS id, d.kind, d.slug, d.title, d.category, d.status, d.visibility, d.body,
+SELECT d.public_id AS id, d.kind, d.slug, d.title, d.category, d.status, d.visibility, d.body, d.policy,
        m.public_id AS author_id, d.published_at, d.deleted_at
 FROM documents d
 LEFT JOIN members m ON m.id = d.author_id
@@ -73,13 +129,14 @@ type GetDocumentByIDRow struct {
 	Status      string             `json:"status"`
 	Visibility  string             `json:"visibility"`
 	Body        string             `json:"body"`
+	Policy      []byte             `json:"policy"`
 	AuthorID    pgtype.UUID        `json:"author_id"`
 	PublishedAt pgtype.Timestamptz `json:"published_at"`
 	DeletedAt   pgtype.Timestamptz `json:"deleted_at"`
 }
 
-func (q *Queries) GetDocumentByID(ctx context.Context, publicID pgtype.UUID) (GetDocumentByIDRow, error) {
-	row := q.db.QueryRow(ctx, getDocumentByID, publicID)
+func (q *Queries) GetDocumentByID(ctx context.Context, documentID pgtype.UUID) (GetDocumentByIDRow, error) {
+	row := q.db.QueryRow(ctx, getDocumentByID, documentID)
 	var i GetDocumentByIDRow
 	err := row.Scan(
 		&i.ID,
@@ -90,6 +147,7 @@ func (q *Queries) GetDocumentByID(ctx context.Context, publicID pgtype.UUID) (Ge
 		&i.Status,
 		&i.Visibility,
 		&i.Body,
+		&i.Policy,
 		&i.AuthorID,
 		&i.PublishedAt,
 		&i.DeletedAt,
@@ -98,7 +156,7 @@ func (q *Queries) GetDocumentByID(ctx context.Context, publicID pgtype.UUID) (Ge
 }
 
 const getDocumentBySlug = `-- name: GetDocumentBySlug :one
-SELECT d.public_id AS id, d.kind, d.slug, d.title, d.category, d.status, d.visibility, d.body,
+SELECT d.public_id AS id, d.kind, d.slug, d.title, d.category, d.status, d.visibility, d.body, d.policy,
        m.public_id AS author_id, d.published_at, d.deleted_at
 FROM documents d
 LEFT JOIN members m ON m.id = d.author_id
@@ -114,6 +172,7 @@ type GetDocumentBySlugRow struct {
 	Status      string             `json:"status"`
 	Visibility  string             `json:"visibility"`
 	Body        string             `json:"body"`
+	Policy      []byte             `json:"policy"`
 	AuthorID    pgtype.UUID        `json:"author_id"`
 	PublishedAt pgtype.Timestamptz `json:"published_at"`
 	DeletedAt   pgtype.Timestamptz `json:"deleted_at"`
@@ -131,6 +190,7 @@ func (q *Queries) GetDocumentBySlug(ctx context.Context, slug string) (GetDocume
 		&i.Status,
 		&i.Visibility,
 		&i.Body,
+		&i.Policy,
 		&i.AuthorID,
 		&i.PublishedAt,
 		&i.DeletedAt,
@@ -138,24 +198,65 @@ func (q *Queries) GetDocumentBySlug(ctx context.Context, slug string) (GetDocume
 	return i, err
 }
 
-const listDocumentBacklinksBySlug = `-- name: ListDocumentBacklinksBySlug :many
-SELECT src.public_id AS source_id, tgt.public_id AS target_id, dl.relation, src.kind, src.slug
-FROM document_links dl
-JOIN documents src ON src.id = dl.source_id AND src.deleted_at IS NULL
-JOIN documents tgt ON tgt.id = dl.target_id
-WHERE dl.target_id = (SELECT doc.id FROM documents doc WHERE doc.slug = $1 AND doc.deleted_at IS NULL)
+const getDocumentRevisionAuthor = `-- name: GetDocumentRevisionAuthor :one
+SELECT m.public_id AS author_id
+FROM documents d
+LEFT JOIN members m ON m.id = d.author_id
+WHERE d.public_id = $1
 `
 
-type ListDocumentBacklinksBySlugRow struct {
-	SourceID pgtype.UUID `json:"source_id"`
-	TargetID pgtype.UUID `json:"target_id"`
-	Relation string      `json:"relation"`
-	Kind     string      `json:"kind"`
-	Slug     string      `json:"slug"`
+func (q *Queries) GetDocumentRevisionAuthor(ctx context.Context, documentID pgtype.UUID) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, getDocumentRevisionAuthor, documentID)
+	var author_id pgtype.UUID
+	err := row.Scan(&author_id)
+	return author_id, err
 }
 
-func (q *Queries) ListDocumentBacklinksBySlug(ctx context.Context, slug string) ([]ListDocumentBacklinksBySlugRow, error) {
-	rows, err := q.db.Query(ctx, listDocumentBacklinksBySlug, slug)
+const listDocumentBacklinksBySlug = `-- name: ListDocumentBacklinksBySlug :many
+SELECT src.public_id AS source_id, tgt.public_id AS target_id, dl.relation, src.kind, src.slug,
+       COALESCE($1::boolean AND NOT document_readable(src.public_id, author.public_id, src.status, src.visibility, src.policy,
+      $2::uuid, $3::text[], $4::text,
+      FALSE, $5::boolean, $6::uuid[]), FALSE)::boolean AS admin_override
+FROM document_links dl
+JOIN documents src ON src.id = dl.source_id AND src.deleted_at IS NULL
+LEFT JOIN members author ON author.id = src.author_id
+JOIN documents tgt ON tgt.id = dl.target_id AND tgt.deleted_at IS NULL
+WHERE tgt.slug = $7
+  AND document_readable(src.public_id, author.public_id, src.status, src.visibility, src.policy,
+      $2::uuid, $3::text[], $4::text,
+      $1::boolean, $5::boolean, $6::uuid[])
+ORDER BY src.updated_at DESC, src.id DESC, dl.relation
+`
+
+type ListDocumentBacklinksBySlugParams struct {
+	ViewerAdmin  bool          `json:"viewer_admin"`
+	ViewerID     pgtype.UUID   `json:"viewer_id"`
+	ViewerRoles  []string      `json:"viewer_roles"`
+	ViewerHandle string        `json:"viewer_handle"`
+	ViewerLiveDm bool          `json:"viewer_live_dm"`
+	ReaderIds    []pgtype.UUID `json:"reader_ids"`
+	Slug         string        `json:"slug"`
+}
+
+type ListDocumentBacklinksBySlugRow struct {
+	SourceID      pgtype.UUID `json:"source_id"`
+	TargetID      pgtype.UUID `json:"target_id"`
+	Relation      string      `json:"relation"`
+	Kind          string      `json:"kind"`
+	Slug          string      `json:"slug"`
+	AdminOverride bool        `json:"admin_override"`
+}
+
+func (q *Queries) ListDocumentBacklinksBySlug(ctx context.Context, arg ListDocumentBacklinksBySlugParams) ([]ListDocumentBacklinksBySlugRow, error) {
+	rows, err := q.db.Query(ctx, listDocumentBacklinksBySlug,
+		arg.ViewerAdmin,
+		arg.ViewerID,
+		arg.ViewerRoles,
+		arg.ViewerHandle,
+		arg.ViewerLiveDm,
+		arg.ReaderIds,
+		arg.Slug,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -169,6 +270,7 @@ func (q *Queries) ListDocumentBacklinksBySlug(ctx context.Context, slug string) 
 			&i.Relation,
 			&i.Kind,
 			&i.Slug,
+			&i.AdminOverride,
 		); err != nil {
 			return nil, err
 		}
@@ -187,8 +289,8 @@ JOIN documents d ON d.id = dr.document_id
 WHERE dr.member_id = (SELECT members.id FROM members WHERE members.public_id = $1)
 `
 
-func (q *Queries) ListDocumentReaders(ctx context.Context, publicID pgtype.UUID) ([]pgtype.UUID, error) {
-	rows, err := q.db.Query(ctx, listDocumentReaders, publicID)
+func (q *Queries) ListDocumentReaders(ctx context.Context, memberID pgtype.UUID) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, listDocumentReaders, memberID)
 	if err != nil {
 		return nil, err
 	}
@@ -257,53 +359,73 @@ func (q *Queries) ListDocumentRevisions(ctx context.Context, arg ListDocumentRev
 }
 
 const listDocuments = `-- name: ListDocuments :many
-SELECT d.public_id AS id, d.kind, d.slug, d.title, d.category, d.status, d.visibility, d.body,
-       m.public_id AS author_id, d.published_at, d.deleted_at
+SELECT d.public_id AS id, d.kind, d.slug, d.title, d.category, d.status, d.visibility, d.body, d.policy,
+       m.public_id AS author_id, d.published_at, d.deleted_at,
+       COALESCE($1::boolean AND NOT document_readable(d.public_id, m.public_id, d.status, d.visibility, d.policy,
+      $2::uuid, $3::text[], $4::text,
+      FALSE, $5::boolean, $6::uuid[]), FALSE)::boolean AS admin_override
 FROM documents d
 LEFT JOIN members m ON m.id = d.author_id
 WHERE d.deleted_at IS NULL
-  AND ($1::text IS NULL OR d.kind = $1)
-  AND ($2::text IS NULL OR d.category = $2)
-  AND ($3::text IS NULL OR d.status = $3)
-  AND ($4::text IS NULL OR d.visibility = $4)
-  AND ($5::text IS NULL OR d.title ILIKE '%' || $5 || '%')
-ORDER BY d.updated_at DESC
-LIMIT $6 OFFSET $7
+  AND ($7::text IS NULL OR d.kind = $7)
+  AND ($8::text IS NULL OR d.category = $8)
+  AND ($9::text IS NULL OR d.status = $9)
+  AND ($10::text IS NULL OR d.visibility = $10)
+  AND ($11::text IS NULL OR d.title ILIKE '%' || $11 || '%')
+  AND document_readable(d.public_id, m.public_id, d.status, d.visibility, d.policy,
+      $2::uuid, $3::text[], $4::text,
+      $1::boolean, $5::boolean, $6::uuid[])
+ORDER BY d.updated_at DESC, d.id DESC
+LIMIT $13 OFFSET $12
 `
 
 type ListDocumentsParams struct {
-	Column1 string `json:"column_1"`
-	Column2 string `json:"column_2"`
-	Column3 string `json:"column_3"`
-	Column4 string `json:"column_4"`
-	Column5 string `json:"column_5"`
-	Limit   int32  `json:"limit"`
-	Offset  int32  `json:"offset"`
+	ViewerAdmin  bool          `json:"viewer_admin"`
+	ViewerID     pgtype.UUID   `json:"viewer_id"`
+	ViewerRoles  []string      `json:"viewer_roles"`
+	ViewerHandle string        `json:"viewer_handle"`
+	ViewerLiveDm bool          `json:"viewer_live_dm"`
+	ReaderIds    []pgtype.UUID `json:"reader_ids"`
+	Kind         pgtype.Text   `json:"kind"`
+	Category     pgtype.Text   `json:"category"`
+	Status       pgtype.Text   `json:"status"`
+	Visibility   pgtype.Text   `json:"visibility"`
+	Search       pgtype.Text   `json:"search"`
+	RowOffset    int32         `json:"row_offset"`
+	RowLimit     int32         `json:"row_limit"`
 }
 
 type ListDocumentsRow struct {
-	ID          pgtype.UUID        `json:"id"`
-	Kind        string             `json:"kind"`
-	Slug        string             `json:"slug"`
-	Title       string             `json:"title"`
-	Category    pgtype.Text        `json:"category"`
-	Status      string             `json:"status"`
-	Visibility  string             `json:"visibility"`
-	Body        string             `json:"body"`
-	AuthorID    pgtype.UUID        `json:"author_id"`
-	PublishedAt pgtype.Timestamptz `json:"published_at"`
-	DeletedAt   pgtype.Timestamptz `json:"deleted_at"`
+	ID            pgtype.UUID        `json:"id"`
+	Kind          string             `json:"kind"`
+	Slug          string             `json:"slug"`
+	Title         string             `json:"title"`
+	Category      pgtype.Text        `json:"category"`
+	Status        string             `json:"status"`
+	Visibility    string             `json:"visibility"`
+	Body          string             `json:"body"`
+	Policy        []byte             `json:"policy"`
+	AuthorID      pgtype.UUID        `json:"author_id"`
+	PublishedAt   pgtype.Timestamptz `json:"published_at"`
+	DeletedAt     pgtype.Timestamptz `json:"deleted_at"`
+	AdminOverride bool               `json:"admin_override"`
 }
 
 func (q *Queries) ListDocuments(ctx context.Context, arg ListDocumentsParams) ([]ListDocumentsRow, error) {
 	rows, err := q.db.Query(ctx, listDocuments,
-		arg.Column1,
-		arg.Column2,
-		arg.Column3,
-		arg.Column4,
-		arg.Column5,
-		arg.Limit,
-		arg.Offset,
+		arg.ViewerAdmin,
+		arg.ViewerID,
+		arg.ViewerRoles,
+		arg.ViewerHandle,
+		arg.ViewerLiveDm,
+		arg.ReaderIds,
+		arg.Kind,
+		arg.Category,
+		arg.Status,
+		arg.Visibility,
+		arg.Search,
+		arg.RowOffset,
+		arg.RowLimit,
 	)
 	if err != nil {
 		return nil, err
@@ -321,9 +443,11 @@ func (q *Queries) ListDocuments(ctx context.Context, arg ListDocumentsParams) ([
 			&i.Status,
 			&i.Visibility,
 			&i.Body,
+			&i.Policy,
 			&i.AuthorID,
 			&i.PublishedAt,
 			&i.DeletedAt,
+			&i.AdminOverride,
 		); err != nil {
 			return nil, err
 		}

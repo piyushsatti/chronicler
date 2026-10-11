@@ -7,6 +7,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -23,6 +24,9 @@ type Config struct {
 	RedirectURI  string
 	JWTSecret    string
 	TokenTTL     time.Duration
+	// HTTPClient is a trusted Go-only transport seam for controlled tests and
+	// harnesses. Nil selects the bounded Discord client; no endpoint is configurable.
+	HTTPClient HTTPDoer
 }
 
 type MemberStore interface {
@@ -32,13 +36,18 @@ type MemberStore interface {
 type Service struct {
 	cfg   Config
 	store MemberStore
+	http  HTTPDoer
 }
 
 func New(cfg Config, store MemberStore) *Service {
 	if cfg.TokenTTL == 0 {
 		cfg.TokenTTL = 30 * 24 * time.Hour
 	}
-	return &Service{cfg: cfg, store: store}
+	client := cfg.HTTPClient
+	if client == nil {
+		client = newDiscordClient()
+	}
+	return &Service{cfg: cfg, store: store, http: client}
 }
 
 func (s *Service) Routes(mux httpserver.Router) {
@@ -69,7 +78,7 @@ type callbackBody struct {
 
 func (s *Service) callback(w http.ResponseWriter, r *http.Request) {
 	var body callbackBody
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.Code == "" {
+	if err := decodeBoundedJSON(r.Body, &body); err != nil || strings.TrimSpace(body.Code) == "" {
 		apierr.Write(w, r, apierr.New(apierr.Invalid, "code required"))
 		return
 	}
@@ -77,13 +86,32 @@ func (s *Service) callback(w http.ResponseWriter, r *http.Request) {
 		apierr.Write(w, r, apierr.New(apierr.Invalid, "oauth not configured"))
 		return
 	}
-	// Exchange is left as a stub until Discord credentials are wired in preview.
 	// Dev path: code "dev:<discordId>" mints a local token when ClientSecret is "dev".
 	discordID, displayName, avatar := body.Code, "dev", ""
-	if s.cfg.ClientSecret == "dev" && strings.HasPrefix(body.Code, "dev:") {
+	if s.cfg.ClientSecret == "dev" {
+		if !strings.HasPrefix(body.Code, "dev:") {
+			apierr.Write(w, r, apierr.New(apierr.Invalid, "development code required"))
+			return
+		}
 		discordID = strings.TrimPrefix(body.Code, "dev:")
+		if strings.TrimSpace(discordID) == "" {
+			apierr.Write(w, r, apierr.New(apierr.Invalid, "discord id required"))
+			return
+		}
 	} else {
-		apierr.Write(w, r, apierr.New(apierr.Invalid, "discord token exchange not wired; use code dev:<discordId> with DISCORD_CLIENT_SECRET=dev"))
+		if s.cfg.RedirectURI == "" {
+			apierr.Write(w, r, apierr.New(apierr.Invalid, "oauth not configured"))
+			return
+		}
+		profile, err := s.exchangeDiscord(r.Context(), body.Code)
+		if err != nil {
+			apierr.Write(w, r, err)
+			return
+		}
+		discordID, displayName, avatar = profile.ID, profile.DisplayName, profile.AvatarURL
+	}
+	if s.store == nil {
+		apierr.Write(w, r, apierr.New(apierr.Internal, "member store unavailable"))
 		return
 	}
 	memberID, roles, archons, lts, err := s.store.EnsureFromDiscord(r.Context(), discordID, displayName, avatar)
@@ -104,6 +132,16 @@ func (s *Service) callback(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]string{"token": token})
+}
+
+// A callback/provider response is one bounded JSON value. Decoder errors never
+// escape with provider response bytes or credentials attached.
+func decodeBoundedJSON(reader io.Reader, target any) error {
+	raw, err := io.ReadAll(io.LimitReader(reader, maxOAuthJSONBytes+1))
+	if err != nil || len(raw) > maxOAuthJSONBytes {
+		return apierr.New(apierr.Invalid, "invalid oauth response")
+	}
+	return json.Unmarshal(raw, target)
 }
 
 // Claims is the JWT payload (D41).

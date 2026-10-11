@@ -1,7 +1,6 @@
 import { HttpResponse } from 'msw';
 import type { FeatureGraphql, FeatureHandlers, FeatureRoute } from '../../chrome/featureModule.js';
 import { lazyElement } from '../../chrome/lazyElement.js';
-import { stubRoute } from '../../chrome/routeBuilders.js';
 import goodRulesList from '../../../tests/fixtures/wire/rules/list-good.json';
 
 export const endpoints = {} as const;
@@ -27,6 +26,20 @@ export const routes: readonly FeatureRoute[] = [
       import('./pages/RulesPage.js').then((module) => ({ default: module.RulesPage })),
     ),
   },
-  stubRoute('/rules/guides/:id', 'Guide detail'),
-  stubRoute('/rules/rulings/:id', 'Ruling detail'),
+  {
+    path: '/rules/guides/:id',
+    element: lazyElement(() =>
+      import('./pages/GuideDetailPage.js').then((module) => ({
+        default: module.GuideDetailPage,
+      })),
+    ),
+  },
+  {
+    path: '/rules/rulings/:id',
+    element: lazyElement(() =>
+      import('./pages/GuideDetailPage.js').then((module) => ({
+        default: module.RulingDetailPage,
+      })),
+    ),
+  },
 ];

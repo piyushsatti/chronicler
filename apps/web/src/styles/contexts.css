@@ -1,0 +1,87 @@
+/*
+ * contexts.css — style contexts applied on the page root container
+ *
+ * Contexts are purely additive — they override CSS custom properties
+ * or add conditional styles. NEVER define standalone color tokens here.
+ * All color comes from tokens.css data-theme selectors.
+ *
+ * Valid contexts: ctx-war-room, ctx-tavern, ctx-rpg, ctx-chronicle
+ * To add a new one, add a new section below — zero React changes required.
+ */
+
+/* ----- WAR ROOM -----------------------------------------------------------
+ * Dense data dashboards: stats, tables, feeds, maps.
+ * Emphasis: type-value large, type-label tight uppercase, tabular figures.
+ * Pages: /, /map, /search, /dm, /admin, /regions/:slug
+ */
+.ctx-war-room {
+  --type-display-size: clamp(2rem, 4.5vw, 3.25rem);
+  --type-value-size:   clamp(1.5rem, 2.5vw, 2rem);
+}
+
+.ctx-war-room .type-value {
+  font-variant-numeric: tabular-nums;
+}
+
+.ctx-war-room .type-caption {
+  letter-spacing: 0.05em;
+}
+
+
+/* ----- TAVERN BOARD -------------------------------------------------------
+ * Card-based browsing: quest boards, rosters, directories.
+ * Emphasis: type-title readable, type-caption comfortable.
+ * Pages: /quests, /characters, /players, /guilds, /factions, /npcs, /regions
+ */
+.ctx-tavern .type-title {
+  line-height: 1.5;
+}
+
+.ctx-tavern .type-caption {
+  line-height: 1.55;
+}
+
+/* Quest names are headings; DM names retain the compact type-title tier. */
+.ctx-tavern [data-el='boardCard.title'] {
+  --type-display-size: clamp(1.375rem, 2vw, 1.75rem);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+
+/* ----- RPG MENU -----------------------------------------------------------
+ * Detail pages with tabs, stat blocks, equipment.
+ * Emphasis: type-title slightly larger, narrative constrained.
+ * Pages: /quests/:code, /characters/:code, /guilds/:code, /dms/:code, etc.
+ */
+.ctx-rpg {
+  --type-title-size: 1.0625rem;
+}
+
+.ctx-rpg .type-narrative {
+  max-width: 65ch;
+}
+
+
+/* ----- CHRONICLE ----------------------------------------------------------
+ * Timeline and narrative-first pages. Prose is the primary tier.
+ * Emphasis: generous narrative leading, Fraunces OPSZ 144 for reading.
+ * Pages: /timeline, /series/:code, /calendar, /welcome
+ */
+.ctx-chronicle {
+  --type-narrative-size: 1.125rem;
+  --type-display-size:   clamp(1.75rem, 4vw, 2.75rem);
+}
+
+.ctx-chronicle .type-display {
+  text-align: center;
+}
+
+.ctx-chronicle .type-narrative {
+  line-height: 1.85;
+  max-width: 68ch;
+}
+
+.ctx-chronicle .type-heading {
+  color: var(--color-accent);
+}

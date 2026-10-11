@@ -8,14 +8,14 @@ One short paragraph: the product area and its boundary.
 
 ## Interfaces
 
-| Interface | Role |
-| --- | --- |
+| Interface                        | Role                          |
+| -------------------------------- | ----------------------------- |
 | [name](/docs/interfaces/name.md) | Why this system depends on it |
 
 ## Implemented by
 
-| App | Local docs |
-| --- | --- |
+| App          | Local docs                                    |
+| ------------ | --------------------------------------------- |
 | `apps/<app>` | [path under apps/…/docs/](/apps/<app>/docs/…) |
 
 ## Requirements

@@ -4,11 +4,11 @@ Locked conventions from [D40](../../../apps/api/docs/decisions/D40-GraphQL-Versu
 
 ## GraphQL vs REST vs DROP
 
-| Transport | When | Where |
-| --- | --- | --- |
-| **GraphQL** | Screen selects a tree of related fields in one round trip (list or detail with nested children) | `POST /v1/graphql` |
-| **REST** | Command (old mutation); pure lookup with fixed response; static config / fixed aggregate; read-that-writes (become an explicit command, then optionally a query) | Path under `/v1` |
-| **DROP** | Alias, deprecated path, or placeholder that always returned empty | Not ported |
+| Transport   | When                                                                                                                                                             | Where              |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
+| **GraphQL** | Screen selects a tree of related fields in one round trip (list or detail with nested children)                                                                  | `POST /v1/graphql` |
+| **REST**    | Command (old mutation); pure lookup with fixed response; static config / fixed aggregate; read-that-writes (become an explicit command, then optionally a query) | Path under `/v1`   |
+| **DROP**    | Alias, deprecated path, or placeholder that always returned empty                                                                                                | Not ported         |
 
 Reads that write split into a command plus a follow-up read (e.g. acknowledge notifications, then `myNotifications`). Full map: [field-routing.md](../field-routing.md).
 

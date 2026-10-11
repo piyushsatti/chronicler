@@ -3,12 +3,45 @@ import { PageHost, type PageRegionRenderers } from '@pi/react-imposition/react';
 import { Link } from 'react-router-dom';
 import { PageShell } from '../../../components/foundation/PageShell.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
+import { Tabs } from '../../../components/primitives/Tabs.js';
+import { Card } from '../../../components/primitives/Card.js';
+import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { useCommunityPage } from '../hooks/useCommunityPage.js';
+import type { CommunityMemberView } from '../types.js';
 
 const DECLARATION: PageDeclaration = {
   page: 'community',
   regions: [{ role: 'body', priority: 1 }],
 };
+
+function MemberList({
+  members,
+  empty,
+  profileBase,
+}: {
+  members: CommunityMemberView[];
+  empty: string;
+  profileBase: '/dms' | '/players';
+}): React.JSX.Element {
+  if (members.length === 0) {
+    return <EmptyState kind="generic" message={empty} />;
+  }
+  return (
+    <ul className="stack">
+      {members.map((member) => (
+        <li key={member.memberId}>
+          <Card className="stack">
+            <Link className="type-title" to={`${profileBase}/@${member.handle}`}>
+              {member.displayName}
+            </Link>
+            <p className="type-caption">@{member.handle}</p>
+            {member.tagline ? <p className="type-body">{member.tagline}</p> : null}
+          </Card>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 export function CommunityPage(): React.JSX.Element {
   const page = useCommunityPage();
@@ -44,20 +77,43 @@ export function CommunityPage(): React.JSX.Element {
               Characters
             </Link>
           </nav>
-          <section className="stack" aria-label="DMs accepting">
-            <h2 className="type-title">DMs accepting players</h2>
-            <ul className="stack">
-              {hub.dms
-                .filter((dm) => dm.acceptingPlayers)
-                .map((dm) => (
-                  <li key={dm.memberId} className="card stack">
-                    <p className="type-title">{dm.displayName}</p>
-                    <p className="type-caption">@{dm.handle}</p>
-                    {dm.tagline ? <p className="type-body">{dm.tagline}</p> : null}
-                  </li>
-                ))}
-            </ul>
-          </section>
+          <Tabs
+            items={[
+              {
+                id: 'muster',
+                label: 'Muster',
+                panel: (
+                  <MemberList
+                    members={hub.dms.filter((dm) => dm.acceptingPlayers)}
+                    empty="No DMs are accepting players right now."
+                    profileBase="/dms"
+                  />
+                ),
+              },
+              {
+                id: 'dms',
+                label: 'DMs',
+                panel: (
+                  <MemberList
+                    members={hub.dms}
+                    empty="No DMs in the directory."
+                    profileBase="/dms"
+                  />
+                ),
+              },
+              {
+                id: 'players',
+                label: 'Players',
+                panel: (
+                  <MemberList
+                    members={hub.players}
+                    empty="No players in the directory."
+                    profileBase="/players"
+                  />
+                ),
+              },
+            ]}
+          />
         </div>
       ),
     };

@@ -1,90 +1,1151 @@
-/* Sole place for raw color and type literals under apps/web/src.
-   Live Chronicler: warm charcoal, bronze, Fraunces, Geist. */
+/* === SECTION 1: FONT VARIABLES === */
 
 :root {
-  color-scheme: dark;
-  font-size: 16px;
-
-  --font-display: 'Fraunces Variable', 'Fraunces', Georgia, serif;
-  --font-heading: var(--font-display);
-  --font-narrative: var(--font-display);
-  --font-body: 'Geist', system-ui, sans-serif;
-  --font-mono: 'Geist Mono', ui-monospace, monospace;
-  --font-title: var(--font-display);
-
-  --color-bg-deep: #0f0e0c;
-  --color-bg-panel: #16140f;
-  --color-bg-surface: #1e1b16;
-  --color-border: #3d3527;
-  --color-border-2: #2a251d;
-  --color-text: #f5ebdc;
-  --color-text-muted: #958777;
-  --color-text-2: #958777;
-  --color-text-3: #908171;
-  --color-text-4: #4d453a;
-  --color-accent: #c8956d;
-  --color-accent-hover: #d9a579;
-  --color-danger: #d36a59;
-  --color-good: #5a8f60;
-  --color-hero-on-brand-ink: #0f0e0c;
-  --color-backdrop: rgba(0, 0, 0, 0.55);
-
-  --color-bg: var(--color-bg-deep);
-  --color-card: var(--color-bg-panel);
-  --color-ink: var(--color-text);
-  --color-muted: var(--color-text-muted);
-  --color-line: var(--color-border);
-  --color-accent-ink: var(--color-hero-on-brand-ink);
-
-  --color-bar: color-mix(in srgb, var(--color-bg-deep) 88%, transparent);
-  --color-bar-bottom: color-mix(in srgb, var(--color-bg-deep) 92%, transparent);
-
-  --discord-brand: #5865f2;
-  --discord-brand-hover: #4752c4;
-  --discord-ink: #ffffff;
-
-  --shadow-card: 0 1px 2px rgba(33, 28, 22, 0.04), 0 4px 16px rgba(33, 28, 22, 0.05);
-  --shadow-lift: 0 2px 6px rgba(33, 28, 22, 0.06), 0 12px 32px rgba(33, 28, 22, 0.1);
-
-  --radius-sm: 0.5625rem;
-  --radius-card: 0.875rem;
-  --radius-btn: 0.5rem;
-  --radius-pill: 999px;
-  --radius-mark: 0.5rem;
-
-  --chrome-bar: 4rem;
-  --chrome-bar-thin: 3rem;
-  --chrome-bottom: 3.5rem;
-
-  --sp-1: 0.25rem;
-  --sp-2: 0.5rem;
-  --sp-3: 0.75rem;
-  --sp-4: 1rem;
-  --sp-5: 1.5rem;
-  --sp-6: 2rem;
-  --sp-7: 3rem;
-  --sp-8: 4rem;
+  --font-body:      'Geist', sans-serif;
+  --font-display:   'Fraunces Variable', serif;
+  --font-heading:   'Fraunces Variable', serif;
+  --font-narrative: 'Fraunces Variable', serif;
+  --font-mono:      'Geist Mono', monospace;
 }
 
-@media (prefers-color-scheme: light) {
-  /* Preference only — not a layout breakpoint. */
-  :root {
-    color-scheme: light;
-    --color-bg-deep: #f3efe6;
-    --color-bg-panel: #faf7f0;
-    --color-bg-surface: #ffffff;
-    --color-border: #d6c9b3;
-    --color-border-2: #e6ddc9;
-    --color-text: #1b1712;
-    --color-text-muted: #6e5f4c;
-    --color-text-2: #6e5f4c;
-    --color-text-3: #776957;
-    --color-text-4: #b5a88f;
-    --color-accent: #85592f;
-    --color-accent-hover: #6f4a26;
-    --color-danger: #8a2a1e;
-    --color-good: #3a6e3f;
-    --color-hero-on-brand-ink: #f3efe6;
-    --color-backdrop: rgba(27, 23, 18, 0.3);
-  }
+/* === SECTION 2: COLOUR THEMES === */
+
+/*
+ * Refined-modern dark — warm charcoal + bronze.
+ * Also applied to :root so the page has styles before JS hydrates.
+ *
+ * Variable naming intentionally preserves the old names (bg-deep, bg-panel,
+ * bg-surface, border, border-2) so existing components keep compiling
+ * without a mechanical rename sweep. Semantic meaning has shifted:
+ *   bg-deep     = deepest background layer (page canvas)
+ *   bg-panel    = raised card / panel surface
+ *   bg-surface  = elevated surface (modals, popovers)
+ *   border      = default border (hairline emphasis)
+ *   border-2 = repurposed as subtle border / lower-emphasis hairline
+ */
+:root,
+[data-mode="dark"][data-theme="default"] {
+  --color-bg-deep:    #0f0e0c;
+  --color-bg-panel:   #16140f;
+  --color-bg-surface: #1e1b16;
+  --color-border:     #3d3527;
+  --color-border-2: #2a251d;
+  --color-text:       #f5ebdc;
+  --color-text-muted: #958777;
+  --color-accent:     #c8956d;
+  --color-accent-hover: #d9a579;
+  --color-backdrop:   rgba(0, 0, 0, 0.55);
+}
+
+/* Refined-modern light — cream paper + bronze (DRAFT: inverted-lightness
+   sibling of the dark default above; same bronze hue family, darkened for
+   AA contrast on a light ground). */
+/* DRAFT for owner review — #198 */
+[data-mode="light"][data-theme="default"] {
+  --color-bg-deep:    #f3efe6;
+  --color-bg-panel:   #faf7f0;
+  --color-bg-surface: #ffffff;
+  --color-border:     #d6c9b3;
+  --color-border-2: #e6ddc9;
+  --color-text:       #1b1712;
+  --color-text-muted: #6e5f4c;
+  --color-accent:     #85592f;
+  --color-accent-hover: #6f4a26;
+  --color-backdrop:   rgba(27, 23, 18, 0.30);
+}
+
+/* Parchment light + dark — #452 (A2): --color-* for this theme is now
+ * authored ONLY through the semantic tier below (SECTION 2B), which reads
+ * the --p-* primitives populated per-mode in SECTION 2A. The old hardcoded
+ * hex blocks that used to live here are deleted (converge, don't duplicate:
+ * they were the same values the primitive tier already carries). */
+
+
+/* ============================================================
+   SECTION 2A: PRIMITIVE TIER (--p-*)  —  epic-a-tokens #451 (A1)
+   ============================================================
+ *
+ * Design-token tiering (Style Dictionary / W3C design-tokens draft):
+ * primitive (--p-*, raw hex only) -> semantic (--color-*, consumed by
+ * components) -> component (--btn-*, --field-*, ...). See
+ * notes/design/design-language.md section 1 for the full tier rule.
+ *
+ * Structured as [data-theme][data-mode] blocks, one per theme x mode
+ * (5 themes x 2 modes = 10 blocks total). Light is a MODE AXIS, not an
+ * override of a dark default: both modes are peer blocks under a theme.
+ *
+ * This issue (#451, A1) populates ONLY the 2 Parchment blocks below.
+ *
+ * CORRECTION (post-#495 review FIX verify-gate): these values are the
+ * refined-modern DEFAULT theme's --color-* ladder (section 2 above),
+ * NOT the old dedicated Parchment --color-* block that shipped before
+ * this branch (git history at ad641c6^: ground #1c1710/#f7f1e5,
+ * accent #d9a361/#a06832, etc — a visibly different bronze-paper
+ * palette). Verified by diff: 8-9 of 9 tokens differ per mode from the
+ * true prior Parchment. This is NOT a byte-identical carry-over, and
+ * the original "zero visual diff" claim below was wrong for anyone on
+ * the Parchment theme specifically (Atlas stays the app default, so
+ * default-theme rendering is unaffected).
+ *
+ * The values ARE, however, correct: they match
+ * notes/design/theme-matrix-research.md section 2's "Parchment
+ * dark/light (current, unchanged)" tables exactly — the research doc
+ * is ruling-level truth (owner reviewed and approved these exact
+ * palettes in the theme-matrix preview), and it independently converges
+ * Parchment onto the same hue family as Default rather than the old
+ * distinct bronze-paper set. So: Parchment's primitives intentionally
+ * moved to the research-approved values in this PR; that is a real,
+ * approved visual change for Parchment users, not a bug and not a
+ * silent carry-over.
+ *
+ * The remaining 8 blocks (Midnight, Ember, Dracula, Vegan x light/dark)
+ * are populated against this same schema in epic B (B7), using exact
+ * values from notes/design/theme-matrix-research.md section 2.
+ *
+ * No component or skin may reference a --p-* token directly (enforced
+ * by A5) — only the semantic tier reads these.
+ */
+
+/* ---- Parchment dark (research-approved values plus the owner-authorized
+   2026-09-13 contrast repair recorded in theme-matrix-research.md) — same hue family as
+   refined-modern Default, NOT the old pre-#451 bronze-paper Parchment
+   block; see CORRECTION note above) ---- */
+[data-theme="parchment"][data-mode="dark"] {
+  --p-ground-0: #0f0e0c;
+  --p-ground-1: #16140f;
+  --p-ground-2: #1e1b16;
+
+  --p-hairline-1: #3d3527;
+  --p-hairline-2: #2a251d;
+
+  --p-text-1: #f5ebdc;
+  --p-text-2: #958777; /* repaired: normal metadata clears AA on ground-2 */
+  --p-text-3: #908171; /* repaired: retired/code text and its status dot clear AA */
+  --p-text-4: #4d453a;
+
+  --p-brand:       #c8956d;
+  --p-brand-hover: #d9a579;
+  --p-brand-wash:  #31271d; /* derived: 15% brand mixed into ground-1, no shipped token to carry over */
+
+  --p-red:   #d36a59; /* repaired: danger text and dark-on-live treatment both clear AA */
+  --p-green: #5a8f60;
+  --p-gold:  #c8a84b;
+
+  /* quintet/stone/silver hoisted to the theme-invariant :root block
+     below (they were identical across dark+light here) — see #452
+     review FIX 1 */
+
+  --p-scrim: rgba(0, 0, 0, 0.55);
+
+  --p-region-hollow:      #7ec8e3;
+  --p-region-esparithen:  #a8e6a3;
+  --p-region-dalmond:     #f4c87a;
+  --p-region-pawluck:     #c8a2c8;
+  --p-region-viceroc:     #f08080;
+  --p-region-dunnshore:   #87ceeb;
+  --p-region-pelsand:     #deb887;
+}
+
+/* ---- Parchment light (research-approved values, see CORRECTION note
+   above the dark block) ---- */
+[data-theme="parchment"][data-mode="light"] {
+  --p-ground-0: #f3efe6;
+  --p-ground-1: #faf7f0;
+  --p-ground-2: #ffffff;
+
+  --p-hairline-1: #d6c9b3;
+  --p-hairline-2: #e6ddc9;
+
+  --p-text-1: #1b1712;
+  --p-text-2: #6e5f4c;
+  --p-text-3: #776957; /* repaired: normal metadata clears AA on ground-1 */
+  --p-text-4: #b5a88f;
+
+  --p-brand:       #85592f;
+  --p-brand-hover: #6f4a26;
+  --p-brand-wash:  #e8dfd3; /* derived: 15% brand mixed into ground-1, no shipped token to carry over */
+
+  --p-red:   #8a2a1e;
+  --p-green: #3a6e3f;
+  --p-gold:  #8a6e28;
+
+  /* quintet/stone/silver hoisted to the theme-invariant :root block
+     below (they were identical across dark+light here) — see #452
+     review FIX 1 */
+
+  --p-scrim: rgba(27, 23, 18, 0.30);
+
+  --p-region-hollow:      #7ec8e3;
+  --p-region-esparithen:  #a8e6a3;
+  --p-region-dalmond:     #f4c87a;
+  --p-region-pawluck:     #c8a2c8;
+  --p-region-viceroc:     #f08080;
+  --p-region-dunnshore:   #87ceeb;
+  --p-region-pelsand:     #deb887;
+}
+
+/* ---- Theme-invariant brand-identity primitives (#452, A2, fork 9) ----
+ * Category/event/rarity quintet + the region-identity set below back
+ * SECTION 6's --cat-* / --evt-* / --rarity-* / --region-* names. They are
+ * identical across every mode (verified: both Parchment blocks above
+ * carried the same 5 quintet + stone/silver hex) and, per SECTION 6's
+ * own file comment, must stay perceptually identical across every
+ * THEME too — so they live once at bare :root, never duplicated inside
+ * a [data-theme][data-mode] block.
+ *
+ * --p-region-* here is deliberately NOT the same name as the
+ * per-theme --p-region-* pair inside the Parchment blocks above (those
+ * back Parchment's own UI region-swatch display and carry different,
+ * theme-scoped pastel values — a real semantic difference, not a
+ * duplicate). Reusing the name would let the higher-specificity
+ * [data-theme="parchment"] block silently override this invariant set
+ * whenever Parchment is active, breaking the "consistent across ALL
+ * themes" guarantee SECTION 6 exists to provide. Named --p-region-mark-*
+ * to keep the two apart; documented here since it reads as a near-miss
+ * of the literal #452/#495-review-ask ("alias --p-quintet-* / --p-region-*")
+ * — this is the same primitive tier, disambiguated to avoid a real
+ * cascade bug, not a second implementation of the rule.
+ */
+:root {
+  --p-quintet-terracotta: #B3431E;
+  --p-quintet-violet:     #6B4A93;
+  --p-quintet-green:      #4A6A3D;
+  --p-quintet-gold:       #B8900A;
+  --p-quintet-blue:       #2F6090;
+  --p-stone:  #8A8273;
+  --p-silver: #7A828E;
+
+  --p-region-mark-dalmond:     #2F6090;
+  --p-region-mark-dunnshore:   #9A6B38;
+  --p-region-mark-esparithen:  #A23A2E;
+  --p-region-mark-hollow:      #B8900A;
+  --p-region-mark-pawluck:     #4A6A3D;
+  --p-region-mark-viceroc:     #6B4A93;
+  --p-region-mark-pelsand:     #8A8273;
+}
+
+/* ---- Midnight / Ember / Dracula / Vegan x light/dark : B7 (#467) ----
+ * Filled against notes/design/theme-matrix-research.md section 2, exact
+ * values. Same shape as the Parchment blocks above (ground-0/1/2,
+ * hairline-1/2, text-1..4, brand+hover+wash, red, green, gold, scrim,
+ * region-*) so check:theme-schema's completeness union stays satisfied.
+ * --p-brand-wash is derived the same way Parchment's is (15% brand mixed
+ * into ground-1, no shipped token to carry over). --p-region-* swatch
+ * values reuse Parchment's (theme's own UI region-swatch pastel display,
+ * not covered by the research doc for the new themes; no contrast
+ * requirement applies to them).
+ */
+
+/* ---- Midnight dark (research section 2 "Midnight dark FIXED") ---- */
+[data-theme="midnight"][data-mode="dark"] {
+  --p-ground-0: #181c30;
+  --p-ground-1: #1f2440;
+  --p-ground-2: #282e52;
+
+  --p-hairline-1: #454d78;
+  --p-hairline-2: #333a5e;
+
+  --p-text-1: #eef0fb;
+  --p-text-2: #aab2dd;
+  --p-text-3: #8891bc;
+  --p-text-4: #5e6790;
+
+  --p-brand:       #a08ef0;
+  --p-brand-hover: #b3a3f5;
+  --p-brand-wash:  #32345a;
+
+  --p-red:   #e2708a;
+  --p-green: #6fbf9e;
+  --p-gold:  #e0bf6a;
+
+  --p-scrim: rgba(8, 10, 22, 0.55);
+
+  --p-region-hollow:      #7ec8e3;
+  --p-region-esparithen:  #a8e6a3;
+  --p-region-dalmond:     #f4c87a;
+  --p-region-pawluck:     #c8a2c8;
+  --p-region-viceroc:     #f08080;
+  --p-region-dunnshore:   #87ceeb;
+  --p-region-pelsand:     #deb887;
+}
+
+/* ---- Midnight light (research section 2 "Midnight light NEW") ---- */
+[data-theme="midnight"][data-mode="light"] {
+  --p-ground-0: #eef0fa;
+  --p-ground-1: #f6f7fd;
+  --p-ground-2: #ffffff;
+
+  --p-hairline-1: #c7cce8;
+  --p-hairline-2: #dde1f4;
+
+  --p-text-1: #161a30;
+  --p-text-2: #4a5280;
+  --p-text-3: #666fa0;
+  --p-text-4: #9aa1c8;
+
+  --p-brand:       #5b46c4;
+  --p-brand-hover: #4a38a8;
+  --p-brand-wash:  #dfdcf4;
+
+  --p-red:   #a3324a;
+  --p-green: #2f6e57;
+  --p-gold:  #8a6d1e;
+
+  --p-scrim: rgba(20, 22, 42, 0.30);
+
+  --p-region-hollow:      #7ec8e3;
+  --p-region-esparithen:  #a8e6a3;
+  --p-region-dalmond:     #f4c87a;
+  --p-region-pawluck:     #c8a2c8;
+  --p-region-viceroc:     #f08080;
+  --p-region-dunnshore:   #87ceeb;
+  --p-region-pelsand:     #deb887;
+}
+
+/* ---- Ember dark (research section 2 "Ember dark FIXED") ---- */
+[data-theme="ember"][data-mode="dark"] {
+  --p-ground-0: #211509;
+  --p-ground-1: #2b1c0d;
+  --p-ground-2: #382512;
+
+  --p-hairline-1: #5c3d20;
+  --p-hairline-2: #48301a;
+
+  --p-text-1: #faeee0;
+  --p-text-2: #c7a480;
+  --p-text-3: #a3835f;
+  --p-text-4: #795f42;
+
+  --p-brand:       #f0954f;
+  --p-brand-hover: #f6ab6c;
+  --p-brand-wash:  #492e17;
+
+  --p-red:   #d96a4f;
+  --p-green: #7cae5f;
+  --p-gold:  #e0b653;
+
+  --p-scrim: rgba(16, 9, 3, 0.55);
+
+  --p-region-hollow:      #7ec8e3;
+  --p-region-esparithen:  #a8e6a3;
+  --p-region-dalmond:     #f4c87a;
+  --p-region-pawluck:     #c8a2c8;
+  --p-region-viceroc:     #f08080;
+  --p-region-dunnshore:   #87ceeb;
+  --p-region-pelsand:     #deb887;
+}
+
+/* ---- Ember light (research section 2 "Ember light NEW") ---- */
+[data-theme="ember"][data-mode="light"] {
+  --p-ground-0: #f7ede1;
+  --p-ground-1: #fbf5ec;
+  --p-ground-2: #ffffff;
+
+  --p-hairline-1: #e0c6a5;
+  --p-hairline-2: #ecdac0;
+
+  --p-text-1: #241608;
+  --p-text-2: #6e4c30;
+  --p-text-3: #8d6944;
+  --p-text-4: #bd9c76;
+
+  --p-brand:       #a8501e;
+  --p-brand-hover: #8c3f16;
+  --p-brand-wash:  #efdccd;
+
+  --p-red:   #9a3320;
+  --p-green: #3f6e2f;
+  --p-gold:  #8a6414;
+
+  --p-scrim: rgba(30, 17, 6, 0.30);
+
+  --p-region-hollow:      #7ec8e3;
+  --p-region-esparithen:  #a8e6a3;
+  --p-region-dalmond:     #f4c87a;
+  --p-region-pawluck:     #c8a2c8;
+  --p-region-viceroc:     #f08080;
+  --p-region-dunnshore:   #87ceeb;
+  --p-region-pelsand:     #deb887;
+}
+
+/* ---- Dracula dark (research section 2, classic spec adapted) ---- */
+[data-theme="dracula"][data-mode="dark"] {
+  --p-ground-0: #20212c;
+  --p-ground-1: #282a36;
+  --p-ground-2: #333544;
+
+  --p-hairline-1: #4d4f68;
+  --p-hairline-2: #3c3e52;
+
+  --p-text-1: #f8f8f2;
+  --p-text-2: #b8bce0;
+  --p-text-3: #8a8ec2;
+  --p-text-4: #6272a4;
+
+  --p-brand:       #bd93f9;
+  --p-brand-hover: #caa4fa;
+  --p-brand-wash:  #3e3a53;
+
+  --p-red:   #ff5555;
+  --p-green: #50fa7b;
+  --p-gold:  #f1fa8c;
+
+  --p-scrim: rgba(10, 10, 16, 0.55);
+
+  --p-region-hollow:      #7ec8e3;
+  --p-region-esparithen:  #a8e6a3;
+  --p-region-dalmond:     #f4c87a;
+  --p-region-pawluck:     #c8a2c8;
+  --p-region-viceroc:     #f08080;
+  --p-region-dunnshore:   #87ceeb;
+  --p-region-pelsand:     #deb887;
+}
+
+/* ---- Dracula light (research section 2, Alucard-derived) ---- */
+[data-theme="dracula"][data-mode="light"] {
+  --p-ground-0: #fffbeb;
+  --p-ground-1: #fdf6e3;
+  --p-ground-2: #ffffff;
+
+  --p-hairline-1: #d8cfa8;
+  --p-hairline-2: #e8e0c4;
+
+  --p-text-1: #1f1f1f;
+  --p-text-2: #5b5540;
+  --p-text-3: #6c664b;
+  --p-text-4: #9a9270;
+
+  --p-brand:       #644ac9;
+  --p-brand-hover: #523aad;
+  --p-brand-wash:  #e6dcdf;
+
+  --p-red:   #cb3a2a;
+  --p-green: #14710a;
+  --p-gold:  #846e15;
+
+  --p-scrim: rgba(40, 36, 20, 0.30);
+
+  --p-region-hollow:      #7ec8e3;
+  --p-region-esparithen:  #a8e6a3;
+  --p-region-dalmond:     #f4c87a;
+  --p-region-pawluck:     #c8a2c8;
+  --p-region-viceroc:     #f08080;
+  --p-region-dunnshore:   #87ceeb;
+  --p-region-pelsand:     #deb887;
+}
+
+/* ---- Vegan dark (research section 2 "Vegan dark NEW") ---- */
+[data-theme="vegan"][data-mode="dark"] {
+  --p-ground-0: #12190f;
+  --p-ground-1: #182117;
+  --p-ground-2: #202b1c;
+
+  --p-hairline-1: #3a4d31;
+  --p-hairline-2: #2c3a25;
+
+  --p-text-1: #eef5e6;
+  --p-text-2: #a8c294;
+  --p-text-3: #86a06f;
+  --p-text-4: #5a6f4a;
+
+  --p-brand:       #7cb342;
+  --p-brand-hover: #8fc659;
+  --p-brand-wash:  #27371d;
+
+  --p-red:   #d9704f;
+  --p-green: #4fae8c;
+  --p-gold:  #d4b24a;
+
+  --p-scrim: rgba(6, 10, 4, 0.55);
+
+  --p-region-hollow:      #7ec8e3;
+  --p-region-esparithen:  #a8e6a3;
+  --p-region-dalmond:     #f4c87a;
+  --p-region-pawluck:     #c8a2c8;
+  --p-region-viceroc:     #f08080;
+  --p-region-dunnshore:   #87ceeb;
+  --p-region-pelsand:     #deb887;
+}
+
+/* ---- Vegan light (research section 2 "Vegan light NEW") ---- */
+[data-theme="vegan"][data-mode="light"] {
+  --p-ground-0: #eef3e4;
+  --p-ground-1: #f6f9ef;
+  --p-ground-2: #ffffff;
+
+  --p-hairline-1: #c9d9b5;
+  --p-hairline-2: #dee8cd;
+
+  --p-text-1: #14200f;
+  --p-text-2: #445c34;
+  --p-text-3: #5c7548;
+  --p-text-4: #8ba36f;
+
+  --p-brand:       #4a7a24;
+  --p-brand-hover: #3c6519;
+  --p-brand-wash:  #dce6d1;
+
+  --p-red:   #a3392a;
+  --p-green: #1f7a5c;
+  --p-gold:  #7a6318;
+
+  --p-scrim: rgba(20, 32, 14, 0.30);
+
+  --p-region-hollow:      #7ec8e3;
+  --p-region-esparithen:  #a8e6a3;
+  --p-region-dalmond:     #f4c87a;
+  --p-region-pawluck:     #c8a2c8;
+  --p-region-viceroc:     #f08080;
+  --p-region-dunnshore:   #87ceeb;
+  --p-region-pelsand:     #deb887;
+}
+
+
+/* ============================================================
+   SECTION 2B: SEMANTIC TIER (--color-*)  —  epic-a-tokens #452 (A2)
+   ============================================================
+ *
+ * design-language.md section 1, Tier 2: the ONE app-facing vocabulary.
+ * Every name here is defined ONLY in terms of --p-* (never a raw hex).
+ * RULING (accept criteria #452): the semantic tier is theme-invariant —
+ * no theme block redefines a --color-* NAME, it only supplies the --p-*
+ * values that name resolves through. This block is written once and
+ * would apply unconditionally at :root once every theme has a --p-*
+ * primitive block (B7). Today only Parchment (A1, #451) has primitives,
+ * so this block is scoped to [data-theme="parchment"] as a documented,
+ * temporary deviation — NOT a second per-theme redefinition of the
+ * vocabulary itself, just of which theme currently backs it. The other
+ * 5 themes (default/atlas) keep their
+ * legacy hardcoded --color-* blocks below until B7 gives them --p-*
+ * primitives too, at which point this block promotes to :root and
+ * those legacy blocks delete. A :root fallback set further down keeps
+ * the NEW names (selected-wash, hero-*, focus-ring, border-2, text-2..4)
+ * working under those themes in the meantime.
+ */
+/* :root fallback for the NEW semantic names, so themes without --p-*
+ * primitives yet (everything but Parchment) still render something
+ * sane instead of an invalid/unset custom property. Same specificity
+ * as the [data-theme="parchment"] block below but declared FIRST —
+ * equal-specificity cascade means Parchment's --p-*-backed values win
+ * there (source order), every other theme falls through to these
+ * legacy-derived equivalents until B7. */
+:root {
+  --color-text-2:     var(--color-text-muted);
+  --color-text-3:     var(--color-text-muted);
+  --color-text-4:     var(--color-border);
+  --color-accent-2:   var(--color-bg-surface);
+  --color-danger:     var(--color-status-dead);
+  --color-good:       var(--color-status-alive);
+  --color-warn:       var(--color-status-missing);
+  --color-selected-wash: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  --color-hero-bg:    var(--color-bg-panel);
+  --color-hero-glow:  var(--color-accent-2);
+  --color-hero-ink:   var(--color-text);
+  --color-hero-ink-2: var(--color-text-muted);
+  --color-hero-btn:   var(--color-accent);
+  --color-hero-on-brand-ink: var(--color-bg-deep);
+  --focus-ring: 0 0 0 2px var(--color-bg-deep), 0 0 0 4px var(--color-accent);
+}
+
+[data-theme="parchment"] {
+  --color-bg-deep:      var(--p-ground-0);
+  --color-bg-panel:     var(--p-ground-1);
+  --color-bg-surface:   var(--p-ground-2);
+  --color-border:       var(--p-hairline-1);
+  --color-border-2:     var(--p-hairline-2);
+  --color-text:         var(--p-text-1);
+  --color-text-2:       var(--p-text-2);
+  --color-text-3:       var(--p-text-3);
+  --color-text-4:       var(--p-text-4);
+  --color-text-muted:   var(--p-text-2);     /* legacy alias, same primitive */
+  --color-accent:       var(--p-brand);
+  --color-accent-hover: var(--p-brand-hover);
+  --color-accent-2:     var(--p-brand-wash);
+  --color-danger:       var(--p-red);
+  --color-good:         var(--p-green);
+  --color-warn:         var(--p-gold);
+  --color-backdrop:     var(--p-scrim);
+
+  /* NEW rows (#452 accept) */
+  --color-selected-wash: color-mix(in srgb, var(--p-brand) 8%, transparent);
+  --color-hero-bg:       var(--p-ground-1);
+  --color-hero-glow:     var(--p-brand-wash);
+  --color-hero-ink:      var(--p-text-1);
+  --color-hero-ink-2:    var(--p-text-2);
+  /* role tokens, not raw --color-accent: control/ink on a hero surface,
+   * free to diverge from general accent in a future palette. */
+  --color-hero-btn:      var(--p-brand);
+  --color-hero-on-brand-ink: var(--p-ground-0);
+  --focus-ring: 0 0 0 2px var(--p-ground-0), 0 0 0 4px var(--p-brand);
+
+  /* status / confidence — Parchment reads primitives too */
+  --color-status-alive:    var(--p-green);
+  --color-status-dead:     var(--p-red);
+  --color-status-retired:  var(--p-text-3);
+  --color-status-missing:  var(--p-gold);
+  --color-confidence-high: var(--p-green);
+  --color-confidence-med:  var(--p-gold);
+  --color-confidence-low:  var(--p-red);
+}
+
+/* ---- B7 (#467): semantic mapping blocks for the 4 new ruled themes,
+ * mode-agnostic, mirroring the [data-theme="parchment"] block above
+ * token-for-token. Without these the new themes' primitives (above) are
+ * declared and unconsumed — see plan finding [Y2]. ---- */
+[data-theme="midnight"] {
+  --color-bg-deep:      var(--p-ground-0);
+  --color-bg-panel:     var(--p-ground-1);
+  --color-bg-surface:   var(--p-ground-2);
+  --color-border:       var(--p-hairline-1);
+  --color-border-2:     var(--p-hairline-2);
+  --color-text:         var(--p-text-1);
+  --color-text-2:       var(--p-text-2);
+  --color-text-3:       var(--p-text-3);
+  --color-text-4:       var(--p-text-4);
+  --color-text-muted:   var(--p-text-2);
+  --color-accent:       var(--p-brand);
+  --color-accent-hover: var(--p-brand-hover);
+  --color-accent-2:     var(--p-brand-wash);
+  --color-danger:       var(--p-red);
+  --color-good:         var(--p-green);
+  --color-warn:         var(--p-gold);
+  --color-backdrop:     var(--p-scrim);
+
+  --color-selected-wash: color-mix(in srgb, var(--p-brand) 8%, transparent);
+  --color-hero-bg:       var(--p-ground-1);
+  --color-hero-glow:     var(--p-brand-wash);
+  --color-hero-ink:      var(--p-text-1);
+  --color-hero-ink-2:    var(--p-text-2);
+  /* role tokens, not raw --color-accent: control/ink on a hero surface,
+   * free to diverge from general accent in a future palette. */
+  --color-hero-btn:      var(--p-brand);
+  --color-hero-on-brand-ink: var(--p-ground-0);
+  --focus-ring: 0 0 0 2px var(--p-ground-0), 0 0 0 4px var(--p-brand);
+
+  --color-status-alive:    var(--p-green);
+  --color-status-dead:     var(--p-red);
+  --color-status-retired:  var(--p-text-3);
+  --color-status-missing:  var(--p-gold);
+  --color-confidence-high: var(--p-green);
+  --color-confidence-med:  var(--p-gold);
+  --color-confidence-low:  var(--p-red);
+}
+
+[data-theme="ember"] {
+  --color-bg-deep:      var(--p-ground-0);
+  --color-bg-panel:     var(--p-ground-1);
+  --color-bg-surface:   var(--p-ground-2);
+  --color-border:       var(--p-hairline-1);
+  --color-border-2:     var(--p-hairline-2);
+  --color-text:         var(--p-text-1);
+  --color-text-2:       var(--p-text-2);
+  --color-text-3:       var(--p-text-3);
+  --color-text-4:       var(--p-text-4);
+  --color-text-muted:   var(--p-text-2);
+  --color-accent:       var(--p-brand);
+  --color-accent-hover: var(--p-brand-hover);
+  --color-accent-2:     var(--p-brand-wash);
+  --color-danger:       var(--p-red);
+  --color-good:         var(--p-green);
+  --color-warn:         var(--p-gold);
+  --color-backdrop:     var(--p-scrim);
+
+  --color-selected-wash: color-mix(in srgb, var(--p-brand) 8%, transparent);
+  --color-hero-bg:       var(--p-ground-1);
+  --color-hero-glow:     var(--p-brand-wash);
+  --color-hero-ink:      var(--p-text-1);
+  --color-hero-ink-2:    var(--p-text-2);
+  /* role tokens, not raw --color-accent: control/ink on a hero surface,
+   * free to diverge from general accent in a future palette. */
+  --color-hero-btn:      var(--p-brand);
+  --color-hero-on-brand-ink: var(--p-ground-0);
+  --focus-ring: 0 0 0 2px var(--p-ground-0), 0 0 0 4px var(--p-brand);
+
+  --color-status-alive:    var(--p-green);
+  --color-status-dead:     var(--p-red);
+  --color-status-retired:  var(--p-text-3);
+  --color-status-missing:  var(--p-gold);
+  --color-confidence-high: var(--p-green);
+  --color-confidence-med:  var(--p-gold);
+  --color-confidence-low:  var(--p-red);
+}
+
+[data-theme="dracula"] {
+  --color-bg-deep:      var(--p-ground-0);
+  --color-bg-panel:     var(--p-ground-1);
+  --color-bg-surface:   var(--p-ground-2);
+  --color-border:       var(--p-hairline-1);
+  --color-border-2:     var(--p-hairline-2);
+  --color-text:         var(--p-text-1);
+  --color-text-2:       var(--p-text-2);
+  --color-text-3:       var(--p-text-3);
+  --color-text-4:       var(--p-text-4);
+  --color-text-muted:   var(--p-text-2);
+  --color-accent:       var(--p-brand);
+  --color-accent-hover: var(--p-brand-hover);
+  --color-accent-2:     var(--p-brand-wash);
+  --color-danger:       var(--p-red);
+  --color-good:         var(--p-green);
+  --color-warn:         var(--p-gold);
+  --color-backdrop:     var(--p-scrim);
+
+  --color-selected-wash: color-mix(in srgb, var(--p-brand) 8%, transparent);
+  --color-hero-bg:       var(--p-ground-1);
+  --color-hero-glow:     var(--p-brand-wash);
+  --color-hero-ink:      var(--p-text-1);
+  --color-hero-ink-2:    var(--p-text-2);
+  /* role tokens, not raw --color-accent: control/ink on a hero surface,
+   * free to diverge from general accent in a future palette. */
+  --color-hero-btn:      var(--p-brand);
+  --color-hero-on-brand-ink: var(--p-ground-0);
+  --focus-ring: 0 0 0 2px var(--p-ground-0), 0 0 0 4px var(--p-brand);
+
+  --color-status-alive:    var(--p-green);
+  --color-status-dead:     var(--p-red);
+  --color-status-retired:  var(--p-text-3);
+  --color-status-missing:  var(--p-gold);
+  --color-confidence-high: var(--p-green);
+  --color-confidence-med:  var(--p-gold);
+  --color-confidence-low:  var(--p-red);
+}
+
+[data-theme="vegan"] {
+  --color-bg-deep:      var(--p-ground-0);
+  --color-bg-panel:     var(--p-ground-1);
+  --color-bg-surface:   var(--p-ground-2);
+  --color-border:       var(--p-hairline-1);
+  --color-border-2:     var(--p-hairline-2);
+  --color-text:         var(--p-text-1);
+  --color-text-2:       var(--p-text-2);
+  --color-text-3:       var(--p-text-3);
+  --color-text-4:       var(--p-text-4);
+  --color-text-muted:   var(--p-text-2);
+  --color-accent:       var(--p-brand);
+  --color-accent-hover: var(--p-brand-hover);
+  --color-accent-2:     var(--p-brand-wash);
+  --color-danger:       var(--p-red);
+  --color-good:         var(--p-green);
+  --color-warn:         var(--p-gold);
+  --color-backdrop:     var(--p-scrim);
+
+  --color-selected-wash: color-mix(in srgb, var(--p-brand) 8%, transparent);
+  --color-hero-bg:       var(--p-ground-1);
+  --color-hero-glow:     var(--p-brand-wash);
+  --color-hero-ink:      var(--p-text-1);
+  --color-hero-ink-2:    var(--p-text-2);
+  /* role tokens, not raw --color-accent: control/ink on a hero surface,
+   * free to diverge from general accent in a future palette. */
+  --color-hero-btn:      var(--p-brand);
+  --color-hero-on-brand-ink: var(--p-ground-0);
+  --focus-ring: 0 0 0 2px var(--p-ground-0), 0 0 0 4px var(--p-brand);
+
+  --color-status-alive:    var(--p-green);
+  --color-status-dead:     var(--p-red);
+  --color-status-retired:  var(--p-text-3);
+  --color-status-missing:  var(--p-gold);
+  --color-confidence-high: var(--p-green);
+  --color-confidence-med:  var(--p-gold);
+  --color-confidence-low:  var(--p-red);
+}
+
+
+/* ============================================================
+   ATLAS — the default design language (warm paper · terracotta).
+   This block carries the canonical Atlas palette. It maps Atlas
+   values onto BOTH the legacy --color-* names (so utility-class
+   components recolor) and is complemented by the Atlas vocabulary
+   in SECTION 5, whose aliases resolve from these --color-* values.
+   ============================================================ */
+[data-mode="light"][data-theme="atlas"] {
+  --color-bg-deep:      #FBF8F2;   /* Atlas --bg        */
+  --color-bg-panel:     #FFFFFF;   /* Atlas --surface   */
+  --color-bg-surface:   #F4EFE6;   /* Atlas --surface-2 */
+  --color-border:       #EAE2D4;   /* Atlas --line      */
+  --color-border-2:     #DDD3C0;   /* Atlas --line-2    */
+  --color-text:         #211C16;   /* Atlas --ink       */
+  --color-text-muted:   #5C5345;   /* Atlas --ink-2     */
+  --color-accent:       #B3431E;   /* Atlas --accent    */
+  --color-accent-hover: #9C3819;
+  --color-backdrop:     rgba(33, 28, 22, 0.30);
+
+  /* status / confidence → Atlas semantic palette */
+  --color-status-alive:    #4A6A3D;
+  --color-status-dead:     #C2362B;
+  --color-status-retired:  #968B79;
+  --color-status-missing:  #B0841E;
+  --color-confidence-high: #211C16;
+  --color-confidence-med:  #C5BBA8;
+  --color-confidence-low:  #FBF8F2;
+
+  --color-danger: #C2362B;
+  --color-good:   #4A6A3D;
+  --color-warn:   #826216;
+}
+
+/* ------------------------------------------------------------
+   Atlas dark (DRAFT) — same terracotta accent + semantic hue family
+   as the Atlas light block above, inverted-lightness ladder for a
+   dark ground. Covers every token the light block defines above
+   (no partial block — a partial block here would mixed-palette).
+   ------------------------------------------------------------ */
+/* DRAFT for owner review — #198 */
+[data-mode="dark"][data-theme="atlas"] {
+  --color-bg-deep:      #1b1712;
+  --color-bg-panel:     #252019;
+  --color-bg-surface:   #2f281f;
+  --color-border:       #46392a;
+  --color-border-2:     #3a2f22;
+  --color-text:         #f5f1e8;
+  --color-text-muted:   #b8ac98;
+  --color-accent:       #e2703d;
+  --color-accent-hover: #ed8557;
+  --color-backdrop:     rgba(0, 0, 0, 0.6);
+
+  /* status / confidence → Atlas semantic palette, dark ground */
+  --color-status-alive:    #6fa05c;
+  --color-status-dead:     #e86657;
+  --color-status-retired:  #b4a88f;
+  --color-status-missing:  #d9a83c;
+  --color-confidence-high: #f5f1e8;
+  --color-confidence-med:  #6b5c48;
+  --color-confidence-low:  #1b1712;
+
+  --color-danger: #e86657;
+  --color-good:   #6fa05c;
+  --color-warn:   #d9a83c;
+}
+
+/* Atlas theme-scoped, mode-independent values */
+[data-theme="atlas"] {
+  /* region palette — Atlas exact values (also drives --r-* via SECTION 5 alias) */
+  --color-region-hollow-highlands: #B8900A;
+  --color-region-esparithen:       #A23A2E;
+  --color-region-dalmond:          #2F6090;
+  --color-region-pawluck:          #4A6A3D;
+  --color-region-viceroc:          #6B4A93;
+  --color-region-dunnshore:        #9A6B38;
+  --color-region-pelsand:          #8A8273;
+}
+
+/* Scrollbar thumb/track pair + selection wash — semantic-tier composition
+ * of SECTION 2A primitives (#452, integrator close-out for issue #511:
+ * moved out of SECTION 5 so the --p-* reads live in the semantic tier
+ * per A5, not the component/vocabulary tier). Consumers in SECTION 5 and
+ * the ::selection rule below alias these names, never --p-* directly. */
+:root {
+  --color-scrollbar-thumb: var(--p-hairline-1, var(--color-border));
+  --color-scrollbar-track: var(--p-ground-1, var(--color-bg-panel));
+  --color-selection-wash:  var(--p-brand-wash, var(--color-accent-2));
+}
+
+/* === SECTION 3: STATUS / SEMANTIC COLOURS === */
+
+/* Warm-pulled semantic status colours */
+:root {
+  --color-status-alive:   #5a8f60;
+  --color-status-dead:    #d36a59;
+  --color-status-retired: #a9826b;
+  --color-status-missing: #b89656;
+
+  --color-confidence-high: #5a8f60;
+  --color-confidence-med:  #c8a84b;
+  --color-confidence-low:  #d36a59;
+}
+
+/* Light-mode status colour overrides — higher contrast on cream */
+[data-mode="light"] {
+  --color-status-alive:    #3a6e3f;
+  --color-status-dead:     #8a2a1e;
+  --color-status-retired:  #7a5a46;
+  --color-status-missing:  #8a6e28;
+  --color-confidence-high: #3a6e3f;
+  --color-confidence-med:  #8a6e28;
+  --color-confidence-low:  #8a2a1e;
+}
+
+/* Colorblind-safe override — Wong palette */
+[data-colorblind="safe"] {
+  --color-status-alive:   #0072B2;
+  --color-status-dead:    #E69F00;
+  --color-status-retired: #56B4E9;
+  --color-status-missing: #F0E442;
+
+  --color-confidence-high: #0072B2;
+  --color-confidence-med:  #F0E442;
+  --color-confidence-low:  #E69F00;
+
+  --color-region-hollow-highlands: #56B4E9;
+  --color-region-esparithen:       #009E73;
+  --color-region-dalmond:          #E69F00;
+  --color-region-pawluck:          #CC79A7;
+  --color-region-viceroc:          #D55E00;
+  --color-region-dunnshore:        #0072B2;
+  --color-region-pelsand:          #F0E442;
+}
+
+
+/* === SECTION 4: REGION COLOURS === */
+
+/* A5 documented exception: raw hex under app/components/map/** (SVG cartography
+ * stroke/fill for the region atlas) is exempt from the A5 raw-hex ban — the map
+ * renders geography, not UI chrome, and its palette is sourced from
+ * cartographic reference art rather than the design-token scale. Enforced by
+ * scripts/design-gates/check-tokens.mjs's EXCEPTION_PATH_GLOBS, not a silent
+ * pass. The region tokens below stay --color-* per the normal tiering. */
+
+:root {
+  --color-region-hollow-highlands: #7ec8e3;
+  --color-region-esparithen:       #a8e6a3;
+  --color-region-dalmond:          #f4c87a;
+  --color-region-pawluck:          #c8a2c8;
+  --color-region-viceroc:          #f08080;
+  --color-region-dunnshore:        #87ceeb;
+  --color-region-pelsand:          #deb887;
+}
+
+
+/* === SECTION 5: ATLAS DESIGN VOCABULARY ===
+ *
+ * The ported Atlas component classes (.card / .qc / .stack / .h1 / .topbar …
+ * in styles/atlas.css) consume these short token names. They are defined here
+ * at :root as ALIASES of the active theme's --color-* tokens, plus fallbacks
+ * for genuinely-new roles. This guarantees every Atlas-structured page renders
+ * with defined values under ALL themes (default/parchment/dracula/atlas),
+ * not just atlas — the theme-switch gate. The atlas theme
+ * overrides the new-role values with exact Atlas hex (SECTION 2 above).
+ *
+ * Aliases whose legacy semantic differs (e.g. --surface-2 → --color-bg-surface
+ * which legacy treats as "elevated/modal" vs Atlas "recessed chip-fill") will
+ * recolor slightly off on non-atlas themes — acceptable per the migration spec.
+ */
+:root {
+  /* Density (#452, O5 ruling: two steps, comfortable/compact) — a
+   * MULTIPLIER over --sp-*, not a parallel spacing scale. Set at the
+   * theme root (:root = comfortable, the default); [data-density=
+   * "compact"] further down is the only other step. */
+  --density-mult: 1;
+
+  /* Spacing scale — theme-independent, density-scaled */
+  --sp-1: calc(4px  * var(--density-mult));
+  --sp-2: calc(8px  * var(--density-mult));
+  --sp-3: calc(12px * var(--density-mult));
+  --sp-4: calc(16px * var(--density-mult));
+  --sp-5: calc(24px * var(--density-mult));
+  --sp-6: calc(32px * var(--density-mult));
+  --sp-7: calc(48px * var(--density-mult));
+  --sp-8: calc(64px * var(--density-mult));
+
+  /* Radii / shadows — theme-independent */
+  --rad:      14px;
+  --rad-sm:   9px;
+  --rad-xs:   4px;   /* NEW (#452, fork 2): absorbs off-scale 2/3/4/6 */
+  --rad-pill: 999px;
+  --shadow:      0 1px 2px rgba(33, 28, 22, 0.04), 0 4px 16px rgba(33, 28, 22, 0.05);
+  --shadow-lift: 0 2px 6px rgba(33, 28, 22, 0.06), 0 12px 32px rgba(33, 28, 22, 0.10);
+
+  /* Elevation scale — NEW (#452, fork 6): 3-step drop-shadow scale,
+   * replacing --shadow/--shadow-lift as the language going forward.
+   * The old pair stays defined above (still consumed, migration task
+   * per design-language.md section 8) but no new call site should
+   * reach for it. */
+  /* #452 (A2) review fix: no raw rgba(0,0,0,x) literals — derive from the
+   * scrim-based semantic token (--color-backdrop, itself --p-scrim on the
+   * parchment tier) via color-mix, no literal color operand. Ratios are the
+   * old literal alpha over --color-backdrop's ~0.55 dark-mode alpha. */
+  --shadow-1: 0 1px 2px color-mix(in srgb, var(--color-backdrop) 15%, transparent);
+  --shadow-2: 0 2px 6px color-mix(in srgb, var(--color-backdrop) 18%, transparent), 0 8px 20px color-mix(in srgb, var(--color-backdrop) 11%, transparent);
+  --shadow-3: 0 4px 12px color-mix(in srgb, var(--color-backdrop) 25%, transparent), 0 16px 40px color-mix(in srgb, var(--color-backdrop) 18%, transparent);
+
+  /* Breakpoints — NEW (#452). Values only: which primitives reflow at
+   * which step is specced at build time (design-language.md section 7).
+   * Custom properties are the documented single source of truth for JS
+   * matchMedia / Imposition layout; no viewport @media rules in styles. */
+  --bp-sm: 640px;
+  --bp-md: 1024px;
+  --bp-lg: 1440px;
+
+  /* Scrollbar thumb/track pair — NEW (#452, design-language.md section
+   * 8: MINOR, one pair reusing --p-*). Definition moved to SECTION 2B
+   * (semantic tier, #511 integrator close-out); --color-scrollbar-thumb
+   * and --color-scrollbar-track are already in scope here via :root. */
+}
+
+/* Density step 2/2 (#452, O5). Comfortable (--density-mult: 1, above) is
+ * the default; this is the only other step — no third. Consistent with
+ * the C14 list-density-cap rule (same two-tier switch, different axis). */
+[data-density="compact"] {
+  --density-mult: 0.75;
+}
+
+/* Text selection — #452, design-language.md section 8 (MINOR): one rule,
+ * built on --color-selection-wash (SECTION 2B semantic tier, #511
+ * integrator close-out; the primitive read now lives there, not here). */
+::selection {
+  background: var(--color-selection-wash);
+  color: var(--color-text);
+}
+
+/* Scrollbars — #452, design-language.md section 8 (MINOR): one custom
+ * thumb/track pair, Firefox (scrollbar-color) + WebKit pseudo-elements. */
+* {
+  scrollbar-color: var(--color-scrollbar-thumb) var(--color-scrollbar-track);
+  scrollbar-width: thin;
+}
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+*::-webkit-scrollbar-track {
+  background: var(--color-scrollbar-track);
+}
+*::-webkit-scrollbar-thumb {
+  background: var(--color-scrollbar-thumb);
+  border-radius: var(--rad-pill);
+}
+
+
+/* === SECTION 6: v03 FIXED BRAND COLOUR TOKENS ===
+ *
+ * Theme-invariant brand colours: NEVER remap per mode or colorblind override.
+ * These are design-identity hues (category, region, event-type, rarity) that
+ * must be perceptually consistent across ALL themes. They live at :root —
+ * outside any [data-mode] / [data-colorblind] block — by intention.
+ *
+ * SVG stroke= / fill= attributes are documented exceptions (not caught by gate).
+ *
+ * #452 (A2) fork 9 / #495 review FIX 1: every name below is an ALIAS of the
+ * theme-invariant --p-quintet-* / --p-stone / --p-silver / --p-region-mark-*
+ * primitives declared in SECTION 2A — one palette, four semantic views
+ * (specification pattern), zero raw hex here. Pages reference
+ * var(--token-name) throughout; nothing below composes a literal.
+ */
+:root {
+  /* ── Codex category colours ─────────────────────────────────────────── */
+  --cat-npc:      var(--p-quintet-terracotta);   /* warm terracotta  */
+  --cat-faction:  var(--p-quintet-violet);       /* deep violet      */
+  --cat-region:   var(--p-quintet-green);        /* forest green     */
+  --cat-artifact: var(--p-quintet-gold);         /* amber gold       */
+  --cat-event:    var(--p-quintet-blue);         /* slate blue       */
+
+  /* ── Chronicle region colours ───────────────────────────────────────── */
+  /* All 7 regions (was 3 of 7 — #201 bonus bug); values mirror the default
+     --color-region-* theme tokens, frozen here since this set is
+     theme-invariant by design (see file-level comment above). */
+  --region-dalmond:          var(--p-region-mark-dalmond);
+  --region-dunnshore:        var(--p-region-mark-dunnshore);
+  --region-esparithen:       var(--p-region-mark-esparithen);
+  --region-hollow:           var(--p-region-mark-hollow);
+  --region-pawluck:          var(--p-region-mark-pawluck);
+  --region-viceroc:          var(--p-region-mark-viceroc);
+  --region-pelsand:          var(--p-region-mark-pelsand);
+
+  /* ── Chronicle event-type colours ──────────────────────────────────── */
+  --evt-world:        var(--p-quintet-green);      /* WORLD EVENT       */
+  --evt-progression:  var(--p-quintet-blue);       /* SESSION           */
+  --evt-state-change: var(--p-quintet-terracotta); /* CHARACTER         */
+  --evt-dm:            var(--p-quintet-gold);      /* DM                */
+
+  /* ── Rarity colours (personalize / flair) ───────────────────────────── */
+  --rarity-common:    var(--p-stone);
+  --rarity-uncommon:  var(--p-quintet-green);
+  --rarity-rare:      var(--p-quintet-blue);
+  --rarity-epic:      var(--p-quintet-violet);
+  --rarity-legendary: var(--p-quintet-gold);
+
+  /* ── Rarity ring tints — component derivation, so callers don't
+     re-run color-mix() inline (#511 integrator close-out) ──────────── */
+  --rarity-common-ring:    color-mix(in srgb, var(--rarity-common) 45%, transparent);
+  --rarity-uncommon-ring:  color-mix(in srgb, var(--rarity-uncommon) 45%, transparent);
+  --rarity-rare-ring:      color-mix(in srgb, var(--rarity-rare) 45%, transparent);
+  --rarity-epic-ring:      color-mix(in srgb, var(--rarity-epic) 45%, transparent);
+  --rarity-legendary-ring: color-mix(in srgb, var(--rarity-legendary) 45%, transparent);
+
+  /* ── flair-gold ring tint — flair-gold itself is pre-existing/undefined
+     (out of #511 scope), tracked separately; ring token still needed so
+     laurel frame's color-mix() doesn't reference a bare undefined var ── */
+  --flair-gold-ring: var(--flair-gold, var(--p-quintet-gold));
+
+  /* ── DM tier badge — silver (no existing token) ─────────────────────── */
+  --tier-silver:  var(--p-silver);
+
+  /* ── Discord brand blue (third-party, not themeable, #511 integrator
+     close-out: moved here from app/index.css so the raw hex lives in
+     the theme-invariant brand tier instead of app-shell CSS) ────────── */
+  --discord-brand:       #5865F2;
+  --discord-brand-hover: #4752C4;
+}
+
+/* === SECTION 7: COMPONENT TOKENS (Tier 3) ===
+ *
+ * design-token tiering: primitive -> semantic -> component (see design-language.md
+ * §1 Tier 3). Component tokens consume ONLY semantic tokens, one skin per name, and
+ * every token below names >=2 real duplicated call sites — no token without them.
+ */
+:root {
+  /* Shared overlay/elevation contract. These aliases keep modal, popover,
+     tooltip, toast, and domain surfaces on one theme-independent vocabulary. */
+  --overlay-bg:     var(--color-bg-surface);
+  --overlay-border: var(--color-border);
+  --overlay-shadow: var(--shadow-3);
+  --raised-bg:      var(--color-bg-panel);
+  --raised-border:  var(--color-border-2);
+  --raised-shadow:  var(--shadow-1);
+
+  /* Interactive-state contract. Disabled controls retain readable contrast
+     and shape instead of communicating state through opacity alone. */
+  --control-disabled-bg:     var(--color-bg-surface);
+  --control-disabled-fg:     var(--color-text-3);
+  --control-disabled-border: var(--color-border-2);
+
+  /* Status indicators use the established semantic palette; adjacent copy
+     remains on the normal foreground token and never relies on colour alone. */
+  --status-success-indicator: var(--color-good);
+  --status-warning-indicator: var(--color-warn);
+  --status-danger-indicator:  var(--color-danger);
+
+  /* ── Field skin — replaces the twice-duplicated fieldStyle/inputStyle consts:
+     HomeContentEditor.tsx fieldStyle, CommunityShared.tsx AVAIL_FIELD_STYLE,
+     MemberRoleEditor.tsx inputStyle (imported 6x: CreationCatalogPanel,
+     RegionsPanel, TimeAnchorPanel, MembersPanel, RegionDetailEditor,
+     BackstoriesPanel, UnlockablesPanel) ── */
+  /* radius: design-language.md §8 rules 6px -> --rad-xs (4px) as a
+     deliberate migration change; the previously-shipped 8px here (drifted
+     from the old inputStyle 6px) was neither value — #495 review FIX 12. */
+  --field-bg:     var(--color-bg-panel);
+  --field-border: var(--color-border);
+  --field-radius: var(--rad-xs);
+  --field-font:   var(--font-body);
+
+  /* Validation states — Field primitive alongside the existing Error slot.
+     Fallbacks reference semantic tokens, never raw hex, per the
+     component-tier rule (design-language.md §1) — #495 review FIX 12. */
+  --field-border-error:   var(--color-danger, var(--color-status-dead));
+  --field-border-valid:   var(--color-good);
+  --field-border-pending: var(--color-warn);
+
+  /* ── Chip tint ladder — RULED fixed pair (weak 12% / strong 24%), replacing
+     the ad hoc color-mix opacities scattered per call site: atlas.css
+     .status[data-s="alive"], .state[data-s="SCHEDULED"/"SOFT"]
+     (weak); chip SELECTED states use strong + border. ── */
+  --chip-tint-weak:   12%;
+  --chip-tint-strong: 24%;
+
+  /* ── Card / row padding — real duplicated inline-style sites:
+     card: HomeContentEditor.tsx:119, RegionFieldNotes.tsx:126, RegionsPanel.tsx:140,
+     CreationCatalogPanel.tsx:141, MembersPanel.tsx:210, TimeAnchorPanel.tsx:143,
+     GameCalendarPanel.tsx:219, UnlockablesPanel.tsx:197, BackstoriesPanel.tsx:154.
+     row: CreationCatalogPanel.tsx:121, RegionsPanel.tsx:81, MembersPanel.tsx:199,
+     GameCalendarPanel.tsx:205, TimeAnchorPanel.tsx:129, BackstoriesPanel.tsx:140,
+     UnlockablesPanel.tsx:178, AdminIngestionPage.tsx:24. ── */
+  --card-pad: var(--sp-4);
+  --row-pad:  var(--sp-3) var(--sp-4);
+
+  /* ── Badge pad/radius — atlas.css .status (pill status badge) and .state
+     (quest-lifecycle badge); converges the two padding skins onto one. ── */
+  --badge-pad:    0 12px;
+  --badge-radius: var(--rad-pill);
+
+  /* ── Legend key row height — drives the scroll-cap max-height math
+     (maxVisibleKeys * --legend-key-height), design-language.md row 22. ── */
+  --legend-key-height: 28px;
 }

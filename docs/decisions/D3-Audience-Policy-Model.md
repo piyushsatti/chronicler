@@ -21,11 +21,11 @@ Legacy `documents.visibility` **folds into** this model (one engine). **`[!spoil
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
-| Role hierarchy | No honest ordering; implicit “superior sees all” over-shares (for example archon reading DM secrets) and fights flat-capability checks |
-| Named reusable audience groups | Deferred (YAGNI); future additive layer |
-| Full `[!audience …]` grammar with NOT-principals in markup | Deferred; smaller parser reduces adversarial surface |
+| Alternative                                                | Why not                                                                                                                                |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| Role hierarchy                                             | No honest ordering; implicit “superior sees all” over-shares (for example archon reading DM secrets) and fights flat-capability checks |
+| Named reusable audience groups                             | Deferred (YAGNI); future additive layer                                                                                                |
+| Full `[!audience …]` grammar with NOT-principals in markup | Deferred; smaller parser reduces adversarial surface                                                                                   |
 
 ## Consequences
 

@@ -3,8 +3,8 @@ import { PageHost, type PageRegionRenderers } from '@pi/react-imposition/react';
 import { Link } from 'react-router-dom';
 import { PageShell } from '../../../components/foundation/PageShell.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
-import type { RuleListItemView } from '../adapters/rulesAdapter.js';
 import { useRulesPage } from '../hooks/useRulesPage.js';
+import type { RuleListItemView } from '../types.js';
 
 const DECLARATION: PageDeclaration = {
   page: 'rules',

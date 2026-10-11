@@ -69,7 +69,9 @@ export function readObjectSchema(yaml: string, name: string): ObjectSchema {
   return {
     required,
     properties,
-    additionalProperties: block.some((line) => /additionalProperties:\s*true/.test(line)),
+    additionalProperties: block.some((line) =>
+      /additionalProperties:\s*true/.test(line),
+    ),
   };
 }
 
@@ -92,8 +94,10 @@ export function schemaViolations(schema: ObjectSchema, value: unknown): string[]
   for (const [key, property] of Object.entries(schema.properties)) {
     if (!(key in body) || body[key] === undefined) continue;
     const field = body[key];
-    if (property.type === 'string' && typeof field !== 'string') problems.push(`${key} must be a string`);
-    if (property.type === 'number' && typeof field !== 'number') problems.push(`${key} must be a number`);
+    if (property.type === 'string' && typeof field !== 'string')
+      problems.push(`${key} must be a string`);
+    if (property.type === 'number' && typeof field !== 'number')
+      problems.push(`${key} must be a number`);
     if (property.enum && !property.enum.includes(String(field))) {
       problems.push(`${key} must be one of ${property.enum.join(', ')}`);
     }
@@ -146,7 +150,9 @@ describe('discord-ingest', () => {
   const heartbeat = readObjectSchema(yaml, 'Heartbeat');
 
   it('rejects a body the DiscordEvent schema does not allow', () => {
-    expect(schemaViolations(discordEvent, { kind: 'announce' })).toContain('missing event_id');
+    expect(schemaViolations(discordEvent, { kind: 'announce' })).toContain(
+      'missing event_id',
+    );
     expect(
       schemaViolations(discordEvent, {
         event_id: '1',

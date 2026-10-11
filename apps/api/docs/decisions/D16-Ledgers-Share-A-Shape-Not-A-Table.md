@@ -17,11 +17,11 @@ domains each inventing their own audit table.
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
+| Alternative                                                                 | Why not                                                                                                                                                                                                                                                                                                                                          |
+| --------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | One polymorphic `audit_events` table (entity_type, entity_id, JSON payload) | The textbook answer, and wrong here. Ten tables already exist and are load-bearing, each with real foreign keys and typed columns. Collapsing them means a large migration that trades typed, indexed, FK-enforced columns for a JSON blob, to fix a naming problem. It also loses the per-domain read gating that already differs deliberately. |
-| Leave it alone; document `role_changes` as the precedent | The status quo. It is precisely what produced seven spellings: `role_changes` was already the cited precedent in three places and was copied by none of them. A precedent nobody follows is not a convention. |
-| Retrofit every existing table before the mixin is used | Rejected as a gate, not as work. See scope below. |
+| Leave it alone; document `role_changes` as the precedent                    | The status quo. It is precisely what produced seven spellings: `role_changes` was already the cited precedent in three places and was copied by none of them. A precedent nobody follows is not a convention.                                                                                                                                    |
+| Retrofit every existing table before the mixin is used                      | Rejected as a gate, not as work. See scope below.                                                                                                                                                                                                                                                                                                |
 
 ## Consequences
 

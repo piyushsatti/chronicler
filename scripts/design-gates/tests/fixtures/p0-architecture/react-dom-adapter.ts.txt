@@ -1,0 +1,6 @@
+import React from 'react';
+import { createPortal } from 'react-dom';
+export const loadItems = () => {
+  document.title = 'Items';
+  return createPortal(React.createElement('div'), window.document.body);
+};

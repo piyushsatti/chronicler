@@ -11,11 +11,11 @@ When `SNIFFER_ENABLED=true`, `mountActivity` forwards three guild gateway events
 
 `mountActivity` returns immediately unless `config.snifferEnabled` is set. Listeners accept events whose guild is `config.guildId`. Bot-authored activity is skipped. Each accepted payload becomes a `SniffedEvent` and `deliverActivity` calls `postDiscordEvent`.
 
-| Gateway event | Normalizer | `event_id` | `amount` |
-| --- | --- | --- | --- |
-| `messageCreate` | `normalizeMessageCreate` | Discord message id | `1` |
-| `voiceStateUpdate` | `VoiceSessionTracker.handleVoiceStateUpdate` | `voice:<userId>:<joinedAtMs>` | whole minutes in the channel |
-| raw `MESSAGE_REACTION_ADD` | `normalizeReactionDispatch` | `reaction:<sessionKey>:<sequence>:<messageId>` | `1` |
+| Gateway event              | Normalizer                                   | `event_id`                                     | `amount`                     |
+| -------------------------- | -------------------------------------------- | ---------------------------------------------- | ---------------------------- |
+| `messageCreate`            | `normalizeMessageCreate`                     | Discord message id                             | `1`                          |
+| `voiceStateUpdate`         | `VoiceSessionTracker.handleVoiceStateUpdate` | `voice:<userId>:<joinedAtMs>`                  | whole minutes in the channel |
+| raw `MESSAGE_REACTION_ADD` | `normalizeReactionDispatch`                  | `reaction:<sessionKey>:<sequence>:<messageId>` | `1`                          |
 
 Voice joins stay in a process-local `VoiceSessionTracker`. A restart forgets open joins. On `ClientReady`, `reconcile` closes sessions missing from the guild voice cache and emits `voice:recovery:…` when at least one minute elapsed. Sessions under one minute produce no event.
 

@@ -12,6 +12,14 @@ const backstories = '/v1/backstories';
 export const endpoints = {
   backstories,
   characterProgression: (id: string) => `/v1/characters/${id}/progression`,
+  characterLogs: (id: string) => `/v1/characters/${id}/logs`,
+  characterSummaries: (id: string) => `/v1/characters/${id}/summaries`,
+  characterCoPlayers: (id: string) => `/v1/characters/${id}/co-players`,
+  characterParticipations: (id: string) => `/v1/characters/${id}/participations`,
+  characterProfile: (id: string) => `/v1/characters/${id}/profile`,
+  characterSubmitVerification: (id: string) =>
+    `/v1/characters/${id}/submit-verification`,
+  characterRetire: (id: string) => `/v1/characters/${id}/retire`,
 } as const;
 
 export const queryKeys = {
@@ -29,6 +37,36 @@ export const graphql: FeatureGraphql = {
 export const handlers: FeatureHandlers = [
   http.get(backstories, () => HttpResponse.json(goodBackstories)),
   http.get('/v1/characters/:id/progression', () => HttpResponse.json(goodProgression)),
+  http.get('/v1/characters/:id/summaries', () =>
+    HttpResponse.json({
+      items: [{ id: 's1', slug: 'vault-delve', title: 'Vault notes', questShortCode: 'Q-103' }],
+    }),
+  ),
+  http.get('/v1/characters/:id/co-players', () =>
+    HttpResponse.json({
+      items: [{ memberId: 'm1', handle: 'player1', displayName: 'Alex', sharedQuests: 2 }],
+    }),
+  ),
+  http.get('/v1/characters/:id/participations', () =>
+    HttpResponse.json({
+      items: [
+        {
+          questId: 'q1',
+          questShortCode: 'Q-101',
+          questTitle: 'Siege of Kraghold',
+          status: 'played',
+          scheduledAt: '2026-01-01T18:00:00Z',
+        },
+      ],
+    }),
+  ),
+  http.patch('/v1/characters/:id/profile', async ({ request }) =>
+    HttpResponse.json(await request.json()),
+  ),
+  http.post('/v1/characters/:id/submit-verification', () =>
+    HttpResponse.json({ ok: true }),
+  ),
+  http.post('/v1/characters/:id/retire', () => HttpResponse.json({ ok: true })),
 ];
 
 export const routes: readonly FeatureRoute[] = [

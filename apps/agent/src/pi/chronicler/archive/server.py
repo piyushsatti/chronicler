@@ -65,9 +65,7 @@ class ArchiveReadinessMiddleware:
         self._app = app
         self._readiness = readiness
 
-    async def __call__(
-        self, scope: Scope, receive: Receive, send: Send
-    ) -> None:
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope.get("type") != "http" or scope.get("path") != "/healthz":
             await self._app(scope, receive, send)
             return
@@ -79,9 +77,7 @@ class ArchiveReadinessMiddleware:
                     "headers": [(b"content-type", b"application/json")],
                 }
             )
-            await send(
-                {"type": "http.response.body", "body": b'{"error":"method"}'}
-            )
+            await send({"type": "http.response.body", "body": b'{"error":"method"}'})
             return
         result = self._readiness.initial_sync
         payload: dict[str, object] = {

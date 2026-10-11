@@ -6,11 +6,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/jobs"
 )
@@ -172,41 +174,224 @@ func TestJobLeaseRetryAndCancellationRace(t *testing.T) {
 	}
 }
 
-// Run only against the admitted disposable database. Temporary shadow tables
-// isolate the exact migration precondition from the migrated application data.
-func TestJobLeaseMigrationRefusesAdmittedWork(t *testing.T) {
+// These tests exercise the current initial schema on an admitted disposable
+// database. They do not establish an upgrade path for former Goose histories.
+func TestJobLeaseSchemaCatalog(t *testing.T) {
 	pool := integrationPool(t)
 	ctx := context.Background()
-	raw, e := os.ReadFile("../../db/migrations/0002_job_leases.sql")
-	if e != nil {
-		t.Fatal(e)
+	t.Run("single_lifecycle_authority", func(t *testing.T) {
+		var count int
+		if err := pool.QueryRow(ctx, `SELECT count(*) FROM information_schema.columns
+			WHERE table_schema='public' AND table_name='agent_questions' AND column_name='state'`).Scan(&count); err != nil {
+			t.Fatal(err)
+		}
+		if count != 0 {
+			t.Fatal("agent_questions must derive lifecycle from background_jobs")
+		}
+	})
+	t.Run("lease_token_column", func(t *testing.T) {
+		var notNull bool
+		var typeName, defaultExpr string
+		if err := pool.QueryRow(ctx, `SELECT a.attnotnull, format_type(a.atttypid,a.atttypmod), pg_get_expr(d.adbin,d.adrelid)
+			FROM pg_attribute a JOIN pg_attrdef d ON d.adrelid=a.attrelid AND d.adnum=a.attnum
+			WHERE a.attrelid='public.background_jobs'::regclass AND a.attname='lease_token' AND NOT a.attisdropped`).Scan(&notNull, &typeName, &defaultExpr); err != nil {
+			t.Fatal(err)
+		}
+		if !notNull || typeName != "bigint" || defaultExpr != "0" {
+			t.Fatalf("lease_token: notNull=%v type=%s default=%s", notNull, typeName, defaultExpr)
+		}
+	})
+	for _, check := range []struct {
+		name    string
+		columns []string
+	}{
+		{"background_jobs_lease_token_check", []string{"lease_token"}},
+		{"job_lease_state", []string{"attempt_deadline_at", "claimed_at", "lease_expires_at", "state"}},
+		{"job_completion_pair", []string{"completion_operation", "completion_payload"}},
+		{"agent_question_deadline", []string{"kind", "question_deadline_at"}},
+	} {
+		t.Run(check.name, func(t *testing.T) {
+			var validated bool
+			var definition string
+			var columns []string
+			if err := pool.QueryRow(ctx, `SELECT c.convalidated, pg_get_constraintdef(c.oid),
+				ARRAY(SELECT a.attname::text FROM unnest(c.conkey) AS keys(attnum)
+					JOIN pg_attribute a ON a.attrelid=c.conrelid AND a.attnum=keys.attnum ORDER BY a.attname)
+				FROM pg_constraint c WHERE c.conrelid='public.background_jobs'::regclass AND c.conname=$1 AND c.contype='c'`, check.name).Scan(&validated, &definition, &columns); err != nil {
+				t.Fatal(err)
+			}
+			if !validated || !strings.HasPrefix(definition, "CHECK (") || strings.Join(columns, ",") != strings.Join(check.columns, ",") {
+				t.Fatalf("constraint %s: validated=%v columns=%v definition=%s", check.name, validated, columns, definition)
+			}
+			t.Logf("%s: %s", check.name, definition)
+		})
 	}
-	up := strings.Split(string(raw), "-- +goose Down")[0]
-	for _, fixture := range []string{"running_generic", "queued_agent", "question_projection"} {
-		t.Run(fixture, func(t *testing.T) {
-			tx, e := pool.Begin(ctx)
-			if e != nil {
-				t.Fatal(e)
+	for _, index := range []struct {
+		name, column string
+		agentOnly    bool
+	}{
+		{"background_jobs_expiry_idx", "lease_expires_at", false},
+		{"background_jobs_question_deadline_idx", "question_deadline_at", true},
+	} {
+		t.Run(index.name, func(t *testing.T) {
+			var valid, ready, unique bool
+			var method, predicate string
+			var columns []string
+			if err := pool.QueryRow(ctx, `SELECT i.indisvalid, i.indisready, i.indisunique, am.amname, pg_get_expr(i.indpred,i.indrelid),
+				ARRAY(SELECT a.attname::text FROM unnest(i.indkey) WITH ORDINALITY AS keys(attnum,ordinal)
+					JOIN pg_attribute a ON a.attrelid=i.indrelid AND a.attnum=keys.attnum ORDER BY keys.ordinal)
+				FROM pg_index i JOIN pg_class c ON c.oid=i.indexrelid JOIN pg_am am ON am.oid=c.relam
+				WHERE i.indrelid='public.background_jobs'::regclass AND i.indexrelid=to_regclass('public.' || $1)`, index.name).Scan(&valid, &ready, &unique, &method, &predicate, &columns); err != nil {
+				t.Fatal(err)
+			}
+			if !valid || !ready || unique || method != "btree" || len(columns) != 1 || columns[0] != index.column || predicate == "" {
+				t.Fatalf("index %s: valid=%v ready=%v unique=%v method=%s columns=%v predicate=%s", index.name, valid, ready, unique, method, columns, predicate)
+			}
+			// Evaluate PostgreSQL's catalog predicate, rather than matching its
+			// version-specific deparsed spelling, for every supported state/kind.
+			for _, kind := range []string{"test", "agent_question"} {
+				for _, state := range leaseSchemaStates {
+					want := state == "running"
+					if index.agentOnly {
+						want = kind == "agent_question" && (state == "queued" || state == "retry_wait" || state == "running")
+					}
+					var got bool
+					query := fmt.Sprintf(`SELECT %s FROM (VALUES ($1::text,$2::text)) AS fixture(kind,state)`, predicate)
+					if err := pool.QueryRow(ctx, query, kind, state).Scan(&got); err != nil {
+						t.Fatal(err)
+					}
+					if got != want {
+						t.Fatalf("index %s includes kind=%s state=%s: got %v want %v", index.name, kind, state, got, want)
+					}
+				}
+			}
+			t.Logf("%s: %s", index.name, predicate)
+		})
+	}
+}
+
+func TestJobLeaseSchemaAdmitsValidJobs(t *testing.T) {
+	pool := integrationPool(t)
+	ctx := context.Background()
+	for _, kind := range []string{"test", "agent_question"} {
+		for _, state := range leaseSchemaStates {
+			t.Run(kind+"_"+state, func(t *testing.T) {
+				tx, err := pool.Begin(ctx)
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer tx.Rollback(ctx)
+				fixture := leaseSchemaFixture{kind: kind, state: state, token: int64(0)}
+				if state == "running" {
+					fixture.timestamps = 7
+				}
+				if kind == "agent_question" {
+					fixture.questionDeadline = time.Now().Add(time.Minute)
+				}
+				if _, err := insertLeaseSchemaFixture(ctx, tx, t.Name(), fixture); err != nil {
+					t.Fatalf("valid row rejected: %v", err)
+				}
+			})
+		}
+	}
+	t.Run("completion_pair", func(t *testing.T) {
+		tx, err := pool.Begin(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer tx.Rollback(ctx)
+		fixture := leaseSchemaFixture{kind: "test", state: "succeeded", token: int64(1), operation: "test.completed", payload: "{}"}
+		if _, err := insertLeaseSchemaFixture(ctx, tx, t.Name(), fixture); err != nil {
+			t.Fatalf("matching completion pair rejected: %v", err)
+		}
+	})
+	t.Run("default_lease_token", func(t *testing.T) {
+		tx, err := pool.Begin(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer tx.Rollback(ctx)
+		var token int64
+		if err := tx.QueryRow(ctx, `INSERT INTO background_jobs(job_key,kind) VALUES($1,'test') RETURNING lease_token`, t.Name()).Scan(&token); err != nil {
+			t.Fatal(err)
+		}
+		if token != 0 {
+			t.Fatalf("default lease token=%d, want 0", token)
+		}
+	})
+}
+
+func TestJobLeaseSchemaRejectsInvalidJobs(t *testing.T) {
+	pool := integrationPool(t)
+	ctx := context.Background()
+	type rejection struct {
+		name, code, constraint, column string
+		fixture                        leaseSchemaFixture
+	}
+	base := leaseSchemaFixture{kind: "test", state: "queued", token: int64(0)}
+	negative, nullToken, operationOnly, payloadOnly, agentNoDeadline, genericDeadline := base, base, base, base, base, base
+	negative.token = int64(-1)
+	nullToken.token = nil
+	operationOnly.operation = "test.completed"
+	payloadOnly.payload = "{}"
+	agentNoDeadline.kind = "agent_question"
+	genericDeadline.questionDeadline = time.Now().Add(time.Minute)
+	cases := []rejection{
+		{"negative_lease_token", "23514", "background_jobs_lease_token_check", "", negative},
+		{"null_lease_token", "23502", "", "lease_token", nullToken},
+		{"completion_operation_only", "23514", "job_completion_pair", "", operationOnly},
+		{"completion_payload_only", "23514", "job_completion_pair", "", payloadOnly},
+		{"agent_without_question_deadline", "23514", "agent_question_deadline", "", agentNoDeadline},
+		{"generic_with_question_deadline", "23514", "agent_question_deadline", "", genericDeadline},
+	}
+	for _, state := range leaseSchemaStates {
+		for mask := uint8(0); mask < 8; mask++ {
+			if (state == "running" && mask == 7) || (state != "running" && mask == 0) {
+				continue
+			}
+			fixture := base
+			fixture.state, fixture.timestamps = state, mask
+			cases = append(cases, rejection{fmt.Sprintf("%s_timestamps_%03b", state, mask), "23514", "job_lease_state", "", fixture})
+		}
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tx, err := pool.Begin(ctx)
+			if err != nil {
+				t.Fatal(err)
 			}
 			defer tx.Rollback(ctx)
-			if _, e := tx.Exec(ctx, `CREATE TEMP TABLE background_jobs(id bigint,state text,kind text); CREATE TEMP TABLE agent_questions(job_id bigint);`); e != nil {
-				t.Fatal(e)
-			}
-			switch fixture {
-			case "running_generic":
-				_, e = tx.Exec(ctx, `INSERT INTO background_jobs VALUES(1,'running','maintenance')`)
-			case "queued_agent":
-				_, e = tx.Exec(ctx, `INSERT INTO background_jobs VALUES(1,'queued','agent_question')`)
-			case "question_projection":
-				_, e = tx.Exec(ctx, `INSERT INTO agent_questions VALUES(1)`)
-			}
-			if e != nil {
-				t.Fatal(e)
-			}
-			_, e = tx.Exec(ctx, up)
-			if e == nil || !strings.Contains(e.Error(), "requires reconciliation") {
-				t.Fatalf("migration admitted %s: %v", fixture, e)
+			_, err = insertLeaseSchemaFixture(ctx, tx, t.Name(), tc.fixture)
+			var pgErr *pgconn.PgError
+			if !errors.As(err, &pgErr) || pgErr.Code != tc.code || pgErr.TableName != "background_jobs" || pgErr.ConstraintName != tc.constraint || pgErr.ColumnName != tc.column {
+				t.Fatalf("want SQLSTATE=%s table=background_jobs constraint=%s column=%s, got %v", tc.code, tc.constraint, tc.column, err)
 			}
 		})
 	}
+}
+
+var leaseSchemaStates = []string{"queued", "running", "succeeded", "retry_wait", "repair_required", "dead", "cancelled"}
+
+type leaseSchemaFixture struct {
+	kind, state      string
+	token            any
+	timestamps       uint8
+	questionDeadline any
+	operation        any
+	payload          any
+}
+
+func insertLeaseSchemaFixture(ctx context.Context, tx pgx.Tx, key string, fixture leaseSchemaFixture) (int64, error) {
+	var timestamps [3]any
+	for i := range timestamps {
+		if fixture.timestamps&(1<<i) != 0 {
+			timestamps[i] = time.Now().Add(time.Minute)
+		}
+	}
+	var token int64
+	err := tx.QueryRow(ctx, `INSERT INTO background_jobs
+		(job_key,kind,state,lease_token,lease_expires_at,claimed_at,attempt_deadline_at,question_deadline_at,completion_operation,completion_payload)
+		VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING lease_token`,
+		key, fixture.kind, fixture.state, fixture.token, timestamps[0], timestamps[1], timestamps[2], fixture.questionDeadline, fixture.operation, fixture.payload).Scan(&token)
+	return token, err
 }

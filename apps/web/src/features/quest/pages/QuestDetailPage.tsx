@@ -1,18 +1,17 @@
 import type { PageDeclaration } from '@pi/react-imposition';
 import { PageHost, type PageRegionRenderers } from '@pi/react-imposition/react';
-import { useQuery } from '@tanstack/react-query';
-import { useParams } from 'react-router-dom';
-import { queryKeys } from '../../../api/queryKeys.js';
+import { Link, useParams } from 'react-router-dom';
 import { useAuth } from '../../../auth/AuthContext.js';
 import { isDm } from '../../../auth/roles.js';
 import { PageShell } from '../../../components/foundation/PageShell.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
+import { Tabs } from '../../../components/primitives/Tabs.js';
+import { Button } from '../../../components/primitives/Button.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import { useMe } from '../../../hooks/useMe.js';
-import { loadSignupCharacterId } from '../adapters/questAdapter.js';
 import { useQuestMutations } from '../hooks/useQuestMutations.js';
 import { useQuestPage } from '../hooks/useQuestPage.js';
-
+import { useSignupCharacter } from '../hooks/useSignupCharacter.js';
 
 const DECLARATION: PageDeclaration = {
   page: 'quest-detail',
@@ -20,7 +19,6 @@ const DECLARATION: PageDeclaration = {
     { role: 'summary', priority: 1 },
     { role: 'roster', priority: 2 },
   ],
-  twoPaneIntent: { primary: 'summary', secondary: 'roster' },
 };
 
 export function QuestDetailPage(): React.JSX.Element {
@@ -32,11 +30,7 @@ export function QuestDetailPage(): React.JSX.Element {
   const questId = page.status === 'ready' ? page.view.id : '';
   const shortCode = page.status === 'ready' ? page.view.shortCode : code;
   const mutations = useQuestMutations(shortCode, questId);
-  const signupChar = useQuery({
-    queryKey: queryKeys.characters('signup'),
-    queryFn: loadSignupCharacterId,
-    enabled: isAuthenticated,
-  });
+  const signupChar = useSignupCharacter(isAuthenticated);
   const firstCharacterId = signupChar.data ?? undefined;
 
   if (page.status === 'error') {
@@ -66,45 +60,45 @@ export function QuestDetailPage(): React.JSX.Element {
         <p className="type-caption">
           {quest.filledCount}/{quest.slotsMax} seats · {quest.durationHours}h
         </p>
-        {quest.dmName ? (
-          <p className="type-caption">DM {quest.dmName}</p>
-        ) : null}
+        {quest.dmName ? <p className="type-caption">DM {quest.dmName}</p> : null}
         <p className="type-caption">
           Discord delivery: {quest.discordDelivery.overallStatus}
           {!quest.discordDelivery.isTerminal
             ? ` (${quest.discordDelivery.appliedRevision}/${quest.discordDelivery.desiredRevision})`
             : ''}
         </p>
+        <Link className="type-link" to={`/quests/${quest.shortCode}/summary`}>
+          Session summaries
+        </Link>
         {isAuthenticated ? (
-          <button
+          <Button
             type="button"
-            className="btn"
             disabled={mutations.signup.isPending || !firstCharacterId}
             onClick={() => {
               if (firstCharacterId) mutations.signup.mutate(firstCharacterId);
             }}
           >
             Sign up
-          </button>
+          </Button>
         ) : null}
         {dm ? (
           <div className="row">
-            <button
+            <Button
               type="button"
-              className="btn btn-ghost"
+              variant="ghost"
               disabled={mutations.transition.isPending}
               onClick={() => mutations.transition.mutate('played')}
             >
               Mark played
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="btn btn-ghost"
+              variant="ghost"
               disabled={mutations.close.isPending}
               onClick={() => mutations.close.mutate()}
             >
               Close
-            </button>
+            </Button>
           </div>
         ) : null}
         {mutationError ? (
@@ -116,23 +110,47 @@ export function QuestDetailPage(): React.JSX.Element {
       </div>
     ),
     roster: () => (
-      <section className="card stack" aria-label="Roster">
-        <h2 className="type-heading">Roster</h2>
-        {quest.participants.length === 0 ? (
-          <p className="type-caption">No participants yet.</p>
-        ) : (
-          <ul className="stack">
-            {quest.participants.map((p) => (
-              <li key={`${p.memberId}-${p.characterId}`}>
-                <span className="type-title">{p.characterName}</span>
+      <Tabs
+        items={[
+          {
+            id: 'roster',
+            label: 'Roster',
+            panel: (
+              <section className="stack" aria-label="Roster">
+                {quest.participants.length === 0 ? (
+                  <p className="type-caption">No participants yet.</p>
+                ) : (
+                  <ul className="stack">
+                    {quest.participants.map((p) => (
+                      <li key={`${p.memberId}-${p.characterId}`}>
+                        <span className="type-title">{p.characterName}</span>
+                        <p className="type-caption">
+                          @{p.memberHandle} · {p.status}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            ),
+          },
+          {
+            id: 'details',
+            label: 'Details',
+            panel: (
+              <section className="stack" aria-label="Details">
                 <p className="type-caption">
-                  @{p.memberHandle} · {p.status}
+                  Genres: {quest.genres.length > 0 ? quest.genres.join(', ') : '—'}
                 </p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </section>
+                <p className="type-caption">
+                  Tags: {quest.tags.length > 0 ? quest.tags.join(', ') : '—'}
+                </p>
+                <p className="type-caption">Scheduled: {quest.scheduledAt}</p>
+              </section>
+            ),
+          },
+        ]}
+      />
     ),
   };
 

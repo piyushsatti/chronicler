@@ -64,7 +64,9 @@ describe('postDiscordEvent', () => {
   it('throws one Error on a 500 response', async () => {
     globalThis.fetch = vi
       .fn()
-      .mockResolvedValue(new Response('boom', { status: 500 })) as unknown as typeof fetch;
+      .mockResolvedValue(
+        new Response('boom', { status: 500 }),
+      ) as unknown as typeof fetch;
 
     const { postDiscordEvent } = await import('@discord/activity/forward.js');
     await expect(postDiscordEvent(fakeEvent())).rejects.toThrow(/500/);
@@ -107,7 +109,9 @@ describe('deliverActivity', () => {
       const { deliverActivity, resetActivityInFlightForTests } =
         await import('@discord/activity/forward.js');
       resetActivityInFlightForTests();
-      expect(() => deliverActivity(fakeEvent({ event_id: `msg-${status}` }))).not.toThrow();
+      expect(() =>
+        deliverActivity(fakeEvent({ event_id: `msg-${status}` })),
+      ).not.toThrow();
       await vi.waitFor(() => expect(errorSpy).toHaveBeenCalledTimes(1));
       expect(errorSpy.mock.calls[0]?.[0]).toBe('Activity post failed');
     }

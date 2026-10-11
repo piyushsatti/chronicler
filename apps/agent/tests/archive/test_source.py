@@ -37,7 +37,9 @@ class PublicSource:
         batch = tuple(expected_document_ids)
         self.batches.append(batch)
         if self.documents is not None:
-            return {item: self.documents[item] for item in batch if item in self.documents}
+            return {
+                item: self.documents[item] for item in batch if item in self.documents
+            }
         return {
             item: PublicDocument(item, "rule", None, item, item, "Current public text")
             for item in batch
@@ -66,7 +68,10 @@ def _snapshot(path: Path, count: int = 3) -> tuple[PublicDocument, ...]:
         for index in range(count)
     )
     path.write_text(
-        "".join(json.dumps(asdict(document), sort_keys=True) + "\n" for document in documents)
+        "".join(
+            json.dumps(asdict(document), sort_keys=True) + "\n"
+            for document in documents
+        )
     )
     return documents
 
@@ -123,15 +128,15 @@ async def test_full_live_projection_promotes_and_never_falls_back(
 
 
 @pytest.mark.asyncio
-async def test_live_count_alone_cannot_replace_frozen_identities(tmp_path: Path) -> None:
+async def test_live_count_alone_cannot_replace_frozen_identities(
+    tmp_path: Path,
+) -> None:
     snapshot_path = tmp_path / "public.jsonl"
     expected = _snapshot(snapshot_path)
     snapshot = SnapshotSource(snapshot_path, expected_document_count=3)
     projection = CountedProjection(("unrelated-0", "unrelated-1", "unrelated-2"))
     public = PublicSource()
-    source = ArchiveSource(
-        projection, public, snapshot, 3, tmp_path / "promoted.json"
-    )
+    source = ArchiveSource(projection, public, snapshot, 3, tmp_path / "promoted.json")
 
     assert await source.all_documents() == expected
     assert public.batches == []
@@ -145,9 +150,7 @@ async def test_live_promotion_requires_public_revalidation(tmp_path: Path) -> No
     projection = CountedProjection(tuple(document.document_id for document in expected))
     public = PublicSource()
     public.documents = {expected[0].document_id: expected[0]}
-    source = ArchiveSource(
-        projection, public, snapshot, 3, tmp_path / "promoted.json"
-    )
+    source = ArchiveSource(projection, public, snapshot, 3, tmp_path / "promoted.json")
 
     assert await source.all_documents() == expected
     assert source.using_bootstrap is True

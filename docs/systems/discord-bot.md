@@ -8,18 +8,18 @@ The bot is primarily an activity sensor: no slash-command product surface, no DB
 
 ## Interfaces
 
-| Interface | Role |
-| --- | --- |
-| [discord-sensor](/docs/interfaces/discord-sensor.md) | Bot is a sensor |
-| [discord-ingest](/docs/interfaces/discord-ingest.md) | Observation forward path |
-| [agent-qa-http](/docs/interfaces/agent-qa-http.md) | Optional mention → API question path |
+| Interface                                            | Role                                 |
+| ---------------------------------------------------- | ------------------------------------ |
+| [discord-sensor](/docs/interfaces/discord-sensor.md) | Bot is a sensor                      |
+| [discord-ingest](/docs/interfaces/discord-ingest.md) | Observation forward path             |
+| [agent-qa-http](/docs/interfaces/agent-qa-http.md)   | Optional mention → API question path |
 
 ## Implemented by
 
-| App | Local docs |
-| --- | --- |
+| App            | Local docs                               |
+| -------------- | ---------------------------------------- |
 | `apps/discord` | [apps/discord/docs/](/apps/discord/docs) |
-| `apps/api` | [apps/api/docs/](/apps/api/docs) |
+| `apps/api`     | [apps/api/docs/](/apps/api/docs)         |
 
 ## Requirements
 

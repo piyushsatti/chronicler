@@ -1,0 +1,18 @@
+/* Global entry: base defaults, preserved type/layout/Atlas, then primitive
+   state overrides. Keep the unlayered focus-ring owner after Atlas. */
+@import './tokens.css';
+@import './fonts.css';
+@import './base.css';
+@import './typography.css';
+@import './contexts.css';
+@import './layout.css';
+@import './shell.css';
+@import './motion.css';
+@import './effects.css';
+@import './cosmetic.css';
+@import './atlas.css';
+@import './atlas-content.css';
+@import './atlas-map.css';
+@import './atlas-vendor/atlas-components.css';
+@import './primitives.css';
+@import './editor.css';

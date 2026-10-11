@@ -21,8 +21,8 @@
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
+| Alternative                      | Why not                                                             |
+| -------------------------------- | ------------------------------------------------------------------- |
 | Two new metrics plus grant hooks | Not chosen; scope shrinks #150 to one new count and one repo method |
 
 ## Consequences

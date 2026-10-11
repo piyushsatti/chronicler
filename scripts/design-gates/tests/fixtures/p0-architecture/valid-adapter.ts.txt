@@ -1,0 +1,8 @@
+import { z } from 'zod';
+import { graphqlRequest } from '../../../api/graphql.js';
+export const parseItems = (wire: unknown) => z.array(z.string()).safeParse(wire);
+export async function loadItems() {
+  const window = { start: 1, end: 2 };
+  const wire = await graphqlRequest<{ document: unknown }>('query', window);
+  return parseItems(wire.document);
+}

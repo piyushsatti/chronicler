@@ -26,20 +26,7 @@ func main() {
 	mux := http.NewServeMux()
 	app.MountFromAPI(mux, runtime, cfg)
 
-	limiter := httpserver.NewRateLimit(time.Minute, 30, "/v1/quests")
-	handler := httpserver.Chain(
-		mux,
-		httpserver.Recover,
-		httpserver.RequestLog,
-		limiter.Middleware,
-		httpserver.MaxBody(1<<20, "/v1/"),
-		func(next http.Handler) http.Handler {
-			return auth.Middleware(login.Parser(cfg.JWTSecret), next)
-		},
-		func(next http.Handler) http.Handler {
-			return httpserver.CORS(cfg.CORSOrigins, next)
-		},
-	)
+	handler := apiHandler(mux, cfg, runtime.Authority)
 
 	srv := &http.Server{Addr: cfg.Addr, Handler: handler}
 	go func() {
@@ -59,4 +46,23 @@ func main() {
 	if runtime.Pool != nil {
 		runtime.Pool.Close()
 	}
+}
+
+// apiHandler owns production middleware ordering. CORS must wrap every early
+// application rejection so allowed browser clients receive its typed response.
+func apiHandler(mux http.Handler, cfg config.Config, authority auth.AuthorityResolver) http.Handler {
+	limiter := httpserver.NewRateLimit(time.Minute, 30, "/v1/quests")
+	return httpserver.Chain(
+		mux,
+		httpserver.Recover,
+		httpserver.RequestLog,
+		func(next http.Handler) http.Handler {
+			return httpserver.CORS(cfg.CORSOrigins, next)
+		},
+		limiter.Middleware,
+		httpserver.MaxBody(1<<20, "/v1/"),
+		func(next http.Handler) http.Handler {
+			return auth.LiveMiddleware(login.Parser(cfg.JWTSecret), authority, next)
+		},
+	)
 }

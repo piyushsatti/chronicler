@@ -17,7 +17,7 @@ Backend and frontend parsers disagreed on marker recognition. **`> [!DM]` shippe
 
 **Case and whitespace fold to canonical** in both runtimes — do not treat case variants as “unrecognized visible prose.”
 
-**Handle charset** matches **`members.handle`** constraints, not an independent regex.
+**July 30 lexical amendment:** marker handles use the closed charset **`[A-Za-z0-9_.-]+`**, independent of database handle constraints. Exact handle case is preserved. `markerHandlePattern` and `packages/contracts/fixtures/audience-markers.v1.json` implement the accepted seam.
 
 **Malformed known markers** → denied (impossible policy). **Unknown callouts** (`[!note]`, etc.) → visible; **validation at save** refuses non-conforming markers before storage (retire frontend fail-safe that hid plain callouts).
 
@@ -27,12 +27,12 @@ Backend and frontend parsers disagreed on marker recognition. **`> [!DM]` shippe
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
-| Treat case variants as unrecognized | Unrecognized path defaults to **visible** → disclosure |
-| Generate one parser from the other | Over-engineering for three constructs |
-| Prose spec both teams follow | Produced measured divergences; fixtures enforce instead |
-| Runtime heuristic for author intent | Validation at save replaces guessing |
+| Alternative                         | Why not                                                 |
+| ----------------------------------- | ------------------------------------------------------- |
+| Treat case variants as unrecognized | Unrecognized path defaults to **visible** → disclosure  |
+| Generate one parser from the other  | Over-engineering for three constructs                   |
+| Prose spec both teams follow        | Produced measured divergences; fixtures enforce instead |
+| Runtime heuristic for author intent | Validation at save replaces guessing                    |
 
 ## Consequences
 
@@ -40,7 +40,7 @@ Existing bodies with uppercase DM callouts may be public until reclassified. Sum
 
 ## Enforced by
 
-Shared marker fixture tests; aligned `parse_policy` / editor validation.
+`TestSharedAudienceMarkerConformance`, `TestMemberMarkerPreservesExactAcceptedCharsetHandle` and the shared marker vectors cover the Go classifier. Editor save-validation conformance remains **not independently verified**; this decision does not claim it is shipped.
 
 ## Reopen triggers
 

@@ -1,0 +1,143 @@
+{
+  "items": [
+    {
+      "id": "de03c728-bef6-53e0-995c-567bd5172a4f",
+      "shortCode": "Q-417",
+      "status": "open",
+      "scheduledAt": "2026-06-20T20:00:00Z",
+      "slotsMax": 6,
+      "filledCount": 4,
+      "displayStatus": "filling",
+      "dm": {
+        "handle": "@_coolpants",
+        "displayName": "@_coolpants"
+      },
+      "briefDocument": {
+        "id": "57572244-aaee-5740-88c4-8c6863972cf0",
+        "slug": "q-417-brief",
+        "title": "The Hound of Culann"
+      },
+      "discordDelivery": {
+        "desiredRevision": 0,
+        "appliedRevision": 0,
+        "overallStatus": "skipped"
+      }
+    },
+    {
+      "id": "8863e160-393f-590d-a400-dab034914bc9",
+      "shortCode": "Q-419",
+      "status": "open",
+      "scheduledAt": "2026-06-14T00:00:00.000Z",
+      "slotsMax": 4,
+      "filledCount": 2,
+      "displayStatus": "filling",
+      "dm": {
+        "handle": "@mortal.bard",
+        "displayName": "@mortal.bard"
+      },
+      "briefDocument": {
+        "id": "1f49316d-e38c-5cdb-b38c-db70085fcd63",
+        "slug": "q-419-brief",
+        "title": "Lily's Nightmares"
+      },
+      "discordDelivery": {
+        "desiredRevision": 0,
+        "appliedRevision": 0,
+        "overallStatus": "skipped"
+      }
+    },
+    {
+      "id": "4557d8fc-82b7-5124-b648-b94017124a75",
+      "shortCode": "Q-420",
+      "status": "open",
+      "scheduledAt": "2026-06-21T19:00:00Z",
+      "slotsMax": 6,
+      "filledCount": 5,
+      "displayStatus": "filling",
+      "dm": {
+        "handle": "@kd29",
+        "displayName": "@kd29"
+      },
+      "briefDocument": {
+        "id": "0925e28c-aeea-50f0-9f02-72badfc6d9e1",
+        "slug": "q-420-brief",
+        "title": "Pawluck Region Story Finale"
+      },
+      "discordDelivery": {
+        "desiredRevision": 0,
+        "appliedRevision": 0,
+        "overallStatus": "skipped"
+      }
+    },
+    {
+      "id": "1b7be424-e878-5d28-bd42-53cf1f5229ab",
+      "shortCode": "Q-421",
+      "status": "open",
+      "scheduledAt": "2026-06-26T21:00:00Z",
+      "slotsMax": 5,
+      "filledCount": 1,
+      "displayStatus": "filling",
+      "dm": {
+        "handle": "@smolcop",
+        "displayName": "@smolcop"
+      },
+      "briefDocument": {
+        "id": "38f75871-b410-51ed-b25c-e37253e37c61",
+        "slug": "q-421-brief",
+        "title": "The Silent Sawmills II"
+      },
+      "discordDelivery": {
+        "desiredRevision": 0,
+        "appliedRevision": 0,
+        "overallStatus": "skipped"
+      }
+    },
+    {
+      "id": "a0e32b64-dd54-5e71-a7eb-644d432e9ca7",
+      "shortCode": "Q-422",
+      "status": "open",
+      "scheduledAt": "2026-06-14T00:00:00.000Z",
+      "slotsMax": 6,
+      "filledCount": 0,
+      "displayStatus": "open",
+      "dm": {
+        "handle": "@_coolpants",
+        "displayName": "@_coolpants"
+      },
+      "briefDocument": {
+        "id": "94eefc5a-b8fe-51ae-88e2-f52e572112a7",
+        "slug": "q-422-brief",
+        "title": "The Silence"
+      },
+      "discordDelivery": {
+        "desiredRevision": 0,
+        "appliedRevision": 0,
+        "overallStatus": "skipped"
+      }
+    },
+    {
+      "id": "c858cc4b-4abe-56b2-81a1-3f5fb06bd058",
+      "shortCode": "Q-425",
+      "status": "open",
+      "scheduledAt": "2026-06-21T20:00:00Z",
+      "slotsMax": 6,
+      "filledCount": 1,
+      "displayStatus": "filling",
+      "dm": {
+        "handle": "@thessa",
+        "displayName": "@thessa"
+      },
+      "briefDocument": {
+        "id": "aff13a9c-a0a4-56a1-a06a-21f6d876dba5",
+        "slug": "q-425-brief",
+        "title": "The Bell Tower of Dal"
+      },
+      "discordDelivery": {
+        "desiredRevision": 0,
+        "appliedRevision": 0,
+        "overallStatus": "skipped"
+      }
+    }
+  ],
+  "total": 6
+}

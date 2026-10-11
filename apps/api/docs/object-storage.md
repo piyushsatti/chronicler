@@ -18,11 +18,11 @@ Related: [Domain-Model-and-Decisions](/docs/interfaces/media-linked.md),
 
 Three questions were asked. The short answers:
 
-| Question | Answer |
-| --- | --- |
-| Do we have object storage on Supabase already? | **Provisioned but unused.** The `storage` schema exists (8 system tables), but there are **0 buckets** and **0 objects**. Nothing is stored. |
-| If we have multimedia, how do we store/retrieve it? | **There is no mechanism today.** Every image field is a nullable `*_url` text column pointing at an *external* URL (Discord CDN or hand-entered). The only upload UI (`WorldHexGrid` base image, quest battle-map) reads the file into an in-memory `data:` URL that is never persisted or sent to the backend. |
-| Do we have documentation for it? | **No.** This document is the first. |
+| Question                                            | Answer                                                                                                                                                                                                                                                                                                          |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Do we have object storage on Supabase already?      | **Provisioned but unused.** The `storage` schema exists (8 system tables), but there are **0 buckets** and **0 objects**. Nothing is stored.                                                                                                                                                                    |
+| If we have multimedia, how do we store/retrieve it? | **There is no mechanism today.** Every image field is a nullable `*_url` text column pointing at an _external_ URL (Discord CDN or hand-entered). The only upload UI (`WorldHexGrid` base image, quest battle-map) reads the file into an in-memory `data:` URL that is never persisted or sent to the backend. |
+| Do we have documentation for it?                    | **No.** This document is the first.                                                                                                                                                                                                                                                                             |
 
 ## Current state
 
@@ -30,15 +30,15 @@ Three questions were asked. The short answers:
 
 Evidence from the live tree (2026-07-12):
 
-| Surface | Field / element | Reality |
-| --- | --- | --- |
-| `AtlasModel` (`db/models/world.py`) | `image_url: Text` | External URL string. No upload path. |
-| `GuildProfileModel` (`db/models/world.py`) | `seal_image_url: Text` | External URL string. |
-| ~~`HomeContentBlockModel`~~ (deleted, backend hygiene batch 2 -- zero Python callers; table `home_content_blocks` untouched) | `image_url: Text` | External URL string (marketing tiles). |
-| `PersonModel` (`db/models/identity.py`) | `discord_avatar_hash`, `discord_banner_hash` | Discord CDN hashes; resolved to `avatarUrl`/`bannerUrl` in `MeType`/`PartyMemberType`. Not owned by us. |
-| Frontend `WorldHexGrid.tsx` | `<input type="file">` → `handleImageUpload` | `FileReader.readAsDataURL` → in-memory `data:` URL. Lost on reload. **Never reaches the backend.** |
-| Frontend `QuestSummaryPage.tsx` | battle-map panel | Placeholder: "not yet uploaded (no upload backend)". |
-| Dependencies | `@supabase/supabase-js`, `storage3`, `boto3`, any S3 SDK | **None present** in backend, frontend, or bot. |
+| Surface                                                                                                                      | Field / element                                          | Reality                                                                                                 |
+| ---------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `AtlasModel` (`db/models/world.py`)                                                                                          | `image_url: Text`                                        | External URL string. No upload path.                                                                    |
+| `GuildProfileModel` (`db/models/world.py`)                                                                                   | `seal_image_url: Text`                                   | External URL string.                                                                                    |
+| ~~`HomeContentBlockModel`~~ (deleted, backend hygiene batch 2 -- zero Python callers; table `home_content_blocks` untouched) | `image_url: Text`                                        | External URL string (marketing tiles).                                                                  |
+| `PersonModel` (`db/models/identity.py`)                                                                                      | `discord_avatar_hash`, `discord_banner_hash`             | Discord CDN hashes; resolved to `avatarUrl`/`bannerUrl` in `MeType`/`PartyMemberType`. Not owned by us. |
+| Frontend `WorldHexGrid.tsx`                                                                                                  | `<input type="file">` → `handleImageUpload`              | `FileReader.readAsDataURL` → in-memory `data:` URL. Lost on reload. **Never reaches the backend.**      |
+| Frontend `QuestSummaryPage.tsx`                                                                                              | battle-map panel                                         | Placeholder: "not yet uploaded (no upload backend)".                                                    |
+| Dependencies                                                                                                                 | `@supabase/supabase-js`, `storage3`, `boto3`, any S3 SDK | **None present** in backend, frontend, or bot.                                                          |
 
 ### Why this is a problem now
 
@@ -99,11 +99,11 @@ sequenceDiagram
 
 Group by lifecycle and visibility, not by entity, so policies stay few:
 
-| Bucket | Visibility | Holds |
-| --- | --- | --- |
-| `public-media` | public | Anything meant to be world-readable: guild seals, atlas/map base images, home content tiles, published character portraits. Served via CDN URL. |
-| `user-avatars` | public | User-uploaded avatars/banners (custom, independent of Discord). |
-| `private-drafts` | private | Unpublished/draft assets, quest battle-maps gated to participants. Served via signed download URL. |
+| Bucket           | Visibility | Holds                                                                                                                                           |
+| ---------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `public-media`   | public     | Anything meant to be world-readable: guild seals, atlas/map base images, home content tiles, published character portraits. Served via CDN URL. |
+| `user-avatars`   | public     | User-uploaded avatars/banners (custom, independent of Discord).                                                                                 |
+| `private-drafts` | private    | Unpublished/draft assets, quest battle-maps gated to participants. Served via signed download URL.                                              |
 
 Start with `public-media` only; add the others when a private surface actually needs them.
 
@@ -129,7 +129,7 @@ Resolve path → URL at read time.
 
 ## Schema implications (reserve this before v2 lands)
 
-> **Schema v2 outcome (resolved):** v2 §7 locked an `assets` table **plus a polymorphic `asset_links(target_type, target_id)` join table** (decision 28) — *not* the per-entity `*_asset_id` FK columns (`seal_asset_id`, `battle_map_asset_id`, `portrait_asset_id`) recommended below. Assets attach to any target through `asset_links`, so there are no per-entity FK columns to add. Read Option A / the entity table below as the *design input* that fed this decision, not the final shape. The Supabase Storage mechanics (buckets, signed URLs, path convention, rollout) still hold. See [Domain-Model-and-Decisions](/docs/interfaces/media-linked.md).
+> **Schema v2 outcome (resolved):** v2 §7 locked an `assets` table **plus a polymorphic `asset_links(target_type, target_id)` join table** (decision 28) — _not_ the per-entity `*_asset_id` FK columns (`seal_asset_id`, `battle_map_asset_id`, `portrait_asset_id`) recommended below. Assets attach to any target through `asset_links`, so there are no per-entity FK columns to add. Read Option A / the entity table below as the _design input_ that fed this decision, not the final shape. The Supabase Storage mechanics (buckets, signed URLs, path convention, rollout) still hold. See [Domain-Model-and-Decisions](/docs/interfaces/media-linked.md).
 
 This is the point of writing now. Two viable shapes:
 
@@ -169,14 +169,14 @@ resolvers compute them from the path — so the frontend contract is unchanged.
 
 v2 attaches all of these via `asset_links(target_type, target_id)` rather than per-entity FK columns (see the outcome note above). v2 nouns shown:
 
-| Target (v2) | Today | v2 attachment |
-| --- | --- | --- |
-| `maps` base image | `image_url` | `asset_links` row, `target_type='map'` (from the `WorldHexGrid` upload stub) |
-| Guild codex entry (`documents`, category=guild) | `seal_image_url` | `asset_links` row, `target_type='document'` — no typed guilds table (decision 47) |
-| Home content tile | `image_url` | `asset_links` row (public bucket) |
-| `members` avatar/banner | Discord hash | keep hash; optional `asset_links` row for custom uploads |
-| `quests` battle-map | none (stub) | `asset_links` row, `target_type='quest'` (private bucket) |
-| `characters` portrait | **no field exists** | `asset_links` row, `target_type='character'` |
+| Target (v2)                                     | Today               | v2 attachment                                                                     |
+| ----------------------------------------------- | ------------------- | --------------------------------------------------------------------------------- |
+| `maps` base image                               | `image_url`         | `asset_links` row, `target_type='map'` (from the `WorldHexGrid` upload stub)      |
+| Guild codex entry (`documents`, category=guild) | `seal_image_url`    | `asset_links` row, `target_type='document'` — no typed guilds table (decision 47) |
+| Home content tile                               | `image_url`         | `asset_links` row (public bucket)                                                 |
+| `members` avatar/banner                         | Discord hash        | keep hash; optional `asset_links` row for custom uploads                          |
+| `quests` battle-map                             | none (stub)         | `asset_links` row, `target_type='quest'` (private bucket)                         |
+| `characters` portrait                           | **no field exists** | `asset_links` row, `target_type='character'`                                      |
 
 ## Downstream risks if ignored
 

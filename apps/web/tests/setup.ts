@@ -1,8 +1,16 @@
 import '@testing-library/jest-dom/vitest';
+import { transferableAbortController } from 'node:util';
 import { cleanup } from '@testing-library/react';
 import { afterAll, afterEach, beforeAll } from 'vitest';
 import { server } from '../src/mocks/server.js';
 
+// jsdom supplies DOM signals, while this harness uses Node's fetch/Request.
+// Pair them with native Node signals so real cancellation reaches MSW/fetch.
+const nativeController = transferableAbortController();
+Object.defineProperties(globalThis, {
+  AbortController: { value: nativeController.constructor, configurable: true },
+  AbortSignal: { value: nativeController.signal.constructor, configurable: true },
+});
 
 const memory = new Map<string, string>();
 const localStorageMock: Storage = {
@@ -40,6 +48,26 @@ Object.defineProperty(globalThis, 'ResizeObserver', {
   configurable: true,
 });
 
+class IntersectionObserverStub {
+  constructor(
+    _callback: IntersectionObserverCallback,
+    _options?: IntersectionObserverInit,
+  ) {}
+  observe(): void {}
+  unobserve(): void {}
+  disconnect(): void {}
+  takeRecords(): IntersectionObserverEntry[] {
+    return [];
+  }
+  root: Element | Document | null = null;
+  rootMargin = '';
+  thresholds: readonly number[] = [];
+}
+Object.defineProperty(globalThis, 'IntersectionObserver', {
+  value: IntersectionObserverStub,
+  configurable: true,
+});
+
 beforeAll(() => {
   server.listen({ onUnhandledRequest: 'error' });
 });
@@ -49,7 +77,6 @@ afterEach(() => {
   server.resetHandlers();
   memory.clear();
 });
-
 
 afterAll(() => {
   server.close();

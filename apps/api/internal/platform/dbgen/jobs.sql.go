@@ -48,7 +48,7 @@ func (q *Queries) JobClock(ctx context.Context) (pgtype.Timestamptz, error) {
 }
 
 const lockClaimableJob = `-- name: LockClaimableJob :one
-SELECT id, public_id, job_key, kind, lane, state, attempts, payload, error_message, next_run_at, created_at, updated_at, lease_token, lease_expires_at, claimed_at, attempt_deadline_at, question_deadline_at, completion_operation, completion_payload FROM background_jobs
+SELECT id, public_id, job_key, kind, lane, state, attempts, payload, error_message, lease_token, lease_expires_at, claimed_at, attempt_deadline_at, question_deadline_at, completion_operation, completion_payload, next_run_at, created_at, updated_at FROM background_jobs
 WHERE lane=$1 AND ((state IN ('queued','retry_wait') AND next_run_at<=clock_timestamp()) OR (state='running' AND lease_expires_at<=clock_timestamp()))
 ORDER BY next_run_at,id FOR UPDATE SKIP LOCKED LIMIT 1
 `
@@ -66,9 +66,6 @@ func (q *Queries) LockClaimableJob(ctx context.Context, lane string) (Background
 		&i.Attempts,
 		&i.Payload,
 		&i.ErrorMessage,
-		&i.NextRunAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.LeaseToken,
 		&i.LeaseExpiresAt,
 		&i.ClaimedAt,
@@ -76,12 +73,15 @@ func (q *Queries) LockClaimableJob(ctx context.Context, lane string) (Background
 		&i.QuestionDeadlineAt,
 		&i.CompletionOperation,
 		&i.CompletionPayload,
+		&i.NextRunAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const lockExpiredQuestion = `-- name: LockExpiredQuestion :one
-SELECT id, public_id, job_key, kind, lane, state, attempts, payload, error_message, next_run_at, created_at, updated_at, lease_token, lease_expires_at, claimed_at, attempt_deadline_at, question_deadline_at, completion_operation, completion_payload FROM background_jobs WHERE kind='agent_question' AND state IN ('queued','running','retry_wait')
+SELECT id, public_id, job_key, kind, lane, state, attempts, payload, error_message, lease_token, lease_expires_at, claimed_at, attempt_deadline_at, question_deadline_at, completion_operation, completion_payload, next_run_at, created_at, updated_at FROM background_jobs WHERE kind='agent_question' AND state IN ('queued','running','retry_wait')
  AND question_deadline_at<=clock_timestamp() ORDER BY question_deadline_at,id FOR UPDATE SKIP LOCKED LIMIT 1
 `
 
@@ -98,9 +98,6 @@ func (q *Queries) LockExpiredQuestion(ctx context.Context) (BackgroundJob, error
 		&i.Attempts,
 		&i.Payload,
 		&i.ErrorMessage,
-		&i.NextRunAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.LeaseToken,
 		&i.LeaseExpiresAt,
 		&i.ClaimedAt,
@@ -108,12 +105,15 @@ func (q *Queries) LockExpiredQuestion(ctx context.Context) (BackgroundJob, error
 		&i.QuestionDeadlineAt,
 		&i.CompletionOperation,
 		&i.CompletionPayload,
+		&i.NextRunAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const lockJob = `-- name: LockJob :one
-SELECT id, public_id, job_key, kind, lane, state, attempts, payload, error_message, next_run_at, created_at, updated_at, lease_token, lease_expires_at, claimed_at, attempt_deadline_at, question_deadline_at, completion_operation, completion_payload FROM background_jobs WHERE id=$1 FOR UPDATE
+SELECT id, public_id, job_key, kind, lane, state, attempts, payload, error_message, lease_token, lease_expires_at, claimed_at, attempt_deadline_at, question_deadline_at, completion_operation, completion_payload, next_run_at, created_at, updated_at FROM background_jobs WHERE id=$1 FOR UPDATE
 `
 
 func (q *Queries) LockJob(ctx context.Context, id int64) (BackgroundJob, error) {
@@ -129,9 +129,6 @@ func (q *Queries) LockJob(ctx context.Context, id int64) (BackgroundJob, error) 
 		&i.Attempts,
 		&i.Payload,
 		&i.ErrorMessage,
-		&i.NextRunAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.LeaseToken,
 		&i.LeaseExpiresAt,
 		&i.ClaimedAt,
@@ -139,12 +136,15 @@ func (q *Queries) LockJob(ctx context.Context, id int64) (BackgroundJob, error) 
 		&i.QuestionDeadlineAt,
 		&i.CompletionOperation,
 		&i.CompletionPayload,
+		&i.NextRunAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }
 
 const lockPublicJob = `-- name: LockPublicJob :one
-SELECT id, public_id, job_key, kind, lane, state, attempts, payload, error_message, next_run_at, created_at, updated_at, lease_token, lease_expires_at, claimed_at, attempt_deadline_at, question_deadline_at, completion_operation, completion_payload FROM background_jobs WHERE public_id=$1 FOR UPDATE
+SELECT id, public_id, job_key, kind, lane, state, attempts, payload, error_message, lease_token, lease_expires_at, claimed_at, attempt_deadline_at, question_deadline_at, completion_operation, completion_payload, next_run_at, created_at, updated_at FROM background_jobs WHERE public_id=$1 FOR UPDATE
 `
 
 func (q *Queries) LockPublicJob(ctx context.Context, publicID pgtype.UUID) (BackgroundJob, error) {
@@ -160,9 +160,6 @@ func (q *Queries) LockPublicJob(ctx context.Context, publicID pgtype.UUID) (Back
 		&i.Attempts,
 		&i.Payload,
 		&i.ErrorMessage,
-		&i.NextRunAt,
-		&i.CreatedAt,
-		&i.UpdatedAt,
 		&i.LeaseToken,
 		&i.LeaseExpiresAt,
 		&i.ClaimedAt,
@@ -170,6 +167,9 @@ func (q *Queries) LockPublicJob(ctx context.Context, publicID pgtype.UUID) (Back
 		&i.QuestionDeadlineAt,
 		&i.CompletionOperation,
 		&i.CompletionPayload,
+		&i.NextRunAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
 	)
 	return i, err
 }

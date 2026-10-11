@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { parseMe } from '../../../src/features/member/adapters/memberAdapter.js';
+import {
+  parseAuthCallback,
+  parseMe,
+} from '../../../src/features/member/adapters/memberAdapter.js';
 import goodMe from '../../fixtures/wire/me/good.json';
 import badMe from '../../fixtures/wire/me/bad-missing-field.json';
 
@@ -14,5 +17,22 @@ describe('parseMe', () => {
 
   it('rejects incomplete wire', () => {
     expect(parseMe(badMe).ok).toBe(false);
+  });
+});
+
+describe('parseAuthCallback', () => {
+  it('accepts the documented token response', () => {
+    expect(parseAuthCallback({ token: 'header.payload.signature' })).toEqual({
+      ok: true,
+      data: 'header.payload.signature',
+    });
+  });
+
+  it('rejects missing or empty tokens', () => {
+    expect(parseAuthCallback({})).toMatchObject({
+      ok: false,
+      failure: 'InvalidWire',
+    });
+    expect(parseAuthCallback({ token: '' }).ok).toBe(false);
   });
 });

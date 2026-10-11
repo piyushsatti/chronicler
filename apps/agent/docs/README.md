@@ -9,13 +9,13 @@ Python uv project for the Chronicler answer worker (`pi.chronicler.agent`) and t
 
 ## Index
 
-| Doc | Topic |
-| --- | --- |
-| [architecture.md](/apps/agent/docs/architecture.md) | Components, trust, flows |
+| Doc                                                     | Topic                               |
+| ------------------------------------------------------- | ----------------------------------- |
+| [architecture.md](/apps/agent/docs/architecture.md)     | Components, trust, flows            |
 | [http-transport.md](/apps/agent/docs/http-transport.md) | Submit / claim / complete contracts |
-| [archive.md](/apps/agent/docs/archive.md) | LanceDB + MCP + GraphQL source |
-| [environment.md](/apps/agent/docs/environment.md) | Env var table |
-| [legacy-mapping.md](/apps/agent/docs/legacy-mapping.md) | Pre-monorepo → `pi.chronicler.*` |
-| [port-gap-audit.md](/apps/agent/docs/port-gap-audit.md) | Stale docs and known bugs |
+| [archive.md](/apps/agent/docs/archive.md)               | LanceDB + MCP + GraphQL source      |
+| [environment.md](/apps/agent/docs/environment.md)       | Env var table                       |
+| [legacy-mapping.md](/apps/agent/docs/legacy-mapping.md) | Pre-monorepo → `pi.chronicler.*`    |
+| [port-gap-audit.md](/apps/agent/docs/port-gap-audit.md) | Stale docs and known bugs           |
 
 Layout and local commands: [../README.md](/apps/agent/README.md).

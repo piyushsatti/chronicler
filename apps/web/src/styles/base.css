@@ -1,9 +1,8 @@
-@import './tokens.css';
-
-/* Skin Imposition chrome with Chronicler tokens (no raw hex here). */
+/* Skin Imposition chrome with Chronicler tokens (no raw hex here).
+   Token/layer imports live in styles/index.css. */
 :root {
-  --imposition-shell-nav-background: var(--color-card);
-  --imposition-shell-border-color: var(--color-line);
+  --imposition-shell-nav-background: var(--color-bg-panel);
+  --imposition-shell-border-color: var(--color-border);
 }
 
 *,
@@ -14,8 +13,8 @@
 
 body {
   margin: 0;
-  background: var(--color-bg);
-  color: var(--color-ink);
+  background: var(--color-bg-deep);
+  color: var(--color-text);
   font-family: var(--font-body);
   font-size: 0.875rem;
   line-height: 1.5;
@@ -23,134 +22,6 @@ body {
 
 a {
   color: inherit;
-}
-
-a:focus-visible,
-button:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: 2px;
-}
-
-.type-display,
-.type-heading,
-.type-title {
-  font-family: var(--font-display);
-  font-weight: 500;
-  color: var(--color-text);
-}
-
-.type-display {
-  font-size: 2.5rem;
-  letter-spacing: -0.025em;
-  line-height: 1;
-}
-
-.type-heading {
-  font-size: 1.5rem;
-  letter-spacing: -0.02em;
-  line-height: 1.1;
-}
-
-.type-title {
-  font-family: var(--font-body);
-  font-size: 1rem;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
-.type-body {
-  font-family: var(--font-body);
-  font-size: 0.9375rem;
-  line-height: 1.55;
-  color: var(--color-text-2);
-}
-
-.type-caption {
-  font-size: 0.78125rem;
-  color: var(--color-text-3);
-}
-
-.eyebrow {
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--color-text-3);
-}
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-2);
-  height: 2.5rem;
-  padding: 0 var(--sp-4);
-  border-radius: var(--radius-pill);
-  border: 1px solid var(--color-border-2);
-  background: var(--color-bg-panel);
-  color: var(--color-text);
-  font-family: var(--font-body);
-  font-size: 0.84375rem;
-  font-weight: 550;
-  cursor: pointer;
-  text-decoration: none;
-}
-
-.btn:hover {
-  background: var(--color-bg-surface);
-  border-color: var(--color-text-4);
-}
-
-.btn:disabled {
-  opacity: 0.55;
-  cursor: default;
-}
-
-.btn.primary {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-  color: var(--color-accent-ink);
-}
-
-.btn.primary:hover {
-  background: var(--color-accent-hover);
-  border-color: var(--color-accent-hover);
-}
-
-.btn-ghost,
-.btn.ghost {
-  border-color: transparent;
-  background: transparent;
-  color: var(--color-text-2);
-}
-
-.btn-ghost:hover,
-.btn.ghost:hover {
-  background: var(--color-bg-surface);
-  color: var(--color-text);
-}
-
-.card {
-  background: var(--color-bg-panel);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-card);
-  padding: var(--sp-5);
-  box-shadow: var(--shadow-card);
-}
-
-.card[data-tone='flat'] {
-  box-shadow: none;
-}
-
-.card[data-interactive='true'] {
-  cursor: pointer;
-  transition: box-shadow 180ms, transform 180ms, border-color 180ms;
-}
-
-.card[data-interactive='true']:hover {
-  box-shadow: var(--shadow-lift);
-  transform: translateY(-3px);
-  border-color: var(--color-border-2);
 }
 
 .lane {
@@ -201,7 +72,7 @@ button:focus-visible {
 }
 
 .state-loading {
-  border-radius: var(--radius-sm);
+  border-radius: var(--rad-sm);
   background: linear-gradient(
     90deg,
     var(--color-bg-surface),
@@ -212,11 +83,7 @@ button:focus-visible {
   animation: state-shimmer 1.3s ease-in-out infinite;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .state-loading {
-    animation: none;
-  }
-}
+/* viewport queries removed — use Imposition navPatternFor / declarations */
 
 @keyframes state-shimmer {
   0% {
@@ -227,21 +94,13 @@ button:focus-visible {
   }
 }
 
-.stack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-4);
+/* Default gaps for target compositions; the preserved data-gap/data-wrap
+   rules remain authoritative in the same components layer. */
+@layer components {
+  .stack { gap: var(--sp-4); }
+  .row { gap: var(--sp-3); }
 }
 
-.row {
-  display: flex;
-  flex-direction: row;
-  flex-wrap: wrap;
-  gap: var(--sp-3);
-  align-items: center;
-}
-
-.page,
 .page-shell {
   max-width: 73.75rem;
   margin: 0 auto;
@@ -277,15 +136,15 @@ button:focus-visible {
   display: flex;
   align-items: center;
   gap: var(--sp-3);
-  min-height: var(--chrome-bar);
+  min-height: var(--sp-8);
   padding: 0 var(--sp-5);
-  background: var(--color-bar);
+  background: color-mix(in srgb, var(--color-bg-deep) 88%, transparent);
   border-bottom: 1px solid var(--color-border);
   backdrop-filter: blur(14px);
 }
 
 .site-chrome[data-site-pattern='bottom-bar'] .site-chrome__top {
-  min-height: var(--chrome-bar-thin);
+  min-height: var(--sp-7);
   gap: var(--sp-2);
   padding-inline: var(--sp-3);
 }
@@ -306,9 +165,9 @@ button:focus-visible {
   width: 1.625rem;
   height: 1.625rem;
   place-items: center;
-  border-radius: var(--radius-mark);
+  border-radius: var(--rad-sm);
   background: var(--color-accent);
-  color: var(--color-accent-ink);
+  color: var(--color-hero-on-brand-ink);
 }
 
 .site-chrome__links {
@@ -333,7 +192,7 @@ button:focus-visible {
 .site-chrome__links .site-chrome__link {
   height: 2.25rem;
   padding: 0 var(--sp-3);
-  border-radius: var(--radius-pill);
+  border-radius: var(--rad-pill);
 }
 
 .site-chrome__links .site-chrome__link:hover {
@@ -354,9 +213,9 @@ button:focus-visible {
   align-items: stretch;
   justify-content: space-around;
   gap: var(--sp-1);
-  min-height: var(--chrome-bottom);
+  min-height: var(--bottomnav-height);
   padding-bottom: env(safe-area-inset-bottom, 0px);
-  background: var(--color-bar-bottom);
+  background: var(--color-bg-panel);
   border-top: 1px solid var(--color-border);
   backdrop-filter: blur(14px);
 }
@@ -392,7 +251,7 @@ button:focus-visible {
   min-width: 16rem;
   padding: 0 var(--sp-4);
   border: 1px solid var(--color-border-2);
-  border-radius: var(--radius-pill);
+  border-radius: var(--rad-pill);
   background: var(--color-bg-panel);
   color: var(--color-text-3);
   font-family: inherit;
@@ -408,7 +267,7 @@ button:focus-visible {
 .site-chrome__search-kbd {
   margin-left: auto;
   padding: 0.125rem 0.375rem;
-  border-radius: var(--radius-sm);
+  border-radius: var(--rad-sm);
   background: var(--color-bg-surface);
   color: var(--color-text-3);
   font-family: var(--font-mono);
@@ -439,9 +298,9 @@ button:focus-visible {
   height: 2.5rem;
   padding: 0 var(--sp-4);
   border: none;
-  border-radius: var(--radius-pill);
+  border-radius: var(--rad-pill);
   background: var(--discord-brand);
-  color: var(--discord-ink);
+  color: white; /* Preserved fixed Discord brand foreground (Nav.css). */
   font-family: var(--font-body);
   font-size: 0.84375rem;
   font-weight: 550;
@@ -459,7 +318,7 @@ button:focus-visible {
   width: 2rem;
   height: 2rem;
   place-items: center;
-  border-radius: var(--radius-pill);
+  border-radius: var(--rad-pill);
   background: var(--color-bg-surface);
   color: var(--color-text);
   font-family: var(--font-display);
@@ -479,26 +338,19 @@ button:focus-visible {
   object-fit: contain;
 }
 
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-1);
-}
-
-.field input,
-.field textarea,
-.field select {
+/* Foundation Field still renders bare controls. Typed Field primitives
+   already own their field-input skin in primitives.css. */
+.field :where(input, textarea, select):not(.field-input) {
   padding: var(--sp-2);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-btn);
-  background: var(--color-card);
-  color: var(--color-ink);
+  border: 1px solid var(--field-border);
+  border-radius: var(--field-radius);
+  background: var(--field-bg);
+  color: var(--color-text);
   font: inherit;
 }
 
-.field[data-invalid='true'] input,
-.field[data-invalid='true'] textarea {
-  border-color: var(--color-danger);
+.field[data-invalid='true'] :where(input, textarea):not(.field-input) {
+  border-color: var(--field-border-error);
 }
 
 .hex-grid {
@@ -510,9 +362,9 @@ button:focus-visible {
 .hex-cell {
   min-width: 5.5rem;
   padding: var(--sp-2);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-btn);
-  background: var(--color-card);
+  border: 1px solid var(--color-border);
+  border-radius: var(--rad-xs);
+  background: var(--color-bg-panel);
   cursor: pointer;
   text-align: left;
 }
@@ -524,22 +376,4 @@ button:focus-visible {
 
 .hex-cell[data-selected='true'] {
   outline: 2px solid var(--color-accent);
-}
-
-.stat-chip {
-  display: inline-flex;
-  flex-direction: column;
-  gap: var(--sp-1);
-  padding: var(--sp-3);
-  border: 1px solid var(--color-line);
-  border-radius: var(--radius-sm);
-  background: var(--color-card);
-}
-
-.stat-chip[data-presentation='minimal'] .stat-chip__meta {
-  display: none;
-}
-
-.stat-chip[data-presentation='stacked'] {
-  min-width: 8rem;
 }

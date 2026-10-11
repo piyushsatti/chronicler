@@ -1,0 +1,6 @@
+import { useMutation as createMutation } from '@tanstack/react-query';
+import { publishDocument } from './adapters/editorMutations.js';
+export function EditorWorkspace() {
+  const publish = createMutation({ mutationFn: publishDocument });
+  return <button onClick={() => publish.mutate()}>Publish</button>;
+}

@@ -8,14 +8,14 @@ The world is a containment hierarchy, not a flat table set. A region groups maps
 
 ## Interfaces
 
-| Interface | Role |
-| --- | --- |
+| Interface                                      | Role                                  |
+| ---------------------------------------------- | ------------------------------------- |
 | [scoped-body](/docs/interfaces/scoped-body.md) | Location visibility / fog as audience |
 
 ## Implemented by
 
-| App | Local docs |
-| --- | --- |
+| App        | Local docs                       |
+| ---------- | -------------------------------- |
 | `apps/api` | [apps/api/docs/](/apps/api/docs) |
 | `apps/web` | [apps/web/docs/](/apps/web/docs) |
 

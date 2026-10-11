@@ -26,18 +26,51 @@ func (q *Queries) CountHexesForMap(ctx context.Context, publicID pgtype.UUID) (i
 }
 
 const countMapPlaces = `-- name: CountMapPlaces :one
-SELECT count(*)::int
+SELECT count(*)::int AS total,
+       COALESCE(bool_or($1::boolean AND NOT document_readable(d.public_id, author.public_id, d.status, d.visibility, d.policy,
+      $2::uuid, $3::text[], $4::text,
+      FALSE, $5::boolean, $6::uuid[])), FALSE)::boolean AS admin_override
 FROM maps m
 JOIN hexes h ON h.map_id = m.id
 JOIN hex_entry_links hel ON hel.hex_id = h.id
-WHERE m.atlas_code = $1
+JOIN documents d ON d.id = hel.document_id
+LEFT JOIN members author ON author.id = d.author_id
+WHERE m.atlas_code = $7
+  AND d.deleted_at IS NULL AND d.status = 'published'
+  AND d.kind = 'codex_entry' AND d.category LIKE 'location/%'
+  AND document_readable(d.public_id, author.public_id, d.status, d.visibility, d.policy,
+      $2::uuid, $3::text[], $4::text,
+      $1::boolean, $5::boolean, $6::uuid[])
 `
 
-func (q *Queries) CountMapPlaces(ctx context.Context, atlasCode string) (int32, error) {
-	row := q.db.QueryRow(ctx, countMapPlaces, atlasCode)
-	var column_1 int32
-	err := row.Scan(&column_1)
-	return column_1, err
+type CountMapPlacesParams struct {
+	ViewerAdmin  bool          `json:"viewer_admin"`
+	ViewerID     pgtype.UUID   `json:"viewer_id"`
+	ViewerRoles  []string      `json:"viewer_roles"`
+	ViewerHandle string        `json:"viewer_handle"`
+	ViewerLiveDm bool          `json:"viewer_live_dm"`
+	ReaderIds    []pgtype.UUID `json:"reader_ids"`
+	AtlasCode    string        `json:"atlas_code"`
+}
+
+type CountMapPlacesRow struct {
+	Total         int32 `json:"total"`
+	AdminOverride bool  `json:"admin_override"`
+}
+
+func (q *Queries) CountMapPlaces(ctx context.Context, arg CountMapPlacesParams) (CountMapPlacesRow, error) {
+	row := q.db.QueryRow(ctx, countMapPlaces,
+		arg.ViewerAdmin,
+		arg.ViewerID,
+		arg.ViewerRoles,
+		arg.ViewerHandle,
+		arg.ViewerLiveDm,
+		arg.ReaderIds,
+		arg.AtlasCode,
+	)
+	var i CountMapPlacesRow
+	err := row.Scan(&i.Total, &i.AdminOverride)
+	return i, err
 }
 
 const countOpenQuestsInRegion = `-- name: CountOpenQuestsInRegion :one
@@ -277,34 +310,60 @@ func (q *Queries) ListHexesForMap(ctx context.Context, arg ListHexesForMapParams
 }
 
 const listMapPlaces = `-- name: ListMapPlaces :many
-SELECT h.public_id AS hex_id, h.col, h.row, d.public_id AS document_id, d.slug, d.title, COALESCE(d.category, '') AS category
+SELECT h.public_id AS hex_id, h.col, h.row, d.public_id AS document_id, d.slug, d.title, COALESCE(d.category, '') AS category,
+       COALESCE($1::boolean AND NOT document_readable(d.public_id, author.public_id, d.status, d.visibility, d.policy,
+      $2::uuid, $3::text[], $4::text,
+      FALSE, $5::boolean, $6::uuid[]), FALSE)::boolean AS admin_override
 FROM maps m
 JOIN hexes h ON h.map_id = m.id
 JOIN hex_entry_links hel ON hel.hex_id = h.id
 JOIN documents d ON d.id = hel.document_id
-WHERE m.atlas_code = $1
-ORDER BY d.title
-LIMIT $2 OFFSET $3
+LEFT JOIN members author ON author.id = d.author_id
+WHERE m.atlas_code = $7
+  AND d.deleted_at IS NULL AND d.status = 'published'
+  AND d.kind = 'codex_entry' AND d.category LIKE 'location/%'
+  AND document_readable(d.public_id, author.public_id, d.status, d.visibility, d.policy,
+      $2::uuid, $3::text[], $4::text,
+      $1::boolean, $5::boolean, $6::uuid[])
+ORDER BY d.title, d.id, h.id
+LIMIT $9 OFFSET $8
 `
 
 type ListMapPlacesParams struct {
-	AtlasCode string `json:"atlas_code"`
-	Limit     int32  `json:"limit"`
-	Offset    int32  `json:"offset"`
+	ViewerAdmin  bool          `json:"viewer_admin"`
+	ViewerID     pgtype.UUID   `json:"viewer_id"`
+	ViewerRoles  []string      `json:"viewer_roles"`
+	ViewerHandle string        `json:"viewer_handle"`
+	ViewerLiveDm bool          `json:"viewer_live_dm"`
+	ReaderIds    []pgtype.UUID `json:"reader_ids"`
+	AtlasCode    string        `json:"atlas_code"`
+	RowOffset    int32         `json:"row_offset"`
+	RowLimit     int32         `json:"row_limit"`
 }
 
 type ListMapPlacesRow struct {
-	HexID      pgtype.UUID `json:"hex_id"`
-	Col        int32       `json:"col"`
-	Row        int32       `json:"row"`
-	DocumentID pgtype.UUID `json:"document_id"`
-	Slug       string      `json:"slug"`
-	Title      string      `json:"title"`
-	Category   string      `json:"category"`
+	HexID         pgtype.UUID `json:"hex_id"`
+	Col           int32       `json:"col"`
+	Row           int32       `json:"row"`
+	DocumentID    pgtype.UUID `json:"document_id"`
+	Slug          string      `json:"slug"`
+	Title         string      `json:"title"`
+	Category      string      `json:"category"`
+	AdminOverride bool        `json:"admin_override"`
 }
 
 func (q *Queries) ListMapPlaces(ctx context.Context, arg ListMapPlacesParams) ([]ListMapPlacesRow, error) {
-	rows, err := q.db.Query(ctx, listMapPlaces, arg.AtlasCode, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, listMapPlaces,
+		arg.ViewerAdmin,
+		arg.ViewerID,
+		arg.ViewerRoles,
+		arg.ViewerHandle,
+		arg.ViewerLiveDm,
+		arg.ReaderIds,
+		arg.AtlasCode,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -320,6 +379,7 @@ func (q *Queries) ListMapPlaces(ctx context.Context, arg ListMapPlacesParams) ([
 			&i.Slug,
 			&i.Title,
 			&i.Category,
+			&i.AdminOverride,
 		); err != nil {
 			return nil, err
 		}

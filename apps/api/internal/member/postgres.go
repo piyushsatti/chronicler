@@ -47,6 +47,27 @@ func (s *PostgresStore) GetByID(ctx context.Context, id string) (Member, error) 
 	return mapMember(row.ID, row.DiscordID, row.Handle, row.DisplayName, row.Roles, row.Status), nil
 }
 
+// ResolveAuthority reads current member and DM-profile state in one statement.
+// It deliberately accepts no token roles and caches nothing across requests.
+func (s *PostgresStore) ResolveAuthority(ctx context.Context, id string) (auth.Authority, error) {
+	uid, err := db.ParseUUID(id)
+	if err != nil {
+		return auth.NewAuthority("", nil, "", "")
+	}
+	row, err := s.q.GetMemberAuthority(ctx, uid)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return auth.NewAuthority("", nil, "", "")
+		}
+		return auth.Authority{}, err
+	}
+	roles := make([]auth.Role, len(row.Roles))
+	for i, role := range row.Roles {
+		roles[i] = auth.Role(role)
+	}
+	return auth.NewAuthorityWithHandle(db.UUIDString(row.ID), roles, row.Status, row.DmStatus, row.Handle)
+}
+
 func (s *PostgresStore) GetByHandle(ctx context.Context, handle string) (Member, error) {
 	row, err := s.q.GetMemberByHandle(ctx, handle)
 	if err != nil {

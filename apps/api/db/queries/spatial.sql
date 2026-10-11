@@ -69,21 +69,41 @@ VALUES ($1, $2)
 ON CONFLICT (real_date) DO UPDATE SET game_day = EXCLUDED.game_day;
 
 -- name: ListMapPlaces :many
-SELECT h.public_id AS hex_id, h.col, h.row, d.public_id AS document_id, d.slug, d.title, COALESCE(d.category, '') AS category
+SELECT h.public_id AS hex_id, h.col, h.row, d.public_id AS document_id, d.slug, d.title, COALESCE(d.category, '') AS category,
+       COALESCE(sqlc.arg(viewer_admin)::boolean AND NOT document_readable(d.public_id, author.public_id, d.status, d.visibility, d.policy,
+      sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
+      FALSE, sqlc.arg(viewer_live_dm)::boolean, sqlc.arg(reader_ids)::uuid[]), FALSE)::boolean AS admin_override
 FROM maps m
 JOIN hexes h ON h.map_id = m.id
 JOIN hex_entry_links hel ON hel.hex_id = h.id
 JOIN documents d ON d.id = hel.document_id
-WHERE m.atlas_code = $1
-ORDER BY d.title
-LIMIT $2 OFFSET $3;
+LEFT JOIN members author ON author.id = d.author_id
+WHERE m.atlas_code = sqlc.arg(atlas_code)
+  AND d.deleted_at IS NULL AND d.status = 'published'
+  AND d.kind = 'codex_entry' AND d.category LIKE 'location/%'
+  AND document_readable(d.public_id, author.public_id, d.status, d.visibility, d.policy,
+      sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
+      sqlc.arg(viewer_admin)::boolean, sqlc.arg(viewer_live_dm)::boolean, sqlc.arg(reader_ids)::uuid[])
+ORDER BY d.title, d.id, h.id
+LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 
 -- name: CountMapPlaces :one
-SELECT count(*)::int
+SELECT count(*)::int AS total,
+       COALESCE(bool_or(sqlc.arg(viewer_admin)::boolean AND NOT document_readable(d.public_id, author.public_id, d.status, d.visibility, d.policy,
+      sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
+      FALSE, sqlc.arg(viewer_live_dm)::boolean, sqlc.arg(reader_ids)::uuid[])), FALSE)::boolean AS admin_override
 FROM maps m
 JOIN hexes h ON h.map_id = m.id
 JOIN hex_entry_links hel ON hel.hex_id = h.id
-WHERE m.atlas_code = $1;
+JOIN documents d ON d.id = hel.document_id
+LEFT JOIN members author ON author.id = d.author_id
+WHERE m.atlas_code = sqlc.arg(atlas_code)
+  AND d.deleted_at IS NULL AND d.status = 'published'
+  AND d.kind = 'codex_entry' AND d.category LIKE 'location/%'
+  AND document_readable(d.public_id, author.public_id, d.status, d.visibility, d.policy,
+      sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
+      sqlc.arg(viewer_admin)::boolean, sqlc.arg(viewer_live_dm)::boolean, sqlc.arg(reader_ids)::uuid[])
+;
 
 -- name: CountRecentHexChangesForMap :one
 SELECT count(*)::int

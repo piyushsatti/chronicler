@@ -1,14 +1,11 @@
 import type { PageDeclaration } from '@pi/react-imposition';
 import { PageHost, type PageRegionRenderers } from '@pi/react-imposition/react';
-import { useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { queryKeys } from '../../../api/queryKeys.js';
 import { Field } from '../../../components/foundation/Field.js';
 import { PageShell } from '../../../components/foundation/PageShell.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { toAppError } from '../../../errors/toAppError.js';
-import { loadSearch, loadSearchKinds } from '../adapters/searchAdapter.js';
+import { useSearchPage } from '../hooks/useSearchPage.js';
 
 const DECLARATION: PageDeclaration = {
   page: 'search',
@@ -16,19 +13,7 @@ const DECLARATION: PageDeclaration = {
 };
 
 export function SearchPage(): React.JSX.Element {
-  const [query, setQuery] = useState('');
-  const [kind, setKind] = useState('');
-  const kindsQ = useQuery({
-    queryKey: queryKeys.searchKinds,
-    queryFn: loadSearchKinds,
-  });
-  const kindsKey = kind || 'all';
-  const searchQ = useQuery({
-    queryKey: queryKeys.search(query, kindsKey),
-    queryFn: () => loadSearch(query, kind ? [kind] : undefined),
-    enabled: query.trim().length > 0,
-  });
-  const kinds = useMemo(() => kindsQ.data ?? [], [kindsQ.data]);
+  const { query, setQuery, kind, setKind, kinds, searchQ } = useSearchPage();
 
   const regions: PageRegionRenderers = {
     body: () => (

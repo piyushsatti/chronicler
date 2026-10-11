@@ -76,7 +76,7 @@ func TestReconcileAfterRunningBurst(t *testing.T) {
 	if err := sync.SyncQuest(ctx, payload.PublicID, payload.DesiredRevision); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.Succeed(ctx, claimed.ID); err != nil {
+	if err := store.Succeed(ctx, claimed.Receipt()); err != nil {
 		t.Fatal(err)
 	}
 	reconciler := delivery.NewPostgresReconciler(pool.Pool, jobs.NewEnqueuer(store))

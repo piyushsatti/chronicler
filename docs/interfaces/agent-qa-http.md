@@ -10,13 +10,13 @@ Discord and the Python agent worker exchange grounded Q&A jobs only through inge
 
 ## Enforcement
 
-| Mechanism | Location | Status |
-| --- | --- | --- |
-| OpenAPI agent question schemas | `packages/contracts/openapi.yaml` | defined (submit/get/claim/renew/retry/complete) |
-| OpenAPI ↔ mux contract test | `apps/api/test/contract` | enforced |
-| Discord broker unit tests | `apps/discord/tests/unit/agent/` | enforced (HTTP submit/parse) |
-| API agent handler tests | `apps/api/internal/agent` | unit-tested (protocol, bounds, receipt and replay behavior) |
-| Agent worker HTTP tests | `apps/agent/tests/` | enforced (`bun run test:agent` / `agent.yml`) |
+| Mechanism                      | Location                          | Status                                                      |
+| ------------------------------ | --------------------------------- | ----------------------------------------------------------- |
+| OpenAPI agent question schemas | `packages/contracts/openapi.yaml` | defined (submit/get/claim/renew/retry/complete)             |
+| OpenAPI ↔ mux contract test    | `apps/api/test/contract`          | enforced                                                    |
+| Discord broker unit tests      | `apps/discord/tests/unit/agent/`  | enforced (HTTP submit/parse)                                |
+| API agent handler tests        | `apps/api/internal/agent`         | unit-tested (protocol, bounds, receipt and replay behavior) |
+| Agent worker HTTP tests        | `apps/agent/tests/`               | enforced (`bun run test:agent` / `agent.yml`)               |
 
 ## Provider
 
@@ -32,10 +32,10 @@ Request limits: submit/claim/renew/retry 16 KiB; completion 64 KiB. Response lim
 
 ## Consumers
 
-| Consumer | Reliance |
-| --- | --- |
-| `apps/discord` | [mentions.md](/apps/discord/docs/mentions.md) — POST then poll |
-| `apps/agent` | [http-transport.md](/apps/agent/docs/http-transport.md) — claim then complete |
+| Consumer       | Reliance                                                                      |
+| -------------- | ----------------------------------------------------------------------------- |
+| `apps/discord` | [mentions.md](/apps/discord/docs/mentions.md) — POST then poll                |
+| `apps/agent`   | [http-transport.md](/apps/agent/docs/http-transport.md) — claim then complete |
 
 ## Related decisions
 

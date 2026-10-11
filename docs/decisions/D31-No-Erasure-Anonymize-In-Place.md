@@ -9,7 +9,7 @@
 
 ## Context
 
-Member erasure was open. Schema FKs to `members` are bare `REFERENCES` (NO ACTION), so `DELETE FROM members` fails against many referencing tables. A product position was required without claiming legal compliance.
+Member erasure was open. Campaign history must retain the fact of recorded actions while identifying values have a separately stated treatment. The historical blanket no-cascade rationale is superseded by the current mixed foreign-key actions; the provisional product ruling does not depend on that old schema observation.
 
 ## Decision
 
@@ -18,15 +18,15 @@ Member erasure was open. Schema FKs to `members` are bare `REFERENCES` (NO ACTIO
 - Row removal is not the supported path.
 - Supported operation shape: anonymize in place (identifying values cleared; rows and facts retained).
 - Published framing is **product policy**, not a legal claim (owner-ruled branch P).
-- Status remains **ruled-provisional**: shape chosen; per-surface execution map and trigger authorization stay out of this short record (long-form inventory in `.local/docs-quarry/decisions-longform/`).
+- Status remains **ruled-provisional**: shape chosen; a current per-surface execution map and trigger authorization are still required before implementation. [D30](/docs/decisions/D30-Deletion-Is-Named-Per-Entity.md) preserves ordinary deletion/retention policy separately.
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
-| Cascade delete / row removal | Foreclosed by bare FKs without schema rewrite |
-| Crypto-shredding | No per-member key; schema-wide rewrite |
-| Legal-compliance framing | Owner chose weaker product-policy framing |
+| Alternative                  | Why not                                                               |
+| ---------------------------- | --------------------------------------------------------------------- |
+| Cascade delete / row removal | Can destroy campaign facts; current cascades do not authorize erasure |
+| Crypto-shredding             | No per-member key; schema-wide rewrite                                |
+| Legal-compliance framing     | Owner chose weaker product-policy framing                             |
 
 ## Consequences
 
@@ -38,4 +38,4 @@ No erase-by-delete path. Anonymize is designed, not built, until owner confirmat
 
 ## Reopen triggers
 
-FK shape changes to allow deletes; anonymization runs before confirmation; a legal obligation forces compliance framing; free-text residual policy changes.
+A current per-surface map changes retained facts; anonymization runs before confirmation; a legal obligation forces compliance framing; free-text or backup residual policy changes.

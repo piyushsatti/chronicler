@@ -1,0 +1,79 @@
+/* ============================================================
+   Layout API — A8 (epic-a-tokens-and-enforcement, issue 458).
+
+   Sanctioned layout mechanism for justify/align/grow/row/column
+   mechanics (design-language.md C9). Spacing tokens (C6, --sp-*)
+   cover gaps only; this sheet is the attribute-driven alignment
+   layer on top of .stack/.row/.cols (atlas.css).
+
+   Rule: components never write `display:flex`/`justifyContent:…`
+   inline style objects. Use a .stack/.row/.cols class plus a
+   data-justify/data-align/data-cols/data-gap attribute instead.
+   check:layout (scripts/design-gates/check-layout.mjs) enforces
+   this; violations that predate the gate are enumerated in
+   allowlist.json's "layout" section, owned by an Epic C wave.
+
+   issue 458 / review 495 FIX 7: atlas dot css lines 84 to 97 already
+   declares data-gap 1 through 7, data-align start, end and baseline,
+   and data-justify between, center and end. This sheet used to
+   redeclare all of them verbatim: one rule with two implementations,
+   with the zero visual diff claim resting on stylesheet import order
+   rather than there being a single source. This sheet now carries
+   only the values C9 adds beyond the atlas set: gap 0 and 8, justify
+   start/around/evenly, align center/stretch, plus the attributes
+   atlas never had at all: grow, shrink, wrap, cols, row. Everything
+   atlas already covers is read from there via the normal cascade,
+   not duplicated here.
+   ============================================================ */
+
+@layer components {
+
+  /* ── data-gap: --sp-* only, every depth (C6). Only 0 and 8 are new
+     here, atlas.css already covers 1 through 7. ────────────────── */
+  [data-gap="0"] { gap: 0; }
+  [data-gap="8"] { gap: var(--sp-8); }
+
+  /* ── data-justify: main-axis (flex) / inline-axis (grid). Only
+     start/around/evenly are new, atlas.css already covers
+     between/center/end. ──────────────────────────────────────────── */
+  [data-justify="start"]   { justify-content: flex-start; }
+  [data-justify="around"]  { justify-content: space-around; }
+  [data-justify="evenly"]  { justify-content: space-evenly; }
+
+  /* ── data-align: cross-axis. Only center/stretch are new, atlas.css
+     already covers start/end/baseline. ─────────────────────────────── */
+  [data-align="center"]   { align-items: center; }
+  [data-align="stretch"]  { align-items: stretch; }
+
+  /* ── data-grow / data-shrink: item-level flex mechanics ──── */
+  [data-grow="1"]   { flex-grow: 1; }
+  [data-grow="0"]   { flex-grow: 0; }
+  [data-shrink="0"] { flex-shrink: 0; }
+
+  /* ── flex-fill: the truncation idiom (flex:1 + min-width:0).
+     `.grow` (atlas.css) is flex:1 only and does not truncate. ── */
+  .flex-fill { flex: 1; min-width: 0; }
+
+  /* ── data-wrap: row wrapping (mirrors .row[data-wrap="1"]) ─ */
+  [data-wrap="1"] { flex-wrap: wrap; }
+  [data-wrap="0"] { flex-wrap: nowrap; }
+
+  /* ── data-cols: grid column counts, mobile-collapse built in ─
+     .cols already sets display:grid (atlas.css); data-cols is
+     the general form (.cols[data-n] pre-dates this sheet and
+     stays for backward compat, both read the same intent). ── */
+  [data-cols="1"] { display: grid; grid-template-columns: 1fr; }
+  [data-cols="2"] { display: grid; grid-template-columns: repeat(2, 1fr); }
+  [data-cols="3"] { display: grid; grid-template-columns: repeat(3, 1fr); }
+  [data-cols="4"] { display: grid; grid-template-columns: repeat(4, 1fr); }
+  [data-cols="7"] { display: grid; grid-template-columns: repeat(7, 1fr); }
+  [data-cols="auto"] { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+
+  /* viewport queries removed — use Imposition navPatternFor / declarations */
+
+
+  /* ── data-row: escape hatch for one-off row/column mechanics
+     without pulling in .stack/.row's other defaults ─────────── */
+  [data-row="1"]    { display: flex; flex-direction: row; }
+  [data-row="0"]    { display: flex; flex-direction: column; }
+}

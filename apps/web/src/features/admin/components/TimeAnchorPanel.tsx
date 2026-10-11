@@ -1,0 +1,153 @@
+import { Button } from '../../../components/primitives/Button.js';
+import { Card } from '../../../components/primitives/Card.js';
+import { EmptyState } from '../../../components/primitives/EmptyState.js';
+import { StatePanel } from '../../../components/foundation/StatePanel.js';
+import type { AdminTimeAnchorView } from '../types.js';
+import type { useTimeAnchorPanel } from '../hooks/useTimeAnchorPanel.js';
+
+export function TimeAnchorPanel({
+  view,
+}: {
+  view: ReturnType<typeof useTimeAnchorPanel>;
+}): React.JSX.Element {
+  const {
+    BLANK,
+    toLocalInputValue,
+    anchors,
+    editingId,
+    setEditingId,
+    form,
+    setForm,
+    message,
+    save,
+  } = view;
+
+  if (anchors.isError) {
+    return <StatePanel status="error" error={anchors.error} />;
+  }
+  if (anchors.isLoading || !anchors.data) return <StatePanel status="loading" />;
+
+  const startEdit = (anchor: AdminTimeAnchorView): void => {
+    setEditingId(anchor.id);
+    setForm({
+      realUtc: toLocalInputValue(anchor.realUtc),
+      epochDay: String(anchor.epochDay),
+      rate: String(anchor.rate),
+      note: anchor.note ?? '',
+    });
+  };
+
+  return (
+    <Card
+      className="stack"
+      data-component="TimeAnchorPanel"
+      data-el="admin.timeAnchorPanel"
+    >
+      <div className="row" data-justify="between">
+        <h3 className="type-heading">Time anchors</h3>
+        <Button
+          type="button"
+          size="sm"
+          onClick={() => {
+            setEditingId('new');
+            setForm(BLANK);
+          }}
+        >
+          New anchor
+        </Button>
+      </div>
+      <p className="type-caption">
+        Anchors regenerate future game_time_map days server-side on write.
+      </p>
+      {message ? (
+        <p className="type-caption" role="status">
+          {message}
+        </p>
+      ) : null}
+      {editingId ? (
+        <div className="stack card">
+          <label className="stack">
+            <span className="type-label">Real UTC</span>
+            <input
+              className="field"
+              type="datetime-local"
+              value={form.realUtc}
+              onChange={(e) => setForm((f) => ({ ...f, realUtc: e.target.value }))}
+            />
+          </label>
+          <div className="row" data-wrap="1">
+            <label className="stack">
+              <span className="type-label">Epoch day</span>
+              <input
+                className="field"
+                value={form.epochDay}
+                onChange={(e) => setForm((f) => ({ ...f, epochDay: e.target.value }))}
+              />
+            </label>
+            <label className="stack">
+              <span className="type-label">Rate</span>
+              <input
+                className="field"
+                value={form.rate}
+                onChange={(e) => setForm((f) => ({ ...f, rate: e.target.value }))}
+              />
+            </label>
+          </div>
+          <label className="stack">
+            <span className="type-label">Note</span>
+            <input
+              className="field"
+              value={form.note}
+              onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
+            />
+          </label>
+          <div className="row">
+            <Button
+              type="button"
+              disabled={save.isPending}
+              onClick={() => save.mutate()}
+            >
+              Save
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => {
+                setEditingId(null);
+                setForm(BLANK);
+              }}
+            >
+              Cancel
+            </Button>
+          </div>
+          {save.isError ? <StatePanel status="error" error={save.error} /> : null}
+        </div>
+      ) : null}
+      {anchors.data.length === 0 ? (
+        <EmptyState kind="generic" message="No time anchors yet." />
+      ) : (
+        <ul className="stack">
+          {anchors.data.map((a) => (
+            <li key={a.id} className="card row" data-justify="between">
+              <div className="stack">
+                <p className="type-title">{a.realUtc}</p>
+                <p className="type-caption">
+                  epoch {a.epochDay} · rate {a.rate}
+                  {a.note ? ` · ${a.note}` : ''}
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => startEdit(a)}
+              >
+                Edit
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
+  );
+}

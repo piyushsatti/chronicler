@@ -1,20 +1,18 @@
 import {
   createElement,
-  lazy,
   Suspense,
   type ComponentType,
   type ReactElement,
 } from 'react';
+import { lazyWithReload } from './lazyWithReload.js';
 
 /**
- * Route element that loads a page on navigation.
- * Dynamic import keeps feature.ts from pulling pages (and their query-key
- * imports) in while the registry is still initializing.
+ * Route element that loads a page on navigation with stale-chunk recovery.
  */
 export function lazyElement(
   load: () => Promise<{ default: ComponentType }>,
 ): ReactElement {
-  const Page = lazy(load);
+  const Page = lazyWithReload(load);
   return createElement(
     Suspense,
     {

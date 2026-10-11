@@ -1,6 +1,10 @@
 package document
 
-import "github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
+import (
+	"encoding/json"
+
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
+)
 
 type Status string
 
@@ -17,7 +21,8 @@ type Document struct {
 	Status     Status
 	Visibility Visibility
 	AuthorID   string
-	Body       string
+	Body       string          // raw inside repositories; scoped bytes on every Queries result
+	Policy     json.RawMessage // nil and JSON null compile legacy visibility
 }
 
 var (
@@ -25,13 +30,6 @@ var (
 	ErrForbidden = apierr.New(apierr.Forbidden, "document not readable")
 )
 
-// EffectiveBody returns the body if scope allows, otherwise ErrNotFound (no existence oracle).
-func (d Document) EffectiveBody(scope ViewerScope) (string, error) {
-	if d.Status != StatusPublished && d.AuthorID != scope.MemberID && !scope.IsAdmin {
-		return "", ErrNotFound
-	}
-	if d.Status == StatusPublished && !scope.Allows(d.Visibility, d.AuthorID, nil) {
-		return "", ErrNotFound
-	}
-	return d.Body, nil
-}
+// Readable applies only the outer document gate. Queries always project Body
+// through EffectiveBody before returning it to a consumer.
+func (d Document) Readable(scope ViewerScope) bool { return Specify(d).Allows(scope) }

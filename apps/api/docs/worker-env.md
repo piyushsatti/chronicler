@@ -4,11 +4,11 @@ The worker binary (`apps/api/cmd/worker`) consumes Postgres-backed jobs when `DA
 
 ## Discord delivery (quest loop)
 
-| Variable | Purpose |
-| --- | --- |
-| `DISCORD_BOT_TOKEN` | Bot token used for `Authorization: Bot …` on Discord REST (worker posts quest messages) |
-| `DISCORD_ANNOUNCE_CHANNEL_ID` | Target channel for quest projection messages |
-| `DISCORD_DELIVERY_DRY_RUN` | When `1`/`true`, apply `discord_applied_revision` without calling Discord. Required for local compose when token/channel are empty |
+| Variable                      | Purpose                                                                                                                            |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| `DISCORD_BOT_TOKEN`           | Bot token used for `Authorization: Bot …` on Discord REST (worker posts quest messages)                                            |
+| `DISCORD_ANNOUNCE_CHANNEL_ID` | Target channel for quest projection messages                                                                                       |
+| `DISCORD_DELIVERY_DRY_RUN`    | When `1`/`true`, apply `discord_applied_revision` without calling Discord. Required for local compose when token/channel are empty |
 
 Without token + channel **and** without dry-run, sync returns an error; the job retries then dead-letters. Applied revision does **not** advance.
 
@@ -24,9 +24,9 @@ After each successful delivery, the worker **reconciles**: if `discord_desired_r
 
 Local stack: [deploy/compose.yaml](/deploy/compose.yaml).
 
-| Service | Token | Role |
-| --- | --- | --- |
-| `worker` | `DISCORD_BOT_TOKEN` | Discord REST announce (or dry-run) |
+| Service   | Token               | Role                                                                                                                            |
+| --------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `worker`  | `DISCORD_BOT_TOKEN` | Discord REST announce (or dry-run)                                                                                              |
 | `discord` | `BOT_DISCORD_TOKEN` | Gateway sensor only; posts to `/v1/ingest/*`. Does not announce quests ([D1](/docs/decisions/D1-Discord-Announce-Ownership.md)) |
 
 Staging E2E against a live channel needs a real worker token + channel id and `DISCORD_DELIVERY_DRY_RUN` unset/false. No live Discord test runs in CI (httptest mocks).
@@ -39,9 +39,9 @@ Optional: set `DATABASE_URL` to reuse an existing Postgres (migrate+seed still a
 
 ## API process
 
-| Variable | Purpose |
-| --- | --- |
-| `CHRONICLER_ENV` | `development` (default) or `production`. Production requires Postgres |
+| Variable           | Purpose                                                                    |
+| ------------------ | -------------------------------------------------------------------------- |
+| `CHRONICLER_ENV`   | `development` (default) or `production`. Production requires Postgres      |
 | `REQUIRE_DATABASE` | When truthy, fail startup if Postgres is unavailable (even in development) |
 
 ## Maintenance lane

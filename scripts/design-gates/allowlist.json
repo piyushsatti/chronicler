@@ -1,6 +1,11 @@
 {
-  "_comment": "Allowlists for apps/web design gates. Lengths may only shrink (ratchet).",
+  "_comment": "Allowlists for apps/web design gates. Lengths may only shrink (ratchet). Soft-skipped gates (gallery/motion/effects/cosmetic/orphan) re-arm when their trees land.",
   "tokens": [],
   "boundary": [],
-  "responsive": []
+  "responsive": [],
+  "layout": [],
+  "duplication": [],
+  "orphan": [],
+  "stateTrio": [],
+  "architectureLadder": []
 }

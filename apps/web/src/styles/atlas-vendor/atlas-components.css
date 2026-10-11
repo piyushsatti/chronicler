@@ -1,0 +1,503 @@
+/* Canonical Atlas design system, .hf2-scoped, vendored from the Claude Design bundle — safe to import app-wide (rules only apply under a .hf2 ancestor). */
+/* ============================================================
+   Chronicler — Component & layout styles · "Atlas" theme
+   Scope: .hf2 · Requires tokens.css (loaded first)
+   Extracted verbatim from hifi2.css
+   ============================================================ */
+
+/* issue 453: atlas-vendor/atlas-tokens.css (68 duplicate props) was deleted — every
+   var it pinned now has a global semantic-tier equivalent in tokens.css EXCEPT
+   these, which had no global counterpart and no var() fallback below (--n,
+   --region-color, --hov-bg, --hov-rest all default via their own var()
+   fallback and needed nothing here). Kept minimal, .hf2-scoped only. */
+.hf2 {
+  --mo-fast: 120ms;
+  --mo-base: 200ms;
+  --mo-slow: 360ms;
+  --mo-ease: cubic-bezier(.2,.6,.2,1);
+  --mo-ease-inout: cubic-bezier(.4,0,.2,1);
+  --mo-spring: cubic-bezier(.2,1.3,.4,1);
+  --mo-lift: -3px;
+  --mo-stagger: 32ms;
+}
+
+/* ---------- type ---------- */
+.hf2 .display { font-family: var(--font-display); font-weight: 500; letter-spacing: -0.02em; line-height: 1.05; }
+.hf2 .h1 { font-family: var(--font-display); font-weight: 500; font-size: 40px; letter-spacing: -0.025em; line-height: 1.0; }
+.hf2 .h2 { font-family: var(--font-display); font-weight: 500; font-size: 24px; letter-spacing: -0.02em; line-height: 1.1; }
+.hf2 .h3 { font-family: var(--font-body); font-weight: 600; font-size: 16px; letter-spacing: -0.01em; }
+.hf2 .lede { font-family: var(--font-body); font-size: 15px; color: var(--color-text-2); line-height: 1.55; }
+.hf2 .body { font-size: 14px; color: var(--color-text-2); }
+.hf2 .small { font-size: 12.5px; color: var(--color-text-3); }
+.hf2 .eyebrow { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--color-text-3); }
+.hf2 .num { font-variant-numeric: tabular-nums; }
+
+/* ---------- flexible layout primitives ----------
+   <div className="stack" data-gap="5"> → flex column, gap = --sp-5
+   <div className="row" data-gap="3" data-align="center" data-justify="between">
+   These read the data-attr and map to the spacing scale. */
+.hf2 .stack { display: flex; flex-direction: column; }
+.hf2 .row { display: flex; align-items: center; }
+.hf2 .row[data-wrap="1"] { flex-wrap: wrap; }
+.hf2 .grow { flex: 1; }
+.hf2 [data-gap="1"] { gap: var(--sp-1); }
+.hf2 [data-gap="2"] { gap: var(--sp-2); }
+.hf2 [data-gap="3"] { gap: var(--sp-3); }
+.hf2 [data-gap="4"] { gap: var(--sp-4); }
+.hf2 [data-gap="5"] { gap: var(--sp-5); }
+.hf2 [data-gap="6"] { gap: var(--sp-6); }
+.hf2 [data-gap="7"] { gap: var(--sp-7); }
+.hf2 [data-align="start"] { align-items: flex-start; }
+.hf2 [data-align="end"] { align-items: flex-end; }
+.hf2 [data-align="baseline"] { align-items: baseline; }
+.hf2 [data-justify="between"] { justify-content: space-between; }
+.hf2 [data-justify="center"] { justify-content: center; }
+.hf2 [data-justify="end"] { justify-content: flex-end; }
+.hf2 .cols { display: grid; gap: var(--sp-4); }
+.hf2 .cols[data-n="2"] { grid-template-columns: 1fr 1fr; }
+.hf2 .cols[data-n="3"] { grid-template-columns: repeat(3, 1fr); }
+.hf2 .cols[data-gap="5"] { gap: var(--sp-5); }
+
+/* ---------- top nav ---------- */
+.hf2 .topbar {
+  display: flex; align-items: center; gap: var(--sp-5);
+  height: 64px;
+  padding: 0 var(--sp-6);
+  background: color-mix(in srgb, var(--color-bg-deep) 95%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--color-border);
+  position: sticky; top: 0; z-index: 20;
+}
+.hf2 .brand {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 21px;
+  letter-spacing: -0.02em;
+  color: var(--color-text);
+  display: flex; align-items: center; gap: var(--sp-2);
+}
+.hf2 .brand-mark {
+  width: 26px; height: 26px;
+  background: var(--color-accent);
+  color: var(--color-hero-on-brand-ink);
+  border-radius: 8px;
+  display: grid; place-items: center;
+  font-size: 15px; font-weight: 700;
+  font-family: var(--font-display);
+}
+.hf2 .nav { display: flex; align-items: center; gap: var(--sp-1); }
+.hf2 .nav a {
+  display: inline-flex; align-items: center; gap: var(--sp-2);
+  height: 36px; padding: 0 var(--sp-3);
+  border-radius: var(--rad-pill);
+  color: var(--color-text-2);
+  font-size: 13.5px; font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background var(--mo-fast) var(--mo-ease), color var(--mo-fast) var(--mo-ease);
+}
+.hf2 .nav a:hover { background: var(--color-bg-surface); color: var(--color-text); }
+.hf2 .nav a.active { background: var(--color-text); color: var(--color-bg-deep); }
+.hf2 .nav a .ico { opacity: 0.7; }
+.hf2 .nav a.active .ico { opacity: 1; }
+
+/* ---------- page frame ---------- */
+.hf2 .page { max-width: 1180px; margin: 0 auto; padding: var(--sp-7) var(--sp-6) var(--sp-8); }
+
+/* ---------- buttons ---------- */
+.hf2 .btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--sp-2);
+  height: 40px; padding: 0 var(--sp-4);
+  border-radius: var(--rad-pill);
+  border: 1px solid var(--color-border-2);
+  background: var(--color-bg-panel);
+  color: var(--color-text);
+  font-family: var(--font-body); font-size: 13.5px; font-weight: 550;
+  cursor: pointer;
+  transition: background var(--mo-fast) var(--mo-ease), border-color var(--mo-fast) var(--mo-ease), transform var(--mo-fast) var(--mo-ease);
+}
+.hf2 .btn:hover { background: var(--color-bg-surface); border-color: var(--color-text-4); }
+.hf2 .btn:active { transform: translateY(1px) scale(0.98); }
+.hf2 .btn.primary { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-hero-on-brand-ink); }
+.hf2 .btn.primary:hover { background: color-mix(in srgb, var(--color-accent) 82%, var(--color-bg-deep)); }
+.hf2 .btn.ghost { border-color: transparent; background: transparent; color: var(--color-text-2); }
+.hf2 .btn.ghost:hover { background: var(--color-bg-surface); color: var(--color-text); }
+.hf2 .btn.sm { height: 32px; padding: 0 var(--sp-3); font-size: 12.5px; }
+.hf2 .btn.lg { height: 44px; padding: 0 var(--sp-5); font-size: 14.5px; }
+.hf2 .btn.on-hero { background: var(--color-hero-btn); border-color: var(--color-hero-btn); color: var(--color-hero-on-brand-ink); }
+.hf2 .btn.on-hero:hover { background: color-mix(in srgb, var(--color-hero-btn) 88%, var(--color-bg-deep)); border-color: color-mix(in srgb, var(--color-hero-btn) 88%, var(--color-bg-deep)); }
+
+/* ---------- search ---------- */
+.hf2 .search {
+  display: flex; align-items: center; gap: var(--sp-2);
+  height: 40px; padding: 0 var(--sp-4);
+  min-width: 260px;
+  background: var(--color-bg-panel);
+  border: 1px solid var(--color-border-2);
+  border-radius: var(--rad-pill);
+  color: var(--color-text-3); font-size: 13.5px;
+  cursor: text;
+  transition: border-color var(--mo-fast) var(--mo-ease);
+}
+.hf2 .search:hover { border-color: var(--color-text-4); }
+.hf2 .search kbd {
+  margin-left: auto;
+  font-family: var(--font-mono); font-size: 10px;
+  padding: 2px 6px; border-radius: 5px;
+  background: var(--color-bg-surface); color: var(--color-text-3);
+}
+
+/* ---------- card (flexible: data-pad, data-tone) ---------- */
+.hf2 .card {
+  background: var(--color-bg-panel);
+  border: 1px solid var(--color-border);
+  border-radius: var(--rad);
+  padding: var(--sp-5);
+  box-shadow: var(--shadow);
+}
+.hf2 .card[data-pad="4"] { padding: var(--sp-4); }
+.hf2 .card[data-pad="6"] { padding: var(--sp-6); }
+.hf2 .card[data-tone="2"] { background: var(--color-bg-surface); box-shadow: none; }
+.hf2 .card[data-tone="flat"] { box-shadow: none; }
+.hf2 .card[data-interactive="1"] { cursor: pointer; transition: box-shadow var(--mo-base) var(--mo-ease), transform var(--mo-base) var(--mo-ease), border-color var(--mo-base) var(--mo-ease); }
+.hf2 .card[data-interactive="1"]:hover { box-shadow: var(--shadow-lift); transform: translateY(var(--mo-lift)); border-color: var(--color-border-2); }
+.hf2 .card[data-interactive="1"]:active { transform: translateY(calc(var(--mo-lift) + 1px)) scale(0.997); transition-duration: var(--mo-fast); }
+
+/* ---------- quest card ---------- */
+.hf2 .qc { display: flex; flex-direction: column; gap: var(--sp-3); min-height: 250px; position: relative; }
+.hf2 .qc__top { display: flex; align-items: center; justify-content: space-between; }
+.hf2 .qc__title { font-family: var(--font-display); font-weight: 500; font-size: 20px; letter-spacing: -0.015em; line-height: 1.12; color: var(--color-text);
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.hf2 .qc__hook { font-size: 13px; color: var(--color-text-3); line-height: 1.5;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; flex: 1; }
+.hf2 .qc__foot { display: flex; align-items: center; gap: var(--sp-2); margin-top: var(--sp-1); }
+.hf2 .qc__ribbon {
+  position: absolute; top: calc(-1 * var(--sp-5) - 1px); right: var(--sp-4);
+  background: var(--color-accent); color: var(--color-hero-on-brand-ink);
+  font-family: var(--font-mono); font-size: 9.5px; letter-spacing: 0.08em; font-weight: 500;
+  padding: 4px 9px; border-radius: 0 0 7px 7px;
+}
+
+/* ---------- chips / states / region ---------- */
+.hf2 .chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 24px; padding: 0 10px;
+  border-radius: var(--rad-pill);
+  background: var(--color-bg-surface);
+  color: var(--color-text-2);
+  font-size: 11.5px; font-weight: 500;
+  white-space: nowrap;
+}
+.hf2 .chip[data-tone="line"] { background: transparent; border: 1px solid var(--color-border-2); }
+.hf2 .chip .dot { width: 7px; height: 7px; border-radius: 2px; background: var(--region-color, var(--color-text-3)); }
+
+.hf2 .state {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 24px; padding: 0 10px;
+  border-radius: var(--rad-pill);
+  font-family: var(--font-body); font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+.hf2 .state[data-s="OPEN"]      { background: var(--color-bg-surface); color: var(--color-text-2); }
+.hf2 .state[data-s="FILLING"]   { background: var(--color-bg-surface); color: var(--color-accent); }
+.hf2 .state[data-s="FULL"]      { background: var(--color-text); color: var(--color-bg-deep); }
+.hf2 .state[data-s="SCHEDULED"] { background: color-mix(in srgb, var(--color-confidence-med) 16%, transparent); color: var(--color-confidence-med); }
+.hf2 .state[data-s="POSTPONED"] { background: color-mix(in srgb, var(--color-confidence-med) 16%, transparent); color: var(--color-confidence-med); }
+.hf2 .state[data-s="LIVE"]      { background: var(--color-status-dead); color: var(--color-hero-on-brand-ink); }
+.hf2 .state[data-s="SOFT"]      { background: color-mix(in srgb, var(--color-confidence-med) 16%, transparent); color: var(--color-confidence-med); }
+.hf2 .state[data-s="CLOSED"]    { background: transparent; color: var(--color-text-3); border: 1px solid var(--color-border-2); }
+.hf2 .state[data-s="CANCELLED"] { background: transparent; color: var(--color-text-3); border: 1px solid var(--color-border-2); text-decoration: line-through; }
+.hf2 .state .live-dot { width: 6px; height: 6px; border-radius: 999px; background: var(--color-hero-on-brand-ink); animation: hf2-pulse 1.5s infinite; }
+
+.hf2 .code {
+  font-family: var(--font-mono); font-size: 11px; font-weight: 500;
+  color: var(--color-text-3);
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+.hf2 .code:hover { color: var(--color-accent); }
+
+/* ---------- avatars ---------- */
+.hf2 .av {
+  width: 26px; height: 26px; border-radius: 50%;
+  background: var(--color-bg-surface);
+  border: 1.5px solid var(--color-bg-panel);
+  display: grid; place-items: center;
+  font-size: 9.5px; font-weight: 600; color: var(--color-text-2);
+  position: relative; flex-shrink: 0;
+}
+.hf2 .av[data-online="1"]::after {
+  content: ""; position: absolute; right: -1px; bottom: -1px;
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--color-status-alive); border: 2px solid var(--color-bg-panel);
+}
+.hf2 .av[data-you="1"] { outline: 2px solid var(--color-accent); outline-offset: 1px; }
+.hf2 .av[data-empty="1"] { background: transparent; border: 1.5px dashed var(--color-text-4); color: var(--color-text-4); }
+.hf2 .av[data-size="xl"] { width: 40px; height: 40px; font-size: 14px; }
+.hf2 .av[data-size="lg"] { width: 64px; height: 64px; font-size: 20px; }
+.hf2 .party { display: flex; }
+.hf2 .party .av + .av { margin-left: -8px; }
+
+.hf2 .dm {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 30px; padding: 0 12px 0 4px;
+  border-radius: var(--rad-pill);
+  background: var(--color-bg-surface);
+  font-size: 12.5px; font-weight: 500; color: var(--color-text);
+  cursor: pointer; transition: background var(--mo-fast) var(--mo-ease);
+}
+.hf2 .dm:hover { background: var(--color-border); }
+.hf2 .dm .fam { color: var(--color-text-3); font-size: 11px; }
+
+/* ---------- live band ---------- */
+.hf2 .live-band {
+  display: flex; align-items: center; gap: var(--sp-3);
+  padding: var(--sp-3) var(--sp-5);
+  background: var(--color-text);
+  color: var(--color-bg-deep);
+  border-radius: var(--rad);
+  margin-bottom: var(--sp-6);
+}
+.hf2 .live-band .pulse { width: 9px; height: 9px; border-radius: 50%; background: var(--color-status-dead); animation: hf2-pulse 1.5s infinite; flex-shrink: 0; }
+.hf2 .live-band .lbl { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 500; }
+.hf2 .live-band .sep { width: 1px; height: 16px; background: color-mix(in srgb, var(--color-bg-deep) 22%, transparent); }
+.hf2 .live-band .det { font-size: 13px; opacity: 0.9; }
+.hf2 .live-band .det em { font-style: normal; font-weight: 600; opacity: 1; }
+.hf2 .live-band .cta { margin-left: auto; font-size: 12.5px; opacity: 0.85; display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
+.hf2 .live-band .cta:hover { opacity: 1; }
+@keyframes hf2-pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.35); } }
+
+/* ---------- hero shelf ---------- */
+.hf2 .shelf {
+  display: grid; grid-template-columns: auto 1fr auto; gap: var(--sp-5); align-items: center;
+  padding: var(--sp-5) var(--sp-6);
+  background: linear-gradient(110deg, var(--color-bg-surface), var(--color-bg-panel));
+  border: 1px solid var(--color-border);
+  border-radius: var(--rad);
+  margin-bottom: var(--sp-7);
+}
+.hf2 .shelf__icon { width: 52px; height: 52px; border-radius: 50%; background: var(--color-bg-panel); display: grid; place-items: center; color: var(--color-accent); box-shadow: var(--shadow); }
+
+/* ---------- lane heading ---------- */
+.hf2 .lane { margin-bottom: var(--sp-7); }
+.hf2 .lane__head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: var(--sp-4); gap: var(--sp-4); }
+.hf2 .lane__title { display: flex; align-items: baseline; gap: var(--sp-3); }
+.hf2 .lane__title .n { font-family: var(--font-display); font-size: 15px; color: var(--color-accent); font-weight: 600; }
+
+/* ---------- table ---------- */
+.hf2 .tbl { width: 100%; border-collapse: collapse; }
+.hf2 .tbl th { text-align: left; padding: var(--sp-2) var(--sp-3); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-text-3); font-weight: 600; border-bottom: 1px solid var(--color-border); }
+.hf2 .tbl td { padding: var(--sp-3); border-bottom: 1px solid var(--color-border); font-size: 13px; vertical-align: middle; }
+.hf2 .tbl tr:last-child td { border-bottom: none; }
+.hf2 .tbl tr:hover td { background: var(--color-bg-surface); }
+
+/* ---------- world-state row ---------- */
+.hf2 .ws { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-3) 0; border-bottom: 1px solid var(--color-border); }
+.hf2 .ws:last-child { border-bottom: none; }
+.hf2 .ws .glyph { width: 22px; height: 22px; border-radius: 7px; display: grid; place-items: center; font-size: 12px; flex-shrink: 0; }
+
+/* ---------- pulse bars ---------- */
+.hf2 .pulse-row { display: grid; grid-template-columns: 96px 1fr auto; gap: var(--sp-3); align-items: center; padding: var(--sp-2) 0; }
+.hf2 .pulse-track { height: 7px; border-radius: 999px; background: var(--color-bg-surface); overflow: hidden; display: flex; }
+.hf2 .pulse-track .a { background: var(--color-text); }
+.hf2 .pulse-track .b { background: var(--color-text-4); }
+
+/* pip */
+.hf2 .pip { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--color-text-3); display: inline-block; }
+.hf2 .pip[data-k="high"] { background: var(--color-text); border-color: var(--color-text); }
+.hf2 .pip[data-k="med"] { background: var(--color-text-4); border-color: var(--color-text-3); }
+.hf2 .pip[data-k="low"] { background: transparent; }
+
+/* ---------- page header (entity pages) ---------- */
+.hf2 .phead { display: flex; gap: var(--sp-5); align-items: flex-start; margin-bottom: var(--sp-6); }
+.hf2 .token {
+  width: 96px; height: 96px; border-radius: 18px; flex-shrink: 0;
+  background: var(--color-bg-surface); border: 1px solid var(--color-border);
+  display: grid; place-items: center; color: var(--color-text-3);
+  font-family: var(--font-mono); font-size: 11px; text-align: center;
+  overflow: hidden;
+}
+.hf2 .token[data-tone="ink"] { background: var(--color-text); color: var(--color-bg-deep); }
+.hf2 .phead__body { flex: 1; min-width: 0; }
+.hf2 .phead__actions { display: flex; flex-direction: column; gap: var(--sp-2); align-items: flex-end; }
+
+/* status chip (character lifecycle) */
+.hf2 .status {
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 26px; padding: 0 12px; border-radius: var(--rad-pill);
+  font-size: 12px; font-weight: 600;
+  background: var(--color-bg-surface); color: var(--color-text-2);
+}
+.hf2 .status .d { width: 7px; height: 7px; border-radius: 50%; }
+.hf2 .status[data-s="alive"] { background: color-mix(in srgb, var(--color-status-alive) 15%, transparent); color: var(--color-status-alive); }
+.hf2 .status[data-s="alive"] .d { background: var(--color-status-alive); }
+.hf2 .status[data-s="dead"] { background: var(--color-bg-surface); color: var(--color-text-3); }
+.hf2 .status[data-s="dead"] .d { background: var(--color-text-3); }
+
+/* ---------- stat tiles ---------- */
+.hf2 .stats { display: grid; grid-template-columns: repeat(var(--n,4), 1fr); gap: var(--sp-3); }
+.hf2 .stat { background: var(--color-bg-panel); border: 1px solid var(--color-border); border-radius: var(--rad-sm); padding: var(--sp-4); }
+.hf2 .stat .v { font-family: var(--font-display); font-size: 28px; font-weight: 500; line-height: 1; }
+.hf2 .stat .k { font-size: 11.5px; color: var(--color-text-3); margin-top: 6px; }
+
+/* ---------- section label ---------- */
+.hf2 .sec-label { display: flex; align-items: baseline; justify-content: space-between; margin: var(--sp-6) 0 var(--sp-3); }
+.hf2 .sec-label h3 { font-family: var(--font-display); font-size: 19px; font-weight: 500; letter-spacing: -0.015em; margin: 0; }
+
+/* ---------- tabs ---------- */
+.hf2 .tabs { display: flex; gap: var(--sp-1); border-bottom: 1px solid var(--color-border); margin-bottom: var(--sp-5); }
+.hf2 .tabs a { padding: 10px 14px; font-size: 13.5px; font-weight: 550; color: var(--color-text-3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; transition: color var(--mo-fast) var(--mo-ease), border-color var(--mo-fast) var(--mo-ease); }
+.hf2 .tabs a:hover { color: var(--color-text); }
+.hf2 .tabs a.active { color: var(--color-text); border-bottom-color: var(--color-accent); }
+
+/* ---------- timeline (progression / state) ---------- */
+.hf2 .tl { position: relative; padding-left: var(--sp-5); }
+.hf2 .tl::before { content: ""; position: absolute; left: 7px; top: 4px; bottom: 4px; width: 2px; background: var(--color-border); }
+.hf2 .tl-row { position: relative; padding: var(--sp-2) 0 var(--sp-4); }
+.hf2 .tl-row::before { content: ""; position: absolute; left: calc(-1 * var(--sp-5) + 3px); top: 8px; width: 10px; height: 10px; border-radius: 50%; background: var(--color-bg-panel); border: 2px solid var(--color-text-3); }
+.hf2 .tl-row[data-hl="1"]::before { background: var(--color-accent); border-color: var(--color-accent); }
+
+/* ---------- filter bar ---------- */
+.hf2 .filters { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; padding: var(--sp-3) var(--sp-4); background: var(--color-bg-panel); border: 1px solid var(--color-border); border-radius: var(--rad); margin-bottom: var(--sp-5); }
+.hf2 .filters .grp { display: inline-flex; gap: 6px; align-items: center; }
+.hf2 .filters .grp + .grp { padding-left: var(--sp-3); border-left: 1px solid var(--color-border); }
+.hf2 .seg { display: inline-flex; background: var(--color-bg-surface); border-radius: var(--rad-pill); padding: 3px; }
+/* Production renders the segment options as real <button>s for a11y (focus +
+   aria-pressed); the selectors cover both span (design prototype) and button. */
+.hf2 .seg span, .hf2 .seg button { padding: 5px 12px; font-size: 12px; font-weight: 550; border-radius: var(--rad-pill); color: var(--color-text-2); cursor: pointer; background: none; border: none; font-family: inherit; }
+.hf2 .seg span.on, .hf2 .seg button.on { background: var(--color-bg-panel); color: var(--color-text); box-shadow: var(--shadow); }
+
+/* ---------- adventure summary prose ---------- */
+.hf2 .prose { font-family: var(--font-display); font-weight: 400; font-size: 18px; line-height: 1.6; color: var(--color-text); max-width: 64ch; }
+.hf2 .prose p { margin: 0 0 var(--sp-4); }
+.hf2 .prose .drop::first-letter { font-size: 3.4em; float: left; line-height: 0.8; padding: 6px 10px 0 0; font-weight: 500; color: var(--color-accent); }
+.hf2 .gameinfo { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-3) var(--sp-5); }
+.hf2 .gameinfo .gi { display: flex; flex-direction: column; gap: 3px; padding: var(--sp-3) 0; border-bottom: 1px solid var(--color-border); }
+.hf2 .gameinfo .gi .k { font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-text-3); }
+.hf2 .gameinfo .gi .v { font-size: 14px; font-weight: 500; }
+
+/* roster grid */
+.hf2 .roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--sp-4); }
+
+/* ---------- mobile nav (hamburger + drawer) ---------- */
+.hf2 .navbtn { all: unset; cursor: pointer; width: 38px; height: 38px; border-radius: 9px; display: none; align-items: center; justify-content: center; color: var(--color-text-2); }
+.hf2 .navbtn:hover { background: var(--color-bg-surface); color: var(--color-text); }
+.hf2 .navdrawer { position: fixed; top: 64px; left: 0; right: 0; z-index: 60; display: flex; flex-direction: column; padding: 8px;
+  background: color-mix(in srgb, var(--color-bg-deep) 97%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid var(--color-border); box-shadow: var(--shadow-lift); }
+.hf2 .navdrawer a { display: flex; align-items: center; gap: 11px; padding: 12px 14px; border-radius: 9px; color: var(--color-text-2); font-size: 15px; font-weight: 500; cursor: pointer; text-decoration: none; }
+.hf2 .navdrawer a:hover { background: var(--color-bg-surface); color: var(--color-text); }
+.hf2 .navdrawer a.active { color: var(--color-accent); }
+
+/* ---------- responsive ---------- */
+/* viewport queries removed — use Imposition navPatternFor / declarations */
+
+/* viewport queries removed — use Imposition navPatternFor / declarations */
+
+/* viewport queries removed — use Imposition navPatternFor / declarations */
+
+
+/* ---------- focus-visible (keyboard) ---------- */
+.hf2 button:focus-visible, .hf2 a:focus-visible, .hf2 input:focus-visible, .hf2 textarea:focus-visible,
+.hf2 select:focus-visible, .hf2 [tabindex]:focus-visible, .hf2 [role="button"]:focus-visible,
+.hf2 .nav a:focus-visible, .hf2 .navdrawer a:focus-visible, .hf2 .tabs a:focus-visible {
+  outline: 2px solid var(--color-accent); outline-offset: 2px; border-radius: 8px;
+}
+.hf2 .card[data-interactive="1"]:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 3px; }
+
+/* ---------- async states (skeleton / empty / error) ---------- */
+@keyframes hf2-shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+.hf2 .skel { border-radius: var(--rad-sm); background: linear-gradient(90deg, var(--color-bg-surface) 25%, color-mix(in srgb, var(--color-bg-surface) 55%, var(--color-border)) 50%, var(--color-bg-surface) 75%); background-size: 200% 100%; animation: hf2-shimmer 1.3s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .hf2 .skel { animation: none; } }
+
+.hf2 .estate { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 10px; padding: var(--sp-8) var(--sp-5); color: var(--color-text-3); }
+.hf2 .estate .estate-ic { width: 48px; height: 48px; border-radius: 13px; background: var(--color-bg-surface); display: grid; place-items: center; color: var(--color-text-3); font-size: 20px; }
+.hf2 .estate .estate-t { font-family: var(--font-display); font-size: 18px; color: var(--color-text); }
+
+/* ============================================================
+   Motion — utilities + keyframes (see docs/MOTION.md §3)
+   ============================================================ */
+
+/* ---- .lift : declarative hover lift (replaces inline onMouseEnter/Leave) ---- */
+.hf2 .lift {
+  transition: transform var(--mo-base) var(--mo-ease),
+              box-shadow var(--mo-base) var(--mo-ease),
+              border-color var(--mo-base) var(--mo-ease);
+}
+.hf2 .lift:hover { transform: translateY(var(--mo-lift)); box-shadow: var(--shadow-lift); border-color: var(--color-border-2); }
+.hf2 .lift:active { transform: translateY(calc(var(--mo-lift) + 1px)) scale(0.997); transition-duration: var(--mo-fast); }
+
+/* ---- .btn-reset : neutralize native <button> chrome from CSS (not inline) ----
+   Use with .hov-bg / .hov-line so their :hover + transition aren't clobbered by
+   an inline `all: unset` (inline always beats class, killing the hover). */
+.hf2 .btn-reset {
+  appearance: none; -webkit-appearance: none;
+  background: transparent; border: 0; padding: 0; margin: 0;
+  font: inherit; color: inherit; text-align: inherit;
+}
+
+/* ---- .hov-bg / .hov-line : declarative hover for rows & outline chips ----
+   (replaces inline onMouseEnter/Leave background/border mutations).
+   Tokenized timing; reduced-motion handled by the global guard below.
+   .hov-bg picks its rest background from --hov-rest (default transparent)
+   so it works on both transparent rows and surface-2 tiles. */
+.hf2 .hov-bg {
+  background: var(--hov-rest, transparent);
+  transition: background var(--mo-fast) var(--mo-ease);
+}
+.hf2 .hov-bg:hover { background: var(--hov-bg, var(--color-bg-surface)); }
+.hf2 .hov-line {
+  border-color: var(--color-border);
+  transition: border-color var(--mo-fast) var(--mo-ease);
+}
+.hf2 .hov-line:hover { border-color: var(--color-border-2); }
+
+/* ---- .reveal : staggered list/grid entrance (drive with useReveal) ----
+   Children start hidden; the hook sets data-shown="1" when in view. */
+.hf2 .reveal > * { opacity: 0; transform: translateY(10px); }
+.hf2 .reveal[data-shown="1"] > * {
+  opacity: 1; transform: none;
+  transition: opacity var(--mo-base) var(--mo-ease), transform var(--mo-base) var(--mo-ease);
+}
+.hf2 .reveal[data-shown="1"] > *:nth-child(1) { transition-delay: 0ms; }
+.hf2 .reveal[data-shown="1"] > *:nth-child(2) { transition-delay: calc(var(--mo-stagger) * 1); }
+.hf2 .reveal[data-shown="1"] > *:nth-child(3) { transition-delay: calc(var(--mo-stagger) * 2); }
+.hf2 .reveal[data-shown="1"] > *:nth-child(4) { transition-delay: calc(var(--mo-stagger) * 3); }
+.hf2 .reveal[data-shown="1"] > *:nth-child(5) { transition-delay: calc(var(--mo-stagger) * 4); }
+.hf2 .reveal[data-shown="1"] > *:nth-child(6) { transition-delay: calc(var(--mo-stagger) * 5); }
+.hf2 .reveal[data-shown="1"] > *:nth-child(7) { transition-delay: calc(var(--mo-stagger) * 6); }
+.hf2 .reveal[data-shown="1"] > *:nth-child(n+8) { transition-delay: calc(var(--mo-stagger) * 7); }
+
+/* ---- .tab-fade : crossfade tab/route content (key the wrapper by tab id) ---- */
+@keyframes hf2-fade-rise { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+.hf2 .tab-fade { animation: hf2-fade-rise var(--mo-base) var(--mo-ease) both; }
+
+/* ---- .x-fade : skeleton → content crossfade (key by loading state) ---- */
+@keyframes hf2-fade { from { opacity: 0; } to { opacity: 1; } }
+.hf2 .x-fade { animation: hf2-fade var(--mo-base) var(--mo-ease) both; }
+
+/* ---- modal / overlay entrance ----
+   .mo-backdrop fades the dim layer (opacity only — no transform, so a
+   full-screen `inset:0` overlay never shifts). .mo-pop scales+rises the dialog. */
+@keyframes hf2-backdrop { from { opacity: 0; } to { opacity: 1; } }
+@keyframes hf2-pop { from { opacity: 0; transform: translateY(8px) scale(0.985); } to { opacity: 1; transform: none; } }
+.hf2 .mo-backdrop { animation: hf2-backdrop var(--mo-base) var(--mo-ease) both; }
+.hf2 .mo-pop { animation: hf2-pop var(--mo-base) var(--mo-ease) both; }
+
+/* ---- nav drawer drop-in ---- */
+@keyframes hf2-drawer { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+.hf2 .navdrawer { animation: hf2-drawer var(--mo-base) var(--mo-ease) both; }
+
+/* ============================================================
+   Global reduced-motion guard — every animation degrades to instant.
+   Content still reaches its end state (we animate FROM hidden, and
+   useReveal/useCountUp set their final state synchronously here).
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .hf2 *, .hf2 *::before, .hf2 *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

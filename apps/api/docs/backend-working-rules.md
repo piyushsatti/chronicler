@@ -1,45 +1,41 @@
 # Backend working rules
 
-As-built backend discipline for `apps/api`. Session commit footgun summarized in [AGENTS.md](/AGENTS.md).
+Working discipline for the Go API and worker in `apps/api`. [AGENTS.md](/AGENTS.md) owns the repository rules; current code and the accepted decisions below supersede imported Python implementation guidance.
 
-## Layer boundaries (target)
+## Transport and layer boundaries
 
 ```text
-GraphQL adapter → service → repo → ORM
+GraphQL tree read / REST command or fixed read → command/query → repository → sqlc/pgx
 ```
 
-- GraphQL modules are thin adapters: no raw SQLAlchemy queries; types map from ORM instances via `from_orm()` static methods.
-- Services own business logic and write orchestration; they do not commit.
-- Repos: one per aggregate root, flush only, return ORM model instances directly.
-- New work follows the target under `apps/api/src/pi/chronicler/api/`. Quest is the reference vertical slice.
+- Follow [D40](/apps/api/docs/decisions/D40-GraphQL-Versus-REST.md): GraphQL serves selected trees of related fields; REST owns commands, fixed-shape reads and reads that write. Routing authority is [field-routing.md](/packages/contracts/field-routing.md), with wire shapes in [OpenAPI](/packages/contracts/openapi.yaml) and the contract SDL.
+- Adapters decode and validate input, establish caller authority, call a command/query and map its result. Domain rules and transaction orchestration belong in the owning slice.
+- New API code belongs under `apps/api/internal/`. The [quest commands](/apps/api/internal/quest/command.go) and [repository interface](/apps/api/internal/quest/repository.go) demonstrate the transaction boundary; their presence does not certify every quest behavior as complete.
 
-## Sessions commit explicitly (the footgun)
+## Commands own one transaction
 
-`get_session()` does not auto-commit. Every write-path GraphQL resolver or FastAPI router must call `await session.commit()` before returning, or rows are flushed but never persisted. Read resolvers never commit.
+A command executes related writes through [uow.Runner.Do](/apps/api/internal/platform/uow/uow.go). The [pgx runner](/apps/api/internal/platform/db/db.go) binds repositories to one transaction, commits when the callback returns nil and rolls back otherwise. Repositories never commit; handlers do not add a second commit. Return each write failure from the callback so it cannot commit partial work.
 
-Related interface: [session-audience](/docs/interfaces/session-audience.md).
+Aggregate changes, their history and durable job enqueue belong in the same transaction when they form one command. Run remote HTTP/model work outside that transaction. Read-only paths do not mutate state. Memory implementations are local/test substitutes and do not prove Postgres persistence or concurrency.
 
-## Pydantic at every boundary
+## Expected failures are values
 
-Raw input → parsed shape → ORM/read model → API output. Never skip a layer.
+Keep [D25's expected-failure principle](/apps/api/docs/decisions/D25-Expected-Failures-Are-Values.md), translated to Go: return typed values from the shared [apierr vocabulary](/apps/api/internal/platform/apierr/apierr.go). REST adapters use `apierr.Write` to emit `application/problem+json`; unexpected errors become opaque 500 responses. The imported D25 Python dataclasses, pyright and GraphQL mutation-union details do not prescribe the current Go/REST implementation.
 
-## Event sourcing
+Validate request shape and domain constraints at their owning boundaries. Do not treat an ignored error or zero affected rows as a successful state transition. Authentication and authorization remain explicit; public serialization must respect audience rules such as [session-audience](/docs/interfaces/session-audience.md).
 
-Events are append-only. Current state is computed by replaying events. Materialized views are a read optimization, never the source of truth.
+## Database and background work
 
-## Database conventions
-
-- SQLAlchemy 2.0 async style only, sessions via `async_session_maker`.
-- Hex coordinates are plain axial integer columns (`atlas_id`, `q`, `r`). No PostGIS in the product model.
-- JSONB holds flexible metadata where the schema allows it.
-- Append-only ledger tables record history (see API-local [D16](/apps/api/docs/decisions/D16-Ledgers-Share-A-Shape-Not-A-Table.md)).
-
-## Testing
-
-- pytest-asyncio throughout; test DB fixtures roll back transactions between tests.
-- Repo tests run against real Postgres, never mocked storage.
-- Never mock domain logic; test it directly.
-
-## Ingest
+- [D42](/apps/api/docs/decisions/D42-Worker-And-Migrations.md) selects fresh Postgres and Goose. SQL migrations in `apps/api/db/migrations` define schema; queries in `apps/api/db/queries` generate `internal/platform/dbgen` through [sqlc configuration](/apps/api/sqlc.yaml). Change source inputs and regenerate; do not hand-edit generated files.
+- Use pgx repositories and explicit transactions. Do not copy SQLAlchemy session/flush/commit patterns into Go. Hex coordinates remain axial integer columns; JSONB is used where the schema allows flexible data.
+- Preserve append-only history where an aggregate defines it ([D16](/apps/api/docs/decisions/D16-Ledgers-Share-A-Shape-Not-A-Table.md)). The current backend also persists aggregate state directly; a universal event-replay source-of-truth claim is not an as-built rule.
+- `cmd/worker` owns Discord delivery and scheduled jobs. [D43](/apps/api/docs/decisions/D43-Agent-Worker-HTTP-Claim.md) and [agent-qa-http](/docs/interfaces/agent-qa-http.md) give the API durable question ownership and the Python agent HTTP claim/complete; the model stays in `apps/agent`.
+- [D44](/apps/api/docs/decisions/D44-Leased-Work-With-Fencing.md) gives `background_jobs` sole lifecycle authority, post-lock clock sampling, expiry/reclaim and receipt-fenced completion. [Background work](/apps/api/docs/background-work.md) records budgets and limits. Validate recovery against disposable Postgres and the actual consumer; source implementation alone is not execution evidence.
 
 Discord gateway events arrive through the bot forwarding to the API ingest path. Interfaces: [discord-ingest](/docs/interfaces/discord-ingest.md), [discord-sensor](/docs/interfaces/discord-sensor.md).
+
+## Verification
+
+- Test domain behavior directly with Go tests and adapter/contract tests at the wire boundary. Test persistence, atomicity, locking and recovery against an explicitly admitted disposable Postgres database; a fake store is not that evidence.
+- Follow [README verification commands](/README.md) and [contribution gates](/CONTRIBUTING.md). Repository instructions require `scripts/verify` for covered app changes and `python3 scripts/docs-lint.py` for documentation.
+- Report each executed check and any skipped or unavailable database/service lane separately. A passing unit suite or route-registration test does not establish behavioral parity, recovery or live service effectiveness.

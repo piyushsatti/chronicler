@@ -1,0 +1,6 @@
+import { useMutation } from '@tanstack/react-query';
+import { saveProfile } from '../adapters/profileAdapter.js';
+export function useOwnerActions() {
+  const save = useMutation({ mutationFn: saveProfile });
+  return <button onClick={() => save.mutate()}>Save</button>;
+}

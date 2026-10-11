@@ -63,7 +63,10 @@ export function stripComments(source: string): string {
   return out;
 }
 
-export function sensorViolations(source: string, allowed: readonly string[] = SENSOR_API_PATHS): string[] {
+export function sensorViolations(
+  source: string,
+  allowed: readonly string[] = SENSOR_API_PATHS,
+): string[] {
   const code = stripComments(source);
   const found: string[] = [];
   for (const rule of FORBIDDEN) {
@@ -88,23 +91,31 @@ function sourceFiles(dir: string): string[] {
 
 describe('discord-sensor', () => {
   it('rejects announce, scheduled-event, GraphQL, and database code', () => {
-    expect(sensorViolations('guild.scheduledEvents.create()')).toContain('scheduled events');
+    expect(sensorViolations('guild.scheduledEvents.create()')).toContain(
+      'scheduled events',
+    );
     expect(sensorViolations("fetch('/v1/graphql')")).toContain('graphql');
-    expect(sensorViolations("import Database from 'better-sqlite3'")).toContain('database');
+    expect(sensorViolations("import Database from 'better-sqlite3'")).toContain(
+      'database',
+    );
     expect(sensorViolations("fetch('/v1/quests/announce')")).toContain(
       'undeclared route /v1/quests/announce',
     );
   });
 
   it('ignores the same words inside comments', () => {
-    expect(sensorViolations('// GuildScheduledEvents was removed\nconst ok = 1;')).toEqual([]);
+    expect(
+      sensorViolations('// GuildScheduledEvents was removed\nconst ok = 1;'),
+    ).toEqual([]);
   });
 
   it('the default bot does not call the agent question route', () => {
     expect(sensorViolations("fetch('/v1/agent/questions')")).toContain(
       'undeclared route /v1/agent/questions',
     );
-    const files = sourceFiles(srcRoot).filter((file) => !file.includes(`${path.sep}agent${path.sep}`));
+    const files = sourceFiles(srcRoot).filter(
+      (file) => !file.includes(`${path.sep}agent${path.sep}`),
+    );
     const violations = files.flatMap((file) =>
       sensorViolations(readFileSync(file, 'utf8')).map(
         (violation) => `${path.relative(srcRoot, file)}: ${violation}`,
@@ -117,7 +128,9 @@ describe('discord-sensor', () => {
   });
 
   it('the agent module may call /v1/agent/questions when the flag turns it on', () => {
-    expect(sensorViolations("fetch('/v1/agent/questions')", AGENT_API_PATHS)).toEqual([]);
+    expect(sensorViolations("fetch('/v1/agent/questions')", AGENT_API_PATHS)).toEqual(
+      [],
+    );
     const agentRoot = path.join(srcRoot, 'agent');
     const violations = sourceFiles(agentRoot).flatMap((file) =>
       sensorViolations(readFileSync(file, 'utf8'), AGENT_API_PATHS).map(

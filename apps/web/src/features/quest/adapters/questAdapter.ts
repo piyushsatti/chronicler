@@ -20,11 +20,28 @@ export type QuestBoardItemView = {
   shortCode: string;
   title: string;
   status: string;
+  machineStatus: string;
   scheduledAt: string;
   slotsMax: number;
   filledCount: number;
   dmName: string | null;
   discordDelivery: DiscordDeliveryView;
+};
+
+export type QuestListFilters = Readonly<{
+  status?: string;
+  displayStatus?: string;
+}>;
+
+export type QuestListRequest = {
+  filters: QuestListFilters;
+  limit: number;
+  offset: number;
+};
+
+export type QuestListView = {
+  items: QuestBoardItemView[];
+  total: number;
 };
 
 export type QuestParticipantView = {
@@ -67,6 +84,7 @@ function mapBoardItem(
     shortCode: item.shortCode,
     title: item.briefDocument?.title ?? item.shortCode,
     status: item.displayStatus ?? item.status,
+    machineStatus: item.status,
     scheduledAt: item.scheduledAt,
     slotsMax: item.slotsMax,
     filledCount: item.filledCount,
@@ -78,6 +96,32 @@ function mapBoardItem(
 const BOARD_QUERY = `
   query QuestBoard($limit: Int!) {
     questBoard(limit: $limit) {
+      total
+      items {
+        id
+        shortCode
+        status
+        scheduledAt
+        slotsMax
+        filledCount
+        displayStatus
+        dm { handle displayName }
+        briefDocument { id slug title }
+        discordDelivery {
+          desiredRevision
+          appliedRevision
+          overallStatus
+          nextRetryAt
+          errorMessage
+        }
+      }
+    }
+  }
+`;
+
+const LIST_QUERY = `
+  query QuestList($filters: QuestV2FiltersInput!, $limit: Int!, $offset: Int!) {
+    quests(filters: $filters, limit: $limit, offset: $offset) {
       total
       items {
         id
@@ -142,6 +186,18 @@ export function parseQuestBoard(wire: unknown): AdapterResult<QuestBoardItemView
   return { ok: true, data: parsed.data.items.map(mapBoardItem) };
 }
 
+/** Generic list selects the same card fields as the retained board operation. */
+export function parseQuestList(wire: unknown): AdapterResult<QuestListView> {
+  const parsed = questBoardWireSchema.safeParse(wire);
+  if (!parsed.success) {
+    return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
+  }
+  return {
+    ok: true,
+    data: { items: parsed.data.items.map(mapBoardItem), total: parsed.data.total },
+  };
+}
+
 export function parseQuestDetail(wire: unknown): AdapterResult<QuestDetailView> {
   const parsed = questDetailWireSchema.safeParse(wire);
   if (!parsed.success) {
@@ -176,6 +232,25 @@ export async function loadQuestBoard(): Promise<QuestBoardItemView[]> {
     return result.data;
   } catch (err) {
     throw toAppError(err, 'quest:board');
+  }
+}
+
+export async function loadQuestList(request: QuestListRequest): Promise<QuestListView> {
+  try {
+    const data = await graphqlRequest<{ quests: unknown }>(LIST_QUERY, request);
+    const result = parseQuestList(data.quests);
+    if (!result.ok) throw toAppError({ failure: result.failure }, 'quest:list');
+    // A nonempty population cannot yield an empty first page with a positive limit.
+    // Count-only and exhausted offset reads are valid generic list responses.
+    if (
+      request.offset === 0 && request.limit > 0 &&
+      result.data.items.length === 0 && result.data.total > 0
+    ) {
+      throw toAppError({ failure: 'InvalidWire' }, 'quest:list');
+    }
+    return result.data;
+  } catch (err) {
+    throw toAppError(err, 'quest:list');
   }
 }
 

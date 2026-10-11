@@ -33,12 +33,12 @@ operator review.
 
 ## Meaning and recovery
 
-| State | Meaning | Recovery |
-|---|---|---|
-| `FAILED` | Discord rejected or could not complete a bounded operation with no known identity ambiguity. | Correct availability/configuration, then use one manual retry. |
-| `RATE_LIMITED` | The local retry budget or Discord `429` delayed the operation. | Wait at least `retryAfterSeconds`; do not loop. |
-| `REPAIR_REQUIRED` with stored ID | The stored object is missing/inaccessible, a thread failed after message creation, or an event cannot enter the required terminal state. | Inspect the exact object and permissions. An owner authorizes any remote deletion, replacement, or stored-ID repair. |
-| `REPAIR_REQUIRED` without stored ID | Creation may have succeeded without a response, or multiple marker matches exist. | Search Discord by quest marker/backlink and creation time. Adopt one unambiguous object through an owner-reviewed repair; resolve duplicates before retrying. |
+| State                               | Meaning                                                                                                                                  | Recovery                                                                                                                                                      |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `FAILED`                            | Discord rejected or could not complete a bounded operation with no known identity ambiguity.                                             | Correct availability/configuration, then use one manual retry.                                                                                                |
+| `RATE_LIMITED`                      | The local retry budget or Discord `429` delayed the operation.                                                                           | Wait at least `retryAfterSeconds`; do not loop.                                                                                                               |
+| `REPAIR_REQUIRED` with stored ID    | The stored object is missing/inaccessible, a thread failed after message creation, or an event cannot enter the required terminal state. | Inspect the exact object and permissions. An owner authorizes any remote deletion, replacement, or stored-ID repair.                                          |
+| `REPAIR_REQUIRED` without stored ID | Creation may have succeeded without a response, or multiple marker matches exist.                                                        | Search Discord by quest marker/backlink and creation time. Adopt one unambiguous object through an owner-reviewed repair; resolve duplicates before retrying. |
 
 A message creation timeout is ambiguous because Discord may have accepted the
 request. The bridge does not guess. The stable nonce protects only Discord's

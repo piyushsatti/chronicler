@@ -1,12 +1,9 @@
 import type { PageDeclaration } from '@pi/react-imposition';
 import { PageHost, type PageRegionRenderers } from '@pi/react-imposition/react';
-import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'react-router-dom';
-import { queryKeys } from '../../../api/queryKeys.js';
 import { PageShell } from '../../../components/foundation/PageShell.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
-import { toAppError } from '../../../errors/toAppError.js';
-import { loadDocument } from '../adapters/documentAdapter.js';
+import { useDocumentPage } from '../hooks/useDocumentPage.js';
 
 const DECLARATION: PageDeclaration = {
   page: 'document',
@@ -15,26 +12,17 @@ const DECLARATION: PageDeclaration = {
 
 export function DocumentPage(): React.JSX.Element {
   const { slug = '' } = useParams();
-  const q = useQuery({
-    queryKey: queryKeys.document(slug),
-    queryFn: () => loadDocument(slug),
-    enabled: Boolean(slug),
-  });
+  const page = useDocumentPage(slug);
 
   let regions: PageRegionRenderers;
-  if (q.isError) {
+  if (page.status === 'error') {
     regions = {
-      body: () => (
-        <StatePanel
-          status="error"
-          error={toAppError(q.error, 'document:page')}
-        />
-      ),
+      body: () => <StatePanel status="error" error={page.error} />,
     };
-  } else if (q.isLoading || !q.data) {
+  } else if (page.status === 'loading') {
     regions = { body: () => <StatePanel status="loading" /> };
   } else {
-    const doc = q.data;
+    const doc = page.view;
     regions = {
       body: () => (
         <article className="stack">
@@ -54,7 +42,7 @@ export function DocumentPage(): React.JSX.Element {
   }
 
   return (
-    <PageShell title={q.data?.title ?? 'Document'}>
+    <PageShell title={page.status === 'ready' ? page.view.title : 'Document'}>
       <PageHost declaration={DECLARATION} regions={regions} />
     </PageShell>
   );

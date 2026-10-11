@@ -6,7 +6,7 @@ Identity rules, invariants, and **non-synonyms**—what must not be collapsed ev
 
 Product purpose and authority boundaries: [README](/docs/semantics/README.md) (opening). Never derive role authority from a UI label alone. The [systems map](/docs/systems.md) owns product shape; these rules travel with the application for implementers.
 
-**Term:** *persisted domain event* (N26) means an append-only business or audit record tied to an entity—not DDD “domain layer,” not a Discord Gateway event, and not a queue message.
+**Term:** _persisted domain event_ (N26) means an append-only business or audit record tied to an entity—not DDD “domain layer,” not a Discord Gateway event, and not a queue message.
 
 ## Non-synonyms (background and ops)
 

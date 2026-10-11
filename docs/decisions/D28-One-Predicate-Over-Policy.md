@@ -25,13 +25,13 @@ Search **coverage** (quests, characters, etc.) remains a product call; **access*
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
-| Patch `scope_predicate` to also read `policy` | Still two implementations of one matrix; convention already drifted once |
-| Compile policy down to `visibility` | Three enum values cannot express arbitrary principals; rounding toward `public` leaks |
-| Forbid policy-only writes at mutation | Fixes one path; vestigial `visibility` remains wrong after #143 |
-| Deny all policy-scoped rows in listings | Fail-closed but breaks intentional sharing lists |
-| Per-viewer server index cache | Premise died with connection-floor measurement ([D27](/docs/decisions/D27-One-Session-Per-Request.md)) |
+| Alternative                                   | Why not                                                                                                |
+| --------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Patch `scope_predicate` to also read `policy` | Still two implementations of one matrix; convention already drifted once                               |
+| Compile policy down to `visibility`           | Three enum values cannot express arbitrary principals; rounding toward `public` leaks                  |
+| Forbid policy-only writes at mutation         | Fixes one path; vestigial `visibility` remains wrong after #143                                        |
+| Deny all policy-scoped rows in listings       | Fail-closed but breaks intentional sharing lists                                                       |
+| Per-viewer server index cache                 | Premise died with connection-floor measurement ([D27](/docs/decisions/D27-One-Session-Per-Request.md)) |
 
 ## Consequences
 

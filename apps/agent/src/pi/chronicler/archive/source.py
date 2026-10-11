@@ -348,10 +348,7 @@ class ArchiveSource:
         return tuple(current[item] for item in identifiers if item in current)
 
     def _can_attempt_live_promotion(self, live_ids: Sequence[str]) -> bool:
-        if (
-            self._bootstrap_source is None
-            or self._bootstrap_min_live_documents is None
-        ):
+        if self._bootstrap_source is None or self._bootstrap_min_live_documents is None:
             return False
         identifiers = set(live_ids)
         return (

@@ -21,12 +21,12 @@
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
-| Separate NPC, Faction and generic editors | They had already drifted in fields, access controls, routes and feature coverage. A second surface makes every future capability a synchronization task |
-| One generic form with every field always visible | It exposes irrelevant vocabulary and makes the category meaningless to the author. One implementation can still adapt its field set |
-| Default new entries to Artifact | It creates incorrectly classified documents through omission and hid the missing NPC/Faction options that prompted this ruling |
-| Let campaign roles edit another author's entry | A role describes campaign responsibility, not authorship. Cross-author mutation remains an explicit admin override under D14 |
+| Alternative                                      | Why not                                                                                                                                                 |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Separate NPC, Faction and generic editors        | They had already drifted in fields, access controls, routes and feature coverage. A second surface makes every future capability a synchronization task |
+| One generic form with every field always visible | It exposes irrelevant vocabulary and makes the category meaningless to the author. One implementation can still adapt its field set                     |
+| Default new entries to Artifact                  | It creates incorrectly classified documents through omission and hid the missing NPC/Faction options that prompted this ruling                          |
+| Let campaign roles edit another author's entry   | A role describes campaign responsibility, not authorship. Cross-author mutation remains an explicit admin override under D14                            |
 
 ## Consequences
 

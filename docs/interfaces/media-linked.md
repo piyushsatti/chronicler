@@ -10,9 +10,9 @@ Chronicler links to media; it does not host object storage for campaign assets a
 
 ## Enforcement
 
-| Mechanism | Location | Status |
-| --- | --- | --- |
-| Lint / absence of hosting upload surface | API/web | **not enforced** |
+| Mechanism                                | Location | Status           |
+| ---------------------------------------- | -------- | ---------------- |
+| Lint / absence of hosting upload surface | API/web  | **not enforced** |
 
 ## Provider
 

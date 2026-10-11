@@ -1,5 +1,10 @@
 import { EventEmitter } from 'node:events';
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import {
+  createServer,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse,
+} from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { ChannelType } from 'discord.js';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
@@ -114,7 +119,9 @@ it('terminal disconnect exits and does not reply to an in-flight question', asyn
   const { start } = await import('@discord/session.js');
   await start({ client: client as never, exit });
   client.emit('messageCreate', mention(reply));
-  await vi.waitFor(() => expect(seen.some((line) => line.startsWith('GET '))).toBe(true));
+  await vi.waitFor(() =>
+    expect(seen.some((line) => line.startsWith('GET '))).toBe(true),
+  );
   client.emit('shardDisconnect', { code: 4004, reason: '', wasClean: false }, 0);
   await new Promise((resolve) => setTimeout(resolve, 50));
   expect(exit).toHaveBeenCalledWith(1);
@@ -150,7 +157,9 @@ it('does not reply when the API completes after stop', async () => {
     if (response.writableEnded || response.destroyed) continue;
     try {
       response.writeHead(200, { 'content-type': 'application/json' });
-      response.end(JSON.stringify({ ...completedQuestion('Too late.'), job_id: jobId }));
+      response.end(
+        JSON.stringify({ ...completedQuestion('Too late.'), job_id: jobId }),
+      );
     } catch {
       // The poll abort may already have closed the socket.
     }

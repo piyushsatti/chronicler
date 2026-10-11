@@ -12,35 +12,35 @@ Chronicler is the record-keeping platform for a West Marches D&D community. Memb
 
 ## The fifteen systems
 
-| System | Answers | Page |
-| --- | --- | --- |
-| Identity and access | Who are you, and what may you do | [systems/identity-lifecycle.md](/docs/systems/identity-lifecycle.md) |
-| Documents and audience | Who wrote this, and who may read it | [systems/documents-and-audience.md](/docs/systems/documents-and-audience.md) |
-| Quests and play | How a game gets run and recorded | [systems/quests-and-play.md](/docs/systems/quests-and-play.md) |
-| World and map | Where things are, and who knows they exist | [systems/world-and-map.md](/docs/systems/world-and-map.md) |
-| Characters | Who owns a character sheet and who may change it | [systems/characters.md](/docs/systems/characters.md) |
-| Game time | What the in-world date is | [systems/time-and-the-calendar.md](/docs/systems/time-and-the-calendar.md) |
-| Data model | What the nouns are and where their boundaries run | [systems/data-model.md](/docs/systems/data-model.md) |
-| Request path | What happens between a click and a row | [systems/serving-a-request.md](/docs/systems/serving-a-request.md) |
-| Frontend | How the browser fetches, caches, and renders | [systems/frontend.md](/docs/systems/frontend.md) |
-| Discord | What the bot may and may not do | [systems/discord-bot.md](/docs/systems/discord-bot.md) |
-| Agent Q&A | How a mention becomes a grounded public answer | [systems/agent-qa.md](/docs/systems/agent-qa.md) |
-| Work and scheduling | What runs without a person asking | [systems/work-and-scheduling.md](/docs/systems/work-and-scheduling.md) |
-| Operations | How it ships, backs up, and tells you it broke | [systems/operations.md](/docs/systems/operations.md) |
-| Community and social | How members find, follow, and ask things of each other | [systems/community-and-social.md](/docs/systems/community-and-social.md) |
+| System                      | Answers                                                 | Page                                                                                   |
+| --------------------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Identity and access         | Who are you, and what may you do                        | [systems/identity-lifecycle.md](/docs/systems/identity-lifecycle.md)                   |
+| Documents and audience      | Who wrote this, and who may read it                     | [systems/documents-and-audience.md](/docs/systems/documents-and-audience.md)           |
+| Quests and play             | How a game gets run and recorded                        | [systems/quests-and-play.md](/docs/systems/quests-and-play.md)                         |
+| World and map               | Where things are, and who knows they exist              | [systems/world-and-map.md](/docs/systems/world-and-map.md)                             |
+| Characters                  | Who owns a character sheet and who may change it        | [systems/characters.md](/docs/systems/characters.md)                                   |
+| Game time                   | What the in-world date is                               | [systems/time-and-the-calendar.md](/docs/systems/time-and-the-calendar.md)             |
+| Data model                  | What the nouns are and where their boundaries run       | [systems/data-model.md](/docs/systems/data-model.md)                                   |
+| Request path                | What happens between a click and a row                  | [systems/serving-a-request.md](/docs/systems/serving-a-request.md)                     |
+| Frontend                    | How the browser fetches, caches, and renders            | [systems/frontend.md](/docs/systems/frontend.md)                                       |
+| Discord                     | What the bot may and may not do                         | [systems/discord-bot.md](/docs/systems/discord-bot.md)                                 |
+| Agent Q&A                   | How a mention becomes a grounded public answer          | [systems/agent-qa.md](/docs/systems/agent-qa.md)                                       |
+| Work and scheduling         | What runs without a person asking                       | [systems/work-and-scheduling.md](/docs/systems/work-and-scheduling.md)                 |
+| Operations                  | How it ships, backs up, and tells you it broke          | [systems/operations.md](/docs/systems/operations.md)                                   |
+| Community and social        | How members find, follow, and ask things of each other  | [systems/community-and-social.md](/docs/systems/community-and-social.md)               |
 | Personalization and unlocks | What a member can change, and what they must earn first | [systems/personalization-and-unlocks.md](/docs/systems/personalization-and-unlocks.md) |
 
 ## Seams → interfaces
 
-| Seam | Interface |
-| --- | --- |
-| Browser to API (JWT identity only) | [live-authority](/docs/interfaces/live-authority.md) |
-| API to database (one session; audience bound) | [session-audience](/docs/interfaces/session-audience.md) |
-| Document to reader (body already scoped) | [scoped-body](/docs/interfaces/scoped-body.md) |
-| Discord to the record (observations, never facts) | [discord-sensor](/docs/interfaces/discord-sensor.md) |
-| Discord / agent / API Q&A jobs (HTTP, no broker) | [agent-qa-http](/docs/interfaces/agent-qa-http.md) |
-| Shared GraphQL SDL | [graphql-schema](/docs/interfaces/graphql-schema.md) |
-| Production releases | [actions-releases](/docs/interfaces/actions-releases.md) |
+| Seam                                              | Interface                                                |
+| ------------------------------------------------- | -------------------------------------------------------- |
+| Browser to API (JWT identity only)                | [live-authority](/docs/interfaces/live-authority.md)     |
+| API to database (one session; audience bound)     | [session-audience](/docs/interfaces/session-audience.md) |
+| Document to reader (body already scoped)          | [scoped-body](/docs/interfaces/scoped-body.md)           |
+| Discord to the record (observations, never facts) | [discord-sensor](/docs/interfaces/discord-sensor.md)     |
+| Discord / agent / API Q&A jobs (HTTP, no broker)  | [agent-qa-http](/docs/interfaces/agent-qa-http.md)       |
+| Shared GraphQL SDL                                | [graphql-schema](/docs/interfaces/graphql-schema.md)     |
+| Production releases                               | [actions-releases](/docs/interfaces/actions-releases.md) |
 
 ## Related
 

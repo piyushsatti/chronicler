@@ -86,7 +86,7 @@ Automated tests cover detection and messaging. Role-change end-to-end without a 
 
 ## Product surface (this completion bar)
 
-Bottom bar (exactly five): Home, Quests, Characters, Codex, Map. Account (`/login`), Admin, Verify, and Search are off-bar links from Account / Home. Wire only through feature adapters; MSW stands in for stubbed Go routes under `VITE_API_MODE=mock`.
+Primary navigation has exactly six destinations: Home (`/`), Quests (`/quests`), Chronicles (`/chronicles`), Codex (`/codex`), Rules (`/rules`), and Community (`/community`), matching `PRIMARY_DESTINATIONS` in [`destinations.ts`](/apps/web/src/chrome/destinations.ts). Verification (`/admin/review`) is an additional link for members with `canVerify`; it is not a primary destination. Other routes, including Characters and Map, remain accessible through their existing route and link flows. This choice changes the primary destination list only. The responsive shell continues to allocate navigation through `@pi/react-imposition` and `navPatternFor`; `PageHost` remains the page composition boundary above.
 
 ## Contract gaps (do not invent wire)
 

@@ -8,16 +8,16 @@ This is product language—not syntax (schema field names), not DDD “domain”
 
 ## Facets
 
-| Facet | File | Holds |
-| --- | --- | --- |
-| Index | this README | Entry point |
-| Actors | [actors.md](/docs/semantics/actors.md) | Who may act (A-ids) |
-| Nouns | [nouns.md](/docs/semantics/nouns.md) | Things and relationships (N-ids) |
-| Verbs | [verbs.md](/docs/semantics/verbs.md) | Actions and contracts (V-ids) |
-| Goals | [goals.md](/docs/semantics/goals.md) | Journeys built from verbs (G-ids) |
-| Taxonomy | [taxonomy.md](/docs/semantics/taxonomy.md) | Kinds, categories, state sets |
-| Mereology | [mereology.md](/docs/semantics/mereology.md) | Part–whole and composition |
-| Ontology | [ontology.md](/docs/semantics/ontology.md) | Invariants and non-synonym rules |
+| Facet     | File                                         | Holds                             |
+| --------- | -------------------------------------------- | --------------------------------- |
+| Index     | this README                                  | Entry point                       |
+| Actors    | [actors.md](/docs/semantics/actors.md)       | Who may act (A-ids)               |
+| Nouns     | [nouns.md](/docs/semantics/nouns.md)         | Things and relationships (N-ids)  |
+| Verbs     | [verbs.md](/docs/semantics/verbs.md)         | Actions and contracts (V-ids)     |
+| Goals     | [goals.md](/docs/semantics/goals.md)         | Journeys built from verbs (G-ids) |
+| Taxonomy  | [taxonomy.md](/docs/semantics/taxonomy.md)   | Kinds, categories, state sets     |
+| Mereology | [mereology.md](/docs/semantics/mereology.md) | Part–whole and composition        |
+| Ontology  | [ontology.md](/docs/semantics/ontology.md)   | Invariants and non-synonym rules  |
 
 Formal **ontology** here means identity commitments and forbidden equivalences—not the whole folder.
 

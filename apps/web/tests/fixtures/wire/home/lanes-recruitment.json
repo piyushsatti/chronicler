@@ -1,0 +1,88 @@
+{
+  "questBoard": {
+    "items": [
+      {
+        "id": "de03c728-bef6-53e0-995c-567bd5172a4f",
+        "shortCode": "Q-417",
+        "status": "open",
+        "scheduledAt": "2026-06-20T20:00:00Z",
+        "slotsMax": 6,
+        "filledCount": 4,
+        "displayStatus": "filling",
+        "dm": {
+          "handle": "@_coolpants",
+          "displayName": "@_coolpants"
+        },
+        "briefDocument": {
+          "id": "57572244-aaee-5740-88c4-8c6863972cf0",
+          "slug": "q-417-brief",
+          "title": "The Hound of Culann"
+        },
+        "discordDelivery": {
+          "desiredRevision": 0,
+          "appliedRevision": 0,
+          "overallStatus": "skipped"
+        }
+      },
+      {
+        "id": "8863e160-393f-590d-a400-dab034914bc9",
+        "shortCode": "Q-419",
+        "status": "open",
+        "scheduledAt": "2026-06-14T00:00:00.000Z",
+        "slotsMax": 4,
+        "filledCount": 2,
+        "displayStatus": "filling",
+        "dm": {
+          "handle": "@mortal.bard",
+          "displayName": "@mortal.bard"
+        },
+        "briefDocument": {
+          "id": "1f49316d-e38c-5cdb-b38c-db70085fcd63",
+          "slug": "q-419-brief",
+          "title": "Lily's Nightmares"
+        },
+        "discordDelivery": {
+          "desiredRevision": 0,
+          "appliedRevision": 0,
+          "overallStatus": "skipped"
+        }
+      },
+      {
+        "id": "4557d8fc-82b7-5124-b648-b94017124a75",
+        "shortCode": "Q-420",
+        "status": "open",
+        "scheduledAt": "2026-06-21T19:00:00Z",
+        "slotsMax": 6,
+        "filledCount": 5,
+        "displayStatus": "filling",
+        "dm": {
+          "handle": "@kd29",
+          "displayName": "@kd29"
+        },
+        "briefDocument": {
+          "id": "0925e28c-aeea-50f0-9f02-72badfc6d9e1",
+          "slug": "q-420-brief",
+          "title": "Pawluck Region Story Finale"
+        },
+        "discordDelivery": {
+          "desiredRevision": 0,
+          "appliedRevision": 0,
+          "overallStatus": "skipped"
+        }
+      }
+    ],
+    "total": 3
+  },
+  "quests": {
+    "items": [],
+    "total": 0
+  },
+  "recentlyClosedQuests": {
+    "items": [],
+    "total": 0
+  },
+  "communityDirectory": {
+    "entries": [],
+    "total": 0
+  }
+}

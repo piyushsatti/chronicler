@@ -11,6 +11,7 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/member"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
+	"github.com/piyushsatti/chronicler/apps/api/internal/quest"
 	"github.com/piyushsatti/chronicler/apps/api/internal/site"
 )
 
@@ -68,8 +69,8 @@ func (r *queryResolver) MemberProfile(ctx context.Context, handle string) (*Memb
 		})
 	}
 	return &MemberProfileType{
-		Member:       toMemberType(m),
-		Availability: slots,
+		Member:          toMemberType(m),
+		Availability:    slots,
 		ActivitySummary: &ActivitySummaryType{},
 		RecentWeeks:     []*WeekActivityType{},
 	}, nil
@@ -99,20 +100,18 @@ func (r *queryResolver) MyPersonalization(ctx context.Context) (*MyPersonalizati
 func (r *queryResolver) Document(ctx context.Context, slug string) (*DocumentType, error) {
 	d, err := r.Services.Documents.BySlug(ctx, slug)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
-	body, _ := d.EffectiveBody(r.Services.Documents.ScopeFromContext(ctx))
-	return toDocumentType(d, body), nil
+	return toDocumentType(d, d.Body), nil
 }
 
 // DocumentByID is the resolver for the documentById field.
 func (r *queryResolver) DocumentByID(ctx context.Context, id string) (*DocumentType, error) {
 	d, err := r.Services.Documents.ByID(ctx, id)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
-	body, _ := d.EffectiveBody(r.Services.Documents.ScopeFromContext(ctx))
-	return toDocumentType(d, body), nil
+	return toDocumentType(d, d.Body), nil
 }
 
 // Documents is the resolver for the documents field.
@@ -129,11 +128,9 @@ func (r *queryResolver) Documents(ctx context.Context, filters *DocumentFiltersI
 	if err != nil {
 		return nil, err
 	}
-	scope := r.Services.Documents.ScopeFromContext(ctx)
 	out := make([]*DocumentType, 0, len(items))
 	for _, d := range items {
-		body, _ := d.EffectiveBody(scope)
-		out = append(out, toDocumentType(d, body))
+		out = append(out, toDocumentType(d, d.Body))
 	}
 	return &DocumentListResult{Items: out, Total: int(total)}, nil
 }
@@ -158,17 +155,15 @@ func (r *queryResolver) DocumentBacklinks(ctx context.Context, slug string) ([]*
 
 // CodexDirectory is the resolver for the codexDirectory field.
 func (r *queryResolver) CodexDirectory(ctx context.Context, categoryPrefix *string, search *string, limit int, offset int) (*CodexDirectoryResult, error) {
-	kind := "codex"
+	kind := "codex_entry"
 	f := document.ListFilter{Kind: &kind, Limit: limit, Offset: offset, Search: search, Category: categoryPrefix}
 	items, total, err := r.Services.Documents.List(ctx, f)
 	if err != nil {
 		return nil, err
 	}
-	scope := r.Services.Documents.ScopeFromContext(ctx)
 	out := make([]*DocumentType, 0, len(items))
 	for _, d := range items {
-		body, _ := d.EffectiveBody(scope)
-		out = append(out, toDocumentType(d, body))
+		out = append(out, toDocumentType(d, d.Body))
 	}
 	return &CodexDirectoryResult{Items: out, Total: int(total)}, nil
 }
@@ -196,7 +191,7 @@ func (r *queryResolver) Map(ctx context.Context, atlasCode string) (*MapV2Type, 
 func (r *queryResolver) MapView(ctx context.Context, atlasCode string, limit int, offset int) (*MapViewV2Type, error) {
 	page, err := r.Services.Spatial.MapView(ctx, atlasCode, limit, offset)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 	places := make([]*MapPlaceV2Type, 0, len(page.Places))
 	for _, p := range page.Places {
@@ -301,7 +296,7 @@ func (r *queryResolver) Character(ctx context.Context, id *string, shortCode *st
 // Search is the resolver for the search field.
 func (r *queryResolver) Search(ctx context.Context, query string, kinds []string, limit int, offset int) (*SearchResultV2Type, error) {
 	search := query
-	items, _, err := r.Services.Documents.List(ctx, document.ListFilter{Search: &search, Limit: limit, Offset: offset})
+	items, total, err := r.Services.Documents.List(ctx, document.ListFilter{Search: &search, Limit: limit, Offset: offset})
 	if err != nil {
 		return nil, err
 	}
@@ -311,7 +306,7 @@ func (r *queryResolver) Search(ctx context.Context, query string, kinds []string
 			ID: d.ID, Kind: d.Kind, Slug: d.Slug, Title: d.Title, Snippet: d.Title,
 		})
 	}
-	return &SearchResultV2Type{Query: query, Documents: hits}, nil
+	return &SearchResultV2Type{Query: query, Documents: hits, DocumentTotal: int(total)}, nil
 }
 
 // Home is the resolver for the home field.
@@ -334,11 +329,12 @@ func (r *queryResolver) Quest(ctx context.Context, id *string, shortCode *string
 
 // Quests is the resolver for the quests field.
 func (r *queryResolver) Quests(ctx context.Context, filters *QuestV2FiltersInput, limit int, offset int) (*QuestV2ListResult, error) {
-	var status *string
-	if filters != nil && filters.Status != nil {
-		status = filters.Status
+	filter := quest.ListFilter{Limit: limit, Offset: offset, Order: quest.OldestFirst}
+	if filters != nil {
+		filter.Status, filter.DisplayStatus = filters.Status, filters.DisplayStatus
+		filter.ScheduledFrom, filter.ScheduledTo = filters.ScheduledFrom, filters.ScheduledTo
 	}
-	rows, total, err := r.Services.Quests.List(ctx, status, limit, offset)
+	rows, total, err := r.Services.Quests.List(ctx, filter)
 	if err != nil {
 		return nil, err
 	}
@@ -352,13 +348,29 @@ func (r *queryResolver) Quests(ctx context.Context, filters *QuestV2FiltersInput
 // QuestBoard is the resolver for the questBoard field.
 func (r *queryResolver) QuestBoard(ctx context.Context, regionID *string, limit int, offset int) (*QuestV2ListResult, error) {
 	open := "open"
-	return r.Quests(ctx, &QuestV2FiltersInput{Status: &open}, limit, offset)
+	rows, total, err := r.Services.Quests.List(ctx, quest.ListFilter{Status: &open, Limit: limit, Offset: offset, Order: quest.NewestFirst})
+	if err != nil {
+		return nil, err
+	}
+	items := make([]*QuestV2Type, 0, len(rows))
+	for _, q := range rows {
+		items = append(items, toQuestV2(q))
+	}
+	return &QuestV2ListResult{Items: items, Total: int(total)}, nil
 }
 
 // RecentlyClosedQuests is the resolver for the recentlyClosedQuests field.
 func (r *queryResolver) RecentlyClosedQuests(ctx context.Context, regionID *string, closedSince *time.Time, limit int, offset int) (*QuestV2ListResult, error) {
 	closed := "closed"
-	return r.Quests(ctx, &QuestV2FiltersInput{Status: &closed}, limit, offset)
+	rows, total, err := r.Services.Quests.List(ctx, quest.ListFilter{Status: &closed, Limit: limit, Offset: offset, Order: quest.NewestFirst})
+	if err != nil {
+		return nil, err
+	}
+	items := make([]*QuestV2Type, 0, len(rows))
+	for _, q := range rows {
+		items = append(items, toQuestV2(q))
+	}
+	return &QuestV2ListResult{Items: items, Total: int(total)}, nil
 }
 
 // QuestArcs is the resolver for the questArcs field.

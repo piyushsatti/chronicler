@@ -17,11 +17,11 @@ Discord delivery and scheduled jobs (reconcile, game-time fill, idempotency purg
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
-| Atlas | Goose is SQL-first and matches the "migrations are the schema" rule with less ceremony |
-| Worker inside the API process | Blocks HTTP under Discord rate limits; old design already separated them |
-| API embeds the agent model | Violates the apps/agent boundary |
+| Alternative                   | Why not                                                                                |
+| ----------------------------- | -------------------------------------------------------------------------------------- |
+| Atlas                         | Goose is SQL-first and matches the "migrations are the schema" rule with less ceremony |
+| Worker inside the API process | Blocks HTTP under Discord rate limits; old design already separated them               |
+| API embeds the agent model    | Violates the apps/agent boundary                                                       |
 
 ## Consequences
 

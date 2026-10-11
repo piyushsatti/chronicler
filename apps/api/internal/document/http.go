@@ -49,10 +49,6 @@ func (h HTTP) revisions(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h HTTP) trash(w http.ResponseWriter, r *http.Request) {
-	if !auth.FromContext(r.Context()).Has(auth.Admin) {
-		apierr.Write(w, r, apierr.New(apierr.Forbidden, "admin required"))
-		return
-	}
 	if h.Q.Repo == nil {
 		apierr.Write(w, r, apierr.New(apierr.Invalid, "document store not configured"))
 		return

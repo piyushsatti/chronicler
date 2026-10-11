@@ -1,0 +1,800 @@
+{
+  "schema_version": 1,
+  "definition": "D3/D20 with July 30 long-form seam: closed audience markers and shared finite handle charset; outer gate precedes blocks",
+  "scope": "shared parser/projection vectors; editor runtime must consume these before claiming two-runtime conformance",
+  "body_policy_ruling": {
+    "owner_date": "2026-10-11",
+    "decision": "Enforce per-viewer blocks everywhere (Recommended)",
+    "applies_to": "Every readable document, including SQL NULL and JSON-null policy",
+    "preserves": "Whole-document access, author raw bypass and audited administrator raw bypass",
+    "legacy_tier": "DM/archon outer grants do not bypass member or literal-role block scopes"
+  },
+  "viewer_examples": {
+    "dm": {
+      "member_id": "viewer",
+      "roles": ["dm"],
+      "handle": "Other"
+    },
+    "member": {
+      "member_id": "viewer",
+      "roles": ["player"],
+      "handle": "Exact-Handle"
+    }
+  },
+  "preserved_source_behavior": [
+    "Maximal consecutive blockquote run is one span; nested marker scopes entire run",
+    "Bare marker scopes its own line, including code-fence text",
+    "Malformed outranks handle, then DM, then spoiler; first of multiple valid handle markers is retained",
+    "Ordinary unknown callouts remain visible; spoiler is presentation only",
+    "A closing bracket terminates the marker token; it cannot encode a longer member identity containing that delimiter"
+  ],
+  "open_conformance_gaps": [
+    "Database handles outside [A-Za-z0-9_.-]+ cannot be written as accepted markers; their document-policy member principals remain valid",
+    "No owner ruling independently names multi-handle precedence; first valid handle preserves the examined source",
+    "Frontend save-time validation/editor conformance remains a later independently verified consumer"
+  ],
+  "cases": [
+    {
+      "name": "ordinary prose",
+      "body": "Public intro\n\nPublic end",
+      "spans": [
+        {
+          "text": "Public intro\n\nPublic end",
+          "policy": null,
+          "spoiler": false
+        }
+      ],
+      "public_body": "Public intro\n\nPublic end",
+      "dm_body": "Public intro\n\nPublic end",
+      "member_body": "Public intro\n\nPublic end"
+    },
+    {
+      "name": "normalized '[!dm]'",
+      "body": "Public\n> [!dm]\n> DM-SECRET\n\nAfter",
+      "spans": [
+        {
+          "text": "Public",
+          "policy": null,
+          "spoiler": false
+        },
+        {
+          "text": "> [!dm]\n> DM-SECRET",
+          "policy": ["role:dm"],
+          "spoiler": false
+        },
+        {
+          "text": "\nAfter",
+          "policy": null,
+          "spoiler": false
+        }
+      ],
+      "public_body": "Public\n> [!redacted]\n\nAfter",
+      "dm_body": "Public\n> [!dm]\n> DM-SECRET\n\nAfter",
+      "member_body": "Public\n> [!redacted]\n\nAfter"
+    },
+    {
+      "name": "normalized '[!DM]'",
+      "body": "Public\n> [!DM]\n> DM-SECRET\n\nAfter",
+      "spans": [
+        {
+          "text": "Public",
+          "policy": null,
+          "spoiler": false
+        },
+        {
+          "text": "> [!DM]\n> DM-SECRET",
+          "policy": ["role:dm"],
+          "spoiler": false
+        },
+        {
+          "text": "\nAfter",
+          "policy": null,
+          "spoiler": false
+        }
+      ],
+      "public_body": "Public\n> [!redacted]\n\nAfter",
+      "dm_body": "Public\n> [!DM]\n> DM-SECRET\n\nAfter",
+      "member_body": "Public\n> [!redacted]\n\nAfter"
+    },
+    {
+      "name": "normalized '[!Dm]'",
+      "body": "Public\n> [!Dm]\n> DM-SECRET\n\nAfter",
+      "spans": [
+        {
+          "text": "Public",
+          "policy": null,
+          "spoiler": false
+        },
+        {
+          "text": "> [!Dm]\n> DM-SECRET",
+          "policy": ["role:dm"],
+          "spoiler": false
+        },
+        {
+          "text": "\nAfter",
+          "policy": null,
+          "spoiler": false
+        }
+      ],
+      "public_body": "Public\n> [!redacted]\n\nAfter",
+      "dm_body": "Public\n> [!Dm]\n> DM-SECRET\n\nAfter",
+      "member_body": "Public\n> [!redacted]\n\nAfter"
+    },
+    {
+      "name": "normalized '[! dm ]'",
+      "body": "Public\n> [! dm ]\n> DM-SECRET\n\nAfter",
+      "spans": [
+        {
+          "text": "Public",
+          "policy": null,
+          "spoiler": false
+        },
+        {
+          "text": "> [! dm ]\n> DM-SECRET",
+          "policy": ["role:dm"],
+          "spoiler": false
+        },
+        {
+          "text": "\nAfter",
+          "policy": null,
+          "spoiler": false
+        }
+      ],
+      "public_body": "Public\n> [!redacted]\n\nAfter",
+      "dm_body": "Public\n> [! dm ]\n> DM-SECRET\n\nAfter",
+      "member_body": "Public\n> [!redacted]\n\nAfter"
+    },
+    {
+      "name": "normalized '[!\\tDM\\t]'",
+      "body": "Public\n> [!\tDM\t]\n> DM-SECRET\n\nAfter",
+      "spans": [
+        {
+          "text": "Public",
+          "policy": null,
+          "spoiler": false
+        },
+        {
+          "text": "> [!\tDM\t]\n> DM-SECRET",
+          "policy": ["role:dm"],
+          "spoiler": false
+        },
+        {
+          "text": "\nAfter",
+          "policy": null,
+          "spoiler": false
+        }
+      ],
+      "public_body": "Public\n> [!redacted]\n\nAfter",
+      "dm_body": "Public\n> [!\tDM\t]\n> DM-SECRET\n\nAfter",
+      "member_body": "Public\n> [!redacted]\n\nAfter"
+    },
+    {
+      "name": "exact handle '[!dm:@Exact-Handle]'",
+      "body": "> [!dm:@Exact-Handle]\n> HANDLE-SECRET",
+      "spans": [
+        {
+          "text": "> [!dm:@Exact-Handle]\n> HANDLE-SECRET",
+          "policy": ["member:@Exact-Handle"],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!dm:@Exact-Handle]\n> HANDLE-SECRET"
+    },
+    {
+      "name": "exact handle '[!DM:@Exact-Handle]'",
+      "body": "> [!DM:@Exact-Handle]\n> HANDLE-SECRET",
+      "spans": [
+        {
+          "text": "> [!DM:@Exact-Handle]\n> HANDLE-SECRET",
+          "policy": ["member:@Exact-Handle"],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!DM:@Exact-Handle]\n> HANDLE-SECRET"
+    },
+    {
+      "name": "exact handle '[! dm:@Exact-Handle ]'",
+      "body": "> [! dm:@Exact-Handle ]\n> HANDLE-SECRET",
+      "spans": [
+        {
+          "text": "> [! dm:@Exact-Handle ]\n> HANDLE-SECRET",
+          "policy": ["member:@Exact-Handle"],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [! dm:@Exact-Handle ]\n> HANDLE-SECRET"
+    },
+    {
+      "name": "unsupported marker charset Space Handle",
+      "body": "> [!dm:@Space Handle]\n> SPECIAL-HANDLE-SECRET",
+      "spans": [
+        {
+          "text": "> [!dm:@Space Handle]\n> SPECIAL-HANDLE-SECRET",
+          "policy": [],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!redacted]"
+    },
+    {
+      "name": "unsupported marker charset colon:handle",
+      "body": "> [!dm:@colon:handle]\n> SPECIAL-HANDLE-SECRET",
+      "spans": [
+        {
+          "text": "> [!dm:@colon:handle]\n> SPECIAL-HANDLE-SECRET",
+          "policy": [],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!redacted]"
+    },
+    {
+      "name": "unsupported marker charset éxact",
+      "body": "> [!dm:@éxact]\n> SPECIAL-HANDLE-SECRET",
+      "spans": [
+        {
+          "text": "> [!dm:@éxact]\n> SPECIAL-HANDLE-SECRET",
+          "policy": [],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!redacted]"
+    },
+    {
+      "name": "unsupported marker charset emoji🐉",
+      "body": "> [!dm:@emoji🐉]\n> SPECIAL-HANDLE-SECRET",
+      "spans": [
+        {
+          "text": "> [!dm:@emoji🐉]\n> SPECIAL-HANDLE-SECRET",
+          "policy": [],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!redacted]"
+    },
+    {
+      "name": "unsupported marker charset with/slash",
+      "body": "> [!dm:@with/slash]\n> SPECIAL-HANDLE-SECRET",
+      "spans": [
+        {
+          "text": "> [!dm:@with/slash]\n> SPECIAL-HANDLE-SECRET",
+          "policy": [],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!redacted]"
+    },
+    {
+      "name": "unsupported marker charset quoted\"handle",
+      "body": "> [!dm:@quoted\"handle]\n> SPECIAL-HANDLE-SECRET",
+      "spans": [
+        {
+          "text": "> [!dm:@quoted\"handle]\n> SPECIAL-HANDLE-SECRET",
+          "policy": [],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!redacted]"
+    },
+    {
+      "name": "malformed '[!dm:]'",
+      "body": "> [!dm:]\n> MALFORMED-SECRET",
+      "spans": [
+        {
+          "text": "> [!dm:]\n> MALFORMED-SECRET",
+          "policy": [],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!redacted]"
+    },
+    {
+      "name": "malformed '[!dm:@]'",
+      "body": "> [!dm:@]\n> MALFORMED-SECRET",
+      "spans": [
+        {
+          "text": "> [!dm:@]\n> MALFORMED-SECRET",
+          "policy": [],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!redacted]"
+    },
+    {
+      "name": "malformed '[!dm:no-at]'",
+      "body": "> [!dm:no-at]\n> MALFORMED-SECRET",
+      "spans": [
+        {
+          "text": "> [!dm:no-at]\n> MALFORMED-SECRET",
+          "policy": [],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!redacted]"
+    },
+    {
+      "name": "malformed '[!dm: @Exact-Handle]'",
+      "body": "> [!dm: @Exact-Handle]\n> MALFORMED-SECRET",
+      "spans": [
+        {
+          "text": "> [!dm: @Exact-Handle]\n> MALFORMED-SECRET",
+          "policy": [],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!redacted]"
+    },
+    {
+      "name": "malformed '[! dm :@Exact-Handle]'",
+      "body": "> [! dm :@Exact-Handle]\n> MALFORMED-SECRET",
+      "spans": [
+        {
+          "text": "> [! dm :@Exact-Handle]\n> MALFORMED-SECRET",
+          "policy": [],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!redacted]"
+    },
+    {
+      "name": "malformed '[!audience role:player]'",
+      "body": "> [!audience role:player]\n> MALFORMED-SECRET",
+      "spans": [
+        {
+          "text": "> [!audience role:player]\n> MALFORMED-SECRET",
+          "policy": [],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!redacted]"
+    },
+    {
+      "name": "malformed '[!AUDIENCE]'",
+      "body": "> [!AUDIENCE]\n> MALFORMED-SECRET",
+      "spans": [
+        {
+          "text": "> [!AUDIENCE]\n> MALFORMED-SECRET",
+          "policy": [],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!redacted]"
+    },
+    {
+      "name": "malformed '[!Dm:'",
+      "body": "> [!Dm:\n> MALFORMED-SECRET",
+      "spans": [
+        {
+          "text": "> [!Dm:\n> MALFORMED-SECRET",
+          "policy": [],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!redacted]"
+    },
+    {
+      "name": "malformed '[! DM'",
+      "body": "> [! DM\n> MALFORMED-SECRET",
+      "spans": [
+        {
+          "text": "> [! DM\n> MALFORMED-SECRET",
+          "policy": [],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!redacted]"
+    },
+    {
+      "name": "malformed '[!audience'",
+      "body": "> [!audience\n> MALFORMED-SECRET",
+      "spans": [
+        {
+          "text": "> [!audience\n> MALFORMED-SECRET",
+          "policy": [],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!redacted]"
+    },
+    {
+      "name": "nested marker narrows whole maximal quote",
+      "body": "> ordinary surrounding quote\n>> [!DM]\n>> NESTED-SECRET\n> surrounding tail",
+      "spans": [
+        {
+          "text": "> ordinary surrounding quote\n>> [!DM]\n>> NESTED-SECRET\n> surrounding tail",
+          "policy": ["role:dm"],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> ordinary surrounding quote\n>> [!DM]\n>> NESTED-SECRET\n> surrounding tail",
+      "member_body": "> [!redacted]"
+    },
+    {
+      "name": "malformed outranks valid handle",
+      "body": "> [!dm:@Exact-Handle]\n> MEMBER-SECRET\n>> [!dm:]\n> mixed tail",
+      "spans": [
+        {
+          "text": "> [!dm:@Exact-Handle]\n> MEMBER-SECRET\n>> [!dm:]\n> mixed tail",
+          "policy": [],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!redacted]"
+    },
+    {
+      "name": "dm outranks spoiler",
+      "body": "> [!spoiler]\n> [!dm]\n> DM-SPOILER-SECRET",
+      "spans": [
+        {
+          "text": "> [!spoiler]\n> [!dm]\n> DM-SPOILER-SECRET",
+          "policy": ["role:dm"],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!spoiler]\n> [!dm]\n> DM-SPOILER-SECRET",
+      "member_body": "> [!redacted]"
+    },
+    {
+      "name": "handle outranks DM",
+      "body": "> [!dm]\n> [!dm:@Exact-Handle]\n> MEMBER-WINS-SECRET",
+      "spans": [
+        {
+          "text": "> [!dm]\n> [!dm:@Exact-Handle]\n> MEMBER-WINS-SECRET",
+          "policy": ["member:@Exact-Handle"],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!dm]\n> [!dm:@Exact-Handle]\n> MEMBER-WINS-SECRET"
+    },
+    {
+      "name": "first multiple handle retained source behavior",
+      "body": "> [!dm:@Exact-Handle]\n> [!dm:@Second]\n> FIRST-HANDLE-SECRET",
+      "spans": [
+        {
+          "text": "> [!dm:@Exact-Handle]\n> [!dm:@Second]\n> FIRST-HANDLE-SECRET",
+          "policy": ["member:@Exact-Handle"],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!dm:@Exact-Handle]\n> [!dm:@Second]\n> FIRST-HANDLE-SECRET"
+    },
+    {
+      "name": "bare marker scopes only its line",
+      "body": "Bare [!DM] BARE-SECRET\nOrdinary following line",
+      "spans": [
+        {
+          "text": "Bare [!DM] BARE-SECRET",
+          "policy": ["role:dm"],
+          "spoiler": false
+        },
+        {
+          "text": "Ordinary following line",
+          "policy": null,
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]\nOrdinary following line",
+      "dm_body": "Bare [!DM] BARE-SECRET\nOrdinary following line",
+      "member_body": "> [!redacted]\nOrdinary following line"
+    },
+    {
+      "name": "marker inside code fence retains bare-line source behavior",
+      "body": "```md\n[!DM] FENCE-SECRET\n```\nAfter",
+      "spans": [
+        {
+          "text": "```md",
+          "policy": null,
+          "spoiler": false
+        },
+        {
+          "text": "[!DM] FENCE-SECRET",
+          "policy": ["role:dm"],
+          "spoiler": false
+        },
+        {
+          "text": "```\nAfter",
+          "policy": null,
+          "spoiler": false
+        }
+      ],
+      "public_body": "```md\n> [!redacted]\n```\nAfter",
+      "dm_body": "```md\n[!DM] FENCE-SECRET\n```\nAfter",
+      "member_body": "```md\n> [!redacted]\n```\nAfter"
+    },
+    {
+      "name": "blank line ends quote scope",
+      "body": "> [!dm]\n> FIRST-SECRET\n\n> [!note]\n> Visible note",
+      "spans": [
+        {
+          "text": "> [!dm]\n> FIRST-SECRET",
+          "policy": ["role:dm"],
+          "spoiler": false
+        },
+        {
+          "text": "\n> [!note]\n> Visible note",
+          "policy": null,
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]\n\n> [!note]\n> Visible note",
+      "dm_body": "> [!dm]\n> FIRST-SECRET\n\n> [!note]\n> Visible note",
+      "member_body": "> [!redacted]\n\n> [!note]\n> Visible note"
+    },
+    {
+      "name": "spoiler presentation only",
+      "body": "> [!spoiler]\n> SPOILER-VISIBLE",
+      "spans": [
+        {
+          "text": "> [!spoiler]\n> SPOILER-VISIBLE",
+          "policy": null,
+          "spoiler": true
+        }
+      ],
+      "public_body": "> [!spoiler]\n> SPOILER-VISIBLE",
+      "dm_body": "> [!spoiler]\n> SPOILER-VISIBLE",
+      "member_body": "> [!spoiler]\n> SPOILER-VISIBLE"
+    },
+    {
+      "name": "ordinary unknown '[!note]'",
+      "body": "> [!note]\n> ORDINARY-VISIBLE",
+      "spans": [
+        {
+          "text": "> [!note]\n> ORDINARY-VISIBLE",
+          "policy": null,
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!note]\n> ORDINARY-VISIBLE",
+      "dm_body": "> [!note]\n> ORDINARY-VISIBLE",
+      "member_body": "> [!note]\n> ORDINARY-VISIBLE"
+    },
+    {
+      "name": "ordinary unknown '[!warning]'",
+      "body": "> [!warning]\n> ORDINARY-VISIBLE",
+      "spans": [
+        {
+          "text": "> [!warning]\n> ORDINARY-VISIBLE",
+          "policy": null,
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!warning]\n> ORDINARY-VISIBLE",
+      "dm_body": "> [!warning]\n> ORDINARY-VISIBLE",
+      "member_body": "> [!warning]\n> ORDINARY-VISIBLE"
+    },
+    {
+      "name": "ordinary unknown '[!unknown-callout]'",
+      "body": "> [!unknown-callout]\n> ORDINARY-VISIBLE",
+      "spans": [
+        {
+          "text": "> [!unknown-callout]\n> ORDINARY-VISIBLE",
+          "policy": null,
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!unknown-callout]\n> ORDINARY-VISIBLE",
+      "dm_body": "> [!unknown-callout]\n> ORDINARY-VISIBLE",
+      "member_body": "> [!unknown-callout]\n> ORDINARY-VISIBLE"
+    },
+    {
+      "name": "ordinary unknown '[!dmdun]'",
+      "body": "> [!dmdun]\n> ORDINARY-VISIBLE",
+      "spans": [
+        {
+          "text": "> [!dmdun]\n> ORDINARY-VISIBLE",
+          "policy": null,
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!dmdun]\n> ORDINARY-VISIBLE",
+      "dm_body": "> [!dmdun]\n> ORDINARY-VISIBLE",
+      "member_body": "> [!dmdun]\n> ORDINARY-VISIBLE"
+    },
+    {
+      "name": "ordinary unknown '[!note'",
+      "body": "> [!note\n> ORDINARY-VISIBLE",
+      "spans": [
+        {
+          "text": "> [!note\n> ORDINARY-VISIBLE",
+          "policy": null,
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!note\n> ORDINARY-VISIBLE",
+      "dm_body": "> [!note\n> ORDINARY-VISIBLE",
+      "member_body": "> [!note\n> ORDINARY-VISIBLE"
+    },
+    {
+      "name": "three-space-or-tab quote prefix",
+      "body": "  > [!DM]\n\t> INDENTED-SECRET",
+      "spans": [
+        {
+          "text": "  > [!DM]\n\t> INDENTED-SECRET",
+          "policy": ["role:dm"],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "  > [!DM]\n\t> INDENTED-SECRET",
+      "member_body": "> [!redacted]"
+    },
+    {
+      "name": "four-space prefix is bare marker line",
+      "body": "    > [!dm] INDENTED-BARE-SECRET\n    > Visible next line",
+      "spans": [
+        {
+          "text": "    > [!dm] INDENTED-BARE-SECRET",
+          "policy": ["role:dm"],
+          "spoiler": false
+        },
+        {
+          "text": "    > Visible next line",
+          "policy": null,
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]\n    > Visible next line",
+      "dm_body": "    > [!dm] INDENTED-BARE-SECRET\n    > Visible next line",
+      "member_body": "> [!redacted]\n    > Visible next line"
+    },
+    {
+      "name": "handle case is not folded",
+      "body": "[!dm:@Exact-Handle] CASE-SECRET",
+      "spans": [
+        {
+          "text": "[!dm:@Exact-Handle] CASE-SECRET",
+          "policy": ["member:@Exact-Handle"],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "[!dm:@Exact-Handle] CASE-SECRET"
+    },
+    {
+      "name": "accepted marker charset Under_score",
+      "body": "> [!dm:@Under_score]\n> HANDLE-SECRET",
+      "spans": [
+        {
+          "text": "> [!dm:@Under_score]\n> HANDLE-SECRET",
+          "policy": ["member:@Under_score"],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!redacted]"
+    },
+    {
+      "name": "accepted marker charset dot.handle",
+      "body": "> [!dm:@dot.handle]\n> HANDLE-SECRET",
+      "spans": [
+        {
+          "text": "> [!dm:@dot.handle]\n> HANDLE-SECRET",
+          "policy": ["member:@dot.handle"],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!redacted]"
+    },
+    {
+      "name": "accepted marker charset ALPHA09",
+      "body": "> [!dm:@ALPHA09]\n> HANDLE-SECRET",
+      "spans": [
+        {
+          "text": "> [!dm:@ALPHA09]\n> HANDLE-SECRET",
+          "policy": ["member:@ALPHA09"],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!redacted]"
+    },
+    {
+      "name": "accepted marker charset hyphen-handle",
+      "body": "> [!dm:@hyphen-handle]\n> HANDLE-SECRET",
+      "spans": [
+        {
+          "text": "> [!dm:@hyphen-handle]\n> HANDLE-SECRET",
+          "policy": ["member:@hyphen-handle"],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!redacted]"
+    },
+    {
+      "name": "closing delimiter cannot encode a longer DB handle",
+      "body": "> [!dm:@Bad]Handle]\n> BAD-BRACKET-SECRET",
+      "spans": [
+        {
+          "text": "> [!dm:@Bad]Handle]\n> BAD-BRACKET-SECRET",
+          "policy": ["member:@Bad"],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!redacted]"
+    },
+    {
+      "name": "unsupported marker delimiter '> [!dm:@Bad\\n> Handle]\\n> BAD-NEWLINE-SECRET'",
+      "body": "> [!dm:@Bad\n> Handle]\n> BAD-NEWLINE-SECRET",
+      "spans": [
+        {
+          "text": "> [!dm:@Bad\n> Handle]\n> BAD-NEWLINE-SECRET",
+          "policy": [],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!redacted]"
+    },
+    {
+      "name": "unsupported inner bracket charset",
+      "body": "> [!dm:@Bad[Handle]\n> BAD-BRACKET-SECRET",
+      "spans": [
+        {
+          "text": "> [!dm:@Bad[Handle]\n> BAD-BRACKET-SECRET",
+          "policy": [],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]",
+      "dm_body": "> [!redacted]",
+      "member_body": "> [!redacted]"
+    }
+  ],
+  "handle_charset": "[A-Za-z0-9_.-]+"
+}

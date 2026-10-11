@@ -10,8 +10,8 @@ The Discord bot is a read-only sensor and activity forwarder. It never announces
 
 ## Enforcement
 
-| Mechanism | Location | Status |
-| --- | --- | --- |
+| Mechanism                                                                    | Location                                                            | Status       |
+| ---------------------------------------------------------------------------- | ------------------------------------------------------------------- | ------------ |
 | No announce, scheduled-event, GraphQL, or database client in the Discord app | [sensor.test.ts](/apps/discord/tests/unit/interface/sensor.test.ts) | **enforced** |
 
 ## Provider

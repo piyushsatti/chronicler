@@ -35,9 +35,6 @@ type BackgroundJob struct {
 	Attempts            int32              `json:"attempts"`
 	Payload             []byte             `json:"payload"`
 	ErrorMessage        pgtype.Text        `json:"error_message"`
-	NextRunAt           pgtype.Timestamptz `json:"next_run_at"`
-	CreatedAt           pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 	LeaseToken          int64              `json:"lease_token"`
 	LeaseExpiresAt      pgtype.Timestamptz `json:"lease_expires_at"`
 	ClaimedAt           pgtype.Timestamptz `json:"claimed_at"`
@@ -45,6 +42,9 @@ type BackgroundJob struct {
 	QuestionDeadlineAt  pgtype.Timestamptz `json:"question_deadline_at"`
 	CompletionOperation pgtype.Text        `json:"completion_operation"`
 	CompletionPayload   []byte             `json:"completion_payload"`
+	NextRunAt           pgtype.Timestamptz `json:"next_run_at"`
+	CreatedAt           pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt           pgtype.Timestamptz `json:"updated_at"`
 }
 
 type Backstory struct {
@@ -375,6 +375,11 @@ type QuestArc struct {
 	Name      string             `json:"name"`
 	CreatedBy int64              `json:"created_by"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
+}
+
+type QuestDisplayStatus struct {
+	ID            int64  `json:"id"`
+	DisplayStatus string `json:"display_status"`
 }
 
 type QuestHex struct {

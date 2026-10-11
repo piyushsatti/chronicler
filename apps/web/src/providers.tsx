@@ -2,7 +2,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { Provider as ReduxProvider } from 'react-redux';
 import { BrowserRouter } from 'react-router-dom';
-import { AuthProvider } from './auth/AuthContext.js';
+import { AuthProvider } from './context/AuthContext.js';
+import { ThemeProvider } from './context/ThemeContext.js';
 import { createAppStore } from './store/store.js';
 
 export function createTestQueryClient(): QueryClient {
@@ -21,7 +22,9 @@ export function AppProviders({ children }: { children: ReactNode }): React.JSX.E
     <ReduxProvider store={store}>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <ThemeProvider>{children}</ThemeProvider>
+          </AuthProvider>
         </BrowserRouter>
       </QueryClientProvider>
     </ReduxProvider>

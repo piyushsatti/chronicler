@@ -1,0 +1,104 @@
+/* cosmetic.css — B9 (issue 470). One rule (and, for animated rows, one
+ * @keyframes) per COSMETIC_CATALOG launch id, class prefix `.cosmetic-<id>`
+ * (NOT `.effect-<id>` — effects.css's orphan gate E9 only orphan-checks
+ * `.effect-*` against EFFECT_CATALOG; the two registries stay unmixed but
+ * coexistent, gate CE11). No `:root` block (motion.css is the one duration
+ * surface), zero color literals (semantic tokens only). `data-motion-collapse`
+ * (fed by `useMotionCollapse`) is the ONE collapse predicate — no OS-media
+ * escape hatch lives in this file.
+ *
+ * Declarations are restricted to box-shadow/outline/opacity/color/
+ * transition/animation/background-* and `transform: translateY()` for
+ * hover-lift only — never border-width/padding/margin/width/height/inset/
+ * display/font-size (no-layout proof, gate CE7).
+ */
+
+/* ---- admin-ring ---------------------------------------------------------
+ * Static 2px ring, inset + outer box-shadow — never border-width (no
+ * reflow).
+ * ------------------------------------------------------------------------- */
+
+.cosmetic-admin-ring {
+  box-shadow:
+    inset 0 0 0 2px var(--color-warn),
+    0 0 0 2px var(--color-warn);
+}
+
+/* ---- verifier-glow -------------------------------------------------------
+ * Soft outer glow, low-amplitude continuous pulse. Copies the `atlas-pulse`
+ * opacity shape (atlas.css:14) WITHOUT the `transform: scale()` half — a
+ * subtle avatar-scoped pulse must not resize the avatar box.
+ * `reuses: 'atlas-pulse'` (catalog) records provenance only; this file never
+ * references `atlas-pulse` directly (it carries a `transform: scale(1.35)`
+ * and its own reduced-motion redefinition, which would add a second collapse
+ * predicate).
+ * --------------------------------------------------------------------------- */
+
+.cosmetic-verifier-glow {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 35%, transparent);
+}
+
+@keyframes cosmetic-verifier-glow {
+  0%,
+  100% {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-accent) 35%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-accent) 12%, transparent);
+  }
+}
+
+[data-motion-collapse='off'] .cosmetic-verifier-glow:not([data-motion-collapse='on'] *):not([data-cosmetic-density='dense'] *) {
+  animation: cosmetic-verifier-glow var(--motion-loop-status-pulse) var(--motion-ease-in-out) infinite;
+}
+
+/* ---- dm-sigil -------------------------------------------------------------
+ * `::after` pseudo on the already-positioned avatar root — no extra DOM
+ * node, no layout participation.
+ * --------------------------------------------------------------------------- */
+
+.cosmetic-dm-sigil {
+  position: relative;
+}
+
+.cosmetic-dm-sigil::after {
+  /* Glyph sigil, not a box-shadow dot: the avatar root is `overflow: hidden`
+     with `border-radius: 50%` (Avatar.tsx:109 / atlas.css:366), so a corner
+     pseudo is clipped away, and a 0x0 box's `border-radius: 50%` computes to
+     0 — its spread shadow paints square. Bottom-centre keeps it inside the
+     circular clip; no width/height, so still zero layout participation. */
+  content: '\25C6';
+  position: absolute;
+  inset: auto 50% 0 auto;
+  line-height: 1;
+  color: var(--color-accent);
+  transform: translateX(50%);
+}
+
+/* ---- role-hairline-tint ---------------------------------------------------
+ * DEVIATION (recorded on the catalog row too): catalog §3 says "2px accent
+ * border"; implemented as an inset box-shadow instead — a border changes
+ * box geometry, which the no-layout accept criterion forbids.
+ * --------------------------------------------------------------------------- */
+
+.cosmetic-role-hairline-tint {
+  box-shadow: inset 2px 0 0 0 var(--color-accent);
+}
+
+/* ---- selection-ring --------------------------------------------------- */
+
+.cosmetic-selection-ring {
+  box-shadow: 0 0 0 2px var(--color-selected-wash);
+}
+
+/* ---- hover-lift ------------------------------------------------------------
+ * NOT a catalog row, NOT resolver-returned, and NOT redeclared here.
+ * hover-lift already exists as the opt-in `.motion-card-hover-lift-tilt` rule
+ * in motion.css (motion-catalog row `card-hover-lift-tilt`, app/motion/
+ * catalog.ts:58), with the same tokens and the same data-motion-collapse
+ * guard. Restating it in cosmetic.css would be a second implementation of one
+ * rule (convergence ruling), and scoping it to the bare Atlas `.card` /
+ * `.list-row` classes would silently lift every static card and row in the
+ * app. `CosmeticDriver` stays 4-member; the launch set the resolver serves is
+ * 5 rows. Consumers that want a lift add `.motion-card-hover-lift-tilt`.
+ * --------------------------------------------------------------------------- */

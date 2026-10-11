@@ -4,18 +4,18 @@ Locked conventions from `0001_init.sql`. New tables should pick a row from this 
 
 ## Naming
 
-| Pattern | Convention | Examples |
-| --- | --- | --- |
-| Aggregate root | Plural domain noun | `members`, `quests`, `hexes`, `documents` |
-| Pure M:N | `{left}_{right}` | `member_follows`, `member_unlocks`, `quest_regions` |
-| Role / duty M:N | `*_assignments` | `lieutenant_assignments`, `archon_assignments` |
-| 1:1 extension | `{root}_{facet}`; PK = parent FK | `member_settings`, `dm_profiles`, `character_ddb_mirrors` |
-| Ledger | `*_ledger` | `character_progression_ledger` |
-| Domain events | `*_events` | `discord_activity_events` |
-| Content snapshots | `*_revisions` | `document_revisions` |
-| Catalog / code table | `*_catalog` (not a root) | `creation_catalog` |
-| Workflow entity | Domain noun (not a junction) | `dm_requests`, `verifications`, `notifications` |
-| Jobs / infra | Clear operational noun | `background_jobs`, `idempotency_keys` |
+| Pattern              | Convention                       | Examples                                                  |
+| -------------------- | -------------------------------- | --------------------------------------------------------- |
+| Aggregate root       | Plural domain noun               | `members`, `quests`, `hexes`, `documents`                 |
+| Pure M:N             | `{left}_{right}`                 | `member_follows`, `member_unlocks`, `quest_regions`       |
+| Role / duty M:N      | `*_assignments`                  | `lieutenant_assignments`, `archon_assignments`            |
+| 1:1 extension        | `{root}_{facet}`; PK = parent FK | `member_settings`, `dm_profiles`, `character_ddb_mirrors` |
+| Ledger               | `*_ledger`                       | `character_progression_ledger`                            |
+| Domain events        | `*_events`                       | `discord_activity_events`                                 |
+| Content snapshots    | `*_revisions`                    | `document_revisions`                                      |
+| Catalog / code table | `*_catalog` (not a root)         | `creation_catalog`                                        |
+| Workflow entity      | Domain noun (not a junction)     | `dm_requests`, `verifications`, `notifications`           |
+| Jobs / infra         | Clear operational noun           | `background_jobs`, `idempotency_keys`                     |
 
 **History suffix:** prefer `*_events` for **new** history tables. Legacy `role_changes` / `hex_changes` keep `*_changes` unless renamed in a dedicated migration.
 
@@ -49,12 +49,12 @@ Facet of a root. **PK = parent FK**, `ON DELETE CASCADE`, **no `public_id`**. Lo
 
 Append-oriented history. Usually has own `id` + `public_id` when rows are addressable or cited in audit APIs.
 
-| Kind | Intent |
-| --- | --- |
-| Ledger | Numeric / delta truth (`character_progression_ledger`) — shape shared, table per domain ([D16](../../docs/decisions/D16-Ledgers-Share-A-Shape-Not-A-Table.md)) |
-| Events | Domain or ingest facts (`discord_activity_events`; PK may be external `event_id`) |
-| Revisions | Full content snapshots (`document_revisions`) |
-| Changes (legacy) | Same family as events; keep suffix until migrated |
+| Kind             | Intent                                                                                                                                                         |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Ledger           | Numeric / delta truth (`character_progression_ledger`) — shape shared, table per domain ([D16](../../docs/decisions/D16-Ledgers-Share-A-Shape-Not-A-Table.md)) |
+| Events           | Domain or ingest facts (`discord_activity_events`; PK may be external `event_id`)                                                                              |
+| Revisions        | Full content snapshots (`document_revisions`)                                                                                                                  |
+| Changes (legacy) | Same family as events; keep suffix until migrated                                                                                                              |
 
 Do **not** collapse into one polymorphic `audit_events` blob table — typed FKs and per-domain read gating stay ([D16](../../docs/decisions/D16-Ledgers-Share-A-Shape-Not-A-Table.md)).
 
@@ -76,10 +76,10 @@ Looks like a join but has its own lifecycle (status, resolution). Gets `id` + `p
 
 ## When `public_id` applies
 
-| Has `public_id`? | When |
-| --- | --- |
-| Yes | Independently addressable from HTTP/GraphQL (roots, workflow entities, many ledgers/events/revisions, jobs clients can poll). |
-| No | Pure / enriched nested joins (composite PK); 1:1 facets; infra keyed by natural keys (`idempotency_keys`, `site_settings.key`, `game_time_map.real_date`). |
+| Has `public_id`? | When                                                                                                                                                       |
+| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Yes              | Independently addressable from HTTP/GraphQL (roots, workflow entities, many ledgers/events/revisions, jobs clients can poll).                              |
+| No               | Pure / enriched nested joins (composite PK); 1:1 facets; infra keyed by natural keys (`idempotency_keys`, `site_settings.key`, `game_time_map.real_date`). |
 
 Edge case: `hex_edges` keeps `public_id` while edges may remain API-addressable — do not drop without a product decision that edges are never fetched by UUID (see comment in `0001_init.sql`).
 

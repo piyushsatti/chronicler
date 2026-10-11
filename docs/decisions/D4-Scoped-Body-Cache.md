@@ -15,10 +15,10 @@
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
-| Restructure cache around scoped bodies | Not chosen; per-request assembly was the starred simpler option |
-| Per-viewer cached blob | Cannot represent two redacted views of one document in one stored column |
+| Alternative                            | Why not                                                                  |
+| -------------------------------------- | ------------------------------------------------------------------------ |
+| Restructure cache around scoped bodies | Not chosen; per-request assembly was the starred simpler option          |
+| Per-viewer cached blob                 | Cannot represent two redacted views of one document in one stored column |
 
 ## Consequences
 

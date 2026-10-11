@@ -2,5 +2,15 @@
   "activeAlertCount": 1,
   "pendingDeliveryCount": 2,
   "deliveryTotal": 5,
-  "deliveries": [{ "id": "job-1" }]
+  "deliveries": [{ "id": "job-1" }],
+  "activeAlerts": [
+    {
+      "key": "delivery-lag",
+      "label": "Delivery lag",
+      "severity": "warning",
+      "remediationHref": "/admin/delivery",
+      "firstSeenAt": "2026-10-01T12:00:00Z",
+      "lastSeenAt": "2026-10-10T12:00:00Z"
+    }
+  ]
 }

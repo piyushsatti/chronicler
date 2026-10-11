@@ -1,0 +1,45 @@
+{
+  "_comment": "A6 theme-schema gate manifest. Source of truth for which themes are RULED (part of the 5-theme x 2-mode matrix from notes/design/theme-matrix-research.md) vs merely present in tokens.css as legacy/spike/pre-Epic-B blocks (atlas, default) which this gate does not police. Add a theme here only on an owner ruling; the gate then requires it to have complete light+dark [data-theme=\"<name>\"][data-mode=\"...\"] blocks in tokens.css.",
+  "themes": [
+    {
+      "name": "parchment",
+      "modes": [
+        "light",
+        "dark"
+      ],
+      "ruled": "2026-08-01"
+    },
+    {
+      "name": "midnight",
+      "modes": [
+        "light",
+        "dark"
+      ],
+      "ruled": "2026-08-03"
+    },
+    {
+      "name": "ember",
+      "modes": [
+        "light",
+        "dark"
+      ],
+      "ruled": "2026-08-03"
+    },
+    {
+      "name": "dracula",
+      "modes": [
+        "light",
+        "dark"
+      ],
+      "ruled": "2026-08-03"
+    },
+    {
+      "name": "vegan",
+      "modes": [
+        "light",
+        "dark"
+      ],
+      "ruled": "2026-08-03"
+    }
+  ]
+}

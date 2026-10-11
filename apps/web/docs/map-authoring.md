@@ -1,89 +1,30 @@
-# Map Authoring Workspace Design
+# Map activation and authoring guidance
 
-This document describes how the map feature should move from a display-only atlas into an authoring workspace where editors can create regions, assign regions to hexes, work with layered map meaning, and attach campaign documents.
+This page owns the dormant web map’s activation gate and retains the earlier authoring proposal as explicitly unapproved exploration.
 
 Standalone interaction prototype and adversarial design review were removed from the repo (optional local copy under `.local/docs-quarry/archive/`).
 
-## Current State
+## Current state and deferred activation
 
-The codebase currently has two map-related models.
+**Activation remains deferred.** The authoritative route registry is `features/map/feature.ts`: both `/map` and `/map/:atlasCode` render `MapComingSoonPage`; region hubs remain available separately. This consolidation neither activates routes nor authorizes data creation/import.
 
-The `/map` route is currently gated to `ComingSoon` (see App.tsx); the `worldMap` query and `WorldHexGrid`/`WorldMapPage` components described below exist in the codebase but are not wired into routing.
+The rebuild has an unwired `MapPage` → `useMapPage` → Zod adapter path and Go `spatial.Queries.MapView`/GraphQL reads. It is not the legacy DRK viewport/package implementation: the current hook uses a client exploration mock, defaults to one atlas, and the `MapView` resolver emits empty `hexcode` values for places. Restore and verify the accepted read-only surface and eligible package registry before assuming a route-only activation is ready. These are source observations, not production-data or performance measurements.
 
-### User-Facing World Map
+### Resume and launch checklist
 
-The visible `/map` page reads DB-backed editorial content through the `worldMap` query.
+The September 13 closeout accepted the following gate. Its then-empty anonymous production map result explains historical dormancy; current production eligibility remains unverified.
 
-Current query surface:
+1. Confirm an eligible canonical production hexgrid map intersects the build-time package registry. Creating/importing data requires separate owner authorization; fixture fallback must not disguise absent canonical data.
+2. Repeat a read-only eligibility preflight and verify permission-safe `mapView` projection using the existing [live authority](/docs/interfaces/live-authority.md) and [document scope](/docs/interfaces/scoped-body.md). Names, linked-document metadata, enumeration counts and selection state must not disclose hidden places. No second map fog/discovery authority is introduced.
+3. Verify anonymous/member/DM hidden-selection cases, viewer-transition cache clearing, canonical `/codex/location/:slug` navigation, theme switching, compressed responses, keyboard/focus behavior, accessible directory/selection announcements, and the named browser interaction/accessibility checks. Verify exact current route/contract/package support before execution; historical merge tests are not current proof.
+4. Retain cold-cache timings and capture conditions. Historical admission required at least 20 cold-cache desktop and constrained-mobile profiles, first-usable p75 <1s and selection p95 ≤100ms; failure blocked launch. Current migration comparison is **1920×1080 only**, which supersedes the old mobile comparison scope but supplies no new mobile performance evidence or changed threshold approval. Revalidate the performance protocol/remaining profile obligation with the owner before activation.
+5. After these prerequisites pass, make activation a separate small route-wiring change replacing the two Coming Soon routes. Retain a route-only rollback that restores Coming Soon while preserving canonical persistence, audience corrections, projections and inert assets/components. Execute any production promotion/rollback through the accepted Actions release process, with separate authorization.
 
-```graphql
-worldMap(atlasCode: String = "A-1") -> WorldMapType
-worldMapAggregate -> WorldMapAggregateType
-```
+Advertising/navigation promotion, authoring, quest markers, city/pointcrawl extensions, and removal of the old spike remain separate decisions. The launch gate does not accept the proposed authoring schema or permissions below.
 
-Current backing tables:
+## Historical authoring proposal
 
-```text
-region_profiles
-map_locations
-```
-
-Current frontend path:
-
-```text
-useWorldMap()
-  -> worldMap(atlasCode)
-  -> mergeWorldMapDto()
-  -> WorldMapPage / WorldHexGrid / RegionFieldNotes
-```
-
-This means region lore, terrain notes, region options, location pins, and activity counts are mostly API-driven. However, the visible grid still depends on frontend layout constants for the rendered hex topology.
-
-### Canonical Spatial Model
-
-The backend already has a stronger canonical map model.
-
-Current tables:
-
-```text
-atlases
-hexes
-features
-feature_hexes
-quest_hexes
-world_event_hexes
-world_event_features
-```
-
-Current read surface:
-
-```graphql
-atlases() -> list[AtlasType]
-hexes(atlasId: UUID!) -> list[HexType]
-featuresForHex(hexAddress: String!) -> list[FeatureType]
-```
-
-Current write surface:
-
-```graphql
-upsertAtlas(input: AtlasInput!) -> AtlasType
-upsertHex(input: HexInput!) -> HexType
-upsertFeature(input: FeatureInput!) -> FeatureType
-assignFeatureToHex(featureId: ID!, hexId: ID!) -> Boolean
-```
-
-These mutations are operator-batch shaped. They are useful for ingest, repair, and admin tooling, but they are not yet an ergonomic in-app editing interface.
-
-## Current Gaps
-
-The map is DB-backed, but not yet authorable in the way the product needs.
-
-1. `region_profiles` and `map_locations` do not appear to have normal GraphQL mutations.
-2. Hex-to-region assignment for the visible map is not fully driven from the `hexes` table.
-3. There is no explicit map layer model.
-4. There is no document attachment model for map entities.
-5. There is no draft/publish flow for map changes.
-6. Existing spatial writes are too low-level for an editor workflow.
+The remainder is retained design exploration, **not the current Go wire/storage model or an accepted implementation plan**. Names such as `worldMap`, `region_profiles`, layers, Python signatures and the A-1 walkthrough describe an older proposal; do not recreate them during migration without a reviewed decision. Implement any approved future surface through the accepted [web architecture](/apps/web/docs/architecture.md): PageHost/PageDeclaration, a composition hook, query/mutation hooks and Zod edge adapters, with props-only feature components.
 
 ## Recommended Direction
 

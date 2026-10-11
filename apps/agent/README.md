@@ -4,13 +4,13 @@ Python service for the Chronicler agent, plus the Archive indexing stack in the 
 
 ## Layout
 
-| Path | Purpose |
-| --- | --- |
-| `src/pi/chronicler/agent/` | Answer worker and harness (`from pi.chronicler.agent import …`) |
-| `src/pi/chronicler/archive/` | Archive index, embeddings, MCP server |
-| `src/pi/chronicler/qa/` | Shared public-doc helpers for Archive |
-| `tests/` | Pytest for agent, archive, and qa |
-| `pyproject.toml`, `uv.lock` | Dependencies and package metadata |
+| Path                         | Purpose                                                         |
+| ---------------------------- | --------------------------------------------------------------- |
+| `src/pi/chronicler/agent/`   | Answer worker and harness (`from pi.chronicler.agent import …`) |
+| `src/pi/chronicler/archive/` | Archive index, embeddings, MCP server                           |
+| `src/pi/chronicler/qa/`      | Shared public-doc helpers for Archive                           |
+| `tests/`                     | Pytest for agent, archive, and qa                               |
+| `pyproject.toml`, `uv.lock`  | Dependencies and package metadata                               |
 
 `pi/` and `pi/chronicler/` are namespace directories only (no `__init__.py`).
 

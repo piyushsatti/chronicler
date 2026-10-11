@@ -8,12 +8,12 @@
 
 ## Where secrets live
 
-| Class | Typical home | Notes |
-| --- | --- | --- |
-| Local development | Workstation env files / secret manager (not committed) | Never commit `.env` with real values |
-| Production API / bot / agent | Host vault or Actions secrets used by deploy workflows | Injected at deploy time |
-| Frontend public config | Build-time public env only | No private keys in the SPA |
-| Discord application | Discord developer portal + vault | Bot token is a machine principal secret |
+| Class                        | Typical home                                           | Notes                                   |
+| ---------------------------- | ------------------------------------------------------ | --------------------------------------- |
+| Local development            | Workstation env files / secret manager (not committed) | Never commit `.env` with real values    |
+| Production API / bot / agent | Host vault or Actions secrets used by deploy workflows | Injected at deploy time                 |
+| Frontend public config       | Build-time public env only                             | No private keys in the SPA              |
+| Discord application          | Discord developer portal + vault                       | Bot token is a machine principal secret |
 
 ## Rotation and access
 

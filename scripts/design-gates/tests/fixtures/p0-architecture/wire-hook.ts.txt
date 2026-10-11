@@ -1,0 +1,7 @@
+import { z } from 'zod';
+import { parseItems as parseWire } from '../adapters/itemsAdapter.js';
+export function useItems(wire: unknown) {
+  const schema = z.array(z.string());
+  const selected = schema.safeParse(wire);
+  return parseWire(selected);
+}

@@ -1,0 +1,100 @@
+/* effects.css — B8 (issue 469). One rule/keyframes block per EFFECT_CATALOG id,
+ * all collapse-guarded via the repo's full guard shape (motion.css:84,112,
+ * 133). No `:root` duration block here — all loop durations live in
+ * motion.css (F3, the one duration-token surface). Semantic tokens only —
+ * zero color literals, zero --p-* primitive references (check-tokens.mjs,
+ * check-effects.mjs E3/E4/E7/E11).
+ */
+
+/* ruling 32 stacking context: the layer sits at z=-1 INSIDE the existing
+   `#root` stacking context (app/index.css:105 — `position: relative;
+   z-index: 1`), so it paints behind every in-flow app box while staying
+   above the body background and `body::before`. Deliberately NOT done by
+   raising `#main`: giving `#main` a z-index makes it a stacking context and
+   clamps every non-portaled fixed overlay rendered inside it (`.pz-cel`
+   z=10002, `.pr-toast__stack` z=100, `.pop-content` z=40, the editor menus)
+   below the sticky `.topbar` at z=20. */
+.ambient-layer {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Contained scope: the gallery paints a catalog row inside a bounded stage
+   instead of behind the page. Same classes, same keyframes — only the box
+   changes, so a demo is the real effect and not a lookalike. */
+.ambient-layer[data-scope='contained'] {
+  position: absolute;
+  z-index: 0;
+}
+
+/* ---- starfield-twinkle -------------------------------------------------- */
+
+.effect-starfield-twinkle .ambient-dot {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: var(--color-accent);
+  opacity: 0.25;
+  top: calc(mod(var(--i, 0) * 37%, 100%));
+  left: calc(mod(var(--i, 0) * 71%, 100%));
+}
+
+.effect-starfield-twinkle .ambient-dot:nth-child(3n) {
+  background: var(--color-text-muted);
+}
+
+@keyframes effect-starfield-twinkle {
+  0%, 100% { opacity: 0.15; }
+  50%      { opacity: 0.6; }
+}
+
+[data-motion-collapse='off'] .effect-starfield-twinkle .ambient-dot:not([data-motion-collapse='on'] *) {
+  animation: effect-starfield-twinkle var(--motion-loop-starfield) var(--motion-ease-in-out) infinite;
+  animation-delay: calc(var(--motion-loop-starfield) * var(--i, 0) * -0.01);
+}
+
+/* ---- glow-pulse ---------------------------------------------------------
+ * Copies the full `atlas-pulse` shape (atlas.css:14 — opacity 1->0.4 plus
+ * scale(1)->scale(1.35)), not the reduced-motion opacity-only redefinition
+ * at atlas.css:629.
+ * ------------------------------------------------------------------------- */
+
+.effect-glow-pulse {
+  background: radial-gradient(circle at 50% 20%, var(--color-hero-glow), transparent 60%);
+}
+
+@keyframes effect-glow-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: 0.4; transform: scale(1.35); }
+}
+
+[data-motion-collapse='off'] .effect-glow-pulse:not([data-motion-collapse='on'] *) {
+  animation: effect-glow-pulse var(--motion-loop-status-pulse) var(--motion-ease-in-out) infinite;
+}
+
+/* ---- gradient-sweep -------------------------------------------------------
+ * Copies the `skeleton-shimmer-cascade` shape (motion.css:255 — background-
+ * position -200% -> 200%).
+ * --------------------------------------------------------------------------- */
+
+.effect-gradient-sweep {
+  background: linear-gradient(
+    90deg,
+    transparent 25%,
+    color-mix(in srgb, var(--color-accent) 20%, transparent) 50%,
+    transparent 75%
+  );
+  background-size: 200% 100%;
+}
+
+@keyframes effect-gradient-sweep {
+  0%   { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+[data-motion-collapse='off'] .effect-gradient-sweep:not([data-motion-collapse='on'] *) {
+  animation: effect-gradient-sweep var(--motion-loop-shimmer) var(--motion-ease-in-out) infinite;
+}

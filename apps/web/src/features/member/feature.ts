@@ -2,35 +2,24 @@ import { http, HttpResponse } from 'msw';
 import type { FeatureGraphql, FeatureHandlers, FeatureRoute } from '../../chrome/featureModule.js';
 import { lazyElement } from '../../chrome/lazyElement.js';
 import goodMe from '../../../tests/fixtures/wire/me/good.json';
-import goodNotifications from '../../../tests/fixtures/wire/notifications/list-good.json';
-import goodUnread from '../../../tests/fixtures/wire/notifications/unread-good.json';
 
 const membersMe = '/v1/members/me';
-const notificationsUnreadCount = '/v1/me/notifications/unread-count';
-const acknowledgeNotifications = '/v1/me/notifications/acknowledge-suppressed';
-const reconcilePersonalization = '/v1/me/personalization/reconcile';
+const updateMySettings = '/v1/me/settings';
 const authDiscord = '/auth/discord';
 const authCallback = '/auth/discord/callback';
 
 export const endpoints = {
   membersMe,
-  notificationsUnreadCount,
-  acknowledgeNotifications,
-  reconcilePersonalization,
+  updateMySettings,
   authDiscord,
   authCallback,
 } as const;
 
 export const queryKeys = {
   me: ['me'] as const,
-  notifications: ['notifications'] as const,
-  notificationsUnread: ['notificationsUnread'] as const,
 };
 
-export const graphql: FeatureGraphql = {
-  MyNotifications: () =>
-    HttpResponse.json({ data: { myNotifications: goodNotifications } }),
-};
+export const graphql: FeatureGraphql = {};
 
 export const handlers: FeatureHandlers = [
   http.get(membersMe, ({ request }) => {
@@ -43,8 +32,7 @@ export const handlers: FeatureHandlers = [
     }
     return HttpResponse.json(goodMe);
   }),
-  http.get(notificationsUnreadCount, () => HttpResponse.json(goodUnread)),
-  http.post(acknowledgeNotifications, () => HttpResponse.json({ ok: true })),
+  http.patch(updateMySettings, () => HttpResponse.json({ ok: true })),
   http.post(authCallback, async ({ request }) => {
     const body = (await request.json()) as { code?: string };
     if (!body.code) {
@@ -68,7 +56,9 @@ export const routes: readonly FeatureRoute[] = [
   {
     path: '/login',
     element: lazyElement(() =>
-      import('./pages/LoginPage.js').then((module) => ({ default: module.LoginPage })),
+      import('../../chrome/LoginRoute.js').then((module) => ({
+        default: module.LoginRoute,
+      })),
     ),
   },
   {

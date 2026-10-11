@@ -15,12 +15,12 @@
 
 The five create gates fold into **one system, three shapes** — only the first becomes data:
 
-| Shape | Examples | Treatment |
-| --- | --- | --- |
-| Role permission | `rule` → admin or verifier | `document.create.rule` in `role_permissions` |
-| “Any member” role check | `codex_entry`, `summary`, `community` | `document.create.<kind>` on a base member role |
-| Structural refusal | `quest_brief` → `False` | **Delete the entry.** Service refuses the kind; real creation stays on the quest flow |
-| Resource-scoped authority | Location create/edit | **Not this table** — routed to AUTH-6 (archon owns region), ReBAC-shaped |
+| Shape                     | Examples                              | Treatment                                                                             |
+| ------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------- |
+| Role permission           | `rule` → admin or verifier            | `document.create.rule` in `role_permissions`                                          |
+| “Any member” role check   | `codex_entry`, `summary`, `community` | `document.create.<kind>` on a base member role                                        |
+| Structural refusal        | `quest_brief` → `False`               | **Delete the entry.** Service refuses the kind; real creation stays on the quest flow |
+| Resource-scoped authority | Location create/edit                  | **Not this table** — routed to AUTH-6 (archon owns region), ReBAC-shaped              |
 
 **`quest_brief` must not become a permission:** `False` means “this door is not the door,” not “nobody holds the permission.” Making it a grant would be one `INSERT` away from bypass on a live-editable matrix ([ROLE-1](/docs/decisions/D14-Ownership-Is-Code-Override-Is-Declared.md)).
 
@@ -28,11 +28,11 @@ The five create gates fold into **one system, three shapes** — only the first 
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
-| Keep `KIND_GATES` parallel to `role_permissions` | Two gate systems; seven-day production window where any member could publish rules showed lambda gates are easy to miss |
-| Encode `quest_brief` as a permission granted to nobody | Guarantee becomes editable data; violates structural refusal |
-| Force location archon checks into RBAC rows | Region ownership is resource-scoped; belongs in AUTH-6 |
+| Alternative                                            | Why not                                                                                                                 |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------- |
+| Keep `KIND_GATES` parallel to `role_permissions`       | Two gate systems; seven-day production window where any member could publish rules showed lambda gates are easy to miss |
+| Encode `quest_brief` as a permission granted to nobody | Guarantee becomes editable data; violates structural refusal                                                            |
+| Force location archon checks into RBAC rows            | Region ownership is resource-scoped; belongs in AUTH-6                                                                  |
 
 ## Consequences
 

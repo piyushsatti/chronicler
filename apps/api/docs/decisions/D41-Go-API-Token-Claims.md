@@ -13,21 +13,21 @@ The old API minted a JWT at Discord OAuth login with member id, roles, archon re
 
 The Go API owns `/auth/discord` and `/auth/discord/callback`. The login token is a signed JWT (HS256) with claims:
 
-| Claim | Meaning |
-| --- | --- |
-| `member_id` | UUID of the member row |
-| `roles` | role strings at mint time |
-| `archon_regions` | region ids the member archons |
-| `lt_npcs` | NPC document ids the member is lieutenant for |
+| Claim            | Meaning                                       |
+| ---------------- | --------------------------------------------- |
+| `member_id`      | UUID of the member row                        |
+| `roles`          | role strings at mint time                     |
+| `archon_regions` | region ids the member archons                 |
+| `lt_npcs`        | NPC document ids the member is lieutenant for |
 
 A missing or invalid bearer token makes the caller **anonymous**. It does not return 401 on public reads. Privileged commands recheck roles and assignments in the database after claims are parsed.
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
-| Cookie sessions | Old clients already use bearer JWT in JSON body from OAuth |
-| Middleware-only auth | Cannot see revocation after mint |
+| Alternative          | Why not                                                    |
+| -------------------- | ---------------------------------------------------------- |
+| Cookie sessions      | Old clients already use bearer JWT in JSON body from OAuth |
+| Middleware-only auth | Cannot see revocation after mint                           |
 
 ## Consequences
 

@@ -3,8 +3,8 @@ import { Link } from 'react-router-dom';
 import { SingleRegionPage } from '../../../chrome/singleRegion.js';
 import { PageShell } from '../../../components/foundation/PageShell.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
-import { CODE_CATEGORIES } from '../adapters/codex.wire.schema.js';
 import { useCodexPage } from '../hooks/useCodexPage.js';
+import { CODE_CATEGORIES } from '../types.js';
 
 export function CodexPage(): React.JSX.Element {
   const [category, setCategory] = useState('');

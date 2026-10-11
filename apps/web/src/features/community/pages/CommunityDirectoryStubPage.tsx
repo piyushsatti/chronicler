@@ -1,16 +1,12 @@
-import { PageShell } from '../../../components/foundation/PageShell.js';
+import { Navigate } from 'react-router-dom';
 
-/** Wave 0 stub — replaced by community slice. */
+/** Redirects Wave 0 stubs to real community directory routes. */
 export function CommunityDirectoryStubPage({
   section,
 }: {
   section: 'players' | 'dms' | 'dm-profile';
 }): React.JSX.Element {
-  const title =
-    section === 'players' ? 'Players' : section === 'dms' ? 'Dungeon Masters' : 'DM profile';
-  return (
-    <PageShell>
-      <p className="type-heading">{title}</p>
-    </PageShell>
-  );
+  const to =
+    section === 'players' ? '/players' : section === 'dms' ? '/dms' : '/community';
+  return <Navigate to={to} replace />;
 }

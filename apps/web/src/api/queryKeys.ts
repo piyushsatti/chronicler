@@ -15,6 +15,12 @@ export const queryKeys = featureQueryKeys as {
   mapView: (atlasCode: string) => readonly ['mapView', string];
   hexFeatures: (hexcode: string) => readonly ['hexFeatures', string];
   questBoard: readonly ['questBoard'];
+  questLists: readonly ['quests'];
+  questList: (
+    filters: Readonly<{ status?: string; displayStatus?: string }>,
+    limit: number,
+    offset: number,
+  ) => readonly ['quests', { readonly status: string | null; readonly displayStatus: string | null }, number, number];
   quest: (code: string) => readonly ['quest', string];
   questSummary: (code: string) => readonly ['questSummary', string];
   chronicleList: readonly ['chronicleList'];
@@ -30,6 +36,11 @@ export const queryKeys = featureQueryKeys as {
   adminOperations: readonly ['adminOperations'];
   adminCharacters: readonly ['adminCharacters'];
   notifications: readonly ['notifications'];
+  notificationsPreview: (
+    limit: number,
+  ) => readonly ['notifications', 'preview', number];
+  notificationsInbox: (limit: number) => readonly ['notifications', 'inbox', number];
   notificationsUnread: readonly ['notificationsUnread'];
+  personalization: readonly ['personalization'];
   backstories: readonly ['backstories'];
 };

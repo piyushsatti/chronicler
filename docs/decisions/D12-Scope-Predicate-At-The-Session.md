@@ -19,12 +19,12 @@ issues.**
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
+| Alternative                                                | Why not                                                                                                                                                                                                                           |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `Authority` as a required argument on every batch function | Covers DataLoader only. Look-ahead pre-fetches and ORM eager loads are not batch functions and stay uncovered. Solving one third of the problem with a convention that looks like it solved all of it is worse than solving none. |
-| A lint rule requiring `visible_to` in every `select()` | Cannot see an eager load: `selectinload` emits its SELECT inside SQLAlchemy, from a `relationship()` declaration that contains no predicate to lint. |
-| A test asserting every loader is predicate-covered | Kept as a supplement, rejected as the mechanism. It catches what exists at the time it is written. The failure mode named in `GQL-SQL-6` is a loader added later by someone who did not know the rule. |
-| Database-side RLS as the primary | Would work, and is `AUTH-4`'s question, not this one. Deferred rather than dismissed: see below. |
+| A lint rule requiring `visible_to` in every `select()`     | Cannot see an eager load: `selectinload` emits its SELECT inside SQLAlchemy, from a `relationship()` declaration that contains no predicate to lint.                                                                              |
+| A test asserting every loader is predicate-covered         | Kept as a supplement, rejected as the mechanism. It catches what exists at the time it is written. The failure mode named in `GQL-SQL-6` is a loader added later by someone who did not know the rule.                            |
+| Database-side RLS as the primary                           | Would work, and is `AUTH-4`'s question, not this one. Deferred rather than dismissed: see below.                                                                                                                                  |
 
 ## Consequences
 

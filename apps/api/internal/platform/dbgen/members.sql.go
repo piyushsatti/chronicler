@@ -34,6 +34,35 @@ func (q *Queries) CountMembersFiltered(ctx context.Context, dollar_1 string) (in
 	return column_1, err
 }
 
+const getMemberAuthority = `-- name: GetMemberAuthority :one
+SELECT m.public_id AS id, m.roles, m.status, m.handle,
+       COALESCE(dp.status, '')::text AS dm_status
+FROM members m
+LEFT JOIN dm_profiles dp ON dp.member_id = m.id
+WHERE m.public_id = $1
+`
+
+type GetMemberAuthorityRow struct {
+	ID       pgtype.UUID `json:"id"`
+	Roles    []string    `json:"roles"`
+	Status   string      `json:"status"`
+	Handle   string      `json:"handle"`
+	DmStatus string      `json:"dm_status"`
+}
+
+func (q *Queries) GetMemberAuthority(ctx context.Context, publicID pgtype.UUID) (GetMemberAuthorityRow, error) {
+	row := q.db.QueryRow(ctx, getMemberAuthority, publicID)
+	var i GetMemberAuthorityRow
+	err := row.Scan(
+		&i.ID,
+		&i.Roles,
+		&i.Status,
+		&i.Handle,
+		&i.DmStatus,
+	)
+	return i, err
+}
+
 const getMemberByDiscordID = `-- name: GetMemberByDiscordID :one
 SELECT public_id AS id, discord_id, handle, display_name, avatar_url, roles, status
 FROM members
@@ -275,10 +304,8 @@ const upsertMemberFromDiscord = `-- name: UpsertMemberFromDiscord :one
 INSERT INTO members (discord_id, handle, display_name, avatar_url, roles)
 VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT (discord_id) DO UPDATE
-SET handle = EXCLUDED.handle,
-    display_name = EXCLUDED.display_name,
+SET display_name = EXCLUDED.display_name,
     avatar_url = EXCLUDED.avatar_url,
-    roles = EXCLUDED.roles,
     updated_at = now()
 RETURNING public_id AS id, discord_id, handle, display_name, avatar_url, roles, status
 `

@@ -18,6 +18,7 @@ describe('QuestDetailPage', () => {
     expect(await screen.findByText('Q-101')).toBeInTheDocument();
     expect(screen.getByText(/Discord delivery: applied/)).toBeInTheDocument();
     expect(document.querySelector('[data-page-region="summary"]')).toBeTruthy();
+    expect(screen.getByRole('tab', { name: 'Roster' })).toBeInTheDocument();
   });
 
   it('shows controlled error', async () => {

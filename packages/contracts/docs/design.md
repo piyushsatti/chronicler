@@ -8,27 +8,27 @@ Clients and the API must share one contract. Putting SDL and OpenAPI here means:
 
 - Web and Discord generate from the same files the Go API implements.
 - Reviewers argue about the wire shape once, not per app.
-- The Go handlers are generated *from* this package — they are not the source.
+- The Go handlers are generated _from_ this package — they are not the source.
 
 Interface rule: [graphql-schema](../../../docs/interfaces/graphql-schema.md).
 
 ## Source-of-truth order
 
-| Layer | Location | Role |
-| --- | --- | --- |
-| 1. Split SDL | `graphql/*.graphql` | Edit here. One file per slice + `scalars.graphql` + `roots.graphql`. |
-| 2. Merge | `scripts/merge-graphql-schema` → `schema.graphql` | Committed artifact for codegen and `bun run check-schema`. |
-| 3. REST | `openapi.yaml` | Commands, fixed lookups, auth/ingest under `/v1` (and a few non-`/v1` machine routes). |
-| 4. Routing map | `field-routing.md` | Old GraphQL field → GQL / REST / DROP. Must stay in sync with SDL + OpenAPI ([D40](../../../apps/api/docs/decisions/D40-GraphQL-Versus-REST.md)). |
+| Layer          | Location                                          | Role                                                                                                                                              |
+| -------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1. Split SDL   | `graphql/*.graphql`                               | Edit here. One file per slice + `scalars.graphql` + `roots.graphql`.                                                                              |
+| 2. Merge       | `scripts/merge-graphql-schema` → `schema.graphql` | Committed artifact for codegen and `bun run check-schema`.                                                                                        |
+| 3. REST        | `openapi.yaml`                                    | Commands, fixed lookups, auth/ingest under `/v1` (and a few non-`/v1` machine routes).                                                            |
+| 4. Routing map | `field-routing.md`                                | Old GraphQL field → GQL / REST / DROP. Must stay in sync with SDL + OpenAPI ([D40](../../../apps/api/docs/decisions/D40-GraphQL-Versus-REST.md)). |
 
 Do not hand-edit `schema.graphql` for product changes — change the split files and re-merge.
 
 ## Consumers
 
-| Consumer | How |
-| --- | --- |
-| `apps/web` | GraphQL codegen / types from `@pi/contracts` |
-| `apps/discord` | Same package; ingest/auth via OpenAPI paths |
+| Consumer        | How                                                         |
+| --------------- | ----------------------------------------------------------- |
+| `apps/web`      | GraphQL codegen / types from `@pi/contracts`                |
+| `apps/discord`  | Same package; ingest/auth via OpenAPI paths                 |
 | `apps/api` (Go) | gqlgen + OpenAPI-driven handlers generated from these files |
 
 Local notes: `apps/web/README.md`, `apps/discord/docs/`, `apps/api/README.md`.
@@ -45,9 +45,9 @@ Version lives in the URL path (`/v1/...`), not in type or field name suffixes �
 
 ## Pointers
 
-| Doc | Use when |
-| --- | --- |
-| [D40](../../../apps/api/docs/decisions/D40-GraphQL-Versus-REST.md) | Choosing GraphQL vs REST vs DROP |
-| [field-routing.md](../field-routing.md) | Mapping a legacy field or reviewing a PR |
-| [graphql-schema](../../../docs/interfaces/graphql-schema.md) | Interface ownership and CI drift check |
-| [patterns.md](patterns.md) | Naming, `ID`, versioning conventions |
+| Doc                                                                | Use when                                 |
+| ------------------------------------------------------------------ | ---------------------------------------- |
+| [D40](../../../apps/api/docs/decisions/D40-GraphQL-Versus-REST.md) | Choosing GraphQL vs REST vs DROP         |
+| [field-routing.md](../field-routing.md)                            | Mapping a legacy field or reviewing a PR |
+| [graphql-schema](../../../docs/interfaces/graphql-schema.md)       | Interface ownership and CI drift check   |
+| [patterns.md](patterns.md)                                         | Naming, `ID`, versioning conventions     |

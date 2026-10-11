@@ -1,0 +1,13 @@
+import { useEffect, useRef } from 'react';
+export function useFocus() {
+  const element = useRef<HTMLElement>(null);
+  useEffect(() => {
+    element.current?.focus();
+    const observer = new ResizeObserver(() => element.current?.scrollIntoView());
+    if (element.current) observer.observe(element.current);
+    const draft = JSON.parse(localStorage.getItem('draft') ?? '{}');
+    document.title = String(draft.title ?? 'Draft');
+    return () => observer.disconnect();
+  }, []);
+  return element;
+}

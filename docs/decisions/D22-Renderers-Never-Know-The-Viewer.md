@@ -23,13 +23,13 @@ R6 and `HANDOFF-EDITING.md` §2 disagreed on whether redaction keys off renderer
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
-| Renderer checks viewer role | Third redaction engine; duplicates server gate and invites drift |
+| Alternative                         | Why not                                                                                                |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| Renderer checks viewer role         | Third redaction engine; duplicates server gate and invites drift                                       |
 | Client-side enforcement of audience | Fourth parser; [D20](/docs/decisions/D20-One-Closed-Marker-Set.md) exists because two already diverged |
-| Frontend re-derives ruling/category | Hand-mirror of backend; same failure mode as deleted `ROLE-1` pattern |
-| Client-computed document slugs | Three implementations already disagree on one input string |
-| Close the region body gap now | Product work not requested; record states the gap |
+| Frontend re-derives ruling/category | Hand-mirror of backend; same failure mode as deleted `ROLE-1` pattern                                  |
+| Client-computed document slugs      | Three implementations already disagree on one input string                                             |
+| Close the region body gap now       | Product work not requested; record states the gap                                                      |
 
 ## Consequences
 

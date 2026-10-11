@@ -28,10 +28,9 @@ func (r *questV2TypeResolver) BriefDocument(ctx context.Context, obj *QuestV2Typ
 	}
 	d, err := r.Services.Documents.ByID(ctx, obj.DocumentID)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
-	body, _ := d.EffectiveBody(r.Services.Documents.ScopeFromContext(ctx))
-	return toDocumentType(d, body), nil
+	return toDocumentType(d, d.Body), nil
 }
 
 // Participants is the resolver for the participants field.

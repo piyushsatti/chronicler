@@ -75,7 +75,8 @@ describe('normalizeReactionDispatch', () => {
   };
 
   it('uses hashed session and dispatch sequence as stable identity', async () => {
-    const { normalizeReactionDispatch } = await import('@discord/activity/normalize.js');
+    const { normalizeReactionDispatch } =
+      await import('@discord/activity/normalize.js');
 
     const receivedAt = () => Date.parse('2026-09-13T12:34:56.000Z');
     const first = normalizeReactionDispatch(
@@ -110,7 +111,8 @@ describe('normalizeReactionDispatch', () => {
   });
 
   it('requires session identity and skips the bot user', async () => {
-    const { normalizeReactionDispatch } = await import('@discord/activity/normalize.js');
+    const { normalizeReactionDispatch } =
+      await import('@discord/activity/normalize.js');
 
     expect(normalizeReactionDispatch(packet, '')).toBeNull();
     expect(normalizeReactionDispatch(packet, 'session', 'user-7')).toBeNull();

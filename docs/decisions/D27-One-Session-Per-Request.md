@@ -19,13 +19,13 @@
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
-| Session per resolver (status quo) | Couples page complexity to connection count; ~2 concurrent detail views before pool exhaustion |
-| Query cost / depth limits alone | Guards a resource measurement shows is not scarce (ms-level query cost) |
-| Gateway for AUTH-7 before measuring | Floor was connection setup; gateway pays it too |
-| Keep one-session + lock after DataLoader deadlock | Hang is production-fatal; lock is not reentrant |
-| Transaction-mode pooler without trigger | Session-per-request reduced waste; move when waits appear |
+| Alternative                                       | Why not                                                                                        |
+| ------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Session per resolver (status quo)                 | Couples page complexity to connection count; ~2 concurrent detail views before pool exhaustion |
+| Query cost / depth limits alone                   | Guards a resource measurement shows is not scarce (ms-level query cost)                        |
+| Gateway for AUTH-7 before measuring               | Floor was connection setup; gateway pays it too                                                |
+| Keep one-session + lock after DataLoader deadlock | Hang is production-fatal; lock is not reentrant                                                |
+| Transaction-mode pooler without trigger           | Session-per-request reduced waste; move when waits appear                                      |
 
 ## Consequences
 

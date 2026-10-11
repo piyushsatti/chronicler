@@ -21,9 +21,9 @@ Category vocab starts `{dm_table}` with room to add values such as `player_intro
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
-| Placeholder document | Would make `dmTable` never-null, push emptiness detection to the frontend by content inspection, and create rows nobody authored |
+| Alternative            | Why not                                                                                                                                        |
+| ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| Placeholder document   | Would make `dmTable` never-null, push emptiness detection to the frontend by content inspection, and create rows nobody authored               |
 | Multiple tables per DM | Drops the index and forces “which table does this quest use?” — product surface not requested; index is the only thing to drop if wanted later |
 
 ## Consequences

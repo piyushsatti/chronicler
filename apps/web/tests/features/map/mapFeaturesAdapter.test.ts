@@ -1,8 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import {
-  assertCanAddFeature,
-  parseHexFeatures,
-} from '../../../src/features/map/adapters/mapFeaturesAdapter.js';
+import { assertCanAddFeature } from '../../../src/features/map/adapters/mapFeaturesAdapter.js';
+import { parseHexFeatures } from '../../../src/features/map/adapters/mapAdapter.js';
 import { InvariantViolation } from '../../../src/errors/types.js';
 
 const feature = (n: number) => ({

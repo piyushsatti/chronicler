@@ -12,24 +12,24 @@ Distinct from the five Codex categories but still `Document` nouns: quest brief,
 
 ## Document dimensions (orthogonal)
 
-| Dimension | Examples | Must not conflate |
-| --- | --- | --- |
-| Kind/category | Codex category, quest brief, summary | With audience or tombstone |
-| Publication | draft / published | With deletion |
-| Audience | policy, readers, scoped body | With edit permission |
-| Deletion | tombstone | With identity (slug/UUID survive) |
+| Dimension     | Examples                             | Must not conflate                 |
+| ------------- | ------------------------------------ | --------------------------------- |
+| Kind/category | Codex category, quest brief, summary | With audience or tombstone        |
+| Publication   | draft / published                    | With deletion                     |
+| Audience      | policy, readers, scoped body         | With edit permission              |
+| Deletion      | tombstone                            | With identity (slug/UUID survive) |
 
 ## Quest lifecycle (quest status)
 
 Legal transitions are enforced in code for `QuestStatus`; this table is the semantic map, not every guard in services.
 
-| From | To (allowed examples) | Notes |
-| --- | --- | --- |
-| `open` | `full`, `played`, `cancelled` | `→ full` when slots fill; `→ played` only when `now >= scheduled_at` |
-| `full` | `open`, `played`, `cancelled` | `→ open` when a signed-up seat frees; same `scheduled_at` guard for `→ played` |
-| `played` | `closed` | Closure coordinates attendance/rewards (V07, V17) |
-| `cancelled` | — | Terminal; only from `open` or `full` (before play) |
-| `closed` | — | Terminal |
+| From        | To (allowed examples)         | Notes                                                                          |
+| ----------- | ----------------------------- | ------------------------------------------------------------------------------ |
+| `open`      | `full`, `played`, `cancelled` | `→ full` when slots fill; `→ played` only when `now >= scheduled_at`           |
+| `full`      | `open`, `played`, `cancelled` | `→ open` when a signed-up seat frees; same `scheduled_at` guard for `→ played` |
+| `played`    | `closed`                      | Closure coordinates attendance/rewards (V07, V17)                              |
+| `cancelled` | —                             | Terminal; only from `open` or `full` (before play)                             |
+| `closed`    | —                             | Terminal                                                                       |
 
 Canonical diagram and `LEGAL_TRANSITIONS`: [quests and play](/docs/systems/quests-and-play.md).
 
@@ -37,12 +37,12 @@ Participation statuses (`signed_up`, `waitlisted`, `withdrawn`, `played`, `no_sh
 
 ## Character lifecycle
 
-| State | Meaning |
-| --- | --- |
-| `active` | May sign up for quests subject to other rules |
-| `pending_approval` | Verification in flight |
-| `retired` | Terminal for active play; history kept; V05 refused after retire |
-| `dead` | Terminal; distinct from retired in product meaning — transition verbs are not fully enumerated here |
+| State              | Meaning                                                                                             |
+| ------------------ | --------------------------------------------------------------------------------------------------- |
+| `active`           | May sign up for quests subject to other rules                                                       |
+| `pending_approval` | Verification in flight                                                                              |
+| `retired`          | Terminal for active play; history kept; V05 refused after retire                                    |
+| `dead`             | Terminal; distinct from retired in product meaning — transition verbs are not fully enumerated here |
 
 ## DM profile (N02)
 

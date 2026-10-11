@@ -8,16 +8,16 @@ The scarce resource is a pooled connection, not a millisecond. Postgres executes
 
 ## Interfaces
 
-| Interface | Role |
-| --- | --- |
-| [live-authority](/docs/interfaces/live-authority.md) | Authority at the boundary |
-| [session-audience](/docs/interfaces/session-audience.md) | One session per request |
-| [graphql-schema](/docs/interfaces/graphql-schema.md) | Request surface |
+| Interface                                                | Role                      |
+| -------------------------------------------------------- | ------------------------- |
+| [live-authority](/docs/interfaces/live-authority.md)     | Authority at the boundary |
+| [session-audience](/docs/interfaces/session-audience.md) | One session per request   |
+| [graphql-schema](/docs/interfaces/graphql-schema.md)     | Request surface           |
 
 ## Implemented by
 
-| App | Local docs |
-| --- | --- |
+| App        | Local docs                       |
+| ---------- | -------------------------------- |
 | `apps/api` | [apps/api/docs/](/apps/api/docs) |
 
 ## Requirements

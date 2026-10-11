@@ -120,15 +120,15 @@ class ArchiveSettings:
         litellm_base_url = _required("LITELLM_BASE_URL").rstrip("/")
         litellm_api_key = _required("LITELLM_API_KEY")
         rerank_model = os.getenv("RERANK_MODEL", "").strip() or None
-        bootstrap_snapshot_path = os.getenv(
-            "ARCHIVE_BOOTSTRAP_SNAPSHOT_PATH", ""
-        ).strip() or None
-        bootstrap_snapshot_sha256 = os.getenv(
-            "ARCHIVE_BOOTSTRAP_SNAPSHOT_SHA256", ""
-        ).strip() or None
-        bootstrap_promotion_marker_path = os.getenv(
-            "ARCHIVE_BOOTSTRAP_PROMOTION_MARKER_PATH", ""
-        ).strip() or None
+        bootstrap_snapshot_path = (
+            os.getenv("ARCHIVE_BOOTSTRAP_SNAPSHOT_PATH", "").strip() or None
+        )
+        bootstrap_snapshot_sha256 = (
+            os.getenv("ARCHIVE_BOOTSTRAP_SNAPSHOT_SHA256", "").strip() or None
+        )
+        bootstrap_promotion_marker_path = (
+            os.getenv("ARCHIVE_BOOTSTRAP_PROMOTION_MARKER_PATH", "").strip() or None
+        )
         return cls(
             database_url=_required("ARCHIVE_DATABASE_URL"),
             database_ca_file=_required("ARCHIVE_DATABASE_CA_FILE"),

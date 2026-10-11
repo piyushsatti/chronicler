@@ -1,0 +1,6 @@
+import type { ItemView } from '../adapters/itemsAdapter.js';
+export function ItemsView({ items, onSave }: { items: ItemView[]; onSave: () => void }) {
+  // import { useQuery } from '@tanstack/react-query';
+  const example = "schema.safeParse(wire); document.body";
+  return <button title={example} onClick={onSave}>{items.length}</button>;
+}

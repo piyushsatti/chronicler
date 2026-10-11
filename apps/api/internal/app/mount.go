@@ -11,6 +11,7 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/ingest"
 	"github.com/piyushsatti/chronicler/apps/api/internal/login"
 	"github.com/piyushsatti/chronicler/apps/api/internal/member"
+	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/config"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/graphql"
@@ -22,19 +23,22 @@ import (
 
 // HTTPDeps are the collaborators Mount needs. Nil read callbacks are replaced
 // with not-found stubs so the OpenAPI surface stays registered without a DB.
+// Notification routes stay registered, but absent read/command dependencies fail internally.
 type HTTPDeps struct {
-	Resolver      *graph.Resolver
-	QuestCmd      quest.Commands
-	Documents     document.Queries
-	SiteStats     func() site.Stats
-	MemberMe      member.MeQuery
-	Login         *login.Service
-	Ingest        *ingest.Handler
-	Agent         *agent.Service
-	SpatialTime   spatial.TimeMap
-	MemberRead    member.ReadAPI
-	SpatialRead   spatial.ReadAPI
-	CharacterRead character.ReadAPI
+	Resolver        *graph.Resolver
+	QuestCmd        quest.Commands
+	Notifications   notification.Queries
+	NotificationCmd notification.Commands
+	Documents       document.Queries
+	SiteStats       func() site.Stats
+	MemberMe        member.MeQuery
+	Login           *login.Service
+	Ingest          *ingest.Handler
+	Agent           *agent.Service
+	SpatialTime     spatial.TimeMap
+	MemberRead      member.ReadAPI
+	SpatialRead     spatial.ReadAPI
+	CharacterRead   character.ReadAPI
 }
 
 // Mount registers the HTTP surface used by cmd/api (health, auth, GraphQL, /v1).
@@ -69,6 +73,8 @@ func Mount(mux httpserver.Router, d HTTPDeps) {
 		}
 	}
 	member.Routes(mux, me)
+	notification.Routes(mux, d.Notifications)
+	notification.CommandRoutes(mux, d.NotificationCmd)
 
 	withMemberReadStubs(d.MemberRead).Routes(mux)
 	withSpatialReadStubs(d.SpatialRead).Routes(mux)
@@ -117,10 +123,12 @@ func MountFromAPI(mux httpserver.Router, runtime API, cfg config.Config) {
 	}
 
 	Mount(mux, HTTPDeps{
-		Resolver:  runtime.Resolver,
-		QuestCmd:  runtime.QuestCmd,
-		Documents: runtime.Documents,
-		SiteStats: runtime.SiteStats,
+		Resolver:        runtime.Resolver,
+		QuestCmd:        runtime.QuestCmd,
+		Documents:       runtime.Documents,
+		Notifications:   runtime.Notifications,
+		NotificationCmd: runtime.NotificationCmd,
+		SiteStats:       runtime.SiteStats,
 		MemberMe: func(id string) (member.Member, error) {
 			if id == "" {
 				return member.Member{}, apierr.New(apierr.NotFound, "member not found")

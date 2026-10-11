@@ -13,12 +13,12 @@ A transaction locks the backing row, samples `clock_timestamp()` after that lock
 
 ## Timing and wire contract
 
-| Concern | Agent questions | Go delivery/maintenance jobs |
-| --- | --- | --- |
-| Lease / renewal | 30 seconds / 10 seconds | 120 seconds / 40 seconds |
-| Deadline | Immutable 100 seconds from submission, including queue and retries | 10 minutes per attempt |
+| Concern         | Agent questions                                                               | Go delivery/maintenance jobs             |
+| --------------- | ----------------------------------------------------------------------------- | ---------------------------------------- |
+| Lease / renewal | 30 seconds / 10 seconds                                                       | 120 seconds / 40 seconds                 |
+| Deadline        | Immutable 100 seconds from submission, including queue and retries            | 10 minutes per attempt                   |
 | Result delivery | Stop model work 5 seconds before deadline; bound delivery to remaining budget | Context cancellation plus receipt checks |
-| Caller | Existing Discord 120-second wait | Existing durable jobs |
+| Caller          | Existing Discord 120-second wait                                              | Existing durable jobs                    |
 
 These are accepted budgets, not measured production latency guarantees. Model and provider calls must use the remaining budget; renewal never extends the question deadline. A separate bounded Go worker sweep terminalizes overdue queued/running/retry questions with a safe `question.failed` result. Reads stay read-only. A full worker or database outage can still prevent a response within the caller budget.
 
@@ -28,7 +28,9 @@ Choose the lean acknowledgment contract: identical normalized terminal completio
 
 ## Migration and compatibility
 
-Migration `0002_job_leases.sql` locks both tables before checking existing data. It refuses any running job in any lane, and any existing agent work, pending reviewed reconciliation. It does not convert or discard admitted work silently. The initial schema migration remains unchanged. Deploying this migration, choosing existing-data reconciliation and enabling consumers require their own operational approval.
+The consolidated [initial schema](/apps/api/db/migrations/0001_init.sql) defines lease tokens, live timestamp checks, completion pairs, question deadlines and partial indexes. `agent_questions` has no lifecycle state column. This is a fresh-database baseline; the former incremental `0002_job_leases.sql` lock/preflight refusal and rollback guard are absent from the current migration set.
+
+Existing Goose histories are unresolved (`SCHEMA-HISTORY-01`). Applying the current files does not rerun an already-applied version 1 or reconcile former versions 2/3. Do not convert or discard existing work or rewrite migration history. Existing-data reconciliation, production migration execution and enabling consumers require their own reviewed operational approval. Initial-DDL execution must be verified on a separately admitted empty database; prior end-state fixtures do not prove it.
 
 Workers and API must adopt protocol 1 together. A stale binary receives 422 instead of taking unfenced work. There is no historical attempt ledger: replay after a newer attempt is a conflict. Add such a ledger only if historical replay becomes an explicit requirement.
 

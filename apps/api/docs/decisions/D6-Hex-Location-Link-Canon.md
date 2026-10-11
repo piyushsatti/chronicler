@@ -15,8 +15,8 @@ Two mechanisms linked hexes to location documents: scalar `hexes.document_id` (u
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
+| Alternative                            | Why not                                                                     |
+| -------------------------------------- | --------------------------------------------------------------------------- |
 | Repurpose `hexes.document_id` as canon | Not chosen; typed table already carried terrain relation and publish gating |
 
 ## Consequences

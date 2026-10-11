@@ -8,14 +8,14 @@ Current Go implementation reference. [D42](/apps/api/docs/decisions/D42-Worker-A
 
 [Job queries](/apps/api/db/queries/jobs.sql) lock a candidate with `FOR UPDATE SKIP LOCKED`. The [store](/apps/api/internal/platform/jobs/postgres.go) samples the database clock after the row lock and applies shared [lease rules](/apps/api/internal/platform/jobs/lease.go). Every worker mutation uses internal job identity plus the claimed token. Transactions finish before remote work begins.
 
-| Transition | Rule |
-| --- | --- |
-| queued/retry_wait → running | Due job; increment attempt and token |
-| expired running → running | New token fences the abandoned worker |
-| running → succeeded/dead/repair_required | Valid live receipt; preserve current terminal acknowledgment |
-| running → retry_wait | Valid live receipt; release it and use bounded server backoff |
-| question deadline → dead | Atomic safe failure result; applies even before first claim |
-| queued/running/retry_wait → cancelled | Internal operator command by public UUID; no worker receipt required; terminal results remain immutable |
+| Transition                               | Rule                                                                                                    |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| queued/retry_wait → running              | Due job; increment attempt and token                                                                    |
+| expired running → running                | New token fences the abandoned worker                                                                   |
+| running → succeeded/dead/repair_required | Valid live receipt; preserve current terminal acknowledgment                                            |
+| running → retry_wait                     | Valid live receipt; release it and use bounded server backoff                                           |
+| question deadline → dead                 | Atomic safe failure result; applies even before first claim                                             |
+| queued/running/retry_wait → cancelled    | Internal operator command by public UUID; no worker receipt required; terminal results remain immutable |
 
 Exact current terminal replay is read-only. A released retry receipt and any older token conflict. Generic re-enqueue may begin a new logical generation on its stable row, resetting attempts while preserving the token. Agent submissions with the same UUID and normalized body are idempotent; a different body conflicts.
 
@@ -29,6 +29,8 @@ These budgets require a running API/database/worker. They do not establish produ
 
 ## Schema and verification
 
-[Goose migration 0002](/apps/api/db/migrations/0002_job_leases.sql) locks both relevant tables and refuses any running job or preexisting agent work before schema changes. Existing-state reconciliation and production migration execution are separate decisions. No data import/discard, legacy production cutover, PGMQ, or TLS guarantee is implied.
+The consolidated [initial schema](/apps/api/db/migrations/0001_init.sql) enforces nonnegative non-null tokens, running/non-running lease timestamps, completion pairs and agent-question deadlines. It defines the partial expiry/deadline indexes and omits duplicate question state. It provides a fresh-database baseline, not the former incremental migration's lock/preflight refusal or rollback guard.
 
-Go unit/HTTP tests exercise the shared state rules and wire validation. Integration fixtures in `apps/api/test/integration/job_leases_test.go` and `agent_leases_test.go` exercise Postgres concurrency and atomicity when run against an admitted disposable database. Report execution receipts separately from source coverage. Operational cutover and provider side-effect proofs remain separate gates.
+Existing Goose histories remain unresolved (`SCHEMA-HISTORY-01`): an applied version 1 is not rerun, and former versions 2/3 have no matching current migration files. Reconciliation and production execution require separate reviewed operational approval. Fresh initial-DDL proof requires an admitted empty fixture; reusing a former end-state database does not establish it. No data import/discard, history rewrite, legacy production cutover, PGMQ, or TLS guarantee is implied.
+
+Go unit/HTTP tests exercise the shared state rules and wire validation. Integration fixtures in `apps/api/test/integration/job_leases_test.go` and `agent_leases_test.go` exercise schema admission/rejection, Postgres concurrency and atomicity when run against an admitted disposable database. Report execution receipts separately from source coverage. Operational cutover and provider side-effect proofs remain separate gates.

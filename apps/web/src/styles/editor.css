@@ -1,0 +1,230 @@
+/* Editor properties panel + LiveEditor — ported from v03 prototype */
+  .hf2 .pf{ display:flex; flex-direction:column; }
+  .hf2 .pf-row{ display:grid; grid-template-columns:22px 138px 1fr; align-items:start; gap:10px; padding:5px 8px; border-radius:8px; }
+  .hf2 .pf-row:hover{ background:var(--color-bg-surface); }
+  .hf2 .pf-ic{ display:grid; place-items:center; color:var(--color-text-4); height:26px; }
+  .hf2 .pf-label{ display:flex; align-items:center; gap:5px; height:auto; min-height:26px; font-size:12.5px; font-weight:600; color:var(--color-text-3); }
+  .hf2 .pf-req{ width:5px; height:5px; border-radius:50%; background:var(--color-accent); flex-shrink:0; }
+  /* #10: hint text must read as a distinct, lighter tier under the (now bolder)
+     label — was inheriting the label's own size/weight via the generic `.small`
+     utility, so label and hint were visually near-identical. Reuses this file's
+     own secondary-text scale (11px matches .pf-err/.pf-ok) and the existing
+     --ink-4 tone, no new sizes or colors introduced. */
+  .hf2 .pf-hint{ font-size:11px; font-weight:400; color:var(--color-text-4); }
+  .hf2 .pf-val{ min-width:0; display:flex; flex-direction:column; gap:3px; }
+  .hf2 .pf-err{ font-size:11px; color:var(--color-status-dead); padding-left:2px; }
+  .hf2 .pf-row[data-err="1"]{ background:color-mix(in srgb, var(--color-status-dead) 3%, transparent); }
+
+  .hf2 .pf-input{ all:unset; box-sizing:border-box; width:100%; min-height:26px; padding:3px 8px; font-size:13.5px; color:var(--color-text);
+    border-radius:7px; border:1px solid transparent; }
+  .hf2 .pf-input:hover{ border-color:var(--color-border); }
+  .hf2 .pf-input:focus{ border-color:var(--color-border-2); background:var(--color-bg-panel); box-shadow:0 0 0 3px color-mix(in srgb, var(--color-accent) 8%, transparent); }
+  .hf2 .pf-input.pf-mono{ font-family:var(--font-mono); font-size:12.5px; }
+  .hf2 .pf-input.pf-bad{ border-color:color-mix(in srgb, var(--color-status-dead) 40%, transparent); }
+  .hf2 .pf-ph{ color:var(--color-text-4); }
+
+  /* picker */
+  .hf2 .pf-pick{ all:unset; box-sizing:border-box; cursor:pointer; display:inline-flex; align-items:center; gap:7px; min-height:26px;
+    padding:3px 9px; font-size:13.5px; color:var(--color-text); border-radius:7px; border:1px solid var(--color-border); background:var(--color-bg-panel); }
+  .hf2 .pf-pick:hover{ border-color:var(--color-border-2); }
+  .hf2 .pf-caret{ color:var(--color-text-4); font-size:10px; margin-left:2px; }
+  .hf2 .pf-backdrop{ position:fixed; inset:0; z-index:40; }
+  .hf2 .pf-menu{ position:absolute; z-index:41; top:calc(100% + 4px); left:0; min-width:170px; max-height:240px; overflow:auto;
+    background:var(--color-bg-panel); border:1px solid var(--color-border-2); border-radius:10px; box-shadow:var(--shadow-lift); padding:5px; }
+  .hf2 .pf-opt{ all:unset; cursor:pointer; display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:7px; font-size:13px; color:var(--color-text-2); }
+  .hf2 .pf-opt:hover{ background:var(--color-bg-surface); color:var(--color-text); }
+  .hf2 .pf-dot{ width:8px; height:8px; border-radius:2px; flex-shrink:0; }
+  .hf2 .pf-pill{ display:inline-flex; align-items:center; gap:6px; padding:2px 10px; border-radius:999px; font-size:12px; font-weight:600; }
+
+  /* slots */
+  .hf2 .pf-slots{ display:inline-flex; align-items:center; gap:6px; font-size:13.5px; color:var(--color-text); }
+  .hf2 .pf-num{ all:unset; width:34px; text-align:center; padding:3px 4px; border-radius:6px; border:1px solid var(--color-border); font-variant-numeric:tabular-nums; }
+  .hf2 .pf-num:focus{ border-color:var(--color-border-2); box-shadow:0 0 0 3px color-mix(in srgb, var(--color-accent) 8%, transparent); }
+  .hf2 .pf-slash{ color:var(--color-text-4); }
+
+  /* tags */
+  .hf2 .pf-tags{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding:2px; }
+  .hf2 .pf-tag{ display:inline-flex; align-items:center; gap:5px; font-family:var(--font-mono); font-size:11px; color:var(--color-text-2);
+    background:var(--color-bg-surface); border:1px solid var(--color-border); border-radius:6px; padding:3px 4px 3px 9px; }
+  .hf2 .pf-tag button{ all:unset; cursor:pointer; color:var(--color-text-4); font-size:13px; line-height:1; padding:0 2px; }
+  .hf2 .pf-tag button:hover{ color:var(--color-status-dead); }
+  .hf2 .pf-taginput{ all:unset; min-width:90px; flex:1; font-size:12.5px; padding:3px 4px; color:var(--color-text); }
+
+  .hf2 .pf-add{ all:unset; cursor:pointer; display:inline-flex; align-items:center; gap:6px; margin:6px 8px 0; padding:5px 8px; border-radius:7px;
+    font-size:12px; color:var(--color-text-4); }
+  .hf2 .pf-add:hover{ background:var(--color-bg-surface); color:var(--color-text-3); }
+
+  .hf2 .pf-summary{ margin:0 8px 12px; padding:10px 14px; border-radius:10px; background:color-mix(in srgb, var(--color-status-dead) 5%, transparent); border:1px solid color-mix(in srgb, var(--color-status-dead) 20%, transparent); font-size:12.5px; color:var(--color-text-2); }
+  .hf2 .pf-summary strong{ display:block; margin-bottom:4px; color:var(--color-status-dead); font-size:12.5px; }
+  .hf2 .pf-summary ul{ margin:0; padding-left:18px; }
+  .hf2 .pf-summary li{ margin:2px 0; }
+  .hf2 .pf-ok{ color:var(--color-status-alive); font-size:11px; font-weight:700; }
+
+  .hf2 .pf-toggle{ all:unset; cursor:pointer; display:inline-flex; align-items:center; gap:9px; }
+  .hf2 .pf-toggle .pf-knob{ width:34px; height:20px; border-radius:999px; background:var(--color-border-2); position:relative; transition:background 140ms; }
+  .hf2 .pf-toggle .pf-knob::after{ content:''; position:absolute; top:2px; left:2px; width:16px; height:16px; border-radius:50%; background:var(--color-text-2); box-shadow:0 1px 2px color-mix(in srgb, var(--color-backdrop) 15%, transparent); transition:transform 140ms; }
+  .hf2 .pf-toggle[data-on="1"] .pf-knob{ background:var(--color-accent); }
+  .hf2 .pf-toggle[data-on="1"] .pf-knob::after{ transform:translateX(14px); background:var(--color-hero-on-brand-ink); }
+  .hf2 .pf-toggle-lbl{ font-size:13px; color:var(--color-text-2); }
+  .hf2 .pf-area{ resize:none; line-height:1.55; white-space:pre-wrap; min-height:46px; }
+  .hf2 .pf-pairs{ display:flex; flex-direction:column; gap:5px; }
+  .hf2 .pf-pair{ display:flex; align-items:center; gap:6px; }
+  .hf2 .pf-pair .pf-input{ border:1px solid var(--color-border); }
+  .hf2 .pf-pair-x{ all:unset; cursor:pointer; color:var(--color-text-4); font-size:15px; padding:0 4px; }
+  .hf2 .pf-pair-x:hover{ color:var(--color-status-dead); }
+  .hf2 .pf-rowadd{ all:unset; cursor:pointer; font-size:12px; color:var(--color-text-4); padding:3px 4px; }
+  .hf2 .pf-rowadd:hover{ color:var(--color-text-3); }
+
+  /* viewport queries removed — use Imposition navPatternFor / declarations */
+
+
+  .hf2 .le-doc{ max-width:720px; margin:0 auto; padding:8px 0 40vh; color:var(--color-text-2); }
+  /* #17: compact variant for LiveEditor instances embedded inline (not
+     owning the whole page body) -- e.g. one per audience-block text run in
+     the summary editor. Swaps the whole-page 40vh click-below gutter for a
+     small fixed one; everything else about `.le-doc` is unchanged. */
+  .hf2 .le-doc.le-doc-compact{ padding:6px 0 10px; }
+  .hf2 .le-row{ position:relative; border-radius:7px; }
+  .hf2 .le-read{ cursor:text; padding:2px 10px; border-left:2px solid transparent; }
+  .hf2 .le-read:hover{ background:var(--color-bg-surface); }
+  .hf2 .le-active{ background:color-mix(in srgb, var(--color-accent) 3%, transparent); border-left:2px solid var(--color-accent); }
+
+  .hf2 .le-li{ display:flex; gap:9px; }
+  .hf2 .le-li .le-bullet{ color:var(--color-text-4); flex-shrink:0; }
+  .hf2 .le-li .le-num{ font-variant-numeric:tabular-nums; color:var(--color-text-3); }
+  .hf2 .le-quote{ border-left:3px solid var(--color-border-2); padding-left:13px; margin-left:-2px; }
+  .hf2 .le-hr{ border:none; border-top:1px solid var(--color-border); margin:14px 8px; }
+  .hf2 .le-empty{ min-height:1.1em; }
+
+  .hf2 .le-input{ box-sizing:border-box; display:block; width:100%; padding:2px 10px; caret-color:var(--color-accent);
+    border-left:2px solid var(--color-accent); background:color-mix(in srgb, var(--color-accent) 3%, transparent); border-radius:7px; color:var(--color-text); white-space:pre-wrap; word-break:break-word; }
+  .hf2 .le-syntax{ color:var(--color-text-4); }
+
+  /* widgets (table / callout / mermaid / code) */
+  .hf2 .le-widget{ position:relative; cursor:pointer; border-radius:10px; padding:2px; margin:2px 6px; transition:box-shadow 140ms; }
+  .hf2 .le-widget:hover{ box-shadow:0 0 0 1px var(--color-border-2); }
+  .hf2 .le-widget::after{ content:''; }
+  .hf2 .le-widget .cr-prose{ pointer-events:none; }
+  .hf2 .le-widget:hover .le-chip{ opacity:1; }
+  .hf2 .le-chip{ position:absolute; top:8px; right:10px; z-index:2; opacity:0; transition:opacity 140ms;
+    font-family:var(--font-mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--color-text-3);
+    background:var(--color-bg-deep); border:1px solid var(--color-border); border-radius:6px; padding:3px 7px; pointer-events:none; }
+
+  /* raw rows inside an open widget */
+  .hf2 .le-raw{ cursor:text; padding:2px 12px; font-family:var(--font-mono); font-size:12.5px; line-height:1.7; color:var(--color-text-2); white-space:pre-wrap; border-left:2px solid transparent; }
+  .hf2 .le-raw:hover{ background:var(--color-bg-surface); }
+  .hf2 .le-rawbox{ background:var(--color-bg-surface); border:1px solid var(--color-border); border-radius:10px; margin:2px 6px; padding:6px 0; }
+  .hf2 .le-input.le-mono{ font-family:var(--font-mono); font-size:12.5px; line-height:1.7; }
+
+  .hf2 .le-add{ cursor:text; padding:10px; margin:4px 6px 0; color:var(--color-text-4); font-size:13.5px; border-radius:7px; }
+  .hf2 .le-add:hover{ background:var(--color-bg-surface); color:var(--color-text-3); }
+  .hf2 .le-input::placeholder{ color:var(--color-text-4); }
+  .hf2 .le-add{ max-width:720px; margin-left:auto; margin-right:auto; }
+
+  .hf2 .le-toolbar{ display:flex; align-items:center; gap:3px; flex-wrap:wrap; padding:7px 12px; margin:0; background:var(--color-bg-panel); border-bottom:1px solid var(--color-border); position:sticky; top:64px; z-index:15; }
+  .hf2 .le-tb-btn{ all:unset; cursor:pointer; min-width:26px; height:26px; padding:0 7px; box-sizing:border-box; display:inline-flex; align-items:center; justify-content:center; border-radius:7px; font-size:12.5px; font-weight:600; color:var(--color-text-2); }
+  .hf2 .le-tb-btn:hover{ background:var(--color-bg-surface); color:var(--color-text); }
+  .hf2 .le-tb-btn.le-tb-text{ font-weight:500; font-size:12px; color:var(--color-text-3); }
+  .hf2 .le-tb-btn.le-tb-text:hover{ color:var(--color-text); }
+  .hf2 .le-tb-sep{ width:1px; height:18px; background:var(--color-border); margin:0 4px; }
+
+  /* touch target floor (WCAG 2.5.5): coarse pointers get >=44px hit areas;
+     desktop keeps the dense 26px chrome. Narrow-viewport half is Imposition. */
+  @media (pointer: coarse) {
+    .hf2 .le-tb-btn{ min-width:44px; height:44px; }
+    .hf2 .le-toolbar{ gap:8px; }
+  }
+
+  .hf2 .le-menu-backdrop{ position:fixed; inset:0; z-index:50; }
+  .hf2 .le-menu{ position:absolute; z-index:51; top:calc(100% + 6px); right:0; width:300px; max-width:78vw; background:var(--color-bg-panel); border:1px solid var(--color-border-2); border-radius:12px; box-shadow:var(--shadow-lift); padding:8px; }
+  .hf2 .le-menu-head{ font-family:var(--font-mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--color-text-3); padding:4px 8px 8px; }
+  .hf2 .le-menu-search{ all:unset; box-sizing:border-box; width:100%; padding:8px 10px; margin-bottom:6px; border:1px solid var(--color-border); border-radius:8px; font-size:13px; color:var(--color-text); }
+  .hf2 .le-menu-search:focus{ border-color:var(--color-border-2); box-shadow:0 0 0 3px color-mix(in srgb, var(--color-accent) 8%, transparent); }
+  .hf2 .le-menu-list{ display:flex; flex-direction:column; gap:1px; max-height:240px; overflow:auto; }
+  .hf2 .le-menu-item{ all:unset; cursor:pointer; display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:7px; font-size:13px; color:var(--color-text); }
+  .hf2 .le-menu-item:hover{ background:var(--color-bg-surface); }
+  .hf2 .le-menu-kind{ font-family:var(--font-mono); font-size:8.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--color-text-3); background:var(--color-bg-surface); border:1px solid var(--color-border); border-radius:4px; padding:2px 5px; flex-shrink:0; }
+  .hf2 .le-menu-tok{ font-family:var(--font-mono); font-size:10.5px; color:var(--color-accent); flex-shrink:0; }
+  .hf2 .le-menu-empty{ padding:14px; text-align:center; color:var(--color-text-3); font-size:12.5px; }
+  .hf2 .le-menu-field{ display:grid; gap:4px; padding:5px 8px; color:var(--color-text-3); font-family:var(--font-mono); font-size:9px; letter-spacing:.06em; text-transform:uppercase; }
+  .hf2 .le-menu-field input, .hf2 .le-menu-field select{ box-sizing:border-box; width:100%; padding:7px 8px; border:1px solid var(--color-border); border-radius:7px; background:var(--color-bg-panel); color:var(--color-text); font:inherit; font-family:var(--font-body); font-size:12px; letter-spacing:0; text-transform:none; }
+  .hf2 .le-menu-item:disabled{ cursor:not-allowed; opacity:.45; }
+  .hf2 .le-ac{ position:fixed; z-index:60; width:260px; max-width:80vw; background:var(--color-bg-panel); border:1px solid var(--color-border-2); border-radius:10px; box-shadow:var(--shadow-lift); padding:6px; }
+  .hf2 .le-ac-head{ font-family:var(--font-mono); font-size:8.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--color-text-3); padding:3px 8px 6px; }
+  .hf2 .le-ac-item{ all:unset; cursor:pointer; display:flex; align-items:center; gap:8px; padding:6px 9px; border-radius:7px; font-size:13px; color:var(--color-text); }
+  .hf2 .le-ac-item:hover{ background:var(--color-bg-surface); }
+  .hf2 .le-ac-cat{ font-family:var(--font-mono); font-size:8.5px; letter-spacing:.06em; color:var(--color-text-3); }
+
+/* AudienceBlockField (R8) — LOCK (server-strip) vs BLUR (client spoiler) must
+   read distinctly by shape + icon + microcopy, not colour alone. */
+  .hf2 .ab-field{ display:flex; flex-direction:column; gap:10px; }
+  .hf2 .ab-toolbar{ display:flex; flex-wrap:wrap; gap:6px; }
+  .hf2 .ab-toolbar-btn{ all:unset; box-sizing:border-box; cursor:pointer; min-height:36px; padding:0 12px; display:inline-flex; align-items:center;
+    font-size:12.5px; font-weight:600; color:var(--color-text-2); border:1px solid var(--color-border); border-radius:8px; background:var(--color-bg-panel); }
+  .hf2 .ab-toolbar-btn:hover{ border-color:var(--color-border-2); color:var(--color-text); background:var(--color-bg-surface); }
+  .hf2 .ab-toolbar-btn:focus-visible{ outline:2px solid var(--color-accent); outline-offset:2px; }
+
+  .hf2 .ab-segments{ display:flex; flex-direction:column; gap:8px; }
+
+  /* #17: now a wrapper <div> around a per-segment `LiveEditor` (was a bare
+     `<textarea>`) -- LiveEditor supplies its own line/placeholder styling
+     (`.le-input`/`.le-read` etc), so this only needs box sizing + a focus
+     ring. `:focus-within` (not `:focus`) since the actual focus target is
+     the nested LiveEditor input, not this div. */
+  .hf2 .ab-text-seg{ box-sizing:border-box; width:100%; border-radius:8px; border:1px solid transparent; }
+  .hf2 .ab-text-seg:focus-within{ border-color:var(--color-border-2); background:var(--color-bg-panel); box-shadow:0 0 0 3px color-mix(in srgb, var(--color-accent) 8%, transparent); }
+
+  /* editor chrome — a solid, heavier border reads as "locked"; a dashed,
+     lighter border reads as "just blurred". The icon + label reinforce it. */
+  .hf2 .ab-editor{ display:flex; flex-direction:column; gap:8px; padding:10px 12px; border-radius:10px; background:var(--color-bg-panel); }
+  .hf2 .ab-editor--lock{ border:2px solid var(--color-text-3); }
+  .hf2 .ab-editor--blur{ border:2px dashed var(--color-accent); }
+
+  .hf2 .ab-editor-head{ display:flex; align-items:center; gap:8px; }
+  .hf2 .ab-editor-ic{ flex-shrink:0; color:var(--color-text-2); }
+  .hf2 .ab-editor--blur .ab-editor-ic{ color:var(--color-accent); }
+  .hf2 .ab-editor-label{ flex:1; min-width:0; font-family:var(--font-mono); font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:var(--color-text-2); }
+  .hf2 .ab-editor-remove{ all:unset; cursor:pointer; width:26px; height:26px; display:grid; place-items:center; border-radius:6px; color:var(--color-text-3); font-size:15px; line-height:1; }
+  .hf2 .ab-editor-remove:hover{ background:var(--color-bg-surface); color:var(--color-status-dead); }
+  .hf2 .ab-editor-remove:focus-visible{ outline:2px solid var(--color-accent); outline-offset:1px; }
+
+  .hf2 .ab-editor-switch{ display:flex; flex-wrap:wrap; gap:4px; }
+  .hf2 .ab-switch-btn{ all:unset; box-sizing:border-box; cursor:pointer; min-height:32px; padding:0 10px; display:inline-flex; align-items:center;
+    font-size:12px; font-weight:600; color:var(--color-text-3); border:1px solid var(--color-border); border-radius:7px; }
+  .hf2 .ab-switch-btn:hover{ color:var(--color-text); border-color:var(--color-border-2); }
+  .hf2 .ab-switch-btn:focus-visible{ outline:2px solid var(--color-accent); outline-offset:2px; }
+  .hf2 .ab-switch-btn[aria-pressed="true"]{ background:var(--color-text); color:var(--color-bg-deep); border-color:var(--color-text); }
+  .hf2 .ab-editor--blur .ab-switch-btn[aria-pressed="true"]{ background:var(--color-accent); border-color:var(--color-accent); color:var(--color-hero-on-brand-ink); }
+
+  .hf2 .ab-editor-malformed-hint{ font-size:12px; color:var(--color-warn); }
+
+  .hf2 .ab-handle-field{ display:flex; align-items:center; gap:8px; }
+  .hf2 .ab-handle-label{ font-size:12px; color:var(--color-text-3); flex-shrink:0; }
+  .hf2 .ab-handle-input{ all:unset; box-sizing:border-box; flex:1; min-height:30px; padding:3px 9px; font-family:var(--font-mono); font-size:13px;
+    color:var(--color-text); border:1px solid var(--color-border); border-radius:7px; }
+  .hf2 .ab-handle-input:focus{ border-color:var(--color-border-2); box-shadow:0 0 0 3px color-mix(in srgb, var(--color-accent) 8%, transparent); }
+
+  .hf2 .ab-editor-body{ all:unset; box-sizing:border-box; width:100%; min-height:44px; padding:6px 8px; font-size:14px; line-height:1.7;
+    color:var(--color-text); border-radius:7px; border:1px solid var(--color-border); background:var(--color-bg-deep); white-space:pre-wrap; }
+  .hf2 .ab-editor-body:focus{ border-color:var(--color-border-2); box-shadow:0 0 0 3px color-mix(in srgb, var(--color-accent) 8%, transparent); }
+  .hf2 .ab-editor-body::placeholder{ color:var(--color-text-4); }
+
+  .hf2 .ab-editor-microcopy{ font-size:11.5px; color:var(--color-text-3); }
+
+  /* read-mode redaction primitives */
+  .hf2 .ab-read{ display:flex; flex-direction:column; gap:10px; }
+  .hf2 .ab-block{ display:flex; flex-direction:column; gap:6px; padding:12px 14px; border-radius:10px; }
+  .hf2 .ab-block--lock{ border:2px solid var(--color-text-3); background:var(--color-bg-surface); }
+  .hf2 .ab-block--blur{ border:2px dashed var(--color-accent); background:var(--color-bg-surface); }
+  .hf2 .ab-block-head{ display:flex; align-items:center; gap:8px; }
+  .hf2 .ab-block-ic{ flex-shrink:0; color:var(--color-text-2); }
+  .hf2 .ab-block--blur .ab-block-ic{ color:var(--color-accent); }
+  .hf2 .ab-block-label{ font-family:var(--font-mono); font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:var(--color-text-2); }
+  .hf2 .ab-block-redacted{ font-family:var(--font-mono); font-size:13px; color:var(--color-text-3); margin:0; }
+  .hf2 .ab-block-microcopy{ font-size:11.5px; color:var(--color-text-3); margin:0; }
+  .hf2 .ab-reveal-btn{ all:unset; cursor:pointer; align-self:flex-start; min-height:36px; padding:0 14px; display:inline-flex; align-items:center;
+    font-size:12.5px; font-weight:600; color:var(--color-hero-on-brand-ink); background:var(--color-accent); border-radius:8px; }
+  .hf2 .ab-reveal-btn:hover{ background:var(--color-accent-hover); }
+  .hf2 .ab-reveal-btn:focus-visible{ outline:2px solid var(--color-text); outline-offset:2px; }
+  .hf2 .ab-block-body.ab-blurred{ filter:blur(6px); user-select:none; pointer-events:none; }
+  .hf2 .ab-block-body{ transition:filter 160ms; }

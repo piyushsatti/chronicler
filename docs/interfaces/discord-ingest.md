@@ -10,8 +10,8 @@ The bot forwards **normalized observations** to the API. Observations are not fa
 
 ## Enforcement
 
-| Mechanism | Location | Status |
-| --- | --- | --- |
+| Mechanism                                                          | Location                                                                                                                     | Status       |
+| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------- | ------------ |
 | Activity and heartbeat bodies match `DiscordEvent` and `Heartbeat` | [ingest.test.ts](/apps/discord/tests/unit/interface/ingest.test.ts) against [openapi.yaml](/packages/contracts/openapi.yaml) | **enforced** |
 
 ## Provider

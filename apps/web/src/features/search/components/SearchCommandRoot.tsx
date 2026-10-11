@@ -1,4 +1,3 @@
-import { useQuery } from '@tanstack/react-query';
 import {
   createContext,
   useCallback,
@@ -8,11 +7,10 @@ import {
   type ReactNode,
 } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { queryKeys } from '../../../api/queryKeys.js';
 import { Field } from '../../../components/foundation/Field.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { toAppError } from '../../../errors/toAppError.js';
-import { loadSearch } from '../adapters/searchAdapter.js';
+import { useSearchPalette } from '../hooks/useSearchPalette.js';
 import '../search.css';
 
 type SearchDialogContextValue = {
@@ -42,12 +40,7 @@ function SearchDialogPanel({
 }: {
   onNavigate: () => void;
 }): React.JSX.Element {
-  const [query, setQuery] = useState('');
-  const searchQ = useQuery({
-    queryKey: queryKeys.search(query, 'palette'),
-    queryFn: () => loadSearch(query),
-    enabled: query.trim().length > 0,
-  });
+  const { query, setQuery, searchQ } = useSearchPalette();
 
   return (
     <div className="search-dialog stack">

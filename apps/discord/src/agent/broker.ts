@@ -35,7 +35,8 @@ export function parseQuestionResult(
       message: boundedString(raw['message'], 300),
     };
   }
-  if (raw['type'] !== 'question.completed') throw new Error('Agent result type mismatch');
+  if (raw['type'] !== 'question.completed')
+    throw new Error('Agent result type mismatch');
   const rawSources = raw['sources'];
   if (!Array.isArray(rawSources) || rawSources.length > 3)
     throw new Error('Agent result sources mismatch');

@@ -21,8 +21,8 @@ Staff merge/dedup tool and historical backfill are **deferred** — revisit only
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
+| Alternative                             | Why not                                                             |
+| --------------------------------------- | ------------------------------------------------------------------- |
 | Canon table with migration and backfill | Not rejected outright; explicitly deferred until sprawl warrants it |
 
 ## Consequences

@@ -1,10 +1,13 @@
-import { http, HttpResponse } from 'msw';
+import { graphql, http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { Route, Routes } from 'react-router-dom';
 import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
 import { HomePage } from '../../../src/features/home/pages/HomePage.js';
 import { server } from '../../../src/mocks/server.js';
 import lanesBad from '../../fixtures/wire/home/lanes-bad-board.json';
+import recruitment from '../../fixtures/wire/home/lanes-recruitment.json';
 import { renderWithProviders } from '../../test-utils.js';
 
 describe('HomePage', () => {
@@ -21,6 +24,82 @@ describe('HomePage', () => {
       'href',
       '/dms/@mira',
     );
+  });
+
+  it('shows all three filling quests in recruiting and follows a quest link', async () => {
+    const user = userEvent.setup();
+    server.use(
+      graphql.query('HomeWarRoom', () => HttpResponse.json({ data: recruitment })),
+    );
+    renderWithProviders(
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/quests/Q-419" element={<p>Quest detail destination</p>} />
+      </Routes>,
+    );
+    const lane = await screen.findByRole('region', { name: 'Now recruiting' });
+    expect(
+      within(lane)
+        .getAllByRole('link')
+        .map((link) => link.getAttribute('href')),
+    ).toEqual(['/quests/Q-417', '/quests/Q-419', '/quests/Q-420']);
+    for (const label of ['Q-417 · filling', 'Q-419 · filling', 'Q-420 · filling']) {
+      expect(within(lane).getByText(label)).toBeInTheDocument();
+    }
+    const openQuestLinks = screen.getAllByRole('link', { name: 'Open quests' });
+    expect(openQuestLinks).toHaveLength(2);
+    for (const link of openQuestLinks) {
+      expect(link).toHaveAttribute('href', '/quests');
+    }
+    await user.click(within(lane).getByRole('link', { name: "Lily's Nightmares" }));
+    expect(await screen.findByText('Quest detail destination')).toBeInTheDocument();
+  });
+
+  it('does not show a non-open quest even when its display label is open', async () => {
+    const mixed = {
+      ...recruitment,
+      questBoard: {
+        ...recruitment.questBoard,
+        items: recruitment.questBoard.items.map((item, index) => ({
+          ...item,
+          status: index === 1 ? 'closed' : 'open',
+          displayStatus: index === 1 ? 'open' : 'legacy-custom',
+        })),
+      },
+    };
+    server.use(graphql.query('HomeWarRoom', () => HttpResponse.json({ data: mixed })));
+    renderWithProviders(<HomePage />);
+    const lane = await screen.findByRole('region', { name: 'Now recruiting' });
+    expect(
+      within(lane)
+        .getAllByRole('link')
+        .map((link) => link.getAttribute('href')),
+    ).toEqual(['/quests/Q-417', '/quests/Q-420']);
+    expect(within(lane).getByText('Q-417 · legacy-custom')).toBeInTheDocument();
+    expect(within(lane).getByText('Q-420 · legacy-custom')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: "Lily's Nightmares" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('shows loading while recruitment is pending and becomes ready', async () => {
+    let release!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      graphql.query('HomeWarRoom', async () => {
+        await pending;
+        return HttpResponse.json({ data: recruitment });
+      }),
+    );
+    renderWithProviders(<HomePage />);
+    expect(screen.getByRole('status')).toHaveTextContent('Loading…');
+    release();
+    expect(
+      await screen.findByRole('region', { name: 'Now recruiting' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('shows controlled error when lanes wire fails', async () => {
@@ -58,6 +137,8 @@ describe('HomePage', () => {
       ),
     );
     renderWithProviders(<HomePage />);
-    expect(await screen.findByText('The war room is quiet for now.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('The war room is quiet for now.'),
+    ).toBeInTheDocument();
   });
 });

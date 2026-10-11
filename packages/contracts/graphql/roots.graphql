@@ -3,18 +3,44 @@
 
 type Query {
   member(id: ID = null, handle: String = null): MemberType
-  members(filters: MemberFiltersInput = null, sort: MemberSortInput = null, limit: Int! = 100, offset: Int! = 0): MemberListResult!
+  members(
+    filters: MemberFiltersInput = null
+    sort: MemberSortInput = null
+    limit: Int! = 100
+    offset: Int! = 0
+  ): MemberListResult!
   memberActivityStats(memberId: ID!): MemberActivityStatsType
   memberProfile(handle: String!): MemberProfileType
-  communityDirectory(filters: CommunityDirectoryFiltersInput = null, limit: Int! = 50, offset: Int! = 0): CommunityDirectoryResult!
-  pendingDmProfileVerifications(limit: Int! = 50, offset: Int! = 0): CommunityDirectoryResult!
-  openQuestSeats(regionId: ID = null, dmId: ID = null, limit: Int! = 50, offset: Int! = 0): OpenQuestSeatsV2Result!
+  communityDirectory(
+    filters: CommunityDirectoryFiltersInput = null
+    limit: Int! = 50
+    offset: Int! = 0
+  ): CommunityDirectoryResult!
+  pendingDmProfileVerifications(
+    limit: Int! = 50
+    offset: Int! = 0
+  ): CommunityDirectoryResult!
+  openQuestSeats(
+    regionId: ID = null
+    dmId: ID = null
+    limit: Int! = 50
+    offset: Int! = 0
+  ): OpenQuestSeatsV2Result!
   myPersonalization: MyPersonalizationType
   document(slug: String!): DocumentType
   documentById(id: ID!): DocumentType
-  documents(filters: DocumentFiltersInput = null, limit: Int! = 50, offset: Int! = 0): DocumentListResult!
+  documents(
+    filters: DocumentFiltersInput = null
+    limit: Int! = 50
+    offset: Int! = 0
+  ): DocumentListResult!
   documentBacklinks(slug: String!): [DocumentLinkType!]!
-  codexDirectory(categoryPrefix: String = null, search: String = null, limit: Int! = 50, offset: Int! = 0): CodexDirectoryResult!
+  codexDirectory(
+    categoryPrefix: String = null
+    search: String = null
+    limit: Int! = 50
+    offset: Int! = 0
+  ): CodexDirectoryResult!
   codexEntry(slug: String!): CodexEntryCardType
   codexCategories: [CategoryCountType!]!
   map(atlasCode: String!): MapV2Type
@@ -22,18 +48,52 @@ type Query {
   maps(family: String = null): [MapV2Type!]!
   hex(mapId: ID!, col: Int!, row: Int!): HexV2Type
   regions(kind: String = null): [RegionV2Type!]!
-  characters(filters: CharacterV2FiltersInput = null, limit: Int! = 50, offset: Int! = 0): CharacterV2ListResult!
+  characters(
+    filters: CharacterV2FiltersInput = null
+    limit: Int! = 50
+    offset: Int! = 0
+  ): CharacterV2ListResult!
   myCharacters(limit: Int! = 50, offset: Int! = 0): CharacterV2ListResult!
   character(id: ID = null, shortCode: String = null): CharacterV2Type
-  search(query: String!, kinds: [String!] = null, limit: Int! = 20, offset: Int! = 0): SearchResultV2Type!
+  search(
+    query: String!
+    kinds: [String!] = null
+    limit: Int! = 20
+    offset: Int! = 0
+  ): SearchResultV2Type!
   home: HomeV2Type!
   quest(id: ID = null, shortCode: String = null): QuestV2Type
-  quests(filters: QuestV2FiltersInput = null, limit: Int! = 50, offset: Int! = 0): QuestV2ListResult!
-  questBoard(regionId: ID = null, limit: Int! = 50, offset: Int! = 0): QuestV2ListResult!
-  recentlyClosedQuests(regionId: ID = null, closedSince: DateTime = null, limit: Int! = 50, offset: Int! = 0): QuestV2ListResult!
+  quests(
+    filters: QuestV2FiltersInput = null
+    limit: Int! = 50
+    offset: Int! = 0
+  ): QuestV2ListResult!
+  questBoard(
+    regionId: ID = null
+    limit: Int! = 50
+    offset: Int! = 0
+  ): QuestV2ListResult!
+  recentlyClosedQuests(
+    regionId: ID = null
+    closedSince: DateTime = null
+    limit: Int! = 50
+    offset: Int! = 0
+  ): QuestV2ListResult!
   questArcs(limit: Int! = 50, offset: Int! = 0): QuestArcV2ListResult!
   questArc(id: ID!): QuestArcV2Type
-  myNotifications(limit: Int!, unreadOnly: Boolean! = false, before: DateTime = null): NotificationConnection!
-  adminCharacterDirectory(filters: AdminCharacterDirectoryFiltersInput = null, limit: Int! = 50, offset: Int! = 0): AdminCharacterDirectoryV2Type!
-  adminOperations(deliveryState: String = null, limit: Int! = 25, offset: Int! = 0): AdminOperationsV2Type!
+  myNotifications(
+    limit: Int!
+    unreadOnly: Boolean! = false
+    before: DateTime = null
+  ): NotificationConnection!
+  adminCharacterDirectory(
+    filters: AdminCharacterDirectoryFiltersInput = null
+    limit: Int! = 50
+    offset: Int! = 0
+  ): AdminCharacterDirectoryV2Type!
+  adminOperations(
+    deliveryState: String = null
+    limit: Int! = 25
+    offset: Int! = 0
+  ): AdminOperationsV2Type!
 }

@@ -10,8 +10,8 @@ One or two sentences: the obligation both sides must honor.
 
 ## Enforcement
 
-| Mechanism | Location | Status |
-| --- | --- | --- |
+| Mechanism                            | Location         | Status                   |
+| ------------------------------------ | ---------------- | ------------------------ |
 | Schema check / test / CI step / lint | path or job name | enforced \| not enforced |
 
 If every row is **not enforced**, list this interface on [interfaces/README.md](/docs/interfaces/README.md#not-enforced).

@@ -2,12 +2,12 @@
 
 Postgres schema for Chronicler. **Migrations are the schema** — read `migrations/0001_init.sql` for the live DDL and its header conventions.
 
-| Path | Purpose |
-| --- | --- |
-| `migrations/` | Goose SQL migrations (greenfield; no Alembic history) |
-| `seed/` | Local/preview fixtures (`local.sql`) |
-| `queries/` | sqlc query sources |
-| [`docs/`](docs/) | Why / patterns / table inventory |
+| Path             | Purpose                                               |
+| ---------------- | ----------------------------------------------------- |
+| `migrations/`    | Goose SQL migrations (greenfield; no Alembic history) |
+| `seed/`          | Local/preview fixtures (`local.sql`)                  |
+| `queries/`       | sqlc query sources                                    |
+| [`docs/`](docs/) | Why / patterns / table inventory                      |
 
 Canonical convention text also lives in the header of `migrations/0001_init.sql`. Design rationale and naming patterns are expanded under [`docs/`](docs/) — start at [`docs/README.md`](docs/README.md).
 
@@ -57,9 +57,9 @@ Regenerate the file from the built-in world with `go run ./cmd/seedqa -write`.
 
 ## Dual-key (one-liner)
 
-| Column | Role |
-| --- | --- |
-| `id` | `BIGINT` identity PK; **all FKs**; never in URLs or client payloads |
-| `public_id` | `UUID`; only identifier the HTTP/GraphQL layer may accept or emit |
+| Column      | Role                                                                |
+| ----------- | ------------------------------------------------------------------- |
+| `id`        | `BIGINT` identity PK; **all FKs**; never in URLs or client payloads |
+| `public_id` | `UUID`; only identifier the HTTP/GraphQL layer may accept or emit   |
 
 Full rules: [`docs/design.md`](docs/design.md), [`docs/patterns.md`](docs/patterns.md).

@@ -4,11 +4,15 @@ on:
   push:
     paths:
       - '.github/workflows/agent.yml'
+      - 'pyproject.toml'
+      - 'uv.lock'
       - 'apps/agent/**'
       - 'packages/contracts/openapi.yaml'
   pull_request:
     paths:
       - '.github/workflows/agent.yml'
+      - 'pyproject.toml'
+      - 'uv.lock'
       - 'apps/agent/**'
       - 'packages/contracts/openapi.yaml'
 
@@ -18,10 +22,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
+      - name: Sync root tooling
+        run: uv sync --frozen --all-groups
       - name: Sync agent
         run: uv sync --directory apps/agent --frozen --all-groups
       - name: Ruff
-        run: uv run --directory apps/agent ruff check . && uv run --directory apps/agent ruff format --check .
+        run: uv run --directory apps/agent ruff check . && uv run ruff format --check apps/agent
       - name: Pyright
         run: uv run --directory apps/agent pyright
       - name: Pytest

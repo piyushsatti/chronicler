@@ -1,0 +1,8 @@
+import { useItems } from './useItems.js';
+export function useItemsPage() {
+  const items = useItems();
+  if (items.isError) return { status: 'error', error: items.error };
+  if (items.isLoading) return { status: 'loading' };
+  if (items.data.length === 0) return { status: 'empty' };
+  return { status: 'ready', view: items.data };
+}

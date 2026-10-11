@@ -2,17 +2,34 @@
 # apps/web remains excluded (owned by a separate session).
 exclude: ^(apps/web/)
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.13
+  - repo: local
     hooks:
       - id: ruff
+        name: ruff check
+        entry: .venv/bin/ruff check --force-exclude
+        language: system
         args: [--fix]
+        types_or: [python, pyi, jupyter]
+        require_serial: true
+        pass_filenames: true
+        minimum_pre_commit_version: '2.9.2'
       - id: ruff-format
+        name: ruff format
+        entry: .venv/bin/ruff format --force-exclude
+        language: system
+        types_or: [python, pyi, jupyter]
+        require_serial: true
+        pass_filenames: true
+        minimum_pre_commit_version: '2.9.2'
 
-  - repo: https://github.com/pre-commit/mirrors-prettier
-    rev: v4.0.0-alpha.8
+  - repo: local
     hooks:
       - id: prettier
+        name: prettier
+        entry: bun run --no-install --no-env-file prettier --write --ignore-unknown
+        language: system
+        types: [text]
+        pass_filenames: true
 
   - repo: local
     hooks:

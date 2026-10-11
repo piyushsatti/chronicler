@@ -8,15 +8,15 @@ A document's audience is decided by exactly one engine (`resolve_audience`), int
 
 ## Interfaces
 
-| Interface | Role |
-| --- | --- |
-| [scoped-body](/docs/interfaces/scoped-body.md) | Audience-scoped documents |
+| Interface                                                | Role                      |
+| -------------------------------------------------------- | ------------------------- |
+| [scoped-body](/docs/interfaces/scoped-body.md)           | Audience-scoped documents |
 | [session-audience](/docs/interfaces/session-audience.md) | Visibility at the session |
 
 ## Implemented by
 
-| App | Local docs |
-| --- | --- |
+| App        | Local docs                       |
+| ---------- | -------------------------------- |
 | `apps/api` | [apps/api/docs/](/apps/api/docs) |
 | `apps/web` | [apps/web/docs/](/apps/web/docs) |
 

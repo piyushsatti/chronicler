@@ -32,7 +32,10 @@ import { deliverActivity } from './forward.js';
  *
  * @param voiceTracker - injectable for tests; defaults to a fresh tracker.
  */
-export function mountActivity(client: Client, voiceTracker?: VoiceSessionTracker): void {
+export function mountActivity(
+  client: Client,
+  voiceTracker?: VoiceSessionTracker,
+): void {
   if (!config.snifferEnabled) {
     logger.info(
       'Sniffer disabled (SNIFFER_ENABLED is not "true") -- gateway activity ' +

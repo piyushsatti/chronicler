@@ -1,9 +1,10 @@
 import { HttpResponse } from 'msw';
 import type { FeatureGraphql, FeatureHandlers, FeatureRoute } from '../../chrome/featureModule.js';
 import { lazyElement } from '../../chrome/lazyElement.js';
-import { shortCodeRedirectRoute, stubRoute } from '../../chrome/routeBuilders.js';
+import { shortCodeRedirectRoute } from '../../chrome/routeBuilders.js';
 import goodCodex from '../../../tests/fixtures/wire/codex/good.json';
 import goodCodexEntry from '../../../tests/fixtures/wire/codex/entry-good.json';
+import type { CodexKind } from './pages/CodexTypedDetailPage.js';
 
 export const endpoints = {} as const;
 
@@ -19,6 +20,17 @@ export const graphql: FeatureGraphql = {
 
 export const handlers: FeatureHandlers = [];
 
+function typed(path: string, kind: CodexKind): FeatureRoute {
+  return {
+    path,
+    element: lazyElement(() =>
+      import('./pages/CodexTypedDetailPage.js').then((module) => ({
+        default: () => module.CodexTypedDetailPage({ kind }),
+      })),
+    ),
+  };
+}
+
 export const routes: readonly FeatureRoute[] = [
   {
     path: '/codex',
@@ -26,13 +38,13 @@ export const routes: readonly FeatureRoute[] = [
       import('./pages/CodexPage.js').then((module) => ({ default: module.CodexPage })),
     ),
   },
-  stubRoute('/codex/npc/:slug', 'NPC detail'),
-  stubRoute('/codex/faction/:slug', 'Faction detail'),
-  stubRoute('/codex/region/:slug', 'Region hub (codex path)'),
-  stubRoute('/codex/location/:slug', 'Location detail'),
-  stubRoute('/codex/artifact/:id', 'Artifact detail'),
-  stubRoute('/codex/event/:id', 'Event detail'),
-  stubRoute('/codex/lore/:id', 'Lore detail'),
+  typed('/codex/npc/:slug', 'npc'),
+  typed('/codex/faction/:slug', 'faction'),
+  typed('/codex/region/:slug', 'region'),
+  typed('/codex/location/:slug', 'location'),
+  typed('/codex/artifact/:id', 'artifact'),
+  typed('/codex/event/:id', 'event'),
+  typed('/codex/lore/:id', 'lore'),
   {
     path: '/npcs',
     element: lazyElement(() =>
@@ -41,7 +53,7 @@ export const routes: readonly FeatureRoute[] = [
       })),
     ),
   },
-  stubRoute('/npcs/:slug', 'NPC detail (short path)'),
+  typed('/npcs/:slug', 'npc'),
   {
     path: '/factions',
     element: lazyElement(() =>
@@ -50,7 +62,7 @@ export const routes: readonly FeatureRoute[] = [
       })),
     ),
   },
-  stubRoute('/factions/:slug', 'Faction detail (short path)'),
+  typed('/factions/:slug', 'faction'),
   {
     path: '/regions',
     element: lazyElement(() =>

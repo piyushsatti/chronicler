@@ -4,13 +4,13 @@ Use [start-here.md](/docs/start-here.md) for the human path. This page is the in
 
 ## Product intent
 
-| Slice | Path | Holds |
-| --- | --- | --- |
-| **Requirements** | [requirements/](/docs/requirements/README.md) | R-id index and by-system extracts |
-| **Semantics** | [semantics/](/docs/semantics/README.md) | Actors, nouns, verbs, goals, taxonomy, mereology, invariants |
-| **Systems** | [systems.md](/docs/systems.md) | Thin map of product areas (including Agent Q&A) |
-| **Interfaces** | [interfaces/](/docs/interfaces/README.md) | Boundaries both sides must honor |
-| **Decisions** | [decisions/](/docs/decisions/README.md) | Short boundary ADRs (D-ids) |
+| Slice            | Path                                          | Holds                                                        |
+| ---------------- | --------------------------------------------- | ------------------------------------------------------------ |
+| **Requirements** | [requirements/](/docs/requirements/README.md) | R-id index and by-system extracts                            |
+| **Semantics**    | [semantics/](/docs/semantics/README.md)       | Actors, nouns, verbs, goals, taxonomy, mereology, invariants |
+| **Systems**      | [systems.md](/docs/systems.md)                | Thin map of product areas (including Agent Q&A)              |
+| **Interfaces**   | [interfaces/](/docs/interfaces/README.md)     | Boundaries both sides must honor                             |
+| **Decisions**    | [decisions/](/docs/decisions/README.md)       | Short boundary ADRs (D-ids)                                  |
 
 **Requirements** are the most product-facing. **Semantics** nail vocabulary. **Systems** point at **interfaces**; apps implement interfaces. Tooling rules: [CONTRIBUTING.md](/CONTRIBUTING.md), [AGENTS.md](/AGENTS.md).
 
@@ -18,11 +18,11 @@ Use [start-here.md](/docs/start-here.md) for the human path. This page is the in
 
 ## As-built
 
-| Slice | Path | Holds |
-| --- | --- | --- |
-| **Apps** | `apps/*/docs/` | Design and as-built next to code |
-| **Contracts** | `packages/contracts/schema.graphql` | GraphQL SDL ([graphql-schema](/docs/interfaces/graphql-schema.md)) |
-| **Deploy** | [deploy/docs/](/deploy/docs/README.md) | Ship, promote, backup, repair runbooks |
+| Slice         | Path                                   | Holds                                                              |
+| ------------- | -------------------------------------- | ------------------------------------------------------------------ |
+| **Apps**      | `apps/*/docs/`                         | Design and as-built next to code                                   |
+| **Contracts** | `packages/contracts/schema.graphql`    | GraphQL SDL ([graphql-schema](/docs/interfaces/graphql-schema.md)) |
+| **Deploy**    | [deploy/docs/](/deploy/docs/README.md) | Ship, promote, backup, repair runbooks                             |
 
 ## Tree
 

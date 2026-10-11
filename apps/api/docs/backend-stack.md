@@ -3,17 +3,16 @@ Interfaces: see [docs/interfaces/](/docs/interfaces/README.md).
 
 # Backend stack
 
-
 Current-state reference (latest only at time of excerpt). Paths below describe **legacy** layout until the API app is fully wired.
 
 ## Languages & runtime
 
-| Item | Value | Legacy source |
-| --- | --- | --- |
-| Language | Python | `pyproject.toml` |
-| Version | `>=3.12`, pinned `3.12` | `requires-python`, `.python-version` |
-| Package manager | **uv** | `uv.lock` |
-| Container base | `python:3.12-slim` | `Dockerfile` |
+| Item            | Value                   | Legacy source                        |
+| --------------- | ----------------------- | ------------------------------------ |
+| Language        | Python                  | `pyproject.toml`                     |
+| Version         | `>=3.12`, pinned `3.12` | `requires-python`, `.python-version` |
+| Package manager | **uv**                  | `uv.lock`                            |
+| Container base  | `python:3.12-slim`      | `Dockerfile`                         |
 
 ## Web / API framework
 

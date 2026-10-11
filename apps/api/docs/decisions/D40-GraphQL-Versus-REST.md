@@ -26,10 +26,10 @@ Version lives once in the path (`/v1/graphql`, `/v1/...`). Field and type names 
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
+| Alternative        | Why not                                                                                  |
+| ------------------ | ---------------------------------------------------------------------------------------- |
 | Everything GraphQL | Keeps reads-that-write and fixed aggregates in the wrong place; no gain over the old API |
-| Everything REST | Forces a full web client rewrite and loses nested selection |
+| Everything REST    | Forces a full web client rewrite and loses nested selection                              |
 
 ## Consequences
 

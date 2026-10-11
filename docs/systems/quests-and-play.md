@@ -8,17 +8,17 @@ The lifecycle is an explicit, named state machine, not an implicit one inferred 
 
 ## Interfaces
 
-| Interface | Role |
-| --- | --- |
-| [discord-sensor](/docs/interfaces/discord-sensor.md) | Announce owned by API |
+| Interface                                            | Role                    |
+| ---------------------------------------------------- | ----------------------- |
+| [discord-sensor](/docs/interfaces/discord-sensor.md) | Announce owned by API   |
 | [graphql-schema](/docs/interfaces/graphql-schema.md) | Quest mutations/queries |
 
 ## Implemented by
 
-| App | Local docs |
-| --- | --- |
-| `apps/api` | [apps/api/docs/](/apps/api/docs) |
-| `apps/web` | [apps/web/docs/](/apps/web/docs) |
+| App            | Local docs                               |
+| -------------- | ---------------------------------------- |
+| `apps/api`     | [apps/api/docs/](/apps/api/docs)         |
+| `apps/web`     | [apps/web/docs/](/apps/web/docs)         |
 | `apps/discord` | [apps/discord/docs/](/apps/discord/docs) |
 
 ## Requirements

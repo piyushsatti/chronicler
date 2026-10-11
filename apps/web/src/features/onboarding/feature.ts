@@ -1,5 +1,6 @@
 import type { FeatureGraphql, FeatureHandlers, FeatureRoute } from '../../chrome/featureModule.js';
-import { shortCodeRedirectRoute, stubRoute } from '../../chrome/routeBuilders.js';
+import { lazyElement } from '../../chrome/lazyElement.js';
+import { shortCodeRedirectRoute } from '../../chrome/routeBuilders.js';
 
 export const endpoints = {} as const;
 
@@ -9,14 +10,35 @@ export const graphql: FeatureGraphql = {};
 
 export const handlers: FeatureHandlers = [];
 
+function comingSoon(path: string, feature: string): FeatureRoute {
+  return {
+    path,
+    element: lazyElement(() =>
+      import('./pages/ComingSoonPage.js').then((module) => ({
+        default: () => module.ComingSoonPage({ feature }),
+      })),
+    ),
+  };
+}
+
 export const routes: readonly FeatureRoute[] = [
-  stubRoute('/welcome', 'Welcome'),
-  stubRoute('/settings', 'Settings'),
-  stubRoute('/guilds', 'Guilds — coming soon'),
-  stubRoute('/guilds/:shortCode', 'Guilds — coming soon'),
-  stubRoute('/calendar', 'Calendar — coming soon'),
-  stubRoute('/schedule', 'Schedule — coming soon'),
-  stubRoute('/series/:shortCode', 'Quest series — coming soon'),
+  {
+    path: '/welcome',
+    element: lazyElement(() =>
+      import('./pages/WelcomePage.js').then((module) => ({ default: module.WelcomePage })),
+    ),
+  },
+  {
+    path: '/settings',
+    element: lazyElement(() =>
+      import('./pages/SettingsPage.js').then((module) => ({ default: module.SettingsPage })),
+    ),
+  },
+  comingSoon('/guilds', 'Guilds'),
+  comingSoon('/guilds/:shortCode', 'Guilds'),
+  comingSoon('/calendar', 'Calendar'),
+  comingSoon('/schedule', 'Schedule'),
+  comingSoon('/series/:shortCode', 'Quest series'),
   shortCodeRedirectRoute('/guilds/:shortCode/redirect', '/guilds'),
   shortCodeRedirectRoute('/series/:shortCode/redirect', '/series'),
 ];

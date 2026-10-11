@@ -8,14 +8,14 @@ What runs today runs alone. One `scheduler` container, `supercronic` reading a c
 
 ## Interfaces
 
-| Interface | Role |
-| --- | --- |
+| Interface                                                          | Role                    |
+| ------------------------------------------------------------------ | ----------------------- |
 | [work-queue-durability](/docs/interfaces/work-queue-durability.md) | Durable background work |
 
 ## Implemented by
 
-| App | Local docs |
-| --- | --- |
+| App        | Local docs                       |
+| ---------- | -------------------------------- |
 | `apps/api` | [apps/api/docs/](/apps/api/docs) |
 
 ## Requirements

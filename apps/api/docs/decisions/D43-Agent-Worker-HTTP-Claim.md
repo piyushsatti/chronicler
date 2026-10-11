@@ -15,11 +15,11 @@ D42 gave the API the agent question table and left answering to `apps/agent`. Di
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
+| Alternative                                | Why not                                                                 |
+| ------------------------------------------ | ----------------------------------------------------------------------- |
 | Restore RabbitMQ between Discord and agent | Conflicts with “no queue broker by default”; Discord already HTTP-polls |
-| API embeds the model | Violates D42 agent boundary |
-| Worker polls Postgres with a shared DB URL | Couples Python to API schema and credentials |
+| API embeds the model                       | Violates D42 agent boundary                                             |
+| Worker polls Postgres with a shared DB URL | Couples Python to API schema and credentials                            |
 
 ## Consequences
 

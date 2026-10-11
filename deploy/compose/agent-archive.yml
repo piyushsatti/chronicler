@@ -21,14 +21,14 @@ services:
       LITELLM_API_KEY: ${LITELLM_API_KEY:?set LITELLM_API_KEY}
       EMBEDDING_MODEL: ${EMBEDDING_MODEL:-chronicler-embed-v1}
       ARCHIVE_HOST: 0.0.0.0
-      ARCHIVE_PORT: "8000"
+      ARCHIVE_PORT: '8000'
       INDEX_INTERVAL_SECONDS: ${INDEX_INTERVAL_SECONDS:-3600}
     volumes:
       - archive-data:/var/lib/chronicler/archive
     ports:
-      - "8090:8000"
+      - '8090:8000'
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - 'host.docker.internal:host-gateway'
 
   agent:
     build:
@@ -49,11 +49,11 @@ services:
       AGENT_TOKENIZER_SHA256: ${AGENT_TOKENIZER_SHA256:?set AGENT_TOKENIZER_SHA256}
       AGENT_TOKENIZER_CONFIG_SHA256: ${AGENT_TOKENIZER_CONFIG_SHA256:?set AGENT_TOKENIZER_CONFIG_SHA256}
       AGENT_CHAT_TEMPLATE_SHA256: ${AGENT_CHAT_TEMPLATE_SHA256:?set AGENT_CHAT_TEMPLATE_SHA256}
-      AGENT_CLAIM_INTERVAL_SECONDS: "2"
+      AGENT_CLAIM_INTERVAL_SECONDS: '2'
     depends_on:
       - archive
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+      - 'host.docker.internal:host-gateway'
     # Mount tokenizer assets in real deploys:
     # volumes:
     #   - ${AGENT_TOKENIZER_HOST_PATH}:/model-cache/tokenizer:ro

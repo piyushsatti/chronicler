@@ -1,37 +1,40 @@
-# D14: Ownership Is Code Override Is Declared
+# D14: Ownership Is Code; Override Is Declared
 
-**Status:** decided
-**Kind:** boundary
-**Owner:** global (`docs/decisions/`)
+**Status:** decided; amended 2026-09-16  
+**Kind:** boundary  
+**Owner:** global (`docs/decisions/`)  
 **Interface:** [live-authority](/docs/interfaces/live-authority.md)
 
 ## Context
 
-`Authorization.md` R8 reads: documents have resource-scoped authority via `resolve_audience`,
-generalize it to quests, characters and regions. A code survey on 2026-07-27 found two of those three
-wrong.
+Read visibility and write ownership are separate axes. Treating resource authority as a documents-only mechanism hid inconsistent overrides on character writes.
 
 ## Decision
 
-**AUTH-6 splits on the axis R8 conflated, and the split is the ruling.**
+**Use relationship-based access control with ownership in code and explicitly declared override breadth.** The ownership relation is an invariant: document author, quest DM, character owner, or the archon assigned to the map's region. Declaring an override never changes that relation.
+
+Operation declarations name the required permission and who may act without owning the resource. A declared role is specific; “any role holder” needs a written justification. Do not invent broader authority inside a service body. [D29](/docs/decisions/D29-Owner-And-Admin-Bypass-Identity-Predicates.md) governs platform-owner/admin bypass.
+
+**September 16 amendment:** every player-character mutation is literally owner-only, including profile/guild/status, progression and logs, verification submission, downtime and D&D Beyond sync. Platform owner, admin, verifier and other staff have no mutation bypass. Separately authorized admin/verifier decisions may append an assessment and change approval/lifecycle state; they do not edit player-authored fields or initiate sync.
+
+Per-row read audience applies to the document family: documents, revisions and links. Quests and characters remain public records; this does not expose a quest brief, linked document or protected body. Document reads follow [scoped-body](/docs/interfaces/scoped-body.md). This ruling adds neither region ownership nor an NPC editing grant from lieutenant assignment.
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
-| Zanzibar / full ReBAC (SpiceDB, OpenFGA, Ory Keto) | Same reasoning that rejected Casbin/OPA under `ROLE-1`. It buys arbitrary relationship graphs and transitive lookups; we have four ownership relations, one of them two hops. Running a policy service to express `quest.dm_id == caller` is not proportionate. |
-| Ownership as data, in a table | Rejected on D13's rule: making a gate editable is safe only when the gate is a policy. `quest.dm_id` owning a quest is an invariant. An admin editing an ownership table to become the author of someone else's document is exactly the forgery path D13 closed for `quest_brief`. |
-| Generalizing read scoping to quests and characters, as R8 asks | Premise checked and rejected. They are public by product decision. Building a visibility predicate for an entity with no visibility rule adds a mechanism with no policy behind it. |
-| Leaving breadth at the call site with a lint rule | A lint rule can see that a check exists. It cannot see that `any_role_holder` was the wrong answer, which is precisely the defect found above. |
+- Editable ownership policy: it permits changing an invariant to impersonate the resource owner.
+- A policy service for a few ownership relations: disproportionate to this boundary.
+- Unnamed overrides at call sites: their breadth cannot be reviewed consistently.
+- Generalizing document audience rules to every public entity: no accepted visibility policy supports it.
 
 ## Consequences
 
-This ruling remains binding until a reopen trigger fires or a new ADR supersedes it. Long-form evidence (if any) remains in `.local/docs-quarry/decisions-longform/`.
+Ownership, capability, audience and application validity remain distinct. One declared authority surface replaces repeated call-site interpretations. The September amendment supersedes July's general bypass language for player-character mutations only.
 
 ## Enforced by
 
-**not enforced** unless the related interface names a schema check, test, or CI job.
+The [live-authority interface](/docs/interfaces/live-authority.md) records implemented checks and gaps. Character mutation parity and complete operation-declaration coverage are **not enforced** by the current read-only character API.
 
 ## Reopen triggers
 
-- A written ADR supersedes this decision.
+- An accepted decision changes ownership, the scoped document family, or the player-character exception.
+- Lieutenant assignment gains an editing authority rather than remaining an unresolved relation.

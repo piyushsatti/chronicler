@@ -1,0 +1,6 @@
+import { useQuery } from '@tanstack/react-query';
+import { queryKeys } from '../../../api/queryKeys.js';
+import { loadItems } from '../adapters/itemsAdapter.js';
+export function useItems() {
+  return useQuery({ queryKey: queryKeys.items, queryFn: loadItems });
+}

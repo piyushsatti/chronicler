@@ -35,6 +35,15 @@ const mapViewWireSchema = z.object({
   places: z.array(placeWireSchema),
 });
 
+const featureWireSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string().min(1),
+  summary: z.string(),
+  slug: z.string().min(1),
+});
+
+const featuresWireSchema = z.array(featureWireSchema).max(4);
+
 export type MapFeatureView = {
   id: string;
   title: string;
@@ -56,6 +65,21 @@ export type MapViewModel = {
   atlasCode: string;
   hexes: MapHexView[];
 };
+
+export function parseHexFeatures(wire: unknown): AdapterResult<MapFeatureView[]> {
+  const parsed = featuresWireSchema.safeParse(wire);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      failure: 'InvalidWire',
+      detail:
+        Array.isArray(wire) && wire.length > 4
+          ? 'max-4-features'
+          : parsed.error.message,
+    };
+  }
+  return { ok: true, data: parsed.data };
+}
 
 const MAP_QUERY = `
   query MapAtlas($atlasCode: String!) {
@@ -116,22 +140,26 @@ export function parseMapBundle(
     });
     featuresByHex.set(p.hexcode, list);
   }
+  const hexes: MapHexView[] = [];
+  for (const h of map.data.hexes) {
+    const hexcode = h.hexcode ?? `C${h.col}R${h.row}`;
+    const featureResult = parseHexFeatures(featuresByHex.get(hexcode) ?? []);
+    if (!featureResult.ok) return featureResult;
+    hexes.push({
+      id: h.id,
+      hexcode,
+      col: h.col,
+      row: h.row,
+      features: featureResult.data,
+    });
+  }
   return {
     ok: true,
     data: {
       id: map.data.id,
       name: map.data.name,
       atlasCode: map.data.atlasCode,
-      hexes: map.data.hexes.map((h) => {
-        const hexcode = h.hexcode ?? `C${h.col}R${h.row}`;
-        return {
-          id: h.id,
-          hexcode,
-          col: h.col,
-          row: h.row,
-          features: featuresByHex.get(hexcode) ?? [],
-        };
-      }),
+      hexes,
     },
   };
 }
@@ -141,8 +169,7 @@ export function hexesToNodes(hexes: MapHexView[]): HexNode[] {
   if (hexes.length === 0) return [];
   const center = hexes[0]!;
   return hexes.map((h) => {
-    const dist =
-      Math.abs(h.col - center.col) + Math.abs(h.row - center.row);
+    const dist = Math.abs(h.col - center.col) + Math.abs(h.row - center.row);
     const ring = h.hexcode === center.hexcode ? 0 : dist <= 1 ? 1 : 2;
     const neighbors = hexes
       .filter(

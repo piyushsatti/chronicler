@@ -1,0 +1,8 @@
+import type { components } from '@/api/openapi.gen.js';
+import type { Query } from '@pi/contracts';
+export type InlineWire = import('../../../api/generated/graphql.js').Query;
+export type { Mutation } from '@pi/contracts';
+export const getWire = () => import('../../../api/generated/graphql.js');
+export function WireView({ value }: { value: components & Query }) {
+  return <div>{String(value)}</div>;
+}

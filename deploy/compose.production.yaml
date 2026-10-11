@@ -3,7 +3,7 @@ services:
   api:
     image: ${API_IMAGE}
     environment:
-      API_ADDR: ":8080"
+      API_ADDR: ':8080'
       DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET}
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}

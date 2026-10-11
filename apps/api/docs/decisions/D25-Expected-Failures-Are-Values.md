@@ -20,13 +20,13 @@
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
-| Shared exception hierarchy / `ChroniclerError` base | Still depends on humans catching the right symbol; invites `except ChroniclerError` |
-| `Result[T, E]` wrapper | Extra unwrap at every call site; pyright already enforces exhaustiveness on bare unions |
-| Functional-effects / `returns` library | Guarantee is pyright, not combinators |
-| Partial vertical conversion | Two conventions inside one vertical — worse than not starting |
-| Per-mutation GraphQL error code enum | Duplicates union `__typename` |
+| Alternative                                         | Why not                                                                                 |
+| --------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Shared exception hierarchy / `ChroniclerError` base | Still depends on humans catching the right symbol; invites `except ChroniclerError`     |
+| `Result[T, E]` wrapper                              | Extra unwrap at every call site; pyright already enforces exhaustiveness on bare unions |
+| Functional-effects / `returns` library              | Guarantee is pyright, not combinators                                                   |
+| Partial vertical conversion                         | Two conventions inside one vertical — worse than not starting                           |
+| Per-mutation GraphQL error code enum                | Duplicates union `__typename`                                                           |
 
 ## Consequences
 

@@ -3,6 +3,8 @@
   "shortCode": "C-101",
   "name": "Lyra Storm",
   "status": "active",
+  "ownerId": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "verificationStatus": "approved",
   "backstoryId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
   "description": "A wanderer of Lightfall.",
   "ddbUrl": "https://example.com/ddb/lyra",

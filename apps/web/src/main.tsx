@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client';
 import '@pi/react-imposition/styles.css';
 import { App } from './App.js';
 import { AppProviders } from './providers.js';
-import './styles/base.css';
+import './styles/index.css';
 
 async function enableMocking(): Promise<void> {
   if (import.meta.env.VITE_API_MODE !== 'mock') return;

@@ -18,10 +18,10 @@ Older intent put durable replay on the bot. The bot container has no durable vol
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
-| Bot-local durable SQLite | Destroyed on redeploy; second backup story |
-| Message broker | Extra ops surface; Postgres already present and backed up |
+| Alternative              | Why not                                                   |
+| ------------------------ | --------------------------------------------------------- |
+| Bot-local durable SQLite | Destroyed on redeploy; second backup story                |
+| Message broker           | Extra ops surface; Postgres already present and backed up |
 
 ## Consequences
 

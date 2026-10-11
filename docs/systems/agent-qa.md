@@ -8,17 +8,17 @@ Allowlisted Discord mentions ask questions about public rules and codex. The Go 
 
 ## Interfaces
 
-| Interface | Role |
-| --- | --- |
+| Interface                                          | Role                                            |
+| -------------------------------------------------- | ----------------------------------------------- |
 | [agent-qa-http](/docs/interfaces/agent-qa-http.md) | Submit, claim, complete over ingest-secret REST |
 
 ## Implemented by
 
-| App | Local docs |
-| --- | --- |
-| `apps/discord` | [mentions.md](/apps/discord/docs/mentions.md) |
-| `apps/api` | [D42](/apps/api/docs/decisions/D42-Worker-And-Migrations.md), [D43](/apps/api/docs/decisions/D43-Agent-Worker-HTTP-Claim.md) |
-| `apps/agent` | [architecture.md](/apps/agent/docs/architecture.md) |
+| App            | Local docs                                                                                                                   |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| `apps/discord` | [mentions.md](/apps/discord/docs/mentions.md)                                                                                |
+| `apps/api`     | [D42](/apps/api/docs/decisions/D42-Worker-And-Migrations.md), [D43](/apps/api/docs/decisions/D43-Agent-Worker-HTTP-Claim.md) |
+| `apps/agent`   | [architecture.md](/apps/agent/docs/architecture.md)                                                                          |
 
 ## Requirements
 

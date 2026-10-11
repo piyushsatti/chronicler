@@ -24,13 +24,13 @@ Explicit tradeoff: hotlinking accepts link rot, content substitution on third-pa
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
-| Object storage / content-addressed store | Owner scope cut; no working upload surface |
-| Signed URLs / capability URLs | Requires hosting first; deferred until audience is needed |
-| Server-side embed detection (`HEAD`, oEmbed) | Violates no-fetch rule; SSRF surface |
-| Proxy media through the API | Reintroduces fetch + egress cost on a small box |
-| Per-viewer media audience without hosting | Impossible; obscurity is the only layer today |
+| Alternative                                  | Why not                                                   |
+| -------------------------------------------- | --------------------------------------------------------- |
+| Object storage / content-addressed store     | Owner scope cut; no working upload surface                |
+| Signed URLs / capability URLs                | Requires hosting first; deferred until audience is needed |
+| Server-side embed detection (`HEAD`, oEmbed) | Violates no-fetch rule; SSRF surface                      |
+| Proxy media through the API                  | Reintroduces fetch + egress cost on a small box           |
+| Per-viewer media audience without hosting    | Impossible; obscurity is the only layer today             |
 
 ## Consequences
 

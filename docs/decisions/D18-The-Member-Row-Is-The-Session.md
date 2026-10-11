@@ -15,11 +15,11 @@ Owner revision: **per-device sign-out is wanted.** Deactivation via status as a 
 
 **The member row is the session record.** Kill mechanisms use columns already loaded on every request ([D11](/docs/decisions/D11-Live-Authority-At-The-Boundary.md)) — **zero extra queries.**
 
-| Column | Effect |
-| --- | --- |
-| `members.tokens_valid_after` | Invalidates every token issued before timestamp (compare to `iat`) |
-| `members.revoked_jtis` | Bounded set of `(jti, exp)` — **one device** sign-out |
-| `members.status` | Was intended for ban/deactivate; product path withdrawn per 2026-07-30 ruling |
+| Column                       | Effect                                                                        |
+| ---------------------------- | ----------------------------------------------------------------------------- |
+| `members.tokens_valid_after` | Invalidates every token issued before timestamp (compare to `iat`)            |
+| `members.revoked_jtis`       | Bounded set of `(jti, exp)` — **one device** sign-out                         |
+| `members.status`             | Was intended for ban/deactivate; product path withdrawn per 2026-07-30 ruling |
 
 Tokens gain a server-issued **`jti`**. **Sign out (this device)** appends `jti` to `revoked_jtis`. **Sign out everywhere** bumps `tokens_valid_after`. Requires a **backend logout endpoint** (client-only delete today).
 
@@ -29,12 +29,12 @@ Tokens gain a server-issued **`jti`**. **Sign out (this device)** appends `jti` 
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
-| Separate `sessions` table per token | Extra write per login and lookup per request; grows without bound |
-| Redis / shared cache denylist | No store; member row already read |
-| Secret rotation or shorter expiry alone | Break-glass or window-shrink, not per-device revocation |
-| Per-device sign-out rejected | **Withdrawn** — owner stated per-device sign-out is desired |
+| Alternative                             | Why not                                                           |
+| --------------------------------------- | ----------------------------------------------------------------- |
+| Separate `sessions` table per token     | Extra write per login and lookup per request; grows without bound |
+| Redis / shared cache denylist           | No store; member row already read                                 |
+| Secret rotation or shorter expiry alone | Break-glass or window-shrink, not per-device revocation           |
+| Per-device sign-out rejected            | **Withdrawn** — owner stated per-device sign-out is desired       |
 
 ## Consequences
 

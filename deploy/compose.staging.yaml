@@ -10,7 +10,7 @@ services:
     volumes:
       - staging_pg:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U chronicler"]
+      test: ['CMD-SHELL', 'pg_isready -U chronicler']
       interval: 5s
       timeout: 3s
       retries: 10
@@ -19,7 +19,7 @@ services:
     build:
       context: ../apps/api
     environment:
-      API_ADDR: ":8080"
+      API_ADDR: ':8080'
       DATABASE_URL: ${DATABASE_URL}
       JWT_SECRET: ${JWT_SECRET}
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID}

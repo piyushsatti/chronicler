@@ -21,11 +21,11 @@ The map needed a ruling on layer state, fog/discovery, and who may mutate locati
 
 ## Alternatives rejected
 
-| Alternative | Why not |
-| --- | --- |
-| Quest-visiting-hex auto-reveal | Rejected explicitly |
-| Keep `hex_discoveries` as a credit ledger | Rejected explicitly |
-| Fog-as-progression product | Deferred as possible later feature, out of scope now |
+| Alternative                               | Why not                                              |
+| ----------------------------------------- | ---------------------------------------------------- |
+| Quest-visiting-hex auto-reveal            | Rejected explicitly                                  |
+| Keep `hex_discoveries` as a credit ledger | Rejected explicitly                                  |
+| Fog-as-progression product                | Deferred as possible later feature, out of scope now |
 
 ## Consequences
 

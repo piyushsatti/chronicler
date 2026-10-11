@@ -8,12 +8,12 @@
 
 ## Applications
 
-| App | Runtime | Role | Docs |
-| --- | --- | --- | --- |
-| `apps/api` | Go (GraphQL + REST) | Authoritative API, worker, persistence | [apps/api/docs/](/apps/api/docs/README.md) |
-| `apps/web` | TypeScript (React, Vite) | Member-facing SPA | [apps/web/docs/](/apps/web/docs/README.md) |
-| `apps/discord` | TypeScript (discord.js) | Guild activity sensor + optional mention agent | [apps/discord/docs/](/apps/discord/docs/README.md) |
-| `apps/agent` | Python (uv) | Grounded Q&A worker + Archive stack | [apps/agent/docs/](/apps/agent/docs/README.md) |
+| App            | Runtime                  | Role                                           | Docs                                               |
+| -------------- | ------------------------ | ---------------------------------------------- | -------------------------------------------------- |
+| `apps/api`     | Go (GraphQL + REST)      | Authoritative API, worker, persistence         | [apps/api/docs/](/apps/api/docs/README.md)         |
+| `apps/web`     | TypeScript (React, Vite) | Member-facing SPA                              | [apps/web/docs/](/apps/web/docs/README.md)         |
+| `apps/discord` | TypeScript (discord.js)  | Guild activity sensor + optional mention agent | [apps/discord/docs/](/apps/discord/docs/README.md) |
+| `apps/agent`   | Python (uv)              | Grounded Q&A worker + Archive stack            | [apps/agent/docs/](/apps/agent/docs/README.md)     |
 
 ## Shared contract
 

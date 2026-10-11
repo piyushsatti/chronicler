@@ -8,14 +8,14 @@ A character has exactly one owner, `characters.owner_id`, set once at creation a
 
 ## Interfaces
 
-| Interface | Role |
-| --- | --- |
+| Interface                                            | Role                       |
+| ---------------------------------------------------- | -------------------------- |
 | [live-authority](/docs/interfaces/live-authority.md) | Ownership and bypass rules |
 
 ## Implemented by
 
-| App | Local docs |
-| --- | --- |
+| App        | Local docs                       |
+| ---------- | -------------------------------- |
 | `apps/api` | [apps/api/docs/](/apps/api/docs) |
 | `apps/web` | [apps/web/docs/](/apps/web/docs) |
 

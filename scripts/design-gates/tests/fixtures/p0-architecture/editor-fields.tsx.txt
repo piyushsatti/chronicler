@@ -1,0 +1,6 @@
+import * as Query from '@tanstack/react-query';
+import { loadEditorRegions as loadOptions } from '../adapters/editorRegionsAdapter.js';
+export const RegionField = () => {
+  const options = Query.useQuery({ queryKey: ['regions'], queryFn: loadOptions });
+  return <select>{options.data?.map((region) => <option>{region.name}</option>)}</select>;
+};

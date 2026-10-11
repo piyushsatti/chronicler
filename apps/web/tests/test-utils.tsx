@@ -4,6 +4,7 @@ import type { ReactElement, ReactNode } from 'react';
 import { Provider as ReduxProvider } from 'react-redux';
 import { MemoryRouter } from 'react-router-dom';
 import { AuthProvider } from '../src/auth/AuthContext.js';
+import { ThemeProvider } from '../src/context/ThemeContext.js';
 import { createTestQueryClient } from '../src/providers.js';
 import { createAppStore } from '../src/store/store.js';
 
@@ -20,7 +21,9 @@ export function renderWithProviders(
       <ReduxProvider store={store}>
         <QueryClientProvider client={queryClient}>
           <MemoryRouter initialEntries={[route]}>
-            <AuthProvider>{children}</AuthProvider>
+            <AuthProvider>
+              <ThemeProvider>{children}</ThemeProvider>
+            </AuthProvider>
           </MemoryRouter>
         </QueryClientProvider>
       </ReduxProvider>

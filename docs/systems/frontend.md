@@ -8,15 +8,15 @@ The frontend is static, built with Vite/React, served from Vercel. It reaches th
 
 ## Interfaces
 
-| Interface | Role |
-| --- | --- |
-| [scoped-body](/docs/interfaces/scoped-body.md) | Render scoped bodies |
-| [graphql-schema](/docs/interfaces/graphql-schema.md) | Client contract |
+| Interface                                            | Role                 |
+| ---------------------------------------------------- | -------------------- |
+| [scoped-body](/docs/interfaces/scoped-body.md)       | Render scoped bodies |
+| [graphql-schema](/docs/interfaces/graphql-schema.md) | Client contract      |
 
 ## Implemented by
 
-| App | Local docs |
-| --- | --- |
+| App        | Local docs                       |
+| ---------- | -------------------------------- |
 | `apps/web` | [apps/web/docs/](/apps/web/docs) |
 
 ## Requirements

@@ -5,6 +5,8 @@ import (
 	"errors"
 	"time"
 
+	"github.com/piyushsatti/chronicler/apps/api/internal/document"
+
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -127,19 +129,24 @@ func (p *PostgresQueries) HexAt(ctx context.Context, mapID string, col, row int)
 	return mapHex(rowData.ID, rowData.MapID, rowData.Col, rowData.Row, rowData.Terrain, rowData.Elevation, rowData.Climate), nil
 }
 
-func (p *PostgresQueries) MapViewPage(ctx context.Context, atlasCode string, limit, offset int) (MapViewPage, error) {
+func (p *PostgresQueries) MapViewPage(ctx context.Context, scope document.ViewerScope, atlasCode string, limit, offset int) (MapViewPage, error) {
 	m, err := p.MapByAtlas(ctx, atlasCode)
 	if err != nil {
 		return MapViewPage{}, err
 	}
-	total, err := p.q.CountMapPlaces(ctx, atlasCode)
+	viewer := document.SQLScope(scope)
+	total, err := p.q.CountMapPlaces(ctx, dbgen.CountMapPlacesParams{
+		AtlasCode: atlasCode, ViewerID: viewer.ID, ViewerRoles: viewer.Roles, ViewerHandle: viewer.Handle,
+		ViewerAdmin: viewer.Admin, ViewerLiveDm: viewer.LiveDM, ReaderIds: viewer.Readers,
+	})
 	if err != nil {
 		return MapViewPage{}, err
 	}
 	rows, err := p.q.ListMapPlaces(ctx, dbgen.ListMapPlacesParams{
 		AtlasCode: atlasCode,
-		Limit:     int32(limit),
-		Offset:    int32(offset),
+		RowLimit:  int32(limit), RowOffset: int32(offset),
+		ViewerID: viewer.ID, ViewerRoles: viewer.Roles, ViewerHandle: viewer.Handle,
+		ViewerAdmin: viewer.Admin, ViewerLiveDm: viewer.LiveDM, ReaderIds: viewer.Readers,
 	})
 	if err != nil {
 		return MapViewPage{}, err
@@ -156,7 +163,13 @@ func (p *PostgresQueries) MapViewPage(ctx context.Context, atlasCode string, lim
 			Category:   row.Category,
 		})
 	}
-	return MapViewPage{Map: m, Places: places, TotalPlaces: int(total)}, nil
+	overridden := false
+	for _, row := range rows {
+		overridden = overridden || row.AdminOverride
+	}
+	document.AuditSQLOverride(ctx, scope, overridden, "map_places", "list")
+	document.AuditSQLOverride(ctx, scope, total.AdminOverride, "map_places", "count")
+	return MapViewPage{Map: m, Places: places, TotalPlaces: int(total.Total)}, nil
 }
 
 func (p *PostgresQueries) HexHistory(ctx context.Context, hexID string, limit int) ([]HexChange, error) {

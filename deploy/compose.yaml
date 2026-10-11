@@ -6,11 +6,11 @@ services:
       POSTGRES_PASSWORD: chronicler
       POSTGRES_DB: chronicler
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - chronicler_pg:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U chronicler"]
+      test: ['CMD-SHELL', 'pg_isready -U chronicler']
       interval: 5s
       timeout: 3s
       retries: 10
@@ -35,7 +35,7 @@ services:
     build:
       context: ../apps/api
     environment:
-      API_ADDR: ":8080"
+      API_ADDR: ':8080'
       DATABASE_URL: postgres://chronicler:chronicler@postgres:5432/chronicler?sslmode=disable
       JWT_SECRET: ${JWT_SECRET:-dev-only-change-me}
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}
@@ -45,7 +45,7 @@ services:
       AGENT_INLINE_COMPLETE: ${AGENT_INLINE_COMPLETE:-1}
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
     ports:
-      - "8080:8080"
+      - '8080:8080'
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -73,9 +73,9 @@ services:
       context: ..
       dockerfile: apps/discord/Dockerfile
     environment:
-      AGENT_ENABLED: "false"
+      AGENT_ENABLED: 'false'
       API_URL: http://api:8080
-      BOT_ALLOW_INSECURE_API_URL: "true"
+      BOT_ALLOW_INSECURE_API_URL: 'true'
       BOT_API_ALLOWED_ORIGIN: http://api:8080
       INGEST_SECRET: ${INGEST_SECRET:-dev-ingest-secret}
       GUILD_ID: ${GUILD_ID:-0}

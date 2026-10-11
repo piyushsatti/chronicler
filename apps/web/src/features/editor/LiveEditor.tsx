@@ -1,0 +1,1204 @@
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Button } from '../../components/primitives/Button.js';
+import type { EntityLinkIndex } from './types.js';
+
+export type LiveEditorCommand =
+  | 'bold'
+  | 'italic'
+  | 'strike'
+  | 'code'
+  | 'h2'
+  | 'h3'
+  | 'bullet'
+  | 'ordered'
+  | 'quote'
+  | 'link'
+  | 'wikilink'
+  | 'table'
+  | 'diagram'
+  | 'hr';
+
+export type LiveEditorProps = {
+  value: string;
+  onChange: (markdown: string) => void;
+  toolbar?: boolean;
+  placeholder?: string;
+  compact?: boolean;
+  entityIndex?: EntityLinkIndex;
+  /** `blocks` = legacy per-line read/edit; `plain` = single textarea. */
+  variant?: 'blocks' | 'plain';
+};
+
+/** Pure serialize/deserialize helpers (legacy LiveEditor contract). */
+export function leSerialize(lines: string[]): string {
+  return lines.join('\n');
+}
+
+export function leDeserialize(value: string): string[] {
+  return (value || '').replace(/\r\n?/g, '\n').split('\n');
+}
+
+/** Map caret offset in LF-normalized string onto a parts entry + column. */
+export function leLocateInParts(
+  parts: string[],
+  pos: number,
+): { idx: number; col: number } {
+  let consumed = 0;
+  for (let idx = 0; idx < parts.length; idx++) {
+    const partLen = parts[idx].length;
+    if (pos <= consumed + partLen) return { idx, col: pos - consumed };
+    consumed += partLen + 1;
+  }
+  const last = Math.max(parts.length - 1, 0);
+  return { idx: last, col: parts[last]?.length ?? 0 };
+}
+
+/** Renumber a contiguous ordered-list run starting at `from` (legacy #4). */
+export function leRenumberOrderedListRun(
+  lines: string[],
+  from: number,
+  startNum: number,
+): string[] {
+  const out = lines.slice();
+  let num = startNum;
+  for (let idx = from; idx < out.length; idx++) {
+    const mm = out[idx].match(/^(\s*)(\d+)(\.\s+)(.*)$/);
+    if (!mm) break;
+    out[idx] = `${mm[1]}${num}${mm[3]}${mm[4]}`;
+    num++;
+  }
+  return out;
+}
+
+export function leKind(t: string): string {
+  if (/^#\s/.test(t)) return 'h1';
+  if (/^##\s/.test(t)) return 'h2';
+  if (/^###\s/.test(t)) return 'h3';
+  if (/^\s*([-*+])\s+/.test(t)) return 'li';
+  if (/^\s*\d+\.\s+/.test(t)) return 'ol';
+  if (/^\s*>\s?/.test(t)) return 'quote';
+  if (/^\s*(---|\*\*\*|___)\s*$/.test(t)) return 'hr';
+  if (t.trim() === '') return 'empty';
+  return 'p';
+}
+
+export function leStrip(t: string, k: string): string {
+  if (k === 'h1') return t.replace(/^#\s+/, '');
+  if (k === 'h2') return t.replace(/^##\s+/, '');
+  if (k === 'h3') return t.replace(/^###\s+/, '');
+  if (k === 'li') return t.replace(/^\s*([-*+])\s+/, '');
+  if (k === 'ol') return t.replace(/^\s*\d+\.\s+/, '');
+  if (k === 'quote') return t.replace(/^\s*>\s?/, '');
+  return t;
+}
+
+export function leTypeClass(t: string): string {
+  switch (leKind(t)) {
+    case 'h1':
+      return 'type-display';
+    case 'h2':
+    case 'h3':
+      return 'type-heading';
+    case 'quote':
+      return 'type-narrative';
+    default:
+      return 'type-body';
+  }
+}
+
+export type LeRegion = { start: number; end: number; kind: string };
+
+/** Detect fenced code/mermaid, tables, and callout quote blocks. */
+export function leRegions(lines: string[]): LeRegion[] {
+  const regs: LeRegion[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    if (/^\s*```/.test(lines[i])) {
+      let j = i + 1;
+      while (j < lines.length && !/^\s*```\s*$/.test(lines[j])) j++;
+      const lang = ((lines[i].match(/```+\s*([\w-]*)/) || [])[1] || '').toLowerCase();
+      regs.push({
+        start: i,
+        end: Math.min(j, lines.length - 1),
+        kind: lang === 'mermaid' ? 'mermaid' : 'code',
+      });
+      i = j + 1;
+      continue;
+    }
+    if (
+      /\|/.test(lines[i]) &&
+      i + 1 < lines.length &&
+      /\|/.test(lines[i + 1]) &&
+      /^\s*\|?[\s:|-]*-[\s:|-]*\|?\s*$/.test(lines[i + 1])
+    ) {
+      let j = i + 1;
+      while (
+        j + 1 < lines.length &&
+        lines[j + 1].trim() !== '' &&
+        /\|/.test(lines[j + 1])
+      ) {
+        j++;
+      }
+      regs.push({ start: i, end: j, kind: 'table' });
+      i = j + 1;
+      continue;
+    }
+    const cm = lines[i].match(/^\s*>\s*\[!(\w+)\]/);
+    if (cm) {
+      let j = i;
+      while (j + 1 < lines.length && /^\s*>/.test(lines[j + 1])) j++;
+      regs.push({ start: i, end: j, kind: 'callout' });
+      i = j + 1;
+      continue;
+    }
+    i++;
+  }
+  return regs;
+}
+
+function wrapSelection(
+  value: string,
+  start: number,
+  end: number,
+  before: string,
+  after: string,
+): { next: string; cursor: number } {
+  const selected = value.slice(start, end) || 'text';
+  const next = value.slice(0, start) + before + selected + after + value.slice(end);
+  return { next, cursor: start + before.length + selected.length + after.length };
+}
+
+function prefixLines(
+  value: string,
+  start: number,
+  end: number,
+  prefix: string,
+): { next: string; cursor: number } {
+  const lines = leDeserialize(value);
+  let offset = 0;
+  let startIdx = 0;
+  let endIdx = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const lineEnd = offset + lines[i].length;
+    if (start >= offset && start <= lineEnd + 1) startIdx = i;
+    if (end >= offset && end <= lineEnd + 1) endIdx = i;
+    offset = lineEnd + 1;
+  }
+  for (let i = startIdx; i <= endIdx; i++) {
+    lines[i] = lines[i].startsWith(prefix)
+      ? lines[i].slice(prefix.length)
+      : prefix + lines[i].replace(/^(#{1,6}\s+|[-*+]\s+|>\s+|\d+\.\s+)/, '');
+  }
+  return { next: leSerialize(lines), cursor: start + prefix.length };
+}
+
+function insertAt(
+  value: string,
+  start: number,
+  end: number,
+  text: string,
+): { next: string; cursor: number } {
+  const next = value.slice(0, start) + text + value.slice(end);
+  return { next, cursor: start + text.length };
+}
+
+function lineAtOffset(
+  value: string,
+  pos: number,
+): { idx: number; lineStart: number; line: string } {
+  const lines = leDeserialize(value);
+  let offset = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const lineEnd = offset + lines[i].length;
+    if (pos >= offset && pos <= lineEnd) {
+      return { idx: i, lineStart: offset, line: lines[i] };
+    }
+    offset = lineEnd + 1;
+  }
+  const last = Math.max(lines.length - 1, 0);
+  return { idx: last, lineStart: offset, line: lines[last] ?? '' };
+}
+
+function indentLine(line: string, outdent: boolean): string {
+  if (outdent) return line.replace(/^ {1,2}/, '');
+  return `  ${line}`;
+}
+
+function wikiQueryAt(
+  value: string,
+  caret: number,
+): { query: string; start: number } | null {
+  const before = value.slice(0, caret);
+  const m = before.match(/\[\[([^[\]]*)$/);
+  if (!m) return null;
+  return { query: m[1], start: caret - m[1].length - 2 };
+}
+
+const LEReadLine = memo(function LEReadLine({ text }: { text: string }) {
+  const k = leKind(text);
+  if (k === 'hr') return <hr className="le-hr" />;
+  if (k === 'empty') return <div className="le-empty">&nbsp;</div>;
+  const content = leStrip(text, k);
+  if (k === 'h1') return <div className="le-h1 type-display">{content}</div>;
+  if (k === 'h2') return <div className="le-h2 type-heading">{content}</div>;
+  if (k === 'h3') return <div className="le-h3 type-heading">{content}</div>;
+  if (k === 'li') {
+    return (
+      <div className="le-li type-body">
+        <span className="le-bullet">•</span>
+        <span>{content}</span>
+      </div>
+    );
+  }
+  if (k === 'ol') {
+    return (
+      <div className="le-li type-body">
+        <span className="le-bullet le-num">
+          {(text.match(/^\s*(\d+)\./) || [])[1]}.
+        </span>
+        <span>{content}</span>
+      </div>
+    );
+  }
+  if (k === 'quote') return <div className="le-quote type-narrative">{content}</div>;
+  return <div className="le-p type-body">{content}</div>;
+});
+
+const LE_FOCUSABLE_SEL =
+  '.le-read, .le-raw, .le-widget, .le-add, .le-ac, button, input, textarea, a';
+
+const LE_TABLE_TEMPLATE =
+  '| Column | Column |\n|---|---|\n| Cell | Cell |\n| Cell | Cell |';
+
+function PlainLiveEditor({
+  value,
+  onChange,
+  toolbar,
+  placeholder,
+  compact,
+  entityIndex,
+}: Required<
+  Pick<LiveEditorProps, 'value' | 'onChange' | 'toolbar' | 'placeholder' | 'compact'>
+> & { entityIndex: EntityLinkIndex }): React.JSX.Element {
+  const ref = useRef<HTMLTextAreaElement>(null);
+  const [caret, setCaret] = useState(0);
+  const [suggestIdx, setSuggestIdx] = useState(0);
+  const [showGutter, setShowGutter] = useState(false);
+
+  const apply = useCallback(
+    (result: { next: string; cursor: number }) => {
+      onChange(result.next);
+      requestAnimationFrame(() => {
+        const el = ref.current;
+        if (!el) return;
+        el.focus();
+        el.setSelectionRange(result.cursor, result.cursor);
+        setCaret(result.cursor);
+      });
+    },
+    [onChange],
+  );
+
+  const run = useCallback(
+    (command: LiveEditorCommand) => {
+      const el = ref.current;
+      const start = el?.selectionStart ?? value.length;
+      const end = el?.selectionEnd ?? value.length;
+      let result: { next: string; cursor: number };
+      switch (command) {
+        case 'bold':
+          result = wrapSelection(value, start, end, '**', '**');
+          break;
+        case 'italic':
+          result = wrapSelection(value, start, end, '_', '_');
+          break;
+        case 'strike':
+          result = wrapSelection(value, start, end, '~~', '~~');
+          break;
+        case 'code':
+          result = wrapSelection(value, start, end, '`', '`');
+          break;
+        case 'link':
+          result = wrapSelection(value, start, end, '[', '](url)');
+          break;
+        case 'wikilink':
+          result = wrapSelection(value, start, end, '[[', ']]');
+          break;
+        case 'h2':
+          result = prefixLines(value, start, end, '## ');
+          break;
+        case 'h3':
+          result = prefixLines(value, start, end, '### ');
+          break;
+        case 'bullet':
+          result = prefixLines(value, start, end, '- ');
+          break;
+        case 'ordered':
+          result = prefixLines(value, start, end, '1. ');
+          break;
+        case 'quote':
+          result = prefixLines(value, start, end, '> ');
+          break;
+        case 'table':
+          result = insertAt(value, start, end, `\n${LE_TABLE_TEMPLATE}\n`);
+          break;
+        case 'diagram':
+          result = insertAt(
+            value,
+            start,
+            end,
+            '\n```mermaid\nflowchart LR\n  A --> B\n```\n',
+          );
+          break;
+        case 'hr':
+          result = insertAt(value, start, end, '\n---\n');
+          break;
+        default:
+          return;
+      }
+      apply(result);
+    },
+    [apply, value],
+  );
+
+  const wiki = wikiQueryAt(value, caret);
+  const suggestions = useMemo(() => {
+    if (!wiki || !entityIndex.length) return [];
+    const q = wiki.query.toLowerCase();
+    return entityIndex
+      .filter(
+        (e) =>
+          e.label.toLowerCase().includes(q) || e.id.toLowerCase().includes(q),
+      )
+      .slice(0, 8);
+  }, [entityIndex, wiki]);
+
+  const pickWiki = (label: string): void => {
+    if (!wiki) return;
+    apply(insertAt(value, wiki.start, caret, `[[${label}]]`));
+    setSuggestIdx(0);
+  };
+
+  const onKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+    if (suggestions.length > 0) {
+      if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        setSuggestIdx((i) => (i + 1) % suggestions.length);
+        return;
+      }
+      if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        setSuggestIdx((i) => (i - 1 + suggestions.length) % suggestions.length);
+        return;
+      }
+      if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
+        const pick = suggestions[suggestIdx] ?? suggestions[0];
+        if (pick) pickWiki(pick.label);
+        return;
+      }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setSuggestIdx(0);
+        return;
+      }
+    }
+    if (event.key === 'Tab') {
+      const el = event.currentTarget;
+      const start = el.selectionStart;
+      const end = el.selectionEnd;
+      const { idx, lineStart, line } = lineAtOffset(value, start);
+      const kind = leKind(line);
+      if (kind === 'li' || kind === 'ol' || kind === 'quote') {
+        event.preventDefault();
+        const nextLine = indentLine(line, event.shiftKey);
+        const lines = leDeserialize(value);
+        lines[idx] = nextLine;
+        const next = leSerialize(lines);
+        const delta = nextLine.length - line.length;
+        apply({ next, cursor: Math.max(lineStart, start + delta) });
+        return;
+      }
+      if (!event.shiftKey && start === end) {
+        event.preventDefault();
+        apply(insertAt(value, start, end, '  '));
+      }
+      return;
+    }
+    if (event.key !== 'Enter' || event.shiftKey) return;
+    const el = event.currentTarget;
+    const start = el.selectionStart;
+    const lines = leDeserialize(value);
+    let offset = 0;
+    let lineIdx = 0;
+    for (let i = 0; i < lines.length; i++) {
+      const lineEnd = offset + lines[i].length;
+      if (start >= offset && start <= lineEnd) {
+        lineIdx = i;
+        break;
+      }
+      offset = lineEnd + 1;
+    }
+    const line = lines[lineIdx] ?? '';
+    const bullet = line.match(/^(\s*)([-*+])\s+(.*)$/);
+    const ordered = line.match(/^(\s*)(\d+)(\.\s+)(.*)$/);
+    const quote = line.match(/^(\s*)>\s?(.*)$/);
+    if (bullet) {
+      event.preventDefault();
+      if (!bullet[3].trim()) {
+        lines[lineIdx] = '';
+        apply({ next: leSerialize(lines), cursor: offset });
+        return;
+      }
+      const insert = `${bullet[1]}${bullet[2]} `;
+      const next = `${value.slice(0, start)}\n${insert}${value.slice(start)}`;
+      apply({ next, cursor: start + 1 + insert.length });
+      return;
+    }
+    if (ordered) {
+      event.preventDefault();
+      if (!ordered[4].trim()) {
+        lines[lineIdx] = '';
+        apply({ next: leSerialize(lines), cursor: offset });
+        return;
+      }
+      const n = Number(ordered[2]) + 1;
+      const insert = `${ordered[1]}${n}${ordered[3]}`;
+      let next = `${value.slice(0, start)}\n${insert}${value.slice(start)}`;
+      next = leSerialize(leRenumberOrderedListRun(leDeserialize(next), lineIdx + 1, n));
+      apply({ next, cursor: start + 1 + insert.length });
+      return;
+    }
+    if (quote) {
+      event.preventDefault();
+      if (!quote[2].trim()) {
+        lines[lineIdx] = '';
+        apply({ next: leSerialize(lines), cursor: offset });
+        return;
+      }
+      const insert = `${quote[1]}> `;
+      const next = `${value.slice(0, start)}\n${insert}${value.slice(start)}`;
+      apply({ next, cursor: start + 1 + insert.length });
+    }
+  };
+
+  const commands: { id: LiveEditorCommand; label: string }[] = [
+    { id: 'bold', label: 'B' },
+    { id: 'italic', label: 'I' },
+    { id: 'strike', label: 'S' },
+    { id: 'code', label: '</>' },
+    { id: 'h2', label: 'H2' },
+    { id: 'h3', label: 'H3' },
+    { id: 'bullet', label: '•' },
+    { id: 'ordered', label: '1.' },
+    { id: 'quote', label: '“' },
+    { id: 'link', label: 'Link' },
+    { id: 'wikilink', label: '[[]]' },
+    { id: 'table', label: 'Table' },
+    { id: 'diagram', label: 'Diagram' },
+    { id: 'hr', label: '—' },
+  ];
+
+  const gutterLines = useMemo(() => leDeserialize(value).map((l) => leKind(l)), [value]);
+
+  return (
+    <div
+      className="live-editor stack"
+      data-component="LiveEditor"
+      data-variant="plain"
+      data-compact={compact ? '1' : undefined}
+    >
+      {toolbar ? (
+        <div className="row" role="toolbar" aria-label="Markdown formatting" data-wrap="1">
+          {commands.map((cmd) => (
+            <Button
+              key={cmd.id}
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => run(cmd.id)}
+              aria-label={cmd.id}
+            >
+              {cmd.label}
+            </Button>
+          ))}
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-pressed={showGutter}
+            onClick={() => setShowGutter((v) => !v)}
+            aria-label="Toggle structure gutter"
+          >
+            Structure
+          </Button>
+        </div>
+      ) : null}
+      <div className="live-editor__surface stack">
+        {showGutter ? (
+          <div className="live-editor__gutter row" data-el="editor.gutter" aria-hidden>
+            {gutterLines.map((kind, i) => (
+              <span key={i} className="type-caption live-editor__gutter-chip" data-kind={kind}>
+                {kind}
+              </span>
+            ))}
+          </div>
+        ) : null}
+        <textarea
+          ref={ref}
+          className="field live-editor__input"
+          rows={compact ? 6 : 16}
+          value={value}
+          placeholder={placeholder}
+          onChange={(event) => {
+            onChange(event.target.value);
+            setCaret(event.target.selectionStart);
+            setSuggestIdx(0);
+          }}
+          onSelect={(event) => setCaret(event.currentTarget.selectionStart)}
+          onKeyDown={onKeyDown}
+          onPaste={(event) => {
+            const text = event.clipboardData.getData('text/plain');
+            if (!text || (!text.includes('\r') && !text.includes('\n'))) return;
+            event.preventDefault();
+            const el = event.currentTarget;
+            apply(
+              insertAt(
+                value,
+                el.selectionStart,
+                el.selectionEnd,
+                text.replace(/\r\n?/g, '\n'),
+              ),
+            );
+          }}
+          data-el="editor.body"
+          spellCheck
+        />
+        {suggestions.length > 0 ? (
+          <ul
+            className="live-editor__wiki-suggest card stack"
+            role="listbox"
+            aria-label="Wikilink suggestions"
+          >
+            {suggestions.map((entry, i) => (
+              <li key={entry.id}>
+                <button
+                  type="button"
+                  className="btn btn--ghost"
+                  role="option"
+                  aria-selected={i === suggestIdx}
+                  data-active={i === suggestIdx ? '1' : undefined}
+                  onClick={() => pickWiki(entry.label)}
+                >
+                  {entry.label}
+                  {entry.kind ? (
+                    <span className="type-caption"> · {entry.kind}</span>
+                  ) : null}
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : null}
+      </div>
+    </div>
+  );
+}
+
+function BlocksLiveEditor({
+  value,
+  onChange,
+  toolbar,
+  placeholder,
+  compact,
+  entityIndex,
+}: Required<
+  Pick<LiveEditorProps, 'value' | 'onChange' | 'toolbar' | 'placeholder' | 'compact'>
+> & { entityIndex: EntityLinkIndex }): React.JSX.Element {
+  const [lines, setLines] = useState(() => leDeserialize(value));
+  const [active, setActive] = useState<number | null>(null);
+  const [wikiAC, setWikiAC] = useState<{
+    query: string;
+    at: number;
+    start: number;
+  } | null>(null);
+  const [acIdx, setAcIdx] = useState(0);
+  const caretRef = useRef<{ idx: number; pos: number } | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const lastSent = useRef(value);
+  const pendingCaret = useRef<number | null>(null);
+  const lastActive = useRef(0);
+
+  useEffect(() => {
+    const joined = leSerialize(lines);
+    if (joined !== lastSent.current) {
+      lastSent.current = joined;
+      onChange(joined);
+    }
+  }, [lines, onChange]);
+
+  useEffect(() => {
+    if (active != null) return;
+    if (value !== lastSent.current) {
+      lastSent.current = value;
+      setLines(leDeserialize(value));
+      setActive(null);
+    }
+  }, [value, active]);
+
+  useEffect(() => {
+    if (active != null && inputRef.current) {
+      const el = inputRef.current;
+      el.focus();
+      const want =
+        caretRef.current && caretRef.current.idx === active
+          ? caretRef.current.pos
+          : el.value.length;
+      try {
+        el.setSelectionRange(want, want);
+      } catch {
+        /* ignore */
+      }
+      caretRef.current = null;
+      el.style.height = 'auto';
+      el.style.height = `${el.scrollHeight}px`;
+    }
+  }, [active]);
+
+  useEffect(() => {
+    if (pendingCaret.current != null && inputRef.current) {
+      const p = pendingCaret.current;
+      pendingCaret.current = null;
+      inputRef.current.focus();
+      try {
+        inputRef.current.setSelectionRange(p, p);
+      } catch {
+        /* ignore */
+      }
+      inputRef.current.style.height = 'auto';
+      inputRef.current.style.height = `${inputRef.current.scrollHeight}px`;
+    }
+  });
+
+  useEffect(() => {
+    if (active != null) lastActive.current = active;
+  }, [active]);
+
+  const enter = (i: number, pos?: number): void => {
+    caretRef.current = { idx: i, pos: pos ?? (lines[i] || '').length };
+    setActive(i);
+  };
+
+  const applyValue = (i: number, nv: string, caret?: number): void => {
+    setLines((ls) => {
+      const n = ls.slice();
+      n[i] = nv;
+      return n;
+    });
+    if (caret != null) pendingCaret.current = caret;
+  };
+
+  const ensureActive = (): boolean => {
+    if (active == null) {
+      setActive(lastActive.current || 0);
+      return false;
+    }
+    return true;
+  };
+
+  const onInput = (i: number, e: React.ChangeEvent<HTMLTextAreaElement>): void => {
+    const v = e.target.value;
+    if (/\r|\n/.test(v)) {
+      let parts = leDeserialize(v);
+      const rawCaret = e.target.selectionStart;
+      let caretPos = v.slice(0, rawCaret).replace(/\r\n?/g, '\n').length;
+      if (parts.length > 1 && parts[parts.length - 1] === '') {
+        const normalizedTotalLen = parts.join('\n').length;
+        parts = parts.slice(0, -1);
+        caretPos = Math.min(caretPos, normalizedTotalLen - 1);
+      }
+      const { idx: partIdx, col } = leLocateInParts(parts, caretPos);
+      setLines((ls) => {
+        const n = ls.slice();
+        n.splice(i, 1, ...parts);
+        return n;
+      });
+      const lastIdx = i + partIdx;
+      caretRef.current = { idx: lastIdx, pos: col };
+      setActive(lastIdx);
+      setWikiAC(null);
+      setAcIdx(0);
+      return;
+    }
+    e.target.style.height = 'auto';
+    e.target.style.height = `${e.target.scrollHeight}px`;
+    setLines((ls) => {
+      const n = ls.slice();
+      n[i] = v;
+      return n;
+    });
+    const caret = e.target.selectionStart;
+    const m = v.slice(0, caret).match(/\[\[([^[\]]*)$/);
+    setWikiAC(
+      m ? { query: m[1], at: caret, start: caret - m[1].length - 2 } : null,
+    );
+    setAcIdx(0);
+  };
+
+  const acceptWiki = (name: string): void => {
+    if (active == null || !wikiAC) return;
+    const line = lines[active];
+    const ins = `[[${name}]]`;
+    const nv = line.slice(0, wikiAC.start) + ins + line.slice(wikiAC.at);
+    applyValue(active, nv, wikiAC.start + ins.length);
+    setWikiAC(null);
+  };
+
+  const onKey = (i: number, e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+    const el = e.target as HTMLTextAreaElement;
+    const pos = el.selectionStart;
+    if (wikiAC) {
+      const q = (wikiAC.query || '').toLowerCase();
+      const list = entityIndex
+        .filter(
+          (entry) =>
+            entry.label.toLowerCase().includes(q) ||
+            entry.id.toLowerCase().includes(q),
+        )
+        .slice(0, 6);
+      if (list.length) {
+        if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          setAcIdx((n) => (n + 1) % list.length);
+          return;
+        }
+        if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          setAcIdx((n) => (n - 1 + list.length) % list.length);
+          return;
+        }
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          acceptWiki(list[Math.min(acIdx, list.length - 1)].label);
+          return;
+        }
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          setWikiAC(null);
+          return;
+        }
+      }
+    }
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      const v = el.value;
+      const before = v.slice(0, pos);
+      const after = v.slice(pos);
+      let pre = '';
+      const m = before.match(/^(\s*([-*+]|\d+\.)\s+)/);
+      if (m && after === '' && before.trim() === m[1].trim()) {
+        setLines((ls) => {
+          const n = ls.slice();
+          n[i] = '';
+          return n;
+        });
+        return;
+      }
+      if (m) pre = m[1].replace(/\d+/, (s) => String(parseInt(s, 10) + 1));
+      const quote = before.match(/^(\s*)>\s?/);
+      if (!m && quote && after === '' && !before.replace(/^\s*>\s?/, '').trim()) {
+        setLines((ls) => {
+          const n = ls.slice();
+          n[i] = '';
+          return n;
+        });
+        return;
+      }
+      if (!m && quote) pre = `${quote[1]}> `;
+      const insertedNum = pre.match(/(\d+)/);
+      setLines((ls) => {
+        let n = ls.slice();
+        n.splice(i, 1, before, pre + after);
+        if (insertedNum) {
+          n = leRenumberOrderedListRun(n, i + 2, parseInt(insertedNum[1], 10) + 1);
+        }
+        return n;
+      });
+      enter(i + 1, pre.length);
+      return;
+    }
+    if (e.key === 'Tab') {
+      const kind = leKind(el.value);
+      if (kind === 'li' || kind === 'ol' || kind === 'quote') {
+        e.preventDefault();
+        const nextLine = indentLine(el.value, e.shiftKey);
+        applyValue(i, nextLine, Math.max(0, pos + (nextLine.length - el.value.length)));
+      }
+      return;
+    }
+    if (e.key === 'Backspace' && pos === 0 && el.selectionEnd === 0 && i > 0) {
+      e.preventDefault();
+      const prevLen = lines[i - 1].length;
+      setLines((ls) => {
+        const n = ls.slice();
+        n.splice(i - 1, 2, ls[i - 1] + ls[i]);
+        return n;
+      });
+      enter(i - 1, prevLen);
+      return;
+    }
+    if (e.key === 'ArrowUp' && i > 0 && !e.shiftKey) {
+      e.preventDefault();
+      enter(i - 1);
+      return;
+    }
+    if (e.key === 'ArrowDown' && i < lines.length - 1 && !e.shiftKey) {
+      e.preventDefault();
+      enter(i + 1, 0);
+      return;
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      if (wikiAC) {
+        setWikiAC(null);
+        return;
+      }
+      el.blur();
+      setActive(null);
+    }
+  };
+
+  const blankDoc = lines.length === 1 && lines[0].trim() === '';
+  const regs = leRegions(lines);
+  const regAt = (idx: number): LeRegion | undefined =>
+    regs.find((r) => idx >= r.start && idx <= r.end);
+
+  const handleContainerMouseDown = (e: React.MouseEvent<HTMLDivElement>): void => {
+    if (e.button !== 0) return;
+    const target = e.target as HTMLElement;
+    if (target.closest(LE_FOCUSABLE_SEL)) return;
+    e.preventDefault();
+    ensureActive();
+  };
+
+  const cmdWrap = (b: string, a: string): void => {
+    if (!ensureActive()) return;
+    const el = inputRef.current;
+    if (!el || active == null) return;
+    const s = el.selectionStart;
+    const e = el.selectionEnd;
+    const v = el.value;
+    const sel = v.slice(s, e);
+    applyValue(
+      active,
+      v.slice(0, s) + b + sel + a + v.slice(e),
+      sel ? s + b.length + sel.length + a.length : s + b.length,
+    );
+  };
+
+  const cmdPrefix = (pfx: string): void => {
+    if (!ensureActive() || active == null) return;
+    const cur = lines[active];
+    const nv = cur.startsWith(pfx)
+      ? cur.slice(pfx.length)
+      : pfx + cur.replace(/^(#{1,6}\s+|[-*+]\s+|>\s+|\d+\.\s+)/, '');
+    applyValue(active, nv, nv.length);
+  };
+
+  const cmdBlock = (text: string): void => {
+    const at = active != null ? active : lines.length - 1;
+    const sep = lines[at] && lines[at].trim() !== '' ? 1 : 0;
+    setLines((ls) => {
+      const n = ls.slice();
+      n.splice(at + 1, 0, ...(sep ? [''] : []), ...text.split('\n'), '');
+      return n;
+    });
+    const focusLine = at + 1 + sep + 1;
+    caretRef.current = { idx: focusLine, pos: 0 };
+    setActive(focusLine);
+  };
+
+  const run = (command: LiveEditorCommand): void => {
+    switch (command) {
+      case 'bold':
+        cmdWrap('**', '**');
+        break;
+      case 'italic':
+        cmdWrap('_', '_');
+        break;
+      case 'strike':
+        cmdWrap('~~', '~~');
+        break;
+      case 'code':
+        cmdWrap('`', '`');
+        break;
+      case 'link':
+        cmdWrap('[', '](url)');
+        break;
+      case 'wikilink': {
+        if (!ensureActive()) break;
+        const el = inputRef.current;
+        if (!el || active == null) break;
+        const s = el.selectionStart;
+        const e = el.selectionEnd;
+        const v = el.value;
+        const token = '[[]]';
+        applyValue(active, v.slice(0, s) + token + v.slice(e), s + 2);
+        break;
+      }
+      case 'h2':
+        cmdPrefix('## ');
+        break;
+      case 'h3':
+        cmdPrefix('### ');
+        break;
+      case 'bullet':
+        cmdPrefix('- ');
+        break;
+      case 'ordered':
+        cmdPrefix('1. ');
+        break;
+      case 'quote':
+        cmdPrefix('> ');
+        break;
+      case 'table':
+        cmdBlock(LE_TABLE_TEMPLATE);
+        break;
+      case 'diagram':
+        cmdBlock('```mermaid\nflowchart LR\n  A --> B\n```');
+        break;
+      case 'hr':
+        cmdBlock('---');
+        break;
+      default:
+        break;
+    }
+  };
+
+  const inputFor = (i: number, mono: boolean): React.JSX.Element => (
+    <textarea
+      ref={inputRef}
+      className={`le-input ${mono ? 'le-mono type-code' : leTypeClass(lines[i])}`}
+      rows={1}
+      spellCheck={!mono}
+      placeholder={!mono && blankDoc ? placeholder : ''}
+      value={lines[i]}
+      onChange={(e) => onInput(i, e)}
+      onKeyDown={(e) => onKey(i, e)}
+      data-el={i === active ? 'editor.body' : undefined}
+    />
+  );
+
+  const rows: React.ReactNode[] = [];
+  let i = 0;
+  while (i < lines.length) {
+    const r = regAt(i);
+    if (r) {
+      const inside = active != null && active >= r.start && active <= r.end;
+      if (inside) {
+        const inner: React.ReactNode[] = [];
+        for (let k = r.start; k <= r.end; k++) {
+          inner.push(
+            <div key={k} className="le-row">
+              {k === active ? (
+                inputFor(k, true)
+              ) : (
+                <div
+                  className="le-raw"
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    enter(k);
+                  }}
+                >
+                  {lines[k] || '\u00a0'}
+                </div>
+              )}
+            </div>,
+          );
+        }
+        rows.push(
+          <div key={`reg${r.start}`} className="le-rawbox">
+            {inner}
+          </div>,
+        );
+      } else {
+        const md = lines.slice(r.start, r.end + 1).join('\n');
+        rows.push(
+          <div
+            key={`reg${r.start}`}
+            className="le-widget"
+            onMouseDown={(e) => {
+              e.preventDefault();
+              enter(r.kind === 'callout' ? r.start : r.start + 1);
+            }}
+          >
+            <span className="le-chip">
+              {r.kind === 'mermaid' ? 'diagram · click to edit' : `${r.kind} · click to edit`}
+            </span>
+            <pre className="type-caption" style={{ whiteSpace: 'pre-wrap', margin: 0 }}>
+              {md}
+            </pre>
+          </div>,
+        );
+      }
+      i = r.end + 1;
+    } else {
+      const idx = i;
+      rows.push(
+        <div key={idx} className={`le-row ${idx === active ? 'le-active' : ''}`}>
+          {idx === active ? (
+            inputFor(idx, false)
+          ) : (
+            <div
+              className="le-read"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                enter(idx);
+              }}
+            >
+              <LEReadLine text={lines[idx]} />
+            </div>
+          )}
+        </div>,
+      );
+      i++;
+    }
+  }
+
+  const wikiList = useMemo(() => {
+    if (!wikiAC) return [];
+    const q = (wikiAC.query || '').toLowerCase();
+    return entityIndex
+      .filter(
+        (entry) =>
+          entry.label.toLowerCase().includes(q) ||
+          entry.id.toLowerCase().includes(q),
+      )
+      .slice(0, 6);
+  }, [entityIndex, wikiAC]);
+
+  const commands: { id: LiveEditorCommand; label: string }[] = [
+    { id: 'bold', label: 'B' },
+    { id: 'italic', label: 'I' },
+    { id: 'strike', label: 'S' },
+    { id: 'code', label: '</>' },
+    { id: 'h2', label: 'H2' },
+    { id: 'h3', label: 'H3' },
+    { id: 'bullet', label: '•' },
+    { id: 'ordered', label: '1.' },
+    { id: 'quote', label: '“' },
+    { id: 'link', label: 'Link' },
+    { id: 'wikilink', label: '[[]]' },
+    { id: 'table', label: 'Table' },
+    { id: 'diagram', label: 'Diagram' },
+    { id: 'hr', label: '—' },
+  ];
+
+  return (
+    <div
+      className="live-editor stack"
+      data-component="LiveEditor"
+      data-variant="blocks"
+      data-compact={compact ? '1' : undefined}
+      onMouseDown={handleContainerMouseDown}
+    >
+      {toolbar ? (
+        <div
+          className="row le-toolbar"
+          role="toolbar"
+          aria-label="Markdown formatting"
+          data-wrap="1"
+        >
+          {commands.map((cmd) => (
+            <Button
+              key={cmd.id}
+              type="button"
+              variant="ghost"
+              size="sm"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => run(cmd.id)}
+              aria-label={cmd.id}
+            >
+              {cmd.label}
+            </Button>
+          ))}
+        </div>
+      ) : null}
+      <div className={`le-doc${compact ? ' le-doc-compact' : ''}`}>
+        {rows}
+        <div
+          className="le-add"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            if (blankDoc) {
+              enter(0, 0);
+            } else {
+              setLines((ls) => {
+                const n = ls.slice();
+                n.push('');
+                return n;
+              });
+              enter(lines.length, 0);
+            }
+          }}
+        >
+          {blankDoc ? placeholder || 'Write…' : 'Write…'}
+        </div>
+      </div>
+      {wikiAC && active != null && wikiList.length > 0 ? (
+        <ul className="le-ac live-editor__wiki-suggest card stack" role="listbox" aria-label="Wikilink suggestions">
+          {wikiList.map((entry, wi) => (
+            <li key={entry.id}>
+              <button
+                type="button"
+                className="btn btn--ghost le-ac-item"
+                role="option"
+                aria-selected={wi === acIdx}
+                data-active={wi === acIdx ? '1' : undefined}
+                onMouseDown={(ev) => {
+                  ev.preventDefault();
+                  acceptWiki(entry.label);
+                }}
+              >
+                {entry.label}
+                {entry.kind ? <span className="type-caption"> · {entry.kind}</span> : null}
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+export function LiveEditor({
+  value,
+  onChange,
+  toolbar = true,
+  placeholder = 'Write…',
+  compact = false,
+  entityIndex = [],
+  variant = 'blocks',
+}: LiveEditorProps): React.JSX.Element {
+  if (variant === 'plain') {
+    return (
+      <PlainLiveEditor
+        value={value}
+        onChange={onChange}
+        toolbar={toolbar}
+        placeholder={placeholder}
+        compact={compact}
+        entityIndex={entityIndex}
+      />
+    );
+  }
+  return (
+    <BlocksLiveEditor
+      value={value}
+      onChange={onChange}
+      toolbar={toolbar}
+      placeholder={placeholder}
+      compact={compact}
+      entityIndex={entityIndex}
+    />
+  );
+}

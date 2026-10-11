@@ -3,16 +3,19 @@ import { useSizeClasses } from '@pi/react-imposition/react';
 import type { ReactNode } from 'react';
 import { useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { useSearchDialog } from '../features/search/components/SearchCommandRoot.js';
-import { NotificationBell } from './NotificationBell.js';
 import { canAccessVerify, isAdmin } from '../auth/roles.js';
 import { useAuth } from '../auth/AuthContext.js';
+import { useSearchDialog } from '../features/search/components/SearchCommandRoot.js';
 import { useMe } from '../hooks/useMe.js';
+import { useAppDispatch } from '../store/hooks.js';
+import { dialogClosed, dialogOpened } from '../store/searchSlice.js';
 import {
   destinationsForAuth,
   siteLinksPlacement,
   type SiteDestination,
 } from './destinations.js';
+import { NavDrawer } from './NavDrawer.js';
+import { NotificationBell } from './NotificationBell.js';
 
 function BrandGlyph(): React.JSX.Element {
   return (
@@ -105,6 +108,7 @@ function NavIcon({ id }: { id: string }): React.JSX.Element {
       <svg {...common}>
         <rect x="4" y="4" width="16" height="16" rx="2" />
         <path d="M8 9h8M8 12h8M8 15h5" />
+        <path d="M4 8h1M4 12h1M4 16h1" strokeWidth="2" />
       </svg>
     );
   }
@@ -144,7 +148,11 @@ function DestinationLinks({
 }): React.JSX.Element {
   return (
     <nav
-      className={placement === 'bottom' ? 'site-chrome__bottom' : 'site-chrome__links'}
+      className={
+        placement === 'bottom'
+          ? 'site-chrome__bottom app-shell__bottomnav'
+          : 'site-chrome__links nav-links-row'
+      }
       data-site-links
       data-site-links-placement={placement}
       aria-label="Primary"
@@ -199,11 +207,12 @@ function AccountSlot({
 
 /**
  * Live chrome. Search and Log in stay in the top strip.
- * The six links (plus Verification, when allowed) sit in the bottom bar
- * only for the bottom-bar pattern; every other pattern joins them to the top.
+ * Links sit in the bottom bar for bottom-bar; drawer pattern uses NavDrawer;
+ * every other pattern joins links to the top.
  */
 export function SiteChrome({ children }: { children: ReactNode }): React.JSX.Element {
   const searchDialog = useSearchDialog();
+  const dispatch = useAppDispatch();
   const { widthClass, heightClass } = useSizeClasses();
   const pattern = navPatternFor(widthClass, heightClass);
   const placement = siteLinksPlacement(pattern);
@@ -219,12 +228,23 @@ export function SiteChrome({ children }: { children: ReactNode }): React.JSX.Ele
       logout();
     }
   }, [isAuthenticated, confirmedNoMember, logout]);
+
+  useEffect(() => {
+    if (searchDialog.open) {
+      dispatch(dialogOpened());
+    } else {
+      dispatch(dialogClosed());
+    }
+  }, [dispatch, searchDialog.open]);
+
   const roles = me.data?.roles ?? [];
   const destinations = destinationsForAuth({
     isAuthenticated,
     isAdmin: isAdmin(roles),
     canVerify: canAccessVerify(roles),
   });
+  const showDrawer = pattern === 'drawer';
+  const showTopLinks = placement === 'top' && !showDrawer;
   const links = (
     <DestinationLinks
       destinations={destinations}
@@ -233,15 +253,26 @@ export function SiteChrome({ children }: { children: ReactNode }): React.JSX.Ele
     />
   );
 
+  const openSearch = (): void => {
+    dispatch(dialogOpened());
+    searchDialog.openSearch();
+  };
+
   return (
-    <div className="site-chrome" data-site-chrome data-site-pattern={pattern}>
+    <div
+      className="site-chrome app-shell"
+      data-site-chrome
+      data-site-pattern={pattern}
+      data-el="shell.root"
+    >
       <header className="site-chrome__top">
         <Link className="site-chrome__brand" to="/" aria-label="Chronicler">
           <span className="site-chrome__brand-mark" aria-hidden="true">
             <BrandGlyph />
           </span>
         </Link>
-        {placement === 'top' ? links : null}
+        {showDrawer ? <NavDrawer destinations={destinations} /> : null}
+        {showTopLinks ? links : null}
         <span className="site-chrome__spacer" />
         <button
           type="button"
@@ -249,7 +280,7 @@ export function SiteChrome({ children }: { children: ReactNode }): React.JSX.Ele
           aria-label="Search the chronicle"
           aria-haspopup="dialog"
           aria-expanded={searchDialog.open}
-          onClick={searchDialog.openSearch}
+          onClick={openSearch}
         >
           <SearchIcon />
           <span className="site-chrome__search-label">Search the chronicle</span>
@@ -261,7 +292,9 @@ export function SiteChrome({ children }: { children: ReactNode }): React.JSX.Ele
           name={me.data?.displayName ?? me.data?.handle}
         />
       </header>
-      <div className="site-chrome__main">{children}</div>
+      <main id="main" tabIndex={-1} className="site-chrome__main app-shell__main">
+        {children}
+      </main>
       {placement === 'bottom' ? links : null}
     </div>
   );

@@ -1,12 +1,9 @@
 import type { PageDeclaration } from '@pi/react-imposition';
 import { PageHost, type PageRegionRenderers } from '@pi/react-imposition/react';
-import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router-dom';
-import { queryKeys } from '../../../api/queryKeys.js';
 import { PageShell } from '../../../components/foundation/PageShell.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
-import { toAppError } from '../../../errors/toAppError.js';
-import { loadCodexEntry } from '../adapters/codexAdapter.js';
+import { useCodexEntryPage } from '../hooks/useCodexEntryPage.js';
 
 const DECLARATION: PageDeclaration = {
   page: 'codex-entry',
@@ -15,23 +12,17 @@ const DECLARATION: PageDeclaration = {
 
 export function CodexEntryPage(): React.JSX.Element {
   const { slug = '' } = useParams();
-  const q = useQuery({
-    queryKey: queryKeys.codexEntry(slug),
-    queryFn: () => loadCodexEntry(slug),
-    enabled: Boolean(slug),
-  });
+  const page = useCodexEntryPage(slug);
 
   let regions: PageRegionRenderers;
-  if (q.isError) {
+  if (page.status === 'error') {
     regions = {
-      body: () => (
-        <StatePanel status="error" error={toAppError(q.error, 'codex:entry')} />
-      ),
+      body: () => <StatePanel status="error" error={page.error} />,
     };
-  } else if (q.isLoading || !q.data) {
+  } else if (page.status === 'loading') {
     regions = { body: () => <StatePanel status="loading" /> };
   } else {
-    const entry = q.data;
+    const entry = page.view;
     regions = {
       body: () => (
         <article className="stack">
@@ -52,7 +43,7 @@ export function CodexEntryPage(): React.JSX.Element {
   }
 
   return (
-    <PageShell title={q.data?.title ?? 'Codex'}>
+    <PageShell title={page.status === 'ready' ? page.view.title : 'Codex'}>
       <PageHost declaration={DECLARATION} regions={regions} />
     </PageShell>
   );

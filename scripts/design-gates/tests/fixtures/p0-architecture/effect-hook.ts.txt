@@ -1,0 +1,7 @@
+import * as React from 'react';
+import { loadItems as request } from '../adapters/itemsAdapter.js';
+export function useItems() {
+  const runLoad = () => request();
+  React.useEffect(runLoad, []);
+  return {};
+}
