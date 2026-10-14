@@ -1,0 +1,24 @@
+# Fixed synthetic local test settings, merged with compose.yaml by dev-stack.
+services:
+  postgres:
+    ports: !override
+      - '127.0.0.1:5432:5432'
+  api:
+    environment:
+      CHRONICLER_ENV: development
+      REQUIRE_DATABASE: '1'
+      JWT_SECRET: local-test-only-jwt-secret
+      DISCORD_CLIENT_ID: ''
+      DISCORD_CLIENT_SECRET: local-test-only-oauth-secret
+      DISCORD_REDIRECT_URI: http://127.0.0.1:8080/auth/discord/callback
+      INGEST_SECRET: local-test-only-ingest-secret
+      AGENT_INLINE_COMPLETE: '0'
+      CORS_ORIGINS: http://127.0.0.1:5173
+    ports: !override
+      - '127.0.0.1:8080:8080'
+  worker:
+    environment:
+      REQUIRE_DATABASE: '1'
+      DISCORD_BOT_TOKEN: ''
+      DISCORD_ANNOUNCE_CHANNEL_ID: ''
+      DISCORD_DELIVERY_DRY_RUN: '1'

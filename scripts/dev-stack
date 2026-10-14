@@ -1,0 +1,113 @@
+#!/usr/bin/env -S -i PATH=/usr/bin:/bin /bin/bash
+# Fixed-command facade: all Docker inputs live here and in the Compose override.
+set -euo pipefail
+if (( $# != 0 )); then
+  echo 'dev-stack takes no arguments' >&2
+  exit 64
+fi
+
+# Ignore caller Docker contexts, credentials, Compose settings, proxies and shell
+# hooks. No caller environment value becomes a Docker argument.
+exec /usr/bin/env -i PATH=/usr/bin:/bin HOME=/tmp/chronicler-dev \
+  LANG=C.UTF-8 /bin/bash --noprofile --norc <<'MAIN'
+set -euo pipefail
+umask 077
+readonly root=.
+readonly state=/tmp/chronicler-dev
+if [[ -e $state || -L $state ]]; then
+  [[ -d $state && ! -L $state && -O $state ]] || {
+    echo 'Unsafe /tmp/chronicler-dev directory' >&2
+    exit 73
+  }
+else
+  mkdir -m 700 "$state"
+fi
+chmod 700 "$state"
+exec > >(tee -a "$state/startup.log") 2>&1
+step=serialization
+receipt() {
+  code=$?
+  trap - EXIT
+  printf '%s exit=%s step=%s\n' "$(date -u +%FT%TZ)" "$code" "$step" > "$state/status.$$.tmp"
+  mv "$state/status.$$.tmp" "$state/latest-status"
+  printf '%s dev-stack exit=%s step=%s\n' "$(date -u +%FT%TZ)" "$code" "$step"
+  exit "$code"
+}
+trap receipt EXIT
+printf '\n%s dev-stack startup\n' "$(date -u +%FT%TZ)"
+exec 9>"$state/startup.lock"
+flock -w 30 9 || { echo 'Another dev-stack startup is still running' >&2; exit 75; }
+step=setup
+mkdir -p "$state/docker-config"
+: > "$state/empty.env"
+export DOCKER_CONFIG="$state/docker-config"
+readonly -a compose=(/usr/bin/docker --host unix:///var/run/docker.sock compose
+  --project-name chronicler-dev --project-directory "$root/deploy"
+  --env-file "$state/empty.env" -f "$root/deploy/compose.yaml"
+  -f "$root/deploy/compose.dev-tests.yaml")
+readonly -a services=(postgres migrate api worker)
+step=compose-config
+timeout --kill-after=5s 15s "${compose[@]}" config --quiet
+step=daemon
+timeout --kill-after=5s 10s /usr/bin/docker --host unix:///var/run/docker.sock info --format '{{.ServerVersion}}'
+
+# The detached follower owns FD 8 for its lifetime. Concurrent launches lose the
+# lock and exit. FD 9 belongs to startup and must not be inherited.
+nohup /bin/bash --noprofile --norc -c '
+  set -uo pipefail
+  exec 9>&-
+  state=/tmp/chronicler-dev
+  root=.
+  exec 8>"$state/follower.lock"
+  flock -n 8 || exit 0
+  printf "%s\n" "$$" > "$state/follower.pid"
+  trap '\''rm -f "$state/follower.pid"'\'' EXIT
+  compose=(/usr/bin/docker --host unix:///var/run/docker.sock compose
+    --project-name chronicler-dev --project-directory "$root/deploy"
+    --env-file "$state/empty.env" -f "$root/deploy/compose.yaml"
+    -f "$root/deploy/compose.dev-tests.yaml")
+  since=$(date -u +%FT%TZ)
+  while :; do
+    next=$(date -u +%FT%TZ)
+    timeout --kill-after=5s 3600s "${compose[@]}" logs --follow --timestamps --no-color --since "$since" postgres migrate api worker
+    code=$?
+    printf "%s follower exit=%s; retrying\n" "$(date -u +%FT%TZ)" "$code"
+    since=$next
+    sleep 5
+  done
+' </dev/null >>"$state/services.log" 2>&1 &
+step=startup
+timeout --kill-after=10s 900s "${compose[@]}" up --detach --build "${services[@]}"
+step=service-readiness
+readonly deadline=$((SECONDS + 90))
+while (( SECONDS < deadline )); do
+  running=$(timeout --kill-after=2s 5s "${compose[@]}" ps --status running --services)
+  if [[ $'\n'"$running"$'\n' != *$'\npostgres\n'* ||
+        $'\n'"$running"$'\n' != *$'\napi\n'* ||
+        $'\n'"$running"$'\n' != *$'\nworker\n'* ]]; then
+    sleep 2
+    continue
+  fi
+  timeout --kill-after=2s 5s "${compose[@]}" logs --timestamps --no-color --tail 100 worker > "$state/worker-startup.log"
+  worker_log=$(cat "$state/worker-startup.log")
+  if [[ $worker_log == *"worker using in-memory job store"* ]]; then
+    echo 'Worker fell back to in-memory storage; startup rejected' >&2
+    exit 1
+  fi
+  if [[ $worker_log != *"worker using postgres job store"* ]]; then
+    sleep 2
+    continue
+  fi
+  step=liveness
+  if curl --noproxy 127.0.0.1 --fail --silent --show-error --max-time 2 \
+    http://127.0.0.1:8080/health >"$state/health.tmp" 2>/dev/null; then
+    mv "$state/health.tmp" "$state/health.json"
+    step=complete
+    echo 'Services running; worker Postgres startup recorded; API /health passed (liveness only). Logs: /tmp/chronicler-dev'
+    exit 0
+  fi
+  sleep 2
+done
+echo 'Services, worker Postgres startup or API liveness did not succeed within the bounded wait' >&2
+exit 1
+MAIN

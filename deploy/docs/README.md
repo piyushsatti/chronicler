@@ -10,6 +10,7 @@ How Chronicler **ships, backs up, and recovers**. Lives next to Compose files in
 | Doc                                                             | Use                                           |
 | --------------------------------------------------------------- | --------------------------------------------- |
 | [deploy-runbook.md](/deploy/docs/deploy-runbook.md)             | Topology, bootstrap, routine deploy, rollback |
+| [dev-stack.md](/deploy/docs/dev-stack.md)                       | Fixed local stack startup and log receipts    |
 | [fresh-db-bootstrap.md](/deploy/docs/fresh-db-bootstrap.md)     | Local/QA seed and role tokens                 |
 | [digitalocean-droplet.md](/deploy/docs/digitalocean-droplet.md) | Droplet host notes                            |
 | [droplet-disk-hygiene.md](/deploy/docs/droplet-disk-hygiene.md) | Disk prune                                    |

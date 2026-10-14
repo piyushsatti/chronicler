@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -273,7 +274,13 @@ func (w *world) docID(title string) string {
 
 func (w *world) revisionsAndLinks() {
 	i := 0
-	for _, ids := range w.byCat {
+	categories := make([]string, 0, len(w.byCat))
+	for category := range w.byCat {
+		categories = append(categories, category)
+	}
+	sort.Strings(categories)
+	for _, category := range categories {
+		ids := w.byCat[category]
 		if len(ids) < 2 {
 			continue
 		}
@@ -738,12 +745,8 @@ func (w *world) jobsAndSite() {
 		{"qa-future", "queued", "quest_discord_delivery", "discord"},
 		{"qa-later", "retry_wait", "quest_discord_delivery", "discord"},
 	}
-	var answered string
 	for i, j := range jobs {
 		id := w.id(24)
-		if i == 0 {
-			answered = id
-		}
 		row := map[string]any{
 			"public_id": id, "job_key": j.key, "kind": j.kind, "lane": j.lane, "state": j.state,
 			"attempts": i % 3,
@@ -757,10 +760,31 @@ func (w *world) jobsAndSite() {
 		}
 		w.put("background_jobs", []string{"job_key"}, nil, row)
 	}
+	// D44: background_jobs owns lifecycle; agent_questions is the projection.
+	// Allocate after the delivery fixtures to preserve their six stable IDs.
+	answered := w.id(24)
+	question := "What is the Kept Tower's lamp schedule?"
+	history := map[string]any{
+		"messages":   []any{map[string]any{"role": "user", "content": "lamp schedule"}},
+		"incomplete": false,
+	}
+	result := map[string]any{
+		"version": 1, "type": "question.completed", "job_id": answered,
+		"answer":  "Dusk until the ferry bell, unless the charter says otherwise.",
+		"sources": []any{map[string]any{"document_id": w.docID("Kept Tower"), "title": "Kept Tower"}},
+	}
+	w.put("background_jobs", []string{"job_key"}, nil, map[string]any{
+		"public_id": answered, "job_key": "agent:" + answered,
+		"kind": "agent_question", "lane": "agent", "state": "succeeded",
+		"attempts": 1, "lease_token": 1,
+		"payload":              map[string]any{"version": 1, "type": "question.requested", "job_id": answered, "question": question, "history": history},
+		"completion_operation": "succeed", "completion_payload": result,
+		"created_at": "2026-10-05T12:00:00Z", "next_run_at": "2026-10-05T12:00:00Z",
+		"updated_at": "2026-10-05T12:00:30Z", "question_deadline_at": "2026-10-05T12:01:40Z",
+	})
 	w.put("agent_questions", []string{"public_id"}, map[string]ref{"job_id": who("background_jobs", answered)}, map[string]any{
-		"public_id": w.id(25), "question": "What is the Kept Tower's lamp schedule?",
-		"state": "answered", "history": []any{map[string]any{"role": "user", "text": "lamp schedule"}},
-		"result": map[string]any{"text": "Dusk until the ferry bell, unless the charter says otherwise."},
+		"public_id": w.id(25), "question": question, "history": history, "result": result,
+		"created_at": "2026-10-05T12:00:00Z", "updated_at": "2026-10-05T12:00:30Z",
 	})
 	for i := 0; i < 5; i++ {
 		w.put("discord_activity_events", []string{"event_id"}, nil, map[string]any{

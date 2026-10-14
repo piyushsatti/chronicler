@@ -1,0 +1,46 @@
+# Chronicler: unattended local test and verification commands.
+# Domain rules require the proxy; do not disable it while network is enabled.
+# New sessions load this trusted project layer. Existing sessions may need restart.
+approval_policy = "never"
+default_permissions = "chronicler-tests"
+
+[features]
+network_proxy = true
+
+[permissions.chronicler-tests]
+description = "Chronicler local tests, fixture servers, and dependency tooling."
+extends = ":workspace"
+
+[permissions.chronicler-tests.filesystem]
+"~/.cache/go-build" = "write"
+"~/go/pkg/mod" = "write"
+"~/.cache/uv" = "write"
+"~/.cache/pre-commit" = "write"
+
+[permissions.chronicler-tests.network]
+enabled = true
+allow_local_binding = false
+
+# Host-level permissions cover all local test ports, including ephemeral ports.
+# Codex network rules cannot select individual HTTP paths or methods.
+[permissions.chronicler-tests.network.domains]
+"localhost" = "allow"
+"127.0.0.1" = "allow"
+"::1" = "allow"
+"proxy.golang.org" = "allow"
+"sum.golang.org" = "allow"
+"storage.googleapis.com" = "allow"
+"github.com" = "allow"
+"api.github.com" = "allow"
+"codeload.github.com" = "allow"
+"raw.githubusercontent.com" = "allow"
+"objects.githubusercontent.com" = "allow"
+"release-assets.githubusercontent.com" = "allow"
+"registry.npmjs.org" = "allow"
+"pypi.org" = "allow"
+"files.pythonhosted.org" = "allow"
+
+# Testcontainers needs the local Docker daemon. Docker socket access grants
+# control of that daemon, beyond just HTTP access to the application under test.
+[permissions.chronicler-tests.network.unix_sockets]
+"/var/run/docker.sock" = "allow"

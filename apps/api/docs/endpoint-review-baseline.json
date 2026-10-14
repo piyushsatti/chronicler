@@ -1,0 +1,1090 @@
+{
+  "format_version": 1,
+  "reviewed_at_utc": "2026-10-13T22:16:25.319184+00:00",
+  "source_revision": "bdbbe83e9d0a8f1969d6001b31d086272ef23ab2",
+  "scope": "Go API/database and Discord boundary review; QA seed source repair and local Docker startup/logging facade applied. No all-endpoint probe runner or transport architecture change.",
+  "canonical_report": "apps/api/docs/endpoint-review.md",
+  "source_worktree_note": "Existing review/configuration edits preserved; QA generator/fixture and acceptance tests added; local Compose override/facade/runbook added. Protected .codex changes remain staged outside the clone.",
+  "versions": {
+    "go": "go1.26.0 linux/amd64",
+    "bun": "1.3.14",
+    "vitest": "2.1.9",
+    "codex": "0.162.0-alpha.17.2",
+    "latest_available_goose_migration": 2,
+    "postgres_runtime": "not verified; testcontainers configured for postgres:16-alpine"
+  },
+  "counts": {
+    "openapi_http_operations": 34,
+    "mounted_logical_http_operations_including_graphql": 37,
+    "mounted_rest_operations": 36,
+    "graphql_queries": 34,
+    "graphql_placeholder_roots": 12,
+    "field_routing_rest_operations": 123,
+    "unimplemented_field_routing_operations": 91,
+    "qa_insert_specs": 637,
+    "qa_tables": 45
+  },
+  "input_patterns": [
+    "AGENTS.md",
+    ".codex/config.toml",
+    "package.json",
+    "bun.lock",
+    "scripts/verify",
+    "scripts/verify-repo",
+    "scripts/merge-graphql-schema",
+    "apps/api/**/*.go",
+    "apps/api/go.mod",
+    "apps/api/go.sum",
+    "apps/api/gqlgen.yml",
+    "apps/api/sqlc.yaml",
+    "apps/api/scripts/*",
+    "apps/api/db/**/*.sql",
+    "apps/api/db/seed/*.jsonl",
+    "apps/discord/src/**/*.ts",
+    "apps/discord/tests/**/*.ts",
+    "apps/discord/package.json",
+    "apps/discord/vitest.config.ts",
+    "packages/contracts/**/*.graphql",
+    "packages/contracts/openapi.yaml",
+    "packages/contracts/field-routing.md",
+    "packages/contracts/src/**/*.ts",
+    ".github/workflows/*.yml",
+    "deploy/compose*.yaml",
+    "tests/e2e/**/*",
+    "scripts/dev-stack",
+    ".codex/rules/*.rules"
+  ],
+  "input_sha256": {
+    ".codex/config.toml": "6609dd931718205c1a2a0f4a192834a15fcf4ea83b3eaf63d41dcb4a60f8faad",
+    ".github/workflows/agent.yml": "ff512bf4764b0dd59463dc88aa9304190e182a1f7c12d7abd4442bb3a04cd2ac",
+    ".github/workflows/api.yml": "9473005e0860de649c1c5c3873ad2c09430ae5f3a35dbaea909e1e9f64622fa4",
+    ".github/workflows/deploy-api.yml": "4b9629345adb42c7e563bd230ab5fe2f389c5c3cf06a4f2ce05128c8bf1f76d1",
+    ".github/workflows/repo.yml": "dc651001c58f335edb909ebd0e64231328416d984b706b8e3acba2eccca2af14",
+    ".github/workflows/web.yml": "47fc0360c42f2d60134a3242573b6e8cb68391c99d2a0b52c72f9d1f8dfd2ac0",
+    "AGENTS.md": "0914f9f20875eb8b43779813dfe8c6a563742d8630b41c4797a4744af1955e86",
+    "apps/api/cmd/api/authority_integration_test.go": "e45ea96c4728f506467307fc4a518e630c473b6ebbe67c64e7e51a3f534d8d2b",
+    "apps/api/cmd/api/chain_test.go": "f2805f82f717b2550f869049e4606508b6d16516de9650105fbfc073d00ffca5",
+    "apps/api/cmd/api/document_archon_integration_test.go": "6f2a9fd4129570915c6a5195af995f69e7f99b9a339d66ebc37b7ca6ab4929fe",
+    "apps/api/cmd/api/document_audience_audit_integration_test.go": "a41856af077063ef89ba1738ed3543102cde9bf4512d1ec56e8a936d337a4c01",
+    "apps/api/cmd/api/document_audience_integration_test.go": "967f4c525f144b024085af0a8ef09b391a05bcfae186af320d0682d5ab92652a",
+    "apps/api/cmd/api/document_body_integration_test.go": "4eb19e21bbd038a0c257a64b3447a57091414dc5c57cca9af0070e9e3f7a3bc3",
+    "apps/api/cmd/api/main.go": "7b98125e68dd7ebb91d84e10472f60f5ae4a32a57d8feaf25c2c600adad0b5a9",
+    "apps/api/cmd/api/member_me_integration_test.go": "d7b5e196ecd6ca3cd6b90a368e62df81e5707ea1cdada975474a34cb4e0dc387",
+    "apps/api/cmd/api/notifications_read_integration_test.go": "07bf11e4d0421dfd111c54cf4d3f22ff4e037ee5cdc8a05792ec0f94054a013f",
+    "apps/api/cmd/api/notifications_unread_integration_test.go": "33b958becbbb92cf6862864edb284f1947ebec70747f1198c809c628c2db245a",
+    "apps/api/cmd/seedqa/fixture_integration_test.go": "ab3c6838f5871807240d7702af97136daa854e13f355e1bdd3894982ac679ae8",
+    "apps/api/cmd/seedqa/fixture_test.go": "141e45f52a81e3951b1fac17ae8ff70fd6754e24804e1f1e07c8f93bb42c5c09",
+    "apps/api/cmd/seedqa/main.go": "b25f995513b7e2b34d787e1013c5198fc50b70d963eacb2e2cf5a00d90f12bc9",
+    "apps/api/cmd/seedqa/main_test.go": "296d506815a065c08eb3c5f40509bdc058a672361d6d77392367a7ad929dbf4e",
+    "apps/api/cmd/seedqa/world.go": "b07eca295a06826899dd24c8f2ddfb135386996ce618bda90d42d0b3f2f88f72",
+    "apps/api/cmd/seedqa/world_catalog.go": "d011abc3e1269debd91b8fa3a68d9a00ed031e69559eec50e139373020de2c11",
+    "apps/api/cmd/worker/main.go": "f9ab04f01ff92f34a30584f6b58fdcabaebb7859d98791d775294373a7b96279",
+    "apps/api/db/migrations/0001_init.sql": "bc0649d680fe28196d5fcc10abaa6def78d30fc56d17b54b5618f69a9228b5e9",
+    "apps/api/db/migrations/0002_quest_display_status.sql": "19d07b57d27c3a6b866c7c17604a936e091c1c85b0747c2fabc407ea4ac2243b",
+    "apps/api/db/queries/agent.sql": "35d5bdd913ccb5643b5b208c8879f728201b43b937d9bb607f95f311f2ad85da",
+    "apps/api/db/queries/characters.sql": "40365e3f0a311fa64d620290360acdecbb885fb010707dcc56cf2a46a19e235a",
+    "apps/api/db/queries/documents.sql": "69600e1d409992ab40108a94131d2bb306fe47606fb8bb12a0547411e4a80962",
+    "apps/api/db/queries/idempotency.sql": "1bf27509dc16f92452d12c10909aed160440748ca045805734985b0f86680063",
+    "apps/api/db/queries/ingest.sql": "330f54be439937b217906d0a6983450cd8db2d9b8cce38c4f99f4559b1a87d33",
+    "apps/api/db/queries/jobs.sql": "dc3a21086c78054785f3a47bb3c24c32cbb1bcf3473ae2cf2f9bc92e23bc32d9",
+    "apps/api/db/queries/members.sql": "60594c234f86d6a354e16f3ebbaf68adfc4be6b1eb02b5b28901723825e7e08a",
+    "apps/api/db/queries/notifications.sql": "82375d026caadc49ecde5bd51a215a3438ca26cc90d4ed99c8557a14a59aaef3",
+    "apps/api/db/queries/quests.sql": "7279eca341326dc96f88d041501cd1b75b054f69868c0f056e04d1c966574fba",
+    "apps/api/db/queries/site.sql": "271fdfcdd91284580be1da6d18e536357ecbe941407c90490e48ec25f5901f94",
+    "apps/api/db/queries/spatial.sql": "307e1313253223c3416cf711ca2dc90f1c3b93435ae36313d8276b5071b6dc2e",
+    "apps/api/db/seed/local.sql": "25ac23a05b987a57e71503db0d9dbd99bac19429ff0e345f132c9bd36b44cde1",
+    "apps/api/db/seed/qa.jsonl": "15c9cccba4bc50b96b77f1657e665379083a635ff89f12a3fc03f130c244a9c8",
+    "apps/api/go.mod": "44ef5aedee6ec81e0a02594c4c12956153f617664cae211f0bacf53dda15caa5",
+    "apps/api/go.sum": "6ed965621893161885811981eed6155db10e84f3975d1d43c536d1e724870a6a",
+    "apps/api/gqlgen.yml": "f861665c13d5f4be0631b63597de370fa406cf0294905c1edbe65bcaa0469dfb",
+    "apps/api/internal/agent/agent.go": "b2c4b6efc75f723c186ad68e0a3a8b0a066e4c4f691c494fa837a60c31626a3c",
+    "apps/api/internal/agent/agent_test.go": "7904307e8686cad0adadf5e7fcfc2c482c5ae576d16a997a0d068265faccb77d",
+    "apps/api/internal/agent/lease_test.go": "0ce5c9b9b8dc4325663811de0421660383df6b455cd616c36c374da2490b10a7",
+    "apps/api/internal/agent/memory.go": "fcdfe74edb92604ef7323b8d282a8a6e230eeafee839cedbda44dacb2f521e04",
+    "apps/api/internal/agent/postgres.go": "529b26b25bc2470ce90fb4cd7e4e1524a2cdf2a83be61d484f526f2d774fc929",
+    "apps/api/internal/agent/store.go": "24e3872db3db8456c12f29b6849fc786e3aa9acfda05b87890a0ccced6a5a8d7",
+    "apps/api/internal/app/authority_test.go": "d47ec252c1f6d072465ddca73f16562bfced40bb08caea5fe123a93731c12044",
+    "apps/api/internal/app/mount.go": "05cd656a93902ffde26ad924a40dd32b71cc647d8fa81df6343833191c3061b7",
+    "apps/api/internal/app/wire.go": "5a88969c053b4a9ea650c44577ec9b7b891db1458a18547936cdec0bf5af17b5",
+    "apps/api/internal/character/character.go": "64998c88b3bdbe151ab5901d12ca9fa2469ddb283d5460d2067748ed6e8cf9a4",
+    "apps/api/internal/character/http.go": "d51359250214b8806299be07ee291a2226f2f7afb57fbf1280868131fc127231",
+    "apps/api/internal/character/postgres.go": "37fbabec81a3c5aa5f3542e9880f006f31a3b7ca0d340fbab08a40b17ebb16e7",
+    "apps/api/internal/character/query.go": "b641832b957ea2f77d1bf4331fa916fe19a13270486daa2aa7f7fee50e0c6d81",
+    "apps/api/internal/character/read.go": "8ce3d1481885c4cab4d361ea3aac21dc109148140513c89c2ab697bdf208fa78",
+    "apps/api/internal/delivery/delivery.go": "0e065e7984a5f9fa696968c992dc459285e4b8e409f46c118fd7f81d3d7acd17",
+    "apps/api/internal/delivery/discord_sync.go": "a3c913392b6b031c3fc4060b70bfbe8c63deb552afa89ce4f9b90778e3ae3a41",
+    "apps/api/internal/delivery/discord_sync_rest_test.go": "f2f7f10c97a30fddb550074982ff170ee1a85e83605ebb06e7949ed0f5288c4a",
+    "apps/api/internal/delivery/discord_sync_test.go": "42cab184c2905de3e74cc1e4d09e044454aa3f835360d39beb988d58fbbb9b92",
+    "apps/api/internal/delivery/errors.go": "c3bdc3690684a87723cae8fc5f91991394bee6e5f975788d561cab17789be931",
+    "apps/api/internal/delivery/postgres_revision.go": "fb188c7b96272e28759b62a00409e22b3a7db7b76a6de838711b9d74d3c1cb3e",
+    "apps/api/internal/delivery/process_test.go": "31ebf4b59d113a5f9bea345ebe2ad6079cf76d8e5cca9cd5d6b36d3612f0c685",
+    "apps/api/internal/document/audit.go": "3e38748554e80414b91834c0fca99be29fbf7d39cca2b550b63446c069af992b",
+    "apps/api/internal/document/body.go": "49ee4ad2ac7f8ff961055d0db4d6bb44d5241444fc76dda781083055968345b0",
+    "apps/api/internal/document/body_test.go": "efe5b4592e77ab20a1a77fcf94ff0b5a7cf86e154c8560edf96fedf8bf4fca26",
+    "apps/api/internal/document/body_vectors_test.go": "d738ee319fa8a9301e626fe19934c2a683f3e4e9848dc9f65575da06ea8022ad",
+    "apps/api/internal/document/boundary_test.go": "5cecd1778e7f4561db18105d95f380d0db4a0d41cf30da545ac95d4f0d83b05b",
+    "apps/api/internal/document/document.go": "7e0266a4230f0af1421bd73406fda6c0d505322b8ebe1fc3a982fa75e7efcb74",
+    "apps/api/internal/document/document_test.go": "6a9f8d9db26721dc89e4eb6fc3493da5faee63ae2a25e3cac98301887a9a602e",
+    "apps/api/internal/document/http.go": "3416043250d1417f577171191a52dd1df92da9eea0b67c2b11c71ead9e1a748b",
+    "apps/api/internal/document/http_test.go": "e1fe2f02d8636fe7ca23b0e142ebf44ba4c0afd3ff2ed36c2531882aaf8fa1b3",
+    "apps/api/internal/document/loaders.go": "71052cb212f65979e82d606bd9f7b884f2d35b9d85759c8e66ed2b36c3362e48",
+    "apps/api/internal/document/policy.go": "3cf97332418bb15fc7947cca0886ce8cf84a7a751f7465ae84684ac373619d07",
+    "apps/api/internal/document/policy_integration_test.go": "70975b1dd40f058aae329155b143ad2ac928ce265fe40010d9db5a0ad0fa5dcf",
+    "apps/api/internal/document/policy_test.go": "c6e16ca88f52e93a3f8334fb3b4dfffaae6ff27ffedc7b67423d2d7e3b2fb19c",
+    "apps/api/internal/document/postgres.go": "753401dc5c040025913332fd2f48243e528514f44a345cbbcd1d4d0369628e46",
+    "apps/api/internal/document/postgres_test.go": "0ebf7299c43f1ddd263fd559499f6c91a544a554a3d3a9975c8238578b459494",
+    "apps/api/internal/document/query.go": "f8c082e733336f25ae70da481a91a0239a8676b19bcbcca5386df0576b4ebcf8",
+    "apps/api/internal/document/query_test.go": "5a3eb79a98e5f0b5caae18696b1b64cf389607b78ac60062cb23393c98d4f128",
+    "apps/api/internal/document/repository.go": "2020816b89970f54f954859f93e0b0ac656b437f2da6f3172735bd5c0e1bff62",
+    "apps/api/internal/document/revisions.go": "22120d8aaba55097cc3d00d3eb10f67f53b28447a3d8f15e4356ab0482d708e8",
+    "apps/api/internal/document/scope.go": "39b234414f8114e85380ee5d76e769625527192dc5b924d9c544138e15f2adf7",
+    "apps/api/internal/document/scope_test.go": "5a448ea534a9856ffe9bf3a0712d5b6af3de4a24dd42719fc235b9dd2e9126b8",
+    "apps/api/internal/graph/delivery_test.go": "af903d7cff7b1731a2054b99b6564ac87b02e76f976457979f87ca50e72e3cad",
+    "apps/api/internal/graph/document.resolvers.go": "7699034c3010da6934b3270caccfbf77301a853c4f09ed3b063d4d6ed49cb356",
+    "apps/api/internal/graph/generated.go": "0784aebb7ddd64aef6a58993b8f330c0e9105f719ca41cb4a49476d3a6e809ab",
+    "apps/api/internal/graph/mappers.go": "d5c3e475a19e86487c5cd4571adc5e6e93d820c11338a064bad74cb137586b0d",
+    "apps/api/internal/graph/models_gen.go": "aac6d907ab24b5ee1fcc7abe54d58ab6cf8bdde14098be942d553756d03b873a",
+    "apps/api/internal/graph/quest.resolvers.go": "12c16645ba70ed07ac4a63c9191e44c6bf62d179d11f2170c39ffc8b54d94206",
+    "apps/api/internal/graph/quest_reads_test.go": "3de5184dd8a7dd1a5061a3bf473429571c1ec970fa7a0600301f93e279a58499",
+    "apps/api/internal/graph/resolver.go": "fef0fcd2bb9e1375f4ba751ebac29c3696426540b65890dd50802f43ac552c34",
+    "apps/api/internal/graph/roots.resolvers.go": "08277fe1fb2442872ac562779b357b9dd6a290ddfd3e0577ff3a59d21a2de34c",
+    "apps/api/internal/ingest/ingest.go": "ffb24d2aba1ec0e969ed64466b209157f857313c250d7e37ccd741037c649d1d",
+    "apps/api/internal/ingest/ingest_test.go": "ba8ae4b88e93cfa38277e320ae066df2cac4057e4569b3cc49c3e239c0fee8bc",
+    "apps/api/internal/ingest/postgres.go": "89ff13e0157ea938a648efb24ece7ff7c7513b11cea0838fa0b050098053bea0",
+    "apps/api/internal/login/login.go": "5118308d1d7e5a942e63c1169e1669ece487dee5281f2edfc7520876f5c200ad",
+    "apps/api/internal/login/oauth.go": "b7ac04003e65e10c9cfccd5ea3922fc15a909a7b05f96b3be185f9f1a3533c3a",
+    "apps/api/internal/login/oauth_test.go": "a487e030c69d0bcba43824958801218d273a868bb85bea7df1160e2e94808ef6",
+    "apps/api/internal/member/http.go": "cd7dfbe92e356e29a15e37b4a603995f4d743ffaf3dec561e5c4fcdf7095bdbd",
+    "apps/api/internal/member/http_read.go": "df0a24a58bc9af76f3fb6d1b138230351051054c5e33600c85058b9de22f42f0",
+    "apps/api/internal/member/http_test.go": "f927a173df8dec0fabb0408c2eab7a158bb8979dc039054c71afd39522627db5",
+    "apps/api/internal/member/member.go": "95029c8791cb505f4ec5eed56828a2062eb5800e112108b5b14f7e4226cee97c",
+    "apps/api/internal/member/member_me_http_test.go": "2412b98a00e6d1a5a160be270306499f5f9772505c83f9405498dc668827f90d",
+    "apps/api/internal/member/postgres.go": "3d5accb7efbdf66c75da9d5f0e956b1ba78bd1c5f2489646efd9e9be9db40bed",
+    "apps/api/internal/member/query.go": "6cb72504ec13875563ff80732b33e5f8fb73c8a103cb1877f8144ac2879786a9",
+    "apps/api/internal/member/read.go": "95d4d2459598fb8d422d25799d416ec1361135d38a225f67625123d201bf9ba5",
+    "apps/api/internal/notification/command.go": "fdd75eaf0befab6e1c10e5fa9f32fcc7e6af4b1be294d7dea225bdb62c9c2719",
+    "apps/api/internal/notification/command_http.go": "cc0d09a7b345c74003ba6774966c2ab4a98212f950102b93cb4920fe3d1470bb",
+    "apps/api/internal/notification/command_http_test.go": "c60042d8cedc67b5af849c1cb0ef78a0c627817b82f5db77054c111e876639fd",
+    "apps/api/internal/notification/command_test.go": "ab73e8d9d6897a7baca94e4b854fd0679a1ea2f3a624e259ace1bdab2b9f7e60",
+    "apps/api/internal/notification/http.go": "7e67cb25fee4a68dd8cf526639213f73188b876319340d2cce5986cc187e32c4",
+    "apps/api/internal/notification/http_test.go": "9b07b73598b1b88e077fda614f133455961219c98951f16de1d61795c8e7e881",
+    "apps/api/internal/notification/postgres.go": "0f9a262301a4f80ffab7d5b485eeae5c9f1952581fac3a8546986533d65f1bfd",
+    "apps/api/internal/notification/query.go": "095c64eb35b205b8b6c931d4c7b99dbe53f449672fc4f67222e0b63faeeab601",
+    "apps/api/internal/notification/query_test.go": "98b2ea7659a8e385905f252c944675f9547993ae5c9dfa822bb2d2541f559d09",
+    "apps/api/internal/notification/repository.go": "2983901dedcc526d3d7b8521ffb1c0363eb3e710ca89af7aaeebd72e32f3652f",
+    "apps/api/internal/platform/apierr/apierr.go": "45ac75256fa1be6b0999d0402a6863be40703ffe1180df94449773e094235174",
+    "apps/api/internal/platform/auth/auth.go": "336a3eef3ddf5419532ddc074f2274fb29395014a8c0b5575821b5f32d84397e",
+    "apps/api/internal/platform/auth/auth_test.go": "06b1206097506f8b167334b1f541f7965eb73320b0e58a9b0e9eae2065d1a364",
+    "apps/api/internal/platform/clock/clock.go": "903d38813e7e3845e792e82dd207a41bf04bbbdb7c503a4e1be8c6443d3518d8",
+    "apps/api/internal/platform/config/config.go": "60a919f0a42b13a3a004f0be3a94e7c66520719d3955d6b32fcb6760c5c36a52",
+    "apps/api/internal/platform/db/db.go": "c87f42120009129cb65c963317abe2ab3778408f48012e38535a667f5e23c31b",
+    "apps/api/internal/platform/db/pgtype.go": "9beded67452df6c8ce27ad2062b0dc6eace5bea3c4107103d77a43e9a74fd058",
+    "apps/api/internal/platform/dbgen/agent.sql.go": "3f4b037456e11d5aaade600e9af8f948614d266e76593db7578f6bb42686d001",
+    "apps/api/internal/platform/dbgen/characters.sql.go": "63da52b81c6c517fc57e9c3008cafbb5677fe71b2fad734a8cc6245883d06a43",
+    "apps/api/internal/platform/dbgen/db.go": "84f598c6b75bfcb2abf4c6fbe856276271ccb1899028c767b01f05ad1f13cd87",
+    "apps/api/internal/platform/dbgen/documents.sql.go": "1d25e4576987c276e6a09181dd39f13b963456be86e16f523ca655cd0a91bf06",
+    "apps/api/internal/platform/dbgen/idempotency.sql.go": "da86e74dae8e789134991c2c068fa766e352a3b8a281702f2c05ad036d0ab893",
+    "apps/api/internal/platform/dbgen/ingest.sql.go": "652b82f1a2f60e408cb688a9717304c769e2cf772e56169c83b17dfef3aaea6d",
+    "apps/api/internal/platform/dbgen/jobs.sql.go": "58f3743ba642ae3ea92392bb0a23029519c6038005615dbe9a7fdab316b55ac5",
+    "apps/api/internal/platform/dbgen/members.sql.go": "c16bd43748b36833d2d98664865ed05a448dcb00c4c7598be2de6662f07fac73",
+    "apps/api/internal/platform/dbgen/models.go": "51af6da185a2035018281c37741e6ac80c8a7e64a2bfeca92b4ad3ba1f78f436",
+    "apps/api/internal/platform/dbgen/notifications.sql.go": "ce14adad7f9e1f4b89b608b5c2e0bc6134e1cda6d9644310cfe1d9a5b4eee50d",
+    "apps/api/internal/platform/dbgen/quests.sql.go": "1aad3846edf8acadddbd7f3af5090f0d8f2353b9998ed04e980ad70efac96b0d",
+    "apps/api/internal/platform/dbgen/site.sql.go": "e09296cdd026641cbaad2b8f173ff67910ca466ebc18f6d61aac0a0c25497850",
+    "apps/api/internal/platform/dbgen/spatial.sql.go": "af3f626771d0dfef3cfc6544c60c1f121c9b8452ad6e5d17f2a64ed86fae676f",
+    "apps/api/internal/platform/dbtest/dbtest.go": "9f5c21e717f89c654df0834133846663c63839efef702bc239c27d99f05da5e4",
+    "apps/api/internal/platform/graphql/graphql.go": "0e5364c826c667e71b70923799d3946fe81bae7733b0408d9b0b61ec07bf3b63",
+    "apps/api/internal/platform/graphql/server.go": "ea4c9e78188fab4d80b2136ce068c17227f754630870c91c66878d0836d0c7a2",
+    "apps/api/internal/platform/graphql/server_test.go": "8c4cf4c10c5d28f958f15d3d6dfbab128ab5ba6f3616f4ac606b139ba98d384f",
+    "apps/api/internal/platform/httpserver/httpserver.go": "060d75176ee6baf1f988804fa4a37e7445dd9743462a7f539a161ac66f484962",
+    "apps/api/internal/platform/httpserver/router.go": "1bd6a5c95788d628d72c29ba269461ff41194985a0d0d8eaceb0e471f6ac9e00",
+    "apps/api/internal/platform/idempotency/idempotency.go": "54c1bb4af322ac2223cc4bd041cfa6e613c1df48c94e2d0dd6293f1e60c3accf",
+    "apps/api/internal/platform/jobs/enqueue_test.go": "af5cd862b358d842b2d4fc13e9dd6564203f8abf3baea677629f34c336db4484",
+    "apps/api/internal/platform/jobs/jobs.go": "d5182df713de29db45680907bbb8fb4dac35700bfb21ed63d2bd19c9a83e5f31",
+    "apps/api/internal/platform/jobs/lease.go": "879f4762d3c747c7621b133a36d93a9dbd9efbb706414723ce8b6333c26621fb",
+    "apps/api/internal/platform/jobs/lease_test.go": "fd4920c6803838af7e70ea01d0ec5e20e444e4e0c5f7c6d115221f5d0c159092",
+    "apps/api/internal/platform/jobs/memory.go": "1dfb0d9c53ec8cef706ca93ebd356fbf9fd3e8cb021cacbd28c2f2a1768a4099",
+    "apps/api/internal/platform/jobs/postgres.go": "a0572553c1e0a9dbe8527999e630b3f5fc2c0c6029a80db7ad2e126a2ff1b4c8",
+    "apps/api/internal/platform/jobs/run.go": "5012ead57c8cf638599af29d16c320ab54d08ebcd818715b3d2c910fd43ff7ae",
+    "apps/api/internal/platform/jobs/run_test.go": "d54ae37d83822acf51130ac4461d90e0b3d4b1454bea23f9e3a86251d9fa059e",
+    "apps/api/internal/platform/uow/uow.go": "d9902983f22570c45c85621b17434cf027627d38f9b6a310d4d06a51e6f8db3e",
+    "apps/api/internal/quest/command.go": "a5b139a5d64c815a79ec419b4ed1dee071f90425ad349653ace8c142e269fcdc",
+    "apps/api/internal/quest/command_test.go": "d44c7917099b73b96164023f4fa033b046000710fec71e543cb1a41a9e2b19f3",
+    "apps/api/internal/quest/fake_test.go": "b05c0e9d9a97aaae2321ccec03de77fb63e7200538630a8f14a53b90133c6f7b",
+    "apps/api/internal/quest/http.go": "6aa26cde743f0526dbed3c73dc525f5f1fefa5d3ccf99c2c5164958ca354be68",
+    "apps/api/internal/quest/http_test.go": "586c66a20c034fd5204d3b9b705bcc384de85a79d9e2cf901977c51dfdcbd87b",
+    "apps/api/internal/quest/loaders.go": "2e97d233fed915b8d86132229d14518ce2907f51ea998de38a0c80000f272e79",
+    "apps/api/internal/quest/memory.go": "9d1dc638561f1518c2bb0110345eb1288e1647d6a46a585ffa532e3f81879bf8",
+    "apps/api/internal/quest/postgres.go": "bc272fde5ad20ec1fa00877afa186e8e44061077351bd0548bc68022e55a13de",
+    "apps/api/internal/quest/quest.go": "d3449b3b3ffa06f2d0f72ce8504be72c834ab4b0c95059062d1480d2cdfce65a",
+    "apps/api/internal/quest/quest_test.go": "cd7b95af452981ef22628401ebcc18ff0bb4e4e59816170bfdaa0dfef48c72d2",
+    "apps/api/internal/quest/reads_test.go": "9fbe8529bd840e261dfdb622cfdd7453eec2e9580f77d666e526ddbc8a90d4f8",
+    "apps/api/internal/quest/repository.go": "daa2d5c4c17326b726273e1124a674e1cb485c7edaaa059c7a6d3fcbe2435836",
+    "apps/api/internal/quest/signup.go": "4e3f3dce410cd05ac1e738e67d2cebbb8f80111fe17e04e7d70f8edb7b1a0000",
+    "apps/api/internal/quest/signup_test.go": "ba08bffc4ee905a81fd005a87b4d727d397f38220aae4570843d22d313f4473e",
+    "apps/api/internal/site/postgres.go": "a6c6fabf255b65d0b7e0f380db663964533298ce95403f1b38ffda1049e1f2fb",
+    "apps/api/internal/site/query.go": "35dde675aed9f62290d38e891aef4660bfc32c971ef14f5f76a802317e5ee6f2",
+    "apps/api/internal/site/site.go": "bd152ab9f5896bd670b58a65b226345cfe402ba98f929eeaf0c505225bbf6f6e",
+    "apps/api/internal/spatial/http_read.go": "887475321560cf25a96ea1049c7ef50b924c1527028e50a7bff904977b632496",
+    "apps/api/internal/spatial/postgres.go": "2bd844613a754c77849149297d5cd78ac5003e9caa9c33b2c84a3133927f31bb",
+    "apps/api/internal/spatial/query.go": "16d55eca84c26b392860b7af2be9b96c39bcf34596c246c6a131b88a63e0805a",
+    "apps/api/internal/spatial/query_test.go": "ec41542a81aa97645fe91f137f9f9b9d2e31542809b0b6b38db08aa540338750",
+    "apps/api/internal/spatial/read.go": "5f9d993f79138a947bad4a83fc93e86c5297613425ae07196e7379b401f38128",
+    "apps/api/internal/spatial/spatial.go": "20796e649d49ea529c3c67356f10aa97e3d840ca70cf14544b674631185dec23",
+    "apps/api/internal/spatial/time_postgres.go": "713ebc788c8bb23ebfd58a6e1fd6632f6cf6fe79637e9335c2f89430c688e0fa",
+    "apps/api/internal/worker/agent_deadline.go": "571bd9b344db66a4f94f468f08203cc5816f9b7e3a5a11a907639c9b70df382b",
+    "apps/api/internal/worker/agent_deadline_test.go": "084c3c3ebbae4ddc3b145130e3ab9f70803cf46d61e3f1bbcb436de19cd0aafa",
+    "apps/api/internal/worker/maintenance.go": "f080c823809ec517012a11657365c6b4664c6d40e52c9da3d5a11cbf9a26ddde",
+    "apps/api/internal/worker/maintenance_test.go": "ee4e5fc906625be1a03466abe092c4ac9e7be6c5f5f0270798511a263d4dde0c",
+    "apps/api/internal/worker/schedule.go": "3c8dce30d898fb7ce96134dd9c426af909e2a7486fe24ba3f7e145f392af1c8c",
+    "apps/api/scripts/load-qa.sh": "71f5031308669ca61b9d565588b51653cbb85cbf8b6b1ef57c83ab00f9cdecc4",
+    "apps/api/scripts/migrate.sh": "89007ab55e2ba5d3186387132be3463caf97b6c8b761f7f4244972323386380b",
+    "apps/api/scripts/verify-loop.sh": "237d7db1f0ed52fe7300389d16797cdf9e09d4e3ab7db1183c76edfa60d6062c",
+    "apps/api/sqlc.yaml": "92d762efb92957ecb4571413cf92627a3273c364bad74713c5e875a076f043a6",
+    "apps/api/test/contract/doc.go": "c97ba68e3702e263c2335f4b1c22fb5f40a6dee7b856c35efd7c9715bf490931",
+    "apps/api/test/contract/field_routing_test.go": "d20d105cf1b5838690b3c7b9de5b364c491ffb600b3c8f1bba6241199b8ebca9",
+    "apps/api/test/contract/graphql_roots_test.go": "f0a82dce62e53aef46ecb4dd7ad5bcc701392adf99eaa7b0a978e3183f9684f3",
+    "apps/api/test/contract/notifications_read_test.go": "8b9516d81e586adb3e47eef49cc7ac1ecc8f92a23e0140adadc66d65e42753b5",
+    "apps/api/test/contract/notifications_unread_test.go": "deca6c4bd5206155ecc8f9b51330e93c57958f2fa8ef4047329e502b592f8e0b",
+    "apps/api/test/contract/openapi_mux_test.go": "b3b3e508518c54d343dfd422d78ee1bd18a44ffba8146b412c6e0d77ad96da48",
+    "apps/api/test/contract/paths.go": "db25fcd40ba61c3f4ddffdab189225789d17e474b733a69bd970e182a1a0b4a1",
+    "apps/api/test/integration/agent_leases_test.go": "1a17c6bedf8fa657f6ada671d937b3cace02097eac156519b078ab89bf088729",
+    "apps/api/test/integration/job_leases_test.go": "1dd06fe385203778b503f3306cf4c784a4defe5ef00cb415432ca386151ec770",
+    "apps/api/test/integration/member_postgres_test.go": "7afbbe350f12092c2bf3c2ce1c5108882fa08bb2a0e50603f43a41aec4d1a4ab",
+    "apps/api/test/integration/quest_loop_test.go": "d47de2f4d85ce7704d712166699a2e892b942b24d143fed8f75ffba172acbf6c",
+    "apps/api/test/integration/quest_reads_test.go": "4fc06a3f8df5ac2c69f116c99ee6144351bef49dd60761f83765ea82365e3f0a",
+    "apps/api/test/integration/quest_reconcile_test.go": "94b2bfbcccabdd83a21bb1ce4aa79cde8254b2d1ac6b97131a258add4655b893",
+    "apps/api/test/integration/quest_signup_test.go": "28ff394205008735a34ae1fcdaa2601c74e345c65fb3c9d5c3913e9bf8b02606",
+    "apps/api/test/integration/schema_invariants_test.go": "396b3de9ec608d9709643ed279fffe807a41eaa8f9b639a486a5caabde2ceb7e",
+    "apps/api/test/parity/runner_test.go": "6cf6abfa1c4fc8aa2617b022a8ad916b78bd6cde83587bff3f274d05429fb83e",
+    "apps/api/tools.go": "ba883c3344c933b66dbc633aa6df59120bc1c92789d93a6482b5edd5bd13d389",
+    "apps/discord/package.json": "eaddb9884581139d0c6533db7f3df1d5b5f6b11b841164bc55141aee1736a201",
+    "apps/discord/src/activity/forward.ts": "78192376e946c6e2ef462625dd892546865acdf4bdcaa7713ff2a659964db285",
+    "apps/discord/src/activity/index.ts": "50037dd23820123e4b5e50fdd54df6fb630942455201092410b9a6a975fccbc7",
+    "apps/discord/src/activity/mount.ts": "a296002d1bc0d9f927aac046758f7ca161cc732765b49d63b69c47cfa07cc34c",
+    "apps/discord/src/activity/normalize.ts": "b171f457be58b12cfa5ea45707de2171c4b3bab7fd60d4473e4e9cba686bcafe",
+    "apps/discord/src/activity/types.ts": "361f672b2269f1d921792b953814c8a402ec9bae6ec379b577d3b316e9ea65d0",
+    "apps/discord/src/agent/broker.ts": "103fa21ce5b758c7f63815da1b1bb0c97927fbd2b37d9c8075ed26d3fb330c31",
+    "apps/discord/src/agent/mount.ts": "6c57697c450b8e550b5c831fc1763e72fe36060d9ed37a79bc1d8ee81c3173bc",
+    "apps/discord/src/agent/normalize.ts": "6cab32f3fbcd9e15c0a1b39dc12f1a9d99b0a2aa3e9fa178186eb16dcb622b4a",
+    "apps/discord/src/agent/queue.ts": "7ed03923a9e7462dec821d10f4ecc75c91c2bfd6c3b22cd480db93631cdbc3d0",
+    "apps/discord/src/agent/render.ts": "5d8c1bee500d050d592ac1b6ad2582341c1e476e93193c7a15b1844a1b9221f2",
+    "apps/discord/src/agent/reply-context.ts": "5f5c8a1a34275b139fefed2fdda395bd76e4deab7aa090a1462d571fecd1027e",
+    "apps/discord/src/agent/types.ts": "4ba85289f344397b3e0372acf6afb10028ccca2913c82b3e3cfa220db6133cd5",
+    "apps/discord/src/client.ts": "e3079a4c4a1ca45a7bbc5023e85612fa97ea1de9fcdbd5251d10a5da3116f888",
+    "apps/discord/src/config.ts": "1205923745bd2d498eaa2b841d6a18d118972cedf6b9a736901035a90e3c2d25",
+    "apps/discord/src/health.ts": "649b45bd1b5de845941199e31405005ad1a1619f1dce6b1286faf2a21bc1a015",
+    "apps/discord/src/index.ts": "f7d50c69fa7eec6e77e172d8468587beec16df59a50b9a1e672dd6ec3855f40a",
+    "apps/discord/src/log.ts": "a1fe3ec13ae1d6a3def42cd75a315232b8404fb52e8651941b981db403ef48bd",
+    "apps/discord/src/session.ts": "b1f16ed53512d7eeee8ff21734e766e508882b22b41eb2cc10d7ed6d6748b0e4",
+    "apps/discord/tests/e2e/session.test.ts": "977fc030e86b99c830231882087256d320db9a96a9c34afd89a411b8e3a9168f",
+    "apps/discord/tests/fixtures/api.ts": "e085b3422e314e62a0270c5efe6913c945634cbdac3b984c452d44ebf4b440ba",
+    "apps/discord/tests/integration/api.test.ts": "409670bc64240b31a22cd65747317de2dce204de9be3e84cc4a443564f5c7f72",
+    "apps/discord/tests/integration/shutdown.test.ts": "4433172984a94f9445cdb02be9ccb4ff227cc154f76ffc07ad7f3a5d6971586e",
+    "apps/discord/tests/unit/activity/forward.test.ts": "4cedf84bee14c386a66642fc23b742a47dc2cdb26b5b09e527ba6302afb8cc5a",
+    "apps/discord/tests/unit/activity/mount.test.ts": "ef796776430ac17d970899bc6733c770df087e8fd071a6aa84acef9bffdbad9c",
+    "apps/discord/tests/unit/activity/normalize.test.ts": "850fd768d459b94ef3c3b9d78bf4750316ad0c77b01082c88f543133b852bc0b",
+    "apps/discord/tests/unit/agent/broker.test.ts": "69f78f0ca07ea995203719a037a2d879b7280e6e85d62acbad910a88b8744ef9",
+    "apps/discord/tests/unit/agent/flag.test.ts": "570d741682f55ff26006be7227fe66d04c73ddca52cecb1a965bd60c0f69011c",
+    "apps/discord/tests/unit/agent/mount.test.ts": "8b6dc790b5bf2349a58d71f5089de0b7b768d0d13ac7effa18400c02c9eca2c6",
+    "apps/discord/tests/unit/agent/normalize.test.ts": "b5f110bf2db77ed55ba234f81db8bed67f745772554bd03e4d2986b4c267fa46",
+    "apps/discord/tests/unit/agent/queue.test.ts": "e03af437419935a30d5833eaed34e38f671aedae809f38d0becb38810e1ee9b5",
+    "apps/discord/tests/unit/agent/render.test.ts": "34c5eaa0c048e33cc50a5ef5dfc096cca96cd4c28e08bea93ca8e1b5b8c8a199",
+    "apps/discord/tests/unit/agent/reply-context.test.ts": "b0b913ee0e2c5554904de4be03474f9f78ef1f0ec863ab43d0de415f0affb826",
+    "apps/discord/tests/unit/client.test.ts": "8da3fb1c73f6f6dba922399fd17be116e4ca959cf7aed6d794931b2ad15ba233",
+    "apps/discord/tests/unit/config.test.ts": "93be8f15a6635713519f2b54a3a94d059b81692de050e07c98a82939b7423b5c",
+    "apps/discord/tests/unit/health.heartbeat.test.ts": "a26ce5249a97b01fdbddf4cecb8bf4383ca8b45e09f8efc35364569f767260cf",
+    "apps/discord/tests/unit/health.test.ts": "0ce4c172ab4bee1fa94e309da0ce4f0785752e795eebf02c6fb63be9c844a267",
+    "apps/discord/tests/unit/interface/ingest.test.ts": "9adf1b3b5df413bfc083e1005263e200aae7a359767cadfcd1e866a701e17ef0",
+    "apps/discord/tests/unit/interface/sensor.test.ts": "1d3e80fb4de2cb974c7902da15795b01488a22b69b80cf2e47ec7c9f20da3132",
+    "apps/discord/tests/unit/log.test.ts": "b1d2a1fafb592ba7a2fd6a54ec05d788b77667e7c73eab1d69ec496ec52dd7fb",
+    "apps/discord/tests/unit/session.test.ts": "95e8229a50034ade1d7f8db69266ffec7fde5b04063b7084ccc54011a70f2baf",
+    "apps/discord/vitest.config.ts": "d9369ae0e8592b1222f490babc176198e32536b17ac6a80efc84686b7d8d53b2",
+    "bun.lock": "c98dbc088793de676ceff02cbe15aa1b2a093037842517a8c5e315c7a12e6c11",
+    "deploy/compose.dev-tests.yaml": "591f9fe8772ae916e2b127d54dc2c49eb53204710c2f255d4ed8b1c1a606b9cf",
+    "deploy/compose.preview.yaml": "282448aa691fd53ad00ebd27b60ebfe48710f7069c31881a7cd26225f30aff4d",
+    "deploy/compose.production.yaml": "f716285da8cd10962f498f8e693895af9c2750bd61950d645f703b01fc774049",
+    "deploy/compose.staging.yaml": "36aac6e3251eb5c259efd62a3d1c0eeee8bca7f0c653b153d5be6e0b3a9e4070",
+    "deploy/compose.yaml": "1d07a8204c7d6d152ff6c985aed56ada25cd4194e9b6f903470bd0e2fb2caa5c",
+    "package.json": "1990c292220ab1100b189647fb0d04749a1ab9cb540d27135cf123a8f2ced84c",
+    "packages/contracts/field-routing.md": "3edc7a05cb8146c908b57576a8f1f3d08549630372c1bbe9659a96571cce8391",
+    "packages/contracts/graphql/character.graphql": "a7efe1a204080d89fd9097ee3c33fb0a601947e99b21e34c35cf34b1eb59a8a4",
+    "packages/contracts/graphql/document.graphql": "f6f161819d1b6b87057d0e218918d4c24abcb56058cc13bdf3e28e7ef4562bcd",
+    "packages/contracts/graphql/member.graphql": "2ad578a3344cd587f96bfce23b79a6ab83fd9193f9465558d6509cd399b87f90",
+    "packages/contracts/graphql/quest.graphql": "61acad9fcda5f6813e684d3c290d064631228ed5e99d5b00c6867ca07d2aa9af",
+    "packages/contracts/graphql/roots.graphql": "c766b0a5d075fd363b36f610c954f90ba5e16f724ac70f2005dd52db6fdfe2d5",
+    "packages/contracts/graphql/scalars.graphql": "d4b283eab7ce81dcf077638667f8c6d398f7551f34417891a7dfa9f35b613e93",
+    "packages/contracts/graphql/site.graphql": "6c9d1c96199c5cce89245dc9770bc1c4f8bf0f1f495b35b22979688c27618d39",
+    "packages/contracts/graphql/spatial.graphql": "d20aa2d087289c831cd71082650c62c267a70b97ded54f06e4fc56fec2232780",
+    "packages/contracts/openapi.yaml": "6d9f3554f1b55842b0eb46e4a39bf1e5abcbd4ece327ea542c613adb18385cf6",
+    "packages/contracts/schema.graphql": "424dc925093a3653510c89e418f07e1ecb94c86498a57e6eebf1645c3fdfa9cd",
+    "packages/contracts/src/generated/graphql.ts": "dfe68420ea015340e9622f64ab3c328cd4d859e03296023d8ea0f30508af1c0c",
+    "packages/contracts/src/index.ts": "e13a9fecdb5d5462da13a92d4e769a41005a888ebe0e22ddd5c22ec511d829eb",
+    "scripts/dev-stack": "c3fc4cb3a2bd4d28117651853acc0a28eefb57a54172a428a5a95e5685df48e7",
+    "scripts/merge-graphql-schema": "4d920400e370ce8ef021361403562d4608428512a1f9b80f04c87c278e1a3d32",
+    "scripts/verify": "72865ed8a9571773ce2ec295d2ced467ee46f02bb908d6aede1ce36188720e63",
+    "scripts/verify-repo": "17665d51c63bcf22d9a3d4684e2755160723c94af78f476ee3fe50bb2687bcf6",
+    "tests/e2e/README.md": "60b8f135034b6c1a940fbf6019d981b095006e5f0575873c0efeec3fadd2b63d"
+  },
+  "rest_operations": [
+    {
+      "operation": "GET /health",
+      "status": "Registered",
+      "evidence": "Contract registration; complete seeded HTTP scenario coverage absent.",
+      "in_openapi": true
+    },
+    {
+      "operation": "GET /auth/discord",
+      "status": "Registered",
+      "evidence": "Contract registration; complete seeded HTTP scenario coverage absent.",
+      "in_openapi": true
+    },
+    {
+      "operation": "POST /auth/discord/callback",
+      "status": "Partial",
+      "evidence": "OAuth handler unit tests with injected provider/store; no live provider proof.",
+      "in_openapi": true
+    },
+    {
+      "operation": "GET /v1/members/me",
+      "status": "Partial",
+      "evidence": "Production middleware + PostgreSQL test source; DB execution unavailable.",
+      "in_openapi": true
+    },
+    {
+      "operation": "POST /v1/ingest/discord-event",
+      "status": "Partial",
+      "evidence": "Bot fixture HTTP tests + direct PostgreSQL store assertions; joined middleware flow absent.",
+      "in_openapi": true
+    },
+    {
+      "operation": "POST /v1/ingest/heartbeat",
+      "status": "Partial",
+      "evidence": "Bot fixture HTTP tests + direct PostgreSQL store assertions; joined middleware flow absent.",
+      "in_openapi": true
+    },
+    {
+      "operation": "POST /v1/agent/questions",
+      "status": "Partial",
+      "evidence": "Local HTTP lifecycle and PostgreSQL lease test source; complete bot/API/DB loop absent.",
+      "in_openapi": true
+    },
+    {
+      "operation": "GET /v1/agent/questions/{id}",
+      "status": "Partial",
+      "evidence": "Local HTTP lifecycle and PostgreSQL lease test source; complete bot/API/DB loop absent.",
+      "in_openapi": true
+    },
+    {
+      "operation": "POST /v1/agent/questions/claim",
+      "status": "Partial",
+      "evidence": "Local HTTP lifecycle and PostgreSQL lease test source; complete bot/API/DB loop absent.",
+      "in_openapi": true
+    },
+    {
+      "operation": "POST /v1/agent/questions/{id}/complete",
+      "status": "Partial",
+      "evidence": "Local HTTP lifecycle and PostgreSQL lease test source; complete bot/API/DB loop absent.",
+      "in_openapi": true
+    },
+    {
+      "operation": "POST /v1/agent/questions/{id}/renew",
+      "status": "Partial",
+      "evidence": "Local HTTP lifecycle and PostgreSQL lease test source; complete bot/API/DB loop absent.",
+      "in_openapi": true
+    },
+    {
+      "operation": "POST /v1/agent/questions/{id}/retry",
+      "status": "Partial",
+      "evidence": "Local HTTP lifecycle and PostgreSQL lease test source; complete bot/API/DB loop absent.",
+      "in_openapi": true
+    },
+    {
+      "operation": "POST /v1/quests",
+      "status": "Registered",
+      "evidence": "Contract registration; complete seeded HTTP scenario coverage absent.",
+      "in_openapi": true
+    },
+    {
+      "operation": "POST /v1/quests/{id}/signup",
+      "status": "Partial",
+      "evidence": "PostgreSQL domain assertions; no complete production HTTP scenario matrix.",
+      "in_openapi": true
+    },
+    {
+      "operation": "POST /v1/quests/{id}/discord/sync",
+      "status": "Partial",
+      "evidence": "PostgreSQL domain assertions; no complete production HTTP scenario matrix.",
+      "in_openapi": true
+    },
+    {
+      "operation": "POST /v1/quests/{id}/transition",
+      "status": "Partial",
+      "evidence": "HTTP memory-store cases plus PostgreSQL domain/outbox assertions; full HTTP/DB lane absent.",
+      "in_openapi": true
+    },
+    {
+      "operation": "POST /v1/quests/{id}/close",
+      "status": "Registered",
+      "evidence": "Contract registration; complete seeded HTTP scenario coverage absent.",
+      "in_openapi": true
+    },
+    {
+      "operation": "GET /v1/me/notifications/unread-count",
+      "status": "Partial",
+      "evidence": "Production middleware + PostgreSQL test source; DB execution unavailable.",
+      "in_openapi": true
+    },
+    {
+      "operation": "POST /v1/me/notifications/read",
+      "status": "Partial",
+      "evidence": "Production middleware + PostgreSQL test source; DB execution unavailable.",
+      "in_openapi": true
+    },
+    {
+      "operation": "POST /v1/me/notifications/acknowledge-suppressed",
+      "status": "No-op",
+      "evidence": "Returns 204 with no command/repository call.",
+      "in_openapi": true
+    },
+    {
+      "operation": "POST /v1/me/personalization/reconcile",
+      "status": "No-op",
+      "evidence": "Returns 204 with no command/repository call.",
+      "in_openapi": true
+    },
+    {
+      "operation": "GET /v1/stats",
+      "status": "Registered",
+      "evidence": "Contract registration; complete seeded HTTP scenario coverage absent.",
+      "in_openapi": true
+    },
+    {
+      "operation": "GET /v1/search/kinds",
+      "status": "Registered",
+      "evidence": "Contract registration; complete seeded HTTP scenario coverage absent.",
+      "in_openapi": true
+    },
+    {
+      "operation": "GET /v1/time/game-date",
+      "status": "Registered",
+      "evidence": "Contract registration; complete seeded HTTP scenario coverage absent.",
+      "in_openapi": true
+    },
+    {
+      "operation": "GET /v1/members/by-discord/{discordId}",
+      "status": "Partial",
+      "evidence": "Handler test with fake callback; no complete production HTTP/database proof.",
+      "in_openapi": true
+    },
+    {
+      "operation": "GET /v1/members/{id}/role-history",
+      "status": "Registered",
+      "evidence": "Contract registration; complete seeded HTTP scenario coverage absent.",
+      "in_openapi": true
+    },
+    {
+      "operation": "GET /v1/members/{id}/availability",
+      "status": "Registered",
+      "evidence": "Contract registration; complete seeded HTTP scenario coverage absent.",
+      "in_openapi": true
+    },
+    {
+      "operation": "GET /v1/hexes/{id}/history",
+      "status": "Registered",
+      "evidence": "Contract registration; complete seeded HTTP scenario coverage absent.",
+      "in_openapi": true
+    },
+    {
+      "operation": "GET /v1/regions/{id}/counts",
+      "status": "Registered",
+      "evidence": "Contract registration; complete seeded HTTP scenario coverage absent.",
+      "in_openapi": true
+    },
+    {
+      "operation": "GET /v1/maps/{atlasCode}/activity",
+      "status": "Registered",
+      "evidence": "Contract registration; complete seeded HTTP scenario coverage absent.",
+      "in_openapi": true
+    },
+    {
+      "operation": "GET /v1/characters/{id}/progression",
+      "status": "Registered",
+      "evidence": "Contract registration; complete seeded HTTP scenario coverage absent.",
+      "in_openapi": true
+    },
+    {
+      "operation": "GET /v1/characters/{id}/logs",
+      "status": "Registered",
+      "evidence": "Contract registration; complete seeded HTTP scenario coverage absent.",
+      "in_openapi": true
+    },
+    {
+      "operation": "GET /v1/characters/{id}/verification-history",
+      "status": "Registered",
+      "evidence": "Contract registration; complete seeded HTTP scenario coverage absent.",
+      "in_openapi": true
+    },
+    {
+      "operation": "GET /v1/time/real-dates",
+      "status": "Registered",
+      "evidence": "Contract registration; complete seeded HTTP scenario coverage absent.",
+      "in_openapi": true
+    },
+    {
+      "operation": "POST /v1/graphql",
+      "status": "Partial",
+      "evidence": "34 query roots; 12 placeholders; selected database HTTP assertions.",
+      "in_openapi": false
+    },
+    {
+      "operation": "GET /v1/documents/{id}/revisions",
+      "status": "Partial",
+      "evidence": "Production middleware + PostgreSQL test source; DB execution unavailable.",
+      "in_openapi": false
+    },
+    {
+      "operation": "GET /v1/documents/trash",
+      "status": "Partial",
+      "evidence": "Production middleware + PostgreSQL test source; DB execution unavailable.",
+      "in_openapi": false
+    }
+  ],
+  "graphql_roots": [
+    {
+      "operation": "member",
+      "status": "Partial",
+      "evidence": "Calls services; no complete seeded HTTP value proof identified."
+    },
+    {
+      "operation": "members",
+      "status": "Partial",
+      "evidence": "Calls services; no complete seeded HTTP value proof identified."
+    },
+    {
+      "operation": "memberActivityStats",
+      "status": "Placeholder",
+      "evidence": "Hard-coded empty/null; registration is not value coverage."
+    },
+    {
+      "operation": "memberProfile",
+      "status": "Partial",
+      "evidence": "Calls services; no complete seeded HTTP value proof identified."
+    },
+    {
+      "operation": "communityDirectory",
+      "status": "Placeholder",
+      "evidence": "Hard-coded empty/null; registration is not value coverage."
+    },
+    {
+      "operation": "pendingDmProfileVerifications",
+      "status": "Placeholder",
+      "evidence": "Hard-coded empty/null; registration is not value coverage."
+    },
+    {
+      "operation": "openQuestSeats",
+      "status": "Placeholder",
+      "evidence": "Hard-coded empty/null; registration is not value coverage."
+    },
+    {
+      "operation": "myPersonalization",
+      "status": "Placeholder",
+      "evidence": "Hard-coded empty/null; registration is not value coverage."
+    },
+    {
+      "operation": "document",
+      "status": "Partial",
+      "evidence": "Mounted API + PostgreSQL assertion source; DB execution unavailable."
+    },
+    {
+      "operation": "documentById",
+      "status": "Partial",
+      "evidence": "Mounted API + PostgreSQL assertion source; DB execution unavailable."
+    },
+    {
+      "operation": "documents",
+      "status": "Partial",
+      "evidence": "Mounted API + PostgreSQL assertion source; DB execution unavailable."
+    },
+    {
+      "operation": "documentBacklinks",
+      "status": "Partial",
+      "evidence": "Mounted API + PostgreSQL assertion source; DB execution unavailable."
+    },
+    {
+      "operation": "codexDirectory",
+      "status": "Partial",
+      "evidence": "Mounted API + PostgreSQL assertion source; DB execution unavailable."
+    },
+    {
+      "operation": "codexEntry",
+      "status": "Placeholder",
+      "evidence": "Hard-coded empty/null; registration is not value coverage."
+    },
+    {
+      "operation": "codexCategories",
+      "status": "Placeholder",
+      "evidence": "Hard-coded empty/null; registration is not value coverage."
+    },
+    {
+      "operation": "map",
+      "status": "Partial",
+      "evidence": "Calls services; no complete seeded HTTP value proof identified."
+    },
+    {
+      "operation": "mapView",
+      "status": "Partial",
+      "evidence": "Mounted API + PostgreSQL assertion source; DB execution unavailable."
+    },
+    {
+      "operation": "maps",
+      "status": "Partial",
+      "evidence": "Calls services; no complete seeded HTTP value proof identified."
+    },
+    {
+      "operation": "hex",
+      "status": "Partial",
+      "evidence": "Calls services; no complete seeded HTTP value proof identified."
+    },
+    {
+      "operation": "regions",
+      "status": "Partial",
+      "evidence": "Calls services; no complete seeded HTTP value proof identified."
+    },
+    {
+      "operation": "characters",
+      "status": "Partial",
+      "evidence": "Calls services; no complete seeded HTTP value proof identified."
+    },
+    {
+      "operation": "myCharacters",
+      "status": "Partial",
+      "evidence": "Calls services; no complete seeded HTTP value proof identified."
+    },
+    {
+      "operation": "character",
+      "status": "Partial",
+      "evidence": "Calls services; no complete seeded HTTP value proof identified."
+    },
+    {
+      "operation": "search",
+      "status": "Partial",
+      "evidence": "Mounted API + PostgreSQL assertion source; DB execution unavailable."
+    },
+    {
+      "operation": "home",
+      "status": "Partial",
+      "evidence": "Calls services; no complete seeded HTTP value proof identified."
+    },
+    {
+      "operation": "quest",
+      "status": "Partial",
+      "evidence": "GraphQL + PostgreSQL quest read assertions; limited fields/filters; DB execution unavailable."
+    },
+    {
+      "operation": "quests",
+      "status": "Partial",
+      "evidence": "GraphQL + PostgreSQL quest read assertions; limited fields/filters; DB execution unavailable."
+    },
+    {
+      "operation": "questBoard",
+      "status": "Partial",
+      "evidence": "GraphQL + PostgreSQL quest read assertions; limited fields/filters; DB execution unavailable."
+    },
+    {
+      "operation": "recentlyClosedQuests",
+      "status": "Partial",
+      "evidence": "GraphQL + PostgreSQL quest read assertions; limited fields/filters; DB execution unavailable."
+    },
+    {
+      "operation": "questArcs",
+      "status": "Placeholder",
+      "evidence": "Hard-coded empty/null; registration is not value coverage."
+    },
+    {
+      "operation": "questArc",
+      "status": "Placeholder",
+      "evidence": "Hard-coded empty/null; registration is not value coverage."
+    },
+    {
+      "operation": "myNotifications",
+      "status": "Placeholder",
+      "evidence": "Hard-coded empty/null; registration is not value coverage."
+    },
+    {
+      "operation": "adminCharacterDirectory",
+      "status": "Placeholder",
+      "evidence": "Hard-coded empty/null; registration is not value coverage."
+    },
+    {
+      "operation": "adminOperations",
+      "status": "Placeholder",
+      "evidence": "Hard-coded empty/null; registration is not value coverage."
+    }
+  ],
+  "unimplemented_rest_operations": [
+    "DELETE /v1/archons",
+    "DELETE /v1/documents/{id}",
+    "DELETE /v1/hexes/{id}/links",
+    "DELETE /v1/lieutenants",
+    "DELETE /v1/me/following/{id}",
+    "GET /v1/archons",
+    "GET /v1/backstories",
+    "GET /v1/calendar",
+    "GET /v1/characters/pending-verifications",
+    "GET /v1/characters/{id}/co-players",
+    "GET /v1/characters/{id}/downtime-projects",
+    "GET /v1/characters/{id}/participations",
+    "GET /v1/characters/{id}/summaries",
+    "GET /v1/config/discord-delivery-mode",
+    "GET /v1/creation-catalog",
+    "GET /v1/dm-summaries",
+    "GET /v1/hex-changes",
+    "GET /v1/hexes/{id}/pois",
+    "GET /v1/lieutenants",
+    "GET /v1/me/availability",
+    "GET /v1/me/following/{id}",
+    "GET /v1/me/quest-signups",
+    "GET /v1/me/requests",
+    "GET /v1/members/{id}/dm-sessions",
+    "GET /v1/members/{id}/dm-stats",
+    "GET /v1/quests/genre-options",
+    "GET /v1/quests/state-counts",
+    "GET /v1/quests/{id}/summaries",
+    "GET /v1/site-settings/home-banner",
+    "GET /v1/site-settings/quest-announcement-role",
+    "GET /v1/time/anchors",
+    "GET /v1/unlockables",
+    "PATCH /v1/admin/backstories/{id}",
+    "PATCH /v1/characters/{id}/guild",
+    "PATCH /v1/characters/{id}/profile",
+    "PATCH /v1/documents/{id}",
+    "PATCH /v1/documents/{id}/published",
+    "PATCH /v1/hexes/{id}",
+    "PATCH /v1/me/dm-profile",
+    "PATCH /v1/me/profile",
+    "PATCH /v1/me/settings",
+    "PATCH /v1/quests/{id}",
+    "PATCH /v1/regions/{id}",
+    "PATCH /v1/time/anchors/{id}",
+    "PATCH /v1/unlockables/{id}/active",
+    "POST /v1/admin/backstories",
+    "POST /v1/admin/discord-deliveries/{jobId}/redrive",
+    "POST /v1/archons",
+    "POST /v1/characters",
+    "POST /v1/characters/{id}/ddb-sync",
+    "POST /v1/characters/{id}/decide-verification",
+    "POST /v1/characters/{id}/logs",
+    "POST /v1/characters/{id}/pcxp",
+    "POST /v1/characters/{id}/retire",
+    "POST /v1/characters/{id}/submit-verification",
+    "POST /v1/dm-profiles/{memberId}/decide",
+    "POST /v1/documents",
+    "POST /v1/documents/preview-body",
+    "POST /v1/documents/{id}/publish",
+    "POST /v1/documents/{id}/restore",
+    "POST /v1/documents/{id}/unpublish",
+    "POST /v1/hexes/{id}/links",
+    "POST /v1/lieutenants",
+    "POST /v1/maps",
+    "POST /v1/me/cosmetics/equip",
+    "POST /v1/me/dm-profile/submit",
+    "POST /v1/me/requests",
+    "POST /v1/members/roles:batch",
+    "POST /v1/members/{id}/unlocks",
+    "POST /v1/quests/{id}/participants/attest",
+    "POST /v1/quests/{id}/participants/select",
+    "POST /v1/quests/{id}/remove-from-arc",
+    "POST /v1/quests/{id}/withdraw",
+    "POST /v1/regions",
+    "POST /v1/regions/{id}/transition",
+    "POST /v1/time/anchors",
+    "POST /v1/unlockables",
+    "PUT /v1/admin/creation-catalog",
+    "PUT /v1/calendar",
+    "PUT /v1/characters/{id}/downtime-projects",
+    "PUT /v1/documents/{id}/visibility",
+    "PUT /v1/hexes/{hexId}/pois",
+    "PUT /v1/maps/{mapId}/edges",
+    "PUT /v1/me/availability",
+    "PUT /v1/me/following/{id}",
+    "PUT /v1/members/{id}/roles",
+    "PUT /v1/quest-arcs",
+    "PUT /v1/quest-summaries",
+    "PUT /v1/quests/{id}/hexes",
+    "PUT /v1/site-settings/home-banner",
+    "PUT /v1/site-settings/quest-announcement-role"
+  ],
+  "qa_table_insert_specs": {
+    "agent_questions": 1,
+    "archon_assignments": 1,
+    "background_jobs": 7,
+    "backstories": 4,
+    "bot_heartbeats": 1,
+    "character_ddb_mirrors": 12,
+    "character_logs": 12,
+    "character_progression_ledger": 12,
+    "characters": 12,
+    "creation_catalog": 12,
+    "discord_activity_events": 5,
+    "dm_profiles": 5,
+    "dm_requests": 6,
+    "document_links": 9,
+    "document_readers": 1,
+    "document_revisions": 9,
+    "documents": 140,
+    "downtime_projects": 12,
+    "game_calendar": 1,
+    "game_time_map": 14,
+    "hex_changes": 9,
+    "hex_edges": 12,
+    "hex_entry_links": 28,
+    "hexes": 80,
+    "idempotency_keys": 1,
+    "lieutenant_assignments": 1,
+    "maps": 2,
+    "member_availability": 17,
+    "member_follows": 12,
+    "member_settings": 17,
+    "member_unlocks": 5,
+    "members": 17,
+    "notifications": 6,
+    "pois": 20,
+    "quest_arcs": 2,
+    "quest_hexes": 20,
+    "quest_participants": 49,
+    "quest_regions": 20,
+    "quests": 20,
+    "regions": 3,
+    "role_changes": 4,
+    "site_settings": 2,
+    "time_anchors": 1,
+    "unlockables": 9,
+    "verifications": 4
+  },
+  "findings": [
+    {
+      "id": "seed-drift",
+      "status": "source-repaired-unit-validated",
+      "summary": "Removed agent_questions.state, added dedicated succeeded agent job and current envelopes; reproducible fixture 637 specs/45 tables/7 jobs. Unit and adapter checks pass; fresh DB double-load/poll acceptance blocked at Docker setup."
+    },
+    {
+      "id": "missing-commands",
+      "status": "source-confirmed",
+      "summary": "91 field-routing REST operations lack implementations; no mounted PUT/PATCH/DELETE."
+    },
+    {
+      "id": "graph-placeholders",
+      "status": "source-confirmed",
+      "summary": "12 of 34 roots return hard-coded empty/null responses."
+    },
+    {
+      "id": "no-op-commands",
+      "status": "source-confirmed",
+      "summary": "Personalization reconciliation and suppressed notification acknowledgement return 204 without state effects."
+    },
+    {
+      "id": "partial-fields",
+      "status": "source-confirmed",
+      "summary": "Synthetic timestamps, document category/kind confusion, empty rich fields, ignored filters and page-length character totals."
+    },
+    {
+      "id": "ci-lane",
+      "status": "source-confirmed",
+      "summary": "Root verify excludes Go; API verify-loop excludes integration-tagged cmd/api fixtures."
+    },
+    {
+      "id": "whole-system",
+      "status": "source-confirmed",
+      "summary": "No whole-system runner; bot integration/e2e suites use fixture HTTP APIs and scripted clients."
+    },
+    {
+      "id": "graphql-depth",
+      "status": "source-confirmed",
+      "summary": "MaxDepth branch repeats FixedComplexityLimit; declared depth bound not implemented."
+    },
+    {
+      "id": "performance",
+      "status": "unmeasured",
+      "summary": "No current repeatable Go performance harness found; historical capacity recipe points to absent Python load scripts."
+    },
+    {
+      "id": "db-execution",
+      "status": "unavailable",
+      "summary": "Current managed sandbox denies Docker socket operations; fixed sg refresh also fails. Targeted seed acceptance and complete tagged suite could not run DB assertions. No live seed load or all-endpoint probe success."
+    }
+  ],
+  "execution_receipts": [
+    {
+      "command": "go test ./...",
+      "cwd": "apps/api",
+      "status": "passed",
+      "detail": "Unit/contract/limited parity tests; integration-tagged tests excluded."
+    },
+    {
+      "command": "bun run --filter @pi/discord test",
+      "cwd": ".",
+      "status": "passed",
+      "detail": "114 tests in 21 files; fixture HTTP servers and scripted clients."
+    },
+    {
+      "command": "go test -tags=integration ./...",
+      "cwd": "apps/api",
+      "status": "unavailable",
+      "exit_code": 1,
+      "detail": "DB setup failed; Docker socket access denied by OS. No DB behavior verified."
+    },
+    {
+      "command": "scripts/verify",
+      "cwd": ".",
+      "status": "incomplete",
+      "exit_code": 2,
+      "detail": "Lint/format/JS type checks passed; Python typecheck could not spawn Pyright. Later steps not reached."
+    },
+    {
+      "command": "codex --strict-config doctor --summary --ascii --no-color",
+      "cwd": ".",
+      "status": "config accepted",
+      "exit_code": 1,
+      "detail": "Config loaded; scoped profile/restricted filesystem/network enabled/approval Never. Aggregate diagnostics failed; no activation or endpoint access proof."
+    },
+    {
+      "command": "go test ./...",
+      "cwd": "apps/api",
+      "status": "passed",
+      "exit_code": 0,
+      "observed_at_utc": "2026-10-13T22:14:56Z",
+      "detail": "After seed repair; full unit/contract suite, excluding integration-tagged tests. Log /tmp/chronicler-seed-unit.log."
+    },
+    {
+      "command": "env -u DATABASE_URL go test -tags=integration ./cmd/seedqa -run '^TestQAFreshPostgresDoubleLoad$' -count=1 -v",
+      "cwd": "apps/api",
+      "status": "unavailable",
+      "exit_code": 1,
+      "observed_at_utc": "2026-10-13T22:14:56Z",
+      "detail": "Docker initialization: socket operation not permitted. No DB assertions executed. Log /tmp/chronicler-seed-targeted.log."
+    },
+    {
+      "command": "env -u DATABASE_URL go test -tags=integration ./...",
+      "cwd": "apps/api",
+      "status": "unavailable",
+      "exit_code": 1,
+      "observed_at_utc": "2026-10-13T22:14:57Z",
+      "detail": "Full DB lane fails setup at denied Docker socket; includes cmd/api and seedqa. Log /tmp/chronicler-seed-full-tagged.log."
+    },
+    {
+      "command": "env DATABASE_URL=postgres://external-sentinel.invalid/never-connect go test -tags=integration ./cmd/seedqa -run '^TestQAFreshPostgresDoubleLoad$' -count=1 -v",
+      "cwd": "apps/api",
+      "status": "expected-rejection",
+      "exit_code": 1,
+      "observed_at_utc": "2026-10-13T22:14:58Z",
+      "detail": "External URL rejected before Docker, network or migrations. Log /tmp/chronicler-seed-external-url-rejection.log."
+    },
+    {
+      "command": "scripts/dev-stack",
+      "cwd": ".",
+      "status": "unavailable",
+      "exit_code": 1,
+      "observed_at_utc": "2026-10-13T22:15:28Z",
+      "detail": "Compose config accepted; exit 1 step=daemon, Docker socket permission denied. /tmp/chronicler-dev/latest-status. Fixed sg refresh fails setgid; actual startup/repeated follower unverified."
+    },
+    {
+      "command": "scripts/verify",
+      "cwd": ".",
+      "status": "incomplete",
+      "exit_code": 1,
+      "observed_at_utc": "2026-10-13T22:16:25.319184+00:00",
+      "detail": "Initial run found stale agent Pyright launcher; after locked environment reinstall lint/format/JS+Python type checks pass. Stops at Discord fixture tests: 102 pass/12 fail, one unhandled error; independent loopback probe returns proxy HTTP 502 upstream failure."
+    },
+    {
+      "command": "bun run --filter @pi/web test",
+      "cwd": ".",
+      "status": "passed",
+      "exit_code": 0,
+      "observed_at_utc": "2026-10-13T22:16:25.319184+00:00",
+      "detail": "440 tests in 91 files."
+    },
+    {
+      "command": "bun run test:agent",
+      "cwd": ".",
+      "status": "failed-environment",
+      "exit_code": 1,
+      "observed_at_utc": "2026-10-13T22:16:25.319184+00:00",
+      "detail": "347 pass, 16 fail from optional SOCKS proxy dependency socksio absent."
+    },
+    {
+      "command": "uv run --directory apps/agent --with socksio pytest",
+      "cwd": ".",
+      "status": "passed",
+      "exit_code": 0,
+      "observed_at_utc": "2026-10-13T22:16:25.319184+00:00",
+      "detail": "363 tests; supplemental proxy dependency invocation, not normal root-gate success."
+    },
+    {
+      "command": "uv run ruff format --check apps/agent",
+      "cwd": ".",
+      "status": "passed",
+      "exit_code": 0,
+      "observed_at_utc": "2026-10-13T22:16:25.319184+00:00",
+      "detail": "67 files formatted."
+    },
+    {
+      "command": "env PRE_COMMIT_HOME=/tmp/chronicler-pre-commit PATH=\"/tmp/chronicler-tools:$PATH\" uv run pre-commit run --all-files",
+      "cwd": ".",
+      "status": "passed",
+      "exit_code": 0,
+      "observed_at_utc": "2026-10-13T22:16:25.319184+00:00",
+      "detail": "Scratch cache replaces read-only default; temporary bunx wrapper forwards to installed bun x. First run formatted deployment index; second passed."
+    },
+    {
+      "command": "python3 scripts/docs-lint.py; targeted Prettier --check; git diff --check",
+      "cwd": ".",
+      "status": "passed",
+      "detail": "Final canonical review and deployment docs; snapshot input comparison matches."
+    }
+  ],
+  "invalidation": "Compare both the input file set and hashes. Changed inputs require affected source findings to be revisited. Runtime/provider/DB receipts remain dated regardless of unchanged source.",
+  "knowledge_cli_setup": {
+    "date_utc": "2026-10-13T22:16:25.319184+00:00",
+    "host": "triton",
+    "heptabase_desktop_version": "1.112.3",
+    "notion_cli_version": "0.23.19",
+    "rule_file": "~/.codex/rules/knowledge-cli.rules",
+    "authorization": "Full Heptabase and Notion CLI commands; parent restrictions withdrawn by owner",
+    "activation": "CLI allowances retained; protected project configuration unchanged. Current task denies Notion login host; no connection established.",
+    "todos": [
+      "Sign into Heptabase desktop and enable/register compatible 0.7.x CLI",
+      "Connect Notion CLI; task currently denies app.notion.com",
+      "Create new Chronicler parent whiteboard, nine domain coverage boards and Notion parent page",
+      "Retrieve Heptabase account ID later; GraphQL CRUD remains pending review"
+    ],
+    "prepared_inputs": "/tmp/chronicler-boards",
+    "remote_objects_created": [],
+    "preparation": "Nine-domain positioned plan; exact set and semantic classification checks pass: 34 roots/36 REST routes + transport/91 absent REST. No layout lint or screenshot."
+  },
+  "local_dev_stack": {
+    "pattern": "fixed-command facade; canonical Compose plus one local test override",
+    "applied_files": [
+      "scripts/dev-stack",
+      "deploy/compose.dev-tests.yaml",
+      "deploy/docs/dev-stack.md"
+    ],
+    "config_status": "protected .codex writes rejected; actual general socket grant remains",
+    "staged_config": "/tmp/chronicler-dev-stack-config.toml",
+    "staged_rule": "/tmp/chronicler-dev-stack.rules",
+    "checks": "Bash/Compose/TOML parsing, argument rejection, positive/nonmatching staged rule examples passed; actual startup blocked before services",
+    "receipts_dir": "/tmp/chronicler-dev"
+  },
+  "last_source_revisit": {
+    "at_utc": "2026-10-13T22:16:25.319184+00:00",
+    "changed_inputs": [
+      "apps/api/cmd/seedqa/fixture_integration_test.go",
+      "apps/api/cmd/seedqa/fixture_test.go",
+      "apps/api/cmd/seedqa/world.go",
+      "apps/api/db/seed/qa.jsonl",
+      "deploy/compose.dev-tests.yaml",
+      "scripts/dev-stack"
+    ],
+    "detail": "Revisited seed lifecycle/protocol/determinism, new unit+DB acceptance assertions, Compose isolation and fixed startup/logging/readiness facade. Unchanged endpoint findings reused."
+  }
+}

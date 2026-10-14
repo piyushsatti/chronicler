@@ -15,6 +15,8 @@
 
 ## Topics
 
+[Endpoint review baseline](/apps/api/docs/endpoint-review.md) — operation inventory, seed drift, coverage limits and sequential acceptance gates; versioned project-memory snapshot linked there.
+
 | Doc                                                                 | Use                                                  |
 | ------------------------------------------------------------------- | ---------------------------------------------------- |
 | [backend-working-rules.md](/apps/api/docs/backend-working-rules.md) | Layering, session commit footgun                     |

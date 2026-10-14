@@ -37,6 +37,10 @@ Do not ask the owner to perform raw SSH or on-server file edits for routine oper
 | [docs/semantics/](/docs/semantics/README.md)       | Product semantics                | Naming concepts                   |
 | [docs/requirements/](/docs/requirements/README.md) | R-id verdict index               | Flipping met/partial/absent       |
 
+## Endpoint review project memory
+
+For API/database/bot endpoint reviews, read the [canonical baseline](/apps/api/docs/endpoint-review.md) and [versioned snapshot](/apps/api/docs/endpoint-review-baseline.json) first. Compare the snapshot's input file set and fingerprints; reuse unchanged source findings and revisit affected findings when inputs change. Execution receipts are dated: rerun requested checks and never infer database or live-provider success from unit/fixture tests. Update these same records as review phases advance.
+
 ## Verify before claiming done
 
 From the repository root, `scripts/verify` (or `bun run verify`) must pass for changes that touch covered apps. Say what you ran; do not claim verification you did not perform. Docs changes should also pass `python3 scripts/docs-lint.py`.
