@@ -1,0 +1,126 @@
+extend type Query {
+  characters(
+    filters: CharacterV2FiltersInput = null
+    limit: Int! = 50
+    offset: Int! = 0
+  ): CharacterV2ListResult!
+  myCharacters(limit: Int! = 50, offset: Int! = 0): CharacterV2ListResult!
+  character(id: ID = null, shortCode: String = null): CharacterV2Type
+  adminCharacterDirectory(
+    filters: AdminCharacterDirectoryFiltersInput = null
+    limit: Int! = 50
+    offset: Int! = 0
+  ): AdminCharacterDirectoryV2Type!
+  pendingCharacterVerifications(
+    limit: Int! = 50
+    offset: Int! = 0
+  ): CharacterV2ListResult!
+  characterVerificationHistory(
+    characterId: ID!
+    limit: Int! = 50
+    offset: Int! = 0
+  ): VerificationPage!
+  backstories(
+    filters: BackstoryFiltersInput
+    limit: Int! = 50
+    offset: Int! = 0
+  ): BackstoryPage!
+  creationCatalog(
+    filters: CreationCatalogFiltersInput
+    limit: Int! = 50
+    offset: Int! = 0
+  ): CreationCatalogPage!
+  characterProgression(
+    characterId: ID!
+    limit: Int! = 50
+    offset: Int! = 0
+  ): ProgressionListResult!
+  characterLogs(
+    characterId: ID!
+    limit: Int! = 50
+    offset: Int! = 0
+  ): CharacterLogListResult!
+  downtimeProjects(
+    characterId: ID!
+    limit: Int! = 50
+    offset: Int! = 0
+  ): DowntimeProjectListResult!
+  coPlayers(characterId: ID!, limit: Int! = 50, offset: Int! = 0): CoPlayerPage!
+  characterSummaries(
+    characterId: ID!
+    limit: Int! = 50
+    offset: Int! = 0
+  ): DocumentListResult!
+  participationsByCharacter(
+    characterId: ID!
+    limit: Int! = 50
+    offset: Int! = 0
+  ): ParticipationPage!
+  myQuestRewards(
+    status: RewardClaimStatus
+    limit: Int! = 50
+    offset: Int! = 0
+  ): RewardEntitlementPage!
+}
+extend type Mutation {
+  createCharacter(input: CreateCharacterV2Input!, meta: CommandMeta!): CharacterV2Type!
+  adjustPcxp(
+    characterId: ID!
+    amount: Int!
+    note: String!
+    meta: CommandMeta!
+  ): ProgressionEntryType!
+  submitForVerification(
+    characterId: ID!
+    expectedUpdatedAt: DateTime!
+    meta: CommandMeta!
+  ): CharacterV2Type!
+  retireCharacter(
+    characterId: ID!
+    expectedUpdatedAt: DateTime!
+    meta: CommandMeta!
+  ): CharacterV2Type!
+  decideVerification(
+    characterId: ID!
+    expectedSubmittedAt: DateTime!
+    verdict: VerificationVerdict!
+    note: String
+    meta: CommandMeta!
+  ): VerificationType!
+  setCharacterGuild(characterId: ID!, guildId: ID, meta: CommandMeta!): CharacterV2Type!
+  updateCharacterProfile(
+    characterId: ID!
+    input: UpdateCharacterProfileV2Input!
+    meta: CommandMeta!
+  ): CharacterV2Type!
+  syncCharacterDdb(
+    characterId: ID!
+    ddbUrl: String!
+    meta: CommandMeta!
+  ): DdbSyncReceipt!
+  logCharacterEvent(
+    characterId: ID!
+    body: String!
+    questId: ID
+    meta: CommandMeta!
+  ): CharacterLogType!
+  upsertDowntimeProject(
+    characterId: ID!
+    input: DowntimeInput!
+    meta: CommandMeta!
+  ): DowntimeProjectType!
+  upsertCreationCatalogEntry(
+    input: UpsertCreationCatalogEntryInput!
+    meta: CommandMeta!
+  ): CreationCatalogEntryType!
+  createBackstory(input: BackstoryInput!, meta: CommandMeta!): BackstoryType!
+  updateBackstory(id: ID!, input: BackstoryInput!, meta: CommandMeta!): BackstoryType!
+  deleteCharacterLog(characterId: ID!, logId: ID!, meta: CommandMeta!): CommandReceipt!
+  deleteCharacter(characterId: ID!, meta: CommandMeta!): CommandReceipt!
+  restoreCharacter(characterId: ID!, meta: CommandMeta!): CharacterV2Type!
+  claimQuestRewards(
+    questId: ID!
+    characterId: ID!
+    meta: CommandMeta!
+  ): RewardClaimReceipt!
+}

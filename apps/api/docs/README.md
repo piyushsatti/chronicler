@@ -17,6 +17,8 @@
 
 [Endpoint review baseline](/apps/api/docs/endpoint-review.md) — operation inventory, seed drift, coverage limits and sequential acceptance gates; versioned project-memory snapshot linked there.
 
+[Content boundary review](/apps/api/docs/content-boundary-review.md) records authored-content and operational-data ownership findings, source limits, and open design decisions.
+
 | Doc                                                                 | Use                                                  |
 | ------------------------------------------------------------------- | ---------------------------------------------------- |
 | [backend-working-rules.md](/apps/api/docs/backend-working-rules.md) | Layering, session commit footgun                     |
@@ -32,3 +34,5 @@
 | [decisions/](/apps/api/docs/decisions)                              | API-local D-records                                  |
 
 Parent: [../README.md](/apps/api/README.md).
+
+Accepted product API design and implementation status: [GraphQL product](/apps/api/docs/design/graphql-product/README.md).

@@ -1,0 +1,181 @@
+# Every effectful command requires a caller-scoped replay key.
+input CommandMeta {
+  idempotencyKey: String!
+}
+input UpdateMyProfileInput {
+  displayName: String!
+  avatarUrl: String
+}
+input UpdateDmProfileInput {
+  tagline: String
+  philosophy: String
+  houseRules: String
+  tableInfo: JSON
+  acceptingPlayers: Boolean!
+}
+input MemberSettingsPatch {
+  theme: Theme
+  mode: ColorMode
+  effectsEnabled: Boolean
+  colorblindSafe: Boolean
+  reducedMotion: Boolean
+  density: Density
+  timezone: String
+  notifyCharacterVerification: Boolean
+  notifyQuestSignup: Boolean
+  notifyDocumentActivity: Boolean
+  notifyQuestScheduled: Boolean
+  notifyDmMentioned: Boolean
+  notifyDmRequestDecided: Boolean
+}
+input DocumentDraftInput {
+  kind: String!
+  category: String
+  title: String!
+  body: String!
+  frontmatter: JSON!
+  visibility: String!
+  policy: [String!]
+}
+input DocumentEditInput {
+  expectedRevision: Int!
+  title: String
+  body: String
+  frontmatter: JSON
+  category: String
+}
+input DocumentAudienceInput {
+  visibility: String!
+  policy: [String!]
+  readerIds: [ID!]! = []
+}
+input MapCreateInput {
+  name: String!
+  atlasCode: String!
+  family: String!
+  mapKind: String!
+  regionId: ID
+  assetPath: String
+  cols: Int
+  rows: Int
+}
+input HexEditInput {
+  terrain: String
+  elevation: String
+  climate: String
+  submapId: ID
+  note: String!
+}
+input PoiInput {
+  id: ID
+  poiType: String!
+  discoveryTier: String!
+  isCharterObjective: Boolean!
+  documentId: ID
+}
+input HexEdgeInput {
+  hexA: ID!
+  hexB: ID!
+  edgeType: String!
+  aSide: String
+  documentId: ID
+}
+input RegionInput {
+  name: String!
+  kind: String!
+  charterDeadline: DateTime
+  documentId: ID
+}
+input TimeAnchorInput {
+  realUtc: DateTime!
+  epochDay: Int!
+  rate: Float!
+  note: String
+}
+input BackstoryInput {
+  name: String!
+  lore: String!
+  cohort: String!
+  sourceRegionId: ID
+  retired: Boolean!
+}
+input DowntimeInput {
+  id: ID
+  name: String!
+  goal: String
+  target: Int
+  progress: Int!
+  status: String!
+  notes: String
+}
+input QuestEditInput {
+  expectedUpdatedAt: DateTime!
+  title: String
+  regionIds: [ID!]
+  scheduledAt: DateTime
+  durationHours: Float
+  briefBody: String
+  dmId: ID
+  kinds: [String!]
+  slotsMax: Int
+  arcId: ID
+  tags: [String!]
+  genres: [String!]
+  apl: Int
+  signupType: String
+  additionalInfo: String
+}
+input QuestSummaryInput {
+  documentId: ID
+  questIds: [ID!]!
+  characterId: ID
+  title: String!
+  body: String!
+  visibility: String!
+  frontmatter: JSON!
+}
+input QuestHexInput {
+  hexId: ID!
+  role: String!
+}
+input ParticipationAttestationInput {
+  characterId: ID!
+  status: String!
+}
+input HomeBannerInput {
+  enabled: Boolean!
+  title: String
+  body: String
+  ctaLabel: String
+  ctaHref: String
+  mediaKind: String
+  mediaUrl: String
+  mediaLabel: String
+}
+input AnnouncementRoleInput {
+  enabled: Boolean!
+  roleId: String
+}
+enum VerificationVerdict {
+  APPROVED
+  REJECTED
+}
+type CommandReceipt {
+  replayed: Boolean!
+}
+type NotificationWriteReceipt {
+  replayed: Boolean!
+  affectedCount: Int!
+}
+type DdbSyncReceipt {
+  character: CharacterV2Type!
+  succeeded: Boolean!
+  attemptedAt: DateTime!
+  safeError: String
+}
+type DeliveryReceipt {
+  jobId: ID!
+  desiredRevision: Int!
+  appliedRevision: Int!
+  deliveryStatus: String!
+}

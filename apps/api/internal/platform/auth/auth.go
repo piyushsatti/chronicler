@@ -4,6 +4,7 @@ package auth
 
 import (
 	"context"
+	"github.com/google/uuid"
 	"net/http"
 	"slices"
 	"strings"
@@ -14,9 +15,12 @@ import (
 type Role string
 
 const (
-	Player Role = "player"
-	DM     Role = "dm"
-	Admin  Role = "admin"
+	Player     Role = "player"
+	DM         Role = "dm"
+	Admin      Role = "admin"
+	Archon     Role = "archon"
+	Lieutenant Role = "lieutenant"
+	Verifier   Role = "verifier"
 )
 
 type Claims struct {
@@ -27,9 +31,10 @@ type Claims struct {
 // Authority is built from a fresh member/profile read, then shared only within
 // the request. Its fields cannot be populated by decoding an external token.
 type Authority struct {
-	claims Claims
-	liveDM bool
-	handle string
+	claims        Claims
+	liveDM        bool
+	handle        string
+	platformOwner bool
 }
 
 func NewAuthority(memberID string, roles []Role, status, dmStatus string) (Authority, error) {
@@ -150,3 +155,19 @@ func Require(gate Gate, next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 }
+
+func NewAuthorityWithOwner(memberID string, roles []Role, status, dmStatus, handle, configuredOwnerID string) (Authority, error) {
+	if configuredOwnerID != "" {
+		parsed, err := uuid.Parse(configuredOwnerID)
+		if err != nil || parsed.String() != configuredOwnerID {
+			return Authority{}, apierr.New(apierr.Internal, "invalid configured owner identity")
+		}
+	}
+	actor, err := NewAuthorityWithHandle(memberID, roles, status, dmStatus, handle)
+	if err != nil {
+		return Authority{}, err
+	}
+	actor.platformOwner = configuredOwnerID != "" && memberID == configuredOwnerID
+	return actor, nil
+}
+func (a Authority) IsPlatformOwner() bool { return a.platformOwner }

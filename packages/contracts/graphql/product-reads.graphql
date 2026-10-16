@@ -1,0 +1,60 @@
+type RoleChangePage {
+  items: [RoleChangeType!]!
+  total: Int!
+}
+type UnlockablePage {
+  items: [UnlockableType!]!
+  total: Int!
+}
+type DocumentRevisionPage {
+  items: [DocumentRevisionType!]!
+  total: Int!
+}
+type LieutenantPage {
+  items: [LieutenantAssignmentType!]!
+  total: Int!
+}
+type ArchonPage {
+  items: [ArchonAssignmentType!]!
+  total: Int!
+}
+type HexChangePage {
+  items: [HexChangeV2Type!]!
+  total: Int!
+}
+type PoiPage {
+  items: [PoiV2Type!]!
+  total: Int!
+}
+type RealDatePage {
+  items: [Date!]!
+  total: Int!
+}
+type TimeAnchorPage {
+  items: [TimeAnchorV2Type!]!
+  total: Int!
+}
+type VerificationPage {
+  items: [VerificationType!]!
+  total: Int!
+}
+type BackstoryPage {
+  items: [BackstoryType!]!
+  total: Int!
+}
+type CreationCatalogPage {
+  items: [CreationCatalogEntryType!]!
+  total: Int!
+}
+type CoPlayerPage {
+  items: [CoPlayerV2Type!]!
+  total: Int!
+}
+type ParticipationPage {
+  items: [QuestParticipantV2Type!]!
+  total: Int!
+}
+type RequestPage {
+  items: [RequestV2Type!]!
+  total: Int!
+}

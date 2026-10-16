@@ -32,21 +32,6 @@ type OpenQuestSeatsV2Result {
   total: Int!
 }
 
-type QuestAnnounceOutcomeV2Type {
-  messageId: String
-  threadCreated: Boolean!
-  alreadyAnnounced: Boolean!
-  error: String
-  eventId: String
-  eventUrl: String
-  accepted: Boolean
-  jobId: ID
-  desiredRevision: Int
-  appliedRevision: Int
-  deliveryStatus: String
-  nextRetryAt: DateTime
-}
-
 type QuestAnnouncementRoleSettingType {
   enabled: Boolean!
   roleId: String
@@ -62,13 +47,8 @@ type QuestArcV2Type {
   name: String!
   createdBy: ID!
   createdAt: DateTime!
-  quests: [QuestV2Type!]!
+  quests(limit: Int! = 50, offset: Int! = 0): [QuestV2Type!]!
   questCount: Int!
-}
-
-type QuestBoardEntryType {
-  id: ID!
-  title: String!
 }
 
 type QuestDiscordDeliveryV2Type {
@@ -82,37 +62,6 @@ type QuestDiscordDeliveryV2Type {
   nextRetryAt: DateTime
   errorCode: String
   errorMessage: String
-}
-
-type QuestDiscordSyncLegOutcomeV2Type {
-  state: QuestDiscordSyncLegStateV2!
-  remoteId: String
-  error: String
-  retryAfterSeconds: Int
-}
-
-enum QuestDiscordSyncLegStateV2 {
-  CREATED
-  UPDATED
-  UNCHANGED
-  NOT_CONFIGURED
-  FAILED
-  RATE_LIMITED
-  REPAIR_REQUIRED
-}
-
-type QuestDiscordSyncOutcomeV2Type {
-  success: Boolean
-  message: QuestDiscordSyncLegOutcomeV2Type
-  thread: QuestDiscordSyncLegOutcomeV2Type
-  event: QuestDiscordSyncLegOutcomeV2Type
-  error: String
-  accepted: Boolean
-  jobId: ID
-  desiredRevision: Int
-  appliedRevision: Int
-  deliveryStatus: String
-  nextRetryAt: DateTime
 }
 
 type QuestDmV2Type {
@@ -141,12 +90,6 @@ type QuestParticipantV2Type {
   memberAvatarUrl: String
 }
 
-input QuestRewardV2Input {
-  kind: String!
-  amount: Int = null
-  note: String = null
-}
-
 type QuestStateCountV2Type {
   state: String!
   count: Int!
@@ -166,8 +109,8 @@ type QuestSummariesV2Result {
 }
 
 type QuestSummaryTotalsV2Type {
-  totalPcxpAwarded: Int!
-  itemGrants: [String!]!
+  totalPcxpAwarded: Int
+  coverage: RewardCoverage!
 }
 
 input QuestV2FiltersInput {
@@ -191,6 +134,7 @@ type QuestV2ListResult {
 }
 
 type QuestV2Type {
+  rewardEntitlements(limit: Int! = 50, offset: Int! = 0): [QuestRewardEntitlementType!]!
   id: ID!
   shortCode: String!
   kinds: [String!]!
@@ -201,7 +145,7 @@ type QuestV2Type {
   durationHours: Float!
   slotsMax: Int!
   filledCount: Int!
-  documentId: ID!
+  documentId: ID
   discordMessageId: String
   discordEventId: String
   eventUrl: String
@@ -216,8 +160,12 @@ type QuestV2Type {
   displayStatus: String
   dm: QuestDmV2Type
   briefDocument: DocumentType
-  participants(status: String = null): [QuestParticipantV2Type!]!
-  hexes(role: String = null): [QuestHexV2Type!]!
+  participants(
+    status: String = null
+    limit: Int! = 100
+    offset: Int! = 0
+  ): [QuestParticipantV2Type!]!
+  hexes(role: String = null, limit: Int! = 100, offset: Int! = 0): [QuestHexV2Type!]!
   arc: QuestArcV2Type
   dmTable: DocumentType
   regions: [ID!]!
@@ -239,4 +187,9 @@ type RequestV2Type {
   kind: String!
   note: String
   status: String!
+}
+
+enum RewardCoverage {
+  COMPLETE
+  LEGACY_UNKNOWN
 }

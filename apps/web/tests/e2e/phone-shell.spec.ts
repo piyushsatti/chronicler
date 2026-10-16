@@ -15,9 +15,18 @@ test('phone home uses bottom-bar and home regions', async ({ page }) => {
   for (const name of LIVE_LINKS) {
     await expect(links.getByRole('link', { name })).toBeVisible();
   }
-  await expect(links.getByRole('link', { name: 'Search the chronicle' })).toHaveCount(0);
+  await expect(links.getByRole('button', { name: 'Search the chronicle' })).toHaveCount(0);
   await expect(links.getByRole('link', { name: 'Log in' })).toHaveCount(0);
-  await expect(page.getByRole('link', { name: 'Search the chronicle' })).toBeVisible();
+  const search = page.getByRole('button', { name: 'Search the chronicle' });
+  await expect(search).toBeVisible();
+  await search.click();
+  const dialog = page.getByRole('dialog', { name: 'Search the chronicle' });
+  await expect(dialog).toBeVisible();
+  const input = dialog.getByRole('textbox', { name: 'Search the chronicle' });
+  await expect(input).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).toBeHidden();
+  await expect(search).toHaveAttribute('aria-expanded', 'false');
   await expect(page.getByRole('link', { name: 'Log in' })).toBeVisible();
   await expect(page.locator('[data-page="home"]')).toBeVisible();
   await expect(page.locator('[data-page-region="heading"]')).toBeVisible();

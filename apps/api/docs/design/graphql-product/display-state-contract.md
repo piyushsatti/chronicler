@@ -1,0 +1,17 @@
+# Quest display state specification
+
+**Status:** accepted design. Published schema/config and comment scaffolds do not implement these contracts. Runtime enforcement remains pending the owning implementation tasks and their tests.
+
+Pattern is Specification with one PostgreSQL implementation. Quest owns the public projection and filter. This converges all product consumers on one authority.
+
+Migration P04 replaces the body of the existing `quest_display_status` view with a compatibility wrapper over `quest_display_status_at(status, filled_count, scheduled_at, duration_hours, as_of)`. QUE03 owns that SQL function in migration0003. The function is IMMUTABLE and returns text. The legacy wrapper supplies `now()` only for retained internal clients. Product SQL never uses that wrapper.
+
+The function has the exact precedence from migration0002. For open or full, return live when scheduled_at <= as_of < scheduled_at + duration_hours hours. Otherwise open with filled_count > 0 returns filling. Otherwise full with scheduled_at > as_of returns scheduled. Otherwise return the stored machine status. A full quest after its duration returns full. An open quest with zero players before its date returns open. No stored display enum, persisted cache, Go switch, or separately maintained Site/Spatial interpretation exists.
+
+QUE05 samples the injected UTC business clock once per owning query task. Each owning repository method receives its typed spec.AsOf and passes that timestamp to SQL; there is no extra per-row status lookup. Each Quest root list/count, Arc relation, DM history, RegionActivity and open-seat projection uses the same SQL function with that same timestamp for projection and filtering. Internal specs carry `AsOf time.Time`. Product readers never call now(), and an actor's timezone cannot change the predicate. The GraphQL field is computed from already projected data.
+
+SPA05 calls the Quest-provided, Spatial-consumer-owned `spatial.QuestActivityReader.ActivityByRegions` set reader for all selected region IDs and one AsOf. It never independently counts a live, scheduled, or filling predicate. Site totalQuests is a literal population count and does not acquire an unused display-state dependency. Those readers return consumer-owned DTOs through IDs and values. They do not return an eager Quest graph.
+
+S03 exact boundary group DISPLAY-ASOF resets only synthetic quests050 and052. Quest050 is open, filled0, Oct15T12:00, duration3.5h. At Oct14T12:00 it displays open. Quest052 is full, filled1, Oct16T12:00, duration3.5h. At Oct14T12:00 it displays scheduled. For050 at Oct15T12:00 it displays live, at15:29:59.999999 live, at15:30 open. After a declared fixture update filled_count1 while statusopen, the prestart and postend result is filling. That update is never part of the original fixture. For052 at Oct16T12:00 live, at15:30 full. Played, closed and cancelled remain their machine status at every clock. Root aliases displayStatus=open/filling/scheduled/live give disjoint exact synthetic IDs and matching totals under the identical AsOf. Canonical QA rows remain in global totals and are selected by their actual inputs in canonical-qa-fixture.json. Isolated exact two-row contrast applies shortCodes [Q-OPEN,Q-FULL].
+
+QUE03 SQL companion tests call the function at every boundary. QUE05 and SPA05 tests compare all rows/counts to those SQL results. S03 mounted tests prove the displayed field and its filter agree. All cases remain NOT IMPLEMENTED until runtime receipts exist.

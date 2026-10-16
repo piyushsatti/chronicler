@@ -1,0 +1,244 @@
+{
+  "old_source": "apps/api/db/seed/qa.jsonl",
+  "old_source_sha256": "15c9cccba4bc50b96b77f1657e665379083a635ff89f12a3fc03f130c244a9c8",
+  "old_total": 637,
+  "cosmetic_catalog": [
+    {
+      "table": "unlockables",
+      "conflict": ["public_id"],
+      "row": {
+        "active": true,
+        "code": "ink-night",
+        "cosmetic_type": "theme",
+        "payload": {
+          "label": "ink-night",
+          "rarity": "common"
+        },
+        "public_id": "00000012-0000-4000-8000-000000000001"
+      }
+    },
+    {
+      "table": "unlockables",
+      "conflict": ["public_id"],
+      "row": {
+        "active": true,
+        "code": "salt-gold",
+        "cosmetic_type": "palette",
+        "payload": {
+          "label": "salt-gold",
+          "rarity": "rare"
+        },
+        "public_id": "00000012-0000-4000-8000-000000000002"
+      }
+    },
+    {
+      "table": "unlockables",
+      "conflict": ["public_id"],
+      "row": {
+        "active": true,
+        "code": "chapbook",
+        "cosmetic_type": "font",
+        "payload": {
+          "label": "chapbook",
+          "rarity": "common"
+        },
+        "public_id": "00000012-0000-4000-8000-000000000003"
+      }
+    },
+    {
+      "table": "unlockables",
+      "conflict": ["public_id"],
+      "row": {
+        "active": false,
+        "code": "tower-lamp",
+        "cosmetic_type": "flair",
+        "payload": {
+          "label": "tower-lamp",
+          "rarity": "rare"
+        },
+        "public_id": "00000012-0000-4000-8000-000000000004"
+      }
+    },
+    {
+      "table": "unlockables",
+      "conflict": ["public_id"],
+      "row": {
+        "active": true,
+        "code": "road-warden",
+        "cosmetic_type": "title",
+        "payload": {
+          "label": "road-warden",
+          "rarity": "common"
+        },
+        "public_id": "00000012-0000-4000-8000-000000000005"
+      }
+    },
+    {
+      "table": "unlockables",
+      "conflict": ["public_id"],
+      "row": {
+        "active": true,
+        "code": "kept-seal",
+        "cosmetic_type": "badge",
+        "payload": {
+          "label": "kept-seal",
+          "rarity": "rare"
+        },
+        "public_id": "00000012-0000-4000-8000-000000000006"
+      }
+    },
+    {
+      "table": "unlockables",
+      "conflict": ["public_id"],
+      "row": {
+        "active": true,
+        "code": "charter-frame",
+        "cosmetic_type": "frame",
+        "payload": {
+          "label": "charter-frame",
+          "rarity": "common"
+        },
+        "public_id": "00000012-0000-4000-8000-000000000007"
+      }
+    },
+    {
+      "table": "unlockables",
+      "conflict": ["public_id"],
+      "row": {
+        "active": true,
+        "code": "wharf-plate",
+        "cosmetic_type": "nameplate",
+        "payload": {
+          "label": "wharf-plate",
+          "rarity": "rare"
+        },
+        "public_id": "00000012-0000-4000-8000-000000000008"
+      }
+    },
+    {
+      "table": "unlockables",
+      "conflict": ["public_id"],
+      "row": {
+        "active": true,
+        "code": "ferry-token",
+        "cosmetic_type": "token",
+        "payload": {
+          "label": "ferry-token",
+          "rarity": "common"
+        },
+        "public_id": "00000012-0000-4000-8000-000000000009"
+      }
+    }
+  ],
+  "cosmetic_grants": [
+    {
+      "table": "member_unlocks",
+      "conflict": ["member_id", "unlockable_id"],
+      "refs": {
+        "granted_by": {
+          "table": "members",
+          "public_id": "00000001-0000-4000-8000-000000000009"
+        },
+        "member_id": {
+          "table": "members",
+          "public_id": "00000001-0000-4000-8000-00000000000a"
+        },
+        "unlockable_id": {
+          "table": "unlockables",
+          "public_id": "00000012-0000-4000-8000-000000000001"
+        }
+      },
+      "row": {
+        "source": "milestone"
+      }
+    },
+    {
+      "table": "member_unlocks",
+      "conflict": ["member_id", "unlockable_id"],
+      "refs": {
+        "granted_by": {
+          "table": "members",
+          "public_id": "00000001-0000-4000-8000-000000000009"
+        },
+        "member_id": {
+          "table": "members",
+          "public_id": "00000001-0000-4000-8000-00000000000a"
+        },
+        "unlockable_id": {
+          "table": "unlockables",
+          "public_id": "00000012-0000-4000-8000-000000000002"
+        }
+      },
+      "row": {
+        "source": "event"
+      }
+    },
+    {
+      "table": "member_unlocks",
+      "conflict": ["member_id", "unlockable_id"],
+      "refs": {
+        "granted_by": {
+          "table": "members",
+          "public_id": "00000001-0000-4000-8000-000000000009"
+        },
+        "member_id": {
+          "table": "members",
+          "public_id": "00000001-0000-4000-8000-00000000000a"
+        },
+        "unlockable_id": {
+          "table": "unlockables",
+          "public_id": "00000012-0000-4000-8000-000000000003"
+        }
+      },
+      "row": {
+        "source": "cohort"
+      }
+    },
+    {
+      "table": "member_unlocks",
+      "conflict": ["member_id", "unlockable_id"],
+      "refs": {
+        "granted_by": {
+          "table": "members",
+          "public_id": "00000001-0000-4000-8000-000000000009"
+        },
+        "member_id": {
+          "table": "members",
+          "public_id": "00000001-0000-4000-8000-00000000000a"
+        },
+        "unlockable_id": {
+          "table": "unlockables",
+          "public_id": "00000012-0000-4000-8000-000000000004"
+        }
+      },
+      "row": {
+        "source": "grant"
+      }
+    },
+    {
+      "table": "member_unlocks",
+      "conflict": ["member_id", "unlockable_id"],
+      "refs": {
+        "granted_by": {
+          "table": "members",
+          "public_id": "00000001-0000-4000-8000-000000000009"
+        },
+        "member_id": {
+          "table": "members",
+          "public_id": "00000001-0000-4000-8000-00000000000a"
+        },
+        "unlockable_id": {
+          "table": "unlockables",
+          "public_id": "00000012-0000-4000-8000-000000000005"
+        }
+      },
+      "row": {
+        "source": "purchase"
+      }
+    }
+  ],
+  "removed_records": 14,
+  "unchanged_old_records": 623,
+  "unchanged_old_rowset_sha256": "0826a2ba053711cb5aec86be57da384d75bf7c56ad4525b0a5cd9b9e35ea30ee",
+  "rule": "Exact old-row removal receipt only. S06 must update actual Go source, controlled ROOT-GEN-QA recomputes final current source hashes/counts including separately declared additions; no replacement achievement invented."
+}

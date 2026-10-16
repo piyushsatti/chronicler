@@ -1,0 +1,148 @@
+{
+  "authority": "current approved DM Dee003; ordinary Document authorship permissions remain unchanged",
+  "cases": [
+    {
+      "actor": "001",
+      "effects": "zero rows changed; other author table901 is never substituted",
+      "expected": {
+        "dmTable": null
+      },
+      "name": "empty",
+      "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations.",
+      "selection": "query {\n\tquest(id: \"10000000-0000-4000-8000-000000000050\") {\n\t\tdmTable {\n\t\t\tid\n\t\t\ttitle\n\t\t}\n\t}\n}\n"
+    },
+    {
+      "actor": "003",
+      "effects": {
+        "documents": "exact input stored under captured UUID tableId, author003, version1",
+        "history": "one initial authored revision matching title/body/frontmatter and actor003; record UUID as $revisionId",
+        "notifications": "no mention/source event for this plain body",
+        "receipt": "one complete actor003/createDocument/d5-create receipt; replay returns same tableId,revisionId and adds zero rows"
+      },
+      "expected": {
+        "authorId": "10000000-0000-4000-8000-000000000003",
+        "category": "dm_table",
+        "id": "$tableId",
+        "kind": "community",
+        "status": "draft",
+        "title": "Dee table",
+        "visibility": "public"
+      },
+      "lookup": "as actor003 quest050.dmTable.id equals tableId; anonymous draft lookup null under Document audience rule",
+      "meta": {
+        "idempotencyKey": "d5-create"
+      },
+      "name": "create_and_lookup",
+      "operation": "createDocument"
+    },
+    {
+      "actor": "003",
+      "expected": "after ordinary publish transaction anonymous quest050.dmTable selects tableId/title Dee table; duplicate key aliases resolve the same ID",
+      "id": "$tableId",
+      "name": "publish_then_public_lookup",
+      "operation": "publishDocument"
+    },
+    {
+      "actor": "003",
+      "delta_input": {
+        "title": "Second Dee table"
+      },
+      "effects": "no second document, initial revision, receipt or event; tableId unchanged",
+      "expected_error": {
+        "code": "CONFLICT",
+        "safe_reason": "DUPLICATE_DM_TABLE"
+      },
+      "name": "duplicate_precheck",
+      "operation": "createDocument"
+    },
+    {
+      "actor": "003",
+      "expected": "exactly one committed table and receipt; loser CONFLICT/DUPLICATE_DM_TABLE from precheck or mapped index error; no duplicate live slot or loser history",
+      "isolation": "fresh empty003 slot; run two distinct titles/keys simultaneously",
+      "name": "concurrent_duplicates"
+    },
+    {
+      "actor": "003",
+      "effects": "soft-delete/create each have their normal immutable Document history; failures never erase either history",
+      "expected": "replacement owns unique slot; restore rejects CONFLICT/DUPLICATE_DM_TABLE; original remains deleted and replacement remains live, no restore history/receipt",
+      "name": "soft_delete_replacement_restore",
+      "steps": [
+        "soft-delete tableId through deleteDocument; quest050.dmTable null",
+        "create replacement with title Dee replacement table; server allocates dee-replacement-table; capture replacementId",
+        "restore tableId while replacement live"
+      ]
+    },
+    {
+      "expected": "003 sees tableId;001 and anonymous dmTable null with no UUID/title/body leakage; specification DB failure is opaque error, not null success",
+      "fixture": "publish live table with policy member:10000000-0000-4000-8000-000000000003 and protected body",
+      "name": "protected"
+    }
+  ],
+  "create_input": {
+    "body": "Meet at the River Hall.",
+    "category": "dm_table",
+    "frontmatter": {},
+    "kind": "community",
+    "policy": null,
+    "title": "Dee table",
+    "visibility": "public"
+  },
+  "fixture": {
+    "isolation": "Fresh isolated S03 core plus explicit otherAuthorTable901; no broad QA. No existing003 DM table in empty-state case; preserve every other core Document and other-author table. Every case resets, generated identities captured.",
+    "namespace": "10000000-0000-4000-8000-000000000NNN",
+    "otherAuthorTable901": {
+      "authorId": "10000000-0000-4000-8000-000000000002",
+      "category": "dm_table",
+      "deletedAt": null,
+      "id": "10000000-0000-4000-8000-000000000901",
+      "kind": "community",
+      "title": "Other DM table"
+    },
+    "quest050": {
+      "dmId": "10000000-0000-4000-8000-000000000003"
+    }
+  },
+  "id": "D5-DM-TABLE-EXACT",
+  "input_boundaries": {
+    "body": {
+      "empty": "valid empty draft body, no mention event",
+      "omit_or_null": "INVALID",
+      "persisted": "documents draft body and initial revision body"
+    },
+    "category": {
+      "omitted_or_null": "ordinary community document, no DM-table slot occupied",
+      "persisted": "documents.category"
+    },
+    "frontmatter": {
+      "omit_or_null": "INVALID",
+      "persisted": "documents draft frontmatter and initial revision frontmatter"
+    },
+    "kind": {
+      "omit_or_null": "INVALID",
+      "persisted": "documents.kind"
+    },
+    "policy": {
+      "omitted_or_null": "no explicit policy; existing visibility specification applies",
+      "persisted": "documents.policy"
+    },
+    "title": {
+      "empty": "INVALID",
+      "omit_or_null": "INVALID",
+      "persisted": "documents.title"
+    },
+    "visibility": {
+      "omit_or_null": "INVALID",
+      "persisted": "documents.visibility"
+    }
+  },
+  "owner": "S03",
+  "source_owners": {
+    "create_precheck": "DOC06",
+    "field": "NEST-quest",
+    "loader": "DOC05/G02",
+    "lookup_constraint": "DOC04",
+    "unique_index": "P04"
+  },
+  "status": "NOT IMPLEMENTED",
+  "test_file": "apps/api/cmd/api/graphql_product_integration_test.go"
+}

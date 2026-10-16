@@ -1,0 +1,64 @@
+extend type Query {
+  document(slug: String!): DocumentType
+  documentById(id: ID!): DocumentType
+  documents(
+    filters: DocumentFiltersInput = null
+    limit: Int! = 50
+    offset: Int! = 0
+  ): DocumentListResult!
+  documentBacklinks(
+    slug: String!
+    limit: Int! = 50
+    offset: Int! = 0
+  ): [DocumentLinkType!]!
+  codexDirectory(
+    categoryPrefix: String = null
+    search: String = null
+    limit: Int! = 50
+    offset: Int! = 0
+  ): CodexDirectoryResult!
+  codexEntry(slug: String!): CodexEntryCardType
+  codexCategories: [CategoryCountType!]!
+  documentRevisions(
+    documentId: ID!
+    limit: Int! = 50
+    offset: Int! = 0
+  ): DocumentRevisionPage!
+  documentsTrash(limit: Int! = 50, offset: Int! = 0): DocumentListResult!
+  previewBody(body: String!, audience: PreviewAudience!, authorId: ID): String!
+  lieutenantAssignments(
+    memberId: ID
+    npcDocumentId: ID
+    limit: Int! = 50
+    offset: Int! = 0
+  ): LieutenantPage!
+}
+extend type Mutation {
+  createDocument(input: DocumentDraftInput!, meta: CommandMeta!): DocumentType!
+  updateDocument(id: ID!, input: DocumentEditInput!, meta: CommandMeta!): DocumentType!
+  publishDocument(id: ID!, expectedRevision: Int!, meta: CommandMeta!): DocumentType!
+  unpublishDocument(id: ID!, expectedRevision: Int!, meta: CommandMeta!): DocumentType!
+  editPublishedDocument(
+    id: ID!
+    input: DocumentEditInput!
+    meta: CommandMeta!
+  ): DocumentType!
+  setDocumentVisibility(
+    id: ID!
+    expectedRevision: Int!
+    input: DocumentAudienceInput!
+    meta: CommandMeta!
+  ): DocumentType!
+  deleteDocument(id: ID!, expectedRevision: Int!, meta: CommandMeta!): CommandReceipt!
+  restoreDocument(id: ID!, meta: CommandMeta!): DocumentType!
+  assignLieutenant(
+    memberId: ID!
+    npcDocumentId: ID!
+    meta: CommandMeta!
+  ): LieutenantAssignmentType!
+  revokeLieutenant(
+    memberId: ID!
+    npcDocumentId: ID!
+    meta: CommandMeta!
+  ): CommandReceipt!
+}

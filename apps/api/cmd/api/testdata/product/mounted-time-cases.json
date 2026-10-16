@@ -1,0 +1,356 @@
+{
+  "clock": "2026-10-14T12:00:00Z",
+  "calendar_delta": {
+    "era": {
+      "name": "Pi Era",
+      "abbrev": "PI"
+    },
+    "periods": [
+      {
+        "name": "River",
+        "type": "month",
+        "days": 30
+      }
+    ],
+    "leap": null
+  },
+  "reader": {
+    "id": "TIME-READ-EXACT",
+    "owner": "S03",
+    "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+    "fixture": "Keep canonical QA Jan1 anchor 00000017-0000-4000-8000-000000000001 with epoch0/rate1.5/note from apps/api/db/seed/qa.jsonl; add synthetic anchor100 Oct1/epoch100/rate1/note Fixture; override10Oct\u2192-1,11Oct\u21920,12Oct\u2192112,13Oct\u2192112,14Oct\u2192113 and15Oct\u2192114, delete only16Oct; replace calendar singleton with calendar_delta. Other QA rows remain.",
+    "aliases": [
+      {
+        "operation": "gameDate",
+        "arguments": {
+          "realDate": "2026-10-14"
+        },
+        "expected": {
+          "eraAbbrev": "PI",
+          "year": 4,
+          "periodName": "River",
+          "periodIndex": 0,
+          "periodType": "month",
+          "day": 24
+        }
+      },
+      {
+        "operation": "gameDate",
+        "arguments": {
+          "realDate": "2026-10-16"
+        },
+        "expected": null
+      },
+      {
+        "operation": "gameCalendar",
+        "arguments": {
+          "realFrom": "2026-10-14",
+          "realTo": "2026-10-17"
+        },
+        "expected": {
+          "definition": {
+            "era": {
+              "name": "Pi Era",
+              "abbrev": "PI"
+            },
+            "periods": [
+              {
+                "name": "River",
+                "type": "month",
+                "days": 30
+              }
+            ],
+            "leap": null
+          },
+          "currentGameDay": 113,
+          "currentGameDate": {
+            "eraAbbrev": "PI",
+            "year": 4,
+            "periodName": "River",
+            "periodIndex": 0,
+            "periodType": "month",
+            "day": 24
+          },
+          "monthGrid": [
+            {
+              "realDate": "2026-10-14",
+              "gameDay": 113
+            },
+            {
+              "realDate": "2026-10-15",
+              "gameDay": 114
+            },
+            {
+              "realDate": "2026-10-16",
+              "gameDay": null
+            }
+          ]
+        }
+      },
+      {
+        "operation": "timeAnchors",
+        "actor": "004",
+        "arguments": {
+          "limit": 1,
+          "offset": 1
+        },
+        "expected": {
+          "items": [
+            {
+              "id": "10000000-0000-4000-8000-000000000100",
+              "realUtc": "2026-10-01T00:00:00Z",
+              "epochDay": 100,
+              "rate": 1,
+              "note": "Fixture"
+            }
+          ],
+          "total": 2
+        }
+      },
+      {
+        "operation": "realDates",
+        "arguments": {
+          "gameDay": 112,
+          "limit": 1,
+          "offset": 0
+        },
+        "expected": {
+          "items": ["2026-10-12"],
+          "total": 2
+        }
+      },
+      {
+        "operation": "realDates",
+        "arguments": {
+          "gameDay": 112,
+          "limit": 1,
+          "offset": 1
+        },
+        "expected": {
+          "items": ["2026-10-13"],
+          "total": 2
+        }
+      },
+      {
+        "operation": "realDates",
+        "arguments": {
+          "gameDay": 112,
+          "limit": 1,
+          "offset": 2
+        },
+        "expected": {
+          "items": [],
+          "total": 2
+        }
+      },
+      {
+        "operation": "gameDate",
+        "arguments": {
+          "realDate": "2026-10-11"
+        },
+        "expected": {
+          "eraAbbrev": "PI",
+          "year": 1,
+          "periodName": "River",
+          "periodIndex": 0,
+          "periodType": "month",
+          "day": 1
+        }
+      },
+      {
+        "operation": "gameDate",
+        "arguments": {
+          "realDate": "2026-10-10"
+        },
+        "expected": {
+          "eraAbbrev": "PI",
+          "year": 0,
+          "periodName": "River",
+          "periodIndex": 0,
+          "periodType": "month",
+          "day": 30
+        }
+      },
+      {
+        "operation": "gameCalendar",
+        "arguments": {
+          "realFrom": "2026-10-15",
+          "realTo": "2026-10-17"
+        },
+        "expected": {
+          "definition": {
+            "era": {
+              "name": "Pi Era",
+              "abbrev": "PI"
+            },
+            "periods": [
+              {
+                "name": "River",
+                "type": "month",
+                "days": 30
+              }
+            ],
+            "leap": null
+          },
+          "currentGameDay": 113,
+          "currentGameDate": {
+            "eraAbbrev": "PI",
+            "year": 4,
+            "periodName": "River",
+            "periodIndex": 0,
+            "periodType": "month",
+            "day": 24
+          },
+          "monthGrid": [
+            {
+              "realDate": "2026-10-15",
+              "gameDay": 114
+            },
+            {
+              "realDate": "2026-10-16",
+              "gameDay": null
+            }
+          ]
+        }
+      },
+      {
+        "operation": "gameCalendar",
+        "arguments": {
+          "realFrom": "2026-10-14",
+          "realTo": "2026-10-16"
+        },
+        "expected": {
+          "definition": {
+            "era": {
+              "name": "Pi Era",
+              "abbrev": "PI"
+            },
+            "periods": [
+              {
+                "name": "River",
+                "type": "month",
+                "days": 30
+              }
+            ],
+            "leap": null
+          },
+          "currentGameDay": 113,
+          "currentGameDate": {
+            "eraAbbrev": "PI",
+            "year": 4,
+            "periodName": "River",
+            "periodIndex": 0,
+            "periodType": "month",
+            "day": 24
+          },
+          "monthGrid": [
+            {
+              "realDate": "2026-10-14",
+              "gameDay": 113
+            },
+            {
+              "realDate": "2026-10-15",
+              "gameDay": 114
+            }
+          ]
+        }
+      },
+      {
+        "operation": "realDates",
+        "arguments": {
+          "gameDay": 112,
+          "limit": 100,
+          "offset": 0
+        },
+        "expected": {
+          "items": ["2026-10-12", "2026-10-13"],
+          "total": 2
+        }
+      },
+      {
+        "operation": "realDates",
+        "arguments": {
+          "gameDay": 999,
+          "limit": 1,
+          "offset": 0
+        },
+        "expected": {
+          "items": [],
+          "total": 0
+        }
+      },
+      {
+        "operation": "realDates",
+        "arguments": {
+          "gameDay": -1,
+          "limit": 1,
+          "offset": 0
+        },
+        "expected": {
+          "items": ["2026-10-10"],
+          "total": 1
+        }
+      }
+    ],
+    "boundary": "realFrom2026-01-01/realTo2027-01-03 span367 INVALID; from=to or reversed INVALID; malformed date INVALID. Unknown mapped date returns null without SQL writes. timeAnchors player001 FORBIDDEN; limit0/101 and offset-1 INVALID; offset2 [] total2. At offset0 the canonical QA Jan1 anchor remains visible rather than disappearing from total. realDates limit0/101/offset-1 INVALID; gameDay1.2 or2147483648 INVALID at Int coercion. timeAnchors limit100 returns canonical QA Jan1 row then synthetic100, total2; offset0/limit1 selects the complete literal QA source row, never synthetic100.",
+    "effects": "Zero business/history/receipt/event/notification/job writes. Canonical QA definition reset in a separate parser case gives stored214 year2/Ember/day5/literal epoch Year of the Kept Tower; no inferred abbreviation or offset."
+  },
+  "writer": {
+    "id": "TIME-ANCHOR-WRITE-EXACT",
+    "owner": "S04",
+    "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+    "operations": ["createTimeAnchor", "updateTimeAnchor"],
+    "actor": "004",
+    "fixture": "Keep canonical QA Jan1 anchor, add anchor100 Oct1/epoch100/rate1/note Fixture. Set historical13Oct\u2192112; clear mapped future dates>=14Oct and insert14Oct\u2192113,15Oct\u2192114. Use calendar_delta. Other domains remain populated.",
+    "create": {
+      "input": {
+        "realUtc": "2026-10-14T00:00:00Z",
+        "epochDay": 200,
+        "rate": 2,
+        "note": "Bridge calendar anchor"
+      },
+      "meta": {
+        "idempotencyKey": "time-anchor-create-1"
+      },
+      "capture": "anchorId from create response; historyId from unique actor/time/anchor immutable row; both canonical UUID and FK-corresponding, never predetermined suffixes",
+      "expected": {
+        "id": "$anchorId",
+        "realUtc": "2026-10-14T00:00:00Z",
+        "epochDay": 200,
+        "rate": 2,
+        "note": "Bridge calendar anchor"
+      },
+      "map": "Every date d in [14Oct,13Nov) has 200+2*(UTCdays(d)-UTCdays(14Oct));14\u2192200,15\u2192202,12Nov\u2192258.13Oct remains112. Exactly30 changed/inserted future map rows, one anchor, one prior-null/new-input history actor004/clock, one receipt."
+    },
+    "update": {
+      "id": "$anchorId",
+      "input": {
+        "realUtc": "2026-10-15T00:00:00Z",
+        "epochDay": 201,
+        "rate": 3,
+        "note": "Revised calibration"
+      },
+      "meta": {
+        "idempotencyKey": "time-anchor-update-1"
+      },
+      "expected": {
+        "id": "$anchorId",
+        "realUtc": "2026-10-15T00:00:00Z",
+        "epochDay": 201,
+        "rate": 3,
+        "note": "Revised calibration"
+      },
+      "map": "14Oct reverts to existing anchor100 projection113; every d in [15Oct,13Nov) is201+3*(UTCdays(d)-UTCdays(15Oct));15\u2192201,12Nov\u2192285; historical13 remains112. History exact prior create input and new update input, actor004/clock, one new receipt. All four input fields differ from prior. Exactly29 map rows change;16Oct remains204 and is not counted as an update."
+    },
+    "null_omitted": "note null/omitted means stored SQL NULL in this complete replacement input, not preserve; required realUtc/epochDay/rate null or omitted INVALID with zero changes.",
+    "validation": [
+      "rate0 succeeds as explicit pause, every covered future date gets epochDay; rate-1,101,string NaN/infinity for Float INVALID at GraphQL coercion; malformed non-JSON numeric tokens transport400. rate1.5 exact rational floor tested at UTC midnight and fractional-anchor boundaries.",
+      "note2001 characters INVALID;2000 allowed. Epoch overflow of any projected row INVALID and rolls back anchor/history/map/receipt.",
+      "Another anchor at exact Oct1T00 already exists: new duplicate realUtc CONFLICT, no write. Legacy duplicate rows remain preserved; tie-break UUID descending is deterministic.",
+      "Player001 FORBIDDEN, no changes; configured active owner009 may use explicitly admitted Time privilege but gets no Character bypass.",
+      "Remove all anchors only in first-anchor boundary fixture; first future-only anchor cannot cover current midnight and fails INVALID, no rows/fabricated fallback."
+    ],
+    "rollback": "Inject map, history or receipt write failure after anchor update: opaque INTERNAL and byte-for-byte original anchor/map/history/receipt state. Same key/input replay returns same captured anchor/history/result and zero repeated effects. Changed input same key CONFLICT. No notification/event/job/progression/grant writes.",
+    "concurrency": "Two updates serialize on Time aggregate lock; each history prior equals immediately preceding committed state. Worker token1 paused before effect transaction/receipt row lock, reclaimed token2 via separate worker/control pools: token1 zero map/history/EFFECT_ADMITTED effects; token2 obtains physical kind lock and admits exact projection once with each execution pool maximum1 and a separate control pool."
+  }
+}

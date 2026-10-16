@@ -1,10 +1,10 @@
 openapi: 3.1.0
 info:
   title: Chronicler API
-  version: '0.1.0'
-  description: |
-    REST surface under /v1. GraphQL trees live at POST /v1/graphql.
-    Field routing: packages/contracts/field-routing.md
+  version: 0.1.0
+  description: Accepted HTTP protocol contract. Product operations use POST /v1/graphql.
+    Product REST route removal and GraphQL runtime implementation remain pending;
+    split SDL is authoritative for product fields.
 servers:
   - url: /
 paths:
@@ -14,7 +14,6 @@ paths:
       responses:
         '204':
           description: Process is up
-
   /auth/discord:
     get:
       operationId: discordOAuthRedirect
@@ -26,7 +25,6 @@ paths:
       responses:
         '302':
           description: Redirect to Discord
-
   /auth/discord/callback:
     post:
       operationId: discordOAuthCallback
@@ -36,7 +34,8 @@ paths:
           application/json:
             schema:
               type: object
-              required: [code]
+              required:
+                - code
               properties:
                 code:
                   type: string
@@ -49,33 +48,11 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [token]
+                required:
+                  - token
                 properties:
                   token:
                     type: string
-
-  /v1/members/me:
-    get:
-      operationId: memberMe
-      description: Current authenticated member. Roles come from the existing verified request authority, not bearer token role claims.
-      security:
-        - bearer: []
-      responses:
-        '200':
-          description: Current member identity and current request roles
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MemberMe'
-        '401':
-          $ref: '#/components/responses/Problem'
-        '403':
-          $ref: '#/components/responses/Problem'
-        '404':
-          $ref: '#/components/responses/Problem'
-        '500':
-          $ref: '#/components/responses/Problem'
-
   /v1/ingest/discord-event:
     post:
       operationId: ingestDiscordEvent
@@ -94,7 +71,6 @@ paths:
           $ref: '#/components/responses/Problem'
         '422':
           $ref: '#/components/responses/Problem'
-
   /v1/ingest/heartbeat:
     post:
       operationId: ingestHeartbeat
@@ -111,7 +87,6 @@ paths:
           description: Accepted
         '401':
           $ref: '#/components/responses/Problem'
-
   /v1/agent/questions:
     post:
       operationId: submitQuestion
@@ -133,7 +108,6 @@ paths:
           $ref: '#/components/responses/Problem'
         '422':
           $ref: '#/components/responses/Problem'
-
   /v1/agent/questions/{id}:
     get:
       operationId: getQuestion
@@ -159,11 +133,12 @@ paths:
           description: Still running (no body)
         '404':
           $ref: '#/components/responses/Problem'
-
   /v1/agent/questions/claim:
     post:
       operationId: claimQuestion
-      description: Lease protocol 1. Agent lease is 30 seconds; renew after 10 seconds. The immutable whole-question deadline is 100 seconds from submission, including queue and retry time.
+      description: Lease protocol 1. Agent lease is 30 seconds; renew after 10 seconds.
+        The immutable whole-question deadline is 100 seconds from submission, including
+        queue and retry time.
       security:
         - ingestSecret: []
       requestBody:
@@ -185,11 +160,11 @@ paths:
           $ref: '#/components/responses/Problem'
         '422':
           $ref: '#/components/responses/Problem'
-
   /v1/agent/questions/{id}/complete:
     post:
       operationId: completeQuestion
-      description: Stored or identical current terminal replay. Expired or superseded receipt returns 409.
+      description: Stored or identical current terminal replay. Expired or superseded
+        receipt returns 409.
       security:
         - ingestSecret: []
       parameters:
@@ -216,7 +191,6 @@ paths:
           $ref: '#/components/responses/Problem'
         '422':
           $ref: '#/components/responses/Problem'
-
   /v1/agent/questions/{id}/renew:
     post:
       operationId: renewQuestion
@@ -251,11 +225,11 @@ paths:
           $ref: '#/components/responses/Problem'
         '422':
           $ref: '#/components/responses/Problem'
-
   /v1/agent/questions/{id}/retry:
     post:
       operationId: retryQuestion
-      description: Ownership released; an old retry receipt returns 409. Expired or superseded receipt returns 409.
+      description: Ownership released; an old retry receipt returns 409. Expired or
+        superseded receipt returns 409.
       security:
         - ingestSecret: []
       parameters:
@@ -282,474 +256,34 @@ paths:
           $ref: '#/components/responses/Problem'
         '422':
           $ref: '#/components/responses/Problem'
-
-  /v1/quests:
+  /v1/graphql:
     post:
-      operationId: createQuest
+      operationId: graphql
       security:
+        - {}
         - bearer: []
+      description: Single selected GraphQL operation. Live authority follows pure
+        request validation. No array batching, uploads or subscriptions. Product commands
+        own independent transactions.
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              type: object
-              required: [shortCode, kinds, scheduledAt, documentId]
-              properties:
-                shortCode:
-                  type: string
-                kinds:
-                  type: array
-                  items:
-                    type: string
-                scheduledAt:
-                  type: string
-                  format: date-time
-                documentId:
-                  type: string
-                  format: uuid
-                slotsMax:
-                  type: integer
-                durationHours:
-                  type: number
+              $ref: '#/components/schemas/GraphQLRequest'
       responses:
-        '201':
-          description: Quest created
+        '200':
+          description: Executed GraphQL result; errors use extensions.code, including
+            expected failures.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/QuestStatus'
-        '401':
-          $ref: '#/components/responses/Problem'
-        '422':
-          $ref: '#/components/responses/Problem'
-
-  /v1/quests/{id}/signup:
-    post:
-      operationId: signupForQuest
-      security:
-        - bearer: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [characterId]
-              properties:
-                characterId:
-                  type: string
-                  format: uuid
-      responses:
-        '204':
-          description: Signed up
-        '401':
-          $ref: '#/components/responses/Problem'
-        '404':
-          $ref: '#/components/responses/Problem'
-        '409':
-          $ref: '#/components/responses/Problem'
-        '422':
-          $ref: '#/components/responses/Problem'
-
-  /v1/quests/{id}/discord/sync:
-    post:
-      operationId: syncQuestDiscord
-      security:
-        - bearer: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '204':
-          description: Desired revision bumped and delivery enqueued
-        '401':
-          $ref: '#/components/responses/Problem'
-        '403':
-          $ref: '#/components/responses/Problem'
-        '404':
-          $ref: '#/components/responses/Problem'
-
-  /v1/quests/{id}/transition:
-    post:
-      operationId: transitionQuestStatus
-      security:
-        - bearer: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [to]
-              properties:
-                to:
-                  type: string
-                  enum: [open, full, played, cancelled]
-      responses:
-        '200':
-          description: Quest after transition
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/QuestStatus'
-        '401':
-          $ref: '#/components/responses/Problem'
-        '403':
-          $ref: '#/components/responses/Problem'
-        '404':
-          $ref: '#/components/responses/Problem'
-        '409':
-          $ref: '#/components/responses/Problem'
-        '422':
-          $ref: '#/components/responses/Problem'
-
-  /v1/quests/{id}/close:
-    post:
-      operationId: closeQuest
-      security:
-        - bearer: []
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required: [idempotencyKey, rewards]
-              properties:
-                idempotencyKey:
-                  type: string
-                  format: uuid
-                rewards:
-                  type: array
-                  items:
-                    type: object
-                    required: [kind]
-                    properties:
-                      kind:
-                        type: string
-                      amount:
-                        type: integer
-                      note:
-                        type: string
-      responses:
-        '200':
-          description: Quest closed
-        '401':
-          $ref: '#/components/responses/Problem'
-        '409':
-          $ref: '#/components/responses/Problem'
-
-  /v1/me/notifications/unread-count:
-    get:
-      operationId: myUnreadNotificationCount
-      description: Count the verified current member's notification rows with read_at null. This read does not acknowledge, suppress or mark notifications read.
-      security:
-        - bearer: []
-      responses:
-        '200':
-          description: Current member unread count
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties: false
-                required: [count]
-                properties:
-                  count:
-                    type: integer
-                    minimum: 0
-        '401':
-          $ref: '#/components/responses/Problem'
-        '403':
-          $ref: '#/components/responses/Problem'
-        '500':
-          $ref: '#/components/responses/Problem'
-
-  /v1/me/notifications/read:
-    post:
-      operationId: markNotificationsRead
-      description: >-
-        Mark only the current active member's addressed unread notifications read.
-        Accept exactly one JSON object with ids, no duplicate keys or trailing value,
-        and at most 8192 request-body bytes. Enforce the 100-entry bound before
-        case-insensitive UUID deduplication. Unknown, foreign and already-read IDs
-        are ignored without disclosure. Empty ids is a valid no-op. One transaction
-        timestamp is used for new read_at values; existing timestamps never change.
-        Success follows commit acknowledgement. A lost commit acknowledgement can
-        have an unknown outcome; retry is idempotent. Atomicity is per request.
-      security:
-        - bearer: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              additionalProperties: false
-              required: [ids]
-              properties:
-                ids:
-                  type: array
-                  maxItems: 100
-                  items:
-                    type: string
-                    format: uuid
-                    pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$'
-      responses:
-        '204':
-          description: Command committed; no response body or per-ID outcomes
-        '401':
-          $ref: '#/components/responses/Problem'
-        '403':
-          $ref: '#/components/responses/Problem'
-        '422':
-          description: Invalid notification read request; fixed INVALID problem, with no request data echoed
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/Problem'
-        '500':
-          $ref: '#/components/responses/Problem'
-
-  /v1/me/notifications/acknowledge-suppressed:
-    post:
-      operationId: acknowledgeSuppressedNotifications
-      security:
-        - bearer: []
-      responses:
-        '204':
-          description: Suppressed rows marked read
-
-  /v1/me/personalization/reconcile:
-    post:
-      operationId: reconcileUnlocks
-      security:
-        - bearer: []
-      responses:
-        '200':
-          description: Grants applied
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  grantedCount:
-                    type: integer
-
-  /v1/stats:
-    get:
-      operationId: siteStats
-      responses:
-        '200':
-          description: Fixed public aggregates
-
-  /v1/search/kinds:
-    get:
-      operationId: searchableKinds
-      responses:
-        '200':
-          description: Static searchable kind catalog
-
-  /v1/time/game-date:
-    get:
-      operationId: gameDate
-      parameters:
-        - name: realDate
-          in: query
-          required: true
-          schema:
-            type: string
-            format: date
-      responses:
-        '200':
-          description: Game day
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [gameDay]
-                properties:
-                  gameDay:
-                    type: integer
-        '404':
-          $ref: '#/components/responses/Problem'
-
-  /v1/members/by-discord/{discordId}:
-    get:
-      operationId: memberByDiscordId
-      parameters:
-        - name: discordId
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Member row
-        '404':
-          $ref: '#/components/responses/Problem'
-
-  /v1/members/{id}/role-history:
-    get:
-      operationId: memberRoleHistory
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Role change ledger
-
-  /v1/members/{id}/availability:
-    get:
-      operationId: memberAvailability
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Weekly availability windows
-
-  /v1/hexes/{id}/history:
-    get:
-      operationId: hexHistory
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Hex change log
-
-  /v1/regions/{id}/counts:
-    get:
-      operationId: regionCounts
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Hex and open-quest counts
-
-  /v1/maps/{atlasCode}/activity:
-    get:
-      operationId: regionActivity
-      parameters:
-        - name: atlasCode
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Recent map edit activity
-
-  /v1/characters/{id}/progression:
-    get:
-      operationId: characterProgression
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: PCXP ledger entries
-
-  /v1/characters/{id}/logs:
-    get:
-      operationId: characterLogs
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Character session logs
-
-  /v1/characters/{id}/verification-history:
-    get:
-      operationId: characterVerificationHistory
-      parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
-            format: uuid
-      responses:
-        '200':
-          description: Verification decisions
-
-  /v1/time/real-dates:
-    get:
-      operationId: realDate
-      parameters:
-        - name: gameDay
-          in: query
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Zero or more real dates
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [dates]
-                properties:
-                  dates:
-                    type: array
-                    items:
-                      type: string
-                      format: date
-
+                $ref: '#/components/schemas/GraphQLResponse'
+        '400':
+          description: Malformed JSON/envelope or transport document; no business
+            effect.
+        '413':
+          description: Request exceeds256KiB; no business effect.
 components:
   securitySchemes:
     bearer:
@@ -768,29 +302,12 @@ components:
           schema:
             $ref: '#/components/schemas/Problem'
   schemas:
-    MemberMe:
-      type: object
-      additionalProperties: false
-      required: [id, handle, displayName, roles]
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Existing member public_id; never the internal BIGINT id or Discord identity.
-        handle:
-          type: string
-          minLength: 1
-        displayName:
-          type: string
-          minLength: 1
-        roles:
-          type: array
-          description: Existing exact role strings from the verified current request authority. An empty set serializes as [], never null. No role hierarchy or new enum is introduced.
-          items:
-            type: string
     Problem:
       type: object
-      required: [title, status, code]
+      required:
+        - title
+        - status
+        - code
       properties:
         title:
           type: string
@@ -798,16 +315,31 @@ components:
           type: integer
         code:
           type: string
-          enum: [INVALID, UNAUTHENTICATED, FORBIDDEN, NOT_FOUND, CONFLICT, INTERNAL]
+          enum:
+            - INVALID
+            - UNAUTHENTICATED
+            - FORBIDDEN
+            - NOT_FOUND
+            - CONFLICT
+            - INTERNAL
     DiscordEvent:
       type: object
-      required: [event_id, kind, discord_user_id, channel_id, occurred_at, amount]
+      required:
+        - event_id
+        - kind
+        - discord_user_id
+        - channel_id
+        - occurred_at
+        - amount
       properties:
         event_id:
           type: string
         kind:
           type: string
-          enum: [message, voice, reaction]
+          enum:
+            - message
+            - voice
+            - reaction
         discord_user_id:
           type: string
         channel_id:
@@ -824,28 +356,29 @@ components:
       description: Request at most 16384 bytes.
       type: object
       additionalProperties: false
-      required: [lease_protocol]
+      required:
+        - lease_protocol
       properties:
         lease_protocol:
           type: integer
           const: 1
     LeaseToken:
       type: string
-      pattern: '^[1-9][0-9]{0,18}$'
-      description: Positive signed-64-bit monotonic token, encoded as a decimal string; never reused.
+      pattern: ^[1-9][0-9]{0,18}$
+      description: Positive signed-64-bit monotonic token, encoded as a decimal string;
+        never reused.
     Lease:
       type: object
       additionalProperties: false
-      description: Agent protocol 1. Response at most 16384 bytes. attempt_deadline_at equals the immutable question_deadline_at; expires_at never exceeds that deadline.
+      description: Agent protocol 1. Response at most 16384 bytes. attempt_deadline_at
+        equals the immutable question_deadline_at; expires_at never exceeds that deadline.
       required:
-        [
-          token,
-          attempt,
-          expires_at,
-          renew_after_seconds,
-          attempt_deadline_at,
-          remaining_budget_seconds,
-        ]
+        - token
+        - attempt
+        - expires_at
+        - renew_after_seconds
+        - attempt_deadline_at
+        - remaining_budget_seconds
       properties:
         token:
           $ref: '#/components/schemas/LeaseToken'
@@ -864,14 +397,19 @@ components:
         remaining_budget_seconds:
           type: number
           minimum: 0
-          description: Whole-question time remaining at the server clock sample; subtract measured request round-trip time locally.
+          description:
+            Whole-question time remaining at the server clock sample; subtract
+            measured request round-trip time locally.
     ClaimedQuestion:
-      description: Response at most 65536 bytes. Whole-question deadline is 100 seconds after submission, including queue time and all attempts.
+      description: Response at most 65536 bytes. Whole-question deadline is 100 seconds
+        after submission, including queue time and all attempts.
       unevaluatedProperties: false
       allOf:
         - $ref: '#/components/schemas/QuestionRequested'
         - type: object
-          required: [lease, question_deadline_at]
+          required:
+            - lease
+            - question_deadline_at
           properties:
             lease:
               $ref: '#/components/schemas/Lease'
@@ -880,11 +418,17 @@ components:
               format: date-time
     QuestionCompletion:
       unevaluatedProperties: false
-      description: Maximum request body 65536 bytes. Unknown top-level fields rejected. Completed results require a nonblank answer; failed results require a nonblank message. Missing or null sources normalize to []; missing or null diagnostics are omitted. Object order and whitespace do not affect replay identity. Required job_id must equal the path ID. Result is immutable; repeat the same normalized terminal payload after response loss. question.failed is terminal.
+      description: Maximum request body 65536 bytes. Unknown top-level fields rejected.
+        Completed results require a nonblank answer; failed results require a nonblank
+        message. Missing or null sources normalize to []; missing or null diagnostics
+        are omitted. Object order and whitespace do not affect replay identity. Required
+        job_id must equal the path ID. Result is immutable; repeat the same normalized
+        terminal payload after response loss. question.failed is terminal.
       allOf:
         - $ref: '#/components/schemas/QuestionResult'
         - type: object
-          required: [lease_token]
+          required:
+            - lease_token
           properties:
             lease_token:
               $ref: '#/components/schemas/LeaseToken'
@@ -892,7 +436,8 @@ components:
       description: Request at most 16384 bytes.
       type: object
       additionalProperties: false
-      required: [lease_token]
+      required:
+        - lease_token
       properties:
         lease_token:
           $ref: '#/components/schemas/LeaseToken'
@@ -900,17 +445,27 @@ components:
       description: Request at most 16384 bytes.
       type: object
       additionalProperties: false
-      required: [lease_token, reason]
+      required:
+        - lease_token
+        - reason
       properties:
         lease_token:
           $ref: '#/components/schemas/LeaseToken'
         reason:
           type: string
-          enum: [transient_error, worker_shutdown]
+          enum:
+            - transient_error
+            - worker_shutdown
     QuestionRequested:
-      description: Submit request at most 16384 bytes; unknown top-level fields rejected by submit. Question must contain non-whitespace text. Missing or null history normalizes to absent history.
+      description: Submit request at most 16384 bytes; unknown top-level fields rejected
+        by submit. Question must contain non-whitespace text. Missing or null history
+        normalizes to absent history.
       type: object
-      required: [version, type, job_id, question]
+      required:
+        - version
+        - type
+        - job_id
+        - question
       properties:
         version:
           type: integer
@@ -926,10 +481,15 @@ components:
           minLength: 1
           maxLength: 600
         history:
-          type: [object, 'null']
+          type:
+            - object
+            - 'null'
           additionalProperties: false
-          required: [messages, incomplete]
-          description: At most 8192 UTF-8 bytes across message content strings; each content must contain non-whitespace text.
+          required:
+            - messages
+            - incomplete
+          description: At most 8192 UTF-8 bytes across message content strings; each
+            content must contain non-whitespace text.
           properties:
             messages:
               type: array
@@ -937,11 +497,15 @@ components:
               items:
                 type: object
                 additionalProperties: false
-                required: [role, content]
+                required:
+                  - role
+                  - content
                 properties:
                   role:
                     type: string
-                    enum: [user, assistant]
+                    enum:
+                      - user
+                      - assistant
                   content:
                     type: string
                     minLength: 1
@@ -949,14 +513,19 @@ components:
               type: boolean
     QuestionResult:
       type: object
-      required: [version, type, job_id]
+      required:
+        - version
+        - type
+        - job_id
       properties:
         version:
           type: integer
           const: 1
         type:
           type: string
-          enum: [question.completed, question.failed]
+          enum:
+            - question.completed
+            - question.failed
         job_id:
           type: string
           format: uuid
@@ -964,7 +533,9 @@ components:
           type: string
           maxLength: 16000
         sources:
-          type: [array, 'null']
+          type:
+            - array
+            - 'null'
           maxItems: 100
           items:
             type: object
@@ -977,15 +548,53 @@ components:
           type: string
           maxLength: 1000
         diagnostics:
-          type: [object, 'null']
+          type:
+            - object
+            - 'null'
           description: At most 16384 bytes after JSON normalization.
           additionalProperties: true
-    QuestStatus:
+    GraphQLRequest:
       type: object
-      required: [id, status]
+      additionalProperties: false
+      required:
+        - query
       properties:
-        id:
+        query:
           type: string
-        status:
-          type: string
-          enum: [open, full, played, closed, cancelled]
+        operationName:
+          type:
+            - string
+            - 'null'
+        variables:
+          type:
+            - object
+            - 'null'
+          additionalProperties: true
+    GraphQLResponse:
+      type: object
+      properties:
+        data: {}
+        errors:
+          type: array
+          items:
+            type: object
+            required:
+              - message
+            properties:
+              message:
+                type: string
+              path:
+                type: array
+                items: {}
+              extensions:
+                type: object
+                properties:
+                  code:
+                    type: string
+                    enum:
+                      - UNAUTHENTICATED
+                      - FORBIDDEN
+                      - NOT_FOUND
+                      - CONFLICT
+                      - INVALID
+                      - INTERNAL

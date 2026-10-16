@@ -1,0 +1,3 @@
+-- QUE03 owns the named SQL implementation after P04, QUE02.
+-- Responsibility: Complete named set SQL projections, filters,count,page,locks,writes,histories; sqlc sources.
+-- Acceptance: TASK-QUE03, AUTH-quest, BATCH-quest. No SQL statements are implemented.

@@ -1,0 +1,182 @@
+{
+  "clock": "2026-10-14T12:00:00Z",
+  "fixture_namespace": "10000000-0000-4000-8000-000000000NNN",
+  "owner": "S03",
+  "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+  "scenarios": [
+    {
+      "id": "PATCH-SETTINGS-JOINT",
+      "operation": "updateMySettings",
+      "actor": "001",
+      "input_source": "mounted-input-cases.json#INPUT-JOINT-MemberSettingsPatch.valid_object",
+      "before_source": "mounted-projections.json#PROJECTION-MemberSettingsType.expected",
+      "expected": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme": "MIDNIGHT",
+        "mode": "DARK",
+        "effectsEnabled": false,
+        "colorblindSafe": true,
+        "reducedMotion": true,
+        "density": "COMPACT",
+        "timezone": "Europe/London",
+        "updatedAt": "2026-10-14T12:00:00Z",
+        "notifyCharacterVerification": false,
+        "notifyQuestSignup": false,
+        "notifyDocumentActivity": false,
+        "notifyQuestScheduled": false,
+        "notifyDmMentioned": false,
+        "notifyDmRequestDecided": false
+      },
+      "database": "Exactly the actor's existing member_settings row changes; snake_case columns correspond one-to-one to expected camelCase fields; enum storage lowercase. Ben's row is byte-for-byte unchanged. Same-request myPersonalization.settings and next-request read match expected.",
+      "side_effects": "Zero new progression/grant/document/quest/history/notification/background-job rows. One actor-operation-key command receipt containing the returned settings object. Replaying the same input/key returns that receipt and leaves row/timestamp unchanged. Different input under the same key is CONFLICT and leaves all rows unchanged.",
+      "field_group": "Every MemberSettingsPatch field is selected in this joint patch and differs from before.",
+      "omission_case": "After joint patch, apply {effectsEnabled:true} with a fresh key. Exactly effectsEnabled becomes true and updatedAt equals the advanced injected clock 2026-10-14T12:01:00Z; every omitted preference retains the joint value.",
+      "null_case": "After joint patch, {timezone:null} clears SQL timezone and response timezone to null; every other preference is unchanged. Separately parameterize explicit null for each of the other 12 preference fields: INVALID, GraphQL data:null because the mutation root is non-null, no row/receipt/history/notification/job change.",
+      "validation": [
+        "theme:UNKNOWN, mode:UNKNOWN, density:UNKNOWN are GraphQL enum coercion INVALID before business writes.",
+        "timezone:Not/AZone is INVALID; timezone:Europe/London succeeds; timezone empty string is INVALID.",
+        "Boolean fields supplied as string false are INVALID and no effects.",
+        "Missing authority: UNAUTHENTICATED; inactive resolved member: FORBIDDEN; no identity-only fallback and no settings insertion."
+      ],
+      "rollback": "Inject command-receipt append failure after business writes: INTERNAL opaque error and original business rows/history unchanged; zero notice/job/receipt rows. Same owner-input-key replay returns original successful result and timestamp, no repeated history. Changed input under same key CONFLICT, zero effects."
+    },
+    {
+      "id": "PATCH-PROFILE-JOINT",
+      "operation": "updateMyProfile",
+      "actor": "001",
+      "input_source": "mounted-input-cases.json#INPUT-JOINT-UpdateMyProfileInput.valid_object",
+      "before": {
+        "displayName": "Ava",
+        "avatarUrl": null
+      },
+      "expected": {
+        "displayName": "Ava Bridgekeeper",
+        "avatarUrl": "https://example.invalid/avatar/bridge.png"
+      },
+      "database": "members row 001 display_name and avatar_url equal expected; handle ava, roles [player], status active and joined_at 2026-01-01T00:00:00Z unchanged; member 002 unchanged. memberMe immediately and on next request returns expected.",
+      "side_effects": "One command receipt, no grant/progression/quest/document/history/notification/job effects; avatar URL is never fetched.",
+      "omission_case": "A fresh {displayName:Ava Next} omits avatarUrl and preserves the joint URL.",
+      "null_case": "A fresh {displayName:Ava Final,avatarUrl:null} stores null avatar URL; displayName null or omitted is INVALID, no effects.",
+      "validation": [
+        "displayName empty or 201 characters INVALID; name with 200 characters succeeds.",
+        "avatarUrl http://example.invalid/avatar.png or javascript:alert(1) INVALID; HTTPS succeeds; 2049 characters INVALID."
+      ],
+      "rollback": "Inject command-receipt append failure after business writes: INTERNAL opaque error and original business rows/history unchanged; zero notice/job/receipt rows. Same owner-input-key replay returns original successful result and timestamp, no repeated history. Changed input under same key CONFLICT, zero effects."
+    },
+    {
+      "id": "PATCH-CHARACTER-PROFILE-JOINT",
+      "operation": "updateCharacterProfile",
+      "actor": "001",
+      "characterId": "10000000-0000-4000-8000-000000000030",
+      "input_source": "mounted-input-cases.json#INPUT-JOINT-UpdateCharacterProfileV2Input.valid_object",
+      "before": {
+        "description": "Scout",
+        "backgroundText": null
+      },
+      "expected": {
+        "description": "Carries bridge supplies revised",
+        "backgroundText": "Bridge childhood revised",
+        "updatedAt": "2026-10-14T12:00:00Z"
+      },
+      "database": "Only character 030 profile columns and updated_at change; owner_id 001, status active, pcxp 12, region 020, guild 010, backstory 040 and verification provenance remain unchanged. Exactly one character_changes snapshot records old/new profile, actor001 and clock. Ben character031 unchanged.",
+      "side_effects": "One command receipt; no progression/log/participation/entitlement/notification/job rows; source actor ownership checked again inside transaction before replay disclosure.",
+      "omission_case": "Fresh {description:Next description} preserves backgroundText Bridge childhood revised; updatedAt uses advanced clock.",
+      "null_case": "Fresh {description:null,backgroundText:null} stores both SQL NULL and returns both null, history records joint prior values and null new values.",
+      "validation": [
+        "Nonowner002, DM003, admin004 and configured platform owner009 each FORBIDDEN with no changes, including replay of owner001's key.",
+        "Description or backgroundText 131073 UTF-8 bytes INVALID and zero effects; 131072 bytes succeeds. Rejected metadata does not append history."
+      ],
+      "rollback": "Inject command-receipt append failure after business writes: INTERNAL opaque error and original business rows/history unchanged; zero notice/job/receipt rows. Same owner-input-key replay returns original successful result and timestamp, no repeated history. Changed input under same key CONFLICT, zero effects."
+    },
+    {
+      "id": "PATCH-DOCUMENT-EDIT-JOINT",
+      "operation": "editPublishedDocument",
+      "additional_operation": "updateDocument",
+      "actor": "001",
+      "input_source": "mounted-input-cases.json#INPUT-JOINT-DocumentEditInput.valid_object",
+      "fixtures": {
+        "published": {
+          "id": "10000000-0000-4000-8000-000000000010",
+          "version": 2,
+          "title": "River ledger",
+          "category": "Lore",
+          "frontmatter": {
+            "region": "North"
+          },
+          "body": "Public river\n> [!dm:@dee]\n> DMBLOCK_SENTINEL",
+          "publishedAt": "2026-10-13T10:00:00Z"
+        },
+        "draft": {
+          "id": "10000000-0000-4000-8000-000000000012",
+          "version": 2,
+          "title": "Draft bridge account",
+          "category": "NPC",
+          "frontmatter": {
+            "draft": true
+          },
+          "body": "Draft bridge body",
+          "authorId": "10000000-0000-4000-8000-000000000001",
+          "status": "draft"
+        }
+      },
+      "expected": {
+        "version": 3,
+        "title": "River account revised",
+        "category": "Lore",
+        "frontmatter": {
+          "region": "North",
+          "source": "Revised account"
+        },
+        "effectiveBody": "Revised river account",
+        "updatedAt": "2026-10-14T12:00:00Z"
+      },
+      "database": "Run published and draft variants in separate resets. Exactly selected Document body/title/category/full frontmatter/version/updated_at changes. Published variant retains status published and original published_at/by; append exactly one immutable revision with captured UUID, prior version2 body/title/frontmatter/audience and new version3 snapshots, actor001 and clock. Draft variant retains draft status and appends exactly one immutable document_revisions row with reason UPDATE_DRAFT, actor001/time/old/new and published_at/by null; no competing document-change table. Other Document rows unchanged.",
+      "side_effects": "Published author actor001 receives no self inbox card; exactly one DOCUMENT_EDITED fact persists with captured revisionID and zero recipients; no DM_MENTIONED event because an old mention was removed, not added. Draft variant zero notification events/cards. No jobs/progression/grants/Quest changes. Exactly one command receipt in each variant.",
+      "omission_case": "Fresh input {expectedRevision:3,title:River title only} changes only title, version4 and clock; body/category/frontmatter retain joint values.",
+      "null_case": "Fresh {expectedRevision:3,category:null} clears category SQL/JSON null, preserving title/body/frontmatter; body/title/frontmatter null INVALID with no effects; expectedRevision omitted/null INVALID with no effects.",
+      "validation": [
+        "After version3, expectedRevision2 gives CONFLICT and zero Document/history/notice/job/receipt changes.",
+        "title empty or 201 characters INVALID; body 131073 UTF-8 bytes INVALID, 131072 allowed.",
+        "frontmatter depth17 INVALID, depth16 allowed within total request bound; aliases scalar instead of array INVALID.",
+        "Ben002 unrelated to Lore, DM003 unrelated and anonymous are FORBIDDEN/UNAUTHENTICATED with no effects; admin004 editing published010 notifies author001 exactly once via required existing event/card.",
+        "updateDocument on published010 CONFLICT; editPublishedDocument on draft012 CONFLICT."
+      ],
+      "rollback": "Inject revision/history/receipt/event append failure after business writes: opaque INTERNAL and original document version2/fields/history/notification counts unchanged. Same owner key/input replay returns same captured revision/result/version3 with no further rows; changed input same key CONFLICT."
+    },
+    {
+      "id": "REPLACE-AVAILABILITY-EXACT",
+      "operation": "setMyAvailability",
+      "actor": "001",
+      "input_source": "mounted-input-cases.json#INPUT-JOINT-AvailabilitySlotInput.valid_object",
+      "before": [
+        {
+          "day": "MONDAY",
+          "startTime": "09:00:00",
+          "endTime": "12:00:00",
+          "note": null
+        }
+      ],
+      "expected": [
+        {
+          "day": "TUESDAY",
+          "startTime": "10:00:00",
+          "endTime": "13:00:00",
+          "note": "After breakfast"
+        }
+      ],
+      "database": "Actor001 availability is replaced by exactly one row weekday2/start_minute600/end_minute780/note After breakfast; no Monday row remains. Ben002 Tuesday15:00–16:00 row remains unchanged. myAvailability and memberAvailability(001) match the response ordered weekday/start_minute.",
+      "side_effects": "One command receipt; zero profile/role/history/progression/grant/notification/job changes.",
+      "omission_case": "A slot omitting note stores SQL NULL; required day/startTime/endTime omitted is INVALID.",
+      "null_case": "note:null stores SQL NULL; day/startTime/endTime:null INVALID before any deletion.",
+      "validation": [
+        "day:FUNDAY INVALID; valid weekdays MONDAY through SUNDAY with Sunday0, Monday1 through Saturday6.",
+        "startTime:13:00/endTime:10:00 or equal endpoints INVALID; 09:00:01 INVALID because minute storage must not truncate seconds; 09:00 and 09:00:00 both canonicalize to 09:00:00.",
+        "Two Tuesday slots10:00\u201313:00 and12:00\u201314:00 overlap: INVALID and original Monday row preserved. Adjacent10:00\u201313:00 and13:00\u201314:00 succeeds as two rows.",
+        "28 nonoverlapping slots succeeds;29 INVALID and zero writes; note2001 characters INVALID,2000 allowed.",
+        "Empty slots succeeds and clears only actor001 availability; anonymous UNAUTHENTICATED, inactive FORBIDDEN, no deletion."
+      ],
+      "rollback": "Failure after deleting old rows but before inserting/receipt commit rolls back to exact Monday fixture; same key/input replay yields original one Tuesday row, no duplicate; changed input same key CONFLICT.",
+      "field_group": "All four AvailabilitySlotInput fields are exercised by the exact replacement and omission/null/invalid cases."
+    }
+  ]
+}

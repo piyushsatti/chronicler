@@ -14,6 +14,7 @@ export type CardPad = 0 | 3 | 4 | 5 | 6;
 export type CardElement = 'div' | 'article' | 'section';
 
 type CardBaseProps = {
+  'data-component'?: string;
   children?: ReactNode;
   className?: string;
   variant?: CardVariant;
@@ -60,9 +61,9 @@ export type CardProps =
 
 /** Link cards use a native anchor; cards with independent controls compose a
  * Card.ActionOverlay as a sibling instead of nesting controls in the anchor. */
-function cardAttributes(variant: CardVariant, tone: CardTone, pad: CardPad) {
+function cardAttributes(variant: CardVariant, tone: CardTone, pad: CardPad, component: string) {
   return {
-    'data-component': 'Card',
+    'data-component': component,
     'data-pad': pad,
     'data-tone': tone,
     'data-variant': variant,
@@ -78,7 +79,7 @@ function CardImpl(props: CardProps): React.JSX.Element {
     variant === 'sidebar' && 'card--sidebar',
     className,
   );
-  const dataAttrs = cardAttributes(variant, tone, pad);
+  const dataAttrs = cardAttributes(variant, tone, pad, props['data-component'] ?? 'Card');
 
   if (variant === 'clickable' && 'href' in props && props.href !== undefined) {
     const {

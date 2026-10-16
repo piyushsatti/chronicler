@@ -1,0 +1,3 @@
+-- SPA03 owns the named SQL implementation after P04, SPA02.
+-- Responsibility: Complete named set SQL projections, filters,count,page,locks,writes,histories; sqlc sources.
+-- Acceptance: TASK-SPA03, AUTH-spatial, BATCH-spatial. No SQL statements are implemented.

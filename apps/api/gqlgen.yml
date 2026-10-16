@@ -1,44 +1,170 @@
-schema:
-  - ../../packages/contracts/graphql/*.graphql
-
-exec:
-  package: graph
-  filename: internal/graph/generated.go
-
-model:
-  package: graph
-  filename: internal/graph/models_gen.go
-
-resolver:
-  package: graph
-  layout: follow-schema
-  dir: internal/graph
-
-models:
-  ID:
-    model:
-      - github.com/99designs/gqlgen/graphql.ID
-  DateTime:
-    model:
-      - github.com/99designs/gqlgen/graphql.Time
-  Date:
-    model:
-      - github.com/99designs/gqlgen/graphql.Time
-  JSON:
-    model:
-      - github.com/99designs/gqlgen/graphql.Map
-  Int:
-    model:
-      - github.com/99designs/gqlgen/graphql.Int
-  QuestV2Type:
-    fields:
-      participants:
-        resolver: true
-      briefDocument:
-        resolver: true
-      dm:
-        resolver: true
-  DocumentType:
-    fields:
-      author:
-        resolver: true
+{
+  'schema': ['../../packages/contracts/graphql/**/*.graphql'],
+  'exec': { 'package': 'graph', 'filename': 'internal/graph/generated.go' },
+  'model': { 'package': 'graph', 'filename': 'internal/graph/models_gen.go' },
+  'resolver':
+    {
+      'package': 'graph',
+      'layout': 'follow-schema',
+      'dir': 'internal/graph',
+      'filename_template': '{name}.resolvers.go',
+    },
+  'models':
+    {
+      'ID':
+        {
+          'model':
+            [
+              'github.com/piyushsatti/chronicler/apps/api/internal/platform/graphql/scalars.ID',
+            ],
+        },
+      'Date':
+        {
+          'model':
+            [
+              'github.com/piyushsatti/chronicler/apps/api/internal/platform/graphql/scalars.Date',
+            ],
+        },
+      'Time':
+        {
+          'model':
+            [
+              'github.com/piyushsatti/chronicler/apps/api/internal/platform/graphql/scalars.Time',
+            ],
+        },
+      'DateTime':
+        {
+          'model':
+            [
+              'github.com/piyushsatti/chronicler/apps/api/internal/platform/graphql/scalars.DateTime',
+            ],
+        },
+      'JSON':
+        {
+          'model':
+            [
+              'github.com/piyushsatti/chronicler/apps/api/internal/platform/graphql/scalars.JSON',
+            ],
+        },
+      'Int': { 'model': ['github.com/99designs/gqlgen/graphql.Int'] },
+      'AdminOperationsV2Type': { 'fields': { 'activeAlerts': { 'resolver': true } } },
+      'CodexEntryCardType': { 'fields': { 'subjects': { 'resolver': true } } },
+      'DocumentType':
+        {
+          'fields':
+            {
+              'author': { 'resolver': true },
+              'summaryDerived': { 'resolver': true },
+              'policy': { 'resolver': true },
+            },
+        },
+      'GameCalendarV2Type': { 'fields': { 'currentGameDate': { 'resolver': true } } },
+      'HexV2Type': { 'fields': { 'linkedEntries': { 'resolver': true } } },
+      'MapV2Type':
+        {
+          'fields':
+            {
+              'edges': { 'resolver': true },
+              'hexes': { 'resolver': true },
+              'pointcrawlEdges': { 'resolver': true },
+              'pointcrawlNodes': { 'resolver': true },
+            },
+        },
+      'MemberActivityStatsType':
+        {
+          'fields':
+            {
+              'recentSessions': { 'resolver': true },
+              'voiceByChannel': { 'resolver': true },
+            },
+          'extraFields':
+            { 'MemberID': { 'type': 'string', 'overrideTags': 'json:"-"' } },
+        },
+      'MemberProfileType': { 'fields': { 'recentWeeks': { 'resolver': true } } },
+      'PointcrawlNodeV2Type': { 'fields': { 'linkedEntries': { 'resolver': true } } },
+      'QuestArcV2Type': { 'fields': { 'quests': { 'resolver': true } } },
+      'QuestV2Type':
+        {
+          'fields':
+            {
+              'arc': { 'resolver': true },
+              'briefDocument': { 'resolver': true },
+              'discordDelivery': { 'resolver': true },
+              'dm': { 'resolver': true },
+              'dmTable': { 'resolver': true },
+              'hexes': { 'resolver': true },
+              'participants': { 'resolver': true },
+              'rewardEntitlements': { 'resolver': true },
+            },
+        },
+      'MemberType': { 'fields': { 'discordId': { 'resolver': true } } },
+      'DocumentEditInput':
+        {
+          'fields':
+            {
+              'body': { 'omittable': true },
+              'category': { 'omittable': true },
+              'frontmatter': { 'omittable': true },
+              'title': { 'omittable': true },
+            },
+        },
+      'HexEditInput':
+        {
+          'fields':
+            {
+              'climate': { 'omittable': true },
+              'elevation': { 'omittable': true },
+              'submapId': { 'omittable': true },
+              'terrain': { 'omittable': true },
+            },
+        },
+      'MemberSettingsPatch':
+        {
+          'fields':
+            {
+              'colorblindSafe': { 'omittable': true },
+              'density': { 'omittable': true },
+              'effectsEnabled': { 'omittable': true },
+              'mode': { 'omittable': true },
+              'notifyCharacterVerification': { 'omittable': true },
+              'notifyDmMentioned': { 'omittable': true },
+              'notifyDmRequestDecided': { 'omittable': true },
+              'notifyDocumentActivity': { 'omittable': true },
+              'notifyQuestScheduled': { 'omittable': true },
+              'notifyQuestSignup': { 'omittable': true },
+              'reducedMotion': { 'omittable': true },
+              'theme': { 'omittable': true },
+              'timezone': { 'omittable': true },
+            },
+        },
+      'QuestEditInput':
+        {
+          'fields':
+            {
+              'additionalInfo': { 'omittable': true },
+              'apl': { 'omittable': true },
+              'arcId': { 'omittable': true },
+              'briefBody': { 'omittable': true },
+              'dmId': { 'omittable': true },
+              'durationHours': { 'omittable': true },
+              'genres': { 'omittable': true },
+              'kinds': { 'omittable': true },
+              'regionIds': { 'omittable': true },
+              'scheduledAt': { 'omittable': true },
+              'signupType': { 'omittable': true },
+              'slotsMax': { 'omittable': true },
+              'tags': { 'omittable': true },
+              'title': { 'omittable': true },
+            },
+        },
+      'UpdateCharacterProfileV2Input':
+        {
+          'fields':
+            {
+              'backgroundText': { 'omittable': true },
+              'description': { 'omittable': true },
+            },
+        },
+      'UpdateMyProfileInput': { 'fields': { 'avatarUrl': { 'omittable': true } } },
+    },
+}

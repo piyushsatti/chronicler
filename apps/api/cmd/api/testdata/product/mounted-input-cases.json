@@ -1,0 +1,2937 @@
+{
+  "status": "IN_PROGRESS",
+  "cases": [
+    {
+      "id": "INPUT-JOINT-AdminCharacterDirectoryFiltersInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "AdminCharacterDirectoryFiltersInput",
+      "valid_object": {
+        "namePrefix": "Ava",
+        "regionId": "10000000-0000-4000-8000-000000000020",
+        "status": "active"
+      },
+      "bindings": [
+        {
+          "operation": "Query.adminCharacterDirectory",
+          "argument": "filters"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-AdminCharacterDirectoryFiltersInput-namePrefix",
+          "value": "Ava",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-AdminCharacterDirectoryFiltersInput-regionId",
+          "value": "10000000-0000-4000-8000-000000000020",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-AdminCharacterDirectoryFiltersInput-status",
+          "value": "active",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-AnnouncementRoleInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "AnnouncementRoleInput",
+      "valid_object": {
+        "enabled": true,
+        "roleId": "100000000000000201"
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.updateQuestAnnouncementRoleSetting",
+          "argument": "input"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-AnnouncementRoleInput-enabled",
+          "value": true,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-AnnouncementRoleInput-roleId",
+          "value": "100000000000000201",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-AvailabilitySlotInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "AvailabilitySlotInput",
+      "valid_object": {
+        "day": "TUESDAY",
+        "startTime": "10:00:00",
+        "endTime": "13:00:00",
+        "note": "After breakfast"
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.setMyAvailability",
+          "argument": "slots"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-AvailabilitySlotInput-day",
+          "value": "TUESDAY",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": true,
+          "scenario_ref": "REPLACE-AVAILABILITY-EXACT"
+        },
+        {
+          "field_id": "SDL-AvailabilitySlotInput-endTime",
+          "value": "13:00:00",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": true,
+          "scenario_ref": "REPLACE-AVAILABILITY-EXACT"
+        },
+        {
+          "field_id": "SDL-AvailabilitySlotInput-note",
+          "value": "After breakfast",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": true,
+          "scenario_ref": "REPLACE-AVAILABILITY-EXACT"
+        },
+        {
+          "field_id": "SDL-AvailabilitySlotInput-startTime",
+          "value": "10:00:00",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": true,
+          "scenario_ref": "REPLACE-AVAILABILITY-EXACT"
+        }
+      ],
+      "status": "Exact joint persisted readback, omission/null, validation, rollback and replay cases bound",
+      "scenario_ref": "REPLACE-AVAILABILITY-EXACT"
+    },
+    {
+      "id": "INPUT-JOINT-BackstoryFiltersInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "BackstoryFiltersInput",
+      "valid_object": {
+        "cohort": "2026",
+        "includeRetired": true,
+        "regionId": "10000000-0000-4000-8000-000000000020"
+      },
+      "bindings": [
+        {
+          "operation": "Query.backstories",
+          "argument": "filters"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-BackstoryFiltersInput-cohort",
+          "value": "2026",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-BackstoryFiltersInput-includeRetired",
+          "value": true,
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "GraphQL default false",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-BackstoryFiltersInput-regionId",
+          "value": "10000000-0000-4000-8000-000000000020",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-BackstoryInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "BackstoryInput",
+      "valid_object": {
+        "cohort": "2027",
+        "lore": "Raised beside the new bridge",
+        "name": "Bridge keeper",
+        "retired": false,
+        "sourceRegionId": "10000000-0000-4000-8000-000000000020"
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.createBackstory",
+          "argument": "input"
+        },
+        {
+          "operation": "Mutation.updateBackstory",
+          "argument": "input"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-BackstoryInput-cohort",
+          "value": "2027",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-BackstoryInput-lore",
+          "value": "Raised beside the new bridge",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-BackstoryInput-name",
+          "value": "Bridge keeper",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-BackstoryInput-retired",
+          "value": false,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-BackstoryInput-sourceRegionId",
+          "value": "10000000-0000-4000-8000-000000000020",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-CharacterV2FiltersInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "CharacterV2FiltersInput",
+      "valid_object": {
+        "guildId": "10000000-0000-4000-8000-000000000010",
+        "namePrefix": "Ava",
+        "ownerId": "10000000-0000-4000-8000-000000000001",
+        "regionId": "10000000-0000-4000-8000-000000000020",
+        "status": "active"
+      },
+      "bindings": [
+        {
+          "operation": "Query.characters",
+          "argument": "filters"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-CharacterV2FiltersInput-guildId",
+          "value": "10000000-0000-4000-8000-000000000010",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CharacterV2FiltersInput-namePrefix",
+          "value": "Ava",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CharacterV2FiltersInput-ownerId",
+          "value": "10000000-0000-4000-8000-000000000001",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CharacterV2FiltersInput-regionId",
+          "value": "10000000-0000-4000-8000-000000000020",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CharacterV2FiltersInput-status",
+          "value": "active",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-CloseQuestInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "CloseQuestInput",
+      "valid_object": {
+        "attendance": [
+          {
+            "characterId": "10000000-0000-4000-8000-000000000031",
+            "status": "played"
+          }
+        ],
+        "rewards": [
+          {
+            "characterId": "10000000-0000-4000-8000-000000000031",
+            "pcxp": 4,
+            "note": "Completed the crossing"
+          }
+        ]
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.closeQuest",
+          "argument": "input"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-CloseQuestInput-attendance",
+          "value": [
+            {
+              "characterId": "10000000-0000-4000-8000-000000000031",
+              "status": "played"
+            }
+          ],
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CloseQuestInput-rewards",
+          "value": [
+            {
+              "characterId": "10000000-0000-4000-8000-000000000031",
+              "pcxp": 4,
+              "note": "Completed the crossing"
+            }
+          ],
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-CommandMeta",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "CommandMeta",
+      "valid_object": {
+        "idempotencyKey": "phase1-joint-input-0001"
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.acknowledgeSuppressedNotifications",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.adjustPcxp",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.assignArchon",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.assignLieutenant",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.attestQuestParticipation",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.claimQuestRewards",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.closeQuest",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.createBackstory",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.createCharacter",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.createDocument",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.createMap",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.createQuest",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.createRegion",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.createRequest",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.createTimeAnchor",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.decideDmProfileVerification",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.decideRequest",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.decideVerification",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.deleteCharacter",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.deleteCharacterLog",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.deleteDocument",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.deleteQuest",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.deleteRegion",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.editPublishedDocument",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.followPerson",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.grantUnlock",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.linkHexEntry",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.linkPointcrawlEntry",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.logCharacterEvent",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.markNotificationsRead",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.publishDocument",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.redriveDiscordDelivery",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.removeQuestFromArc",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.restoreCharacter",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.restoreDocument",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.restoreQuest",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.restoreRegion",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.retireCharacter",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.revokeArchon",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.revokeLieutenant",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.selectQuestParticipants",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.setCharacterGuild",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.setDocumentVisibility",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.setHexEdge",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.setMemberRoles",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.setMemberRolesBatch",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.setMyAvailability",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.setPointcrawlEdge",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.setQuestHexes",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.setUnlockableActive",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.signupForQuest",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.submitDmProfileForVerification",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.submitForVerification",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.syncCharacterDdb",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.syncQuestDiscord",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.transitionQuestStatus",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.transitionRegion",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.unfollowPerson",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.unlinkHexEntry",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.unlinkPointcrawlEntry",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.unpublishDocument",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.updateBackstory",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.updateCharacterProfile",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.updateDocument",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.updateGameCalendar",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.updateHex",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.updateHomeBanner",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.updateMyDmProfile",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.updateMyProfile",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.updateMySettings",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.updateQuest",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.updateQuestAnnouncementRoleSetting",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.updateRegion",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.updateTimeAnchor",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.upsertCreationCatalogEntry",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.upsertDowntimeProject",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.upsertPoi",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.upsertPointcrawlNode",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.upsertQuestArc",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.upsertQuestSummary",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.upsertUnlockable",
+          "argument": "meta"
+        },
+        {
+          "operation": "Mutation.withdrawFromQuest",
+          "argument": "meta"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-CommandMeta-idempotencyKey",
+          "value": "phase1-joint-input-0001",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": true,
+          "scenario_ref": "ROOT-ARG-META-updateMySettings"
+        }
+      ],
+      "status": "Exact grammar/length/replay/authority group over populated settings patch",
+      "scenario_ref": "ROOT-ARG-META-updateMySettings"
+    },
+    {
+      "id": "INPUT-JOINT-CommunityDirectoryFiltersInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "CommunityDirectoryFiltersInput",
+      "valid_object": {
+        "acceptingPlayers": true,
+        "dmProfileStatus": "approved",
+        "role": "dm",
+        "search": "Dee"
+      },
+      "bindings": [
+        {
+          "operation": "Query.communityDirectory",
+          "argument": "filters"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-CommunityDirectoryFiltersInput-acceptingPlayers",
+          "value": true,
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CommunityDirectoryFiltersInput-dmProfileStatus",
+          "value": "approved",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CommunityDirectoryFiltersInput-role",
+          "value": "dm",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CommunityDirectoryFiltersInput-search",
+          "value": "Dee",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-CreateCharacterV2Input",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "CreateCharacterV2Input",
+      "valid_object": {
+        "backgroundText": "Bridge childhood",
+        "backstoryId": "10000000-0000-4000-8000-000000000040",
+        "catalogPickIds": ["10000000-0000-4000-8000-000000000042"],
+        "ddbUrl": null,
+        "description": "Carries bridge supplies",
+        "guildId": "10000000-0000-4000-8000-000000000010",
+        "name": "Bridge scout",
+        "regionId": "10000000-0000-4000-8000-000000000020",
+        "shortCode": "C-BRIDGE"
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.createCharacter",
+          "argument": "input"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-CreateCharacterV2Input-backgroundText",
+          "value": "Bridge childhood",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CreateCharacterV2Input-backstoryId",
+          "value": "10000000-0000-4000-8000-000000000040",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CreateCharacterV2Input-catalogPickIds",
+          "value": ["10000000-0000-4000-8000-000000000042"],
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "GraphQL default []",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CreateCharacterV2Input-ddbUrl",
+          "value": null,
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CreateCharacterV2Input-description",
+          "value": "Carries bridge supplies",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CreateCharacterV2Input-guildId",
+          "value": "10000000-0000-4000-8000-000000000010",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CreateCharacterV2Input-name",
+          "value": "Bridge scout",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CreateCharacterV2Input-regionId",
+          "value": "10000000-0000-4000-8000-000000000020",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CreateCharacterV2Input-shortCode",
+          "value": "C-BRIDGE",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-CreateQuestV2Input",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "CreateQuestV2Input",
+      "valid_object": {
+        "additionalInfo": "Bring rope",
+        "apl": 2,
+        "arcId": "10000000-0000-4000-8000-000000000060",
+        "briefBody": "Cross the bridge at dawn",
+        "dmId": "10000000-0000-4000-8000-000000000003",
+        "durationHours": 4.0,
+        "genres": [" Exploration "],
+        "kinds": ["standard"],
+        "regionIds": ["10000000-0000-4000-8000-000000000020"],
+        "scheduledAt": "2026-10-16T18:00:00Z",
+        "signupType": "open",
+        "slotsMax": 2,
+        "tags": [" River  Road ", "river road"],
+        "title": "Bridge crossing"
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.createQuest",
+          "argument": "input"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-CreateQuestV2Input-additionalInfo",
+          "value": "Bring rope",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CreateQuestV2Input-apl",
+          "value": 2,
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CreateQuestV2Input-arcId",
+          "value": "10000000-0000-4000-8000-000000000060",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CreateQuestV2Input-briefBody",
+          "value": "Cross the bridge at dawn",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "GraphQL default \"\"",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CreateQuestV2Input-dmId",
+          "value": "10000000-0000-4000-8000-000000000003",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CreateQuestV2Input-durationHours",
+          "value": 4.0,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CreateQuestV2Input-genres",
+          "value": [" Exploration "],
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "GraphQL default []",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CreateQuestV2Input-kinds",
+          "value": ["standard"],
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "GraphQL default [\"standard\"]",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CreateQuestV2Input-regionIds",
+          "value": ["10000000-0000-4000-8000-000000000020"],
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CreateQuestV2Input-scheduledAt",
+          "value": "2026-10-16T18:00:00Z",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CreateQuestV2Input-signupType",
+          "value": "open",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CreateQuestV2Input-slotsMax",
+          "value": 2,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "GraphQL default 4",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CreateQuestV2Input-tags",
+          "value": [" River  Road ", "river road"],
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "GraphQL default []",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CreateQuestV2Input-title",
+          "value": "Bridge crossing",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-CreationCatalogFiltersInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "CreationCatalogFiltersInput",
+      "valid_object": {
+        "includeAll": true,
+        "kind": "species",
+        "regionId": "10000000-0000-4000-8000-000000000020"
+      },
+      "bindings": [
+        {
+          "operation": "Query.creationCatalog",
+          "argument": "filters"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-CreationCatalogFiltersInput-includeAll",
+          "value": true,
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "GraphQL default false",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CreationCatalogFiltersInput-kind",
+          "value": "species",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-CreationCatalogFiltersInput-regionId",
+          "value": "10000000-0000-4000-8000-000000000020",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-DmSummaryFiltersV2Input",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "DmSummaryFiltersV2Input",
+      "valid_object": {
+        "questId": "10000000-0000-4000-8000-000000000051",
+        "search": "Crossing"
+      },
+      "bindings": [
+        {
+          "operation": "Query.dmSummaries",
+          "argument": "filters"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-DmSummaryFiltersV2Input-questId",
+          "value": "10000000-0000-4000-8000-000000000051",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-DmSummaryFiltersV2Input-search",
+          "value": "Crossing",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-DocumentAudienceInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "DocumentAudienceInput",
+      "valid_object": {
+        "policy": ["member:10000000-0000-4000-8000-000000000003"],
+        "readerIds": [],
+        "visibility": "restricted"
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.setDocumentVisibility",
+          "argument": "input"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-DocumentAudienceInput-policy",
+          "value": ["member:10000000-0000-4000-8000-000000000003"],
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-DocumentAudienceInput-readerIds",
+          "value": [],
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "GraphQL default []",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-DocumentAudienceInput-visibility",
+          "value": "restricted",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-DocumentDraftInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "DocumentDraftInput",
+      "valid_object": {
+        "body": "Bridge account",
+        "category": "Lore",
+        "frontmatter": {
+          "region": "North",
+          "aliases": ["Bridge account"]
+        },
+        "kind": "codex_entry",
+        "policy": null,
+        "title": "Bridge account",
+        "visibility": "public"
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.createDocument",
+          "argument": "input"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-DocumentDraftInput-body",
+          "value": "Bridge account",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-DocumentDraftInput-category",
+          "value": "Lore",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-DocumentDraftInput-frontmatter",
+          "value": {
+            "region": "North",
+            "aliases": ["Bridge account"]
+          },
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-DocumentDraftInput-kind",
+          "value": "codex_entry",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-DocumentDraftInput-policy",
+          "value": null,
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-DocumentDraftInput-title",
+          "value": "Bridge account",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-DocumentDraftInput-visibility",
+          "value": "public",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-DocumentEditInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "DocumentEditInput",
+      "valid_object": {
+        "body": "Revised river account",
+        "category": "Lore",
+        "expectedRevision": 2,
+        "frontmatter": {
+          "region": "North",
+          "source": "Revised account"
+        },
+        "title": "River account revised"
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.editPublishedDocument",
+          "argument": "input"
+        },
+        {
+          "operation": "Mutation.updateDocument",
+          "argument": "input"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-DocumentEditInput-body",
+          "value": "Revised river account",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": true,
+          "scenario_ref": "PATCH-DOCUMENT-EDIT-JOINT"
+        },
+        {
+          "field_id": "SDL-DocumentEditInput-category",
+          "value": "Lore",
+          "null": "stored SQL NULL; other fields unchanged",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": true,
+          "scenario_ref": "PATCH-DOCUMENT-EDIT-JOINT"
+        },
+        {
+          "field_id": "SDL-DocumentEditInput-expectedRevision",
+          "value": 2,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": true,
+          "scenario_ref": "PATCH-DOCUMENT-EDIT-JOINT"
+        },
+        {
+          "field_id": "SDL-DocumentEditInput-frontmatter",
+          "value": {
+            "region": "North",
+            "source": "Revised account"
+          },
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": true,
+          "scenario_ref": "PATCH-DOCUMENT-EDIT-JOINT"
+        },
+        {
+          "field_id": "SDL-DocumentEditInput-title",
+          "value": "River account revised",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": true,
+          "scenario_ref": "PATCH-DOCUMENT-EDIT-JOINT"
+        }
+      ],
+      "status": "Exact joint persisted readback, omission/null, validation, rollback and replay cases bound",
+      "scenario_ref": "PATCH-DOCUMENT-EDIT-JOINT"
+    },
+    {
+      "id": "INPUT-JOINT-DocumentFiltersInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "DocumentFiltersInput",
+      "valid_object": {
+        "category": "Lore",
+        "createdBy": "10000000-0000-4000-8000-000000000001",
+        "kind": "codex_entry",
+        "region": "10000000-0000-4000-8000-000000000020",
+        "search": "River",
+        "status": "published",
+        "visibility": "public"
+      },
+      "bindings": [
+        {
+          "operation": "Query.documents",
+          "argument": "filters"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-DocumentFiltersInput-category",
+          "value": "Lore",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-DocumentFiltersInput-createdBy",
+          "value": "10000000-0000-4000-8000-000000000001",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-DocumentFiltersInput-kind",
+          "value": "codex_entry",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-DocumentFiltersInput-region",
+          "value": "10000000-0000-4000-8000-000000000020",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-DocumentFiltersInput-search",
+          "value": "River",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-DocumentFiltersInput-status",
+          "value": "published",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-DocumentFiltersInput-visibility",
+          "value": "public",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-DowntimeInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "DowntimeInput",
+      "valid_object": {
+        "goal": "Repair the bridge",
+        "id": "10000000-0000-4000-8000-000000000180",
+        "name": "Bridge repairs",
+        "notes": "Bought timber",
+        "progress": 2,
+        "status": "active",
+        "target": 5
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.upsertDowntimeProject",
+          "argument": "input"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-DowntimeInput-goal",
+          "value": "Repair the bridge",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-DowntimeInput-id",
+          "value": "10000000-0000-4000-8000-000000000180",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-DowntimeInput-name",
+          "value": "Bridge repairs",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-DowntimeInput-notes",
+          "value": "Bought timber",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-DowntimeInput-progress",
+          "value": 2,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-DowntimeInput-status",
+          "value": "active",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-DowntimeInput-target",
+          "value": 5,
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-HexEdgeInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "HexEdgeInput",
+      "valid_object": {
+        "aSide": "E",
+        "documentId": "10000000-0000-4000-8000-000000000010",
+        "edgeType": "road",
+        "hexA": "10000000-0000-4000-8000-000000000026",
+        "hexB": "10000000-0000-4000-8000-000000000027"
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.setHexEdge",
+          "argument": "input"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-HexEdgeInput-aSide",
+          "value": "E",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-HexEdgeInput-documentId",
+          "value": "10000000-0000-4000-8000-000000000010",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-HexEdgeInput-edgeType",
+          "value": "road",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-HexEdgeInput-hexA",
+          "value": "10000000-0000-4000-8000-000000000026",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-HexEdgeInput-hexB",
+          "value": "10000000-0000-4000-8000-000000000027",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-HexEditInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "HexEditInput",
+      "valid_object": {
+        "climate": "wet",
+        "elevation": "lowland",
+        "note": "Survey after rain",
+        "submapId": "10000000-0000-4000-8000-000000000025",
+        "terrain": "marsh"
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.updateHex",
+          "argument": "input"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-HexEditInput-climate",
+          "value": "wet",
+          "null": "stored SQL NULL; other fields unchanged",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-HexEditInput-elevation",
+          "value": "lowland",
+          "null": "stored SQL NULL; other fields unchanged",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-HexEditInput-note",
+          "value": "Survey after rain",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-HexEditInput-submapId",
+          "value": "10000000-0000-4000-8000-000000000025",
+          "null": "stored SQL NULL; other fields unchanged",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-HexEditInput-terrain",
+          "value": "marsh",
+          "null": "stored SQL NULL; other fields unchanged",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-HomeBannerInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "HomeBannerInput",
+      "valid_object": {
+        "body": "Gather at the bridge",
+        "ctaHref": "/quests",
+        "ctaLabel": "View quests",
+        "enabled": true,
+        "mediaKind": null,
+        "mediaLabel": null,
+        "mediaUrl": null,
+        "title": "Bridge week"
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.updateHomeBanner",
+          "argument": "input"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-HomeBannerInput-body",
+          "value": "Gather at the bridge",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-HomeBannerInput-ctaHref",
+          "value": "/quests",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-HomeBannerInput-ctaLabel",
+          "value": "View quests",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-HomeBannerInput-enabled",
+          "value": true,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-HomeBannerInput-mediaKind",
+          "value": null,
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-HomeBannerInput-mediaLabel",
+          "value": null,
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-HomeBannerInput-mediaUrl",
+          "value": null,
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-HomeBannerInput-title",
+          "value": "Bridge week",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-MapCreateInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "MapCreateInput",
+      "valid_object": {
+        "assetPath": null,
+        "atlasCode": "BRIDGE",
+        "cols": 3,
+        "family": "campaign",
+        "mapKind": "hexgrid",
+        "name": "Bridge atlas",
+        "regionId": "10000000-0000-4000-8000-000000000020",
+        "rows": 2
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.createMap",
+          "argument": "input"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-MapCreateInput-assetPath",
+          "value": null,
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-MapCreateInput-atlasCode",
+          "value": "BRIDGE",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-MapCreateInput-cols",
+          "value": 3,
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-MapCreateInput-family",
+          "value": "campaign",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-MapCreateInput-mapKind",
+          "value": "hexgrid",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-MapCreateInput-name",
+          "value": "Bridge atlas",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-MapCreateInput-regionId",
+          "value": "10000000-0000-4000-8000-000000000020",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-MapCreateInput-rows",
+          "value": 2,
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-MemberFiltersInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "MemberFiltersInput",
+      "valid_object": {
+        "role": "dm",
+        "search": "Dee",
+        "status": "active"
+      },
+      "bindings": [
+        {
+          "operation": "Query.members",
+          "argument": "filters"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-MemberFiltersInput-role",
+          "value": "dm",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-MemberFiltersInput-search",
+          "value": "Dee",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-MemberFiltersInput-status",
+          "value": "active",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-MemberRoleBatchInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "MemberRoleBatchInput",
+      "valid_object": {
+        "memberId": "10000000-0000-4000-8000-000000000002",
+        "note": "Appointed region steward",
+        "roles": ["player", "archon"]
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.setMemberRolesBatch",
+          "argument": "changes"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-MemberRoleBatchInput-memberId",
+          "value": "10000000-0000-4000-8000-000000000002",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-MemberRoleBatchInput-note",
+          "value": "Appointed region steward",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-MemberRoleBatchInput-roles",
+          "value": ["player", "archon"],
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-MemberSettingsPatch",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "MemberSettingsPatch",
+      "valid_object": {
+        "colorblindSafe": true,
+        "density": "COMPACT",
+        "effectsEnabled": false,
+        "mode": "DARK",
+        "notifyCharacterVerification": false,
+        "notifyDmMentioned": false,
+        "notifyDmRequestDecided": false,
+        "notifyDocumentActivity": false,
+        "notifyQuestScheduled": false,
+        "notifyQuestSignup": false,
+        "reducedMotion": true,
+        "theme": "MIDNIGHT",
+        "timezone": "Europe/London"
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.updateMySettings",
+          "argument": "input"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-MemberSettingsPatch-colorblindSafe",
+          "value": true,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": true,
+          "scenario_ref": "PATCH-SETTINGS-JOINT"
+        },
+        {
+          "field_id": "SDL-MemberSettingsPatch-density",
+          "value": "COMPACT",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": true,
+          "scenario_ref": "PATCH-SETTINGS-JOINT"
+        },
+        {
+          "field_id": "SDL-MemberSettingsPatch-effectsEnabled",
+          "value": false,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": true,
+          "scenario_ref": "PATCH-SETTINGS-JOINT"
+        },
+        {
+          "field_id": "SDL-MemberSettingsPatch-mode",
+          "value": "DARK",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": true,
+          "scenario_ref": "PATCH-SETTINGS-JOINT"
+        },
+        {
+          "field_id": "SDL-MemberSettingsPatch-notifyCharacterVerification",
+          "value": false,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": true,
+          "scenario_ref": "PATCH-SETTINGS-JOINT"
+        },
+        {
+          "field_id": "SDL-MemberSettingsPatch-notifyDmMentioned",
+          "value": false,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": true,
+          "scenario_ref": "PATCH-SETTINGS-JOINT"
+        },
+        {
+          "field_id": "SDL-MemberSettingsPatch-notifyDmRequestDecided",
+          "value": false,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": true,
+          "scenario_ref": "PATCH-SETTINGS-JOINT"
+        },
+        {
+          "field_id": "SDL-MemberSettingsPatch-notifyDocumentActivity",
+          "value": false,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": true,
+          "scenario_ref": "PATCH-SETTINGS-JOINT"
+        },
+        {
+          "field_id": "SDL-MemberSettingsPatch-notifyQuestScheduled",
+          "value": false,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": true,
+          "scenario_ref": "PATCH-SETTINGS-JOINT"
+        },
+        {
+          "field_id": "SDL-MemberSettingsPatch-notifyQuestSignup",
+          "value": false,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": true,
+          "scenario_ref": "PATCH-SETTINGS-JOINT"
+        },
+        {
+          "field_id": "SDL-MemberSettingsPatch-reducedMotion",
+          "value": true,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": true,
+          "scenario_ref": "PATCH-SETTINGS-JOINT"
+        },
+        {
+          "field_id": "SDL-MemberSettingsPatch-theme",
+          "value": "MIDNIGHT",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": true,
+          "scenario_ref": "PATCH-SETTINGS-JOINT"
+        },
+        {
+          "field_id": "SDL-MemberSettingsPatch-timezone",
+          "value": "Europe/London",
+          "null": "stored SQL NULL; other fields unchanged",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": true,
+          "scenario_ref": "PATCH-SETTINGS-JOINT"
+        }
+      ],
+      "status": "Exact joint persisted readback, omission/null, validation, rollback and replay cases bound",
+      "scenario_ref": "PATCH-SETTINGS-JOINT"
+    },
+    {
+      "id": "INPUT-JOINT-ParticipationAttestationInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "ParticipationAttestationInput",
+      "valid_object": {
+        "characterId": "10000000-0000-4000-8000-000000000031",
+        "status": "played"
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.attestQuestParticipation",
+          "argument": "entries"
+        },
+        {
+          "input": "CloseQuestInput.attendance"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-ParticipationAttestationInput-characterId",
+          "value": "10000000-0000-4000-8000-000000000031",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-ParticipationAttestationInput-status",
+          "value": "played",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-PoiInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "PoiInput",
+      "valid_object": {
+        "discoveryTier": "landmark",
+        "documentId": "10000000-0000-4000-8000-000000000010",
+        "id": "10000000-0000-4000-8000-000000000181",
+        "isCharterObjective": true,
+        "poiType": "landmark"
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.upsertPoi",
+          "argument": "input"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-PoiInput-discoveryTier",
+          "value": "landmark",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-PoiInput-documentId",
+          "value": "10000000-0000-4000-8000-000000000010",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-PoiInput-id",
+          "value": "10000000-0000-4000-8000-000000000181",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-PoiInput-isCharterObjective",
+          "value": true,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-PoiInput-poiType",
+          "value": "landmark",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-PointcrawlEdgeInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "PointcrawlEdgeInput",
+      "valid_object": {
+        "directed": true,
+        "documentId": "10000000-0000-4000-8000-000000000010",
+        "id": "10000000-0000-4000-8000-000000000085",
+        "kind": "road",
+        "label": "Eastern bridge",
+        "nodeA": "10000000-0000-4000-8000-000000000082",
+        "nodeB": "10000000-0000-4000-8000-000000000083"
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.setPointcrawlEdge",
+          "argument": "input"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-PointcrawlEdgeInput-directed",
+          "value": true,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-PointcrawlEdgeInput-documentId",
+          "value": "10000000-0000-4000-8000-000000000010",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-PointcrawlEdgeInput-id",
+          "value": "10000000-0000-4000-8000-000000000085",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-PointcrawlEdgeInput-kind",
+          "value": "road",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-PointcrawlEdgeInput-label",
+          "value": "Eastern bridge",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-PointcrawlEdgeInput-nodeA",
+          "value": "10000000-0000-4000-8000-000000000082",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-PointcrawlEdgeInput-nodeB",
+          "value": "10000000-0000-4000-8000-000000000083",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-PointcrawlNodeInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "PointcrawlNodeInput",
+      "valid_object": {
+        "id": "10000000-0000-4000-8000-000000000082",
+        "name": "Bridge east",
+        "submapId": "10000000-0000-4000-8000-000000000024",
+        "x": 2.5,
+        "y": 3.75
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.upsertPointcrawlNode",
+          "argument": "input"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-PointcrawlNodeInput-id",
+          "value": "10000000-0000-4000-8000-000000000082",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-PointcrawlNodeInput-name",
+          "value": "Bridge east",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-PointcrawlNodeInput-submapId",
+          "value": "10000000-0000-4000-8000-000000000024",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-PointcrawlNodeInput-x",
+          "value": 2.5,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-PointcrawlNodeInput-y",
+          "value": 3.75,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-QuestEditInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "QuestEditInput",
+      "valid_object": {
+        "additionalInfo": "Bring lanterns",
+        "apl": 3,
+        "arcId": null,
+        "briefBody": "Cross after sunset",
+        "dmId": "10000000-0000-4000-8000-000000000017",
+        "durationHours": 4.5,
+        "expectedUpdatedAt": "2026-10-13T10:00:00Z",
+        "genres": ["Mystery"],
+        "kinds": ["event"],
+        "regionIds": ["10000000-0000-4000-8000-000000000021"],
+        "scheduledAt": "2026-10-17T19:00:00Z",
+        "signupType": "application",
+        "slotsMax": 3,
+        "tags": ["bridge"],
+        "title": "Bridge at night"
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.updateQuest",
+          "argument": "input"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-QuestEditInput-additionalInfo",
+          "value": "Bring lanterns",
+          "null": "stored SQL NULL; other fields unchanged",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestEditInput-apl",
+          "value": 3,
+          "null": "stored SQL NULL; other fields unchanged",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestEditInput-arcId",
+          "value": null,
+          "null": "stored SQL NULL; other fields unchanged",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestEditInput-briefBody",
+          "value": "Cross after sunset",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestEditInput-dmId",
+          "value": "10000000-0000-4000-8000-000000000017",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestEditInput-durationHours",
+          "value": 4.5,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestEditInput-expectedUpdatedAt",
+          "value": "2026-10-13T10:00:00Z",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestEditInput-genres",
+          "value": ["Mystery"],
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestEditInput-kinds",
+          "value": ["event"],
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestEditInput-regionIds",
+          "value": ["10000000-0000-4000-8000-000000000021"],
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestEditInput-scheduledAt",
+          "value": "2026-10-17T19:00:00Z",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestEditInput-signupType",
+          "value": "application",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestEditInput-slotsMax",
+          "value": 3,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestEditInput-tags",
+          "value": ["bridge"],
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestEditInput-title",
+          "value": "Bridge at night",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-QuestHexInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "QuestHexInput",
+      "valid_object": {
+        "hexId": "10000000-0000-4000-8000-000000000027",
+        "role": "expected"
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.setQuestHexes",
+          "argument": "hexes"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-QuestHexInput-hexId",
+          "value": "10000000-0000-4000-8000-000000000027",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestHexInput-role",
+          "value": "expected",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-QuestPcxpAwardInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "QuestPcxpAwardInput",
+      "valid_object": {
+        "characterId": "10000000-0000-4000-8000-000000000031",
+        "note": "Completed the crossing",
+        "pcxp": 4
+      },
+      "bindings": [
+        {
+          "input": "CloseQuestInput.rewards"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-QuestPcxpAwardInput-characterId",
+          "value": "10000000-0000-4000-8000-000000000031",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestPcxpAwardInput-note",
+          "value": "Completed the crossing",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestPcxpAwardInput-pcxp",
+          "value": 4,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-QuestStateCountsFiltersV2Input",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "QuestStateCountsFiltersV2Input",
+      "valid_object": {
+        "arcId": "10000000-0000-4000-8000-000000000060",
+        "dmId": "10000000-0000-4000-8000-000000000003",
+        "kind": "standard",
+        "regionId": "10000000-0000-4000-8000-000000000020",
+        "tag": "river"
+      },
+      "bindings": [
+        {
+          "operation": "Query.questStateCounts",
+          "argument": "filters"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-QuestStateCountsFiltersV2Input-arcId",
+          "value": "10000000-0000-4000-8000-000000000060",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestStateCountsFiltersV2Input-dmId",
+          "value": "10000000-0000-4000-8000-000000000003",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestStateCountsFiltersV2Input-kind",
+          "value": "standard",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestStateCountsFiltersV2Input-regionId",
+          "value": "10000000-0000-4000-8000-000000000020",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestStateCountsFiltersV2Input-tag",
+          "value": "river",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-QuestSummaryInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "QuestSummaryInput",
+      "valid_object": {
+        "body": "The bridge was crossed",
+        "characterId": "10000000-0000-4000-8000-000000000030",
+        "documentId": null,
+        "frontmatter": {
+          "weather": "rain"
+        },
+        "questIds": ["10000000-0000-4000-8000-000000000051"],
+        "title": "Crossing account",
+        "visibility": "public"
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.upsertQuestSummary",
+          "argument": "input"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-QuestSummaryInput-body",
+          "value": "The bridge was crossed",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestSummaryInput-characterId",
+          "value": "10000000-0000-4000-8000-000000000030",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestSummaryInput-documentId",
+          "value": null,
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestSummaryInput-frontmatter",
+          "value": {
+            "weather": "rain"
+          },
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestSummaryInput-questIds",
+          "value": ["10000000-0000-4000-8000-000000000051"],
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestSummaryInput-title",
+          "value": "Crossing account",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestSummaryInput-visibility",
+          "value": "public",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-QuestV2FiltersInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "QuestV2FiltersInput",
+      "valid_object": {
+        "arcId": "10000000-0000-4000-8000-000000000060",
+        "displayStatus": "open",
+        "dmId": "10000000-0000-4000-8000-000000000003",
+        "genre": "exploration",
+        "kind": "standard",
+        "regionId": "10000000-0000-4000-8000-000000000020",
+        "scheduledFrom": "2026-10-15T00:00:00Z",
+        "scheduledTo": "2026-10-16T00:00:00Z",
+        "search": "River",
+        "shortCodes": ["Q-RIVER"],
+        "status": "open",
+        "tag": "river"
+      },
+      "bindings": [
+        {
+          "operation": "Query.quests",
+          "argument": "filters"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-QuestV2FiltersInput-arcId",
+          "value": "10000000-0000-4000-8000-000000000060",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestV2FiltersInput-displayStatus",
+          "value": "open",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestV2FiltersInput-dmId",
+          "value": "10000000-0000-4000-8000-000000000003",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestV2FiltersInput-genre",
+          "value": "exploration",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestV2FiltersInput-kind",
+          "value": "standard",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestV2FiltersInput-regionId",
+          "value": "10000000-0000-4000-8000-000000000020",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestV2FiltersInput-scheduledFrom",
+          "value": "2026-10-15T00:00:00Z",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestV2FiltersInput-scheduledTo",
+          "value": "2026-10-16T00:00:00Z",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestV2FiltersInput-search",
+          "value": "River",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestV2FiltersInput-shortCodes",
+          "value": ["Q-RIVER"],
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestV2FiltersInput-status",
+          "value": "open",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-QuestV2FiltersInput-tag",
+          "value": "river",
+          "null": "predicate absent; identical result to omission, no writes",
+          "omitted": "predicate absent; no writes",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-RegionInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "RegionInput",
+      "valid_object": {
+        "charterDeadline": "2026-12-01T00:00:00Z",
+        "documentId": "10000000-0000-4000-8000-000000000010",
+        "kind": "archon",
+        "name": "North revised"
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.createRegion",
+          "argument": "input"
+        },
+        {
+          "operation": "Mutation.updateRegion",
+          "argument": "input"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-RegionInput-charterDeadline",
+          "value": "2026-12-01T00:00:00Z",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-RegionInput-documentId",
+          "value": "10000000-0000-4000-8000-000000000010",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-RegionInput-kind",
+          "value": "archon",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-RegionInput-name",
+          "value": "North revised",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-TimeAnchorInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "TimeAnchorInput",
+      "valid_object": {
+        "epochDay": 200,
+        "note": "Bridge calendar anchor",
+        "rate": 2.0,
+        "realUtc": "2026-10-14T00:00:00Z"
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.createTimeAnchor",
+          "argument": "input"
+        },
+        {
+          "operation": "Mutation.updateTimeAnchor",
+          "argument": "input"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-TimeAnchorInput-epochDay",
+          "value": 200,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": true,
+          "scenario_ref": "TIME-ANCHOR-WRITE-EXACT"
+        },
+        {
+          "field_id": "SDL-TimeAnchorInput-note",
+          "value": "Bridge calendar anchor",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": true,
+          "scenario_ref": "TIME-ANCHOR-WRITE-EXACT"
+        },
+        {
+          "field_id": "SDL-TimeAnchorInput-rate",
+          "value": 2.0,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": true,
+          "scenario_ref": "TIME-ANCHOR-WRITE-EXACT"
+        },
+        {
+          "field_id": "SDL-TimeAnchorInput-realUtc",
+          "value": "2026-10-14T00:00:00Z",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": true,
+          "scenario_ref": "TIME-ANCHOR-WRITE-EXACT"
+        }
+      ],
+      "status": "Exact create/update/trajectory/history/omission/null/validation/replay/rollback group",
+      "scenario_ref": "TIME-ANCHOR-WRITE-EXACT"
+    },
+    {
+      "id": "INPUT-JOINT-UpdateCharacterProfileV2Input",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "UpdateCharacterProfileV2Input",
+      "valid_object": {
+        "backgroundText": "Bridge childhood revised",
+        "description": "Carries bridge supplies revised"
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.updateCharacterProfile",
+          "argument": "input"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-UpdateCharacterProfileV2Input-backgroundText",
+          "value": "Bridge childhood revised",
+          "null": "stored SQL NULL; other fields unchanged",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": true,
+          "scenario_ref": "PATCH-CHARACTER-PROFILE-JOINT"
+        },
+        {
+          "field_id": "SDL-UpdateCharacterProfileV2Input-description",
+          "value": "Carries bridge supplies revised",
+          "null": "stored SQL NULL; other fields unchanged",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": true,
+          "scenario_ref": "PATCH-CHARACTER-PROFILE-JOINT"
+        }
+      ],
+      "status": "Exact joint persisted readback, omission/null, validation, rollback and replay cases bound",
+      "scenario_ref": "PATCH-CHARACTER-PROFILE-JOINT"
+    },
+    {
+      "id": "INPUT-JOINT-UpdateDmProfileInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "UpdateDmProfileInput",
+      "valid_object": {
+        "acceptingPlayers": false,
+        "houseRules": "Use milestone rests",
+        "philosophy": "Player choices shape the crossing",
+        "tableInfo": {
+          "style": "mystery"
+        },
+        "tagline": "Explore the eastern bridge"
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.updateMyDmProfile",
+          "argument": "input"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-UpdateDmProfileInput-acceptingPlayers",
+          "value": false,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-UpdateDmProfileInput-houseRules",
+          "value": "Use milestone rests",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-UpdateDmProfileInput-philosophy",
+          "value": "Player choices shape the crossing",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-UpdateDmProfileInput-tableInfo",
+          "value": {
+            "style": "mystery"
+          },
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-UpdateDmProfileInput-tagline",
+          "value": "Explore the eastern bridge",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-UpdateMyProfileInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "UpdateMyProfileInput",
+      "valid_object": {
+        "avatarUrl": "https://example.invalid/avatar/bridge.png",
+        "displayName": "Ava Bridgekeeper"
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.updateMyProfile",
+          "argument": "input"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-UpdateMyProfileInput-avatarUrl",
+          "value": "https://example.invalid/avatar/bridge.png",
+          "null": "stored SQL NULL; other fields unchanged",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": true,
+          "scenario_ref": "PATCH-PROFILE-JOINT"
+        },
+        {
+          "field_id": "SDL-UpdateMyProfileInput-displayName",
+          "value": "Ava Bridgekeeper",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": true,
+          "scenario_ref": "PATCH-PROFILE-JOINT"
+        }
+      ],
+      "status": "Exact joint persisted readback, omission/null, validation, rollback and replay cases bound",
+      "scenario_ref": "PATCH-PROFILE-JOINT"
+    },
+    {
+      "id": "INPUT-JOINT-UpsertCreationCatalogEntryInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "UpsertCreationCatalogEntryInput",
+      "valid_object": {
+        "available": false,
+        "description": "Bridge ancestry",
+        "introducedByRegionId": "10000000-0000-4000-8000-000000000020",
+        "kind": "species",
+        "name": "Bridge folk",
+        "optionId": "10000000-0000-4000-8000-000000000042",
+        "retired": true
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.upsertCreationCatalogEntry",
+          "argument": "input"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-UpsertCreationCatalogEntryInput-available",
+          "value": false,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "GraphQL default false",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-UpsertCreationCatalogEntryInput-description",
+          "value": "Bridge ancestry",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-UpsertCreationCatalogEntryInput-introducedByRegionId",
+          "value": "10000000-0000-4000-8000-000000000020",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-UpsertCreationCatalogEntryInput-kind",
+          "value": "species",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-UpsertCreationCatalogEntryInput-name",
+          "value": "Bridge folk",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-UpsertCreationCatalogEntryInput-optionId",
+          "value": "10000000-0000-4000-8000-000000000042",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-UpsertCreationCatalogEntryInput-retired",
+          "value": true,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "GraphQL default false",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    },
+    {
+      "id": "INPUT-JOINT-UpsertUnlockableInput",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "input_type": "UpsertUnlockableInput",
+      "valid_object": {
+        "active": false,
+        "description": "Honored bridge service",
+        "kind": "ACHIEVEMENT",
+        "name": "Bridge keeper",
+        "payload": {
+          "label": "Bridge keeper"
+        },
+        "unlockRule": null
+      },
+      "bindings": [
+        {
+          "operation": "Mutation.upsertUnlockable",
+          "argument": "input"
+        }
+      ],
+      "fields": [
+        {
+          "field_id": "SDL-UpsertUnlockableInput-active",
+          "value": false,
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "GraphQL default true",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-UpsertUnlockableInput-description",
+          "value": "Honored bridge service",
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-UpsertUnlockableInput-kind",
+          "value": "ACHIEVEMENT",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-UpsertUnlockableInput-name",
+          "value": "Bridge keeper",
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-UpsertUnlockableInput-payload",
+          "value": {
+            "label": "Bridge keeper"
+          },
+          "null": "INVALID; no business/history/notification/job/receipt writes",
+          "omitted": "INVALID; no writes",
+          "complete": false
+        },
+        {
+          "field_id": "SDL-UpsertUnlockableInput-unlockRule",
+          "value": null,
+          "null": "not yet behavior-bound; requires command-specific admission rule",
+          "omitted": "preserve old value for patch; create uses explicit documented default",
+          "complete": false
+        }
+      ],
+      "status": "Authored values and null/omission classification; exact per-command readback and validation completion still required. No acceptance completion claim."
+    }
+  ]
+}

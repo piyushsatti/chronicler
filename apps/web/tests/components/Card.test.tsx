@@ -7,6 +7,38 @@ import { Button } from '../../src/components/primitives/Button.js';
 import { Card } from '../../src/components/primitives/Card.js';
 
 describe('Card', () => {
+  for (const component of [undefined, 'EditorShell']) {
+    it.each(['surface', 'button', 'anchor', 'router'] as const)(
+      `preserves ${component ?? 'default'} identity and generated attributes on %s`,
+      (branch) => {
+        const shared = {
+          'aria-label': 'Identity contract',
+          'data-component': component,
+          'data-tone': 'untrusted',
+          'data-pad': 'untrusted',
+          'data-variant': 'untrusted',
+          tone: 2,
+          pad: 4,
+        } as const;
+        const card = branch === 'surface'
+          ? <Card {...shared} as="section" />
+          : branch === 'button'
+            ? <Card {...shared} variant="clickable" />
+            : branch === 'anchor'
+              ? <Card {...shared} variant="clickable" href="/quests" />
+              : <Card {...shared} variant="clickable" to="/quests" />;
+        render(<MemoryRouter>{card}</MemoryRouter>);
+        const element = screen.getByLabelText('Identity contract');
+        expect(element).toHaveAttribute('data-component', component ?? 'Card');
+        expect(element).toHaveAttribute('data-tone', '2');
+        expect(element).toHaveAttribute('data-pad', '4');
+        expect(element).toHaveAttribute('data-variant', branch === 'surface' ? 'plain' : 'clickable');
+        if (branch === 'surface') expect(element).not.toHaveAttribute('data-interactive');
+        else expect(element).toHaveAttribute('data-interactive', '1');
+      },
+    );
+  }
+
   it('renders semantic surfaces and forwards view-only attributes', () => {
     render(
       <Card

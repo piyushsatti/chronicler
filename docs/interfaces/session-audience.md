@@ -1,33 +1,36 @@
-# Interface: Session and audience predicate
+# Interface: Task database work and audience predicate
 
-**Status:** accepted  
-**Provider:** `apps/api`  
-**Consumers:** all GraphQL/HTTP request paths that read audience-scoped data
+**Status:** accepted design; full Go enforcement pending
+**Provider:** apps/api
+**Consumers:** GraphQL resolvers, batch providers and HTTP paths reading scoped data
 
 ## Rule
 
-One database session per request. The audience (visibility) predicate is bound to that session so no query can forget it. Sibling work on the same request serializes on that session.
+Each independent read task or loader batch borrows its own pooled connection for its bounded database work. There is no request-wide session, transaction or serialization lock. Current authority and the audience specification travel as immutable inputs. Every Document/revision/link projection applies the owning audience predicate.
+
+A business command owns one unit-of-work transaction and binds all repositories/foreign writers to it. Repositories never commit. Required history, in-app notifications and durable work admission share that command transaction. Several mutation roots remain independent commands. Remote provider work holds no database transaction or query connection.
 
 ## Enforcement
 
-| Mechanism                      | Location              | Status           |
-| ------------------------------ | --------------------- | ---------------- |
-| Session-scoped listener / gate | API ORM session setup | **not enforced** |
+| Mechanism                                        | Location                                            | Status                                                    |
+| ------------------------------------------------ | --------------------------------------------------- | --------------------------------------------------------- |
+| Command transaction ownership                    | uow.Runner.Do                                       | existing primitive; full product command use not enforced |
+| Scoped Document projections                      | Document specification and scoped-body tests        | partially implemented                                     |
+| Task-local batching and complete command writers | product repositories/loaders and mounted acceptance | not enforced until implementation                         |
 
 ## Provider
 
-API session factory and audience binding. Local design: `apps/api/docs/`.
+The [API contract](/apps/api/docs/graphql-contract.md) and [Go interfaces](/apps/api/docs/design/graphql-product/interfaces.md) specify actual provider/caller signatures. Pool acquisition/query bounds and concurrent loader limits are accepted in the [performance contract](/apps/api/docs/design/graphql-product/performance.md).
 
 ## Consumers
 
-No consumer reimplements audience rules in SQL or client code.
+Consumers do not implement competing audience rules. Renderers receive the already scoped body. A shared pgx transaction is never handed to concurrent resolver tasks.
 
 ## Related decisions
 
-- [D12](/docs/decisions/D12-Scope-Predicate-At-The-Session.md)
-- [D27](/docs/decisions/D27-One-Session-Per-Request.md)
-- [D28](/docs/decisions/D28-One-Predicate-Over-Policy.md)
+- [D27](/docs/decisions/D27-One-Session-Per-Request.md) was amended to session per task with no lock.
+- [D28](/docs/decisions/D28-One-Predicate-Over-Policy.md) retains one audience predicate.
 
 ## Reopen
 
-A second session or a query path that bypasses the session-bound predicate is accepted in writing.
+Measured pool/resource behavior requires a new accepted boundary, or a scoped load bypasses the owning predicate.

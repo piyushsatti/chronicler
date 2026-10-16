@@ -6,7 +6,7 @@ type CodexDirectoryResult {
 type CodexEntryCardType {
   document: DocumentType!
   backlinkCount: Int!
-  subjects: [DocumentLinkType!]!
+  subjects(limit: Int! = 50, offset: Int! = 0): [DocumentLinkType!]!
 }
 
 type DocumentAuthorType {
@@ -36,15 +36,18 @@ type DocumentListResult {
 }
 
 type DocumentRevisionType {
+  reason: String!
+  recordedAt: DateTime!
+  recordedBy: ID
   id: ID!
   documentId: ID!
   rev: Int!
   title: String!
   frontmatter: JSON!
   body: String!
-  visibility: String!
-  publishedAt: DateTime!
-  publishedBy: ID!
+  visibility: String
+  publishedAt: DateTime
+  publishedBy: ID
 }
 
 type DocumentSearchHitType {
@@ -59,6 +62,7 @@ type DocumentSearchHitType {
 
 type DocumentType {
   id: ID!
+  version: Int!
   slug: String!
   kind: String!
   category: String
@@ -81,7 +85,7 @@ type LieutenantAssignmentType {
   memberId: ID!
   npcDocumentId: ID!
   grantedAt: DateTime!
-  grantedBy: ID!
+  grantedBy: ID
 }
 
 enum PreviewAudience {

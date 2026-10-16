@@ -1,0 +1,68 @@
+{
+  "id": "D29-OVERRIDE-EXACT",
+  "owner": "S03",
+  "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+  "read": {
+    "fixture": "operation-vectors.md Document011 author002/policy member:10000000-0000-4000-8000-000000000003/body HIDDEN_BODY_SENTINEL; caller004 live admin; clear captured structured log only, snapshot all DB rows",
+    "operation": "document(id:011){id title effectiveBody}",
+    "expected": {
+      "id": "10000000-0000-4000-8000-000000000011",
+      "title": "HIDDEN_TITLE_SENTINEL",
+      "effectiveBody": "HIDDEN_BODY_SENTINEL"
+    },
+    "log": [
+      {
+        "actorId": "10000000-0000-4000-8000-000000000004",
+        "operation": "Query.document",
+        "subjectType": "document",
+        "subjectId": "10000000-0000-4000-8000-000000000011",
+        "ruleCode": "AUDIENCE",
+        "at": "2026-10-14T12:00:00Z"
+      }
+    ],
+    "negative": [
+      "anonymous FORBIDDEN, no override log",
+      "002 author ordinary allowed, no override log",
+      "demoted004 following request FORBIDDEN, no successful override log"
+    ],
+    "db": "No rows changed, no auth_override_audit insert",
+    "forbidden_log_bytes": [
+      "HIDDEN_BODY_SENTINEL",
+      "HIDDEN_TITLE_SENTINEL",
+      "member:10000000-0000-4000-8000-000000000003"
+    ]
+  },
+  "write": {
+    "source": "PATCH-DOCUMENT-EDIT-JOINT published variant",
+    "operation": "editPublishedDocument",
+    "actor": "004",
+    "input_source": "INPUT-JOINT-DocumentEditInput.valid_object",
+    "expected": {
+      "version": 3,
+      "title": "River account revised",
+      "category": "Lore",
+      "frontmatter": {
+        "region": "North",
+        "source": "Revised account"
+      },
+      "updatedAt": "2026-10-14T12:00:00Z"
+    },
+    "audit": [
+      {
+        "publicId": "$auditId",
+        "actorId": "10000000-0000-4000-8000-000000000004",
+        "operation": "Mutation.editPublishedDocument",
+        "subjectType": "document",
+        "subjectId": "10000000-0000-4000-8000-000000000010",
+        "ruleCode": "OWNERSHIP",
+        "at": "2026-10-14T12:00:00Z"
+      }
+    ],
+    "history": "exactly one immutable revision with captured UUID matching PATCH old/new snapshots, recordedBy004; published identity/time retained",
+    "notifications": "exactly one DOCUMENT_EDITED event linked same revisionID; recipient001 only, actor004 excluded; no DM_MENTIONED event because old mention removed; no jobs/progression/grants",
+    "receipt": "one complete receipt; same actor/input/key replay returns original revision/result with no extra revision/audit/event/card/receipt",
+    "rollback": "force audit insert error: INTERNAL, exact original version2 fields, no new revision/audit/event/card/job/receipt; do not log success"
+  },
+  "exceptions": "staff/owner cannot mutate/claim another player Character or decide a request addressed to003: FORBIDDEN/no override fact, including successful-otheractor replay key",
+  "status": "NOT IMPLEMENTED"
+}

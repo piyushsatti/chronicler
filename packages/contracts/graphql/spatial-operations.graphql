@@ -1,0 +1,105 @@
+extend type Query {
+  map(atlasCode: String!): MapV2Type
+  mapView(atlasCode: String!, limit: Int! = 250, offset: Int! = 0): MapViewV2Type
+  maps(
+    family: String = null
+    mapKind: String = null
+    limit: Int! = 50
+    offset: Int! = 0
+  ): [MapV2Type!]!
+  hex(mapId: ID!, col: Int!, row: Int!): HexV2Type
+  regions(kind: String = null, limit: Int! = 50, offset: Int! = 0): [RegionV2Type!]!
+  archonAssignments(
+    regionId: ID
+    memberId: ID
+    limit: Int! = 50
+    offset: Int! = 0
+  ): ArchonPage!
+  hexHistory(hexId: ID!, limit: Int! = 50, offset: Int! = 0): HexChangePage!
+  recentHexChanges(mapId: ID, limit: Int! = 50, offset: Int! = 0): HexChangePage!
+  poisForHex(hexId: ID!, limit: Int! = 50, offset: Int! = 0): PoiPage!
+  regionCounts(regionId: ID!): RegionCountsV2Type
+  regionActivity(atlasCode: String!): RegionActivityV2Type
+  gameDate(realDate: Date!): GameDateV2Type
+  realDates(gameDay: Int!, limit: Int! = 50, offset: Int! = 0): RealDatePage!
+  timeAnchors(limit: Int! = 50, offset: Int! = 0): TimeAnchorPage!
+  gameCalendar(realFrom: Date!, realTo: Date!): GameCalendarV2Type!
+}
+extend type Mutation {
+  createMap(input: MapCreateInput!, meta: CommandMeta!): MapV2Type!
+  updateHex(id: ID!, input: HexEditInput!, meta: CommandMeta!): HexV2Type!
+  upsertPoi(hexId: ID!, input: PoiInput!, meta: CommandMeta!): PoiV2Type!
+  setHexEdge(mapId: ID!, input: HexEdgeInput!, meta: CommandMeta!): HexEdgeV2Type!
+  linkHexEntry(
+    hexId: ID!
+    documentId: ID!
+    relation: String!
+    meta: CommandMeta!
+  ): HexEntryLinkV2Type!
+  unlinkHexEntry(
+    hexId: ID!
+    documentId: ID!
+    relation: String!
+    meta: CommandMeta!
+  ): CommandReceipt!
+  createRegion(input: RegionInput!, meta: CommandMeta!): RegionV2Type!
+  updateRegion(id: ID!, input: RegionInput!, meta: CommandMeta!): RegionV2Type!
+  transitionRegion(
+    id: ID!
+    to: String!
+    note: String!
+    meta: CommandMeta!
+  ): RegionV2Type!
+  assignArchon(memberId: ID!, regionId: ID!, meta: CommandMeta!): ArchonAssignmentType!
+  revokeArchon(memberId: ID!, regionId: ID!, meta: CommandMeta!): CommandReceipt!
+  createTimeAnchor(input: TimeAnchorInput!, meta: CommandMeta!): TimeAnchorV2Type!
+  updateTimeAnchor(
+    id: ID!
+    input: TimeAnchorInput!
+    meta: CommandMeta!
+  ): TimeAnchorV2Type!
+  updateGameCalendar(definition: JSON!, meta: CommandMeta!): GameCalendarV2Type!
+  deleteRegion(regionId: ID!, meta: CommandMeta!): CommandReceipt!
+  restoreRegion(regionId: ID!, meta: CommandMeta!): RegionV2Type!
+  upsertPointcrawlNode(
+    mapId: ID!
+    input: PointcrawlNodeInput!
+    meta: CommandMeta!
+  ): PointcrawlNodeV2Type!
+  setPointcrawlEdge(
+    mapId: ID!
+    input: PointcrawlEdgeInput!
+    meta: CommandMeta!
+  ): PointcrawlEdgeV2Type!
+  linkPointcrawlEntry(
+    mapId: ID!
+    nodeId: ID!
+    documentId: ID!
+    relation: String!
+    meta: CommandMeta!
+  ): PointcrawlEntryLinkType!
+  unlinkPointcrawlEntry(
+    mapId: ID!
+    nodeId: ID!
+    documentId: ID!
+    relation: String!
+    meta: CommandMeta!
+  ): CommandReceipt!
+}
+
+input PointcrawlNodeInput {
+  id: ID
+  x: Float!
+  y: Float!
+  name: String!
+  submapId: ID
+}
+input PointcrawlEdgeInput {
+  id: ID
+  nodeA: ID!
+  nodeB: ID!
+  directed: Boolean!
+  kind: String!
+  label: String
+  documentId: ID
+}

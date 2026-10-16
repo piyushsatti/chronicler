@@ -1,0 +1,31 @@
+extend type Query {
+  search(
+    query: String!
+    kinds: [String!] = null
+    limit: Int! = 20
+    offset: Int! = 0
+  ): SearchResultV2Type!
+  home: HomeV2Type!
+  adminOperations(
+    deliveryState: String = null
+    limit: Int! = 25
+    offset: Int! = 0
+  ): AdminOperationsV2Type!
+  searchableKinds: [SearchKindType!]!
+  siteStats: SiteStatsV2Type!
+  discordDeliveryMode: String!
+  homeBanner: HomeBannerType!
+  questAnnouncementRoleSetting: QuestAnnouncementRoleSettingType!
+}
+extend type Mutation {
+  updateHomeBanner(input: HomeBannerInput!, meta: CommandMeta!): HomeBannerType!
+  updateQuestAnnouncementRoleSetting(
+    input: AnnouncementRoleInput!
+    meta: CommandMeta!
+  ): QuestAnnouncementRoleSettingType!
+  redriveDiscordDelivery(
+    jobId: ID!
+    reason: String!
+    meta: CommandMeta!
+  ): DeliveryReceipt!
+}

@@ -1,7 +1,7 @@
 # Chronicler: unattended local test and verification commands.
 # Domain rules require the proxy; do not disable it while network is enabled.
 # New sessions load this trusted project layer. Existing sessions may need restart.
-approval_policy = "never"
+approval_policy = "on-request"
 default_permissions = "chronicler-tests"
 
 [features]
@@ -24,6 +24,7 @@ allow_local_binding = false
 # Host-level permissions cover all local test ports, including ephemeral ports.
 # Codex network rules cannot select individual HTTP paths or methods.
 [permissions.chronicler-tests.network.domains]
+"cdn.playwright.dev" = "allow"
 "localhost" = "allow"
 "127.0.0.1" = "allow"
 "::1" = "allow"

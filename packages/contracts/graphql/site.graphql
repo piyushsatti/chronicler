@@ -1,10 +1,10 @@
 type AdminDeliveryConfigV2Type {
   publicOrigin: String!
-  publicOriginHealthy: Boolean!
+  publicOriginHealthy: Boolean
   deliveryMode: String!
   announcementRoleId: String
   announcementRoleSource: String!
-  announcementRoleHealthy: Boolean!
+  announcementRoleHealthy: Boolean
 }
 
 type AdminDeliveryJobV2Type {
@@ -38,13 +38,14 @@ type AdminHealthAlertV2Type {
 }
 
 type AdminOperationsV2Type {
+  scheduledWork: [ScheduledWorkStatusType!]!
   config: AdminDeliveryConfigV2Type!
   activeAlertCount: Int!
   pendingDeliveryCount: Int!
   terminalDeliveryCount: Int!
   deliveryTotal: Int!
   deliveries: [AdminDeliveryJobV2Type!]!
-  activeAlerts: [AdminHealthAlertV2Type!]!
+  activeAlerts(limit: Int! = 50, offset: Int! = 0): [AdminHealthAlertV2Type!]!
 }
 
 type CategoryCountType {
@@ -54,7 +55,7 @@ type CategoryCountType {
 
 type ChannelVoiceMinutesType {
   channelId: String!
-  minutes: Int!
+  minutes: Float!
 }
 
 type CountByKeyType {
@@ -99,14 +100,13 @@ type HomeBannerType {
 }
 
 type HomeBucketType {
-  category: String!
+  category: String
   documents: [DocumentType!]!
 }
 
 type HomeV2Type {
   recentByCategory: [HomeBucketType!]!
   communityStats: SiteStatsV2Type!
-  questBoard: [QuestBoardEntryType!]!
 }
 
 type SearchKindType {
@@ -129,7 +129,6 @@ type SearchResultV2Type {
 type SiteStatsV2Type {
   totalMembers: Int!
   membersByRole: [CountByKeyType!]!
-  totalDirectors: Int!
   activeCharacters: Int!
   publishedDocumentsByKind: [CountByKeyType!]!
   publishedDocumentsByCategory: [CountByKeyType!]!
@@ -138,21 +137,15 @@ type SiteStatsV2Type {
   totalRegions: Int!
   totalQuests: Int!
   totalDms: Int!
-  beginnerFriendlyQuestCount: Int!
-  monthsOfHistory: Int!
   activity: ActivitySummaryType!
 }
 
-enum UnknownReason {
-  DM_SUMMARY_MISSING
-  CHARACTER_SHEET_MISSING
-  QUEST_SUMMARY_MISSING
-  REGION_UNASSIGNED
-  NPC_OWNER_MISSING
-  FACTION_LEADER_MISSING
-  NEVER_SCRAPED
-  ARCHIVE_GAP
-  AMBIGUOUS_NAME
-  TIMELINE_GAP
-  OTHER
+type ScheduledWorkStatusType {
+  kind: String!
+  expectedSlot: DateTime!
+  outcome: String!
+  lastStartedAt: DateTime
+  lastFinishedAt: DateTime
+  jobId: ID
+  safeErrorCode: String
 }

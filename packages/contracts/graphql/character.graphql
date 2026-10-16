@@ -6,12 +6,12 @@ type AdminCharacterDirectoryEntryV2Type {
   ownerHandle: String!
   ownerDisplayName: String!
   ownerAvatarUrl: String
-  regionId: ID!
-  regionName: String!
+  regionId: ID
+  regionName: String
   guildId: ID
   status: String!
   verificationStatus: String!
-  verificationSubmittedAt: DateTime!
+  verificationSubmittedAt: DateTime
   updatedAt: DateTime!
 }
 
@@ -37,7 +37,7 @@ type BackstoryType {
   name: String!
   lore: String!
   cohort: String!
-  sourceRegionId: ID!
+  sourceRegionId: ID
   retired: Boolean!
 }
 
@@ -63,7 +63,7 @@ type CharacterLogType {
   characterId: ID!
   body: String!
   questId: ID
-  createdBy: ID!
+  createdBy: ID
   createdAt: DateTime!
 }
 
@@ -93,17 +93,18 @@ type CharacterV2Type {
   shortCode: String!
   name: String!
   status: String!
-  regionId: ID!
+  regionId: ID
   guildId: ID
-  backstoryId: ID!
+  backstoryId: ID
   pcxp: Int!
   description: String
   backgroundText: String
   ddbUrl: String
   createdAt: DateTime!
   updatedAt: DateTime!
-  verificationSubmittedAt: DateTime!
+  verificationSubmittedAt: DateTime
   verificationStatus: CharacterReviewStatus!
+  ddbLastAttempt: DdbAttemptType
   ddbMirror: CharacterDDBMirrorType
   proficiencies: [DDBProficiencyType!]!
   displayIcon: String
@@ -118,8 +119,8 @@ type CoPlayerV2Type {
 
 input CreateCharacterV2Input {
   name: String!
-  regionId: ID!
-  backstoryId: ID!
+  regionId: ID
+  backstoryId: ID
   catalogPickIds: [ID!]! = []
   guildId: ID = null
   description: String = null
@@ -160,7 +161,7 @@ type DowntimeProjectType {
   name: String!
   goal: String
   progress: Int!
-  target: Int!
+  target: Int
   status: String!
   notes: String
   updatedAt: DateTime!
@@ -173,7 +174,7 @@ type ProgressionEntryType {
   amount: Int
   questId: ID
   note: String
-  recordedBy: ID!
+  recordedBy: ID
   recordedAt: DateTime!
 }
 
@@ -205,4 +206,39 @@ type VerificationType {
   note: String
   verifiedBy: ID!
   recordedAt: DateTime!
+}
+
+type DdbAttemptType {
+  id: ID!
+  attemptedAt: DateTime!
+  finishedAt: DateTime!
+  succeeded: Boolean!
+  safeError: String
+  provenance: JSON!
+}
+
+enum RewardClaimStatus {
+  UNCLAIMED
+  CLAIMED
+}
+type QuestRewardEntitlementType {
+  id: ID!
+  questId: ID!
+  characterId: ID!
+  pcxp: Int!
+  note: String
+  awardedBy: ID!
+  awardedAt: DateTime!
+  claimedAt: DateTime
+  progressionEntryId: ID
+}
+type RewardEntitlementPage {
+  items: [QuestRewardEntitlementType!]!
+  total: Int!
+}
+type RewardClaimReceipt {
+  entitlementIds: [ID!]!
+  progressionEntries: [ProgressionEntryType!]!
+  replayed: Boolean!
+  alreadyClaimed: Boolean!
 }

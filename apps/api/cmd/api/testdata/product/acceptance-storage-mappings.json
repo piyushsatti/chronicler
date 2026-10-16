@@ -1,0 +1,227 @@
+{
+  "schema_version": 1,
+  "pattern": "Single acceptance-loader logical\u2192physical map, not an application policy interpreter",
+  "table_aliases": {
+    "notification_recipients": "notifications",
+    "command_receipts": "idempotency_keys",
+    "node_changes": "pointcrawl_node_changes"
+  },
+  "column_aliases": {
+    "documents": {
+      "frontmatter": "frontmatter_yaml",
+      "authorId": "author_id",
+      "publishedBy": "published_by",
+      "deletedBy": "deleted_by"
+    },
+    "document_revisions": {
+      "recordedBy": "created_by",
+      "recordedAt": "created_at",
+      "actor": "created_by",
+      "at": "created_at",
+      "frontmatter": "frontmatter_yaml",
+      "old": "old_value",
+      "new": "new_value",
+      "snapshot": "new_value"
+    },
+    "character_progression_ledger": {
+      "amount": "delta",
+      "recordedAt": "created_at"
+    },
+    "member_unlocks": {
+      "unlockedAt": "granted_at"
+    },
+    "member_follows": {
+      "memberId": "follower_id",
+      "targetId": "followed_id"
+    },
+    "arc_changes": {
+      "arcId": "arc_id",
+      "old": "old_value",
+      "new": "new_value",
+      "actor": "actor_id",
+      "at": "created_at"
+    },
+    "quest_reward_decisions": {
+      "closureChangeId": "closure_change_id",
+      "decidedBy": "decided_by",
+      "decidedAt": "decided_at"
+    },
+    "characters": {
+      "guildId": "guild_document_id",
+      "pcxp": "player_xp",
+      "player_xp_after": "player_xp",
+      "player_xp_before": "player_xp"
+    },
+    "character_ddb_attempts": {
+      "attemptedAt": "started_at"
+    },
+    "lieutenant_assignments": {
+      "grantedAt": "created_at"
+    },
+    "archon_assignments": {
+      "grantedAt": "created_at"
+    },
+    "map_changes": {
+      "actor": "actor_id",
+      "at": "recorded_at"
+    },
+    "region_changes": {
+      "actor": "actor_id",
+      "at": "created_at"
+    },
+    "assignment_changes": {
+      "actor": "actor_id",
+      "at": "created_at"
+    },
+    "pointcrawl_node_changes": {
+      "actor": "actor_id",
+      "at": "created_at"
+    },
+    "site_setting_changes": {
+      "recordedAt": "created_at"
+    },
+    "job_redrives": {
+      "recordedAt": "created_at"
+    },
+    "calendar_changes": {
+      "recordedAt": "created_at"
+    }
+  },
+  "logical_fact_columns": {
+    "characters": {
+      "verificationStatus": "latest verifications verdict; no stored Character verdict column",
+      "approval_state": "latest actual verification row"
+    },
+    "hex_changes": {
+      "oldValue": "payload.oldValue",
+      "newValue": "payload.newValue",
+      "causedByMember": "payload.causedByMember",
+      "causedByQuest": "payload.causedByQuest",
+      "note": "payload.note",
+      "occurredAt": "payload.occurredAt",
+      "actor": "payload.actor",
+      "at": "payload.at",
+      "documentId": "payload.old/new.documentId",
+      "relation": "payload.old/new.relation"
+    },
+    "region_changes": {
+      "note": "new_value.note"
+    },
+    "document_links": {
+      "documentId": "source_id resolved from publicUUID",
+      "characterId": "character_target_id one separate edge",
+      "questIds": "quest_target_id one edge per publicUUID"
+    },
+    "notifications": {
+      "notificationId": "public_id of actual notification row, no second recipient table"
+    },
+    "dm_profiles": {
+      "submittedAt": "immutable dm_profile_review_events SUBMIT recorded_at; latest matching revision"
+    },
+    "character_ddb_mirrors": {
+      "armorClass": "payload.armorClass",
+      "background": "payload.background",
+      "classes": "payload.classes",
+      "level": "payload.level",
+      "maxHp": "payload.maxHp",
+      "species": "payload.species",
+      "xp": "payload.xp"
+    },
+    "pointcrawl_node_changes": {
+      "documentId": "old_value/new_value.documentId",
+      "mapId": "old_value/new_value.mapId",
+      "relation": "old_value/new_value.relation"
+    },
+    "site_setting_changes": {
+      "body": "old_value/new_value.body",
+      "ctaHref": "old_value/new_value.ctaHref",
+      "ctaLabel": "old_value/new_value.ctaLabel",
+      "enabled": "old_value/new_value.enabled",
+      "mediaKind": "old_value/new_value.mediaKind",
+      "mediaLabel": "old_value/new_value.mediaLabel",
+      "mediaUrl": "old_value/new_value.mediaUrl",
+      "title": "old_value/new_value.title"
+    },
+    "time_anchor_changes": {
+      "epochDay": "old_value/new_value.epochDay",
+      "note": "old_value/new_value.note",
+      "rate": "old_value/new_value.rate",
+      "realUtc": "old_value/new_value.realUtc"
+    },
+    "calendar_changes": {
+      "era": "old_value/new_value.era",
+      "leap": "old_value/new_value.leap",
+      "periods": "old_value/new_value.periods"
+    }
+  },
+  "effect_metadata": [
+    "actor_excluded",
+    "after",
+    "after_count",
+    "all_other_rows_unchanged",
+    "applied",
+    "arc_id_after",
+    "arc_id_before",
+    "arc_links",
+    "before",
+    "before_count",
+    "changed_fields",
+    "codec",
+    "columns",
+    "conditional_reservations",
+    "count",
+    "count_delta",
+    "decoded_json",
+    "delete",
+    "delete_count",
+    "desired_after",
+    "desired_before",
+    "desired_revision",
+    "exact",
+    "exists",
+    "expected",
+    "fact",
+    "facts",
+    "hexId",
+    "id",
+    "identity",
+    "input_columns",
+    "insert",
+    "insert_count",
+    "key",
+    "logical_key",
+    "no_writes",
+    "nodeId",
+    "old028_removed",
+    "old_rows",
+    "operation",
+    "promotion",
+    "provider_status",
+    "publicIds",
+    "reason",
+    "replace_quest",
+    "retained",
+    "retained_identity",
+    "row",
+    "row_count",
+    "rows",
+    "set",
+    "status_after",
+    "status_before",
+    "table",
+    "unchanged",
+    "update",
+    "update_count",
+    "update_id",
+    "where"
+  ],
+  "rules": [
+    "Only fixture/effect boundaries apply these aliases; GraphQL response fields remain wire values.",
+    "Public UUID FK references resolve once to actual owning bigint IDs, never insert UUID into bigint column.",
+    "Physical fixture.rows, update.set and physical_projection.columns prohibit logical column aliases.",
+    "Document JSON frontmatter uses typed JSON\u2194YAML codec, preserving json.Number lexical values.",
+    "JSON fact snapshots are stored in actual payload/old_value/new_value; their keys are not added SQL columns.",
+    "Legacy before0003 fixtures use baseline inventory; final fixtures use proposed0003 inventory, then actual native schema introspection.",
+    "Metadata keys specify assertion operators/counts, never literal INSERT columns."
+  ]
+}

@@ -1,0 +1,126 @@
+{
+  "data": {
+    "background": {
+      "definition": {
+        "name": "Soldier"
+      }
+    },
+    "classes": [
+      {
+        "definition": {
+          "name": "Barbarian"
+        },
+        "level": 1
+      }
+    ],
+    "currentXp": 0,
+    "id": 152579009,
+    "modifiers": {
+      "background": [
+        {
+          "friendlySubtypeName": "Athletics",
+          "isGranted": false,
+          "subType": "athletics",
+          "type": "proficiency"
+        },
+        {
+          "friendlySubtypeName": "Intimidation",
+          "isGranted": false,
+          "subType": "intimidation",
+          "type": "proficiency"
+        },
+        {
+          "friendlySubtypeName": "Darts",
+          "isGranted": false,
+          "subType": "darts",
+          "type": "proficiency"
+        }
+      ],
+      "class": [
+        {
+          "friendlySubtypeName": "Nature",
+          "isGranted": false,
+          "subType": "nature",
+          "type": "proficiency"
+        },
+        {
+          "friendlySubtypeName": "Survival",
+          "isGranted": false,
+          "subType": "survival",
+          "type": "proficiency"
+        },
+        {
+          "friendlySubtypeName": "Strength Saving Throws",
+          "isGranted": true,
+          "subType": "strength-saving-throws",
+          "type": "proficiency"
+        },
+        {
+          "friendlySubtypeName": "Constitution Saving Throws",
+          "isGranted": true,
+          "subType": "constitution-saving-throws",
+          "type": "proficiency"
+        },
+        {
+          "friendlySubtypeName": "Simple Weapons",
+          "isGranted": true,
+          "subType": "simple-weapons",
+          "type": "proficiency"
+        },
+        {
+          "friendlySubtypeName": "Martial Weapons",
+          "isGranted": true,
+          "subType": "martial-weapons",
+          "type": "proficiency"
+        },
+        {
+          "friendlySubtypeName": "Light Armor",
+          "isGranted": true,
+          "subType": "light-armor",
+          "type": "proficiency"
+        },
+        {
+          "friendlySubtypeName": "Medium Armor",
+          "isGranted": true,
+          "subType": "medium-armor",
+          "type": "proficiency"
+        },
+        {
+          "friendlySubtypeName": "Shields",
+          "isGranted": true,
+          "subType": "shields",
+          "type": "proficiency"
+        }
+      ],
+      "condition": [],
+      "feat": [],
+      "item": [],
+      "race": [
+        {
+          "friendlySubtypeName": "Common",
+          "isGranted": true,
+          "subType": "common",
+          "type": "language"
+        },
+        {
+          "friendlySubtypeName": "Giant",
+          "isGranted": false,
+          "subType": "giant",
+          "type": "language"
+        },
+        {
+          "friendlySubtypeName": "Orc",
+          "isGranted": false,
+          "subType": "orc",
+          "type": "language"
+        }
+      ]
+    },
+    "overrideHitPoints": null,
+    "race": {
+      "baseName": "Goliath",
+      "fullName": "Goliath"
+    }
+  },
+  "success": true
+}

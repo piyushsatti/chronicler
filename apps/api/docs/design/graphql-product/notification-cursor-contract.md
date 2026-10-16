@@ -1,0 +1,11 @@
+# Authenticated notification cursor
+
+**Status:** accepted design. Published schema/config and comment scaffolds do not implement these contracts. Runtime enforcement remains pending the owning implementation tasks and their tests.
+
+NOT05 owns an immutable CursorCodec and its constructor. W02 supplies existing Config.JWTSecret bytes to NewCursorCodec and injects the result into notification.ProductQueries. Empty secret rejects construction. No authentication, secret or configuration setting changes.
+
+The derived32byte signing key is HMAC-SHA256(key=JWTSecret, message=UTF8 chronicler:notification-cursor:v1). Payload is compact JSON from the typed struct with stable key order version,memberId,unreadOnly,createdAt,id. Version is1; memberId/id are canonical lowercase UUID strings, unreadOnly is a JSON Boolean, createdAt is UTC formatted with six fractional digits and Z. Token is unpadded base64url(payload) dot unpadded base64url(HMAC-SHA256(derivedKey,payload)). Codec stores only the derived key and never mutable member/filter state.
+
+Decode bounds token to1024bytes, requires exactly two components, valid base64url and exact32byte signature, constant-time MAC comparison, version1 and exact payload keys/types. It rejects invalid timestamps, noncanonical UUIDs, unknown/trailing JSON, duplicate keys and current member/unreadOnly mismatch as INVALID. Query resolution decodes before SQL and passes parsed BeforeCreatedAt/BeforeNotificationID fields to its owning repository. It never lets a repository interpret an opaque token or fall back to an empty success.
+
+NOT05 tests capture actual Encode output, round-trip exactly through the same query, tamper each component, change member/filter, pass version2/signed unknown/duplicate payload keys through a controlled test signer, and rejects a 1025-byte token while accepting its valid bounded counterpart. A restart with the same JWTSecret accepts the original token; a different secret rejects it. S03 tied timestamp fixture120/121 pages by raw createdAt+UUID, including a wholly suppressed page; cursor advances past considered raw rows. No tests hardcode a production signing secret or guess an unsigned token. A raw cryptographic fixture is not runtime database acceptance.

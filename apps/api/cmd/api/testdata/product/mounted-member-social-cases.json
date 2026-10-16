@@ -1,0 +1,135 @@
+{
+  "owner": "S03",
+  "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+  "scenarios": [
+    {
+      "id": "SOCIAL-FOLLOW-EXACT",
+      "operations": ["followPerson", "unfollowPerson"],
+      "actor": "001",
+      "memberId": "10000000-0000-4000-8000-000000000003",
+      "before": "No member_follows(001,003) row; existing member_follows(002,003) row remains.",
+      "steps": [
+        {
+          "operation": "followPerson",
+          "meta": {
+            "idempotencyKey": "follow-dee-1"
+          },
+          "response": {
+            "replayed": false
+          },
+          "database": "Exactly member_follows(001,003) inserts; isFollowing(003) for001 true;002 row unchanged."
+        },
+        {
+          "operation": "followPerson",
+          "meta": {
+            "idempotencyKey": "follow-dee-1"
+          },
+          "response": {
+            "replayed": true
+          },
+          "database": "Same one row and original creation timestamp; no new effects."
+        },
+        {
+          "operation": "followPerson",
+          "meta": {
+            "idempotencyKey": "follow-dee-2"
+          },
+          "response": {
+            "replayed": false
+          },
+          "database": "Existing unique preference remains one row; no timestamp reset."
+        },
+        {
+          "operation": "unfollowPerson",
+          "meta": {
+            "idempotencyKey": "unfollow-dee-1"
+          },
+          "response": {
+            "replayed": false
+          },
+          "database": "Only member_follows(001,003) hard deletes; isFollowing(003) for001 false;002 row unchanged."
+        },
+        {
+          "operation": "unfollowPerson",
+          "meta": {
+            "idempotencyKey": "unfollow-dee-1"
+          },
+          "response": {
+            "replayed": true
+          },
+          "database": "No recreated row or duplicate effects."
+        }
+      ],
+      "errors": [
+        {
+          "target": "001",
+          "code": "INVALID",
+          "effect": "No self row or receipt."
+        },
+        {
+          "target": "999",
+          "code": "NOT_FOUND",
+          "effect": "No row or receipt."
+        },
+        {
+          "actor": "anonymous",
+          "code": "UNAUTHENTICATED",
+          "effect": "No rows."
+        },
+        {
+          "actor": "001 with live status inactive",
+          "code": "FORBIDDEN",
+          "effect": "No rows or successful replay disclosure."
+        }
+      ],
+      "side_effects": "Command receipts only; zero notification/event/job/grant/progression/history changes. Follow grants no authorization or signup priority. Inject receipt failure rolls back insertion/deletion; actor002 cannot access actor001 replay receipt.",
+      "query_case": {
+        "operation": "isFollowing",
+        "argument": "memberId",
+        "value": "10000000-0000-4000-8000-000000000003",
+        "actor_results": [
+          {
+            "actor": "001",
+            "at": "before follow",
+            "expected": false
+          },
+          {
+            "actor": "001",
+            "at": "after follow",
+            "expected": true
+          },
+          {
+            "actor": "001",
+            "at": "after unfollow",
+            "expected": false
+          },
+          {
+            "actor": "002",
+            "at": "all three stages",
+            "expected": true
+          }
+        ],
+        "missing_relation": "For001 member999 without any matching row returns false, without creating an identity or preference; the read is relation existence, while writers still require target existence",
+        "errors": [
+          {
+            "actor": "anonymous",
+            "code": "UNAUTHENTICATED"
+          },
+          {
+            "actor": "001 with live inactive status",
+            "code": "FORBIDDEN"
+          },
+          {
+            "memberId": "not-a-uuid",
+            "code": "INVALID"
+          },
+          {
+            "memberId": null,
+            "code": "INVALID"
+          }
+        ],
+        "effects": "Every query snapshots and preserves all rows; following never bypasses protected Document/Character permissions"
+      }
+    }
+  ]
+}

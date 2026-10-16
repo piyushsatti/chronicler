@@ -1,33 +1,34 @@
 # Interface: GraphQL schema
 
-**Status:** accepted  
-**Provider:** `apps/api` (exports SDL)  
-**Consumers:** `apps/web`, `apps/discord` (via `@pi/contracts`)
+**Status:** accepted; split SDL/discovery published, aggregate/runtime regeneration pending
+**Provider:** packages/contracts and apps/api
+**Consumers:** apps/web, apps/discord and product clients
 
 ## Rule
 
-There is one GraphQL schema for the product. Clients consume the committed SDL in `packages/contracts/schema.graphql`. Clients do not fork or hand-edit the contract.
+There is one product GraphQL SDL source under packages/contracts/graphql, recursively discovered in sorted order. Clients consume the controlled aggregate schema.graphql and generated types after root regeneration. No client forks the schema. Product queries and business commands share this contract; retained HTTP protocols are separate.
 
 ## Enforcement
 
-| Mechanism                     | Location                | Status   |
-| ----------------------------- | ----------------------- | -------- |
-| Export from API schema module | `bun run export-schema` | enforced |
-| Drift check vs committed SDL  | `bun run check-schema`  | enforced |
+| Mechanism                                      | Location                                             | Status                            |
+| ---------------------------------------------- | ---------------------------------------------------- | --------------------------------- |
+| Full recursive discovery and schema validation | scripts/merge-graphql-schema and TestSchemaDiscovery | implemented/tested                |
+| Aggregate drift vs source                      | bun run check-schema                                 | pending controlled regeneration   |
+| Generated/executable field/argument parity     | TestGraphQLContract and mounted product tests        | not enforced until implementation |
 
 ## Provider
 
-Split SDL under `packages/contracts/graphql/` is the source; `scripts/merge-graphql-schema` produces the committed `schema.graphql`. The Go API generates handlers from that contract via gqlgen.
+The [API contract](/apps/api/docs/graphql-contract.md) explains source/config publication, real generation prerequisites and runtime acceptance. Publishing SDL does not replace old generated handlers. No generator is run against incomplete service declarations.
 
 ## Consumers
 
-Web and Discord generate or import types from `@pi/contracts`. Local notes: `apps/web/README.md`, `apps/discord/docs/`.
+Clients use @pi/contracts after controlled regeneration. [Breaking changes](/packages/contracts/docs/product-cutover.md) identify the unsupported old product REST adapters, retired selections and changed scalar/nullability/cursor contracts. Frontend migration remains separate.
 
 ## Related decisions
 
-- Aggregate boundaries that shape the surface: [D26](/apps/api/docs/decisions/D26-Ten-Roots-Not-Forty-Five-Repos.md) (API-local)
-- Expected failures as values on the wire: [D25](/apps/api/docs/decisions/D25-Expected-Failures-Are-Values.md) (API-local)
+- [D40](/apps/api/docs/decisions/D40-GraphQL-Versus-REST.md) selects the single product API.
+- [D25](/apps/api/docs/decisions/D25-Expected-Failures-Are-Values.md) retains expected failure values.
 
 ## Reopen
 
-A second public API surface (REST for reads, alternate GraphQL) is accepted in writing with an ADR.
+A second product API is accepted in writing or actual client/server source discovery differs.

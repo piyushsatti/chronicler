@@ -1,0 +1,3 @@
+-- DOC03 owns the named SQL implementation after P04, DOC02.
+-- Responsibility: Complete named set SQL projections, filters,count,page,locks,writes,histories; sqlc sources; typed-link set joins and Document-only backlink isolation, source/target audience; one set FindAvailableSlug SQL task over ALLrows, firstfree suffix within3s.
+-- Acceptance: TASK-DOC03, AUTH-document, BATCH-document. No SQL statements are implemented.

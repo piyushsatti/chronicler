@@ -1,0 +1,15 @@
+extend type Query {
+  myNotifications(
+    limit: Int!
+    unreadOnly: Boolean! = false
+    before: String = null
+  ): NotificationConnection!
+  myUnreadNotificationCount: Int!
+}
+extend type Mutation {
+  markNotificationsRead(ids: [ID!]!, meta: CommandMeta!): NotificationWriteReceipt!
+  acknowledgeSuppressedNotifications(
+    limit: Int! = 100
+    meta: CommandMeta!
+  ): NotificationWriteReceipt!
+}

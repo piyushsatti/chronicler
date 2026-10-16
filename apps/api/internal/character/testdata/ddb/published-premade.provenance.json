@@ -1,0 +1,33 @@
+{
+  "capture": {
+    "url": "https://character-service.dndbeyond.com/character/v5/character/152579009",
+    "public_page": "https://www.dndbeyond.com/characters/152579009",
+    "catalog": "https://character-service.dndbeyond.com/character/v5/premade",
+    "capture_utc": "2026-10-14T13:00:39.738329+00:00",
+    "status": 200,
+    "bytes": 204710,
+    "sha256": "89d676ce7b8163dd23dc54da2a1796154296a78d23c7c0692450876a5f404b28",
+    "content_type": "application/json; charset=utf-8",
+    "authenticated": false,
+    "source": "official published premade catalog",
+    "verification_boundary": "one dated captured response; no ongoing live parity"
+  },
+  "reduction": {
+    "algorithm": "deterministic allowlist projection v1",
+    "source_sha256": "89d676ce7b8163dd23dc54da2a1796154296a78d23c7c0692450876a5f404b28",
+    "reduced_sha256": "02284379bfbcc9caedaeb325323686d5526d70e07520848ffddb400007b2be28",
+    "reduced_bytes": 3038,
+    "excluded": [
+      "account/user identifiers",
+      "character name",
+      "licensed feature/background descriptions",
+      "inventory/currencies/campaign/notes/avatar URLs",
+      "unused rules/effective-stat derivation inputs"
+    ],
+    "preserved_missing_optional": [
+      "armorClass absent",
+      "overrideHitPoints null"
+    ],
+    "validation_boundary": "one dated public provider response transformed offline; not synthetic-original, ongoing parity or completeness of all DDB rule calculations"
+  }
+}

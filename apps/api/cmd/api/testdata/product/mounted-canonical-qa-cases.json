@@ -1,0 +1,258 @@
+{
+  "cases": [
+    {
+      "id": "CANONICAL-MAPS-GLOBAL",
+      "operation": "maps",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "fixture": {
+        "source": "apps/api/db/seed/qa.jsonl",
+        "source_sha256": "15c9cccba4bc50b96b77f1657e665379083a635ff89f12a3fc03f130c244a9c8",
+        "rows": 637,
+        "table_counts": {
+          "agent_questions": 1,
+          "archon_assignments": 1,
+          "background_jobs": 7,
+          "backstories": 4,
+          "bot_heartbeats": 1,
+          "character_ddb_mirrors": 12,
+          "character_logs": 12,
+          "character_progression_ledger": 12,
+          "characters": 12,
+          "creation_catalog": 12,
+          "discord_activity_events": 5,
+          "dm_profiles": 5,
+          "dm_requests": 6,
+          "document_links": 9,
+          "document_readers": 1,
+          "document_revisions": 9,
+          "documents": 140,
+          "downtime_projects": 12,
+          "game_calendar": 1,
+          "game_time_map": 14,
+          "hex_changes": 9,
+          "hex_edges": 12,
+          "hex_entry_links": 28,
+          "hexes": 80,
+          "idempotency_keys": 1,
+          "lieutenant_assignments": 1,
+          "maps": 2,
+          "member_availability": 17,
+          "member_follows": 12,
+          "member_settings": 17,
+          "member_unlocks": 5,
+          "members": 17,
+          "notifications": 6,
+          "pois": 20,
+          "quest_arcs": 2,
+          "quest_hexes": 20,
+          "quest_participants": 49,
+          "quest_regions": 20,
+          "quests": 20,
+          "regions": 3,
+          "role_changes": 4,
+          "site_settings": 2,
+          "time_anchors": 1,
+          "unlockables": 9,
+          "verifications": 4
+        },
+        "migration_effect": "All existing maps.family become campaign by migration. Load dated637 rows into old schema before0003; approved exact9cosmetic/5grant purge per qa-catalog-purge-fixture.json leaves623 dated unrelated rows. Preserve these and all canonical maps. Fresh current-schema QA uses S06-reviewed regenerated source, never loads raw old cosmetic columns after0003. Add exact synthetic024 North Atlas and025 South Atlas. No namespace-only predicate exists.",
+        "canonical_map_rows": [
+          {
+            "table": "maps",
+            "conflict": ["public_id"],
+            "refs": {
+              "region_id": {
+                "table": "regions",
+                "public_id": "00000003-0000-4000-8000-000000000001"
+              }
+            },
+            "row": {
+              "asset_path": "atlases/lfc/coast.webp",
+              "atlas_code": "LFC",
+              "cols": 12,
+              "map_kind": "hexgrid",
+              "name": "Lightfall Coast",
+              "public_id": "00000004-0000-4000-8000-000000000001",
+              "rows": 12
+            }
+          },
+          {
+            "table": "maps",
+            "conflict": ["public_id"],
+            "refs": {
+              "region_id": {
+                "table": "regions",
+                "public_id": "00000003-0000-4000-8000-000000000003"
+              }
+            },
+            "row": {
+              "atlas_code": "LFC-UNDER",
+              "map_kind": "pointcrawl",
+              "name": "Underkeep",
+              "public_id": "00000004-0000-4000-8000-000000000002"
+            }
+          }
+        ]
+      },
+      "selection": ["id", "name", "family", "mapKind"],
+      "aliases": [
+        {
+          "alias": "all",
+          "arguments": {
+            "family": "campaign",
+            "limit": 100,
+            "offset": 0
+          },
+          "expected": [
+            {
+              "id": "00000004-0000-4000-8000-000000000001",
+              "name": "Lightfall Coast",
+              "family": "campaign",
+              "mapKind": "hexgrid"
+            },
+            {
+              "id": "10000000-0000-4000-8000-000000000024",
+              "name": "North Atlas",
+              "family": "campaign",
+              "mapKind": "hexgrid"
+            },
+            {
+              "id": "10000000-0000-4000-8000-000000000025",
+              "name": "South Atlas",
+              "family": "campaign",
+              "mapKind": "pointcrawl"
+            },
+            {
+              "id": "00000004-0000-4000-8000-000000000002",
+              "name": "Underkeep",
+              "family": "campaign",
+              "mapKind": "pointcrawl"
+            }
+          ]
+        },
+        {
+          "alias": "hex",
+          "arguments": {
+            "mapKind": "hexgrid"
+          },
+          "expected": [
+            {
+              "id": "00000004-0000-4000-8000-000000000001",
+              "name": "Lightfall Coast",
+              "family": "campaign",
+              "mapKind": "hexgrid"
+            },
+            {
+              "id": "10000000-0000-4000-8000-000000000024",
+              "name": "North Atlas",
+              "family": "campaign",
+              "mapKind": "hexgrid"
+            }
+          ]
+        },
+        {
+          "alias": "point",
+          "arguments": {
+            "family": "campaign",
+            "mapKind": "pointcrawl"
+          },
+          "expected": [
+            {
+              "id": "10000000-0000-4000-8000-000000000025",
+              "name": "South Atlas",
+              "family": "campaign",
+              "mapKind": "pointcrawl"
+            },
+            {
+              "id": "00000004-0000-4000-8000-000000000002",
+              "name": "Underkeep",
+              "family": "campaign",
+              "mapKind": "pointcrawl"
+            }
+          ]
+        },
+        {
+          "alias": "missingFamily",
+          "arguments": {
+            "family": "other"
+          },
+          "expected": []
+        },
+        {
+          "alias": "first",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": [
+            {
+              "id": "00000004-0000-4000-8000-000000000001",
+              "name": "Lightfall Coast",
+              "family": "campaign",
+              "mapKind": "hexgrid"
+            }
+          ]
+        },
+        {
+          "alias": "second",
+          "arguments": {
+            "limit": 1,
+            "offset": 1
+          },
+          "expected": [
+            {
+              "id": "10000000-0000-4000-8000-000000000024",
+              "name": "North Atlas",
+              "family": "campaign",
+              "mapKind": "hexgrid"
+            }
+          ]
+        },
+        {
+          "alias": "past",
+          "arguments": {
+            "limit": 1,
+            "offset": 4
+          },
+          "expected": []
+        }
+      ],
+      "invalid": [
+        {
+          "arguments": {
+            "mapKind": "campaign"
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "limit": 0
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "limit": 101
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "offset": -1
+          },
+          "code": "INVALID"
+        }
+      ],
+      "null_semantics": "family:null and mapKind:null omit only that predicate; both null returns exact all array. Omitting limit/offset uses50/0 and returns all4. GraphQL null on required limit/offset INVALID.",
+      "effects": "Zero business, history, job, event, recipient, receipt or cache repair writes. Inject set query failure INTERNAL rather than empty array.",
+      "argument_ids": [
+        "ARG-Query-maps-family",
+        "ARG-Query-maps-mapKind",
+        "ARG-Query-maps-limit",
+        "ARG-Query-maps-offset"
+      ]
+    }
+  ],
+  "runtime_success_claim": false
+}

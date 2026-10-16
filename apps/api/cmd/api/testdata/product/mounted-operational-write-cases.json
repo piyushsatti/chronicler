@@ -1,0 +1,1328 @@
+{
+  "clock": "2026-10-14T12:00:00Z",
+  "contracts": [
+    "behavior.md",
+    "transport-contract.md",
+    "time-contract.md",
+    "work-contract.md"
+  ],
+  "fixture_mode": "Canonical QA retained except explicit named synthetic fixtures. Every scenario resets independently; no production namespace predicate.",
+  "owner": "S04",
+  "scenarios": [
+    {
+      "actor": "10000000-0000-4000-8000-000000000004",
+      "arguments": {
+        "input": {
+          "body": "The bridge reopens",
+          "ctaHref": "https://example.test/bridge",
+          "ctaLabel": "Visit",
+          "enabled": false,
+          "mediaKind": "illustration",
+          "mediaLabel": "North bridge",
+          "mediaUrl": "/assets/bridge.webp",
+          "title": "News"
+        },
+        "meta": {
+          "idempotencyKey": "ops:updateHomeBanner:1"
+        }
+      },
+      "authentication": [
+        {
+          "actor": "anonymous",
+          "code": "UNAUTHENTICATED"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000004",
+          "code": "FORBIDDEN",
+          "overlay": "current member inactive despite admin token"
+        }
+      ],
+      "database": {
+        "payload": {
+          "body": "The bridge reopens",
+          "ctaHref": "https://example.test/bridge",
+          "ctaLabel": "Visit",
+          "enabled": false,
+          "mediaKind": "illustration",
+          "mediaLabel": "North bridge",
+          "mediaUrl": "/assets/bridge.webp",
+          "title": "News"
+        },
+        "site_setting_changes": {
+          "actorId": "10000000-0000-4000-8000-000000000004",
+          "after": {
+            "body": "The bridge reopens",
+            "ctaHref": "https://example.test/bridge",
+            "ctaLabel": "Visit",
+            "enabled": false,
+            "mediaKind": "illustration",
+            "mediaLabel": "North bridge",
+            "mediaUrl": "/assets/bridge.webp",
+            "title": "News"
+          },
+          "before": {
+            "body": "Read the ledger",
+            "ctaHref": "/codex/lore-river",
+            "ctaLabel": "Read",
+            "enabled": true,
+            "mediaKind": null,
+            "mediaLabel": null,
+            "mediaUrl": null,
+            "title": "Welcome"
+          },
+          "id": "$bannerHistoryId",
+          "key": "home_banner",
+          "recordedAt": "2026-10-14T12:00:00Z"
+        },
+        "site_settings.key": "home_banner",
+        "updatedAt": "2026-10-14T12:00:00Z"
+      },
+      "decision_complete": true,
+      "effects": {
+        "events": 0,
+        "jobs": 0,
+        "progression": 0,
+        "receipts": 1,
+        "recipients": 0,
+        "settings_history": 1,
+        "settings_updates": 1,
+        "unrelated_business": 0
+      },
+      "expected": {
+        "body": "The bridge reopens",
+        "ctaHref": "https://example.test/bridge",
+        "ctaLabel": "Visit",
+        "enabled": false,
+        "mediaKind": "illustration",
+        "mediaLabel": "North bridge",
+        "mediaUrl": "/assets/bridge.webp",
+        "title": "News"
+      },
+      "fixture": {
+        "site_settings.home_banner": {
+          "body": "Read the ledger",
+          "ctaHref": "/codex/lore-river",
+          "ctaLabel": "Read",
+          "enabled": true,
+          "mediaKind": null,
+          "mediaLabel": null,
+          "mediaUrl": null,
+          "title": "Welcome"
+        }
+      },
+      "id": "OPS-WRITE-updateHomeBanner",
+      "identity_rule": "Every $UUID is captured from actual response or unique immutable committed row, validated and cross-linked. Fixture UUIDs are actual before identities, not generated-ID guesses.",
+      "input_fields": {
+        "HomeBannerInput.body": {
+          "invalid_chars": 131073,
+          "null": null,
+          "omit": null,
+          "stored": "body",
+          "valid_max_chars": 131072,
+          "value": "The bridge reopens"
+        },
+        "HomeBannerInput.ctaHref": {
+          "accepted": ["/codex/lore-river", "https://example.test/a"],
+          "invalid_chars": 2049,
+          "network_requests": 0,
+          "null": null,
+          "omit": null,
+          "rejected": [
+            "//example.test/x",
+            "javascript:alert(1)",
+            "https://user:pass@example.test/a",
+            "/a/../b",
+            "/a\\b"
+          ],
+          "stored": "ctaHref",
+          "valid_max_chars": 2048,
+          "value": "https://example.test/bridge"
+        },
+        "HomeBannerInput.ctaLabel": {
+          "invalid_chars": 201,
+          "null": null,
+          "omit": null,
+          "stored": "ctaLabel",
+          "valid_max_chars": 200,
+          "value": "Visit"
+        },
+        "HomeBannerInput.enabled": {
+          "contrast": true,
+          "null": "INVALID",
+          "omit": "INVALID",
+          "value": false,
+          "wrong_type": "INVALID"
+        },
+        "HomeBannerInput.mediaKind": {
+          "invalid_chars": 201,
+          "null": null,
+          "omit": null,
+          "stored": "mediaKind",
+          "valid_max_chars": 200,
+          "value": "illustration"
+        },
+        "HomeBannerInput.mediaLabel": {
+          "invalid_chars": 201,
+          "null": null,
+          "omit": null,
+          "stored": "mediaLabel",
+          "valid_max_chars": 200,
+          "value": "North bridge"
+        },
+        "HomeBannerInput.mediaUrl": {
+          "accepted": ["/codex/lore-river", "https://example.test/a"],
+          "invalid_chars": 2049,
+          "network_requests": 0,
+          "null": null,
+          "omit": null,
+          "rejected": [
+            "//example.test/x",
+            "javascript:alert(1)",
+            "https://user:pass@example.test/a",
+            "/a/../b",
+            "/a\\b"
+          ],
+          "stored": "mediaUrl",
+          "valid_max_chars": 2048,
+          "value": "/assets/bridge.webp"
+        },
+        "HomeBannerInput.title": {
+          "invalid_chars": 201,
+          "null": null,
+          "omit": null,
+          "stored": "title",
+          "valid_max_chars": 200,
+          "value": "News"
+        },
+        "meta": {
+          "128ascii_chars": "accepted and performs exact positive effect",
+          "129chars": "INVALID",
+          "empty_or_nonascii_or_whitespace_key": "INVALID",
+          "omitted_or_null": "INVALID",
+          "value": {
+            "idempotencyKey": "ops:updateHomeBanner:1"
+          }
+        }
+      },
+      "negative": [
+        {
+          "actor": "10000000-0000-4000-8000-000000000002",
+          "code": "FORBIDDEN"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000005",
+          "code": "FORBIDDEN"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000003",
+          "code": "FORBIDDEN"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000001",
+          "code": "FORBIDDEN",
+          "unchanged": "All before facts/counts preserved"
+        }
+      ],
+      "null_omitted": {
+        "effects": "One actual replacement and history; every optional prior value cleared. Explicit null optionals give same object. Required enabled omission/null INVALID.",
+        "expected": {
+          "body": null,
+          "ctaHref": null,
+          "ctaLabel": null,
+          "enabled": true,
+          "mediaKind": null,
+          "mediaLabel": null,
+          "mediaUrl": null,
+          "title": null
+        },
+        "input": {
+          "enabled": true
+        }
+      },
+      "operation": "updateHomeBanner",
+      "owner": "S04",
+      "readback": {
+        "actor": "anonymous",
+        "expected": {
+          "body": "The bridge reopens",
+          "ctaHref": "https://example.test/bridge",
+          "ctaLabel": "Visit",
+          "enabled": false,
+          "mediaKind": "illustration",
+          "mediaLabel": "North bridge",
+          "mediaUrl": "/assets/bridge.webp",
+          "title": "News"
+        },
+        "query": "query {\n\thomeBanner {\n\t\tenabled\n\t\ttitle\n\t\tbody\n\t\tctaLabel\n\t\tctaHref\n\t\tmediaKind\n\t\tmediaUrl\n\t\tmediaLabel\n\t}\n}\n",
+        "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations."
+      },
+      "replay": {
+        "same_actor_key_input": "Original captured result with replayed=true where receipt exposes it; no new business/history/job/read-state/receipt changes, preserve original timestamps. Current authority checked before receipt disclosure.",
+        "same_key_changed_input": "CONFLICT with zero effects; concretely change first provided scalar/ID/list field to contrast supplied above.",
+        "stored_fingerprint": "Operation+actor+normalized arguments; key is not cross-operation authority."
+      },
+      "rollback": {
+        "code": "INTERNAL",
+        "expected": "All exact fixture before values and history/job/read-state counts preserved; zero new receipt or half success. Also inject each named owning history insert failure independently.",
+        "failure": "Inject final replay receipt persistence failure after all named writes, before command commit"
+      },
+      "status": "NOT IMPLEMENTED",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000004",
+      "arguments": {
+        "input": {
+          "enabled": false,
+          "roleId": null
+        },
+        "meta": {
+          "idempotencyKey": "ops:updateQuestAnnouncementRoleSetting:1"
+        }
+      },
+      "authentication": [
+        {
+          "actor": "anonymous",
+          "code": "UNAUTHENTICATED"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000004",
+          "code": "FORBIDDEN",
+          "overlay": "current member inactive despite admin token"
+        }
+      ],
+      "database": {
+        "history": {
+          "actorId": "10000000-0000-4000-8000-000000000004",
+          "after": {
+            "enabled": false,
+            "roleId": null
+          },
+          "before": {
+            "enabled": true,
+            "roleId": "123456789"
+          },
+          "id": "$roleSettingHistoryId",
+          "recordedAt": "2026-10-14T12:00:00Z"
+        },
+        "payload": {
+          "enabled": false,
+          "roleId": null
+        },
+        "site_settings.key": "quest_announcement_role",
+        "updatedAt": "2026-10-14T12:00:00Z"
+      },
+      "decision_complete": true,
+      "effects": {
+        "events": 0,
+        "jobs": 0,
+        "progression": 0,
+        "receipts": 1,
+        "recipients": 0,
+        "settings_history": 1,
+        "settings_updates": 1,
+        "unrelated_business": 0
+      },
+      "expected": {
+        "enabled": false,
+        "roleId": null
+      },
+      "fixture": {
+        "appliedRevision": 2,
+        "desiredRevision": 3,
+        "site_settings.quest_announcement_role": {
+          "enabled": true,
+          "roleId": "123456789"
+        }
+      },
+      "id": "OPS-WRITE-updateQuestAnnouncementRoleSetting",
+      "identity_rule": "Every $UUID is captured from actual response or unique immutable committed row, validated and cross-linked. Fixture UUIDs are actual before identities, not generated-ID guesses.",
+      "input_fields": {
+        "AnnouncementRoleInput.enabled": {
+          "contrast": true,
+          "null": "INVALID",
+          "omit": "INVALID",
+          "value": false,
+          "wrong_type": "INVALID"
+        },
+        "AnnouncementRoleInput.roleId": {
+          "disabled_valid": {
+            "enabled": false,
+            "roleId": "1"
+          },
+          "enabled_true_null": "INVALID",
+          "enabled_true_omitted": "INVALID",
+          "invalid": [
+            "0",
+            "01",
+            "-1",
+            "1.0",
+            " 1",
+            "18446744073709551616",
+            "111111111111111111111"
+          ],
+          "null": null,
+          "omit": null,
+          "positive": {
+            "enabled": true,
+            "roleId": "18446744073709551615"
+          },
+          "value": null
+        },
+        "meta": {
+          "128ascii_chars": "accepted and performs exact positive effect",
+          "129chars": "INVALID",
+          "empty_or_nonascii_or_whitespace_key": "INVALID",
+          "omitted_or_null": "INVALID",
+          "value": {
+            "idempotencyKey": "ops:updateQuestAnnouncementRoleSetting:1"
+          }
+        }
+      },
+      "negative": [
+        {
+          "actor": "10000000-0000-4000-8000-000000000001",
+          "code": "FORBIDDEN",
+          "unchanged": "All before facts/counts preserved"
+        }
+      ],
+      "operation": "updateQuestAnnouncementRoleSetting",
+      "owner": "S04",
+      "readback": {
+        "admin_config_health": null,
+        "expected": {
+          "enabled": false,
+          "roleId": null
+        },
+        "query": "query {\n\tquestAnnouncementRoleSetting {\n\t\tenabled\n\t\troleId\n\t}\n}\n",
+        "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations.",
+        "quests_desired_applied": "All values unchanged3/2; no provider calls or jobs. A later real Quest desired projection consumes persisted configuration, never implies provider-applied success."
+      },
+      "replay": {
+        "same_actor_key_input": "Original captured result with replayed=true where receipt exposes it; no new business/history/job/read-state/receipt changes, preserve original timestamps. Current authority checked before receipt disclosure.",
+        "same_key_changed_input": "CONFLICT with zero effects; concretely change first provided scalar/ID/list field to contrast supplied above.",
+        "stored_fingerprint": "Operation+actor+normalized arguments; key is not cross-operation authority."
+      },
+      "rollback": {
+        "code": "INTERNAL",
+        "expected": "All exact fixture before values and history/job/read-state counts preserved; zero new receipt or half success. Also inject each named owning history insert failure independently.",
+        "failure": "Inject final replay receipt persistence failure after all named writes, before command commit"
+      },
+      "status": "NOT IMPLEMENTED",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000004",
+      "arguments": {
+        "jobId": "10000000-0000-4000-8000-000000000110",
+        "meta": {
+          "idempotencyKey": "ops:redriveDiscordDelivery:1"
+        },
+        "reason": "Repair"
+      },
+      "authentication": [
+        {
+          "actor": "anonymous",
+          "code": "UNAUTHENTICATED"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000004",
+          "code": "FORBIDDEN",
+          "overlay": "current member inactive despite admin token"
+        }
+      ],
+      "database": {
+        "appliedRevision": 2,
+        "attemptDeadlineAt": null,
+        "attempts": 0,
+        "claimedAt": null,
+        "completionOperation": null,
+        "completionPayload": null,
+        "db_clock": "Capture actual post-row-lock JobClock; do not substitute business clock; no remote side effects.",
+        "desiredRevision": 3,
+        "job_redrives": {
+          "actorId": "10000000-0000-4000-8000-000000000004",
+          "id": "$redriveHistoryId",
+          "jobId": "10000000-0000-4000-8000-000000000110",
+          "reason": "Repair",
+          "recordedAt": "2026-10-14T12:00:00Z"
+        },
+        "leaseExpiresAt": null,
+        "leaseToken": 7,
+        "nextRunAt": "$dbRedriveClock",
+        "redriveCount": 1,
+        "safeError": null,
+        "same_job_public_id": "10000000-0000-4000-8000-000000000110",
+        "state": "queued",
+        "updatedAt": "$dbRedriveClock"
+      },
+      "decision_complete": true,
+      "effects": {
+        "events": 0,
+        "job_redrives": 1,
+        "job_updates": 1,
+        "jobs": 0,
+        "progression": 0,
+        "receipts": 1,
+        "recipients": 0,
+        "unrelated_business": 0
+      },
+      "expected": {
+        "appliedRevision": 2,
+        "deliveryStatus": "queued",
+        "desiredRevision": 3,
+        "jobId": "10000000-0000-4000-8000-000000000110"
+      },
+      "fixture": {
+        "job110": {
+          "appliedRevision": 2,
+          "attempts": 8,
+          "completionOperation": "failure",
+          "completionPayload": {
+            "safeCode": "UPSTREAM_TIMEOUT"
+          },
+          "desiredRevision": 3,
+          "kind": "quest_discord_delivery",
+          "leaseToken": 7,
+          "redriveCount": 0,
+          "state": "dead"
+        }
+      },
+      "id": "OPS-WRITE-redriveDiscordDelivery",
+      "identity_rule": "Every $UUID is captured from actual response or unique immutable committed row, validated and cross-linked. Fixture UUIDs are actual before identities, not generated-ID guesses.",
+      "input_fields": {
+        "jobId": {
+          "malformed": "INVALID",
+          "null": "INVALID",
+          "omit": "INVALID",
+          "unknown": "NOT_FOUND",
+          "value": "10000000-0000-4000-8000-000000000110"
+        },
+        "meta": {
+          "128ascii_chars": "accepted and performs exact positive effect",
+          "129chars": "INVALID",
+          "empty_or_nonascii_or_whitespace_key": "INVALID",
+          "omitted_or_null": "INVALID",
+          "value": {
+            "idempotencyKey": "ops:redriveDiscordDelivery:1"
+          }
+        },
+        "reason": {
+          "empty": "INVALID",
+          "invalid_chars": 2001,
+          "normalized_input": " Repair ",
+          "normalized_stored": "Repair",
+          "null": "INVALID",
+          "omit": "INVALID",
+          "valid_chars": 2000,
+          "value": "Repair",
+          "whitespace": "INVALID"
+        }
+      },
+      "negative": [
+        {
+          "code": "CONFLICT",
+          "overlay": {
+            "job110.state": "queued"
+          }
+        },
+        {
+          "code": "CONFLICT",
+          "overlay": {
+            "job110.state": "running"
+          }
+        },
+        {
+          "code": "CONFLICT",
+          "overlay": {
+            "job110.state": "retry_wait"
+          }
+        },
+        {
+          "code": "CONFLICT",
+          "overlay": {
+            "job110.state": "succeeded"
+          }
+        },
+        {
+          "code": "CONFLICT",
+          "overlay": {
+            "job110.state": "cancelled"
+          }
+        },
+        {
+          "code": "INVALID",
+          "overlay": {
+            "job110.kind": "agent_question"
+          }
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000002",
+          "code": "FORBIDDEN"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000001",
+          "code": "FORBIDDEN",
+          "unchanged": "All before facts/counts preserved"
+        }
+      ],
+      "operation": "redriveDiscordDelivery",
+      "owner": "S04",
+      "replay": {
+        "same_actor_key_input": "Original captured result with replayed=true where receipt exposes it; no new business/history/job/read-state/receipt changes, preserve original timestamps. Current authority checked before receipt disclosure.",
+        "same_key_changed_input": "CONFLICT with zero effects; concretely change first provided scalar/ID/list field to contrast supplied above.",
+        "stored_fingerprint": "Operation+actor+normalized arguments; key is not cross-operation authority."
+      },
+      "rollback": {
+        "code": "INTERNAL",
+        "expected": "All exact fixture before values and history/job/read-state counts preserved; zero new receipt or half success. Also inject each named owning history insert failure independently.",
+        "failure": "Inject final replay receipt persistence failure after all named writes, before command commit"
+      },
+      "same_key_after_remote_change": "After a later controlled job success, replay exact actor/key returns original queued receipt without requeue or changing later success. New key while queued/succeeded CONFLICT; only admitted terminal dead/repair_required can be redriven.",
+      "status": "NOT IMPLEMENTED",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000001",
+      "arguments": {
+        "ids": [
+          "10000000-0000-4000-8000-000000000120",
+          "10000000-0000-4000-8000-000000000120",
+          "10000000-0000-4000-8000-000000000125",
+          "10000000-0000-4000-8000-000000000999"
+        ],
+        "meta": {
+          "idempotencyKey": "ops:markNotificationsRead:1"
+        }
+      },
+      "authentication": [
+        {
+          "actor": "anonymous",
+          "code": "UNAUTHENTICATED"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000001",
+          "code": "FORBIDDEN",
+          "overlay": "current member inactive despite admin token"
+        }
+      ],
+      "database": {
+        "event_recipient_identity_rows": "No insertion/deletion. All bodies/facts/subjects unchanged.",
+        "notice120.readAt": "2026-10-14T12:00:00Z",
+        "notice125.readAt": null,
+        "otherAvaNotices.readAt": null,
+        "rawUnread": 3
+      },
+      "decision_complete": true,
+      "effects": {
+        "events": 0,
+        "jobs": 0,
+        "notification_read_updates": 1,
+        "progression": 0,
+        "receipts": 1,
+        "recipients": 0,
+        "unrelated_business": 0
+      },
+      "expected": {
+        "affectedCount": 1,
+        "replayed": false
+      },
+      "fixture": {
+        "notice120": {
+          "readAt": null,
+          "recipientId": "10000000-0000-4000-8000-000000000001"
+        },
+        "notice125": {
+          "readAt": null,
+          "recipientId": "10000000-0000-4000-8000-000000000002"
+        },
+        "otherAvaNotices": [
+          "10000000-0000-4000-8000-000000000121",
+          "10000000-0000-4000-8000-000000000122",
+          "10000000-0000-4000-8000-000000000123"
+        ],
+        "rawUnread": 4
+      },
+      "id": "OPS-WRITE-markNotificationsRead",
+      "identity_rule": "Every $UUID is captured from actual response or unique immutable committed row, validated and cross-linked. Fixture UUIDs are actual before identities, not generated-ID guesses.",
+      "input_fields": {
+        "ids": {
+          "empty": {
+            "affectedCount": 0,
+            "replayed": false
+          },
+          "length101_before_dedup": "INVALID",
+          "malformed": ["2", "INVALID"],
+          "max100_duplicates": {
+            "affectedCount": 1,
+            "value": [
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000120"
+            ]
+          },
+          "null": "INVALID",
+          "null_element": "INVALID",
+          "omit": "INVALID",
+          "value": [
+            "10000000-0000-4000-8000-000000000120",
+            "10000000-0000-4000-8000-000000000120",
+            "10000000-0000-4000-8000-000000000125",
+            "10000000-0000-4000-8000-000000000999"
+          ]
+        },
+        "meta": {
+          "128ascii_chars": "accepted and performs exact positive effect",
+          "129chars": "INVALID",
+          "empty_or_nonascii_or_whitespace_key": "INVALID",
+          "omitted_or_null": "INVALID",
+          "value": {
+            "idempotencyKey": "ops:markNotificationsRead:1"
+          }
+        }
+      },
+      "negative": [],
+      "operation": "markNotificationsRead",
+      "owner": "S04",
+      "repeat_new_key": {
+        "expected": {
+          "affectedCount": 0,
+          "replayed": false
+        },
+        "notice120.readAt": "2026-10-14T12:00:00Z",
+        "notification_write_delta": 0,
+        "receipt_delta": 1
+      },
+      "replay": {
+        "same_actor_key_input": "Original captured result with replayed=true where receipt exposes it; no new business/history/job/read-state/receipt changes, preserve original timestamps. Current authority checked before receipt disclosure.",
+        "same_key_changed_input": "CONFLICT with zero effects; concretely change first provided scalar/ID/list field to contrast supplied above.",
+        "stored_fingerprint": "Operation+actor+normalized arguments; key is not cross-operation authority."
+      },
+      "rollback": {
+        "code": "INTERNAL",
+        "expected": "All exact fixture before values and history/job/read-state counts preserved; zero new receipt or half success. Also inject each named owning history insert failure independently.",
+        "failure": "Inject final replay receipt persistence failure after all named writes, before command commit"
+      },
+      "same_key": {
+        "expected": {
+          "affectedCount": 1,
+          "replayed": true
+        },
+        "notice120.readAt": "2026-10-14T12:00:00Z",
+        "notification_write_delta": 0,
+        "receipt_delta": 0
+      },
+      "status": "NOT IMPLEMENTED",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000001",
+      "arguments": {
+        "limit": 2,
+        "meta": {
+          "idempotencyKey": "ops:acknowledgeSuppressedNotifications:1"
+        }
+      },
+      "authentication": [
+        {
+          "actor": "anonymous",
+          "code": "UNAUTHENTICATED"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000001",
+          "code": "FORBIDDEN",
+          "overlay": "current member inactive despite admin token"
+        }
+      ],
+      "corruption_case": {
+        "changes": "All old unread/readAt values and receipt counts unchanged. No quarantine/deletion/mark-read/synthetic verdict. Even if122 suppression was applied earlier in its transaction it rolls back.",
+        "expected": "INTERNAL with opaque message",
+        "limit": 100,
+        "overlay": {
+          "notice124": {
+            "createdAt": "2026-10-10T10:00:00Z",
+            "facts": null,
+            "id": "10000000-0000-4000-8000-000000000124",
+            "kind": "CHARACTER_VERIFICATION_DECIDED",
+            "recipientId": "10000000-0000-4000-8000-000000000001"
+          }
+        }
+      },
+      "database": {
+        "notice122.readAt": "2026-10-14T12:00:00Z",
+        "notices120_121_123_125.readAt": null,
+        "rawUnread": 3,
+        "subject011": "Retained byte-identical, no content/code/UUID leaks in result"
+      },
+      "decision_complete": true,
+      "effects": {
+        "events": 0,
+        "jobs": 0,
+        "notification_read_updates": 1,
+        "progression": 0,
+        "receipts": 1,
+        "recipients": 0,
+        "unrelated_business": 0
+      },
+      "expected": {
+        "affectedCount": 1,
+        "replayed": false
+      },
+      "fixture": {
+        "foreign125": "Retain Ben row outside reader scope",
+        "ordered_oldest_ava_unread": [
+          {
+            "createdAt": "2026-10-11T10:00:00Z",
+            "currentVisible": false,
+            "id": "10000000-0000-4000-8000-000000000122",
+            "subjectDocument": "10000000-0000-4000-8000-000000000011"
+          },
+          {
+            "createdAt": "2026-10-12T10:00:00Z",
+            "id": "10000000-0000-4000-8000-000000000120",
+            "validHistoricalFact": true
+          },
+          {
+            "createdAt": "2026-10-12T10:00:00Z",
+            "id": "10000000-0000-4000-8000-000000000121",
+            "validHistoricalFact": true
+          },
+          {
+            "createdAt": "2026-10-13T10:00:00Z",
+            "id": "10000000-0000-4000-8000-000000000123",
+            "subjectQuest": "10000000-0000-4000-8000-000000000050"
+          }
+        ],
+        "rawUnread": 4
+      },
+      "id": "OPS-WRITE-acknowledgeSuppressedNotifications",
+      "identity_rule": "Every $UUID is captured from actual response or unique immutable committed row, validated and cross-linked. Fixture UUIDs are actual before identities, not generated-ID guesses.",
+      "input_fields": {
+        "limit": {
+          "0": "INVALID",
+          "101": "INVALID",
+          "max100": {
+            "affectedCount": 1,
+            "considers": [
+              "10000000-0000-4000-8000-000000000122",
+              "10000000-0000-4000-8000-000000000120",
+              "10000000-0000-4000-8000-000000000121",
+              "10000000-0000-4000-8000-000000000123"
+            ]
+          },
+          "min1": {
+            "affectedCount": 1,
+            "considers": ["10000000-0000-4000-8000-000000000122"]
+          },
+          "negative": "INVALID",
+          "null": "INVALID",
+          "omit": 100,
+          "value": 2
+        },
+        "meta": {
+          "128ascii_chars": "accepted and performs exact positive effect",
+          "129chars": "INVALID",
+          "empty_or_nonascii_or_whitespace_key": "INVALID",
+          "omitted_or_null": "INVALID",
+          "value": {
+            "idempotencyKey": "ops:acknowledgeSuppressedNotifications:1"
+          }
+        }
+      },
+      "missing_document_case": {
+        "expected": {
+          "affectedCount": 1,
+          "replayed": false
+        },
+        "overlay": {
+          "notice122.subjectDocument": "10000000-0000-4000-8000-000000000999"
+        },
+        "rule": "Ordinary missing Document is suppressed and acknowledged. Missing nondocument subject instead is ROWS-1 INTERNAL and rollback."
+      },
+      "negative": [],
+      "operation": "acknowledgeSuppressedNotifications",
+      "owner": "S04",
+      "replay": {
+        "same_actor_key_input": "Original captured result with replayed=true where receipt exposes it; no new business/history/job/read-state/receipt changes, preserve original timestamps. Current authority checked before receipt disclosure.",
+        "same_key_changed_input": "CONFLICT with zero effects; concretely change first provided scalar/ID/list field to contrast supplied above.",
+        "stored_fingerprint": "Operation+actor+normalized arguments; key is not cross-operation authority."
+      },
+      "rollback": {
+        "code": "INTERNAL",
+        "expected": "All exact fixture before values and history/job/read-state counts preserved; zero new receipt or half success. Also inject each named owning history insert failure independently.",
+        "failure": "Inject final replay receipt persistence failure after all named writes, before command commit"
+      },
+      "same_key": {
+        "expected": {
+          "affectedCount": 1,
+          "replayed": true
+        },
+        "notification_write_delta": 0,
+        "receipt_delta": 0
+      },
+      "status": "NOT IMPLEMENTED",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000004",
+      "arguments": {
+        "definition": {
+          "era": {
+            "abbrev": "RPI",
+            "name": "Revised Pi Era"
+          },
+          "leap": null,
+          "periods": [
+            {
+              "days": 20,
+              "name": "Bridge",
+              "type": "month"
+            }
+          ]
+        },
+        "meta": {
+          "idempotencyKey": "ops:updateGameCalendar:1"
+        }
+      },
+      "authentication": [
+        {
+          "actor": "anonymous",
+          "code": "UNAUTHENTICATED"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000004",
+          "code": "FORBIDDEN",
+          "overlay": "current member inactive despite admin token"
+        }
+      ],
+      "database": {
+        "anchors": "All unchanged",
+        "calendar_changes": {
+          "actorId": "10000000-0000-4000-8000-000000000004",
+          "after": {
+            "era": {
+              "abbrev": "RPI",
+              "name": "Revised Pi Era"
+            },
+            "leap": null,
+            "periods": [
+              {
+                "days": 20,
+                "name": "Bridge",
+                "type": "month"
+              }
+            ]
+          },
+          "before": {
+            "era": {
+              "abbrev": "PI",
+              "name": "Pi Era"
+            },
+            "leap": null,
+            "periods": [
+              {
+                "days": 30,
+                "name": "River",
+                "type": "month"
+              }
+            ]
+          },
+          "id": "$calendarHistoryId",
+          "recordedAt": "2026-10-14T12:00:00Z"
+        },
+        "game_calendar.definition": {
+          "era": {
+            "abbrev": "RPI",
+            "name": "Revised Pi Era"
+          },
+          "leap": null,
+          "periods": [
+            {
+              "days": 20,
+              "name": "Bridge",
+              "type": "month"
+            }
+          ]
+        },
+        "game_time_map": "Byte-identical; metadata definition update never fills/interpolates anchor math",
+        "updatedAt": "2026-10-14T12:00:00Z"
+      },
+      "decision_complete": true,
+      "effects": {
+        "calendar_history": 1,
+        "calendar_updates": 1,
+        "events": 0,
+        "jobs": 0,
+        "progression": 0,
+        "receipts": 1,
+        "recipients": 0,
+        "unrelated_business": 0
+      },
+      "expected": {
+        "currentGameDate": {
+          "day": 14,
+          "eraAbbrev": "RPI",
+          "periodIndex": 0,
+          "periodName": "Bridge",
+          "periodType": "month",
+          "year": 6
+        },
+        "currentGameDay": 113,
+        "definition": {
+          "era": {
+            "abbrev": "RPI",
+            "name": "Revised Pi Era"
+          },
+          "leap": null,
+          "periods": [
+            {
+              "days": 20,
+              "name": "Bridge",
+              "type": "month"
+            }
+          ]
+        },
+        "monthGrid": [
+          {
+            "gameDay": 113,
+            "realDate": "2026-10-14"
+          },
+          {
+            "gameDay": 114,
+            "realDate": "2026-10-15"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-10-16"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-10-17"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-10-18"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-10-19"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-10-20"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-10-21"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-10-22"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-10-23"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-10-24"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-10-25"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-10-26"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-10-27"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-10-28"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-10-29"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-10-30"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-10-31"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-11-01"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-11-02"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-11-03"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-11-04"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-11-05"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-11-06"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-11-07"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-11-08"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-11-09"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-11-10"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-11-11"
+          },
+          {
+            "gameDay": null,
+            "realDate": "2026-11-12"
+          }
+        ]
+      },
+      "fixture": {
+        "definition": {
+          "era": {
+            "abbrev": "PI",
+            "name": "Pi Era"
+          },
+          "leap": null,
+          "periods": [
+            {
+              "days": 30,
+              "name": "River",
+              "type": "month"
+            }
+          ]
+        },
+        "game_time_map": {
+          "2026-10-13": 112,
+          "2026-10-14": 113,
+          "2026-10-15": 114
+        },
+        "missing_dates": "All dates16Oct through12Nov deliberately absent; retain earlier canonical QA map rows."
+      },
+      "id": "OPS-WRITE-updateGameCalendar",
+      "identity_rule": "Every $UUID is captured from actual response or unique immutable committed row, validated and cross-linked. Fixture UUIDs are actual before identities, not generated-ID guesses.",
+      "input_fields": {
+        "definition": {
+          "abbrev_empty_or33": "INVALID",
+          "days367": "INVALID",
+          "deep17_or_json262145bytes": "INVALID",
+          "dual_legacy_and_modern": "INVALID",
+          "legacy_positive": {
+            "epoch": "Year of the Kept Tower",
+            "months": [
+              {
+                "days": 30,
+                "name": "Thaw"
+              },
+              {
+                "days": 30,
+                "name": "Salt"
+              },
+              {
+                "days": 30,
+                "name": "Harrow"
+              },
+              {
+                "days": 30,
+                "name": "Ember"
+              }
+            ]
+          },
+          "name_empty_or201": "INVALID",
+          "negative_metadata_rate": "INVALID",
+          "non_null_leap": "INVALID",
+          "null": "INVALID",
+          "omit": "INVALID",
+          "one_period_days1": "accepted rendering under exact same pure specification",
+          "period_count0_or37": "INVALID",
+          "scalar_or_array": "INVALID",
+          "value": {
+            "era": {
+              "abbrev": "RPI",
+              "name": "Revised Pi Era"
+            },
+            "leap": null,
+            "periods": [
+              {
+                "days": 20,
+                "name": "Bridge",
+                "type": "month"
+              }
+            ]
+          },
+          "zero_days": "INVALID"
+        },
+        "meta": {
+          "128ascii_chars": "accepted and performs exact positive effect",
+          "129chars": "INVALID",
+          "empty_or_nonascii_or_whitespace_key": "INVALID",
+          "omitted_or_null": "INVALID",
+          "value": {
+            "idempotencyKey": "ops:updateGameCalendar:1"
+          }
+        }
+      },
+      "negative": [
+        {
+          "actor": "10000000-0000-4000-8000-000000000001",
+          "code": "FORBIDDEN",
+          "unchanged": "All before facts/counts preserved"
+        }
+      ],
+      "operation": "updateGameCalendar",
+      "owner": "S04",
+      "readback": {
+        "expected": {
+          "day": 14,
+          "eraAbbrev": "RPI",
+          "periodIndex": 0,
+          "periodName": "Bridge",
+          "periodType": "month",
+          "year": 6
+        },
+        "query": "query {\n\tgameDate(realDate: \"2026-10-14\") {\n\t\teraAbbrev\n\t\tyear\n\t\tperiodName\n\t\tperiodIndex\n\t\tperiodType\n\t\tday\n\t}\n}\n",
+        "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations.",
+        "response_path": ["gameDate"]
+      },
+      "replay": {
+        "same_actor_key_input": "Original captured result with replayed=true where receipt exposes it; no new business/history/job/read-state/receipt changes, preserve original timestamps. Current authority checked before receipt disclosure.",
+        "same_key_changed_input": "CONFLICT with zero effects; concretely change first provided scalar/ID/list field to contrast supplied above.",
+        "stored_fingerprint": "Operation+actor+normalized arguments; key is not cross-operation authority."
+      },
+      "rollback": {
+        "code": "INTERNAL",
+        "expected": "All exact fixture before values and history/job/read-state counts preserved; zero new receipt or half success. Also inject each named owning history insert failure independently.",
+        "failure": "Inject final replay receipt persistence failure after all named writes, before command commit"
+      },
+      "status": "NOT IMPLEMENTED",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go"
+    }
+  ],
+  "status": "Six exact authored effect groups; runtime NOT IMPLEMENTED; final integrated review required",
+  "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go"
+}

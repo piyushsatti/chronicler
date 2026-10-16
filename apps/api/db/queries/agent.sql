@@ -1,4 +1,4 @@
--- name: InsertQuestionJob :exec
+-- name: InsertQuestionJob :execrows
 INSERT INTO background_jobs(public_id,job_key,kind,lane,state,payload,question_deadline_at)
 VALUES(sqlc.arg(job_id)::uuid,'agent:'||sqlc.arg(job_id)::uuid::text,'agent_question','agent','queued',sqlc.arg(payload),clock_timestamp()+interval '100 seconds')
 ON CONFLICT(public_id) DO NOTHING;

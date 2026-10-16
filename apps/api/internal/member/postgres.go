@@ -3,6 +3,9 @@ package member
 import (
 	"context"
 	"errors"
+	"fmt"
+	"github.com/google/uuid"
+	"reflect"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -14,11 +17,29 @@ import (
 )
 
 type PostgresStore struct {
-	q *dbgen.Queries
+	q                 *dbgen.Queries
+	configuredOwnerID string
 }
 
 func NewPostgresStore(pool *pgxpool.Pool) *PostgresStore {
-	return &PostgresStore{q: dbgen.New(pool)}
+	store, err := NewFromDBTX(pool, "")
+	if err != nil {
+		panic(err)
+	}
+	return store
+}
+
+func NewFromDBTX(executor dbgen.DBTX, configuredOwnerID string) (*PostgresStore, error) {
+	if executor == nil || (reflect.ValueOf(executor).Kind() == reflect.Pointer && reflect.ValueOf(executor).IsNil()) {
+		return nil, fmt.Errorf("member database executor required")
+	}
+	if configuredOwnerID != "" {
+		parsed, err := uuid.Parse(configuredOwnerID)
+		if err != nil || parsed.String() != configuredOwnerID {
+			return nil, fmt.Errorf("invalid configured owner identity")
+		}
+	}
+	return &PostgresStore{q: dbgen.New(executor), configuredOwnerID: configuredOwnerID}, nil
 }
 
 func mapMember(id pgtype.UUID, discordID, handle, displayName string, roles []string, status string) Member {
@@ -65,7 +86,7 @@ func (s *PostgresStore) ResolveAuthority(ctx context.Context, id string) (auth.A
 	for i, role := range row.Roles {
 		roles[i] = auth.Role(role)
 	}
-	return auth.NewAuthorityWithHandle(db.UUIDString(row.ID), roles, row.Status, row.DmStatus, row.Handle)
+	return auth.NewAuthorityWithOwner(db.UUIDString(row.ID), roles, row.Status, row.DmStatus, row.Handle, s.configuredOwnerID)
 }
 
 func (s *PostgresStore) GetByHandle(ctx context.Context, handle string) (Member, error) {

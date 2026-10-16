@@ -9,6 +9,7 @@ import (
 	"os"
 	"reflect"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -39,38 +40,113 @@ func TestCheckedInQAMatchesGenerator(t *testing.T) {
 	for _, row := range rows {
 		counts[row.Table]++
 	}
-	if len(rows) != 637 || len(counts) != 45 || counts["background_jobs"] != 7 {
+	if len(rows) != 623+5 || len(counts) != 44 || counts["background_jobs"] != 7 {
 		t.Fatalf("specifications=%d tables=%d jobs=%d", len(rows), len(counts), counts["background_jobs"])
 	}
 }
 
-// The initial DDL is schema authority, independent of the generator. This catches
-// stale fixture columns before Docker is needed, including question-owned state.
 func TestQAColumnsMatchInitialDDL(t *testing.T) {
-	raw, err := os.ReadFile("../../db/migrations/0001_init.sql")
+	var schema struct {
+		FinalTables map[string]struct {
+			Columns map[string]struct {
+				Generated bool `json:"generated"`
+			} `json:"columns"`
+		} `json:"final_tables"`
+	}
+	raw, err := os.ReadFile("../api/testdata/product/physical-schema-inventory.json")
 	if err != nil {
 		t.Fatal(err)
 	}
-	tables := map[string]map[string]bool{}
-	for _, match := range regexp.MustCompile(`(?s)CREATE TABLE (\w+) \((.*?)\n\);`).FindAllStringSubmatch(string(raw), -1) {
-		columns := map[string]bool{}
-		for _, col := range regexp.MustCompile(`(?m)^    ([a-z][a-z0-9_]*) [A-Z]`).FindAllStringSubmatch(match[2], -1) {
-			columns[col[1]] = true
-		}
-		tables[match[1]] = columns
+	if err := json.Unmarshal(raw, &schema); err != nil {
+		t.Fatal(err)
 	}
-	if tables["agent_questions"]["state"] {
+	ddl := map[string]map[string]bool{}
+	entries, err := os.ReadDir("../../db/migrations")
+	if err != nil {
+		t.Fatal(err)
+	}
+	createTable := regexp.MustCompile(`(?s)CREATE TABLE (\w+) \((.*?)\n\);`)
+	column := regexp.MustCompile(`(?m)^    ([a-z][a-z0-9_]*) [A-Z]`)
+	alterColumn := regexp.MustCompile(`(?m)^ALTER TABLE (\w+) (?:(ADD|DROP) COLUMN (\w+)|(RENAME) COLUMN (\w+) TO (\w+))`)
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".sql") {
+			continue
+		}
+		raw, err := os.ReadFile("../../db/migrations/" + entry.Name())
+		if err != nil {
+			t.Fatal(err)
+		}
+		up := strings.SplitN(string(raw), "-- +goose Down", 2)[0]
+		for _, table := range createTable.FindAllStringSubmatch(up, -1) {
+			columns := map[string]bool{}
+			for _, col := range column.FindAllStringSubmatch(table[2], -1) {
+				columns[col[1]] = true
+			}
+			ddl[table[1]] = columns
+		}
+		for _, change := range alterColumn.FindAllStringSubmatch(up, -1) {
+			if ddl[change[1]] == nil {
+				t.Fatalf("column change references unknown table %s", change[1])
+			}
+			if change[4] == "RENAME" {
+				delete(ddl[change[1]], change[5])
+				ddl[change[1]][change[6]] = true
+			} else if change[2] == "ADD" {
+				ddl[change[1]][change[3]] = true
+			} else {
+				delete(ddl[change[1]], change[3])
+			}
+		}
+	}
+	if len(ddl) != len(schema.FinalTables) {
+		t.Fatalf("migration tables=%d current inventory=%d", len(ddl), len(schema.FinalTables))
+	}
+	for name, table := range schema.FinalTables {
+		want := map[string]bool{}
+		for col := range table.Columns {
+			want[col] = true
+		}
+		if !reflect.DeepEqual(ddl[name], want) {
+			t.Errorf("migration columns for %s=%v want=%v", name, ddl[name], want)
+		}
+	}
+
+	columns := 0
+	for _, table := range schema.FinalTables {
+		columns += len(table.Columns)
+	}
+	if len(schema.FinalTables) != 69 || columns != 563 {
+		t.Fatalf("current schema inventory has %d tables and %d columns", len(schema.FinalTables), columns)
+	}
+	if _, present := schema.FinalTables["agent_questions"].Columns["state"]; present {
 		t.Fatal("question lifecycle unexpectedly returned to the projection")
 	}
 	for _, row := range generateQA() {
+		table, present := schema.FinalTables[row.Table]
+		if !present {
+			t.Errorf("%s absent from current schema", row.Table)
+			continue
+		}
 		for col := range row.Row {
-			if !tables[row.Table][col] {
-				t.Errorf("%s.%s absent from initial DDL", row.Table, col)
+			if spec, present := table.Columns[col]; !present {
+				t.Errorf("%s.%s absent from current schema", row.Table, col)
+			} else if spec.Generated {
+				t.Errorf("%s.%s is generated and cannot be inserted", row.Table, col)
 			}
 		}
-		for col := range row.Refs {
-			if !tables[row.Table][col] {
-				t.Errorf("reference %s.%s absent from initial DDL", row.Table, col)
+		for col, reference := range row.Refs {
+			if spec, present := table.Columns[col]; !present {
+				t.Errorf("reference %s.%s absent from current schema", row.Table, col)
+			} else if spec.Generated {
+				t.Errorf("reference %s.%s is generated and cannot be inserted", row.Table, col)
+			}
+			if _, present := schema.FinalTables[reference.Table].Columns["public_id"]; !present {
+				t.Errorf("reference %s has no public UUID", reference.Table)
+			}
+		}
+		for _, col := range row.Conflict {
+			if _, present := table.Columns[col]; !present {
+				t.Errorf("conflict %s.%s absent from current schema", row.Table, col)
 			}
 		}
 	}

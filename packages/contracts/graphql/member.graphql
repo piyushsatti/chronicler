@@ -2,13 +2,13 @@ type ActivityEventType {
   kind: String!
   channelId: String!
   occurredAt: DateTime!
-  amount: Int!
+  amount: Float!
 }
 
 type ActivitySummaryType {
-  voiceMinutes: Int!
-  messages: Int!
-  reactions: Int!
+  voiceMinutes: Float!
+  messages: Float!
+  reactions: Float!
 }
 
 input AvailabilitySlotInput {
@@ -51,7 +51,6 @@ type DirectoryEntryType {
   dmProfileReviewRevision: Int
   tableInfo: JSON
   availableDays: [String!]!
-  lookingToPlay: Boolean!
 }
 
 type DmProfileV2Type {
@@ -72,14 +71,14 @@ type DriverProgressType {
 }
 
 type MemberActivityStatsType {
-  voiceMinutes: Int!
-  messages: Int!
+  voiceMinutes: Float!
+  messages: Float!
   questsPlayed: Int!
   longestSessionHours: Float
   summariesAuthored: Int!
   lastMessageAt: DateTime
-  voiceByChannel: [ChannelVoiceMinutesType!]!
-  recentSessions: [ActivityEventType!]!
+  voiceByChannel(limit: Int! = 50, offset: Int! = 0): [ChannelVoiceMinutesType!]!
+  recentSessions(limit: Int! = 20, offset: Int! = 0): [ActivityEventType!]!
 }
 
 input MemberFiltersInput {
@@ -98,7 +97,7 @@ type MemberProfileType {
   dmProfile: DmProfileV2Type
   availability: [AvailabilitySlotType!]!
   activitySummary: ActivitySummaryType!
-  recentWeeks: [WeekActivityType!]!
+  recentWeeks(limit: Int! = 12, offset: Int! = 0): [WeekActivityType!]!
 }
 
 input MemberRoleBatchInput {
@@ -121,27 +120,38 @@ type MemberSearchHitType {
   avatarUrl: String
 }
 
+enum Theme {
+  PARCHMENT
+  MIDNIGHT
+  EMBER
+  DRACULA
+  VEGAN
+}
+enum ColorMode {
+  LIGHT
+  DARK
+  SYSTEM
+}
+enum Density {
+  COMFORTABLE
+  COMPACT
+}
 type MemberSettingsType {
   memberId: ID!
-  themeMode: String
-  colorMode: String!
-  bgEffect: String!
-  themePalette: String
-  bodyFont: String
+  theme: Theme!
+  mode: ColorMode!
+  effectsEnabled: Boolean!
   colorblindSafe: Boolean!
+  reducedMotion: Boolean!
+  density: Density!
   timezone: String
-  updatedAt: DateTime!
-  flairTitle: ID
-  flairBadge: ID
-  flairFrame: ID
-  flairNameplate: ID
-  flairToken: ID
-  notifyCharacterVerification: Boolean
-  notifyQuestSignup: Boolean
-  notifyDocumentActivity: Boolean
-  notifyQuestScheduled: Boolean
-  notifyDmMentioned: Boolean
-  notifyDmRequestDecided: Boolean
+  updatedAt: DateTime
+  notifyCharacterVerification: Boolean!
+  notifyQuestSignup: Boolean!
+  notifyDocumentActivity: Boolean!
+  notifyQuestScheduled: Boolean!
+  notifyDmMentioned: Boolean!
+  notifyDmRequestDecided: Boolean!
 }
 
 enum MemberSortInput {
@@ -171,17 +181,12 @@ type MemberUnlockType {
 
 type MyPersonalizationType {
   settings: MemberSettingsType
-  unlocks: [MemberUnlockType!]!
-  catalog: [UnlockableType!]!
-  driverProgress: DriverProgressType!
-  unlockedAchievements: [String!]!
-  dmTier: String!
 }
 
 type NotificationConnection {
   items: [NotificationType!]!
   hasMore: Boolean!
-  nextBefore: DateTime
+  nextBefore: String
 }
 
 type NotificationType {
@@ -207,9 +212,13 @@ type RoleChangeType {
   note: String
 }
 
+enum UnlockKind {
+  ACHIEVEMENT
+  DM_TIER
+}
 type UnlockableType {
   id: ID!
-  cosmeticType: String!
+  kind: UnlockKind!
   name: String!
   description: String
   payload: JSON!
@@ -218,7 +227,7 @@ type UnlockableType {
 }
 
 input UpsertUnlockableInput {
-  cosmeticType: String!
+  kind: UnlockKind!
   name: String!
   payload: JSON!
   description: String = null
@@ -228,7 +237,15 @@ input UpsertUnlockableInput {
 
 type WeekActivityType {
   periodStart: Date!
-  voiceMinutes: Int!
-  messages: Int!
-  reactions: Int!
+  voiceMinutes: Float!
+  messages: Float!
+  reactions: Float!
+}
+
+type MemberUnlockPage {
+  items: [MemberUnlockType!]!
+  total: Int!
+  driverProgress: DriverProgressType!
+  unlockedAchievements: [String!]!
+  dmTier: String!
 }

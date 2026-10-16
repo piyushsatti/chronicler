@@ -1,0 +1,58 @@
+[
+  {
+    "type": "QuestAnnounceOutcomeV2Type",
+    "source": "quest.graphql",
+    "disposition": "retired unused SDL shape",
+    "reason": "No reachable field references; asyncDeliveryReceipt and PCXP CloseQuestInput replace obsolete announce/sync/reward shapes; no homequestboard stub or unusedtaxonomyplaceholder exposed",
+    "root_identity_removed": false
+  },
+  {
+    "type": "QuestBoardEntryType",
+    "source": "quest.graphql",
+    "disposition": "retired unused SDL shape",
+    "reason": "No reachable field references; asyncDeliveryReceipt and PCXP CloseQuestInput replace obsolete announce/sync/reward shapes; no homequestboard stub or unusedtaxonomyplaceholder exposed",
+    "root_identity_removed": false
+  },
+  {
+    "type": "QuestDiscordSyncLegOutcomeV2Type",
+    "source": "quest.graphql",
+    "disposition": "retired unused SDL shape",
+    "reason": "No reachable field references; asyncDeliveryReceipt and PCXP CloseQuestInput replace obsolete announce/sync/reward shapes; no homequestboard stub or unusedtaxonomyplaceholder exposed",
+    "root_identity_removed": false
+  },
+  {
+    "type": "QuestDiscordSyncLegStateV2",
+    "source": "quest.graphql",
+    "disposition": "retired unused SDL shape",
+    "reason": "No reachable field references; asyncDeliveryReceipt and PCXP CloseQuestInput replace obsolete announce/sync/reward shapes; no homequestboard stub or unusedtaxonomyplaceholder exposed",
+    "root_identity_removed": false
+  },
+  {
+    "type": "QuestDiscordSyncOutcomeV2Type",
+    "source": "quest.graphql",
+    "disposition": "retired unused SDL shape",
+    "reason": "No reachable field references; asyncDeliveryReceipt and PCXP CloseQuestInput replace obsolete announce/sync/reward shapes; no homequestboard stub or unusedtaxonomyplaceholder exposed",
+    "root_identity_removed": false
+  },
+  {
+    "type": "QuestRewardV2Input",
+    "source": "quest.graphql",
+    "disposition": "retired unused SDL shape",
+    "reason": "No reachable field references; asyncDeliveryReceipt and PCXP CloseQuestInput replace obsolete announce/sync/reward shapes; no homequestboard stub or unusedtaxonomyplaceholder exposed",
+    "root_identity_removed": false
+  },
+  {
+    "type": "RegionArchonAssignmentsType",
+    "source": "spatial.graphql",
+    "disposition": "retired unused SDL shape",
+    "reason": "No reachable field references; asyncDeliveryReceipt and PCXP CloseQuestInput replace obsolete announce/sync/reward shapes; no homequestboard stub or unusedtaxonomyplaceholder exposed",
+    "root_identity_removed": false
+  },
+  {
+    "type": "UnknownReason",
+    "source": "site.graphql",
+    "disposition": "retired unused SDL shape",
+    "reason": "No reachable field references; asyncDeliveryReceipt and PCXP CloseQuestInput replace obsolete announce/sync/reward shapes; no homequestboard stub or unusedtaxonomyplaceholder exposed",
+    "root_identity_removed": false
+  }
+]

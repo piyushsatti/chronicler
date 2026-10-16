@@ -1041,6 +1041,140 @@
       "cwd": ".",
       "status": "passed",
       "detail": "Final canonical review and deployment docs; snapshot input comparison matches."
+    },
+    {
+      "at_utc": "2026-10-14T10:42:27.403595+00:00",
+      "command": "go test ./...",
+      "cwd": "apps/api",
+      "status": "passed",
+      "detail": "Fresh invocation passed, with cached packages where reported; no integration-tagged tests."
+    },
+    {
+      "at_utc": "2026-10-14T10:42:27.403595+00:00",
+      "command": "go test ./cmd/seedqa -run 'TestCheckedInQAMatchesGenerator|TestQAColumnsMatchInitialDDL|TestQAQuestionUsesCurrentAdapters' -count=1 -v",
+      "cwd": "apps/api",
+      "status": "passed",
+      "detail": "Uncached generator, DDL-column and current question adapter checks; 637 specifications, 45 tables, seven background jobs."
+    },
+    {
+      "at_utc": "2026-10-14T10:42:27.403595+00:00",
+      "command": "env -u DATABASE_URL go test -tags=integration ./cmd/seedqa -run TestQAFreshPostgresDoubleLoad -count=1 -v",
+      "cwd": "apps/api",
+      "status": "failed",
+      "detail": "Docker setup denied Unix socket access; no seed load or DB-backed assertions executed."
+    },
+    {
+      "at_utc": "2026-10-14T10:42:27.403595+00:00",
+      "command": "env -u DATABASE_URL go test -tags=integration ./...",
+      "cwd": "apps/api",
+      "status": "failed",
+      "detail": "Database setup unavailable at Docker socket; no complete integration success."
+    },
+    {
+      "at_utc": "2026-10-14T10:42:27.403595+00:00",
+      "command": "bash -n scripts/dev-stack; facade argument rejection; merged docker compose config --quiet",
+      "cwd": ".",
+      "status": "passed",
+      "detail": "Syntax and merged config passed; argument rejected before Docker access. Configuration check requires no daemon."
+    },
+    {
+      "at_utc": "2026-10-14T10:42:27.403595+00:00",
+      "command": "scripts/dev-stack",
+      "cwd": ".",
+      "status": "failed",
+      "detail": "Exit 1 at step=daemon; Docker socket denied. Appended startup log and latest-status retained. Startup, liveness and follower behavior unverified."
+    },
+    {
+      "at_utc": "2026-10-14T10:42:27.403595+00:00",
+      "command": "scripts/verify",
+      "cwd": ".",
+      "status": "failed",
+      "detail": "Lint, formatting and both language type checks passed. Discord fixture HTTP tests: 102 passed, 12 failed, one unhandled error; later gate steps not reached."
+    },
+    {
+      "at_utc": "2026-10-14T10:42:27.403595+00:00",
+      "command": "command -v heptabase; ntn whoami; ntn login --no-browser",
+      "cwd": ".",
+      "status": "blocked",
+      "detail": "Heptabase CLI absent; Notion workspace unselected; login blocked by app.notion.com sandbox allowlist before a login URL."
+    },
+    {
+      "at_utc": "2026-10-14T10:42:27.403595+00:00",
+      "command": "python3 /tmp/chronicler-boards/build-notion-coverage.py",
+      "cwd": ".",
+      "status": "passed",
+      "detail": "Notion import page titled Chronicler: nine domains, CRUD/evidence tables. Exact set of 162 operation identities and saved input fingerprints match. No remote publication."
+    },
+    {
+      "at_utc": "2026-10-14T10:43:07.890690+00:00",
+      "command": "python3 scripts/docs-lint.py; targeted Prettier; git diff --check",
+      "cwd": ".",
+      "status": "passed",
+      "detail": "Canonical review records; source fingerprint projection checks also pass. Later root gate stages remain unrun after Discord failures."
+    },
+    {
+      "at_utc": "2026-10-14T11:38:26.876276+00:00",
+      "command": "sg docker -c 'env -u DATABASE_URL DOCKER_HOST=unix:///var/run/docker.sock ~/.local/bin/go test -tags=integration ./cmd/seedqa -run TestQAFreshPostgresDoubleLoad -count=1 -v'",
+      "cwd": "apps/api",
+      "status": "passed",
+      "detail": "Outside sandbox; refresh already-granted Docker group for this fixed command. Fresh disposable Postgres: migrations v2; two QA loads verify 637 specifications, 45 tables, all explicit values and resolved FKs; Postgres-backed answered-question poll and submit/completion replay preserve every row; owned container terminated. No provider or all-endpoint claim."
+    },
+    {
+      "at_utc": "2026-10-14T11:43:43.652578+00:00",
+      "command": "sg docker -c 'env -u DATABASE_URL DOCKER_HOST=unix:///var/run/docker.sock ~/.local/bin/go test -tags=integration ./...'",
+      "cwd": "apps/api",
+      "status": "passed",
+      "detail": "Outside sandbox with existing Docker-group refresh. Complete tagged suite includes mounted cmd/api tests. cmd/api, seedqa, document and test/integration freshly executed; other packages reported cached. Does not prove unimplemented/new GraphQL behavior. Log /tmp/chronicler-graphql-preflight-integration.log."
+    },
+    {
+      "at_utc": "2026-10-14T11:43:43.652578+00:00",
+      "command": "scripts/verify (outside sandbox)",
+      "cwd": ".",
+      "status": "failed",
+      "detail": "Lint, formatting, JS/Python type checks,114Discord/440web/363agent tests passed. Precommit Ruff/format/Prettier passed; eslint failed because bunx executable missing. No app source changes for environment setup; failed-step rerun pending."
+    },
+    {
+      "at_utc": "2026-10-14T11:46:56.213377+00:00",
+      "command": "env PATH=/tmp/chronicler-tools:~/.local/bin:/usr/local/bin:/usr/bin:/bin uv run pre-commit run --all-files",
+      "cwd": ".",
+      "status": "passed",
+      "detail": "Rerun only the failed root-gate step using the existing temporary bunx forwarding shim. All four hooks passed. All earlier lint/format/types and114/440/363 tests passed outside sandbox; no app/dependency/hook changes. Exact scripts/verify invocation remains failed at missing bunx; no misleading native full-gate receipt."
+    },
+    {
+      "at_utc": "2026-10-14T13:00:39.738329+00:00",
+      "command": "anonymous GET official published DDB premade sample",
+      "cwd": ".",
+      "status": "captured",
+      "url": "https://character-service.dndbeyond.com/character/v5/character/152579009",
+      "http_status": 200,
+      "bytes": 204710,
+      "sha256": "89d676ce7b8163dd23dc54da2a1796154296a78d23c7c0692450876a5f404b28",
+      "source_catalog": "https://character-service.dndbeyond.com/character/v5/premade",
+      "detail": "Dated response/provenance preserved under .local/plans/graphql-implementation/provider-captures/ddb-2026-10-14; no authentication/private character access. Parser/drift/optional sync implementation tests pending, no ongoing live parity or DDB approval prerequisite."
+    },
+    {
+      "at_utc": "2026-10-14T13:11:57+00:00",
+      "command": "sg docker -c './scripts/dev-stack'",
+      "cwd": ".",
+      "status": "passed",
+      "log": "/tmp/chronicler-graphql-dev-stack-check.log",
+      "detail": "Existing local stack starts; worker PostgreSQL/dry-run; API health204; migration v2. Not proposed GraphQL implementation."
+    },
+    {
+      "at_utc": "2026-10-14T13:14:08+00:00",
+      "command": "sg docker -c './scripts/dev-stack'",
+      "cwd": ".",
+      "status": "passed",
+      "log": "/tmp/chronicler-graphql-dev-stack-repeat.log",
+      "detail": "Repeated startup passed with same PostgreSQL container/owned volume; service log captured recreation. Logger supervisor durability is separately failed."
+    },
+    {
+      "at_utc": "2026-10-14T13:16:49.888477+00:00",
+      "command": "scoped host-process inspection of chronicler-dev follower",
+      "cwd": ".",
+      "status": "failed",
+      "detail": "Recorded follower supervisor PID absent and no matching supervisor shell; timeout/docker/docker-compose log clients survive as orphans. Durable retry/supervisor reuse unverified; separate-session repair scheduled in DEV01, source unchanged.",
+      "evidence": "/tmp/chronicler-graphql-follower-processes.json"
     }
   ],
   "invalidation": "Compare both the input file set and hashes. Changed inputs require affected source findings to be revisited. Runtime/provider/DB receipts remain dated regardless of unchanged source.",
@@ -1051,7 +1185,7 @@
     "notion_cli_version": "0.23.19",
     "rule_file": "~/.codex/rules/knowledge-cli.rules",
     "authorization": "Full Heptabase and Notion CLI commands; parent restrictions withdrawn by owner",
-    "activation": "CLI allowances retained; protected project configuration unchanged. Current task denies Notion login host; no connection established.",
+    "activation": "Heptabase CLI still unregistered; Notion workspace unselected and login host blocked in current task. No remote creation.",
     "todos": [
       "Sign into Heptabase desktop and enable/register compatible 0.7.x CLI",
       "Connect Notion CLI; task currently denies app.notion.com",
@@ -1060,7 +1194,11 @@
     ],
     "prepared_inputs": "/tmp/chronicler-boards",
     "remote_objects_created": [],
-    "preparation": "Nine-domain positioned plan; exact set and semantic classification checks pass: 34 roots/36 REST routes + transport/91 absent REST. No layout lint or screenshot."
+    "preparation": "Nine-domain positioned plan; exact set and semantic classification checks pass: 34 roots/36 REST routes + transport/91 absent REST. No layout lint or screenshot.",
+    "last_checked_at_utc": "2026-10-14T10:42:27.403595+00:00",
+    "prepared_notion_page": "/tmp/chronicler-boards/notion-coverage.md",
+    "prepared_crud_matrix": "/tmp/chronicler-boards/crud-matrix.json",
+    "prepared_projection_builder": "/tmp/chronicler-boards/build-notion-coverage.py"
   },
   "local_dev_stack": {
     "pattern": "fixed-command facade; canonical Compose plus one local test override",
@@ -1073,7 +1211,13 @@
     "staged_config": "/tmp/chronicler-dev-stack-config.toml",
     "staged_rule": "/tmp/chronicler-dev-stack.rules",
     "checks": "Bash/Compose/TOML parsing, argument rejection, positive/nonmatching staged rule examples passed; actual startup blocked before services",
-    "receipts_dir": "/tmp/chronicler-dev"
+    "receipts_dir": "/tmp/chronicler-dev",
+    "latest_attempt": {
+      "at_utc": "2026-10-14T10:42:27.403595+00:00",
+      "exit_code": 1,
+      "step": "daemon",
+      "detail": "Docker socket denied; syntax/config/argument checks passed. No successful startup or follower runtime proof."
+    }
   },
   "last_source_revisit": {
     "at_utc": "2026-10-13T22:16:25.319184+00:00",
@@ -1086,5 +1230,6 @@
       "scripts/dev-stack"
     ],
     "detail": "Revisited seed lifecycle/protocol/determinism, new unit+DB acceptance assertions, Compose isolation and fixed startup/logging/readiness facade. Unchanged endpoint findings reused."
-  }
+  },
+  "last_execution_at_utc": "2026-10-14T11:38:26.876276+00:00"
 }

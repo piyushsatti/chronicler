@@ -1,0 +1,793 @@
+[
+  {
+    "field": "AdminCharacterDirectoryV2Type.items",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "AdminOperationsV2Type.activeAlerts",
+    "max": 100,
+    "rule": "validated limit argument",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "AdminOperationsV2Type.deliveries",
+    "max": 100,
+    "rule": "parent root limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "AdminOperationsV2Type.scheduledWork",
+    "max": 2,
+    "rule": "exact two-entry governing schedule registry",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "ArchonPage.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "BackstoryPage.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "CharacterLogListResult.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "CharacterV2ListResult.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "CharacterV2Type.proficiencies",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "CloseQuestInput.attendance",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "CloseQuestInput.rewards",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "CoPlayerPage.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "CodexDirectoryResult.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "CodexEntryCardType.subjects",
+    "max": 100,
+    "rule": "validated limit argument",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "CommunityDirectoryResult.entries",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "CreateCharacterV2Input.catalogPickIds",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "CreateQuestV2Input.genres",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "CreateQuestV2Input.kinds",
+    "max": 6,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "CreateQuestV2Input.regionIds",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "CreateQuestV2Input.tags",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "CreationCatalogPage.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "DirectoryEntryType.availableDays",
+    "max": 7,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "DirectoryEntryType.roles",
+    "max": 7,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "DmSessionHistoryV2Result.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "DocumentAudienceInput.policy",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "DocumentAudienceInput.readerIds",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "DocumentDraftInput.policy",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "DocumentListResult.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "DocumentRevisionPage.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "DocumentType.policy",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "DowntimeProjectListResult.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "GameCalendarV2Type.monthGrid",
+    "max": 366,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "HexChangePage.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "HexV2Type.linkedEntries",
+    "max": 100,
+    "rule": "validated limit argument",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "HomeBucketType.documents",
+    "max": 5,
+    "rule": "home bucket cap5",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "HomeV2Type.recentByCategory",
+    "max": 6,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "LieutenantPage.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "MapV2Type.edges",
+    "max": 250,
+    "rule": "validated limit argument",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "MapV2Type.hexes",
+    "max": 250,
+    "rule": "validated limit argument",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "MapV2Type.pointcrawlEdges",
+    "max": 250,
+    "rule": "validated limit argument",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "MapV2Type.pointcrawlNodes",
+    "max": 250,
+    "rule": "validated limit argument",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "MapViewV2Type.places",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "MemberActivityStatsType.recentSessions",
+    "max": 100,
+    "rule": "validated limit argument",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "MemberActivityStatsType.voiceByChannel",
+    "max": 100,
+    "rule": "validated limit argument",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "MemberListResult.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "MemberProfileType.availability",
+    "max": 28,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "MemberProfileType.recentWeeks",
+    "max": 12,
+    "rule": "validated limit argument",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "MemberRoleBatchInput.roles",
+    "max": 7,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "MemberType.roles",
+    "max": 7,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "Mutation.attestQuestParticipation",
+    "max": 100,
+    "rule": "validated corresponding input length<=100",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "Mutation.selectQuestParticipants",
+    "max": 100,
+    "rule": "validated corresponding input length<=100",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "Mutation.setMemberRolesBatch",
+    "max": 100,
+    "rule": "validated corresponding input length<=100",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "Mutation.setMyAvailability",
+    "max": 100,
+    "rule": "validated corresponding input length<=100",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "Mutation.setQuestHexes",
+    "max": 100,
+    "rule": "validated corresponding input length<=100",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "MyPersonalizationType.catalog",
+    "max": 100,
+    "rule": "validated limit argument",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "MyPersonalizationType.unlockedAchievements",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "MyPersonalizationType.unlocks",
+    "max": 100,
+    "rule": "validated limit argument",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "NotificationConnection.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "OpenQuestSeatV2Type.regionIds",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "OpenQuestSeatsV2Result.entries",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "ParticipationPage.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "PoiPage.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "PointcrawlNodeV2Type.linkedEntries",
+    "max": 100,
+    "rule": "validated limit argument",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "ProgressionListResult.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "Query.codexCategories",
+    "max": 100,
+    "rule": "parent root limit when applicable else finite reference vocabulary",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "Query.documentBacklinks",
+    "max": 100,
+    "rule": "validated limit argument",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "Query.maps",
+    "max": 100,
+    "rule": "validated limit argument",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "Query.memberAvailability",
+    "max": 100,
+    "rule": "parent root limit when applicable else finite reference vocabulary",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "Query.myAvailability",
+    "max": 100,
+    "rule": "parent root limit when applicable else finite reference vocabulary",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "Query.questGenreOptions",
+    "max": 100,
+    "rule": "parent root limit when applicable else finite reference vocabulary",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "Query.questStateCounts",
+    "max": 5,
+    "rule": "parent root limit when applicable else finite reference vocabulary",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "Query.regions",
+    "max": 100,
+    "rule": "validated limit argument",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "Query.searchableKinds",
+    "max": 20,
+    "rule": "parent root limit when applicable else finite reference vocabulary",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "QuestArcV2ListResult.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "QuestArcV2Type.quests",
+    "max": 100,
+    "rule": "validated limit argument",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "QuestEditInput.genres",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "QuestEditInput.kinds",
+    "max": 6,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "QuestEditInput.regionIds",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "QuestEditInput.tags",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "QuestSummariesV2Result.summaries",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "QuestSummaryInput.questIds",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "QuestSummaryTotalsV2Type.itemGrants",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "QuestV2FiltersInput.shortCodes",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "QuestV2ListResult.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "QuestV2Type.genres",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "QuestV2Type.hexes",
+    "max": 100,
+    "rule": "validated limit argument",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "QuestV2Type.kinds",
+    "max": 6,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "QuestV2Type.participants",
+    "max": 100,
+    "rule": "validated limit argument",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "QuestV2Type.regions",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "QuestV2Type.rewardEntitlements",
+    "max": 100,
+    "rule": "validated limit argument",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "QuestV2Type.tags",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "RealDatePage.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "RegionActivityV2Type.liveQuests",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "RegionActivityV2Type.openQuests",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "RequestPage.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "RewardClaimReceipt.entitlementIds",
+    "max": 1,
+    "rule": "one unique entitlement per quest and character; one existing-ledger append",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "RewardClaimReceipt.progressionEntries",
+    "max": 1,
+    "rule": "one unique entitlement per quest and character; one existing-ledger append",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "RewardEntitlementPage.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "RoleChangePage.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "RoleChangeType.newRoles",
+    "max": 7,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "RoleChangeType.oldRoles",
+    "max": 7,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "SearchResultV2Type.documents",
+    "max": 100,
+    "rule": "parent root limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "SearchResultV2Type.members",
+    "max": 100,
+    "rule": "parent root limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "SiteStatsV2Type.membersByRole",
+    "max": 7,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "SiteStatsV2Type.publishedDocumentsByCategory",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "SiteStatsV2Type.publishedDocumentsByKind",
+    "max": 20,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "SummaryDerivedV2Type.dms",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "SummaryDerivedV2Type.hexes",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "SummaryDerivedV2Type.players",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "SummaryDerivedV2Type.regions",
+    "max": 100,
+    "rule": "closed finite domain or explicitly bounded derived relation",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "TimeAnchorPage.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "UnlockablePage.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  },
+  {
+    "field": "VerificationPage.items",
+    "max": 100,
+    "rule": "parent requested limit",
+    "scalar_item_weight": 1,
+    "overflow": "INVALID, never silent truncate; paged fields use SQL declared limit. Derived closed arrays enforce max in owning writer/read invariant."
+  }
+]

@@ -1,0 +1,4262 @@
+{
+  "id": "INTEGRATION-REPAIR-3",
+  "pattern": "aggregate/specification, exclusive arc, migration anti-corruption layer, unit of work",
+  "status": "NOT IMPLEMENTED; exact acceptance contracts only",
+  "cases": [
+    {
+      "id": "SLUG-BASE-0",
+      "owner": "DOC06",
+      "test_file": "apps/api/internal/document/product_commands_phase3_test.go",
+      "fixture": {
+        "title": "  Bridge  ACCOUNT!  "
+      },
+      "action": "Call SlugBase without DB or authority",
+      "expected": {
+        "slug": "bridge-account",
+        "python_reference": "re.sub(r\"[^a-z0-9]+\",\"-\", title.strip().lower()).strip(\"-\") or \"untitled\""
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SLUG-BASE-1",
+      "owner": "DOC06",
+      "test_file": "apps/api/internal/document/product_commands_phase3_test.go",
+      "fixture": {
+        "title": "!!!"
+      },
+      "action": "Call SlugBase without DB or authority",
+      "expected": {
+        "slug": "untitled",
+        "python_reference": "re.sub(r\"[^a-z0-9]+\",\"-\", title.strip().lower()).strip(\"-\") or \"untitled\""
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SLUG-BASE-2",
+      "owner": "DOC06",
+      "test_file": "apps/api/internal/document/product_commands_phase3_test.go",
+      "fixture": {
+        "title": "İX"
+      },
+      "action": "Call SlugBase without DB or authority",
+      "expected": {
+        "slug": "i-x",
+        "python_reference": "re.sub(r\"[^a-z0-9]+\",\"-\", title.strip().lower()).strip(\"-\") or \"untitled\""
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SLUG-BASE-3",
+      "owner": "DOC06",
+      "test_file": "apps/api/internal/document/product_commands_phase3_test.go",
+      "fixture": {
+        "title": "KELVIN"
+      },
+      "action": "Call SlugBase without DB or authority",
+      "expected": {
+        "slug": "kelvin",
+        "python_reference": "re.sub(r\"[^a-z0-9]+\",\"-\", title.strip().lower()).strip(\"-\") or \"untitled\""
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SLUG-BASE-4",
+      "owner": "DOC06",
+      "test_file": "apps/api/internal/document/product_commands_phase3_test.go",
+      "fixture": {
+        "title": "ΣΟΣ"
+      },
+      "action": "Call SlugBase without DB or authority",
+      "expected": {
+        "slug": "untitled",
+        "python_reference": "re.sub(r\"[^a-z0-9]+\",\"-\", title.strip().lower()).strip(\"-\") or \"untitled\""
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SLUG-BASE-5",
+      "owner": "DOC06",
+      "test_file": "apps/api/internal/document/product_commands_phase3_test.go",
+      "fixture": {
+        "title": "Straße"
+      },
+      "action": "Call SlugBase without DB or authority",
+      "expected": {
+        "slug": "stra-e",
+        "python_reference": "re.sub(r\"[^a-z0-9]+\",\"-\", title.strip().lower()).strip(\"-\") or \"untitled\""
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SLUG-BASE-6",
+      "owner": "DOC06",
+      "test_file": "apps/api/internal/document/product_commands_phase3_test.go",
+      "fixture": {
+        "title": "ÁB"
+      },
+      "action": "Call SlugBase without DB or authority",
+      "expected": {
+        "slug": "a-b",
+        "python_reference": "re.sub(r\"[^a-z0-9]+\",\"-\", title.strip().lower()).strip(\"-\") or \"untitled\""
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SLUG-ALL-ROW-SUFFIX",
+      "owner": "DOC06",
+      "test_file": "apps/api/internal/document/product_commands_phase3_test.go",
+      "fixture": {
+        "title": "River ledger",
+        "existing_documents": [
+          {
+            "id": "10000000-0000-4000-8000-000000000010",
+            "slug": "river-ledger",
+            "kind": "rule",
+            "deletedAt": null
+          },
+          {
+            "id": "10000000-0000-4000-8000-000000000013",
+            "slug": "river-ledger-2",
+            "kind": "community",
+            "deletedAt": "2026-10-13T10:00:00Z"
+          },
+          {
+            "id": "10000000-0000-4000-8000-000000000015",
+            "slug": "river-ledger-4",
+            "kind": "summary",
+            "deletedAt": null
+          }
+        ]
+      },
+      "action": "createDocument as active001 with codex_entry/Lore/title River ledger/bodyNew/frontmatter{}/visibilitypublic/no clientslug; key slug-suffix",
+      "expected": {
+        "slug": "river-ledger-3",
+        "id": "$documentId",
+        "version": 1,
+        "authorId": "10000000-0000-4000-8000-000000000001",
+        "history": {
+          "count": 1,
+          "reason": "CREATE_DRAFT",
+          "id": "$revisionId",
+          "actorId": "10000000-0000-4000-8000-000000000001",
+          "at": "2026-10-14T12:00:00Z"
+        },
+        "receipt": 1,
+        "other_rows_unchanged": true,
+        "replay": "same key returns same IDs/slug, no writes"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SLUG-CONCURRENT-INSERT",
+      "owner": "DOC06",
+      "test_file": "apps/api/internal/document/product_commands_phase3_test.go",
+      "fixture": {
+        "title": "Bridge account",
+        "slug_absent": "bridge-account",
+        "actors": [
+          "10000000-0000-4000-8000-000000000001",
+          "10000000-0000-4000-8000-000000000002"
+        ],
+        "keys": ["slug-race-a", "slug-race-b"]
+      },
+      "action": "Barrier both one-task FindAvailableSlug absent selections, then release both INSERTs against unchanged global UNIQUE(documents.slug)",
+      "expected": {
+        "successes": 1,
+        "loser": "CONFLICT",
+        "committed_documents": 1,
+        "committed_CREATE_DRAFT_revisions": 1,
+        "committed_receipts": 1,
+        "loser_rows": 0,
+        "retry": "fresh request/new key after winner sees bridge-account-2; no hidden retry after partial command"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SLUG-TITLE-EDIT-IMMUTABLE",
+      "owner": "DOC06",
+      "test_file": "apps/api/internal/document/product_commands_phase3_test.go",
+      "fixture": {
+        "documentId": "10000000-0000-4000-8000-000000000012",
+        "slug": "draft-npc",
+        "title": "Draft NPC",
+        "version": 2
+      },
+      "action": "updateDocument as001 expectedRevision2 titleNew NPC; no slug input",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000012",
+        "slug": "draft-npc",
+        "title": "New NPC",
+        "version": 3,
+        "reason": "UPDATE_DRAFT",
+        "events": 0,
+        "receipt": 1
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "D5-AUTHOR-FK-PREFLIGHT",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "documents_columns": [
+          "id",
+          "public_id",
+          "author_id",
+          "kind",
+          "category",
+          "deleted_at"
+        ],
+        "duplicate_rows": [
+          {
+            "id": "10000000-0000-4000-8000-000000000900",
+            "authorId": "10000000-0000-4000-8000-000000000003",
+            "kind": "community",
+            "category": "dm_table",
+            "deletedAt": null
+          },
+          {
+            "id": "10000000-0000-4000-8000-000000000901",
+            "authorId": "10000000-0000-4000-8000-000000000003",
+            "kind": "community",
+            "category": "dm_table",
+            "deletedAt": null
+          }
+        ]
+      },
+      "action": "Run 0003 preflight before index; also independently reset with one live DMtable authorNULL",
+      "expected": {
+        "duplicates": "fail with member003 and documents900/901; no survivor selection",
+        "null_author": "fail without invented owner",
+        "schema_and_data_unchanged": true,
+        "valid_index": "uq_documents_dm_table_per_member ON documents(author_id), never documents.created_by",
+        "existing_race_cases": "D5-DM-TABLE-EXACT concurrent_duplicates and soft_delete_replacement_restore, actual Member-authorFK shared with batchlookup"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "LINK-EXCLUSIVE-ARC-FOUR-TYPES",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "sourceDocument": "10000000-0000-4000-8000-000000000010",
+        "targets": [
+          {
+            "type": "document",
+            "uuid": "10000000-0000-4000-8000-000000000015",
+            "physical": "document_target_id"
+          },
+          {
+            "type": "quest",
+            "uuid": "10000000-0000-4000-8000-000000000051",
+            "physical": "quest_target_id"
+          },
+          {
+            "type": "character",
+            "uuid": "10000000-0000-4000-8000-000000000030",
+            "physical": "character_target_id"
+          },
+          {
+            "type": "region",
+            "uuid": "10000000-0000-4000-8000-000000000020",
+            "physical": "region_target_id"
+          }
+        ],
+        "internal_fixture_id_for_each_target": 123,
+        "mode": "Fresh migrations-only fixture; explicitly seed each target table id123 with its own publicUUID and valid coreFKs. Source010 has a distinct internalid. Do not predict command-generated IDs.",
+        "relation": "subject"
+      },
+      "action": "Insert four rows source010 with exactly one named targetFK=123 each. Select generated discriminator/ID and owning publicUUID by four set joins.",
+      "expected": {
+        "rows": 4,
+        "generated_pairs": [
+          ["document", 123],
+          ["quest", 123],
+          ["character", 123],
+          ["region", 123]
+        ],
+        "public_targets": {
+          "document": "10000000-0000-4000-8000-000000000015",
+          "quest": "10000000-0000-4000-8000-000000000051",
+          "character": "10000000-0000-4000-8000-000000000030",
+          "region": "10000000-0000-4000-8000-000000000020"
+        },
+        "other_raw_fks": null,
+        "ordinary_link_survives": "A pre0003 ordinary source012→target010 relationlink survives exact FK publicUUID/relation; no duplicate logical table",
+        "backlink010": "Only raw document_target_id edges with target_type=document; equal numeric Quest/Character/Region targets must not enter Documentbacklinks"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "LINK-CONSTRAINT-zero",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "sourceDocument": "10000000-0000-4000-8000-000000000010",
+        "targets": [
+          {
+            "type": "document",
+            "uuid": "10000000-0000-4000-8000-000000000015",
+            "physical": "document_target_id"
+          },
+          {
+            "type": "quest",
+            "uuid": "10000000-0000-4000-8000-000000000051",
+            "physical": "quest_target_id"
+          },
+          {
+            "type": "character",
+            "uuid": "10000000-0000-4000-8000-000000000030",
+            "physical": "character_target_id"
+          },
+          {
+            "type": "region",
+            "uuid": "10000000-0000-4000-8000-000000000020",
+            "physical": "region_target_id"
+          }
+        ],
+        "internal_fixture_id_for_each_target": 123,
+        "mode": "Fresh migrations-only fixture; explicitly seed each target table id123 with its own publicUUID and valid coreFKs. Source010 has a distinct internalid. Do not predict command-generated IDs.",
+        "relation": "subject"
+      },
+      "action": {
+        "insert": {
+          "source_id": "core010internal",
+          "relation": "subject"
+        },
+        "duplicate_setup": "four-type case committed first only for duplicate; other variants start zero linkrows"
+      },
+      "expected": {
+        "sqlstate": "23514",
+        "no_partial_edges": true,
+        "all_other_rows_unchanged": true
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "LINK-CONSTRAINT-two",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "sourceDocument": "10000000-0000-4000-8000-000000000010",
+        "targets": [
+          {
+            "type": "document",
+            "uuid": "10000000-0000-4000-8000-000000000015",
+            "physical": "document_target_id"
+          },
+          {
+            "type": "quest",
+            "uuid": "10000000-0000-4000-8000-000000000051",
+            "physical": "quest_target_id"
+          },
+          {
+            "type": "character",
+            "uuid": "10000000-0000-4000-8000-000000000030",
+            "physical": "character_target_id"
+          },
+          {
+            "type": "region",
+            "uuid": "10000000-0000-4000-8000-000000000020",
+            "physical": "region_target_id"
+          }
+        ],
+        "internal_fixture_id_for_each_target": 123,
+        "mode": "Fresh migrations-only fixture; explicitly seed each target table id123 with its own publicUUID and valid coreFKs. Source010 has a distinct internalid. Do not predict command-generated IDs.",
+        "relation": "subject"
+      },
+      "action": {
+        "insert": {
+          "source_id": "core010internal",
+          "relation": "subject",
+          "document_target_id": 123,
+          "quest_target_id": 123
+        },
+        "duplicate_setup": "four-type case committed first only for duplicate; other variants start zero linkrows"
+      },
+      "expected": {
+        "sqlstate": "23514",
+        "no_partial_edges": true,
+        "all_other_rows_unchanged": true
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "LINK-CONSTRAINT-missing",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "sourceDocument": "10000000-0000-4000-8000-000000000010",
+        "targets": [
+          {
+            "type": "document",
+            "uuid": "10000000-0000-4000-8000-000000000015",
+            "physical": "document_target_id"
+          },
+          {
+            "type": "quest",
+            "uuid": "10000000-0000-4000-8000-000000000051",
+            "physical": "quest_target_id"
+          },
+          {
+            "type": "character",
+            "uuid": "10000000-0000-4000-8000-000000000030",
+            "physical": "character_target_id"
+          },
+          {
+            "type": "region",
+            "uuid": "10000000-0000-4000-8000-000000000020",
+            "physical": "region_target_id"
+          }
+        ],
+        "internal_fixture_id_for_each_target": 123,
+        "mode": "Fresh migrations-only fixture; explicitly seed each target table id123 with its own publicUUID and valid coreFKs. Source010 has a distinct internalid. Do not predict command-generated IDs.",
+        "relation": "subject"
+      },
+      "action": {
+        "insert": {
+          "source_id": "core010internal",
+          "relation": "subject",
+          "quest_target_id": 999999
+        },
+        "duplicate_setup": "four-type case committed first only for duplicate; other variants start zero linkrows"
+      },
+      "expected": {
+        "sqlstate": "23503",
+        "no_partial_edges": true,
+        "all_other_rows_unchanged": true
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "LINK-CONSTRAINT-duplicate",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "sourceDocument": "10000000-0000-4000-8000-000000000010",
+        "targets": [
+          {
+            "type": "document",
+            "uuid": "10000000-0000-4000-8000-000000000015",
+            "physical": "document_target_id"
+          },
+          {
+            "type": "quest",
+            "uuid": "10000000-0000-4000-8000-000000000051",
+            "physical": "quest_target_id"
+          },
+          {
+            "type": "character",
+            "uuid": "10000000-0000-4000-8000-000000000030",
+            "physical": "character_target_id"
+          },
+          {
+            "type": "region",
+            "uuid": "10000000-0000-4000-8000-000000000020",
+            "physical": "region_target_id"
+          }
+        ],
+        "internal_fixture_id_for_each_target": 123,
+        "mode": "Fresh migrations-only fixture; explicitly seed each target table id123 with its own publicUUID and valid coreFKs. Source010 has a distinct internalid. Do not predict command-generated IDs.",
+        "relation": "subject"
+      },
+      "action": {
+        "insert": {
+          "source_id": "core010internal",
+          "relation": "subject",
+          "quest_target_id": 123
+        },
+        "duplicate_setup": "four-type case committed first only for duplicate; other variants start zero linkrows"
+      },
+      "expected": {
+        "sqlstate": "23505",
+        "no_partial_edges": true,
+        "all_other_rows_unchanged": true
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "LINK-DOWN-AND-TOMBSTONES",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "sourceDocument": "10000000-0000-4000-8000-000000000010",
+        "targets": [
+          {
+            "type": "document",
+            "uuid": "10000000-0000-4000-8000-000000000015",
+            "physical": "document_target_id"
+          },
+          {
+            "type": "quest",
+            "uuid": "10000000-0000-4000-8000-000000000051",
+            "physical": "quest_target_id"
+          },
+          {
+            "type": "character",
+            "uuid": "10000000-0000-4000-8000-000000000030",
+            "physical": "character_target_id"
+          },
+          {
+            "type": "region",
+            "uuid": "10000000-0000-4000-8000-000000000020",
+            "physical": "region_target_id"
+          }
+        ],
+        "internal_fixture_id_for_each_target": 123,
+        "mode": "Fresh migrations-only fixture; explicitly seed each target table id123 with its own publicUUID and valid coreFKs. Source010 has a distinct internalid. Do not predict command-generated IDs.",
+        "relation": "subject"
+      },
+      "action": "Hold migration table lock across down preflight/rewrite; run with nonDocument edge. Separately reset ordinaryDocumentonly oldgraph and up/down; separately tombstone targets then try harddeletes.",
+      "expected": {
+        "nonDocument_down": "fails without erasing typed rows",
+        "Document_only_roundtrip": "same source/target publicUUID/relation and original realFK/index/PK behavior",
+        "tombstones": "edges retained; suppressed only by owning readpolicy",
+        "harddelete": "newsubject FK restricts; Documenttarget cascade retained",
+        "index": "(target_type,target_id,relation,source_id)"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "LINK-SUMMARY-ATOMIC",
+      "owner": "DOC06",
+      "test_file": "apps/api/internal/document/product_commands_phase3_test.go",
+      "fixture": {
+        "core": "S03 core",
+        "summary": "10000000-0000-4000-8000-000000000015",
+        "quest_subjects": [
+          "10000000-0000-4000-8000-000000000050",
+          "10000000-0000-4000-8000-000000000051"
+        ],
+        "character_subject": "10000000-0000-4000-8000-000000000030",
+        "actor": "10000000-0000-4000-8000-000000000001"
+      },
+      "action": "Quest upsert summary delegates StoreSummary in single tx. After text/revision/link updates inject final Character subject insert FK/storage failure.",
+      "expected": {
+        "code": "INTERNAL",
+        "documents015": "exact original body/title/version/slug",
+        "document_revisions": "original rows only",
+        "document_links": "original complete source015 edges restored",
+        "receipts": 0,
+        "notifications": 0,
+        "second_transaction_read": "old summary and links unchanged; no repair on read"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "LINK-AUDIENCE-AND-CORRUPTION",
+      "owner": "DOC06",
+      "test_file": "apps/api/internal/document/product_commands_phase3_test.go",
+      "fixture": {
+        "core": "S03 core",
+        "public_source": "10000000-0000-4000-8000-000000000010",
+        "protected_doc_target": "10000000-0000-4000-8000-000000000011",
+        "policy": ["member:10000000-0000-4000-8000-000000000003"],
+        "ordinary_public_quest": "10000000-0000-4000-8000-000000000051"
+      },
+      "action": "Read typed links as anonymous/Dee then inject query failure; separately tombstone source; separately represent invalid discriminator in test mapper.",
+      "expected": {
+        "anonymous": "protectedDocumenttarget omitted, ordinary Quest publicUUID retained; no protected body/reference",
+        "Dee": "same typedUUIDs plus admitted011",
+        "tombstoned_source": "no links exposed",
+        "dependency_or_invalid_discriminator": "opaque INTERNAL, not empty success",
+        "queries": "one set-projection; source and Documenttarget use same predicate; no per-edge query"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "MENTION-RESOLVABLE-ben",
+      "owner": "NOT08",
+      "test_file": "apps/api/internal/notification/producer_phase3_test.go",
+      "fixture": {
+        "Document010": "published author001 version2, bodyPublic river; no prior mentions",
+        "member": {
+          "id": "10000000-0000-4000-8000-000000000002",
+          "handle": "ben",
+          "status": "active",
+          "role_status": "player"
+        },
+        "actor": "10000000-0000-4000-8000-000000000004"
+      },
+      "action": {
+        "operation": "editPublishedDocument",
+        "id": "10000000-0000-4000-8000-000000000010",
+        "input": {
+          "expectedRevision": 2,
+          "body": "Public river\n> [!dm:@ben]\n> Addressed passage"
+        },
+        "meta": {
+          "idempotencyKey": "mention-ben"
+        }
+      },
+      "expected": {
+        "version": 3,
+        "author_notice_recipients": ["10000000-0000-4000-8000-000000000001"],
+        "DM_MENTIONED_recipients": ["10000000-0000-4000-8000-000000000002"],
+        "mention_fact": {
+          "revisionId": "$revisionId",
+          "mentionedMemberId": "10000000-0000-4000-8000-000000000002"
+        },
+        "no_approval_filter": true,
+        "in_app_required": true,
+        "current_body_audience": "may suppress unreadable card without deleting required row",
+        "repeat_new_edit_same_marker": "one DOCUMENT_EDITED author event, zero DM_MENTIONED",
+        "rollback": "fail mention recipient append after author notice; whole Document/history/events/cards/receipt rollback"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "MENTION-RESOLVABLE-reed",
+      "owner": "NOT08",
+      "test_file": "apps/api/internal/notification/producer_phase3_test.go",
+      "fixture": {
+        "Document010": "published author001 version2, bodyPublic river; no prior mentions",
+        "member": {
+          "id": "10000000-0000-4000-8000-000000000008",
+          "handle": "reed",
+          "status": "active",
+          "role_status": "unapproved_dm"
+        },
+        "actor": "10000000-0000-4000-8000-000000000004"
+      },
+      "action": {
+        "operation": "editPublishedDocument",
+        "id": "10000000-0000-4000-8000-000000000010",
+        "input": {
+          "expectedRevision": 2,
+          "body": "Public river\n> [!dm:@reed]\n> Addressed passage"
+        },
+        "meta": {
+          "idempotencyKey": "mention-reed"
+        }
+      },
+      "expected": {
+        "version": 3,
+        "author_notice_recipients": ["10000000-0000-4000-8000-000000000001"],
+        "DM_MENTIONED_recipients": ["10000000-0000-4000-8000-000000000008"],
+        "mention_fact": {
+          "revisionId": "$revisionId",
+          "mentionedMemberId": "10000000-0000-4000-8000-000000000008"
+        },
+        "no_approval_filter": true,
+        "in_app_required": true,
+        "current_body_audience": "may suppress unreadable card without deleting required row",
+        "repeat_new_edit_same_marker": "one DOCUMENT_EDITED author event, zero DM_MENTIONED",
+        "rollback": "fail mention recipient append after author notice; whole Document/history/events/cards/receipt rollback"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "MENTION-ACTOR-EXCLUDED",
+      "owner": "NOT08",
+      "test_file": "apps/api/internal/notification/producer_phase3_test.go",
+      "fixture": {
+        "Document010.authorId": "10000000-0000-4000-8000-000000000002",
+        "old_body": "Public river",
+        "actor": "10000000-0000-4000-8000-000000000002"
+      },
+      "action": "Owned edit adds [!dm:@ben] addressed block; no prior marker",
+      "expected": {
+        "DM_MENTIONED_recipients": [],
+        "DOCUMENT_EDITED_recipients": [],
+        "revision": 1,
+        "receipt": 1
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-effects_enabled-absent",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "effects_enabled",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-effects_enabled-false",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "effects_enabled": false,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "effects_enabled",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-effects_enabled-true",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "effectsEnabled": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "effects_enabled",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-effects_enabled-null",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "effectsEnabled": null,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "effects_enabled",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-effects_enabled-equal",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "effects_enabled": false,
+          "effectsEnabled": false,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "effects_enabled",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-effects_enabled-one-null-false",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "effects_enabled": false,
+          "effectsEnabled": null,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "effects_enabled",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-effects_enabled-one-null-true",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "effects_enabled": null,
+          "effectsEnabled": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "effects_enabled",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-effects_enabled-conflict",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "effects_enabled": false,
+          "effectsEnabled": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "effects_enabled",
+        "value": "PREFLIGHT_FAIL",
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-effects_enabled-bad-type",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "effectsEnabled": "false",
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "effects_enabled",
+        "value": "PREFLIGHT_FAIL",
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-colorblind_safe-absent",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "colorblind_safe",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-colorblind_safe-false",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "colorblind_safe": false,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "colorblind_safe",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-colorblind_safe-true",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "colorblindSafe": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "colorblind_safe",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-colorblind_safe-null",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "colorblindSafe": null,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "colorblind_safe",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-colorblind_safe-equal",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "colorblind_safe": false,
+          "colorblindSafe": false,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "colorblind_safe",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-colorblind_safe-one-null-false",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "colorblind_safe": false,
+          "colorblindSafe": null,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "colorblind_safe",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-colorblind_safe-one-null-true",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "colorblind_safe": null,
+          "colorblindSafe": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "colorblind_safe",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-colorblind_safe-conflict",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "colorblind_safe": false,
+          "colorblindSafe": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "colorblind_safe",
+        "value": "PREFLIGHT_FAIL",
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-colorblind_safe-bad-type",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "colorblindSafe": "false",
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "colorblind_safe",
+        "value": "PREFLIGHT_FAIL",
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-reduced_motion-absent",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "reduced_motion",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-reduced_motion-false",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "reduced_motion": false,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "reduced_motion",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-reduced_motion-true",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "reducedMotion": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "reduced_motion",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-reduced_motion-null",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "reducedMotion": null,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "reduced_motion",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-reduced_motion-equal",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "reduced_motion": false,
+          "reducedMotion": false,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "reduced_motion",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-reduced_motion-one-null-false",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "reduced_motion": false,
+          "reducedMotion": null,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "reduced_motion",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-reduced_motion-one-null-true",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "reduced_motion": null,
+          "reducedMotion": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "reduced_motion",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-reduced_motion-conflict",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "reduced_motion": false,
+          "reducedMotion": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "reduced_motion",
+        "value": "PREFLIGHT_FAIL",
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-reduced_motion-bad-type",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "reducedMotion": "false",
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "reduced_motion",
+        "value": "PREFLIGHT_FAIL",
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_character_verification-absent",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_character_verification",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_character_verification-false",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_character_verification": false,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_character_verification",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_character_verification-true",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notifyCharacterVerification": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_character_verification",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_character_verification-null",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notifyCharacterVerification": null,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_character_verification",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_character_verification-equal",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_character_verification": false,
+          "notifyCharacterVerification": false,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_character_verification",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_character_verification-one-null-false",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_character_verification": false,
+          "notifyCharacterVerification": null,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_character_verification",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_character_verification-one-null-true",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_character_verification": null,
+          "notifyCharacterVerification": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_character_verification",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_character_verification-conflict",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_character_verification": false,
+          "notifyCharacterVerification": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_character_verification",
+        "value": "PREFLIGHT_FAIL",
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_character_verification-bad-type",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notifyCharacterVerification": "false",
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_character_verification",
+        "value": "PREFLIGHT_FAIL",
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_quest_signup-absent",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_quest_signup",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_quest_signup-false",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_quest_signup": false,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_quest_signup",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_quest_signup-true",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notifyQuestSignup": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_quest_signup",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_quest_signup-null",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notifyQuestSignup": null,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_quest_signup",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_quest_signup-equal",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_quest_signup": false,
+          "notifyQuestSignup": false,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_quest_signup",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_quest_signup-one-null-false",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_quest_signup": false,
+          "notifyQuestSignup": null,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_quest_signup",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_quest_signup-one-null-true",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_quest_signup": null,
+          "notifyQuestSignup": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_quest_signup",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_quest_signup-conflict",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_quest_signup": false,
+          "notifyQuestSignup": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_quest_signup",
+        "value": "PREFLIGHT_FAIL",
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_quest_signup-bad-type",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notifyQuestSignup": "false",
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_quest_signup",
+        "value": "PREFLIGHT_FAIL",
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_document_activity-absent",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_document_activity",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_document_activity-false",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_document_activity": false,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_document_activity",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_document_activity-true",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notifyDocumentActivity": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_document_activity",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_document_activity-null",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notifyDocumentActivity": null,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_document_activity",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_document_activity-equal",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_document_activity": false,
+          "notifyDocumentActivity": false,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_document_activity",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_document_activity-one-null-false",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_document_activity": false,
+          "notifyDocumentActivity": null,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_document_activity",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_document_activity-one-null-true",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_document_activity": null,
+          "notifyDocumentActivity": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_document_activity",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_document_activity-conflict",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_document_activity": false,
+          "notifyDocumentActivity": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_document_activity",
+        "value": "PREFLIGHT_FAIL",
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_document_activity-bad-type",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notifyDocumentActivity": "false",
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_document_activity",
+        "value": "PREFLIGHT_FAIL",
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_quest_scheduled-absent",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_quest_scheduled",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_quest_scheduled-false",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_quest_scheduled": false,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_quest_scheduled",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_quest_scheduled-true",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notifyQuestScheduled": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_quest_scheduled",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_quest_scheduled-null",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notifyQuestScheduled": null,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_quest_scheduled",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_quest_scheduled-equal",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_quest_scheduled": false,
+          "notifyQuestScheduled": false,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_quest_scheduled",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_quest_scheduled-one-null-false",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_quest_scheduled": false,
+          "notifyQuestScheduled": null,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_quest_scheduled",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_quest_scheduled-one-null-true",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_quest_scheduled": null,
+          "notifyQuestScheduled": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_quest_scheduled",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_quest_scheduled-conflict",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_quest_scheduled": false,
+          "notifyQuestScheduled": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_quest_scheduled",
+        "value": "PREFLIGHT_FAIL",
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_quest_scheduled-bad-type",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notifyQuestScheduled": "false",
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_quest_scheduled",
+        "value": "PREFLIGHT_FAIL",
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_dm_mentioned-absent",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_dm_mentioned",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_dm_mentioned-false",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_dm_mentioned": false,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_dm_mentioned",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_dm_mentioned-true",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notifyDmMentioned": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_dm_mentioned",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_dm_mentioned-null",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notifyDmMentioned": null,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_dm_mentioned",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_dm_mentioned-equal",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_dm_mentioned": false,
+          "notifyDmMentioned": false,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_dm_mentioned",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_dm_mentioned-one-null-false",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_dm_mentioned": false,
+          "notifyDmMentioned": null,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_dm_mentioned",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_dm_mentioned-one-null-true",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_dm_mentioned": null,
+          "notifyDmMentioned": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_dm_mentioned",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_dm_mentioned-conflict",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_dm_mentioned": false,
+          "notifyDmMentioned": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_dm_mentioned",
+        "value": "PREFLIGHT_FAIL",
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_dm_mentioned-bad-type",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notifyDmMentioned": "false",
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_dm_mentioned",
+        "value": "PREFLIGHT_FAIL",
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_dm_request_decided-absent",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_dm_request_decided",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_dm_request_decided-false",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_dm_request_decided": false,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_dm_request_decided",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_dm_request_decided-true",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notifyDmRequestDecided": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_dm_request_decided",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_dm_request_decided-null",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notifyDmRequestDecided": null,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_dm_request_decided",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_dm_request_decided-equal",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_dm_request_decided": false,
+          "notifyDmRequestDecided": false,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_dm_request_decided",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_dm_request_decided-one-null-false",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_dm_request_decided": false,
+          "notifyDmRequestDecided": null,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_dm_request_decided",
+        "value": false,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_dm_request_decided-one-null-true",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_dm_request_decided": null,
+          "notifyDmRequestDecided": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_dm_request_decided",
+        "value": true,
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_dm_request_decided-conflict",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notify_dm_request_decided": false,
+          "notifyDmRequestDecided": true,
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_dm_request_decided",
+        "value": "PREFLIGHT_FAIL",
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-notify_dm_request_decided-bad-type",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload": {
+          "notifyDmRequestDecided": "false",
+          "pronouns": {
+            "text": "they/them"
+          },
+          "table_notes": [
+            "Keep this",
+            {
+              "nested": 9007199254740993
+            }
+          ]
+        },
+        "updated_at": "2026-10-13T10:00:00Z"
+      },
+      "action": "Run 0003 bounded import preflight then migration in same transaction",
+      "expected": {
+        "column": "notify_dm_request_decided",
+        "value": "PREFLIGHT_FAIL",
+        "mode": "dark",
+        "timezone": "Asia/Kolkata",
+        "payload_equals_before": true,
+        "updated_at_equals_before": true,
+        "failure": "On PREFLIGHT_FAIL preserve original schema/rows; no partialcolumns or typeconversion",
+        "post_migration": "all new typedcolumns authoritative; change typedcolumn doesnotwritepayload or fallback into its stale value"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-ENUM-empty",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": null,
+        "payload": {},
+        "timezone": null
+      },
+      "action": "Run the same settings preflight/migration",
+      "expected": {
+        "typed_theme_mode_density": ["parchment", "system", "comfortable"],
+        "payload_equals_before": true,
+        "failure_keeps_schema_and_rows": true
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-ENUM-wire-enums",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "light",
+        "payload": {
+          "theme": "MIDNIGHT",
+          "density": "COMPACT"
+        },
+        "timezone": null
+      },
+      "action": "Run the same settings preflight/migration",
+      "expected": {
+        "typed_theme_mode_density": ["midnight", "light", "compact"],
+        "payload_equals_before": true,
+        "failure_keeps_schema_and_rows": true
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-ENUM-storage-enums",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "system",
+        "payload": {
+          "theme": "ember",
+          "density": "comfortable"
+        },
+        "timezone": null
+      },
+      "action": "Run the same settings preflight/migration",
+      "expected": {
+        "typed_theme_mode_density": ["ember", "system", "comfortable"],
+        "payload_equals_before": true,
+        "failure_keeps_schema_and_rows": true
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-ENUM-bad-theme",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "payload": {
+          "theme": "unknown"
+        },
+        "timezone": null
+      },
+      "action": "Run the same settings preflight/migration",
+      "expected": {
+        "typed_theme_mode_density": "PREFLIGHT_FAIL",
+        "payload_equals_before": true,
+        "failure_keeps_schema_and_rows": true
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-ENUM-bad-density",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "dark",
+        "payload": {
+          "density": 7
+        },
+        "timezone": null
+      },
+      "action": "Run the same settings preflight/migration",
+      "expected": {
+        "typed_theme_mode_density": "PREFLIGHT_FAIL",
+        "payload_equals_before": true,
+        "failure_keeps_schema_and_rows": true
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "SETTINGS-ENUM-bad-mode",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme_mode": "auto",
+        "payload": {},
+        "timezone": null
+      },
+      "action": "Run the same settings preflight/migration",
+      "expected": {
+        "typed_theme_mode_density": "PREFLIGHT_FAIL",
+        "payload_equals_before": true,
+        "failure_keeps_schema_and_rows": true
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "BRIEF-QUEST-IDENTITY",
+      "owner": "DOC06",
+      "test_file": "apps/api/internal/document/product_commands_phase3_test.go",
+      "fixture": {
+        "QuestID": "10000000-0000-4000-8000-000000000050",
+        "actor": "10000000-0000-4000-8000-000000000004",
+        "DMID": "10000000-0000-4000-8000-000000000003",
+        "title": "River quest",
+        "body": "Cross",
+        "RegionIDs": ["10000000-0000-4000-8000-000000000020"],
+        "At": "2026-10-14T12:00:00Z"
+      },
+      "action": "QUE06 allocates QuestID first and passes typed BriefCreate. DOC06 creates independently captured DocumentUUID and initial revision under that Tx.",
+      "expected": {
+        "slug": "quest-10000000000040008000000000000050",
+        "DocumentId": "$briefId",
+        "Document_author": "10000000-0000-4000-8000-000000000003",
+        "revision_actor": "10000000-0000-4000-8000-000000000004",
+        "version": 1,
+        "reason": "CREATE_DRAFT",
+        "Quest_documentId": "$briefId",
+        "no_hidden_title_inference": true,
+        "failure": "duplicate trustedslug insert maps CONFLICT and rolls Quest/brief/revision/links/receipt back"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "FP-nested-sort",
+      "owner": "P01",
+      "test_file": "apps/api/internal/platform/product/types_phase3_test.go",
+      "fixture": {
+        "normalized_internal_spec": {
+          "b": {
+            "z": 2,
+            "a": 1
+          },
+          "a": [2, 1]
+        }
+      },
+      "action": "Call the real shared Fingerprint function; no DB, actor/key/clock/IDs excluded",
+      "expected": {
+        "canonical_bytes_utf8": "{\"a\":[2,1],\"b\":{\"a\":1,\"z\":2}}",
+        "sha256": "5eb64c69809ad680fe9f8a219cecabe8aa4289d501468d43daf75735ab6aaab5"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "FP-html",
+      "owner": "P01",
+      "test_file": "apps/api/internal/platform/product/types_phase3_test.go",
+      "fixture": {
+        "normalized_internal_spec": {
+          "s": "<>&"
+        }
+      },
+      "action": "Call the real shared Fingerprint function; no DB, actor/key/clock/IDs excluded",
+      "expected": {
+        "canonical_bytes_utf8": "{\"s\":\"\\u003c\\u003e\\u0026\"}",
+        "sha256": "bbd37047d69a2464d44f68fc5b43ca5fcabf0dd4d218bce5a9dcee8d027e53fb"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "FP-patch-omitted",
+      "owner": "P01",
+      "test_file": "apps/api/internal/platform/product/types_phase3_test.go",
+      "fixture": {
+        "normalized_internal_spec": {
+          "Field": {
+            "Set": false,
+            "Value": null
+          }
+        }
+      },
+      "action": "Call the real shared Fingerprint function; no DB, actor/key/clock/IDs excluded",
+      "expected": {
+        "canonical_bytes_utf8": "{\"Field\":{\"Set\":false,\"Value\":null}}",
+        "sha256": "a3229b1210b268cf2740cee9e72767e731b45bf86cae67d462ccc38c3a5fabcc"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "FP-patch-null",
+      "owner": "P01",
+      "test_file": "apps/api/internal/platform/product/types_phase3_test.go",
+      "fixture": {
+        "normalized_internal_spec": {
+          "Field": {
+            "Set": true,
+            "Value": null
+          }
+        }
+      },
+      "action": "Call the real shared Fingerprint function; no DB, actor/key/clock/IDs excluded",
+      "expected": {
+        "canonical_bytes_utf8": "{\"Field\":{\"Set\":true,\"Value\":null}}",
+        "sha256": "cb44480f8618b522b8da5e0f704ba305592e97bcde4c2c3976f8b524c309b51c"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "FP-NUMBER-LEXEMES",
+      "owner": "P01",
+      "test_file": "apps/api/internal/platform/product/types_phase3_test.go",
+      "fixture": {
+        "raw_json_values": ["1", "1.0", "9007199254740993"]
+      },
+      "action": "Wrap each lexical value as json.Number in same normalized Spec; use the shared two-pass canonicalizer",
+      "expected": {
+        "number1_vs_1point0": "different lowerhexSHA256",
+        "large_integer": "same exact 9007199254740993 bytes, no float64 loss",
+        "arrays": "[1,2] differs [2,1]",
+        "errors": "unsupported Go funcs/channels/nonfinite value fail pure before SQL"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "UNLOCK-OLD-QA-PURGE",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "stage": "actual0001/0002 before0003",
+        "source": "qa-catalog-purge-fixture.json",
+        "exact_rows": {
+          "old_source": "apps/api/db/seed/qa.jsonl",
+          "old_source_sha256": "15c9cccba4bc50b96b77f1657e665379083a635ff89f12a3fc03f130c244a9c8",
+          "old_total": 637,
+          "cosmetic_catalog": [
+            {
+              "table": "unlockables",
+              "conflict": ["public_id"],
+              "row": {
+                "active": true,
+                "code": "ink-night",
+                "cosmetic_type": "theme",
+                "payload": {
+                  "label": "ink-night",
+                  "rarity": "common"
+                },
+                "public_id": "00000012-0000-4000-8000-000000000001"
+              }
+            },
+            {
+              "table": "unlockables",
+              "conflict": ["public_id"],
+              "row": {
+                "active": true,
+                "code": "salt-gold",
+                "cosmetic_type": "palette",
+                "payload": {
+                  "label": "salt-gold",
+                  "rarity": "rare"
+                },
+                "public_id": "00000012-0000-4000-8000-000000000002"
+              }
+            },
+            {
+              "table": "unlockables",
+              "conflict": ["public_id"],
+              "row": {
+                "active": true,
+                "code": "chapbook",
+                "cosmetic_type": "font",
+                "payload": {
+                  "label": "chapbook",
+                  "rarity": "common"
+                },
+                "public_id": "00000012-0000-4000-8000-000000000003"
+              }
+            },
+            {
+              "table": "unlockables",
+              "conflict": ["public_id"],
+              "row": {
+                "active": false,
+                "code": "tower-lamp",
+                "cosmetic_type": "flair",
+                "payload": {
+                  "label": "tower-lamp",
+                  "rarity": "rare"
+                },
+                "public_id": "00000012-0000-4000-8000-000000000004"
+              }
+            },
+            {
+              "table": "unlockables",
+              "conflict": ["public_id"],
+              "row": {
+                "active": true,
+                "code": "road-warden",
+                "cosmetic_type": "title",
+                "payload": {
+                  "label": "road-warden",
+                  "rarity": "common"
+                },
+                "public_id": "00000012-0000-4000-8000-000000000005"
+              }
+            },
+            {
+              "table": "unlockables",
+              "conflict": ["public_id"],
+              "row": {
+                "active": true,
+                "code": "kept-seal",
+                "cosmetic_type": "badge",
+                "payload": {
+                  "label": "kept-seal",
+                  "rarity": "rare"
+                },
+                "public_id": "00000012-0000-4000-8000-000000000006"
+              }
+            },
+            {
+              "table": "unlockables",
+              "conflict": ["public_id"],
+              "row": {
+                "active": true,
+                "code": "charter-frame",
+                "cosmetic_type": "frame",
+                "payload": {
+                  "label": "charter-frame",
+                  "rarity": "common"
+                },
+                "public_id": "00000012-0000-4000-8000-000000000007"
+              }
+            },
+            {
+              "table": "unlockables",
+              "conflict": ["public_id"],
+              "row": {
+                "active": true,
+                "code": "wharf-plate",
+                "cosmetic_type": "nameplate",
+                "payload": {
+                  "label": "wharf-plate",
+                  "rarity": "rare"
+                },
+                "public_id": "00000012-0000-4000-8000-000000000008"
+              }
+            },
+            {
+              "table": "unlockables",
+              "conflict": ["public_id"],
+              "row": {
+                "active": true,
+                "code": "ferry-token",
+                "cosmetic_type": "token",
+                "payload": {
+                  "label": "ferry-token",
+                  "rarity": "common"
+                },
+                "public_id": "00000012-0000-4000-8000-000000000009"
+              }
+            }
+          ],
+          "cosmetic_grants": [
+            {
+              "table": "member_unlocks",
+              "conflict": ["member_id", "unlockable_id"],
+              "refs": {
+                "granted_by": {
+                  "table": "members",
+                  "public_id": "00000001-0000-4000-8000-000000000009"
+                },
+                "member_id": {
+                  "table": "members",
+                  "public_id": "00000001-0000-4000-8000-00000000000a"
+                },
+                "unlockable_id": {
+                  "table": "unlockables",
+                  "public_id": "00000012-0000-4000-8000-000000000001"
+                }
+              },
+              "row": {
+                "source": "milestone"
+              }
+            },
+            {
+              "table": "member_unlocks",
+              "conflict": ["member_id", "unlockable_id"],
+              "refs": {
+                "granted_by": {
+                  "table": "members",
+                  "public_id": "00000001-0000-4000-8000-000000000009"
+                },
+                "member_id": {
+                  "table": "members",
+                  "public_id": "00000001-0000-4000-8000-00000000000a"
+                },
+                "unlockable_id": {
+                  "table": "unlockables",
+                  "public_id": "00000012-0000-4000-8000-000000000002"
+                }
+              },
+              "row": {
+                "source": "event"
+              }
+            },
+            {
+              "table": "member_unlocks",
+              "conflict": ["member_id", "unlockable_id"],
+              "refs": {
+                "granted_by": {
+                  "table": "members",
+                  "public_id": "00000001-0000-4000-8000-000000000009"
+                },
+                "member_id": {
+                  "table": "members",
+                  "public_id": "00000001-0000-4000-8000-00000000000a"
+                },
+                "unlockable_id": {
+                  "table": "unlockables",
+                  "public_id": "00000012-0000-4000-8000-000000000003"
+                }
+              },
+              "row": {
+                "source": "cohort"
+              }
+            },
+            {
+              "table": "member_unlocks",
+              "conflict": ["member_id", "unlockable_id"],
+              "refs": {
+                "granted_by": {
+                  "table": "members",
+                  "public_id": "00000001-0000-4000-8000-000000000009"
+                },
+                "member_id": {
+                  "table": "members",
+                  "public_id": "00000001-0000-4000-8000-00000000000a"
+                },
+                "unlockable_id": {
+                  "table": "unlockables",
+                  "public_id": "00000012-0000-4000-8000-000000000004"
+                }
+              },
+              "row": {
+                "source": "grant"
+              }
+            },
+            {
+              "table": "member_unlocks",
+              "conflict": ["member_id", "unlockable_id"],
+              "refs": {
+                "granted_by": {
+                  "table": "members",
+                  "public_id": "00000001-0000-4000-8000-000000000009"
+                },
+                "member_id": {
+                  "table": "members",
+                  "public_id": "00000001-0000-4000-8000-00000000000a"
+                },
+                "unlockable_id": {
+                  "table": "unlockables",
+                  "public_id": "00000012-0000-4000-8000-000000000005"
+                }
+              },
+              "row": {
+                "source": "purchase"
+              }
+            }
+          ],
+          "removed_records": 14,
+          "unchanged_old_records": 623,
+          "unchanged_old_rowset_sha256": "0826a2ba053711cb5aec86be57da384d75bf7c56ad4525b0a5cd9b9e35ea30ee",
+          "rule": "Exact old-row removal receipt only. S06 must update actual Go source, controlled ROOT-GEN-QA recomputes final current source hashes/counts including separately declared additions; no replacement achievement invented."
+        }
+      },
+      "action": "Load dated637 QA first, run actual0003 migration, compare full table snapshots excluding only exact approved deleted rows",
+      "expected": {
+        "removed_catalog_rows": 9,
+        "removed_grants": 5,
+        "retained_dated_rows": 623,
+        "remaining_catalog_and_grants": 0,
+        "unrelated_rowset_sha256": "0826a2ba053711cb5aec86be57da384d75bf7c56ad4525b0a5cd9b9e35ea30ee",
+        "payloads_and_ids": "exact dated fixture values; no inferred achievements",
+        "new_schema": "no cosmetic_type; kind NOT NULL CHECK achievement/dm_tier; no default; name NOT NULL; description/unlock_rule nullable"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "UNLOCK-AMBIGUOUS-116",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "stage": "old schema",
+        "unlockable": {
+          "public_id": "10000000-0000-4000-8000-000000000090",
+          "cosmetic_type": "badge",
+          "payload": {
+            "kind": "achievement"
+          }
+        },
+        "grant_references": ["exact linked rows"]
+      },
+      "action": "Run unlock-catalog-storage-contract.md recursive exact-key preflight before any delete or DDL",
+      "expected": {
+        "code": "PREFLIGHT_FAIL",
+        "schema_and_all_rows_unchanged": true,
+        "safe_report": ["10000000-0000-4000-8000-000000000090"],
+        "no_prose_or_code_classification": true
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "UNLOCK-AMBIGUOUS-117",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "stage": "old schema",
+        "unlockable": {
+          "public_id": "10000000-0000-4000-8000-000000000090",
+          "cosmetic_type": "badge",
+          "payload": {
+            "kind": "UNKNOWN"
+          }
+        },
+        "grant_references": ["exact linked rows"]
+      },
+      "action": "Run unlock-catalog-storage-contract.md recursive exact-key preflight before any delete or DDL",
+      "expected": {
+        "code": "PREFLIGHT_FAIL",
+        "schema_and_all_rows_unchanged": true,
+        "safe_report": ["10000000-0000-4000-8000-000000000090"],
+        "no_prose_or_code_classification": true
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "UNLOCK-AMBIGUOUS-118",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "stage": "old schema",
+        "unlockable": {
+          "public_id": "10000000-0000-4000-8000-000000000090",
+          "cosmetic_type": "badge",
+          "payload": {
+            "kind": false
+          }
+        },
+        "grant_references": ["exact linked rows"]
+      },
+      "action": "Run unlock-catalog-storage-contract.md recursive exact-key preflight before any delete or DDL",
+      "expected": {
+        "code": "PREFLIGHT_FAIL",
+        "schema_and_all_rows_unchanged": true,
+        "safe_report": ["10000000-0000-4000-8000-000000000090"],
+        "no_prose_or_code_classification": true
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "UNLOCK-AMBIGUOUS-119",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "stage": "old schema",
+        "unlockable": {
+          "public_id": "10000000-0000-4000-8000-000000000090",
+          "cosmetic_type": "badge",
+          "payload": {
+            "kind": {
+              "type": "badge"
+            }
+          }
+        },
+        "grant_references": ["exact linked rows"]
+      },
+      "action": "Run unlock-catalog-storage-contract.md recursive exact-key preflight before any delete or DDL",
+      "expected": {
+        "code": "PREFLIGHT_FAIL",
+        "schema_and_all_rows_unchanged": true,
+        "safe_report": ["10000000-0000-4000-8000-000000000090"],
+        "no_prose_or_code_classification": true
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "UNLOCK-WIRE-STORAGE",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "stage": "post0003",
+        "rows": [
+          {
+            "kind": "achievement",
+            "name": "Bridge keeper",
+            "code": "unlock_10000000000040008000000000000090",
+            "payload": {}
+          },
+          {
+            "kind": "dm_tier",
+            "name": "River DM",
+            "code": "unlock_10000000000040008000000000000091",
+            "payload": {}
+          }
+        ]
+      },
+      "action": "Insert exact new-schema rows then Member-owned catalog read; separately reject uppercase physicalkind and omittedkind/name",
+      "expected": {
+        "wire_kinds": ["ACHIEVEMENT", "DM_TIER"],
+        "physical_kinds": ["achievement", "dm_tier"],
+        "bad_physical_kind": "23514",
+        "missing_required": "23502",
+        "legacy_classification_claim": false
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "DOCUMENT-CURRENT-PROVENANCE",
+      "owner": "P04",
+      "test_file": "apps/api/internal/test/migration_graphql_integration_test.go",
+      "fixture": {
+        "stage": "old schema",
+        "document": {
+          "id": "10000000-0000-4000-8000-000000000012",
+          "author_id": "10000000-0000-4000-8000-000000000001",
+          "status": "published",
+          "published_at": "2026-10-13T10:00:00Z",
+          "deleted_at": null
+        }
+      },
+      "action": "Upgrade, then separate reset scenarios publish as004, unpublish as001, delete as004, restore as001 through real commands",
+      "expected": {
+        "legacy_published_by": null,
+        "legacy_deleted_by": null,
+        "publish_current_actor": "10000000-0000-4000-8000-000000000004",
+        "publish_author_stays": "10000000-0000-4000-8000-000000000001",
+        "unpublish_current_publication": [null, null],
+        "delete_current_actor": "10000000-0000-4000-8000-000000000004",
+        "restore_deleted": [null, null],
+        "delete_restore_publication": "literal previous published_at/published_by retained, including unknownNULL",
+        "revisions": "same-UOW exact before/after including provenance, existing created_by/created_at record actual actor/time",
+        "FK_missing_member": "23503, no partialwrite"
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    },
+    {
+      "id": "WORK-RECEIPT-RETENTION",
+      "owner": "WK02",
+      "test_file": "apps/api/internal/worker/maintenance_graphql_integration_test.go",
+      "fixture": {
+        "fixture_source": "mounted-operational-write-cases.json#scenarios[id=OPS-WRITE-markNotificationsRead]",
+        "setup": "Execute the exact referenced successful action as active member001 with its original ids and ops:markNotificationsRead:1 key; capture full response and complete notifications, notification_events and idempotency_keys rowsets (the command has no separate history table). Fixture-only age the real completed row using the exact aging SQL, then capture its complete bytes as $agedReceipt. Every subsequent step preserves that committed aged snapshot; never reset or synthesize fingerprint/receipt/identity fields.",
+        "initial_clock": "2026-10-14T12:00:00Z",
+        "maintenance_clock": "2027-01-22T12:00:00Z",
+        "receipt_age_days": 100,
+        "captured_tables": ["notifications", "notification_events", "idempotency_keys"],
+        "ordinary_maintenance_effects": "WORK-TIME time-fill and work/job observation writes remain permitted and independently asserted; they are not part of this notification-command unchanged snapshot. No replay-side business writes are permitted.",
+        "aging_sql": "UPDATE idempotency_keys SET created_at = transaction_timestamp() - interval '100 days', completed_at = transaction_timestamp() - interval '100 days' WHERE endpoint = 'graphql:markNotificationsRead' AND actor_id = (SELECT id FROM members WHERE public_id = $1) AND key = $2 RETURNING *",
+        "aging_parameters": [
+          "10000000-0000-4000-8000-000000000001",
+          "ops:markNotificationsRead:1"
+        ],
+        "aging_assertion": "Exactly one actual completed row changed; only those two timestamps differ from the original committed receipt. Capture returned timestamps and all receipt columns; created_at is genuinely100days before database transaction_timestamp, independent of injected app clock.",
+        "orphan_job": {
+          "Key": "maintenance:obsolete-purge-retention:2027-01-22",
+          "Kind": "purge_idempotency",
+          "Lane": "maintenance",
+          "Payload": {
+            "version": 1,
+            "scheduledSlot": "2027-01-22T12:00:00Z",
+            "schemaVersion": 3,
+            "buildId": "test-retention"
+          }
+        }
+      },
+      "action": {
+        "ordered_steps": [
+          "Verify apps/api/db/queries/idempotency.sql is absent after LEGQ-REPLAY-PURGE and run module-pinned ROOT-GEN-SQL; inspect the entire generated dbgen Go method AST for PurgeIdempotencyKeys absence.",
+          "Inspect the maintenance registry and dispatch: no active purge_idempotency admission or PurgeIdempotencyKeys caller; only explicit orphan-kind rejection may name purge_idempotency. Run normal EnsureSlots and real due maintenance handlers at the advanced clock.",
+          "Enqueue one explicit orphan purge_idempotency job as the negative fixture and process it through the real maintenance handler; observe failure UNKNOWN_MAINTENANCE_KIND, not success or receipt deletion.",
+          "Compare captured receipt bytes and the three exact captured table rowsets, then replay the exact captured successful action with its same actor/ids/key at the advanced clock; independently verify current inactive-member denial from that committed snapshot plus only member001 status=inactive."
+        ]
+      },
+      "expected": {
+        "scheduled_kinds": ["gametime_fill", "reconcile_dry_run"],
+        "orphan_safe_error": "UNKNOWN_MAINTENANCE_KIND",
+        "orphan_success": false,
+        "receipt_identity": "same endpoint graphql:markNotificationsRead, actual member001 bigint FK and original key",
+        "receipt_bytes_equal_captured": true,
+        "receipt_created_at": "$agedReceipt.created_at",
+        "receipt_completed_at": "$agedReceipt.completed_at",
+        "same_key_response": {
+          "affectedCount": 1,
+          "replayed": true
+        },
+        "captured_table_rowsets_equal_after_maintenance_and_replay": true,
+        "new_receipts": 0,
+        "new_notification_updates": 0,
+        "inactive_same_key_code": "FORBIDDEN",
+        "inactive_receipt_disclosure": false,
+        "legacy_reservations": "P04 preserves all actual pre0003 legacy endpoint/key/actor_id/created_at values and NULL added fields; these are never admitted as completed product receipts",
+        "test_name": "TestMaintenanceProductReceiptRetention",
+        "verification_command": "cd apps/api && env -u DATABASE_URL go test -tags=integration ./internal/worker -run '^TestMaintenanceProductReceiptRetention$' -count=1",
+        "implementation_verification": "WK02 existing maintenance_graphql_integration_test.go owns this scenario; LEGQ-REPLAY-PURGE owns only SQL source withdrawal, ROOT-GEN-SQL owns generated deletion. No test path has two writers."
+      },
+      "status": "NOT IMPLEMENTED; independent review pending"
+    }
+  ],
+  "sources": {
+    "work-contract.md": "dd118650c35f0a9e106c1be0eee70c0ca8154e11f1ccf51edc36d2343d387461",
+    "document-storage-contract.md": "948f44c454ec29044d13458fd5a5a14ee2138783d6e4db5ae85e215d39fbad24",
+    "settings-storage-contract.md": "cba6ceea5c1e399be30a0bfdd42a611a918287e3e97d884a7c795d4f0aafaee6",
+    "notification-producer-contract.md": "96e02b3c849a4fdb7a67af4b04e5596feb516acf50efef94bcb4f9793aa0c98e",
+    "transport-contract.md": "71d97d90d5e73c53758281e48e75698f7e279c9602a3cd771c846d1de63a9aa2",
+    "mounted-mutation-input-repair-cases.json": "6f6c64ed033fb170df5629d837086d40b6a190b000afa98cf220fbd6b9e70686",
+    "unlock-catalog-storage-contract.md": "21d5ac272b00c6c5a8eaac8644e509101b3bd4c5f82673b0d3dc54be5a872d94",
+    "physical-schema-inventory.json": "00bc8317af996515b28a6b9106e3ea64ff514300c811eb64c221bb5c03d60597",
+    "qa-catalog-purge-fixture.json": "1aaf3de9e2c28e162f9c847aca24ab836e97839d78cd1f5838948238a6fe4e15"
+  },
+  "field_coverage": "No generic completeness flags. Current mutation input and query argument binders separately audit exact fields/roots. These cases repair concrete independent review findings 2-12.",
+  "runtime_success": false
+}

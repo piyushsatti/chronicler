@@ -20,3 +20,5 @@ Short ADRs that apply only inside `apps/api`. Boundary decisions: [docs/decision
 | [D42](/apps/api/docs/decisions/D42-Worker-And-Migrations.md)              | Worker binary, goose migrations, agent boundary         |
 | [D43](/apps/api/docs/decisions/D43-Agent-Worker-HTTP-Claim.md)            | Agent worker claims jobs over HTTP                      |
 | [D44](/apps/api/docs/decisions/D44-Leased-Work-With-Fencing.md)           | Leased work queue, fencing and bounded question journey |
+
+D40 now records the accepted all-product GraphQL rule and retained HTTP protocols. Its previous split routing rule is superseded; runtime cutover remains pending.

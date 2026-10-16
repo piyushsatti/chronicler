@@ -1,0 +1,1774 @@
+{
+  "designed_delta_fixtures": true,
+  "scenarios": [
+    {
+      "id": "PROJECTION-MapV2Type",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "MapV2Type",
+      "operation": "map",
+      "variables": {
+        "atlasCode": "NORTH"
+      },
+      "result_path": "map",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000024",
+        "name": "North Atlas",
+        "atlasCode": "NORTH",
+        "family": "campaign",
+        "mapKind": "hexgrid",
+        "assetPath": null,
+        "cols": 2,
+        "rows": 2,
+        "regionId": "10000000-0000-4000-8000-000000000020",
+        "createdBy": null,
+        "createdAt": "2026-01-02T00:00:00Z"
+      },
+      "field_ids": [
+        "SDL-MapV2Type-id",
+        "SDL-MapV2Type-name",
+        "SDL-MapV2Type-atlasCode",
+        "SDL-MapV2Type-family",
+        "SDL-MapV2Type-mapKind",
+        "SDL-MapV2Type-assetPath",
+        "SDL-MapV2Type-cols",
+        "SDL-MapV2Type-rows",
+        "SDL-MapV2Type-regionId",
+        "SDL-MapV2Type-createdBy",
+        "SDL-MapV2Type-createdAt"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-HexV2Type",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "HexV2Type",
+      "operation": "hex",
+      "variables": {
+        "mapId": "10000000-0000-4000-8000-000000000024",
+        "col": 0,
+        "row": 0
+      },
+      "result_path": "hex",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000026",
+        "mapId": "10000000-0000-4000-8000-000000000024",
+        "col": 0,
+        "row": 0,
+        "hexcode": "NORTH:0:0",
+        "terrain": "forest",
+        "elevation": null,
+        "climate": null,
+        "submapId": null,
+        "createdAt": null
+      },
+      "field_ids": [
+        "SDL-HexV2Type-id",
+        "SDL-HexV2Type-mapId",
+        "SDL-HexV2Type-col",
+        "SDL-HexV2Type-row",
+        "SDL-HexV2Type-hexcode",
+        "SDL-HexV2Type-terrain",
+        "SDL-HexV2Type-elevation",
+        "SDL-HexV2Type-climate",
+        "SDL-HexV2Type-submapId",
+        "SDL-HexV2Type-createdAt"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-HexEdgeV2Type",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "HexEdgeV2Type",
+      "operation": "map",
+      "variables": {
+        "atlasCode": "NORTH"
+      },
+      "result_path": "map.edges[0]",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000029",
+        "mapId": "10000000-0000-4000-8000-000000000024",
+        "hexA": "10000000-0000-4000-8000-000000000026",
+        "hexB": "10000000-0000-4000-8000-000000000027",
+        "edgeType": "trail",
+        "aSide": null,
+        "documentId": null
+      },
+      "field_ids": [
+        "SDL-HexEdgeV2Type-id",
+        "SDL-HexEdgeV2Type-mapId",
+        "SDL-HexEdgeV2Type-hexA",
+        "SDL-HexEdgeV2Type-hexB",
+        "SDL-HexEdgeV2Type-edgeType",
+        "SDL-HexEdgeV2Type-aSide",
+        "SDL-HexEdgeV2Type-documentId"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-HexEntryLinkV2Type",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "HexEntryLinkV2Type",
+      "operation": "hex",
+      "variables": {
+        "mapId": "10000000-0000-4000-8000-000000000024",
+        "col": 0,
+        "row": 0
+      },
+      "result_path": "hex.linkedEntries[0]",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "hexId": "10000000-0000-4000-8000-000000000026",
+        "documentId": "10000000-0000-4000-8000-000000000010",
+        "relation": "location"
+      },
+      "field_ids": [
+        "SDL-HexEntryLinkV2Type-hexId",
+        "SDL-HexEntryLinkV2Type-documentId",
+        "SDL-HexEntryLinkV2Type-relation"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-PointcrawlNodeV2Type",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "PointcrawlNodeV2Type",
+      "operation": "map",
+      "variables": {
+        "atlasCode": "SOUTH"
+      },
+      "result_path": "map.pointcrawlNodes[0]",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000082",
+        "mapId": "10000000-0000-4000-8000-000000000025",
+        "x": 1.25,
+        "y": 2.5,
+        "name": "Bridge",
+        "submapId": null,
+        "createdAt": "2026-01-02T00:00:00Z"
+      },
+      "field_ids": [
+        "SDL-PointcrawlNodeV2Type-id",
+        "SDL-PointcrawlNodeV2Type-mapId",
+        "SDL-PointcrawlNodeV2Type-x",
+        "SDL-PointcrawlNodeV2Type-y",
+        "SDL-PointcrawlNodeV2Type-name",
+        "SDL-PointcrawlNodeV2Type-submapId",
+        "SDL-PointcrawlNodeV2Type-createdAt"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-PointcrawlEdgeV2Type",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "PointcrawlEdgeV2Type",
+      "operation": "map",
+      "variables": {
+        "atlasCode": "SOUTH"
+      },
+      "result_path": "map.pointcrawlEdges[0]",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "003",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000085",
+        "mapId": "10000000-0000-4000-8000-000000000025",
+        "nodeA": "10000000-0000-4000-8000-000000000082",
+        "nodeB": "10000000-0000-4000-8000-000000000083",
+        "directed": false,
+        "kind": "trail",
+        "label": null,
+        "documentId": null
+      },
+      "field_ids": [
+        "SDL-PointcrawlEdgeV2Type-id",
+        "SDL-PointcrawlEdgeV2Type-mapId",
+        "SDL-PointcrawlEdgeV2Type-nodeA",
+        "SDL-PointcrawlEdgeV2Type-nodeB",
+        "SDL-PointcrawlEdgeV2Type-directed",
+        "SDL-PointcrawlEdgeV2Type-kind",
+        "SDL-PointcrawlEdgeV2Type-label",
+        "SDL-PointcrawlEdgeV2Type-documentId"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-PointcrawlEntryLinkType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "PointcrawlEntryLinkType",
+      "operation": "map",
+      "variables": {
+        "atlasCode": "SOUTH"
+      },
+      "result_path": "map.pointcrawlNodes[0].linkedEntries[0]",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "mapId": "10000000-0000-4000-8000-000000000025",
+        "nodeId": "10000000-0000-4000-8000-000000000082",
+        "documentId": "10000000-0000-4000-8000-000000000010",
+        "relation": "location",
+        "createdAt": "2026-01-02T00:00:00Z",
+        "createdBy": "10000000-0000-4000-8000-000000000006"
+      },
+      "field_ids": [
+        "SDL-PointcrawlEntryLinkType-mapId",
+        "SDL-PointcrawlEntryLinkType-nodeId",
+        "SDL-PointcrawlEntryLinkType-documentId",
+        "SDL-PointcrawlEntryLinkType-relation",
+        "SDL-PointcrawlEntryLinkType-createdAt",
+        "SDL-PointcrawlEntryLinkType-createdBy"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-ArchonAssignmentType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "ArchonAssignmentType",
+      "operation": "archonAssignments",
+      "variables": {
+        "regionId": "10000000-0000-4000-8000-000000000020",
+        "limit": 1,
+        "offset": 0
+      },
+      "result_path": "archonAssignments.items[0]",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "memberId": "10000000-0000-4000-8000-000000000006",
+        "regionId": "10000000-0000-4000-8000-000000000020",
+        "grantedAt": "2026-01-01T00:00:00Z",
+        "grantedBy": null
+      },
+      "field_ids": [
+        "SDL-ArchonAssignmentType-memberId",
+        "SDL-ArchonAssignmentType-regionId",
+        "SDL-ArchonAssignmentType-grantedAt",
+        "SDL-ArchonAssignmentType-grantedBy"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-CharacterDDBMirrorType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "CharacterDDBMirrorType",
+      "operation": "character",
+      "variables": {
+        "id": "10000000-0000-4000-8000-000000000030"
+      },
+      "result_path": "character.ddbMirror",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "characterId": "10000000-0000-4000-8000-000000000030",
+        "level": 3,
+        "xp": 900,
+        "armorClass": 15,
+        "maxHp": 24,
+        "species": "Human",
+        "classes": "Ranger 3",
+        "background": "Scout",
+        "syncedAt": "2026-10-14T10:00:00Z"
+      },
+      "field_ids": [
+        "SDL-CharacterDDBMirrorType-characterId",
+        "SDL-CharacterDDBMirrorType-level",
+        "SDL-CharacterDDBMirrorType-xp",
+        "SDL-CharacterDDBMirrorType-armorClass",
+        "SDL-CharacterDDBMirrorType-maxHp",
+        "SDL-CharacterDDBMirrorType-species",
+        "SDL-CharacterDDBMirrorType-classes",
+        "SDL-CharacterDDBMirrorType-background",
+        "SDL-CharacterDDBMirrorType-syncedAt"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-CharacterLogType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "CharacterLogType",
+      "operation": "characterLogs",
+      "variables": {
+        "characterId": "10000000-0000-4000-8000-000000000030",
+        "limit": 1,
+        "offset": 0
+      },
+      "result_path": "characterLogs.items[0]",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000070",
+        "characterId": "10000000-0000-4000-8000-000000000030",
+        "body": "Reached bridge",
+        "questId": "10000000-0000-4000-8000-000000000051",
+        "createdBy": "10000000-0000-4000-8000-000000000001",
+        "createdAt": "2026-10-13T10:00:00Z"
+      },
+      "field_ids": [
+        "SDL-CharacterLogType-id",
+        "SDL-CharacterLogType-characterId",
+        "SDL-CharacterLogType-body",
+        "SDL-CharacterLogType-questId",
+        "SDL-CharacterLogType-createdBy",
+        "SDL-CharacterLogType-createdAt"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-QuestRewardEntitlementType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "QuestRewardEntitlementType",
+      "operation": "myQuestRewards",
+      "variables": {
+        "status": "UNCLAIMED",
+        "limit": 1,
+        "offset": 0
+      },
+      "result_path": "myQuestRewards.items[0]",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "002",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000160",
+        "questId": "10000000-0000-4000-8000-000000000053",
+        "characterId": "10000000-0000-4000-8000-000000000031",
+        "pcxp": 4,
+        "note": "Completed the crossing",
+        "awardedBy": "10000000-0000-4000-8000-000000000003",
+        "awardedAt": "2026-10-14T12:00:00Z",
+        "claimedAt": null,
+        "progressionEntryId": null
+      },
+      "field_ids": [
+        "SDL-QuestRewardEntitlementType-id",
+        "SDL-QuestRewardEntitlementType-questId",
+        "SDL-QuestRewardEntitlementType-characterId",
+        "SDL-QuestRewardEntitlementType-pcxp",
+        "SDL-QuestRewardEntitlementType-note",
+        "SDL-QuestRewardEntitlementType-awardedBy",
+        "SDL-QuestRewardEntitlementType-awardedAt",
+        "SDL-QuestRewardEntitlementType-claimedAt",
+        "SDL-QuestRewardEntitlementType-progressionEntryId"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-GameDateV2Type",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "GameDateV2Type",
+      "operation": "gameDate",
+      "variables": {
+        "realDate": "2026-10-14"
+      },
+      "result_path": "gameDate",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "eraAbbrev": "PI",
+        "year": 4,
+        "periodName": "River",
+        "periodIndex": 0,
+        "periodType": "month",
+        "day": 24
+      },
+      "field_ids": [
+        "SDL-GameDateV2Type-eraAbbrev",
+        "SDL-GameDateV2Type-year",
+        "SDL-GameDateV2Type-periodName",
+        "SDL-GameDateV2Type-periodIndex",
+        "SDL-GameDateV2Type-periodType",
+        "SDL-GameDateV2Type-day"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-MemberType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "MemberType",
+      "operation": "memberMe",
+      "variables": {},
+      "result_path": "memberMe",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000001",
+        "handle": "ava",
+        "displayName": "Ava",
+        "avatarUrl": null,
+        "roles": ["player"],
+        "status": "active",
+        "joinedAt": "2026-01-01T00:00:00Z",
+        "discordId": "100000000000000001"
+      },
+      "field_ids": [
+        "SDL-MemberType-id",
+        "SDL-MemberType-handle",
+        "SDL-MemberType-displayName",
+        "SDL-MemberType-avatarUrl",
+        "SDL-MemberType-roles",
+        "SDL-MemberType-status",
+        "SDL-MemberType-joinedAt",
+        "SDL-MemberType-discordId"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-MemberSettingsType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "MemberSettingsType",
+      "operation": "myPersonalization",
+      "variables": {},
+      "result_path": "myPersonalization.settings",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "theme": "PARCHMENT",
+        "mode": "SYSTEM",
+        "effectsEnabled": true,
+        "colorblindSafe": false,
+        "reducedMotion": false,
+        "density": "COMFORTABLE",
+        "timezone": null,
+        "updatedAt": "2026-10-13T10:00:00Z",
+        "notifyCharacterVerification": true,
+        "notifyQuestSignup": true,
+        "notifyDocumentActivity": true,
+        "notifyQuestScheduled": true,
+        "notifyDmMentioned": true,
+        "notifyDmRequestDecided": true
+      },
+      "field_ids": [
+        "SDL-MemberSettingsType-memberId",
+        "SDL-MemberSettingsType-theme",
+        "SDL-MemberSettingsType-mode",
+        "SDL-MemberSettingsType-effectsEnabled",
+        "SDL-MemberSettingsType-colorblindSafe",
+        "SDL-MemberSettingsType-reducedMotion",
+        "SDL-MemberSettingsType-density",
+        "SDL-MemberSettingsType-timezone",
+        "SDL-MemberSettingsType-updatedAt",
+        "SDL-MemberSettingsType-notifyCharacterVerification",
+        "SDL-MemberSettingsType-notifyQuestSignup",
+        "SDL-MemberSettingsType-notifyDocumentActivity",
+        "SDL-MemberSettingsType-notifyQuestScheduled",
+        "SDL-MemberSettingsType-notifyDmMentioned",
+        "SDL-MemberSettingsType-notifyDmRequestDecided"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-AvailabilitySlotType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "AvailabilitySlotType",
+      "operation": "myAvailability",
+      "variables": {},
+      "result_path": "myAvailability[0]",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "day": "MONDAY",
+        "startTime": "09:00:00",
+        "endTime": "12:00:00",
+        "note": null
+      },
+      "field_ids": [
+        "SDL-AvailabilitySlotType-day",
+        "SDL-AvailabilitySlotType-startTime",
+        "SDL-AvailabilitySlotType-endTime",
+        "SDL-AvailabilitySlotType-note"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-ActivityEventType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "ActivityEventType",
+      "operation": "memberActivityStats",
+      "variables": {
+        "memberId": "10000000-0000-4000-8000-000000000001"
+      },
+      "result_path": "memberActivityStats.recentSessions[0]",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "kind": "message",
+        "channelId": "100000000000000200",
+        "occurredAt": "2026-10-14T11:00:00Z",
+        "amount": 3
+      },
+      "field_ids": [
+        "SDL-ActivityEventType-kind",
+        "SDL-ActivityEventType-channelId",
+        "SDL-ActivityEventType-occurredAt",
+        "SDL-ActivityEventType-amount"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-ActivitySummaryType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "ActivitySummaryType",
+      "operation": "memberProfile",
+      "variables": {
+        "handle": "ava"
+      },
+      "result_path": "memberProfile.activitySummary",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "voiceMinutes": 120,
+        "messages": 3,
+        "reactions": 2
+      },
+      "field_ids": [
+        "SDL-ActivitySummaryType-voiceMinutes",
+        "SDL-ActivitySummaryType-messages",
+        "SDL-ActivitySummaryType-reactions"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-WeekActivityType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "WeekActivityType",
+      "operation": "memberProfile",
+      "variables": {
+        "handle": "ava"
+      },
+      "result_path": "memberProfile.recentWeeks[0]",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "periodStart": "2026-10-12",
+        "voiceMinutes": 120,
+        "messages": 3,
+        "reactions": 2
+      },
+      "field_ids": [
+        "SDL-WeekActivityType-periodStart",
+        "SDL-WeekActivityType-voiceMinutes",
+        "SDL-WeekActivityType-messages",
+        "SDL-WeekActivityType-reactions"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-DmProfileV2Type",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "DmProfileV2Type",
+      "operation": "memberProfile",
+      "variables": {
+        "handle": "dee"
+      },
+      "result_path": "memberProfile.dmProfile",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "memberId": "10000000-0000-4000-8000-000000000003",
+        "tagline": "Cross the river",
+        "philosophy": "Fair play",
+        "houseRules": null,
+        "tableInfo": {
+          "style": "exploration"
+        },
+        "acceptingPlayers": true,
+        "status": "approved",
+        "reviewRevision": 3
+      },
+      "field_ids": [
+        "SDL-DmProfileV2Type-memberId",
+        "SDL-DmProfileV2Type-tagline",
+        "SDL-DmProfileV2Type-philosophy",
+        "SDL-DmProfileV2Type-houseRules",
+        "SDL-DmProfileV2Type-tableInfo",
+        "SDL-DmProfileV2Type-acceptingPlayers",
+        "SDL-DmProfileV2Type-status",
+        "SDL-DmProfileV2Type-reviewRevision"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-DirectoryEntryType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "DirectoryEntryType",
+      "operation": "communityDirectory",
+      "variables": {
+        "filters": {
+          "acceptingPlayers": true
+        },
+        "limit": 1,
+        "offset": 0
+      },
+      "result_path": "communityDirectory.entries[0]",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "memberId": "10000000-0000-4000-8000-000000000003",
+        "handle": "dee",
+        "displayName": "Dee",
+        "avatarUrl": null,
+        "roles": ["dm"],
+        "status": "active",
+        "isDm": true,
+        "tagline": "Cross the river",
+        "acceptingPlayers": true,
+        "dmProfileStatus": "approved",
+        "dmProfileReviewRevision": 3,
+        "tableInfo": {
+          "style": "exploration"
+        },
+        "availableDays": ["MONDAY"]
+      },
+      "field_ids": [
+        "SDL-DirectoryEntryType-memberId",
+        "SDL-DirectoryEntryType-handle",
+        "SDL-DirectoryEntryType-displayName",
+        "SDL-DirectoryEntryType-avatarUrl",
+        "SDL-DirectoryEntryType-roles",
+        "SDL-DirectoryEntryType-status",
+        "SDL-DirectoryEntryType-isDm",
+        "SDL-DirectoryEntryType-tagline",
+        "SDL-DirectoryEntryType-acceptingPlayers",
+        "SDL-DirectoryEntryType-dmProfileStatus",
+        "SDL-DirectoryEntryType-dmProfileReviewRevision",
+        "SDL-DirectoryEntryType-tableInfo",
+        "SDL-DirectoryEntryType-availableDays"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-MemberUnlockType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "MemberUnlockType",
+      "operation": "myUnlocks",
+      "variables": {},
+      "result_path": "myUnlocks.items[0]",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "unlockableId": "10000000-0000-4000-8000-000000000090",
+        "unlockedAt": "2026-10-13T10:00:00Z",
+        "source": "grant",
+        "grantedBy": "10000000-0000-4000-8000-000000000004"
+      },
+      "field_ids": [
+        "SDL-MemberUnlockType-memberId",
+        "SDL-MemberUnlockType-unlockableId",
+        "SDL-MemberUnlockType-unlockedAt",
+        "SDL-MemberUnlockType-source",
+        "SDL-MemberUnlockType-grantedBy"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-DriverProgressType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "DriverProgressType",
+      "operation": "myUnlocks",
+      "variables": {},
+      "result_path": "myUnlocks.driverProgress",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "tenureMonths": 9,
+        "playerQuestsCount": 1,
+        "dmSessionsCount": 0
+      },
+      "field_ids": [
+        "SDL-DriverProgressType-tenureMonths",
+        "SDL-DriverProgressType-playerQuestsCount",
+        "SDL-DriverProgressType-dmSessionsCount"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-CharacterV2Type",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "CharacterV2Type",
+      "operation": "character",
+      "variables": {
+        "id": "10000000-0000-4000-8000-000000000030"
+      },
+      "result_path": "character",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000030",
+        "ownerId": "10000000-0000-4000-8000-000000000001",
+        "shortCode": "C-AVA",
+        "name": "Ava Scout",
+        "status": "active",
+        "regionId": "10000000-0000-4000-8000-000000000020",
+        "guildId": "10000000-0000-4000-8000-000000000010",
+        "backstoryId": "10000000-0000-4000-8000-000000000040",
+        "pcxp": 12,
+        "description": "Scout",
+        "backgroundText": null,
+        "ddbUrl": null,
+        "createdAt": "2026-01-01T00:00:00Z",
+        "updatedAt": "2026-10-13T09:00:00Z",
+        "verificationSubmittedAt": "2026-10-12T08:00:00Z",
+        "verificationStatus": "APPROVED",
+        "displayIcon": null,
+        "daysActive": 286
+      },
+      "field_ids": [
+        "SDL-CharacterV2Type-id",
+        "SDL-CharacterV2Type-ownerId",
+        "SDL-CharacterV2Type-shortCode",
+        "SDL-CharacterV2Type-name",
+        "SDL-CharacterV2Type-status",
+        "SDL-CharacterV2Type-regionId",
+        "SDL-CharacterV2Type-guildId",
+        "SDL-CharacterV2Type-backstoryId",
+        "SDL-CharacterV2Type-pcxp",
+        "SDL-CharacterV2Type-description",
+        "SDL-CharacterV2Type-backgroundText",
+        "SDL-CharacterV2Type-ddbUrl",
+        "SDL-CharacterV2Type-createdAt",
+        "SDL-CharacterV2Type-updatedAt",
+        "SDL-CharacterV2Type-verificationSubmittedAt",
+        "SDL-CharacterV2Type-verificationStatus",
+        "SDL-CharacterV2Type-displayIcon",
+        "SDL-CharacterV2Type-daysActive"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-DDBProficiencyType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "DDBProficiencyType",
+      "operation": "character",
+      "variables": {
+        "id": "10000000-0000-4000-8000-000000000030"
+      },
+      "result_path": "character.proficiencies[0]",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "kind": "proficiency",
+        "name": "Strength Saving Throws"
+      },
+      "field_ids": ["SDL-DDBProficiencyType-kind", "SDL-DDBProficiencyType-name"],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-DocumentType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "DocumentType",
+      "operation": "documentById",
+      "variables": {
+        "id": "10000000-0000-4000-8000-000000000010"
+      },
+      "result_path": "documentById",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "anonymous",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000010",
+        "version": 2,
+        "slug": "lore-river",
+        "kind": "codex_entry",
+        "category": "Lore",
+        "status": "published",
+        "visibility": "public",
+        "policy": null,
+        "title": "River ledger",
+        "frontmatter": {
+          "region": "North"
+        },
+        "authorId": "10000000-0000-4000-8000-000000000001",
+        "updatedAt": "2026-10-13T10:00:00Z",
+        "deletedAt": null,
+        "deletedBy": null,
+        "effectiveBody": "Public river\n> [!redacted]",
+        "publishedAt": "2026-10-13T10:00:00Z"
+      },
+      "field_ids": [
+        "SDL-DocumentType-id",
+        "SDL-DocumentType-version",
+        "SDL-DocumentType-slug",
+        "SDL-DocumentType-kind",
+        "SDL-DocumentType-category",
+        "SDL-DocumentType-status",
+        "SDL-DocumentType-visibility",
+        "SDL-DocumentType-policy",
+        "SDL-DocumentType-title",
+        "SDL-DocumentType-frontmatter",
+        "SDL-DocumentType-authorId",
+        "SDL-DocumentType-updatedAt",
+        "SDL-DocumentType-deletedAt",
+        "SDL-DocumentType-deletedBy",
+        "SDL-DocumentType-effectiveBody",
+        "SDL-DocumentType-publishedAt"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-DocumentAuthorType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "DocumentAuthorType",
+      "operation": "documentById",
+      "variables": {
+        "id": "10000000-0000-4000-8000-000000000010"
+      },
+      "result_path": "documentById.author",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "handle": "ava"
+      },
+      "field_ids": ["SDL-DocumentAuthorType-handle"],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-DocumentLinkType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "DocumentLinkType",
+      "operation": "codexEntry",
+      "variables": {
+        "slug": "lore-river"
+      },
+      "result_path": "codexEntry.subjects[0]",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "documentId": "10000000-0000-4000-8000-000000000010",
+        "targetType": "region",
+        "targetId": "10000000-0000-4000-8000-000000000020",
+        "relation": "subject"
+      },
+      "field_ids": [
+        "SDL-DocumentLinkType-documentId",
+        "SDL-DocumentLinkType-targetType",
+        "SDL-DocumentLinkType-targetId",
+        "SDL-DocumentLinkType-relation"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-DocumentRevisionType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "DocumentRevisionType",
+      "operation": "documentRevisions",
+      "variables": {
+        "documentId": "10000000-0000-4000-8000-000000000010",
+        "limit": 1,
+        "offset": 0
+      },
+      "result_path": "documentRevisions.items[0]",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "reason": "Publish river account",
+        "recordedAt": "2026-10-13T10:00:00Z",
+        "recordedBy": "10000000-0000-4000-8000-000000000001",
+        "id": "10000000-0000-4000-8000-000000000170",
+        "documentId": "10000000-0000-4000-8000-000000000010",
+        "rev": 2,
+        "title": "River ledger",
+        "frontmatter": {
+          "region": "North"
+        },
+        "body": "Public river\n> [!dm:@dee]\n> DMBLOCK_SENTINEL",
+        "visibility": "public",
+        "publishedAt": "2026-10-13T10:00:00Z",
+        "publishedBy": "10000000-0000-4000-8000-000000000001"
+      },
+      "field_ids": [
+        "SDL-DocumentRevisionType-reason",
+        "SDL-DocumentRevisionType-recordedAt",
+        "SDL-DocumentRevisionType-recordedBy",
+        "SDL-DocumentRevisionType-id",
+        "SDL-DocumentRevisionType-documentId",
+        "SDL-DocumentRevisionType-rev",
+        "SDL-DocumentRevisionType-title",
+        "SDL-DocumentRevisionType-frontmatter",
+        "SDL-DocumentRevisionType-body",
+        "SDL-DocumentRevisionType-visibility",
+        "SDL-DocumentRevisionType-publishedAt",
+        "SDL-DocumentRevisionType-publishedBy"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-LieutenantAssignmentType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "LieutenantAssignmentType",
+      "operation": "lieutenantAssignments",
+      "variables": {
+        "npcDocumentId": "10000000-0000-4000-8000-000000000012",
+        "memberId": "10000000-0000-4000-8000-000000000002",
+        "limit": 1,
+        "offset": 0
+      },
+      "result_path": "lieutenantAssignments.items[0]",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "memberId": "10000000-0000-4000-8000-000000000002",
+        "npcDocumentId": "10000000-0000-4000-8000-000000000012",
+        "grantedAt": "2026-10-14T10:00:00Z",
+        "grantedBy": "10000000-0000-4000-8000-000000000001"
+      },
+      "field_ids": [
+        "SDL-LieutenantAssignmentType-memberId",
+        "SDL-LieutenantAssignmentType-npcDocumentId",
+        "SDL-LieutenantAssignmentType-grantedAt",
+        "SDL-LieutenantAssignmentType-grantedBy"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-SummaryDmV2Type",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "SummaryDmV2Type",
+      "operation": "documentById",
+      "variables": {
+        "id": "10000000-0000-4000-8000-000000000015"
+      },
+      "result_path": "documentById.summaryDerived.dms[0]",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000003",
+        "displayName": "Dee"
+      },
+      "field_ids": ["SDL-SummaryDmV2Type-id", "SDL-SummaryDmV2Type-displayName"],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-SummaryHexV2Type",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "SummaryHexV2Type",
+      "operation": "documentById",
+      "variables": {
+        "id": "10000000-0000-4000-8000-000000000015"
+      },
+      "result_path": "documentById.summaryDerived.hexes[0]",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000026",
+        "mapId": "10000000-0000-4000-8000-000000000024",
+        "hexcode": "NORTH:0:0"
+      },
+      "field_ids": [
+        "SDL-SummaryHexV2Type-id",
+        "SDL-SummaryHexV2Type-mapId",
+        "SDL-SummaryHexV2Type-hexcode"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-SummaryPlayerV2Type",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "SummaryPlayerV2Type",
+      "operation": "documentById",
+      "variables": {
+        "id": "10000000-0000-4000-8000-000000000015"
+      },
+      "result_path": "documentById.summaryDerived.players[0]",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "characterId": "10000000-0000-4000-8000-000000000030",
+        "characterShortCode": "C-AVA",
+        "characterName": "Ava Scout",
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "manual": false
+      },
+      "field_ids": [
+        "SDL-SummaryPlayerV2Type-characterId",
+        "SDL-SummaryPlayerV2Type-characterShortCode",
+        "SDL-SummaryPlayerV2Type-characterName",
+        "SDL-SummaryPlayerV2Type-memberId",
+        "SDL-SummaryPlayerV2Type-manual"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-SummaryRegionV2Type",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "SummaryRegionV2Type",
+      "operation": "documentById",
+      "variables": {
+        "id": "10000000-0000-4000-8000-000000000015"
+      },
+      "result_path": "documentById.summaryDerived.regions[0]",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000020",
+        "name": "North"
+      },
+      "field_ids": ["SDL-SummaryRegionV2Type-id", "SDL-SummaryRegionV2Type-name"],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-QuestV2Type",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "QuestV2Type",
+      "operation": "quest",
+      "variables": {
+        "id": "10000000-0000-4000-8000-000000000050"
+      },
+      "result_path": "quest",
+      "fixture": "Explicit synthetic delta rows supplied exactly as expected; fixtures are nonempty and separate from real DDB capture",
+      "actor": "001",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000050",
+        "shortCode": "Q-RIVER",
+        "kinds": ["standard"],
+        "status": "open",
+        "dmId": "10000000-0000-4000-8000-000000000003",
+        "arcId": "10000000-0000-4000-8000-000000000060",
+        "scheduledAt": "2026-10-15T18:00:00Z",
+        "durationHours": 3.5,
+        "slotsMax": 1,
+        "filledCount": 0,
+        "documentId": "10000000-0000-4000-8000-000000000014",
+        "discordMessageId": null,
+        "discordEventId": null,
+        "eventUrl": null,
+        "announceError": null,
+        "tags": ["river"],
+        "genres": ["exploration"],
+        "apl": 1,
+        "signupType": "open",
+        "createdBy": "10000000-0000-4000-8000-000000000003",
+        "createdAt": "2026-10-10T10:00:00Z",
+        "updatedAt": "2026-10-13T10:00:00Z",
+        "displayStatus": "open",
+        "regions": ["10000000-0000-4000-8000-000000000020"]
+      },
+      "field_ids": [
+        "SDL-QuestV2Type-id",
+        "SDL-QuestV2Type-shortCode",
+        "SDL-QuestV2Type-kinds",
+        "SDL-QuestV2Type-status",
+        "SDL-QuestV2Type-dmId",
+        "SDL-QuestV2Type-arcId",
+        "SDL-QuestV2Type-scheduledAt",
+        "SDL-QuestV2Type-durationHours",
+        "SDL-QuestV2Type-slotsMax",
+        "SDL-QuestV2Type-filledCount",
+        "SDL-QuestV2Type-documentId",
+        "SDL-QuestV2Type-discordMessageId",
+        "SDL-QuestV2Type-discordEventId",
+        "SDL-QuestV2Type-eventUrl",
+        "SDL-QuestV2Type-announceError",
+        "SDL-QuestV2Type-tags",
+        "SDL-QuestV2Type-genres",
+        "SDL-QuestV2Type-apl",
+        "SDL-QuestV2Type-signupType",
+        "SDL-QuestV2Type-createdBy",
+        "SDL-QuestV2Type-createdAt",
+        "SDL-QuestV2Type-updatedAt",
+        "SDL-QuestV2Type-displayStatus",
+        "SDL-QuestV2Type-regions"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings."
+    },
+    {
+      "id": "PROJECTION-BackstoryType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "BackstoryType",
+      "operation": "backstories",
+      "variables": {},
+      "result_path": "backstories.items[id=10000000-0000-4000-8000-000000000040]",
+      "fixture": "Restore canonical QA plus operation-vectors core; overlay the exact literal synthetic row values in expected. Required referenced core rows keep their identities. Explicit scalar fixture does not establish global pagination or filter closure. For backstories/catalog/regions, traverse all pages and locate the exact synthetic UUID rather than assuming canonical QA rows absent. No canonical row is removed.",
+      "actor": "001",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000040",
+        "cohort": "North",
+        "name": "Northborn",
+        "lore": "Raised on the northern road",
+        "sourceRegionId": "10000000-0000-4000-8000-000000000020",
+        "retired": false
+      },
+      "field_ids": [
+        "SDL-BackstoryType-id",
+        "SDL-BackstoryType-cohort",
+        "SDL-BackstoryType-name",
+        "SDL-BackstoryType-lore",
+        "SDL-BackstoryType-sourceRegionId",
+        "SDL-BackstoryType-retired"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings.",
+      "selection_fields": ["id", "cohort", "name", "lore", "sourceRegionId", "retired"]
+    },
+    {
+      "id": "PROJECTION-CreationCatalogEntryType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "CreationCatalogEntryType",
+      "operation": "creationCatalog",
+      "variables": {},
+      "result_path": "creationCatalog.items[id=10000000-0000-4000-8000-000000000042]",
+      "fixture": "Restore canonical QA plus operation-vectors core; overlay the exact literal synthetic row values in expected. Required referenced core rows keep their identities. Explicit scalar fixture does not establish global pagination or filter closure. For backstories/catalog/regions, traverse all pages and locate the exact synthetic UUID rather than assuming canonical QA rows absent. No canonical row is removed.",
+      "actor": "001",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000042",
+        "kind": "species",
+        "name": "Human",
+        "description": "Adaptable travellers",
+        "available": true,
+        "retired": false,
+        "introducedByRegionId": "10000000-0000-4000-8000-000000000020"
+      },
+      "field_ids": [
+        "SDL-CreationCatalogEntryType-id",
+        "SDL-CreationCatalogEntryType-kind",
+        "SDL-CreationCatalogEntryType-name",
+        "SDL-CreationCatalogEntryType-description",
+        "SDL-CreationCatalogEntryType-available",
+        "SDL-CreationCatalogEntryType-retired",
+        "SDL-CreationCatalogEntryType-introducedByRegionId"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings.",
+      "selection_fields": [
+        "id",
+        "kind",
+        "name",
+        "description",
+        "available",
+        "retired",
+        "introducedByRegionId"
+      ]
+    },
+    {
+      "id": "PROJECTION-DowntimeProjectType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "DowntimeProjectType",
+      "operation": "downtimeProjects",
+      "variables": {
+        "characterId": "10000000-0000-4000-8000-000000000030"
+      },
+      "result_path": "downtimeProjects.items[0]",
+      "fixture": "Restore canonical QA plus operation-vectors core; overlay the exact literal synthetic row values in expected. Required referenced core rows keep their identities. Explicit scalar fixture does not establish global pagination or filter closure. For backstories/catalog/regions, traverse all pages and locate the exact synthetic UUID rather than assuming canonical QA rows absent. No canonical row is removed.",
+      "actor": "001",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000071",
+        "characterId": "10000000-0000-4000-8000-000000000030",
+        "name": "Survey the bridge",
+        "goal": "Five safe crossings",
+        "progress": 2,
+        "target": 5,
+        "notes": null,
+        "status": "active",
+        "updatedAt": "2026-10-13T10:00:00Z"
+      },
+      "field_ids": [
+        "SDL-DowntimeProjectType-id",
+        "SDL-DowntimeProjectType-characterId",
+        "SDL-DowntimeProjectType-name",
+        "SDL-DowntimeProjectType-goal",
+        "SDL-DowntimeProjectType-progress",
+        "SDL-DowntimeProjectType-target",
+        "SDL-DowntimeProjectType-notes",
+        "SDL-DowntimeProjectType-status",
+        "SDL-DowntimeProjectType-updatedAt"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings.",
+      "selection_fields": [
+        "id",
+        "characterId",
+        "name",
+        "goal",
+        "progress",
+        "target",
+        "notes",
+        "status",
+        "updatedAt"
+      ]
+    },
+    {
+      "id": "PROJECTION-CoPlayerV2Type",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "CoPlayerV2Type",
+      "operation": "coPlayers",
+      "variables": {
+        "characterId": "10000000-0000-4000-8000-000000000030"
+      },
+      "result_path": "coPlayers.items[0]",
+      "fixture": "Restore canonical QA plus operation-vectors core; overlay the exact literal synthetic row values in expected. Required referenced core rows keep their identities. Explicit scalar fixture does not establish global pagination or filter closure. For backstories/catalog/regions, traverse all pages and locate the exact synthetic UUID rather than assuming canonical QA rows absent. No canonical row is removed.",
+      "actor": "001",
+      "expected": {
+        "memberId": "10000000-0000-4000-8000-000000000002",
+        "characterId": "10000000-0000-4000-8000-000000000031",
+        "questCount": 1
+      },
+      "field_ids": [
+        "SDL-CoPlayerV2Type-memberId",
+        "SDL-CoPlayerV2Type-characterId",
+        "SDL-CoPlayerV2Type-questCount"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings.",
+      "selection_fields": ["memberId", "characterId", "questCount"]
+    },
+    {
+      "id": "PROJECTION-ProgressionEntryType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "ProgressionEntryType",
+      "operation": "characterProgression",
+      "variables": {
+        "characterId": "10000000-0000-4000-8000-000000000030",
+        "limit": 1,
+        "offset": 0
+      },
+      "result_path": "characterProgression.items[0]",
+      "fixture": "Restore canonical QA plus operation-vectors core; overlay the exact literal synthetic row values in expected. Required referenced core rows keep their identities. Explicit scalar fixture does not establish global pagination or filter closure. For backstories/catalog/regions, traverse all pages and locate the exact synthetic UUID rather than assuming canonical QA rows absent. No canonical row is removed. Seed new ledger IDs072(delta10,createdAt12Oct10Z) and073(delta2,createdAt13Oct10Z), both legacy reason Journey and null questId/recordedBy/note. The core legacy actor/note prose is superseded by these exact columns. Cache player_xp12. No fabricated provenance.",
+      "actor": "001",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000073",
+        "characterId": "10000000-0000-4000-8000-000000000030",
+        "kind": "pcxp",
+        "amount": 2,
+        "note": null,
+        "questId": null,
+        "recordedBy": null,
+        "recordedAt": "2026-10-13T10:00:00Z"
+      },
+      "field_ids": [
+        "SDL-ProgressionEntryType-id",
+        "SDL-ProgressionEntryType-characterId",
+        "SDL-ProgressionEntryType-kind",
+        "SDL-ProgressionEntryType-amount",
+        "SDL-ProgressionEntryType-note",
+        "SDL-ProgressionEntryType-questId",
+        "SDL-ProgressionEntryType-recordedBy",
+        "SDL-ProgressionEntryType-recordedAt"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings.",
+      "selection_fields": [
+        "id",
+        "characterId",
+        "kind",
+        "amount",
+        "note",
+        "questId",
+        "recordedBy",
+        "recordedAt"
+      ]
+    },
+    {
+      "id": "PROJECTION-RoleChangeType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "RoleChangeType",
+      "operation": "memberRoleHistory",
+      "variables": {
+        "memberId": "10000000-0000-4000-8000-000000000001"
+      },
+      "result_path": "memberRoleHistory.items[0]",
+      "fixture": "Restore canonical QA plus operation-vectors core; overlay the exact literal synthetic row values in expected. Required referenced core rows keep their identities. Explicit scalar fixture does not establish global pagination or filter closure. For backstories/catalog/regions, traverse all pages and locate the exact synthetic UUID rather than assuming canonical QA rows absent. No canonical row is removed.",
+      "actor": "004",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000074",
+        "memberId": "10000000-0000-4000-8000-000000000001",
+        "oldRoles": [],
+        "newRoles": ["player"],
+        "changedBy": "10000000-0000-4000-8000-000000000004",
+        "note": "Initial player assignment",
+        "occurredAt": "2026-01-01T00:00:00Z"
+      },
+      "field_ids": [
+        "SDL-RoleChangeType-id",
+        "SDL-RoleChangeType-memberId",
+        "SDL-RoleChangeType-oldRoles",
+        "SDL-RoleChangeType-newRoles",
+        "SDL-RoleChangeType-changedBy",
+        "SDL-RoleChangeType-note",
+        "SDL-RoleChangeType-occurredAt"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings.",
+      "selection_fields": [
+        "id",
+        "memberId",
+        "oldRoles",
+        "newRoles",
+        "changedBy",
+        "note",
+        "occurredAt"
+      ]
+    },
+    {
+      "id": "PROJECTION-QuestArcV2Type",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "QuestArcV2Type",
+      "operation": "questArc",
+      "variables": {
+        "id": "10000000-0000-4000-8000-000000000060"
+      },
+      "result_path": "questArc",
+      "fixture": "Restore canonical QA plus operation-vectors core; overlay the exact literal synthetic row values in expected. Required referenced core rows keep their identities. Explicit scalar fixture does not establish global pagination or filter closure. For backstories/catalog/regions, traverse all pages and locate the exact synthetic UUID rather than assuming canonical QA rows absent. No canonical row is removed.",
+      "actor": "001",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000060",
+        "name": "River arc",
+        "createdBy": "10000000-0000-4000-8000-000000000003",
+        "createdAt": "2026-10-10T10:00:00Z",
+        "questCount": 2
+      },
+      "field_ids": [
+        "SDL-QuestArcV2Type-id",
+        "SDL-QuestArcV2Type-name",
+        "SDL-QuestArcV2Type-createdBy",
+        "SDL-QuestArcV2Type-createdAt",
+        "SDL-QuestArcV2Type-questCount"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings.",
+      "selection_fields": ["id", "name", "createdBy", "createdAt", "questCount"]
+    },
+    {
+      "id": "PROJECTION-QuestDmV2Type",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "QuestDmV2Type",
+      "operation": "quest",
+      "variables": {
+        "id": "10000000-0000-4000-8000-000000000050"
+      },
+      "result_path": "quest.dm",
+      "fixture": "Restore canonical QA plus operation-vectors core; overlay the exact literal synthetic row values in expected. Required referenced core rows keep their identities. Explicit scalar fixture does not establish global pagination or filter closure. For backstories/catalog/regions, traverse all pages and locate the exact synthetic UUID rather than assuming canonical QA rows absent. No canonical row is removed.",
+      "actor": "001",
+      "expected": {
+        "handle": "dee",
+        "displayName": "Dee",
+        "avatarUrl": null
+      },
+      "field_ids": [
+        "SDL-QuestDmV2Type-handle",
+        "SDL-QuestDmV2Type-displayName",
+        "SDL-QuestDmV2Type-avatarUrl"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings.",
+      "selection_fields": ["handle", "displayName", "avatarUrl"]
+    },
+    {
+      "id": "PROJECTION-QuestParticipantV2Type",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "QuestParticipantV2Type",
+      "operation": "quest",
+      "variables": {
+        "id": "10000000-0000-4000-8000-000000000052"
+      },
+      "result_path": "quest.participants(status:signed_up)[0]",
+      "fixture": "Restore canonical QA plus operation-vectors core; overlay the exact literal synthetic row values in expected. Required referenced core rows keep their identities. Explicit scalar fixture does not establish global pagination or filter closure. For backstories/catalog/regions, traverse all pages and locate the exact synthetic UUID rather than assuming canonical QA rows absent. No canonical row is removed.",
+      "actor": "001",
+      "expected": {
+        "questId": "10000000-0000-4000-8000-000000000052",
+        "memberId": "10000000-0000-4000-8000-000000000002",
+        "characterId": "10000000-0000-4000-8000-000000000031",
+        "status": "signed_up",
+        "manual": false,
+        "createdAt": "2026-10-12T10:00:00Z",
+        "updatedAt": "2026-10-13T10:00:00Z",
+        "characterName": "Ben Guard",
+        "memberHandle": "ben",
+        "memberDisplayName": "Ben",
+        "memberAvatarUrl": null
+      },
+      "field_ids": [
+        "SDL-QuestParticipantV2Type-questId",
+        "SDL-QuestParticipantV2Type-memberId",
+        "SDL-QuestParticipantV2Type-characterId",
+        "SDL-QuestParticipantV2Type-status",
+        "SDL-QuestParticipantV2Type-manual",
+        "SDL-QuestParticipantV2Type-createdAt",
+        "SDL-QuestParticipantV2Type-updatedAt",
+        "SDL-QuestParticipantV2Type-characterName",
+        "SDL-QuestParticipantV2Type-memberHandle",
+        "SDL-QuestParticipantV2Type-memberDisplayName",
+        "SDL-QuestParticipantV2Type-memberAvatarUrl"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings.",
+      "selection_fields": [
+        "questId",
+        "memberId",
+        "characterId",
+        "status",
+        "manual",
+        "createdAt",
+        "updatedAt",
+        "characterName",
+        "memberHandle",
+        "memberDisplayName",
+        "memberAvatarUrl"
+      ]
+    },
+    {
+      "id": "PROJECTION-QuestHexV2Type",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "QuestHexV2Type",
+      "operation": "quest",
+      "variables": {
+        "id": "10000000-0000-4000-8000-000000000050"
+      },
+      "result_path": "quest.hexes(role:planned)[0]",
+      "fixture": "Restore canonical QA plus operation-vectors core; overlay the exact literal synthetic row values in expected. Required referenced core rows keep their identities. Explicit scalar fixture does not establish global pagination or filter closure. For backstories/catalog/regions, traverse all pages and locate the exact synthetic UUID rather than assuming canonical QA rows absent. No canonical row is removed.",
+      "actor": "001",
+      "expected": {
+        "questId": "10000000-0000-4000-8000-000000000050",
+        "hexId": "10000000-0000-4000-8000-000000000026",
+        "role": "planned"
+      },
+      "field_ids": [
+        "SDL-QuestHexV2Type-questId",
+        "SDL-QuestHexV2Type-hexId",
+        "SDL-QuestHexV2Type-role"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings.",
+      "selection_fields": ["questId", "hexId", "role"]
+    },
+    {
+      "id": "PROJECTION-PoiV2Type",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "PoiV2Type",
+      "operation": "poisForHex",
+      "variables": {
+        "hexId": "10000000-0000-4000-8000-000000000026"
+      },
+      "result_path": "poisForHex.items[0]",
+      "fixture": "Restore canonical QA plus operation-vectors core; overlay the exact literal synthetic row values in expected. Required referenced core rows keep their identities. Explicit scalar fixture does not establish global pagination or filter closure. For backstories/catalog/regions, traverse all pages and locate the exact synthetic UUID rather than assuming canonical QA rows absent. No canonical row is removed.",
+      "actor": "001",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000080",
+        "hexId": "10000000-0000-4000-8000-000000000026",
+        "poiType": "landmark",
+        "documentId": "10000000-0000-4000-8000-000000000010",
+        "discoveryTier": "landmark",
+        "isCharterObjective": false
+      },
+      "field_ids": [
+        "SDL-PoiV2Type-id",
+        "SDL-PoiV2Type-hexId",
+        "SDL-PoiV2Type-poiType",
+        "SDL-PoiV2Type-documentId",
+        "SDL-PoiV2Type-discoveryTier",
+        "SDL-PoiV2Type-isCharterObjective"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings.",
+      "selection_fields": [
+        "id",
+        "hexId",
+        "poiType",
+        "documentId",
+        "discoveryTier",
+        "isCharterObjective"
+      ]
+    },
+    {
+      "id": "PROJECTION-RegionV2Type",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "RegionV2Type",
+      "operation": "regions",
+      "variables": {},
+      "result_path": "regions[id=10000000-0000-4000-8000-000000000020]",
+      "fixture": "Restore canonical QA plus operation-vectors core; overlay the exact literal synthetic row values in expected. Required referenced core rows keep their identities. Explicit scalar fixture does not establish global pagination or filter closure. For backstories/catalog/regions, traverse all pages and locate the exact synthetic UUID rather than assuming canonical QA rows absent. No canonical row is removed.",
+      "actor": "001",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000020",
+        "name": "North",
+        "kind": "archon",
+        "charterDeadline": null,
+        "documentId": null,
+        "createdAt": "2026-01-01T00:00:00Z"
+      },
+      "field_ids": [
+        "SDL-RegionV2Type-id",
+        "SDL-RegionV2Type-name",
+        "SDL-RegionV2Type-kind",
+        "SDL-RegionV2Type-charterDeadline",
+        "SDL-RegionV2Type-documentId",
+        "SDL-RegionV2Type-createdAt"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings.",
+      "selection_fields": [
+        "id",
+        "name",
+        "kind",
+        "charterDeadline",
+        "documentId",
+        "createdAt"
+      ]
+    },
+    {
+      "id": "PROJECTION-RegionActivityQuestRefV2Type",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "RegionActivityQuestRefV2Type",
+      "operation": "regionActivity",
+      "variables": {
+        "atlasCode": "NORTH"
+      },
+      "result_path": "regionActivity.openQuests[0]",
+      "fixture": "Restore canonical QA plus operation-vectors core; overlay the exact literal synthetic row values in expected. Required referenced core rows keep their identities. Explicit scalar fixture does not establish global pagination or filter closure. For backstories/catalog/regions, traverse all pages and locate the exact synthetic UUID rather than assuming canonical QA rows absent. No canonical row is removed.",
+      "actor": "001",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000050",
+        "shortCode": "Q-OPEN",
+        "scheduledAt": "2026-10-15T12:00:00Z",
+        "slotsMax": 1,
+        "filledCount": 0
+      },
+      "field_ids": [
+        "SDL-RegionActivityQuestRefV2Type-id",
+        "SDL-RegionActivityQuestRefV2Type-shortCode",
+        "SDL-RegionActivityQuestRefV2Type-scheduledAt",
+        "SDL-RegionActivityQuestRefV2Type-slotsMax",
+        "SDL-RegionActivityQuestRefV2Type-filledCount"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings.",
+      "selection_fields": ["id", "shortCode", "scheduledAt", "slotsMax", "filledCount"]
+    },
+    {
+      "id": "PROJECTION-RequestV2Type",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "RequestV2Type",
+      "operation": "myRequests",
+      "variables": {},
+      "result_path": "myRequests.items[0]",
+      "fixture": "Restore canonical QA plus operation-vectors core; overlay the exact literal synthetic row values in expected. Required referenced core rows keep their identities. Explicit scalar fixture does not establish global pagination or filter closure. For backstories/catalog/regions, traverse all pages and locate the exact synthetic UUID rather than assuming canonical QA rows absent. No canonical row is removed.",
+      "actor": "001",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000130",
+        "requesterId": "10000000-0000-4000-8000-000000000001",
+        "targetDmId": "10000000-0000-4000-8000-000000000003",
+        "kind": "quest",
+        "note": "A bridge expedition",
+        "status": "pending"
+      },
+      "field_ids": [
+        "SDL-RequestV2Type-id",
+        "SDL-RequestV2Type-requesterId",
+        "SDL-RequestV2Type-targetDmId",
+        "SDL-RequestV2Type-kind",
+        "SDL-RequestV2Type-note",
+        "SDL-RequestV2Type-status"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings.",
+      "selection_fields": ["id", "requesterId", "targetDmId", "kind", "note", "status"]
+    },
+    {
+      "id": "PROJECTION-HomeBannerType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "HomeBannerType",
+      "operation": "homeBanner",
+      "variables": {},
+      "result_path": "homeBanner",
+      "fixture": "Restore canonical QA plus operation-vectors core; overlay the exact literal synthetic row values in expected. Required referenced core rows keep their identities. Explicit scalar fixture does not establish global pagination or filter closure. For backstories/catalog/regions, traverse all pages and locate the exact synthetic UUID rather than assuming canonical QA rows absent. No canonical row is removed.",
+      "actor": "001",
+      "expected": {
+        "enabled": true,
+        "title": "Welcome",
+        "body": "Read the ledger",
+        "ctaLabel": "Read",
+        "ctaHref": "/codex/lore-river",
+        "mediaKind": null,
+        "mediaUrl": null,
+        "mediaLabel": null
+      },
+      "field_ids": [
+        "SDL-HomeBannerType-enabled",
+        "SDL-HomeBannerType-title",
+        "SDL-HomeBannerType-body",
+        "SDL-HomeBannerType-ctaLabel",
+        "SDL-HomeBannerType-ctaHref",
+        "SDL-HomeBannerType-mediaKind",
+        "SDL-HomeBannerType-mediaUrl",
+        "SDL-HomeBannerType-mediaLabel"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings.",
+      "selection_fields": [
+        "enabled",
+        "title",
+        "body",
+        "ctaLabel",
+        "ctaHref",
+        "mediaKind",
+        "mediaUrl",
+        "mediaLabel"
+      ]
+    },
+    {
+      "id": "PROJECTION-QuestAnnouncementRoleSettingType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "QuestAnnouncementRoleSettingType",
+      "operation": "questAnnouncementRoleSetting",
+      "variables": {},
+      "result_path": "questAnnouncementRoleSetting",
+      "fixture": "Restore canonical QA plus operation-vectors core; overlay the exact literal synthetic row values in expected. Required referenced core rows keep their identities. Explicit scalar fixture does not establish global pagination or filter closure. For backstories/catalog/regions, traverse all pages and locate the exact synthetic UUID rather than assuming canonical QA rows absent. No canonical row is removed.",
+      "actor": "001",
+      "expected": {
+        "enabled": true,
+        "roleId": "123456789"
+      },
+      "field_ids": [
+        "SDL-QuestAnnouncementRoleSettingType-enabled",
+        "SDL-QuestAnnouncementRoleSettingType-roleId"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings.",
+      "selection_fields": ["enabled", "roleId"]
+    },
+    {
+      "id": "PROJECTION-DdbAttemptType",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "DdbAttemptType",
+      "operation": "character",
+      "variables": {
+        "id": "10000000-0000-4000-8000-000000000030"
+      },
+      "result_path": "character.ddbLastAttempt",
+      "fixture": "Restore canonical QA plus operation-vectors core; overlay the exact literal synthetic row values in expected. Required referenced core rows keep their identities. Explicit scalar fixture does not establish global pagination or filter closure. For backstories/catalog/regions, traverse all pages and locate the exact synthetic UUID rather than assuming canonical QA rows absent. No canonical row is removed.",
+      "actor": "001",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000075",
+        "attemptedAt": "2026-10-14T11:00:00Z",
+        "finishedAt": "2026-10-14T11:00:01Z",
+        "succeeded": false,
+        "safeError": "UPSTREAM_TIMEOUT",
+        "provenance": {
+          "parserVersion": "v1",
+          "source": "synthetic-fixture"
+        }
+      },
+      "field_ids": [
+        "SDL-DdbAttemptType-id",
+        "SDL-DdbAttemptType-attemptedAt",
+        "SDL-DdbAttemptType-finishedAt",
+        "SDL-DdbAttemptType-succeeded",
+        "SDL-DdbAttemptType-safeError",
+        "SDL-DdbAttemptType-provenance"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings.",
+      "selection_fields": [
+        "id",
+        "attemptedAt",
+        "finishedAt",
+        "succeeded",
+        "safeError",
+        "provenance"
+      ]
+    },
+    {
+      "id": "PROJECTION-AdminCharacterDirectoryEntryV2Type",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "type": "AdminCharacterDirectoryEntryV2Type",
+      "operation": "adminCharacterDirectory",
+      "variables": {
+        "filters": {
+          "search": "C-AVA"
+        }
+      },
+      "result_path": "adminCharacterDirectory.items[0]",
+      "fixture": "Restore canonical QA plus operation-vectors core; overlay the exact literal synthetic row values in expected. Required referenced core rows keep their identities. Explicit scalar fixture does not establish global pagination or filter closure. For backstories/catalog/regions, traverse all pages and locate the exact synthetic UUID rather than assuming canonical QA rows absent. No canonical row is removed.",
+      "actor": "004",
+      "expected": {
+        "id": "10000000-0000-4000-8000-000000000030",
+        "shortCode": "C-AVA",
+        "name": "Ava Scout",
+        "status": "active",
+        "ownerId": "10000000-0000-4000-8000-000000000001",
+        "ownerHandle": "ava",
+        "ownerDisplayName": "Ava",
+        "ownerAvatarUrl": null,
+        "regionId": "10000000-0000-4000-8000-000000000020",
+        "regionName": "North",
+        "guildId": "10000000-0000-4000-8000-000000000010",
+        "updatedAt": "2026-10-13T09:00:00Z",
+        "verificationStatus": "APPROVED",
+        "verificationSubmittedAt": "2026-10-12T08:00:00Z"
+      },
+      "field_ids": [
+        "SDL-AdminCharacterDirectoryEntryV2Type-id",
+        "SDL-AdminCharacterDirectoryEntryV2Type-shortCode",
+        "SDL-AdminCharacterDirectoryEntryV2Type-name",
+        "SDL-AdminCharacterDirectoryEntryV2Type-status",
+        "SDL-AdminCharacterDirectoryEntryV2Type-ownerId",
+        "SDL-AdminCharacterDirectoryEntryV2Type-ownerHandle",
+        "SDL-AdminCharacterDirectoryEntryV2Type-ownerDisplayName",
+        "SDL-AdminCharacterDirectoryEntryV2Type-ownerAvatarUrl",
+        "SDL-AdminCharacterDirectoryEntryV2Type-regionId",
+        "SDL-AdminCharacterDirectoryEntryV2Type-regionName",
+        "SDL-AdminCharacterDirectoryEntryV2Type-guildId",
+        "SDL-AdminCharacterDirectoryEntryV2Type-updatedAt",
+        "SDL-AdminCharacterDirectoryEntryV2Type-verificationStatus",
+        "SDL-AdminCharacterDirectoryEntryV2Type-verificationSubmittedAt"
+      ],
+      "assertion": "Select these fields in one mounted operation and compare the entire returned object to expected. Nullable fields are JSON null, not absent, zero or placeholder strings.",
+      "selection_fields": [
+        "id",
+        "shortCode",
+        "name",
+        "status",
+        "ownerId",
+        "ownerHandle",
+        "ownerDisplayName",
+        "ownerAvatarUrl",
+        "regionId",
+        "regionName",
+        "guildId",
+        "updatedAt",
+        "verificationStatus",
+        "verificationSubmittedAt"
+      ]
+    }
+  ]
+}

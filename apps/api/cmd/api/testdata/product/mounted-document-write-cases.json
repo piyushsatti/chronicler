@@ -1,0 +1,2953 @@
+{
+  "bindings": "Every $binding is captured from actual response or unique committed originating row, validated canonical UUID and cross-checked in linked DB/fact/receipt rows. Never predict generated UUIDs or reuse fixture suffixes for generated identities.",
+  "cases": [
+    {
+      "actor": "10000000-0000-4000-8000-000000000001",
+      "arguments": {
+        "input": {
+          "body": "Bridge account",
+          "category": "Lore",
+          "frontmatter": {
+            "aliases": ["Bridge account"],
+            "region": "North"
+          },
+          "kind": "codex_entry",
+          "policy": null,
+          "title": "Bridge account",
+          "visibility": "public"
+        }
+      },
+      "assertions": {
+        "documents": "one new row whose fields equal input/response; raw body Bridge account; actor001 is immutable author; every seeded Document unchanged",
+        "jobs": [],
+        "notice_events": [],
+        "notice_recipients": [],
+        "readback": [
+          {
+            "actor": "10000000-0000-4000-8000-000000000001",
+            "capture_sources": {
+              "documentId": "same-case successful action response.id; validated captured UUID, never predicted"
+            },
+            "equals": "$response",
+            "query": "query ($documentId: ID!) {\n\tdocumentById(id: $documentId) {\n\t\tid\n\t\tversion\n\t\tslug\n\t\tkind\n\t\tcategory\n\t\tstatus\n\t\tvisibility\n\t\tpolicy\n\t\ttitle\n\t\tfrontmatter\n\t\tauthorId\n\t\tupdatedAt\n\t\tdeletedAt\n\t\tdeletedBy\n\t\teffectiveBody\n\t\tpublishedAt\n\t}\n}\n",
+            "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations.",
+            "variables": {
+              "documentId": "$documentId"
+            }
+          },
+          {
+            "actor": null,
+            "capture_sources": {
+              "documentId": "same-case successful action response.id; validated captured UUID, never predicted"
+            },
+            "data": null,
+            "error": "FORBIDDEN",
+            "query": "query ($documentId: ID!) {\n\tdocumentById(id: $documentId) {\n\t\tid\n\t\tversion\n\t\tslug\n\t\tkind\n\t\tcategory\n\t\tstatus\n\t\tvisibility\n\t\tpolicy\n\t\ttitle\n\t\tfrontmatter\n\t\tauthorId\n\t\tupdatedAt\n\t\tdeletedAt\n\t\tdeletedBy\n\t\teffectiveBody\n\t\tpublishedAt\n\t}\n}\n",
+            "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations.",
+            "variables": {
+              "documentId": "$documentId"
+            }
+          }
+        ],
+        "reader_and_link_sets": [],
+        "receipt_count": 1,
+        "response": {
+          "authorId": "10000000-0000-4000-8000-000000000001",
+          "category": "Lore",
+          "deletedAt": null,
+          "deletedBy": null,
+          "effectiveBody": "Bridge account",
+          "frontmatter": {
+            "aliases": ["Bridge account"],
+            "region": "North"
+          },
+          "id": "$documentId",
+          "kind": "codex_entry",
+          "policy": null,
+          "publishedAt": null,
+          "status": "draft",
+          "title": "Bridge account",
+          "updatedAt": "2026-10-14T12:00:00Z",
+          "version": 1,
+          "visibility": "public"
+        },
+        "revisions": "exactly one initial immutable authored revision; capture $revisionId; its document identity/body/title/frontmatter/actor/time correspond to the inserted draft; reason CREATE_DRAFT; immutable rev1 and complete old=null/new draft snapshot"
+      },
+      "bindings": ["documentId", "revisionId"],
+      "existing_contract": "D5-DM-TABLE-EXACT supplies community/dm_table and unique-slot paths",
+      "id": "DOC-CREATE-LORE",
+      "meta": {
+        "idempotencyKey": "doc-create-lore"
+      },
+      "operation": "createDocument"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000004",
+      "arguments": {
+        "expectedRevision": 2,
+        "id": "10000000-0000-4000-8000-000000000012"
+      },
+      "assertions": {
+        "audit": {
+          "actorId": "10000000-0000-4000-8000-000000000004",
+          "at": "2026-10-14T12:00:00Z",
+          "count": 1,
+          "operation": "Mutation.publishDocument",
+          "ruleCode": "OWNERSHIP",
+          "subjectId": "10000000-0000-4000-8000-000000000012",
+          "subjectType": "document"
+        },
+        "documents": {
+          "authorId": "10000000-0000-4000-8000-000000000001",
+          "body": "Draft bridge body",
+          "category": "NPC",
+          "frontmatter": {
+            "draft": true
+          },
+          "id": "10000000-0000-4000-8000-000000000012",
+          "publishedAt": "2026-10-14T12:00:00Z",
+          "publishedBy": "10000000-0000-4000-8000-000000000004",
+          "status": "published",
+          "title": "Draft bridge account",
+          "version": 3
+        },
+        "events": [
+          {
+            "fact": {
+              "RevisionID": "$revisionId"
+            },
+            "id": "$eventId",
+            "kind": "DOCUMENT_PUBLISHED",
+            "recipients": ["10000000-0000-4000-8000-000000000001"]
+          }
+        ],
+        "immutable_revision": {
+          "count_delta": 1,
+          "id": "$revisionId",
+          "new": "Exact committed result plus preserved fields as asserted above",
+          "old": "Exact reset fixture selected Document including publication/audience/readers/deletion bytes",
+          "old_rows": "same IDs and bytes forever",
+          "reason": "PUBLISH",
+          "recordedAt": "2026-10-14T12:00:00Z",
+          "recordedBy": "10000000-0000-4000-8000-000000000004",
+          "rev": "max preexisting immutable rev ordinal + 1, measured before command; never substitute Document.version"
+        },
+        "jobs": [],
+        "readback": {
+          "actor": null,
+          "equals": {
+            "effectiveBody": "Draft bridge body",
+            "id": "10000000-0000-4000-8000-000000000012",
+            "publishedAt": "2026-10-14T12:00:00Z",
+            "status": "published",
+            "title": "Draft bridge account"
+          },
+          "query": "query {\n\tdocumentById(id: \"10000000-0000-4000-8000-000000000012\") {\n\t\tid\n\t\ttitle\n\t\tstatus\n\t\teffectiveBody\n\t\tpublishedAt\n\t}\n}\n",
+          "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations."
+        },
+        "readers": [],
+        "receipts": 1,
+        "revision": {
+          "actor": "10000000-0000-4000-8000-000000000004",
+          "at": "2026-10-14T12:00:00Z",
+          "count_delta": 1,
+          "documentId": "10000000-0000-4000-8000-000000000012",
+          "id": "$revisionId",
+          "immutable": true
+        },
+        "unchanged": [
+          "id",
+          "slug",
+          "kind",
+          "visibility",
+          "policy",
+          "deletedAt",
+          "deletedBy",
+          "all other documents"
+        ]
+      },
+      "bindings": ["revisionId", "eventId", "recipientId", "auditId", "revisionId"],
+      "id": "DOC-PUBLISH-DRAFT",
+      "meta": {
+        "idempotencyKey": "doc-publish-draft"
+      },
+      "operation": "publishDocument",
+      "required_resolution": [],
+      "variants": [
+        {
+          "actor": "10000000-0000-4000-8000-000000000001",
+          "audit": [],
+          "events": [
+            {
+              "kind": "DOCUMENT_PUBLISHED",
+              "recipients": []
+            }
+          ],
+          "meaning": "author ordinary grant is not an actual override"
+        }
+      ]
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000001",
+      "arguments": {
+        "expectedRevision": 2,
+        "id": "10000000-0000-4000-8000-000000000010"
+      },
+      "assertions": {
+        "documents": {
+          "id": "10000000-0000-4000-8000-000000000010",
+          "publishedAt": null,
+          "publishedBy": null,
+          "status": "draft",
+          "version": 3
+        },
+        "immutable_revision": {
+          "count_delta": 1,
+          "id": "$revisionId",
+          "new": "Exact committed result plus preserved fields as asserted above",
+          "old": "Exact reset fixture selected Document including publication/audience/readers/deletion bytes",
+          "old_rows": "same IDs and bytes forever",
+          "reason": "UNPUBLISH",
+          "recordedAt": "2026-10-14T12:00:00Z",
+          "recordedBy": "10000000-0000-4000-8000-000000000001",
+          "rev": "max preexisting immutable rev ordinal + 1, measured before command; never substitute Document.version"
+        },
+        "jobs": [],
+        "notice_events": [],
+        "notice_recipients": [],
+        "preserve": [
+          "id",
+          "slug",
+          "authorId",
+          "body",
+          "title",
+          "frontmatter",
+          "category",
+          "visibility",
+          "policy",
+          "all prior immutable revisions"
+        ],
+        "readback": [
+          {
+            "actor": "10000000-0000-4000-8000-000000000001",
+            "effectiveBody": "Public river\n\u003e [!dm:@dee]\n\u003e DMBLOCK_SENTINEL",
+            "status": "draft"
+          },
+          {
+            "actor": null,
+            "data": null,
+            "error": "FORBIDDEN",
+            "query": "query {\n\tdocumentById(id: \"10000000-0000-4000-8000-000000000010\") {\n\t\tid\n\t\tversion\n\t\tslug\n\t\tkind\n\t\tcategory\n\t\tstatus\n\t\tvisibility\n\t\tpolicy\n\t\ttitle\n\t\tfrontmatter\n\t\tauthorId\n\t\tupdatedAt\n\t\tdeletedAt\n\t\tdeletedBy\n\t\teffectiveBody\n\t\tpublishedAt\n\t}\n}\n",
+            "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations."
+          }
+        ],
+        "reader_set": [],
+        "reason": "UNPUBLISH",
+        "receipts": 1,
+        "revision_actor": "10000000-0000-4000-8000-000000000001",
+        "revision_at": "2026-10-14T12:00:00Z",
+        "revision_delta": 1,
+        "revision_id": "$revisionId"
+      },
+      "bindings": ["revisionId", "revisionId"],
+      "id": "DOC-UNPUBLISH",
+      "meta": {
+        "idempotencyKey": "doc-unpublish"
+      },
+      "operation": "unpublishDocument",
+      "required_resolution": []
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000001",
+      "arguments": {
+        "expectedRevision": 2,
+        "id": "10000000-0000-4000-8000-000000000010",
+        "input": {
+          "policy": null,
+          "readerIds": ["10000000-0000-4000-8000-000000000003"],
+          "visibility": "restricted"
+        }
+      },
+      "assertions": {
+        "documents": {
+          "id": "10000000-0000-4000-8000-000000000010",
+          "policy": null,
+          "version": 3,
+          "visibility": "restricted"
+        },
+        "immutable_revision": {
+          "count_delta": 1,
+          "id": "$revisionId",
+          "new": "Exact committed result plus preserved fields as asserted above",
+          "old": "Exact reset fixture selected Document including publication/audience/readers/deletion bytes",
+          "old_rows": "same IDs and bytes forever",
+          "reason": "SET_AUDIENCE",
+          "recordedAt": "2026-10-14T12:00:00Z",
+          "recordedBy": "10000000-0000-4000-8000-000000000001",
+          "rev": "max preexisting immutable rev ordinal + 1, measured before command; never substitute Document.version"
+        },
+        "jobs": [],
+        "notice_events": [],
+        "notice_recipients": [],
+        "preserve": [
+          "authorId",
+          "body",
+          "title",
+          "frontmatter",
+          "category",
+          "status",
+          "publishedAt",
+          "publishedBy",
+          "prior revision bytes",
+          "every other reader set"
+        ],
+        "readback": [
+          {
+            "actor": "10000000-0000-4000-8000-000000000003",
+            "effectiveBody": "Public river\n\u003e [!dm:@dee]\n\u003e DMBLOCK_SENTINEL",
+            "policy": null
+          },
+          {
+            "actor": "10000000-0000-4000-8000-000000000002",
+            "data": null,
+            "error": "FORBIDDEN"
+          },
+          {
+            "actor": null,
+            "data": null,
+            "error": "FORBIDDEN"
+          }
+        ],
+        "readers": [
+          {
+            "documentId": "10000000-0000-4000-8000-000000000010",
+            "memberId": "10000000-0000-4000-8000-000000000003"
+          }
+        ],
+        "receipts": 1,
+        "revision_actor": "10000000-0000-4000-8000-000000000001",
+        "revision_at": "2026-10-14T12:00:00Z",
+        "revision_delta": 1,
+        "revision_id": "$revisionId"
+      },
+      "bindings": ["revisionId", "revisionId"],
+      "id": "DOC-AUDIENCE-REPLACE",
+      "meta": {
+        "idempotencyKey": "doc-audience-replace"
+      },
+      "operation": "setDocumentVisibility",
+      "required_resolution": [],
+      "variants": [
+        {
+          "assertion": "Explicit policy dominates public visibility; inner marker never grants denied outer document.",
+          "input": {
+            "policy": ["member:10000000-0000-4000-8000-000000000003"],
+            "readerIds": [],
+            "visibility": "public"
+          },
+          "readback": [
+            {
+              "actor": "10000000-0000-4000-8000-000000000003",
+              "effectiveBody": "Public river\n\u003e [!dm:@dee]\n\u003e DMBLOCK_SENTINEL"
+            },
+            {
+              "actor": "10000000-0000-4000-8000-000000000002",
+              "error": "FORBIDDEN"
+            },
+            {
+              "actor": null,
+              "error": "FORBIDDEN"
+            }
+          ],
+          "readers": []
+        },
+        {
+          "assertion": "Readable whole-document role:archon grant does not imply role:dm or dee-addressed marker grant.",
+          "input": {
+            "policy": ["role:archon"],
+            "readerIds": [],
+            "visibility": "public"
+          },
+          "readback": [
+            {
+              "actor": "10000000-0000-4000-8000-000000000006",
+              "effectiveBody": "Public river\n\u003e [!redacted]"
+            }
+          ]
+        },
+        {
+          "assertion": "Omitted policy means no explicit policy in complete audience replacement; zero reader rows remain; author raw grant retained. Audience input is full replacement; omitted/null policy clears explicit policy.",
+          "input": {
+            "readerIds": [],
+            "visibility": "restricted"
+          }
+        }
+      ]
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000001",
+      "arguments": {
+        "expectedRevision": 2,
+        "id": "10000000-0000-4000-8000-000000000010"
+      },
+      "assertions": {
+        "documents": {
+          "deletedAt": "2026-10-14T12:00:00Z",
+          "deletedBy": "10000000-0000-4000-8000-000000000001",
+          "id": "10000000-0000-4000-8000-000000000010",
+          "version": 3
+        },
+        "immutable_revision": {
+          "count_delta": 1,
+          "id": "$revisionId",
+          "new": "Exact committed result plus preserved fields as asserted above",
+          "old": "Exact reset fixture selected Document including publication/audience/readers/deletion bytes",
+          "old_rows": "same IDs and bytes forever",
+          "reason": "DELETE",
+          "recordedAt": "2026-10-14T12:00:00Z",
+          "recordedBy": "10000000-0000-4000-8000-000000000001",
+          "rev": "max preexisting immutable rev ordinal + 1, measured before command; never substitute Document.version"
+        },
+        "jobs": [],
+        "notice_events": [],
+        "notice_recipients": [],
+        "preserve": [
+          "physical document row",
+          "id",
+          "slug",
+          "authorId",
+          "body",
+          "title",
+          "frontmatter",
+          "audience",
+          "all revisions",
+          "all links",
+          "all reader rows",
+          "referencing characters/quests"
+        ],
+        "readback": [
+          {
+            "actor": null,
+            "data": null,
+            "errors": [],
+            "query": "query {\n\tdocumentById(id: \"10000000-0000-4000-8000-000000000010\") {\n\t\tid\n\t\tversion\n\t\tslug\n\t\tkind\n\t\tcategory\n\t\tstatus\n\t\tvisibility\n\t\tpolicy\n\t\ttitle\n\t\tfrontmatter\n\t\tauthorId\n\t\tupdatedAt\n\t\tdeletedAt\n\t\tdeletedBy\n\t\teffectiveBody\n\t\tpublishedAt\n\t}\n}\n",
+            "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations."
+          },
+          {
+            "actor": "10000000-0000-4000-8000-000000000001",
+            "data": null,
+            "errors": [],
+            "query": "query {\n\tdocumentById(id: \"10000000-0000-4000-8000-000000000010\") {\n\t\tid\n\t\tversion\n\t\tslug\n\t\tkind\n\t\tcategory\n\t\tstatus\n\t\tvisibility\n\t\tpolicy\n\t\ttitle\n\t\tfrontmatter\n\t\tauthorId\n\t\tupdatedAt\n\t\tdeletedAt\n\t\tdeletedBy\n\t\teffectiveBody\n\t\tpublishedAt\n\t}\n}\n",
+            "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations."
+          },
+          {
+            "actor": "10000000-0000-4000-8000-000000000004",
+            "contains": "10000000-0000-4000-8000-000000000010",
+            "query": "query {\n\tdocumentsTrash {\n\t\titems {\n\t\t\tid\n\t\t\tversion\n\t\t\tslug\n\t\t\tkind\n\t\t\tcategory\n\t\t\tstatus\n\t\t\tvisibility\n\t\t\tpolicy\n\t\t\ttitle\n\t\t\tfrontmatter\n\t\t\tauthorId\n\t\t\tupdatedAt\n\t\t\tdeletedAt\n\t\t\tdeletedBy\n\t\t\teffectiveBody\n\t\t\tpublishedAt\n\t\t}\n\t\ttotal\n\t}\n}\n",
+            "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations."
+          },
+          {
+            "actor": "10000000-0000-4000-8000-000000000001",
+            "preserves_prior_history": true,
+            "query": "query {\n\tdocumentRevisions(documentId: \"10000000-0000-4000-8000-000000000010\") {\n\t\titems {\n\t\t\treason\n\t\t\trecordedAt\n\t\t\trecordedBy\n\t\t\tid\n\t\t\tdocumentId\n\t\t\trev\n\t\t\ttitle\n\t\t\tfrontmatter\n\t\t\tbody\n\t\t\tvisibility\n\t\t\tpublishedAt\n\t\t\tpublishedBy\n\t\t}\n\t\ttotal\n\t}\n}\n",
+            "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations."
+          }
+        ],
+        "receipts": 1,
+        "response": {
+          "replayed": false
+        }
+      },
+      "bindings": ["revisionId"],
+      "id": "DOC-DELETE-SOFT",
+      "meta": {
+        "idempotencyKey": "doc-delete-soft"
+      },
+      "operation": "deleteDocument",
+      "required_resolution": []
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000001",
+      "arguments": {
+        "id": "10000000-0000-4000-8000-000000000010"
+      },
+      "assertions": {
+        "documents": {
+          "deletedAt": null,
+          "deletedBy": null,
+          "id": "10000000-0000-4000-8000-000000000010",
+          "publishedAt": "2026-10-13T10:00:00Z",
+          "publishedBy": "10000000-0000-4000-8000-000000000001",
+          "status": "published",
+          "version": 3
+        },
+        "immutable_revision": {
+          "count_delta": 1,
+          "id": "$revisionId",
+          "new": "Exact committed result plus preserved fields as asserted above",
+          "old": "Exact reset fixture selected Document including publication/audience/readers/deletion bytes",
+          "old_rows": "same IDs and bytes forever",
+          "reason": "RESTORE",
+          "recordedAt": "2026-10-14T12:00:00Z",
+          "recordedBy": "10000000-0000-4000-8000-000000000001",
+          "rev": "max preexisting immutable rev ordinal + 1, measured before command; never substitute Document.version"
+        },
+        "jobs": [],
+        "notice_events": [],
+        "notice_recipients": [],
+        "preserve": [
+          "identity",
+          "slug lore-river",
+          "author001",
+          "raw body",
+          "title",
+          "frontmatter",
+          "audience",
+          "all prior revision UUIDs and bytes",
+          "links",
+          "reader set"
+        ],
+        "readback": [
+          {
+            "actor": null,
+            "effectiveBody": "Public river\n\u003e [!redacted]",
+            "id": "10000000-0000-4000-8000-000000000010",
+            "query": "query {\n\tdocumentById(id: \"10000000-0000-4000-8000-000000000010\") {\n\t\tid\n\t\tversion\n\t\tslug\n\t\tkind\n\t\tcategory\n\t\tstatus\n\t\tvisibility\n\t\tpolicy\n\t\ttitle\n\t\tfrontmatter\n\t\tauthorId\n\t\tupdatedAt\n\t\tdeletedAt\n\t\tdeletedBy\n\t\teffectiveBody\n\t\tpublishedAt\n\t}\n}\n",
+            "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations.",
+            "title": "River ledger"
+          },
+          {
+            "actor": "10000000-0000-4000-8000-000000000004",
+            "excludes": "10000000-0000-4000-8000-000000000010",
+            "query": "query {\n\tdocumentsTrash {\n\t\titems {\n\t\t\tid\n\t\t\tversion\n\t\t\tslug\n\t\t\tkind\n\t\t\tcategory\n\t\t\tstatus\n\t\t\tvisibility\n\t\t\tpolicy\n\t\t\ttitle\n\t\t\tfrontmatter\n\t\t\tauthorId\n\t\t\tupdatedAt\n\t\t\tdeletedAt\n\t\t\tdeletedBy\n\t\t\teffectiveBody\n\t\t\tpublishedAt\n\t\t}\n\t\ttotal\n\t}\n}\n",
+            "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations."
+          }
+        ],
+        "receipts": 1
+      },
+      "bindings": ["revisionId"],
+      "fixture_delta": {
+        "documents": [
+          {
+            "deletedAt": "2026-10-13T11:00:00Z",
+            "deletedBy": "10000000-0000-4000-8000-000000000001",
+            "id": "10000000-0000-4000-8000-000000000010"
+          }
+        ]
+      },
+      "id": "DOC-RESTORE-IDENTITY",
+      "meta": {
+        "idempotencyKey": "doc-restore-identity"
+      },
+      "operation": "restoreDocument",
+      "required_resolution": []
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000004",
+      "arguments": {
+        "memberId": "10000000-0000-4000-8000-000000000002",
+        "npcDocumentId": "10000000-0000-4000-8000-000000000012"
+      },
+      "assertions": {
+        "audit": [],
+        "authority": "Live admin004 ordinary admitted role, no bypass audit; author001, unrelated DM003 and lieutenant002 FORBIDDEN. Configured owner009 admitted with actual ROLE override audit if role predicate bypassed.",
+        "jobs": [],
+        "lieutenant_assignments": [
+          {
+            "grantedAt": "2026-10-14T12:00:00Z",
+            "grantedBy": "10000000-0000-4000-8000-000000000004",
+            "memberId": "10000000-0000-4000-8000-000000000002",
+            "npcDocumentId": "10000000-0000-4000-8000-000000000012"
+          }
+        ],
+        "notice_events": [],
+        "notice_recipients": [],
+        "preserve": [
+          "all Document rows including version",
+          "all Document revisions",
+          "all readers",
+          "all links",
+          "all Characters/progression",
+          "other assignments"
+        ],
+        "readback": {
+          "actor": "10000000-0000-4000-8000-000000000004",
+          "items": [
+            {
+              "grantedAt": "2026-10-14T12:00:00Z",
+              "grantedBy": "10000000-0000-4000-8000-000000000004",
+              "memberId": "10000000-0000-4000-8000-000000000002",
+              "npcDocumentId": "10000000-0000-4000-8000-000000000012"
+            }
+          ],
+          "query": "query {\n\tlieutenantAssignments(npcDocumentId: \"10000000-0000-4000-8000-000000000012\") {\n\t\titems {\n\t\t\tmemberId\n\t\t\tnpcDocumentId\n\t\t\tgrantedAt\n\t\t\tgrantedBy\n\t\t}\n\t\ttotal\n\t}\n}\n",
+          "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations.",
+          "total": 1
+        },
+        "receipts": 1,
+        "response": {
+          "grantedAt": "2026-10-14T12:00:00Z",
+          "grantedBy": "10000000-0000-4000-8000-000000000004",
+          "memberId": "10000000-0000-4000-8000-000000000002",
+          "npcDocumentId": "10000000-0000-4000-8000-000000000012"
+        },
+        "scope_probe": {
+          "actor": "10000000-0000-4000-8000-000000000002",
+          "arguments": {
+            "id": "10000000-0000-4000-8000-000000000010",
+            "input": {
+              "expectedRevision": 2,
+              "title": "Unauthorized lieutenant edit"
+            }
+          },
+          "effects": {
+            "auth_override_audit": 0,
+            "background_jobs": 0,
+            "character_progression_ledger": 0,
+            "command_receipts": 0,
+            "document_links": "same set",
+            "document_readers": "same set",
+            "document_revisions": "same rows and bytes",
+            "documents": "all rows byte-for-byte unchanged",
+            "lieutenant_assignments": "same set",
+            "notification_events": 0,
+            "notification_recipients": 0
+          },
+          "error": "FORBIDDEN",
+          "operation": "updateDocument"
+        },
+        "target": "Existing active member002; inactive007 INVALID; missing999 NOT_FOUND. Target document012 is nondeleted codex_entry/NPC; Lore010 INVALID; tombstone013 NOT_FOUND."
+      },
+      "fixture_delta": {
+        "lieutenant_assignments": []
+      },
+      "id": "DOC-LIEUTENANT-GRANT",
+      "meta": {
+        "idempotencyKey": "doc-lieutenant-grant"
+      },
+      "new_key_repeat": "Return same grantedAt/grantedBy unchanged plus one new receipt; no assignment/history/Document version change.",
+      "operation": "assignLieutenant",
+      "required_resolution": []
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000004",
+      "arguments": {
+        "memberId": "10000000-0000-4000-8000-000000000002",
+        "npcDocumentId": "10000000-0000-4000-8000-000000000012"
+      },
+      "assertions": {
+        "audit": [],
+        "authority": "Live admin004 ordinary admitted role, no bypass audit; author001, unrelated DM003 and lieutenant002 FORBIDDEN. Configured owner009 admitted with actual ROLE override audit if role predicate bypassed.",
+        "jobs": [],
+        "lieutenant_assignments": [],
+        "notice_events": [],
+        "notice_recipients": [],
+        "preserve": [
+          "all Document rows including version",
+          "all Document revisions",
+          "all readers",
+          "all links",
+          "all Characters/progression",
+          "other assignments"
+        ],
+        "readback": {
+          "actor": "10000000-0000-4000-8000-000000000004",
+          "items": [],
+          "query": "query {\n\tlieutenantAssignments(npcDocumentId: \"10000000-0000-4000-8000-000000000012\") {\n\t\titems {\n\t\t\tmemberId\n\t\t\tnpcDocumentId\n\t\t\tgrantedAt\n\t\t\tgrantedBy\n\t\t}\n\t\ttotal\n\t}\n}\n",
+          "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations.",
+          "total": 0
+        },
+        "receipts": 1,
+        "response": {
+          "replayed": false
+        },
+        "scope_probe": {
+          "actor": "10000000-0000-4000-8000-000000000002",
+          "arguments": {
+            "id": "10000000-0000-4000-8000-000000000010",
+            "input": {
+              "expectedRevision": 2,
+              "title": "Unauthorized lieutenant edit"
+            }
+          },
+          "effects": {
+            "auth_override_audit": 0,
+            "background_jobs": 0,
+            "character_progression_ledger": 0,
+            "command_receipts": 0,
+            "document_links": "same set",
+            "document_readers": "same set",
+            "document_revisions": "same rows and bytes",
+            "documents": "all rows byte-for-byte unchanged",
+            "lieutenant_assignments": "same set",
+            "notification_events": 0,
+            "notification_recipients": 0
+          },
+          "error": "FORBIDDEN",
+          "operation": "updateDocument"
+        },
+        "target": "Existing active member002; inactive007 INVALID; missing999 NOT_FOUND. Target document012 is nondeleted codex_entry/NPC; Lore010 INVALID; tombstone013 NOT_FOUND."
+      },
+      "fixture_delta": {
+        "lieutenant_assignments": [
+          {
+            "grantedAt": "2026-10-13T10:00:00Z",
+            "grantedBy": "10000000-0000-4000-8000-000000000004",
+            "memberId": "10000000-0000-4000-8000-000000000002",
+            "npcDocumentId": "10000000-0000-4000-8000-000000000012"
+          }
+        ]
+      },
+      "id": "DOC-LIEUTENANT-REVOKE",
+      "meta": {
+        "idempotencyKey": "doc-lieutenant-revoke"
+      },
+      "new_key_repeat": "Absent assignment succeeds no-op plus one new receipt; no history/version change.",
+      "operation": "revokeLieutenant",
+      "required_resolution": []
+    }
+  ],
+  "clock": "2026-10-14T12:00:00Z",
+  "field_ids": [
+    "DocumentDraftInput.kind",
+    "DocumentDraftInput.category",
+    "DocumentDraftInput.title",
+    "DocumentDraftInput.body",
+    "DocumentDraftInput.frontmatter",
+    "DocumentDraftInput.visibility",
+    "DocumentDraftInput.policy",
+    "DocumentEditInput.expectedRevision",
+    "DocumentEditInput.title",
+    "DocumentEditInput.body",
+    "DocumentEditInput.frontmatter",
+    "DocumentEditInput.category",
+    "DocumentAudienceInput.visibility",
+    "DocumentAudienceInput.policy",
+    "DocumentAudienceInput.readerIds",
+    "LieutenantAssignmentType.memberId",
+    "LieutenantAssignmentType.npcDocumentId",
+    "LieutenantAssignmentType.grantedAt",
+    "LieutenantAssignmentType.grantedBy"
+  ],
+  "fixture": {
+    "authority": "Same identity-only JWT reused after live member demotion/assignment revocation; no trusted JWT role bits. Owner009 enabled only in explicit configured-owner cases.",
+    "characters": [
+      "10000000-0000-4000-8000-000000000030",
+      "10000000-0000-4000-8000-000000000031",
+      "10000000-0000-4000-8000-000000000032",
+      "10000000-0000-4000-8000-000000000033"
+    ],
+    "documents": {
+      "010": {
+        "authorId": "10000000-0000-4000-8000-000000000001",
+        "body": "Public river\n\u003e [!dm:@dee]\n\u003e DMBLOCK_SENTINEL",
+        "category": "Lore",
+        "deletedAt": null,
+        "deletedBy": null,
+        "frontmatter": {
+          "region": "North"
+        },
+        "id": "10000000-0000-4000-8000-000000000010",
+        "kind": "codex_entry",
+        "policy": null,
+        "publishedAt": "2026-10-13T10:00:00Z",
+        "publishedBy": "10000000-0000-4000-8000-000000000001",
+        "slug": "lore-river",
+        "status": "published",
+        "title": "River ledger",
+        "updatedAt": "2026-10-13T10:00:00Z",
+        "version": 2,
+        "visibility": "public"
+      },
+      "011": "operation-vectors hidden-faction authored002 explicit003",
+      "012": {
+        "authorId": "10000000-0000-4000-8000-000000000001",
+        "body": "Draft bridge body",
+        "category": "NPC",
+        "deletedAt": null,
+        "deletedBy": null,
+        "frontmatter": {
+          "draft": true
+        },
+        "id": "10000000-0000-4000-8000-000000000012",
+        "kind": "codex_entry",
+        "policy": null,
+        "publishedAt": null,
+        "publishedBy": null,
+        "slug": "draft-bridge-account",
+        "status": "draft",
+        "title": "Draft bridge account",
+        "updatedAt": "2026-10-13T10:00:00Z",
+        "version": 2,
+        "visibility": "public"
+      },
+      "013": "operation-vectors tombstone",
+      "014": "operation-vectors quest brief authored003",
+      "015": "operation-vectors summary",
+      "016": "operation-vectors protected DM summary"
+    },
+    "isolation": "Reset selected graph before each independent case/variant. Do not load broad QA simultaneously; no production namespace/UUID-prefix filter is added. Seed fixed public IDs only for read fixtures; generated result identities are captured UUIDs.",
+    "members": [
+      "10000000-0000-4000-8000-000000000001",
+      "10000000-0000-4000-8000-000000000002",
+      "10000000-0000-4000-8000-000000000003",
+      "10000000-0000-4000-8000-000000000004",
+      "10000000-0000-4000-8000-000000000005",
+      "10000000-0000-4000-8000-000000000006",
+      "10000000-0000-4000-8000-000000000007",
+      "10000000-0000-4000-8000-000000000008",
+      "10000000-0000-4000-8000-000000000009"
+    ],
+    "mode": "explicit selected fixture graph",
+    "quests": [
+      "10000000-0000-4000-8000-000000000050",
+      "10000000-0000-4000-8000-000000000051",
+      "10000000-0000-4000-8000-000000000052",
+      "10000000-0000-4000-8000-000000000053",
+      "10000000-0000-4000-8000-000000000054"
+    ],
+    "regions": [
+      "10000000-0000-4000-8000-000000000020",
+      "10000000-0000-4000-8000-000000000021",
+      "10000000-0000-4000-8000-000000000022"
+    ],
+    "source": "operation-vectors.md, operation-expectations.json mutations, plus PATCH-DOCUMENT-EDIT-JOINT exact draft/published overlays; PATCH and D5 supersede older version0 prose"
+  },
+  "id": "DOCUMENT-WRITES-EXACT",
+  "input_boundaries": [
+    {
+      "accept": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "error": "INVALID",
+      "field": "DocumentDraftInput.title",
+      "reject": [
+        "",
+        "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      ]
+    },
+    {
+      "accept_utf8_bytes": 131072,
+      "error": "INVALID",
+      "field": "DocumentDraftInput.body",
+      "reject_utf8_bytes": 131073,
+      "test_value": "é repeated65536 fits; add one ASCII x exceeds",
+      "transport": "valid request remains below256KiB after UTF-8 JSON encoding"
+    },
+    {
+      "error": "INVALID",
+      "field": "DocumentDraftInput.kind",
+      "reject": ["UNKNOWN"]
+    },
+    {
+      "error": "INVALID",
+      "field": "DocumentDraftInput.category",
+      "reject": ["UNKNOWN"]
+    },
+    {
+      "accept": ["public", "dm_only", "restricted"],
+      "error": "INVALID",
+      "field": "DocumentAudienceInput.visibility",
+      "reject": ["private", "UNKNOWN"]
+    },
+    {
+      "accept": [
+        null,
+        [],
+        ["member:10000000-0000-4000-8000-000000000003"],
+        ["role:dm"]
+      ],
+      "error": "INVALID",
+      "field": "DocumentAudienceInput.policy",
+      "reject": [["allow:all"], ["member:"], ["role:"]]
+    },
+    {
+      "accept_count": 100,
+      "field": "DocumentAudienceInput.readerIds",
+      "missing_uuid": "10000000-0000-4000-8000-000000000999",
+      "reject_count": 101,
+      "unknown_member_error": "NOT_FOUND",
+      "wrong_type_error": "NOT_FOUND",
+      "wrong_type_uuid": "10000000-0000-4000-8000-000000000030"
+    },
+    {
+      "assertion": "Default empty list replaces readers; no silent preservation.",
+      "explicit_null": "INVALID",
+      "field": "DocumentAudienceInput.readerIds",
+      "omitted": []
+    },
+    {
+      "assertion": "No explicit audience, use canonical legacy visibility and per-viewer body projection.",
+      "explicit_null": null,
+      "field": "DocumentDraftInput.policy",
+      "omitted": null
+    },
+    {
+      "assertion": "Ordinary codex_entry requires the D32 closed five category choice at creation; no uncategorized draft.",
+      "explicit_null": "INVALID",
+      "field": "DocumentDraftInput.category",
+      "omitted": "INVALID"
+    },
+    {
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "explicit_null": "INVALID",
+      "field": "DocumentDraftInput.kind",
+      "omitted": "INVALID"
+    },
+    {
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "explicit_null": "INVALID",
+      "field": "DocumentDraftInput.title",
+      "omitted": "INVALID"
+    },
+    {
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "explicit_null": "INVALID",
+      "field": "DocumentDraftInput.body",
+      "omitted": "INVALID"
+    },
+    {
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "explicit_null": "INVALID",
+      "field": "DocumentDraftInput.frontmatter",
+      "omitted": "INVALID"
+    },
+    {
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "explicit_null": "INVALID",
+      "field": "DocumentDraftInput.visibility",
+      "omitted": "INVALID"
+    }
+  ],
+  "location_cases": [
+    {
+      "actors": [
+        {
+          "allowed": true,
+          "assertion": "Scoped current assignment grants admission even though nonauthor. Exactly command-specific Document/history/receipt effects above.",
+          "audit": [],
+          "id": "10000000-0000-4000-8000-000000000006"
+        },
+        {
+          "effects": {
+            "auth_override_audit": 0,
+            "background_jobs": 0,
+            "character_progression_ledger": 0,
+            "command_receipts": 0,
+            "document_links": "same set",
+            "document_readers": "same set",
+            "document_revisions": "same rows and bytes",
+            "documents": "all rows byte-for-byte unchanged",
+            "lieutenant_assignments": "same set",
+            "notification_events": 0,
+            "notification_recipients": 0
+          },
+          "error": "FORBIDDEN",
+          "id": "10000000-0000-4000-8000-000000000001"
+        },
+        {
+          "effects": {
+            "auth_override_audit": 0,
+            "background_jobs": 0,
+            "character_progression_ledger": 0,
+            "command_receipts": 0,
+            "document_links": "same set",
+            "document_readers": "same set",
+            "document_revisions": "same rows and bytes",
+            "documents": "all rows byte-for-byte unchanged",
+            "lieutenant_assignments": "same set",
+            "notification_events": 0,
+            "notification_recipients": 0
+          },
+          "error": "FORBIDDEN",
+          "id": "10000000-0000-4000-8000-000000000003"
+        },
+        {
+          "allowed": true,
+          "audit": {
+            "actorId": "10000000-0000-4000-8000-000000000004",
+            "at": "2026-10-14T12:00:00Z",
+            "operation": "Mutation.updateDocument",
+            "ruleCode": "ASSIGNMENT",
+            "subjectId": "10000000-0000-4000-8000-000000000018"
+          },
+          "id": "10000000-0000-4000-8000-000000000004"
+        },
+        {
+          "before_request": "Delete current region020 assignment, retain identical JWT",
+          "effects": {
+            "auth_override_audit": 0,
+            "background_jobs": 0,
+            "character_progression_ledger": 0,
+            "command_receipts": 0,
+            "document_links": "same set",
+            "document_readers": "same set",
+            "document_revisions": "same rows and bytes",
+            "documents": "all rows byte-for-byte unchanged",
+            "lieutenant_assignments": "same set",
+            "notification_events": 0,
+            "notification_recipients": 0
+          },
+          "error": "FORBIDDEN",
+          "id": "10000000-0000-4000-8000-000000000006"
+        }
+      ],
+      "arguments": {
+        "id": "10000000-0000-4000-8000-000000000018",
+        "input": {
+          "expectedRevision": 2,
+          "title": "North crossing revised"
+        }
+      },
+      "fixture": {
+        "archonAssignment": {
+          "memberId": "10000000-0000-4000-8000-000000000006",
+          "regionId": "10000000-0000-4000-8000-000000000020"
+        },
+        "authorId": "10000000-0000-4000-8000-000000000001",
+        "category": "Locations",
+        "deletedAt": null,
+        "documentId": "10000000-0000-4000-8000-000000000018",
+        "kind": "codex_entry",
+        "link": {
+          "hexId": "10000000-0000-4000-8000-000000000026",
+          "regionId": "10000000-0000-4000-8000-000000000020"
+        },
+        "status": "draft",
+        "title": "North crossing",
+        "version": 2
+      },
+      "id": "DOC-LOCATION-updateDocument",
+      "operation": "updateDocument",
+      "public_readback": "Canonical scoped-body projection still applies; assignment does not grant role:dm or another addressed DM block."
+    },
+    {
+      "actors": [
+        {
+          "allowed": true,
+          "assertion": "Scoped current assignment grants admission even though nonauthor. Exactly command-specific Document/history/receipt effects above.",
+          "audit": [],
+          "id": "10000000-0000-4000-8000-000000000006"
+        },
+        {
+          "effects": {
+            "auth_override_audit": 0,
+            "background_jobs": 0,
+            "character_progression_ledger": 0,
+            "command_receipts": 0,
+            "document_links": "same set",
+            "document_readers": "same set",
+            "document_revisions": "same rows and bytes",
+            "documents": "all rows byte-for-byte unchanged",
+            "lieutenant_assignments": "same set",
+            "notification_events": 0,
+            "notification_recipients": 0
+          },
+          "error": "FORBIDDEN",
+          "id": "10000000-0000-4000-8000-000000000001"
+        },
+        {
+          "effects": {
+            "auth_override_audit": 0,
+            "background_jobs": 0,
+            "character_progression_ledger": 0,
+            "command_receipts": 0,
+            "document_links": "same set",
+            "document_readers": "same set",
+            "document_revisions": "same rows and bytes",
+            "documents": "all rows byte-for-byte unchanged",
+            "lieutenant_assignments": "same set",
+            "notification_events": 0,
+            "notification_recipients": 0
+          },
+          "error": "FORBIDDEN",
+          "id": "10000000-0000-4000-8000-000000000003"
+        },
+        {
+          "allowed": true,
+          "audit": {
+            "actorId": "10000000-0000-4000-8000-000000000004",
+            "at": "2026-10-14T12:00:00Z",
+            "operation": "Mutation.editPublishedDocument",
+            "ruleCode": "ASSIGNMENT",
+            "subjectId": "10000000-0000-4000-8000-000000000018"
+          },
+          "id": "10000000-0000-4000-8000-000000000004"
+        },
+        {
+          "before_request": "Delete current region020 assignment, retain identical JWT",
+          "effects": {
+            "auth_override_audit": 0,
+            "background_jobs": 0,
+            "character_progression_ledger": 0,
+            "command_receipts": 0,
+            "document_links": "same set",
+            "document_readers": "same set",
+            "document_revisions": "same rows and bytes",
+            "documents": "all rows byte-for-byte unchanged",
+            "lieutenant_assignments": "same set",
+            "notification_events": 0,
+            "notification_recipients": 0
+          },
+          "error": "FORBIDDEN",
+          "id": "10000000-0000-4000-8000-000000000006"
+        }
+      ],
+      "arguments": {
+        "id": "10000000-0000-4000-8000-000000000018",
+        "input": {
+          "expectedRevision": 2,
+          "title": "North crossing revised"
+        }
+      },
+      "fixture": {
+        "archonAssignment": {
+          "memberId": "10000000-0000-4000-8000-000000000006",
+          "regionId": "10000000-0000-4000-8000-000000000020"
+        },
+        "authorId": "10000000-0000-4000-8000-000000000001",
+        "category": "Locations",
+        "deletedAt": null,
+        "documentId": "10000000-0000-4000-8000-000000000018",
+        "kind": "codex_entry",
+        "link": {
+          "hexId": "10000000-0000-4000-8000-000000000026",
+          "regionId": "10000000-0000-4000-8000-000000000020"
+        },
+        "status": "published",
+        "title": "North crossing",
+        "version": 2
+      },
+      "id": "DOC-LOCATION-editPublishedDocument",
+      "operation": "editPublishedDocument",
+      "public_readback": "Canonical scoped-body projection still applies; assignment does not grant role:dm or another addressed DM block."
+    },
+    {
+      "actors": [
+        {
+          "allowed": true,
+          "assertion": "Scoped current assignment grants admission even though nonauthor. Exactly command-specific Document/history/receipt effects above.",
+          "audit": [],
+          "id": "10000000-0000-4000-8000-000000000006"
+        },
+        {
+          "effects": {
+            "auth_override_audit": 0,
+            "background_jobs": 0,
+            "character_progression_ledger": 0,
+            "command_receipts": 0,
+            "document_links": "same set",
+            "document_readers": "same set",
+            "document_revisions": "same rows and bytes",
+            "documents": "all rows byte-for-byte unchanged",
+            "lieutenant_assignments": "same set",
+            "notification_events": 0,
+            "notification_recipients": 0
+          },
+          "error": "FORBIDDEN",
+          "id": "10000000-0000-4000-8000-000000000001"
+        },
+        {
+          "effects": {
+            "auth_override_audit": 0,
+            "background_jobs": 0,
+            "character_progression_ledger": 0,
+            "command_receipts": 0,
+            "document_links": "same set",
+            "document_readers": "same set",
+            "document_revisions": "same rows and bytes",
+            "documents": "all rows byte-for-byte unchanged",
+            "lieutenant_assignments": "same set",
+            "notification_events": 0,
+            "notification_recipients": 0
+          },
+          "error": "FORBIDDEN",
+          "id": "10000000-0000-4000-8000-000000000003"
+        },
+        {
+          "allowed": true,
+          "audit": {
+            "actorId": "10000000-0000-4000-8000-000000000004",
+            "at": "2026-10-14T12:00:00Z",
+            "operation": "Mutation.publishDocument",
+            "ruleCode": "ASSIGNMENT",
+            "subjectId": "10000000-0000-4000-8000-000000000018"
+          },
+          "id": "10000000-0000-4000-8000-000000000004"
+        },
+        {
+          "before_request": "Delete current region020 assignment, retain identical JWT",
+          "effects": {
+            "auth_override_audit": 0,
+            "background_jobs": 0,
+            "character_progression_ledger": 0,
+            "command_receipts": 0,
+            "document_links": "same set",
+            "document_readers": "same set",
+            "document_revisions": "same rows and bytes",
+            "documents": "all rows byte-for-byte unchanged",
+            "lieutenant_assignments": "same set",
+            "notification_events": 0,
+            "notification_recipients": 0
+          },
+          "error": "FORBIDDEN",
+          "id": "10000000-0000-4000-8000-000000000006"
+        }
+      ],
+      "arguments": {
+        "expectedRevision": 2,
+        "id": "10000000-0000-4000-8000-000000000018"
+      },
+      "fixture": {
+        "archonAssignment": {
+          "memberId": "10000000-0000-4000-8000-000000000006",
+          "regionId": "10000000-0000-4000-8000-000000000020"
+        },
+        "authorId": "10000000-0000-4000-8000-000000000001",
+        "category": "Locations",
+        "deletedAt": null,
+        "documentId": "10000000-0000-4000-8000-000000000018",
+        "kind": "codex_entry",
+        "link": {
+          "hexId": "10000000-0000-4000-8000-000000000026",
+          "regionId": "10000000-0000-4000-8000-000000000020"
+        },
+        "status": "draft",
+        "title": "North crossing",
+        "version": 2
+      },
+      "id": "DOC-LOCATION-publishDocument",
+      "operation": "publishDocument",
+      "public_readback": "Canonical scoped-body projection still applies; assignment does not grant role:dm or another addressed DM block."
+    },
+    {
+      "actors": [
+        {
+          "allowed": true,
+          "assertion": "Scoped current assignment grants admission even though nonauthor. Exactly command-specific Document/history/receipt effects above.",
+          "audit": [],
+          "id": "10000000-0000-4000-8000-000000000006"
+        },
+        {
+          "effects": {
+            "auth_override_audit": 0,
+            "background_jobs": 0,
+            "character_progression_ledger": 0,
+            "command_receipts": 0,
+            "document_links": "same set",
+            "document_readers": "same set",
+            "document_revisions": "same rows and bytes",
+            "documents": "all rows byte-for-byte unchanged",
+            "lieutenant_assignments": "same set",
+            "notification_events": 0,
+            "notification_recipients": 0
+          },
+          "error": "FORBIDDEN",
+          "id": "10000000-0000-4000-8000-000000000001"
+        },
+        {
+          "effects": {
+            "auth_override_audit": 0,
+            "background_jobs": 0,
+            "character_progression_ledger": 0,
+            "command_receipts": 0,
+            "document_links": "same set",
+            "document_readers": "same set",
+            "document_revisions": "same rows and bytes",
+            "documents": "all rows byte-for-byte unchanged",
+            "lieutenant_assignments": "same set",
+            "notification_events": 0,
+            "notification_recipients": 0
+          },
+          "error": "FORBIDDEN",
+          "id": "10000000-0000-4000-8000-000000000003"
+        },
+        {
+          "allowed": true,
+          "audit": {
+            "actorId": "10000000-0000-4000-8000-000000000004",
+            "at": "2026-10-14T12:00:00Z",
+            "operation": "Mutation.unpublishDocument",
+            "ruleCode": "ASSIGNMENT",
+            "subjectId": "10000000-0000-4000-8000-000000000018"
+          },
+          "id": "10000000-0000-4000-8000-000000000004"
+        },
+        {
+          "before_request": "Delete current region020 assignment, retain identical JWT",
+          "effects": {
+            "auth_override_audit": 0,
+            "background_jobs": 0,
+            "character_progression_ledger": 0,
+            "command_receipts": 0,
+            "document_links": "same set",
+            "document_readers": "same set",
+            "document_revisions": "same rows and bytes",
+            "documents": "all rows byte-for-byte unchanged",
+            "lieutenant_assignments": "same set",
+            "notification_events": 0,
+            "notification_recipients": 0
+          },
+          "error": "FORBIDDEN",
+          "id": "10000000-0000-4000-8000-000000000006"
+        }
+      ],
+      "arguments": {
+        "expectedRevision": 2,
+        "id": "10000000-0000-4000-8000-000000000018"
+      },
+      "fixture": {
+        "archonAssignment": {
+          "memberId": "10000000-0000-4000-8000-000000000006",
+          "regionId": "10000000-0000-4000-8000-000000000020"
+        },
+        "authorId": "10000000-0000-4000-8000-000000000001",
+        "category": "Locations",
+        "deletedAt": null,
+        "documentId": "10000000-0000-4000-8000-000000000018",
+        "kind": "codex_entry",
+        "link": {
+          "hexId": "10000000-0000-4000-8000-000000000026",
+          "regionId": "10000000-0000-4000-8000-000000000020"
+        },
+        "status": "published",
+        "title": "North crossing",
+        "version": 2
+      },
+      "id": "DOC-LOCATION-unpublishDocument",
+      "operation": "unpublishDocument",
+      "public_readback": "Canonical scoped-body projection still applies; assignment does not grant role:dm or another addressed DM block."
+    },
+    {
+      "actors": [
+        {
+          "allowed": true,
+          "assertion": "Scoped current assignment grants admission even though nonauthor. Exactly command-specific Document/history/receipt effects above.",
+          "audit": [],
+          "id": "10000000-0000-4000-8000-000000000006"
+        },
+        {
+          "effects": {
+            "auth_override_audit": 0,
+            "background_jobs": 0,
+            "character_progression_ledger": 0,
+            "command_receipts": 0,
+            "document_links": "same set",
+            "document_readers": "same set",
+            "document_revisions": "same rows and bytes",
+            "documents": "all rows byte-for-byte unchanged",
+            "lieutenant_assignments": "same set",
+            "notification_events": 0,
+            "notification_recipients": 0
+          },
+          "error": "FORBIDDEN",
+          "id": "10000000-0000-4000-8000-000000000001"
+        },
+        {
+          "effects": {
+            "auth_override_audit": 0,
+            "background_jobs": 0,
+            "character_progression_ledger": 0,
+            "command_receipts": 0,
+            "document_links": "same set",
+            "document_readers": "same set",
+            "document_revisions": "same rows and bytes",
+            "documents": "all rows byte-for-byte unchanged",
+            "lieutenant_assignments": "same set",
+            "notification_events": 0,
+            "notification_recipients": 0
+          },
+          "error": "FORBIDDEN",
+          "id": "10000000-0000-4000-8000-000000000003"
+        },
+        {
+          "allowed": true,
+          "audit": {
+            "actorId": "10000000-0000-4000-8000-000000000004",
+            "at": "2026-10-14T12:00:00Z",
+            "operation": "Mutation.setDocumentVisibility",
+            "ruleCode": "ASSIGNMENT",
+            "subjectId": "10000000-0000-4000-8000-000000000018"
+          },
+          "id": "10000000-0000-4000-8000-000000000004"
+        },
+        {
+          "before_request": "Delete current region020 assignment, retain identical JWT",
+          "effects": {
+            "auth_override_audit": 0,
+            "background_jobs": 0,
+            "character_progression_ledger": 0,
+            "command_receipts": 0,
+            "document_links": "same set",
+            "document_readers": "same set",
+            "document_revisions": "same rows and bytes",
+            "documents": "all rows byte-for-byte unchanged",
+            "lieutenant_assignments": "same set",
+            "notification_events": 0,
+            "notification_recipients": 0
+          },
+          "error": "FORBIDDEN",
+          "id": "10000000-0000-4000-8000-000000000006"
+        }
+      ],
+      "arguments": {
+        "expectedRevision": 2,
+        "id": "10000000-0000-4000-8000-000000000018",
+        "input": {
+          "policy": null,
+          "readerIds": [],
+          "visibility": "public"
+        }
+      },
+      "fixture": {
+        "archonAssignment": {
+          "memberId": "10000000-0000-4000-8000-000000000006",
+          "regionId": "10000000-0000-4000-8000-000000000020"
+        },
+        "authorId": "10000000-0000-4000-8000-000000000001",
+        "category": "Locations",
+        "deletedAt": null,
+        "documentId": "10000000-0000-4000-8000-000000000018",
+        "kind": "codex_entry",
+        "link": {
+          "hexId": "10000000-0000-4000-8000-000000000026",
+          "regionId": "10000000-0000-4000-8000-000000000020"
+        },
+        "status": "published",
+        "title": "North crossing",
+        "version": 2
+      },
+      "id": "DOC-LOCATION-setDocumentVisibility",
+      "operation": "setDocumentVisibility",
+      "public_readback": "Canonical scoped-body projection still applies; assignment does not grant role:dm or another addressed DM block."
+    },
+    {
+      "actors": [
+        {
+          "allowed": true,
+          "assertion": "Scoped current assignment grants admission even though nonauthor. Exactly command-specific Document/history/receipt effects above.",
+          "audit": [],
+          "id": "10000000-0000-4000-8000-000000000006"
+        },
+        {
+          "effects": {
+            "auth_override_audit": 0,
+            "background_jobs": 0,
+            "character_progression_ledger": 0,
+            "command_receipts": 0,
+            "document_links": "same set",
+            "document_readers": "same set",
+            "document_revisions": "same rows and bytes",
+            "documents": "all rows byte-for-byte unchanged",
+            "lieutenant_assignments": "same set",
+            "notification_events": 0,
+            "notification_recipients": 0
+          },
+          "error": "FORBIDDEN",
+          "id": "10000000-0000-4000-8000-000000000001"
+        },
+        {
+          "effects": {
+            "auth_override_audit": 0,
+            "background_jobs": 0,
+            "character_progression_ledger": 0,
+            "command_receipts": 0,
+            "document_links": "same set",
+            "document_readers": "same set",
+            "document_revisions": "same rows and bytes",
+            "documents": "all rows byte-for-byte unchanged",
+            "lieutenant_assignments": "same set",
+            "notification_events": 0,
+            "notification_recipients": 0
+          },
+          "error": "FORBIDDEN",
+          "id": "10000000-0000-4000-8000-000000000003"
+        },
+        {
+          "allowed": true,
+          "audit": {
+            "actorId": "10000000-0000-4000-8000-000000000004",
+            "at": "2026-10-14T12:00:00Z",
+            "operation": "Mutation.deleteDocument",
+            "ruleCode": "ASSIGNMENT",
+            "subjectId": "10000000-0000-4000-8000-000000000018"
+          },
+          "id": "10000000-0000-4000-8000-000000000004"
+        },
+        {
+          "before_request": "Delete current region020 assignment, retain identical JWT",
+          "effects": {
+            "auth_override_audit": 0,
+            "background_jobs": 0,
+            "character_progression_ledger": 0,
+            "command_receipts": 0,
+            "document_links": "same set",
+            "document_readers": "same set",
+            "document_revisions": "same rows and bytes",
+            "documents": "all rows byte-for-byte unchanged",
+            "lieutenant_assignments": "same set",
+            "notification_events": 0,
+            "notification_recipients": 0
+          },
+          "error": "FORBIDDEN",
+          "id": "10000000-0000-4000-8000-000000000006"
+        }
+      ],
+      "arguments": {
+        "expectedRevision": 2,
+        "id": "10000000-0000-4000-8000-000000000018"
+      },
+      "fixture": {
+        "archonAssignment": {
+          "memberId": "10000000-0000-4000-8000-000000000006",
+          "regionId": "10000000-0000-4000-8000-000000000020"
+        },
+        "authorId": "10000000-0000-4000-8000-000000000001",
+        "category": "Locations",
+        "deletedAt": null,
+        "documentId": "10000000-0000-4000-8000-000000000018",
+        "kind": "codex_entry",
+        "link": {
+          "hexId": "10000000-0000-4000-8000-000000000026",
+          "regionId": "10000000-0000-4000-8000-000000000020"
+        },
+        "status": "published",
+        "title": "North crossing",
+        "version": 2
+      },
+      "id": "DOC-LOCATION-deleteDocument",
+      "operation": "deleteDocument",
+      "public_readback": "Canonical scoped-body projection still applies; assignment does not grant role:dm or another addressed DM block."
+    },
+    {
+      "actors": [
+        {
+          "allowed": true,
+          "assertion": "Scoped current assignment grants admission even though nonauthor. Exactly command-specific Document/history/receipt effects above.",
+          "audit": [],
+          "id": "10000000-0000-4000-8000-000000000006"
+        },
+        {
+          "effects": {
+            "auth_override_audit": 0,
+            "background_jobs": 0,
+            "character_progression_ledger": 0,
+            "command_receipts": 0,
+            "document_links": "same set",
+            "document_readers": "same set",
+            "document_revisions": "same rows and bytes",
+            "documents": "all rows byte-for-byte unchanged",
+            "lieutenant_assignments": "same set",
+            "notification_events": 0,
+            "notification_recipients": 0
+          },
+          "error": "FORBIDDEN",
+          "id": "10000000-0000-4000-8000-000000000001"
+        },
+        {
+          "effects": {
+            "auth_override_audit": 0,
+            "background_jobs": 0,
+            "character_progression_ledger": 0,
+            "command_receipts": 0,
+            "document_links": "same set",
+            "document_readers": "same set",
+            "document_revisions": "same rows and bytes",
+            "documents": "all rows byte-for-byte unchanged",
+            "lieutenant_assignments": "same set",
+            "notification_events": 0,
+            "notification_recipients": 0
+          },
+          "error": "FORBIDDEN",
+          "id": "10000000-0000-4000-8000-000000000003"
+        },
+        {
+          "allowed": true,
+          "audit": {
+            "actorId": "10000000-0000-4000-8000-000000000004",
+            "at": "2026-10-14T12:00:00Z",
+            "operation": "Mutation.restoreDocument",
+            "ruleCode": "ASSIGNMENT",
+            "subjectId": "10000000-0000-4000-8000-000000000018"
+          },
+          "id": "10000000-0000-4000-8000-000000000004"
+        },
+        {
+          "before_request": "Delete current region020 assignment, retain identical JWT",
+          "effects": {
+            "auth_override_audit": 0,
+            "background_jobs": 0,
+            "character_progression_ledger": 0,
+            "command_receipts": 0,
+            "document_links": "same set",
+            "document_readers": "same set",
+            "document_revisions": "same rows and bytes",
+            "documents": "all rows byte-for-byte unchanged",
+            "lieutenant_assignments": "same set",
+            "notification_events": 0,
+            "notification_recipients": 0
+          },
+          "error": "FORBIDDEN",
+          "id": "10000000-0000-4000-8000-000000000006"
+        }
+      ],
+      "arguments": {
+        "id": "10000000-0000-4000-8000-000000000018"
+      },
+      "fixture": {
+        "archonAssignment": {
+          "memberId": "10000000-0000-4000-8000-000000000006",
+          "regionId": "10000000-0000-4000-8000-000000000020"
+        },
+        "authorId": "10000000-0000-4000-8000-000000000001",
+        "category": "Locations",
+        "deletedAt": "2026-10-13T10:00:00Z",
+        "documentId": "10000000-0000-4000-8000-000000000018",
+        "kind": "codex_entry",
+        "link": {
+          "hexId": "10000000-0000-4000-8000-000000000026",
+          "regionId": "10000000-0000-4000-8000-000000000020"
+        },
+        "status": "published",
+        "title": "North crossing",
+        "version": 2
+      },
+      "id": "DOC-LOCATION-restoreDocument",
+      "operation": "restoreDocument",
+      "public_readback": "Canonical scoped-body projection still applies; assignment does not grant role:dm or another addressed DM block."
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000006",
+      "authority": "Current archon capability before any link; do not fabricate owning region from author UUID. Future link targetMap/region establishes scope.",
+      "expected": "Initial version1 CREATE_DRAFT snapshot/receipt, author006; no fabricated map link. Nonarchon001 FORBIDDEN.",
+      "id": "DOC-LOCATION-CREATE-UNLINKED",
+      "input_overlay": {
+        "category": "Locations"
+      },
+      "operation": "createDocument"
+    }
+  ],
+  "mention_case": {
+    "actor": "10000000-0000-4000-8000-000000000004",
+    "arguments": {
+      "id": "10000000-0000-4000-8000-000000000010",
+      "input": {
+        "body": "Public river revised\n\u003e [!dm:@dee]\n\u003e New addressed passage",
+        "category": "Lore",
+        "expectedRevision": 2,
+        "frontmatter": {
+          "region": "North",
+          "source": "Revised account"
+        },
+        "title": "River account revised"
+      }
+    },
+    "expected": {
+      "audit": {
+        "actorId": "10000000-0000-4000-8000-000000000004",
+        "at": "2026-10-14T12:00:00Z",
+        "operation": "Mutation.editPublishedDocument",
+        "ruleCode": "OWNERSHIP",
+        "subjectId": "10000000-0000-4000-8000-000000000010"
+      },
+      "authorId": "10000000-0000-4000-8000-000000000001",
+      "events": [
+        {
+          "id": "$editedEventId",
+          "kind": "DOCUMENT_EDITED",
+          "recipients": ["10000000-0000-4000-8000-000000000001"],
+          "revisionId": "$revisionId"
+        },
+        {
+          "id": "$mentionEventId",
+          "kind": "DM_MENTIONED",
+          "recipients": ["10000000-0000-4000-8000-000000000003"],
+          "revisionId": "$revisionId"
+        }
+      ],
+      "jobs": [],
+      "publishedAt": "2026-10-13T10:00:00Z",
+      "publishedBy": "10000000-0000-4000-8000-000000000001",
+      "reason": "EDIT_PUBLISHED",
+      "receipts": 1,
+      "revisionId": "$revisionId",
+      "version": 3
+    },
+    "fault": "Fail final DM_MENTIONED recipient003 insert after prior author001 insert; INTERNAL, exact original Document/revisions/audit/events/cards/receipt restored, no partial author notice.",
+    "fixture_delta": {
+      "documents010.body": "Public river"
+    },
+    "id": "DOC-EDIT-NEW-DM-MENTION",
+    "operation": "editPublishedDocument",
+    "readback": [
+      {
+        "actor": null,
+        "effectiveBody": "Public river revised\n\u003e [!redacted]"
+      },
+      {
+        "actor": "10000000-0000-4000-8000-000000000003",
+        "effectiveBody": "Public river revised\n\u003e [!dm:@dee]\n\u003e New addressed passage"
+      }
+    ],
+    "repeat": "Same key returns same revision/events and zero added rows. New edit retaining same addressed dee marker emits DOCUMENT_EDITED only, no duplicate DM_MENTIONED.",
+    "reuse": "PATCH-DOCUMENT-EDIT-JOINT published fixture only, reset before overlay"
+  },
+  "negative_cases": [
+    {
+      "actor": null,
+      "base_case": "DOC-CREATE-LORE",
+      "data": null,
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "UNAUTHENTICATED",
+      "id": "createDocument-ANONYMOUS",
+      "operation": "createDocument"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000007",
+      "base_case": "DOC-CREATE-LORE",
+      "data": null,
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "FORBIDDEN",
+      "id": "createDocument-INACTIVE",
+      "operation": "createDocument"
+    },
+    {
+      "actor": null,
+      "base_case": "DOC-PUBLISH-DRAFT",
+      "data": null,
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "UNAUTHENTICATED",
+      "id": "publishDocument-ANONYMOUS",
+      "operation": "publishDocument"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000007",
+      "base_case": "DOC-PUBLISH-DRAFT",
+      "data": null,
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "FORBIDDEN",
+      "id": "publishDocument-INACTIVE",
+      "operation": "publishDocument"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000002",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "FORBIDDEN",
+      "id": "publishDocument-NONAUTHOR",
+      "operation": "publishDocument"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000001",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "NOT_FOUND",
+      "id": "publishDocument-MISSING",
+      "operation": "publishDocument",
+      "replace_argument": {
+        "id": "10000000-0000-4000-8000-000000000999"
+      }
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000001",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "NOT_FOUND",
+      "id": "publishDocument-WRONG-TYPE",
+      "operation": "publishDocument",
+      "replace_argument": {
+        "id": "10000000-0000-4000-8000-000000000030"
+      }
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000001",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "CONFLICT",
+      "id": "publishDocument-STALE",
+      "operation": "publishDocument",
+      "replace_argument": {
+        "expectedRevision": 1
+      }
+    },
+    {
+      "actor": null,
+      "base_case": "DOC-UNPUBLISH",
+      "data": null,
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "UNAUTHENTICATED",
+      "id": "unpublishDocument-ANONYMOUS",
+      "operation": "unpublishDocument"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000007",
+      "base_case": "DOC-UNPUBLISH",
+      "data": null,
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "FORBIDDEN",
+      "id": "unpublishDocument-INACTIVE",
+      "operation": "unpublishDocument"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000002",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "FORBIDDEN",
+      "id": "unpublishDocument-NONAUTHOR",
+      "operation": "unpublishDocument"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000001",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "NOT_FOUND",
+      "id": "unpublishDocument-MISSING",
+      "operation": "unpublishDocument",
+      "replace_argument": {
+        "id": "10000000-0000-4000-8000-000000000999"
+      }
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000001",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "NOT_FOUND",
+      "id": "unpublishDocument-WRONG-TYPE",
+      "operation": "unpublishDocument",
+      "replace_argument": {
+        "id": "10000000-0000-4000-8000-000000000030"
+      }
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000001",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "CONFLICT",
+      "id": "unpublishDocument-STALE",
+      "operation": "unpublishDocument",
+      "replace_argument": {
+        "expectedRevision": 1
+      }
+    },
+    {
+      "actor": null,
+      "base_case": "DOC-AUDIENCE-REPLACE",
+      "data": null,
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "UNAUTHENTICATED",
+      "id": "setDocumentVisibility-ANONYMOUS",
+      "operation": "setDocumentVisibility"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000007",
+      "base_case": "DOC-AUDIENCE-REPLACE",
+      "data": null,
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "FORBIDDEN",
+      "id": "setDocumentVisibility-INACTIVE",
+      "operation": "setDocumentVisibility"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000002",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "FORBIDDEN",
+      "id": "setDocumentVisibility-NONAUTHOR",
+      "operation": "setDocumentVisibility"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000001",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "NOT_FOUND",
+      "id": "setDocumentVisibility-MISSING",
+      "operation": "setDocumentVisibility",
+      "replace_argument": {
+        "id": "10000000-0000-4000-8000-000000000999"
+      }
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000001",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "NOT_FOUND",
+      "id": "setDocumentVisibility-WRONG-TYPE",
+      "operation": "setDocumentVisibility",
+      "replace_argument": {
+        "id": "10000000-0000-4000-8000-000000000030"
+      }
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000001",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "CONFLICT",
+      "id": "setDocumentVisibility-STALE",
+      "operation": "setDocumentVisibility",
+      "replace_argument": {
+        "expectedRevision": 1
+      }
+    },
+    {
+      "actor": null,
+      "base_case": "DOC-DELETE-SOFT",
+      "data": null,
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "UNAUTHENTICATED",
+      "id": "deleteDocument-ANONYMOUS",
+      "operation": "deleteDocument"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000007",
+      "base_case": "DOC-DELETE-SOFT",
+      "data": null,
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "FORBIDDEN",
+      "id": "deleteDocument-INACTIVE",
+      "operation": "deleteDocument"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000002",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "FORBIDDEN",
+      "id": "deleteDocument-NONAUTHOR",
+      "operation": "deleteDocument"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000001",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "NOT_FOUND",
+      "id": "deleteDocument-MISSING",
+      "operation": "deleteDocument",
+      "replace_argument": {
+        "id": "10000000-0000-4000-8000-000000000999"
+      }
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000001",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "NOT_FOUND",
+      "id": "deleteDocument-WRONG-TYPE",
+      "operation": "deleteDocument",
+      "replace_argument": {
+        "id": "10000000-0000-4000-8000-000000000030"
+      }
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000001",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "CONFLICT",
+      "id": "deleteDocument-STALE",
+      "operation": "deleteDocument",
+      "replace_argument": {
+        "expectedRevision": 1
+      }
+    },
+    {
+      "actor": null,
+      "base_case": "DOC-RESTORE-IDENTITY",
+      "data": null,
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "UNAUTHENTICATED",
+      "id": "restoreDocument-ANONYMOUS",
+      "operation": "restoreDocument"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000007",
+      "base_case": "DOC-RESTORE-IDENTITY",
+      "data": null,
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "FORBIDDEN",
+      "id": "restoreDocument-INACTIVE",
+      "operation": "restoreDocument"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000002",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "FORBIDDEN",
+      "id": "restoreDocument-NONAUTHOR",
+      "operation": "restoreDocument"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000001",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "NOT_FOUND",
+      "id": "restoreDocument-MISSING",
+      "operation": "restoreDocument",
+      "replace_argument": {
+        "id": "10000000-0000-4000-8000-000000000999"
+      }
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000001",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "NOT_FOUND",
+      "id": "restoreDocument-WRONG-TYPE",
+      "operation": "restoreDocument",
+      "replace_argument": {
+        "id": "10000000-0000-4000-8000-000000000030"
+      }
+    },
+    {
+      "actor": null,
+      "base_case": "DOC-LIEUTENANT-GRANT",
+      "data": null,
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "UNAUTHENTICATED",
+      "id": "assignLieutenant-ANONYMOUS",
+      "operation": "assignLieutenant"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000007",
+      "base_case": "DOC-LIEUTENANT-GRANT",
+      "data": null,
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "FORBIDDEN",
+      "id": "assignLieutenant-INACTIVE",
+      "operation": "assignLieutenant"
+    },
+    {
+      "actor": null,
+      "base_case": "DOC-LIEUTENANT-REVOKE",
+      "data": null,
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "UNAUTHENTICATED",
+      "id": "revokeLieutenant-ANONYMOUS",
+      "operation": "revokeLieutenant"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000007",
+      "base_case": "DOC-LIEUTENANT-REVOKE",
+      "data": null,
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "FORBIDDEN",
+      "id": "revokeLieutenant-INACTIVE",
+      "operation": "revokeLieutenant"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000001",
+      "arguments": {
+        "expectedRevision": 2,
+        "id": "10000000-0000-4000-8000-000000000010"
+      },
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "CONFLICT",
+      "id": "DOC-PUBLISH-PUBLISHED",
+      "operation": "publishDocument"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000001",
+      "arguments": {
+        "expectedRevision": 2,
+        "id": "10000000-0000-4000-8000-000000000012"
+      },
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "CONFLICT",
+      "id": "DOC-UNPUBLISH-DRAFT",
+      "operation": "unpublishDocument"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000003",
+      "arguments": {
+        "expectedRevision": 2,
+        "id": "10000000-0000-4000-8000-000000000014"
+      },
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "INVALID",
+      "id": "DOC-DELETE-QUEST-BRIEF",
+      "operation": "deleteDocument"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000001",
+      "base_case": "DOC-CREATE-LORE",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "CONFLICT for loser, same global documents.slug constraint",
+      "id": "DOC-CREATE-SLUG-RACE",
+      "inject": "Barrier after both concurrent title Bridge account allocators read absent bridge-account, before INSERT; two distinct keys, exactly one commits",
+      "operation": "createDocument"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000003",
+      "arguments": {
+        "expectedRevision": 2,
+        "id": "10000000-0000-4000-8000-000000000011",
+        "input": {
+          "policy": null,
+          "readerIds": [],
+          "visibility": "public"
+        }
+      },
+      "assertion": "Being an addressed/readable DM does not confer author write authority.",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "FORBIDDEN",
+      "id": "DOC-AUDIENCE-OUTER-DENY",
+      "operation": "setDocumentVisibility"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000004",
+      "arguments": {
+        "memberId": "10000000-0000-4000-8000-000000000002",
+        "npcDocumentId": "10000000-0000-4000-8000-000000000010"
+      },
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "INVALID",
+      "id": "DOC-ASSIGN-WRONG-CATEGORY",
+      "operation": "assignLieutenant"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000001",
+      "arguments": {
+        "id": "10000000-0000-4000-8000-000000000012",
+        "input": {
+          "category": "Lore",
+          "expectedRevision": 2
+        }
+      },
+      "assertion": "D32 assigned NPC cannot leave NPC category, including admin; revoke first. No role bypass of caller-independent invariant.",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "CONFLICT",
+      "fixture_delta": {
+        "lieutenant_assignments": [
+          {
+            "grantedAt": "2026-10-13T10:00:00Z",
+            "grantedBy": "10000000-0000-4000-8000-000000000004",
+            "memberId": "10000000-0000-4000-8000-000000000002",
+            "npcDocumentId": "10000000-0000-4000-8000-000000000012"
+          }
+        ]
+      },
+      "id": "DOC-NPC-ASSIGNED-CATEGORY-LEAVE",
+      "operation": "updateDocument"
+    }
+  ],
+  "operation_coverage": [
+    "createDocument",
+    "updateDocument",
+    "publishDocument",
+    "unpublishDocument",
+    "editPublishedDocument",
+    "setDocumentVisibility",
+    "deleteDocument",
+    "restoreDocument",
+    "assignLieutenant",
+    "revokeLieutenant"
+  ],
+  "owner": "S03",
+  "patterns": [
+    "Document aggregate",
+    "authorization specification",
+    "unit of work",
+    "transactional outbox"
+  ],
+  "replay_matrix": [
+    {
+      "base_case": "DOC-CREATE-LORE",
+      "conflicting_payload_same_key": "CONFLICT with all rows unchanged; change title for create, expectedRevision for versioned verbs, target UUID for assignment, id for restore.",
+      "other_actor_same_key": "Caller-scoped key cannot disclose or replay another actor receipt; ordinary authority still applies.",
+      "same_actor_same_payload_same_key": "Return committed receipt and captured IDs/result unchanged even if token stale after commit; no new business/revision/event/recipient/job/audit rows; recheck current authority before disclosure."
+    },
+    {
+      "base_case": "DOC-PUBLISH-DRAFT",
+      "conflicting_payload_same_key": "CONFLICT with all rows unchanged; change title for create, expectedRevision for versioned verbs, target UUID for assignment, id for restore.",
+      "other_actor_same_key": "Caller-scoped key cannot disclose or replay another actor receipt; ordinary authority still applies.",
+      "same_actor_same_payload_same_key": "Return committed receipt and captured IDs/result unchanged even if token stale after commit; no new business/revision/event/recipient/job/audit rows; recheck current authority before disclosure."
+    },
+    {
+      "base_case": "DOC-UNPUBLISH",
+      "conflicting_payload_same_key": "CONFLICT with all rows unchanged; change title for create, expectedRevision for versioned verbs, target UUID for assignment, id for restore.",
+      "other_actor_same_key": "Caller-scoped key cannot disclose or replay another actor receipt; ordinary authority still applies.",
+      "same_actor_same_payload_same_key": "Return committed receipt and captured IDs/result unchanged even if token stale after commit; no new business/revision/event/recipient/job/audit rows; recheck current authority before disclosure."
+    },
+    {
+      "base_case": "DOC-AUDIENCE-REPLACE",
+      "conflicting_payload_same_key": "CONFLICT with all rows unchanged; change title for create, expectedRevision for versioned verbs, target UUID for assignment, id for restore.",
+      "other_actor_same_key": "Caller-scoped key cannot disclose or replay another actor receipt; ordinary authority still applies.",
+      "same_actor_same_payload_same_key": "Return committed receipt and captured IDs/result unchanged even if token stale after commit; no new business/revision/event/recipient/job/audit rows; recheck current authority before disclosure."
+    },
+    {
+      "base_case": "DOC-DELETE-SOFT",
+      "conflicting_payload_same_key": "CONFLICT with all rows unchanged; change title for create, expectedRevision for versioned verbs, target UUID for assignment, id for restore.",
+      "other_actor_same_key": "Caller-scoped key cannot disclose or replay another actor receipt; ordinary authority still applies.",
+      "same_actor_same_payload_same_key": "Return committed receipt and captured IDs/result unchanged even if token stale after commit; no new business/revision/event/recipient/job/audit rows; recheck current authority before disclosure."
+    },
+    {
+      "base_case": "DOC-RESTORE-IDENTITY",
+      "conflicting_payload_same_key": "CONFLICT with all rows unchanged; change title for create, expectedRevision for versioned verbs, target UUID for assignment, id for restore.",
+      "other_actor_same_key": "Caller-scoped key cannot disclose or replay another actor receipt; ordinary authority still applies.",
+      "same_actor_same_payload_same_key": "Return committed receipt and captured IDs/result unchanged even if token stale after commit; no new business/revision/event/recipient/job/audit rows; recheck current authority before disclosure."
+    },
+    {
+      "base_case": "DOC-LIEUTENANT-GRANT",
+      "conflicting_payload_same_key": "CONFLICT with all rows unchanged; change title for create, expectedRevision for versioned verbs, target UUID for assignment, id for restore.",
+      "other_actor_same_key": "Caller-scoped key cannot disclose or replay another actor receipt; ordinary authority still applies.",
+      "same_actor_same_payload_same_key": "Return committed receipt and captured IDs/result unchanged even if token stale after commit; no new business/revision/event/recipient/job/audit rows; recheck current authority before disclosure."
+    },
+    {
+      "base_case": "DOC-LIEUTENANT-REVOKE",
+      "conflicting_payload_same_key": "CONFLICT with all rows unchanged; change title for create, expectedRevision for versioned verbs, target UUID for assignment, id for restore.",
+      "other_actor_same_key": "Caller-scoped key cannot disclose or replay another actor receipt; ordinary authority still applies.",
+      "same_actor_same_payload_same_key": "Return committed receipt and captured IDs/result unchanged even if token stale after commit; no new business/revision/event/recipient/job/audit rows; recheck current authority before disclosure."
+    }
+  ],
+  "required_followups": [],
+  "reuse": [
+    {
+      "file": "mounted-patch-cases.json",
+      "id": "PATCH-DOCUMENT-EDIT-JOINT",
+      "operations": ["updateDocument", "editPublishedDocument"]
+    },
+    {
+      "file": "mounted-dm-table-cases.json",
+      "id": "D5-DM-TABLE-EXACT",
+      "operations": [
+        "createDocument",
+        "publishDocument",
+        "deleteDocument",
+        "restoreDocument"
+      ]
+    },
+    {
+      "file": "mounted-override-cases.json",
+      "obligations": "actual admin write audit, author ordinary grant no audit, audit append failure rollback, own-character exclusion",
+      "operations": ["editPublishedDocument"]
+    }
+  ],
+  "rollback_matrix": [
+    {
+      "assertion": "Business state, immutable history, reader/link/assignment sets, jobs, events, recipients, audit and receipt equal reset fixture exactly.",
+      "base_case": "DOC-CREATE-LORE",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "INTERNAL",
+      "inject": "Final receipt append failure after all earlier admitted writes",
+      "public_message": "Internal error"
+    },
+    {
+      "assertion": "Business state, immutable history, reader/link/assignment sets, jobs, events, recipients, audit and receipt equal reset fixture exactly.",
+      "base_case": "DOC-PUBLISH-DRAFT",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "INTERNAL",
+      "inject": "Final receipt append failure after all earlier admitted writes",
+      "public_message": "Internal error"
+    },
+    {
+      "assertion": "Business state, immutable history, reader/link/assignment sets, jobs, events, recipients, audit and receipt equal reset fixture exactly.",
+      "base_case": "DOC-UNPUBLISH",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "INTERNAL",
+      "inject": "Final receipt append failure after all earlier admitted writes",
+      "public_message": "Internal error"
+    },
+    {
+      "assertion": "Business state, immutable history, reader/link/assignment sets, jobs, events, recipients, audit and receipt equal reset fixture exactly.",
+      "base_case": "DOC-AUDIENCE-REPLACE",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "INTERNAL",
+      "inject": "Final receipt append failure after all earlier admitted writes",
+      "public_message": "Internal error"
+    },
+    {
+      "assertion": "Business state, immutable history, reader/link/assignment sets, jobs, events, recipients, audit and receipt equal reset fixture exactly.",
+      "base_case": "DOC-DELETE-SOFT",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "INTERNAL",
+      "inject": "Final receipt append failure after all earlier admitted writes",
+      "public_message": "Internal error"
+    },
+    {
+      "assertion": "Business state, immutable history, reader/link/assignment sets, jobs, events, recipients, audit and receipt equal reset fixture exactly.",
+      "base_case": "DOC-RESTORE-IDENTITY",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "INTERNAL",
+      "inject": "Final receipt append failure after all earlier admitted writes",
+      "public_message": "Internal error"
+    },
+    {
+      "assertion": "Business state, immutable history, reader/link/assignment sets, jobs, events, recipients, audit and receipt equal reset fixture exactly.",
+      "base_case": "DOC-LIEUTENANT-GRANT",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "INTERNAL",
+      "inject": "Final receipt append failure after all earlier admitted writes",
+      "public_message": "Internal error"
+    },
+    {
+      "assertion": "Business state, immutable history, reader/link/assignment sets, jobs, events, recipients, audit and receipt equal reset fixture exactly.",
+      "base_case": "DOC-LIEUTENANT-REVOKE",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "INTERNAL",
+      "inject": "Final receipt append failure after all earlier admitted writes",
+      "public_message": "Internal error"
+    },
+    {
+      "assertion": "No published state/revision/event/card/audit/receipt; next ordinary read remains original draft. No transaction leaves partial recipient state.",
+      "base_case": "DOC-PUBLISH-DRAFT",
+      "effects": {
+        "auth_override_audit": 0,
+        "background_jobs": 0,
+        "character_progression_ledger": 0,
+        "command_receipts": 0,
+        "document_links": "same set",
+        "document_readers": "same set",
+        "document_revisions": "same rows and bytes",
+        "documents": "all rows byte-for-byte unchanged",
+        "lieutenant_assignments": "same set",
+        "notification_events": 0,
+        "notification_recipients": 0
+      },
+      "error": "INTERNAL",
+      "inject": "Final DOCUMENT_PUBLISHED recipient insert for author001, after revision/event/audit"
+    }
+  ],
+  "root_resolution": "Root contract resolution 2026-10-16. D7a assigned archon owns linked Location even nonauthor; admin/configured owner D29 bypass; lieutenant commands admin/configured owner only; current Document.version increments once per actual lifecycle/edit/audience change; initial draft1. Immutable reasons CREATE_DRAFT, UPDATE_DRAFT, PUBLISH, EDIT_PUBLISHED, UNPUBLISH, SET_AUDIENCE, DELETE, RESTORE. Each new revision stores actual complete old/new relevant snapshots, actor/time, next per-document immutable rev ordinal independent of version. Legacy unknown provenance remains null. Draft updates emit no events. Unpublish clears current publication cache; old provenance remains history. Delete retains current status/publication fields; restore preserves original publication, no republish event.",
+  "runtime": {
+    "database_execution": "Not executed by this contract generator; prepared environment qualified separately; no runtime claim",
+    "status": "NOT IMPLEMENTED"
+  },
+  "status": "ACCEPTANCE SPECIFICATION; NOT IMPLEMENTED OR RUNTIME EVIDENCE",
+  "test_file": "apps/api/cmd/api/graphql_product_integration_test.go"
+}

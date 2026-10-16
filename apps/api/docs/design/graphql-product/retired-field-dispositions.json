@@ -1,0 +1,44 @@
+[
+  {
+    "field": "DirectoryEntryType.lookingToPlay",
+    "disposition": "retired",
+    "reason": "No source or accepted product meaning. Retired under breaking product cutover.",
+    "root_ruling": ".local/workflow-runs/backend-plan-resume-20261016/dispositions.md",
+    "frontend_incompatibility": "Existing selections of this field fail schema validation after breaking GraphQL cutover. apps/web remains unchanged."
+  },
+  {
+    "field": "SiteStatsV2Type.totalDirectors",
+    "disposition": "retired",
+    "reason": "No documented role/identity or producer. Retired under breaking product cutover.",
+    "root_ruling": ".local/workflow-runs/backend-plan-resume-20261016/dispositions.md",
+    "frontend_incompatibility": "Existing selections of this field fail schema validation after breaking GraphQL cutover. apps/web remains unchanged."
+  },
+  {
+    "field": "SiteStatsV2Type.beginnerFriendlyQuestCount",
+    "disposition": "retired",
+    "reason": "No documented classifier or producer. Retired under breaking product cutover.",
+    "root_ruling": ".local/workflow-runs/backend-plan-resume-20261016/dispositions.md",
+    "frontend_incompatibility": "Existing selections of this field fail schema validation after breaking GraphQL cutover. apps/web remains unchanged."
+  },
+  {
+    "field": "SiteStatsV2Type.monthsOfHistory",
+    "disposition": "retired",
+    "reason": "No documented baseline/window or producer. Retired under breaking product cutover.",
+    "root_ruling": ".local/workflow-runs/backend-plan-resume-20261016/dispositions.md",
+    "frontend_incompatibility": "Existing selections of this field fail schema validation after breaking GraphQL cutover. apps/web remains unchanged."
+  },
+  {
+    "field": "QuestSummaryTotalsV2Type.itemGrants",
+    "disposition": "retired",
+    "reason": "Unsupported retained item-to-quest provenance and PCXP-only closure. This does not classify historical items as cosmetic and does not retire achievements or DM tiers.",
+    "root_ruling": ".local/workflow-runs/backend-plan-resume-20261016/dispositions.md",
+    "frontend_incompatibility": "Existing selections of this field fail schema validation after breaking GraphQL cutover. apps/web remains unchanged."
+  },
+  {
+    "field": "DocumentDraftInput.slug",
+    "disposition": "retire client input under D22",
+    "reason": "Canonical server title allocator owns ordinary slug; trusted Quest/summary identity slugs remain owning flows. No replacement client grammar.",
+    "frontend_impact": "Caller must omit slug; frontend migration excluded, publish input removal in Phase2.",
+    "source": "D22 and document-storage-contract.md"
+  }
+]

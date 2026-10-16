@@ -1,0 +1,3654 @@
+{
+  "additional_cases": [
+    {
+      "actions": [
+        {
+          "expected": {
+            "climate": "wet",
+            "elevation": "lowland",
+            "submapId": "10000000-0000-4000-8000-000000000025",
+            "terrain": "forest"
+          },
+          "input": {
+            "note": "Survey"
+          }
+        },
+        {
+          "expected": {
+            "climate": null,
+            "elevation": null,
+            "submapId": null,
+            "terrain": null
+          },
+          "input": {
+            "climate": null,
+            "elevation": null,
+            "note": "Cleared survey",
+            "submapId": null,
+            "terrain": null
+          },
+          "reset": true
+        },
+        {
+          "expected": {
+            "climate": "wet",
+            "elevation": "lowland",
+            "submapId": "10000000-0000-4000-8000-000000000025",
+            "terrain": "hill"
+          },
+          "input": {
+            "note": "Survey",
+            "terrain": "hill"
+          },
+          "reset": true
+        }
+      ],
+      "fixture": {
+        "hex026": {
+          "climate": "wet",
+          "elevation": "lowland",
+          "submapId": "10000000-0000-4000-8000-000000000025",
+          "terrain": "forest"
+        }
+      },
+      "history": "One actual multi-field patch produces one complete before/after hex_changes fact with006/clock/note; unchanged note-only patch has receipt1/history0/unchanged timestamp.",
+      "id": "SPATIAL-HEX-PATCH-OMIT-CLEAR",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go"
+    },
+    {
+      "action": {
+        "hexId": "10000000-0000-4000-8000-000000000026",
+        "input": {
+          "discoveryTier": "hidden",
+          "documentId": null,
+          "id": "10000000-0000-4000-8000-000000000080",
+          "isCharterObjective": true,
+          "poiType": "settlement"
+        }
+      },
+      "actor": "10000000-0000-4000-8000-000000000006",
+      "effects": "one existing POI update no insert; one immutable old landmark/landmark/false/010 to exact new state fact006/clock; no Document audience or discovery write",
+      "expected": {
+        "discoveryTier": "hidden",
+        "documentId": null,
+        "hexId": "10000000-0000-4000-8000-000000000026",
+        "id": "10000000-0000-4000-8000-000000000080",
+        "isCharterObjective": true,
+        "poiType": "settlement"
+      },
+      "id": "SPATIAL-POI-UPDATE-EXACT",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go"
+    },
+    {
+      "action": {
+        "input": {
+          "id": "10000000-0000-4000-8000-000000000082",
+          "name": "Bridge east",
+          "submapId": null,
+          "x": 2.5,
+          "y": 3.75
+        },
+        "mapId": "10000000-0000-4000-8000-000000000025"
+      },
+      "actor": "10000000-0000-4000-8000-000000000006",
+      "effects": "same node identity and creation time; exact old1.25/2.5/Bridge/null and new snapshot one node change006/clock; retain typed location010 link",
+      "expected": {
+        "createdAt": "2026-01-02T00:00:00Z",
+        "id": "10000000-0000-4000-8000-000000000082",
+        "mapId": "10000000-0000-4000-8000-000000000025",
+        "name": "Bridge east",
+        "submapId": null,
+        "x": 2.5,
+        "y": 3.75
+      },
+      "id": "SPATIAL-NODE-UPDATE-EXACT",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go"
+    },
+    {
+      "action": {
+        "input": {
+          "aSide": null,
+          "documentId": null,
+          "edgeType": "road",
+          "hexA": "10000000-0000-4000-8000-000000000027",
+          "hexB": "10000000-0000-4000-8000-000000000026"
+        },
+        "mapId": "10000000-0000-4000-8000-000000000024"
+      },
+      "actor": "10000000-0000-4000-8000-000000000006",
+      "expected": "same persisted029 with canonical pair026/027, edgeType road; no parallel duplicate edge; full before/after map_changes006/clock",
+      "id": "SPATIAL-HEX-EDGE-REVERSED",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go"
+    },
+    {
+      "actions": [
+        "delete022 keyregion-delete1",
+        "delete022 keyregion-delete2",
+        "restore022 keyregion-restore1",
+        "restore022 keyregion-restore2"
+      ],
+      "actor": "10000000-0000-4000-8000-000000000006",
+      "expected": "delete1 sets tombstone006/clock with one region_changes; delete2 adds receipt only and zero history; restore1 clears tombstone preserving stable022 and authored facts, one region_changes; restore2 adds receipt only and zero history; all related rows unchanged",
+      "fixture": "ARC-WILD. No map/Character/quest-region link refers022.",
+      "id": "SPATIAL-REGION-DELETE-REPEATED",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000004",
+      "cases": [
+        {
+          "action": "delete020",
+          "expected": "CONFLICT; map024 unchanged",
+          "fixture": "region020 active map024 exists; remove only quest-region refs020 and character region refs020 from explicit isolated graph"
+        },
+        {
+          "action": "delete021",
+          "expected": "CONFLICT; character031 unchanged",
+          "fixture": "region021 no maps or quest-region refs; active character031 region021 retained"
+        },
+        {
+          "action": "delete020",
+          "expected": "CONFLICT; quest050/020 unchanged",
+          "fixture": "region020 no maps or Characters; quest-region050/020 retained"
+        }
+      ],
+      "effects": "zero history/audit/receipt for each failure; never reassignment or related mutation",
+      "id": "SPATIAL-REGION-DELETE-REFERENCES",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go"
+    },
+    {
+      "expected": "FORBIDDEN before receipt disclosure; hex stays hill; only original one edit history/receipt; no extra audit or edit",
+      "id": "SPATIAL-AUTH-REVOKED-REPLAY",
+      "owner": "S04",
+      "steps": [
+        "Arc006 updateHex026 hill Survey keyspatial-updateHex-1 commits",
+        "admin004 revokeArchon006/020 with distinct key commits",
+        "Arc006 repeats exact original updateHex key with stale archon JWT"
+      ],
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go"
+    },
+    {
+      "action": "admin004 (no archon assignment) updates026 terrain forest-\u003ehill noteSurvey",
+      "effects": "exactly one actual override audit in business tx; plain current archon006 edit yields zero override audit; force audit insert failure rolls back hex/history/receipt; admin with invalid wrong-map endpoint still INVALID, zero override effect",
+      "expected": {
+        "audit": {
+          "actorId": "10000000-0000-4000-8000-000000000004",
+          "at": "2026-10-14T12:00:00Z",
+          "id": "$auditId",
+          "operation": "updateHex",
+          "ruleCode": "ASSIGNMENT",
+          "subjectId": "10000000-0000-4000-8000-000000000026",
+          "subjectType": "Hex"
+        },
+        "hexId": "10000000-0000-4000-8000-000000000026",
+        "historyActor": "10000000-0000-4000-8000-000000000004",
+        "terrain": "hill"
+      },
+      "id": "SPATIAL-ADMIN-ACTUAL-OVERRIDE",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go"
+    },
+    {
+      "action": "Arc updates edge085 directedtrue/path/Bridge path/null annotation under live region020 assignment; mutation does not change Document audience",
+      "expected": "no hidden083 UUID/name, edge085 UUID/label, nested location011 UUID or incident endpoints/totals leak. No custom map privacy state.",
+      "fixture": "edge085 connects public082/location010 to hidden083/location011. Selected isolated graph keeps document011 Dee-only.",
+      "id": "SPATIAL-POINT-HIDDEN-INCIDENT",
+      "owner": "S04",
+      "readback": {
+        "Dee": {
+          "pointcrawlEdges": ["10000000-0000-4000-8000-000000000085"],
+          "pointcrawlNodes": [
+            "10000000-0000-4000-8000-000000000082",
+            "10000000-0000-4000-8000-000000000083"
+          ]
+        },
+        "anonymous_and_Ava": {
+          "pointcrawlEdges": [],
+          "pointcrawlNodes": ["10000000-0000-4000-8000-000000000082"]
+        }
+      },
+      "status": "NOT IMPLEMENTED",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go"
+    },
+    {
+      "action": "on reset082 remove only location010 link; link location010 then link distinct subject015 with separate keys; unlink exact subject015",
+      "expected": "first link captured provenance006/clock; location010 remains after subject unlink; Document010/015 unchanged; second location011 denied Arc; duplicate exact subject with fresh key CONFLICT; same-key replay adds no node history",
+      "id": "SPATIAL-POINT-TYPED-LINKS",
+      "owner": "S04",
+      "status": "NOT IMPLEMENTED; exact DOC04 location-admission seam in spatial-admission-contract.md",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go"
+    },
+    {
+      "action": "admin004 deleteRegion020 while openQuest050/region020 exists",
+      "boundary": "Any active referencing map, Character or quest-region link blocks deletion; inactive references/history remain without foreign mutation.",
+      "expected": "CONFLICT; no region/assignment/map/Character/Quest/history/receipt changes",
+      "id": "SPATIAL-REGION-COMMITMENT",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go"
+    },
+    {
+      "actor": "10000000-0000-4000-8000-000000000004",
+      "arguments": {
+        "input": {
+          "assetPath": null,
+          "atlasCode": "DETACHED",
+          "cols": null,
+          "family": "campaign",
+          "mapKind": "pointcrawl",
+          "name": "Detached point map",
+          "regionId": null,
+          "rows": null
+        }
+      },
+      "contrasts": [
+        {
+          "expected_dimensions": [2, 3],
+          "input_patch": {
+            "cols": 2,
+            "rows": 3
+          }
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000006",
+          "expected": "FORBIDDEN regionless write"
+        },
+        {
+          "expected": "INVALID absent live region/dimensions",
+          "input_patch": {
+            "mapKind": "hexgrid"
+          }
+        }
+      ],
+      "effects": {
+        "hexes": 0,
+        "map_changes": 1,
+        "maps": 1,
+        "nodes": 0,
+        "receipts": 1
+      },
+      "expected": {
+        "assetPath": null,
+        "atlasCode": "DETACHED",
+        "cols": null,
+        "createdAt": "2026-10-14T12:00:00Z",
+        "createdBy": "10000000-0000-4000-8000-000000000004",
+        "family": "campaign",
+        "id": "$mapId",
+        "mapKind": "pointcrawl",
+        "name": "Detached point map",
+        "regionId": null,
+        "rows": null
+      },
+      "id": "SPATIAL-POINT-MAP-NULLABLE",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go"
+    },
+    {
+      "action": {
+        "mapId": "10000000-0000-4000-8000-000000000086",
+        "newSubmapId": "10000000-0000-4000-8000-000000000024"
+      },
+      "concurrency": "Two writers adding24-\u003e25 and25-\u003e24 after exact initiallyempty graph serialize on same owning SQL advisory lock; exactly one succeeds, other INVALID after reread; resulting graph acyclic, one history and receipt. Denied stewardship on either distinct source/target FORBIDDEN before graph disclosures.",
+      "expected": "INVALID; all containment edges and history/receipts unchanged",
+      "fixture": {
+        "edges": [
+          [
+            "10000000-0000-4000-8000-000000000024",
+            "10000000-0000-4000-8000-000000000025"
+          ],
+          [
+            "10000000-0000-4000-8000-000000000025",
+            "10000000-0000-4000-8000-000000000086"
+          ]
+        ],
+        "maps": [
+          "10000000-0000-4000-8000-000000000024",
+          "10000000-0000-4000-8000-000000000025",
+          "10000000-0000-4000-8000-000000000086"
+        ]
+      },
+      "id": "SPATIAL-CONTAINMENT-CYCLE",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go"
+    },
+    {
+      "cases": [
+        {
+          "actor": "10000000-0000-4000-8000-000000000006",
+          "category": "Lore",
+          "documentId": "10000000-0000-4000-8000-000000000010",
+          "error": "INVALID",
+          "targetRegionId": "10000000-0000-4000-8000-000000000020"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000006",
+          "category": "Locations",
+          "expected": "admitted by assigned archon despite nonauthor",
+          "owningRegions": [],
+          "targetRegionId": "10000000-0000-4000-8000-000000000020"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000001",
+          "authorId": "10000000-0000-4000-8000-000000000001",
+          "category": "Locations",
+          "error": "FORBIDDEN author-only",
+          "owningRegions": ["10000000-0000-4000-8000-000000000020"],
+          "targetRegionId": "10000000-0000-4000-8000-000000000020"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000006",
+          "category": "Locations",
+          "error": "INVALID region mismatch",
+          "owningRegions": ["10000000-0000-4000-8000-000000000021"],
+          "targetRegionId": "10000000-0000-4000-8000-000000000020"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000004",
+          "category": "Locations",
+          "expected": "declared D7 admin override recorded atomically",
+          "owningRegions": ["10000000-0000-4000-8000-000000000021"],
+          "targetRegionId": "10000000-0000-4000-8000-000000000020"
+        }
+      ],
+      "id": "SPATIAL-LOCATION-OWNERSHIP",
+      "owner": "S04",
+      "producer": "Both hex and pointcrawl call exact same DOC04 admission; no fabricated document.region column",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go"
+    },
+    {
+      "cases": [
+        {
+          "action": "link010location to026 then same010location to027 newkey",
+          "expected": "CONFLICT second write; first exact link/history retained"
+        },
+        {
+          "action": "link010location to026 then distinct011location to026 with admitted current Document audience",
+          "expected": "CONFLICT second write, no partial history/receipt"
+        },
+        {
+          "action": "link026/010/terrain",
+          "expected": "typed terrain link persisted; no location uniqueness violation"
+        },
+        {
+          "action": "unlink absent026/010/terrain",
+          "expected": "receipt1/history0/links unchanged"
+        }
+      ],
+      "id": "SPATIAL-HEX-D6-RELATIONS",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go"
+    },
+    {
+      "cases": [
+        {
+          "action": "assign existing006/020 newkey",
+          "expected": "same original grantedAt/grantedBy; history0,receipt1"
+        },
+        {
+          "action": "revoke absent006/022 newkey",
+          "expected": "assignment unchanged/history0/receipt1"
+        },
+        {
+          "action": "assign target002(player)",
+          "expected": "INVALID zero effects"
+        },
+        {
+          "action": "assign inactive006",
+          "expected": "INVALID zero effects"
+        },
+        {
+          "action": "assign as006(archon)",
+          "expected": "FORBIDDEN zero effects"
+        }
+      ],
+      "id": "SPATIAL-ARCHON-IDEMPOTENCE",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go"
+    },
+    {
+      "cases": [
+        {
+          "action": {
+            "input": {
+              "charterDeadline": null,
+              "documentId": null,
+              "kind": "server",
+              "name": "North"
+            },
+            "updateRegion": "10000000-0000-4000-8000-000000000020"
+          },
+          "changes": 0,
+          "error": "INVALID"
+        },
+        {
+          "action": {
+            "note": "",
+            "to": "server",
+            "transitionRegion": "10000000-0000-4000-8000-000000000020"
+          },
+          "expected": {
+            "kind": "server",
+            "note": ""
+          },
+          "history": 1
+        },
+        {
+          "action": "updateRegion020 with samekindarchon and supplied deadline2026-12-01T00Z",
+          "expected": "literal deadline retained, no inferred forbidden kind/deadline combination"
+        }
+      ],
+      "id": "SPATIAL-REGION-KIND-GATE",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go"
+    },
+    {
+      "directed_contrast": {
+        "directed": true,
+        "nodeA": "10000000-0000-4000-8000-000000000083",
+        "nodeB": "10000000-0000-4000-8000-000000000082"
+      },
+      "expected": {
+        "directed": false,
+        "nodeA": "10000000-0000-4000-8000-000000000082",
+        "nodeB": "10000000-0000-4000-8000-000000000083"
+      },
+      "hex_rule": "Hex order is actual internal bigint canonical A/B, not UUID ordering. aSide remains literal relative to stored A.",
+      "id": "SPATIAL-POINT-EDGE-ORDER",
+      "input": {
+        "directed": false,
+        "documentId": null,
+        "kind": "path",
+        "label": null,
+        "nodeA": "10000000-0000-4000-8000-000000000083",
+        "nodeB": "10000000-0000-4000-8000-000000000082"
+      },
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go"
+    }
+  ],
+  "clock": "2026-10-14T12:00:00Z",
+  "existing_time_cases": "create/update anchor remain in mounted-time-cases.json; updateGameCalendar is OPS-WRITE-updateGameCalendar in mounted-operational-write-cases.json",
+  "fixture": {
+    "base": "values exactly operation-vectors.md; include its required related rows FK graph (catalog/backstory/brief/history/participation/arc); unspecified collections empty explicitly, not filtered away",
+    "id": "SPATIAL-ISOLATED-GRAPH",
+    "mode": "explicit selected canonical operation-vectors graph in disposable fresh migrated database; do not load QA first or hide rows by namespace filters",
+    "overlays": {
+      "ARC-WILD": "add persisted assignment006/022; no quests refer022.",
+      "LOCATION-LINK-CREATE": "Document010 explicit categoryLocations; remove target link026/010 or082/010 only; if no owning location links remain the DOC04 admission uses targetregion020 assignment, otherwise all owning links must match020. Other document facts/links unchanged.",
+      "LOCATION-LINK-EXISTING": "Document010 category Locations; retain target typed location link; preserve every Document column/history.",
+      "NONADJACENT": "add hex088 map024 col2 row2, no links/POI; (026,088) INVALID.",
+      "POI-WRONG-OWNER": "move only081 to027; upsert(hexId026,input.id081) INVALID.",
+      "REMOVE-ARC-NORTH": "remove only persisted (006,020) assignment; positive admin grant recreates it.",
+      "TOMBSTONED-WILD": "ARC-WILD with022 tombstone13Oct12Z actor006, one prior delete history; preserve its actual assignment and restore identity/lifecycle without foreign changes."
+    },
+    "population": {
+      "characters": [
+        "10000000-0000-4000-8000-000000000030",
+        "10000000-0000-4000-8000-000000000031",
+        "10000000-0000-4000-8000-000000000032",
+        "10000000-0000-4000-8000-000000000033"
+      ],
+      "documents": [
+        "10000000-0000-4000-8000-000000000010",
+        "10000000-0000-4000-8000-000000000011",
+        "10000000-0000-4000-8000-000000000012",
+        "10000000-0000-4000-8000-000000000013",
+        "10000000-0000-4000-8000-000000000014",
+        "10000000-0000-4000-8000-000000000015",
+        "10000000-0000-4000-8000-000000000016"
+      ],
+      "hex_edges": ["10000000-0000-4000-8000-000000000029"],
+      "hexes": [
+        "10000000-0000-4000-8000-000000000026",
+        "10000000-0000-4000-8000-000000000027",
+        "10000000-0000-4000-8000-000000000028"
+      ],
+      "maps": [
+        "10000000-0000-4000-8000-000000000024",
+        "10000000-0000-4000-8000-000000000025"
+      ],
+      "members": [
+        "10000000-0000-4000-8000-000000000001",
+        "10000000-0000-4000-8000-000000000002",
+        "10000000-0000-4000-8000-000000000003",
+        "10000000-0000-4000-8000-000000000004",
+        "10000000-0000-4000-8000-000000000005",
+        "10000000-0000-4000-8000-000000000006",
+        "10000000-0000-4000-8000-000000000007",
+        "10000000-0000-4000-8000-000000000008",
+        "10000000-0000-4000-8000-000000000009"
+      ],
+      "pointcrawl_edges": ["10000000-0000-4000-8000-000000000085"],
+      "pointcrawl_nodes": [
+        "10000000-0000-4000-8000-000000000082",
+        "10000000-0000-4000-8000-000000000083"
+      ],
+      "pois": [
+        "10000000-0000-4000-8000-000000000080",
+        "10000000-0000-4000-8000-000000000081"
+      ],
+      "quests": [
+        "10000000-0000-4000-8000-000000000050",
+        "10000000-0000-4000-8000-000000000051",
+        "10000000-0000-4000-8000-000000000052",
+        "10000000-0000-4000-8000-000000000053",
+        "10000000-0000-4000-8000-000000000054"
+      ],
+      "regions": [
+        "10000000-0000-4000-8000-000000000020",
+        "10000000-0000-4000-8000-000000000021",
+        "10000000-0000-4000-8000-000000000022"
+      ]
+    },
+    "reset": "rollback/drop disposable graph and rebuild each case; replay/conflict run sequentially only within their named positive case; frozen clock identical; statement counts exclude setup",
+    "spatial_deltas": {
+      "edge085": {
+        "directed": false,
+        "documentId": null,
+        "kind": "path",
+        "label": null,
+        "mapId": "10000000-0000-4000-8000-000000000025",
+        "nodeA": "10000000-0000-4000-8000-000000000082",
+        "nodeB": "10000000-0000-4000-8000-000000000083"
+      },
+      "hexes026_027_028": {
+        "climate": null,
+        "elevation": null,
+        "submapId": null
+      },
+      "maps024.name": "North atlas",
+      "maps025.name": "South atlas",
+      "maps025.regionId": "10000000-0000-4000-8000-000000000020",
+      "nodes082_and_083.createdAt": "2026-01-02T00:00:00Z",
+      "poi081.hexId": "10000000-0000-4000-8000-000000000026",
+      "regions020": {
+        "charterDeadline": null,
+        "createdAt": "2026-01-01T00:00:00Z",
+        "documentId": "10000000-0000-4000-8000-000000000010"
+      },
+      "regions021": {
+        "charterDeadline": null,
+        "createdAt": "2026-01-01T00:00:00Z",
+        "documentId": null
+      },
+      "regions022": {
+        "charterDeadline": null,
+        "createdAt": "2026-01-01T00:00:00Z",
+        "documentId": null
+      }
+    }
+  },
+  "identity_rule": "Seed IDs above are fixture inputs only. Every created entity/history/receipt/audit uses $ captured UUID from response or unique committed row, validated and correlated across DB and API. No expected namespace or synthetic created UUID.",
+  "input_boundaries": {
+    "HexEdgeInput": {
+      "aSide": {
+        "null": "SQL NULL",
+        "omitted": "SQL NULL",
+        "values": {
+          "64 characters": "accept",
+          "65 characters": "INVALID",
+          "E": "persist exact opaque E"
+        }
+      },
+      "documentId": {
+        "null": "SQL NULL",
+        "omitted": "SQL NULL",
+        "values": {
+          "10000000-0000-4000-8000-000000000010": "persist reference",
+          "10000000-0000-4000-8000-000000000011": "FORBIDDEN Arc",
+          "10000000-0000-4000-8000-000000000999": "NOT_FOUND"
+        }
+      },
+      "edgeType": {
+        "null": "INVALID",
+        "omitted": "INVALID",
+        "values": {
+          "road,trail,river,pass,wall,ford": "each accepted literal",
+          "unknown": "INVALID"
+        }
+      },
+      "hexA": {
+        "null": "INVALID",
+        "omitted": "INVALID",
+        "values": {
+          "10000000-0000-4000-8000-000000000026": "same-map admitted",
+          "10000000-0000-4000-8000-000000000082": "INVALID wrong map"
+        }
+      },
+      "hexB": {
+        "null": "INVALID",
+        "omitted": "INVALID",
+        "values": {
+          "10000000-0000-4000-8000-000000000026": "INVALID self edge",
+          "10000000-0000-4000-8000-000000000027": "adjacent to026 admitted",
+          "10000000-0000-4000-8000-000000000088": "INVALID explicit nonadjacent hex delta"
+        }
+      }
+    },
+    "HexEditInput": {
+      "climate": {
+        "null": "SQL NULL; other optional fields unchanged",
+        "omitted": "preserve persisted before value; note-only write history policy remains separate",
+        "values": {
+          "": "persist empty trimmed author text",
+          " hill ": "normalize hill",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": "persist literal64",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": "INVALID"
+        }
+      },
+      "elevation": {
+        "null": "SQL NULL; other optional fields unchanged",
+        "omitted": "preserve persisted before value; note-only write history policy remains separate",
+        "values": {
+          "": "persist empty trimmed author text",
+          " hill ": "normalize hill",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": "persist literal64",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": "INVALID"
+        }
+      },
+      "note": {
+        "null": "INVALID",
+        "omitted": "INVALID",
+        "values": {
+          "2000 characters": "accept",
+          "2001 characters": "INVALID",
+          "Survey": "persist in history",
+          "empty": "accepted; persisted literally on actual change, unchanged patch receipt-only"
+        }
+      },
+      "submapId": {
+        "null": "SQL NULL; other optional fields unchanged",
+        "omitted": "preserve persisted before value; note-only write history policy remains separate",
+        "values": {
+          "10000000-0000-4000-8000-000000000024": "INVALID self map",
+          "10000000-0000-4000-8000-000000000025": "admit with stewardship on both maps and no current cycle",
+          "10000000-0000-4000-8000-000000000999": "NOT_FOUND"
+        }
+      },
+      "terrain": {
+        "null": "SQL NULL; other optional fields unchanged",
+        "omitted": "preserve persisted before value; note-only write history policy remains separate",
+        "values": {
+          "": "persist empty trimmed author text",
+          " hill ": "normalize hill",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": "persist literal64",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": "INVALID"
+        }
+      }
+    },
+    "MapCreateInput": {
+      "assetPath": {
+        "null": "SQL NULL",
+        "omitted": "SQL NULL",
+        "values": {
+          "": "INVALID",
+          "//host/x": "INVALID",
+          "/a/../b": "INVALID",
+          "/a\\b": "INVALID",
+          "/maps/north.webp": "persist exact; no fetch",
+          "2048 characters": "accept only if valid safe path/HTTPS URL",
+          "2049 characters": "INVALID",
+          "https://example.test/north.webp": "persist exact; no fetch",
+          "https://user:pass@example.test/x": "INVALID",
+          "javascript:alert(1)": "INVALID"
+        }
+      },
+      "atlasCode": {
+        "null": "INVALID",
+        "omitted": "INVALID",
+        "values": {
+          "64 characters": "accept under global code bound",
+          "65 characters": "INVALID",
+          "NORTH": "CONFLICT duplicate atlas",
+          "empty": "INVALID"
+        }
+      },
+      "cols": {
+        "null": "pointcrawl SQL NULL; hexgrid INVALID",
+        "omitted": "same as null",
+        "values": {
+          "0": "INVALID",
+          "1": "accept",
+          "1000": "accept metadata only",
+          "1001": "INVALID"
+        }
+      },
+      "family": {
+        "null": "INVALID",
+        "omitted": "INVALID",
+        "values": {
+          " campaign ": "normalize campaign",
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": "accept",
+          "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa": "INVALID",
+          "bad family": "INVALID",
+          "empty": "INVALID"
+        }
+      },
+      "mapKind": {
+        "null": "INVALID",
+        "omitted": "INVALID",
+        "values": {
+          "campaign": "INVALID",
+          "hexgrid": "accept",
+          "pointcrawl": "accept; nullable dimensions/region exactly as pointcrawl-null case"
+        }
+      },
+      "name": {
+        "null": "INVALID",
+        "omitted": "INVALID",
+        "values": {
+          "200 characters": "accept",
+          "201 characters": "INVALID",
+          "empty": "INVALID"
+        }
+      },
+      "regionId": {
+        "null": "pointcrawl SQL NULL admin/configured-owner-only; hexgrid INVALID",
+        "omitted": "same as null",
+        "values": {
+          "10000000-0000-4000-8000-000000000999": "NOT_FOUND",
+          "tombstoned022": "reject new reference"
+        }
+      },
+      "rows": {
+        "null": "pointcrawl SQL NULL; hexgrid INVALID",
+        "omitted": "same as null",
+        "values": {
+          "0": "INVALID",
+          "1": "accept",
+          "1000": "accept metadata only",
+          "1001": "INVALID"
+        }
+      }
+    },
+    "PoiInput": {
+      "discoveryTier": {
+        "null": "INVALID",
+        "omitted": "INVALID",
+        "values": {
+          "empty": "INVALID",
+          "landmark,hidden,secret": "each accepted literal; no per-member fog/discovery writes",
+          "unknown": "INVALID"
+        }
+      },
+      "documentId": {
+        "null": "SQL NULL",
+        "omitted": "SQL NULL",
+        "values": {
+          "10000000-0000-4000-8000-000000000010": "exact FK/readable identity",
+          "10000000-0000-4000-8000-000000000011": "FORBIDDEN Arc; no leakage",
+          "10000000-0000-4000-8000-000000000999": "NOT_FOUND"
+        }
+      },
+      "id": {
+        "null": "create capture $poiId",
+        "omitted": "create capture $poiId",
+        "values": {
+          "10000000-0000-4000-8000-000000000081": "INVALID when foreign hex in explicit POI-WRONG-OWNER overlay",
+          "10000000-0000-4000-8000-000000000999": "NOT_FOUND; never create supplied missing id"
+        }
+      },
+      "isCharterObjective": {
+        "null": "INVALID",
+        "omitted": "INVALID",
+        "values": {
+          "false": "SQL false/read false",
+          "true": "SQL true/read true"
+        }
+      },
+      "poiType": {
+        "null": "INVALID",
+        "omitted": "INVALID",
+        "values": {
+          "empty": "INVALID",
+          "landmark,settlement,lair,dungeon_site,regional_feature": "each accepted literal in reset subcase",
+          "unknown": "INVALID"
+        }
+      }
+    },
+    "PointcrawlEdgeInput": {
+      "directed": {
+        "null": "INVALID",
+        "omitted": "INVALID",
+        "values": {
+          "false": "persist false with endpoint public UUID ascending; directedtrue retains input order",
+          "true": "persist directed true without swapping endpoints"
+        }
+      },
+      "documentId": {
+        "null": "SQL NULL",
+        "omitted": "SQL NULL full replacement",
+        "values": {
+          "10000000-0000-4000-8000-000000000010": "persist readable annotation",
+          "10000000-0000-4000-8000-000000000011": "FORBIDDEN Arc",
+          "10000000-0000-4000-8000-000000000999": "NOT_FOUND"
+        }
+      },
+      "id": {
+        "null": "create capture $edgeId",
+        "omitted": "create capture $edgeId",
+        "values": {
+          "10000000-0000-4000-8000-000000000085": "update same UUID",
+          "10000000-0000-4000-8000-000000000999": "NOT_FOUND"
+        }
+      },
+      "kind": {
+        "null": "INVALID",
+        "omitted": "INVALID",
+        "values": {
+          "": "INVALID",
+          " path ": "normalize path",
+          "road": "accept opaque author classification",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": "accept",
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx": "INVALID"
+        }
+      },
+      "label": {
+        "null": "SQL NULL",
+        "omitted": "SQL NULL full replacement",
+        "values": {
+          "": "persist empty nullable author label",
+          "200 characters": "accept",
+          "201 characters": "INVALID",
+          "Bridge path": "persist exact"
+        }
+      },
+      "nodeA": {
+        "null": "INVALID",
+        "omitted": "INVALID",
+        "values": {
+          "10000000-0000-4000-8000-000000000026": "INVALID",
+          "10000000-0000-4000-8000-000000000082": "same-map accepted"
+        }
+      },
+      "nodeB": {
+        "null": "INVALID",
+        "omitted": "INVALID",
+        "values": {
+          "10000000-0000-4000-8000-000000000082": "INVALID self edge",
+          "10000000-0000-4000-8000-000000000083": "same-map accepted even if audience hidden to reader; mutation authority independently required"
+        }
+      }
+    },
+    "PointcrawlNodeInput": {
+      "id": {
+        "null": "create capture $nodeId",
+        "omitted": "create capture $nodeId",
+        "values": {
+          "10000000-0000-4000-8000-000000000026": "INVALID wrong aggregate",
+          "10000000-0000-4000-8000-000000000082": "update same UUID retains createdAt2026-01-02T00:00:00Z",
+          "10000000-0000-4000-8000-000000000999": "NOT_FOUND"
+        }
+      },
+      "name": {
+        "null": "INVALID",
+        "omitted": "INVALID",
+        "values": {
+          "200 characters": "accept",
+          "201 characters": "INVALID",
+          "empty": "INVALID"
+        }
+      },
+      "submapId": {
+        "null": "SQL NULL",
+        "omitted": "SQL NULL full replacement",
+        "values": {
+          "10000000-0000-4000-8000-000000000024": "admit only current stewardship on both distinct maps and no graph cycle",
+          "10000000-0000-4000-8000-000000000025": "INVALID self map",
+          "10000000-0000-4000-8000-000000000999": "NOT_FOUND"
+        }
+      },
+      "x": {
+        "null": "INVALID",
+        "omitted": "INVALID",
+        "values": {
+          "-1.7976931348623157e308": "accepted finite PostgreSQLdouble",
+          "1.7976931348623157e308": "accepted finite PostgreSQLdouble",
+          "3.5": "persist/read3.5",
+          "NaN or Infinity": "INVALID"
+        }
+      },
+      "y": {
+        "null": "INVALID",
+        "omitted": "INVALID",
+        "values": {
+          "-1.7976931348623157e308": "accepted finite PostgreSQLdouble",
+          "1.7976931348623157e308": "accepted finite PostgreSQLdouble",
+          "3.5": "persist/read3.5",
+          "NaN or Infinity": "INVALID"
+        }
+      }
+    },
+    "RegionInput": {
+      "charterDeadline": {
+        "null": "SQL NULL",
+        "omitted": "SQL NULL full replacement",
+        "values": {
+          "2026-02-30T00:00:00Z": "INVALID",
+          "2026-12-01T01:00:00+01:00": "persist/read2026-12-01T00:00:00Z"
+        }
+      },
+      "documentId": {
+        "null": "SQL NULL",
+        "omitted": "SQL NULL full replacement",
+        "values": {
+          "10000000-0000-4000-8000-000000000010": "persist exact readable UUID",
+          "10000000-0000-4000-8000-000000000011": "FORBIDDEN Arc unless actual admin override",
+          "10000000-0000-4000-8000-000000000999": "NOT_FOUND"
+        }
+      },
+      "kind": {
+        "null": "INVALID",
+        "omitted": "INVALID",
+        "values": {
+          "changed existing kind": "INVALID; transitionRegion owns change",
+          "server,archon,uncharted": "create accepted; update must equal current storedkind",
+          "unknown": "INVALID"
+        }
+      },
+      "name": {
+        "null": "INVALID",
+        "omitted": "INVALID",
+        "values": {
+          "200 characters": "accept",
+          "201 characters": "INVALID",
+          "empty": "INVALID"
+        }
+      }
+    }
+  },
+  "owner": "S04",
+  "pattern": "CQRS, unit of work, shared authorization specification, typed link identity and durable command receipts. Converges on Map/Region owned persistence; no second policy or Quest relationship writer.",
+  "root_argument_boundaries": {
+    "all_required_ids": "null/omitted INVALID; malformed empty/numeric INVALID before authority SQL; uppercase canonical UUID normalizes lowercase; missing canonical UUID NOT_FOUND after authorized admission",
+    "meta": "omit/null INVALID; key1..128 ASCII [A-Za-z0-9._:-]; lengths0/129/nonASCII/space INVALID; actor+operation+key uniqueness and current-authority-before-replay",
+    "note": "Required String may be empty, literal persisted on actual change; max2000,2001 INVALID.",
+    "relation": "Hex nonempty trimmed author text\u003c=64; empty/65 INVALID, location strict D6 unique indexes, terrain accepted. Pointcrawl exactly location/subject.",
+    "to": "uncharted/archon/server vocabulary only;022 uncharted-\u003earchon,020 archon-\u003eserver allowed;021 server-\u003euncharted and terminal repeats CONFLICT, no Character writes"
+  },
+  "root_engineering_resolutions": {
+    "edge_text": "aSide opaque nullable author text\u003c=64; full replacement null/omission clear. Pointcrawl kind trimmed nonempty\u003c=64, label nullable\u003c=200. Hex edgeType retains six stored literals.",
+    "final_contract": "spatial-admission-contract.md root engineering decisions2026-10-16; all concrete supplement cases below form part of each affected command acceptance",
+    "hex_patch": "HexEditInput terrain/elevation/climate/submapId omittable; omitted preserve, explicit null clear; note required.",
+    "map_history": "map_changes stores Map creation and edge edits, full before/after actual affected public ID/actor/time. P04 schema, SPA04/SPA06 producer; existing node_changes/hex_changes retain own node/link and hex/POI/link histories.",
+    "region_delete": "soft delete only when no active maps, Characters or quest-region links; else CONFLICT without mutating related aggregates. Repeat delete no-op zero history; restore active no-op. No name uniqueness collision is invented.",
+    "source": "root orchestration decision supplied2026-10-16 during bounded Phase1 spatial repair; owning Phase1 author must publish and align seams before gate"
+  },
+  "scenarios": [
+    {
+      "action": {
+        "arguments": {
+          "input": {
+            "assetPath": null,
+            "atlasCode": "NORTH2",
+            "cols": 2,
+            "family": "campaign",
+            "mapKind": "hexgrid",
+            "name": "North second",
+            "regionId": "10000000-0000-4000-8000-000000000020",
+            "rows": 3
+          },
+          "meta": {
+            "idempotencyKey": "spatial-createMap-1"
+          }
+        },
+        "response": {
+          "assetPath": null,
+          "atlasCode": "NORTH2",
+          "cols": 2,
+          "createdAt": "2026-10-14T12:00:00Z",
+          "createdBy": "10000000-0000-4000-8000-000000000006",
+          "family": "campaign",
+          "id": "$mapId",
+          "mapKind": "hexgrid",
+          "name": "North second",
+          "regionId": "10000000-0000-4000-8000-000000000020",
+          "rows": 3
+        }
+      },
+      "actor": "10000000-0000-4000-8000-000000000006",
+      "authority": "current live active Arc006 with persisted assignment to target region; stale JWT roles do not grant assignment",
+      "cases": [
+        {
+          "arguments": {
+            "input": {
+              "assetPath": null,
+              "atlasCode": "NORTH2",
+              "cols": 2,
+              "family": "campaign",
+              "mapKind": "hexgrid",
+              "name": "North second",
+              "regionId": "10000000-0000-4000-8000-000000000020",
+              "rows": 3
+            },
+            "meta": {
+              "idempotencyKey": "spatial-createMap-1"
+            }
+          },
+          "expected": "action.response and exact database delta above",
+          "name": "positive"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000002",
+          "arguments": {
+            "input": {
+              "assetPath": null,
+              "atlasCode": "NORTH2",
+              "cols": 2,
+              "family": "campaign",
+              "mapKind": "hexgrid",
+              "name": "North second",
+              "regionId": "10000000-0000-4000-8000-000000000020",
+              "rows": 3
+            },
+            "meta": {
+              "idempotencyKey": "spatial-createMap-1"
+            }
+          },
+          "error": "FORBIDDEN",
+          "expected": "zero business/history/audit/receipt/notification/job delta",
+          "name": "forbidden"
+        },
+        {
+          "error": "INVALID",
+          "expected": "zero delta; malformed scalar executes zero authority SQL",
+          "name": "invalid",
+          "replace": {
+            "input.mapKind": "grid"
+          }
+        },
+        {
+          "error": "NOT_FOUND",
+          "expected": "zero delta; no supplied missing upsert ID recreated",
+          "name": "missing",
+          "replace": {
+            "input.regionId": "10000000-0000-4000-8000-000000000999"
+          }
+        },
+        {
+          "after": "positive commit",
+          "arguments": {
+            "input": {
+              "assetPath": null,
+              "atlasCode": "NORTH2",
+              "cols": 2,
+              "family": "campaign",
+              "mapKind": "hexgrid",
+              "name": "North second",
+              "regionId": "10000000-0000-4000-8000-000000000020",
+              "rows": 3
+            },
+            "meta": {
+              "idempotencyKey": "spatial-createMap-1"
+            }
+          },
+          "expected": "same stored response/receiptId/created IDs; zero new business/history/audit/notification/job/receipt rows; authority rechecked first",
+          "name": "same-key-replay"
+        },
+        {
+          "after": "positive commit",
+          "error": "CONFLICT",
+          "expected": "same actor+operation+key; exact positive state retained; zero delta",
+          "name": "changed-input-conflict",
+          "replace": {
+            "input.name": "North third"
+          }
+        },
+        {
+          "error": "INTERNAL",
+          "expected": "restore exact fixture before snapshots above, including prior FK/link/assignment/history counts; no receipt or external effects; readback equals before; retry without injection succeeds once",
+          "inject": "fail final command receipt insert after business/history/audit effects in borrowed command transaction",
+          "name": "last-write-rollback"
+        }
+      ],
+      "contracts": [
+        "spatial-admission-contract.md",
+        "mounted-spatial-write-cases.json#additional_cases"
+      ],
+      "database": {
+        "hexes": {
+          "insert": 0
+        },
+        "map_changes": {
+          "actor": "10000000-0000-4000-8000-000000000006",
+          "affectedPublicId": "$mapId",
+          "at": "2026-10-14T12:00:00Z",
+          "id": "$historyId",
+          "insert": 1,
+          "new": "full exact action.response snapshot",
+          "old": null
+        },
+        "maps": {
+          "after": "exact response including captured $mapId",
+          "before": null,
+          "insert": 1
+        }
+      },
+      "decision_complete": true,
+      "fixture": "SPATIAL-ISOLATED-GRAPH plus no overlay",
+      "history_identity": "capture each actual committed history public UUID as $historyId; compare facts to concrete before/after above, actor and frozen clock",
+      "id": "SPATIAL-WRITE-createMap",
+      "operation": "Mutation.createMap",
+      "owner": "S04",
+      "readback": {
+        "expected": "match exact response/persisted after-facts, locate created UUID by captured response only; preserve all contrasting rows",
+        "query": "query {\n\tmap(atlasCode: \"NORTH2\") {\n\t\tid\n\t\tname\n\t\tatlasCode\n\t\tfamily\n\t\tmapKind\n\t\tassetPath\n\t\tcols\n\t\trows\n\t\tregionId\n\t\tcreatedBy\n\t\tcreatedAt\n\t}\n}\n",
+        "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations."
+      },
+      "receipt": {
+        "actor": "10000000-0000-4000-8000-000000000006",
+        "capture": "$receiptId; committed complete domain response retained",
+        "count": 1,
+        "input_hash": "SHA256 of normalized full exact input",
+        "key": "spatial-createMap-1",
+        "operation": "createMap"
+      },
+      "status": "NOT IMPLEMENTED",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "unchanged": {
+        "background_jobs": 0,
+        "characters": "all ownership/progression/state rows unchanged",
+        "documents": "all document bodies/audiences/versions/tombstones unchanged, including010 and011",
+        "notifications": 0,
+        "quest_hexes": "exact fixture rows retained; Map has no Quest-owned writes"
+      },
+      "unresolved": []
+    },
+    {
+      "action": {
+        "arguments": {
+          "id": "10000000-0000-4000-8000-000000000026",
+          "input": {
+            "climate": null,
+            "elevation": null,
+            "note": "Survey",
+            "submapId": null,
+            "terrain": "hill"
+          },
+          "meta": {
+            "idempotencyKey": "spatial-updateHex-1"
+          }
+        },
+        "response": {
+          "climate": null,
+          "col": 0,
+          "elevation": null,
+          "id": "10000000-0000-4000-8000-000000000026",
+          "mapId": "10000000-0000-4000-8000-000000000024",
+          "row": 0,
+          "submapId": null,
+          "terrain": "hill"
+        }
+      },
+      "actor": "10000000-0000-4000-8000-000000000006",
+      "authority": "current live active Arc006 with persisted assignment to target region; stale JWT roles do not grant assignment",
+      "cases": [
+        {
+          "arguments": {
+            "id": "10000000-0000-4000-8000-000000000026",
+            "input": {
+              "climate": null,
+              "elevation": null,
+              "note": "Survey",
+              "submapId": null,
+              "terrain": "hill"
+            },
+            "meta": {
+              "idempotencyKey": "spatial-updateHex-1"
+            }
+          },
+          "expected": "action.response and exact database delta above",
+          "name": "positive"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000002",
+          "arguments": {
+            "id": "10000000-0000-4000-8000-000000000026",
+            "input": {
+              "climate": null,
+              "elevation": null,
+              "note": "Survey",
+              "submapId": null,
+              "terrain": "hill"
+            },
+            "meta": {
+              "idempotencyKey": "spatial-updateHex-1"
+            }
+          },
+          "error": "FORBIDDEN",
+          "expected": "zero business/history/audit/receipt/notification/job delta",
+          "name": "forbidden"
+        },
+        {
+          "error": "INVALID",
+          "expected": "zero delta; malformed scalar executes zero authority SQL",
+          "name": "invalid",
+          "replace": {
+            "input.note": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          }
+        },
+        {
+          "error": "NOT_FOUND",
+          "expected": "zero delta; no supplied missing upsert ID recreated",
+          "name": "missing",
+          "replace": {
+            "id": "10000000-0000-4000-8000-000000000999"
+          }
+        },
+        {
+          "after": "positive commit",
+          "arguments": {
+            "id": "10000000-0000-4000-8000-000000000026",
+            "input": {
+              "climate": null,
+              "elevation": null,
+              "note": "Survey",
+              "submapId": null,
+              "terrain": "hill"
+            },
+            "meta": {
+              "idempotencyKey": "spatial-updateHex-1"
+            }
+          },
+          "expected": "same stored response/receiptId/created IDs; zero new business/history/audit/notification/job/receipt rows; authority rechecked first",
+          "name": "same-key-replay"
+        },
+        {
+          "after": "positive commit",
+          "error": "CONFLICT",
+          "expected": "same actor+operation+key; exact positive state retained; zero delta",
+          "name": "changed-input-conflict",
+          "replace": {
+            "input.terrain": "marsh"
+          }
+        },
+        {
+          "error": "INTERNAL",
+          "expected": "restore exact fixture before snapshots above, including prior FK/link/assignment/history counts; no receipt or external effects; readback equals before; retry without injection succeeds once",
+          "inject": "fail final command receipt insert after business/history/audit effects in borrowed command transaction",
+          "name": "last-write-rollback"
+        }
+      ],
+      "contracts": [
+        "spatial-admission-contract.md",
+        "mounted-spatial-write-cases.json#additional_cases"
+      ],
+      "database": {
+        "hex_changes": {
+          "causedByMember": "10000000-0000-4000-8000-000000000006",
+          "causedByQuest": null,
+          "id": "$historyId",
+          "insert": 1,
+          "kind": "terrain_change",
+          "newValue": "hill",
+          "note": "Survey",
+          "occurredAt": "2026-10-14T12:00:00Z",
+          "oldValue": "forest"
+        },
+        "hexes": {
+          "after": {
+            "climate": null,
+            "elevation": null,
+            "submapId": null,
+            "terrain": "hill"
+          },
+          "before": {
+            "climate": null,
+            "elevation": null,
+            "submapId": null,
+            "terrain": "forest"
+          },
+          "id": "10000000-0000-4000-8000-000000000026"
+        }
+      },
+      "decision_complete": true,
+      "fixture": "SPATIAL-ISOLATED-GRAPH plus no overlay",
+      "history_identity": "capture each actual committed history public UUID as $historyId; compare facts to concrete before/after above, actor and frozen clock",
+      "id": "SPATIAL-WRITE-updateHex",
+      "operation": "Mutation.updateHex",
+      "owner": "S04",
+      "readback": {
+        "expected": "match exact response/persisted after-facts, locate created UUID by captured response only; preserve all contrasting rows",
+        "query": "query {\n\thex(mapId: \"10000000-0000-4000-8000-000000000024\", col: 0, row: 0) {\n\t\tid\n\t\tmapId\n\t\tcol\n\t\trow\n\t\thexcode\n\t\tterrain\n\t\televation\n\t\tclimate\n\t\tsubmapId\n\t\tcreatedAt\n\t}\n}\n",
+        "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations."
+      },
+      "receipt": {
+        "actor": "10000000-0000-4000-8000-000000000006",
+        "capture": "$receiptId; committed complete domain response retained",
+        "count": 1,
+        "input_hash": "SHA256 of normalized full exact input",
+        "key": "spatial-updateHex-1",
+        "operation": "updateHex"
+      },
+      "status": "NOT IMPLEMENTED",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "unchanged": {
+        "background_jobs": 0,
+        "characters": "all ownership/progression/state rows unchanged",
+        "documents": "all document bodies/audiences/versions/tombstones unchanged, including010 and011",
+        "notifications": 0,
+        "quest_hexes": "exact fixture rows retained; Map has no Quest-owned writes"
+      },
+      "unresolved": []
+    },
+    {
+      "action": {
+        "arguments": {
+          "hexId": "10000000-0000-4000-8000-000000000026",
+          "input": {
+            "discoveryTier": "landmark",
+            "documentId": "10000000-0000-4000-8000-000000000010",
+            "id": null,
+            "isCharterObjective": true,
+            "poiType": "landmark"
+          },
+          "meta": {
+            "idempotencyKey": "spatial-upsertPoi-1"
+          }
+        },
+        "response": {
+          "discoveryTier": "landmark",
+          "documentId": "10000000-0000-4000-8000-000000000010",
+          "hexId": "10000000-0000-4000-8000-000000000026",
+          "id": "$poiId",
+          "isCharterObjective": true,
+          "poiType": "landmark"
+        }
+      },
+      "actor": "10000000-0000-4000-8000-000000000006",
+      "authority": "current live active Arc006 with persisted assignment to target region; stale JWT roles do not grant assignment",
+      "cases": [
+        {
+          "arguments": {
+            "hexId": "10000000-0000-4000-8000-000000000026",
+            "input": {
+              "discoveryTier": "landmark",
+              "documentId": "10000000-0000-4000-8000-000000000010",
+              "id": null,
+              "isCharterObjective": true,
+              "poiType": "landmark"
+            },
+            "meta": {
+              "idempotencyKey": "spatial-upsertPoi-1"
+            }
+          },
+          "expected": "action.response and exact database delta above",
+          "name": "positive"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000002",
+          "arguments": {
+            "hexId": "10000000-0000-4000-8000-000000000026",
+            "input": {
+              "discoveryTier": "landmark",
+              "documentId": "10000000-0000-4000-8000-000000000010",
+              "id": null,
+              "isCharterObjective": true,
+              "poiType": "landmark"
+            },
+            "meta": {
+              "idempotencyKey": "spatial-upsertPoi-1"
+            }
+          },
+          "error": "FORBIDDEN",
+          "expected": "zero business/history/audit/receipt/notification/job delta",
+          "name": "forbidden"
+        },
+        {
+          "error": "INVALID",
+          "expected": "zero delta; malformed scalar executes zero authority SQL",
+          "name": "invalid",
+          "replace": {
+            "input.poiType": "unknown"
+          }
+        },
+        {
+          "error": "NOT_FOUND",
+          "expected": "zero delta; no supplied missing upsert ID recreated",
+          "name": "missing",
+          "replace": {
+            "hexId": "10000000-0000-4000-8000-000000000999"
+          }
+        },
+        {
+          "after": "positive commit",
+          "arguments": {
+            "hexId": "10000000-0000-4000-8000-000000000026",
+            "input": {
+              "discoveryTier": "landmark",
+              "documentId": "10000000-0000-4000-8000-000000000010",
+              "id": null,
+              "isCharterObjective": true,
+              "poiType": "landmark"
+            },
+            "meta": {
+              "idempotencyKey": "spatial-upsertPoi-1"
+            }
+          },
+          "expected": "same stored response/receiptId/created IDs; zero new business/history/audit/notification/job/receipt rows; authority rechecked first",
+          "name": "same-key-replay"
+        },
+        {
+          "after": "positive commit",
+          "error": "CONFLICT",
+          "expected": "same actor+operation+key; exact positive state retained; zero delta",
+          "name": "changed-input-conflict",
+          "replace": {
+            "input.isCharterObjective": false
+          }
+        },
+        {
+          "error": "INTERNAL",
+          "expected": "restore exact fixture before snapshots above, including prior FK/link/assignment/history counts; no receipt or external effects; readback equals before; retry without injection succeeds once",
+          "inject": "fail final command receipt insert after business/history/audit effects in borrowed command transaction",
+          "name": "last-write-rollback"
+        }
+      ],
+      "contracts": [
+        "spatial-admission-contract.md",
+        "mounted-spatial-write-cases.json#additional_cases"
+      ],
+      "database": {
+        "hex_changes": {
+          "actor": "10000000-0000-4000-8000-000000000006",
+          "at": "2026-10-14T12:00:00Z",
+          "insert": 1,
+          "kind": "feature_added",
+          "new": "exact response",
+          "old": null
+        },
+        "pois": {
+          "after": "exact response",
+          "before": null,
+          "insert": 1
+        }
+      },
+      "decision_complete": true,
+      "fixture": "SPATIAL-ISOLATED-GRAPH plus no overlay",
+      "history_identity": "capture each actual committed history public UUID as $historyId; compare facts to concrete before/after above, actor and frozen clock",
+      "id": "SPATIAL-WRITE-upsertPoi",
+      "operation": "Mutation.upsertPoi",
+      "owner": "S04",
+      "readback": {
+        "expected": "match exact response/persisted after-facts, locate created UUID by captured response only; preserve all contrasting rows",
+        "query": "query {\n\tpoisForHex(hexId: \"10000000-0000-4000-8000-000000000026\") {\n\t\titems {\n\t\t\tid\n\t\t\thexId\n\t\t\tpoiType\n\t\t\tdiscoveryTier\n\t\t\tisCharterObjective\n\t\t\tdocumentId\n\t\t}\n\t\ttotal\n\t}\n}\n",
+        "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations."
+      },
+      "receipt": {
+        "actor": "10000000-0000-4000-8000-000000000006",
+        "capture": "$receiptId; committed complete domain response retained",
+        "count": 1,
+        "input_hash": "SHA256 of normalized full exact input",
+        "key": "spatial-upsertPoi-1",
+        "operation": "upsertPoi"
+      },
+      "status": "NOT IMPLEMENTED",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "unchanged": {
+        "background_jobs": 0,
+        "characters": "all ownership/progression/state rows unchanged",
+        "documents": "all document bodies/audiences/versions/tombstones unchanged, including010 and011",
+        "notifications": 0,
+        "quest_hexes": "exact fixture rows retained; Map has no Quest-owned writes"
+      },
+      "unresolved": []
+    },
+    {
+      "action": {
+        "arguments": {
+          "input": {
+            "aSide": null,
+            "documentId": null,
+            "edgeType": "road",
+            "hexA": "10000000-0000-4000-8000-000000000026",
+            "hexB": "10000000-0000-4000-8000-000000000027"
+          },
+          "mapId": "10000000-0000-4000-8000-000000000024",
+          "meta": {
+            "idempotencyKey": "spatial-setHexEdge-1"
+          }
+        },
+        "response": {
+          "aSide": null,
+          "documentId": null,
+          "edgeType": "road",
+          "hexA": "10000000-0000-4000-8000-000000000026",
+          "hexB": "10000000-0000-4000-8000-000000000027",
+          "id": "10000000-0000-4000-8000-000000000029",
+          "mapId": "10000000-0000-4000-8000-000000000024"
+        }
+      },
+      "actor": "10000000-0000-4000-8000-000000000006",
+      "authority": "current live active Arc006 with persisted assignment to target region; stale JWT roles do not grant assignment",
+      "cases": [
+        {
+          "arguments": {
+            "input": {
+              "aSide": null,
+              "documentId": null,
+              "edgeType": "road",
+              "hexA": "10000000-0000-4000-8000-000000000026",
+              "hexB": "10000000-0000-4000-8000-000000000027"
+            },
+            "mapId": "10000000-0000-4000-8000-000000000024",
+            "meta": {
+              "idempotencyKey": "spatial-setHexEdge-1"
+            }
+          },
+          "expected": "action.response and exact database delta above",
+          "name": "positive"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000002",
+          "arguments": {
+            "input": {
+              "aSide": null,
+              "documentId": null,
+              "edgeType": "road",
+              "hexA": "10000000-0000-4000-8000-000000000026",
+              "hexB": "10000000-0000-4000-8000-000000000027"
+            },
+            "mapId": "10000000-0000-4000-8000-000000000024",
+            "meta": {
+              "idempotencyKey": "spatial-setHexEdge-1"
+            }
+          },
+          "error": "FORBIDDEN",
+          "expected": "zero business/history/audit/receipt/notification/job delta",
+          "name": "forbidden"
+        },
+        {
+          "error": "INVALID",
+          "expected": "zero delta; malformed scalar executes zero authority SQL",
+          "name": "invalid",
+          "replace": {
+            "input.hexB": "10000000-0000-4000-8000-000000000082"
+          }
+        },
+        {
+          "error": "NOT_FOUND",
+          "expected": "zero delta; no supplied missing upsert ID recreated",
+          "name": "missing",
+          "replace": {
+            "mapId": "10000000-0000-4000-8000-000000000999"
+          }
+        },
+        {
+          "after": "positive commit",
+          "arguments": {
+            "input": {
+              "aSide": null,
+              "documentId": null,
+              "edgeType": "road",
+              "hexA": "10000000-0000-4000-8000-000000000026",
+              "hexB": "10000000-0000-4000-8000-000000000027"
+            },
+            "mapId": "10000000-0000-4000-8000-000000000024",
+            "meta": {
+              "idempotencyKey": "spatial-setHexEdge-1"
+            }
+          },
+          "expected": "same stored response/receiptId/created IDs; zero new business/history/audit/notification/job/receipt rows; authority rechecked first",
+          "name": "same-key-replay"
+        },
+        {
+          "after": "positive commit",
+          "error": "CONFLICT",
+          "expected": "same actor+operation+key; exact positive state retained; zero delta",
+          "name": "changed-input-conflict",
+          "replace": {
+            "input.edgeType": "river"
+          }
+        },
+        {
+          "error": "INTERNAL",
+          "expected": "restore exact fixture before snapshots above, including prior FK/link/assignment/history counts; no receipt or external effects; readback equals before; retry without injection succeeds once",
+          "inject": "fail final command receipt insert after business/history/audit effects in borrowed command transaction",
+          "name": "last-write-rollback"
+        }
+      ],
+      "contracts": [
+        "spatial-admission-contract.md",
+        "mounted-spatial-write-cases.json#additional_cases"
+      ],
+      "database": {
+        "hex_edges": {
+          "after": {
+            "aSide": null,
+            "documentId": null,
+            "edgeType": "road"
+          },
+          "before": {
+            "aSide": null,
+            "documentId": "10000000-0000-4000-8000-000000000011",
+            "edgeType": "trail"
+          },
+          "id": "10000000-0000-4000-8000-000000000029",
+          "insert": 0
+        },
+        "map_changes": {
+          "actor": "10000000-0000-4000-8000-000000000006",
+          "affectedPublicId": "10000000-0000-4000-8000-000000000029",
+          "at": "2026-10-14T12:00:00Z",
+          "id": "$historyId",
+          "insert": 1,
+          "new": "full exact action.response snapshot",
+          "old": "full persisted edge before snapshot from exact fixture"
+        }
+      },
+      "decision_complete": true,
+      "fixture": "SPATIAL-ISOLATED-GRAPH plus no overlay",
+      "history_identity": "capture each actual committed history public UUID as $historyId; compare facts to concrete before/after above, actor and frozen clock",
+      "id": "SPATIAL-WRITE-setHexEdge",
+      "operation": "Mutation.setHexEdge",
+      "owner": "S04",
+      "readback": {
+        "expected": "match exact response/persisted after-facts, locate created UUID by captured response only; preserve all contrasting rows",
+        "query": "query {\n\tmap(atlasCode: \"NORTH\") {\n\t\tedges {\n\t\t\tid\n\t\t\tmapId\n\t\t\thexA\n\t\t\thexB\n\t\t\tedgeType\n\t\t\taSide\n\t\t\tdocumentId\n\t\t}\n\t}\n}\n",
+        "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations."
+      },
+      "receipt": {
+        "actor": "10000000-0000-4000-8000-000000000006",
+        "capture": "$receiptId; committed complete domain response retained",
+        "count": 1,
+        "input_hash": "SHA256 of normalized full exact input",
+        "key": "spatial-setHexEdge-1",
+        "operation": "setHexEdge"
+      },
+      "status": "NOT IMPLEMENTED",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "unchanged": {
+        "background_jobs": 0,
+        "characters": "all ownership/progression/state rows unchanged",
+        "documents": "all document bodies/audiences/versions/tombstones unchanged, including010 and011",
+        "notifications": 0,
+        "quest_hexes": "exact fixture rows retained; Map has no Quest-owned writes"
+      },
+      "unresolved": []
+    },
+    {
+      "action": {
+        "arguments": {
+          "documentId": "10000000-0000-4000-8000-000000000010",
+          "hexId": "10000000-0000-4000-8000-000000000026",
+          "meta": {
+            "idempotencyKey": "spatial-linkHexEntry-1"
+          },
+          "relation": "location"
+        },
+        "response": {
+          "documentId": "10000000-0000-4000-8000-000000000010",
+          "hexId": "10000000-0000-4000-8000-000000000026",
+          "relation": "location"
+        }
+      },
+      "actor": "10000000-0000-4000-8000-000000000006",
+      "authority": "current live active Arc006 with persisted assignment to target region; stale JWT roles do not grant assignment",
+      "cases": [
+        {
+          "arguments": {
+            "documentId": "10000000-0000-4000-8000-000000000010",
+            "hexId": "10000000-0000-4000-8000-000000000026",
+            "meta": {
+              "idempotencyKey": "spatial-linkHexEntry-1"
+            },
+            "relation": "location"
+          },
+          "expected": "action.response and exact database delta above",
+          "name": "positive"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000002",
+          "arguments": {
+            "documentId": "10000000-0000-4000-8000-000000000010",
+            "hexId": "10000000-0000-4000-8000-000000000026",
+            "meta": {
+              "idempotencyKey": "spatial-linkHexEntry-1"
+            },
+            "relation": "location"
+          },
+          "error": "FORBIDDEN",
+          "expected": "zero business/history/audit/receipt/notification/job delta",
+          "name": "forbidden"
+        },
+        {
+          "error": "INVALID",
+          "expected": "zero delta; malformed scalar executes zero authority SQL",
+          "name": "invalid",
+          "replace": {
+            "relation": ""
+          }
+        },
+        {
+          "error": "NOT_FOUND",
+          "expected": "zero delta; no supplied missing upsert ID recreated",
+          "name": "missing",
+          "replace": {
+            "documentId": "10000000-0000-4000-8000-000000000999"
+          }
+        },
+        {
+          "after": "positive commit",
+          "arguments": {
+            "documentId": "10000000-0000-4000-8000-000000000010",
+            "hexId": "10000000-0000-4000-8000-000000000026",
+            "meta": {
+              "idempotencyKey": "spatial-linkHexEntry-1"
+            },
+            "relation": "location"
+          },
+          "expected": "same stored response/receiptId/created IDs; zero new business/history/audit/notification/job/receipt rows; authority rechecked first",
+          "name": "same-key-replay"
+        },
+        {
+          "after": "positive commit",
+          "error": "CONFLICT",
+          "expected": "same actor+operation+key; exact positive state retained; zero delta",
+          "name": "changed-input-conflict",
+          "replace": {
+            "relation": "subject"
+          }
+        },
+        {
+          "error": "INTERNAL",
+          "expected": "restore exact fixture before snapshots above, including prior FK/link/assignment/history counts; no receipt or external effects; readback equals before; retry without injection succeeds once",
+          "inject": "fail final command receipt insert after business/history/audit effects in borrowed command transaction",
+          "name": "last-write-rollback"
+        }
+      ],
+      "contracts": [
+        "spatial-admission-contract.md",
+        "mounted-spatial-write-cases.json#additional_cases"
+      ],
+      "database": {
+        "hex_changes": {
+          "actor": "10000000-0000-4000-8000-000000000006",
+          "at": "2026-10-14T12:00:00Z",
+          "insert": 1,
+          "kind": "entry_linked",
+          "new": {
+            "documentId": "10000000-0000-4000-8000-000000000010",
+            "hexId": "10000000-0000-4000-8000-000000000026",
+            "relation": "location"
+          },
+          "old": null
+        },
+        "hex_entry_links": {
+          "after": [
+            [
+              "10000000-0000-4000-8000-000000000026",
+              "10000000-0000-4000-8000-000000000010",
+              "location"
+            ]
+          ],
+          "before": []
+        }
+      },
+      "decision_complete": true,
+      "fixture": "SPATIAL-ISOLATED-GRAPH plus LOCATION-LINK-CREATE",
+      "history_identity": "capture each actual committed history public UUID as $historyId; compare facts to concrete before/after above, actor and frozen clock",
+      "id": "SPATIAL-WRITE-linkHexEntry",
+      "operation": "Mutation.linkHexEntry",
+      "owner": "S04",
+      "readback": {
+        "expected": "match exact response/persisted after-facts, locate created UUID by captured response only; preserve all contrasting rows",
+        "query": "query {\n\thex(mapId: \"10000000-0000-4000-8000-000000000024\", col: 0, row: 0) {\n\t\tlinkedEntries {\n\t\t\thexId\n\t\t\tdocumentId\n\t\t\trelation\n\t\t}\n\t}\n}\n",
+        "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations."
+      },
+      "receipt": {
+        "actor": "10000000-0000-4000-8000-000000000006",
+        "capture": "$receiptId; committed complete domain response retained",
+        "count": 1,
+        "input_hash": "SHA256 of normalized full exact input",
+        "key": "spatial-linkHexEntry-1",
+        "operation": "linkHexEntry"
+      },
+      "status": "NOT IMPLEMENTED",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "unchanged": {
+        "background_jobs": 0,
+        "characters": "all ownership/progression/state rows unchanged",
+        "documents": "all document bodies/audiences/versions/tombstones unchanged, including010 and011",
+        "notifications": 0,
+        "quest_hexes": "exact fixture rows retained; Map has no Quest-owned writes"
+      },
+      "unresolved": []
+    },
+    {
+      "action": {
+        "arguments": {
+          "documentId": "10000000-0000-4000-8000-000000000010",
+          "hexId": "10000000-0000-4000-8000-000000000026",
+          "meta": {
+            "idempotencyKey": "spatial-unlinkHexEntry-1"
+          },
+          "relation": "location"
+        },
+        "response": "$receipt"
+      },
+      "actor": "10000000-0000-4000-8000-000000000006",
+      "authority": "current live active Arc006 with persisted assignment to target region; stale JWT roles do not grant assignment",
+      "cases": [
+        {
+          "arguments": {
+            "documentId": "10000000-0000-4000-8000-000000000010",
+            "hexId": "10000000-0000-4000-8000-000000000026",
+            "meta": {
+              "idempotencyKey": "spatial-unlinkHexEntry-1"
+            },
+            "relation": "location"
+          },
+          "expected": "action.response and exact database delta above",
+          "name": "positive"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000002",
+          "arguments": {
+            "documentId": "10000000-0000-4000-8000-000000000010",
+            "hexId": "10000000-0000-4000-8000-000000000026",
+            "meta": {
+              "idempotencyKey": "spatial-unlinkHexEntry-1"
+            },
+            "relation": "location"
+          },
+          "error": "FORBIDDEN",
+          "expected": "zero business/history/audit/receipt/notification/job delta",
+          "name": "forbidden"
+        },
+        {
+          "error": "INVALID",
+          "expected": "zero delta; malformed scalar executes zero authority SQL",
+          "name": "invalid",
+          "replace": {
+            "relation": ""
+          }
+        },
+        {
+          "error": "NOT_FOUND",
+          "expected": "zero delta; no supplied missing upsert ID recreated",
+          "name": "missing",
+          "replace": {
+            "hexId": "10000000-0000-4000-8000-000000000999"
+          }
+        },
+        {
+          "after": "positive commit",
+          "arguments": {
+            "documentId": "10000000-0000-4000-8000-000000000010",
+            "hexId": "10000000-0000-4000-8000-000000000026",
+            "meta": {
+              "idempotencyKey": "spatial-unlinkHexEntry-1"
+            },
+            "relation": "location"
+          },
+          "expected": "same stored response/receiptId/created IDs; zero new business/history/audit/notification/job/receipt rows; authority rechecked first",
+          "name": "same-key-replay"
+        },
+        {
+          "after": "positive commit",
+          "error": "CONFLICT",
+          "expected": "same actor+operation+key; exact positive state retained; zero delta",
+          "name": "changed-input-conflict",
+          "replace": {
+            "relation": "subject"
+          }
+        },
+        {
+          "error": "INTERNAL",
+          "expected": "restore exact fixture before snapshots above, including prior FK/link/assignment/history counts; no receipt or external effects; readback equals before; retry without injection succeeds once",
+          "inject": "fail final command receipt insert after business/history/audit effects in borrowed command transaction",
+          "name": "last-write-rollback"
+        }
+      ],
+      "contracts": [
+        "spatial-admission-contract.md",
+        "mounted-spatial-write-cases.json#additional_cases"
+      ],
+      "database": {
+        "hex_changes": {
+          "actor": "10000000-0000-4000-8000-000000000006",
+          "at": "2026-10-14T12:00:00Z",
+          "insert": 1,
+          "kind": "entry_unlinked",
+          "new": null,
+          "old": {
+            "documentId": "10000000-0000-4000-8000-000000000010",
+            "hexId": "10000000-0000-4000-8000-000000000026",
+            "relation": "location"
+          }
+        },
+        "hex_entry_links": {
+          "after": [],
+          "before": [
+            [
+              "10000000-0000-4000-8000-000000000026",
+              "10000000-0000-4000-8000-000000000010",
+              "location"
+            ]
+          ]
+        }
+      },
+      "decision_complete": true,
+      "fixture": "SPATIAL-ISOLATED-GRAPH plus LOCATION-LINK-EXISTING",
+      "history_identity": "capture each actual committed history public UUID as $historyId; compare facts to concrete before/after above, actor and frozen clock",
+      "id": "SPATIAL-WRITE-unlinkHexEntry",
+      "operation": "Mutation.unlinkHexEntry",
+      "owner": "S04",
+      "readback": {
+        "expected": "match exact response/persisted after-facts, locate created UUID by captured response only; preserve all contrasting rows",
+        "query": "query {\n\thex(mapId: \"10000000-0000-4000-8000-000000000024\", col: 0, row: 0) {\n\t\tlinkedEntries {\n\t\t\thexId\n\t\t\tdocumentId\n\t\t\trelation\n\t\t}\n\t}\n}\n",
+        "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations."
+      },
+      "receipt": {
+        "actor": "10000000-0000-4000-8000-000000000006",
+        "capture": "$receiptId; committed complete domain response retained",
+        "count": 1,
+        "input_hash": "SHA256 of normalized full exact input",
+        "key": "spatial-unlinkHexEntry-1",
+        "operation": "unlinkHexEntry"
+      },
+      "status": "NOT IMPLEMENTED",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "unchanged": {
+        "background_jobs": 0,
+        "characters": "all ownership/progression/state rows unchanged",
+        "documents": "all document bodies/audiences/versions/tombstones unchanged, including010 and011",
+        "notifications": 0,
+        "quest_hexes": "exact fixture rows retained; Map has no Quest-owned writes"
+      },
+      "unresolved": []
+    },
+    {
+      "action": {
+        "arguments": {
+          "input": {
+            "charterDeadline": null,
+            "documentId": null,
+            "kind": "uncharted",
+            "name": "East"
+          },
+          "meta": {
+            "idempotencyKey": "spatial-createRegion-1"
+          }
+        },
+        "response": {
+          "charterDeadline": null,
+          "createdAt": "2026-10-14T12:00:00Z",
+          "documentId": null,
+          "id": "$regionId",
+          "kind": "uncharted",
+          "name": "East"
+        }
+      },
+      "actor": "10000000-0000-4000-8000-000000000004",
+      "authority": "current live admin004",
+      "cases": [
+        {
+          "arguments": {
+            "input": {
+              "charterDeadline": null,
+              "documentId": null,
+              "kind": "uncharted",
+              "name": "East"
+            },
+            "meta": {
+              "idempotencyKey": "spatial-createRegion-1"
+            }
+          },
+          "expected": "action.response and exact database delta above",
+          "name": "positive"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000002",
+          "arguments": {
+            "input": {
+              "charterDeadline": null,
+              "documentId": null,
+              "kind": "uncharted",
+              "name": "East"
+            },
+            "meta": {
+              "idempotencyKey": "spatial-createRegion-1"
+            }
+          },
+          "error": "FORBIDDEN",
+          "expected": "zero business/history/audit/receipt/notification/job delta",
+          "name": "forbidden"
+        },
+        {
+          "error": "INVALID",
+          "expected": "zero delta; malformed scalar executes zero authority SQL",
+          "name": "invalid",
+          "replace": {
+            "input.kind": "country"
+          }
+        },
+        {
+          "error": "NOT_FOUND",
+          "expected": "zero delta; no supplied missing upsert ID recreated",
+          "name": "missing",
+          "replace": {
+            "input.documentId": "10000000-0000-4000-8000-000000000999"
+          }
+        },
+        {
+          "after": "positive commit",
+          "arguments": {
+            "input": {
+              "charterDeadline": null,
+              "documentId": null,
+              "kind": "uncharted",
+              "name": "East"
+            },
+            "meta": {
+              "idempotencyKey": "spatial-createRegion-1"
+            }
+          },
+          "expected": "same stored response/receiptId/created IDs; zero new business/history/audit/notification/job/receipt rows; authority rechecked first",
+          "name": "same-key-replay"
+        },
+        {
+          "after": "positive commit",
+          "error": "CONFLICT",
+          "expected": "same actor+operation+key; exact positive state retained; zero delta",
+          "name": "changed-input-conflict",
+          "replace": {
+            "input.name": "East second"
+          }
+        },
+        {
+          "error": "INTERNAL",
+          "expected": "restore exact fixture before snapshots above, including prior FK/link/assignment/history counts; no receipt or external effects; readback equals before; retry without injection succeeds once",
+          "inject": "fail final command receipt insert after business/history/audit effects in borrowed command transaction",
+          "name": "last-write-rollback"
+        }
+      ],
+      "contracts": [
+        "spatial-admission-contract.md",
+        "mounted-spatial-write-cases.json#additional_cases"
+      ],
+      "database": {
+        "region_changes": {
+          "actor": "10000000-0000-4000-8000-000000000004",
+          "at": "2026-10-14T12:00:00Z",
+          "insert": 1,
+          "new": "exact response",
+          "old": null
+        },
+        "regions": {
+          "after": "exact response",
+          "before": null,
+          "insert": 1
+        }
+      },
+      "decision_complete": true,
+      "fixture": "SPATIAL-ISOLATED-GRAPH plus no overlay",
+      "history_identity": "capture each actual committed history public UUID as $historyId; compare facts to concrete before/after above, actor and frozen clock",
+      "id": "SPATIAL-WRITE-createRegion",
+      "operation": "Mutation.createRegion",
+      "owner": "S04",
+      "readback": {
+        "expected": "match exact response/persisted after-facts, locate created UUID by captured response only; preserve all contrasting rows",
+        "query": "query {\n\tregions(kind: \"uncharted\") {\n\t\tid\n\t\tname\n\t\tkind\n\t\tcharterDeadline\n\t\tdocumentId\n\t\tcreatedAt\n\t}\n}\n",
+        "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations."
+      },
+      "receipt": {
+        "actor": "10000000-0000-4000-8000-000000000004",
+        "capture": "$receiptId; committed complete domain response retained",
+        "count": 1,
+        "input_hash": "SHA256 of normalized full exact input",
+        "key": "spatial-createRegion-1",
+        "operation": "createRegion"
+      },
+      "status": "NOT IMPLEMENTED",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "unchanged": {
+        "background_jobs": 0,
+        "characters": "all ownership/progression/state rows unchanged",
+        "documents": "all document bodies/audiences/versions/tombstones unchanged, including010 and011",
+        "notifications": 0,
+        "quest_hexes": "exact fixture rows retained; Map has no Quest-owned writes"
+      },
+      "unresolved": []
+    },
+    {
+      "action": {
+        "arguments": {
+          "id": "10000000-0000-4000-8000-000000000020",
+          "input": {
+            "charterDeadline": null,
+            "documentId": "10000000-0000-4000-8000-000000000010",
+            "kind": "archon",
+            "name": "Upper North"
+          },
+          "meta": {
+            "idempotencyKey": "spatial-updateRegion-1"
+          }
+        },
+        "response": {
+          "charterDeadline": null,
+          "createdAt": "2026-01-01T00:00:00Z",
+          "documentId": "10000000-0000-4000-8000-000000000010",
+          "id": "10000000-0000-4000-8000-000000000020",
+          "kind": "archon",
+          "name": "Upper North"
+        }
+      },
+      "actor": "10000000-0000-4000-8000-000000000006",
+      "authority": "current live active Arc006 with persisted assignment to target region; stale JWT roles do not grant assignment",
+      "cases": [
+        {
+          "arguments": {
+            "id": "10000000-0000-4000-8000-000000000020",
+            "input": {
+              "charterDeadline": null,
+              "documentId": "10000000-0000-4000-8000-000000000010",
+              "kind": "archon",
+              "name": "Upper North"
+            },
+            "meta": {
+              "idempotencyKey": "spatial-updateRegion-1"
+            }
+          },
+          "expected": "action.response and exact database delta above",
+          "name": "positive"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000002",
+          "arguments": {
+            "id": "10000000-0000-4000-8000-000000000020",
+            "input": {
+              "charterDeadline": null,
+              "documentId": "10000000-0000-4000-8000-000000000010",
+              "kind": "archon",
+              "name": "Upper North"
+            },
+            "meta": {
+              "idempotencyKey": "spatial-updateRegion-1"
+            }
+          },
+          "error": "FORBIDDEN",
+          "expected": "zero business/history/audit/receipt/notification/job delta",
+          "name": "forbidden"
+        },
+        {
+          "error": "INVALID",
+          "expected": "zero delta; malformed scalar executes zero authority SQL",
+          "name": "invalid",
+          "replace": {
+            "input.name": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          }
+        },
+        {
+          "error": "NOT_FOUND",
+          "expected": "zero delta; no supplied missing upsert ID recreated",
+          "name": "missing",
+          "replace": {
+            "id": "10000000-0000-4000-8000-000000000999"
+          }
+        },
+        {
+          "after": "positive commit",
+          "arguments": {
+            "id": "10000000-0000-4000-8000-000000000020",
+            "input": {
+              "charterDeadline": null,
+              "documentId": "10000000-0000-4000-8000-000000000010",
+              "kind": "archon",
+              "name": "Upper North"
+            },
+            "meta": {
+              "idempotencyKey": "spatial-updateRegion-1"
+            }
+          },
+          "expected": "same stored response/receiptId/created IDs; zero new business/history/audit/notification/job/receipt rows; authority rechecked first",
+          "name": "same-key-replay"
+        },
+        {
+          "after": "positive commit",
+          "error": "CONFLICT",
+          "expected": "same actor+operation+key; exact positive state retained; zero delta",
+          "name": "changed-input-conflict",
+          "replace": {
+            "input.name": "Highest North"
+          }
+        },
+        {
+          "error": "INTERNAL",
+          "expected": "restore exact fixture before snapshots above, including prior FK/link/assignment/history counts; no receipt or external effects; readback equals before; retry without injection succeeds once",
+          "inject": "fail final command receipt insert after business/history/audit effects in borrowed command transaction",
+          "name": "last-write-rollback"
+        }
+      ],
+      "contracts": [
+        "spatial-admission-contract.md",
+        "mounted-spatial-write-cases.json#additional_cases"
+      ],
+      "database": {
+        "region_changes": {
+          "actor": "10000000-0000-4000-8000-000000000006",
+          "at": "2026-10-14T12:00:00Z",
+          "insert": 1,
+          "new": "after region snapshot",
+          "old": "before region snapshot"
+        },
+        "regions": {
+          "after": {
+            "charterDeadline": null,
+            "documentId": "10000000-0000-4000-8000-000000000010",
+            "kind": "archon",
+            "name": "Upper North"
+          },
+          "before": {
+            "charterDeadline": null,
+            "documentId": "10000000-0000-4000-8000-000000000010",
+            "kind": "archon",
+            "name": "North"
+          },
+          "id": "10000000-0000-4000-8000-000000000020"
+        }
+      },
+      "decision_complete": true,
+      "fixture": "SPATIAL-ISOLATED-GRAPH plus no overlay",
+      "history_identity": "capture each actual committed history public UUID as $historyId; compare facts to concrete before/after above, actor and frozen clock",
+      "id": "SPATIAL-WRITE-updateRegion",
+      "operation": "Mutation.updateRegion",
+      "owner": "S04",
+      "readback": {
+        "expected": "match exact response/persisted after-facts, locate created UUID by captured response only; preserve all contrasting rows",
+        "query": "query {\n\tregions(kind: \"archon\") {\n\t\tid\n\t\tname\n\t\tkind\n\t\tcharterDeadline\n\t\tdocumentId\n\t\tcreatedAt\n\t}\n}\n",
+        "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations."
+      },
+      "receipt": {
+        "actor": "10000000-0000-4000-8000-000000000006",
+        "capture": "$receiptId; committed complete domain response retained",
+        "count": 1,
+        "input_hash": "SHA256 of normalized full exact input",
+        "key": "spatial-updateRegion-1",
+        "operation": "updateRegion"
+      },
+      "status": "NOT IMPLEMENTED",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "unchanged": {
+        "background_jobs": 0,
+        "characters": "all ownership/progression/state rows unchanged",
+        "documents": "all document bodies/audiences/versions/tombstones unchanged, including010 and011",
+        "notifications": 0,
+        "quest_hexes": "exact fixture rows retained; Map has no Quest-owned writes"
+      },
+      "unresolved": []
+    },
+    {
+      "action": {
+        "arguments": {
+          "id": "10000000-0000-4000-8000-000000000022",
+          "meta": {
+            "idempotencyKey": "spatial-transitionRegion-1"
+          },
+          "note": "Charter approved",
+          "to": "archon"
+        },
+        "response": {
+          "charterDeadline": null,
+          "createdAt": "2026-01-01T00:00:00Z",
+          "documentId": null,
+          "id": "10000000-0000-4000-8000-000000000022",
+          "kind": "archon",
+          "name": "Wild"
+        }
+      },
+      "actor": "10000000-0000-4000-8000-000000000004",
+      "authority": "current live admin004",
+      "cases": [
+        {
+          "arguments": {
+            "id": "10000000-0000-4000-8000-000000000022",
+            "meta": {
+              "idempotencyKey": "spatial-transitionRegion-1"
+            },
+            "note": "Charter approved",
+            "to": "archon"
+          },
+          "expected": "action.response and exact database delta above",
+          "name": "positive"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000002",
+          "arguments": {
+            "id": "10000000-0000-4000-8000-000000000022",
+            "meta": {
+              "idempotencyKey": "spatial-transitionRegion-1"
+            },
+            "note": "Charter approved",
+            "to": "archon"
+          },
+          "error": "FORBIDDEN",
+          "expected": "zero business/history/audit/receipt/notification/job delta",
+          "name": "forbidden"
+        },
+        {
+          "error": "INVALID",
+          "expected": "zero delta; malformed scalar executes zero authority SQL",
+          "name": "invalid",
+          "replace": {
+            "to": "country"
+          }
+        },
+        {
+          "error": "NOT_FOUND",
+          "expected": "zero delta; no supplied missing upsert ID recreated",
+          "name": "missing",
+          "replace": {
+            "id": "10000000-0000-4000-8000-000000000999"
+          }
+        },
+        {
+          "after": "positive commit",
+          "arguments": {
+            "id": "10000000-0000-4000-8000-000000000022",
+            "meta": {
+              "idempotencyKey": "spatial-transitionRegion-1"
+            },
+            "note": "Charter approved",
+            "to": "archon"
+          },
+          "expected": "same stored response/receiptId/created IDs; zero new business/history/audit/notification/job/receipt rows; authority rechecked first",
+          "name": "same-key-replay"
+        },
+        {
+          "after": "positive commit",
+          "error": "CONFLICT",
+          "expected": "same actor+operation+key; exact positive state retained; zero delta",
+          "name": "changed-input-conflict",
+          "replace": {
+            "note": "Charter changed"
+          }
+        },
+        {
+          "error": "INTERNAL",
+          "expected": "restore exact fixture before snapshots above, including prior FK/link/assignment/history counts; no receipt or external effects; readback equals before; retry without injection succeeds once",
+          "inject": "fail final command receipt insert after business/history/audit effects in borrowed command transaction",
+          "name": "last-write-rollback"
+        }
+      ],
+      "contracts": [
+        "spatial-admission-contract.md",
+        "mounted-spatial-write-cases.json#additional_cases"
+      ],
+      "database": {
+        "region_changes": {
+          "actor": "10000000-0000-4000-8000-000000000004",
+          "at": "2026-10-14T12:00:00Z",
+          "insert": 1,
+          "new": {
+            "kind": "archon"
+          },
+          "note": "Charter approved",
+          "old": {
+            "kind": "uncharted"
+          }
+        },
+        "regions": {
+          "after": {
+            "kind": "archon"
+          },
+          "before": {
+            "kind": "uncharted"
+          },
+          "id": "10000000-0000-4000-8000-000000000022"
+        }
+      },
+      "decision_complete": true,
+      "fixture": "SPATIAL-ISOLATED-GRAPH plus no overlay",
+      "history_identity": "capture each actual committed history public UUID as $historyId; compare facts to concrete before/after above, actor and frozen clock",
+      "id": "SPATIAL-WRITE-transitionRegion",
+      "operation": "Mutation.transitionRegion",
+      "owner": "S04",
+      "readback": {
+        "expected": "match exact response/persisted after-facts, locate created UUID by captured response only; preserve all contrasting rows",
+        "query": "query {\n\tregions(kind: \"archon\") {\n\t\tid\n\t\tname\n\t\tkind\n\t\tcharterDeadline\n\t\tdocumentId\n\t\tcreatedAt\n\t}\n}\n",
+        "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations."
+      },
+      "receipt": {
+        "actor": "10000000-0000-4000-8000-000000000004",
+        "capture": "$receiptId; committed complete domain response retained",
+        "count": 1,
+        "input_hash": "SHA256 of normalized full exact input",
+        "key": "spatial-transitionRegion-1",
+        "operation": "transitionRegion"
+      },
+      "status": "NOT IMPLEMENTED",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "unchanged": {
+        "background_jobs": 0,
+        "characters": "all ownership/progression/state rows unchanged",
+        "documents": "all document bodies/audiences/versions/tombstones unchanged, including010 and011",
+        "notifications": 0,
+        "quest_hexes": "exact fixture rows retained; Map has no Quest-owned writes"
+      },
+      "unresolved": []
+    },
+    {
+      "action": {
+        "arguments": {
+          "memberId": "10000000-0000-4000-8000-000000000006",
+          "meta": {
+            "idempotencyKey": "spatial-assignArchon-1"
+          },
+          "regionId": "10000000-0000-4000-8000-000000000020"
+        },
+        "response": {
+          "grantedAt": "2026-10-14T12:00:00Z",
+          "grantedBy": "10000000-0000-4000-8000-000000000004",
+          "memberId": "10000000-0000-4000-8000-000000000006",
+          "regionId": "10000000-0000-4000-8000-000000000020"
+        }
+      },
+      "actor": "10000000-0000-4000-8000-000000000004",
+      "authority": "current live admin004",
+      "cases": [
+        {
+          "arguments": {
+            "memberId": "10000000-0000-4000-8000-000000000006",
+            "meta": {
+              "idempotencyKey": "spatial-assignArchon-1"
+            },
+            "regionId": "10000000-0000-4000-8000-000000000020"
+          },
+          "expected": "action.response and exact database delta above",
+          "name": "positive"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000002",
+          "arguments": {
+            "memberId": "10000000-0000-4000-8000-000000000006",
+            "meta": {
+              "idempotencyKey": "spatial-assignArchon-1"
+            },
+            "regionId": "10000000-0000-4000-8000-000000000020"
+          },
+          "error": "FORBIDDEN",
+          "expected": "zero business/history/audit/receipt/notification/job delta",
+          "name": "forbidden"
+        },
+        {
+          "error": "INVALID",
+          "expected": "zero delta; malformed scalar executes zero authority SQL",
+          "name": "invalid",
+          "replace": {
+            "memberId": "bad-uuid"
+          }
+        },
+        {
+          "error": "NOT_FOUND",
+          "expected": "zero delta; no supplied missing upsert ID recreated",
+          "name": "missing",
+          "replace": {
+            "memberId": "10000000-0000-4000-8000-000000000999"
+          }
+        },
+        {
+          "after": "positive commit",
+          "arguments": {
+            "memberId": "10000000-0000-4000-8000-000000000006",
+            "meta": {
+              "idempotencyKey": "spatial-assignArchon-1"
+            },
+            "regionId": "10000000-0000-4000-8000-000000000020"
+          },
+          "expected": "same stored response/receiptId/created IDs; zero new business/history/audit/notification/job/receipt rows; authority rechecked first",
+          "name": "same-key-replay"
+        },
+        {
+          "after": "positive commit",
+          "error": "CONFLICT",
+          "expected": "same actor+operation+key; exact positive state retained; zero delta",
+          "name": "changed-input-conflict",
+          "replace": {
+            "regionId": "10000000-0000-4000-8000-000000000022"
+          }
+        },
+        {
+          "error": "INTERNAL",
+          "expected": "restore exact fixture before snapshots above, including prior FK/link/assignment/history counts; no receipt or external effects; readback equals before; retry without injection succeeds once",
+          "inject": "fail final command receipt insert after business/history/audit effects in borrowed command transaction",
+          "name": "last-write-rollback"
+        }
+      ],
+      "contracts": [
+        "spatial-admission-contract.md",
+        "mounted-spatial-write-cases.json#additional_cases"
+      ],
+      "database": {
+        "archon_assignments": {
+          "after": [
+            [
+              "10000000-0000-4000-8000-000000000006",
+              "10000000-0000-4000-8000-000000000020",
+              "2026-10-14T12:00:00Z",
+              "10000000-0000-4000-8000-000000000004"
+            ]
+          ],
+          "before": []
+        },
+        "assignment_changes": {
+          "actor": "10000000-0000-4000-8000-000000000004",
+          "at": "2026-10-14T12:00:00Z",
+          "insert": 1,
+          "new": {
+            "memberId": "10000000-0000-4000-8000-000000000006",
+            "regionId": "10000000-0000-4000-8000-000000000020"
+          },
+          "old": null
+        }
+      },
+      "decision_complete": true,
+      "fixture": "SPATIAL-ISOLATED-GRAPH plus REMOVE-ARC-NORTH",
+      "history_identity": "capture each actual committed history public UUID as $historyId; compare facts to concrete before/after above, actor and frozen clock",
+      "id": "SPATIAL-WRITE-assignArchon",
+      "operation": "Mutation.assignArchon",
+      "owner": "S04",
+      "readback": {
+        "expected": "match exact response/persisted after-facts, locate created UUID by captured response only; preserve all contrasting rows",
+        "query": "query {\n\tarchonAssignments(regionId: \"10000000-0000-4000-8000-000000000020\") {\n\t\titems {\n\t\t\tmemberId\n\t\t\tregionId\n\t\t\tgrantedAt\n\t\t\tgrantedBy\n\t\t}\n\t\ttotal\n\t}\n}\n",
+        "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations."
+      },
+      "receipt": {
+        "actor": "10000000-0000-4000-8000-000000000004",
+        "capture": "$receiptId; committed complete domain response retained",
+        "count": 1,
+        "input_hash": "SHA256 of normalized full exact input",
+        "key": "spatial-assignArchon-1",
+        "operation": "assignArchon"
+      },
+      "status": "NOT IMPLEMENTED",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "unchanged": {
+        "background_jobs": 0,
+        "characters": "all ownership/progression/state rows unchanged",
+        "documents": "all document bodies/audiences/versions/tombstones unchanged, including010 and011",
+        "notifications": 0,
+        "quest_hexes": "exact fixture rows retained; Map has no Quest-owned writes"
+      },
+      "unresolved": []
+    },
+    {
+      "action": {
+        "arguments": {
+          "memberId": "10000000-0000-4000-8000-000000000006",
+          "meta": {
+            "idempotencyKey": "spatial-revokeArchon-1"
+          },
+          "regionId": "10000000-0000-4000-8000-000000000020"
+        },
+        "response": "$receipt"
+      },
+      "actor": "10000000-0000-4000-8000-000000000004",
+      "authority": "current live admin004",
+      "cases": [
+        {
+          "arguments": {
+            "memberId": "10000000-0000-4000-8000-000000000006",
+            "meta": {
+              "idempotencyKey": "spatial-revokeArchon-1"
+            },
+            "regionId": "10000000-0000-4000-8000-000000000020"
+          },
+          "expected": "action.response and exact database delta above",
+          "name": "positive"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000002",
+          "arguments": {
+            "memberId": "10000000-0000-4000-8000-000000000006",
+            "meta": {
+              "idempotencyKey": "spatial-revokeArchon-1"
+            },
+            "regionId": "10000000-0000-4000-8000-000000000020"
+          },
+          "error": "FORBIDDEN",
+          "expected": "zero business/history/audit/receipt/notification/job delta",
+          "name": "forbidden"
+        },
+        {
+          "error": "INVALID",
+          "expected": "zero delta; malformed scalar executes zero authority SQL",
+          "name": "invalid",
+          "replace": {
+            "regionId": "bad-uuid"
+          }
+        },
+        {
+          "error": "NOT_FOUND",
+          "expected": "zero delta; no supplied missing upsert ID recreated",
+          "name": "missing",
+          "replace": {
+            "regionId": "10000000-0000-4000-8000-000000000999"
+          }
+        },
+        {
+          "after": "positive commit",
+          "arguments": {
+            "memberId": "10000000-0000-4000-8000-000000000006",
+            "meta": {
+              "idempotencyKey": "spatial-revokeArchon-1"
+            },
+            "regionId": "10000000-0000-4000-8000-000000000020"
+          },
+          "expected": "same stored response/receiptId/created IDs; zero new business/history/audit/notification/job/receipt rows; authority rechecked first",
+          "name": "same-key-replay"
+        },
+        {
+          "after": "positive commit",
+          "error": "CONFLICT",
+          "expected": "same actor+operation+key; exact positive state retained; zero delta",
+          "name": "changed-input-conflict",
+          "replace": {
+            "memberId": "10000000-0000-4000-8000-000000000002"
+          }
+        },
+        {
+          "error": "INTERNAL",
+          "expected": "restore exact fixture before snapshots above, including prior FK/link/assignment/history counts; no receipt or external effects; readback equals before; retry without injection succeeds once",
+          "inject": "fail final command receipt insert after business/history/audit effects in borrowed command transaction",
+          "name": "last-write-rollback"
+        }
+      ],
+      "contracts": [
+        "spatial-admission-contract.md",
+        "mounted-spatial-write-cases.json#additional_cases"
+      ],
+      "database": {
+        "archon_assignments": {
+          "after": [],
+          "before": [
+            [
+              "10000000-0000-4000-8000-000000000006",
+              "10000000-0000-4000-8000-000000000020"
+            ]
+          ]
+        },
+        "assignment_changes": {
+          "actor": "10000000-0000-4000-8000-000000000004",
+          "at": "2026-10-14T12:00:00Z",
+          "insert": 1,
+          "new": null,
+          "old": {
+            "memberId": "10000000-0000-4000-8000-000000000006",
+            "regionId": "10000000-0000-4000-8000-000000000020"
+          }
+        }
+      },
+      "decision_complete": true,
+      "fixture": "SPATIAL-ISOLATED-GRAPH plus no overlay",
+      "history_identity": "capture each actual committed history public UUID as $historyId; compare facts to concrete before/after above, actor and frozen clock",
+      "id": "SPATIAL-WRITE-revokeArchon",
+      "operation": "Mutation.revokeArchon",
+      "owner": "S04",
+      "readback": {
+        "expected": "match exact response/persisted after-facts, locate created UUID by captured response only; preserve all contrasting rows",
+        "query": "query {\n\tarchonAssignments(regionId: \"10000000-0000-4000-8000-000000000020\") {\n\t\titems {\n\t\t\tmemberId\n\t\t\tregionId\n\t\t\tgrantedAt\n\t\t\tgrantedBy\n\t\t}\n\t\ttotal\n\t}\n}\n",
+        "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations."
+      },
+      "receipt": {
+        "actor": "10000000-0000-4000-8000-000000000004",
+        "capture": "$receiptId; committed complete domain response retained",
+        "count": 1,
+        "input_hash": "SHA256 of normalized full exact input",
+        "key": "spatial-revokeArchon-1",
+        "operation": "revokeArchon"
+      },
+      "status": "NOT IMPLEMENTED",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "unchanged": {
+        "background_jobs": 0,
+        "characters": "all ownership/progression/state rows unchanged",
+        "documents": "all document bodies/audiences/versions/tombstones unchanged, including010 and011",
+        "notifications": 0,
+        "quest_hexes": "exact fixture rows retained; Map has no Quest-owned writes"
+      },
+      "unresolved": []
+    },
+    {
+      "action": {
+        "arguments": {
+          "meta": {
+            "idempotencyKey": "spatial-deleteRegion-1"
+          },
+          "regionId": "10000000-0000-4000-8000-000000000022"
+        },
+        "response": "$receipt"
+      },
+      "actor": "10000000-0000-4000-8000-000000000006",
+      "authority": "current live active Arc006 with persisted assignment to target region; stale JWT roles do not grant assignment",
+      "cases": [
+        {
+          "arguments": {
+            "meta": {
+              "idempotencyKey": "spatial-deleteRegion-1"
+            },
+            "regionId": "10000000-0000-4000-8000-000000000022"
+          },
+          "expected": "action.response and exact database delta above",
+          "name": "positive"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000002",
+          "arguments": {
+            "meta": {
+              "idempotencyKey": "spatial-deleteRegion-1"
+            },
+            "regionId": "10000000-0000-4000-8000-000000000022"
+          },
+          "error": "FORBIDDEN",
+          "expected": "zero business/history/audit/receipt/notification/job delta",
+          "name": "forbidden"
+        },
+        {
+          "error": "INVALID",
+          "expected": "zero delta; malformed scalar executes zero authority SQL",
+          "name": "invalid",
+          "replace": {
+            "regionId": "bad-uuid"
+          }
+        },
+        {
+          "error": "NOT_FOUND",
+          "expected": "zero delta; no supplied missing upsert ID recreated",
+          "name": "missing",
+          "replace": {
+            "regionId": "10000000-0000-4000-8000-000000000999"
+          }
+        },
+        {
+          "after": "positive commit",
+          "arguments": {
+            "meta": {
+              "idempotencyKey": "spatial-deleteRegion-1"
+            },
+            "regionId": "10000000-0000-4000-8000-000000000022"
+          },
+          "expected": "same stored response/receiptId/created IDs; zero new business/history/audit/notification/job/receipt rows; authority rechecked first",
+          "name": "same-key-replay"
+        },
+        {
+          "after": "positive commit",
+          "error": "CONFLICT",
+          "expected": "same actor+operation+key; exact positive state retained; zero delta",
+          "name": "changed-input-conflict",
+          "replace": {
+            "regionId": "10000000-0000-4000-8000-000000000020"
+          }
+        },
+        {
+          "error": "INTERNAL",
+          "expected": "restore exact fixture before snapshots above, including prior FK/link/assignment/history counts; no receipt or external effects; readback equals before; retry without injection succeeds once",
+          "inject": "fail final command receipt insert after business/history/audit effects in borrowed command transaction",
+          "name": "last-write-rollback"
+        }
+      ],
+      "contracts": [
+        "spatial-admission-contract.md",
+        "mounted-spatial-write-cases.json#additional_cases"
+      ],
+      "database": {
+        "normal_read": "regions excludes022; retained region history still references022",
+        "region_changes": {
+          "actor": "10000000-0000-4000-8000-000000000006",
+          "at": "2026-10-14T12:00:00Z",
+          "insert": 1,
+          "new": "same Wild snapshot with tombstone",
+          "old": "live Wild snapshot"
+        },
+        "regions": {
+          "after": {
+            "deletedAt": "2026-10-14T12:00:00Z",
+            "deletedBy": "10000000-0000-4000-8000-000000000006"
+          },
+          "before": {
+            "deletedAt": null,
+            "deletedBy": null
+          },
+          "id": "10000000-0000-4000-8000-000000000022"
+        }
+      },
+      "decision_complete": true,
+      "fixture": "SPATIAL-ISOLATED-GRAPH plus ARC-WILD",
+      "history_identity": "capture each actual committed history public UUID as $historyId; compare facts to concrete before/after above, actor and frozen clock",
+      "id": "SPATIAL-WRITE-deleteRegion",
+      "operation": "Mutation.deleteRegion",
+      "owner": "S04",
+      "readback": {
+        "expected": "match exact response/persisted after-facts, locate created UUID by captured response only; preserve all contrasting rows",
+        "query": "query {\n\tregions(kind: \"uncharted\") {\n\t\tid\n\t\tname\n\t\tkind\n\t\tcharterDeadline\n\t\tdocumentId\n\t\tcreatedAt\n\t}\n}\n",
+        "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations."
+      },
+      "receipt": {
+        "actor": "10000000-0000-4000-8000-000000000006",
+        "capture": "$receiptId; committed complete domain response retained",
+        "count": 1,
+        "input_hash": "SHA256 of normalized full exact input",
+        "key": "spatial-deleteRegion-1",
+        "operation": "deleteRegion"
+      },
+      "status": "NOT IMPLEMENTED",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "unchanged": {
+        "background_jobs": 0,
+        "characters": "all ownership/progression/state rows unchanged",
+        "documents": "all document bodies/audiences/versions/tombstones unchanged, including010 and011",
+        "notifications": 0,
+        "quest_hexes": "exact fixture rows retained; Map has no Quest-owned writes"
+      },
+      "unresolved": []
+    },
+    {
+      "action": {
+        "arguments": {
+          "meta": {
+            "idempotencyKey": "spatial-restoreRegion-1"
+          },
+          "regionId": "10000000-0000-4000-8000-000000000022"
+        },
+        "response": {
+          "charterDeadline": null,
+          "createdAt": "2026-01-01T00:00:00Z",
+          "documentId": null,
+          "id": "10000000-0000-4000-8000-000000000022",
+          "kind": "uncharted",
+          "name": "Wild"
+        }
+      },
+      "actor": "10000000-0000-4000-8000-000000000006",
+      "authority": "current live active Arc006 with persisted assignment to target region; stale JWT roles do not grant assignment",
+      "cases": [
+        {
+          "arguments": {
+            "meta": {
+              "idempotencyKey": "spatial-restoreRegion-1"
+            },
+            "regionId": "10000000-0000-4000-8000-000000000022"
+          },
+          "expected": "action.response and exact database delta above",
+          "name": "positive"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000002",
+          "arguments": {
+            "meta": {
+              "idempotencyKey": "spatial-restoreRegion-1"
+            },
+            "regionId": "10000000-0000-4000-8000-000000000022"
+          },
+          "error": "FORBIDDEN",
+          "expected": "zero business/history/audit/receipt/notification/job delta",
+          "name": "forbidden"
+        },
+        {
+          "error": "INVALID",
+          "expected": "zero delta; malformed scalar executes zero authority SQL",
+          "name": "invalid",
+          "replace": {
+            "regionId": "bad-uuid"
+          }
+        },
+        {
+          "error": "NOT_FOUND",
+          "expected": "zero delta; no supplied missing upsert ID recreated",
+          "name": "missing",
+          "replace": {
+            "regionId": "10000000-0000-4000-8000-000000000999"
+          }
+        },
+        {
+          "after": "positive commit",
+          "arguments": {
+            "meta": {
+              "idempotencyKey": "spatial-restoreRegion-1"
+            },
+            "regionId": "10000000-0000-4000-8000-000000000022"
+          },
+          "expected": "same stored response/receiptId/created IDs; zero new business/history/audit/notification/job/receipt rows; authority rechecked first",
+          "name": "same-key-replay"
+        },
+        {
+          "after": "positive commit",
+          "error": "CONFLICT",
+          "expected": "same actor+operation+key; exact positive state retained; zero delta",
+          "name": "changed-input-conflict",
+          "replace": {
+            "regionId": "10000000-0000-4000-8000-000000000020"
+          }
+        },
+        {
+          "error": "INTERNAL",
+          "expected": "restore exact fixture before snapshots above, including prior FK/link/assignment/history counts; no receipt or external effects; readback equals before; retry without injection succeeds once",
+          "inject": "fail final command receipt insert after business/history/audit effects in borrowed command transaction",
+          "name": "last-write-rollback"
+        }
+      ],
+      "contracts": [
+        "spatial-admission-contract.md",
+        "mounted-spatial-write-cases.json#additional_cases"
+      ],
+      "database": {
+        "region_changes": {
+          "actor": "10000000-0000-4000-8000-000000000006",
+          "at": "2026-10-14T12:00:00Z",
+          "insert": 1,
+          "new": "same Wild snapshot without tombstone",
+          "old": "tombstoned Wild snapshot"
+        },
+        "regions": {
+          "after": {
+            "deletedAt": null,
+            "deletedBy": null
+          },
+          "before": {
+            "deletedAt": "2026-10-13T12:00:00Z",
+            "deletedBy": "10000000-0000-4000-8000-000000000006"
+          },
+          "id": "10000000-0000-4000-8000-000000000022"
+        }
+      },
+      "decision_complete": true,
+      "fixture": "SPATIAL-ISOLATED-GRAPH plus TOMBSTONED-WILD",
+      "history_identity": "capture each actual committed history public UUID as $historyId; compare facts to concrete before/after above, actor and frozen clock",
+      "id": "SPATIAL-WRITE-restoreRegion",
+      "operation": "Mutation.restoreRegion",
+      "owner": "S04",
+      "readback": {
+        "expected": "match exact response/persisted after-facts, locate created UUID by captured response only; preserve all contrasting rows",
+        "query": "query {\n\tregions(kind: \"uncharted\") {\n\t\tid\n\t\tname\n\t\tkind\n\t\tcharterDeadline\n\t\tdocumentId\n\t\tcreatedAt\n\t}\n}\n",
+        "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations."
+      },
+      "receipt": {
+        "actor": "10000000-0000-4000-8000-000000000006",
+        "capture": "$receiptId; committed complete domain response retained",
+        "count": 1,
+        "input_hash": "SHA256 of normalized full exact input",
+        "key": "spatial-restoreRegion-1",
+        "operation": "restoreRegion"
+      },
+      "status": "NOT IMPLEMENTED",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "unchanged": {
+        "background_jobs": 0,
+        "characters": "all ownership/progression/state rows unchanged",
+        "documents": "all document bodies/audiences/versions/tombstones unchanged, including010 and011",
+        "notifications": 0,
+        "quest_hexes": "exact fixture rows retained; Map has no Quest-owned writes"
+      },
+      "unresolved": []
+    },
+    {
+      "action": {
+        "arguments": {
+          "input": {
+            "id": null,
+            "name": "Gate",
+            "submapId": null,
+            "x": 3.5,
+            "y": 4.5
+          },
+          "mapId": "10000000-0000-4000-8000-000000000025",
+          "meta": {
+            "idempotencyKey": "spatial-upsertPointcrawlNode-1"
+          }
+        },
+        "response": {
+          "createdAt": "2026-10-14T12:00:00Z",
+          "id": "$nodeId",
+          "mapId": "10000000-0000-4000-8000-000000000025",
+          "name": "Gate",
+          "submapId": null,
+          "x": 3.5,
+          "y": 4.5
+        }
+      },
+      "actor": "10000000-0000-4000-8000-000000000006",
+      "authority": "current live active Arc006 with persisted assignment to target region; stale JWT roles do not grant assignment",
+      "cases": [
+        {
+          "arguments": {
+            "input": {
+              "id": null,
+              "name": "Gate",
+              "submapId": null,
+              "x": 3.5,
+              "y": 4.5
+            },
+            "mapId": "10000000-0000-4000-8000-000000000025",
+            "meta": {
+              "idempotencyKey": "spatial-upsertPointcrawlNode-1"
+            }
+          },
+          "expected": "action.response and exact database delta above",
+          "name": "positive"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000002",
+          "arguments": {
+            "input": {
+              "id": null,
+              "name": "Gate",
+              "submapId": null,
+              "x": 3.5,
+              "y": 4.5
+            },
+            "mapId": "10000000-0000-4000-8000-000000000025",
+            "meta": {
+              "idempotencyKey": "spatial-upsertPointcrawlNode-1"
+            }
+          },
+          "error": "FORBIDDEN",
+          "expected": "zero business/history/audit/receipt/notification/job delta",
+          "name": "forbidden"
+        },
+        {
+          "error": "INVALID",
+          "expected": "zero delta; malformed scalar executes zero authority SQL",
+          "name": "invalid",
+          "replace": {
+            "mapId": "10000000-0000-4000-8000-000000000024"
+          }
+        },
+        {
+          "error": "NOT_FOUND",
+          "expected": "zero delta; no supplied missing upsert ID recreated",
+          "name": "missing",
+          "replace": {
+            "mapId": "10000000-0000-4000-8000-000000000999"
+          }
+        },
+        {
+          "after": "positive commit",
+          "arguments": {
+            "input": {
+              "id": null,
+              "name": "Gate",
+              "submapId": null,
+              "x": 3.5,
+              "y": 4.5
+            },
+            "mapId": "10000000-0000-4000-8000-000000000025",
+            "meta": {
+              "idempotencyKey": "spatial-upsertPointcrawlNode-1"
+            }
+          },
+          "expected": "same stored response/receiptId/created IDs; zero new business/history/audit/notification/job/receipt rows; authority rechecked first",
+          "name": "same-key-replay"
+        },
+        {
+          "after": "positive commit",
+          "error": "CONFLICT",
+          "expected": "same actor+operation+key; exact positive state retained; zero delta",
+          "name": "changed-input-conflict",
+          "replace": {
+            "input.x": 4.5
+          }
+        },
+        {
+          "error": "INTERNAL",
+          "expected": "restore exact fixture before snapshots above, including prior FK/link/assignment/history counts; no receipt or external effects; readback equals before; retry without injection succeeds once",
+          "inject": "fail final command receipt insert after business/history/audit effects in borrowed command transaction",
+          "name": "last-write-rollback"
+        }
+      ],
+      "contracts": [
+        "spatial-admission-contract.md",
+        "mounted-spatial-write-cases.json#additional_cases"
+      ],
+      "database": {
+        "pointcrawl_node_changes": {
+          "actor": "10000000-0000-4000-8000-000000000006",
+          "at": "2026-10-14T12:00:00Z",
+          "insert": 1,
+          "new": "exact response",
+          "old": null
+        },
+        "pointcrawl_nodes": {
+          "after": "exact response",
+          "before": null,
+          "insert": 1
+        }
+      },
+      "decision_complete": true,
+      "fixture": "SPATIAL-ISOLATED-GRAPH plus no overlay",
+      "history_identity": "capture each actual committed history public UUID as $historyId; compare facts to concrete before/after above, actor and frozen clock",
+      "id": "SPATIAL-WRITE-upsertPointcrawlNode",
+      "operation": "Mutation.upsertPointcrawlNode",
+      "owner": "S04",
+      "readback": {
+        "expected": "match exact response/persisted after-facts, locate created UUID by captured response only; preserve all contrasting rows",
+        "query": "query {\n\tmap(atlasCode: \"SOUTH\") {\n\t\tpointcrawlNodes {\n\t\t\tid\n\t\t\tmapId\n\t\t\tx\n\t\t\ty\n\t\t\tname\n\t\t\tsubmapId\n\t\t\tcreatedAt\n\t\t}\n\t}\n}\n",
+        "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations."
+      },
+      "receipt": {
+        "actor": "10000000-0000-4000-8000-000000000006",
+        "capture": "$receiptId; committed complete domain response retained",
+        "count": 1,
+        "input_hash": "SHA256 of normalized full exact input",
+        "key": "spatial-upsertPointcrawlNode-1",
+        "operation": "upsertPointcrawlNode"
+      },
+      "status": "NOT IMPLEMENTED",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "unchanged": {
+        "background_jobs": 0,
+        "characters": "all ownership/progression/state rows unchanged",
+        "documents": "all document bodies/audiences/versions/tombstones unchanged, including010 and011",
+        "notifications": 0,
+        "quest_hexes": "exact fixture rows retained; Map has no Quest-owned writes"
+      },
+      "unresolved": []
+    },
+    {
+      "action": {
+        "arguments": {
+          "input": {
+            "directed": true,
+            "documentId": null,
+            "id": "10000000-0000-4000-8000-000000000085",
+            "kind": "path",
+            "label": "Bridge path",
+            "nodeA": "10000000-0000-4000-8000-000000000082",
+            "nodeB": "10000000-0000-4000-8000-000000000083"
+          },
+          "mapId": "10000000-0000-4000-8000-000000000025",
+          "meta": {
+            "idempotencyKey": "spatial-setPointcrawlEdge-1"
+          }
+        },
+        "response": {
+          "directed": true,
+          "documentId": null,
+          "id": "10000000-0000-4000-8000-000000000085",
+          "kind": "path",
+          "label": "Bridge path",
+          "mapId": "10000000-0000-4000-8000-000000000025",
+          "nodeA": "10000000-0000-4000-8000-000000000082",
+          "nodeB": "10000000-0000-4000-8000-000000000083"
+        }
+      },
+      "actor": "10000000-0000-4000-8000-000000000006",
+      "authority": "current live active Arc006 with persisted assignment to target region; stale JWT roles do not grant assignment",
+      "cases": [
+        {
+          "arguments": {
+            "input": {
+              "directed": true,
+              "documentId": null,
+              "id": "10000000-0000-4000-8000-000000000085",
+              "kind": "path",
+              "label": "Bridge path",
+              "nodeA": "10000000-0000-4000-8000-000000000082",
+              "nodeB": "10000000-0000-4000-8000-000000000083"
+            },
+            "mapId": "10000000-0000-4000-8000-000000000025",
+            "meta": {
+              "idempotencyKey": "spatial-setPointcrawlEdge-1"
+            }
+          },
+          "expected": "action.response and exact database delta above",
+          "name": "positive"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000002",
+          "arguments": {
+            "input": {
+              "directed": true,
+              "documentId": null,
+              "id": "10000000-0000-4000-8000-000000000085",
+              "kind": "path",
+              "label": "Bridge path",
+              "nodeA": "10000000-0000-4000-8000-000000000082",
+              "nodeB": "10000000-0000-4000-8000-000000000083"
+            },
+            "mapId": "10000000-0000-4000-8000-000000000025",
+            "meta": {
+              "idempotencyKey": "spatial-setPointcrawlEdge-1"
+            }
+          },
+          "error": "FORBIDDEN",
+          "expected": "zero business/history/audit/receipt/notification/job delta",
+          "name": "forbidden"
+        },
+        {
+          "error": "INVALID",
+          "expected": "zero delta; malformed scalar executes zero authority SQL",
+          "name": "invalid",
+          "replace": {
+            "input.nodeB": "10000000-0000-4000-8000-000000000026"
+          }
+        },
+        {
+          "error": "NOT_FOUND",
+          "expected": "zero delta; no supplied missing upsert ID recreated",
+          "name": "missing",
+          "replace": {
+            "input.id": "10000000-0000-4000-8000-000000000999"
+          }
+        },
+        {
+          "after": "positive commit",
+          "arguments": {
+            "input": {
+              "directed": true,
+              "documentId": null,
+              "id": "10000000-0000-4000-8000-000000000085",
+              "kind": "path",
+              "label": "Bridge path",
+              "nodeA": "10000000-0000-4000-8000-000000000082",
+              "nodeB": "10000000-0000-4000-8000-000000000083"
+            },
+            "mapId": "10000000-0000-4000-8000-000000000025",
+            "meta": {
+              "idempotencyKey": "spatial-setPointcrawlEdge-1"
+            }
+          },
+          "expected": "same stored response/receiptId/created IDs; zero new business/history/audit/notification/job/receipt rows; authority rechecked first",
+          "name": "same-key-replay"
+        },
+        {
+          "after": "positive commit",
+          "error": "CONFLICT",
+          "expected": "same actor+operation+key; exact positive state retained; zero delta",
+          "name": "changed-input-conflict",
+          "replace": {
+            "input.directed": false
+          }
+        },
+        {
+          "error": "INTERNAL",
+          "expected": "restore exact fixture before snapshots above, including prior FK/link/assignment/history counts; no receipt or external effects; readback equals before; retry without injection succeeds once",
+          "inject": "fail final command receipt insert after business/history/audit effects in borrowed command transaction",
+          "name": "last-write-rollback"
+        }
+      ],
+      "contracts": [
+        "spatial-admission-contract.md",
+        "mounted-spatial-write-cases.json#additional_cases"
+      ],
+      "database": {
+        "map_changes": {
+          "actor": "10000000-0000-4000-8000-000000000006",
+          "affectedPublicId": "10000000-0000-4000-8000-000000000085",
+          "at": "2026-10-14T12:00:00Z",
+          "id": "$historyId",
+          "insert": 1,
+          "new": "full exact action.response snapshot",
+          "old": "full persisted edge before snapshot from exact fixture"
+        },
+        "pointcrawl_edges": {
+          "after": "exact response",
+          "before": {
+            "directed": false,
+            "documentId": null,
+            "kind": "path",
+            "label": null,
+            "nodeA": "10000000-0000-4000-8000-000000000082",
+            "nodeB": "10000000-0000-4000-8000-000000000083"
+          },
+          "id": "10000000-0000-4000-8000-000000000085",
+          "insert": 0
+        }
+      },
+      "decision_complete": true,
+      "fixture": "SPATIAL-ISOLATED-GRAPH plus no overlay",
+      "history_identity": "capture each actual committed history public UUID as $historyId; compare facts to concrete before/after above, actor and frozen clock",
+      "id": "SPATIAL-WRITE-setPointcrawlEdge",
+      "operation": "Mutation.setPointcrawlEdge",
+      "owner": "S04",
+      "readback": {
+        "actor_annotation": "Dee003",
+        "expected": "match exact response/persisted after-facts, locate created UUID by captured response only; preserve all contrasting rows",
+        "query": "query {\n\tmap(atlasCode: \"SOUTH\") {\n\t\tpointcrawlEdges {\n\t\t\tid\n\t\t\tmapId\n\t\t\tnodeA\n\t\t\tnodeB\n\t\t\tdirected\n\t\t\tkind\n\t\t\tlabel\n\t\t\tdocumentId\n\t\t}\n\t}\n}\n",
+        "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations."
+      },
+      "receipt": {
+        "actor": "10000000-0000-4000-8000-000000000006",
+        "capture": "$receiptId; committed complete domain response retained",
+        "count": 1,
+        "input_hash": "SHA256 of normalized full exact input",
+        "key": "spatial-setPointcrawlEdge-1",
+        "operation": "setPointcrawlEdge"
+      },
+      "status": "NOT IMPLEMENTED",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "unchanged": {
+        "background_jobs": 0,
+        "characters": "all ownership/progression/state rows unchanged",
+        "documents": "all document bodies/audiences/versions/tombstones unchanged, including010 and011",
+        "notifications": 0,
+        "quest_hexes": "exact fixture rows retained; Map has no Quest-owned writes"
+      },
+      "unresolved": []
+    },
+    {
+      "action": {
+        "arguments": {
+          "documentId": "10000000-0000-4000-8000-000000000010",
+          "mapId": "10000000-0000-4000-8000-000000000025",
+          "meta": {
+            "idempotencyKey": "spatial-linkPointcrawlEntry-1"
+          },
+          "nodeId": "10000000-0000-4000-8000-000000000082",
+          "relation": "location"
+        },
+        "response": {
+          "createdAt": "2026-10-14T12:00:00Z",
+          "createdBy": "10000000-0000-4000-8000-000000000006",
+          "documentId": "10000000-0000-4000-8000-000000000010",
+          "mapId": "10000000-0000-4000-8000-000000000025",
+          "nodeId": "10000000-0000-4000-8000-000000000082",
+          "relation": "location"
+        }
+      },
+      "actor": "10000000-0000-4000-8000-000000000006",
+      "authority": "current live active Arc006 with persisted assignment to target region; stale JWT roles do not grant assignment",
+      "cases": [
+        {
+          "arguments": {
+            "documentId": "10000000-0000-4000-8000-000000000010",
+            "mapId": "10000000-0000-4000-8000-000000000025",
+            "meta": {
+              "idempotencyKey": "spatial-linkPointcrawlEntry-1"
+            },
+            "nodeId": "10000000-0000-4000-8000-000000000082",
+            "relation": "location"
+          },
+          "expected": "action.response and exact database delta above",
+          "name": "positive"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000002",
+          "arguments": {
+            "documentId": "10000000-0000-4000-8000-000000000010",
+            "mapId": "10000000-0000-4000-8000-000000000025",
+            "meta": {
+              "idempotencyKey": "spatial-linkPointcrawlEntry-1"
+            },
+            "nodeId": "10000000-0000-4000-8000-000000000082",
+            "relation": "location"
+          },
+          "error": "FORBIDDEN",
+          "expected": "zero business/history/audit/receipt/notification/job delta",
+          "name": "forbidden"
+        },
+        {
+          "error": "INVALID",
+          "expected": "zero delta; malformed scalar executes zero authority SQL",
+          "name": "invalid",
+          "replace": {
+            "relation": "other"
+          }
+        },
+        {
+          "error": "NOT_FOUND",
+          "expected": "zero delta; no supplied missing upsert ID recreated",
+          "name": "missing",
+          "replace": {
+            "nodeId": "10000000-0000-4000-8000-000000000999"
+          }
+        },
+        {
+          "after": "positive commit",
+          "arguments": {
+            "documentId": "10000000-0000-4000-8000-000000000010",
+            "mapId": "10000000-0000-4000-8000-000000000025",
+            "meta": {
+              "idempotencyKey": "spatial-linkPointcrawlEntry-1"
+            },
+            "nodeId": "10000000-0000-4000-8000-000000000082",
+            "relation": "location"
+          },
+          "expected": "same stored response/receiptId/created IDs; zero new business/history/audit/notification/job/receipt rows; authority rechecked first",
+          "name": "same-key-replay"
+        },
+        {
+          "after": "positive commit",
+          "error": "CONFLICT",
+          "expected": "same actor+operation+key; exact positive state retained; zero delta",
+          "name": "changed-input-conflict",
+          "replace": {
+            "relation": "subject"
+          }
+        },
+        {
+          "error": "INTERNAL",
+          "expected": "restore exact fixture before snapshots above, including prior FK/link/assignment/history counts; no receipt or external effects; readback equals before; retry without injection succeeds once",
+          "inject": "fail final command receipt insert after business/history/audit effects in borrowed command transaction",
+          "name": "last-write-rollback"
+        }
+      ],
+      "contracts": [
+        "spatial-admission-contract.md",
+        "mounted-spatial-write-cases.json#additional_cases"
+      ],
+      "database": {
+        "pointcrawl_entry_links": {
+          "after": [
+            [
+              "10000000-0000-4000-8000-000000000025",
+              "10000000-0000-4000-8000-000000000082",
+              "10000000-0000-4000-8000-000000000010",
+              "location",
+              "2026-10-14T12:00:00Z",
+              "10000000-0000-4000-8000-000000000006"
+            ]
+          ],
+          "before": []
+        },
+        "pointcrawl_node_changes": {
+          "actor": "10000000-0000-4000-8000-000000000006",
+          "at": "2026-10-14T12:00:00Z",
+          "insert": 1,
+          "new": "exact typed link response",
+          "old": null
+        }
+      },
+      "decision_complete": true,
+      "fixture": "SPATIAL-ISOLATED-GRAPH plus LOCATION-LINK-CREATE",
+      "history_identity": "capture each actual committed history public UUID as $historyId; compare facts to concrete before/after above, actor and frozen clock",
+      "id": "SPATIAL-WRITE-linkPointcrawlEntry",
+      "operation": "Mutation.linkPointcrawlEntry",
+      "owner": "S04",
+      "readback": {
+        "expected": "match exact response/persisted after-facts, locate created UUID by captured response only; preserve all contrasting rows",
+        "query": "query {\n\tmap(atlasCode: \"SOUTH\") {\n\t\tpointcrawlNodes {\n\t\t\tlinkedEntries {\n\t\t\t\tmapId\n\t\t\t\tnodeId\n\t\t\t\tdocumentId\n\t\t\t\trelation\n\t\t\t\tcreatedAt\n\t\t\t\tcreatedBy\n\t\t\t}\n\t\t}\n\t}\n}\n",
+        "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations."
+      },
+      "receipt": {
+        "actor": "10000000-0000-4000-8000-000000000006",
+        "capture": "$receiptId; committed complete domain response retained",
+        "count": 1,
+        "input_hash": "SHA256 of normalized full exact input",
+        "key": "spatial-linkPointcrawlEntry-1",
+        "operation": "linkPointcrawlEntry"
+      },
+      "status": "NOT IMPLEMENTED",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "unchanged": {
+        "background_jobs": 0,
+        "characters": "all ownership/progression/state rows unchanged",
+        "documents": "all document bodies/audiences/versions/tombstones unchanged, including010 and011",
+        "notifications": 0,
+        "quest_hexes": "exact fixture rows retained; Map has no Quest-owned writes"
+      },
+      "unresolved": []
+    },
+    {
+      "action": {
+        "arguments": {
+          "documentId": "10000000-0000-4000-8000-000000000010",
+          "mapId": "10000000-0000-4000-8000-000000000025",
+          "meta": {
+            "idempotencyKey": "spatial-unlinkPointcrawlEntry-1"
+          },
+          "nodeId": "10000000-0000-4000-8000-000000000082",
+          "relation": "location"
+        },
+        "response": "$receipt"
+      },
+      "actor": "10000000-0000-4000-8000-000000000006",
+      "authority": "current live active Arc006 with persisted assignment to target region; stale JWT roles do not grant assignment",
+      "cases": [
+        {
+          "arguments": {
+            "documentId": "10000000-0000-4000-8000-000000000010",
+            "mapId": "10000000-0000-4000-8000-000000000025",
+            "meta": {
+              "idempotencyKey": "spatial-unlinkPointcrawlEntry-1"
+            },
+            "nodeId": "10000000-0000-4000-8000-000000000082",
+            "relation": "location"
+          },
+          "expected": "action.response and exact database delta above",
+          "name": "positive"
+        },
+        {
+          "actor": "10000000-0000-4000-8000-000000000002",
+          "arguments": {
+            "documentId": "10000000-0000-4000-8000-000000000010",
+            "mapId": "10000000-0000-4000-8000-000000000025",
+            "meta": {
+              "idempotencyKey": "spatial-unlinkPointcrawlEntry-1"
+            },
+            "nodeId": "10000000-0000-4000-8000-000000000082",
+            "relation": "location"
+          },
+          "error": "FORBIDDEN",
+          "expected": "zero business/history/audit/receipt/notification/job delta",
+          "name": "forbidden"
+        },
+        {
+          "error": "INVALID",
+          "expected": "zero delta; malformed scalar executes zero authority SQL",
+          "name": "invalid",
+          "replace": {
+            "relation": "other"
+          }
+        },
+        {
+          "error": "NOT_FOUND",
+          "expected": "zero delta; no supplied missing upsert ID recreated",
+          "name": "missing",
+          "replace": {
+            "nodeId": "10000000-0000-4000-8000-000000000999"
+          }
+        },
+        {
+          "after": "positive commit",
+          "arguments": {
+            "documentId": "10000000-0000-4000-8000-000000000010",
+            "mapId": "10000000-0000-4000-8000-000000000025",
+            "meta": {
+              "idempotencyKey": "spatial-unlinkPointcrawlEntry-1"
+            },
+            "nodeId": "10000000-0000-4000-8000-000000000082",
+            "relation": "location"
+          },
+          "expected": "same stored response/receiptId/created IDs; zero new business/history/audit/notification/job/receipt rows; authority rechecked first",
+          "name": "same-key-replay"
+        },
+        {
+          "after": "positive commit",
+          "error": "CONFLICT",
+          "expected": "same actor+operation+key; exact positive state retained; zero delta",
+          "name": "changed-input-conflict",
+          "replace": {
+            "relation": "subject"
+          }
+        },
+        {
+          "error": "INTERNAL",
+          "expected": "restore exact fixture before snapshots above, including prior FK/link/assignment/history counts; no receipt or external effects; readback equals before; retry without injection succeeds once",
+          "inject": "fail final command receipt insert after business/history/audit effects in borrowed command transaction",
+          "name": "last-write-rollback"
+        }
+      ],
+      "contracts": [
+        "spatial-admission-contract.md",
+        "mounted-spatial-write-cases.json#additional_cases"
+      ],
+      "database": {
+        "pointcrawl_entry_links": {
+          "after": [],
+          "before": [
+            [
+              "10000000-0000-4000-8000-000000000025",
+              "10000000-0000-4000-8000-000000000082",
+              "10000000-0000-4000-8000-000000000010",
+              "location"
+            ]
+          ]
+        },
+        "pointcrawl_node_changes": {
+          "actor": "10000000-0000-4000-8000-000000000006",
+          "at": "2026-10-14T12:00:00Z",
+          "insert": 1,
+          "new": null,
+          "old": {
+            "documentId": "10000000-0000-4000-8000-000000000010",
+            "mapId": "10000000-0000-4000-8000-000000000025",
+            "nodeId": "10000000-0000-4000-8000-000000000082",
+            "relation": "location"
+          }
+        }
+      },
+      "decision_complete": true,
+      "fixture": "SPATIAL-ISOLATED-GRAPH plus LOCATION-LINK-EXISTING",
+      "history_identity": "capture each actual committed history public UUID as $historyId; compare facts to concrete before/after above, actor and frozen clock",
+      "id": "SPATIAL-WRITE-unlinkPointcrawlEntry",
+      "operation": "Mutation.unlinkPointcrawlEntry",
+      "owner": "S04",
+      "readback": {
+        "expected": "match exact response/persisted after-facts, locate created UUID by captured response only; preserve all contrasting rows",
+        "query": "query {\n\tmap(atlasCode: \"SOUTH\") {\n\t\tpointcrawlNodes {\n\t\t\tlinkedEntries {\n\t\t\t\tmapId\n\t\t\t\tnodeId\n\t\t\t\tdocumentId\n\t\t\t\trelation\n\t\t\t\tcreatedAt\n\t\t\t\tcreatedBy\n\t\t\t}\n\t\t}\n\t}\n}\n",
+        "query_compilation": "Full parsed SDL; every object selection explicit. Declared expected fields are projected from the selected response; forbidden/error cases retain their exact errors. Extra selected scalar fields are not invented expectations."
+      },
+      "receipt": {
+        "actor": "10000000-0000-4000-8000-000000000006",
+        "capture": "$receiptId; committed complete domain response retained",
+        "count": 1,
+        "input_hash": "SHA256 of normalized full exact input",
+        "key": "spatial-unlinkPointcrawlEntry-1",
+        "operation": "unlinkPointcrawlEntry"
+      },
+      "status": "NOT IMPLEMENTED",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "unchanged": {
+        "background_jobs": 0,
+        "characters": "all ownership/progression/state rows unchanged",
+        "documents": "all document bodies/audiences/versions/tombstones unchanged, including010 and011",
+        "notifications": 0,
+        "quest_hexes": "exact fixture rows retained; Map has no Quest-owned writes"
+      },
+      "unresolved": []
+    }
+  ],
+  "sources": [
+    "operation-vectors.md",
+    "operation-expectations.json",
+    "behavior.md",
+    "transport-contract.md",
+    "decisions.md",
+    "migrations.md",
+    "override-audit-contract.md",
+    "go-seams.json",
+    "sdl/commands.graphql",
+    "sdl/spatial-operations.graphql",
+    "docs/decisions/D29-Owner-And-Admin-Bypass-Identity-Predicates.md",
+    "apps/api/docs/decisions/D6-Hex-Location-Link-Canon.md"
+  ],
+  "status": "Seventeen exact effect groups with final root engineering supplement; runtime NOT IMPLEMENTED and independent review required",
+  "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+  "unresolved": {}
+}

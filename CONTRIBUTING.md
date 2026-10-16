@@ -20,7 +20,8 @@ Agents: also read [AGENTS.md](/AGENTS.md).
 **Prerequisites**
 
 - [Bun](https://bun.sh) 1.3.14 (`packageManager` in `package.json`)
-- [uv](https://docs.astral.sh/uv/) for Python tooling and API/agent packages
+- [Go](https://go.dev) 1.26+ for the API
+- [uv](https://docs.astral.sh/uv/) for Python tooling and the agent service
 
 **One-time setup**
 
@@ -28,7 +29,7 @@ Agents: also read [AGENTS.md](/AGENTS.md).
 scripts/setup
 ```
 
-Installs JavaScript workspaces and syncs the root Python dev dependency group (`ruff`, `pyright`, `pre-commit`).
+Installs JavaScript workspaces, syncs the root Python dev dependency group (`ruff`, `pyright`, `pre-commit`), and syncs all agent dependency groups.
 
 **Optional git hooks**
 
@@ -44,17 +45,17 @@ Run before pushing:
 scripts/verify
 ```
 
-Or: `bun run verify`. This runs JavaScript and Python lint, format check, typecheck, tests, and all pre-commit hooks.
+Or: `bun run verify`. This runs JavaScript and Python lint, format check, typecheck, Discord/web Vitest and agent pytest, all pre-commit hooks, and docs lint. It excludes Go and Playwright; select their checks below when applicable.
 
 ### Tooling reference
 
-| Tool     | Scope                           | Command                |
-| -------- | ------------------------------- | ---------------------- |
-| ESLint   | TypeScript / JavaScript         | `bun run lint:js`      |
-| Prettier | Formatted text in repo          | `bun run format:check` |
-| Ruff     | Python                          | `bun run lint:py`      |
-| Pyright  | Python types                    | `bun run typecheck:py` |
-| Vitest   | `@pi/discord` (more apps later) | `bun run test`         |
+| Tool     | Scope                            | Command                |
+| -------- | -------------------------------- | ---------------------- |
+| ESLint   | TypeScript / JavaScript          | `bun run lint:js`      |
+| Prettier | Formatted text in repo           | `bun run format:check` |
+| Ruff     | Python                           | `bun run lint:py`      |
+| Pyright  | Python types                     | `bun run typecheck:py` |
+| Tests    | Discord/web Vitest, agent pytest | `bun run test`         |
 
 Format fix: `bun run format`. Full lint: `bun run lint`. Full typecheck: `bun run typecheck`.
 
@@ -68,6 +69,31 @@ bun run check-schema
 ```
 
 Commit updated `packages/contracts/schema.graphql` when the API contract changes.
+
+## Triton workflow adapter
+
+**Pattern: Adapter.** Shared orchestration policy remains at `~/.codex/workflows/triton-workflow/SKILL.md`; this section owns Chronicler's setup, command selection, and evidence boundaries. This converges on one shared policy and one repository reference. Repository architecture and the rules in [AGENTS.md](/AGENTS.md) remain authoritative.
+
+Use [Development setup](/CONTRIBUTING.md#development-setup) and [README.md](/README.md#develop). Before assigning execution, give one environment owner responsibility for checking the actual worker/gate PATH (`bun`, `bunx`, `uv`, Python and Go), dependencies, writable caches/output space, and any required loopback, proxy, Docker or browser access. Missing prerequisites are readiness failures; do not change model, execution controls, permissions or unrelated configuration to route around them.
+
+Select acceptance by changed scope; commands run from the repository root unless stated otherwise:
+
+- **Repository documentation/tooling, including this file and `AGENTS.md`:** `scripts/verify-repo` and `python3 scripts/docs-lint.py`. For a focused adapter check, also use `bun node_modules/prettier/bin/prettier.cjs --check AGENTS.md CONTRIBUTING.md` and `git diff --check -- AGENTS.md CONTRIBUTING.md`. Focused checks do not replace the repository gate.
+- **Covered application changes:** `scripts/verify`. Go and browser behavior require separate lanes.
+- **Go/API:** from `apps/api`, run `go test -count=1 ./...` and `go vet ./...`.
+- **Schema/code generation:** from `apps/api`, run `env -u DATABASE_URL bash scripts/verify-loop.sh`; follow [API CI](/.github/workflows/api.yml) for additional gqlgen drift checks. This command regenerates outputs and executes selected integration packages via disposable PostgreSQL, so it requires Docker even for schema work.
+- **Database/persistence:** from `apps/api`, run `env -u DATABASE_URL go test -tags=integration -count=1 ./...`. Tests own disposable testcontainers; do not supply a shared database override. This includes `cmd/api` and `cmd/seedqa`, which the verify-loop tagged package list omits.
+- **Web browser behavior:** run `bun run --filter @pi/web lint` and `env CI=1 bun run --filter @pi/web test:e2e`. Check port 4173 ownership first; stop on occupancy without killing or adopting an existing server. `CI=1` disables Playwright server reuse. These Chromium journeys use a mock API; they do not prove full-stack or live-provider behavior.
+
+Use existing app tests and CI as acceptance journeys, selected for the actual change. Distinguish environment failures, unit/fixture evidence, database behavior and live-provider behavior. Dated successful receipts do not establish current readiness.
+
+Apply the canonical skill's ownership and review contracts. Record existing writers, dirty files and exclusions in each run's briefs. `scripts/verify` includes hooks that can rewrite files: run fixing all-files gates in an isolated checkout when the source checkout contains unrelated work. Use the recorded revision plus only the agreed patch; do not copy another checkout's virtual environment or secrets. Preserve effective global/project guidance, configuration/trust, model and execution controls, and record parity before treating an isolated run as qualification.
+
+Keep the canonical skill's per-run evidence under ignored `.local/workflow-runs/`, outside the shared skill, using its `scripts/session.py` helper where applicable. Each session state must identify the checkout where its commands execute. For disposable checkouts, keep primary evidence in the persistent source run directory, outside resources scheduled for deletion; verify retained reports/logs before cleanup. `/tmp` alone is insufficient, and local persistence is not a remote backup. Keep run state out of living documentation and retain one canonical endpoint-review memory.
+
+For fresh-session qualification, follow the canonical skill's activation and acceptance requirements using the repository lanes above. Inspect owned processes after timeouts before retrying or cleaning up; a timeout receipt does not prove child termination. Keep evidence outside any checkout scheduled for cleanup.
+
+Workflow adoption does not authorize production deployment, merge, remote publication, destructive database reset, product architecture/transport changes, memory enablement or generated-memory rewrites. Production releases remain [Actions-only](/docs/interfaces/actions-releases.md). Mercury, existing sessions and unrelated repairs remain excluded. A necessary configuration change requires demonstrated runtime evidence, a scoped authorized edit and rollback that preserves intervening unrelated changes; preserve the original bytes/hash and validate the rollback under fresh effective controls.
 
 ## Documentation ownership model
 

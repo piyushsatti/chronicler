@@ -32,3 +32,8 @@ SELECT * FROM background_jobs WHERE kind='agent_question' AND state IN ('queued'
 
 -- name: ProjectQuestionResult :execrows
 UPDATE agent_questions SET result=$2,updated_at=clock_timestamp() WHERE job_id=$1;
+
+-- name: EnqueueScheduledJob :execrows
+INSERT INTO background_jobs (job_key,kind,lane,state,payload,next_run_at)
+VALUES ($1,$2,$3,'queued',$4,clock_timestamp())
+ON CONFLICT(job_key) DO NOTHING;

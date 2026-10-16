@@ -53,3 +53,5 @@ Web and Discord send identity credentials. Web may cache a validated member resp
 ## Reopen
 
 Authority is allowed to be carried in the token, or a second gate system is introduced without retiring the first.
+
+The planned product cutover replaces GET /v1/members/me with Query.memberMe under the [GraphQL transport contract](/docs/interfaces/graphql-product-transport.md). Existing HTTP behavior above remains an as-built boundary until the scheduled route removal. Same-request authority/cache invalidation is specified in the [API contract](/apps/api/docs/graphql-contract.md), not inferred from old HTTP test success.

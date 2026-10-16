@@ -1,0 +1,1584 @@
+{
+  "cases": [
+    {
+      "id": "NESTED-ARGS-AdminOperationsV2Type-activeAlerts",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "root": "adminOperations",
+      "root_variables": {},
+      "actor": "004",
+      "field": "AdminOperationsV2Type.activeAlerts",
+      "selector": "key",
+      "delta": {
+        "condition_rows": [
+          {
+            "key": "A_ACTIVE",
+            "state": "active",
+            "observedAt": "2026-10-14T11:00:00Z"
+          },
+          {
+            "key": "B_ACTIVE",
+            "state": "active",
+            "observedAt": "2026-10-14T10:00:00Z"
+          },
+          {
+            "key": "C_RESOLVED",
+            "state": "resolved",
+            "observedAt": "2026-10-14T09:00:00Z"
+          }
+        ]
+      },
+      "fixture_isolation": "Reset only this named parent child collection, then insert the authored delta atop the core populated fixture; do not run other scenarios in this transaction. Other parent collections remain populated and unchanged.",
+      "aliases": [
+        {
+          "alias": "first",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["A_ACTIVE"]
+        },
+        {
+          "alias": "second",
+          "arguments": {
+            "limit": 1,
+            "offset": 1
+          },
+          "expected": ["B_ACTIVE"]
+        },
+        {
+          "alias": "duplicate",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["A_ACTIVE"]
+        },
+        {
+          "alias": "all",
+          "arguments": {
+            "limit": 100,
+            "offset": 0
+          },
+          "expected": ["A_ACTIVE", "B_ACTIVE"]
+        },
+        {
+          "alias": "past",
+          "arguments": {
+            "limit": 1,
+            "offset": 2
+          },
+          "expected": []
+        }
+      ],
+      "argument_ids": [
+        "ARG-AdminOperationsV2Type-activeAlerts-limit",
+        "ARG-AdminOperationsV2Type-activeAlerts-offset"
+      ],
+      "invalid": [
+        {
+          "arguments": {
+            "limit": 0
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "limit": 101
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "offset": -1
+          },
+          "code": "INVALID"
+        }
+      ],
+      "effects": "No inserted/updated/deleted business/history/receipt/notification/job rows. Alias duplicate correlates to the same row, different paging aliases retain their own results.",
+      "status": "Exact contrast/paging cases; deeper scalar projection coverage is tracked separately."
+    },
+    {
+      "id": "NESTED-ARGS-CodexEntryCardType-subjects",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "root": "codexEntry",
+      "root_variables": {
+        "slug": "lore-river"
+      },
+      "actor": "001",
+      "field": "CodexEntryCardType.subjects",
+      "selector": "targetId",
+      "delta": {
+        "links": [
+          {
+            "sourceId": "10000000-0000-4000-8000-000000000010",
+            "targetType": "region",
+            "targetId": "10000000-0000-4000-8000-000000000020",
+            "relation": "subject"
+          },
+          {
+            "sourceId": "10000000-0000-4000-8000-000000000010",
+            "targetType": "region",
+            "targetId": "10000000-0000-4000-8000-000000000021",
+            "relation": "subject"
+          }
+        ]
+      },
+      "fixture_isolation": "Reset only this named parent child collection, then insert the authored delta atop the core populated fixture; do not run other scenarios in this transaction. Other parent collections remain populated and unchanged.",
+      "aliases": [
+        {
+          "alias": "first",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["10000000-0000-4000-8000-000000000020"]
+        },
+        {
+          "alias": "second",
+          "arguments": {
+            "limit": 1,
+            "offset": 1
+          },
+          "expected": ["10000000-0000-4000-8000-000000000021"]
+        },
+        {
+          "alias": "duplicate",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["10000000-0000-4000-8000-000000000020"]
+        },
+        {
+          "alias": "all",
+          "arguments": {
+            "limit": 100,
+            "offset": 0
+          },
+          "expected": [
+            "10000000-0000-4000-8000-000000000020",
+            "10000000-0000-4000-8000-000000000021"
+          ]
+        },
+        {
+          "alias": "past",
+          "arguments": {
+            "limit": 1,
+            "offset": 2
+          },
+          "expected": []
+        }
+      ],
+      "argument_ids": [
+        "ARG-CodexEntryCardType-subjects-limit",
+        "ARG-CodexEntryCardType-subjects-offset"
+      ],
+      "invalid": [
+        {
+          "arguments": {
+            "limit": 0
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "limit": 101
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "offset": -1
+          },
+          "code": "INVALID"
+        }
+      ],
+      "effects": "No inserted/updated/deleted business/history/receipt/notification/job rows. Alias duplicate correlates to the same row, different paging aliases retain their own results.",
+      "status": "Exact contrast/paging cases; deeper scalar projection coverage is tracked separately."
+    },
+    {
+      "id": "NESTED-ARGS-HexV2Type-linkedEntries",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "root": "hex",
+      "root_variables": {
+        "mapId": "10000000-0000-4000-8000-000000000024",
+        "col": 0,
+        "row": 0
+      },
+      "actor": "003",
+      "field": "HexV2Type.linkedEntries",
+      "selector": "documentId",
+      "delta": {
+        "links": [
+          {
+            "hexId": "10000000-0000-4000-8000-000000000026",
+            "documentId": "10000000-0000-4000-8000-000000000010",
+            "relation": "location"
+          },
+          {
+            "hexId": "10000000-0000-4000-8000-000000000026",
+            "documentId": "10000000-0000-4000-8000-000000000011",
+            "relation": "subject"
+          }
+        ]
+      },
+      "fixture_isolation": "Reset only this named parent child collection, then insert the authored delta atop the core populated fixture; do not run other scenarios in this transaction. Other parent collections remain populated and unchanged.",
+      "aliases": [
+        {
+          "alias": "first",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["10000000-0000-4000-8000-000000000010"]
+        },
+        {
+          "alias": "second",
+          "arguments": {
+            "limit": 1,
+            "offset": 1
+          },
+          "expected": ["10000000-0000-4000-8000-000000000011"]
+        },
+        {
+          "alias": "duplicate",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["10000000-0000-4000-8000-000000000010"]
+        },
+        {
+          "alias": "all",
+          "arguments": {
+            "limit": 100,
+            "offset": 0
+          },
+          "expected": [
+            "10000000-0000-4000-8000-000000000010",
+            "10000000-0000-4000-8000-000000000011"
+          ]
+        },
+        {
+          "alias": "past",
+          "arguments": {
+            "limit": 1,
+            "offset": 2
+          },
+          "expected": []
+        }
+      ],
+      "argument_ids": [
+        "ARG-HexV2Type-linkedEntries-limit",
+        "ARG-HexV2Type-linkedEntries-offset"
+      ],
+      "invalid": [
+        {
+          "arguments": {
+            "limit": 0
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "limit": 101
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "offset": -1
+          },
+          "code": "INVALID"
+        }
+      ],
+      "effects": "No inserted/updated/deleted business/history/receipt/notification/job rows. Alias duplicate correlates to the same row, different paging aliases retain their own results.",
+      "status": "Exact contrast/paging cases; deeper scalar projection coverage is tracked separately."
+    },
+    {
+      "id": "NESTED-ARGS-MapV2Type-edges",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "root": "map",
+      "root_variables": {
+        "atlasCode": "NORTH"
+      },
+      "actor": "001",
+      "field": "MapV2Type.edges",
+      "selector": "id",
+      "delta": {
+        "edges": [
+          {
+            "id": "10000000-0000-4000-8000-000000000029",
+            "hexA": "10000000-0000-4000-8000-000000000026",
+            "hexB": "10000000-0000-4000-8000-000000000027",
+            "edgeType": "trail"
+          },
+          {
+            "id": "10000000-0000-4000-8000-000000000189",
+            "hexA": "10000000-0000-4000-8000-000000000027",
+            "hexB": "10000000-0000-4000-8000-000000000028",
+            "edgeType": "road"
+          }
+        ]
+      },
+      "fixture_isolation": "Reset only this named parent child collection, then insert the authored delta atop the core populated fixture; do not run other scenarios in this transaction. Other parent collections remain populated and unchanged.",
+      "aliases": [
+        {
+          "alias": "first",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["10000000-0000-4000-8000-000000000029"]
+        },
+        {
+          "alias": "second",
+          "arguments": {
+            "limit": 1,
+            "offset": 1
+          },
+          "expected": ["10000000-0000-4000-8000-000000000189"]
+        },
+        {
+          "alias": "duplicate",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["10000000-0000-4000-8000-000000000029"]
+        },
+        {
+          "alias": "all",
+          "arguments": {
+            "limit": 250,
+            "offset": 0
+          },
+          "expected": [
+            "10000000-0000-4000-8000-000000000029",
+            "10000000-0000-4000-8000-000000000189"
+          ]
+        },
+        {
+          "alias": "past",
+          "arguments": {
+            "limit": 1,
+            "offset": 2
+          },
+          "expected": []
+        }
+      ],
+      "argument_ids": ["ARG-MapV2Type-edges-limit", "ARG-MapV2Type-edges-offset"],
+      "invalid": [
+        {
+          "arguments": {
+            "limit": 0
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "limit": 251
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "offset": -1
+          },
+          "code": "INVALID"
+        }
+      ],
+      "effects": "No inserted/updated/deleted business/history/receipt/notification/job rows. Alias duplicate correlates to the same row, different paging aliases retain their own results.",
+      "status": "Exact contrast/paging cases; deeper scalar projection coverage is tracked separately."
+    },
+    {
+      "id": "NESTED-ARGS-MapV2Type-hexes",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "root": "map",
+      "root_variables": {
+        "atlasCode": "NORTH"
+      },
+      "actor": "001",
+      "field": "MapV2Type.hexes",
+      "selector": "id",
+      "delta": {
+        "hexes": [
+          {
+            "id": "10000000-0000-4000-8000-000000000026",
+            "col": 0,
+            "row": 0
+          },
+          {
+            "id": "10000000-0000-4000-8000-000000000027",
+            "col": 1,
+            "row": 0
+          },
+          {
+            "id": "10000000-0000-4000-8000-000000000028",
+            "col": 0,
+            "row": 1
+          }
+        ]
+      },
+      "fixture_isolation": "Reset only this named parent child collection, then insert the authored delta atop the core populated fixture; do not run other scenarios in this transaction. Other parent collections remain populated and unchanged.",
+      "aliases": [
+        {
+          "alias": "first",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["10000000-0000-4000-8000-000000000026"]
+        },
+        {
+          "alias": "second",
+          "arguments": {
+            "limit": 1,
+            "offset": 1
+          },
+          "expected": ["10000000-0000-4000-8000-000000000027"]
+        },
+        {
+          "alias": "duplicate",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["10000000-0000-4000-8000-000000000026"]
+        },
+        {
+          "alias": "all",
+          "arguments": {
+            "limit": 250,
+            "offset": 0
+          },
+          "expected": [
+            "10000000-0000-4000-8000-000000000026",
+            "10000000-0000-4000-8000-000000000027",
+            "10000000-0000-4000-8000-000000000028"
+          ]
+        },
+        {
+          "alias": "past",
+          "arguments": {
+            "limit": 1,
+            "offset": 3
+          },
+          "expected": []
+        }
+      ],
+      "argument_ids": ["ARG-MapV2Type-hexes-limit", "ARG-MapV2Type-hexes-offset"],
+      "invalid": [
+        {
+          "arguments": {
+            "limit": 0
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "limit": 251
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "offset": -1
+          },
+          "code": "INVALID"
+        }
+      ],
+      "effects": "No inserted/updated/deleted business/history/receipt/notification/job rows. Alias duplicate correlates to the same row, different paging aliases retain their own results.",
+      "status": "Exact contrast/paging cases; deeper scalar projection coverage is tracked separately."
+    },
+    {
+      "id": "NESTED-ARGS-MapV2Type-pointcrawlEdges",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "root": "map",
+      "root_variables": {
+        "atlasCode": "SOUTH"
+      },
+      "actor": "003",
+      "field": "MapV2Type.pointcrawlEdges",
+      "selector": "id",
+      "delta": {
+        "edges": [
+          {
+            "id": "10000000-0000-4000-8000-000000000085",
+            "nodeA": "10000000-0000-4000-8000-000000000082",
+            "nodeB": "10000000-0000-4000-8000-000000000083"
+          },
+          {
+            "id": "10000000-0000-4000-8000-000000000186",
+            "nodeA": "10000000-0000-4000-8000-000000000083",
+            "nodeB": "10000000-0000-4000-8000-000000000184"
+          }
+        ],
+        "extra_node": {
+          "id": "10000000-0000-4000-8000-000000000184",
+          "mapId": "10000000-0000-4000-8000-000000000025",
+          "name": "West gate",
+          "x": 4.0,
+          "y": 3.0
+        }
+      },
+      "fixture_isolation": "Reset only this named parent child collection, then insert the authored delta atop the core populated fixture; do not run other scenarios in this transaction. Other parent collections remain populated and unchanged.",
+      "aliases": [
+        {
+          "alias": "first",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["10000000-0000-4000-8000-000000000085"]
+        },
+        {
+          "alias": "second",
+          "arguments": {
+            "limit": 1,
+            "offset": 1
+          },
+          "expected": ["10000000-0000-4000-8000-000000000186"]
+        },
+        {
+          "alias": "duplicate",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["10000000-0000-4000-8000-000000000085"]
+        },
+        {
+          "alias": "all",
+          "arguments": {
+            "limit": 250,
+            "offset": 0
+          },
+          "expected": [
+            "10000000-0000-4000-8000-000000000085",
+            "10000000-0000-4000-8000-000000000186"
+          ]
+        },
+        {
+          "alias": "past",
+          "arguments": {
+            "limit": 1,
+            "offset": 2
+          },
+          "expected": []
+        }
+      ],
+      "argument_ids": [
+        "ARG-MapV2Type-pointcrawlEdges-limit",
+        "ARG-MapV2Type-pointcrawlEdges-offset"
+      ],
+      "invalid": [
+        {
+          "arguments": {
+            "limit": 0
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "limit": 251
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "offset": -1
+          },
+          "code": "INVALID"
+        }
+      ],
+      "effects": "No inserted/updated/deleted business/history/receipt/notification/job rows. Alias duplicate correlates to the same row, different paging aliases retain their own results.",
+      "status": "Exact contrast/paging cases; deeper scalar projection coverage is tracked separately."
+    },
+    {
+      "id": "NESTED-ARGS-MapV2Type-pointcrawlNodes",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "root": "map",
+      "root_variables": {
+        "atlasCode": "SOUTH"
+      },
+      "actor": "003",
+      "field": "MapV2Type.pointcrawlNodes",
+      "selector": "id",
+      "delta": {
+        "nodes": [
+          {
+            "id": "10000000-0000-4000-8000-000000000082",
+            "name": "Bridge",
+            "x": 1.25,
+            "y": 2.5
+          },
+          {
+            "id": "10000000-0000-4000-8000-000000000083",
+            "name": "Tower",
+            "x": 3.0,
+            "y": 2.0
+          }
+        ]
+      },
+      "fixture_isolation": "Reset only this named parent child collection, then insert the authored delta atop the core populated fixture; do not run other scenarios in this transaction. Other parent collections remain populated and unchanged.",
+      "aliases": [
+        {
+          "alias": "first",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["10000000-0000-4000-8000-000000000082"]
+        },
+        {
+          "alias": "second",
+          "arguments": {
+            "limit": 1,
+            "offset": 1
+          },
+          "expected": ["10000000-0000-4000-8000-000000000083"]
+        },
+        {
+          "alias": "duplicate",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["10000000-0000-4000-8000-000000000082"]
+        },
+        {
+          "alias": "all",
+          "arguments": {
+            "limit": 250,
+            "offset": 0
+          },
+          "expected": [
+            "10000000-0000-4000-8000-000000000082",
+            "10000000-0000-4000-8000-000000000083"
+          ]
+        },
+        {
+          "alias": "past",
+          "arguments": {
+            "limit": 1,
+            "offset": 2
+          },
+          "expected": []
+        }
+      ],
+      "argument_ids": [
+        "ARG-MapV2Type-pointcrawlNodes-limit",
+        "ARG-MapV2Type-pointcrawlNodes-offset"
+      ],
+      "invalid": [
+        {
+          "arguments": {
+            "limit": 0
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "limit": 251
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "offset": -1
+          },
+          "code": "INVALID"
+        }
+      ],
+      "effects": "No inserted/updated/deleted business/history/receipt/notification/job rows. Alias duplicate correlates to the same row, different paging aliases retain their own results.",
+      "status": "Exact contrast/paging cases; deeper scalar projection coverage is tracked separately."
+    },
+    {
+      "id": "NESTED-ARGS-MemberActivityStatsType-recentSessions",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "root": "memberActivityStats",
+      "root_variables": {
+        "memberId": "10000000-0000-4000-8000-000000000001"
+      },
+      "actor": "001",
+      "field": "MemberActivityStatsType.recentSessions",
+      "selector": "occurredAt",
+      "delta": {
+        "events": [
+          {
+            "memberId": "10000000-0000-4000-8000-000000000001",
+            "kind": "message",
+            "channelId": "100000000000000200",
+            "occurredAt": "2026-10-14T11:00:00Z",
+            "amount": 3
+          },
+          {
+            "memberId": "10000000-0000-4000-8000-000000000001",
+            "kind": "reaction",
+            "channelId": "100000000000000201",
+            "occurredAt": "2026-10-13T11:00:00Z",
+            "amount": 2
+          }
+        ]
+      },
+      "fixture_isolation": "Reset only this named parent child collection, then insert the authored delta atop the core populated fixture; do not run other scenarios in this transaction. Other parent collections remain populated and unchanged.",
+      "aliases": [
+        {
+          "alias": "first",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["2026-10-14T11:00:00Z"]
+        },
+        {
+          "alias": "second",
+          "arguments": {
+            "limit": 1,
+            "offset": 1
+          },
+          "expected": ["2026-10-13T11:00:00Z"]
+        },
+        {
+          "alias": "duplicate",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["2026-10-14T11:00:00Z"]
+        },
+        {
+          "alias": "all",
+          "arguments": {
+            "limit": 100,
+            "offset": 0
+          },
+          "expected": ["2026-10-14T11:00:00Z", "2026-10-13T11:00:00Z"]
+        },
+        {
+          "alias": "past",
+          "arguments": {
+            "limit": 1,
+            "offset": 2
+          },
+          "expected": []
+        }
+      ],
+      "argument_ids": [
+        "ARG-MemberActivityStatsType-recentSessions-limit",
+        "ARG-MemberActivityStatsType-recentSessions-offset"
+      ],
+      "invalid": [
+        {
+          "arguments": {
+            "limit": 0
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "limit": 101
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "offset": -1
+          },
+          "code": "INVALID"
+        }
+      ],
+      "effects": "No inserted/updated/deleted business/history/receipt/notification/job rows. Alias duplicate correlates to the same row, different paging aliases retain their own results.",
+      "status": "Exact contrast/paging cases; deeper scalar projection coverage is tracked separately."
+    },
+    {
+      "id": "NESTED-ARGS-MemberActivityStatsType-voiceByChannel",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "root": "memberActivityStats",
+      "root_variables": {
+        "memberId": "10000000-0000-4000-8000-000000000001"
+      },
+      "actor": "001",
+      "field": "MemberActivityStatsType.voiceByChannel",
+      "selector": "channelId",
+      "delta": {
+        "voice_durations": [
+          {
+            "memberId": "10000000-0000-4000-8000-000000000001",
+            "channelId": "100000000000000200",
+            "minutes": 120
+          },
+          {
+            "memberId": "10000000-0000-4000-8000-000000000001",
+            "channelId": "100000000000000201",
+            "minutes": 30
+          }
+        ]
+      },
+      "fixture_isolation": "Reset only this named parent child collection, then insert the authored delta atop the core populated fixture; do not run other scenarios in this transaction. Other parent collections remain populated and unchanged.",
+      "aliases": [
+        {
+          "alias": "first",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["100000000000000200"]
+        },
+        {
+          "alias": "second",
+          "arguments": {
+            "limit": 1,
+            "offset": 1
+          },
+          "expected": ["100000000000000201"]
+        },
+        {
+          "alias": "duplicate",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["100000000000000200"]
+        },
+        {
+          "alias": "all",
+          "arguments": {
+            "limit": 100,
+            "offset": 0
+          },
+          "expected": ["100000000000000200", "100000000000000201"]
+        },
+        {
+          "alias": "past",
+          "arguments": {
+            "limit": 1,
+            "offset": 2
+          },
+          "expected": []
+        }
+      ],
+      "argument_ids": [
+        "ARG-MemberActivityStatsType-voiceByChannel-limit",
+        "ARG-MemberActivityStatsType-voiceByChannel-offset"
+      ],
+      "invalid": [
+        {
+          "arguments": {
+            "limit": 0
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "limit": 101
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "offset": -1
+          },
+          "code": "INVALID"
+        }
+      ],
+      "effects": "No inserted/updated/deleted business/history/receipt/notification/job rows. Alias duplicate correlates to the same row, different paging aliases retain their own results.",
+      "status": "Exact contrast/paging cases; deeper scalar projection coverage is tracked separately."
+    },
+    {
+      "id": "NESTED-ARGS-MemberProfileType-recentWeeks",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "root": "memberProfile",
+      "root_variables": {
+        "handle": "ava"
+      },
+      "actor": "001",
+      "field": "MemberProfileType.recentWeeks",
+      "selector": "periodStart",
+      "delta": {
+        "events": [
+          {
+            "memberId": "10000000-0000-4000-8000-000000000001",
+            "kind": "message",
+            "channelId": "100000000000000200",
+            "occurredAt": "2026-10-14T11:00:00Z",
+            "amount": 3
+          },
+          {
+            "memberId": "10000000-0000-4000-8000-000000000001",
+            "kind": "message",
+            "channelId": "100000000000000200",
+            "occurredAt": "2026-10-06T11:00:00Z",
+            "amount": 1
+          }
+        ]
+      },
+      "fixture_isolation": "Reset only this named parent child collection, then insert the authored delta atop the core populated fixture; do not run other scenarios in this transaction. Other parent collections remain populated and unchanged.",
+      "aliases": [
+        {
+          "alias": "first",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["2026-10-12"]
+        },
+        {
+          "alias": "second",
+          "arguments": {
+            "limit": 1,
+            "offset": 1
+          },
+          "expected": ["2026-10-05"]
+        },
+        {
+          "alias": "duplicate",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["2026-10-12"]
+        },
+        {
+          "alias": "all",
+          "arguments": {
+            "limit": 12,
+            "offset": 0
+          },
+          "expected": ["2026-10-12", "2026-10-05"]
+        },
+        {
+          "alias": "past",
+          "arguments": {
+            "limit": 1,
+            "offset": 2
+          },
+          "expected": []
+        }
+      ],
+      "argument_ids": [
+        "ARG-MemberProfileType-recentWeeks-limit",
+        "ARG-MemberProfileType-recentWeeks-offset"
+      ],
+      "invalid": [
+        {
+          "arguments": {
+            "limit": 0
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "limit": 13
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "offset": -1
+          },
+          "code": "INVALID"
+        }
+      ],
+      "effects": "No inserted/updated/deleted business/history/receipt/notification/job rows. Alias duplicate correlates to the same row, different paging aliases retain their own results.",
+      "status": "Exact contrast/paging cases; deeper scalar projection coverage is tracked separately."
+    },
+    {
+      "id": "NESTED-ARGS-PointcrawlNodeV2Type-linkedEntries",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "root": "map",
+      "root_variables": {
+        "atlasCode": "SOUTH"
+      },
+      "actor": "003",
+      "field": "PointcrawlNodeV2Type.linkedEntries",
+      "selector": "documentId",
+      "delta": {
+        "links": [
+          {
+            "mapId": "10000000-0000-4000-8000-000000000025",
+            "nodeId": "10000000-0000-4000-8000-000000000082",
+            "documentId": "10000000-0000-4000-8000-000000000010",
+            "relation": "location"
+          },
+          {
+            "mapId": "10000000-0000-4000-8000-000000000025",
+            "nodeId": "10000000-0000-4000-8000-000000000082",
+            "documentId": "10000000-0000-4000-8000-000000000011",
+            "relation": "subject"
+          }
+        ]
+      },
+      "fixture_isolation": "Reset only this named parent child collection, then insert the authored delta atop the core populated fixture; do not run other scenarios in this transaction. Other parent collections remain populated and unchanged.",
+      "aliases": [
+        {
+          "alias": "first",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["10000000-0000-4000-8000-000000000010"]
+        },
+        {
+          "alias": "second",
+          "arguments": {
+            "limit": 1,
+            "offset": 1
+          },
+          "expected": ["10000000-0000-4000-8000-000000000011"]
+        },
+        {
+          "alias": "duplicate",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["10000000-0000-4000-8000-000000000010"]
+        },
+        {
+          "alias": "all",
+          "arguments": {
+            "limit": 100,
+            "offset": 0
+          },
+          "expected": [
+            "10000000-0000-4000-8000-000000000010",
+            "10000000-0000-4000-8000-000000000011"
+          ]
+        },
+        {
+          "alias": "past",
+          "arguments": {
+            "limit": 1,
+            "offset": 2
+          },
+          "expected": []
+        }
+      ],
+      "argument_ids": [
+        "ARG-PointcrawlNodeV2Type-linkedEntries-limit",
+        "ARG-PointcrawlNodeV2Type-linkedEntries-offset"
+      ],
+      "invalid": [
+        {
+          "arguments": {
+            "limit": 0
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "limit": 101
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "offset": -1
+          },
+          "code": "INVALID"
+        }
+      ],
+      "effects": "No inserted/updated/deleted business/history/receipt/notification/job rows. Alias duplicate correlates to the same row, different paging aliases retain their own results.",
+      "status": "Exact contrast/paging cases; deeper scalar projection coverage is tracked separately."
+    },
+    {
+      "id": "NESTED-ARGS-QuestArcV2Type-quests",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "root": "questArc",
+      "root_variables": {
+        "id": "10000000-0000-4000-8000-000000000060"
+      },
+      "actor": "001",
+      "field": "QuestArcV2Type.quests",
+      "selector": "id",
+      "delta": {
+        "quests": [
+          {
+            "id": "10000000-0000-4000-8000-000000000050",
+            "arcId": "10000000-0000-4000-8000-000000000060",
+            "scheduledAt": "2026-10-15T18:00:00Z"
+          },
+          {
+            "id": "10000000-0000-4000-8000-000000000051",
+            "arcId": "10000000-0000-4000-8000-000000000060",
+            "scheduledAt": "2026-10-16T18:00:00Z"
+          }
+        ]
+      },
+      "fixture_isolation": "Reset only this named parent child collection, then insert the authored delta atop the core populated fixture; do not run other scenarios in this transaction. Other parent collections remain populated and unchanged.",
+      "aliases": [
+        {
+          "alias": "first",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["10000000-0000-4000-8000-000000000050"]
+        },
+        {
+          "alias": "second",
+          "arguments": {
+            "limit": 1,
+            "offset": 1
+          },
+          "expected": ["10000000-0000-4000-8000-000000000051"]
+        },
+        {
+          "alias": "duplicate",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["10000000-0000-4000-8000-000000000050"]
+        },
+        {
+          "alias": "all",
+          "arguments": {
+            "limit": 100,
+            "offset": 0
+          },
+          "expected": [
+            "10000000-0000-4000-8000-000000000050",
+            "10000000-0000-4000-8000-000000000051"
+          ]
+        },
+        {
+          "alias": "past",
+          "arguments": {
+            "limit": 1,
+            "offset": 2
+          },
+          "expected": []
+        }
+      ],
+      "argument_ids": [
+        "ARG-QuestArcV2Type-quests-limit",
+        "ARG-QuestArcV2Type-quests-offset"
+      ],
+      "invalid": [
+        {
+          "arguments": {
+            "limit": 0
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "limit": 101
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "offset": -1
+          },
+          "code": "INVALID"
+        }
+      ],
+      "effects": "No inserted/updated/deleted business/history/receipt/notification/job rows. Alias duplicate correlates to the same row, different paging aliases retain their own results.",
+      "status": "Exact contrast/paging cases; deeper scalar projection coverage is tracked separately."
+    },
+    {
+      "id": "NESTED-ARGS-QuestV2Type-hexes",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "root": "quest",
+      "root_variables": {
+        "id": "10000000-0000-4000-8000-000000000052"
+      },
+      "actor": "001",
+      "field": "QuestV2Type.hexes",
+      "selector": "hexId",
+      "delta": {
+        "quest_hexes": [
+          {
+            "questId": "10000000-0000-4000-8000-000000000052",
+            "hexId": "10000000-0000-4000-8000-000000000026",
+            "role": "expected"
+          },
+          {
+            "questId": "10000000-0000-4000-8000-000000000052",
+            "hexId": "10000000-0000-4000-8000-000000000027",
+            "role": "visited"
+          }
+        ]
+      },
+      "fixture_isolation": "Reset only this named parent child collection, then insert the authored delta atop the core populated fixture; do not run other scenarios in this transaction. Other parent collections remain populated and unchanged.",
+      "aliases": [
+        {
+          "alias": "first",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["10000000-0000-4000-8000-000000000026"]
+        },
+        {
+          "alias": "second",
+          "arguments": {
+            "limit": 1,
+            "offset": 1
+          },
+          "expected": ["10000000-0000-4000-8000-000000000027"]
+        },
+        {
+          "alias": "duplicate",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["10000000-0000-4000-8000-000000000026"]
+        },
+        {
+          "alias": "all",
+          "arguments": {
+            "limit": 100,
+            "offset": 0
+          },
+          "expected": [
+            "10000000-0000-4000-8000-000000000026",
+            "10000000-0000-4000-8000-000000000027"
+          ]
+        },
+        {
+          "alias": "past",
+          "arguments": {
+            "limit": 1,
+            "offset": 2
+          },
+          "expected": []
+        },
+        {
+          "alias": "expectedHex",
+          "arguments": {
+            "role": "expected",
+            "limit": 100,
+            "offset": 0
+          },
+          "expected": ["10000000-0000-4000-8000-000000000026"]
+        },
+        {
+          "alias": "visitedHex",
+          "arguments": {
+            "role": "visited",
+            "limit": 100,
+            "offset": 0
+          },
+          "expected": ["10000000-0000-4000-8000-000000000027"]
+        },
+        {
+          "alias": "nullRole",
+          "arguments": {
+            "role": null,
+            "limit": 100,
+            "offset": 0
+          },
+          "expected": [
+            "10000000-0000-4000-8000-000000000026",
+            "10000000-0000-4000-8000-000000000027"
+          ]
+        }
+      ],
+      "argument_ids": [
+        "ARG-QuestV2Type-hexes-role",
+        "ARG-QuestV2Type-hexes-limit",
+        "ARG-QuestV2Type-hexes-offset"
+      ],
+      "invalid": [
+        {
+          "arguments": {
+            "limit": 0
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "limit": 101
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "offset": -1
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "role": "location"
+          },
+          "code": "INVALID"
+        }
+      ],
+      "effects": "No inserted/updated/deleted business/history/receipt/notification/job rows. Alias duplicate correlates to the same row, different paging aliases retain their own results.",
+      "status": "Exact contrast/paging cases; deeper scalar projection coverage is tracked separately."
+    },
+    {
+      "id": "NESTED-ARGS-QuestV2Type-participants",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "root": "quest",
+      "root_variables": {
+        "id": "10000000-0000-4000-8000-000000000052"
+      },
+      "actor": "001",
+      "field": "QuestV2Type.participants",
+      "selector": "characterId",
+      "delta": {
+        "participations": [
+          {
+            "questId": "10000000-0000-4000-8000-000000000052",
+            "memberId": "10000000-0000-4000-8000-000000000002",
+            "characterId": "10000000-0000-4000-8000-000000000031",
+            "status": "signed_up",
+            "createdAt": "2026-10-13T10:00:00Z"
+          },
+          {
+            "questId": "10000000-0000-4000-8000-000000000052",
+            "memberId": "10000000-0000-4000-8000-000000000001",
+            "characterId": "10000000-0000-4000-8000-000000000030",
+            "status": "waitlisted",
+            "createdAt": "2026-10-13T11:00:00Z"
+          }
+        ]
+      },
+      "fixture_isolation": "Reset only this named parent child collection, then insert the authored delta atop the core populated fixture; do not run other scenarios in this transaction. Other parent collections remain populated and unchanged.",
+      "aliases": [
+        {
+          "alias": "first",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["10000000-0000-4000-8000-000000000031"]
+        },
+        {
+          "alias": "second",
+          "arguments": {
+            "limit": 1,
+            "offset": 1
+          },
+          "expected": ["10000000-0000-4000-8000-000000000030"]
+        },
+        {
+          "alias": "duplicate",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["10000000-0000-4000-8000-000000000031"]
+        },
+        {
+          "alias": "all",
+          "arguments": {
+            "limit": 100,
+            "offset": 0
+          },
+          "expected": [
+            "10000000-0000-4000-8000-000000000031",
+            "10000000-0000-4000-8000-000000000030"
+          ]
+        },
+        {
+          "alias": "past",
+          "arguments": {
+            "limit": 1,
+            "offset": 2
+          },
+          "expected": []
+        },
+        {
+          "alias": "signed",
+          "arguments": {
+            "status": "signed_up",
+            "limit": 100,
+            "offset": 0
+          },
+          "expected": ["10000000-0000-4000-8000-000000000031"]
+        },
+        {
+          "alias": "waiting",
+          "arguments": {
+            "status": "waitlisted",
+            "limit": 100,
+            "offset": 0
+          },
+          "expected": ["10000000-0000-4000-8000-000000000030"]
+        },
+        {
+          "alias": "withdrawn",
+          "arguments": {
+            "status": "withdrawn",
+            "limit": 100,
+            "offset": 0
+          },
+          "expected": []
+        },
+        {
+          "alias": "nullStatus",
+          "arguments": {
+            "status": null,
+            "limit": 100,
+            "offset": 0
+          },
+          "expected": [
+            "10000000-0000-4000-8000-000000000031",
+            "10000000-0000-4000-8000-000000000030"
+          ]
+        }
+      ],
+      "argument_ids": [
+        "ARG-QuestV2Type-participants-status",
+        "ARG-QuestV2Type-participants-limit",
+        "ARG-QuestV2Type-participants-offset"
+      ],
+      "invalid": [
+        {
+          "arguments": {
+            "limit": 0
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "limit": 101
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "offset": -1
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "status": "SIGNED_UP"
+          },
+          "code": "INVALID"
+        }
+      ],
+      "effects": "No inserted/updated/deleted business/history/receipt/notification/job rows. Alias duplicate correlates to the same row, different paging aliases retain their own results.",
+      "status": "Exact contrast/paging cases; deeper scalar projection coverage is tracked separately."
+    },
+    {
+      "id": "NESTED-ARGS-QuestV2Type-rewardEntitlements",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "root": "quest",
+      "root_variables": {
+        "id": "10000000-0000-4000-8000-000000000053"
+      },
+      "actor": "003",
+      "field": "QuestV2Type.rewardEntitlements",
+      "selector": "id",
+      "delta": {
+        "entitlements": [
+          {
+            "id": "10000000-0000-4000-8000-000000000160",
+            "questId": "10000000-0000-4000-8000-000000000053",
+            "characterId": "10000000-0000-4000-8000-000000000031",
+            "pcxp": 4,
+            "awardedAt": "2026-10-14T10:00:00Z",
+            "awardedBy": "10000000-0000-4000-8000-000000000003"
+          },
+          {
+            "id": "10000000-0000-4000-8000-000000000161",
+            "questId": "10000000-0000-4000-8000-000000000053",
+            "characterId": "10000000-0000-4000-8000-000000000030",
+            "pcxp": 2,
+            "awardedAt": "2026-10-14T11:00:00Z",
+            "awardedBy": "10000000-0000-4000-8000-000000000003"
+          }
+        ]
+      },
+      "fixture_isolation": "Reset only this named parent child collection, then insert the authored delta atop the core populated fixture; do not run other scenarios in this transaction. Other parent collections remain populated and unchanged.",
+      "aliases": [
+        {
+          "alias": "first",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["10000000-0000-4000-8000-000000000161"]
+        },
+        {
+          "alias": "second",
+          "arguments": {
+            "limit": 1,
+            "offset": 1
+          },
+          "expected": ["10000000-0000-4000-8000-000000000160"]
+        },
+        {
+          "alias": "duplicate",
+          "arguments": {
+            "limit": 1,
+            "offset": 0
+          },
+          "expected": ["10000000-0000-4000-8000-000000000161"]
+        },
+        {
+          "alias": "all",
+          "arguments": {
+            "limit": 100,
+            "offset": 0
+          },
+          "expected": [
+            "10000000-0000-4000-8000-000000000161",
+            "10000000-0000-4000-8000-000000000160"
+          ]
+        },
+        {
+          "alias": "past",
+          "arguments": {
+            "limit": 1,
+            "offset": 2
+          },
+          "expected": []
+        }
+      ],
+      "argument_ids": [
+        "ARG-QuestV2Type-rewardEntitlements-limit",
+        "ARG-QuestV2Type-rewardEntitlements-offset"
+      ],
+      "invalid": [
+        {
+          "arguments": {
+            "limit": 0
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "limit": 101
+          },
+          "code": "INVALID"
+        },
+        {
+          "arguments": {
+            "offset": -1
+          },
+          "code": "INVALID"
+        }
+      ],
+      "effects": "No inserted/updated/deleted business/history/receipt/notification/job rows. Alias duplicate correlates to the same row, different paging aliases retain their own results.",
+      "status": "Exact contrast/paging cases; deeper scalar projection coverage is tracked separately."
+    }
+  ],
+  "complete_argument_bindings": 32
+}

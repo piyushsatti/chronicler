@@ -1,0 +1,841 @@
+{
+  "schema_version": 1,
+  "kind": "Exact proposed0003 column delta, literal declarations and referenced source constraints. Author engineering closure, independent review required; no migration execution.",
+  "tables": {
+    "member_availability": {
+      "add_columns": ["note"],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "note": "TEXT NULL"
+      }
+    },
+    "member_settings": {
+      "add_columns": [
+        "colorblind_safe",
+        "density",
+        "effects_enabled",
+        "mode",
+        "notify_character_verification",
+        "notify_dm_mentioned",
+        "notify_dm_request_decided",
+        "notify_document_activity",
+        "notify_quest_scheduled",
+        "notify_quest_signup",
+        "reduced_motion",
+        "theme"
+      ],
+      "source_contracts": ["settings-storage-contract.md"],
+      "drop_columns": ["theme_mode"],
+      "column_declarations": {
+        "colorblind_safe": "BOOLEAN NOT NULL DEFAULT FALSE",
+        "density": "TEXT NOT NULL DEFAULT 'comfortable'",
+        "effects_enabled": "BOOLEAN NOT NULL DEFAULT TRUE",
+        "mode": "TEXT NOT NULL DEFAULT 'system'",
+        "notify_character_verification": "BOOLEAN NOT NULL DEFAULT TRUE",
+        "notify_dm_mentioned": "BOOLEAN NOT NULL DEFAULT TRUE",
+        "notify_dm_request_decided": "BOOLEAN NOT NULL DEFAULT TRUE",
+        "notify_document_activity": "BOOLEAN NOT NULL DEFAULT TRUE",
+        "notify_quest_scheduled": "BOOLEAN NOT NULL DEFAULT TRUE",
+        "notify_quest_signup": "BOOLEAN NOT NULL DEFAULT TRUE",
+        "reduced_motion": "BOOLEAN NOT NULL DEFAULT FALSE",
+        "theme": "TEXT NOT NULL DEFAULT 'parchment'"
+      }
+    },
+    "characters": {
+      "add_columns": [
+        "background_text",
+        "ddb_url",
+        "deleted_at",
+        "deleted_by",
+        "description"
+      ],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "background_text": "TEXT NULL",
+        "ddb_url": "TEXT NULL",
+        "deleted_at": "TIMESTAMPTZ NULL",
+        "deleted_by": "BIGINT REFERENCES members(id) NULL",
+        "description": "TEXT NULL"
+      }
+    },
+    "character_catalog_picks": {
+      "add_columns": ["catalog_id", "character_id"],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "catalog_id": "BIGINT REFERENCES creation_catalog(id) NOT NULL",
+        "character_id": "BIGINT REFERENCES characters(id) NOT NULL"
+      }
+    },
+    "downtime_projects": {
+      "add_columns": ["updated_at"],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "updated_at": "TIMESTAMPTZ NOT NULL DEFAULT now()"
+      }
+    },
+    "creation_catalog": {
+      "add_columns": ["description", "introduced_by_region_id", "retired"],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "description": "TEXT NULL",
+        "introduced_by_region_id": "BIGINT REFERENCES regions(id) NULL",
+        "retired": "BOOLEAN NOT NULL DEFAULT FALSE"
+      }
+    },
+    "character_logs": {
+      "add_columns": ["created_by"],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "created_by": "BIGINT REFERENCES members(id) NULL"
+      }
+    },
+    "character_progression_ledger": {
+      "add_columns": ["kind", "metadata", "note", "quest_id", "recorded_by"],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "kind": "TEXT NOT NULL DEFAULT 'pcxp'",
+        "metadata": "JSONB NULL",
+        "note": "TEXT NULL",
+        "quest_id": "BIGINT REFERENCES quests(id) NULL",
+        "recorded_by": "BIGINT REFERENCES members(id) NULL"
+      }
+    },
+    "documents": {
+      "add_columns": ["deleted_by", "published_by", "version"],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "deleted_by": "BIGINT REFERENCES members(id) NULL",
+        "published_by": "BIGINT REFERENCES members(id) NULL",
+        "version": "INTEGER NOT NULL DEFAULT 0"
+      }
+    },
+    "document_revisions": {
+      "add_columns": [
+        "new_value",
+        "old_value",
+        "policy",
+        "published_at",
+        "published_by",
+        "rev",
+        "visibility"
+      ],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "new_value": "JSONB NULL",
+        "old_value": "JSONB NULL",
+        "policy": "JSONB NULL",
+        "published_at": "TIMESTAMPTZ NULL",
+        "published_by": "BIGINT REFERENCES members(id) NULL",
+        "rev": "INTEGER NOT NULL",
+        "visibility": "TEXT NULL"
+      }
+    },
+    "lieutenant_assignments": {
+      "add_columns": ["granted_by"],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "granted_by": "BIGINT REFERENCES members(id) NULL"
+      }
+    },
+    "archon_assignments": {
+      "add_columns": ["granted_by"],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "granted_by": "BIGINT REFERENCES members(id) NULL"
+      }
+    },
+    "assignment_changes": {
+      "add_columns": [
+        "actor_id",
+        "assignment_kind",
+        "created_at",
+        "id",
+        "member_id",
+        "new_value",
+        "npc_document_id",
+        "old_value",
+        "public_id",
+        "region_id"
+      ],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "actor_id": "BIGINT REFERENCES members(id) NOT NULL",
+        "assignment_kind": "TEXT NOT NULL",
+        "created_at": "TIMESTAMPTZ NOT NULL",
+        "id": "BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY",
+        "member_id": "BIGINT REFERENCES members(id) NOT NULL",
+        "new_value": "JSONB NULL",
+        "npc_document_id": "BIGINT REFERENCES documents(id) NULL",
+        "old_value": "JSONB NULL",
+        "public_id": "UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+        "region_id": "BIGINT REFERENCES regions(id) NULL"
+      }
+    },
+    "quests": {
+      "add_columns": ["closed_at", "deleted_at", "deleted_by"],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "closed_at": "TIMESTAMPTZ NULL",
+        "deleted_at": "TIMESTAMPTZ NULL",
+        "deleted_by": "BIGINT REFERENCES members(id) NULL"
+      }
+    },
+    "quest_changes": {
+      "add_columns": [
+        "actor_id",
+        "created_at",
+        "facts",
+        "id",
+        "kind",
+        "public_id",
+        "quest_id"
+      ],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "actor_id": "BIGINT REFERENCES members(id) NOT NULL",
+        "created_at": "TIMESTAMPTZ NOT NULL",
+        "facts": "JSONB NOT NULL",
+        "id": "BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY",
+        "kind": "TEXT NOT NULL",
+        "public_id": "UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+        "quest_id": "BIGINT REFERENCES quests(id) NOT NULL"
+      }
+    },
+    "regions": {
+      "add_columns": ["deleted_at", "deleted_by"],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "deleted_at": "TIMESTAMPTZ NULL",
+        "deleted_by": "BIGINT REFERENCES members(id) NULL"
+      }
+    },
+    "region_changes": {
+      "add_columns": [
+        "actor_id",
+        "created_at",
+        "id",
+        "kind",
+        "new_value",
+        "old_value",
+        "public_id",
+        "region_id"
+      ],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "actor_id": "BIGINT REFERENCES members(id) NOT NULL",
+        "created_at": "TIMESTAMPTZ NOT NULL",
+        "id": "BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY",
+        "kind": "TEXT NOT NULL",
+        "new_value": "JSONB NULL",
+        "old_value": "JSONB NULL",
+        "public_id": "UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+        "region_id": "BIGINT REFERENCES regions(id) NOT NULL"
+      }
+    },
+    "pointcrawl_nodes": {
+      "add_columns": [
+        "created_at",
+        "id",
+        "map_id",
+        "name",
+        "public_id",
+        "submap_id",
+        "x",
+        "y"
+      ],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "created_at": "TIMESTAMPTZ NOT NULL",
+        "id": "BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY",
+        "map_id": "BIGINT REFERENCES maps(id) NOT NULL",
+        "name": "TEXT NOT NULL",
+        "public_id": "UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+        "submap_id": "BIGINT REFERENCES maps(id) NULL",
+        "x": "DOUBLE PRECISION NOT NULL",
+        "y": "DOUBLE PRECISION NOT NULL"
+      }
+    },
+    "pointcrawl_edges": {
+      "add_columns": [
+        "directed",
+        "document_id",
+        "id",
+        "kind",
+        "label",
+        "map_id",
+        "node_a",
+        "node_b",
+        "public_id"
+      ],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "directed": "BOOLEAN NOT NULL",
+        "document_id": "BIGINT REFERENCES documents(id) NULL",
+        "id": "BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY",
+        "kind": "TEXT NOT NULL",
+        "label": "TEXT NULL",
+        "map_id": "BIGINT REFERENCES maps(id) NOT NULL",
+        "node_a": "BIGINT REFERENCES pointcrawl_nodes(id) NOT NULL",
+        "node_b": "BIGINT REFERENCES pointcrawl_nodes(id) NOT NULL",
+        "public_id": "UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()"
+      }
+    },
+    "maps": {
+      "add_columns": ["created_by", "family"],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "created_by": "BIGINT REFERENCES members(id) NULL",
+        "family": "TEXT NOT NULL DEFAULT 'campaign'"
+      }
+    },
+    "hexes": {
+      "add_columns": ["created_at", "submap_id"],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "created_at": "TIMESTAMPTZ NULL",
+        "submap_id": "BIGINT REFERENCES maps(id) NULL"
+      }
+    },
+    "pointcrawl_entry_links": {
+      "add_columns": [
+        "created_at",
+        "created_by",
+        "document_id",
+        "map_id",
+        "node_id",
+        "relation"
+      ],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "created_at": "TIMESTAMPTZ NOT NULL",
+        "created_by": "BIGINT REFERENCES members(id) NOT NULL",
+        "document_id": "BIGINT REFERENCES documents(id) NOT NULL",
+        "map_id": "BIGINT REFERENCES maps(id) NOT NULL",
+        "node_id": "BIGINT REFERENCES pointcrawl_nodes(id) NOT NULL",
+        "relation": "TEXT NOT NULL"
+      }
+    },
+    "pointcrawl_node_changes": {
+      "add_columns": [
+        "actor_id",
+        "created_at",
+        "id",
+        "kind",
+        "new_value",
+        "node_id",
+        "old_value",
+        "public_id"
+      ],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "actor_id": "BIGINT REFERENCES members(id) NOT NULL",
+        "created_at": "TIMESTAMPTZ NOT NULL",
+        "id": "BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY",
+        "kind": "TEXT NOT NULL",
+        "new_value": "JSONB NULL",
+        "node_id": "BIGINT REFERENCES pointcrawl_nodes(id) NOT NULL",
+        "old_value": "JSONB NULL",
+        "public_id": "UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()"
+      }
+    },
+    "time_anchor_changes": {
+      "add_columns": [
+        "actor_id",
+        "anchor_id",
+        "created_at",
+        "id",
+        "new_value",
+        "old_value",
+        "public_id"
+      ],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "actor_id": "BIGINT REFERENCES members(id) NOT NULL",
+        "anchor_id": "BIGINT REFERENCES time_anchors(id) NOT NULL",
+        "created_at": "TIMESTAMPTZ NOT NULL",
+        "id": "BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY",
+        "new_value": "JSONB NOT NULL",
+        "old_value": "JSONB NULL",
+        "public_id": "UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()"
+      }
+    },
+    "notification_events": {
+      "add_columns": [
+        "actor_id",
+        "created_at",
+        "event_key",
+        "facts",
+        "id",
+        "kind",
+        "public_id",
+        "subject_public_id",
+        "subject_type"
+      ],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "actor_id": "BIGINT REFERENCES members(id) NULL",
+        "created_at": "TIMESTAMPTZ NOT NULL",
+        "event_key": "TEXT NOT NULL",
+        "facts": "JSONB NOT NULL",
+        "id": "BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY",
+        "kind": "TEXT NOT NULL",
+        "public_id": "UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+        "subject_public_id": "UUID NOT NULL",
+        "subject_type": "TEXT NOT NULL"
+      }
+    },
+    "notifications": {
+      "add_columns": ["event_id"],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "event_id": "BIGINT REFERENCES notification_events(id) NULL"
+      }
+    },
+    "notification_channel_deliveries": {
+      "add_columns": [
+        "channel",
+        "delivered_at",
+        "event_id",
+        "job_id",
+        "last_error",
+        "member_id",
+        "state"
+      ],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "channel": "TEXT NOT NULL",
+        "delivered_at": "TIMESTAMPTZ NULL",
+        "event_id": "BIGINT REFERENCES notification_events(id) NOT NULL",
+        "job_id": "BIGINT REFERENCES background_jobs(id) NULL",
+        "last_error": "TEXT NULL",
+        "member_id": "BIGINT REFERENCES members(id) NOT NULL",
+        "state": "TEXT NOT NULL"
+      }
+    },
+    "character_ddb_attempts": {
+      "add_columns": [
+        "character_id",
+        "finished_at",
+        "id",
+        "payload_hash",
+        "provenance",
+        "public_id",
+        "safe_error",
+        "started_at",
+        "succeeded",
+        "url"
+      ],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "character_id": "BIGINT REFERENCES characters(id) NOT NULL",
+        "finished_at": "TIMESTAMPTZ NULL",
+        "id": "BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY",
+        "payload_hash": "TEXT NULL",
+        "provenance": "JSONB NULL",
+        "public_id": "UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+        "safe_error": "TEXT NULL",
+        "started_at": "TIMESTAMPTZ NOT NULL",
+        "succeeded": "BOOLEAN NULL",
+        "url": "TEXT NOT NULL"
+      }
+    },
+    "character_ddb_mirrors": {
+      "add_columns": ["payload_hash", "provenance", "url"],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "payload_hash": "TEXT NULL",
+        "provenance": "JSONB NULL",
+        "url": "TEXT NULL"
+      }
+    },
+    "verifications": {
+      "add_columns": ["review_revision", "evidence_attempt_id"],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "review_revision": "INTEGER NULL",
+        "evidence_attempt_id": "BIGINT NULL REFERENCES character_ddb_attempts(id)"
+      }
+    },
+    "idempotency_keys": {
+      "add_columns": ["completed_at", "fingerprint", "receipt"],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "operation_alias": "operation is logical receipt identity mapped to existing endpoint; no separate operation column",
+      "column_declarations": {
+        "completed_at": "TIMESTAMPTZ NULL",
+        "fingerprint": "TEXT NULL",
+        "receipt": "JSONB NULL"
+      },
+      "retained_columns": {
+        "endpoint": "TEXT NOT NULL",
+        "key": "TEXT NOT NULL",
+        "actor_id": "BIGINT NOT NULL REFERENCES members (id)",
+        "created_at": "TIMESTAMPTZ NOT NULL DEFAULT now()"
+      },
+      "retention": "Existing column declarations/defaults and every stored value remain literal. Only the three named add_columns are new; PRIMARY KEY changes to endpoint+actor_id+key as migrations.md. No ALTER/re-add of retained columns or created_at default removal."
+    },
+    "background_jobs": {
+      "add_columns": ["redrive_count", "safe_error_code"],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "redrive_count": "INTEGER NOT NULL DEFAULT 0",
+        "safe_error_code": "TEXT NULL"
+      }
+    },
+    "job_redrives": {
+      "add_columns": ["actor_id", "created_at", "id", "job_id", "public_id", "reason"],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "actor_id": "BIGINT REFERENCES members(id) NOT NULL",
+        "created_at": "TIMESTAMPTZ NOT NULL",
+        "id": "BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY",
+        "job_id": "BIGINT REFERENCES background_jobs(id) NOT NULL",
+        "public_id": "UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+        "reason": "TEXT NOT NULL"
+      }
+    },
+    "operational_observations": {
+      "add_columns": ["id", "key", "observed_at", "payload", "public_id", "state"],
+      "source_contracts": ["work-contract.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "id": "BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY",
+        "key": "TEXT NOT NULL",
+        "observed_at": "TIMESTAMPTZ NOT NULL",
+        "payload": "JSONB NOT NULL",
+        "public_id": "UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+        "state": "TEXT NOT NULL"
+      }
+    },
+    "quest_reward_entitlements": {
+      "add_columns": [
+        "awarded_at",
+        "awarded_by",
+        "character_id",
+        "claimed_at",
+        "id",
+        "note",
+        "pcxp",
+        "progression_entry_id",
+        "public_id",
+        "quest_id"
+      ],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "awarded_at": "TIMESTAMPTZ NOT NULL",
+        "awarded_by": "BIGINT REFERENCES members(id) NOT NULL",
+        "character_id": "BIGINT REFERENCES characters(id) NOT NULL",
+        "claimed_at": "TIMESTAMPTZ NULL",
+        "id": "BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY",
+        "note": "TEXT NULL",
+        "pcxp": "INTEGER NOT NULL CHECK (pcxp>0)",
+        "progression_entry_id": "BIGINT REFERENCES character_progression_ledger(id) NULL",
+        "public_id": "UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+        "quest_id": "BIGINT REFERENCES quests(id) NOT NULL"
+      }
+    },
+    "request_decisions": {
+      "add_columns": [
+        "actor_id",
+        "decision",
+        "id",
+        "note",
+        "public_id",
+        "recorded_at",
+        "request_id"
+      ],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "actor_id": "BIGINT REFERENCES members(id) NOT NULL",
+        "decision": "TEXT NOT NULL",
+        "id": "BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY",
+        "note": "TEXT NULL",
+        "public_id": "UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+        "recorded_at": "TIMESTAMPTZ NOT NULL",
+        "request_id": "BIGINT REFERENCES dm_requests(id) NOT NULL"
+      }
+    },
+    "quest_reward_decisions": {
+      "add_columns": [
+        "closure_change_id",
+        "decided_at",
+        "decided_by",
+        "public_id",
+        "quest_id"
+      ],
+      "source_contracts": ["rewards-and-policy.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "closure_change_id": "BIGINT REFERENCES quest_changes(id) NOT NULL",
+        "decided_at": "TIMESTAMPTZ NOT NULL",
+        "decided_by": "BIGINT REFERENCES members(id) NOT NULL",
+        "public_id": "UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+        "quest_id": "BIGINT REFERENCES quests(id) NOT NULL"
+      }
+    },
+    "auth_override_audit": {
+      "add_columns": [
+        "actor_id",
+        "id",
+        "operation",
+        "public_id",
+        "recorded_at",
+        "rule_code",
+        "subject_public_id",
+        "subject_type"
+      ],
+      "source_contracts": ["override-audit-contract.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "actor_id": "BIGINT REFERENCES members(id) NOT NULL",
+        "id": "BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY",
+        "operation": "TEXT NOT NULL",
+        "public_id": "UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+        "recorded_at": "TIMESTAMPTZ NOT NULL",
+        "rule_code": "TEXT NOT NULL",
+        "subject_public_id": "UUID NOT NULL",
+        "subject_type": "TEXT NOT NULL"
+      }
+    },
+    "character_changes": {
+      "add_columns": [
+        "affected_public_id",
+        "affected_type",
+        "character_id",
+        "id",
+        "kind",
+        "new_value",
+        "old_value",
+        "public_id",
+        "recorded_at",
+        "recorded_by"
+      ],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "affected_public_id": "UUID NOT NULL",
+        "affected_type": "TEXT NOT NULL",
+        "character_id": "BIGINT REFERENCES characters(id) NOT NULL",
+        "id": "BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY",
+        "kind": "TEXT NOT NULL",
+        "new_value": "JSONB NULL",
+        "old_value": "JSONB NULL",
+        "public_id": "UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+        "recorded_at": "TIMESTAMPTZ NOT NULL",
+        "recorded_by": "BIGINT REFERENCES members(id) NOT NULL"
+      }
+    },
+    "unlockables": {
+      "add_columns": ["description", "kind", "name", "unlock_rule"],
+      "source_contracts": ["migrations.md", "unlock-catalog-storage-contract.md"],
+      "drop_columns": ["cosmetic_type"],
+      "column_declarations": {
+        "description": "TEXT NULL",
+        "kind": "TEXT NOT NULL CHECK (kind IN ('achievement','dm_tier'))",
+        "name": "TEXT NOT NULL",
+        "unlock_rule": "JSONB NULL"
+      }
+    },
+    "member_unlocks": {
+      "add_columns": ["note"],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "note": "TEXT NULL"
+      }
+    },
+    "site_setting_changes": {
+      "add_columns": [
+        "actor_id",
+        "created_at",
+        "id",
+        "new_value",
+        "old_value",
+        "public_id",
+        "setting_key"
+      ],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "actor_id": "BIGINT REFERENCES members(id) NOT NULL",
+        "created_at": "TIMESTAMPTZ NOT NULL",
+        "id": "BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY",
+        "new_value": "JSONB NOT NULL",
+        "old_value": "JSONB NULL",
+        "public_id": "UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+        "setting_key": "TEXT NOT NULL"
+      }
+    },
+    "calendar_changes": {
+      "add_columns": [
+        "actor_id",
+        "calendar_id",
+        "created_at",
+        "id",
+        "new_value",
+        "old_value",
+        "public_id"
+      ],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "actor_id": "BIGINT REFERENCES members(id) NOT NULL",
+        "calendar_id": "SMALLINT REFERENCES game_calendar(id) NOT NULL",
+        "created_at": "TIMESTAMPTZ NOT NULL",
+        "id": "BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY",
+        "new_value": "JSONB NOT NULL",
+        "old_value": "JSONB NULL",
+        "public_id": "UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()"
+      }
+    },
+    "game_calendar": {
+      "add_columns": ["updated_at"],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "updated_at": "TIMESTAMPTZ NULL"
+      }
+    },
+    "arc_changes": {
+      "add_columns": [
+        "actor_id",
+        "arc_id",
+        "created_at",
+        "id",
+        "new_value",
+        "old_value",
+        "public_id"
+      ],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "actor_id": "BIGINT REFERENCES members(id) NOT NULL",
+        "arc_id": "BIGINT REFERENCES quest_arcs(id) NOT NULL",
+        "created_at": "TIMESTAMPTZ NOT NULL",
+        "id": "BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY",
+        "new_value": "JSONB NOT NULL",
+        "old_value": "JSONB NULL",
+        "public_id": "UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()"
+      }
+    },
+    "map_changes": {
+      "add_columns": [
+        "actor_id",
+        "affected_public_id",
+        "affected_type",
+        "id",
+        "map_id",
+        "new_value",
+        "old_value",
+        "public_id",
+        "recorded_at"
+      ],
+      "source_contracts": ["migrations.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "actor_id": "BIGINT REFERENCES members(id) NOT NULL",
+        "affected_public_id": "UUID NOT NULL",
+        "affected_type": "TEXT NOT NULL",
+        "id": "BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY",
+        "map_id": "BIGINT REFERENCES maps(id) NOT NULL",
+        "new_value": "JSONB NULL",
+        "old_value": "JSONB NULL",
+        "public_id": "UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+        "recorded_at": "TIMESTAMPTZ NOT NULL"
+      }
+    },
+    "dm_profile_review_events": {
+      "add_columns": [
+        "id",
+        "kind",
+        "member_id",
+        "public_id",
+        "recorded_at",
+        "recorded_by",
+        "revision",
+        "snapshot",
+        "verification_id"
+      ],
+      "source_contracts": ["dm-profile-review-contract.md"],
+      "drop_columns": [],
+      "column_declarations": {
+        "id": "BIGINT GENERATED BY DEFAULT AS IDENTITY PRIMARY KEY",
+        "kind": "TEXT NOT NULL",
+        "member_id": "BIGINT REFERENCES members(id) NOT NULL",
+        "public_id": "UUID NOT NULL UNIQUE DEFAULT gen_random_uuid()",
+        "recorded_at": "TIMESTAMPTZ NULL",
+        "recorded_by": "BIGINT REFERENCES members(id) NULL",
+        "revision": "INTEGER NOT NULL",
+        "snapshot": "JSONB NOT NULL",
+        "verification_id": "BIGINT REFERENCES verifications(id) NULL"
+      }
+    },
+    "document_links": {
+      "add_columns": [
+        "character_target_id",
+        "document_target_id",
+        "quest_target_id",
+        "region_target_id",
+        "target_id",
+        "target_type"
+      ],
+      "source_contracts": ["document-storage-contract.md"],
+      "drop_columns": [],
+      "generated_columns": ["target_type", "target_id"],
+      "rename": {
+        "target_id": "document_target_id"
+      },
+      "column_declarations": {
+        "character_target_id": "BIGINT REFERENCES characters(id) NULL",
+        "document_target_id": "BIGINT REFERENCES documents(id) NULL",
+        "quest_target_id": "BIGINT REFERENCES quests(id) NULL",
+        "region_target_id": "BIGINT REFERENCES regions(id) NULL",
+        "target_id": "GENERATED ALWAYS AS declared exclusive arc expression STORED",
+        "target_type": "GENERATED ALWAYS AS declared exclusive arc expression STORED"
+      }
+    }
+  },
+  "source_hashes": {
+    "dm-profile-review-contract.md": "50e7ad09558e29724801bae7f657d2474ad040377dba309c0d6359fc33d0b233",
+    "document-storage-contract.md": "948f44c454ec29044d13458fd5a5a14ee2138783d6e4db5ae85e215d39fbad24",
+    "migrations.md": "8a2d522b9388daba4cb5d11c618acc28aeb7c96f5bdaae89f20f5c3d452d8c8d",
+    "override-audit-contract.md": "4dd85aae366a78c48bbc7303d38c3df1111c0f6499b10d9b7890f9fd7e32ea81",
+    "rewards-and-policy.md": "844f9ddd60dee28d2ce06fd9d9284184cb751e8772f888621da8da0b14a39e44",
+    "settings-storage-contract.md": "cba6ceea5c1e399be30a0bfdd42a611a918287e3e97d884a7c795d4f0aafaee6",
+    "unlock-catalog-storage-contract.md": "21d5ac272b00c6c5a8eaac8644e509101b3bd4c5f82673b0d3dc54be5a872d94",
+    "work-contract.md": "dd118650c35f0a9e106c1be0eee70c0ca8154e11f1ccf51edc36d2343d387461"
+  }
+}

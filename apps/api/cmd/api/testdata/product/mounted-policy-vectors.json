@@ -1,0 +1,403 @@
+{
+  "fixture_namespace": "10000000-0000-4000-8000-000000000NNN (replace NNN with the three digit fixture binding)",
+  "clock": "2026-10-14T12:00:00Z",
+  "isolation": "Each scenario starts from a newly loaded populated disposable database; delta fixtures are inserted by the named test owner. Expected UUID suffixes denote exact full IDs in fixture_namespace.",
+  "scenarios": [
+    {
+      "id": "POLICY-REQUEST-EXCLUSIVE",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "operation": "decideRequest",
+      "fixtures": {
+        "request": "130",
+        "requester": "001",
+        "targetDM": "003",
+        "state": "pending"
+      },
+      "cases": [
+        {
+          "actor": "003",
+          "input": {
+            "requestId": "130",
+            "decision": "approved"
+          },
+          "result": {
+            "id": "130",
+            "status": "approved"
+          },
+          "effects": {
+            "request_decisions": [
+              {
+                "id": "$decisionId",
+                "requestId": "130",
+                "actorId": "003",
+                "decision": "approved",
+                "recordedAt": "2026-10-14T12:00:00Z"
+              }
+            ],
+            "notification_recipients": [
+              {
+                "notificationId": "$noticeId",
+                "memberId": "001"
+              }
+            ],
+            "recipientExcluded": "003"
+          }
+        },
+        {
+          "actors": ["001", "002", "004", "009", "017"],
+          "code": "FORBIDDEN",
+          "effects": "No request/history/event/recipient/replay receipt rows changed"
+        },
+        {
+          "actor": "003",
+          "delta": "Remove current approved DM role after identity token issuance",
+          "code": "FORBIDDEN",
+          "effects": "No request/history/event/recipient/replay receipt rows changed"
+        },
+        {
+          "actor": "003",
+          "delta": "Replay identical action after successful commit",
+          "effects": "One captured decisionId, one originating event and one captured noticeId remain; no duplicate facts"
+        },
+        {
+          "actor": "003",
+          "input": {
+            "requestId": "130",
+            "decision": "accepted"
+          },
+          "code": "INVALID",
+          "effects": "No request/history/event/recipient/replay receipt writes; unsupported alias is not interpreted"
+        }
+      ]
+    },
+    {
+      "id": "POLICY-DDB-OPTIONAL",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "operation": "decideVerification",
+      "cases": [
+        {
+          "delta": "Otherwise eligible pending character032 has no DDB link",
+          "verdict": "APPROVED",
+          "result": "APPROVED assessment and character status transition commit"
+        },
+        {
+          "delta": "Otherwise eligible pending character032 has last failed optional sync attempt",
+          "verdict": "APPROVED",
+          "result": "APPROVED assessment commits; failed attempt preserved unchanged"
+        },
+        {
+          "delta": "Otherwise eligible pending character032 has successful mirror older than24h",
+          "verdict": "APPROVED",
+          "result": "APPROVED assessment commits; existing mirror preserved unchanged"
+        },
+        {
+          "delta": "Character032 lacks required non-DDB verification fields",
+          "verdict": "APPROVED",
+          "code": "INVALID",
+          "effects": "No assessment, character status, event or recipient writes"
+        }
+      ],
+      "common": "Verifier005 acts using current resolved authority; approval emits the existing required owner notice atomically. No remote fetch is invoked by assessment.",
+      "fixtures": {
+        "character": "032",
+        "owner": "001",
+        "reviewer": "005",
+        "status": "pending_approval",
+        "regionId": "020",
+        "backstoryId": "040",
+        "catalogPickIds": ["042"],
+        "description": "Ready",
+        "verificationSubmittedAt": "2026-10-14T11:30:00Z",
+        "updatedAt": "2026-10-14T11:30:00Z",
+        "ddbUrl": null
+      },
+      "input": {
+        "characterId": "032",
+        "expectedSubmittedAt": "2026-10-14T11:30:00Z",
+        "verdict": "APPROVED",
+        "note": "Ordinary verification criteria met"
+      }
+    },
+    {
+      "id": "POLICY-REWARD-CLOSE",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "operation": "closeQuest",
+      "fixtures": {
+        "quest": "053",
+        "DM": "003",
+        "playedCharacter": "031",
+        "owner": "002",
+        "pcxpBefore": 5
+      },
+      "input": {
+        "attendance": [
+          {
+            "characterId": "031",
+            "status": "played"
+          }
+        ],
+        "rewards": [
+          {
+            "characterId": "031",
+            "pcxp": 4,
+            "note": "Completed the crossing"
+          }
+        ]
+      },
+      "result": "Quest053 closed; captured closureEntitlementId is UNCLAIMED with pcxp4 and awardedBy003 at clock",
+      "effects": "Character031 pcxp remains5; no progression append; one durable closure history and existing desired-sync work admission; no reward-specific notice",
+      "negative": [
+        {
+          "delta": "Award unplayed character030",
+          "code": "INVALID"
+        },
+        {
+          "delta": "Duplicate031 award entries",
+          "code": "INVALID"
+        },
+        {
+          "delta": "Award pcxp0",
+          "code": "INVALID"
+        }
+      ],
+      "negativeEffects": "Entire action rolls back, including attendance, quest status, entitlements, history, work and replay receipt"
+    },
+    {
+      "id": "POLICY-REWARD-CLAIM",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "operation": "claimQuestRewards",
+      "fixtures": {
+        "quest": "053",
+        "character": "031",
+        "owner": "002",
+        "entitlement": "160",
+        "pcxpBefore": 5
+      },
+      "input": {
+        "questId": "053",
+        "characterId": "031"
+      },
+      "cases": [
+        {
+          "actor": "002",
+          "result": {
+            "entitlementIds": ["160"],
+            "progressionEntries": [
+              {
+                "id": "$progressionId",
+                "characterId": "031",
+                "kind": "pcxp",
+                "amount": 4,
+                "questId": "053",
+                "note": "Completed the crossing",
+                "recordedBy": "002",
+                "recordedAt": "2026-10-14T12:00:00Z"
+              }
+            ],
+            "replayed": false,
+            "alreadyClaimed": false
+          },
+          "effects": "Character031 pcxp9; entitlement160 claimedAt clock and progressionEntryId$progressionId; receipt persisted. No reward event or inbox recipient. Ledger metadata source is quest_reward; source is not a GraphQL field."
+        },
+        {
+          "actors": ["001", "003", "004", "009"],
+          "code": "FORBIDDEN",
+          "effects": "No ledger/cache/entitlement/receipt writes"
+        },
+        {
+          "actor": "002",
+          "delta": "Same metadata key replay",
+          "result": {
+            "replayed": true
+          },
+          "effects": "Still one captured progressionId, pcxp9, one entitlement claim"
+        },
+        {
+          "actor": "002",
+          "delta": "New metadata key after claim",
+          "result": {
+            "alreadyClaimed": true
+          },
+          "effects": "No additional ledger append or PCXP"
+        },
+        {
+          "actor": "002",
+          "delta": "Concurrent two distinct keys",
+          "effects": "Only one paid claim; other result alreadyClaimed; final pcxp9 and one ledger row"
+        },
+        {
+          "actor": "002",
+          "delta": "Inject failure at Quest MarkRewardClaims after character ledger insertion",
+          "code": "INTERNAL",
+          "effects": "Rollback ledger/cache/entitlement/receipt together; pcxp5;160UNCLAIMED;no new progression row"
+        }
+      ]
+    },
+    {
+      "id": "POINTCRAWL-ENDPOINT-PRIVACY",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "operations": ["map"],
+      "selection_paths": [
+        "map.pointcrawlNodes",
+        "map.pointcrawlEdges",
+        "map.pointcrawlNodes.linkedEntries"
+      ],
+      "fixtures": {
+        "map": "025",
+        "publicNode": "082",
+        "hiddenNode": "083",
+        "edge": "085",
+        "hiddenLocationDocument": "011",
+        "allowedPolicy": "member:10000000-0000-4000-8000-000000000003"
+      },
+      "cases": [
+        {
+          "actor": "anonymous",
+          "nodes": ["082"],
+          "edges": [],
+          "hidden": "083 is absent from returned IDs, endpoints, names, totals and links"
+        },
+        {
+          "actor": "001",
+          "nodes": ["082"],
+          "edges": []
+        },
+        {
+          "actor": "003",
+          "nodes": ["082", "083"],
+          "edges": [
+            {
+              "id": "085",
+              "nodeA": "082",
+              "nodeB": "083"
+            }
+          ],
+          "links083": [
+            {
+              "documentId": "011",
+              "relation": "location"
+            }
+          ]
+        }
+      ],
+      "mapping": "Node, incident-edge and linked-entry readers use the same current Document audience specification; node and edge counts apply it before pagination."
+    },
+    {
+      "id": "D9-LEGACY-VARIANTS",
+      "owner": "Q08",
+      "test_file": "apps/api/internal/quest/normalization_integration_test.go",
+      "delta": "Quest050 tags[River Road]; quest051 tags[RIVER ROAD] with later created_at",
+      "input": [" river   road ", "RIVER ROAD", "New  Trail"],
+      "expected": ["River Road", "New Trail"],
+      "meaning": "Existing variant tie-break uses quest.created_at then UUID then array ordinal; historical token authorship is unknown. No canonical table or backfill."
+    },
+    {
+      "id": "D9-CONCURRENT-FIRST-COMMIT",
+      "owner": "Q08",
+      "test_file": "apps/api/internal/quest/normalization_integration_test.go",
+      "delta": "No stored normalized key new trail. WriterA acquires key lock and writes New Trail; writerB submits NEW TRAIL while A uncommitted.",
+      "expected": "B waits; after A commit, B persists New Trail. If A rolls back instead, B persists NEW TRAIL. Both deduplicate whitespace/casefold; no repeated per-token SQL."
+    },
+    {
+      "id": "WORK-RECEIPT-AND-EXCLUSION",
+      "owner": "WK05",
+      "test_file": "apps/api/internal/worker/execution_gate_integration_test.go",
+      "delta": "Pause token1 before effect transaction/receipt lock while holding kind lock. Separate control pool sets real stored lease expiry to clock_timestamp()-interval1second; second real store reclaims token2, then busy kind lock fences Retry1s to retry_wait.",
+      "expected": "token2 callback never enters while token1 holds lock. Resumed token1 receipt guard fails before map/history/EFFECT_ADMITTED. After release and retry eligibility, real claim produces token3/attempt3; only token3 enters and writes once. Token2 old receipt cannot re-enter or finish. Distinct jobs of same kind never overlap; each worker pool max1 with separate control/worker pools.",
+      "external": "No external HTTP operation executes while this DB-only execution lock or a query connection is held."
+    },
+    {
+      "id": "PARTICIPATION-RETIRE-PROMOTION-LOCKS",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "operations": ["retireCharacter", "withdrawFromQuest"],
+      "fixtures": {
+        "quest": "052",
+        "status": "full",
+        "filledCount": 1,
+        "slotsMax": 1,
+        "character030": "active; owner001; waitlisted052; pcxp12",
+        "character031": "active; owner002; signed_up052; pcxp5"
+      },
+      "cases": [
+        {
+          "barrier": "Retirement of030 acquires sorted Character locks before withdrawal of031",
+          "expected": "030retired; both participations withdrawn;052open filledCount0; no promotion notification; two immutable quest action histories; no Character progression/log changes"
+        },
+        {
+          "barrier": "Withdrawal of031 acquires sorted Character locks before retirement of030",
+          "expected": "Withdrawal promotes030 once and emits exactly one QUEST_WAITLIST_PROMOTED recipient001; subsequent retirement withdraws030. Final030retired; both participations withdrawn;052open filledCount0; two immutable quest action histories; no Character progression/log changes"
+        }
+      ],
+      "common": "Both complete without deadlock. Any injected required notification failure rolls back the entire originating action. No Character lock is acquired after a Quest lock."
+    },
+    {
+      "id": "SETTINGS-DEFAULT-AND-PATCH",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "operation": "updateMySettings",
+      "fixtures": {
+        "member": "002",
+        "settingsRow": "absent"
+      },
+      "cases": [
+        {
+          "action": "Read myPersonalization.settings before any update",
+          "expected": {
+            "theme": "PARCHMENT",
+            "mode": "SYSTEM",
+            "effectsEnabled": true,
+            "updatedAt": null
+          },
+          "effects": "No member_settings row inserted"
+        },
+        {
+          "action": "Ben patches theme MIDNIGHT, mode DARK, effectsEnabled false",
+          "expected": {
+            "theme": "MIDNIGHT",
+            "mode": "DARK",
+            "effectsEnabled": false,
+            "updatedAt": "2026-10-14T12:00:00Z"
+          },
+          "effects": "One real settings row, self002; accessibility/notification defaults preserved"
+        },
+        {
+          "action": "Second isolated patch effectsEnabled false against Ava fixturetrue, omit theme/mode",
+          "expected": {
+            "theme": "PARCHMENT",
+            "mode": "SYSTEM",
+            "effectsEnabled": false
+          },
+          "effects": "Exact row changes only effectsEnabled plus real updatedAt; omitted fields unchanged"
+        }
+      ]
+    }
+  ],
+  "policy_delta_members": {
+    "009": {
+      "handle": "ori",
+      "status": "active",
+      "roles": ["player"],
+      "configuration": "PLATFORM_OWNER_MEMBER_ID resolves exact009"
+    },
+    "017": {
+      "handle": "other-dm",
+      "status": "active",
+      "roles": ["dm"],
+      "dmProfileStatus": "approved"
+    }
+  },
+  "generated_identity_rule": {
+    "production": "Server-generated UUIDs; no deterministic global test hook",
+    "decisionId": "After decision commit capture the unique request_decisions.public_id for request130; assert valid UUID and exact actor/decision/time",
+    "noticeId": "Capture the unique notification event/recipient linked to captured decision fact; assert valid UUID and recipient001 only",
+    "closureEntitlementId": "Capture closeQuest rewardEntitlements ID or unique committed quest053/character031 entitlement row; assert UUID and exact PCXP4",
+    "progressionId": "Capture returned claim progressionEntries[0].id; assert UUID, one persisted ledger row and entitlement FK correspondence",
+    "seeded_ids": "Fixture160 unclaimed entitlement is explicitly inserted before isolated claim/query tests and remains a fixed fixture identity"
+  }
+}

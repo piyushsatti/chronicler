@@ -1,0 +1,3 @@
+-- CHA03 owns the named SQL implementation after P04, CHA02.
+-- Responsibility: Complete named set SQL projections, filters,count,page,locks,writes,histories; sqlc sources.
+-- Acceptance: TASK-CHA03, AUTH-character, BATCH-character. No SQL statements are implemented.

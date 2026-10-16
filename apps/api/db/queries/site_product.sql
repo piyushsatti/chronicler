@@ -1,0 +1,3 @@
+-- SIT03 owns the named SQL implementation after P04, SIT02.
+-- Responsibility: Complete named set SQL projections, filters,count,page,locks,writes,histories; sqlc sources.
+-- Acceptance: TASK-SIT03, AUTH-site, BATCH-site. No SQL statements are implemented.

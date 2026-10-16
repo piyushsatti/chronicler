@@ -1,0 +1,1082 @@
+{
+  "cases": [
+    {
+      "id": "ROOT-ARG-META-decideRequest",
+      "argument_id": "ARG-Mutation-decideRequest-meta",
+      "operation": "decideRequest",
+      "argument": "meta",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "positive_effect_source": "POLICY-REQUEST-EXCLUSIVE",
+      "valid_meta": {
+        "idempotencyKey": "phase1:decideRequest:01"
+      },
+      "invalid": [
+        {
+          "value": null,
+          "code": "INVALID"
+        },
+        {
+          "value": {},
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": ""
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "space key"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "\u00e9"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          },
+          "code": "INVALID"
+        }
+      ],
+      "valid_boundary": {
+        "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "expected": "At length128 run the exact populated positive case and require its documented durable effect. For each malformed case reset to that same before fixture: reject before business/history/event/recipient/job/receipt writes. Omitted required meta is GraphQL INVALID. Same actor/operation/key with exact normalized input returns the original receipt/effect; changed input conflicts; distinct actor cannot obtain the original receipt. Permission is current and checked before replay; use the named source forbidden actor case.",
+      "status": "Decision-complete group; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-META-decideVerification",
+      "argument_id": "ARG-Mutation-decideVerification-meta",
+      "operation": "decideVerification",
+      "argument": "meta",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "positive_effect_source": "POLICY-DDB-OPTIONAL",
+      "valid_meta": {
+        "idempotencyKey": "phase1:decideVerification:01"
+      },
+      "invalid": [
+        {
+          "value": null,
+          "code": "INVALID"
+        },
+        {
+          "value": {},
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": ""
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "space key"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "\u00e9"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          },
+          "code": "INVALID"
+        }
+      ],
+      "valid_boundary": {
+        "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "expected": "At length128 run the exact populated positive case and require its documented durable effect. For each malformed case reset to that same before fixture: reject before business/history/event/recipient/job/receipt writes. Omitted required meta is GraphQL INVALID. Same actor/operation/key with exact normalized input returns the original receipt/effect; changed input conflicts; distinct actor cannot obtain the original receipt. Permission is current and checked before replay; use the named source forbidden actor case.",
+      "status": "Decision-complete group; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-META-closeQuest",
+      "argument_id": "ARG-Mutation-closeQuest-meta",
+      "operation": "closeQuest",
+      "argument": "meta",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "positive_effect_source": "POLICY-REWARD-CLOSE",
+      "valid_meta": {
+        "idempotencyKey": "phase1:closeQuest:01"
+      },
+      "invalid": [
+        {
+          "value": null,
+          "code": "INVALID"
+        },
+        {
+          "value": {},
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": ""
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "space key"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "\u00e9"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          },
+          "code": "INVALID"
+        }
+      ],
+      "valid_boundary": {
+        "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "expected": "At length128 run the exact populated positive case and require its documented durable effect. For each malformed case reset to that same before fixture: reject before business/history/event/recipient/job/receipt writes. Omitted required meta is GraphQL INVALID. Same actor/operation/key with exact normalized input returns the original receipt/effect; changed input conflicts; distinct actor cannot obtain the original receipt. Permission is current and checked before replay; use the named source forbidden actor case.",
+      "status": "Decision-complete group; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-META-claimQuestRewards",
+      "argument_id": "ARG-Mutation-claimQuestRewards-meta",
+      "operation": "claimQuestRewards",
+      "argument": "meta",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "positive_effect_source": "POLICY-REWARD-CLAIM",
+      "valid_meta": {
+        "idempotencyKey": "phase1:claimQuestRewards:01"
+      },
+      "invalid": [
+        {
+          "value": null,
+          "code": "INVALID"
+        },
+        {
+          "value": {},
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": ""
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "space key"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "\u00e9"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          },
+          "code": "INVALID"
+        }
+      ],
+      "valid_boundary": {
+        "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "expected": "At length128 run the exact populated positive case and require its documented durable effect. For each malformed case reset to that same before fixture: reject before business/history/event/recipient/job/receipt writes. Omitted required meta is GraphQL INVALID. Same actor/operation/key with exact normalized input returns the original receipt/effect; changed input conflicts; distinct actor cannot obtain the original receipt. Permission is current and checked before replay; use the named source forbidden actor case.",
+      "status": "Decision-complete group; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-META-updateMySettings",
+      "argument_id": "ARG-Mutation-updateMySettings-meta",
+      "operation": "updateMySettings",
+      "argument": "meta",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "positive_effect_source": "PATCH-SETTINGS-JOINT",
+      "valid_meta": {
+        "idempotencyKey": "phase1:updateMySettings:01"
+      },
+      "invalid": [
+        {
+          "value": null,
+          "code": "INVALID"
+        },
+        {
+          "value": {},
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": ""
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "space key"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "\u00e9"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          },
+          "code": "INVALID"
+        }
+      ],
+      "valid_boundary": {
+        "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "expected": "At length128 run the exact populated positive case and require its documented durable effect. For each malformed case reset to that same before fixture: reject before business/history/event/recipient/job/receipt writes. Omitted required meta is GraphQL INVALID. Same actor/operation/key with exact normalized input returns the original receipt/effect; changed input conflicts; distinct actor cannot obtain the original receipt. Permission is current and checked before replay; use the named source forbidden actor case.",
+      "status": "Decision-complete group; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-INPUT-updateMySettings",
+      "argument_id": "ARG-Mutation-updateMySettings-input",
+      "operation": "updateMySettings",
+      "argument": "input",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "positive_effect_source": "PATCH-SETTINGS-JOINT",
+      "expected": "Execute the exact named joint object/replacement. The source specifies all changed values, omitted/null cases, validation, rollback and replay; explicit null or omitted nonnull argument rejects INVALID with no effects.",
+      "status": "Decision-complete group; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-META-updateMyProfile",
+      "argument_id": "ARG-Mutation-updateMyProfile-meta",
+      "operation": "updateMyProfile",
+      "argument": "meta",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "positive_effect_source": "PATCH-PROFILE-JOINT",
+      "valid_meta": {
+        "idempotencyKey": "phase1:updateMyProfile:01"
+      },
+      "invalid": [
+        {
+          "value": null,
+          "code": "INVALID"
+        },
+        {
+          "value": {},
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": ""
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "space key"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "\u00e9"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          },
+          "code": "INVALID"
+        }
+      ],
+      "valid_boundary": {
+        "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "expected": "At length128 run the exact populated positive case and require its documented durable effect. For each malformed case reset to that same before fixture: reject before business/history/event/recipient/job/receipt writes. Omitted required meta is GraphQL INVALID. Same actor/operation/key with exact normalized input returns the original receipt/effect; changed input conflicts; distinct actor cannot obtain the original receipt. Permission is current and checked before replay; use the named source forbidden actor case.",
+      "status": "Decision-complete group; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-INPUT-updateMyProfile",
+      "argument_id": "ARG-Mutation-updateMyProfile-input",
+      "operation": "updateMyProfile",
+      "argument": "input",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "positive_effect_source": "PATCH-PROFILE-JOINT",
+      "expected": "Execute the exact named joint object/replacement. The source specifies all changed values, omitted/null cases, validation, rollback and replay; explicit null or omitted nonnull argument rejects INVALID with no effects.",
+      "status": "Decision-complete group; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-META-updateCharacterProfile",
+      "argument_id": "ARG-Mutation-updateCharacterProfile-meta",
+      "operation": "updateCharacterProfile",
+      "argument": "meta",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "positive_effect_source": "PATCH-CHARACTER-PROFILE-JOINT",
+      "valid_meta": {
+        "idempotencyKey": "phase1:updateCharacterProfile:01"
+      },
+      "invalid": [
+        {
+          "value": null,
+          "code": "INVALID"
+        },
+        {
+          "value": {},
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": ""
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "space key"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "\u00e9"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          },
+          "code": "INVALID"
+        }
+      ],
+      "valid_boundary": {
+        "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "expected": "At length128 run the exact populated positive case and require its documented durable effect. For each malformed case reset to that same before fixture: reject before business/history/event/recipient/job/receipt writes. Omitted required meta is GraphQL INVALID. Same actor/operation/key with exact normalized input returns the original receipt/effect; changed input conflicts; distinct actor cannot obtain the original receipt. Permission is current and checked before replay; use the named source forbidden actor case.",
+      "status": "Decision-complete group; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-INPUT-updateCharacterProfile",
+      "argument_id": "ARG-Mutation-updateCharacterProfile-input",
+      "operation": "updateCharacterProfile",
+      "argument": "input",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "positive_effect_source": "PATCH-CHARACTER-PROFILE-JOINT",
+      "expected": "Execute the exact named joint object/replacement. The source specifies all changed values, omitted/null cases, validation, rollback and replay; explicit null or omitted nonnull argument rejects INVALID with no effects.",
+      "status": "Decision-complete group; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-META-editPublishedDocument",
+      "argument_id": "ARG-Mutation-editPublishedDocument-meta",
+      "operation": "editPublishedDocument",
+      "argument": "meta",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "positive_effect_source": "PATCH-DOCUMENT-EDIT-JOINT",
+      "valid_meta": {
+        "idempotencyKey": "phase1:editPublishedDocument:01"
+      },
+      "invalid": [
+        {
+          "value": null,
+          "code": "INVALID"
+        },
+        {
+          "value": {},
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": ""
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "space key"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "\u00e9"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          },
+          "code": "INVALID"
+        }
+      ],
+      "valid_boundary": {
+        "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "expected": "At length128 run the exact populated positive case and require its documented durable effect. For each malformed case reset to that same before fixture: reject before business/history/event/recipient/job/receipt writes. Omitted required meta is GraphQL INVALID. Same actor/operation/key with exact normalized input returns the original receipt/effect; changed input conflicts; distinct actor cannot obtain the original receipt. Permission is current and checked before replay; use the named source forbidden actor case.",
+      "status": "Decision-complete group; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-INPUT-editPublishedDocument",
+      "argument_id": "ARG-Mutation-editPublishedDocument-input",
+      "operation": "editPublishedDocument",
+      "argument": "input",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "positive_effect_source": "PATCH-DOCUMENT-EDIT-JOINT",
+      "expected": "Execute the exact named joint object/replacement. The source specifies all changed values, omitted/null cases, validation, rollback and replay; explicit null or omitted nonnull argument rejects INVALID with no effects.",
+      "status": "Decision-complete group; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-META-updateDocument",
+      "argument_id": "ARG-Mutation-updateDocument-meta",
+      "operation": "updateDocument",
+      "argument": "meta",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "positive_effect_source": "PATCH-DOCUMENT-EDIT-JOINT",
+      "valid_meta": {
+        "idempotencyKey": "phase1:updateDocument:01"
+      },
+      "invalid": [
+        {
+          "value": null,
+          "code": "INVALID"
+        },
+        {
+          "value": {},
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": ""
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "space key"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "\u00e9"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          },
+          "code": "INVALID"
+        }
+      ],
+      "valid_boundary": {
+        "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "expected": "At length128 run the exact populated positive case and require its documented durable effect. For each malformed case reset to that same before fixture: reject before business/history/event/recipient/job/receipt writes. Omitted required meta is GraphQL INVALID. Same actor/operation/key with exact normalized input returns the original receipt/effect; changed input conflicts; distinct actor cannot obtain the original receipt. Permission is current and checked before replay; use the named source forbidden actor case.",
+      "status": "Decision-complete group; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-INPUT-updateDocument",
+      "argument_id": "ARG-Mutation-updateDocument-input",
+      "operation": "updateDocument",
+      "argument": "input",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "positive_effect_source": "PATCH-DOCUMENT-EDIT-JOINT",
+      "expected": "Execute the exact named joint object/replacement. The source specifies all changed values, omitted/null cases, validation, rollback and replay; explicit null or omitted nonnull argument rejects INVALID with no effects.",
+      "status": "Decision-complete group; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-META-setMyAvailability",
+      "argument_id": "ARG-Mutation-setMyAvailability-meta",
+      "operation": "setMyAvailability",
+      "argument": "meta",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "positive_effect_source": "REPLACE-AVAILABILITY-EXACT",
+      "valid_meta": {
+        "idempotencyKey": "phase1:setMyAvailability:01"
+      },
+      "invalid": [
+        {
+          "value": null,
+          "code": "INVALID"
+        },
+        {
+          "value": {},
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": ""
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "space key"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "\u00e9"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          },
+          "code": "INVALID"
+        }
+      ],
+      "valid_boundary": {
+        "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "expected": "At length128 run the exact populated positive case and require its documented durable effect. For each malformed case reset to that same before fixture: reject before business/history/event/recipient/job/receipt writes. Omitted required meta is GraphQL INVALID. Same actor/operation/key with exact normalized input returns the original receipt/effect; changed input conflicts; distinct actor cannot obtain the original receipt. Permission is current and checked before replay; use the named source forbidden actor case.",
+      "status": "Decision-complete group; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-INPUT-setMyAvailability",
+      "argument_id": "ARG-Mutation-setMyAvailability-slots",
+      "operation": "setMyAvailability",
+      "argument": "slots",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "positive_effect_source": "REPLACE-AVAILABILITY-EXACT",
+      "expected": "Execute the exact named joint object/replacement. The source specifies all changed values, omitted/null cases, validation, rollback and replay; explicit null or omitted nonnull argument rejects INVALID with no effects.",
+      "status": "Decision-complete group; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-META-followPerson",
+      "argument_id": "ARG-Mutation-followPerson-meta",
+      "operation": "followPerson",
+      "argument": "meta",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "positive_effect_source": "SOCIAL-FOLLOW-EXACT",
+      "valid_meta": {
+        "idempotencyKey": "phase1:followPerson:01"
+      },
+      "invalid": [
+        {
+          "value": null,
+          "code": "INVALID"
+        },
+        {
+          "value": {},
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": ""
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "space key"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "\u00e9"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          },
+          "code": "INVALID"
+        }
+      ],
+      "valid_boundary": {
+        "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "expected": "At length128 run the exact populated positive case and require its documented durable effect. For each malformed case reset to that same before fixture: reject before business/history/event/recipient/job/receipt writes. Omitted required meta is GraphQL INVALID. Same actor/operation/key with exact normalized input returns the original receipt/effect; changed input conflicts; distinct actor cannot obtain the original receipt. Permission is current and checked before replay; use the named source forbidden actor case.",
+      "status": "Decision-complete group; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-META-unfollowPerson",
+      "argument_id": "ARG-Mutation-unfollowPerson-meta",
+      "operation": "unfollowPerson",
+      "argument": "meta",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "positive_effect_source": "SOCIAL-FOLLOW-EXACT",
+      "valid_meta": {
+        "idempotencyKey": "phase1:unfollowPerson:01"
+      },
+      "invalid": [
+        {
+          "value": null,
+          "code": "INVALID"
+        },
+        {
+          "value": {},
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": ""
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "space key"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "\u00e9"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          },
+          "code": "INVALID"
+        }
+      ],
+      "valid_boundary": {
+        "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "expected": "At length128 run the exact populated positive case and require its documented durable effect. For each malformed case reset to that same before fixture: reject before business/history/event/recipient/job/receipt writes. Omitted required meta is GraphQL INVALID. Same actor/operation/key with exact normalized input returns the original receipt/effect; changed input conflicts; distinct actor cannot obtain the original receipt. Permission is current and checked before replay; use the named source forbidden actor case.",
+      "status": "Decision-complete group; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-META-createTimeAnchor",
+      "argument_id": "ARG-Mutation-createTimeAnchor-meta",
+      "operation": "createTimeAnchor",
+      "argument": "meta",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "positive_effect_source": "TIME-ANCHOR-WRITE-EXACT",
+      "valid_meta": {
+        "idempotencyKey": "phase1:createTimeAnchor:01"
+      },
+      "invalid": [
+        {
+          "value": null,
+          "code": "INVALID"
+        },
+        {
+          "value": {},
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": ""
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "space key"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "\u00e9"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          },
+          "code": "INVALID"
+        }
+      ],
+      "valid_boundary": {
+        "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "expected": "At length128 run the exact populated positive case and require its documented durable effect. For each malformed case reset to that same before fixture: reject before business/history/event/recipient/job/receipt writes. Omitted required meta is GraphQL INVALID. Same actor/operation/key with exact normalized input returns the original receipt/effect; changed input conflicts; distinct actor cannot obtain the original receipt. Permission is current and checked before replay; use the named source forbidden actor case.",
+      "status": "Decision-complete group; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-INPUT-createTimeAnchor",
+      "argument_id": "ARG-Mutation-createTimeAnchor-input",
+      "operation": "createTimeAnchor",
+      "argument": "input",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "positive_effect_source": "TIME-ANCHOR-WRITE-EXACT",
+      "expected": "Execute the exact named joint object/replacement. The source specifies all changed values, omitted/null cases, validation, rollback and replay; explicit null or omitted nonnull argument rejects INVALID with no effects.",
+      "status": "Decision-complete group; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-META-updateTimeAnchor",
+      "argument_id": "ARG-Mutation-updateTimeAnchor-meta",
+      "operation": "updateTimeAnchor",
+      "argument": "meta",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "positive_effect_source": "TIME-ANCHOR-WRITE-EXACT",
+      "valid_meta": {
+        "idempotencyKey": "phase1:updateTimeAnchor:01"
+      },
+      "invalid": [
+        {
+          "value": null,
+          "code": "INVALID"
+        },
+        {
+          "value": {},
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": ""
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "space key"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "\u00e9"
+          },
+          "code": "INVALID"
+        },
+        {
+          "value": {
+            "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+          },
+          "code": "INVALID"
+        }
+      ],
+      "valid_boundary": {
+        "idempotencyKey": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
+      "expected": "At length128 run the exact populated positive case and require its documented durable effect. For each malformed case reset to that same before fixture: reject before business/history/event/recipient/job/receipt writes. Omitted required meta is GraphQL INVALID. Same actor/operation/key with exact normalized input returns the original receipt/effect; changed input conflicts; distinct actor cannot obtain the original receipt. Permission is current and checked before replay; use the named source forbidden actor case.",
+      "status": "Decision-complete group; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-INPUT-updateTimeAnchor",
+      "argument_id": "ARG-Mutation-updateTimeAnchor-input",
+      "operation": "updateTimeAnchor",
+      "argument": "input",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "positive_effect_source": "TIME-ANCHOR-WRITE-EXACT",
+      "expected": "Execute the exact named joint object/replacement. The source specifies all changed values, omitted/null cases, validation, rollback and replay; explicit null or omitted nonnull argument rejects INVALID with no effects.",
+      "status": "Decision-complete group; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-VALUE-decideRequest-requestId",
+      "argument_id": "ARG-Mutation-decideRequest-requestId",
+      "operation": "decideRequest",
+      "argument": "requestId",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "positive_effect_source": "POLICY-REQUEST-EXCLUSIVE",
+      "valid_value": "130",
+      "expected": {
+        "persisted_effects": "Exact POLICY-REQUEST-EXCLUSIVE effects and corresponding immutable fact/receipt rows, with the supplied argument value retained where that scenario specifies authored data",
+        "authority": "Execute all explicit forbidden/current-role/owner cases of POLICY-REQUEST-EXCLUSIVE; none can obtain original receipt or change rows",
+        "nonnull_boundary": "For nonnull arguments omission or null is INVALID before any business effects; nullable note null remains null and does not synthesize authored text"
+      },
+      "status": "Decision-complete binding to populated policy fixture; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-VALUE-decideRequest-decision",
+      "argument_id": "ARG-Mutation-decideRequest-decision",
+      "operation": "decideRequest",
+      "argument": "decision",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "positive_effect_source": "POLICY-REQUEST-EXCLUSIVE",
+      "valid_value": "approved",
+      "expected": {
+        "persisted_effects": "Exact POLICY-REQUEST-EXCLUSIVE effects and corresponding immutable fact/receipt rows, with the supplied argument value retained where that scenario specifies authored data",
+        "authority": "Execute all explicit forbidden/current-role/owner cases of POLICY-REQUEST-EXCLUSIVE; none can obtain original receipt or change rows",
+        "nonnull_boundary": "For nonnull arguments omission or null is INVALID before any business effects; nullable note null remains null and does not synthesize authored text"
+      },
+      "status": "Decision-complete binding to populated policy fixture; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-VALUE-decideVerification-characterId",
+      "argument_id": "ARG-Mutation-decideVerification-characterId",
+      "operation": "decideVerification",
+      "argument": "characterId",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "positive_effect_source": "POLICY-DDB-OPTIONAL",
+      "valid_value": "032",
+      "expected": {
+        "persisted_effects": "Exact POLICY-DDB-OPTIONAL effects and corresponding immutable fact/receipt rows, with the supplied argument value retained where that scenario specifies authored data",
+        "authority": "Execute all explicit forbidden/current-role/owner cases of POLICY-DDB-OPTIONAL; none can obtain original receipt or change rows",
+        "nonnull_boundary": "For nonnull arguments omission or null is INVALID before any business effects; nullable note null remains null and does not synthesize authored text"
+      },
+      "status": "Decision-complete binding to populated policy fixture; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-VALUE-decideVerification-expectedSubmittedAt",
+      "argument_id": "ARG-Mutation-decideVerification-expectedSubmittedAt",
+      "operation": "decideVerification",
+      "argument": "expectedSubmittedAt",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "positive_effect_source": "POLICY-DDB-OPTIONAL",
+      "valid_value": "2026-10-14T11:30:00Z",
+      "expected": {
+        "persisted_effects": "Exact POLICY-DDB-OPTIONAL effects and corresponding immutable fact/receipt rows, with the supplied argument value retained where that scenario specifies authored data",
+        "authority": "Execute all explicit forbidden/current-role/owner cases of POLICY-DDB-OPTIONAL; none can obtain original receipt or change rows",
+        "nonnull_boundary": "For nonnull arguments omission or null is INVALID before any business effects; nullable note null remains null and does not synthesize authored text"
+      },
+      "status": "Decision-complete binding to populated policy fixture; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-VALUE-decideVerification-verdict",
+      "argument_id": "ARG-Mutation-decideVerification-verdict",
+      "operation": "decideVerification",
+      "argument": "verdict",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "positive_effect_source": "POLICY-DDB-OPTIONAL",
+      "valid_value": "APPROVED",
+      "expected": {
+        "persisted_effects": "Exact POLICY-DDB-OPTIONAL effects and corresponding immutable fact/receipt rows, with the supplied argument value retained where that scenario specifies authored data",
+        "authority": "Execute all explicit forbidden/current-role/owner cases of POLICY-DDB-OPTIONAL; none can obtain original receipt or change rows",
+        "nonnull_boundary": "For nonnull arguments omission or null is INVALID before any business effects; nullable note null remains null and does not synthesize authored text"
+      },
+      "status": "Decision-complete binding to populated policy fixture; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-VALUE-decideVerification-note",
+      "argument_id": "ARG-Mutation-decideVerification-note",
+      "operation": "decideVerification",
+      "argument": "note",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "positive_effect_source": "POLICY-DDB-OPTIONAL",
+      "valid_value": "Ordinary verification criteria met",
+      "expected": {
+        "persisted_effects": "Exact POLICY-DDB-OPTIONAL effects and corresponding immutable fact/receipt rows, with the supplied argument value retained where that scenario specifies authored data",
+        "authority": "Execute all explicit forbidden/current-role/owner cases of POLICY-DDB-OPTIONAL; none can obtain original receipt or change rows",
+        "nonnull_boundary": "For nonnull arguments omission or null is INVALID before any business effects; nullable note null remains null and does not synthesize authored text"
+      },
+      "status": "Decision-complete binding to populated policy fixture; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-VALUE-claimQuestRewards-questId",
+      "argument_id": "ARG-Mutation-claimQuestRewards-questId",
+      "operation": "claimQuestRewards",
+      "argument": "questId",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "positive_effect_source": "POLICY-REWARD-CLAIM",
+      "valid_value": "053",
+      "expected": {
+        "persisted_effects": "Exact POLICY-REWARD-CLAIM effects and corresponding immutable fact/receipt rows, with the supplied argument value retained where that scenario specifies authored data",
+        "authority": "Execute all explicit forbidden/current-role/owner cases of POLICY-REWARD-CLAIM; none can obtain original receipt or change rows",
+        "nonnull_boundary": "For nonnull arguments omission or null is INVALID before any business effects; nullable note null remains null and does not synthesize authored text"
+      },
+      "status": "Decision-complete binding to populated policy fixture; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-VALUE-claimQuestRewards-characterId",
+      "argument_id": "ARG-Mutation-claimQuestRewards-characterId",
+      "operation": "claimQuestRewards",
+      "argument": "characterId",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "positive_effect_source": "POLICY-REWARD-CLAIM",
+      "valid_value": "031",
+      "expected": {
+        "persisted_effects": "Exact POLICY-REWARD-CLAIM effects and corresponding immutable fact/receipt rows, with the supplied argument value retained where that scenario specifies authored data",
+        "authority": "Execute all explicit forbidden/current-role/owner cases of POLICY-REWARD-CLAIM; none can obtain original receipt or change rows",
+        "nonnull_boundary": "For nonnull arguments omission or null is INVALID before any business effects; nullable note null remains null and does not synthesize authored text"
+      },
+      "status": "Decision-complete binding to populated policy fixture; NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-VALUE-followPerson-memberId",
+      "argument_id": "ARG-Mutation-followPerson-memberId",
+      "operation": "followPerson",
+      "argument": "memberId",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "positive_effect_source": "SOCIAL-FOLLOW-EXACT",
+      "valid_value": "10000000-0000-4000-8000-000000000003",
+      "expected": {
+        "target_row": "Only pair001/003 changes; pair002/003 remains unchanged",
+        "validation_cases": [
+          {
+            "target": "001",
+            "code": "INVALID",
+            "effect": "No self row or receipt."
+          },
+          {
+            "target": "999",
+            "code": "NOT_FOUND",
+            "effect": "No row or receipt."
+          },
+          {
+            "actor": "anonymous",
+            "code": "UNAUTHENTICATED",
+            "effect": "No rows."
+          },
+          {
+            "actor": "001 with live status inactive",
+            "code": "FORBIDDEN",
+            "effect": "No rows or successful replay disclosure."
+          }
+        ],
+        "history_notifications_jobs": "zero, as explicitly specified in source",
+        "readback": {
+          "query": "query {isFollowing(memberId:\"10000000-0000-4000-8000-000000000003\")}",
+          "actor": "10000000-0000-4000-8000-000000000001",
+          "expected": {
+            "isFollowing": true
+          }
+        }
+      },
+      "status": "NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-VALUE-unfollowPerson-memberId",
+      "argument_id": "ARG-Mutation-unfollowPerson-memberId",
+      "operation": "unfollowPerson",
+      "argument": "memberId",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "positive_effect_source": "SOCIAL-FOLLOW-EXACT",
+      "valid_value": "10000000-0000-4000-8000-000000000003",
+      "expected": {
+        "target_row": "Only pair001/003 changes; pair002/003 remains unchanged",
+        "validation_cases": [
+          {
+            "target": "001",
+            "code": "INVALID",
+            "effect": "No self row or receipt."
+          },
+          {
+            "target": "999",
+            "code": "NOT_FOUND",
+            "effect": "No row or receipt."
+          },
+          {
+            "actor": "anonymous",
+            "code": "UNAUTHENTICATED",
+            "effect": "No rows."
+          },
+          {
+            "actor": "001 with live status inactive",
+            "code": "FORBIDDEN",
+            "effect": "No rows or successful replay disclosure."
+          }
+        ],
+        "history_notifications_jobs": "zero, as explicitly specified in source",
+        "readback": {
+          "query": "query {isFollowing(memberId:\"10000000-0000-4000-8000-000000000003\")}",
+          "actor": "10000000-0000-4000-8000-000000000001",
+          "expected": {
+            "isFollowing": false
+          }
+        }
+      },
+      "status": "NOT IMPLEMENTED"
+    },
+    {
+      "id": "ROOT-ARG-VALUE-isFollowing-memberId",
+      "argument_id": "ARG-Query-isFollowing-memberId",
+      "operation": "isFollowing",
+      "argument": "memberId",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "positive_effect_source": "SOCIAL-FOLLOW-EXACT",
+      "valid_value": "10000000-0000-4000-8000-000000000003",
+      "expected": {
+        "operation": "isFollowing",
+        "argument": "memberId",
+        "value": "10000000-0000-4000-8000-000000000003",
+        "actor_results": [
+          {
+            "actor": "001",
+            "at": "before follow",
+            "expected": false
+          },
+          {
+            "actor": "001",
+            "at": "after follow",
+            "expected": true
+          },
+          {
+            "actor": "001",
+            "at": "after unfollow",
+            "expected": false
+          },
+          {
+            "actor": "002",
+            "at": "all three stages",
+            "expected": true
+          }
+        ],
+        "missing_relation": "For001 member999 without any matching row returns false, without creating an identity or preference; the read is relation existence, while writers still require target existence",
+        "errors": [
+          {
+            "actor": "anonymous",
+            "code": "UNAUTHENTICATED"
+          },
+          {
+            "actor": "001 with live inactive status",
+            "code": "FORBIDDEN"
+          },
+          {
+            "memberId": "not-a-uuid",
+            "code": "INVALID"
+          },
+          {
+            "memberId": null,
+            "code": "INVALID"
+          }
+        ],
+        "effects": "Every query snapshots and preserves all rows; following never bypasses protected Document/Character permissions"
+      },
+      "status": "NOT IMPLEMENTED"
+    }
+  ],
+  "complete_argument_bindings": 33,
+  "remaining_unbound_arguments_are_open": true
+}

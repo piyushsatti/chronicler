@@ -39,3 +39,5 @@ Interfaces with incomplete enforcement or verification. Each owning page disting
 - Map / systems → interfaces → `apps/<app>/docs/`
 - App docs may link **up only** to interfaces they implement
 - Boundary decisions in [../decisions/](/docs/decisions) are cited from interfaces
+
+The [GraphQL product transport](/docs/interfaces/graphql-product-transport.md) is accepted design. Runtime envelope, limits and product REST removal remain unenforced until their implementation tests pass.

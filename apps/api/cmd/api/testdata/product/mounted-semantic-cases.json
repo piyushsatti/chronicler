@@ -1,0 +1,350 @@
+{
+  "cases": [
+    {
+      "id": "REWARD-COVERAGE-EXACT",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "operation": "questSummaries",
+      "contracts": ["rewards-and-policy.md"],
+      "fixture": {
+        "legacy_closed": {
+          "questId": "10000000-0000-4000-8000-000000000051",
+          "hasDecision": false
+        },
+        "pending_closure": {
+          "questId": "10000000-0000-4000-8000-000000000053",
+          "status": "played",
+          "characterId": "10000000-0000-4000-8000-000000000031",
+          "ledgerSum": 5
+        },
+        "covered_empty": {
+          "questId": "10000000-0000-4000-8000-000000000055",
+          "status": "closed",
+          "hasDecision": true,
+          "entitlements": [],
+          "attributedLedger": []
+        }
+      },
+      "steps": [
+        {
+          "action": "Read legacy051",
+          "expected": {
+            "totalPcxpAwarded": null,
+            "coverage": "LEGACY_UNKNOWN"
+          }
+        },
+        {
+          "action": "Read current played053",
+          "expected": {
+            "totalPcxpAwarded": 0,
+            "coverage": "COMPLETE"
+          }
+        },
+        {
+          "action": "Read covered empty055",
+          "expected": {
+            "totalPcxpAwarded": 0,
+            "coverage": "COMPLETE"
+          }
+        },
+        {
+          "action": "Close053 with owner003, attendance031played,reward031pcxp4; capture full decision/entitlement UUIDs",
+          "expected": {
+            "totalPcxpAwarded": 0,
+            "coverage": "COMPLETE"
+          }
+        },
+        {
+          "action": "Claim053/031 as owning player002; capture attributed progression UUID",
+          "expected": {
+            "totalPcxpAwarded": 4,
+            "coverage": "COMPLETE"
+          }
+        },
+        {
+          "action": "Replay identical claim",
+          "expected": {
+            "totalPcxpAwarded": 4,
+            "coverage": "COMPLETE"
+          }
+        }
+      ],
+      "set_boundary": {
+        "selected_quests": [
+          "10000000-0000-4000-8000-000000000051",
+          "10000000-0000-4000-8000-000000000055"
+        ],
+        "expected": {
+          "totalPcxpAwarded": null,
+          "coverage": "LEGACY_UNKNOWN"
+        }
+      },
+      "negative": "Unknown quest NOT_FOUND, forbidden current authority FORBIDDEN. Attributed payment for currently nonclosed quest INTERNAL. Inject decision, entitlement, ledger or claim-binding failure, assert whole respective UOW rollback and no replay receipt. No reason/timestamp/absence inference or historical FK invention.",
+      "field_bindings": {
+        "SDL-QuestSummaryTotalsV2Type-totalPcxpAwarded": {
+          "step_values": [null, 0, 0, 0, 4, 4]
+        },
+        "SDL-QuestSummaryTotalsV2Type-coverage": {
+          "step_values": [
+            "LEGACY_UNKNOWN",
+            "COMPLETE",
+            "COMPLETE",
+            "COMPLETE",
+            "COMPLETE",
+            "COMPLETE"
+          ]
+        }
+      }
+    },
+    {
+      "id": "SCHEDULED-WORK-EXACT",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "operation": "adminOperations",
+      "contracts": ["work-contract.md"],
+      "fixture": {
+        "clock": "2026-10-14T12:00:00Z",
+        "registry": ["gametime_fill:00:00", "reconcile_dry_run:00:30"],
+        "persisted_observation_reset": "Remove only scheduled-slot job/facts for these two synthetic14Oct slots. Canonical unrelated job110 remains. No live observed time is asserted from fabricated current clock."
+      },
+      "before": [
+        {
+          "kind": "gametime_fill",
+          "expectedSlot": "2026-10-14T00:00:00Z",
+          "outcome": "NEVER_RAN",
+          "lastStartedAt": null,
+          "lastFinishedAt": null,
+          "jobId": null,
+          "safeErrorCode": null
+        },
+        {
+          "kind": "reconcile_dry_run",
+          "expectedSlot": "2026-10-14T00:30:00Z",
+          "outcome": "NEVER_RAN",
+          "lastStartedAt": null,
+          "lastFinishedAt": null,
+          "jobId": null,
+          "safeErrorCode": null
+        }
+      ],
+      "after": [
+        {
+          "kind": "gametime_fill",
+          "expectedSlot": "2026-10-14T00:00:00Z",
+          "outcome": "SUCCEEDED",
+          "lastStartedAt": "2026-10-14T00:01:00Z",
+          "lastFinishedAt": "2026-10-14T00:02:00Z",
+          "jobId": "10000000-0000-4000-8000-000000000140",
+          "safeErrorCode": null
+        },
+        {
+          "kind": "reconcile_dry_run",
+          "expectedSlot": "2026-10-14T00:30:00Z",
+          "outcome": "FAILED",
+          "lastStartedAt": "2026-10-14T00:31:00Z",
+          "lastFinishedAt": "2026-10-14T00:32:00Z",
+          "jobId": "10000000-0000-4000-8000-000000000141",
+          "safeErrorCode": "JOB_INVARIANT_FAILED"
+        }
+      ],
+      "action": "Insert literal persisted fixture execution facts140/141 with matching terminal job rows, then query all scheduledWork fields as admin004. Restart reader instance and compare same exact array. Before insert compare the before array.",
+      "negative": "Ben002 FORBIDDEN, anonymous UNAUTHENTICATED. No writes from either query; never infer successful execution from enqueue. J01 separate real lease execution tests capture actual database timestamps.",
+      "field_bindings": {
+        "SDL-ScheduledWorkStatusType-kind": {
+          "before": ["gametime_fill", "reconcile_dry_run"],
+          "after": ["gametime_fill", "reconcile_dry_run"]
+        },
+        "SDL-ScheduledWorkStatusType-expectedSlot": {
+          "before": ["2026-10-14T00:00:00Z", "2026-10-14T00:30:00Z"],
+          "after": ["2026-10-14T00:00:00Z", "2026-10-14T00:30:00Z"]
+        },
+        "SDL-ScheduledWorkStatusType-outcome": {
+          "before": ["NEVER_RAN", "NEVER_RAN"],
+          "after": ["SUCCEEDED", "FAILED"]
+        },
+        "SDL-ScheduledWorkStatusType-lastStartedAt": {
+          "before": [null, null],
+          "after": ["2026-10-14T00:01:00Z", "2026-10-14T00:31:00Z"]
+        },
+        "SDL-ScheduledWorkStatusType-lastFinishedAt": {
+          "before": [null, null],
+          "after": ["2026-10-14T00:02:00Z", "2026-10-14T00:32:00Z"]
+        },
+        "SDL-ScheduledWorkStatusType-jobId": {
+          "before": [null, null],
+          "after": [
+            "10000000-0000-4000-8000-000000000140",
+            "10000000-0000-4000-8000-000000000141"
+          ]
+        },
+        "SDL-ScheduledWorkStatusType-safeErrorCode": {
+          "before": [null, null],
+          "after": [null, "JOB_INVARIANT_FAILED"]
+        },
+        "SDL-AdminOperationsV2Type-scheduledWork": {
+          "before": [
+            {
+              "kind": "gametime_fill",
+              "expectedSlot": "2026-10-14T00:00:00Z",
+              "outcome": "NEVER_RAN",
+              "lastStartedAt": null,
+              "lastFinishedAt": null,
+              "jobId": null,
+              "safeErrorCode": null
+            },
+            {
+              "kind": "reconcile_dry_run",
+              "expectedSlot": "2026-10-14T00:30:00Z",
+              "outcome": "NEVER_RAN",
+              "lastStartedAt": null,
+              "lastFinishedAt": null,
+              "jobId": null,
+              "safeErrorCode": null
+            }
+          ],
+          "after": [
+            {
+              "kind": "gametime_fill",
+              "expectedSlot": "2026-10-14T00:00:00Z",
+              "outcome": "SUCCEEDED",
+              "lastStartedAt": "2026-10-14T00:01:00Z",
+              "lastFinishedAt": "2026-10-14T00:02:00Z",
+              "jobId": "10000000-0000-4000-8000-000000000140",
+              "safeErrorCode": null
+            },
+            {
+              "kind": "reconcile_dry_run",
+              "expectedSlot": "2026-10-14T00:30:00Z",
+              "outcome": "FAILED",
+              "lastStartedAt": "2026-10-14T00:31:00Z",
+              "lastFinishedAt": "2026-10-14T00:32:00Z",
+              "jobId": "10000000-0000-4000-8000-000000000141",
+              "safeErrorCode": "JOB_INVARIANT_FAILED"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "UNLOCKS-PAGE-EXACT",
+      "owner": "S03",
+      "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
+      "operation": "myUnlocks",
+      "fixture": {
+        "actor": "10000000-0000-4000-8000-000000000001",
+        "grant": {
+          "memberId": "10000000-0000-4000-8000-000000000001",
+          "unlockableId": "10000000-0000-4000-8000-000000000090",
+          "unlockedAt": "2026-10-13T10:00:00Z",
+          "source": "grant",
+          "grantedBy": "10000000-0000-4000-8000-000000000004"
+        },
+        "catalog090": {
+          "kind": "ACHIEVEMENT",
+          "name": "Bridgekeeper",
+          "active": true
+        },
+        "driver": {
+          "tenureMonths": 9,
+          "playerQuestsCount": 1,
+          "dmSessionsCount": 0
+        },
+        "other_grants": "Retain all canonical QA grants belonging to other actual member UUIDs; Ava has only explicit090"
+      },
+      "action": "Read limit1/offset0 then offset1; retire catalog090 only and repeat; read as Ben with no grant; reject limit0/101 and offset-1; explicit null limit/offset INVALID. Repeated reads write nothing.",
+      "field_bindings": {
+        "SDL-MemberUnlockPage-items": {
+          "offset0": [
+            {
+              "memberId": "10000000-0000-4000-8000-000000000001",
+              "unlockableId": "10000000-0000-4000-8000-000000000090",
+              "unlockedAt": "2026-10-13T10:00:00Z",
+              "source": "grant",
+              "grantedBy": "10000000-0000-4000-8000-000000000004"
+            }
+          ],
+          "offset1": []
+        },
+        "SDL-MemberUnlockPage-total": {
+          "both_pages": 1,
+          "Ben": 0
+        },
+        "SDL-MemberUnlockPage-driverProgress": {
+          "tenureMonths": 9,
+          "playerQuestsCount": 1,
+          "dmSessionsCount": 0
+        },
+        "SDL-MemberUnlockPage-dmTier": "none",
+        "SDL-MemberUnlockPage-unlockedAchievements": {
+          "active": ["Bridgekeeper"],
+          "retired_but_earned": ["Bridgekeeper"]
+        }
+      },
+      "argument_ids": ["ARG-Query-myUnlocks-limit", "ARG-Query-myUnlocks-offset"]
+    },
+    {
+      "id": "REWARD-PAGE-AND-RECEIPT-EXACT",
+      "owner": "S04",
+      "test_file": "apps/api/cmd/api/graphql_mutation_integration_test.go",
+      "operation": "myQuestRewards",
+      "fixture": {
+        "actor": "10000000-0000-4000-8000-000000000002",
+        "closed_quest": "10000000-0000-4000-8000-000000000053",
+        "entitlementId": "10000000-0000-4000-8000-000000000160",
+        "characterId": "10000000-0000-4000-8000-000000000031",
+        "pcxp": 4,
+        "claimedAt": null,
+        "ledgerBefore": 5,
+        "scope": "Reset to isolated selected core graph with seeded160; this is separate from captured closureEntitlementId case. No other Ben entitlement exists; retain unrelated QA rows."
+      },
+      "action": "Read UNCLAIMED and CLAIMED aliases before and after claiming160, with limit1 offsets0/1; capture progression UUID and exact cross-row binding, then same-key replay and new-key already-claimed. Reject status unknown, limit0/101, offset-1. Anonymous UNAUTHENTICATED, inactive FORBIDDEN; impossible memberId retarget argument fails schema validation.",
+      "field_bindings": {
+        "SDL-RewardEntitlementPage-items": {
+          "unclaimed_before": ["10000000-0000-4000-8000-000000000160"],
+          "claimed_before": [],
+          "unclaimed_after": [],
+          "claimed_after": ["10000000-0000-4000-8000-000000000160"],
+          "selector": "id"
+        },
+        "SDL-RewardEntitlementPage-total": {
+          "unclaimed_before": 1,
+          "claimed_before": 0,
+          "unclaimed_after": 0,
+          "claimed_after": 1,
+          "past_page_total_for_matching_status": 1
+        },
+        "SDL-RewardClaimReceipt-entitlementIds": [
+          "10000000-0000-4000-8000-000000000160"
+        ],
+        "SDL-RewardClaimReceipt-progressionEntries": [
+          {
+            "id": "$progressionId",
+            "characterId": "10000000-0000-4000-8000-000000000031",
+            "kind": "pcxp",
+            "amount": 4,
+            "note": "Completed the crossing",
+            "questId": "10000000-0000-4000-8000-000000000053",
+            "recordedBy": "10000000-0000-4000-8000-000000000002",
+            "recordedAt": "2026-10-14T12:00:00Z"
+          }
+        ],
+        "SDL-RewardClaimReceipt-replayed": {
+          "first": false,
+          "same_key": true,
+          "new_key": false
+        },
+        "SDL-RewardClaimReceipt-alreadyClaimed": {
+          "first": false,
+          "same_key": false,
+          "new_key": true
+        }
+      },
+      "argument_ids": [
+        "ARG-Query-myQuestRewards-status",
+        "ARG-Query-myQuestRewards-limit",
+        "ARG-Query-myQuestRewards-offset"
+      ]
+    }
+  ],
+  "runtime_success_claim": false
+}

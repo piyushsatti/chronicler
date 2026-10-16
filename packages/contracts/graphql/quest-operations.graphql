@@ -1,0 +1,93 @@
+extend type Query {
+  openQuestSeats(
+    regionId: ID = null
+    dmId: ID = null
+    limit: Int! = 50
+    offset: Int! = 0
+  ): OpenQuestSeatsV2Result!
+  quest(id: ID = null, shortCode: String = null): QuestV2Type
+  quests(
+    filters: QuestV2FiltersInput = null
+    limit: Int! = 50
+    offset: Int! = 0
+  ): QuestV2ListResult!
+  questBoard(
+    regionId: ID = null
+    limit: Int! = 50
+    offset: Int! = 0
+  ): QuestV2ListResult!
+  recentlyClosedQuests(
+    regionId: ID = null
+    closedSince: DateTime = null
+    limit: Int! = 50
+    offset: Int! = 0
+  ): QuestV2ListResult!
+  questArcs(limit: Int! = 50, offset: Int! = 0): QuestArcV2ListResult!
+  questArc(id: ID!): QuestArcV2Type
+  questGenreOptions: [String!]!
+  myQuestSignups(limit: Int! = 50, offset: Int! = 0): ParticipationPage!
+  questSummaries(
+    questId: ID!
+    limit: Int! = 50
+    offset: Int! = 0
+  ): QuestSummariesV2Result!
+  questStateCounts(filters: QuestStateCountsFiltersV2Input): [QuestStateCountV2Type!]!
+  dmStats(memberId: ID!): DmStatsV2Type
+  dmSessionHistory(
+    memberId: ID!
+    limit: Int! = 50
+    offset: Int! = 0
+  ): DmSessionHistoryV2Result!
+  dmSummaries(
+    filters: DmSummaryFiltersV2Input
+    limit: Int! = 50
+    offset: Int! = 0
+  ): DocumentListResult!
+}
+extend type Mutation {
+  createQuest(input: CreateQuestV2Input!, meta: CommandMeta!): QuestV2Type!
+  updateQuest(id: ID!, input: QuestEditInput!, meta: CommandMeta!): QuestV2Type!
+  transitionQuestStatus(id: ID!, to: String!, meta: CommandMeta!): QuestV2Type!
+  closeQuest(id: ID!, input: CloseQuestInput!, meta: CommandMeta!): QuestV2Type!
+  upsertQuestSummary(input: QuestSummaryInput!, meta: CommandMeta!): DocumentType!
+  upsertQuestArc(id: ID, name: String!, meta: CommandMeta!): QuestArcV2Type!
+  removeQuestFromArc(questId: ID!, meta: CommandMeta!): QuestV2Type!
+  signupForQuest(
+    questId: ID!
+    characterId: ID!
+    meta: CommandMeta!
+  ): QuestParticipantV2Type!
+  withdrawFromQuest(
+    questId: ID!
+    characterId: ID!
+    meta: CommandMeta!
+  ): QuestParticipantV2Type!
+  selectQuestParticipants(
+    questId: ID!
+    characterIds: [ID!]!
+    meta: CommandMeta!
+  ): [QuestParticipantV2Type!]!
+  attestQuestParticipation(
+    questId: ID!
+    entries: [ParticipationAttestationInput!]!
+    meta: CommandMeta!
+  ): [QuestParticipantV2Type!]!
+  syncQuestDiscord(questId: ID!, meta: CommandMeta!): DeliveryReceipt!
+  deleteQuest(questId: ID!, meta: CommandMeta!): CommandReceipt!
+  restoreQuest(questId: ID!, meta: CommandMeta!): QuestV2Type!
+  setQuestHexes(
+    questId: ID!
+    hexes: [QuestHexInput!]!
+    meta: CommandMeta!
+  ): [QuestHexV2Type!]!
+}
+
+input CloseQuestInput {
+  attendance: [ParticipationAttestationInput!]!
+  rewards: [QuestPcxpAwardInput!]!
+}
+input QuestPcxpAwardInput {
+  characterId: ID!
+  pcxp: Int!
+  note: String
+}

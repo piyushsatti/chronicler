@@ -1,0 +1,91 @@
+type Query {
+  myUnlocks(limit: Int! = 50, offset: Int! = 0): MemberUnlockPage!
+  member(id: ID = null, handle: String = null): MemberType
+  members(
+    filters: MemberFiltersInput = null
+    sort: MemberSortInput = null
+    limit: Int! = 100
+    offset: Int! = 0
+  ): MemberListResult!
+  memberActivityStats(memberId: ID!): MemberActivityStatsType
+  memberProfile(handle: String!): MemberProfileType
+  communityDirectory(
+    filters: CommunityDirectoryFiltersInput = null
+    limit: Int! = 50
+    offset: Int! = 0
+  ): CommunityDirectoryResult!
+  pendingDmProfileVerifications(
+    limit: Int! = 50
+    offset: Int! = 0
+  ): CommunityDirectoryResult!
+  myPersonalization: MyPersonalizationType
+  memberMe: MemberType!
+  memberByDiscordId(discordId: String!): MemberType
+  memberRoleHistory(memberId: ID!, limit: Int! = 50, offset: Int! = 0): RoleChangePage!
+  myAvailability: [AvailabilitySlotType!]!
+  memberAvailability(memberId: ID!): [AvailabilitySlotType!]!
+  unlockablesCatalog(
+    activeOnly: Boolean! = true
+    limit: Int! = 50
+    offset: Int! = 0
+  ): UnlockablePage!
+  isFollowing(memberId: ID!): Boolean!
+  myRequests(limit: Int! = 50, offset: Int! = 0): RequestPage!
+  dmRequests(limit: Int! = 50, offset: Int! = 0): RequestPage!
+}
+type Mutation {
+  setMemberRoles(
+    memberId: ID!
+    roles: [String!]!
+    note: String
+    meta: CommandMeta!
+  ): MemberType!
+  setMemberRolesBatch(
+    changes: [MemberRoleBatchInput!]!
+    meta: CommandMeta!
+  ): [MemberRoleBatchResultType!]!
+  updateMyProfile(input: UpdateMyProfileInput!, meta: CommandMeta!): MemberType!
+  updateMyDmProfile(input: UpdateDmProfileInput!, meta: CommandMeta!): DmProfileV2Type!
+  setMyAvailability(
+    slots: [AvailabilitySlotInput!]!
+    meta: CommandMeta!
+  ): [AvailabilitySlotType!]!
+  submitDmProfileForVerification(
+    expectedRevision: Int!
+    meta: CommandMeta!
+  ): DmProfileV2Type!
+  decideDmProfileVerification(
+    memberId: ID!
+    expectedRevision: Int!
+    verdict: VerificationVerdict!
+    note: String
+    meta: CommandMeta!
+  ): DmProfileV2Type!
+  grantUnlock(
+    memberId: ID!
+    unlockableId: ID!
+    note: String!
+    meta: CommandMeta!
+  ): MemberUnlockType!
+  updateMySettings(input: MemberSettingsPatch!, meta: CommandMeta!): MemberSettingsType!
+  upsertUnlockable(
+    id: ID
+    input: UpsertUnlockableInput!
+    meta: CommandMeta!
+  ): UnlockableType!
+  setUnlockableActive(id: ID!, active: Boolean!, meta: CommandMeta!): UnlockableType!
+  followPerson(memberId: ID!, meta: CommandMeta!): CommandReceipt!
+  unfollowPerson(memberId: ID!, meta: CommandMeta!): CommandReceipt!
+  createRequest(
+    targetDmId: ID!
+    kind: String!
+    note: String
+    meta: CommandMeta!
+  ): RequestV2Type!
+  decideRequest(
+    requestId: ID!
+    decision: String!
+    note: String
+    meta: CommandMeta!
+  ): RequestV2Type!
+}

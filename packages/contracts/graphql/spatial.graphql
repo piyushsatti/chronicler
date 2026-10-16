@@ -2,7 +2,7 @@ type ArchonAssignmentType {
   memberId: ID!
   regionId: ID!
   grantedAt: DateTime!
-  grantedBy: ID!
+  grantedBy: ID
 }
 
 type GameCalendarV2Type {
@@ -44,11 +44,9 @@ type HexEdgeV2Type {
 }
 
 type HexEntryLinkV2Type {
-  id: ID!
   hexId: ID!
   documentId: ID!
   relation: String!
-  createdAt: DateTime!
 }
 
 type HexV2Type {
@@ -57,13 +55,12 @@ type HexV2Type {
   col: Int!
   row: Int!
   hexcode: String
-  terrain: String!
+  terrain: String
   elevation: String
   climate: String
   submapId: ID
-  tileAssetId: ID
-  createdAt: DateTime!
-  linkedEntries: [HexEntryLinkV2Type!]!
+  createdAt: DateTime
+  linkedEntries(limit: Int! = 50, offset: Int! = 0): [HexEntryLinkV2Type!]!
 }
 
 type MapPlaceV2Type {
@@ -80,16 +77,17 @@ type MapV2Type {
   name: String!
   atlasCode: String!
   family: String!
+  mapKind: String!
   assetPath: String
   cols: Int
   rows: Int
   regionId: ID
-  createdBy: ID!
+  createdBy: ID
   createdAt: DateTime!
   hexes(limit: Int! = 200, offset: Int! = 0): [HexV2Type!]!
-  edges: [HexEdgeV2Type!]!
-  pointcrawlNodes: [PointcrawlNodeV2Type!]!
-  pointcrawlEdges: [PointcrawlEdgeV2Type!]!
+  edges(limit: Int! = 200, offset: Int! = 0): [HexEdgeV2Type!]!
+  pointcrawlNodes(limit: Int! = 200, offset: Int! = 0): [PointcrawlNodeV2Type!]!
+  pointcrawlEdges(limit: Int! = 200, offset: Int! = 0): [PointcrawlEdgeV2Type!]!
 }
 
 type MapViewV2Type {
@@ -128,7 +126,7 @@ type PointcrawlNodeV2Type {
   x: Float!
   y: Float!
   name: String!
-  documentId: ID
+  linkedEntries(limit: Int! = 50, offset: Int! = 0): [PointcrawlEntryLinkType!]!
   submapId: ID
   createdAt: DateTime!
 }
@@ -141,11 +139,6 @@ type RegionActivityV2Type {
   liveCount: Int!
   openQuests: [RegionActivityQuestRefV2Type!]!
   liveQuests: [RegionActivityQuestRefV2Type!]!
-}
-
-type RegionArchonAssignmentsType {
-  regionId: ID!
-  archons: [ArchonAssignmentType!]!
 }
 
 type RegionCountsV2Type {
@@ -170,4 +163,13 @@ type TimeAnchorV2Type {
   epochDay: Int!
   rate: Float!
   note: String
+}
+
+type PointcrawlEntryLinkType {
+  mapId: ID!
+  nodeId: ID!
+  documentId: ID!
+  relation: String!
+  createdAt: DateTime!
+  createdBy: ID!
 }

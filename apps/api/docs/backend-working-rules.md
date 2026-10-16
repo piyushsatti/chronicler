@@ -39,3 +39,7 @@ Discord gateway events arrive through the bot forwarding to the API ingest path.
 - Test domain behavior directly with Go tests and adapter/contract tests at the wire boundary. Test persistence, atomicity, locking and recovery against an explicitly admitted disposable Postgres database; a fake store is not that evidence.
 - Follow [README verification commands](/README.md) and [contribution gates](/CONTRIBUTING.md). Repository instructions require `scripts/verify` for covered app changes and `python3 scripts/docs-lint.py` for documentation.
 - Report each executed check and any skipped or unavailable database/service lane separately. A passing unit suite or route-registration test does not establish behavioral parity, recovery or live service effectiveness.
+
+## Accepted product cutover
+
+The [product GraphQL design](/apps/api/docs/design/graphql-product/README.md) defines the accepted future services, physical storage and verification obligations. Existing useful code remains until its exclusive scheduled owner replaces or retires it. Comment-only placeholders are not implementations. [Generation order](/apps/api/docs/design/graphql-product/generation-order-contract.md) requires actual providers before controlled code generation.

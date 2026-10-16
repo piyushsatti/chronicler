@@ -141,21 +141,35 @@ func (w *world) people() {
 		}
 		w.put("members", []string{"public_id"}, nil, row)
 		w.put("member_settings", []string{"member_id"}, map[string]ref{"member_id": who("members", id)}, map[string]any{
-			"theme_mode": []string{"system", "dark", "light"}[i%3],
-			"timezone":   []string{"America/New_York", "America/Chicago", "Europe/London", "UTC"}[i%4],
-			"payload":    map[string]any{"pronouns": []string{"she/her", "he/him", "they/them"}[i%3], "table_notes": s.name + " prefers a written recap."},
+			"mode":  []string{"system", "dark", "light"}[i%3],
+			"theme": "parchment", "density": "comfortable", "effects_enabled": true,
+			"colorblind_safe": false, "reduced_motion": false,
+			"notify_character_verification": true, "notify_quest_signup": true,
+			"notify_document_activity": true, "notify_quest_scheduled": true,
+			"notify_dm_mentioned": true, "notify_dm_request_decided": true,
+			"timezone": []string{"America/New_York", "America/Chicago", "Europe/London", "UTC"}[i%4],
+			"payload":  map[string]any{"pronouns": []string{"she/her", "he/him", "they/them"}[i%3], "table_notes": s.name + " prefers a written recap."},
 		})
 		w.put("member_availability", []string{"public_id"}, map[string]ref{"member_id": who("members", id)}, map[string]any{
 			"public_id": w.id(21), "weekday": i % 7, "start_minute": 18 * 60, "end_minute": 22 * 60,
 		})
 		if s.dm != nil {
 			w.dms = append(w.dms, id)
-			w.put("dm_profiles", []string{"member_id"}, map[string]ref{"member_id": who("members", id)}, map[string]any{
+			profile := map[string]any{
 				"tagline": s.dm.tagline, "philosophy": s.dm.philosophy, "house_rules": s.dm.rules,
 				"status": s.dm.status, "accepting_players": s.dm.accepting, "review_revision": i % 3,
 				"table_info": map[string]any{
 					"night": []string{"Thursday", "Sunday", "Monday"}[i%3], "seats": 5, "style": s.dm.tagline,
 					"safety": []string{"lines and veils posted in the brief"},
+				},
+			}
+			w.put("dm_profiles", []string{"member_id"}, map[string]ref{"member_id": who("members", id)}, profile)
+			w.put("dm_profile_review_events", []string{"member_id", "revision"}, map[string]ref{"member_id": who("members", id)}, map[string]any{
+				"public_id": w.id(27), "kind": "BASELINE", "revision": i % 3,
+				"recorded_at": nil, "recorded_by": nil, "verification_id": nil,
+				"snapshot": map[string]any{
+					"tagline": profile["tagline"], "philosophy": profile["philosophy"], "houseRules": profile["house_rules"],
+					"tableInfo": profile["table_info"], "acceptingPlayers": profile["accepting_players"], "status": profile["status"],
 				},
 			})
 		}
@@ -191,7 +205,8 @@ func (w *world) addDoc(kind, category, title, body, status, visibility string, a
 	}
 	row := map[string]any{
 		"public_id": id, "kind": kind, "slug": sl, "title": title, "body": body,
-		"status": status, "visibility": visibility,
+		"status": status, "visibility": visibility, "version": 0,
+		"published_by": nil, "deleted_by": nil,
 	}
 	if category != "" {
 		row["category"] = category
@@ -288,13 +303,15 @@ func (w *world) revisionsAndLinks() {
 			"document_id": who("documents", ids[0]),
 			"created_by":  who("members", w.members[0].ID),
 		}, map[string]any{
-			"public_id": w.id(19), "reason": "spring recension",
+			"public_id": w.id(19), "reason": "spring recension", "rev": 1,
 			"title": "Earlier draft", "body": "A shorter draft, kept so the margin notes still have a home.",
 			"frontmatter_yaml": "revision: 1\n",
+			"visibility":       nil, "policy": nil, "published_at": nil, "published_by": nil,
+			"old_value": nil, "new_value": nil,
 		})
-		w.put("document_links", []string{"source_id", "target_id", "relation"}, map[string]ref{
-			"source_id": who("documents", ids[0]),
-			"target_id": who("documents", ids[1]),
+		w.put("document_links", []string{"source_id", "target_type", "target_id", "relation"}, map[string]ref{
+			"source_id":          who("documents", ids[0]),
+			"document_target_id": who("documents", ids[1]),
 		}, map[string]any{"relation": []string{"see_also", "mentions", "contradicts"}[i%3]})
 		i++
 	}
@@ -341,10 +358,10 @@ func (w *world) spatial() {
 	w.lfc = w.id(4)
 	w.put("maps", []string{"public_id"}, map[string]ref{"region_id": who("regions", w.region["coast"])}, map[string]any{
 		"public_id": w.lfc, "name": "Lightfall Coast", "atlas_code": "LFC",
-		"map_kind": "hexgrid", "cols": 12, "rows": 12, "asset_path": "atlases/lfc/coast.webp",
+		"family": "campaign", "map_kind": "hexgrid", "cols": 12, "rows": 12, "asset_path": "atlases/lfc/coast.webp",
 	})
 	w.put("maps", []string{"public_id"}, map[string]ref{"region_id": who("regions", w.region["grey"])}, map[string]any{
-		"public_id": w.id(4), "name": "Underkeep", "atlas_code": "LFC-UNDER", "map_kind": "pointcrawl",
+		"public_id": w.id(4), "name": "Underkeep", "atlas_code": "LFC-UNDER", "family": "campaign", "map_kind": "pointcrawl",
 	})
 
 	terrains := []string{"plains", "forest", "hills", "marsh", "mountain", "coast", "river", "ruin", "road", "waste"}
@@ -691,29 +708,6 @@ func (w *world) social() {
 		_ = i
 	}
 
-	cosmetics := []struct{ code, kind string }{
-		{"ink-night", "theme"}, {"salt-gold", "palette"}, {"chapbook", "font"},
-		{"tower-lamp", "flair"}, {"road-warden", "title"}, {"kept-seal", "badge"},
-		{"charter-frame", "frame"}, {"wharf-plate", "nameplate"}, {"ferry-token", "token"},
-	}
-	unlockIDs := []string{}
-	for i, c := range cosmetics {
-		id := w.id(18)
-		unlockIDs = append(unlockIDs, id)
-		w.put("unlockables", []string{"public_id"}, nil, map[string]any{
-			"public_id": id, "code": c.code, "cosmetic_type": c.kind, "active": i != 3,
-			"payload": map[string]any{"label": c.code, "rarity": []string{"common", "rare"}[i%2]},
-		})
-	}
-	sources := []string{"milestone", "event", "cohort", "grant", "purchase"}
-	for i, src := range sources {
-		w.put("member_unlocks", []string{"member_id", "unlockable_id"}, map[string]ref{
-			"member_id":     who("members", w.memberByHandle("holt").ID),
-			"unlockable_id": who("unlockables", unlockIDs[i]),
-			"granted_by":    who("members", w.memberByHandle("idris").ID),
-		}, map[string]any{"source": src})
-	}
-
 	notes := []struct {
 		handle, kind, body string
 		read               bool
@@ -726,7 +720,7 @@ func (w *world) social() {
 		{"brune", "system", "QA world loaded. The coast map has hexes.", false},
 	}
 	for _, n := range notes {
-		row := map[string]any{"public_id": w.id(17), "kind": n.kind, "body": n.body}
+		row := map[string]any{"public_id": w.id(17), "kind": n.kind, "body": n.body, "event_id": nil}
 		if n.read {
 			row["read_at"] = "2026-10-04T12:00:00Z"
 		}
@@ -796,9 +790,9 @@ func (w *world) jobsAndSite() {
 	w.put("bot_heartbeats", []string{"id"}, nil, map[string]any{
 		"id": 9001, "payload": map[string]any{"ok": true, "source": "qa"}, "received_at": "2026-10-05T12:00:00Z",
 	})
-	w.put("idempotency_keys", []string{"endpoint", "key"}, map[string]ref{
+	w.put("idempotency_keys", []string{"endpoint", "actor_id", "key"}, map[string]ref{
 		"actor_id": who("members", w.memberByHandle("idris").ID),
-	}, map[string]any{"endpoint": "POST /v1/quests", "key": "qa-seed-quest"})
+	}, map[string]any{"endpoint": "POST /v1/quests", "key": "qa-seed-quest", "fingerprint": nil, "receipt": nil, "completed_at": nil})
 
 	bannerDoc := w.docID("Kept Tower")
 	w.put("site_settings", []string{"key"}, map[string]ref{"document_id": who("documents", bannerDoc)}, map[string]any{
