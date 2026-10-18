@@ -1,11 +1,21 @@
 import { z } from 'zod';
-import type { MyNotificationsQuery } from '../../../api/graphql.operations.gen.js';
+import type {
+  AcknowledgeSuppressedNotificationsMutation,
+  MarkNotificationsReadMutation,
+  MyNotificationsQuery,
+  MyUnreadNotificationCountQuery,
+} from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import NOTIFICATIONS_QUERY from './myNotifications.graphql?raw';
-import { restRequest } from '../../../api/rest.js';
-import { rest } from '../../../api/endpoints.js';
+import UNREAD_COUNT_QUERY from './myUnreadNotificationCount.graphql?raw';
+import MARK_READ_MUTATION from './markNotificationsRead.graphql?raw';
+import ACK_MUTATION from './acknowledgeSuppressedNotifications.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
+
+function commandMeta(): { idempotencyKey: string } {
+  return { idempotencyKey: crypto.randomUUID() };
+}
 
 const notificationSchema = z.object({
   id: z.string(),
@@ -25,8 +35,11 @@ const connectionSchema = z.object({
   nextBefore: z.string().nullable().optional(),
 });
 
-const unreadSchema = z.object({
-  count: z.number().int().nonnegative(),
+const unreadSchema = z.number().int().nonnegative();
+
+const writeReceiptSchema = z.object({
+  replayed: z.boolean(),
+  affectedCount: z.number().int().nonnegative(),
 });
 
 export type NotificationView = {
@@ -91,7 +104,7 @@ export function parseUnreadCount(wire: unknown): AdapterResult<number> {
   if (!parsed.success) {
     return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
   }
-  return { ok: true, data: parsed.data.count };
+  return { ok: true, data: parsed.data };
 }
 
 export async function loadNotifications(opts?: {
@@ -115,8 +128,10 @@ export async function loadNotifications(opts?: {
 
 export async function loadUnreadCount(): Promise<number> {
   try {
-    const wire = await restRequest<unknown>(rest.notificationsUnreadCount);
-    const result = parseUnreadCount(wire);
+    const data = await graphqlRequest<MyUnreadNotificationCountQuery>(
+      UNREAD_COUNT_QUERY,
+    );
+    const result = parseUnreadCount(data.myUnreadNotificationCount);
     if (!result.ok) {
       throw toAppError({ failure: result.failure }, 'notifications:unread');
     }
@@ -128,7 +143,16 @@ export async function loadUnreadCount(): Promise<number> {
 
 export async function acknowledgeSuppressedNotifications(): Promise<void> {
   try {
-    await restRequest(rest.acknowledgeNotifications, { method: 'POST' });
+    const data = await graphqlRequest<AcknowledgeSuppressedNotificationsMutation>(
+      ACK_MUTATION,
+      { limit: 100, meta: commandMeta() },
+    );
+    const parsed = writeReceiptSchema.safeParse(
+      data.acknowledgeSuppressedNotifications,
+    );
+    if (!parsed.success) {
+      throw toAppError({ failure: 'InvalidWire' }, 'notifications:ack');
+    }
   } catch (err) {
     throw toAppError(err, 'notifications:ack');
   }
@@ -140,7 +164,7 @@ const markReadBatchSchema = z
   )
   .max(100);
 
-/** field-routing: markNotificationsRead → POST /v1/me/notifications/read */
+/** field-routing: markNotificationsRead → Mutation.markNotificationsRead */
 export async function markNotificationsRead(
   ids: readonly string[],
   session: { token: string; signal: AbortSignal },
@@ -151,24 +175,23 @@ export async function markNotificationsRead(
       throw toAppError({ failure: 'InvalidWire' }, 'notifications:mark-read');
     }
     if (parsed.data.length === 0) return;
-    const body = JSON.stringify({
-      ids: Array.from(new Set(parsed.data.map((id) => id.toLowerCase()))),
-    });
+    const normalized = Array.from(
+      new Set(parsed.data.map((id) => id.toLowerCase())),
+    );
     // Validated UUIDs are ASCII: even 100 distinct IDs occupy only 3,909 bytes.
-    if (body.length > 8192) {
+    if (JSON.stringify({ ids: normalized }).length > 8192) {
       throw toAppError({ failure: 'InvalidWire' }, 'notifications:mark-read');
     }
-    const response = await restRequest<unknown>(rest.notificationsMarkRead, {
-      method: 'POST',
-      signal: session.signal,
-      headers: {
-        'content-type': 'application/json',
-        Authorization: `Bearer ${session.token}`,
+    const data = await graphqlRequest<MarkNotificationsReadMutation>(
+      MARK_READ_MUTATION,
+      { ids: normalized, meta: commandMeta() },
+      {
+        signal: session.signal,
+        headers: { Authorization: `Bearer ${session.token}` },
       },
-      body,
-    });
-    // restRequest returns undefined for 204; a successful JSON response is not this command.
-    if (!z.undefined().safeParse(response).success) {
+    );
+    const receipt = writeReceiptSchema.safeParse(data.markNotificationsRead);
+    if (!receipt.success) {
       throw toAppError({ failure: 'InvalidWire' }, 'notifications:mark-read');
     }
   } catch (err) {

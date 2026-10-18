@@ -1,6 +1,6 @@
 import { onlineManager, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { http, HttpResponse, passthrough } from 'msw';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { GRAPHQL_PATH, rest } from '../../../src/api/endpoints.js';
@@ -63,16 +63,26 @@ function queueHarness() {
   }));
 }
 type ReadRequest = { ids: string[]; bytes: number; authorization: string | null };
+const writeReceipt = { replayed: false, affectedCount: 1 };
 function recordReads(
   reply: (request: ReadRequest, index: number) => Response | Promise<Response>,
 ) {
   const requests: ReadRequest[] = [];
   server.use(
-    http.post(rest.notificationsMarkRead, async ({ request }) => {
-      const body = await request.text();
+    http.post(GRAPHQL_PATH, async ({ request }) => {
+      const raw = await request.text();
+      const body = JSON.parse(raw) as {
+        query?: string;
+        variables?: { ids?: string[] };
+      };
+      const name = body.query?.match(/\b(query|mutation)\s+(\w+)/)?.[2];
+      if (name !== 'MarkNotificationsRead') {
+        return passthrough();
+      }
+      const idsPayload = JSON.stringify({ ids: body.variables?.ids ?? [] });
       const row = {
-        ids: (JSON.parse(body) as { ids: string[] }).ids,
-        bytes: new TextEncoder().encode(body).length,
+        ids: body.variables?.ids ?? [],
+        bytes: new TextEncoder().encode(idsPayload).length,
         authorization: request.headers.get('authorization'),
       };
       requests.push(row);
@@ -81,12 +91,12 @@ function recordReads(
   );
   return requests;
 }
-const success = () => new HttpResponse(null, { status: 204 });
+const success = () =>
+  HttpResponse.json({ data: { markNotificationsRead: writeReceipt } });
 const failure = () =>
-  HttpResponse.json(
-    { status: 500, code: 'INTERNAL', title: 'Internal error' },
-    { status: 500 },
-  );
+  HttpResponse.json({
+    errors: [{ message: 'boom', extensions: { code: 'INTERNAL' } }],
+  });
 
 beforeEach(() => {
   localStorage.clear();
@@ -297,24 +307,40 @@ describe('mark-read accumulated inbox pages', () => {
     const all = ids(120);
     const read = new Set<string>();
     let recovering = false;
-    const requests = recordReads((row) => {
-      if (!recovering) return failure();
-      row.ids.forEach((id) => read.add(id));
-      return success();
-    });
+    const requests: ReadRequest[] = [];
     const cursors = Array.from(
       { length: 5 },
       (_, index) => `2026-10-01T00:00:0${index + 1}Z`,
     );
     server.use(
-      http.get(rest.notificationsUnreadCount, () =>
-        HttpResponse.json({ count: all.length - read.size }),
-      ),
       http.post(GRAPHQL_PATH, async ({ request }) => {
         const body = (await request.json()) as {
-          variables: { before: string | null; limit: number };
+          query?: string;
+          variables?: {
+            before?: string | null;
+            limit?: number;
+            ids?: string[];
+          };
         };
-        const page = body.variables.before
+        const name = body.query?.match(/\b(query|mutation)\s+(\w+)/)?.[2];
+        if (name === 'MyUnreadNotificationCount') {
+          return HttpResponse.json({
+            data: { myUnreadNotificationCount: all.length - read.size },
+          });
+        }
+        if (name === 'MarkNotificationsRead') {
+          const idsPayload = JSON.stringify({ ids: body.variables?.ids ?? [] });
+          const row = {
+            ids: body.variables?.ids ?? [],
+            bytes: new TextEncoder().encode(idsPayload).length,
+            authorization: request.headers.get('authorization'),
+          };
+          requests.push(row);
+          if (!recovering) return failure();
+          row.ids.forEach((id) => read.add(id));
+          return success();
+        }
+        const page = body.variables?.before
           ? cursors.indexOf(body.variables.before) + 1
           : 0;
         return HttpResponse.json({

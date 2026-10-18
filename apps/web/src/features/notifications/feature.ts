@@ -1,4 +1,4 @@
-import { http, HttpResponse } from 'msw';
+import { HttpResponse } from 'msw';
 import type {
   FeatureGraphql,
   FeatureHandlers,
@@ -8,15 +8,7 @@ import { lazyElement } from '../../chrome/lazyElement.js';
 import goodNotifications from '../../../tests/fixtures/wire/notifications/list-good.json';
 import goodUnread from '../../../tests/fixtures/wire/notifications/unread-good.json';
 
-const notificationsUnreadCount = '/v1/me/notifications/unread-count';
-const notificationsMarkRead = '/v1/me/notifications/read';
-const acknowledgeNotifications = '/v1/me/notifications/acknowledge-suppressed';
-
-export const endpoints = {
-  notificationsUnreadCount,
-  notificationsMarkRead,
-  acknowledgeNotifications,
-} as const;
+export const endpoints = {} as const;
 
 export const queryKeys = {
   notifications: ['notifications'] as const,
@@ -25,16 +17,24 @@ export const queryKeys = {
   notificationsUnread: ['notificationsUnread'] as const,
 };
 
+const writeReceipt = { replayed: false, affectedCount: 1 };
+
 export const graphql: FeatureGraphql = {
   MyNotifications: () =>
     HttpResponse.json({ data: { myNotifications: goodNotifications } }),
+  MyUnreadNotificationCount: () =>
+    HttpResponse.json({
+      data: { myUnreadNotificationCount: goodUnread.count },
+    }),
+  MarkNotificationsRead: () =>
+    HttpResponse.json({ data: { markNotificationsRead: writeReceipt } }),
+  AcknowledgeSuppressedNotifications: () =>
+    HttpResponse.json({
+      data: { acknowledgeSuppressedNotifications: writeReceipt },
+    }),
 };
 
-export const handlers: FeatureHandlers = [
-  http.get(notificationsUnreadCount, () => HttpResponse.json(goodUnread)),
-  http.post(notificationsMarkRead, () => new HttpResponse(null, { status: 204 })),
-  http.post(acknowledgeNotifications, () => HttpResponse.json({ ok: true })),
-];
+export const handlers: FeatureHandlers = [];
 
 export const routes: readonly FeatureRoute[] = [
   {

@@ -88,6 +88,22 @@ export type HomeWarRoomQueryVariables = Exact<{
 
 export type HomeWarRoomQuery = { questBoard: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, slotsMax: number, filledCount: number, displayStatus: string | null, dm: { handle: string, displayName: string } | null, briefDocument: { id: string, slug: string, title: string } | null, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string } }> }, quests: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, slotsMax: number, filledCount: number, displayStatus: string | null, dm: { handle: string, displayName: string } | null, briefDocument: { id: string, slug: string, title: string } | null, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string } }> }, recentlyClosedQuests: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, slotsMax: number, filledCount: number, displayStatus: string | null, dm: { handle: string, displayName: string } | null, briefDocument: { id: string, slug: string, title: string } | null, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string } }> }, communityDirectory: { total: number, entries: Array<{ memberId: string, handle: string, displayName: string, tagline: string | null, acceptingPlayers: boolean | null, isDm: boolean }> } };
 
+export type AcknowledgeSuppressedNotificationsMutationVariables = Exact<{
+  limit?: number | null | undefined;
+  meta: CommandMeta;
+}>;
+
+
+export type AcknowledgeSuppressedNotificationsMutation = { acknowledgeSuppressedNotifications: { replayed: boolean, affectedCount: number } };
+
+export type MarkNotificationsReadMutationVariables = Exact<{
+  ids: Array<string> | string;
+  meta: CommandMeta;
+}>;
+
+
+export type MarkNotificationsReadMutation = { markNotificationsRead: { replayed: boolean, affectedCount: number } };
+
 export type MyNotificationsQueryVariables = Exact<{
   limit: number;
   before?: string | null | undefined;
@@ -95,6 +111,11 @@ export type MyNotificationsQueryVariables = Exact<{
 
 
 export type MyNotificationsQuery = { myNotifications: { hasMore: boolean, nextBefore: string | null, items: Array<{ id: string, kind: string, title: string | null, summary: string | null, label: string, readAt: string | null, subjectType: string, subjectCode: string | null, createdAt: string }> } };
+
+export type MyUnreadNotificationCountQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type MyUnreadNotificationCountQuery = { myUnreadNotificationCount: number };
 
 export type MyCharactersQueryVariables = Exact<{ [key: string]: never; }>;
 

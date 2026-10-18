@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { screen, waitFor } from '@testing-library/react';
-import { rest } from '../../src/api/endpoints.js';
+import { GRAPHQL_PATH } from '../../src/api/endpoints.js';
 import { queryKeys } from '../../src/api/queryKeys.js';
 import { TOKEN_KEY } from '../../src/auth/storage.js';
 import { NotificationBell } from '../../src/chrome/NotificationBell.js';
@@ -21,7 +21,16 @@ function seedToken(): void {
 
 async function renderBellWithCount(count: number) {
   server.use(
-    http.get(rest.notificationsUnreadCount, () => HttpResponse.json({ count })),
+    http.post(GRAPHQL_PATH, async ({ request }) => {
+      const body = (await request.json()) as { query?: string };
+      const name = body.query?.match(/\b(query|mutation)\s+(\w+)/)?.[2];
+      if (name === 'MyUnreadNotificationCount') {
+        return HttpResponse.json({ data: { myUnreadNotificationCount: count } });
+      }
+      return HttpResponse.json({
+        errors: [{ message: 'Unhandled', extensions: { code: 'UNHANDLED' } }],
+      });
+    }),
   );
   const rendered = renderWithProviders(<NotificationBell />);
   await waitFor(() => {

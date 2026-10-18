@@ -5,7 +5,7 @@ import { http, HttpResponse } from 'msw';
 import { Component, type ReactNode } from 'react';
 import { Link, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { GRAPHQL_PATH, rest } from '../../../src/api/endpoints.js';
+import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
 import { queryKeys } from '../../../src/api/queryKeys.js';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
 import { LoginRoute } from '../../../src/chrome/LoginRoute.js';
@@ -51,17 +51,39 @@ function notificationsWire() {
   let latestLabel = 'Latest notice';
   let acknowledgements = 0;
   server.use(
-    http.get(rest.notificationsUnreadCount, () => HttpResponse.json({ count: 0 })),
-    http.post(rest.acknowledgeNotifications, () => {
-      acknowledgements += 1;
-      return HttpResponse.json({ ok: true });
-    }),
     http.post(GRAPHQL_PATH, async ({ request }) => {
       const body = (await request.json()) as {
-        variables: { limit: number; before: string | null };
+        query?: string;
+        variables?: { limit?: number; before?: string | null };
       };
-      requests.push(body.variables);
-      const older = body.variables.before === FIRST_CURSOR;
+      const name = body.query?.match(/\b(query|mutation)\s+(\w+)/)?.[2];
+      if (name === 'MyUnreadNotificationCount') {
+        return HttpResponse.json({ data: { myUnreadNotificationCount: 0 } });
+      }
+      if (name === 'AcknowledgeSuppressedNotifications') {
+        acknowledgements += 1;
+        return HttpResponse.json({
+          data: {
+            acknowledgeSuppressedNotifications: {
+              replayed: false,
+              affectedCount: 1,
+            },
+          },
+        });
+      }
+      if (name === 'MarkNotificationsRead') {
+        return HttpResponse.json({
+          data: {
+            markNotificationsRead: { replayed: false, affectedCount: 1 },
+          },
+        });
+      }
+      const variables = {
+        limit: body.variables?.limit ?? 20,
+        before: body.variables?.before ?? null,
+      };
+      requests.push(variables);
+      const older = variables.before === FIRST_CURSOR;
       return HttpResponse.json({
         data: {
           myNotifications: {

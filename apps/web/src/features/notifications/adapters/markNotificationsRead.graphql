@@ -1,0 +1,6 @@
+mutation MarkNotificationsRead($ids: [ID!]!, $meta: CommandMeta!) {
+  markNotificationsRead(ids: $ids, meta: $meta) {
+    replayed
+    affectedCount
+  }
+}

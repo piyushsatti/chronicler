@@ -1,7 +1,7 @@
 import { act, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
-import { GRAPHQL_PATH, rest } from '../../../src/api/endpoints.js';
+import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
 import { queryKeys } from '../../../src/api/queryKeys.js';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
 import { LoginNotificationsPanel } from '../../../src/features/notifications/components/LoginNotificationsPanel.js';
@@ -38,8 +38,14 @@ describe('LoginNotificationsPanel', () => {
 
   it('shows the unread count separately from the current empty-list fixture', async () => {
     server.use(
-      http.get(rest.notificationsUnreadCount, () => HttpResponse.json({ count: 2 })),
-      http.post(GRAPHQL_PATH, () => HttpResponse.json(emptyNotificationList)),
+      http.post(GRAPHQL_PATH, async ({ request }) => {
+        const body = (await request.json()) as { query?: string };
+        const name = body.query?.match(/\b(query|mutation)\s+(\w+)/)?.[2];
+        if (name === 'MyUnreadNotificationCount') {
+          return HttpResponse.json({ data: { myUnreadNotificationCount: 2 } });
+        }
+        return HttpResponse.json(emptyNotificationList);
+      }),
     );
 
     renderPanel();
@@ -53,16 +59,20 @@ describe('LoginNotificationsPanel', () => {
     let allowRecovery = false;
     let countRequests = 0;
     server.use(
-      http.get(rest.notificationsUnreadCount, () => {
-        countRequests += 1;
-        return allowRecovery
-          ? HttpResponse.json({ count: 2 })
-          : HttpResponse.json(
-              { title: 'Internal error', status: 500, code: 'INTERNAL' },
-              { status: 500 },
-            );
+      http.post(GRAPHQL_PATH, async ({ request }) => {
+        const body = (await request.json()) as { query?: string };
+        const name = body.query?.match(/\b(query|mutation)\s+(\w+)/)?.[2];
+        if (name === 'MyUnreadNotificationCount') {
+          countRequests += 1;
+          if (!allowRecovery) {
+            return HttpResponse.json({
+              errors: [{ message: 'boom', extensions: { code: 'INTERNAL' } }],
+            });
+          }
+          return HttpResponse.json({ data: { myUnreadNotificationCount: 2 } });
+        }
+        return HttpResponse.json(emptyNotificationList);
       }),
-      http.post(GRAPHQL_PATH, () => HttpResponse.json(emptyNotificationList)),
     );
 
     const { queryClient } = renderPanel();
