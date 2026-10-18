@@ -1,5 +1,11 @@
 import { z } from 'zod';
+import type {
+  DmTableBySlugQuery,
+  DmTableScheduleQuery,
+} from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
+import DM_TABLE_QUERY from './dmTableBySlug.graphql?raw';
+import SCHEDULE_QUERY from './dmTableSchedule.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 
@@ -46,40 +52,6 @@ const dmTableDocSchema = z.object({
     .nullable()
     .optional(),
 });
-
-const DM_TABLE_QUERY = `
-  query DmTableBySlug($slug: String!) {
-    document(slug: $slug) {
-      id
-      slug
-      title
-      status
-      kind
-      category
-      effectiveBody
-      frontmatter
-      author { handle }
-    }
-  }
-`;
-
-const SCHEDULE_QUERY = `
-  query DmTableSchedule($limit: Int!) {
-    questBoard(limit: $limit) {
-      items {
-        id
-        shortCode
-        status
-        scheduledAt
-        slotsMax
-        filledCount
-        displayStatus
-        dm { handle displayName }
-        briefDocument { title }
-      }
-    }
-  }
-`;
 
 const scheduleItemSchema = z.object({
   id: z.string(),
@@ -132,7 +104,7 @@ export function parseDmTableDocument(wire: unknown): AdapterResult<DmTableView |
 export async function loadDmTableBySlug(slug: string): Promise<DmTableView | null> {
   if (!slug) return null;
   try {
-    const data = await graphqlRequest<{ document: unknown | null }>(DM_TABLE_QUERY, {
+    const data = await graphqlRequest<DmTableBySlugQuery>(DM_TABLE_QUERY, {
       slug,
     });
     const result = parseDmTableDocument(data.document);
@@ -151,9 +123,9 @@ export async function loadDmTableSchedule(handle: string): Promise<DmTableSessio
   const needle = handle.replace(/^@/, '').toLowerCase();
   if (!needle) return [];
   try {
-    const data = await graphqlRequest<{
-      questBoard: { items: unknown[] };
-    }>(SCHEDULE_QUERY, { limit: 50 });
+    const data = await graphqlRequest<DmTableScheduleQuery>(SCHEDULE_QUERY, {
+      limit: 50,
+    });
     const items = z.array(scheduleItemSchema).safeParse(data.questBoard?.items ?? []);
     if (!items.success) {
       throw toAppError({ failure: 'InvalidWire' }, 'profile:dm-table:schedule');

@@ -1,0 +1,20 @@
+query DmTableSchedule($limit: Int!) {
+  questBoard(limit: $limit) {
+    items {
+      id
+      shortCode
+      status
+      scheduledAt
+      slotsMax
+      filledCount
+      displayStatus
+      dm {
+        handle
+        displayName
+      }
+      briefDocument {
+        title
+      }
+    }
+  }
+}

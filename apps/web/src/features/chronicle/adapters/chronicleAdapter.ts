@@ -1,4 +1,10 @@
+import type {
+  ChronicleDetailQuery,
+  ChronicleListQuery,
+} from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
+import LIST_QUERY from './chronicleList.graphql?raw';
+import DETAIL_QUERY from './chronicleDetail.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import {
@@ -23,39 +29,6 @@ export type ChronicleDetailView = {
   body: string | null;
   authorHandle: string | null;
 };
-
-const LIST_QUERY = `
-  query ChronicleList($limit: Int!) {
-    documents(filters: { kind: "summary", status: "published" }, limit: $limit) {
-      items {
-        id
-        slug
-        kind
-        category
-        title
-        effectiveBody
-        author { handle }
-      }
-      total
-    }
-  }
-`;
-
-const DETAIL_QUERY = `
-  query ChronicleDetail($slug: String!) {
-    document(slug: $slug) {
-      id
-      slug
-      kind
-      category
-      status
-      visibility
-      title
-      effectiveBody
-      author { handle }
-    }
-  }
-`;
 
 function mapListItem(
   item: (typeof chronicleListWireSchema)['_output']['items'][number],
@@ -98,7 +71,7 @@ export function parseChronicleDetail(wire: unknown): AdapterResult<ChronicleDeta
 
 export async function loadChronicleList(): Promise<ChronicleListItemView[]> {
   try {
-    const data = await graphqlRequest<{ documents: unknown }>(LIST_QUERY, {
+    const data = await graphqlRequest<ChronicleListQuery>(LIST_QUERY, {
       limit: 50,
     });
     const result = parseChronicleList(data.documents);
@@ -111,7 +84,7 @@ export async function loadChronicleList(): Promise<ChronicleListItemView[]> {
 
 export async function loadChronicleDetail(slug: string): Promise<ChronicleDetailView> {
   try {
-    const data = await graphqlRequest<{ document: unknown | null }>(DETAIL_QUERY, {
+    const data = await graphqlRequest<ChronicleDetailQuery>(DETAIL_QUERY, {
       slug,
     });
     if (data.document == null) {

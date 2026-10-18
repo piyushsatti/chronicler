@@ -1,0 +1,14 @@
+query ProfileCommunityDirectory($limit: Int!) {
+  communityDirectory(limit: $limit) {
+    entries {
+      memberId
+      handle
+      displayName
+      tagline
+      acceptingPlayers
+      isDm
+      roles
+    }
+    total
+  }
+}

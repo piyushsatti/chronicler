@@ -1,0 +1,15 @@
+query DmTableBySlug($slug: String!) {
+  document(slug: $slug) {
+    id
+    slug
+    title
+    status
+    kind
+    category
+    effectiveBody
+    frontmatter
+    author {
+      handle
+    }
+  }
+}

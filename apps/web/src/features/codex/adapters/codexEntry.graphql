@@ -1,0 +1,18 @@
+query CodexEntry($slug: String!) {
+  codexEntry(slug: $slug) {
+    backlinkCount
+    document {
+      id
+      slug
+      kind
+      category
+      status
+      visibility
+      title
+      effectiveBody
+      author {
+        handle
+      }
+    }
+  }
+}

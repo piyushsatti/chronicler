@@ -1,4 +1,10 @@
+import type {
+  RuleDetailQuery,
+  RulesListQuery,
+} from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
+import LIST_QUERY from './rulesList.graphql?raw';
+import DETAIL_QUERY from './ruleDetail.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import {
@@ -29,39 +35,6 @@ export type RulesHubView = {
   guides: RuleListItemView[];
   rulings: RuleListItemView[];
 };
-
-const LIST_QUERY = `
-  query RulesList($limit: Int!) {
-    documents(filters: { kind: "rule", status: "published" }, limit: $limit) {
-      items {
-        id
-        slug
-        kind
-        category
-        title
-        effectiveBody
-        author { handle }
-      }
-      total
-    }
-  }
-`;
-
-const DETAIL_QUERY = `
-  query RuleDetail($slug: String!) {
-    document(slug: $slug) {
-      id
-      slug
-      kind
-      category
-      status
-      visibility
-      title
-      effectiveBody
-      author { handle }
-    }
-  }
-`;
 
 function mapListItem(
   item: (typeof rulesListWireSchema)['_output']['items'][number],
@@ -114,7 +87,7 @@ export function parseRuleDetail(wire: unknown): AdapterResult<RuleDetailView> {
 
 export async function loadRulesHub(): Promise<RulesHubView> {
   try {
-    const data = await graphqlRequest<{ documents: unknown }>(LIST_QUERY, {
+    const data = await graphqlRequest<RulesListQuery>(LIST_QUERY, {
       limit: 100,
     });
     const result = parseRulesList(data.documents);
@@ -127,7 +100,7 @@ export async function loadRulesHub(): Promise<RulesHubView> {
 
 export async function loadRuleDetail(slug: string): Promise<RuleDetailView> {
   try {
-    const data = await graphqlRequest<{ document: unknown | null }>(DETAIL_QUERY, {
+    const data = await graphqlRequest<RuleDetailQuery>(DETAIL_QUERY, {
       slug,
     });
     if (data.document == null) {

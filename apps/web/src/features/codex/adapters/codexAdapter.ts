@@ -1,5 +1,11 @@
 import { z } from 'zod';
+import type {
+  CodexDirectoryQuery,
+  CodexEntryQuery,
+} from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
+import DIRECTORY_QUERY from './codexDirectory.graphql?raw';
+import ENTRY_QUERY from './codexEntry.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import { codexDirectoryWireSchema } from './codex.wire.schema.js';
@@ -37,21 +43,6 @@ const entryDetailWireSchema = z.object({
   }),
 });
 
-
-const DIRECTORY_QUERY = `
-  query CodexDirectory($categoryPrefix: String, $search: String) {
-    codexDirectory(categoryPrefix: $categoryPrefix, search: $search) {
-      items {
-        id
-        slug
-        title
-        category
-      }
-      total
-    }
-  }
-`;
-
 export function parseCodexDirectory(wire: unknown): AdapterResult<CodexEntryView[]> {
   const parsed = codexDirectoryWireSchema.safeParse(wire);
   if (!parsed.success) {
@@ -67,25 +58,6 @@ export function parseCodexDirectory(wire: unknown): AdapterResult<CodexEntryView
     })),
   };
 }
-
-const ENTRY_QUERY = `
-  query CodexEntry($slug: String!) {
-    codexEntry(slug: $slug) {
-      backlinkCount
-      document {
-        id
-        slug
-        kind
-        category
-        status
-        visibility
-        title
-        effectiveBody
-        author { handle }
-      }
-    }
-  }
-`;
 
 export function parseCodexEntryDetail(
   wire: unknown,
@@ -115,7 +87,7 @@ export async function loadCodexDirectory(opts: {
   search?: string;
 }): Promise<CodexEntryView[]> {
   try {
-    const data = await graphqlRequest<{ codexDirectory: unknown }>(DIRECTORY_QUERY, {
+    const data = await graphqlRequest<CodexDirectoryQuery>(DIRECTORY_QUERY, {
       categoryPrefix: opts.categoryPrefix ?? null,
       search: opts.search ?? null,
     });
@@ -133,10 +105,7 @@ export async function loadCodexEntry(
   slug: string,
 ): Promise<CodexEntryDetailView> {
   try {
-    const data = await graphqlRequest<{ codexEntry: unknown | null }>(
-      ENTRY_QUERY,
-      { slug },
-    );
+    const data = await graphqlRequest<CodexEntryQuery>(ENTRY_QUERY, { slug });
     if (data.codexEntry == null) {
       throw toAppError({ failure: 'NotFound' }, 'codex:entry');
     }

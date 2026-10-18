@@ -1,4 +1,6 @@
+import type { CommunityDirectoryQuery } from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
+import DIRECTORY_QUERY from './communityDirectory.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import { communityDirectoryWireSchema } from './community.wire.schema.js';
@@ -18,24 +20,6 @@ export type CommunityHubView = {
   players: CommunityMemberView[];
   memberCount: number;
 };
-
-const DIRECTORY_QUERY = `
-  query CommunityDirectory($limit: Int!) {
-    communityDirectory(limit: $limit) {
-      entries {
-        memberId
-        handle
-        displayName
-        tagline
-        acceptingPlayers
-        isDm
-        roles
-        lookingToPlay
-      }
-      total
-    }
-  }
-`;
 
 function mapEntry(
   entry: (typeof communityDirectoryWireSchema)['_output']['entries'][number],
@@ -67,10 +51,9 @@ export function parseCommunityDirectory(
 
 export async function loadCommunityHub(): Promise<CommunityHubView> {
   try {
-    const data = await graphqlRequest<{ communityDirectory: unknown }>(
-      DIRECTORY_QUERY,
-      { limit: 100 },
-    );
+    const data = await graphqlRequest<CommunityDirectoryQuery>(DIRECTORY_QUERY, {
+      limit: 100,
+    });
     const result = parseCommunityDirectory(data.communityDirectory);
     if (!result.ok) {
       throw toAppError({ failure: result.failure }, 'community:hub');

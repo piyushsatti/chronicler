@@ -1,0 +1,16 @@
+query RulesList($limit: Int!) {
+  documents(filters: { kind: "rule", status: "published" }, limit: $limit) {
+    items {
+      id
+      slug
+      kind
+      category
+      title
+      effectiveBody
+      author {
+        handle
+      }
+    }
+    total
+  }
+}

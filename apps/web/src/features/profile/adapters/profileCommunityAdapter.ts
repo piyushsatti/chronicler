@@ -1,5 +1,7 @@
 import { z } from 'zod';
+import type { ProfileCommunityDirectoryQuery } from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
+import DIRECTORY_QUERY from './profileCommunityDirectory.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 
@@ -35,24 +37,6 @@ export type ProfileHubView = {
   memberCount: number;
 };
 
-const DIRECTORY_QUERY = `
-  query ProfileCommunityDirectory($limit: Int!) {
-    communityDirectory(limit: $limit) {
-      entries {
-        memberId
-        handle
-        displayName
-        tagline
-        acceptingPlayers
-        isDm
-        roles
-        lookingToPlay
-      }
-      total
-    }
-  }
-`;
-
 function mapEntry(entry: z.infer<typeof entrySchema>): ProfileMemberView {
   return {
     memberId: entry.memberId,
@@ -80,7 +64,7 @@ export function parseProfileHub(wire: unknown): AdapterResult<ProfileHubView> {
 /** Profile-local community directory read (avoids profile→community boundary). */
 export async function loadProfileHub(): Promise<ProfileHubView> {
   try {
-    const data = await graphqlRequest<{ communityDirectory: unknown }>(
+    const data = await graphqlRequest<ProfileCommunityDirectoryQuery>(
       DIRECTORY_QUERY,
       { limit: 100 },
     );

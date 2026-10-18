@@ -1,0 +1,11 @@
+query CodexDirectory($categoryPrefix: String, $search: String) {
+  codexDirectory(categoryPrefix: $categoryPrefix, search: $search) {
+    items {
+      id
+      slug
+      title
+      category
+    }
+    total
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "id": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+  "slug": "mira-table",
+  "kind": "dm_table",
+  "category": null,
+  "status": "published",
+  "visibility": "public",
+  "title": "Mira's Table",
+  "effectiveBody": "Weekly sandbox nights.",
+  "frontmatter": {
+    "blurb": "Open table for Lightfall newcomers.",
+    "tags": ["sandbox", "beginner"]
+  },
+  "author": { "handle": "mira" }
+}

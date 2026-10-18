@@ -1,0 +1,15 @@
+query ChronicleDetail($slug: String!) {
+  document(slug: $slug) {
+    id
+    slug
+    kind
+    category
+    status
+    visibility
+    title
+    effectiveBody
+    author {
+      handle
+    }
+  }
+}

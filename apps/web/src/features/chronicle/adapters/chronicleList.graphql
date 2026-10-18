@@ -1,0 +1,16 @@
+query ChronicleList($limit: Int!) {
+  documents(filters: { kind: "summary", status: "published" }, limit: $limit) {
+    items {
+      id
+      slug
+      kind
+      category
+      title
+      effectiveBody
+      author {
+        handle
+      }
+    }
+    total
+  }
+}
