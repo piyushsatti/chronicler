@@ -1610,3 +1610,171 @@ func toUpdateDmProfileFields(in UpdateDmProfileInput) member.UpdateDmProfileFiel
 func toDmProfileView(v member.DmProfileView) *DmProfileType {
 	return toDmProfileType(&v)
 }
+
+func optionalInt32(o gql.Omittable[*int]) product.Optional[int32] {
+	if !o.IsSet() {
+		return product.Optional[int32]{}
+	}
+	v := o.Value()
+	if v == nil {
+		return product.Optional[int32]{Set: true, Value: nil}
+	}
+	i := int32(*v)
+	return product.Optional[int32]{Set: true, Value: &i}
+}
+
+func optionalFloat64(o gql.Omittable[*float64]) product.Optional[float64] {
+	if !o.IsSet() {
+		return product.Optional[float64]{}
+	}
+	return product.Optional[float64]{Set: true, Value: o.Value()}
+}
+
+func optionalTime(o gql.Omittable[*time.Time]) product.Optional[time.Time] {
+	if !o.IsSet() {
+		return product.Optional[time.Time]{}
+	}
+	return product.Optional[time.Time]{Set: true, Value: o.Value()}
+}
+
+func optionalStringSlice(o gql.Omittable[[]string]) product.Optional[[]string] {
+	if !o.IsSet() {
+		return product.Optional[[]string]{}
+	}
+	v := o.Value()
+	return product.Optional[[]string]{Set: true, Value: &v}
+}
+
+func toCreateQuestFields(in CreateQuestInput) quest.CreateQuestV2Fields {
+	var apl *int32
+	if in.Apl != nil {
+		v := int32(*in.Apl)
+		apl = &v
+	}
+	return quest.CreateQuestV2Fields{
+		Title:          in.Title,
+		RegionIds:      in.RegionIds,
+		ScheduledAt:    in.ScheduledAt,
+		DurationHours:  in.DurationHours,
+		BriefBody:      in.BriefBody,
+		DmId:           in.DmID,
+		Kinds:          in.Kinds,
+		SlotsMax:       int32(in.SlotsMax),
+		ArcId:          in.ArcID,
+		Tags:           in.Tags,
+		Genres:         in.Genres,
+		Apl:            apl,
+		SignupType:     in.SignupType,
+		AdditionalInfo: in.AdditionalInfo,
+	}
+}
+
+func toQuestEditFields(in QuestEditInput) quest.QuestEditFields {
+	return quest.QuestEditFields{
+		ExpectedUpdatedAt: in.ExpectedUpdatedAt,
+		Title:             optionalString(in.Title),
+		RegionIds:         optionalStringSlice(in.RegionIds),
+		ScheduledAt:       optionalTime(in.ScheduledAt),
+		DurationHours:     optionalFloat64(in.DurationHours),
+		BriefBody:         optionalString(in.BriefBody),
+		DmId:              optionalString(in.DmID),
+		Kinds:             optionalStringSlice(in.Kinds),
+		SlotsMax:          optionalInt32(in.SlotsMax),
+		ArcId:             optionalString(in.ArcID),
+		Tags:              optionalStringSlice(in.Tags),
+		Genres:            optionalStringSlice(in.Genres),
+		Apl:               optionalInt32(in.Apl),
+		SignupType:        optionalString(in.SignupType),
+		AdditionalInfo:    optionalString(in.AdditionalInfo),
+	}
+}
+
+func toParticipationAttestations(entries []*ParticipationAttestationInput) []quest.ParticipationAttestationFields {
+	out := make([]quest.ParticipationAttestationFields, 0, len(entries))
+	for _, entry := range entries {
+		if entry == nil {
+			continue
+		}
+		out = append(out, quest.ParticipationAttestationFields{
+			CharacterId: entry.CharacterID,
+			Status:      entry.Status,
+		})
+	}
+	return out
+}
+
+func toQuestPcxpAwards(entries []*QuestPcxpAwardInput) []quest.QuestPcxpAwardFields {
+	out := make([]quest.QuestPcxpAwardFields, 0, len(entries))
+	for _, entry := range entries {
+		if entry == nil {
+			continue
+		}
+		out = append(out, quest.QuestPcxpAwardFields{
+			CharacterId: entry.CharacterID,
+			Pcxp:        int32(entry.Pcxp),
+			Note:        entry.Note,
+		})
+	}
+	return out
+}
+
+func toCloseQuestFields(in CloseQuestInput) quest.CloseQuestFields {
+	return quest.CloseQuestFields{
+		Attendance: toParticipationAttestations(in.Attendance),
+		Rewards:    toQuestPcxpAwards(in.Rewards),
+	}
+}
+
+func toQuestSummaryFields(in QuestSummaryInput) quest.QuestSummaryFields {
+	fm := in.Frontmatter
+	if len(fm) == 0 {
+		fm = json.RawMessage("{}")
+	}
+	return quest.QuestSummaryFields{
+		DocumentId:  in.DocumentID,
+		QuestIds:    in.QuestIds,
+		CharacterId: in.CharacterID,
+		Title:       in.Title,
+		Body:        in.Body,
+		Visibility:  in.Visibility,
+		Frontmatter: fm,
+	}
+}
+
+func toQuestPointcrawlLinkType(v quest.QuestHexView) *QuestPointcrawlLinkType {
+	return &QuestPointcrawlLinkType{
+		QuestID:          v.QuestId,
+		PointcrawlNodeID: v.HexId,
+		Role:             v.Role,
+	}
+}
+
+func toQuestHexFieldsFromPointcrawl(links []*QuestPointcrawlLinkInput) []quest.QuestHexFields {
+	out := make([]quest.QuestHexFields, 0, len(links))
+	for _, link := range links {
+		if link == nil {
+			continue
+		}
+		out = append(out, quest.QuestHexFields{
+			HexId: link.PointcrawlNodeID,
+			Role:  link.Role,
+		})
+	}
+	return out
+}
+
+func toQuestParticipantTypes(items []quest.QuestParticipantView) []*QuestParticipantType {
+	out := make([]*QuestParticipantType, len(items))
+	for i, item := range items {
+		out[i] = toQuestParticipantFromQuest(item)
+	}
+	return out
+}
+
+func toQuestPointcrawlLinkTypes(items []quest.QuestHexView) []*QuestPointcrawlLinkType {
+	out := make([]*QuestPointcrawlLinkType, len(items))
+	for i, item := range items {
+		out[i] = toQuestPointcrawlLinkType(item)
+	}
+	return out
+}

@@ -793,27 +793,100 @@ func (r *mutationResolver) AcknowledgeSuppressedNotifications(ctx context.Contex
 
 // CreateQuest is the resolver for the createQuest field.
 func (r *mutationResolver) CreateQuest(ctx context.Context, input CreateQuestInput, meta CommandMeta) (*QuestType, error) {
-	panic(fmt.Errorf("not implemented: CreateQuest - createQuest"))
+	if r.Services.QuestCommands == nil {
+		return nil, fmt.Errorf("quest commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.QuestCommands.CreateQuest(ctx, actor, quest.CreateQuestSpec{
+		Input: toCreateQuestFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toQuestView(view), nil
 }
 
 // UpdateQuest is the resolver for the updateQuest field.
 func (r *mutationResolver) UpdateQuest(ctx context.Context, id string, input QuestEditInput, meta CommandMeta) (*QuestType, error) {
-	panic(fmt.Errorf("not implemented: UpdateQuest - updateQuest"))
+	if r.Services.QuestCommands == nil {
+		return nil, fmt.Errorf("quest commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.QuestCommands.UpdateQuest(ctx, actor, quest.UpdateQuestSpec{
+		Id:    id,
+		Input: toQuestEditFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toQuestView(view), nil
 }
 
 // TransitionQuestStatus is the resolver for the transitionQuestStatus field.
 func (r *mutationResolver) TransitionQuestStatus(ctx context.Context, id string, to string, meta CommandMeta) (*QuestType, error) {
-	panic(fmt.Errorf("not implemented: TransitionQuestStatus - transitionQuestStatus"))
+	if r.Services.QuestCommands == nil {
+		return nil, fmt.Errorf("quest commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.QuestCommands.TransitionQuestStatus(ctx, actor, quest.TransitionQuestStatusSpec{
+		Id: id,
+		To: to,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toQuestView(view), nil
 }
 
 // CloseQuest is the resolver for the closeQuest field.
 func (r *mutationResolver) CloseQuest(ctx context.Context, id string, input CloseQuestInput, meta CommandMeta) (*QuestType, error) {
-	panic(fmt.Errorf("not implemented: CloseQuest - closeQuest"))
+	if r.Services.QuestCommands == nil {
+		return nil, fmt.Errorf("quest commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.QuestCommands.CloseQuest(ctx, actor, quest.CloseQuestSpec{
+		Id:    id,
+		Input: toCloseQuestFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toQuestView(view), nil
 }
 
 // UpsertQuestSummary is the resolver for the upsertQuestSummary field.
 func (r *mutationResolver) UpsertQuestSummary(ctx context.Context, input QuestSummaryInput, meta CommandMeta) (*DocumentType, error) {
-	panic(fmt.Errorf("not implemented: UpsertQuestSummary - upsertQuestSummary"))
+	if r.Services.QuestCommands == nil {
+		return nil, fmt.Errorf("quest commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.QuestCommands.UpsertQuestSummary(ctx, actor, quest.UpsertQuestSummarySpec{
+		Input: toQuestSummaryFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toDocumentViewType(view), nil
 }
 
 // UpsertQuestArc is the resolver for the upsertQuestArc field.
@@ -857,42 +930,159 @@ func (r *mutationResolver) RemoveQuestFromArc(ctx context.Context, questID strin
 
 // SignupForQuest is the resolver for the signupForQuest field.
 func (r *mutationResolver) SignupForQuest(ctx context.Context, questID string, characterID string, meta CommandMeta) (*QuestParticipantType, error) {
-	panic(fmt.Errorf("not implemented: SignupForQuest - signupForQuest"))
+	if r.Services.QuestCommands == nil {
+		return nil, fmt.Errorf("quest commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.QuestCommands.SignupForQuest(ctx, actor, quest.SignupForQuestSpec{
+		QuestId:     questID,
+		CharacterId: characterID,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toQuestParticipantFromQuest(view), nil
 }
 
 // WithdrawFromQuest is the resolver for the withdrawFromQuest field.
 func (r *mutationResolver) WithdrawFromQuest(ctx context.Context, questID string, characterID string, meta CommandMeta) (*QuestParticipantType, error) {
-	panic(fmt.Errorf("not implemented: WithdrawFromQuest - withdrawFromQuest"))
+	if r.Services.QuestCommands == nil {
+		return nil, fmt.Errorf("quest commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.QuestCommands.WithdrawFromQuest(ctx, actor, quest.WithdrawFromQuestSpec{
+		QuestId:     questID,
+		CharacterId: characterID,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toQuestParticipantFromQuest(view), nil
 }
 
 // SelectQuestParticipants is the resolver for the selectQuestParticipants field.
 func (r *mutationResolver) SelectQuestParticipants(ctx context.Context, questID string, characterIds []string, meta CommandMeta) ([]*QuestParticipantType, error) {
-	panic(fmt.Errorf("not implemented: SelectQuestParticipants - selectQuestParticipants"))
+	if r.Services.QuestCommands == nil {
+		return nil, fmt.Errorf("quest commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	views, err := r.Services.QuestCommands.SelectQuestParticipants(ctx, actor, quest.SelectQuestParticipantsSpec{
+		QuestId:      questID,
+		CharacterIds: characterIds,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toQuestParticipantTypes(views), nil
 }
 
 // AttestQuestParticipation is the resolver for the attestQuestParticipation field.
 func (r *mutationResolver) AttestQuestParticipation(ctx context.Context, questID string, entries []*ParticipationAttestationInput, meta CommandMeta) ([]*QuestParticipantType, error) {
-	panic(fmt.Errorf("not implemented: AttestQuestParticipation - attestQuestParticipation"))
+	if r.Services.QuestCommands == nil {
+		return nil, fmt.Errorf("quest commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	views, err := r.Services.QuestCommands.AttestQuestParticipation(ctx, actor, quest.AttestQuestParticipationSpec{
+		QuestId: questID,
+		Entries: toParticipationAttestations(entries),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toQuestParticipantTypes(views), nil
 }
 
 // SyncQuestDiscord is the resolver for the syncQuestDiscord field.
 func (r *mutationResolver) SyncQuestDiscord(ctx context.Context, questID string, meta CommandMeta) (*DeliveryReceipt, error) {
-	panic(fmt.Errorf("not implemented: SyncQuestDiscord - syncQuestDiscord"))
+	if r.Services.QuestCommands == nil {
+		return nil, fmt.Errorf("quest commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	receipt, err := r.Services.QuestCommands.SyncQuestDiscord(ctx, actor, quest.SyncQuestDiscordSpec{
+		QuestId: questID,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toDeliveryReceipt(receipt), nil
 }
 
 // DeleteQuest is the resolver for the deleteQuest field.
 func (r *mutationResolver) DeleteQuest(ctx context.Context, questID string, meta CommandMeta) (*CommandReceipt, error) {
-	panic(fmt.Errorf("not implemented: DeleteQuest - deleteQuest"))
+	if r.Services.QuestCommands == nil {
+		return nil, fmt.Errorf("quest commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	receipt, err := r.Services.QuestCommands.DeleteQuest(ctx, actor, quest.DeleteQuestSpec{
+		QuestId: questID,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toCommandReceipt(receipt), nil
 }
 
 // RestoreQuest is the resolver for the restoreQuest field.
 func (r *mutationResolver) RestoreQuest(ctx context.Context, questID string, meta CommandMeta) (*QuestType, error) {
-	panic(fmt.Errorf("not implemented: RestoreQuest - restoreQuest"))
+	if r.Services.QuestCommands == nil {
+		return nil, fmt.Errorf("quest commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.QuestCommands.RestoreQuest(ctx, actor, quest.RestoreQuestSpec{
+		QuestId: questID,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toQuestView(view), nil
 }
 
 // SetQuestPointcrawlLinks is the resolver for the setQuestPointcrawlLinks field.
 func (r *mutationResolver) SetQuestPointcrawlLinks(ctx context.Context, questID string, links []*QuestPointcrawlLinkInput, meta CommandMeta) ([]*QuestPointcrawlLinkType, error) {
-	panic(fmt.Errorf("not implemented: SetQuestPointcrawlLinks - setQuestPointcrawlLinks"))
+	if r.Services.QuestCommands == nil {
+		return nil, fmt.Errorf("quest commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	views, err := r.Services.QuestCommands.SetQuestPointcrawlLinks(ctx, actor, quest.SetQuestHexesSpec{
+		QuestId: questID,
+		Hexes:   toQuestHexFieldsFromPointcrawl(links),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toQuestPointcrawlLinkTypes(views), nil
 }
 
 // UpdateHomeBanner is the resolver for the updateHomeBanner field.
