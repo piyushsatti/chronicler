@@ -27,7 +27,7 @@ func (p *PostgresStore) Create(ctx context.Context, r QuestionRequested) error {
 	id, _ := db.ParseUUID(r.JobID)
 	payload, _ := json.Marshal(r)
 	return p.jobs.Transaction(ctx, func(q *dbgen.Queries) error {
-		if e := q.InsertQuestionJob(ctx, dbgen.InsertQuestionJobParams{JobID: id, Payload: payload}); e != nil {
+		if _, e := q.InsertQuestionJob(ctx, dbgen.InsertQuestionJobParams{JobID: id, Payload: payload}); e != nil {
 			return e
 		}
 		row, e := q.LockPublicJob(ctx, id)

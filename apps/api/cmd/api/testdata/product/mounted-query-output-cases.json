@@ -4787,7 +4787,6 @@
             "desiredRevision": 3,
             "eventLink": null,
             "failureStreak": 2,
-            "historicalRoleNotificationMissed": false,
             "id": "10000000-0000-4000-8000-000000000110",
             "maxAttempts": 8,
             "messageId": null,
@@ -4818,7 +4817,6 @@
         "SDL-AdminDeliveryJobV2Type-desiredRevision",
         "SDL-AdminDeliveryJobV2Type-eventLink",
         "SDL-AdminDeliveryJobV2Type-failureStreak",
-        "SDL-AdminDeliveryJobV2Type-historicalRoleNotificationMissed",
         "SDL-AdminDeliveryJobV2Type-id",
         "SDL-AdminDeliveryJobV2Type-maxAttempts",
         "SDL-AdminDeliveryJobV2Type-messageId",
@@ -4846,7 +4844,7 @@
       "kind": "positive",
       "operation": "adminOperations",
       "owner": "S03",
-      "query": "query Output86 { adminOperations { config { publicOrigin publicOriginHealthy deliveryMode announcementRoleId announcementRoleSource announcementRoleHealthy } activeAlertCount pendingDeliveryCount terminalDeliveryCount deliveryTotal deliveries { id questId questShortCode questTitle questLink eventLink messageId state desiredRevision appliedRevision failureStreak maxAttempts nextAttemptAt safeError historicalRoleNotificationMissed redriveCount createdAt updatedAt } activeAlerts { firstSeenAt } } }",
+      "query": "query Output86 { adminOperations { config { publicOrigin publicOriginHealthy deliveryMode announcementRoleId announcementRoleSource announcementRoleHealthy } activeAlertCount pendingDeliveryCount terminalDeliveryCount deliveryTotal deliveries { id questId questShortCode questTitle questLink eventLink messageId state desiredRevision appliedRevision failureStreak maxAttempts nextAttemptAt safeError redriveCount createdAt updatedAt } activeAlerts { firstSeenAt } } }",
       "result_path": "adminOperations",
       "root": "adminOperations",
       "scalar_scenario_refs": [],
@@ -5303,7 +5301,7 @@
       "id": "QUERY-OUTPUT-ADMIN-OPERATIONS-FORBIDDEN-1",
       "inject": null,
       "owner": "S03",
-      "query": "query Output86 { adminOperations { config { publicOrigin publicOriginHealthy deliveryMode announcementRoleId announcementRoleSource announcementRoleHealthy } activeAlertCount pendingDeliveryCount terminalDeliveryCount deliveryTotal deliveries { id questId questShortCode questTitle questLink eventLink messageId state desiredRevision appliedRevision failureStreak maxAttempts nextAttemptAt safeError historicalRoleNotificationMissed redriveCount createdAt updatedAt } activeAlerts { firstSeenAt } } }",
+      "query": "query Output86 { adminOperations { config { publicOrigin publicOriginHealthy deliveryMode announcementRoleId announcementRoleSource announcementRoleHealthy } activeAlertCount pendingDeliveryCount terminalDeliveryCount deliveryTotal deliveries { id questId questShortCode questTitle questLink eventLink messageId state desiredRevision appliedRevision failureStreak maxAttempts nextAttemptAt safeError redriveCount createdAt updatedAt } activeAlerts { firstSeenAt } } }",
       "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
       "variables": {}
     },
@@ -5326,7 +5324,7 @@
       "id": "QUERY-OUTPUT-ADMIN-OPERATIONS-UNAUTHENTICATED-2",
       "inject": null,
       "owner": "S03",
-      "query": "query Output86 { adminOperations { config { publicOrigin publicOriginHealthy deliveryMode announcementRoleId announcementRoleSource announcementRoleHealthy } activeAlertCount pendingDeliveryCount terminalDeliveryCount deliveryTotal deliveries { id questId questShortCode questTitle questLink eventLink messageId state desiredRevision appliedRevision failureStreak maxAttempts nextAttemptAt safeError historicalRoleNotificationMissed redriveCount createdAt updatedAt } activeAlerts { firstSeenAt } } }",
+      "query": "query Output86 { adminOperations { config { publicOrigin publicOriginHealthy deliveryMode announcementRoleId announcementRoleSource announcementRoleHealthy } activeAlertCount pendingDeliveryCount terminalDeliveryCount deliveryTotal deliveries { id questId questShortCode questTitle questLink eventLink messageId state desiredRevision appliedRevision failureStreak maxAttempts nextAttemptAt safeError redriveCount createdAt updatedAt } activeAlerts { firstSeenAt } } }",
       "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
       "variables": {}
     },
@@ -5640,9 +5638,6 @@
     "SDL-AdminDeliveryJobV2Type-desiredRevision": ["QUERY-OUTPUT-ADMIN-OPERATIONS"],
     "SDL-AdminDeliveryJobV2Type-eventLink": ["QUERY-OUTPUT-ADMIN-OPERATIONS"],
     "SDL-AdminDeliveryJobV2Type-failureStreak": ["QUERY-OUTPUT-ADMIN-OPERATIONS"],
-    "SDL-AdminDeliveryJobV2Type-historicalRoleNotificationMissed": [
-      "QUERY-OUTPUT-ADMIN-OPERATIONS"
-    ],
     "SDL-AdminDeliveryJobV2Type-id": ["QUERY-OUTPUT-ADMIN-OPERATIONS"],
     "SDL-AdminDeliveryJobV2Type-maxAttempts": ["QUERY-OUTPUT-ADMIN-OPERATIONS"],
     "SDL-AdminDeliveryJobV2Type-messageId": ["QUERY-OUTPUT-ADMIN-OPERATIONS"],
@@ -7615,9 +7610,9 @@
   },
   "remaining_requested_ids": [],
   "requested_output_bound": 248,
-  "requested_output_count": 248,
+  "requested_output_count": 247,
   "source_hashes": {
-    "contract-inventory.json": "f30dea9923a880f0d12fbaccf02a98db2b52878700a2a1db3d971a90d4b3947b",
+    "contract-inventory.json": "a4cfa3ae5657a291e325dbe96007aeac6cc5b7764ccb0f2bb30e11d354b121cc",
     "mounted-projections.json": "e30d6fff517aaf63aa462591e80fdab0d6c86269c1626cd3002a69f1bcf2f8b9",
     "operation-expectations.json": "f5191966e4ce1a5e57dcc7c9d4ed40c56dfe7a6a2f15aca8cc1e1aae967107c1",
     "operation-vectors.md": "6a0923140932cce05f235aaf8e269466cbdb7665717e106ea215e63a8f599a7f"

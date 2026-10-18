@@ -133,7 +133,7 @@ func TestScheduledSQLAdmission(t *testing.T) {
 		t.Fatal(err)
 	}
 	var version int64
-	if err := db.QueryRowContext(ctx, `SELECT max(version_id) FROM goose_db_version WHERE is_applied`).Scan(&version); err != nil || version != 3 {
+	if err := db.QueryRowContext(ctx, `SELECT max(version_id) FROM goose_db_version WHERE is_applied`).Scan(&version); err != nil || version != 4 {
 		t.Fatalf("migrated version=%d error=%v", version, err)
 	}
 	enqueue := scheduledNamedSQL(t, "EnqueueScheduledJob")

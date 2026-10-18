@@ -3,6 +3,7 @@ package worker
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"time"
 
@@ -14,6 +15,8 @@ import (
 )
 
 const LaneMaintenance = "maintenance"
+
+var errUnknownMaintenanceKind = errors.New("UNKNOWN_MAINTENANCE_KIND")
 
 // MaintenanceHandler runs scheduled background jobs from the work table.
 type MaintenanceHandler struct {
@@ -36,18 +39,19 @@ func (h *MaintenanceHandler) ProcessOne(ctx context.Context) (bool, error) {
 	errRun := jobs.RunLeased(ctx, h.store, job, func(ctx context.Context) error {
 		var errRun error
 		switch job.Kind {
-		case "purge_idempotency":
-			errRun = dbgen.New(h.pool).PurgeIdempotencyKeys(ctx)
 		case "gametime_fill":
 			errRun = h.gametimeFill(ctx)
 		case "reconcile_dry_run":
 			errRun = h.reconcileDryRun(ctx)
 		default:
-			slog.InfoContext(ctx, "unknown maintenance job", "kind", job.Kind)
+			return errUnknownMaintenanceKind
 		}
 		return errRun
 	})
 	if errRun != nil {
+		if errors.Is(errRun, errUnknownMaintenanceKind) {
+			return true, h.store.Fail(ctx, job.Receipt(), jobs.RepairRequired, errRun.Error())
+		}
 		if job.Attempts >= jobs.MaxAttempts {
 			return true, h.store.Fail(ctx, job.Receipt(), jobs.Dead, errRun.Error())
 		}
@@ -95,7 +99,7 @@ func (h *MaintenanceHandler) reconcileDryRun(ctx context.Context) error {
 	return nil
 }
 
-// EnqueueDailyMaintenance queues the three job kinds used by the Go worker port.
+// EnqueueDailyMaintenance queues the two active maintenance job kinds.
 func EnqueueDailyMaintenance(ctx context.Context, store jobs.Store, slot time.Time) {
 	if store == nil {
 		return
@@ -104,7 +108,6 @@ func EnqueueDailyMaintenance(ctx context.Context, store jobs.Store, slot time.Ti
 	for _, spec := range []struct {
 		key, kind string
 	}{
-		{"maintenance:purge:" + slotKey, "purge_idempotency"},
 		{"maintenance:gametime:" + slot.Format("2006-01-02"), "gametime_fill"},
 		{"maintenance:reconcile:" + slot.Format("2006-01-02"), "reconcile_dry_run"},
 	} {

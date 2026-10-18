@@ -24,10 +24,7 @@
       "inventory/currencies/campaign/notes/avatar URLs",
       "unused rules/effective-stat derivation inputs"
     ],
-    "preserved_missing_optional": [
-      "armorClass absent",
-      "overrideHitPoints null"
-    ],
+    "preserved_missing_optional": ["armorClass absent", "overrideHitPoints null"],
     "validation_boundary": "one dated public provider response transformed offline; not synthetic-original, ongoing parity or completeness of all DDB rule calculations"
   }
 }

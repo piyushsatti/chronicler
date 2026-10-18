@@ -36,7 +36,7 @@ jobs:
         run: git diff --exit-code -- packages/contracts/schema.graphql
       - name: Install codegen tools
         run: |
-          go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.29.0
+          go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.31.1
           go install github.com/99designs/gqlgen@v0.17.78
       - name: sqlc drift
         run: sqlc generate && git diff --exit-code -- internal/platform/dbgen

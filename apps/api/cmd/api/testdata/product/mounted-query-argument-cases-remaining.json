@@ -141125,9 +141125,9 @@
   "remaining_semantic_questions": [],
   "source_hashes": {
     "behavior.md": "2387bcac950fd3a5385026ee1db39a2adeba61801027eb8873b7e3af25f0d623",
-    "contract-inventory.json": "f30dea9923a880f0d12fbaccf02a98db2b52878700a2a1db3d971a90d4b3947b",
+    "contract-inventory.json": "a4cfa3ae5657a291e325dbe96007aeac6cc5b7764ccb0f2bb30e11d354b121cc",
     "mounted-query-argument-cases.json": "199578698c4a8b3481d78ebee65cd17ef5b9f02db2a6616b7ba548274a13f7e2",
-    "mounted-query-output-cases.json": "71054cbfa7aaffd7f0cf30e4a97b3c7efbf4e95dcca2fd4d1e839114b9a96c58",
+    "mounted-query-output-cases.json": "c7b32f66e9a6e12347bdb270139e6b66355d865949b9275870c4de39f07bc5b1",
     "notification-cursor-contract.md": "6d5a127ef7f0556da8801022979d971b72186b2c47da38ed9af3bb4b81b45117",
     "operation-expectations.json": "f5191966e4ce1a5e57dcc7c9d4ed40c56dfe7a6a2f15aca8cc1e1aae967107c1",
     "operation-vectors.md": "6a0923140932cce05f235aaf8e269466cbdb7665717e106ea215e63a8f599a7f",

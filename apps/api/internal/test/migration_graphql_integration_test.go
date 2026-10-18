@@ -70,6 +70,14 @@ func p04Reject(t *testing.T, db p04Executor, q string) {
 	}
 }
 
+func p04AssertVersion(t *testing.T, db *sql.DB, want int64) {
+	t.Helper()
+	var got int64
+	if err := db.QueryRow(`SELECT max(version_id) FROM goose_db_version WHERE is_applied`).Scan(&got); err != nil || got != want {
+		t.Fatalf("migration version=%d, want %d: %v", got, want, err)
+	}
+}
+
 func TestPhase3TaskP04Acceptance(t *testing.T) {
 	if os.Getenv("DATABASE_URL") != "" {
 		t.Fatal("requires fresh disposable Postgres; omit DATABASE_URL")
@@ -131,9 +139,10 @@ func TestPhase3TaskP04Acceptance(t *testing.T) {
 		if err := goose.UpToContext(ctx, db, "../../db/migrations", 2); err != nil {
 			t.Fatal(err)
 		}
+		p04AssertVersion(t, db, 2)
 	}
-	up := func() error { return goose.UpContext(ctx, db, "../../db/migrations") }
-	down := func() error { return goose.DownContext(ctx, db, "../../db/migrations") }
+	up := func() error { return goose.UpToContext(ctx, db, "../../db/migrations", 3) }
+	down := func() error { return goose.DownToContext(ctx, db, "../../db/migrations", 2) }
 	t.Run("up-down-up-object-lifetime", func(t *testing.T) {
 		fresh(t)
 		p04Exec(t, db, "INSERT INTO members(id,discord_id,handle,display_name) VALUES(1,'roundtrip','roundtrip','Roundtrip')")
@@ -142,14 +151,17 @@ func TestPhase3TaskP04Acceptance(t *testing.T) {
 		if err := up(); err != nil {
 			t.Fatal(err)
 		}
+		p04AssertVersion(t, db, 3)
 		first := p04ObjectSnapshot(t, db)
 		if err := down(); err != nil {
 			t.Fatal(err)
 		}
+		p04AssertVersion(t, db, 2)
 		reverted := p04ObjectSnapshot(t, db)
 		if err := up(); err != nil {
 			t.Fatalf("actual Goose Up after Down: %v", err)
 		}
+		p04AssertVersion(t, db, 3)
 		p04Equal(t, reverted, baseline)
 		p04Equal(t, p04ObjectSnapshot(t, db), first)
 		p04AssertInventory(t, db)
@@ -803,15 +815,26 @@ func p04SchemaSnapshot(t *testing.T, db *sql.DB) string {
 
 func p04AssertInventory(t *testing.T, db *sql.DB) {
 	t.Helper()
+	var version int64
+	if err := db.QueryRow(`SELECT max(version_id) FROM goose_db_version WHERE is_applied`).Scan(&version); err != nil || version != 3 {
+		t.Fatalf("historical inventory comparison requires migration version 3, got %d: %v", version, err)
+	}
 	var inventory struct {
 		Tables map[string]struct {
 			Columns map[string]struct {
 				Declaration string `json:"declaration"`
+				Source      string `json:"source"`
+				Stage       string `json:"stage"`
 			} `json:"columns"`
 			BaselineDDL string `json:"baseline_ddl"`
 		} `json:"final_tables"`
 	}
 	p04JSON(t, "physical-schema-inventory.json", &inventory)
+	appendOrder, ok := inventory.Tables["document_links"].Columns["summary_append_order"]
+	if !ok || appendOrder.Declaration != "BIGINT GENERATED ALWAYS AS IDENTITY" || appendOrder.Source != "apps/api/db/migrations/0004_summary_append_order.sql" || appendOrder.Stage != "added0004" {
+		t.Fatalf("current inventory summary append column=%+v, want the validated migration 0004 identity column", appendOrder)
+	}
+	delete(inventory.Tables["document_links"].Columns, "summary_append_order")
 	type column struct {
 		oid                 int64
 		sqlType             string
@@ -957,7 +980,7 @@ func p04AssertInventory(t *testing.T, db *sql.DB) {
 		}
 	}
 	p04Equal(t, count, 563)
-	t.Log("native inventory matched69 tables/563 columns with PostgreSQL types, nullability, PK, UNIQUE, identity, defaults, generated columns, validated CHECK presence and exact FK targets/actions")
+	t.Log("migration version 3 matched the current inventory after projecting out only migration 0004 summary_append_order; 69 tables/563 columns matched")
 }
 
 func p04ObjectSnapshot(t *testing.T, db *sql.DB) string {

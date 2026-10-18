@@ -316,8 +316,8 @@ type ProgressionListResult {
 }
 
 input UpdateCharacterProfileV2Input {
-  description: String = null
-  backgroundText: String = null
+  description: String
+  backgroundText: String
 }
 
 input UpsertCreationCatalogEntryInput {
@@ -696,6 +696,7 @@ type DocumentType {
   status: String!
   visibility: String!
   policy: [String!]
+  readerIds: [ID!]
   title: String!
   frontmatter: JSON!
   authorId: ID!
@@ -1542,7 +1543,6 @@ type AdminDeliveryJobV2Type {
   maxAttempts: Int!
   nextAttemptAt: DateTime!
   safeError: String
-  historicalRoleNotificationMissed: Boolean!
   redriveCount: Int!
   createdAt: DateTime!
   updatedAt: DateTime!

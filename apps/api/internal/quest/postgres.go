@@ -307,28 +307,28 @@ func NewReadModel(q *dbgen.Queries) *ReadModel {
 	return &ReadModel{q: q}
 }
 
-func (r *ReadModel) ByID(ctx context.Context, id string) (QuestView, error) {
+func (r *ReadModel) ByID(ctx context.Context, id string) (LegacyQuestView, error) {
 	uid, err := db.ParseUUID(id)
 	if err != nil {
-		return QuestView{}, ErrNotFound
+		return LegacyQuestView{}, ErrNotFound
 	}
 	row, err := r.q.GetQuest(ctx, uid)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return QuestView{}, ErrNotFound
+			return LegacyQuestView{}, ErrNotFound
 		}
-		return QuestView{}, err
+		return LegacyQuestView{}, err
 	}
 	return mapQuestView(row), nil
 }
 
-func (r *ReadModel) ByShortCode(ctx context.Context, code string) (QuestView, error) {
+func (r *ReadModel) ByShortCode(ctx context.Context, code string) (LegacyQuestView, error) {
 	row, err := r.q.GetQuestByShortCode(ctx, code)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return QuestView{}, ErrNotFound
+			return LegacyQuestView{}, ErrNotFound
 		}
-		return QuestView{}, err
+		return LegacyQuestView{}, err
 	}
 	return mapShortRow(row), nil
 }
@@ -353,7 +353,7 @@ type ListFilter struct {
 	Order                      ListOrder
 }
 
-func (r *ReadModel) List(ctx context.Context, filter ListFilter) ([]QuestView, int64, error) {
+func (r *ReadModel) List(ctx context.Context, filter ListFilter) ([]LegacyQuestView, int64, error) {
 	if r == nil || r.q == nil {
 		return nil, 0, errors.New("quest read model is not configured")
 	}
@@ -370,7 +370,7 @@ func (r *ReadModel) List(ctx context.Context, filter ListFilter) ([]QuestView, i
 		case Open, Full, Played, Closed, Cancelled:
 			machine = pgtype.Text{String: status, Valid: true}
 		default:
-			return []QuestView{}, 0, nil
+			return []LegacyQuestView{}, 0, nil
 		}
 	}
 	if filter.DisplayStatus != nil {
@@ -394,7 +394,7 @@ func (r *ReadModel) List(ctx context.Context, filter ListFilter) ([]QuestView, i
 	if err != nil {
 		return nil, 0, fmt.Errorf("list quests: %w", err)
 	}
-	out := make([]QuestView, 0, len(rows))
+	out := make([]LegacyQuestView, 0, len(rows))
 	var total int64
 	for _, row := range rows {
 		total = row.Total
@@ -407,7 +407,7 @@ func (r *ReadModel) List(ctx context.Context, filter ListFilter) ([]QuestView, i
 	return out, total, nil
 }
 
-type QuestView struct {
+type LegacyQuestView struct {
 	ID                     string
 	ShortCode              string
 	Status                 Status
@@ -422,12 +422,12 @@ type QuestView struct {
 	DiscordAppliedRevision int
 }
 
-func questView(publicID, dmID, documentID pgtype.UUID, shortCode, status, displayStatus string, scheduled pgtype.Timestamptz, duration float64, filled, slots, desired, applied int32) QuestView {
+func questView(publicID, dmID, documentID pgtype.UUID, shortCode, status, displayStatus string, scheduled pgtype.Timestamptz, duration float64, filled, slots, desired, applied int32) LegacyQuestView {
 	var at time.Time
 	if scheduled.Valid {
 		at = scheduled.Time
 	}
-	return QuestView{
+	return LegacyQuestView{
 		ID:                     db.UUIDString(publicID),
 		ShortCode:              shortCode,
 		Status:                 Status(status),
@@ -443,15 +443,15 @@ func questView(publicID, dmID, documentID pgtype.UUID, shortCode, status, displa
 	}
 }
 
-func mapQuestView(row dbgen.GetQuestRow) QuestView {
+func mapQuestView(row dbgen.GetQuestRow) LegacyQuestView {
 	return questView(row.PublicID, row.DmPublicID, row.DocumentPublicID, row.ShortCode, row.Status, row.DisplayStatus, row.ScheduledAt, row.DurationHours, row.FilledCount, row.SlotsMax, row.DiscordDesiredRevision, row.DiscordAppliedRevision)
 }
 
-func mapShortRow(row dbgen.GetQuestByShortCodeRow) QuestView {
+func mapShortRow(row dbgen.GetQuestByShortCodeRow) LegacyQuestView {
 	return questView(row.PublicID, row.DmPublicID, row.DocumentPublicID, row.ShortCode, row.Status, row.DisplayStatus, row.ScheduledAt, row.DurationHours, row.FilledCount, row.SlotsMax, row.DiscordDesiredRevision, row.DiscordAppliedRevision)
 }
 
-func mapListRow(row dbgen.ListQuestsRow) QuestView {
+func mapListRow(row dbgen.ListQuestsRow) LegacyQuestView {
 	return questView(row.PublicID, row.DmPublicID, row.DocumentPublicID, row.ShortCode, row.Status, row.DisplayStatus, row.ScheduledAt, row.DurationHours, row.FilledCount, row.SlotsMax, row.DiscordDesiredRevision, row.DiscordAppliedRevision)
 }
 
@@ -461,9 +461,9 @@ type Queries struct {
 	ParticipantsFn func(ctx context.Context, questID string, status *string) ([]Participant, error)
 }
 
-func (q Queries) Get(ctx context.Context, id, shortCode *string) (QuestView, error) {
+func (q Queries) Get(ctx context.Context, id, shortCode *string) (LegacyQuestView, error) {
 	if q.Read == nil {
-		return QuestView{}, ErrNotFound
+		return LegacyQuestView{}, ErrNotFound
 	}
 	if id != nil && *id != "" {
 		return q.Read.ByID(ctx, *id)
@@ -471,10 +471,10 @@ func (q Queries) Get(ctx context.Context, id, shortCode *string) (QuestView, err
 	if shortCode != nil && *shortCode != "" {
 		return q.Read.ByShortCode(ctx, *shortCode)
 	}
-	return QuestView{}, ErrNotFound
+	return LegacyQuestView{}, ErrNotFound
 }
 
-func (q Queries) List(ctx context.Context, filter ListFilter) ([]QuestView, int64, error) {
+func (q Queries) List(ctx context.Context, filter ListFilter) ([]LegacyQuestView, int64, error) {
 	return q.Read.List(ctx, filter)
 }
 

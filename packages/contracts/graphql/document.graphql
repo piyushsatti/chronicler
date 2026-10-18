@@ -69,6 +69,7 @@ type DocumentType {
   status: String!
   visibility: String!
   policy: [String!]
+  readerIds: [ID!]
   title: String!
   frontmatter: JSON!
   authorId: ID!

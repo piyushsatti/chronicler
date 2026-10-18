@@ -2517,6 +2517,12 @@
           "source_contracts": ["document-storage-contract.md"],
           "declaration": "BIGINT REFERENCES regions(id) NULL"
         },
+        "summary_append_order": {
+          "declaration": "BIGINT GENERATED ALWAYS AS IDENTITY",
+          "source": "apps/api/db/migrations/0004_summary_append_order.sql",
+          "stage": "added0004",
+          "source_contracts": ["document-storage-contract.md", "migrations.md"]
+        },
         "target_type": {
           "stage": "proposed0003",
           "generated": true,

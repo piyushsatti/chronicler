@@ -1444,14 +1444,6 @@
     {
       "args": [],
       "definitionKind": "OBJECT",
-      "field": "historicalRoleNotificationMissed",
-      "ownerType": "AdminDeliveryJobV2Type",
-      "source": "site.graphql",
-      "type": "Boolean!"
-    },
-    {
-      "args": [],
-      "definitionKind": "OBJECT",
       "field": "id",
       "ownerType": "AdminDeliveryJobV2Type",
       "source": "site.graphql",
@@ -3664,6 +3656,14 @@
       "ownerType": "DocumentType",
       "source": "document.graphql",
       "type": "[String!]"
+    },
+    {
+      "args": [],
+      "definitionKind": "OBJECT",
+      "field": "readerIds",
+      "ownerType": "DocumentType",
+      "source": "document.graphql",
+      "type": "[ID!]"
     },
     {
       "args": [],
@@ -11804,7 +11804,6 @@
     },
     {
       "args": [],
-      "default": "null",
       "definitionKind": "INPUT_OBJECT",
       "field": "backgroundText",
       "ownerType": "UpdateCharacterProfileV2Input",
@@ -11813,7 +11812,6 @@
     },
     {
       "args": [],
-      "default": "null",
       "definitionKind": "INPUT_OBJECT",
       "field": "description",
       "ownerType": "UpdateCharacterProfileV2Input",

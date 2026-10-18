@@ -184,8 +184,8 @@ type ProgressionListResult {
 }
 
 input UpdateCharacterProfileV2Input {
-  description: String = null
-  backgroundText: String = null
+  description: String
+  backgroundText: String
 }
 
 input UpsertCreationCatalogEntryInput {

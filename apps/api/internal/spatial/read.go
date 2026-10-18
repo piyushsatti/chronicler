@@ -31,7 +31,7 @@ type MapPlace struct {
 }
 
 type MapViewPage struct {
-	Map          MapView
+	Map          LegacyMapView
 	Places       []MapPlace
 	TotalPlaces  int
 }

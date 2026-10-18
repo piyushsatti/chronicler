@@ -57,29 +57,47 @@ WHERE dr.member_id = (SELECT members.id FROM members WHERE members.public_id = s
 
 -- name: CountDocumentBacklinks :one
 SELECT count(*)::bigint AS total,
-       COALESCE(bool_or(sqlc.arg(viewer_admin)::boolean AND NOT document_readable(src.public_id, author.public_id, src.status, src.visibility, src.policy,
-      sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
-      FALSE, sqlc.arg(viewer_live_dm)::boolean, sqlc.arg(reader_ids)::uuid[])), FALSE)::boolean AS admin_override
+       COALESCE(bool_or(sqlc.arg(viewer_admin)::boolean AND (
+         NOT document_readable(src.public_id, author.public_id, src.status, src.visibility, src.policy,
+           sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
+           FALSE, sqlc.arg(viewer_live_dm)::boolean, sqlc.arg(reader_ids)::uuid[])
+         OR NOT document_readable(tgt.public_id, target_author.public_id, tgt.status, tgt.visibility, tgt.policy,
+           sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
+           FALSE, sqlc.arg(viewer_live_dm)::boolean, sqlc.arg(reader_ids)::uuid[])
+       )), FALSE)::boolean AS admin_override
 FROM document_links dl
 JOIN documents src ON src.id = dl.source_id AND src.deleted_at IS NULL
 LEFT JOIN members author ON author.id = src.author_id
-JOIN documents tgt ON tgt.id = dl.target_id AND tgt.deleted_at IS NULL
+JOIN documents tgt ON dl.target_type = 'document' AND tgt.id = dl.document_target_id AND tgt.deleted_at IS NULL
+LEFT JOIN members target_author ON target_author.id = tgt.author_id
 WHERE tgt.slug = sqlc.arg(slug)
   AND document_readable(src.public_id, author.public_id, src.status, src.visibility, src.policy,
+      sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
+      sqlc.arg(viewer_admin)::boolean, sqlc.arg(viewer_live_dm)::boolean, sqlc.arg(reader_ids)::uuid[])
+  AND document_readable(tgt.public_id, target_author.public_id, tgt.status, tgt.visibility, tgt.policy,
       sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
       sqlc.arg(viewer_admin)::boolean, sqlc.arg(viewer_live_dm)::boolean, sqlc.arg(reader_ids)::uuid[]);
 
 -- name: ListDocumentBacklinksBySlug :many
 SELECT src.public_id AS source_id, tgt.public_id AS target_id, dl.relation, src.kind, src.slug,
-       COALESCE(sqlc.arg(viewer_admin)::boolean AND NOT document_readable(src.public_id, author.public_id, src.status, src.visibility, src.policy,
-      sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
-      FALSE, sqlc.arg(viewer_live_dm)::boolean, sqlc.arg(reader_ids)::uuid[]), FALSE)::boolean AS admin_override
+       COALESCE(sqlc.arg(viewer_admin)::boolean AND (
+         NOT document_readable(src.public_id, author.public_id, src.status, src.visibility, src.policy,
+           sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
+           FALSE, sqlc.arg(viewer_live_dm)::boolean, sqlc.arg(reader_ids)::uuid[])
+         OR NOT document_readable(tgt.public_id, target_author.public_id, tgt.status, tgt.visibility, tgt.policy,
+           sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
+           FALSE, sqlc.arg(viewer_live_dm)::boolean, sqlc.arg(reader_ids)::uuid[])
+       ), FALSE)::boolean AS admin_override
 FROM document_links dl
 JOIN documents src ON src.id = dl.source_id AND src.deleted_at IS NULL
 LEFT JOIN members author ON author.id = src.author_id
-JOIN documents tgt ON tgt.id = dl.target_id AND tgt.deleted_at IS NULL
+JOIN documents tgt ON dl.target_type = 'document' AND tgt.id = dl.document_target_id AND tgt.deleted_at IS NULL
+LEFT JOIN members target_author ON target_author.id = tgt.author_id
 WHERE tgt.slug = sqlc.arg(slug)
   AND document_readable(src.public_id, author.public_id, src.status, src.visibility, src.policy,
+      sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
+      sqlc.arg(viewer_admin)::boolean, sqlc.arg(viewer_live_dm)::boolean, sqlc.arg(reader_ids)::uuid[])
+  AND document_readable(tgt.public_id, target_author.public_id, tgt.status, tgt.visibility, tgt.policy,
       sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
       sqlc.arg(viewer_admin)::boolean, sqlc.arg(viewer_live_dm)::boolean, sqlc.arg(reader_ids)::uuid[])
 ORDER BY src.updated_at DESC, src.id DESC, dl.relation;

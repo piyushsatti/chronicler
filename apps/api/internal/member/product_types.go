@@ -660,6 +660,7 @@ type CreateRequestWrite struct {
 	Input          CreateRequestSpec
 	Locked         CreateRequestState
 	ValidatedInput CreateRequestSpec
+	RequestID      string
 	HistoryID      *string
 	DecisionID     *string
 	RevisionID     *string
@@ -733,6 +734,7 @@ type SetMemberRolesBatchWrite struct {
 	Input          SetMemberRolesBatchSpec
 	Locked         SetMemberRolesBatchState
 	ValidatedInput SetMemberRolesBatchSpec
+	HistoryIDs     map[string]string
 	HistoryID      *string
 	DecisionID     *string
 	RevisionID     *string
@@ -831,6 +833,7 @@ type UpsertUnlockableWrite struct {
 	Input          UpsertUnlockableSpec
 	Locked         UpsertUnlockableState
 	ValidatedInput UpsertUnlockableSpec
+	UnlockableID   string
 	HistoryID      *string
 	DecisionID     *string
 	RevisionID     *string

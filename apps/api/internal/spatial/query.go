@@ -11,7 +11,7 @@ import (
 
 var ErrNotFound = apierr.New(apierr.NotFound, "spatial entity not found")
 
-type MapView struct {
+type LegacyMapView struct {
 	ID         string
 	Name       string
 	AtlasCode  string
@@ -28,8 +28,8 @@ type Region struct {
 
 type Queries struct {
 	DocumentScope  func(context.Context) (document.ViewerScope, error)
-	MapByAtlas     func(ctx context.Context, code string) (MapView, error)
-	ListMapsFn     func(ctx context.Context, family *string) ([]MapView, error)
+	MapByAtlas     func(ctx context.Context, code string) (LegacyMapView, error)
+	ListMapsFn     func(ctx context.Context, family *string) ([]LegacyMapView, error)
 	ListRegionsFn  func(ctx context.Context, kind *string) ([]Region, error)
 	GameDay        func(ctx context.Context, realDate time.Time) (int, error)
 	MapViewFn      func(ctx context.Context, scope document.ViewerScope, atlasCode string, limit, offset int) (MapViewPage, error)
@@ -39,14 +39,14 @@ type Queries struct {
 	HexHistoryFn   func(ctx context.Context, hexID string, limit int) ([]HexChange, error)
 }
 
-func (q Queries) Map(ctx context.Context, atlasCode string) (MapView, error) {
+func (q Queries) Map(ctx context.Context, atlasCode string) (LegacyMapView, error) {
 	if q.MapByAtlas == nil {
-		return MapView{}, ErrNotFound
+		return LegacyMapView{}, ErrNotFound
 	}
 	return q.MapByAtlas(ctx, atlasCode)
 }
 
-func (q Queries) ListMaps(ctx context.Context, family *string) ([]MapView, error) {
+func (q Queries) ListMaps(ctx context.Context, family *string) ([]LegacyMapView, error) {
 	if q.ListMapsFn == nil {
 		return nil, nil
 	}

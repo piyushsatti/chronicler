@@ -13,15 +13,24 @@ import (
 
 const countDocumentBacklinks = `-- name: CountDocumentBacklinks :one
 SELECT count(*)::bigint AS total,
-       COALESCE(bool_or($1::boolean AND NOT document_readable(src.public_id, author.public_id, src.status, src.visibility, src.policy,
-      $2::uuid, $3::text[], $4::text,
-      FALSE, $5::boolean, $6::uuid[])), FALSE)::boolean AS admin_override
+       COALESCE(bool_or($1::boolean AND (
+         NOT document_readable(src.public_id, author.public_id, src.status, src.visibility, src.policy,
+           $2::uuid, $3::text[], $4::text,
+           FALSE, $5::boolean, $6::uuid[])
+         OR NOT document_readable(tgt.public_id, target_author.public_id, tgt.status, tgt.visibility, tgt.policy,
+           $2::uuid, $3::text[], $4::text,
+           FALSE, $5::boolean, $6::uuid[])
+       )), FALSE)::boolean AS admin_override
 FROM document_links dl
 JOIN documents src ON src.id = dl.source_id AND src.deleted_at IS NULL
 LEFT JOIN members author ON author.id = src.author_id
-JOIN documents tgt ON tgt.id = dl.target_id AND tgt.deleted_at IS NULL
+JOIN documents tgt ON dl.target_type = 'document' AND tgt.id = dl.document_target_id AND tgt.deleted_at IS NULL
+LEFT JOIN members target_author ON target_author.id = tgt.author_id
 WHERE tgt.slug = $7
   AND document_readable(src.public_id, author.public_id, src.status, src.visibility, src.policy,
+      $2::uuid, $3::text[], $4::text,
+      $1::boolean, $5::boolean, $6::uuid[])
+  AND document_readable(tgt.public_id, target_author.public_id, tgt.status, tgt.visibility, tgt.policy,
       $2::uuid, $3::text[], $4::text,
       $1::boolean, $5::boolean, $6::uuid[])
 `
@@ -214,15 +223,24 @@ func (q *Queries) GetDocumentRevisionAuthor(ctx context.Context, documentID pgty
 
 const listDocumentBacklinksBySlug = `-- name: ListDocumentBacklinksBySlug :many
 SELECT src.public_id AS source_id, tgt.public_id AS target_id, dl.relation, src.kind, src.slug,
-       COALESCE($1::boolean AND NOT document_readable(src.public_id, author.public_id, src.status, src.visibility, src.policy,
-      $2::uuid, $3::text[], $4::text,
-      FALSE, $5::boolean, $6::uuid[]), FALSE)::boolean AS admin_override
+       COALESCE($1::boolean AND (
+         NOT document_readable(src.public_id, author.public_id, src.status, src.visibility, src.policy,
+           $2::uuid, $3::text[], $4::text,
+           FALSE, $5::boolean, $6::uuid[])
+         OR NOT document_readable(tgt.public_id, target_author.public_id, tgt.status, tgt.visibility, tgt.policy,
+           $2::uuid, $3::text[], $4::text,
+           FALSE, $5::boolean, $6::uuid[])
+       ), FALSE)::boolean AS admin_override
 FROM document_links dl
 JOIN documents src ON src.id = dl.source_id AND src.deleted_at IS NULL
 LEFT JOIN members author ON author.id = src.author_id
-JOIN documents tgt ON tgt.id = dl.target_id AND tgt.deleted_at IS NULL
+JOIN documents tgt ON dl.target_type = 'document' AND tgt.id = dl.document_target_id AND tgt.deleted_at IS NULL
+LEFT JOIN members target_author ON target_author.id = tgt.author_id
 WHERE tgt.slug = $7
   AND document_readable(src.public_id, author.public_id, src.status, src.visibility, src.policy,
+      $2::uuid, $3::text[], $4::text,
+      $1::boolean, $5::boolean, $6::uuid[])
+  AND document_readable(tgt.public_id, target_author.public_id, tgt.status, tgt.visibility, tgt.policy,
       $2::uuid, $3::text[], $4::text,
       $1::boolean, $5::boolean, $6::uuid[])
 ORDER BY src.updated_at DESC, src.id DESC, dl.relation

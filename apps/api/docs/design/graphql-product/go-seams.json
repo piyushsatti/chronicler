@@ -52,6 +52,13 @@
     },
     {
       "type": "DocumentType",
+      "field": "readerIds",
+      "args": [],
+      "dto_owner": "DOC01",
+      "rule": "resolver-backed; absent from base domain DTO, hydrate through exact typed provider"
+    },
+    {
+      "type": "DocumentType",
       "field": "summaryDerived",
       "args": [],
       "dto_owner": "DOC01",
@@ -745,15 +752,6 @@
           "wire_name": "failureStreak",
           "go_type": "int32",
           "wire_type": "Int!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SIT01"
-        },
-        {
-          "name": "HistoricalRoleNotificationMissed",
-          "wire_name": "historicalRoleNotificationMissed",
-          "go_type": "bool",
-          "wire_type": "Boolean!",
           "resolver_args": [],
           "kind": "OBJECT",
           "owner": "SIT01"
@@ -18515,6 +18513,10 @@
           "go_type": "member.CreateRequestSpec"
         },
         {
+          "name": "RequestID",
+          "go_type": "string"
+        },
+        {
           "name": "HistoryID",
           "go_type": "*string"
         },
@@ -19935,6 +19937,10 @@
         {
           "name": "ValidatedInput",
           "go_type": "member.SetMemberRolesBatchSpec"
+        },
+        {
+          "name": "HistoryIDs",
+          "go_type": "map[string]string"
         },
         {
           "name": "HistoryID",
@@ -21497,6 +21503,10 @@
           "go_type": "member.UpsertUnlockableSpec"
         },
         {
+          "name": "UnlockableID",
+          "go_type": "string"
+        },
+        {
           "name": "HistoryID",
           "go_type": "*string"
         },
@@ -21634,6 +21644,7 @@
       "Note": "*string",
       "ID": "string",
       "SubmissionToken": "string",
+      "ReviewRevision": "*int64",
       "ActorID": "string",
       "At": "time.Time",
       "EvidenceAttemptID": "*string"
@@ -22850,18 +22861,11 @@
     },
     "auth.PreviewAudience": {
       "underlying": "string",
-      "values": [
-        "PLAYER",
-        "DM"
-      ]
+      "values": ["PLAYER", "DM"]
     },
     "auth.AudienceOutcome": {
       "underlying": "uint8",
-      "values": [
-        "AudienceDenied=0",
-        "AudienceOrdinary=1",
-        "AudienceOverridden=2"
-      ]
+      "values": ["AudienceDenied=0", "AudienceOrdinary=1", "AudienceOverridden=2"]
     },
     "dbtest.ProductFixture": {
       "Pool": "*db.Pool",
@@ -24570,9 +24574,7 @@
       "interface": "auth.SummaryRelationshipReader",
       "signature": "SummaryRelations(ctx context.Context, questIDs []string, characterID *string) (auth.SummaryEvidence,error)",
       "provider": "QUE04",
-      "callers": [
-        "P02"
-      ],
+      "callers": ["P02"],
       "transaction": "one owning read task snapshot or current business transaction; no cross-task mutable providers or extra connection acquisition"
     },
     {
@@ -27762,9 +27764,7 @@
       "interface": "auth.DocumentAudienceReader",
       "signature": "Assess(ctx context.Context, viewer auth.AudienceContext, refs []auth.DocumentRef) (auth.AudienceAssessment,error)",
       "provider": "DOC04",
-      "callers": [
-        "P02"
-      ],
+      "callers": ["P02"],
       "transaction": "one owning read task snapshot or current business transaction; no cross-task mutable providers or extra connection acquisition"
     },
     {
@@ -27772,9 +27772,7 @@
       "interface": "auth.MemberIdentityReader",
       "signature": "DiscordIdentity(ctx context.Context, memberID string) (auth.DiscordIdentity,error)",
       "provider": "MEM04",
-      "callers": [
-        "P02"
-      ],
+      "callers": ["P02"],
       "transaction": "one owning read task snapshot or current business transaction; no cross-task mutable providers or extra connection acquisition"
     }
   ],
@@ -28101,11 +28099,7 @@
         "OperatorDiscordWebhookURL": "OPERATOR_DISCORD_WEBHOOK_URL",
         "PlatformOwnerMemberID": "PLATFORM_OWNER_MEMBER_ID"
       },
-      "consumers": [
-        "WD01",
-        "WK04",
-        "W02"
-      ],
+      "consumers": ["WD01", "WK04", "W02"],
       "construction": "Existing FromEnv and existing webhook constructor only; empty valid unconfigured, malformed nonempty rejects, no logging/secret/deploy change; FromEnv snapshots optional PLATFORM_OWNER_MEMBER_ID. Validate checks syntax before lookup, does zero lookups when absent, otherwise requires exactly one matching active Authority. W02 calls Validate once after database connection and before serving. Current request authority still rechecks live membership.",
       "add_methods": [
         "Validate(ctx context.Context, resolve auth.AuthorityResolver) error"
@@ -28361,12 +28355,7 @@
       }
     ],
     "character_verification_history": "Query.characterVerificationHistory requires ForCharacter with retained Character ID and immutable OwnerID. Character owner OR current Verifier/admin admits ordinarily; configured owner may bypass failed OWNERSHIP. ForOperation without facts rejects. Character mutation no-bypass rules are unchanged.",
-    "override_precedence": [
-      "ROLE",
-      "OWNERSHIP",
-      "ASSIGNMENT",
-      "AUDIENCE"
-    ],
+    "override_precedence": ["ROLE", "OWNERSHIP", "ASSIGNMENT", "AUDIENCE"],
     "literal_exceptions": [
       "player-character mutations and signup/withdraw require immutable owner without staff override",
       "decideRequest requires current addressed approved DM without staff override"

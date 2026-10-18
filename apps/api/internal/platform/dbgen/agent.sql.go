@@ -58,7 +58,7 @@ func (q *Queries) InsertAgentQuestion(ctx context.Context, arg InsertAgentQuesti
 	return err
 }
 
-const insertQuestionJob = `-- name: InsertQuestionJob :exec
+const insertQuestionJob = `-- name: InsertQuestionJob :execrows
 INSERT INTO background_jobs(public_id,job_key,kind,lane,state,payload,question_deadline_at)
 VALUES($1::uuid,'agent:'||$1::uuid::text,'agent_question','agent','queued',$2,clock_timestamp()+interval '100 seconds')
 ON CONFLICT(public_id) DO NOTHING
@@ -69,7 +69,10 @@ type InsertQuestionJobParams struct {
 	Payload []byte      `json:"payload"`
 }
 
-func (q *Queries) InsertQuestionJob(ctx context.Context, arg InsertQuestionJobParams) error {
-	_, err := q.db.Exec(ctx, insertQuestionJob, arg.JobID, arg.Payload)
-	return err
+func (q *Queries) InsertQuestionJob(ctx context.Context, arg InsertQuestionJobParams) (int64, error) {
+	result, err := q.db.Exec(ctx, insertQuestionJob, arg.JobID, arg.Payload)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
 }

@@ -2,12 +2,30 @@ package member
 
 import (
 	"context"
+	"time"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/idempotency"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 )
+
+type AssessmentWriter interface {
+	AppendAssessment(ctx context.Context, spec AssessmentSpec) (VerificationView, error)
+}
+
+type AssessmentSpec struct {
+	SubjectType       string
+	SubjectID         string
+	Verdict           VerificationVerdict
+	Note              *string
+	ID                string
+	SubmissionToken   string
+	ReviewRevision    *int64
+	ActorID           string
+	At                time.Time
+	EvidenceAttemptID *string
+}
 
 type MemberReadRepository interface {
 	ReadCommunityDirectory(ctx context.Context, actor auth.Authority, spec CommunityDirectorySpec) (CommunityDirectoryResult, error)

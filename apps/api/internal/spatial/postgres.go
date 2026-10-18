@@ -30,15 +30,15 @@ func int4(v pgtype.Int4) int {
 	return int(v.Int32)
 }
 
-func (p *PostgresQueries) MapByAtlas(ctx context.Context, code string) (MapView, error) {
+func (p *PostgresQueries) MapByAtlas(ctx context.Context, code string) (LegacyMapView, error) {
 	row, err := p.q.GetMapByAtlasCode(ctx, code)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return MapView{}, ErrNotFound
+			return LegacyMapView{}, ErrNotFound
 		}
-		return MapView{}, err
+		return LegacyMapView{}, err
 	}
-	return MapView{
+	return LegacyMapView{
 		ID:        db.UUIDString(row.ID),
 		Name:      row.Name,
 		AtlasCode: row.AtlasCode,
@@ -49,14 +49,14 @@ func (p *PostgresQueries) MapByAtlas(ctx context.Context, code string) (MapView,
 	}, nil
 }
 
-func (p *PostgresQueries) ListMaps(ctx context.Context, family *string) ([]MapView, error) {
+func (p *PostgresQueries) ListMaps(ctx context.Context, family *string) ([]LegacyMapView, error) {
 	rows, err := p.q.ListMaps(ctx, db.OptString(family))
 	if err != nil {
 		return nil, err
 	}
-	out := make([]MapView, 0, len(rows))
+	out := make([]LegacyMapView, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, MapView{
+		out = append(out, LegacyMapView{
 			ID:        db.UUIDString(row.ID),
 			Name:      row.Name,
 			AtlasCode: row.AtlasCode,

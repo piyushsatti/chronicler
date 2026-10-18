@@ -13,7 +13,6 @@
     "SDL-AdminDeliveryJobV2Type-desiredRevision",
     "SDL-AdminDeliveryJobV2Type-eventLink",
     "SDL-AdminDeliveryJobV2Type-failureStreak",
-    "SDL-AdminDeliveryJobV2Type-historicalRoleNotificationMissed",
     "SDL-AdminDeliveryJobV2Type-id",
     "SDL-AdminDeliveryJobV2Type-maxAttempts",
     "SDL-AdminDeliveryJobV2Type-messageId",

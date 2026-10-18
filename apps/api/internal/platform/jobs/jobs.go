@@ -37,6 +37,10 @@ type Job struct {
 	ErrorMessage        string
 }
 
+type Writer interface {
+	EnqueueDesired(ctx context.Context, questID string, desiredRevision int32, at time.Time) (string, error)
+}
+
 // Store is the job table used by the worker.
 type Store interface {
 	Enqueue(ctx context.Context, job Job) error

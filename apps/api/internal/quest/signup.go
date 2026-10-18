@@ -17,7 +17,7 @@ type Participant struct {
 	Manual      bool
 }
 
-func canSignUp(q QuestView) error {
+func canSignUp(q LegacyQuestView) error {
 	switch q.Status {
 	case Open, Full:
 	default:

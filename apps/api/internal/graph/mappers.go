@@ -31,7 +31,7 @@ func toDocumentType(d document.Document, body string) *DocumentType {
 	}
 }
 
-func toQuestV2(q quest.QuestView) *QuestV2Type {
+func toQuestV2(q quest.LegacyQuestView) *QuestV2Type {
 	status := string(q.Status)
 	return &QuestV2Type{
 		ID:            q.ID,
@@ -69,7 +69,7 @@ func toMemberType(m member.Member) *MemberType {
 	}
 }
 
-func toCharacterV2(c character.CharacterView) *CharacterV2Type {
+func toCharacterV2(c character.LegacyCharacterView) *CharacterV2Type {
 	now := time.Now()
 	return &CharacterV2Type{
 		ID:                      c.ID,
@@ -113,7 +113,7 @@ func toHexV2(h spatial.Hex) *HexV2Type {
 	}
 }
 
-func toMapV2(m spatial.MapView) *MapV2Type {
+func toMapV2(m spatial.LegacyMapView) *MapV2Type {
 	return &MapV2Type{
 		ID:        m.ID,
 		Name:      m.Name,

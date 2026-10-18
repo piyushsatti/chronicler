@@ -164,9 +164,9 @@ RETURNING public_id,occurred_at;
 DELETE FROM member_availability WHERE member_id=(SELECT id FROM members WHERE public_id=sqlc.arg(actor_id)::uuid);
 
 -- name: ProductInsertAvailability :many
-WITH slots AS (SELECT unnest(sqlc.arg(weekdays)::smallint[]) AS weekday,unnest(sqlc.arg(starts)::smallint[]) AS start_minute,unnest(sqlc.arg(ends)::smallint[]) AS end_minute,unnest(sqlc.arg(notes)::text[]) AS note)
+WITH slots AS (SELECT unnest(sqlc.arg(weekdays)::smallint[]) AS weekday,unnest(sqlc.arg(starts)::smallint[]) AS start_minute,unnest(sqlc.arg(ends)::smallint[]) AS end_minute,unnest(sqlc.arg(notes)::text[]) AS note,unnest(sqlc.arg(notes_valid)::boolean[]) AS note_valid)
 INSERT INTO member_availability(member_id,weekday,start_minute,end_minute,note)
-SELECT m.id,x.weekday,x.start_minute,x.end_minute,x.note FROM members m CROSS JOIN slots x
+SELECT m.id,x.weekday,x.start_minute,x.end_minute,CASE WHEN x.note_valid THEN x.note ELSE NULL::text END FROM members m CROSS JOIN slots x
 WHERE m.public_id=sqlc.arg(actor_id)::uuid RETURNING public_id,weekday,start_minute,end_minute,note;
 
 -- name: ProductStoreDmProfile :one
@@ -266,6 +266,18 @@ VALUES(sqlc.arg(verification_id)::uuid,'dm_profile',(SELECT id FROM members WHER
  sqlc.arg(verdict)::text,(SELECT id FROM members WHERE public_id=sqlc.arg(actor_id)::uuid),sqlc.narg(note)::text,
  sqlc.arg(at)::timestamptz,sqlc.arg(pending_revision)::int) RETURNING public_id,created_at;
 
+-- name: ProductAppendCharacterVerification :one
+INSERT INTO verifications(public_id,subject_type,subject_id,verdict,decided_by,note,created_at,review_revision,evidence_attempt_id)
+SELECT sqlc.arg(verification_id)::uuid,'character',c.id,sqlc.arg(verdict)::text,a.id,sqlc.narg(note)::text,
+ sqlc.arg(at)::timestamptz,NULL::int,e.id
+FROM characters c
+JOIN members a ON a.public_id=sqlc.arg(actor_id)::uuid
+LEFT JOIN character_ddb_attempts e ON e.public_id=sqlc.narg(evidence_attempt_id)::uuid AND e.character_id=c.id
+WHERE c.public_id=sqlc.arg(character_id)::uuid AND c.status='pending_approval'
+ AND c.verification_submitted_at=sqlc.arg(submission_token)::timestamptz
+ AND (sqlc.narg(evidence_attempt_id)::uuid IS NULL OR e.id IS NOT NULL)
+RETURNING public_id,created_at;
+
 -- name: ProductExistingGrant :one
 SELECT u.public_id AS unlockable_id,m.public_id AS member_id,g.source,g.granted_at,a.public_id AS granted_by
 FROM member_unlocks g JOIN members m ON m.id=g.member_id JOIN unlockables u ON u.id=g.unlockable_id
@@ -283,7 +295,7 @@ SELECT m.public_id,
  coalesce((SELECT sum(e.amount) FROM discord_activity_events e WHERE e.discord_user_id=m.discord_id AND e.kind='reaction'),0)::float8 AS reactions,
  coalesce((SELECT sum(e.amount) FROM discord_activity_events e WHERE e.discord_user_id=m.discord_id AND e.kind='voice'),0)::float8 AS voice_minutes,
  (SELECT max(e.occurred_at) FROM discord_activity_events e WHERE e.discord_user_id=m.discord_id AND e.kind='message') AS last_message_at,
- (SELECT max(e.amount)/60.0 FROM discord_activity_events e WHERE e.discord_user_id=m.discord_id AND e.kind='voice')::float8 AS longest_session_hours,
+ coalesce((SELECT max(e.amount)/60.0 FROM discord_activity_events e WHERE e.discord_user_id=m.discord_id AND e.kind='voice'),0)::float8 AS longest_session_hours,
  (SELECT count(DISTINCT qp.quest_id) FROM quest_participants qp WHERE qp.member_id=m.id AND qp.status='played')::bigint AS quests_played,
  (SELECT count(*) FROM documents d WHERE d.author_id=m.id AND d.kind='summary' AND d.deleted_at IS NULL)::bigint AS summaries_authored
 FROM members m WHERE m.public_id=sqlc.arg(member_id)::uuid;
@@ -341,7 +353,8 @@ WITH inputs AS (
  sqlc.arg(at)::timestamptz,p.note FROM changed c JOIN prior p ON p.id=c.id
  RETURNING member_id,public_id AS history_id
 )
-SELECT c.public_id,c.roles,c.updated_at,h.history_id FROM changed c JOIN history h ON h.member_id=c.id ORDER BY c.public_id;
+SELECT c.public_id,m.discord_id,m.handle,m.display_name,m.avatar_url,c.roles,m.status,m.joined_at,c.updated_at,h.history_id
+FROM changed c JOIN members m ON m.id=c.id JOIN history h ON h.member_id=c.id ORDER BY c.public_id;
 
 -- name: ProductCompleteUnlockCatalog :many
 SELECT public_id,name,description,kind,active,payload,unlock_rule FROM unlockables ORDER BY name,public_id;

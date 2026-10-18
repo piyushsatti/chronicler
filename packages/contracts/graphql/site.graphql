@@ -22,7 +22,6 @@ type AdminDeliveryJobV2Type {
   maxAttempts: Int!
   nextAttemptAt: DateTime!
   safeError: String
-  historicalRoleNotificationMissed: Boolean!
   redriveCount: Int!
   createdAt: DateTime!
   updatedAt: DateTime!
