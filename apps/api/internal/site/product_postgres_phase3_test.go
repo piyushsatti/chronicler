@@ -93,3 +93,25 @@ func TestMapMemberDiscoveryPreservesEmptyTotalPage(t *testing.T) {
 		t.Fatal("missing total row returned success")
 	}
 }
+
+func TestMapSearchKindsPreservesStaticCatalog(t *testing.T) {
+	want := SearchableKinds()
+	got := mapSearchKinds(want)
+	if len(got) != len(want) {
+		t.Fatalf("kinds len = %d, want %d", len(got), len(want))
+	}
+	for i := range want {
+		if got[i].Key != want[i].Key || got[i].Label != want[i].Label || got[i].Searchable != want[i].Searchable {
+			t.Fatalf("kind[%d] = %+v, want %+v", i, got[i], want[i])
+		}
+		if want[i].ExclusionReason == nil {
+			if got[i].ExclusionReason != nil {
+				t.Fatalf("kind[%d] exclusion = %v, want nil", i, got[i].ExclusionReason)
+			}
+			continue
+		}
+		if got[i].ExclusionReason == nil || *got[i].ExclusionReason != *want[i].ExclusionReason {
+			t.Fatalf("kind[%d] exclusion = %v, want %v", i, got[i].ExclusionReason, want[i].ExclusionReason)
+		}
+	}
+}

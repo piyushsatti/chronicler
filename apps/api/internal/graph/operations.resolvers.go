@@ -787,6 +787,10 @@ func (r *mutationResolver) MarkNotificationsRead(ctx context.Context, ids []stri
 }
 
 // AcknowledgeSuppressedNotifications is the resolver for the acknowledgeSuppressedNotifications field.
+// Blocked: ProductCommands.AcknowledgeSuppressedNotifications is absent; Lock/Store and
+// ReadBatchNotificationSubjects still return "pending wiring" / Malformed stubs. Contract
+// requires document-subject proof selection before mark-read (notification-producer-contract /
+// notifications.md). Do not invent a mark-oldest-unread shortcut. Leave panic until NOT06.
 func (r *mutationResolver) AcknowledgeSuppressedNotifications(ctx context.Context, limit int, meta CommandMeta) (*NotificationWriteReceipt, error) {
 	panic(fmt.Errorf("not implemented: AcknowledgeSuppressedNotifications - acknowledgeSuppressedNotifications"))
 }
@@ -2574,7 +2578,18 @@ func (r *queryResolver) AdminOperations(ctx context.Context, deliveryState *stri
 
 // SearchableKinds is the resolver for the searchableKinds field.
 func (r *queryResolver) SearchableKinds(ctx context.Context) ([]*SearchKindType, error) {
-	panic(fmt.Errorf("not implemented: SearchableKinds - searchableKinds"))
+	if r.Services.SiteQueries == nil {
+		return nil, fmt.Errorf("site queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	kinds, err := r.Services.SiteQueries.SearchableKinds(ctx, actor, site.SearchableKindsSpec{})
+	if err != nil {
+		return nil, err
+	}
+	return toSearchKindTypes(kinds), nil
 }
 
 // SiteStats is the resolver for the siteStats field.

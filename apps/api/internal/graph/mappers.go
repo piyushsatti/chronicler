@@ -1569,6 +1569,19 @@ func toHomeBannerType(v site.HomeBannerView) *HomeBannerType {
 	}
 }
 
+func toSearchKindTypes(kinds []site.SearchKindView) []*SearchKindType {
+	out := make([]*SearchKindType, len(kinds))
+	for i, kind := range kinds {
+		out[i] = &SearchKindType{
+			Key:             kind.Key,
+			Label:           kind.Label,
+			Searchable:      kind.Searchable,
+			ExclusionReason: kind.ExclusionReason,
+		}
+	}
+	return out
+}
+
 func toAnnouncementRoleFields(in AnnouncementRoleInput) site.AnnouncementRoleFields {
 	return site.AnnouncementRoleFields{
 		Enabled: in.Enabled,
