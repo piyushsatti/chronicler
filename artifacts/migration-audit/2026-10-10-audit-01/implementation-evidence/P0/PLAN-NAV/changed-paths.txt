@@ -1,3 +1,0 @@
-apps/web/docs/architecture.md
-apps/web/docs/decisions/README.md
-apps/web/docs/decisions/PLAN-NAV-Six-Primary-Destinations.md
