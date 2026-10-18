@@ -893,11 +893,95 @@ func (p *ProductPostgres) ReadQuestArcs(ctx context.Context, _ auth.Authority, s
 	return questArcListFromPageRows(rows), nil
 }
 
-func (p *ProductPostgres) LockUpsertQuestArc(context.Context, UpsertQuestArcSpec) (UpsertQuestArcState, error) {
-	return UpsertQuestArcState{}, p.pending()
+func (p *ProductPostgres) internalMember(ctx context.Context, publicID string) (int64, error) {
+	uid, err := db.ParseUUID(publicID)
+	if err != nil {
+		return 0, apierr.New(apierr.Invalid, "invalid member id")
+	}
+	id, err := p.queries().MemberInternalID(ctx, uid)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, apierr.New(apierr.NotFound, "member not found")
+		}
+		return 0, err
+	}
+	return id, nil
 }
-func (p *ProductPostgres) StoreUpsertQuestArc(context.Context, UpsertQuestArcWrite) (QuestArcView, error) {
-	return QuestArcView{}, p.pending()
+
+func (p *ProductPostgres) LockUpsertQuestArc(ctx context.Context, spec UpsertQuestArcSpec) (UpsertQuestArcState, error) {
+	if spec.Id == nil {
+		return UpsertQuestArcState{}, nil
+	}
+	arcID, err := questUUID(*spec.Id)
+	if err != nil {
+		return UpsertQuestArcState{}, err
+	}
+	row, err := p.queries().ProductQuestLockArc(ctx, arcID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return UpsertQuestArcState{}, nil
+	}
+	if err != nil {
+		return UpsertQuestArcState{}, err
+	}
+	before := mapQuestArcReadRow(dbgen.ProductQuestReadArcRow{
+		PublicID:          row.PublicID,
+		Name:              row.Name,
+		CreatedByPublicID: row.CreatedByPublicID,
+		CreatedAt:         row.CreatedAt,
+		QuestCount:        0,
+	})
+	return UpsertQuestArcState{
+		Exists:    true,
+		SubjectID: db.UUIDString(row.PublicID),
+		Before:    before,
+	}, nil
+}
+
+func (p *ProductPostgres) StoreUpsertQuestArc(ctx context.Context, write UpsertQuestArcWrite) (QuestArcView, error) {
+	spec := write.ValidatedInput
+	at := pgtype.Timestamptz{Time: write.At.UTC(), Valid: true}
+	var arcPublicID pgtype.UUID
+	if spec.Id == nil {
+		if write.Locked.Exists {
+			return QuestArcView{}, fmt.Errorf("quest arc create cannot have a locked existing arc")
+		}
+		memberID, err := p.internalMember(ctx, write.ActorID)
+		if err != nil {
+			return QuestArcView{}, err
+		}
+		row, err := p.queries().ProductQuestInsertArc(ctx, dbgen.ProductQuestInsertArcParams{
+			Name:      spec.Name,
+			CreatedBy: memberID,
+			At:        at,
+		})
+		if err != nil {
+			return QuestArcView{}, err
+		}
+		arcPublicID = row.PublicID
+	} else {
+		if !write.Locked.Exists || write.Locked.SubjectID != *spec.Id {
+			return QuestArcView{}, apierr.New(apierr.NotFound, "quest arc not found")
+		}
+		parsedID, err := questUUID(*spec.Id)
+		if err != nil {
+			return QuestArcView{}, err
+		}
+		arcPublicID = parsedID
+		if _, err = p.queries().ProductQuestUpdateArc(ctx, dbgen.ProductQuestUpdateArcParams{
+			Name:  spec.Name,
+			ArcID: arcPublicID,
+		}); err != nil {
+			return QuestArcView{}, err
+		}
+	}
+	view, err := p.ReadQuestArc(ctx, auth.Authority{}, QuestArcSpec{Id: db.UUIDString(arcPublicID), AsOf: write.At})
+	if err != nil {
+		return QuestArcView{}, err
+	}
+	if view == nil {
+		return QuestArcView{}, fmt.Errorf("quest arc missing after write")
+	}
+	return *view, nil
 }
 func (p *ProductPostgres) LockAttestQuestParticipation(context.Context, AttestQuestParticipationSpec) (AttestQuestParticipationState, error) {
 	return AttestQuestParticipationState{}, p.pending()
@@ -923,11 +1007,61 @@ func (p *ProductPostgres) LockDeleteQuest(context.Context, DeleteQuestSpec) (Del
 func (p *ProductPostgres) StoreDeleteQuest(context.Context, DeleteQuestWrite) (product.CommandReceipt, error) {
 	return product.CommandReceipt{}, p.pending()
 }
-func (p *ProductPostgres) LockRemoveQuestFromArc(context.Context, RemoveQuestFromArcSpec) (RemoveQuestFromArcState, error) {
-	return RemoveQuestFromArcState{}, p.pending()
+func (p *ProductPostgres) LockRemoveQuestFromArc(ctx context.Context, spec RemoveQuestFromArcSpec) (RemoveQuestFromArcState, error) {
+	questID, err := questUUID(spec.QuestId)
+	if err != nil {
+		return RemoveQuestFromArcState{}, err
+	}
+	row, err := p.queries().ProductQuestLockByID(ctx, questID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return RemoveQuestFromArcState{}, nil
+	}
+	if err != nil {
+		return RemoveQuestFromArcState{}, err
+	}
+	if row.DeletedAt.Valid {
+		return RemoveQuestFromArcState{}, nil
+	}
+	before, err := p.ReadQuest(ctx, auth.Authority{}, QuestSpec{Id: &spec.QuestId, AsOf: spec.AsOf})
+	if err != nil {
+		return RemoveQuestFromArcState{}, err
+	}
+	if before == nil {
+		return RemoveQuestFromArcState{}, nil
+	}
+	return RemoveQuestFromArcState{
+		Exists:    true,
+		SubjectID: spec.QuestId,
+		Before:    before,
+	}, nil
 }
-func (p *ProductPostgres) StoreRemoveQuestFromArc(context.Context, RemoveQuestFromArcWrite) (QuestView, error) {
-	return QuestView{}, p.pending()
+
+func (p *ProductPostgres) StoreRemoveQuestFromArc(ctx context.Context, write RemoveQuestFromArcWrite) (QuestView, error) {
+	if !write.Locked.Exists {
+		return QuestView{}, apierr.New(apierr.NotFound, "quest not found")
+	}
+	questID, err := questUUID(write.ValidatedInput.QuestId)
+	if err != nil {
+		return QuestView{}, err
+	}
+	at := pgtype.Timestamptz{Time: write.At.UTC(), Valid: true}
+	if _, err := p.queries().ProductQuestClearArc(ctx, dbgen.ProductQuestClearArcParams{
+		At:      at,
+		QuestID: questID,
+	}); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return QuestView{}, apierr.New(apierr.NotFound, "quest not found")
+		}
+		return QuestView{}, err
+	}
+	view, err := p.ReadQuest(ctx, auth.Authority{}, QuestSpec{Id: &write.ValidatedInput.QuestId, AsOf: write.At})
+	if err != nil {
+		return QuestView{}, err
+	}
+	if view == nil {
+		return QuestView{}, apierr.New(apierr.NotFound, "quest not found")
+	}
+	return *view, nil
 }
 func (p *ProductPostgres) LockRestoreQuest(context.Context, RestoreQuestSpec) (RestoreQuestState, error) {
 	return RestoreQuestState{}, p.pending()

@@ -386,12 +386,41 @@ func (r *mutationResolver) UpsertQuestSummary(ctx context.Context, input QuestSu
 
 // UpsertQuestArc is the resolver for the upsertQuestArc field.
 func (r *mutationResolver) UpsertQuestArc(ctx context.Context, id *string, name string, meta CommandMeta) (*QuestArcV2Type, error) {
-	panic(fmt.Errorf("not implemented: UpsertQuestArc - upsertQuestArc"))
+	if r.Services.QuestCommands == nil {
+		return nil, fmt.Errorf("quest commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.QuestCommands.UpsertQuestArc(ctx, actor, quest.UpsertQuestArcSpec{
+		Id:   id,
+		Name: name,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toQuestArcV2View(view), nil
 }
 
 // RemoveQuestFromArc is the resolver for the removeQuestFromArc field.
 func (r *mutationResolver) RemoveQuestFromArc(ctx context.Context, questID string, meta CommandMeta) (*QuestV2Type, error) {
-	panic(fmt.Errorf("not implemented: RemoveQuestFromArc - removeQuestFromArc"))
+	if r.Services.QuestCommands == nil {
+		return nil, fmt.Errorf("quest commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.QuestCommands.RemoveQuestFromArc(ctx, actor, quest.RemoveQuestFromArcSpec{
+		QuestId: questID,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toQuestV2View(view), nil
 }
 
 // SignupForQuest is the resolver for the signupForQuest field.

@@ -426,6 +426,16 @@ RETURNING q.id, q.public_id, q.deleted_at, q.deleted_by, q.updated_at;
 UPDATE quests q SET arc_id = @arc_id::bigint, updated_at = @at::timestamptz
 WHERE q.public_id = @quest_id::uuid
 RETURNING q.id, q.public_id, q.arc_id, q.updated_at;
+-- name: ProductQuestClearArc :one
+UPDATE quests q SET arc_id = NULL, updated_at = @at::timestamptz
+WHERE q.public_id = @quest_id::uuid AND q.deleted_at IS NULL
+RETURNING q.id, q.public_id, q.arc_id, q.updated_at;
+-- name: ProductQuestLockArc :one
+SELECT arc.id, arc.public_id, arc.name, creator.public_id AS created_by_public_id, arc.created_at
+FROM quest_arcs arc
+JOIN members creator ON creator.id = arc.created_by
+WHERE arc.public_id = @arc_id::uuid
+FOR UPDATE OF arc;
 -- name: ProductQuestInsertArc :one
 INSERT INTO quest_arcs(name, created_by, created_at)
 VALUES (@name::text, @created_by::bigint, @at::timestamptz)

@@ -316,6 +316,36 @@ func (q *Queries) ProductQuestBoardPage(ctx context.Context, arg ProductQuestBoa
 	return items, nil
 }
 
+const productQuestClearArc = `-- name: ProductQuestClearArc :one
+UPDATE quests q SET arc_id = NULL, updated_at = $1::timestamptz
+WHERE q.public_id = $2::uuid AND q.deleted_at IS NULL
+RETURNING q.id, q.public_id, q.arc_id, q.updated_at
+`
+
+type ProductQuestClearArcParams struct {
+	At      pgtype.Timestamptz `json:"at"`
+	QuestID pgtype.UUID        `json:"quest_id"`
+}
+
+type ProductQuestClearArcRow struct {
+	ID        int64              `json:"id"`
+	PublicID  pgtype.UUID        `json:"public_id"`
+	ArcID     pgtype.Int8        `json:"arc_id"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) ProductQuestClearArc(ctx context.Context, arg ProductQuestClearArcParams) (ProductQuestClearArcRow, error) {
+	row := q.db.QueryRow(ctx, productQuestClearArc, arg.At, arg.QuestID)
+	var i ProductQuestClearArcRow
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.ArcID,
+		&i.UpdatedAt,
+	)
+	return i, err
+}
+
 const productQuestCountParticipants = `-- name: ProductQuestCountParticipants :one
 SELECT count(*)::bigint AS total
 FROM quest_participants qp
@@ -1017,6 +1047,35 @@ func (q *Queries) ProductQuestListPage(ctx context.Context, arg ProductQuestList
 		return nil, err
 	}
 	return items, nil
+}
+
+const productQuestLockArc = `-- name: ProductQuestLockArc :one
+SELECT arc.id, arc.public_id, arc.name, creator.public_id AS created_by_public_id, arc.created_at
+FROM quest_arcs arc
+JOIN members creator ON creator.id = arc.created_by
+WHERE arc.public_id = $1::uuid
+FOR UPDATE OF arc
+`
+
+type ProductQuestLockArcRow struct {
+	ID                int64              `json:"id"`
+	PublicID          pgtype.UUID        `json:"public_id"`
+	Name              string             `json:"name"`
+	CreatedByPublicID pgtype.UUID        `json:"created_by_public_id"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+}
+
+func (q *Queries) ProductQuestLockArc(ctx context.Context, arcID pgtype.UUID) (ProductQuestLockArcRow, error) {
+	row := q.db.QueryRow(ctx, productQuestLockArc, arcID)
+	var i ProductQuestLockArcRow
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.Name,
+		&i.CreatedByPublicID,
+		&i.CreatedAt,
+	)
+	return i, err
 }
 
 const productQuestLockByID = `-- name: ProductQuestLockByID :one

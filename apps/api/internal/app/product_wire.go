@@ -158,6 +158,7 @@ func wireProductServices(pgxPool dbgen.DBTX, pool *db.Pool, memberPool *member.P
 	if err != nil {
 		return graph.Services{}, err
 	}
+	questCommands.Queries = questQueries
 
 	spatialRunner := db.NewRunner(pool, func(tx pgx.Tx) spatial.ProductCommandRepos {
 		return bindSpatialCommandRepos(tx, policy, authority, producer)
