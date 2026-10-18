@@ -14,7 +14,6 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/member"
 	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
-	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 	"github.com/piyushsatti/chronicler/apps/api/internal/quest"
 	"github.com/piyushsatti/chronicler/apps/api/internal/site"
@@ -1448,91 +1447,63 @@ func (r *mutationResolver) UnlinkPointcrawlEntry(ctx context.Context, mapID stri
 
 // Characters is the resolver for the characters field.
 func (r *queryResolver) Characters(ctx context.Context, filters *CharacterFiltersInput, limit int, offset int) (*CharacterListResult, error) {
-	if r.Services.CharacterQueries != nil {
-		actor, err := LiveAuthority(ctx)
-		if err != nil {
-			return nil, err
-		}
-		result, err := r.Services.CharacterQueries.Characters(ctx, actor, character.CharactersSpec{
-			Filters: toCharacterFilters(filters),
-			Limit:   int32(limit),
-			Offset:  int32(offset),
-		})
-		if err != nil {
-			return nil, err
-		}
-		return toCharacterListResult(result), nil
+	if r.Services.CharacterQueries == nil {
+		return nil, fmt.Errorf("character queries unavailable")
 	}
-	var status *string
-	if filters != nil && filters.Status != nil {
-		status = filters.Status
-	}
-	rows, err := r.Services.Characters.List(ctx, status, limit, offset)
+	actor, err := LiveAuthority(ctx)
 	if err != nil {
 		return nil, err
 	}
-	items := make([]*CharacterType, 0, len(rows))
-	for _, c := range rows {
-		items = append(items, toCharacter(c))
+	result, err := r.Services.CharacterQueries.Characters(ctx, actor, character.CharactersSpec{
+		Filters: toCharacterFilters(filters),
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+	})
+	if err != nil {
+		return nil, err
 	}
-	return &CharacterListResult{Items: items, Total: len(items)}, nil
+	return toCharacterListResult(result), nil
 }
 
 // MyCharacters is the resolver for the myCharacters field.
 func (r *queryResolver) MyCharacters(ctx context.Context, limit int, offset int) (*CharacterListResult, error) {
-	if r.Services.CharacterQueries != nil {
-		actor, err := LiveAuthority(ctx)
-		if err != nil {
-			return nil, err
-		}
-		if actor.Claims().Anonymous() {
-			return &CharacterListResult{Items: []*CharacterType{}, Total: 0}, nil
-		}
-		result, err := r.Services.CharacterQueries.MyCharacters(ctx, actor, character.MyCharactersSpec{
-			Limit:  int32(limit),
-			Offset: int32(offset),
-		})
-		if err != nil {
-			return nil, err
-		}
-		return toCharacterListResult(result), nil
+	if r.Services.CharacterQueries == nil {
+		return nil, fmt.Errorf("character queries unavailable")
 	}
-	c := auth.FromContext(ctx)
-	if c.Anonymous() {
-		return &CharacterListResult{Items: []*CharacterType{}, Total: 0}, nil
-	}
-	rows, err := r.Services.Characters.ListByOwner(ctx, c.MemberID, limit, offset)
+	actor, err := LiveAuthority(ctx)
 	if err != nil {
 		return nil, err
 	}
-	items := make([]*CharacterType, 0, len(rows))
-	for _, ch := range rows {
-		items = append(items, toCharacter(ch))
+	if actor.Claims().Anonymous() {
+		return &CharacterListResult{Items: []*CharacterType{}, Total: 0}, nil
 	}
-	return &CharacterListResult{Items: items, Total: len(items)}, nil
+	result, err := r.Services.CharacterQueries.MyCharacters(ctx, actor, character.MyCharactersSpec{
+		Limit:  int32(limit),
+		Offset: int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toCharacterListResult(result), nil
 }
 
 // Character is the resolver for the character field.
 func (r *queryResolver) Character(ctx context.Context, id *string, shortCode *string) (*CharacterType, error) {
-	if r.Services.CharacterQueries != nil {
-		actor, err := LiveAuthority(ctx)
-		if err != nil {
-			return nil, err
-		}
-		view, err := r.Services.CharacterQueries.Character(ctx, actor, character.CharacterSpec{Id: id, ShortCode: shortCode})
-		if err != nil {
-			return nil, err
-		}
-		if view == nil {
-			return nil, nil
-		}
-		return toCharacterView(*view), nil
+	if r.Services.CharacterQueries == nil {
+		return nil, fmt.Errorf("character queries unavailable")
 	}
-	c, err := r.Services.Characters.Character(ctx, id, shortCode)
+	actor, err := LiveAuthority(ctx)
 	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.CharacterQueries.Character(ctx, actor, character.CharacterSpec{Id: id, ShortCode: shortCode})
+	if err != nil {
+		return nil, err
+	}
+	if view == nil {
 		return nil, nil
 	}
-	return toCharacter(c), nil
+	return toCharacterView(*view), nil
 }
 
 // AdminCharacterDirectory is the resolver for the adminCharacterDirectory field.
@@ -1756,74 +1727,101 @@ func (r *queryResolver) ParticipationsByCharacter(ctx context.Context, character
 
 // Document is the resolver for the document field.
 func (r *queryResolver) Document(ctx context.Context, slug string) (*DocumentType, error) {
-	d, err := r.Services.Documents.BySlug(ctx, slug)
+	if r.Services.DocumentQueries == nil {
+		return nil, fmt.Errorf("document queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return toDocumentType(d, d.Body), nil
+	view, err := r.Services.DocumentQueries.Document(ctx, actor, document.DocumentSpec{Slug: slug})
+	if err != nil {
+		return nil, err
+	}
+	if view == nil {
+		return nil, nil
+	}
+	return toDocumentViewType(*view), nil
 }
 
 // DocumentByID is the resolver for the documentById field.
 func (r *queryResolver) DocumentByID(ctx context.Context, id string) (*DocumentType, error) {
-	d, err := r.Services.Documents.ByID(ctx, id)
+	if r.Services.DocumentQueries == nil {
+		return nil, fmt.Errorf("document queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return toDocumentType(d, d.Body), nil
+	view, err := r.Services.DocumentQueries.DocumentById(ctx, actor, document.DocumentByIdSpec{Id: id})
+	if err != nil {
+		return nil, err
+	}
+	if view == nil {
+		return nil, nil
+	}
+	return toDocumentViewType(*view), nil
 }
 
 // Documents is the resolver for the documents field.
 func (r *queryResolver) Documents(ctx context.Context, filters *DocumentFiltersInput, limit int, offset int) (*DocumentListResult, error) {
-	f := document.ListFilter{Limit: limit, Offset: offset}
-	if filters != nil {
-		f.Kind = filters.Kind
-		f.Category = filters.Category
-		f.Status = filters.Status
-		f.Visibility = filters.Visibility
-		f.Search = filters.Search
+	if r.Services.DocumentQueries == nil {
+		return nil, fmt.Errorf("document queries unavailable")
 	}
-	items, total, err := r.Services.Documents.List(ctx, f)
+	actor, err := LiveAuthority(ctx)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]*DocumentType, 0, len(items))
-	for _, d := range items {
-		out = append(out, toDocumentType(d, d.Body))
+	result, err := r.Services.DocumentQueries.Documents(ctx, actor, document.DocumentsSpec{
+		Filters: toDocumentFilters(filters),
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+	})
+	if err != nil {
+		return nil, err
 	}
-	return &DocumentListResult{Items: out, Total: int(total)}, nil
+	return toDocumentListResult(result), nil
 }
 
 // DocumentBacklinks is the resolver for the documentBacklinks field.
 func (r *queryResolver) DocumentBacklinks(ctx context.Context, slug string, limit int, offset int) ([]*DocumentLinkType, error) {
-	links, err := r.Services.Documents.Backlinks(ctx, slug)
+	if r.Services.DocumentQueries == nil {
+		return nil, fmt.Errorf("document queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]*DocumentLinkType, 0, len(links))
-	for _, l := range links {
-		out = append(out, &DocumentLinkType{
-			DocumentID: l.DocumentID,
-			TargetType: l.TargetType,
-			TargetID:   l.TargetID,
-			Relation:   l.Relation,
-		})
+	links, err := r.Services.DocumentQueries.DocumentBacklinks(ctx, actor, document.DocumentBacklinksSpec{
+		Slug:   slug,
+		Limit:  int32(limit),
+		Offset: int32(offset),
+	})
+	if err != nil {
+		return nil, err
 	}
-	return out, nil
+	return toDocumentLinkTypes(links), nil
 }
 
 // CodexDirectory is the resolver for the codexDirectory field.
 func (r *queryResolver) CodexDirectory(ctx context.Context, categoryPrefix *string, search *string, limit int, offset int) (*CodexDirectoryResult, error) {
-	kind := "codex_entry"
-	f := document.ListFilter{Kind: &kind, Limit: limit, Offset: offset, Search: search, Category: categoryPrefix}
-	items, total, err := r.Services.Documents.List(ctx, f)
+	if r.Services.DocumentQueries == nil {
+		return nil, fmt.Errorf("document queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]*DocumentType, 0, len(items))
-	for _, d := range items {
-		out = append(out, toDocumentType(d, d.Body))
+	result, err := r.Services.DocumentQueries.CodexDirectory(ctx, actor, document.CodexDirectorySpec{
+		CategoryPrefix: categoryPrefix,
+		Search:         search,
+		Limit:          int32(limit),
+		Offset:         int32(offset),
+	})
+	if err != nil {
+		return nil, err
 	}
-	return &CodexDirectoryResult{Items: out, Total: int(total)}, nil
+	return toCodexDirectoryResult(result), nil
 }
 
 // CodexEntry is the resolver for the codexEntry field.
@@ -1952,30 +1950,18 @@ func (r *queryResolver) Member(ctx context.Context, id *string, handle *string) 
 
 // Members is the resolver for the members field.
 func (r *queryResolver) Members(ctx context.Context, filters *MemberFiltersInput, sort *MemberSortInput, limit int, offset int) (*MemberListResult, error) {
-	if r.Services.MemberQueries != nil {
-		actor, err := LiveAuthority(ctx)
-		if err != nil {
-			return nil, err
-		}
-		result, err := r.Services.MemberQueries.Members(ctx, actor, toMembersSpec(filters, sort, limit, offset))
-		if err != nil {
-			return nil, err
-		}
-		return toMemberListResult(result), nil
+	if r.Services.MemberQueries == nil {
+		return nil, fmt.Errorf("member queries unavailable")
 	}
-	var status *string
-	if filters != nil && filters.Status != nil {
-		status = filters.Status
-	}
-	items, total, err := r.Services.Members.List(ctx, member.ListFilter{Status: status, Limit: limit, Offset: offset})
+	actor, err := LiveAuthority(ctx)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]*MemberType, 0, len(items))
-	for _, m := range items {
-		out = append(out, toMemberType(m))
+	result, err := r.Services.MemberQueries.Members(ctx, actor, toMembersSpec(filters, sort, limit, offset))
+	if err != nil {
+		return nil, err
 	}
-	return &MemberListResult{Items: out, Total: int(total)}, nil
+	return toMemberListResult(result), nil
 }
 
 // MemberActivityStats is the resolver for the memberActivityStats field.
@@ -1999,45 +1985,21 @@ func (r *queryResolver) MemberActivityStats(ctx context.Context, memberID string
 
 // MemberProfile is the resolver for the memberProfile field.
 func (r *queryResolver) MemberProfile(ctx context.Context, handle string) (*MemberProfileType, error) {
-	if r.Services.MemberQueries != nil {
-		actor, err := LiveAuthority(ctx)
-		if err != nil {
-			return nil, err
-		}
-		view, err := r.Services.MemberQueries.MemberProfile(ctx, actor, member.MemberProfileSpec{Handle: handle})
-		if err != nil {
-			return nil, err
-		}
-		if view == nil {
-			return nil, nil
-		}
-		return toMemberProfileType(*view), nil
+	if r.Services.MemberQueries == nil {
+		return nil, fmt.Errorf("member queries unavailable")
 	}
-	m, err := r.Services.Members.Get(ctx, nil, &handle)
+	actor, err := LiveAuthority(ctx)
 	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.MemberQueries.MemberProfile(ctx, actor, member.MemberProfileSpec{Handle: handle})
+	if err != nil {
+		return nil, err
+	}
+	if view == nil {
 		return nil, nil
 	}
-	windows, _ := r.Services.Members.Availability(ctx, m.ID)
-	slots := make([]*AvailabilitySlotType, 0, len(windows))
-	dayNames := []string{"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"}
-	base := time.Date(2000, 1, 1, 0, 0, 0, 0, time.UTC)
-	for _, w := range windows {
-		day := "Sunday"
-		if w.Weekday >= 0 && w.Weekday < len(dayNames) {
-			day = dayNames[w.Weekday]
-		}
-		slots = append(slots, &AvailabilitySlotType{
-			Day:       day,
-			StartTime: clockToProductTime(base.Add(time.Duration(w.StartMinute) * time.Minute)),
-			EndTime:   clockToProductTime(base.Add(time.Duration(w.EndMinute) * time.Minute)),
-		})
-	}
-	return &MemberProfileType{
-		Member:          toMemberType(m),
-		Availability:    slots,
-		ActivitySummary: &ActivitySummaryType{},
-		RecentWeeks:     []*WeekActivityType{},
-	}, nil
+	return toMemberProfileType(*view), nil
 }
 
 // CommunityDirectory is the resolver for the communityDirectory field.
@@ -2265,113 +2227,78 @@ func (r *queryResolver) OpenQuestSeats(ctx context.Context, regionID *string, dm
 
 // Quest is the resolver for the quest field.
 func (r *queryResolver) Quest(ctx context.Context, id *string, shortCode *string) (*QuestType, error) {
-	if r.Services.QuestQueries != nil {
-		actor, err := LiveAuthority(ctx)
-		if err != nil {
-			return nil, err
-		}
-		view, err := r.Services.QuestQueries.Quest(ctx, actor, quest.QuestSpec{Id: id, ShortCode: shortCode})
-		if err != nil {
-			return nil, err
-		}
-		if view == nil {
-			return nil, nil
-		}
-		return toQuestView(*view), nil
+	if r.Services.QuestQueries == nil {
+		return nil, fmt.Errorf("quest queries unavailable")
 	}
-	q, err := r.Services.Quests.Get(ctx, id, shortCode)
+	actor, err := LiveAuthority(ctx)
 	if err != nil {
 		return nil, err
 	}
-	return toQuest(q), nil
+	view, err := r.Services.QuestQueries.Quest(ctx, actor, quest.QuestSpec{Id: id, ShortCode: shortCode})
+	if err != nil {
+		return nil, err
+	}
+	if view == nil {
+		return nil, nil
+	}
+	return toQuestView(*view), nil
 }
 
 // Quests is the resolver for the quests field.
 func (r *queryResolver) Quests(ctx context.Context, filters *QuestFiltersInput, limit int, offset int) (*QuestListResult, error) {
-	if r.Services.QuestQueries != nil {
-		actor, err := LiveAuthority(ctx)
-		if err != nil {
-			return nil, err
-		}
-		result, err := r.Services.QuestQueries.Quests(ctx, actor, toQuestsSpec(filters, limit, offset))
-		if err != nil {
-			return nil, err
-		}
-		return toQuestListResult(result), nil
+	if r.Services.QuestQueries == nil {
+		return nil, fmt.Errorf("quest queries unavailable")
 	}
-	filter := quest.ListFilter{Limit: limit, Offset: offset, Order: quest.OldestFirst}
-	if filters != nil {
-		filter.Status, filter.DisplayStatus = filters.Status, filters.DisplayStatus
-		filter.ScheduledFrom, filter.ScheduledTo = filters.ScheduledFrom, filters.ScheduledTo
-	}
-	rows, total, err := r.Services.Quests.List(ctx, filter)
+	actor, err := LiveAuthority(ctx)
 	if err != nil {
 		return nil, err
 	}
-	items := make([]*QuestType, 0, len(rows))
-	for _, q := range rows {
-		items = append(items, toQuest(q))
+	result, err := r.Services.QuestQueries.Quests(ctx, actor, toQuestsSpec(filters, limit, offset))
+	if err != nil {
+		return nil, err
 	}
-	return &QuestListResult{Items: items, Total: int(total)}, nil
+	return toQuestListResult(result), nil
 }
 
 // QuestBoard is the resolver for the questBoard field.
 func (r *queryResolver) QuestBoard(ctx context.Context, regionID *string, limit int, offset int) (*QuestListResult, error) {
-	if r.Services.QuestQueries != nil {
-		actor, err := LiveAuthority(ctx)
-		if err != nil {
-			return nil, err
-		}
-		result, err := r.Services.QuestQueries.QuestBoard(ctx, actor, quest.QuestBoardSpec{
-			RegionId: regionID,
-			Limit:    int32(limit),
-			Offset:   int32(offset),
-		})
-		if err != nil {
-			return nil, err
-		}
-		return toQuestListResult(result), nil
+	if r.Services.QuestQueries == nil {
+		return nil, fmt.Errorf("quest queries unavailable")
 	}
-	open := "open"
-	rows, total, err := r.Services.Quests.List(ctx, quest.ListFilter{Status: &open, Limit: limit, Offset: offset, Order: quest.NewestFirst})
+	actor, err := LiveAuthority(ctx)
 	if err != nil {
 		return nil, err
 	}
-	items := make([]*QuestType, 0, len(rows))
-	for _, q := range rows {
-		items = append(items, toQuest(q))
+	result, err := r.Services.QuestQueries.QuestBoard(ctx, actor, quest.QuestBoardSpec{
+		RegionId: regionID,
+		Limit:    int32(limit),
+		Offset:   int32(offset),
+	})
+	if err != nil {
+		return nil, err
 	}
-	return &QuestListResult{Items: items, Total: int(total)}, nil
+	return toQuestListResult(result), nil
 }
 
 // RecentlyClosedQuests is the resolver for the recentlyClosedQuests field.
 func (r *queryResolver) RecentlyClosedQuests(ctx context.Context, regionID *string, closedSince *time.Time, limit int, offset int) (*QuestListResult, error) {
-	if r.Services.QuestQueries != nil {
-		actor, err := LiveAuthority(ctx)
-		if err != nil {
-			return nil, err
-		}
-		result, err := r.Services.QuestQueries.RecentlyClosedQuests(ctx, actor, quest.RecentlyClosedQuestsSpec{
-			RegionId:    regionID,
-			ClosedSince: closedSince,
-			Limit:       int32(limit),
-			Offset:      int32(offset),
-		})
-		if err != nil {
-			return nil, err
-		}
-		return toQuestListResult(result), nil
+	if r.Services.QuestQueries == nil {
+		return nil, fmt.Errorf("quest queries unavailable")
 	}
-	closed := "closed"
-	rows, total, err := r.Services.Quests.List(ctx, quest.ListFilter{Status: &closed, Limit: limit, Offset: offset, Order: quest.NewestFirst})
+	actor, err := LiveAuthority(ctx)
 	if err != nil {
 		return nil, err
 	}
-	items := make([]*QuestType, 0, len(rows))
-	for _, q := range rows {
-		items = append(items, toQuest(q))
+	result, err := r.Services.QuestQueries.RecentlyClosedQuests(ctx, actor, quest.RecentlyClosedQuestsSpec{
+		RegionId:    regionID,
+		ClosedSince: closedSince,
+		Limit:       int32(limit),
+		Offset:      int32(offset),
+	})
+	if err != nil {
+		return nil, err
 	}
-	return &QuestListResult{Items: items, Total: int(total)}, nil
+	return toQuestListResult(result), nil
 }
 
 // QuestArcs is the resolver for the questArcs field.
@@ -2553,22 +2480,18 @@ func (r *queryResolver) Search(ctx context.Context, query string, kinds []string
 
 // Home is the resolver for the home field.
 func (r *queryResolver) Home(ctx context.Context) (*HomeType, error) {
-	if r.Services.SiteQueries != nil {
-		actor, err := LiveAuthority(ctx)
-		if err != nil {
-			return nil, err
-		}
-		view, err := r.Services.SiteQueries.Home(ctx, actor, site.HomeSpec{})
-		if err != nil {
-			return nil, err
-		}
-		return toHomeView(view), nil
+	if r.Services.SiteQueries == nil {
+		return nil, fmt.Errorf("site queries unavailable")
 	}
-	st, err := r.Services.Site.Home(ctx)
+	actor, err := LiveAuthority(ctx)
 	if err != nil {
-		st = site.Stats{}
+		return nil, err
 	}
-	return toHome(st), nil
+	view, err := r.Services.SiteQueries.Home(ctx, actor, site.HomeSpec{})
+	if err != nil {
+		return nil, err
+	}
+	return toHomeView(view), nil
 }
 
 // AdminOperations is the resolver for the adminOperations field.
@@ -2654,35 +2577,68 @@ func (r *queryResolver) QuestAnnouncementRoleSetting(ctx context.Context) (*Ques
 
 // Map is the resolver for the map field.
 func (r *queryResolver) Map(ctx context.Context, atlasCode string) (*MapType, error) {
-	m, err := r.Services.Spatial.Map(ctx, atlasCode)
+	if r.Services.SpatialQueries == nil {
+		return nil, fmt.Errorf("spatial queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
 	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SpatialQueries.Map(ctx, actor, spatial.MapSpec{AtlasCode: atlasCode})
+	if err != nil {
+		return nil, err
+	}
+	if view == nil {
 		return nil, nil
 	}
-	return toMap(m), nil
+	return toMapViewType(*view), nil
 }
 
 // Maps is the resolver for the maps field.
 func (r *queryResolver) Maps(ctx context.Context, family *string, mapKind *string, limit int, offset int) ([]*MapType, error) {
-	rows, err := r.Services.Spatial.ListMaps(ctx, family)
+	if r.Services.SpatialQueries == nil {
+		return nil, fmt.Errorf("spatial queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := r.Services.SpatialQueries.Maps(ctx, actor, spatial.MapsSpec{
+		Family:  family,
+		MapKind: mapKind,
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+	})
 	if err != nil {
 		return nil, err
 	}
 	out := make([]*MapType, 0, len(rows))
 	for _, m := range rows {
-		out = append(out, toMap(m))
+		out = append(out, toMapViewType(m))
 	}
 	return out, nil
 }
 
 // Regions is the resolver for the regions field.
 func (r *queryResolver) Regions(ctx context.Context, kind *string, limit int, offset int) ([]*RegionType, error) {
-	rows, err := r.Services.Spatial.ListRegions(ctx, kind)
+	if r.Services.SpatialQueries == nil {
+		return nil, fmt.Errorf("spatial queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := r.Services.SpatialQueries.Regions(ctx, actor, spatial.RegionsSpec{
+		Kind:   kind,
+		Limit:  int32(limit),
+		Offset: int32(offset),
+	})
 	if err != nil {
 		return nil, err
 	}
 	out := make([]*RegionType, 0, len(rows))
 	for _, reg := range rows {
-		out = append(out, &RegionType{ID: reg.ID, Name: reg.Name, Kind: reg.Kind, CreatedAt: time.Now()})
+		out = append(out, toRegionViewType(reg))
 	}
 	return out, nil
 }

@@ -928,6 +928,42 @@ func toDocumentListResult(v document.DocumentListResult) *DocumentListResult {
 	return &DocumentListResult{Items: items, Total: int(v.Total)}
 }
 
+func toDocumentFilters(filters *DocumentFiltersInput) *document.DocumentFiltersFields {
+	if filters == nil {
+		return nil
+	}
+	return &document.DocumentFiltersFields{
+		Category:   filters.Category,
+		CreatedBy:  filters.CreatedBy,
+		Kind:       filters.Kind,
+		Region:     filters.Region,
+		Search:     filters.Search,
+		Status:     filters.Status,
+		Visibility: filters.Visibility,
+	}
+}
+
+func toDocumentLinkTypes(links []document.DocumentLinkView) []*DocumentLinkType {
+	out := make([]*DocumentLinkType, 0, len(links))
+	for _, l := range links {
+		out = append(out, &DocumentLinkType{
+			DocumentID: l.DocumentId,
+			TargetType: l.TargetType,
+			TargetID:   l.TargetId,
+			Relation:   l.Relation,
+		})
+	}
+	return out
+}
+
+func toCodexDirectoryResult(v document.CodexDirectoryResult) *CodexDirectoryResult {
+	items := make([]*DocumentType, len(v.Items))
+	for i, item := range v.Items {
+		items[i] = toDocumentViewType(item)
+	}
+	return &CodexDirectoryResult{Items: items, Total: int(v.Total)}
+}
+
 func toAdminCharacterDirectoryFilters(filters *AdminCharacterDirectoryFiltersInput) *character.AdminCharacterDirectoryFiltersFields {
 	if filters == nil {
 		return nil
