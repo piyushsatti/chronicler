@@ -27,7 +27,11 @@ const maxJSONDepth = 16
 
 var dateTimePattern = regexp.MustCompile(`^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.([0-9]+))?(?:Z|[+-](?:[01][0-9]|2[0-3]):[0-5][0-9])$`)
 
-func UnmarshalID(value any) (string, error) {
+func UnmarshalID(_ context.Context, value any) (string, error) {
+	return unmarshalID(value)
+}
+
+func unmarshalID(value any) (string, error) {
 	text, ok := value.(string)
 	if !ok || len(text) != 36 || text[8] != '-' || text[13] != '-' || text[18] != '-' || text[23] != '-' {
 		return "", invalid("ID")
@@ -40,11 +44,15 @@ func UnmarshalID(value any) (string, error) {
 }
 
 func MarshalID(value string) gql.ContextMarshaler {
-	text, err := UnmarshalID(value)
+	text, err := unmarshalID(value)
 	return marshalString(text, err)
 }
 
-func UnmarshalDate(value any) (product.Date, error) {
+func UnmarshalDate(_ context.Context, value any) (product.Date, error) {
+	return unmarshalDate(value)
+}
+
+func unmarshalDate(value any) (product.Date, error) {
 	text, ok := value.(string)
 	if !ok || len(text) != 10 {
 		return "", invalid("Date")
@@ -57,11 +65,15 @@ func UnmarshalDate(value any) (product.Date, error) {
 }
 
 func MarshalDate(value product.Date) gql.ContextMarshaler {
-	date, err := UnmarshalDate(string(value))
+	date, err := unmarshalDate(string(value))
 	return marshalString(string(date), err)
 }
 
-func UnmarshalTime(value any) (product.Time, error) {
+func UnmarshalTime(_ context.Context, value any) (product.Time, error) {
+	return unmarshalTime(value)
+}
+
+func unmarshalTime(value any) (product.Time, error) {
 	text, ok := value.(string)
 	if !ok || (len(text) != 5 && len(text) != 8) {
 		return "", invalid("Time")
@@ -80,11 +92,15 @@ func UnmarshalTime(value any) (product.Time, error) {
 }
 
 func MarshalTime(value product.Time) gql.ContextMarshaler {
-	clock, err := UnmarshalTime(string(value))
+	clock, err := unmarshalTime(string(value))
 	return marshalString(string(clock), err)
 }
 
-func UnmarshalDateTime(value any) (time.Time, error) {
+func UnmarshalDateTime(_ context.Context, value any) (time.Time, error) {
+	return unmarshalDateTime(value)
+}
+
+func unmarshalDateTime(value any) (time.Time, error) {
 	text, ok := value.(string)
 	if !ok {
 		return time.Time{}, invalid("DateTime")
@@ -116,7 +132,11 @@ func MarshalDateTime(value time.Time) gql.ContextMarshaler {
 	return marshalString(value.UTC().Format(time.RFC3339Nano), nil)
 }
 
-func UnmarshalJSON(value any) (json.RawMessage, error) {
+func UnmarshalJSON(_ context.Context, value any) (json.RawMessage, error) {
+	return unmarshalJSON(value)
+}
+
+func unmarshalJSON(value any) (json.RawMessage, error) {
 	encoded, err := json.Marshal(value)
 	if err != nil || validateJSON(encoded) != nil {
 		return nil, invalid("JSON")

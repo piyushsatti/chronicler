@@ -1,11 +1,13 @@
 package graph
 
 import (
+	"encoding/json"
 	"time"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/character"
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/member"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 	"github.com/piyushsatti/chronicler/apps/api/internal/quest"
 	"github.com/piyushsatti/chronicler/apps/api/internal/site"
 	"github.com/piyushsatti/chronicler/apps/api/internal/spatial"
@@ -13,6 +15,17 @@ import (
 
 func intPtr(v int) *int       { return &v }
 func strPtr(v string) *string { return &v }
+
+func optionalID(id string) *string {
+	if id == "" {
+		return nil
+	}
+	return &id
+}
+
+func clockToProductTime(t time.Time) product.Time {
+	return product.Time(t.Format("15:04:05"))
+}
 
 func toDocumentType(d document.Document, body string) *DocumentType {
 	cat := d.Kind
@@ -25,7 +38,7 @@ func toDocumentType(d document.Document, body string) *DocumentType {
 		Visibility:    string(d.Visibility),
 		Title:         d.Title,
 		AuthorID:      d.AuthorID,
-		Frontmatter:   map[string]any{},
+		Frontmatter:   json.RawMessage("{}"),
 		UpdatedAt:     time.Now(),
 		EffectiveBody: &body,
 	}
@@ -44,7 +57,7 @@ func toQuestV2(q quest.LegacyQuestView) *QuestV2Type {
 		DisplayStatus: strPtr(q.DisplayStatus),
 		SlotsMax:      q.SlotsMax,
 		FilledCount:   q.FilledCount,
-		DocumentID:    q.DocumentID,
+		DocumentID:    optionalID(q.DocumentID),
 		Tags:          []string{},
 		Genres:        []string{},
 		CreatedBy:     q.DMID,
@@ -77,12 +90,12 @@ func toCharacterV2(c character.LegacyCharacterView) *CharacterV2Type {
 		Name:                    c.Name,
 		OwnerID:                 c.OwnerID,
 		Status:                  c.Status,
-		RegionID:                "",
-		BackstoryID:             "",
+		RegionID:                nil,
+		BackstoryID:             nil,
 		Pcxp:                    c.PCXP,
 		CreatedAt:               now,
 		UpdatedAt:               now,
-		VerificationSubmittedAt: now,
+		VerificationSubmittedAt: &now,
 	}
 }
 
@@ -92,39 +105,21 @@ func toHome(stats site.Stats) *HomeV2Type {
 		CommunityStats: &SiteStatsV2Type{
 			TotalMembers: stats.TotalMembers,
 		},
-		QuestBoard: []*QuestBoardEntryType{},
-	}
-}
-
-func toHexV2(h spatial.Hex) *HexV2Type {
-	terrain := h.Terrain
-	if terrain == "" {
-		terrain = "unknown"
-	}
-	return &HexV2Type{
-		ID:        h.ID,
-		MapID:     h.MapID,
-		Col:       h.Col,
-		Row:       h.Row,
-		Terrain:   terrain,
-		Elevation: strPtr(h.Elevation),
-		Climate:   strPtr(h.Climate),
-		CreatedAt: time.Now(),
 	}
 }
 
 func toMapV2(m spatial.LegacyMapView) *MapV2Type {
+	var regionID *string
+	if m.RegionID != "" {
+		regionID = &m.RegionID
+	}
 	return &MapV2Type{
 		ID:        m.ID,
 		Name:      m.Name,
 		AtlasCode: m.AtlasCode,
 		Family:    m.Family,
-		RegionID:  strPtr(m.RegionID),
-		Cols:      intPtr(m.Cols),
-		Rows:      intPtr(m.Rows),
-		CreatedBy: "",
+		MapKind:   "",
+		RegionID:  regionID,
 		CreatedAt: time.Now(),
-		Hexes:     []*HexV2Type{},
-		Edges:     []*HexEdgeV2Type{},
 	}
 }

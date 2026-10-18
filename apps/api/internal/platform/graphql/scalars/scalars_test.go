@@ -20,13 +20,13 @@ func TestPhase3TaskG05Acceptance(t *testing.T) {
 	t.Run("ID", func(t *testing.T) {
 		const upper = "ABCDEF01-2345-6789-ABCD-EF0123456789"
 		const lower = "abcdef01-2345-6789-abcd-ef0123456789"
-		got, err := UnmarshalID(upper)
+		got, err := UnmarshalID(context.Background(),upper)
 		if err != nil || got != lower {
 			t.Fatalf("ID = %q, %v", got, err)
 		}
 		assertWire(t, MarshalID(upper), `"`+lower+`"`)
 		for _, value := range []any{nil, 1, int64(12), json.Number("12"), "", "abcdef0123456789abcdef0123456789", "urn:uuid:" + lower, "{" + lower + "}", " " + lower, lower + " ", "zzzzzzzz-2345-6789-abcd-ef0123456789"} {
-			_, err := UnmarshalID(value)
+			_, err := UnmarshalID(context.Background(),value)
 			assertCode(t, err, apierr.Invalid)
 		}
 		assertBadWire(t, MarshalID(""))
@@ -34,28 +34,28 @@ func TestPhase3TaskG05Acceptance(t *testing.T) {
 	})
 	t.Run("Date", func(t *testing.T) {
 		for _, value := range []string{"2026-10-14", "2024-02-29", "0001-01-01", "9999-12-31"} {
-			got, err := UnmarshalDate(value)
+			got, err := UnmarshalDate(context.Background(),value)
 			if err != nil || string(got) != value {
 				t.Fatalf("Date(%q) = %q, %v", value, got, err)
 			}
 			assertWire(t, MarshalDate(got), `"`+value+`"`)
 		}
 		for _, value := range []any{nil, 20261014, "2026-2-14", "2026-02-30", "2025-02-29", "2026-13-01", "2026-10-14T00:00:00Z", " 2026-10-14"} {
-			_, err := UnmarshalDate(value)
+			_, err := UnmarshalDate(context.Background(),value)
 			assertCode(t, err, apierr.Invalid)
 		}
 		assertBadWire(t, MarshalDate(product.Date("2026-02-30")))
 	})
 	t.Run("Time", func(t *testing.T) {
 		for input, want := range map[string]string{"09:00": "09:00:00", "00:00:00": "00:00:00", "23:59": "23:59:00", "24:00": "24:00:00", "24:00:00": "24:00:00"} {
-			got, err := UnmarshalTime(input)
+			got, err := UnmarshalTime(context.Background(),input)
 			if err != nil || string(got) != want {
 				t.Fatalf("Time(%q) = %q, %v", input, got, err)
 			}
 			assertWire(t, MarshalTime(got), `"`+want+`"`)
 		}
 		for _, value := range []any{nil, 900, "9:00", "09:00:01", "24:01", "24:00:01", "25:00", "09:60", "09:00:00Z", "09:00:00.0", "2026-10-14T09:00:00"} {
-			_, err := UnmarshalTime(value)
+			_, err := UnmarshalTime(context.Background(),value)
 			assertCode(t, err, apierr.Invalid)
 		}
 		assertBadWire(t, MarshalTime(product.Time("09:00:01")))
@@ -69,14 +69,14 @@ func TestPhase3TaskG05Acceptance(t *testing.T) {
 			"2026-10-14T12:00:00.1-02:30":       "2026-10-14T14:30:00.1Z",
 		}
 		for input, want := range cases {
-			got, err := UnmarshalDateTime(input)
+			got, err := UnmarshalDateTime(context.Background(),input)
 			if err != nil || got.Location() != time.UTC || got.Format(time.RFC3339Nano) != want {
 				t.Fatalf("DateTime(%q) = %v, %v", input, got, err)
 			}
 			assertWire(t, MarshalDateTime(got), `"`+want+`"`)
 		}
 		for _, value := range []any{nil, 123, "2026-10-14T12:00:00", "2026-10-14", "2026-10-14T12:00:00.1234567Z", "2026-10-14T12:00:00.1234560001Z", "2026-10-14T12:00:00,1Z", "2026-10-14T1:00:00Z", "2026-10-14T24:00:00Z", "2026-10-14T12:00:60Z", "2026-10-14T12:00:00+24:00", "2026-10-14T12:00:00+01:60", "2026-02-30T12:00:00Z", "9999-12-31T23:59:00-01:00", "0000-01-01T00:00:00+01:00"} {
-			_, err := UnmarshalDateTime(value)
+			_, err := UnmarshalDateTime(context.Background(),value)
 			assertCode(t, err, apierr.Invalid)
 		}
 		assertBadWire(t, MarshalDateTime(time.Date(2026, 1, 1, 1, 1, 1, 123456789, time.UTC)))
@@ -85,7 +85,7 @@ func TestPhase3TaskG05Acceptance(t *testing.T) {
 	})
 	t.Run("JSON", func(t *testing.T) {
 		for _, input := range []any{nil, true, false, "text", json.Number("9007199254740993"), int64(9007199254740993), map[string]any{"z": json.Number("9007199254740993"), "a": []any{nil, true, "x"}}, []any{json.Number("1e1000"), json.Number("-1.234567890123456789")}} {
-			raw, err := UnmarshalJSON(input)
+			raw, err := UnmarshalJSON(context.Background(),input)
 			if err != nil {
 				t.Fatalf("JSON(%v): %v", input, err)
 			}
@@ -94,41 +94,41 @@ func TestPhase3TaskG05Acceptance(t *testing.T) {
 			}
 			assertWire(t, MarshalJSON(raw), string(raw))
 		}
-		raw, err := UnmarshalJSON(json.Number("9007199254740993"))
+		raw, err := UnmarshalJSON(context.Background(),json.Number("9007199254740993"))
 		if err != nil || string(raw) != "9007199254740993" {
 			t.Fatalf("integer precision: %s %v", raw, err)
 		}
 		for _, input := range []any{math.NaN(), math.Inf(1), json.Number("01"), json.Number("NaN"), json.RawMessage(`{`), make(chan int)} {
-			_, err := UnmarshalJSON(input)
+			_, err := UnmarshalJSON(context.Background(),input)
 			assertCode(t, err, apierr.Invalid)
 		}
 		cyclic := map[string]any{}
 		cyclic["self"] = cyclic
-		_, err = UnmarshalJSON(cyclic)
+		_, err = UnmarshalJSON(context.Background(),cyclic)
 		assertCode(t, err, apierr.Invalid)
 		depth16 := json.RawMessage(strings.Repeat("[", 16) + "0" + strings.Repeat("]", 16))
 		depth17 := json.RawMessage(strings.Repeat("[", 17) + "0" + strings.Repeat("]", 17))
-		_, err = UnmarshalJSON(depth16)
+		_, err = UnmarshalJSON(context.Background(),depth16)
 		if err != nil {
 			t.Fatalf("depth 16: %v", err)
 		}
 		assertWire(t, MarshalJSON(depth16), string(depth16))
-		_, err = UnmarshalJSON(depth17)
+		_, err = UnmarshalJSON(context.Background(),depth17)
 		assertCode(t, err, apierr.Invalid)
 		assertBadWire(t, MarshalJSON(depth17))
 		object16 := json.RawMessage(strings.Repeat(`{"a":`, 16) + `"[not nesting]"` + strings.Repeat("}", 16))
-		_, err = UnmarshalJSON(object16)
+		_, err = UnmarshalJSON(context.Background(),object16)
 		if err != nil {
 			t.Fatalf("object depth 16: %v", err)
 		}
 		exact := strings.Repeat("x", 262142)
-		raw, err = UnmarshalJSON(exact)
+		raw, err = UnmarshalJSON(context.Background(),exact)
 		if err != nil || len(raw) != 262144 {
 			t.Fatalf("exact size %d: %v", len(raw), err)
 		}
 		assertWire(t, MarshalJSON(raw), string(raw))
 		t.Run("262145-byte input rejects", func(t *testing.T) {
-			_, err := UnmarshalJSON(exact + "x")
+			_, err := UnmarshalJSON(context.Background(),exact + "x")
 			assertCode(t, err, apierr.Invalid)
 		})
 		t.Run("262145-byte output rejects", func(t *testing.T) {

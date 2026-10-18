@@ -4,40 +4,44 @@ package graph
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"strconv"
 	"time"
+
+	"github.com/99designs/gqlgen/graphql"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 )
 
 type ActivityEventType struct {
 	Kind       string    `json:"kind"`
 	ChannelID  string    `json:"channelId"`
 	OccurredAt time.Time `json:"occurredAt"`
-	Amount     int       `json:"amount"`
+	Amount     float64   `json:"amount"`
 }
 
 type ActivitySummaryType struct {
-	VoiceMinutes int `json:"voiceMinutes"`
-	Messages     int `json:"messages"`
-	Reactions    int `json:"reactions"`
+	VoiceMinutes float64 `json:"voiceMinutes"`
+	Messages     float64 `json:"messages"`
+	Reactions    float64 `json:"reactions"`
 }
 
 type AdminCharacterDirectoryEntryV2Type struct {
-	ID                      string    `json:"id"`
-	ShortCode               string    `json:"shortCode"`
-	Name                    string    `json:"name"`
-	OwnerID                 string    `json:"ownerId"`
-	OwnerHandle             string    `json:"ownerHandle"`
-	OwnerDisplayName        string    `json:"ownerDisplayName"`
-	OwnerAvatarURL          *string   `json:"ownerAvatarUrl,omitempty"`
-	RegionID                string    `json:"regionId"`
-	RegionName              string    `json:"regionName"`
-	GuildID                 *string   `json:"guildId,omitempty"`
-	Status                  string    `json:"status"`
-	VerificationStatus      string    `json:"verificationStatus"`
-	VerificationSubmittedAt time.Time `json:"verificationSubmittedAt"`
-	UpdatedAt               time.Time `json:"updatedAt"`
+	ID                      string     `json:"id"`
+	ShortCode               string     `json:"shortCode"`
+	Name                    string     `json:"name"`
+	OwnerID                 string     `json:"ownerId"`
+	OwnerHandle             string     `json:"ownerHandle"`
+	OwnerDisplayName        string     `json:"ownerDisplayName"`
+	OwnerAvatarURL          *string    `json:"ownerAvatarUrl,omitempty"`
+	RegionID                *string    `json:"regionId,omitempty"`
+	RegionName              *string    `json:"regionName,omitempty"`
+	GuildID                 *string    `json:"guildId,omitempty"`
+	Status                  string     `json:"status"`
+	VerificationStatus      string     `json:"verificationStatus"`
+	VerificationSubmittedAt *time.Time `json:"verificationSubmittedAt,omitempty"`
+	UpdatedAt               time.Time  `json:"updatedAt"`
 }
 
 type AdminCharacterDirectoryFiltersInput struct {
@@ -53,32 +57,31 @@ type AdminCharacterDirectoryV2Type struct {
 
 type AdminDeliveryConfigV2Type struct {
 	PublicOrigin            string  `json:"publicOrigin"`
-	PublicOriginHealthy     bool    `json:"publicOriginHealthy"`
+	PublicOriginHealthy     *bool   `json:"publicOriginHealthy,omitempty"`
 	DeliveryMode            string  `json:"deliveryMode"`
 	AnnouncementRoleID      *string `json:"announcementRoleId,omitempty"`
 	AnnouncementRoleSource  string  `json:"announcementRoleSource"`
-	AnnouncementRoleHealthy bool    `json:"announcementRoleHealthy"`
+	AnnouncementRoleHealthy *bool   `json:"announcementRoleHealthy,omitempty"`
 }
 
 type AdminDeliveryJobV2Type struct {
-	ID                               string    `json:"id"`
-	QuestID                          *string   `json:"questId,omitempty"`
-	QuestShortCode                   *string   `json:"questShortCode,omitempty"`
-	QuestTitle                       *string   `json:"questTitle,omitempty"`
-	QuestLink                        *string   `json:"questLink,omitempty"`
-	EventLink                        *string   `json:"eventLink,omitempty"`
-	MessageID                        *string   `json:"messageId,omitempty"`
-	State                            string    `json:"state"`
-	DesiredRevision                  *int      `json:"desiredRevision,omitempty"`
-	AppliedRevision                  *int      `json:"appliedRevision,omitempty"`
-	FailureStreak                    int       `json:"failureStreak"`
-	MaxAttempts                      int       `json:"maxAttempts"`
-	NextAttemptAt                    time.Time `json:"nextAttemptAt"`
-	SafeError                        *string   `json:"safeError,omitempty"`
-	HistoricalRoleNotificationMissed bool      `json:"historicalRoleNotificationMissed"`
-	RedriveCount                     int       `json:"redriveCount"`
-	CreatedAt                        time.Time `json:"createdAt"`
-	UpdatedAt                        time.Time `json:"updatedAt"`
+	ID              string    `json:"id"`
+	QuestID         *string   `json:"questId,omitempty"`
+	QuestShortCode  *string   `json:"questShortCode,omitempty"`
+	QuestTitle      *string   `json:"questTitle,omitempty"`
+	QuestLink       *string   `json:"questLink,omitempty"`
+	EventLink       *string   `json:"eventLink,omitempty"`
+	MessageID       *string   `json:"messageId,omitempty"`
+	State           string    `json:"state"`
+	DesiredRevision *int      `json:"desiredRevision,omitempty"`
+	AppliedRevision *int      `json:"appliedRevision,omitempty"`
+	FailureStreak   int       `json:"failureStreak"`
+	MaxAttempts     int       `json:"maxAttempts"`
+	NextAttemptAt   time.Time `json:"nextAttemptAt"`
+	SafeError       *string   `json:"safeError,omitempty"`
+	RedriveCount    int       `json:"redriveCount"`
+	CreatedAt       time.Time `json:"createdAt"`
+	UpdatedAt       time.Time `json:"updatedAt"`
 }
 
 type AdminHealthAlertV2Type struct {
@@ -91,6 +94,7 @@ type AdminHealthAlertV2Type struct {
 }
 
 type AdminOperationsV2Type struct {
+	ScheduledWork         []*ScheduledWorkStatusType `json:"scheduledWork"`
 	Config                *AdminDeliveryConfigV2Type `json:"config"`
 	ActiveAlertCount      int                        `json:"activeAlertCount"`
 	PendingDeliveryCount  int                        `json:"pendingDeliveryCount"`
@@ -100,25 +104,35 @@ type AdminOperationsV2Type struct {
 	ActiveAlerts          []*AdminHealthAlertV2Type  `json:"activeAlerts"`
 }
 
+type AnnouncementRoleInput struct {
+	Enabled bool    `json:"enabled"`
+	RoleID  *string `json:"roleId,omitempty"`
+}
+
 type ArchonAssignmentType struct {
 	MemberID  string    `json:"memberId"`
 	RegionID  string    `json:"regionId"`
 	GrantedAt time.Time `json:"grantedAt"`
-	GrantedBy string    `json:"grantedBy"`
+	GrantedBy *string   `json:"grantedBy,omitempty"`
+}
+
+type ArchonPage struct {
+	Items []*ArchonAssignmentType `json:"items"`
+	Total int                     `json:"total"`
 }
 
 type AvailabilitySlotInput struct {
-	Day       string    `json:"day"`
-	StartTime time.Time `json:"startTime"`
-	EndTime   time.Time `json:"endTime"`
-	Note      *string   `json:"note,omitempty"`
+	Day       string       `json:"day"`
+	StartTime product.Time `json:"startTime"`
+	EndTime   product.Time `json:"endTime"`
+	Note      *string      `json:"note,omitempty"`
 }
 
 type AvailabilitySlotType struct {
-	Day       string    `json:"day"`
-	StartTime time.Time `json:"startTime"`
-	EndTime   time.Time `json:"endTime"`
-	Note      *string   `json:"note,omitempty"`
+	Day       string       `json:"day"`
+	StartTime product.Time `json:"startTime"`
+	EndTime   product.Time `json:"endTime"`
+	Note      *string      `json:"note,omitempty"`
 }
 
 type BackstoryFiltersInput struct {
@@ -127,13 +141,26 @@ type BackstoryFiltersInput struct {
 	IncludeRetired bool    `json:"includeRetired"`
 }
 
+type BackstoryInput struct {
+	Name           string  `json:"name"`
+	Lore           string  `json:"lore"`
+	Cohort         string  `json:"cohort"`
+	SourceRegionID *string `json:"sourceRegionId,omitempty"`
+	Retired        bool    `json:"retired"`
+}
+
+type BackstoryPage struct {
+	Items []*BackstoryType `json:"items"`
+	Total int              `json:"total"`
+}
+
 type BackstoryType struct {
-	ID             string `json:"id"`
-	Name           string `json:"name"`
-	Lore           string `json:"lore"`
-	Cohort         string `json:"cohort"`
-	SourceRegionID string `json:"sourceRegionId"`
-	Retired        bool   `json:"retired"`
+	ID             string  `json:"id"`
+	Name           string  `json:"name"`
+	Lore           string  `json:"lore"`
+	Cohort         string  `json:"cohort"`
+	SourceRegionID *string `json:"sourceRegionId,omitempty"`
+	Retired        bool    `json:"retired"`
 }
 
 type CategoryCountType struct {
@@ -142,8 +169,8 @@ type CategoryCountType struct {
 }
 
 type ChannelVoiceMinutesType struct {
-	ChannelID string `json:"channelId"`
-	Minutes   int    `json:"minutes"`
+	ChannelID string  `json:"channelId"`
+	Minutes   float64 `json:"minutes"`
 }
 
 type CharacterDDBMirrorType struct {
@@ -168,7 +195,7 @@ type CharacterLogType struct {
 	CharacterID string    `json:"characterId"`
 	Body        string    `json:"body"`
 	QuestID     *string   `json:"questId,omitempty"`
-	CreatedBy   string    `json:"createdBy"`
+	CreatedBy   *string   `json:"createdBy,omitempty"`
 	CreatedAt   time.Time `json:"createdAt"`
 }
 
@@ -191,21 +218,32 @@ type CharacterV2Type struct {
 	ShortCode               string                  `json:"shortCode"`
 	Name                    string                  `json:"name"`
 	Status                  string                  `json:"status"`
-	RegionID                string                  `json:"regionId"`
+	RegionID                *string                 `json:"regionId,omitempty"`
 	GuildID                 *string                 `json:"guildId,omitempty"`
-	BackstoryID             string                  `json:"backstoryId"`
+	BackstoryID             *string                 `json:"backstoryId,omitempty"`
 	Pcxp                    int                     `json:"pcxp"`
 	Description             *string                 `json:"description,omitempty"`
 	BackgroundText          *string                 `json:"backgroundText,omitempty"`
 	DdbURL                  *string                 `json:"ddbUrl,omitempty"`
 	CreatedAt               time.Time               `json:"createdAt"`
 	UpdatedAt               time.Time               `json:"updatedAt"`
-	VerificationSubmittedAt time.Time               `json:"verificationSubmittedAt"`
+	VerificationSubmittedAt *time.Time              `json:"verificationSubmittedAt,omitempty"`
 	VerificationStatus      CharacterReviewStatus   `json:"verificationStatus"`
+	DdbLastAttempt          *DdbAttemptType         `json:"ddbLastAttempt,omitempty"`
 	DdbMirror               *CharacterDDBMirrorType `json:"ddbMirror,omitempty"`
 	Proficiencies           []*DDBProficiencyType   `json:"proficiencies"`
 	DisplayIcon             *string                 `json:"displayIcon,omitempty"`
 	DaysActive              int                     `json:"daysActive"`
+}
+
+type CloseQuestInput struct {
+	Attendance []*ParticipationAttestationInput `json:"attendance"`
+	Rewards    []*QuestPcxpAwardInput           `json:"rewards"`
+}
+
+type CoPlayerPage struct {
+	Items []*CoPlayerV2Type `json:"items"`
+	Total int               `json:"total"`
 }
 
 type CoPlayerV2Type struct {
@@ -223,6 +261,14 @@ type CodexEntryCardType struct {
 	Document      *DocumentType       `json:"document"`
 	BacklinkCount int                 `json:"backlinkCount"`
 	Subjects      []*DocumentLinkType `json:"subjects"`
+}
+
+type CommandMeta struct {
+	IdempotencyKey string `json:"idempotencyKey"`
+}
+
+type CommandReceipt struct {
+	Replayed bool `json:"replayed"`
 }
 
 type CommunityDirectoryFiltersInput struct {
@@ -244,8 +290,8 @@ type CountByKeyType struct {
 
 type CreateCharacterV2Input struct {
 	Name           string   `json:"name"`
-	RegionID       string   `json:"regionId"`
-	BackstoryID    string   `json:"backstoryId"`
+	RegionID       *string  `json:"regionId,omitempty"`
+	BackstoryID    *string  `json:"backstoryId,omitempty"`
 	CatalogPickIds []string `json:"catalogPickIds"`
 	GuildID        *string  `json:"guildId,omitempty"`
 	Description    *string  `json:"description,omitempty"`
@@ -287,26 +333,53 @@ type CreationCatalogFiltersInput struct {
 	IncludeAll bool    `json:"includeAll"`
 }
 
+type CreationCatalogPage struct {
+	Items []*CreationCatalogEntryType `json:"items"`
+	Total int                         `json:"total"`
+}
+
 type DDBProficiencyType struct {
 	Kind string `json:"kind"`
 	Name string `json:"name"`
 }
 
+type DdbAttemptType struct {
+	ID          string          `json:"id"`
+	AttemptedAt time.Time       `json:"attemptedAt"`
+	FinishedAt  time.Time       `json:"finishedAt"`
+	Succeeded   bool            `json:"succeeded"`
+	SafeError   *string         `json:"safeError,omitempty"`
+	Provenance  json.RawMessage `json:"provenance"`
+}
+
+type DdbSyncReceipt struct {
+	Character   *CharacterV2Type `json:"character"`
+	Succeeded   bool             `json:"succeeded"`
+	AttemptedAt time.Time        `json:"attemptedAt"`
+	SafeError   *string          `json:"safeError,omitempty"`
+}
+
+type DeliveryReceipt struct {
+	JobID           string `json:"jobId"`
+	DesiredRevision int    `json:"desiredRevision"`
+	AppliedRevision int    `json:"appliedRevision"`
+	DeliveryStatus  string `json:"deliveryStatus"`
+}
+
 type DirectoryEntryType struct {
-	MemberID                string         `json:"memberId"`
-	Handle                  string         `json:"handle"`
-	DisplayName             string         `json:"displayName"`
-	AvatarURL               *string        `json:"avatarUrl,omitempty"`
-	Roles                   []string       `json:"roles"`
-	Status                  string         `json:"status"`
-	IsDm                    bool           `json:"isDm"`
-	Tagline                 *string        `json:"tagline,omitempty"`
-	AcceptingPlayers        *bool          `json:"acceptingPlayers,omitempty"`
-	DmProfileStatus         *string        `json:"dmProfileStatus,omitempty"`
-	DmProfileReviewRevision *int           `json:"dmProfileReviewRevision,omitempty"`
-	TableInfo               map[string]any `json:"tableInfo,omitempty"`
-	AvailableDays           []string       `json:"availableDays"`
-	LookingToPlay           bool           `json:"lookingToPlay"`
+	MemberID                string          `json:"memberId"`
+	Handle                  string          `json:"handle"`
+	DisplayName             string          `json:"displayName"`
+	AvatarURL               *string         `json:"avatarUrl,omitempty"`
+	Roles                   []string        `json:"roles"`
+	Status                  string          `json:"status"`
+	IsDm                    bool            `json:"isDm"`
+	Tagline                 *string         `json:"tagline,omitempty"`
+	AcceptingPlayers        *bool           `json:"acceptingPlayers,omitempty"`
+	DmProfileStatus         *string         `json:"dmProfileStatus,omitempty"`
+	DmProfileReviewRevision *int            `json:"dmProfileReviewRevision,omitempty"`
+	TableInfo               json.RawMessage `json:"tableInfo,omitempty"`
+	AvailableDays           []string        `json:"availableDays"`
 }
 
 type DmLastSessionV2Type struct {
@@ -315,14 +388,14 @@ type DmLastSessionV2Type struct {
 }
 
 type DmProfileV2Type struct {
-	MemberID         string         `json:"memberId"`
-	Tagline          *string        `json:"tagline,omitempty"`
-	Philosophy       *string        `json:"philosophy,omitempty"`
-	HouseRules       *string        `json:"houseRules,omitempty"`
-	TableInfo        map[string]any `json:"tableInfo,omitempty"`
-	AcceptingPlayers bool           `json:"acceptingPlayers"`
-	Status           string         `json:"status"`
-	ReviewRevision   int            `json:"reviewRevision"`
+	MemberID         string          `json:"memberId"`
+	Tagline          *string         `json:"tagline,omitempty"`
+	Philosophy       *string         `json:"philosophy,omitempty"`
+	HouseRules       *string         `json:"houseRules,omitempty"`
+	TableInfo        json.RawMessage `json:"tableInfo,omitempty"`
+	AcceptingPlayers bool            `json:"acceptingPlayers"`
+	Status           string          `json:"status"`
+	ReviewRevision   int             `json:"reviewRevision"`
 }
 
 type DmSessionHistoryV2Result struct {
@@ -340,8 +413,32 @@ type DmSummaryFiltersV2Input struct {
 	Search  *string `json:"search,omitempty"`
 }
 
+type DocumentAudienceInput struct {
+	Visibility string   `json:"visibility"`
+	Policy     []string `json:"policy,omitempty"`
+	ReaderIds  []string `json:"readerIds"`
+}
+
 type DocumentAuthorType struct {
 	Handle string `json:"handle"`
+}
+
+type DocumentDraftInput struct {
+	Kind        string          `json:"kind"`
+	Category    *string         `json:"category,omitempty"`
+	Title       string          `json:"title"`
+	Body        string          `json:"body"`
+	Frontmatter json.RawMessage `json:"frontmatter"`
+	Visibility  string          `json:"visibility"`
+	Policy      []string        `json:"policy,omitempty"`
+}
+
+type DocumentEditInput struct {
+	ExpectedRevision int                                `json:"expectedRevision"`
+	Title            graphql.Omittable[*string]         `json:"title,omitempty"`
+	Body             graphql.Omittable[*string]         `json:"body,omitempty"`
+	Frontmatter      graphql.Omittable[json.RawMessage] `json:"frontmatter,omitempty"`
+	Category         graphql.Omittable[*string]         `json:"category,omitempty"`
 }
 
 type DocumentFiltersInput struct {
@@ -366,16 +463,24 @@ type DocumentListResult struct {
 	Total int             `json:"total"`
 }
 
+type DocumentRevisionPage struct {
+	Items []*DocumentRevisionType `json:"items"`
+	Total int                     `json:"total"`
+}
+
 type DocumentRevisionType struct {
-	ID          string         `json:"id"`
-	DocumentID  string         `json:"documentId"`
-	Rev         int            `json:"rev"`
-	Title       string         `json:"title"`
-	Frontmatter map[string]any `json:"frontmatter"`
-	Body        string         `json:"body"`
-	Visibility  string         `json:"visibility"`
-	PublishedAt time.Time      `json:"publishedAt"`
-	PublishedBy string         `json:"publishedBy"`
+	Reason      string          `json:"reason"`
+	RecordedAt  time.Time       `json:"recordedAt"`
+	RecordedBy  *string         `json:"recordedBy,omitempty"`
+	ID          string          `json:"id"`
+	DocumentID  string          `json:"documentId"`
+	Rev         int             `json:"rev"`
+	Title       string          `json:"title"`
+	Frontmatter json.RawMessage `json:"frontmatter"`
+	Body        string          `json:"body"`
+	Visibility  *string         `json:"visibility,omitempty"`
+	PublishedAt *time.Time      `json:"publishedAt,omitempty"`
+	PublishedBy *string         `json:"publishedBy,omitempty"`
 }
 
 type DocumentSearchHitType struct {
@@ -390,14 +495,16 @@ type DocumentSearchHitType struct {
 
 type DocumentType struct {
 	ID             string                `json:"id"`
+	Version        int                   `json:"version"`
 	Slug           string                `json:"slug"`
 	Kind           string                `json:"kind"`
 	Category       *string               `json:"category,omitempty"`
 	Status         string                `json:"status"`
 	Visibility     string                `json:"visibility"`
 	Policy         []string              `json:"policy,omitempty"`
+	ReaderIds      []string              `json:"readerIds,omitempty"`
 	Title          string                `json:"title"`
-	Frontmatter    map[string]any        `json:"frontmatter"`
+	Frontmatter    json.RawMessage       `json:"frontmatter"`
 	AuthorID       string                `json:"authorId"`
 	UpdatedAt      time.Time             `json:"updatedAt"`
 	DeletedAt      *time.Time            `json:"deletedAt,omitempty"`
@@ -406,6 +513,16 @@ type DocumentType struct {
 	Author         *DocumentAuthorType   `json:"author,omitempty"`
 	PublishedAt    *time.Time            `json:"publishedAt,omitempty"`
 	SummaryDerived *SummaryDerivedV2Type `json:"summaryDerived,omitempty"`
+}
+
+type DowntimeInput struct {
+	ID       *string `json:"id,omitempty"`
+	Name     string  `json:"name"`
+	Goal     *string `json:"goal,omitempty"`
+	Target   *int    `json:"target,omitempty"`
+	Progress int     `json:"progress"`
+	Status   string  `json:"status"`
+	Notes    *string `json:"notes,omitempty"`
 }
 
 type DowntimeProjectListResult struct {
@@ -419,7 +536,7 @@ type DowntimeProjectType struct {
 	Name        string    `json:"name"`
 	Goal        *string   `json:"goal,omitempty"`
 	Progress    int       `json:"progress"`
-	Target      int       `json:"target"`
+	Target      *int      `json:"target,omitempty"`
 	Status      string    `json:"status"`
 	Notes       *string   `json:"notes,omitempty"`
 	UpdatedAt   time.Time `json:"updatedAt"`
@@ -432,7 +549,7 @@ type DriverProgressType struct {
 }
 
 type GameCalendarV2Type struct {
-	Definition      map[string]any     `json:"definition,omitempty"`
+	Definition      json.RawMessage    `json:"definition,omitempty"`
 	CurrentGameDay  *int               `json:"currentGameDay,omitempty"`
 	CurrentGameDate *GameDateV2Type    `json:"currentGameDate,omitempty"`
 	MonthGrid       []*GameDayCellType `json:"monthGrid"`
@@ -448,53 +565,19 @@ type GameDateV2Type struct {
 }
 
 type GameDayCellType struct {
-	RealDate time.Time `json:"realDate"`
-	GameDay  *int      `json:"gameDay,omitempty"`
+	RealDate product.Date `json:"realDate"`
+	GameDay  *int         `json:"gameDay,omitempty"`
 }
 
-type HexChangeV2Type struct {
-	ID             string    `json:"id"`
-	HexID          string    `json:"hexId"`
-	OccurredAt     time.Time `json:"occurredAt"`
-	Kind           string    `json:"kind"`
-	OldValue       *string   `json:"oldValue,omitempty"`
-	NewValue       *string   `json:"newValue,omitempty"`
-	CausedByQuest  *string   `json:"causedByQuest,omitempty"`
-	CausedByMember *string   `json:"causedByMember,omitempty"`
-	Note           *string   `json:"note,omitempty"`
-}
-
-type HexEdgeV2Type struct {
-	ID         string  `json:"id"`
-	MapID      string  `json:"mapId"`
-	HexA       string  `json:"hexA"`
-	HexB       string  `json:"hexB"`
-	EdgeType   string  `json:"edgeType"`
-	ASide      *string `json:"aSide,omitempty"`
-	DocumentID *string `json:"documentId,omitempty"`
-}
-
-type HexEntryLinkV2Type struct {
-	ID         string    `json:"id"`
-	HexID      string    `json:"hexId"`
-	DocumentID string    `json:"documentId"`
-	Relation   string    `json:"relation"`
-	CreatedAt  time.Time `json:"createdAt"`
-}
-
-type HexV2Type struct {
-	ID            string                `json:"id"`
-	MapID         string                `json:"mapId"`
-	Col           int                   `json:"col"`
-	Row           int                   `json:"row"`
-	Hexcode       *string               `json:"hexcode,omitempty"`
-	Terrain       string                `json:"terrain"`
-	Elevation     *string               `json:"elevation,omitempty"`
-	Climate       *string               `json:"climate,omitempty"`
-	SubmapID      *string               `json:"submapId,omitempty"`
-	TileAssetID   *string               `json:"tileAssetId,omitempty"`
-	CreatedAt     time.Time             `json:"createdAt"`
-	LinkedEntries []*HexEntryLinkV2Type `json:"linkedEntries"`
+type HomeBannerInput struct {
+	Enabled    bool    `json:"enabled"`
+	Title      *string `json:"title,omitempty"`
+	Body       *string `json:"body,omitempty"`
+	CtaLabel   *string `json:"ctaLabel,omitempty"`
+	CtaHref    *string `json:"ctaHref,omitempty"`
+	MediaKind  *string `json:"mediaKind,omitempty"`
+	MediaURL   *string `json:"mediaUrl,omitempty"`
+	MediaLabel *string `json:"mediaLabel,omitempty"`
 }
 
 type HomeBannerType struct {
@@ -509,30 +592,34 @@ type HomeBannerType struct {
 }
 
 type HomeBucketType struct {
-	Category  string          `json:"category"`
+	Category  *string         `json:"category,omitempty"`
 	Documents []*DocumentType `json:"documents"`
 }
 
 type HomeV2Type struct {
-	RecentByCategory []*HomeBucketType      `json:"recentByCategory"`
-	CommunityStats   *SiteStatsV2Type       `json:"communityStats"`
-	QuestBoard       []*QuestBoardEntryType `json:"questBoard"`
+	RecentByCategory []*HomeBucketType `json:"recentByCategory"`
+	CommunityStats   *SiteStatsV2Type  `json:"communityStats"`
 }
 
 type LieutenantAssignmentType struct {
 	MemberID      string    `json:"memberId"`
 	NpcDocumentID string    `json:"npcDocumentId"`
 	GrantedAt     time.Time `json:"grantedAt"`
-	GrantedBy     string    `json:"grantedBy"`
+	GrantedBy     *string   `json:"grantedBy,omitempty"`
 }
 
-type MapPlaceV2Type struct {
-	HexID      string `json:"hexId"`
-	Hexcode    string `json:"hexcode"`
-	DocumentID string `json:"documentId"`
-	Slug       string `json:"slug"`
-	Title      string `json:"title"`
-	Category   string `json:"category"`
+type LieutenantPage struct {
+	Items []*LieutenantAssignmentType `json:"items"`
+	Total int                         `json:"total"`
+}
+
+type MapCreateInput struct {
+	Name      string  `json:"name"`
+	AtlasCode string  `json:"atlasCode"`
+	Family    string  `json:"family"`
+	MapKind   string  `json:"mapKind"`
+	RegionID  *string `json:"regionId,omitempty"`
+	AssetPath *string `json:"assetPath,omitempty"`
 }
 
 type MapV2Type struct {
@@ -540,37 +627,25 @@ type MapV2Type struct {
 	Name            string                  `json:"name"`
 	AtlasCode       string                  `json:"atlasCode"`
 	Family          string                  `json:"family"`
+	MapKind         string                  `json:"mapKind"`
 	AssetPath       *string                 `json:"assetPath,omitempty"`
-	Cols            *int                    `json:"cols,omitempty"`
-	Rows            *int                    `json:"rows,omitempty"`
 	RegionID        *string                 `json:"regionId,omitempty"`
-	CreatedBy       string                  `json:"createdBy"`
+	CreatedBy       *string                 `json:"createdBy,omitempty"`
 	CreatedAt       time.Time               `json:"createdAt"`
-	Hexes           []*HexV2Type            `json:"hexes"`
-	Edges           []*HexEdgeV2Type        `json:"edges"`
 	PointcrawlNodes []*PointcrawlNodeV2Type `json:"pointcrawlNodes"`
 	PointcrawlEdges []*PointcrawlEdgeV2Type `json:"pointcrawlEdges"`
 }
 
-type MapViewV2Type struct {
-	MapID       string            `json:"mapId"`
-	Name        string            `json:"name"`
-	AtlasCode   string            `json:"atlasCode"`
-	Cols        *int              `json:"cols,omitempty"`
-	Rows        *int              `json:"rows,omitempty"`
-	Places      []*MapPlaceV2Type `json:"places"`
-	TotalPlaces int               `json:"totalPlaces"`
-}
-
 type MemberActivityStatsType struct {
-	VoiceMinutes        int                        `json:"voiceMinutes"`
-	Messages            int                        `json:"messages"`
+	VoiceMinutes        float64                    `json:"voiceMinutes"`
+	Messages            float64                    `json:"messages"`
 	QuestsPlayed        int                        `json:"questsPlayed"`
 	LongestSessionHours *float64                   `json:"longestSessionHours,omitempty"`
 	SummariesAuthored   int                        `json:"summariesAuthored"`
 	LastMessageAt       *time.Time                 `json:"lastMessageAt,omitempty"`
 	VoiceByChannel      []*ChannelVoiceMinutesType `json:"voiceByChannel"`
 	RecentSessions      []*ActivityEventType       `json:"recentSessions"`
+	MemberID            string                     `json:"-"`
 }
 
 type MemberFiltersInput struct {
@@ -612,27 +687,36 @@ type MemberSearchHitType struct {
 	AvatarURL   *string `json:"avatarUrl,omitempty"`
 }
 
+type MemberSettingsPatch struct {
+	Theme                       graphql.Omittable[*Theme]     `json:"theme,omitempty"`
+	Mode                        graphql.Omittable[*ColorMode] `json:"mode,omitempty"`
+	EffectsEnabled              graphql.Omittable[*bool]      `json:"effectsEnabled,omitempty"`
+	ColorblindSafe              graphql.Omittable[*bool]      `json:"colorblindSafe,omitempty"`
+	ReducedMotion               graphql.Omittable[*bool]      `json:"reducedMotion,omitempty"`
+	Density                     graphql.Omittable[*Density]   `json:"density,omitempty"`
+	Timezone                    graphql.Omittable[*string]    `json:"timezone,omitempty"`
+	NotifyCharacterVerification graphql.Omittable[*bool]      `json:"notifyCharacterVerification,omitempty"`
+	NotifyQuestSignup           graphql.Omittable[*bool]      `json:"notifyQuestSignup,omitempty"`
+	NotifyDocumentActivity      graphql.Omittable[*bool]      `json:"notifyDocumentActivity,omitempty"`
+	NotifyQuestScheduled        graphql.Omittable[*bool]      `json:"notifyQuestScheduled,omitempty"`
+	NotifyDmMentioned           graphql.Omittable[*bool]      `json:"notifyDmMentioned,omitempty"`
+}
+
 type MemberSettingsType struct {
-	MemberID                    string    `json:"memberId"`
-	ThemeMode                   *string   `json:"themeMode,omitempty"`
-	ColorMode                   string    `json:"colorMode"`
-	BgEffect                    string    `json:"bgEffect"`
-	ThemePalette                *string   `json:"themePalette,omitempty"`
-	BodyFont                    *string   `json:"bodyFont,omitempty"`
-	ColorblindSafe              bool      `json:"colorblindSafe"`
-	Timezone                    *string   `json:"timezone,omitempty"`
-	UpdatedAt                   time.Time `json:"updatedAt"`
-	FlairTitle                  *string   `json:"flairTitle,omitempty"`
-	FlairBadge                  *string   `json:"flairBadge,omitempty"`
-	FlairFrame                  *string   `json:"flairFrame,omitempty"`
-	FlairNameplate              *string   `json:"flairNameplate,omitempty"`
-	FlairToken                  *string   `json:"flairToken,omitempty"`
-	NotifyCharacterVerification *bool     `json:"notifyCharacterVerification,omitempty"`
-	NotifyQuestSignup           *bool     `json:"notifyQuestSignup,omitempty"`
-	NotifyDocumentActivity      *bool     `json:"notifyDocumentActivity,omitempty"`
-	NotifyQuestScheduled        *bool     `json:"notifyQuestScheduled,omitempty"`
-	NotifyDmMentioned           *bool     `json:"notifyDmMentioned,omitempty"`
-	NotifyDmRequestDecided      *bool     `json:"notifyDmRequestDecided,omitempty"`
+	MemberID                    string     `json:"memberId"`
+	Theme                       Theme      `json:"theme"`
+	Mode                        ColorMode  `json:"mode"`
+	EffectsEnabled              bool       `json:"effectsEnabled"`
+	ColorblindSafe              bool       `json:"colorblindSafe"`
+	ReducedMotion               bool       `json:"reducedMotion"`
+	Density                     Density    `json:"density"`
+	Timezone                    *string    `json:"timezone,omitempty"`
+	UpdatedAt                   *time.Time `json:"updatedAt,omitempty"`
+	NotifyCharacterVerification bool       `json:"notifyCharacterVerification"`
+	NotifyQuestSignup           bool       `json:"notifyQuestSignup"`
+	NotifyDocumentActivity      bool       `json:"notifyDocumentActivity"`
+	NotifyQuestScheduled        bool       `json:"notifyQuestScheduled"`
+	NotifyDmMentioned           bool       `json:"notifyDmMentioned"`
 }
 
 type MemberType struct {
@@ -646,6 +730,14 @@ type MemberType struct {
 	DiscordID   *string   `json:"discordId,omitempty"`
 }
 
+type MemberUnlockPage struct {
+	Items                []*MemberUnlockType `json:"items"`
+	Total                int                 `json:"total"`
+	DriverProgress       *DriverProgressType `json:"driverProgress"`
+	UnlockedAchievements []string            `json:"unlockedAchievements"`
+	DmTier               string              `json:"dmTier"`
+}
+
 type MemberUnlockType struct {
 	MemberID     string    `json:"memberId"`
 	UnlockableID string    `json:"unlockableId"`
@@ -654,19 +746,17 @@ type MemberUnlockType struct {
 	GrantedBy    *string   `json:"grantedBy,omitempty"`
 }
 
+type Mutation struct {
+}
+
 type MyPersonalizationType struct {
-	Settings             *MemberSettingsType `json:"settings,omitempty"`
-	Unlocks              []*MemberUnlockType `json:"unlocks"`
-	Catalog              []*UnlockableType   `json:"catalog"`
-	DriverProgress       *DriverProgressType `json:"driverProgress"`
-	UnlockedAchievements []string            `json:"unlockedAchievements"`
-	DmTier               string              `json:"dmTier"`
+	Settings *MemberSettingsType `json:"settings,omitempty"`
 }
 
 type NotificationConnection struct {
 	Items      []*NotificationType `json:"items"`
 	HasMore    bool                `json:"hasMore"`
-	NextBefore *time.Time          `json:"nextBefore,omitempty"`
+	NextBefore *string             `json:"nextBefore,omitempty"`
 }
 
 type NotificationType struct {
@@ -680,6 +770,11 @@ type NotificationType struct {
 	Summary     *string    `json:"summary,omitempty"`
 	Label       string     `json:"label"`
 	SubjectCode *string    `json:"subjectCode,omitempty"`
+}
+
+type NotificationWriteReceipt struct {
+	Replayed      bool `json:"replayed"`
+	AffectedCount int  `json:"affectedCount"`
 }
 
 type OpenQuestSeatV2Type struct {
@@ -699,13 +794,24 @@ type OpenQuestSeatsV2Result struct {
 	Total   int                    `json:"total"`
 }
 
-type PoiV2Type struct {
-	ID                 string  `json:"id"`
-	HexID              string  `json:"hexId"`
-	PoiType            string  `json:"poiType"`
-	DiscoveryTier      string  `json:"discoveryTier"`
-	IsCharterObjective bool    `json:"isCharterObjective"`
-	DocumentID         *string `json:"documentId,omitempty"`
+type ParticipationAttestationInput struct {
+	CharacterID string `json:"characterId"`
+	Status      string `json:"status"`
+}
+
+type ParticipationPage struct {
+	Items []*QuestParticipantV2Type `json:"items"`
+	Total int                       `json:"total"`
+}
+
+type PointcrawlEdgeInput struct {
+	ID         *string `json:"id,omitempty"`
+	NodeA      string  `json:"nodeA"`
+	NodeB      string  `json:"nodeB"`
+	Directed   bool    `json:"directed"`
+	Kind       string  `json:"kind"`
+	Label      *string `json:"label,omitempty"`
+	DocumentID *string `json:"documentId,omitempty"`
 }
 
 type PointcrawlEdgeV2Type struct {
@@ -719,15 +825,32 @@ type PointcrawlEdgeV2Type struct {
 	DocumentID *string `json:"documentId,omitempty"`
 }
 
-type PointcrawlNodeV2Type struct {
-	ID         string    `json:"id"`
+type PointcrawlEntryLinkType struct {
 	MapID      string    `json:"mapId"`
-	X          float64   `json:"x"`
-	Y          float64   `json:"y"`
-	Name       string    `json:"name"`
-	DocumentID *string   `json:"documentId,omitempty"`
-	SubmapID   *string   `json:"submapId,omitempty"`
+	NodeID     string    `json:"nodeId"`
+	DocumentID string    `json:"documentId"`
+	Relation   string    `json:"relation"`
 	CreatedAt  time.Time `json:"createdAt"`
+	CreatedBy  string    `json:"createdBy"`
+}
+
+type PointcrawlNodeInput struct {
+	ID       *string `json:"id,omitempty"`
+	X        float64 `json:"x"`
+	Y        float64 `json:"y"`
+	Name     string  `json:"name"`
+	SubmapID *string `json:"submapId,omitempty"`
+}
+
+type PointcrawlNodeV2Type struct {
+	ID            string                     `json:"id"`
+	MapID         string                     `json:"mapId"`
+	X             float64                    `json:"x"`
+	Y             float64                    `json:"y"`
+	Name          string                     `json:"name"`
+	LinkedEntries []*PointcrawlEntryLinkType `json:"linkedEntries"`
+	SubmapID      *string                    `json:"submapId,omitempty"`
+	CreatedAt     time.Time                  `json:"createdAt"`
 }
 
 type ProgressionEntryType struct {
@@ -737,7 +860,7 @@ type ProgressionEntryType struct {
 	Amount      *int      `json:"amount,omitempty"`
 	QuestID     *string   `json:"questId,omitempty"`
 	Note        *string   `json:"note,omitempty"`
-	RecordedBy  string    `json:"recordedBy"`
+	RecordedBy  *string   `json:"recordedBy,omitempty"`
 	RecordedAt  time.Time `json:"recordedAt"`
 }
 
@@ -747,21 +870,6 @@ type ProgressionListResult struct {
 }
 
 type Query struct {
-}
-
-type QuestAnnounceOutcomeV2Type struct {
-	MessageID        *string    `json:"messageId,omitempty"`
-	ThreadCreated    bool       `json:"threadCreated"`
-	AlreadyAnnounced bool       `json:"alreadyAnnounced"`
-	Error            *string    `json:"error,omitempty"`
-	EventID          *string    `json:"eventId,omitempty"`
-	EventURL         *string    `json:"eventUrl,omitempty"`
-	Accepted         *bool      `json:"accepted,omitempty"`
-	JobID            *string    `json:"jobId,omitempty"`
-	DesiredRevision  *int       `json:"desiredRevision,omitempty"`
-	AppliedRevision  *int       `json:"appliedRevision,omitempty"`
-	DeliveryStatus   *string    `json:"deliveryStatus,omitempty"`
-	NextRetryAt      *time.Time `json:"nextRetryAt,omitempty"`
 }
 
 type QuestAnnouncementRoleSettingType struct {
@@ -783,11 +891,6 @@ type QuestArcV2Type struct {
 	QuestCount int            `json:"questCount"`
 }
 
-type QuestBoardEntryType struct {
-	ID    string `json:"id"`
-	Title string `json:"title"`
-}
-
 type QuestDiscordDeliveryV2Type struct {
 	JobID           *string    `json:"jobId,omitempty"`
 	DesiredRevision int        `json:"desiredRevision"`
@@ -801,37 +904,28 @@ type QuestDiscordDeliveryV2Type struct {
 	ErrorMessage    *string    `json:"errorMessage,omitempty"`
 }
 
-type QuestDiscordSyncLegOutcomeV2Type struct {
-	State             QuestDiscordSyncLegStateV2 `json:"state"`
-	RemoteID          *string                    `json:"remoteId,omitempty"`
-	Error             *string                    `json:"error,omitempty"`
-	RetryAfterSeconds *int                       `json:"retryAfterSeconds,omitempty"`
-}
-
-type QuestDiscordSyncOutcomeV2Type struct {
-	Success         *bool                             `json:"success,omitempty"`
-	Message         *QuestDiscordSyncLegOutcomeV2Type `json:"message,omitempty"`
-	Thread          *QuestDiscordSyncLegOutcomeV2Type `json:"thread,omitempty"`
-	Event           *QuestDiscordSyncLegOutcomeV2Type `json:"event,omitempty"`
-	Error           *string                           `json:"error,omitempty"`
-	Accepted        *bool                             `json:"accepted,omitempty"`
-	JobID           *string                           `json:"jobId,omitempty"`
-	DesiredRevision *int                              `json:"desiredRevision,omitempty"`
-	AppliedRevision *int                              `json:"appliedRevision,omitempty"`
-	DeliveryStatus  *string                           `json:"deliveryStatus,omitempty"`
-	NextRetryAt     *time.Time                        `json:"nextRetryAt,omitempty"`
-}
-
 type QuestDmV2Type struct {
 	Handle      string  `json:"handle"`
 	DisplayName string  `json:"displayName"`
 	AvatarURL   *string `json:"avatarUrl,omitempty"`
 }
 
-type QuestHexV2Type struct {
-	QuestID string `json:"questId"`
-	HexID   string `json:"hexId"`
-	Role    string `json:"role"`
+type QuestEditInput struct {
+	ExpectedUpdatedAt time.Time                     `json:"expectedUpdatedAt"`
+	Title             graphql.Omittable[*string]    `json:"title,omitempty"`
+	RegionIds         graphql.Omittable[[]string]   `json:"regionIds,omitempty"`
+	ScheduledAt       graphql.Omittable[*time.Time] `json:"scheduledAt,omitempty"`
+	DurationHours     graphql.Omittable[*float64]   `json:"durationHours,omitempty"`
+	BriefBody         graphql.Omittable[*string]    `json:"briefBody,omitempty"`
+	DmID              graphql.Omittable[*string]    `json:"dmId,omitempty"`
+	Kinds             graphql.Omittable[[]string]   `json:"kinds,omitempty"`
+	SlotsMax          graphql.Omittable[*int]       `json:"slotsMax,omitempty"`
+	ArcID             graphql.Omittable[*string]    `json:"arcId,omitempty"`
+	Tags              graphql.Omittable[[]string]   `json:"tags,omitempty"`
+	Genres            graphql.Omittable[[]string]   `json:"genres,omitempty"`
+	Apl               graphql.Omittable[*int]       `json:"apl,omitempty"`
+	SignupType        graphql.Omittable[*string]    `json:"signupType,omitempty"`
+	AdditionalInfo    graphql.Omittable[*string]    `json:"additionalInfo,omitempty"`
 }
 
 type QuestParticipantV2Type struct {
@@ -848,10 +942,21 @@ type QuestParticipantV2Type struct {
 	MemberAvatarURL   *string   `json:"memberAvatarUrl,omitempty"`
 }
 
-type QuestRewardV2Input struct {
-	Kind   string  `json:"kind"`
-	Amount *int    `json:"amount,omitempty"`
-	Note   *string `json:"note,omitempty"`
+type QuestPcxpAwardInput struct {
+	CharacterID string  `json:"characterId"`
+	Pcxp        int     `json:"pcxp"`
+	Note        *string `json:"note,omitempty"`
+}
+
+type QuestPointcrawlLinkInput struct {
+	PointcrawlNodeID string `json:"pointcrawlNodeId"`
+	Role             string `json:"role"`
+}
+
+type QuestPointcrawlLinkV2Type struct {
+	QuestID          string `json:"questId"`
+	PointcrawlNodeID string `json:"pointcrawlNodeId"`
+	Role             string `json:"role"`
 }
 
 type QuestStateCountV2Type struct {
@@ -872,9 +977,19 @@ type QuestSummariesV2Result struct {
 	Totals    *QuestSummaryTotalsV2Type `json:"totals"`
 }
 
+type QuestSummaryInput struct {
+	DocumentID  *string         `json:"documentId,omitempty"`
+	QuestIds    []string        `json:"questIds"`
+	CharacterID *string         `json:"characterId,omitempty"`
+	Title       string          `json:"title"`
+	Body        string          `json:"body"`
+	Visibility  string          `json:"visibility"`
+	Frontmatter json.RawMessage `json:"frontmatter"`
+}
+
 type QuestSummaryTotalsV2Type struct {
-	TotalPcxpAwarded int      `json:"totalPcxpAwarded"`
-	ItemGrants       []string `json:"itemGrants"`
+	TotalPcxpAwarded *int           `json:"totalPcxpAwarded,omitempty"`
+	Coverage         RewardCoverage `json:"coverage"`
 }
 
 type QuestV2FiltersInput struct {
@@ -898,37 +1013,42 @@ type QuestV2ListResult struct {
 }
 
 type QuestV2Type struct {
-	ID               string                      `json:"id"`
-	ShortCode        string                      `json:"shortCode"`
-	Kinds            []string                    `json:"kinds"`
-	Status           string                      `json:"status"`
-	DmID             string                      `json:"dmId"`
-	ArcID            *string                     `json:"arcId,omitempty"`
-	ScheduledAt      time.Time                   `json:"scheduledAt"`
-	DurationHours    float64                     `json:"durationHours"`
-	SlotsMax         int                         `json:"slotsMax"`
-	FilledCount      int                         `json:"filledCount"`
-	DocumentID       string                      `json:"documentId"`
-	DiscordMessageID *string                     `json:"discordMessageId,omitempty"`
-	DiscordEventID   *string                     `json:"discordEventId,omitempty"`
-	EventURL         *string                     `json:"eventUrl,omitempty"`
-	AnnounceError    *string                     `json:"announceError,omitempty"`
-	Tags             []string                    `json:"tags"`
-	Genres           []string                    `json:"genres"`
-	Apl              *int                        `json:"apl,omitempty"`
-	SignupType       *string                     `json:"signupType,omitempty"`
-	CreatedBy        string                      `json:"createdBy"`
-	CreatedAt        time.Time                   `json:"createdAt"`
-	UpdatedAt        time.Time                   `json:"updatedAt"`
-	DisplayStatus    *string                     `json:"displayStatus,omitempty"`
-	Dm               *QuestDmV2Type              `json:"dm,omitempty"`
-	BriefDocument    *DocumentType               `json:"briefDocument,omitempty"`
-	Participants     []*QuestParticipantV2Type   `json:"participants"`
-	Hexes            []*QuestHexV2Type           `json:"hexes"`
-	Arc              *QuestArcV2Type             `json:"arc,omitempty"`
-	DmTable          *DocumentType               `json:"dmTable,omitempty"`
-	Regions          []string                    `json:"regions"`
-	DiscordDelivery  *QuestDiscordDeliveryV2Type `json:"discordDelivery"`
+	ID               string                       `json:"id"`
+	ShortCode        string                       `json:"shortCode"`
+	Kinds            []string                     `json:"kinds"`
+	Status           string                       `json:"status"`
+	DmID             string                       `json:"dmId"`
+	ArcID            *string                      `json:"arcId,omitempty"`
+	ScheduledAt      time.Time                    `json:"scheduledAt"`
+	DurationHours    float64                      `json:"durationHours"`
+	SlotsMax         int                          `json:"slotsMax"`
+	FilledCount      int                          `json:"filledCount"`
+	DocumentID       *string                      `json:"documentId,omitempty"`
+	DiscordMessageID *string                      `json:"discordMessageId,omitempty"`
+	DiscordEventID   *string                      `json:"discordEventId,omitempty"`
+	EventURL         *string                      `json:"eventUrl,omitempty"`
+	AnnounceError    *string                      `json:"announceError,omitempty"`
+	Tags             []string                     `json:"tags"`
+	Genres           []string                     `json:"genres"`
+	Apl              *int                         `json:"apl,omitempty"`
+	SignupType       *string                      `json:"signupType,omitempty"`
+	CreatedBy        string                       `json:"createdBy"`
+	CreatedAt        time.Time                    `json:"createdAt"`
+	UpdatedAt        time.Time                    `json:"updatedAt"`
+	DisplayStatus    *string                      `json:"displayStatus,omitempty"`
+	Dm               *QuestDmV2Type               `json:"dm,omitempty"`
+	BriefDocument    *DocumentType                `json:"briefDocument,omitempty"`
+	Participants     []*QuestParticipantV2Type    `json:"participants"`
+	PointcrawlLinks  []*QuestPointcrawlLinkV2Type `json:"pointcrawlLinks"`
+	Arc              *QuestArcV2Type              `json:"arc,omitempty"`
+	DmTable          *DocumentType                `json:"dmTable,omitempty"`
+	Regions          []string                     `json:"regions"`
+	DiscordDelivery  *QuestDiscordDeliveryV2Type  `json:"discordDelivery"`
+}
+
+type RealDatePage struct {
+	Items []product.Date `json:"items"`
+	Total int            `json:"total"`
 }
 
 type RegionActivityQuestRefV2Type struct {
@@ -949,16 +1069,18 @@ type RegionActivityV2Type struct {
 	LiveQuests     []*RegionActivityQuestRefV2Type `json:"liveQuests"`
 }
 
-type RegionArchonAssignmentsType struct {
-	RegionID string                  `json:"regionId"`
-	Archons  []*ArchonAssignmentType `json:"archons"`
+type RegionCountsV2Type struct {
+	RegionID            string `json:"regionId"`
+	QuestCount          int    `json:"questCount"`
+	PointcrawlNodeCount int    `json:"pointcrawlNodeCount"`
+	FeatureCount        int    `json:"featureCount"`
 }
 
-type RegionCountsV2Type struct {
-	RegionID     string `json:"regionId"`
-	QuestCount   int    `json:"questCount"`
-	HexCount     int    `json:"hexCount"`
-	FeatureCount int    `json:"featureCount"`
+type RegionInput struct {
+	Name            string     `json:"name"`
+	Kind            string     `json:"kind"`
+	CharterDeadline *time.Time `json:"charterDeadline,omitempty"`
+	DocumentID      *string    `json:"documentId,omitempty"`
 }
 
 type RegionV2Type struct {
@@ -970,13 +1092,9 @@ type RegionV2Type struct {
 	CreatedAt       time.Time  `json:"createdAt"`
 }
 
-type RequestV2Type struct {
-	ID          string  `json:"id"`
-	RequesterID string  `json:"requesterId"`
-	TargetDmID  string  `json:"targetDmId"`
-	Kind        string  `json:"kind"`
-	Note        *string `json:"note,omitempty"`
-	Status      string  `json:"status"`
+type RoleChangePage struct {
+	Items []*RoleChangeType `json:"items"`
+	Total int               `json:"total"`
 }
 
 type RoleChangeType struct {
@@ -987,6 +1105,16 @@ type RoleChangeType struct {
 	ChangedBy  string    `json:"changedBy"`
 	OccurredAt time.Time `json:"occurredAt"`
 	Note       *string   `json:"note,omitempty"`
+}
+
+type ScheduledWorkStatusType struct {
+	Kind           string     `json:"kind"`
+	ExpectedSlot   time.Time  `json:"expectedSlot"`
+	Outcome        string     `json:"outcome"`
+	LastStartedAt  *time.Time `json:"lastStartedAt,omitempty"`
+	LastFinishedAt *time.Time `json:"lastFinishedAt,omitempty"`
+	JobID          *string    `json:"jobId,omitempty"`
+	SafeErrorCode  *string    `json:"safeErrorCode,omitempty"`
 }
 
 type SearchKindType struct {
@@ -1009,40 +1137,30 @@ type SearchResultV2Type struct {
 type SiteStatsV2Type struct {
 	TotalMembers                 int                  `json:"totalMembers"`
 	MembersByRole                []*CountByKeyType    `json:"membersByRole"`
-	TotalDirectors               int                  `json:"totalDirectors"`
 	ActiveCharacters             int                  `json:"activeCharacters"`
 	PublishedDocumentsByKind     []*CountByKeyType    `json:"publishedDocumentsByKind"`
 	PublishedDocumentsByCategory []*CountByKeyType    `json:"publishedDocumentsByCategory"`
 	TotalMaps                    int                  `json:"totalMaps"`
-	TotalHexes                   int                  `json:"totalHexes"`
 	TotalRegions                 int                  `json:"totalRegions"`
 	TotalQuests                  int                  `json:"totalQuests"`
 	TotalDms                     int                  `json:"totalDms"`
-	BeginnerFriendlyQuestCount   int                  `json:"beginnerFriendlyQuestCount"`
-	MonthsOfHistory              int                  `json:"monthsOfHistory"`
 	Activity                     *ActivitySummaryType `json:"activity"`
 }
 
 type SummaryDerivedV2Type struct {
-	Regions    []*SummaryRegionV2Type `json:"regions"`
-	Hexes      []*SummaryHexV2Type    `json:"hexes"`
-	Dms        []*SummaryDmV2Type     `json:"dms"`
-	Players    []*SummaryPlayerV2Type `json:"players"`
-	OccurredAt *time.Time             `json:"occurredAt,omitempty"`
-	Arc        *string                `json:"arc,omitempty"`
-	GameDay    *int                   `json:"gameDay,omitempty"`
-	GameDate   *GameDateV2Type        `json:"gameDate,omitempty"`
+	Regions         []*SummaryRegionV2Type         `json:"regions"`
+	PointcrawlNodes []*SummaryPointcrawlNodeV2Type `json:"pointcrawlNodes"`
+	Dms             []*SummaryDmV2Type             `json:"dms"`
+	Players         []*SummaryPlayerV2Type         `json:"players"`
+	OccurredAt      *time.Time                     `json:"occurredAt,omitempty"`
+	Arc             *string                        `json:"arc,omitempty"`
+	GameDay         *int                           `json:"gameDay,omitempty"`
+	GameDate        *GameDateV2Type                `json:"gameDate,omitempty"`
 }
 
 type SummaryDmV2Type struct {
 	ID          string `json:"id"`
 	DisplayName string `json:"displayName"`
-}
-
-type SummaryHexV2Type struct {
-	ID      string  `json:"id"`
-	MapID   string  `json:"mapId"`
-	Hexcode *string `json:"hexcode,omitempty"`
 }
 
 type SummaryPlayerV2Type struct {
@@ -1053,9 +1171,27 @@ type SummaryPlayerV2Type struct {
 	Manual             bool   `json:"manual"`
 }
 
+type SummaryPointcrawlNodeV2Type struct {
+	ID    string  `json:"id"`
+	MapID string  `json:"mapId"`
+	Name  *string `json:"name,omitempty"`
+}
+
 type SummaryRegionV2Type struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
+}
+
+type TimeAnchorInput struct {
+	RealUtc  time.Time `json:"realUtc"`
+	EpochDay int       `json:"epochDay"`
+	Rate     float64   `json:"rate"`
+	Note     *string   `json:"note,omitempty"`
+}
+
+type TimeAnchorPage struct {
+	Items []*TimeAnchorV2Type `json:"items"`
+	Total int                 `json:"total"`
 }
 
 type TimeAnchorV2Type struct {
@@ -1066,19 +1202,37 @@ type TimeAnchorV2Type struct {
 	Note     *string   `json:"note,omitempty"`
 }
 
+type UnlockablePage struct {
+	Items []*UnlockableType `json:"items"`
+	Total int               `json:"total"`
+}
+
 type UnlockableType struct {
-	ID           string         `json:"id"`
-	CosmeticType string         `json:"cosmeticType"`
-	Name         string         `json:"name"`
-	Description  *string        `json:"description,omitempty"`
-	Payload      map[string]any `json:"payload"`
-	UnlockRule   map[string]any `json:"unlockRule,omitempty"`
-	Active       bool           `json:"active"`
+	ID          string          `json:"id"`
+	Kind        UnlockKind      `json:"kind"`
+	Name        string          `json:"name"`
+	Description *string         `json:"description,omitempty"`
+	Payload     json.RawMessage `json:"payload"`
+	UnlockRule  json.RawMessage `json:"unlockRule,omitempty"`
+	Active      bool            `json:"active"`
 }
 
 type UpdateCharacterProfileV2Input struct {
-	Description    *string `json:"description,omitempty"`
-	BackgroundText *string `json:"backgroundText,omitempty"`
+	Description    graphql.Omittable[*string] `json:"description,omitempty"`
+	BackgroundText graphql.Omittable[*string] `json:"backgroundText,omitempty"`
+}
+
+type UpdateDmProfileInput struct {
+	Tagline          *string         `json:"tagline,omitempty"`
+	Philosophy       *string         `json:"philosophy,omitempty"`
+	HouseRules       *string         `json:"houseRules,omitempty"`
+	TableInfo        json.RawMessage `json:"tableInfo,omitempty"`
+	AcceptingPlayers bool            `json:"acceptingPlayers"`
+}
+
+type UpdateMyProfileInput struct {
+	DisplayName string                     `json:"displayName"`
+	AvatarURL   graphql.Omittable[*string] `json:"avatarUrl,omitempty"`
 }
 
 type UpsertCreationCatalogEntryInput struct {
@@ -1092,12 +1246,17 @@ type UpsertCreationCatalogEntryInput struct {
 }
 
 type UpsertUnlockableInput struct {
-	CosmeticType string         `json:"cosmeticType"`
-	Name         string         `json:"name"`
-	Payload      map[string]any `json:"payload"`
-	Description  *string        `json:"description,omitempty"`
-	UnlockRule   map[string]any `json:"unlockRule,omitempty"`
-	Active       bool           `json:"active"`
+	Kind        UnlockKind      `json:"kind"`
+	Name        string          `json:"name"`
+	Payload     json.RawMessage `json:"payload"`
+	Description *string         `json:"description,omitempty"`
+	UnlockRule  json.RawMessage `json:"unlockRule,omitempty"`
+	Active      bool            `json:"active"`
+}
+
+type VerificationPage struct {
+	Items []*VerificationType `json:"items"`
+	Total int                 `json:"total"`
 }
 
 type VerificationType struct {
@@ -1111,10 +1270,10 @@ type VerificationType struct {
 }
 
 type WeekActivityType struct {
-	PeriodStart  time.Time `json:"periodStart"`
-	VoiceMinutes int       `json:"voiceMinutes"`
-	Messages     int       `json:"messages"`
-	Reactions    int       `json:"reactions"`
+	PeriodStart  product.Date `json:"periodStart"`
+	VoiceMinutes float64      `json:"voiceMinutes"`
+	Messages     float64      `json:"messages"`
+	Reactions    float64      `json:"reactions"`
 }
 
 type CharacterReviewStatus string
@@ -1171,6 +1330,118 @@ func (e *CharacterReviewStatus) UnmarshalJSON(b []byte) error {
 }
 
 func (e CharacterReviewStatus) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type ColorMode string
+
+const (
+	ColorModeLight  ColorMode = "LIGHT"
+	ColorModeDark   ColorMode = "DARK"
+	ColorModeSystem ColorMode = "SYSTEM"
+)
+
+var AllColorMode = []ColorMode{
+	ColorModeLight,
+	ColorModeDark,
+	ColorModeSystem,
+}
+
+func (e ColorMode) IsValid() bool {
+	switch e {
+	case ColorModeLight, ColorModeDark, ColorModeSystem:
+		return true
+	}
+	return false
+}
+
+func (e ColorMode) String() string {
+	return string(e)
+}
+
+func (e *ColorMode) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = ColorMode(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid ColorMode", str)
+	}
+	return nil
+}
+
+func (e ColorMode) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *ColorMode) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e ColorMode) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type Density string
+
+const (
+	DensityComfortable Density = "COMFORTABLE"
+	DensityCompact     Density = "COMPACT"
+)
+
+var AllDensity = []Density{
+	DensityComfortable,
+	DensityCompact,
+}
+
+func (e Density) IsValid() bool {
+	switch e {
+	case DensityComfortable, DensityCompact:
+		return true
+	}
+	return false
+}
+
+func (e Density) String() string {
+	return string(e)
+}
+
+func (e *Density) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = Density(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid Density", str)
+	}
+	return nil
+}
+
+func (e Density) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *Density) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e Density) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil
@@ -1288,58 +1559,48 @@ func (e PreviewAudience) MarshalJSON() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-type QuestDiscordSyncLegStateV2 string
+type RewardCoverage string
 
 const (
-	QuestDiscordSyncLegStateV2Created        QuestDiscordSyncLegStateV2 = "CREATED"
-	QuestDiscordSyncLegStateV2Updated        QuestDiscordSyncLegStateV2 = "UPDATED"
-	QuestDiscordSyncLegStateV2Unchanged      QuestDiscordSyncLegStateV2 = "UNCHANGED"
-	QuestDiscordSyncLegStateV2NotConfigured  QuestDiscordSyncLegStateV2 = "NOT_CONFIGURED"
-	QuestDiscordSyncLegStateV2Failed         QuestDiscordSyncLegStateV2 = "FAILED"
-	QuestDiscordSyncLegStateV2RateLimited    QuestDiscordSyncLegStateV2 = "RATE_LIMITED"
-	QuestDiscordSyncLegStateV2RepairRequired QuestDiscordSyncLegStateV2 = "REPAIR_REQUIRED"
+	RewardCoverageComplete      RewardCoverage = "COMPLETE"
+	RewardCoverageLegacyUnknown RewardCoverage = "LEGACY_UNKNOWN"
 )
 
-var AllQuestDiscordSyncLegStateV2 = []QuestDiscordSyncLegStateV2{
-	QuestDiscordSyncLegStateV2Created,
-	QuestDiscordSyncLegStateV2Updated,
-	QuestDiscordSyncLegStateV2Unchanged,
-	QuestDiscordSyncLegStateV2NotConfigured,
-	QuestDiscordSyncLegStateV2Failed,
-	QuestDiscordSyncLegStateV2RateLimited,
-	QuestDiscordSyncLegStateV2RepairRequired,
+var AllRewardCoverage = []RewardCoverage{
+	RewardCoverageComplete,
+	RewardCoverageLegacyUnknown,
 }
 
-func (e QuestDiscordSyncLegStateV2) IsValid() bool {
+func (e RewardCoverage) IsValid() bool {
 	switch e {
-	case QuestDiscordSyncLegStateV2Created, QuestDiscordSyncLegStateV2Updated, QuestDiscordSyncLegStateV2Unchanged, QuestDiscordSyncLegStateV2NotConfigured, QuestDiscordSyncLegStateV2Failed, QuestDiscordSyncLegStateV2RateLimited, QuestDiscordSyncLegStateV2RepairRequired:
+	case RewardCoverageComplete, RewardCoverageLegacyUnknown:
 		return true
 	}
 	return false
 }
 
-func (e QuestDiscordSyncLegStateV2) String() string {
+func (e RewardCoverage) String() string {
 	return string(e)
 }
 
-func (e *QuestDiscordSyncLegStateV2) UnmarshalGQL(v any) error {
+func (e *RewardCoverage) UnmarshalGQL(v any) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
 	}
 
-	*e = QuestDiscordSyncLegStateV2(str)
+	*e = RewardCoverage(str)
 	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid QuestDiscordSyncLegStateV2", str)
+		return fmt.Errorf("%s is not a valid RewardCoverage", str)
 	}
 	return nil
 }
 
-func (e QuestDiscordSyncLegStateV2) MarshalGQL(w io.Writer) {
+func (e RewardCoverage) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
-func (e *QuestDiscordSyncLegStateV2) UnmarshalJSON(b []byte) error {
+func (e *RewardCoverage) UnmarshalJSON(b []byte) error {
 	s, err := strconv.Unquote(string(b))
 	if err != nil {
 		return err
@@ -1347,72 +1608,60 @@ func (e *QuestDiscordSyncLegStateV2) UnmarshalJSON(b []byte) error {
 	return e.UnmarshalGQL(s)
 }
 
-func (e QuestDiscordSyncLegStateV2) MarshalJSON() ([]byte, error) {
+func (e RewardCoverage) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil
 }
 
-type UnknownReason string
+type Theme string
 
 const (
-	UnknownReasonDmSummaryMissing      UnknownReason = "DM_SUMMARY_MISSING"
-	UnknownReasonCharacterSheetMissing UnknownReason = "CHARACTER_SHEET_MISSING"
-	UnknownReasonQuestSummaryMissing   UnknownReason = "QUEST_SUMMARY_MISSING"
-	UnknownReasonRegionUnassigned      UnknownReason = "REGION_UNASSIGNED"
-	UnknownReasonNpcOwnerMissing       UnknownReason = "NPC_OWNER_MISSING"
-	UnknownReasonFactionLeaderMissing  UnknownReason = "FACTION_LEADER_MISSING"
-	UnknownReasonNeverScraped          UnknownReason = "NEVER_SCRAPED"
-	UnknownReasonArchiveGap            UnknownReason = "ARCHIVE_GAP"
-	UnknownReasonAmbiguousName         UnknownReason = "AMBIGUOUS_NAME"
-	UnknownReasonTimelineGap           UnknownReason = "TIMELINE_GAP"
-	UnknownReasonOther                 UnknownReason = "OTHER"
+	ThemeParchment Theme = "PARCHMENT"
+	ThemeMidnight  Theme = "MIDNIGHT"
+	ThemeEmber     Theme = "EMBER"
+	ThemeDracula   Theme = "DRACULA"
+	ThemeVegan     Theme = "VEGAN"
 )
 
-var AllUnknownReason = []UnknownReason{
-	UnknownReasonDmSummaryMissing,
-	UnknownReasonCharacterSheetMissing,
-	UnknownReasonQuestSummaryMissing,
-	UnknownReasonRegionUnassigned,
-	UnknownReasonNpcOwnerMissing,
-	UnknownReasonFactionLeaderMissing,
-	UnknownReasonNeverScraped,
-	UnknownReasonArchiveGap,
-	UnknownReasonAmbiguousName,
-	UnknownReasonTimelineGap,
-	UnknownReasonOther,
+var AllTheme = []Theme{
+	ThemeParchment,
+	ThemeMidnight,
+	ThemeEmber,
+	ThemeDracula,
+	ThemeVegan,
 }
 
-func (e UnknownReason) IsValid() bool {
+func (e Theme) IsValid() bool {
 	switch e {
-	case UnknownReasonDmSummaryMissing, UnknownReasonCharacterSheetMissing, UnknownReasonQuestSummaryMissing, UnknownReasonRegionUnassigned, UnknownReasonNpcOwnerMissing, UnknownReasonFactionLeaderMissing, UnknownReasonNeverScraped, UnknownReasonArchiveGap, UnknownReasonAmbiguousName, UnknownReasonTimelineGap, UnknownReasonOther:
+	case ThemeParchment, ThemeMidnight, ThemeEmber, ThemeDracula, ThemeVegan:
 		return true
 	}
 	return false
 }
 
-func (e UnknownReason) String() string {
+func (e Theme) String() string {
 	return string(e)
 }
 
-func (e *UnknownReason) UnmarshalGQL(v any) error {
+func (e *Theme) UnmarshalGQL(v any) error {
 	str, ok := v.(string)
 	if !ok {
 		return fmt.Errorf("enums must be strings")
 	}
 
-	*e = UnknownReason(str)
+	*e = Theme(str)
 	if !e.IsValid() {
-		return fmt.Errorf("%s is not a valid UnknownReason", str)
+		return fmt.Errorf("%s is not a valid Theme", str)
 	}
 	return nil
 }
 
-func (e UnknownReason) MarshalGQL(w io.Writer) {
+func (e Theme) MarshalGQL(w io.Writer) {
 	fmt.Fprint(w, strconv.Quote(e.String()))
 }
 
-func (e *UnknownReason) UnmarshalJSON(b []byte) error {
+func (e *Theme) UnmarshalJSON(b []byte) error {
 	s, err := strconv.Unquote(string(b))
 	if err != nil {
 		return err
@@ -1420,7 +1669,117 @@ func (e *UnknownReason) UnmarshalJSON(b []byte) error {
 	return e.UnmarshalGQL(s)
 }
 
-func (e UnknownReason) MarshalJSON() ([]byte, error) {
+func (e Theme) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type UnlockKind string
+
+const (
+	UnlockKindAchievement UnlockKind = "ACHIEVEMENT"
+	UnlockKindDmTier      UnlockKind = "DM_TIER"
+)
+
+var AllUnlockKind = []UnlockKind{
+	UnlockKindAchievement,
+	UnlockKindDmTier,
+}
+
+func (e UnlockKind) IsValid() bool {
+	switch e {
+	case UnlockKindAchievement, UnlockKindDmTier:
+		return true
+	}
+	return false
+}
+
+func (e UnlockKind) String() string {
+	return string(e)
+}
+
+func (e *UnlockKind) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = UnlockKind(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid UnlockKind", str)
+	}
+	return nil
+}
+
+func (e UnlockKind) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *UnlockKind) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e UnlockKind) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+type VerificationVerdict string
+
+const (
+	VerificationVerdictApproved VerificationVerdict = "APPROVED"
+	VerificationVerdictRejected VerificationVerdict = "REJECTED"
+)
+
+var AllVerificationVerdict = []VerificationVerdict{
+	VerificationVerdictApproved,
+	VerificationVerdictRejected,
+}
+
+func (e VerificationVerdict) IsValid() bool {
+	switch e {
+	case VerificationVerdictApproved, VerificationVerdictRejected:
+		return true
+	}
+	return false
+}
+
+func (e VerificationVerdict) String() string {
+	return string(e)
+}
+
+func (e *VerificationVerdict) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = VerificationVerdict(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid VerificationVerdict", str)
+	}
+	return nil
+}
+
+func (e VerificationVerdict) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *VerificationVerdict) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e VerificationVerdict) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

@@ -60,13 +60,10 @@
             },
         },
       'GameCalendarV2Type': { 'fields': { 'currentGameDate': { 'resolver': true } } },
-      'HexV2Type': { 'fields': { 'linkedEntries': { 'resolver': true } } },
       'MapV2Type':
         {
           'fields':
             {
-              'edges': { 'resolver': true },
-              'hexes': { 'resolver': true },
               'pointcrawlEdges': { 'resolver': true },
               'pointcrawlNodes': { 'resolver': true },
             },
@@ -93,9 +90,8 @@
               'discordDelivery': { 'resolver': true },
               'dm': { 'resolver': true },
               'dmTable': { 'resolver': true },
-              'hexes': { 'resolver': true },
               'participants': { 'resolver': true },
-              'rewardEntitlements': { 'resolver': true },
+              'pointcrawlLinks': { 'resolver': true },
             },
         },
       'MemberType': { 'fields': { 'discordId': { 'resolver': true } } },
@@ -107,16 +103,6 @@
               'category': { 'omittable': true },
               'frontmatter': { 'omittable': true },
               'title': { 'omittable': true },
-            },
-        },
-      'HexEditInput':
-        {
-          'fields':
-            {
-              'climate': { 'omittable': true },
-              'elevation': { 'omittable': true },
-              'submapId': { 'omittable': true },
-              'terrain': { 'omittable': true },
             },
         },
       'MemberSettingsPatch':

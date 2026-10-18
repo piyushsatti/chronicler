@@ -15,7 +15,7 @@ import (
 )
 
 func TestGraphQLRootsMatchExecutableSchema(t *testing.T) {
-	rootsPath := filepath.Join(contractsDir(t), "graphql", "roots.graphql")
+	rootsPath := filepath.Join(contractsDir(t), "graphql", "_roots.graphql")
 	raw, err := os.ReadFile(rootsPath)
 	if err != nil {
 		t.Fatal(err)
@@ -34,17 +34,12 @@ func TestGraphQLRootsMatchExecutableSchema(t *testing.T) {
 		t.Run(tc.root, func(t *testing.T) {
 			want := fieldNamesFromRootsSource(t, string(raw), tc.root)
 			got := fieldNames(tc.got)
-			if tc.root == "Mutation" && len(want) == 0 {
-				if len(got) > 0 {
-					t.Fatalf("executable schema has Mutation fields %v but roots.graphql has no Mutation", got)
-				}
+			if len(want) == 0 {
+				// M1: product fields live on domain extend blocks; _roots may hold placeholders only.
 				return
 			}
-			if tc.root == "Query" && len(want) == 0 {
-				t.Fatal("roots.graphql has no Query fields")
-			}
 			if missing := diffSorted(want, got); len(missing) > 0 {
-				t.Fatalf("roots.graphql %s fields missing from gqlgen schema:\n  %s",
+				t.Fatalf("_roots.graphql %s fields missing from gqlgen schema:\n  %s",
 					tc.root, strings.Join(missing, "\n  "))
 			}
 		})
@@ -52,7 +47,7 @@ func TestGraphQLRootsMatchExecutableSchema(t *testing.T) {
 }
 
 func TestGraphQLQueryResolverImplementsRoots(t *testing.T) {
-	raw, err := os.ReadFile(filepath.Join(contractsDir(t), "graphql", "roots.graphql"))
+	raw, err := os.ReadFile(filepath.Join(contractsDir(t), "graphql", "_roots.graphql"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +66,7 @@ func TestGraphQLQueryResolverImplementsRoots(t *testing.T) {
 		}
 	}
 	if len(missing) > 0 {
-		t.Fatalf("QueryResolver missing methods for roots.graphql fields:\n  %s", strings.Join(missing, "\n  "))
+		t.Fatalf("QueryResolver missing methods for _roots.graphql fields:\n  %s", strings.Join(missing, "\n  "))
 	}
 }
 
@@ -96,6 +91,9 @@ func fieldNamesFromRootsSource(t *testing.T, src, typeName string) []string {
 	all := fieldNames(schema.Types[typeName])
 	var out []string
 	for _, name := range all {
+		if name == "_contractLayoutStub" {
+			continue
+		}
 		if strings.Contains(src, "\n  "+name+"(") || strings.Contains(src, "\n  "+name+":") {
 			out = append(out, name)
 		}
@@ -107,22 +105,33 @@ func fieldNamesFromRootsSource(t *testing.T, src, typeName string) []string {
 func loadContractsGraphQL(t *testing.T) *ast.Schema {
 	t.Helper()
 	dir := filepath.Join(contractsDir(t), "graphql")
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
 	var sources []*ast.Source
-	for _, e := range entries {
-		if e.IsDir() || !strings.HasSuffix(e.Name(), ".graphql") {
-			continue
-		}
-		path := filepath.Join(dir, e.Name())
-		raw, err := os.ReadFile(path)
+	var walk func(string)
+	walk = func(current string) {
+		entries, err := os.ReadDir(current)
 		if err != nil {
 			t.Fatal(err)
 		}
-		sources = append(sources, &ast.Source{Name: path, Input: string(raw)})
+		for _, e := range entries {
+			path := filepath.Join(current, e.Name())
+			if e.IsDir() {
+				walk(path)
+				continue
+			}
+			if !strings.HasSuffix(e.Name(), ".graphql") {
+				continue
+			}
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			sources = append(sources, &ast.Source{Name: path, Input: string(raw)})
+		}
 	}
+	walk(dir)
+	sort.Slice(sources, func(i, j int) bool {
+		return sources[i].Name < sources[j].Name
+	})
 	schema, err := gqlparser.LoadSchema(sources...)
 	if err != nil {
 		t.Fatalf("load contracts graphql: %v", err)
