@@ -989,7 +989,7 @@ func assertA1SquashShape(t *testing.T, db *sql.DB) {
 	wantAbsent := []string{
 		"hexes", "pois", "hex_edges", "hex_entry_links", "hex_changes", "quest_hexes",
 		"notification_events", "notification_channel_deliveries", "member_follows", "dm_requests",
-		"role_changes", "quest_reward_entitlements", "quest_reward_decisions", "character_ddb_attempts",
+		"request_decisions", "quest_reward_entitlements", "quest_reward_decisions", "character_ddb_attempts",
 		"job_redrives", "operational_observations", "auth_override_audit",
 	}
 	for _, name := range wantAbsent {
@@ -997,13 +997,13 @@ func assertA1SquashShape(t *testing.T, db *sql.DB) {
 			t.Fatalf("dropped table %s still exists", name)
 		}
 	}
-	for _, name := range []string{"quest_pointcrawl_nodes", "pointcrawl_nodes", "unlockables", "game_time_map"} {
+	for _, name := range []string{"quest_pointcrawl_nodes", "pointcrawl_nodes", "unlockables", "game_time_map", "role_changes"} {
 		if p04Text(t, db, `SELECT to_regclass($1) IS NOT NULL`, name) != "true" {
 			t.Fatalf("missing required table %s", name)
 		}
 	}
 	count := p04Text(t, db, `SELECT count(*)::text FROM pg_tables WHERE schemaname=current_schema() AND tablename <> 'goose_db_version'`)
-	p04Equal(t, count, "41")
+	p04Equal(t, count, "42")
 }
 
 func TestA1SquashInitAcceptance(t *testing.T) {

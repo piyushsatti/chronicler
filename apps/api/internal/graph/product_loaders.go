@@ -16,6 +16,8 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/spatial"
 )
 
+const loaderChunkSize = 100
+
 type Loader[K comparable, V any] struct {
 	Load     func(context.Context, K) (*V, error)
 	LoadMany func(context.Context, []K) ([]product.BatchResult[V], error)
@@ -29,7 +31,7 @@ type RequestLoaders struct {
 	Characters           *Loader[character.IDKey, character.CharacterView]
 	Quests               *Loader[quest.IDKey, quest.QuestView]
 	Participants         *Loader[quest.ParticipantsKey, quest.ParticipantList]
-	QuestHexes           *Loader[quest.QuestHexesKey, quest.HexList]
+	QuestPointcrawlLinks *Loader[quest.QuestHexesKey, quest.HexList]
 	QuestRegions         *Loader[quest.QuestRegionsKey, quest.RegionIDList]
 	Arcs                 *Loader[quest.IDKey, quest.QuestArcView]
 	ArcQuests            *Loader[quest.ArcQuestsKey, quest.QuestList]
@@ -73,8 +75,8 @@ func (l *RequestLoaders) clear() {
 	if l.Participants != nil && l.Participants.Clear != nil {
 		l.Participants.Clear()
 	}
-	if l.QuestHexes != nil && l.QuestHexes.Clear != nil {
-		l.QuestHexes.Clear()
+	if l.QuestPointcrawlLinks != nil && l.QuestPointcrawlLinks.Clear != nil {
+		l.QuestPointcrawlLinks.Clear()
 	}
 	if l.QuestRegions != nil && l.QuestRegions.Clear != nil {
 		l.QuestRegions.Clear()
@@ -169,67 +171,119 @@ func NewRequestLoaders(providers BatchProviders, state *RequestState) (*RequestL
 	}
 	reg := &RequestLoaders{}
 	if providers.Member != nil {
-		reg.Members = newEntityLoader(state, providers.Member.BatchMembers)
-		reg.MemberVoiceChannels = newEntityLoader(state, providers.Member.BatchMemberVoiceChannels)
-		reg.MemberRecentSessions = newEntityLoader(state, providers.Member.BatchMemberRecentSessions)
-		reg.MemberRecentWeeks = newEntityLoader(state, providers.Member.BatchMemberRecentWeeks)
+		reg.Members = newKeyedLoader(state, providers.Member.BatchMembers)
+		reg.MemberVoiceChannels = newKeyedLoader(state, providers.Member.BatchMemberVoiceChannels)
+		reg.MemberRecentSessions = newKeyedLoader(state, providers.Member.BatchMemberRecentSessions)
+		reg.MemberRecentWeeks = newKeyedLoader(state, providers.Member.BatchMemberRecentWeeks)
+	}
+	if providers.Document != nil {
+		reg.Documents = newKeyedLoader(state, providers.Document.BatchDocuments)
+		reg.DmTables = newKeyedLoader(state, providers.Document.BatchDmTables)
+		reg.SummaryDerived = newKeyedLoader(state, providers.Document.BatchSummaryDerived)
+		reg.DocumentSubjects = newKeyedLoader(state, providers.Document.BatchDocumentSubjects)
 	}
 	if providers.Character != nil {
-		reg.Characters = newEntityLoader(state, providers.Character.BatchCharacters)
+		reg.Characters = newKeyedLoader(state, providers.Character.BatchCharacters)
+	}
+	if providers.Quest != nil {
+		reg.Quests = newKeyedLoader(state, providers.Quest.BatchQuests)
+		reg.Participants = newKeyedLoader(state, providers.Quest.BatchParticipants)
+		reg.QuestPointcrawlLinks = newKeyedLoader(state, providers.Quest.BatchQuestPointcrawlLinks)
+		reg.QuestRegions = newKeyedLoader(state, providers.Quest.BatchQuestRegions)
+		reg.Arcs = newKeyedLoader(state, providers.Quest.BatchArcs)
+		reg.ArcQuests = newKeyedLoader(state, providers.Quest.BatchArcQuests)
+		reg.Delivery = newKeyedLoader(state, providers.Quest.BatchDelivery)
+		reg.RewardEntitlements = newKeyedLoader(state, providers.Quest.BatchRewardEntitlements)
+	}
+	if providers.Spatial != nil {
+		reg.MapHexes = newKeyedLoader(state, providers.Spatial.BatchMapHexes)
+		reg.MapEdges = newKeyedLoader(state, providers.Spatial.BatchMapEdges)
+		reg.MapNodes = newKeyedLoader(state, providers.Spatial.BatchMapNodes)
+		reg.MapNodeEdges = newKeyedLoader(state, providers.Spatial.BatchMapNodeEdges)
+		reg.HexLinks = newKeyedLoader(state, providers.Spatial.BatchHexLinks)
+		reg.NodeLinks = newKeyedLoader(state, providers.Spatial.BatchNodeLinks)
+		reg.POIs = newKeyedLoader(state, providers.Spatial.BatchPOIs)
 	}
 	if providers.Notification != nil {
-		reg.NotificationSubjects = newEntityLoader(state, providers.Notification.BatchNotificationSubjects)
+		reg.NotificationSubjects = newKeyedLoader(state, providers.Notification.BatchNotificationSubjects)
 	}
 	if providers.Site != nil {
-		reg.ActiveAlerts = newEntityLoader(state, providers.Site.BatchActiveAlerts)
+		reg.ActiveAlerts = newKeyedLoader(state, providers.Site.BatchActiveAlerts)
 	}
 	return reg, nil
 }
 
-func newEntityLoader[K comparable, V any](
-	state *RequestState,
-	batch func(context.Context, auth.Authority, []K) ([]product.BatchResult[V], error),
-) *Loader[K, V] {
-	cache := map[K]*V{}
+func newKeyedLoader[K comparable, V any](state *RequestState, read func(context.Context, auth.Authority, []K) ([]product.BatchResult[V], error)) *Loader[K, V] {
+	cache := map[K]product.BatchResult[V]{}
 	var mu sync.Mutex
-	loader := &Loader[K, V]{}
-	loader.Load = func(ctx context.Context, key K) (*V, error) {
+	clearFn := func() {
 		mu.Lock()
-		if v, ok := cache[key]; ok {
+		cache = map[K]product.BatchResult[V]{}
+		mu.Unlock()
+	}
+	loadMany := func(ctx context.Context, keys []K) ([]product.BatchResult[V], error) {
+		if len(keys) == 0 {
+			return nil, nil
+		}
+		actor, err := state.CurrentAuthority(ctx)
+		if err != nil {
+			return nil, err
+		}
+		out := make([]product.BatchResult[V], len(keys))
+		missing := make([]K, 0, len(keys))
+		missingIdx := make([]int, 0, len(keys))
+		mu.Lock()
+		for i, key := range keys {
+			if cached, ok := cache[key]; ok {
+				out[i] = cached
+				continue
+			}
+			missing = append(missing, key)
+			missingIdx = append(missingIdx, i)
+		}
+		mu.Unlock()
+		if len(missing) == 0 {
+			return out, nil
+		}
+		for start := 0; start < len(missing); start += loaderChunkSize {
+			end := start + loaderChunkSize
+			if end > len(missing) {
+				end = len(missing)
+			}
+			chunk := missing[start:end]
+			chunkIdx := missingIdx[start:end]
+			fetched, err := read(ctx, actor, chunk)
+			if err != nil {
+				return nil, err
+			}
+			if len(fetched) != len(chunk) {
+				return nil, errors.New("batch loader result length mismatch")
+			}
+			mu.Lock()
+			for i, key := range chunk {
+				result := fetched[i]
+				cache[key] = result
+				out[chunkIdx[i]] = result
+			}
 			mu.Unlock()
-			return v, nil
 		}
-		mu.Unlock()
-		actor, err := state.CurrentAuthority(ctx)
-		if err != nil {
-			return nil, err
-		}
-		results, err := batch(ctx, actor, []K{key})
-		if err != nil {
-			return nil, err
-		}
-		if len(results) != 1 {
-			return nil, errors.New("batch loader correspondence failed")
-		}
-		if results[0].Err != nil {
-			return nil, results[0].Err
-		}
-		mu.Lock()
-		cache[key] = results[0].Value
-		mu.Unlock()
-		return results[0].Value, nil
+		return out, nil
 	}
-	loader.LoadMany = func(ctx context.Context, keys []K) ([]product.BatchResult[V], error) {
-		actor, err := state.CurrentAuthority(ctx)
-		if err != nil {
-			return nil, err
-		}
-		return batch(ctx, actor, keys)
+	return &Loader[K, V]{
+		Load: func(ctx context.Context, key K) (*V, error) {
+			results, err := loadMany(ctx, []K{key})
+			if err != nil {
+				return nil, err
+			}
+			if len(results) != 1 {
+				return nil, errors.New("batch loader single key mismatch")
+			}
+			if results[0].Err != nil {
+				return nil, results[0].Err
+			}
+			return results[0].Value, nil
+		},
+		LoadMany: loadMany,
+		Clear:    clearFn,
 	}
-	loader.Clear = func() {
-		mu.Lock()
-		clear(cache)
-		mu.Unlock()
-	}
-	return loader
 }

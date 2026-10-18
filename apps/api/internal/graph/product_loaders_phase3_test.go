@@ -1,8 +1,13 @@
 package graph
 
 import (
+	"context"
 	"reflect"
 	"testing"
+
+	"github.com/piyushsatti/chronicler/apps/api/internal/member"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 )
 
 func TestRequestLoadersClearEveryRegisteredCache(t *testing.T) {
@@ -22,4 +27,60 @@ func TestRequestLoadersClearEveryRegisteredCache(t *testing.T) {
 	}
 	(&RequestLoaders{}).clear()
 	(*RequestLoaders)(nil).clear()
+}
+
+func TestNewLoaderRegistryChunksAndCaches(t *testing.T) {
+	admin, err := auth.NewAuthority("ada", []auth.Role{auth.Admin}, "active", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var batches atomicInt
+	state, err := NewRequestState(auth.Claims{MemberID: "ada"}, func(context.Context, string) (auth.Authority, error) {
+		return admin, nil
+	}, &admin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	loader := newKeyedLoader(state, func(ctx context.Context, actor auth.Authority, keys []member.IDKey) ([]product.BatchResult[member.MemberView], error) {
+		batches.add(1)
+		_ = len(keys)
+		out := make([]product.BatchResult[member.MemberView], len(keys))
+		for i := range keys {
+			out[i] = product.BatchResult[member.MemberView]{Value: &member.MemberView{Id: keys[i].ID}}
+		}
+		return out, nil
+	})
+	keys := make([]member.IDKey, 150)
+	for i := range keys {
+		keys[i] = member.IDKey{ID: "10000000-0000-4000-8000-" + format4(i)}
+	}
+	if _, err := loader.LoadMany(context.Background(), keys); err != nil {
+		t.Fatal(err)
+	}
+	if batches.load() != 2 {
+		t.Fatalf("expected 2 chunks, got %d", batches.load())
+	}
+	if _, err := loader.LoadMany(context.Background(), keys[:1]); err != nil {
+		t.Fatal(err)
+	}
+	if batches.load() != 2 {
+		t.Fatalf("cache miss count = %d", batches.load())
+	}
+}
+
+type atomicInt struct {
+	n int
+}
+
+func (a *atomicInt) add(v int) { a.n += v }
+func (a *atomicInt) load() int { return a.n }
+
+func format4(v int) string {
+	const digits = "0123456789abcdef"
+	b := []byte("000000000000")
+	for i := len(b) - 1; i >= 0; i-- {
+		b[i] = digits[v&0xf]
+		v >>= 4
+	}
+	return string(b)
 }

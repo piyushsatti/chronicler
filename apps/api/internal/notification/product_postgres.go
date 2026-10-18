@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
@@ -64,13 +65,7 @@ func (p *ProductPostgres) ReadMyNotifications(ctx context.Context, actor auth.Au
 	for _, row := range rows {
 		items = append(items, mapNotificationRow(row))
 	}
-	conn := NotificationConnection{Items: items, HasMore: len(items) == int(limit)}
-	if conn.HasMore && len(items) > 0 {
-		last := items[len(items)-1]
-		cursor := last.Id
-		conn.NextBefore = &cursor
-	}
-	return conn, nil
+	return NotificationConnection{Items: items, HasMore: len(items) == int(limit)}, nil
 }
 
 func mapNotificationRow(row dbgen.ProductNotificationInboxRow) NotificationView {
@@ -123,8 +118,38 @@ func (p *ProductPostgres) StoreAcknowledgeSuppressedNotifications(ctx context.Co
 	return NotificationWriteReceipt{}, fmt.Errorf("notification inbox commands pending wiring")
 }
 
+func (p *ProductPostgres) ReadPreferences(context.Context, []string) ([]Preferences, error) {
+	return nil, fmt.Errorf("notification preferences pending wiring")
+}
+
+func (p *ProductPostgres) InsertEvent(context.Context, Event) (string, error) {
+	return "", fmt.Errorf("notification event insert pending wiring")
+}
+
+func (p *ProductPostgres) InsertRecipients(context.Context, string, []string, time.Time) error {
+	return fmt.Errorf("notification recipients insert pending wiring")
+}
+
 func (p *ProductPostgres) StoreMarkNotificationsRead(ctx context.Context, write MarkNotificationsReadWrite) (NotificationWriteReceipt, error) {
-	_ = ctx
-	_ = write
-	return NotificationWriteReceipt{}, fmt.Errorf("notification inbox commands pending wiring")
+	memberID, err := db.ParseUUID(write.ActorID)
+	if err != nil {
+		return NotificationWriteReceipt{}, err
+	}
+	ids := make([]pgtype.UUID, 0, len(write.Input.Ids))
+	for _, id := range write.Input.Ids {
+		parsed, err := db.ParseUUID(id)
+		if err != nil {
+			return NotificationWriteReceipt{}, err
+		}
+		ids = append(ids, parsed)
+	}
+	count, err := p.queries().ProductNotificationMarkRead(ctx, dbgen.ProductNotificationMarkReadParams{
+		MemberID:        memberID,
+		NotificationIds: ids,
+		ReadAt:          pgtype.Timestamptz{Time: write.At, Valid: true},
+	})
+	if err != nil {
+		return NotificationWriteReceipt{}, err
+	}
+	return NotificationWriteReceipt{AffectedCount: count}, nil
 }

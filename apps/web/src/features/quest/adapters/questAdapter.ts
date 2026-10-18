@@ -1,4 +1,14 @@
+import type {
+  MyCharactersQuery,
+  QuestBoardQuery,
+  QuestListQuery,
+  QuestQuery,
+} from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
+import MY_CHARACTERS_QUERY from './myCharacters.graphql?raw';
+import BOARD_QUERY from './questBoard.graphql?raw';
+import DETAIL_QUERY from './questDetail.graphql?raw';
+import LIST_QUERY from './questList.graphql?raw';
 import { restRequest } from '../../../api/rest.js';
 import { rest } from '../../../api/endpoints.js';
 import { toAppError } from '../../../errors/toAppError.js';
@@ -93,91 +103,6 @@ function mapBoardItem(
   };
 }
 
-const BOARD_QUERY = `
-  query QuestBoard($limit: Int!) {
-    questBoard(limit: $limit) {
-      total
-      items {
-        id
-        shortCode
-        status
-        scheduledAt
-        slotsMax
-        filledCount
-        displayStatus
-        dm { handle displayName }
-        briefDocument { id slug title }
-        discordDelivery {
-          desiredRevision
-          appliedRevision
-          overallStatus
-          nextRetryAt
-          errorMessage
-        }
-      }
-    }
-  }
-`;
-
-const LIST_QUERY = `
-  query QuestList($filters: QuestV2FiltersInput!, $limit: Int!, $offset: Int!) {
-    quests(filters: $filters, limit: $limit, offset: $offset) {
-      total
-      items {
-        id
-        shortCode
-        status
-        scheduledAt
-        slotsMax
-        filledCount
-        displayStatus
-        dm { handle displayName }
-        briefDocument { id slug title }
-        discordDelivery {
-          desiredRevision
-          appliedRevision
-          overallStatus
-          nextRetryAt
-          errorMessage
-        }
-      }
-    }
-  }
-`;
-
-const DETAIL_QUERY = `
-  query Quest($id: ID, $shortCode: String) {
-    quest(id: $id, shortCode: $shortCode) {
-      id
-      shortCode
-      status
-      scheduledAt
-      durationHours
-      slotsMax
-      filledCount
-      displayStatus
-      genres
-      tags
-      dm { handle displayName }
-      briefDocument { id slug title }
-      discordDelivery {
-        desiredRevision
-        appliedRevision
-        overallStatus
-        nextRetryAt
-        errorMessage
-      }
-      participants {
-        memberId
-        characterId
-        characterName
-        memberHandle
-        status
-      }
-    }
-  }
-`;
-
 export function parseQuestBoard(wire: unknown): AdapterResult<QuestBoardItemView[]> {
   const parsed = questBoardWireSchema.safeParse(wire);
   if (!parsed.success) {
@@ -224,7 +149,7 @@ export function parseQuestDetail(wire: unknown): AdapterResult<QuestDetailView> 
 
 export async function loadQuestBoard(): Promise<QuestBoardItemView[]> {
   try {
-    const data = await graphqlRequest<{ questBoard: unknown }>(BOARD_QUERY, {
+    const data = await graphqlRequest<QuestBoardQuery>(BOARD_QUERY, {
       limit: 50,
     });
     const result = parseQuestBoard(data.questBoard);
@@ -237,7 +162,7 @@ export async function loadQuestBoard(): Promise<QuestBoardItemView[]> {
 
 export async function loadQuestList(request: QuestListRequest): Promise<QuestListView> {
   try {
-    const data = await graphqlRequest<{ quests: unknown }>(LIST_QUERY, request);
+    const data = await graphqlRequest<QuestListQuery>(LIST_QUERY, request);
     const result = parseQuestList(data.quests);
     if (!result.ok) throw toAppError({ failure: result.failure }, 'quest:list');
     // A nonempty population cannot yield an empty first page with a positive limit.
@@ -259,7 +184,7 @@ export async function loadQuest(opts: {
   shortCode?: string;
 }): Promise<QuestDetailView> {
   try {
-    const data = await graphqlRequest<{ quest: unknown | null }>(DETAIL_QUERY, {
+    const data = await graphqlRequest<QuestQuery>(DETAIL_QUERY, {
       id: opts.id ?? null,
       shortCode: opts.shortCode ?? null,
     });
@@ -277,16 +202,7 @@ export async function loadQuest(opts: {
 /** First owned character id for signup (quest-owned read; avoids cross-feature import). */
 export async function loadSignupCharacterId(): Promise<string | null> {
   try {
-    const data = await graphqlRequest<{
-      myCharacters: { items: Array<{ id: string }> };
-    }>(`
-      query MyCharacters {
-        myCharacters {
-          items { id }
-          total
-        }
-      }
-    `);
+    const data = await graphqlRequest<MyCharactersQuery>(MY_CHARACTERS_QUERY);
     return data.myCharacters.items[0]?.id ?? null;
   } catch (err) {
     throw toAppError(err, 'quest:signup-character');

@@ -42,6 +42,11 @@ func NewFromDBTX(executor dbgen.DBTX, configuredOwnerID string) (*PostgresStore,
 	return &PostgresStore{q: dbgen.New(executor), configuredOwnerID: configuredOwnerID}, nil
 }
 
+// ConfiguredOwnerID returns the immutable platform-owner identity wired at construction.
+func (s *PostgresStore) ConfiguredOwnerID() string {
+	return s.configuredOwnerID
+}
+
 func mapMember(id pgtype.UUID, discordID, handle, displayName string, roles []string, status string) Member {
 	return Member{
 		ID:          db.UUIDString(id),

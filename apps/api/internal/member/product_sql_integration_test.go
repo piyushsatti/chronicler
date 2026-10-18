@@ -99,10 +99,6 @@ func TestPhase3TaskMEM04PostgresAcceptance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	dmAuthority, err := auth.NewAuthority(dm, []auth.Role{auth.DM}, "active", "approved")
-	if err != nil {
-		t.Fatal(err)
-	}
 	if _, err := fixture.Pool.Exec(ctx, `INSERT INTO member_availability(member_id,weekday,start_minute,end_minute,note) SELECT id,1,480,540,'old slot' FROM members WHERE public_id=$1::uuid`, requester); err != nil {
 		t.Fatal(err)
 	}
@@ -158,15 +154,6 @@ func TestPhase3TaskMEM04PostgresAcceptance(t *testing.T) {
 	afterRollback, err := adapter.ReadMyAvailability(ctx, requesterAuthority, MyAvailabilitySpec{})
 	if err != nil || !reflect.DeepEqual(afterRollback, replaced) {
 		t.Fatalf("availability after rollback = %+v err=%v", afterRollback, err)
-	}
-
-	ownRequests, err := adapter.ReadMyRequests(ctx, requesterAuthority, MyRequestsSpec{Limit: 1, Offset: 0})
-	if err != nil || ownRequests.Total != 0 || len(ownRequests.Items) != 0 {
-		t.Fatalf("requester page = %+v err=%v", ownRequests, err)
-	}
-	addressed, err := adapter.ReadDmRequests(ctx, dmAuthority, DmRequestsSpec{Limit: 10, Offset: 0})
-	if err != nil || addressed.Total != 0 || len(addressed.Items) != 0 {
-		t.Fatalf("addressed requests = %+v err=%v", addressed, err)
 	}
 
 	filtered, err := adapter.ReadMembers(ctx, requesterAuthority, MembersSpec{Filters: &MemberFiltersFields{Search: stringPointer("dungeon")}, Limit: 10})
@@ -363,38 +350,6 @@ func TestPhase3TaskMEM04PostgresAcceptance(t *testing.T) {
 		t.Fatalf("nullable batch role history=%+v err=%v", roleHistory, err)
 	}
 
-	const decidedRequestID = "20000000-0000-4000-8000-000000000001"
-	const requestDecisionID = "50000000-0000-4000-8000-000000000002"
-	decisionSpec := DecideRequestSpec{RequestId: decidedRequestID, Decision: "approved", Note: stringPointer("welcome")}
-	decisionState, err := adapter.LockDecideRequest(ctx, decisionSpec)
-	if err != nil || !decisionState.Exists || decisionState.Before == nil || decisionState.Before.Status != "pending" || decisionState.Parties.RequesterID != requester || decisionState.Parties.TargetDMID != dm {
-		t.Fatalf("request decision lock=%+v err=%v", decisionState, err)
-	}
-	request, err := adapter.StoreDecideRequest(ctx, DecideRequestWrite{ActorID: dm, At: time.Now().UTC(), ValidatedInput: decisionSpec, Locked: decisionState, DecisionID: stringPointer(requestDecisionID)})
-	if err != nil || request.Id != decidedRequestID || request.Status != "approved" {
-		t.Fatalf("request decision=%+v err=%v", request, err)
-	}
-	decisionState, err = adapter.LockDecideRequest(ctx, decisionSpec)
-	if err != nil || decisionState.PriorDecision == nil || decisionState.PriorDecision.ID != requestDecisionID || decisionState.PriorDecision.ActorID != dm || decisionState.PriorDecision.Decision != "approved" {
-		t.Fatalf("persisted request decision=%+v err=%v", decisionState, err)
-	}
-	var decisionNote string
-	if err := fixture.Pool.QueryRow(ctx, `SELECT note FROM request_decisions WHERE public_id=$1::uuid`, requestDecisionID).Scan(&decisionNote); err != nil || decisionNote != "welcome" {
-		t.Fatalf("persisted decision note=%q err=%v", decisionNote, err)
-	}
-	createState, err := adapter.LockCreateRequest(ctx, requester, CreateRequestSpec{TargetDmId: dm, Kind: "seat"})
-	if err != nil || !createState.Exists || len(createState.TargetMemberIDs) != 2 || createState.TargetMemberIDs[1] != dm {
-		t.Fatalf("create request lock=%+v err=%v", createState, err)
-	}
-	createdRequest, err := adapter.StoreCreateRequest(ctx, CreateRequestWrite{RequestID: "20000000-0000-4000-8000-000000009999", ActorID: requester, At: time.Now().UTC(), ValidatedInput: CreateRequestSpec{TargetDmId: dm, Kind: "seat", Note: stringPointer("new request")}, Locked: createState})
-	if err != nil || createdRequest.Id != "20000000-0000-4000-8000-000000009999" || createdRequest.RequesterId != requester || createdRequest.TargetDmId != dm || createdRequest.Status != "pending" || createdRequest.Note == nil || *createdRequest.Note != "new request" {
-		t.Fatalf("created request=%+v err=%v", createdRequest, err)
-	}
-	selfRequest, err := adapter.LockCreateRequest(ctx, requester, CreateRequestSpec{TargetDmId: requester, Kind: "quest"})
-	if err != nil || selfRequest.Exists {
-		t.Fatalf("self request lock=%+v err=%v", selfRequest, err)
-	}
-
 	unlockableUpdate := UpsertUnlockableSpec{Id: &secondUnlockable, Input: UpsertUnlockableFields{Active: true, Description: stringPointer("Updated description"), Kind: UnlockKindAchievement, Name: "Updated achievement", Payload: []byte(`{"icon":"star"}`), UnlockRule: nil}}
 	lockedUnlockable, err := adapter.LockUpsertUnlockable(ctx, unlockableUpdate)
 	if err != nil || !lockedUnlockable.Exists || lockedUnlockable.Before == nil || lockedUnlockable.Before.Name == "" {
@@ -482,11 +437,6 @@ func TestPhase3TaskMEM04PostgresAcceptance(t *testing.T) {
 	if err != nil || assessment.Id != assessmentID || assessment.TargetId != characterID || assessment.TargetType != "character" || assessment.Verdict != "approved" || assessment.VerifiedBy != dm {
 		t.Fatalf("character assessment without evidence=%+v err=%v", assessment, err)
 	}
-	var evidenceIsNull bool
-	if err := fixture.Pool.QueryRow(ctx, `SELECT evidence_attempt_id IS NULL FROM verifications WHERE public_id=$1::uuid`, assessmentID).Scan(&evidenceIsNull); err != nil || !evidenceIsNull {
-		t.Fatalf("character verification evidence null=%v err=%v", evidenceIsNull, err)
-	}
-
 	const dmAssessmentID = "70000000-0000-4000-8000-000000000002"
 	profileRevision := int64(1)
 	dmAssessment, err := adapter.AppendAssessment(ctx, AssessmentSpec{SubjectType: "dm_profile", SubjectID: dm, Verdict: VerificationVerdictRejected, ID: dmAssessmentID, ReviewRevision: &profileRevision, ActorID: requester, At: time.Now().UTC(), Note: stringPointer("needs revision")})

@@ -13,7 +13,9 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
 MIGRATION_PATH = REPO / "apps/api/db/migrations/0001_init.sql"
-INVENTORY_PATH = REPO / "apps/api/cmd/api/testdata/product/physical-schema-inventory.json"
+INVENTORY_PATH = (
+    REPO / "apps/api/cmd/api/testdata/product/physical-schema-inventory.json"
+)
 
 DROP_TABLES = {
     "arc_changes",
@@ -58,7 +60,7 @@ DROP_COLUMNS = {
 
 HEADER = """-- +goose Up
 --
--- A1 squashed init (2026-10-18). Authority: owner-decisions A–M, N1–N8;
+-- A1 squashed init (2026-10-18). Authority: owner-decisions A-M, N1-N8;
 -- apps/api/docs/design/graphql-product/migrations.md target inventory.
 -- Pointcrawl-only maps (C3). Inbox notifications (D1/N4). No legacy 0003 upgrade path.
 --
@@ -261,15 +263,23 @@ def build_migration() -> str:
             creates.append(body)
         elif "ALTER TABLE" in s:
             piece = s[s.index("ALTER TABLE") :]
-            if references_dropped_table(piece) or references_dropped_column_alter(piece):
+            if references_dropped_table(piece) or references_dropped_column_alter(
+                piece
+            ):
                 continue
             alters.append(piece)
         elif "CREATE INDEX" in s or "CREATE UNIQUE INDEX" in s:
             piece = s[s.index("CREATE") :]
-            if references_dropped_table(piece) or references_dropped_column_alter(piece):
+            if references_dropped_table(piece) or references_dropped_column_alter(
+                piece
+            ):
                 continue
             indexes.append(piece)
-        elif "CREATE FUNCTION document_readable" in s or "CREATE FUNCTION quest_display_status_at" in s or "CREATE FUNCTION check_product_receipt_complete" in s:
+        elif (
+            "CREATE FUNCTION document_readable" in s
+            or "CREATE FUNCTION quest_display_status_at" in s
+            or "CREATE FUNCTION check_product_receipt_complete" in s
+        ):
             functions.append(s[s.index("CREATE FUNCTION") :])
         elif "CREATE VIEW quest_display_status" in s:
             views.append(s[s.index("CREATE VIEW") :])
@@ -297,7 +307,8 @@ def build_migration() -> str:
         + "\n\n".join(indexes)
         + "\n\n"
         + "\n\n".join(
-            f"-- +goose StatementBegin\n{fn}\n-- +goose StatementEnd" for fn in functions
+            f"-- +goose StatementBegin\n{fn}\n-- +goose StatementEnd"
+            for fn in functions
         )
         + "\n\n"
         + "\n\n".join(triggers)
@@ -306,7 +317,9 @@ def build_migration() -> str:
     )
     up = HEADER + body.strip() + "\n"
 
-    table_names = sorted({re.search(r"CREATE TABLE (\w+)", c).group(1) for c in creates})  # type: ignore
+    table_names = sorted(
+        {re.search(r"CREATE TABLE (\w+)", c).group(1) for c in creates}
+    )  # type: ignore
     down = "\n-- +goose Down\n"
     down += "DROP VIEW IF EXISTS quest_display_status;\n"
     down += "DROP FUNCTION IF EXISTS quest_display_status_at(text,integer,timestamptz,double precision,timestamptz);\n"
@@ -353,9 +366,13 @@ def main() -> int:
     col_count = sum(len(t["columns"]) for t in tables.values())
     inv = {
         "baseline_hashes": {
-            "apps/api/db/migrations/0001_init.sql": hashlib.sha256(sql.encode()).hexdigest(),
+            "apps/api/db/migrations/0001_init.sql": hashlib.sha256(
+                sql.encode()
+            ).hexdigest(),
         },
-        "change_sha256": hashlib.sha256(json.dumps(tables, sort_keys=True).encode()).hexdigest(),
+        "change_sha256": hashlib.sha256(
+            json.dumps(tables, sort_keys=True).encode()
+        ).hexdigest(),
         "baseline_tables": {},
         "final_tables": tables,
         "squash_note": "A1 single init; 0002-0004 folded",

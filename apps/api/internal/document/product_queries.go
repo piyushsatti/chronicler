@@ -1,6 +1,7 @@
 package document
 
 import (
+	"context"
 	"reflect"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
@@ -29,4 +30,20 @@ func NewProductQueries(reads ProductReadRepos, policy *auth.Policy, clock produc
 		}
 	}
 	return &ProductQueries{Reads: reads, Policy: policy, Clock: clock, OverrideReads: overrideReads}, nil
+}
+
+func (s ProductQueries) BatchDocuments(ctx context.Context, actor auth.Authority, keys []DocumentKey) ([]product.BatchResult[DocumentView], error) {
+	return s.Reads.Batch.ReadBatchDocuments(ctx, actor, keys)
+}
+
+func (s ProductQueries) BatchDmTables(ctx context.Context, actor auth.Authority, keys []IDKey) ([]product.BatchResult[DocumentView], error) {
+	return s.Reads.Batch.ReadBatchDmTables(ctx, actor, keys)
+}
+
+func (s ProductQueries) BatchSummaryDerived(ctx context.Context, actor auth.Authority, keys []IDKey) ([]product.BatchResult[SummaryDerivedView], error) {
+	return s.Reads.Batch.ReadBatchSummaryDerived(ctx, actor, keys)
+}
+
+func (s ProductQueries) BatchDocumentSubjects(ctx context.Context, actor auth.Authority, keys []DocumentSubjectsKey) ([]product.BatchResult[SubjectLinkList], error) {
+	return s.Reads.Batch.ReadBatchDocumentSubjects(ctx, actor, keys)
 }

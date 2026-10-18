@@ -18,3 +18,6 @@ dist/
 
 # Local agent/workspace artifacts (plans, scratch audits); not pushed
 .artifacts/
+
+# Go API binary from `go build -o api` in apps/api
+apps/api/api

@@ -11445,14 +11445,6 @@
     {
       "args": [],
       "definitionKind": "OBJECT",
-      "field": "totalHexes",
-      "ownerType": "SiteStatsV2Type",
-      "source": "site.graphql",
-      "type": "Int!"
-    },
-    {
-      "args": [],
-      "definitionKind": "OBJECT",
       "field": "totalMaps",
       "ownerType": "SiteStatsV2Type",
       "source": "site.graphql",

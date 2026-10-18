@@ -64,7 +64,6 @@ func siteStatsFromSnapshot(snapshot CommunityStatsSnapshot) SiteStatsView {
 		MembersByRole:    snapshot.MembersByRole,
 		ActiveCharacters: snapshot.ActiveCharacters,
 		TotalMaps:        snapshot.TotalMaps,
-		TotalHexes:       snapshot.TotalHexes,
 		TotalRegions:     snapshot.TotalRegions,
 		TotalQuests:      snapshot.TotalQuests,
 		TotalDms:         snapshot.TotalDMs,

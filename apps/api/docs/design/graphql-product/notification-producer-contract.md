@@ -10,14 +10,14 @@ Pattern is command-bound inbox generation: each row is a durable inbox fact with
 
 ## Supported kinds (inbox-only)
 
-| Kind | Proof required (same UOW) | Addressed members | Acting member |
-| --- | --- | --- | --- |
-| CHARACTER_VERIFICATION_DECIDED | Verification row ID, Character ID, verdict | Character owner | Retained if owner acts under admitted assessment authority |
-| QUEST_SIGNUP_CONFIRMED | Quest ID, Character ID, participation transition | Signing character's member | Retained; signup is self-service |
-| QUEST_WAITLIST_PROMOTED | Quest ID, promoted Character ID | Promoted character's member | Withdrawing actor is not substituted |
-| DOCUMENT_EDITED, DOCUMENT_PUBLISHED | Document revision ID | Document author | Excluded |
-| DM_MENTIONED | Revision ID, resolved new-mention member IDs | Every newly named resolvable Member | Excluded |
-| QUEST_SCHEDULED | Quest ID, schedule/lifecycle fact + **immutable** signed_up/waitlisted member ID snapshot written in command | Snapshot members | Excluded |
+| Kind                                | Proof required (same UOW)                                                                                    | Addressed members                   | Acting member                                              |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------ | ----------------------------------- | ---------------------------------------------------------- |
+| CHARACTER_VERIFICATION_DECIDED      | Verification row ID, Character ID, verdict                                                                   | Character owner                     | Retained if owner acts under admitted assessment authority |
+| QUEST_SIGNUP_CONFIRMED              | Quest ID, Character ID, participation transition                                                             | Signing character's member          | Retained; signup is self-service                           |
+| QUEST_WAITLIST_PROMOTED             | Quest ID, promoted Character ID                                                                              | Promoted character's member         | Withdrawing actor is not substituted                       |
+| DOCUMENT_EDITED, DOCUMENT_PUBLISHED | Document revision ID                                                                                         | Document author                     | Excluded                                                   |
+| DM_MENTIONED                        | Revision ID, resolved new-mention member IDs                                                                 | Every newly named resolvable Member | Excluded                                                   |
+| QUEST_SCHEDULED                     | Quest ID, schedule/lifecycle fact + **immutable** signed_up/waitlisted member ID snapshot written in command | Snapshot members                    | Excluded                                                   |
 
 Quest schedule/signup/promotion commands capture eligible participation members from the locked roster in the **same transaction** and persist that deduplicated UUID snapshot on the notification row facts (or equivalent normalized columns). Historical reads validate inbox facts against independent proof readers (verification row, document revision, quest row + participant snapshot stored on the notification), never today's roster and never dropped `quest_changes` history (**N2**). Closure after final attendance with an empty eligible set writes no speculative reward notification. Missing or malformed required proof fails the command and rolls back. On historical inbox read, missing proof follows HISTORY-1/ROWS-1 opaque failure and retains unread rows.
 

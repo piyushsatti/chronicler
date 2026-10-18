@@ -200,8 +200,9 @@ func (p *ProductPostgres) StoreSetMemberRoles(ctx context.Context, write SetMemb
 	if err != nil {
 		return MemberView{}, err
 	}
-	_ = historyID
-	_ = actorID
+	if _, err := p.queries().ProductAppendRoleHistory(ctx, dbgen.ProductAppendRoleHistoryParams{HistoryID: historyID, MemberID: memberID, OldRoles: write.Locked.Before.Roles, NewRoles: write.ValidatedInput.Roles, ActorID: actorID, At: pgtype.Timestamptz{Time: write.At, Valid: true}, Note: optionalText(write.ValidatedInput.Note)}); err != nil {
+		return MemberView{}, err
+	}
 	return mapProductMember(row.PublicID, row.DiscordID, row.Handle, row.DisplayName, row.AvatarUrl, row.Roles, row.Status, row.JoinedAt), nil
 }
 
@@ -371,8 +372,7 @@ func (p *ProductPostgres) StoreSetMemberRolesBatch(ctx context.Context, write Se
 	if err != nil {
 		return nil, err
 	}
-	_ = actor
-	rows, err := p.queries().ProductSetMemberRolesBatch(ctx, dbgen.ProductSetMemberRolesBatchParams{Changes: encoded, At: pgtype.Timestamptz{Time: write.At, Valid: true}})
+	rows, err := p.queries().ProductSetMemberRolesBatch(ctx, dbgen.ProductSetMemberRolesBatchParams{Changes: encoded, At: pgtype.Timestamptz{Time: write.At, Valid: true}, ActorID: actor})
 	if err != nil {
 		return nil, err
 	}
@@ -1037,10 +1037,26 @@ func (p *ProductPostgres) StoreUpsertUnlockable(ctx context.Context, write Upser
 }
 
 func (p *ProductPostgres) ReadMemberRoleHistory(ctx context.Context, _ auth.Authority, spec MemberRoleHistorySpec) (RoleChangePage, error) {
-	if _, err := productID(spec.MemberId); err != nil {
+	id, err := productID(spec.MemberId)
+	if err != nil {
 		return RoleChangePage{Items: []RoleChangeView{}}, nil
 	}
-	return RoleChangePage{Items: []RoleChangeView{}, Total: 0}, nil
+	rows, err := p.queries().ProductRoleHistory(ctx, dbgen.ProductRoleHistoryParams{MemberID: id, PageLimit: spec.Limit, PageOffset: spec.Offset})
+	if err != nil {
+		return RoleChangePage{}, err
+	}
+	page := RoleChangePage{Items: []RoleChangeView{}}
+	if len(rows) == 0 {
+		return page, nil
+	}
+	page.Total = int32Total(rows[0].Total)
+	for _, row := range rows {
+		if !row.PublicID.Valid {
+			continue
+		}
+		page.Items = append(page.Items, RoleChangeView{Id: db.UUIDString(row.PublicID), MemberId: db.UUIDString(row.MemberID), OldRoles: append([]string(nil), row.OldRoles...), NewRoles: append([]string(nil), row.NewRoles...), ChangedBy: db.UUIDString(row.ChangedBy), OccurredAt: row.OccurredAt.Time, Note: nullableText(row.Note)})
+	}
+	return page, nil
 }
 
 func (p *ProductPostgres) ReadMemberAvailability(ctx context.Context, _ auth.Authority, spec MemberAvailabilitySpec) ([]AvailabilitySlotView, error) {

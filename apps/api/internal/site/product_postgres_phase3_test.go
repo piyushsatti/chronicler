@@ -32,12 +32,12 @@ func TestMapCommunitySnapshotMapsStoredTotalsRolesAndActivity(t *testing.T) {
 		t.Fatal(err)
 	}
 	want := CommunityStatsSnapshot{
-		TotalMembers: 8, ActiveCharacters: 3, TotalMaps: 2, TotalHexes: 9, TotalRegions: 4, TotalQuests: 5, TotalDMs: 1,
+		TotalMembers: 8, ActiveCharacters: 3, TotalMaps: 2, TotalRegions: 4, TotalQuests: 5, TotalDMs: 1,
 		MembersByRole: []CountByKeyView{{Key: "dm", Count: 2}, {Key: "player", Count: 6}},
 		Activity:      member.ActivitySummaryView{VoiceMinutes: 12.5, Messages: 7, Reactions: 2},
 	}
 	if got.TotalMembers != want.TotalMembers || got.ActiveCharacters != want.ActiveCharacters || got.TotalMaps != want.TotalMaps ||
-		got.TotalHexes != want.TotalHexes || got.TotalRegions != want.TotalRegions || got.TotalQuests != want.TotalQuests ||
+		got.TotalRegions != want.TotalRegions || got.TotalQuests != want.TotalQuests ||
 		got.TotalDMs != want.TotalDMs || got.Activity != want.Activity || len(got.MembersByRole) != len(want.MembersByRole) {
 		t.Fatalf("snapshot = %+v, want %+v", got, want)
 	}

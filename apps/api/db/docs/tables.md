@@ -4,43 +4,44 @@
 
 ## members / actor
 
-| Table                 | Purpose                                        | Pattern                        |
-| --------------------- | ---------------------------------------------- | ------------------------------ |
-| `members`             | Discord-linked account; roles + status         | root                           |
-| `member_settings`     | Normalized UI/prefs facet of a member          | 1:1                            |
-| `member_availability` | Weekly time windows for scheduling             | ownership child (addressable)  |
-| `dm_profiles`         | DM public profile + review status              | 1:1                            |
-| `unlockables`         | Achievement / DM-tier unlock catalog (**N1**)  | catalog                        |
-| `member_unlocks`      | Granted unlockables with source                | enriched association           |
-| `notifications`       | Per-member inbox only (**D1** / **N4**)        | root-ish / polymorphic subject |
+| Table                 | Purpose                                               | Pattern                        |
+| --------------------- | ----------------------------------------------------- | ------------------------------ |
+| `members`             | Discord-linked account; roles + status                | root                           |
+| `role_changes`        | Member role change audit (retained under **N2** trim) | aggregate history              |
+| `member_settings`     | Normalized UI/prefs facet of a member                 | 1:1                            |
+| `member_availability` | Weekly time windows for scheduling                    | ownership child (addressable)  |
+| `dm_profiles`         | DM public profile + review status                     | 1:1                            |
+| `unlockables`         | Achievement / DM-tier unlock catalog (**N1**)         | catalog                        |
+| `member_unlocks`      | Granted unlockables with source                       | enriched association           |
+| `notifications`       | Per-member inbox only (**D1** / **N4**)               | root-ish / polymorphic subject |
 
-Dropped from pre-squash 0001: `role_changes`, `member_follows`, `dm_requests` (**N2** / **N3**).
+Dropped from pre-squash 0001: `member_follows`, `dm_requests`, `request_decisions` (**N3**); other aggregate `*_changes` per **N2** (member `role_changes` retained — see [migrations.md](/apps/api/docs/design/graphql-product/migrations.md)).
 
 ## documents
 
-| Table                    | Purpose                                    | Pattern              |
-| ------------------------ | ------------------------------------------ | -------------------- |
-| `documents`              | Codex / rules / briefs / community content | root                 |
-| `document_revisions`     | Snapshot history (**J1**)                  | revisions            |
+| Table                    | Purpose                                                                      | Pattern              |
+| ------------------------ | ---------------------------------------------------------------------------- | -------------------- |
+| `documents`              | Codex / rules / briefs / community content                                   | root                 |
+| `document_revisions`     | Snapshot history (**J1**)                                                    | revisions            |
 | `document_links`         | Typed edges (document/quest/character/region targets + summary append order) | enriched association |
-| `document_readers`       | Restricted visibility allow-list           | pure M:N             |
-| `lieutenant_assignments` | Member duty over an NPC document           | assignment           |
+| `document_readers`       | Restricted visibility allow-list                                             | pure M:N             |
+| `lieutenant_assignments` | Member duty over an NPC document                                             | assignment           |
 
 ## spatial (C3 pointcrawl-only)
 
 No hex grid tables (`hexes`, `pois`, `hex_edges`, …). See [design.md](design.md).
 
-| Table                    | Purpose                                 | Pattern                       |
-| ------------------------ | --------------------------------------- | ----------------------------- |
-| `regions`                | Server / archon / uncharted region      | root                          |
-| `maps`                   | Named atlas map (`map_kind = pointcrawl`) | root                        |
-| `pointcrawl_nodes`       | Node on a map (x/y, optional submap)    | root (map child)              |
-| `pointcrawl_edges`       | Same-map edge graph                     | root-ish (keeps `public_id`)  |
-| `pointcrawl_entry_links` | Node ↔ document location/subject links  | enriched association          |
-| `archon_assignments`     | Member duty over a region               | assignment                    |
-| `time_anchors`           | Real UTC ↔ epoch-day rate anchors       | root (time)                   |
-| `game_calendar`          | Singleton calendar definition JSON      | infra (singleton)             |
-| `game_time_map`          | Real date → game day lookup             | infra                         |
+| Table                    | Purpose                                   | Pattern                      |
+| ------------------------ | ----------------------------------------- | ---------------------------- |
+| `regions`                | Server / archon / uncharted region        | root                         |
+| `maps`                   | Named atlas map (`map_kind = pointcrawl`) | root                         |
+| `pointcrawl_nodes`       | Node on a map (x/y, optional submap)      | root (map child)             |
+| `pointcrawl_edges`       | Same-map edge graph                       | root-ish (keeps `public_id`) |
+| `pointcrawl_entry_links` | Node ↔ document location/subject links    | enriched association         |
+| `archon_assignments`     | Member duty over a region                 | assignment                   |
+| `time_anchors`           | Real UTC ↔ epoch-day rate anchors         | root (time)                  |
+| `game_calendar`          | Singleton calendar definition JSON        | infra (singleton)            |
+| `game_time_map`          | Real date → game day lookup               | infra                        |
 
 ## characters
 
@@ -58,13 +59,13 @@ No hex grid tables (`hexes`, `pois`, `hex_edges`, …). See [design.md](design.m
 
 ## quests
 
-| Table                      | Purpose                              | Pattern              |
-| -------------------------- | ------------------------------------ | -------------------- |
-| `quest_arcs`               | Multi-quest arc container            | root                 |
-| `quests`                   | Scheduled table / signup board row   | root                 |
-| `quest_participants`       | Signup lifecycle (status, character) | enriched association |
-| `quest_pointcrawl_nodes`   | Expected / visited pointcrawl roles (**N5B**) | enriched association |
-| `quest_regions`            | Quest ↔ region coverage              | pure M:N             |
+| Table                    | Purpose                                       | Pattern              |
+| ------------------------ | --------------------------------------------- | -------------------- |
+| `quest_arcs`             | Multi-quest arc container                     | root                 |
+| `quests`                 | Scheduled table / signup board row            | root                 |
+| `quest_participants`     | Signup lifecycle (status, character)          | enriched association |
+| `quest_pointcrawl_nodes` | Expected / visited pointcrawl roles (**N5B**) | enriched association |
+| `quest_regions`          | Quest ↔ region coverage                       | pure M:N             |
 
 Replaces `quest_hexes`.
 
@@ -81,8 +82,8 @@ Replaces `quest_hexes`.
 
 ## views / functions
 
-| Object                     | Purpose                                      |
-| -------------------------- | -------------------------------------------- |
-| `quest_display_status_at()` | Immutable quest display status at `as_of`   |
-| `quest_display_status`     | View wrapping `quest_display_status_at(now())` |
-| `document_readable()`      | Document audience predicate (D3/D28)         |
+| Object                      | Purpose                                        |
+| --------------------------- | ---------------------------------------------- |
+| `quest_display_status_at()` | Immutable quest display status at `as_of`      |
+| `quest_display_status`      | View wrapping `quest_display_status_at(now())` |
+| `document_readable()`       | Document audience predicate (D3/D28)           |

@@ -6,6 +6,7 @@ import (
 	goast "go/ast"
 	"go/format"
 	"go/token"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -129,10 +130,6 @@ func TestPhase3TaskCHA01Acceptance(t *testing.T) {
 			string(CharacterReviewStatusApproved),
 			string(CharacterReviewStatusUnknown),
 		}, []string{"PENDING", "REJECTED", "APPROVED", "UNKNOWN"})
-		assertEnumValues(t, schema, "RewardClaimStatus", []string{
-			string(RewardClaimStatusUnclaimed),
-			string(RewardClaimStatusClaimed),
-		}, []string{"UNCLAIMED", "CLAIMED"})
 	})
 }
 
@@ -143,15 +140,22 @@ func loadCharacterSourceSchema(t *testing.T) *ast.SchemaDocument {
 		t.Fatal("locate CHA01 acceptance test source")
 	}
 	root := filepath.Clean(filepath.Join(filepath.Dir(filename), "../../../../"))
-	paths, err := filepath.Glob(filepath.Join(root, "packages/contracts/graphql/*.graphql"))
-	if err != nil {
+	sdlRoot := filepath.Join(root, "packages/contracts/graphql")
+	var paths []string
+	if err := filepath.WalkDir(sdlRoot, func(path string, d fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if d.IsDir() || !strings.HasSuffix(path, ".graphql") || filepath.Base(path) == "schema.graphql" {
+			return nil
+		}
+		paths = append(paths, path)
+		return nil
+	}); err != nil {
 		t.Fatal(err)
 	}
 	var sources []*ast.Source
 	for _, path := range paths {
-		if filepath.Base(path) == "schema.graphql" {
-			continue
-		}
 		data, err := os.ReadFile(path)
 		if err != nil {
 			t.Fatal(err)

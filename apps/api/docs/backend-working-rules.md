@@ -5,12 +5,12 @@ Working discipline for the Go API and worker in `apps/api`. [AGENTS.md](/AGENTS.
 ## Transport and layer boundaries
 
 ```text
-POST /v1/graphql (product read or mutation) → command/query → repository → sqlc/pgx
-HTTP protocols (auth, ingest, agent, health) → dedicated handlers
+POST /v1/graphql (product query or mutation) → handler/resolver → command/query → repository → sqlc/pgx
+Retained HTTP (auth, health, Discord ingest/heartbeat, agent Q&A) → protocol handlers → services (not product REST commands)
 ```
 
-- Follow [D40](/apps/api/docs/decisions/D40-GraphQL-Versus-REST.md): **product** reads and business commands use GraphQL only; REST retains authentication, health, Discord observation ingest/heartbeat, and agent question protocols — not a second product command surface. Routing authority is [field-routing.md](/packages/contracts/field-routing.md) (converging toward D40), with wire shapes in [OpenAPI](/packages/contracts/openapi.yaml) and the contract SDL.
-- Adapters decode and validate input, establish caller authority, call a command/query and map its result. Domain rules and transaction orchestration belong in the owning slice.
+- Follow [D40](/apps/api/docs/decisions/D40-GraphQL-Versus-REST.md): **product** reads and business commands use GraphQL only; retained HTTP covers authentication, health, Discord observation ingest/heartbeat, and agent question protocols — not a second product command surface. Routing authority is [field-routing.md](/packages/contracts/field-routing.md) (converging toward D40), with wire shapes in [OpenAPI](/packages/contracts/openapi.yaml) and the contract SDL.
+- GraphQL resolvers and HTTP protocol handlers decode and validate input, establish caller authority, call a command/query, and map its result. Domain rules and transaction orchestration belong in the owning slice.
 - New API code belongs under `apps/api/internal/`. The [quest commands](/apps/api/internal/quest/command.go) and [repository interface](/apps/api/internal/quest/repository.go) demonstrate the transaction boundary; their presence does not certify every quest behavior as complete.
 
 ## Commands own one transaction
@@ -21,7 +21,7 @@ Aggregate changes, their history and durable job enqueue belong in the same tran
 
 ## Expected failures are values
 
-Keep [D25's expected-failure principle](/apps/api/docs/decisions/D25-Expected-Failures-Are-Values.md), translated to Go: return typed values from the shared [apierr vocabulary](/apps/api/internal/platform/apierr/apierr.go). REST adapters use `apierr.Write` to emit `application/problem+json`; unexpected errors become opaque 500 responses. The imported D25 Python dataclasses, pyright and GraphQL mutation-union details do not prescribe the current Go/REST implementation.
+Keep [D25's expected-failure principle](/apps/api/docs/decisions/D25-Expected-Failures-Are-Values.md), translated to Go: return typed values from the shared [apierr vocabulary](/apps/api/internal/platform/apierr/apierr.go). Product GraphQL maps them to `errors.extensions.code` per [graphql-contract.md](/apps/api/docs/graphql-contract.md); retained HTTP protocol handlers use `apierr.Write` for `application/problem+json`. Unexpected errors become opaque 500 responses. Imported D25 Python dataclasses and pyright details do not prescribe the current Go surface.
 
 Validate request shape and domain constraints at their owning boundaries. Do not treat an ignored error or zero affected rows as a successful state transition. Authentication and authorization remain explicit; public serialization must respect audience rules such as [session-audience](/docs/interfaces/session-audience.md).
 

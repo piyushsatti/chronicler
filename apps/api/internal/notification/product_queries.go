@@ -14,10 +14,11 @@ type ProductQueries struct {
 	Policy        *auth.Policy
 	Clock         product.Clock
 	OverrideReads auth.OverrideReadObserver
+	Cursor        CursorCodec
 }
 
-func NewProductQueries(reads ProductReadRepos, policy *auth.Policy, clock product.Clock, overrideReads auth.OverrideReadObserver) (*ProductQueries, error) {
-	for _, dep := range []any{reads.Notification, reads.Batch, policy, clock, overrideReads} {
+func NewProductQueries(reads ProductReadRepos, policy *auth.Policy, clock product.Clock, overrideReads auth.OverrideReadObserver, cursor CursorCodec) (*ProductQueries, error) {
+	for _, dep := range []any{reads.Notification, reads.Batch, policy, clock, overrideReads, cursor} {
 		if dep == nil {
 			return nil, apierr.New(apierr.Internal, "notification query dependencies required")
 		}
@@ -29,7 +30,7 @@ func NewProductQueries(reads ProductReadRepos, policy *auth.Policy, clock produc
 			}
 		}
 	}
-	return &ProductQueries{Reads: reads, Policy: policy, Clock: clock, OverrideReads: overrideReads}, nil
+	return &ProductQueries{Reads: reads, Policy: policy, Clock: clock, OverrideReads: overrideReads, Cursor: cursor}, nil
 }
 
 func (s ProductQueries) admit(ctx context.Context, actor auth.Authority, operation auth.Operation) error {
@@ -51,7 +52,33 @@ func (s ProductQueries) MyNotifications(ctx context.Context, actor auth.Authorit
 	if err := s.admit(ctx, actor, auth.Operation("Query.myNotifications")); err != nil {
 		return NotificationConnection{}, err
 	}
-	return s.Reads.Notification.ReadMyNotifications(ctx, actor, spec)
+	if spec.Before != nil && *spec.Before != "" {
+		cur, err := s.Cursor.Decode(*spec.Before, actor.Claims().MemberID, spec.UnreadOnly)
+		if err != nil {
+			return NotificationConnection{}, err
+		}
+		spec.BeforeCreatedAt = &cur.CreatedAt
+		spec.BeforeNotificationID = &cur.NotificationID
+	}
+	conn, err := s.Reads.Notification.ReadMyNotifications(ctx, actor, spec)
+	if err != nil {
+		return NotificationConnection{}, err
+	}
+	if conn.HasMore && len(conn.Items) > 0 {
+		last := conn.Items[len(conn.Items)-1]
+		token, err := s.Cursor.Encode(Cursor{
+			Version:        cursorVersion,
+			MemberID:       actor.Claims().MemberID,
+			UnreadOnly:     spec.UnreadOnly,
+			CreatedAt:      last.CreatedAt,
+			NotificationID: last.Id,
+		})
+		if err != nil {
+			return NotificationConnection{}, err
+		}
+		conn.NextBefore = &token
+	}
+	return conn, nil
 }
 
 func (s ProductQueries) MyUnreadNotificationCount(ctx context.Context, actor auth.Authority, _ MyUnreadNotificationCountSpec) (int32, error) {

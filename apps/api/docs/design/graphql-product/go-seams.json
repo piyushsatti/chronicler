@@ -9250,15 +9250,6 @@
           "owner": "SIT01"
         },
         {
-          "name": "TotalHexes",
-          "wire_name": "totalHexes",
-          "go_type": "int32",
-          "wire_type": "Int!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SIT01"
-        },
-        {
           "name": "TotalMaps",
           "wire_name": "totalMaps",
           "go_type": "int32",
@@ -22079,7 +22070,7 @@
       "Characters": "*graph.Loader[character.IDKey,character.CharacterView]",
       "Quests": "*graph.Loader[quest.IDKey,quest.QuestView]",
       "Participants": "*graph.Loader[quest.ParticipantsKey,quest.ParticipantList]",
-      "QuestHexes": "*graph.Loader[quest.QuestHexesKey,quest.HexList]",
+      "QuestPointcrawlLinks": "*graph.Loader[quest.QuestHexesKey,quest.HexList]",
       "QuestRegions": "*graph.Loader[quest.QuestRegionsKey,quest.RegionIDList]",
       "Arcs": "*graph.Loader[quest.IDKey,quest.QuestArcView]",
       "ArcQuests": "*graph.Loader[quest.ArcQuestsKey,quest.QuestList]",
@@ -22685,7 +22676,6 @@
       "MembersByRole": "[]site.CountByKeyView",
       "ActiveCharacters": "int32",
       "TotalMaps": "int32",
-      "TotalHexes": "int32",
       "TotalRegions": "int32",
       "TotalQuests": "int32",
       "TotalDMs": "int32",
@@ -26993,9 +26983,9 @@
       "transaction": "one task connection per batch/group/chunk, no shared resolver transaction; document predicate currentAuthority"
     },
     {
-      "id": "BATCH-QuestHexes",
+      "id": "BATCH-QuestPointcrawlLinks",
       "interface": "quest.ProductBatchReader",
-      "signature": "BatchQuestHexes(ctx context.Context, actor auth.Authority, keys []quest.QuestHexesKey) ([]product.BatchResult[quest.HexList],error)",
+      "signature": "BatchQuestPointcrawlLinks(ctx context.Context, actor auth.Authority, keys []quest.QuestHexesKey) ([]product.BatchResult[quest.HexList],error)",
       "provider": "QUE05",
       "callers": ["G02"],
       "transaction": "one task connection per batch/group/chunk, no shared resolver transaction; document predicate currentAuthority"
@@ -27844,11 +27834,11 @@
       "missing": "nil Value only valid missing nullableentity; listparentmissingNOT_FOUND; exact inputcorrespondence inclduplicates"
     },
     {
-      "name": "QuestHexes",
+      "name": "QuestPointcrawlLinks",
       "key": "quest.QuestHexesKey",
       "value": "quest.HexList",
-      "registry_field": "QuestHexes *graph.Loader[quest.QuestHexesKey,quest.HexList]",
-      "batch_signature": "BatchQuestHexes(ctx context.Context, actor auth.Authority, keys []quest.QuestHexesKey) ([]product.BatchResult[quest.HexList],error)",
+      "registry_field": "QuestPointcrawlLinks *graph.Loader[quest.QuestHexesKey,quest.HexList]",
+      "batch_signature": "BatchQuestPointcrawlLinks(ctx context.Context, actor auth.Authority, keys []quest.QuestHexesKey) ([]product.BatchResult[quest.HexList],error)",
       "provider": "QUE05",
       "caller": "G02",
       "key_owner": "QUE01",

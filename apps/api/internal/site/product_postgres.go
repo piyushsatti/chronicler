@@ -7,8 +7,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/piyushsatti/chronicler/apps/api/internal/member"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbgen"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
+	"github.com/piyushsatti/chronicler/apps/api/internal/quest"
 )
 
 const memberSearchOrder = "handle_asc_id_asc"
@@ -22,6 +25,10 @@ func NewProductPostgres(db dbgen.DBTX) (*ProductPostgres, error) {
 		return nil, fmt.Errorf("site database executor required")
 	}
 	return &ProductPostgres{DB: db}, nil
+}
+
+func (p *ProductPostgres) pending() error {
+	return apierr.New(apierr.Internal, "site product surface pending")
 }
 
 func (p *ProductPostgres) ReadHomeCommunity(ctx context.Context, _ auth.Authority, _ HomeSpec) (CommunityStatsSnapshot, error) {
@@ -46,6 +53,45 @@ func (p *ProductPostgres) ReadMemberSearch(ctx context.Context, _ auth.Authority
 	return mapMemberDiscovery(rows)
 }
 
+func (p *ProductPostgres) ReadBatchActiveAlerts(_ context.Context, _ auth.Authority, keys []ActiveAlertsKey) ([]product.BatchResult[AlertList], error) {
+	return make([]product.BatchResult[AlertList], len(keys)), nil
+}
+
+func (p *ProductPostgres) ReadAdminOperations(context.Context, auth.Authority, AdminOperationsSpec) (AdminOperationsView, error) {
+	return AdminOperationsView{}, p.pending()
+}
+func (p *ProductPostgres) ReadDiscordDeliveryMode(context.Context, auth.Authority, DiscordDeliveryModeSpec) (string, error) {
+	return "", p.pending()
+}
+func (p *ProductPostgres) ReadHomeBanner(context.Context, auth.Authority, HomeBannerSpec) (HomeBannerView, error) {
+	return HomeBannerView{}, p.pending()
+}
+func (p *ProductPostgres) ReadQuestAnnouncementRoleSetting(context.Context, auth.Authority, QuestAnnouncementRoleSettingSpec) (QuestAnnouncementRoleSettingView, error) {
+	return QuestAnnouncementRoleSettingView{}, p.pending()
+}
+func (p *ProductPostgres) ReadSearchableKinds(context.Context, auth.Authority, SearchableKindsSpec) ([]SearchKindView, error) {
+	return nil, p.pending()
+}
+
+func (p *ProductPostgres) LockRedriveDiscordDelivery(context.Context, RedriveDiscordDeliverySpec) (RedriveDiscordDeliveryState, error) {
+	return RedriveDiscordDeliveryState{}, p.pending()
+}
+func (p *ProductPostgres) StoreRedriveDiscordDelivery(context.Context, RedriveDiscordDeliveryWrite) (quest.DeliveryReceipt, error) {
+	return quest.DeliveryReceipt{}, p.pending()
+}
+func (p *ProductPostgres) LockUpdateHomeBanner(context.Context, UpdateHomeBannerSpec) (UpdateHomeBannerState, error) {
+	return UpdateHomeBannerState{}, p.pending()
+}
+func (p *ProductPostgres) StoreUpdateHomeBanner(context.Context, UpdateHomeBannerWrite) (HomeBannerView, error) {
+	return HomeBannerView{}, p.pending()
+}
+func (p *ProductPostgres) LockUpdateQuestAnnouncementRoleSetting(context.Context, UpdateQuestAnnouncementRoleSettingSpec) (UpdateQuestAnnouncementRoleSettingState, error) {
+	return UpdateQuestAnnouncementRoleSettingState{}, p.pending()
+}
+func (p *ProductPostgres) StoreUpdateQuestAnnouncementRoleSetting(context.Context, UpdateQuestAnnouncementRoleSettingWrite) (QuestAnnouncementRoleSettingView, error) {
+	return QuestAnnouncementRoleSettingView{}, p.pending()
+}
+
 func mapCommunitySnapshot(rows []dbgen.SiteCommunitySnapshotRow) (CommunityStatsSnapshot, error) {
 	if len(rows) == 0 {
 		return CommunityStatsSnapshot{}, fmt.Errorf("site community snapshot returned no totals row")
@@ -53,7 +99,7 @@ func mapCommunitySnapshot(rows []dbgen.SiteCommunitySnapshotRow) (CommunityStats
 	first := rows[0]
 	snapshot := CommunityStatsSnapshot{
 		TotalMembers: first.TotalMembers, ActiveCharacters: first.ActiveCharacters,
-		TotalMaps: first.TotalMaps, TotalHexes: first.TotalPointcrawlNodes,
+		TotalMaps: first.TotalMaps,
 		TotalRegions: first.TotalRegions, TotalQuests: first.TotalQuests,
 		TotalDMs: first.TotalDms,
 		Activity: member.ActivitySummaryView{

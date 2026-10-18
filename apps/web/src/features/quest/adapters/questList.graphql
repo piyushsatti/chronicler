@@ -1,0 +1,30 @@
+query QuestList($filters: QuestV2FiltersInput!, $limit: Int!, $offset: Int!) {
+  quests(filters: $filters, limit: $limit, offset: $offset) {
+    total
+    items {
+      id
+      shortCode
+      status
+      scheduledAt
+      slotsMax
+      filledCount
+      displayStatus
+      dm {
+        handle
+        displayName
+      }
+      briefDocument {
+        id
+        slug
+        title
+      }
+      discordDelivery {
+        desiredRevision
+        appliedRevision
+        overallStatus
+        nextRetryAt
+        errorMessage
+      }
+    }
+  }
+}

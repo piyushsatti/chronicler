@@ -1,0 +1,37 @@
+query Quest($id: ID, $shortCode: String) {
+  quest(id: $id, shortCode: $shortCode) {
+    id
+    shortCode
+    status
+    scheduledAt
+    durationHours
+    slotsMax
+    filledCount
+    displayStatus
+    genres
+    tags
+    dm {
+      handle
+      displayName
+    }
+    briefDocument {
+      id
+      slug
+      title
+    }
+    discordDelivery {
+      desiredRevision
+      appliedRevision
+      overallStatus
+      nextRetryAt
+      errorMessage
+    }
+    participants {
+      memberId
+      characterId
+      characterName
+      memberHandle
+      status
+    }
+  }
+}

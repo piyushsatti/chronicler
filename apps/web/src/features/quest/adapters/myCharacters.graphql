@@ -1,0 +1,8 @@
+query MyCharacters {
+  myCharacters {
+    items {
+      id
+    }
+    total
+  }
+}

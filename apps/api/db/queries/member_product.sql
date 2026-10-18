@@ -73,6 +73,14 @@ SELECT m.public_id AS member_id,s.updated_at,s.timezone,
 FROM members m LEFT JOIN member_settings s ON s.member_id=m.id WHERE m.public_id=sqlc.arg(member_id)::uuid;
 -- name: ProductMemberProfile :one
 SELECT m.public_id,p.* FROM members m JOIN dm_profiles p ON p.member_id=m.id WHERE m.public_id=sqlc.arg(member_id)::uuid;
+-- name: ProductRoleHistory :many
+WITH matching AS (
+ SELECT c.public_id,m.public_id AS member_id,c.old_roles,c.new_roles,
+ actor.public_id AS changed_by,c.occurred_at,c.note FROM role_changes c
+ JOIN members m ON m.id=c.member_id JOIN members actor ON actor.id=c.changed_by
+ WHERE m.public_id=sqlc.arg(member_id)::uuid
+), page AS (SELECT * FROM matching ORDER BY occurred_at DESC,public_id DESC LIMIT sqlc.arg(page_limit)::int OFFSET sqlc.arg(page_offset)::int)
+SELECT (SELECT count(*) FROM matching)::bigint AS total,p.* FROM (SELECT 1) marker LEFT JOIN page p ON true;
 -- name: ProductUnlockCatalog :many
 WITH matching AS (SELECT * FROM unlockables WHERE NOT sqlc.arg(active_only)::boolean OR active),
 page AS (SELECT * FROM matching ORDER BY name,public_id LIMIT sqlc.arg(page_limit)::int OFFSET sqlc.arg(page_offset)::int)
@@ -99,6 +107,11 @@ UPDATE members SET display_name=sqlc.arg(display_name)::text,
 -- name: ProductUpdateMemberRoles :one
 UPDATE members SET roles=sqlc.arg(roles)::text[],updated_at=sqlc.arg(at)::timestamptz
 WHERE public_id=sqlc.arg(member_id)::uuid RETURNING *;
+-- name: ProductAppendRoleHistory :one
+INSERT INTO role_changes(public_id,member_id,old_roles,new_roles,changed_by,occurred_at,note)
+VALUES(sqlc.arg(history_id)::uuid,(SELECT id FROM members WHERE public_id=sqlc.arg(member_id)::uuid),
+ sqlc.arg(old_roles)::text[],sqlc.arg(new_roles)::text[],(SELECT id FROM members WHERE public_id=sqlc.arg(actor_id)::uuid),sqlc.arg(at)::timestamptz,sqlc.narg(note)::text)
+RETURNING public_id,occurred_at;
 -- name: ProductDeleteAvailability :execrows
 DELETE FROM member_availability WHERE member_id=(SELECT id FROM members WHERE public_id=sqlc.arg(actor_id)::uuid);
 -- name: ProductInsertAvailability :many
@@ -236,8 +249,13 @@ WITH inputs AS (
 ), changed AS (
  UPDATE members m SET roles=p.new_roles,updated_at=sqlc.arg(at)::timestamptz
  FROM prior p WHERE m.id=p.id RETURNING m.id,m.public_id,m.roles,m.updated_at
+), history AS (
+ INSERT INTO role_changes(public_id,member_id,old_roles,new_roles,changed_by,occurred_at,note)
+ SELECT p.history_id,c.id,p.old_roles,c.roles,(SELECT id FROM members WHERE public_id=sqlc.arg(actor_id)::uuid),
+ sqlc.arg(at)::timestamptz,p.note FROM changed c JOIN prior p ON p.id=c.id
+ RETURNING member_id,public_id AS history_id
 )
-SELECT c.public_id,m.discord_id,m.handle,m.display_name,m.avatar_url,c.roles,m.status,m.joined_at,c.updated_at,p.history_id
-FROM changed c JOIN members m ON m.id=c.id JOIN prior p ON p.id=c.id ORDER BY c.public_id;
+SELECT c.public_id,m.discord_id,m.handle,m.display_name,m.avatar_url,c.roles,m.status,m.joined_at,c.updated_at,h.history_id
+FROM changed c JOIN members m ON m.id=c.id JOIN history h ON h.member_id=c.id ORDER BY c.public_id;
 -- name: ProductCompleteUnlockCatalog :many
 SELECT public_id,name,description,kind,active,payload,unlock_rule FROM unlockables ORDER BY name,public_id;

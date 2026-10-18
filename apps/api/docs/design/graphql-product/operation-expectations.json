@@ -57,7 +57,7 @@
     "search": "River anonexact010/014/015 documentsTotal3; HIDDENsentinel0; memberava→001; kinds[] nohits; protectedbodytermDMBLOCK nevermatchespublic",
     "searchableKinds": "exact kindvocabulary from acceptedDocumenttaxonomy, membersearchabletrue, missingmedia/assetnotinvented; namedfixturekeys validatedfullenum",
     "home": "Document-owned readable feed grouped by literal nullable category; real NULL bucket retained, no kind alias. Exact full result mounted-query-output-cases.json QUERY-OUTPUT-HOME.",
-    "siteStats": "totalMembers8,totalDms1,totalMaps2,totalHexes3,totalRegions3,totalQuests5,activeCharacters2; countsDocumentvisibleactual010/014/015 nothidden011; activityvoice120/messages3/reactions2",
+    "siteStats": "totalMembers8,totalDms1,totalMaps2,totalRegions3,totalQuests5,activeCharacters2; countsDocumentvisibleactual010/014/015 nothidden011; activityvoice120/messages3/reactions2",
     "quest": "050 actualkinds[standard],tags[river],genres[exploration],dm003/document014,scheduled15Oct,slots1filled0; filtertagriver050only total1; anonymousprotectedbriefvariantnullrefs",
     "quests": "050 actualkinds[standard],tags[river],genres[exploration],dm003/document014,scheduled15Oct,slots1filled0; filtertagriver050only total1; anonymousprotectedbriefvariantnullrefs",
     "questBoard": "board050/052ordered15Oct,16Oct total2; openSeats050onlytotal1/openSeats1; full052hasnoseats",

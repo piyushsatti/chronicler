@@ -1,5 +1,7 @@
+import type { HomeWarRoomQuery } from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import { toAppError } from '../../../errors/toAppError.js';
+import LANES_QUERY from './homeWarRoom.graphql?raw';
 import type { AdapterResult } from '../../../errors/types.js';
 import type { QuestCardView } from '../../../components/domain/QuestCard.js';
 import {
@@ -77,44 +79,6 @@ function parseCommunity(wire: unknown): AdapterResult<DmAcceptingView[]> {
   };
 }
 
-const LANES_QUERY = `
-  query HomeWarRoom($upcomingFrom: DateTime!, $upcomingTo: DateTime!, $closedSince: DateTime!) {
-    questBoard(limit: 12) {
-      items {
-        id shortCode status scheduledAt slotsMax filledCount displayStatus
-        dm { handle displayName }
-        briefDocument { id slug title }
-        discordDelivery { desiredRevision appliedRevision overallStatus }
-      }
-      total
-    }
-    quests(filters: { scheduledFrom: $upcomingFrom, scheduledTo: $upcomingTo }, limit: 12) {
-      items {
-        id shortCode status scheduledAt slotsMax filledCount displayStatus
-        dm { handle displayName }
-        briefDocument { id slug title }
-        discordDelivery { desiredRevision appliedRevision overallStatus }
-      }
-      total
-    }
-    recentlyClosedQuests(closedSince: $closedSince, limit: 12) {
-      items {
-        id shortCode status scheduledAt slotsMax filledCount displayStatus
-        dm { handle displayName }
-        briefDocument { id slug title }
-        discordDelivery { desiredRevision appliedRevision overallStatus }
-      }
-      total
-    }
-    communityDirectory(filters: { acceptingPlayers: true, role: "dm" }, limit: 12) {
-      entries {
-        memberId handle displayName tagline acceptingPlayers isDm
-      }
-      total
-    }
-  }
-`;
-
 function defaultWindow(): {
   upcomingFrom: string;
   upcomingTo: string;
@@ -160,12 +124,7 @@ export function parseHomeLanesWire(wire: {
 export async function loadHomeLanes(): Promise<HomeLanesViewModel> {
   const window = defaultWindow();
   try {
-    const data = await graphqlRequest<{
-      questBoard: unknown;
-      quests: unknown;
-      recentlyClosedQuests: unknown;
-      communityDirectory: unknown;
-    }>(LANES_QUERY, window);
+    const data = await graphqlRequest<HomeWarRoomQuery>(LANES_QUERY, window);
 
     const result = parseHomeLanesWire(data);
     if (!result.ok) {

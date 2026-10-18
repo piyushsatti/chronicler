@@ -170,8 +170,8 @@ query NestedQuests {
         memberHandle
         createdAt
       }
-      hexes(limit: 100, role: "visited") {
-        hexId
+      pointcrawlLinks(limit: 100, role: "visited") {
+        pointcrawlNodeId
         role
       }
       regions
@@ -196,4 +196,4 @@ query NestedQuests {
 
 Record actual SQL counts, latency p50/p95/p99, bytes, pool wait/acquire concurrency and fixture hash on real mounted handler. No p95 goal claimed without machine baseline. Sensitivity experiments must disable batched SQL/filters/audience/notice write and show relevant ledger criterion fails; isolated patches restored immediately. Depth13, alias expansion, fragments/cycles, limit0/101/negativeoffset, args group distinctions, cross-user cache isolation and same-request mutation/read freshness must be verified.
 
-Cost specification amendment: max100000 accommodates the exact NestedQuests document; do not retain the superseded25000 value. Exact field cardinalities in cardinalities.json are applied by the same AST visitor for validation/examples/runtime guard. A scalar costs1, object costs1+sumchild, list costs1+maxbound×sumchild; actual requested limit replaces max only where validated limit arg exists. NestedQuests upper bound: participant field 1+100×7=701 perquest, arc quests1+5×2=11, brief author/fields<=9, DM3, hexes201, regions101, scalarquestfields9 anddelivery4; <=1045 perquest×50 plus root fields/objects<53000 (no undercount). All 50 parents fit100000. Homepage combined is costed as sumhome andquestBoard. Unknown list/cardinality is a schema validation failure, never weight1. Implicit large links arrays need bounded schema args rather than hidden truncation.
+Cost specification amendment: max100000 accommodates the exact NestedQuests document; do not retain the superseded25000 value. Exact field cardinalities in cardinalities.json are applied by the same AST visitor for validation/examples/runtime guard. A scalar costs1, object costs1+sumchild, list costs1+maxbound×sumchild; actual requested limit replaces max only where validated limit arg exists. NestedQuests upper bound: participant field 1+100×7=701 perquest, arc quests1+5×2=11, brief author/fields<=9, DM3, pointcrawlLinks201, regions101, scalarquestfields9 anddelivery4; <=1045 perquest×50 plus root fields/objects<53000 (no undercount). All 50 parents fit100000. Homepage combined is costed as sumhome andquestBoard. Unknown list/cardinality is a schema validation failure, never weight1. Implicit large links arrays need bounded schema args rather than hidden truncation.

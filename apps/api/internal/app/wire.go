@@ -139,9 +139,20 @@ func wirePostgres(_ context.Context, cfg config.Config, pool *db.Pool, base API)
 		QuestCmd: questCmd,
 	}
 
+	services, err := wireProductServices(pgxPool, pool, memStore, []byte(cfg.JWTSecret), services)
+	if err != nil {
+		slog.Error("product GraphQL wiring failed", "error", err)
+		panic("product GraphQL wiring: " + err.Error())
+	}
+	resolver, err := graph.NewResolver(services)
+	if err != nil {
+		slog.Error("GraphQL resolver construction failed", "error", err)
+		panic("GraphQL resolver: " + err.Error())
+	}
+
 	base.Pool = pool
 	base.QuestCmd = questCmd
-	base.Resolver = &graph.Resolver{Services: services}
+	base.Resolver = resolver
 	base.Documents = docQ
 	base.Notifications = notification.Queries{Repo: notification.NewPostgresRepository(q)}
 	base.NotificationCmd = notification.NewCommands(db.NewRunner(pool, func(tx pgx.Tx) notification.CommandRepository {

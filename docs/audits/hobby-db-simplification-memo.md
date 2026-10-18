@@ -10,13 +10,13 @@
 
 ## Evidence snapshot
 
-| Source | Fact |
-|--------|------|
-| Goose migrations | 4 files: `0001_init` (~45 tables), `0002` (view), `0003_product_graphql` (+24 tables), `0004` (summary link order) |
-| Postgres extensions in DDL | Only `pgcrypto` |
-| endpoint-review | QA seed targets **45** tables; baseline still cites **two** migrations — stale vs four files today |
-| Runtime | Legacy `*.sql` wired; product `*_product.sql` assumes 0003+; product UoW stub |
-| SCHEMA-HISTORY-01 | Do not rewrite goose history without reconciliation ([D44](../../apps/api/docs/decisions/D44-Leased-Work-With-Fencing.md), [background-work](../../apps/api/docs/background-work.md)) |
+| Source                     | Fact                                                                                                                                                                                  |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Goose migrations           | 4 files: `0001_init` (~45 tables), `0002` (view), `0003_product_graphql` (+24 tables), `0004` (summary link order)                                                                    |
+| Postgres extensions in DDL | Only `pgcrypto`                                                                                                                                                                       |
+| endpoint-review            | QA seed targets **45** tables; baseline still cites **two** migrations — stale vs four files today                                                                                    |
+| Runtime                    | Legacy `*.sql` wired; product `*_product.sql` assumes 0003+; product UoW stub                                                                                                         |
+| SCHEMA-HISTORY-01          | Do not rewrite goose history without reconciliation ([D44](../../apps/api/docs/decisions/D44-Leased-Work-With-Fencing.md), [background-work](../../apps/api/docs/background-work.md)) |
 
 ---
 
@@ -42,14 +42,14 @@
 
 Legend: **KEEP** / **MERGE** / **DROP CANDIDATE** (hobby).
 
-| Domain | KEEP examples | DROP / MERGE candidates (hobby) |
-|--------|---------------|----------------------------------|
-| Members | `members`, `notifications` | `member_follows`, `role_changes`, unlock tables, `notification_events` pipeline, audit tables from 0003 |
-| Documents | `documents`, `document_links`, `document_readers` | `document_revisions` (MERGE if no codex history); `lieutenant_assignments` (MERGE) |
-| Spatial | regions, maps, hexes, edges, entry links, pois | `hex_changes`, pointcrawl (0003), `game_time_map`, history tables |
-| Characters | `characters`, progression ledger | `character_changes`, DDB attempts, heavy verification chain |
-| Quests | arcs, quests, participants | `quest_changes`, reward entitlements/decisions (MERGE to ledger) |
-| Jobs / site | `background_jobs`, `site_settings` | `job_redrives`, ingest facts, `operational_observations`, setting change history |
+| Domain      | KEEP examples                                                | DROP / MERGE candidates (hobby)                                                                        |
+| ----------- | ------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------ |
+| Members     | `members`, `notifications`, `role_changes` (**N2** retained) | `member_follows`, unlock tables, `notification_events` pipeline, other aggregate `*_changes` from 0003 |
+| Documents   | `documents`, `document_links`, `document_readers`            | `document_revisions` (MERGE if no codex history); `lieutenant_assignments` (MERGE)                     |
+| Spatial     | regions, maps, hexes, edges, entry links, pois               | `hex_changes`, pointcrawl (0003), `game_time_map`, history tables                                      |
+| Characters  | `characters`, progression ledger                             | `character_changes`, DDB attempts, heavy verification chain                                            |
+| Quests      | arcs, quests, participants                                   | `quest_changes`, reward entitlements/decisions (MERGE to ledger)                                       |
+| Jobs / site | `background_jobs`, `site_settings`                           | `job_redrives`, ingest facts, `operational_observations`, setting change history                       |
 
 **Rough targets:** ~35–45 tables if dropping history/pointcrawl/cosmetics; ~25–30 if aggressive merge.
 
@@ -59,18 +59,18 @@ Full row-level census: expand from [tables.md](../../apps/api/db/docs/tables.md)
 
 ## 3. Extensions and queues
 
-| Tech | In repo today | Hobby recommendation |
-|------|---------------|----------------------|
-| **PostGIS** | Not in migrations; axial hex in [design.md](../../apps/api/db/docs/design.md) | **Reject** unless real-world geo overlays |
-| **PGMQ** | Legacy Python semantics only; Go uses **`background_jobs`** | **Stay on `background_jobs`** + `SKIP LOCKED` |
-| **pgvector** | Not in Postgres; agent uses LanceDB | N/A for API DB |
-| **pgcrypto** | In 0001 | **Keep** |
+| Tech         | In repo today                                                                 | Hobby recommendation                          |
+| ------------ | ----------------------------------------------------------------------------- | --------------------------------------------- |
+| **PostGIS**  | Not in migrations; axial hex in [design.md](../../apps/api/db/docs/design.md) | **Reject** unless real-world geo overlays     |
+| **PGMQ**     | Legacy Python semantics only; Go uses **`background_jobs`**                   | **Stay on `background_jobs`** + `SKIP LOCKED` |
+| **pgvector** | Not in Postgres; agent uses LanceDB                                           | N/A for API DB                                |
+| **pgcrypto** | In 0001                                                                       | **Keep**                                      |
 
 ---
 
 ## 4. Simplification themes
 
-1. **One SQL stack** — legacy *or* product per domain; not both at hobby scale.
+1. **One SQL stack** — legacy _or_ product per domain; not both at hobby scale.
 2. **Drop `*_changes` / audit event tables** unless staff compliance matters; keep `document_revisions` if codex versioning is core.
 3. **Notifications:** inbox rows only; skip event + delivery ledger.
 4. **Unlockables:** drop; use static config or code gates.
@@ -111,18 +111,18 @@ notifications
 
 ## Owner decisions
 
-| # | Question | Hobby default |
-|---|----------|---------------|
-| A | Wipe + single init vs keep migration history | Wipe dev + single init |
-| B | Product GraphQL DDL vs legacy mounted API | Pick one surface |
-| C | Hex-only vs pointcrawl | Hex-only |
-| D | Notification events vs inbox | Inbox only |
-| E | Quest PCXP entitlements | Ledger only |
-| F | Social / DM marketplace tables | Simplify or drop |
-| G | DDB depth | Mirror optional |
-| H | Separate `agent_questions` | Keep (D42) |
-| I | GraphQL idempotency receipts | Minimal |
-| J | Document revisions | Keep if codex is core |
+| #   | Question                                     | Hobby default          |
+| --- | -------------------------------------------- | ---------------------- |
+| A   | Wipe + single init vs keep migration history | Wipe dev + single init |
+| B   | Product GraphQL DDL vs legacy mounted API    | Pick one surface       |
+| C   | Hex-only vs pointcrawl                       | Hex-only               |
+| D   | Notification events vs inbox                 | Inbox only             |
+| E   | Quest PCXP entitlements                      | Ledger only            |
+| F   | Social / DM marketplace tables               | Simplify or drop       |
+| G   | DDB depth                                    | Mirror optional        |
+| H   | Separate `agent_questions`                   | Keep (D42)             |
+| I   | GraphQL idempotency receipts                 | Minimal                |
+| J   | Document revisions                           | Keep if codex is core  |
 
 ---
 

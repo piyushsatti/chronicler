@@ -10,10 +10,11 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/piyushsatti/chronicler/apps/api/internal/character"
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/member"
+	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
-	"github.com/piyushsatti/chronicler/apps/api/internal/platform/idempotency"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 	"github.com/piyushsatti/chronicler/apps/api/internal/quest"
 	"github.com/piyushsatti/chronicler/apps/api/internal/site"
@@ -152,12 +153,9 @@ func (r *mutationResolver) RevokeLieutenant(ctx context.Context, memberID string
 // SetMemberRoles is the resolver for the setMemberRoles field.
 func (r *mutationResolver) SetMemberRoles(ctx context.Context, memberID string, roles []string, note *string, meta CommandMeta) (*MemberType, error) {
 	if r.Services.MemberCommands == nil {
-		return nil, fmt.Errorf("member commands unavailable")
+		return nil, memberCommandsUnavailable()
 	}
-	if err := idempotency.Require(meta.IdempotencyKey); err != nil {
-		return nil, err
-	}
-	actor, err := LiveAuthority(ctx)
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
 	if err != nil {
 		return nil, err
 	}
@@ -165,24 +163,61 @@ func (r *mutationResolver) SetMemberRoles(ctx context.Context, memberID string, 
 		MemberId: memberID,
 		Roles:    roles,
 		Note:     note,
-	}, product.CommandMeta{IdempotencyKey: meta.IdempotencyKey})
+	}, commandMeta)
 	if err != nil {
 		return nil, err
 	}
-	if state, ok := RequestStateFromContext(ctx); ok {
-		state.ClearLoaders()
-	}
+	clearMutationLoaders(ctx)
+	invalidateMutationAuthority(ctx)
 	return toMemberViewType(view), nil
 }
 
 // SetMemberRolesBatch is the resolver for the setMemberRolesBatch field.
 func (r *mutationResolver) SetMemberRolesBatch(ctx context.Context, changes []*MemberRoleBatchInput, meta CommandMeta) ([]*MemberRoleBatchResultType, error) {
-	panic(fmt.Errorf("not implemented: SetMemberRolesBatch - setMemberRolesBatch"))
+	if r.Services.MemberCommands == nil {
+		return nil, memberCommandsUnavailable()
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	spec := member.SetMemberRolesBatchSpec{Changes: make([]member.MemberRoleBatchFields, 0, len(changes))}
+	for _, change := range changes {
+		if change == nil {
+			continue
+		}
+		spec.Changes = append(spec.Changes, member.MemberRoleBatchFields{
+			MemberId: change.MemberID,
+			Roles:    change.Roles,
+			Note:     change.Note,
+		})
+	}
+	results, err := r.Services.MemberCommands.SetMemberRolesBatch(ctx, actor, spec, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	invalidateMutationAuthority(ctx)
+	return toMemberRoleBatchResults(results), nil
 }
 
 // UpdateMyProfile is the resolver for the updateMyProfile field.
 func (r *mutationResolver) UpdateMyProfile(ctx context.Context, input UpdateMyProfileInput, meta CommandMeta) (*MemberType, error) {
-	panic(fmt.Errorf("not implemented: UpdateMyProfile - updateMyProfile"))
+	if r.Services.MemberCommands == nil {
+		return nil, memberCommandsUnavailable()
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.MemberCommands.UpdateMyProfile(ctx, actor, member.UpdateMyProfileSpec{
+		Input: toMemberProfileInput(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toMemberViewType(view), nil
 }
 
 // UpdateMyDmProfile is the resolver for the updateMyDmProfile field.
@@ -192,7 +227,21 @@ func (r *mutationResolver) UpdateMyDmProfile(ctx context.Context, input UpdateDm
 
 // SetMyAvailability is the resolver for the setMyAvailability field.
 func (r *mutationResolver) SetMyAvailability(ctx context.Context, slots []*AvailabilitySlotInput, meta CommandMeta) ([]*AvailabilitySlotType, error) {
-	panic(fmt.Errorf("not implemented: SetMyAvailability - setMyAvailability"))
+	if r.Services.MemberCommands == nil {
+		return nil, memberCommandsUnavailable()
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	views, err := r.Services.MemberCommands.SetMyAvailability(ctx, actor, member.SetMyAvailabilitySpec{
+		Slots: toAvailabilitySlots(slots),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toAvailabilitySlotTypes(views), nil
 }
 
 // SubmitDmProfileForVerification is the resolver for the submitDmProfileForVerification field.
@@ -207,27 +256,102 @@ func (r *mutationResolver) DecideDmProfileVerification(ctx context.Context, memb
 
 // GrantUnlock is the resolver for the grantUnlock field.
 func (r *mutationResolver) GrantUnlock(ctx context.Context, memberID string, unlockableID string, note string, meta CommandMeta) (*MemberUnlockType, error) {
-	panic(fmt.Errorf("not implemented: GrantUnlock - grantUnlock"))
+	if r.Services.MemberCommands == nil {
+		return nil, memberCommandsUnavailable()
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.MemberCommands.GrantUnlock(ctx, actor, member.GrantUnlockSpec{
+		MemberId:     memberID,
+		UnlockableId: unlockableID,
+		Note:         note,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toMemberUnlockType(view), nil
 }
 
 // UpdateMySettings is the resolver for the updateMySettings field.
 func (r *mutationResolver) UpdateMySettings(ctx context.Context, input MemberSettingsPatch, meta CommandMeta) (*MemberSettingsType, error) {
-	panic(fmt.Errorf("not implemented: UpdateMySettings - updateMySettings"))
+	if r.Services.MemberCommands == nil {
+		return nil, memberCommandsUnavailable()
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.MemberCommands.UpdateMySettings(ctx, actor, member.UpdateMySettingsSpec{
+		Input: toMemberSettingsPatch(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toMemberSettingsType(view), nil
 }
 
 // UpsertUnlockable is the resolver for the upsertUnlockable field.
 func (r *mutationResolver) UpsertUnlockable(ctx context.Context, id *string, input UpsertUnlockableInput, meta CommandMeta) (*UnlockableType, error) {
-	panic(fmt.Errorf("not implemented: UpsertUnlockable - upsertUnlockable"))
+	if r.Services.MemberCommands == nil {
+		return nil, memberCommandsUnavailable()
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.MemberCommands.UpsertUnlockable(ctx, actor, member.UpsertUnlockableSpec{
+		Id:    id,
+		Input: toUpsertUnlockableFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toUnlockableType(view), nil
 }
 
 // SetUnlockableActive is the resolver for the setUnlockableActive field.
 func (r *mutationResolver) SetUnlockableActive(ctx context.Context, id string, active bool, meta CommandMeta) (*UnlockableType, error) {
-	panic(fmt.Errorf("not implemented: SetUnlockableActive - setUnlockableActive"))
+	if r.Services.MemberCommands == nil {
+		return nil, memberCommandsUnavailable()
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.MemberCommands.SetUnlockableActive(ctx, actor, member.SetUnlockableActiveSpec{
+		Id:     id,
+		Active: active,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toUnlockableType(view), nil
 }
 
 // MarkNotificationsRead is the resolver for the markNotificationsRead field.
 func (r *mutationResolver) MarkNotificationsRead(ctx context.Context, ids []string, meta CommandMeta) (*NotificationWriteReceipt, error) {
-	panic(fmt.Errorf("not implemented: MarkNotificationsRead - markNotificationsRead"))
+	if r.Services.NotificationCommands == nil {
+		return nil, fmt.Errorf("notification commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	receipt, err := r.Services.NotificationCommands.MarkNotificationsRead(ctx, actor, notification.MarkNotificationsReadSpec{Ids: ids}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return &NotificationWriteReceipt{
+		Replayed:      receipt.Replayed,
+		AffectedCount: int(receipt.AffectedCount),
+	}, nil
 }
 
 // AcknowledgeSuppressedNotifications is the resolver for the acknowledgeSuppressedNotifications field.
@@ -402,6 +526,21 @@ func (r *mutationResolver) UnlinkPointcrawlEntry(ctx context.Context, mapID stri
 
 // Characters is the resolver for the characters field.
 func (r *queryResolver) Characters(ctx context.Context, filters *CharacterV2FiltersInput, limit int, offset int) (*CharacterV2ListResult, error) {
+	if r.Services.CharacterQueries != nil {
+		actor, err := LiveAuthority(ctx)
+		if err != nil {
+			return nil, err
+		}
+		result, err := r.Services.CharacterQueries.Characters(ctx, actor, character.CharactersSpec{
+			Filters: toCharacterV2Filters(filters),
+			Limit:   int32(limit),
+			Offset:  int32(offset),
+		})
+		if err != nil {
+			return nil, err
+		}
+		return toCharacterV2ListResult(result), nil
+	}
 	var status *string
 	if filters != nil && filters.Status != nil {
 		status = filters.Status
@@ -419,6 +558,23 @@ func (r *queryResolver) Characters(ctx context.Context, filters *CharacterV2Filt
 
 // MyCharacters is the resolver for the myCharacters field.
 func (r *queryResolver) MyCharacters(ctx context.Context, limit int, offset int) (*CharacterV2ListResult, error) {
+	if r.Services.CharacterQueries != nil {
+		actor, err := LiveAuthority(ctx)
+		if err != nil {
+			return nil, err
+		}
+		if actor.Claims().Anonymous() {
+			return &CharacterV2ListResult{Items: []*CharacterV2Type{}, Total: 0}, nil
+		}
+		result, err := r.Services.CharacterQueries.MyCharacters(ctx, actor, character.MyCharactersSpec{
+			Limit:  int32(limit),
+			Offset: int32(offset),
+		})
+		if err != nil {
+			return nil, err
+		}
+		return toCharacterV2ListResult(result), nil
+	}
 	c := auth.FromContext(ctx)
 	if c.Anonymous() {
 		return &CharacterV2ListResult{Items: []*CharacterV2Type{}, Total: 0}, nil
@@ -436,6 +592,20 @@ func (r *queryResolver) MyCharacters(ctx context.Context, limit int, offset int)
 
 // Character is the resolver for the character field.
 func (r *queryResolver) Character(ctx context.Context, id *string, shortCode *string) (*CharacterV2Type, error) {
+	if r.Services.CharacterQueries != nil {
+		actor, err := LiveAuthority(ctx)
+		if err != nil {
+			return nil, err
+		}
+		view, err := r.Services.CharacterQueries.Character(ctx, actor, character.CharacterSpec{Id: id, ShortCode: shortCode})
+		if err != nil {
+			return nil, err
+		}
+		if view == nil {
+			return nil, nil
+		}
+		return toCharacterV2View(*view), nil
+	}
 	c, err := r.Services.Characters.Character(ctx, id, shortCode)
 	if err != nil {
 		return nil, nil
@@ -445,57 +615,221 @@ func (r *queryResolver) Character(ctx context.Context, id *string, shortCode *st
 
 // AdminCharacterDirectory is the resolver for the adminCharacterDirectory field.
 func (r *queryResolver) AdminCharacterDirectory(ctx context.Context, filters *AdminCharacterDirectoryFiltersInput, limit int, offset int) (*AdminCharacterDirectoryV2Type, error) {
-	return &AdminCharacterDirectoryV2Type{Items: []*AdminCharacterDirectoryEntryV2Type{}, Total: 0}, nil
+	if r.Services.CharacterQueries == nil {
+		return &AdminCharacterDirectoryV2Type{Items: []*AdminCharacterDirectoryEntryV2Type{}, Total: 0}, nil
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.CharacterQueries.AdminCharacterDirectory(ctx, actor, character.AdminCharacterDirectorySpec{
+		Filters: toAdminCharacterDirectoryFilters(filters),
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toAdminCharacterDirectoryV2Type(view), nil
 }
 
 // PendingCharacterVerifications is the resolver for the pendingCharacterVerifications field.
 func (r *queryResolver) PendingCharacterVerifications(ctx context.Context, limit int, offset int) (*CharacterV2ListResult, error) {
-	panic(fmt.Errorf("not implemented: PendingCharacterVerifications - pendingCharacterVerifications"))
+	if r.Services.CharacterQueries == nil {
+		return nil, fmt.Errorf("character queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result, err := r.Services.CharacterQueries.PendingCharacterVerifications(ctx, actor, character.PendingCharacterVerificationsSpec{
+		Limit:  int32(limit),
+		Offset: int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toCharacterV2ListResult(result), nil
 }
 
 // CharacterVerificationHistory is the resolver for the characterVerificationHistory field.
 func (r *queryResolver) CharacterVerificationHistory(ctx context.Context, characterID string, limit int, offset int) (*VerificationPage, error) {
-	panic(fmt.Errorf("not implemented: CharacterVerificationHistory - characterVerificationHistory"))
+	if r.Services.CharacterQueries == nil {
+		return nil, fmt.Errorf("character queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	page, err := r.Services.CharacterQueries.CharacterVerificationHistory(ctx, actor, character.CharacterVerificationHistorySpec{
+		CharacterId: characterID,
+		Limit:       int32(limit),
+		Offset:      int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toVerificationPage(page), nil
 }
 
 // Backstories is the resolver for the backstories field.
 func (r *queryResolver) Backstories(ctx context.Context, filters *BackstoryFiltersInput, limit int, offset int) (*BackstoryPage, error) {
-	panic(fmt.Errorf("not implemented: Backstories - backstories"))
+	if r.Services.CharacterQueries == nil {
+		return nil, fmt.Errorf("character queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	page, err := r.Services.CharacterQueries.Backstories(ctx, actor, character.BackstoriesSpec{
+		Filters: toBackstoryFilters(filters),
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toBackstoryPage(page), nil
 }
 
 // CreationCatalog is the resolver for the creationCatalog field.
 func (r *queryResolver) CreationCatalog(ctx context.Context, filters *CreationCatalogFiltersInput, limit int, offset int) (*CreationCatalogPage, error) {
-	panic(fmt.Errorf("not implemented: CreationCatalog - creationCatalog"))
+	if r.Services.CharacterQueries == nil {
+		return nil, fmt.Errorf("character queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	page, err := r.Services.CharacterQueries.CreationCatalog(ctx, actor, character.CreationCatalogSpec{
+		Filters: toCreationCatalogFilters(filters),
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toCreationCatalogPage(page), nil
 }
 
 // CharacterProgression is the resolver for the characterProgression field.
 func (r *queryResolver) CharacterProgression(ctx context.Context, characterID string, limit int, offset int) (*ProgressionListResult, error) {
-	panic(fmt.Errorf("not implemented: CharacterProgression - characterProgression"))
+	if r.Services.CharacterQueries == nil {
+		return nil, fmt.Errorf("character queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result, err := r.Services.CharacterQueries.CharacterProgression(ctx, actor, character.CharacterProgressionSpec{
+		CharacterId: characterID,
+		Limit:       int32(limit),
+		Offset:      int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toProgressionListResult(result), nil
 }
 
 // CharacterLogs is the resolver for the characterLogs field.
 func (r *queryResolver) CharacterLogs(ctx context.Context, characterID string, limit int, offset int) (*CharacterLogListResult, error) {
-	panic(fmt.Errorf("not implemented: CharacterLogs - characterLogs"))
+	if r.Services.CharacterQueries == nil {
+		return nil, fmt.Errorf("character queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result, err := r.Services.CharacterQueries.CharacterLogs(ctx, actor, character.CharacterLogsSpec{
+		CharacterId: characterID,
+		Limit:       int32(limit),
+		Offset:      int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toCharacterLogListResult(result), nil
 }
 
 // DowntimeProjects is the resolver for the downtimeProjects field.
 func (r *queryResolver) DowntimeProjects(ctx context.Context, characterID string, limit int, offset int) (*DowntimeProjectListResult, error) {
-	panic(fmt.Errorf("not implemented: DowntimeProjects - downtimeProjects"))
+	if r.Services.CharacterQueries == nil {
+		return nil, fmt.Errorf("character queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result, err := r.Services.CharacterQueries.DowntimeProjects(ctx, actor, character.DowntimeProjectsSpec{
+		CharacterId: characterID,
+		Limit:       int32(limit),
+		Offset:      int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toDowntimeProjectListResult(result), nil
 }
 
 // CoPlayers is the resolver for the coPlayers field.
 func (r *queryResolver) CoPlayers(ctx context.Context, characterID string, limit int, offset int) (*CoPlayerPage, error) {
-	panic(fmt.Errorf("not implemented: CoPlayers - coPlayers"))
+	if r.Services.CharacterQueries == nil {
+		return nil, fmt.Errorf("character queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	page, err := r.Services.CharacterQueries.CoPlayers(ctx, actor, character.CoPlayersSpec{
+		CharacterId: characterID,
+		Limit:       int32(limit),
+		Offset:      int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toCoPlayerPage(page), nil
 }
 
 // CharacterSummaries is the resolver for the characterSummaries field.
 func (r *queryResolver) CharacterSummaries(ctx context.Context, characterID string, limit int, offset int) (*DocumentListResult, error) {
-	panic(fmt.Errorf("not implemented: CharacterSummaries - characterSummaries"))
+	if r.Services.CharacterQueries == nil {
+		return nil, fmt.Errorf("character queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result, err := r.Services.CharacterQueries.CharacterSummaries(ctx, actor, character.CharacterSummariesSpec{
+		CharacterId: characterID,
+		Limit:       int32(limit),
+		Offset:      int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toDocumentListResult(result), nil
 }
 
 // ParticipationsByCharacter is the resolver for the participationsByCharacter field.
 func (r *queryResolver) ParticipationsByCharacter(ctx context.Context, characterID string, limit int, offset int) (*ParticipationPage, error) {
-	panic(fmt.Errorf("not implemented: ParticipationsByCharacter - participationsByCharacter"))
+	if r.Services.CharacterQueries == nil {
+		return nil, fmt.Errorf("character queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	page, err := r.Services.CharacterQueries.ParticipationsByCharacter(ctx, actor, character.ParticipationsByCharacterSpec{
+		CharacterId: characterID,
+		Limit:       int32(limit),
+		Offset:      int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toParticipationPage(page), nil
 }
 
 // Document is the resolver for the document field.
@@ -602,21 +936,55 @@ func (r *queryResolver) LieutenantAssignments(ctx context.Context, memberID *str
 
 // MyUnlocks is the resolver for the myUnlocks field.
 func (r *queryResolver) MyUnlocks(ctx context.Context, limit int, offset int) (*MemberUnlockPage, error) {
-	panic(fmt.Errorf("not implemented: MyUnlocks - myUnlocks"))
+	if r.Services.MemberQueries == nil {
+		return nil, fmt.Errorf("member queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	page, err := r.Services.MemberQueries.MyUnlocks(ctx, actor, member.MyUnlocksSpec{
+		Limit:  int32(limit),
+		Offset: int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toMemberUnlockPage(page), nil
 }
 
 // Member is the resolver for the member field.
 func (r *queryResolver) Member(ctx context.Context, id *string, handle *string) (*MemberType, error) {
-	m, err := r.Services.Members.Get(ctx, id, handle)
+	if r.Services.MemberQueries == nil {
+		return nil, fmt.Errorf("member queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
 	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.MemberQueries.Member(ctx, actor, member.MemberSpec{Id: id, Handle: handle})
+	if err != nil {
+		return nil, err
+	}
+	if view == nil {
 		return nil, nil
 	}
-	return toMemberType(m), nil
+	return toMemberViewType(*view), nil
 }
 
 // Members is the resolver for the members field.
 func (r *queryResolver) Members(ctx context.Context, filters *MemberFiltersInput, sort *MemberSortInput, limit int, offset int) (*MemberListResult, error) {
-	_ = sort
+	if r.Services.MemberQueries != nil {
+		actor, err := LiveAuthority(ctx)
+		if err != nil {
+			return nil, err
+		}
+		result, err := r.Services.MemberQueries.Members(ctx, actor, toMembersSpec(filters, sort, limit, offset))
+		if err != nil {
+			return nil, err
+		}
+		return toMemberListResult(result), nil
+	}
 	var status *string
 	if filters != nil && filters.Status != nil {
 		status = filters.Status
@@ -634,11 +1002,39 @@ func (r *queryResolver) Members(ctx context.Context, filters *MemberFiltersInput
 
 // MemberActivityStats is the resolver for the memberActivityStats field.
 func (r *queryResolver) MemberActivityStats(ctx context.Context, memberID string) (*MemberActivityStatsType, error) {
-	return nil, nil
+	if r.Services.MemberQueries == nil {
+		return nil, fmt.Errorf("member queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.MemberQueries.MemberActivityStats(ctx, actor, member.MemberActivityStatsSpec{MemberId: memberID})
+	if err != nil {
+		return nil, err
+	}
+	if view == nil {
+		return nil, nil
+	}
+	return toMemberActivityStatsType(*view), nil
 }
 
 // MemberProfile is the resolver for the memberProfile field.
 func (r *queryResolver) MemberProfile(ctx context.Context, handle string) (*MemberProfileType, error) {
+	if r.Services.MemberQueries != nil {
+		actor, err := LiveAuthority(ctx)
+		if err != nil {
+			return nil, err
+		}
+		view, err := r.Services.MemberQueries.MemberProfile(ctx, actor, member.MemberProfileSpec{Handle: handle})
+		if err != nil {
+			return nil, err
+		}
+		if view == nil {
+			return nil, nil
+		}
+		return toMemberProfileType(*view), nil
+	}
 	m, err := r.Services.Members.Get(ctx, nil, &handle)
 	if err != nil {
 		return nil, nil
@@ -668,75 +1064,263 @@ func (r *queryResolver) MemberProfile(ctx context.Context, handle string) (*Memb
 
 // CommunityDirectory is the resolver for the communityDirectory field.
 func (r *queryResolver) CommunityDirectory(ctx context.Context, filters *CommunityDirectoryFiltersInput, limit int, offset int) (*CommunityDirectoryResult, error) {
-	return &CommunityDirectoryResult{Entries: []*DirectoryEntryType{}, Total: 0}, nil
+	if r.Services.MemberQueries == nil {
+		return &CommunityDirectoryResult{Entries: []*DirectoryEntryType{}, Total: 0}, nil
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result, err := r.Services.MemberQueries.CommunityDirectory(ctx, actor, member.CommunityDirectorySpec{
+		Filters: toCommunityDirectoryFilters(filters),
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toCommunityDirectoryResult(result), nil
 }
 
 // PendingDmProfileVerifications is the resolver for the pendingDmProfileVerifications field.
 func (r *queryResolver) PendingDmProfileVerifications(ctx context.Context, limit int, offset int) (*CommunityDirectoryResult, error) {
-	return &CommunityDirectoryResult{Entries: []*DirectoryEntryType{}, Total: 0}, nil
+	if r.Services.MemberQueries == nil {
+		return &CommunityDirectoryResult{Entries: []*DirectoryEntryType{}, Total: 0}, nil
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result, err := r.Services.MemberQueries.PendingDmProfileVerifications(ctx, actor, member.PendingDmProfileVerificationsSpec{
+		Limit:  int32(limit),
+		Offset: int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toCommunityDirectoryResult(result), nil
 }
 
 // MyPersonalization is the resolver for the myPersonalization field.
 func (r *queryResolver) MyPersonalization(ctx context.Context) (*MyPersonalizationType, error) {
-	return nil, nil
+	if r.Services.MemberQueries == nil {
+		return nil, fmt.Errorf("member queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.MemberQueries.MyPersonalization(ctx, actor, member.MyPersonalizationSpec{})
+	if err != nil {
+		return nil, err
+	}
+	if view == nil {
+		return nil, nil
+	}
+	return toMyPersonalizationType(*view), nil
 }
 
 // MemberMe is the resolver for the memberMe field.
 func (r *queryResolver) MemberMe(ctx context.Context) (*MemberType, error) {
-	panic(fmt.Errorf("not implemented: MemberMe - memberMe"))
+	if r.Services.MemberQueries == nil {
+		return nil, fmt.Errorf("member queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.MemberQueries.MemberMe(ctx, actor, member.MemberMeSpec{})
+	if err != nil {
+		return nil, err
+	}
+	return toMemberViewType(view), nil
 }
 
 // MemberByDiscordID is the resolver for the memberByDiscordId field.
 func (r *queryResolver) MemberByDiscordID(ctx context.Context, discordID string) (*MemberType, error) {
-	panic(fmt.Errorf("not implemented: MemberByDiscordID - memberByDiscordId"))
+	if r.Services.MemberQueries == nil {
+		return nil, fmt.Errorf("member queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.MemberQueries.MemberByDiscordId(ctx, actor, member.MemberByDiscordIdSpec{DiscordId: discordID})
+	if err != nil {
+		return nil, err
+	}
+	if view == nil {
+		return nil, nil
+	}
+	return toMemberViewType(*view), nil
 }
 
 // MemberRoleHistory is the resolver for the memberRoleHistory field.
 func (r *queryResolver) MemberRoleHistory(ctx context.Context, memberID string, limit int, offset int) (*RoleChangePage, error) {
-	panic(fmt.Errorf("not implemented: MemberRoleHistory - memberRoleHistory"))
+	if r.Services.MemberQueries == nil {
+		return nil, fmt.Errorf("member queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	page, err := r.Services.MemberQueries.MemberRoleHistory(ctx, actor, member.MemberRoleHistorySpec{
+		MemberId: memberID,
+		Limit:    int32(limit),
+		Offset:   int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toRoleChangePage(page), nil
 }
 
 // MyAvailability is the resolver for the myAvailability field.
 func (r *queryResolver) MyAvailability(ctx context.Context) ([]*AvailabilitySlotType, error) {
-	panic(fmt.Errorf("not implemented: MyAvailability - myAvailability"))
+	if r.Services.MemberQueries == nil {
+		return nil, fmt.Errorf("member queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	slots, err := r.Services.MemberQueries.MyAvailability(ctx, actor, member.MyAvailabilitySpec{})
+	if err != nil {
+		return nil, err
+	}
+	return toAvailabilitySlotTypes(slots), nil
 }
 
 // MemberAvailability is the resolver for the memberAvailability field.
 func (r *queryResolver) MemberAvailability(ctx context.Context, memberID string) ([]*AvailabilitySlotType, error) {
-	panic(fmt.Errorf("not implemented: MemberAvailability - memberAvailability"))
+	if r.Services.MemberQueries == nil {
+		return nil, fmt.Errorf("member queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	slots, err := r.Services.MemberQueries.MemberAvailability(ctx, actor, member.MemberAvailabilitySpec{MemberId: memberID})
+	if err != nil {
+		return nil, err
+	}
+	return toAvailabilitySlotTypes(slots), nil
 }
 
 // UnlockablesCatalog is the resolver for the unlockablesCatalog field.
 func (r *queryResolver) UnlockablesCatalog(ctx context.Context, activeOnly bool, limit int, offset int) (*UnlockablePage, error) {
-	panic(fmt.Errorf("not implemented: UnlockablesCatalog - unlockablesCatalog"))
+	if r.Services.MemberQueries == nil {
+		return nil, fmt.Errorf("member queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	page, err := r.Services.MemberQueries.UnlockablesCatalog(ctx, actor, member.UnlockablesCatalogSpec{
+		ActiveOnly: activeOnly,
+		Limit:      int32(limit),
+		Offset:     int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toUnlockablePage(page), nil
 }
 
 // MyNotifications is the resolver for the myNotifications field.
 func (r *queryResolver) MyNotifications(ctx context.Context, limit int, unreadOnly bool, before *string) (*NotificationConnection, error) {
-	return &NotificationConnection{Items: []*NotificationType{}, HasMore: false}, nil
+	if r.Services.NotificationQueries == nil {
+		return nil, fmt.Errorf("notification queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	spec := notification.MyNotificationsSpec{
+		Limit:      int32(limit),
+		UnreadOnly: unreadOnly,
+		Before:     before,
+	}
+	conn, err := r.Services.NotificationQueries.MyNotifications(ctx, actor, spec)
+	if err != nil {
+		return nil, err
+	}
+	return toNotificationConnectionType(conn), nil
 }
 
 // MyUnreadNotificationCount is the resolver for the myUnreadNotificationCount field.
 func (r *queryResolver) MyUnreadNotificationCount(ctx context.Context) (int, error) {
-	panic(fmt.Errorf("not implemented: MyUnreadNotificationCount - myUnreadNotificationCount"))
+	if r.Services.NotificationQueries == nil {
+		return 0, fmt.Errorf("notification queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return 0, err
+	}
+	count, err := r.Services.NotificationQueries.MyUnreadNotificationCount(ctx, actor, notification.MyUnreadNotificationCountSpec{})
+	if err != nil {
+		return 0, err
+	}
+	return int(count), nil
 }
 
 // OpenQuestSeats is the resolver for the openQuestSeats field.
 func (r *queryResolver) OpenQuestSeats(ctx context.Context, regionID *string, dmID *string, limit int, offset int) (*OpenQuestSeatsV2Result, error) {
-	return &OpenQuestSeatsV2Result{Entries: []*OpenQuestSeatV2Type{}, Total: 0}, nil
+	if r.Services.QuestQueries == nil {
+		return nil, fmt.Errorf("quest queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result, err := r.Services.QuestQueries.OpenQuestSeats(ctx, actor, quest.OpenQuestSeatsSpec{
+		RegionId: regionID,
+		DmId:     dmID,
+		Limit:    int32(limit),
+		Offset:   int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toOpenQuestSeatsV2Result(result), nil
 }
 
 // Quest is the resolver for the quest field.
 func (r *queryResolver) Quest(ctx context.Context, id *string, shortCode *string) (*QuestV2Type, error) {
+	if r.Services.QuestQueries != nil {
+		actor, err := LiveAuthority(ctx)
+		if err != nil {
+			return nil, err
+		}
+		view, err := r.Services.QuestQueries.Quest(ctx, actor, quest.QuestSpec{Id: id, ShortCode: shortCode})
+		if err != nil {
+			return nil, err
+		}
+		if view == nil {
+			return nil, nil
+		}
+		return toQuestV2View(*view), nil
+	}
 	q, err := r.Services.Quests.Get(ctx, id, shortCode)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
 	return toQuestV2(q), nil
 }
 
 // Quests is the resolver for the quests field.
 func (r *queryResolver) Quests(ctx context.Context, filters *QuestV2FiltersInput, limit int, offset int) (*QuestV2ListResult, error) {
+	if r.Services.QuestQueries != nil {
+		actor, err := LiveAuthority(ctx)
+		if err != nil {
+			return nil, err
+		}
+		result, err := r.Services.QuestQueries.Quests(ctx, actor, toQuestsSpec(filters, limit, offset))
+		if err != nil {
+			return nil, err
+		}
+		return toQuestV2ListResult(result), nil
+	}
 	filter := quest.ListFilter{Limit: limit, Offset: offset, Order: quest.OldestFirst}
 	if filters != nil {
 		filter.Status, filter.DisplayStatus = filters.Status, filters.DisplayStatus
@@ -755,6 +1339,21 @@ func (r *queryResolver) Quests(ctx context.Context, filters *QuestV2FiltersInput
 
 // QuestBoard is the resolver for the questBoard field.
 func (r *queryResolver) QuestBoard(ctx context.Context, regionID *string, limit int, offset int) (*QuestV2ListResult, error) {
+	if r.Services.QuestQueries != nil {
+		actor, err := LiveAuthority(ctx)
+		if err != nil {
+			return nil, err
+		}
+		result, err := r.Services.QuestQueries.QuestBoard(ctx, actor, quest.QuestBoardSpec{
+			RegionId: regionID,
+			Limit:    int32(limit),
+			Offset:   int32(offset),
+		})
+		if err != nil {
+			return nil, err
+		}
+		return toQuestV2ListResult(result), nil
+	}
 	open := "open"
 	rows, total, err := r.Services.Quests.List(ctx, quest.ListFilter{Status: &open, Limit: limit, Offset: offset, Order: quest.NewestFirst})
 	if err != nil {
@@ -769,6 +1368,22 @@ func (r *queryResolver) QuestBoard(ctx context.Context, regionID *string, limit 
 
 // RecentlyClosedQuests is the resolver for the recentlyClosedQuests field.
 func (r *queryResolver) RecentlyClosedQuests(ctx context.Context, regionID *string, closedSince *time.Time, limit int, offset int) (*QuestV2ListResult, error) {
+	if r.Services.QuestQueries != nil {
+		actor, err := LiveAuthority(ctx)
+		if err != nil {
+			return nil, err
+		}
+		result, err := r.Services.QuestQueries.RecentlyClosedQuests(ctx, actor, quest.RecentlyClosedQuestsSpec{
+			RegionId:    regionID,
+			ClosedSince: closedSince,
+			Limit:       int32(limit),
+			Offset:      int32(offset),
+		})
+		if err != nil {
+			return nil, err
+		}
+		return toQuestV2ListResult(result), nil
+	}
 	closed := "closed"
 	rows, total, err := r.Services.Quests.List(ctx, quest.ListFilter{Status: &closed, Limit: limit, Offset: offset, Order: quest.NewestFirst})
 	if err != nil {
@@ -783,47 +1398,163 @@ func (r *queryResolver) RecentlyClosedQuests(ctx context.Context, regionID *stri
 
 // QuestArcs is the resolver for the questArcs field.
 func (r *queryResolver) QuestArcs(ctx context.Context, limit int, offset int) (*QuestArcV2ListResult, error) {
-	return &QuestArcV2ListResult{Items: []*QuestArcV2Type{}, Total: 0}, nil
+	if r.Services.QuestQueries == nil {
+		return nil, fmt.Errorf("quest queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result, err := r.Services.QuestQueries.QuestArcs(ctx, actor, quest.QuestArcsSpec{
+		Limit:  int32(limit),
+		Offset: int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toQuestArcV2ListResult(result), nil
 }
 
 // QuestArc is the resolver for the questArc field.
 func (r *queryResolver) QuestArc(ctx context.Context, id string) (*QuestArcV2Type, error) {
-	return nil, nil
+	if r.Services.QuestQueries == nil {
+		return nil, fmt.Errorf("quest queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.QuestQueries.QuestArc(ctx, actor, quest.QuestArcSpec{Id: id})
+	if err != nil {
+		return nil, err
+	}
+	if view == nil {
+		return nil, nil
+	}
+	return toQuestArcV2View(*view), nil
 }
 
 // QuestGenreOptions is the resolver for the questGenreOptions field.
 func (r *queryResolver) QuestGenreOptions(ctx context.Context) ([]string, error) {
-	panic(fmt.Errorf("not implemented: QuestGenreOptions - questGenreOptions"))
+	if r.Services.QuestQueries == nil {
+		return nil, fmt.Errorf("quest queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return r.Services.QuestQueries.QuestGenreOptions(ctx, actor, quest.QuestGenreOptionsSpec{})
 }
 
 // MyQuestSignups is the resolver for the myQuestSignups field.
 func (r *queryResolver) MyQuestSignups(ctx context.Context, limit int, offset int) (*ParticipationPage, error) {
-	panic(fmt.Errorf("not implemented: MyQuestSignups - myQuestSignups"))
+	if r.Services.QuestQueries == nil {
+		return nil, fmt.Errorf("quest queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	page, err := r.Services.QuestQueries.MyQuestSignups(ctx, actor, quest.MyQuestSignupsSpec{
+		Limit:  int32(limit),
+		Offset: int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toQuestParticipationPage(page), nil
 }
 
 // QuestSummaries is the resolver for the questSummaries field.
 func (r *queryResolver) QuestSummaries(ctx context.Context, questID string, limit int, offset int) (*QuestSummariesV2Result, error) {
-	panic(fmt.Errorf("not implemented: QuestSummaries - questSummaries"))
+	if r.Services.QuestQueries == nil {
+		return nil, fmt.Errorf("quest queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result, err := r.Services.QuestQueries.QuestSummaries(ctx, actor, quest.QuestSummariesSpec{
+		QuestId: questID,
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toQuestSummariesV2Result(result), nil
 }
 
 // QuestStateCounts is the resolver for the questStateCounts field.
 func (r *queryResolver) QuestStateCounts(ctx context.Context, filters *QuestStateCountsFiltersV2Input) ([]*QuestStateCountV2Type, error) {
-	panic(fmt.Errorf("not implemented: QuestStateCounts - questStateCounts"))
+	if r.Services.QuestQueries == nil {
+		return nil, fmt.Errorf("quest queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	counts, err := r.Services.QuestQueries.QuestStateCounts(ctx, actor, toQuestStateCountsSpec(filters))
+	if err != nil {
+		return nil, err
+	}
+	return toQuestStateCountV2Types(counts), nil
 }
 
 // DmStats is the resolver for the dmStats field.
 func (r *queryResolver) DmStats(ctx context.Context, memberID string) (*DmStatsV2Type, error) {
-	panic(fmt.Errorf("not implemented: DmStats - dmStats"))
+	if r.Services.QuestQueries == nil {
+		return nil, fmt.Errorf("quest queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	stats, err := r.Services.QuestQueries.DmStats(ctx, actor, quest.DmStatsSpec{MemberId: memberID})
+	if err != nil {
+		return nil, err
+	}
+	return toDmStatsV2Type(stats), nil
 }
 
 // DmSessionHistory is the resolver for the dmSessionHistory field.
 func (r *queryResolver) DmSessionHistory(ctx context.Context, memberID string, limit int, offset int) (*DmSessionHistoryV2Result, error) {
-	panic(fmt.Errorf("not implemented: DmSessionHistory - dmSessionHistory"))
+	if r.Services.QuestQueries == nil {
+		return nil, fmt.Errorf("quest queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result, err := r.Services.QuestQueries.DmSessionHistory(ctx, actor, quest.DmSessionHistorySpec{
+		MemberId: memberID,
+		Limit:    int32(limit),
+		Offset:   int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toDmSessionHistoryV2Result(result), nil
 }
 
 // DmSummaries is the resolver for the dmSummaries field.
 func (r *queryResolver) DmSummaries(ctx context.Context, filters *DmSummaryFiltersV2Input, limit int, offset int) (*DocumentListResult, error) {
-	panic(fmt.Errorf("not implemented: DmSummaries - dmSummaries"))
+	if r.Services.QuestQueries == nil {
+		return nil, fmt.Errorf("quest queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result, err := r.Services.QuestQueries.DmSummaries(ctx, actor, quest.DmSummariesSpec{
+		Filters: toDmSummaryFilters(filters),
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toDocumentListResult(result), nil
 }
 
 // Search is the resolver for the search field.
@@ -844,6 +1575,17 @@ func (r *queryResolver) Search(ctx context.Context, query string, kinds []string
 
 // Home is the resolver for the home field.
 func (r *queryResolver) Home(ctx context.Context) (*HomeV2Type, error) {
+	if r.Services.SiteQueries != nil {
+		actor, err := LiveAuthority(ctx)
+		if err != nil {
+			return nil, err
+		}
+		view, err := r.Services.SiteQueries.Home(ctx, actor, site.HomeSpec{})
+		if err != nil {
+			return nil, err
+		}
+		return toHomeV2View(view), nil
+	}
 	st, err := r.Services.Site.Home(ctx)
 	if err != nil {
 		st = site.Stats{}
@@ -863,7 +1605,18 @@ func (r *queryResolver) SearchableKinds(ctx context.Context) ([]*SearchKindType,
 
 // SiteStats is the resolver for the siteStats field.
 func (r *queryResolver) SiteStats(ctx context.Context) (*SiteStatsV2Type, error) {
-	panic(fmt.Errorf("not implemented: SiteStats - siteStats"))
+	if r.Services.SiteQueries == nil {
+		return nil, fmt.Errorf("site queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	snapshot, err := r.Services.SiteQueries.SiteStats(ctx, actor, site.SiteStatsSpec{})
+	if err != nil {
+		return nil, err
+	}
+	return toSiteStatsV2FromSnapshot(snapshot), nil
 }
 
 // DiscordDeliveryMode is the resolver for the discordDeliveryMode field.

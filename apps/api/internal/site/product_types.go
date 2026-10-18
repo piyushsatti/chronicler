@@ -135,7 +135,6 @@ type SiteStatsView struct {
 	PublishedDocumentsByCategory []CountByKeyView
 	PublishedDocumentsByKind     []CountByKeyView
 	TotalDms                     int32
-	TotalHexes                   int32
 	TotalMaps                    int32
 	TotalMembers                 int32
 	TotalQuests                  int32
@@ -263,7 +262,6 @@ type CommunityStatsSnapshot struct {
 	MembersByRole    []CountByKeyView
 	ActiveCharacters int32
 	TotalMaps        int32
-	TotalHexes       int32
 	TotalRegions     int32
 	TotalQuests      int32
 	TotalDMs         int32

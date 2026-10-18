@@ -4,6 +4,8 @@ import tseslint from 'typescript-eslint';
 export default tseslint.config(
   {
     ignores: [
+      '**/.local/**',
+      '**/.artifacts/**',
       '**/node_modules/**',
       '**/dist/**',
       '**/.venv/**',

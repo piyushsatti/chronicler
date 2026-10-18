@@ -51,6 +51,7 @@ select = [
 ]
 "apps/**/src/**/db/migrations/**/*.py" = ["E501", "I001", "UP", "ANN", "W291"]
 "scripts/**/*.py" = ["ANN", "T20"]
+"apps/api/scripts/**/*.py" = ["E501", "ANN", "T20", "SIM102", "SIM110"]
 
 [tool.pyright]
 pythonVersion = "3.12"

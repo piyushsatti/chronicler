@@ -1,0 +1,91 @@
+query HomeWarRoom($upcomingFrom: DateTime!, $upcomingTo: DateTime!, $closedSince: DateTime!) {
+  questBoard(limit: 12) {
+    items {
+      id
+      shortCode
+      status
+      scheduledAt
+      slotsMax
+      filledCount
+      displayStatus
+      dm {
+        handle
+        displayName
+      }
+      briefDocument {
+        id
+        slug
+        title
+      }
+      discordDelivery {
+        desiredRevision
+        appliedRevision
+        overallStatus
+      }
+    }
+    total
+  }
+  quests(filters: { scheduledFrom: $upcomingFrom, scheduledTo: $upcomingTo }, limit: 12) {
+    items {
+      id
+      shortCode
+      status
+      scheduledAt
+      slotsMax
+      filledCount
+      displayStatus
+      dm {
+        handle
+        displayName
+      }
+      briefDocument {
+        id
+        slug
+        title
+      }
+      discordDelivery {
+        desiredRevision
+        appliedRevision
+        overallStatus
+      }
+    }
+    total
+  }
+  recentlyClosedQuests(closedSince: $closedSince, limit: 12) {
+    items {
+      id
+      shortCode
+      status
+      scheduledAt
+      slotsMax
+      filledCount
+      displayStatus
+      dm {
+        handle
+        displayName
+      }
+      briefDocument {
+        id
+        slug
+        title
+      }
+      discordDelivery {
+        desiredRevision
+        appliedRevision
+        overallStatus
+      }
+    }
+    total
+  }
+  communityDirectory(filters: { acceptingPlayers: true, role: "dm" }, limit: 12) {
+    entries {
+      memberId
+      handle
+      displayName
+      tagline
+      acceptingPlayers
+      isDm
+    }
+    total
+  }
+}

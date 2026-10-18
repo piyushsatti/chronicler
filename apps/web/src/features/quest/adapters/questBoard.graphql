@@ -1,0 +1,30 @@
+query QuestBoard($limit: Int!) {
+  questBoard(limit: $limit) {
+    total
+    items {
+      id
+      shortCode
+      status
+      scheduledAt
+      slotsMax
+      filledCount
+      displayStatus
+      dm {
+        handle
+        displayName
+      }
+      briefDocument {
+        id
+        slug
+        title
+      }
+      discordDelivery {
+        desiredRevision
+        appliedRevision
+        overallStatus
+        nextRetryAt
+        errorMessage
+      }
+    }
+  }
+}

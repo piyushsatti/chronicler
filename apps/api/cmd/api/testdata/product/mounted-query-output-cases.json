@@ -4075,7 +4075,6 @@
           }
         ],
         "totalDms": 1,
-        "totalHexes": 3,
         "totalMaps": 2,
         "totalMembers": 8,
         "totalQuests": 5,
@@ -4093,7 +4092,6 @@
         "SDL-SiteStatsV2Type-publishedDocumentsByCategory",
         "SDL-SiteStatsV2Type-publishedDocumentsByKind",
         "SDL-SiteStatsV2Type-totalDms",
-        "SDL-SiteStatsV2Type-totalHexes",
         "SDL-SiteStatsV2Type-totalMaps",
         "SDL-SiteStatsV2Type-totalMembers",
         "SDL-SiteStatsV2Type-totalQuests",
@@ -4106,7 +4104,7 @@
       "kind": "positive",
       "operation": "siteStats",
       "owner": "S03",
-      "query": "query Output76 { siteStats { totalMembers membersByRole { key count } activeCharacters publishedDocumentsByKind { key count } publishedDocumentsByCategory { key count } totalMaps totalHexes totalRegions totalQuests totalDms activity { voiceMinutes messages reactions } } }",
+      "query": "query Output76 { siteStats { totalMembers membersByRole { key count } activeCharacters publishedDocumentsByKind { key count } publishedDocumentsByCategory { key count } totalMaps totalRegions totalQuests totalDms activity { voiceMinutes messages reactions } } }",
       "result_path": "siteStats",
       "root": "siteStats",
       "scalar_scenario_refs": [],
@@ -4173,7 +4171,6 @@
             }
           ],
           "totalDms": 1,
-          "totalHexes": 3,
           "totalMaps": 2,
           "totalMembers": 8,
           "totalQuests": 5,
@@ -4222,7 +4219,6 @@
         "SDL-SiteStatsV2Type-publishedDocumentsByCategory",
         "SDL-SiteStatsV2Type-publishedDocumentsByKind",
         "SDL-SiteStatsV2Type-totalDms",
-        "SDL-SiteStatsV2Type-totalHexes",
         "SDL-SiteStatsV2Type-totalMaps",
         "SDL-SiteStatsV2Type-totalMembers",
         "SDL-SiteStatsV2Type-totalQuests",
@@ -4235,7 +4231,7 @@
       "kind": "positive",
       "operation": "home",
       "owner": "S03",
-      "query": "query Output77 { home { recentByCategory { category documents { id title } } communityStats { totalMembers membersByRole { key count } activeCharacters publishedDocumentsByKind { key count } publishedDocumentsByCategory { key count } totalMaps totalHexes totalRegions totalQuests totalDms activity { voiceMinutes messages reactions } } } }",
+      "query": "query Output77 { home { recentByCategory { category documents { id title } } communityStats { totalMembers membersByRole { key count } activeCharacters publishedDocumentsByKind { key count } publishedDocumentsByCategory { key count } totalMaps totalRegions totalQuests totalDms activity { voiceMinutes messages reactions } } } }",
       "result_path": "home",
       "root": "home",
       "scalar_scenario_refs": [],
@@ -5426,7 +5422,7 @@
       "id": "QUERY-OUTPUT-SITE-STATS-INTERNAL-6",
       "inject": "Site aggregate SQL query failure",
       "owner": "S03",
-      "query": "query Output76 { siteStats { totalMembers membersByRole { key count } activeCharacters publishedDocumentsByKind { key count } publishedDocumentsByCategory { key count } totalMaps totalHexes totalRegions totalQuests totalDms activity { voiceMinutes messages reactions } } }",
+      "query": "query Output76 { siteStats { totalMembers membersByRole { key count } activeCharacters publishedDocumentsByKind { key count } publishedDocumentsByCategory { key count } totalMaps totalRegions totalQuests totalDms activity { voiceMinutes messages reactions } } }",
       "test_file": "apps/api/cmd/api/graphql_product_integration_test.go",
       "variables": {}
     },
@@ -6394,7 +6390,6 @@
       "QUERY-OUTPUT-HOME"
     ],
     "SDL-SiteStatsV2Type-totalDms": ["QUERY-OUTPUT-SITE-STATS", "QUERY-OUTPUT-HOME"],
-    "SDL-SiteStatsV2Type-totalHexes": ["QUERY-OUTPUT-SITE-STATS", "QUERY-OUTPUT-HOME"],
     "SDL-SiteStatsV2Type-totalMaps": ["QUERY-OUTPUT-SITE-STATS", "QUERY-OUTPUT-HOME"],
     "SDL-SiteStatsV2Type-totalMembers": [
       "QUERY-OUTPUT-SITE-STATS",

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """One-shot: drop sqlc queries that reference tables removed in 0001_init.sql (A1)."""
+
 from __future__ import annotations
 
 import re
@@ -28,12 +29,16 @@ def write_queries(path: Path, blocks: list[str]) -> None:
 
 
 def drop_names(path: Path, drop: set[str]) -> None:
-    blocks = [b for n, b in split_queries(path.read_text(encoding="utf-8")) if n not in drop]
+    blocks = [
+        b for n, b in split_queries(path.read_text(encoding="utf-8")) if n not in drop
+    ]
     write_queries(path, blocks)
 
 
 def keep_only(path: Path, keep: set[str]) -> None:
-    blocks = [b for n, b in split_queries(path.read_text(encoding="utf-8")) if n in keep]
+    blocks = [
+        b for n, b in split_queries(path.read_text(encoding="utf-8")) if n in keep
+    ]
     write_queries(path, blocks)
 
 
@@ -162,7 +167,9 @@ RETURNING quest_id, node_id, role;
 
 """
     quest_path = QUERIES / "quest_product.sql"
-    quest_path.write_text(quest_path.read_text(encoding="utf-8") + quest_append, encoding="utf-8")
+    quest_path.write_text(
+        quest_path.read_text(encoding="utf-8") + quest_append, encoding="utf-8"
+    )
 
     patch_file(
         QUERIES / "site_product.sql",

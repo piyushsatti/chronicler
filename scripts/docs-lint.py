@@ -178,8 +178,9 @@ def check_links_and_patterns(findings: list[str]) -> None:
                 continue
             if not file_part.startswith("/"):
                 if not audits_allow_relative(rel):
+                    abs_hint = file_part.lstrip("./")
                     findings.append(
-                        f"{rel}: use repo-root absolute link (/{file_part.lstrip('./')}) "
+                        f"{rel}: use repo-root absolute link (/{abs_hint}) "
                         f"not relative ({raw.strip().split()[0]})"
                     )
                     continue
