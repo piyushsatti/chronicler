@@ -8,7 +8,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/agent"
-	"github.com/piyushsatti/chronicler/apps/api/internal/character"
 	"github.com/piyushsatti/chronicler/apps/api/internal/delivery"
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/graph"
@@ -22,7 +21,6 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/jobs"
 	"github.com/piyushsatti/chronicler/apps/api/internal/quest"
 	"github.com/piyushsatti/chronicler/apps/api/internal/site"
-	"github.com/piyushsatti/chronicler/apps/api/internal/spatial"
 )
 
 type API struct {
@@ -68,15 +66,9 @@ func Wire(ctx context.Context, cfg config.Config) API {
 	return wirePostgres(ctx, cfg, pool, mem)
 }
 
-func emptyServices(cmd quest.Commands) graph.Services {
+func emptyServices(_ quest.Commands) graph.Services {
 	return graph.Services{
-		Documents:  document.Queries{},
-		Quests:     quest.Queries{},
-		Members:    member.Queries{},
-		Site:       site.Queries{},
-		Spatial:    spatial.Queries{},
-		Characters: character.Queries{},
-		QuestCmd:   cmd,
+		Documents: document.Queries{},
 	}
 }
 
@@ -100,46 +92,9 @@ func wirePostgres(_ context.Context, cfg config.Config, pool *db.Pool, base API)
 		BacklinksFn:     docRepo.Backlinks,
 		BacklinkCountFn: docRepo.CountBacklinks,
 	}
-	questRead := quest.NewReadModel(q)
-	spatialPG := spatial.NewPostgresQueries(pgxPool)
-	charPG := character.NewPostgresQueries(pgxPool)
 	sitePG := site.NewPostgresStats(pgxPool)
 
-	services := graph.Services{
-		Documents: docQ,
-		Quests: quest.Queries{
-			Read:           questRead,
-			ParticipantsFn: questRead.ListParticipants,
-		},
-		Members: member.Queries{
-			Lookup:         memStore.GetByID,
-			ByHandle:       memStore.GetByHandle,
-			ListFn:         memStore.List,
-			AvailabilityFn: memStore.Availability,
-		},
-		Site: site.Queries{Stats: sitePG.Stats},
-		Spatial: spatial.Queries{
-			DocumentScope:  docQ.Scope,
-			MapByAtlas:     spatialPG.MapByAtlas,
-			ListMapsFn:     spatialPG.ListMaps,
-			ListRegionsFn:  spatialPG.ListRegions,
-			GameDay:        spatialPG.GameDay,
-			MapViewFn:      spatialPG.MapViewPage,
-			HexFn:          spatialPG.HexAt,
-			RegionCountsFn: spatialPG.RegionCounts,
-			MapActivityFn:  spatialPG.MapActivity,
-			HexHistoryFn:   spatialPG.HexHistory,
-		},
-		Characters: character.Queries{
-			GetByID:        charPG.GetByID,
-			GetByShortCode: charPG.GetByShortCode,
-			ListByOwnerFn:  charPG.ListByOwner,
-			ListAll:        charPG.List,
-		},
-		QuestCmd: questCmd,
-	}
-
-	services, err := wireProductServices(pgxPool, pool, memStore, []byte(cfg.JWTSecret), services)
+	services, err := wireProductServices(pgxPool, pool, memStore, []byte(cfg.JWTSecret), graph.Services{Documents: docQ})
 	if err != nil {
 		slog.Error("product GraphQL wiring failed", "error", err)
 		panic("product GraphQL wiring: " + err.Error())

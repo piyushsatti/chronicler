@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -19,11 +20,40 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/graph"
+	"github.com/piyushsatti/chronicler/apps/api/internal/member"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbgen"
 	gqlserver "github.com/piyushsatti/chronicler/apps/api/internal/platform/graphql"
 	"github.com/piyushsatti/chronicler/apps/api/internal/quest"
 )
+
+func questProductQueries(t *testing.T, pool *db.Pool) *quest.ProductQueries {
+	t.Helper()
+	policy, err := auth.NewPoolPolicy(pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	observer, err := auth.NewSafeOverrideObserver(slog.Default())
+	if err != nil {
+		t.Fatal(err)
+	}
+	questPG, err := quest.NewProductPostgres(pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	docPG, err := document.NewProductPostgres(pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	queries, err := quest.NewProductQueries(quest.ProductReadRepos{
+		Quest: questPG, Batch: questPG, DocumentAudience: docPG, RewardCoverage: questPG,
+	}, policy, time.Now, observer)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return queries
+}
 
 type questReadCase struct {
 	status, display string
@@ -268,8 +298,13 @@ func TestQuestReadsNativeHTTP(t *testing.T) {
 	f := newQuestReadFixture(t, pool, now, cases)
 	before := questReadSnapshot(t, pool)
 	t.Logf("persistent state before reads sha256=%x", sha256.Sum256([]byte(before)))
-	resolver := &graph.Resolver{Services: graph.Services{Quests: quest.Queries{Read: quest.NewReadModel(dbgen.New(pool))}, Documents: document.Queries{Repo: document.NewPostgresReadRepo(pool.Pool)}}}
-	handler := gqlserver.NewHandler(resolver, gqlserver.Limits{}, nil)
+	questQueries := questProductQueries(t, pool)
+	memStore := member.NewPostgresStore(pool.Pool)
+	resolver := &graph.Resolver{Services: graph.Services{
+		QuestQueries: questQueries,
+		Documents:    document.Queries{Repo: document.NewPostgresReadRepo(pool.Pool)},
+	}}
+	handler := gqlserver.NewHandler(resolver, gqlserver.Limits{}, memStore.ResolveAuthority)
 	fields := "{items{id shortCode status displayStatus durationHours} total}"
 	response := questReadRequest(t, handler, `{all:quests(filters:{},limit:100)`+fields+` open:quests(filters:{status:"OPEN"},limit:100)`+fields+` scheduled:quests(filters:{displayStatus:"scheduled"},limit:100)`+fields+` live:quests(filters:{status:"closed",displayStatus:"LIVE"},limit:100)`+fields+` zero:quests(limit:0)`+fields+` past:quests(offset:100)`+fields+` board:questBoard(limit:100)`+fields+` recent:recentlyClosedQuests(limit:100)`+fields+`}`)
 	for _, tc := range []struct {

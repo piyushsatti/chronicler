@@ -155,7 +155,7 @@ func mountMuxOperations(t *testing.T) []string {
 	mux := httpserver.NewRecordingMux()
 	cmd := quest.NewCommands(quest.MemoryRunner(), time.Now)
 	app.Mount(mux, app.HTTPDeps{
-		Resolver:  &graph.Resolver{Services: graph.Services{QuestCmd: cmd}},
+		Resolver:  &graph.Resolver{},
 		QuestCmd:  cmd,
 		SiteStats: func() site.Stats { return site.Stats{} },
 		MemberMe: func(id string) (member.Member, error) {

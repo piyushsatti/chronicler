@@ -7,6 +7,8 @@ package graph
 import (
 	"context"
 	"fmt"
+
+	"github.com/piyushsatti/chronicler/apps/api/internal/member"
 )
 
 // ActiveAlerts is the resolver for the activeAlerts field.
@@ -34,11 +36,19 @@ func (r *documentTypeResolver) Author(ctx context.Context, obj *DocumentType) (*
 	if obj == nil || obj.AuthorID == "" {
 		return nil, nil
 	}
-	m, err := r.Services.Members.Get(ctx, &obj.AuthorID, nil)
+	if r.Services.MemberQueries == nil {
+		return nil, nil
+	}
+	actor, err := LiveAuthority(ctx)
 	if err != nil {
 		return nil, nil
 	}
-	return &DocumentAuthorType{Handle: m.Handle}, nil
+	id := obj.AuthorID
+	view, err := r.Services.MemberQueries.Member(ctx, actor, member.MemberSpec{Id: &id})
+	if err != nil || view == nil {
+		return nil, nil
+	}
+	return &DocumentAuthorType{Handle: view.Handle}, nil
 }
 
 // SummaryDerived is the resolver for the summaryDerived field.

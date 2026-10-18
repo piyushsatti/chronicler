@@ -14,27 +14,22 @@ import (
 
 // Services holds product CQRS providers and transitional legacy read adapters.
 type Services struct {
-	MemberQueries         *member.ProductQueries
-	DocumentQueries       *document.ProductQueries
-	SpatialQueries        *spatial.ProductQueries
-	CharacterQueries      *character.ProductQueries
-	QuestQueries          *quest.ProductQueries
-	SiteQueries           *site.ProductQueries
-	NotificationQueries   *notification.ProductQueries
-	MemberCommands        *member.ProductCommands
-	DocumentCommands      *document.ProductCommands
-	SpatialCommands       *spatial.ProductCommands
-	CharacterCommands     *character.ProductCommands
-	QuestCommands         *quest.ProductCommands
-	SiteCommands          *site.ProductCommands
-	NotificationCommands  *notification.ProductCommands
-	Documents             document.Queries
-	Quests                quest.Queries
-	Members               member.Queries
-	Site                  site.Queries
-	Spatial               spatial.Queries
-	Characters            character.Queries
-	QuestCmd              quest.Commands
+	MemberQueries        *member.ProductQueries
+	DocumentQueries      *document.ProductQueries
+	SpatialQueries       *spatial.ProductQueries
+	CharacterQueries     *character.ProductQueries
+	QuestQueries         *quest.ProductQueries
+	SiteQueries          *site.ProductQueries
+	NotificationQueries  *notification.ProductQueries
+	MemberCommands       *member.ProductCommands
+	DocumentCommands     *document.ProductCommands
+	SpatialCommands      *spatial.ProductCommands
+	CharacterCommands    *character.ProductCommands
+	QuestCommands        *quest.ProductCommands
+	SiteCommands         *site.ProductCommands
+	NotificationCommands *notification.ProductCommands
+	// Documents remains for Query.search until owner decides Search semantics.
+	Documents document.Queries
 }
 
 type Resolver struct {
