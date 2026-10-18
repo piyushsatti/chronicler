@@ -74,6 +74,11 @@ export type DocumentQueryVariables = Exact<{
 
 export type DocumentQuery = { document: { id: string, slug: string, kind: string, category: string | null, status: string, visibility: string, title: string, effectiveBody: string | null, author: { handle: string } | null } | null };
 
+export type HomeBannerQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type HomeBannerQuery = { homeBanner: { enabled: boolean, title: string | null, body: string | null, ctaLabel: string | null, ctaHref: string | null, mediaKind: string | null, mediaUrl: string | null, mediaLabel: string | null } };
+
 export type HomeBucketsQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -87,6 +92,11 @@ export type HomeWarRoomQueryVariables = Exact<{
 
 
 export type HomeWarRoomQuery = { questBoard: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, slotsMax: number, filledCount: number, displayStatus: string | null, dm: { handle: string, displayName: string } | null, briefDocument: { id: string, slug: string, title: string } | null, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string } }> }, quests: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, slotsMax: number, filledCount: number, displayStatus: string | null, dm: { handle: string, displayName: string } | null, briefDocument: { id: string, slug: string, title: string } | null, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string } }> }, recentlyClosedQuests: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, slotsMax: number, filledCount: number, displayStatus: string | null, dm: { handle: string, displayName: string } | null, briefDocument: { id: string, slug: string, title: string } | null, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string } }> }, communityDirectory: { total: number, entries: Array<{ memberId: string, handle: string, displayName: string, tagline: string | null, acceptingPlayers: boolean | null, isDm: boolean }> } };
+
+export type SiteStatsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type SiteStatsQuery = { siteStats: { totalMembers: number } };
 
 export type AcknowledgeSuppressedNotificationsMutationVariables = Exact<{
   limit?: number | null | undefined;

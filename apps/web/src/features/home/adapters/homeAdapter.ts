@@ -1,8 +1,10 @@
-import type { HomeBucketsQuery } from '../../../api/graphql.operations.gen.js';
+import type {
+  HomeBucketsQuery,
+  SiteStatsQuery,
+} from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import HOME_QUERY from './homeBuckets.graphql?raw';
-import { restRequest } from '../../../api/rest.js';
-import { rest } from '../../../api/endpoints.js';
+import SITE_STATS_QUERY from './siteStats.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import { homeWireSchema, siteStatsWireSchema } from './home.wire.schema.js';
@@ -71,8 +73,8 @@ export async function loadHome(): Promise<HomeViewModel> {
 
 export async function loadSiteStats(): Promise<SiteStatsViewModel> {
   try {
-    const wire = await restRequest<unknown>(rest.siteStats);
-    const result = parseSiteStats(wire);
+    const data = await graphqlRequest<SiteStatsQuery>(SITE_STATS_QUERY);
+    const result = parseSiteStats(data.siteStats);
     if (!result.ok) {
       throw toAppError({ failure: result.failure }, 'home:stats');
     }

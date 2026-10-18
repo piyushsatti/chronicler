@@ -1,6 +1,7 @@
 import { z } from 'zod';
-import { restRequest } from '../../../api/rest.js';
-import { rest } from '../../../api/endpoints.js';
+import type { HomeBannerQuery } from '../../../api/graphql.operations.gen.js';
+import { graphqlRequest } from '../../../api/graphql.js';
+import HOME_BANNER_QUERY from './homeBanner.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 
@@ -46,11 +47,11 @@ export function parseHomeBanner(wire: unknown): AdapterResult<HomeBannerView> {
   };
 }
 
-/** Public home banner read — field-routing GET /v1/site-settings/home-banner. */
+/** Public home banner read — field-routing Query.homeBanner. */
 export async function loadHomeBanner(): Promise<HomeBannerView> {
   try {
-    const wire = await restRequest<unknown>(rest.homeBanner);
-    const result = parseHomeBanner(wire);
+    const data = await graphqlRequest<HomeBannerQuery>(HOME_BANNER_QUERY);
+    const result = parseHomeBanner(data.homeBanner);
     if (!result.ok) throw toAppError({ failure: result.failure }, 'home:banner');
     return result.data;
   } catch (err) {

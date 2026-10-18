@@ -1,15 +1,12 @@
-import { http, HttpResponse } from 'msw';
+import { HttpResponse } from 'msw';
 import type { FeatureGraphql, FeatureHandlers, FeatureRoute } from '../../chrome/featureModule.js';
 import { lazyElement } from '../../chrome/lazyElement.js';
 import goodHome from '../../../tests/fixtures/wire/home/good.json';
 import goodLanes from '../../../tests/fixtures/wire/home/lanes-good.json';
 import goodStats from '../../../tests/fixtures/wire/stats/good.json';
+import goodHomeBanner from '../../../tests/fixtures/wire/admin/home-banner-good.json';
 
-const siteStats = '/v1/stats';
-
-export const endpoints = {
-  siteStats,
-} as const;
+export const endpoints = {} as const;
 
 export const queryKeys = {
   home: ['home'] as const,
@@ -28,11 +25,11 @@ export const graphql: FeatureGraphql = {
         communityDirectory: goodLanes.communityDirectory,
       },
     }),
+  SiteStats: () => HttpResponse.json({ data: { siteStats: goodStats } }),
+  HomeBanner: () => HttpResponse.json({ data: { homeBanner: goodHomeBanner } }),
 };
 
-export const handlers: FeatureHandlers = [
-  http.get(siteStats, () => HttpResponse.json(goodStats)),
-];
+export const handlers: FeatureHandlers = [];
 
 export const routes: readonly FeatureRoute[] = [
   {
