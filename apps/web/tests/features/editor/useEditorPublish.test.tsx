@@ -27,6 +27,8 @@ const initial: EditorLoadResult = {
   documentId: 'doc-id',
   redirectHint: 'Q-1',
   briefPublished: true,
+  updatedAt: '2026-10-15T17:00:00Z',
+  documentVersion: 1,
 };
 function wrapper({ children }: { children: ReactNode }) {
   return (
@@ -84,14 +86,17 @@ describe('useEditorPublish (local adapter-dispatch proof, not server parity)', (
     vi.mocked(adapters.createDocument).mockResolvedValue({
       id: 'doc-new',
       redirectPath: '/summaries/new',
+      version: 1,
     });
     vi.mocked(adapters.updateDocument).mockResolvedValue({
       id: 'doc-id',
       redirectPath: '/summaries/edit',
+      version: 2,
     });
     vi.mocked(adapters.editPublishedDocument).mockResolvedValue({
       id: 'doc-id',
       redirectPath: '/summaries/edit',
+      version: 2,
     });
     vi.mocked(adapters.publishDocument).mockResolvedValue(undefined);
     vi.mocked(adapters.maybeSyncQuestDiscord).mockResolvedValue(
@@ -114,11 +119,13 @@ describe('useEditorPublish (local adapter-dispatch proof, not server parity)', (
         apl: 7,
         signupType: 'dm_pick',
       }),
+      '2026-10-15T17:00:00Z',
     );
     expect(adapters.editPublishedDocument).toHaveBeenCalledWith({
       documentId: 'doc-id',
       title: 'New title',
       body: 'New body',
+      expectedRevision: 1,
     });
     expect(adapters.publishDocument).not.toHaveBeenCalled();
     expect(adapters.maybeSyncQuestDiscord).toHaveBeenCalledWith('quest-id');
@@ -147,8 +154,9 @@ describe('useEditorPublish (local adapter-dispatch proof, not server parity)', (
     expect(adapters.updateDocument).toHaveBeenCalledWith('doc-id', {
       title: 'New title',
       body: 'New body',
+      expectedRevision: 1,
     });
-    expect(adapters.publishDocument).toHaveBeenCalledWith('doc-id');
+    expect(adapters.publishDocument).toHaveBeenCalledWith('doc-id', 1);
     expect(adapters.editPublishedDocument).not.toHaveBeenCalled();
   });
 
@@ -168,6 +176,7 @@ describe('useEditorPublish (local adapter-dispatch proof, not server parity)', (
       documentId: 'doc-id',
       title: 'New title',
       body: 'New body',
+      expectedRevision: 1,
     });
     expect(adapters.updateDocument).not.toHaveBeenCalled();
     expect(adapters.publishDocument).not.toHaveBeenCalled();
@@ -186,11 +195,17 @@ describe('useEditorPublish (local adapter-dispatch proof, not server parity)', (
       body: ' New body ',
       kind: 'codex',
       category: 'faction',
+      expectedRevision: 1,
     });
-    expect(adapters.publishDocument).toHaveBeenCalledWith('doc-id');
+    expect(adapters.publishDocument).toHaveBeenCalledWith('doc-id', 1);
   });
 
   it('creates and publishes a new document with its mapped kind', async () => {
+    vi.mocked(adapters.createDocument).mockResolvedValue({
+      id: 'doc-new',
+      redirectPath: '/summaries/new',
+      version: 1,
+    });
     const hook = setup({ typeKey: 'dm-table', mode: 'new' });
     await publish(hook);
     expect(adapters.createDocument).toHaveBeenCalledWith({
@@ -200,7 +215,7 @@ describe('useEditorPublish (local adapter-dispatch proof, not server parity)', (
       category: null,
       visibility: 'public',
     });
-    expect(adapters.publishDocument).toHaveBeenCalledWith('doc-new');
+    expect(adapters.publishDocument).toHaveBeenCalledWith('doc-new', 1);
   });
 
   it('rejects a blank title before any adapter dispatch and keeps validation callback', async () => {
