@@ -18,6 +18,7 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 	"github.com/piyushsatti/chronicler/apps/api/internal/quest"
 	"github.com/piyushsatti/chronicler/apps/api/internal/site"
+	"github.com/piyushsatti/chronicler/apps/api/internal/spatial"
 )
 
 // CreateCharacter is the resolver for the createCharacter field.
@@ -866,77 +867,301 @@ func (r *mutationResolver) RedriveDiscordDelivery(ctx context.Context, jobID str
 
 // CreateMap is the resolver for the createMap field.
 func (r *mutationResolver) CreateMap(ctx context.Context, input MapCreateInput, meta CommandMeta) (*MapV2Type, error) {
-	panic(fmt.Errorf("not implemented: CreateMap - createMap"))
+	if r.Services.SpatialCommands == nil {
+		return nil, fmt.Errorf("spatial commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SpatialCommands.CreateMap(ctx, actor, spatial.CreateMapSpec{
+		Input: toMapCreateFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toMapViewType(view), nil
 }
 
 // CreateRegion is the resolver for the createRegion field.
 func (r *mutationResolver) CreateRegion(ctx context.Context, input RegionInput, meta CommandMeta) (*RegionV2Type, error) {
-	panic(fmt.Errorf("not implemented: CreateRegion - createRegion"))
+	if r.Services.SpatialCommands == nil {
+		return nil, fmt.Errorf("spatial commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SpatialCommands.CreateRegion(ctx, actor, spatial.CreateRegionSpec{
+		Input: toRegionFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toRegionViewType(view), nil
 }
 
 // UpdateRegion is the resolver for the updateRegion field.
 func (r *mutationResolver) UpdateRegion(ctx context.Context, id string, input RegionInput, meta CommandMeta) (*RegionV2Type, error) {
-	panic(fmt.Errorf("not implemented: UpdateRegion - updateRegion"))
+	if r.Services.SpatialCommands == nil {
+		return nil, fmt.Errorf("spatial commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SpatialCommands.UpdateRegion(ctx, actor, spatial.UpdateRegionSpec{
+		Id:    id,
+		Input: toRegionFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toRegionViewType(view), nil
 }
 
 // TransitionRegion is the resolver for the transitionRegion field.
 func (r *mutationResolver) TransitionRegion(ctx context.Context, id string, to string, note string, meta CommandMeta) (*RegionV2Type, error) {
-	panic(fmt.Errorf("not implemented: TransitionRegion - transitionRegion"))
+	if r.Services.SpatialCommands == nil {
+		return nil, fmt.Errorf("spatial commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SpatialCommands.TransitionRegion(ctx, actor, spatial.TransitionRegionSpec{
+		Id:   id,
+		To:   to,
+		Note: note,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toRegionViewType(view), nil
 }
 
 // AssignArchon is the resolver for the assignArchon field.
 func (r *mutationResolver) AssignArchon(ctx context.Context, memberID string, regionID string, meta CommandMeta) (*ArchonAssignmentType, error) {
-	panic(fmt.Errorf("not implemented: AssignArchon - assignArchon"))
+	if r.Services.SpatialCommands == nil {
+		return nil, fmt.Errorf("spatial commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SpatialCommands.AssignArchon(ctx, actor, spatial.AssignArchonSpec{
+		MemberId: memberID,
+		RegionId: regionID,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toArchonAssignmentType(view), nil
 }
 
 // RevokeArchon is the resolver for the revokeArchon field.
 func (r *mutationResolver) RevokeArchon(ctx context.Context, memberID string, regionID string, meta CommandMeta) (*CommandReceipt, error) {
-	panic(fmt.Errorf("not implemented: RevokeArchon - revokeArchon"))
+	if r.Services.SpatialCommands == nil {
+		return nil, fmt.Errorf("spatial commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	receipt, err := r.Services.SpatialCommands.RevokeArchon(ctx, actor, spatial.RevokeArchonSpec{
+		MemberId: memberID,
+		RegionId: regionID,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toCommandReceipt(receipt), nil
 }
 
 // CreateTimeAnchor is the resolver for the createTimeAnchor field.
 func (r *mutationResolver) CreateTimeAnchor(ctx context.Context, input TimeAnchorInput, meta CommandMeta) (*TimeAnchorV2Type, error) {
-	panic(fmt.Errorf("not implemented: CreateTimeAnchor - createTimeAnchor"))
+	if r.Services.SpatialCommands == nil {
+		return nil, fmt.Errorf("spatial commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SpatialCommands.CreateTimeAnchor(ctx, actor, spatial.CreateTimeAnchorSpec{
+		Input: toTimeAnchorFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toTimeAnchorType(view), nil
 }
 
 // UpdateTimeAnchor is the resolver for the updateTimeAnchor field.
 func (r *mutationResolver) UpdateTimeAnchor(ctx context.Context, id string, input TimeAnchorInput, meta CommandMeta) (*TimeAnchorV2Type, error) {
-	panic(fmt.Errorf("not implemented: UpdateTimeAnchor - updateTimeAnchor"))
+	if r.Services.SpatialCommands == nil {
+		return nil, fmt.Errorf("spatial commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SpatialCommands.UpdateTimeAnchor(ctx, actor, spatial.UpdateTimeAnchorSpec{
+		Id:    id,
+		Input: toTimeAnchorFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toTimeAnchorType(view), nil
 }
 
 // UpdateGameCalendar is the resolver for the updateGameCalendar field.
 func (r *mutationResolver) UpdateGameCalendar(ctx context.Context, definition json.RawMessage, meta CommandMeta) (*GameCalendarV2Type, error) {
-	panic(fmt.Errorf("not implemented: UpdateGameCalendar - updateGameCalendar"))
+	if r.Services.SpatialCommands == nil {
+		return nil, fmt.Errorf("spatial commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SpatialCommands.UpdateGameCalendar(ctx, actor, spatial.UpdateGameCalendarSpec{
+		Definition: definition,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toGameCalendarType(view), nil
 }
 
 // DeleteRegion is the resolver for the deleteRegion field.
 func (r *mutationResolver) DeleteRegion(ctx context.Context, regionID string, meta CommandMeta) (*CommandReceipt, error) {
-	panic(fmt.Errorf("not implemented: DeleteRegion - deleteRegion"))
+	if r.Services.SpatialCommands == nil {
+		return nil, fmt.Errorf("spatial commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	receipt, err := r.Services.SpatialCommands.DeleteRegion(ctx, actor, spatial.DeleteRegionSpec{
+		RegionId: regionID,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toCommandReceipt(receipt), nil
 }
 
 // RestoreRegion is the resolver for the restoreRegion field.
 func (r *mutationResolver) RestoreRegion(ctx context.Context, regionID string, meta CommandMeta) (*RegionV2Type, error) {
-	panic(fmt.Errorf("not implemented: RestoreRegion - restoreRegion"))
+	if r.Services.SpatialCommands == nil {
+		return nil, fmt.Errorf("spatial commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SpatialCommands.RestoreRegion(ctx, actor, spatial.RestoreRegionSpec{
+		RegionId: regionID,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toRegionViewType(view), nil
 }
 
 // UpsertPointcrawlNode is the resolver for the upsertPointcrawlNode field.
 func (r *mutationResolver) UpsertPointcrawlNode(ctx context.Context, mapID string, input PointcrawlNodeInput, meta CommandMeta) (*PointcrawlNodeV2Type, error) {
-	panic(fmt.Errorf("not implemented: UpsertPointcrawlNode - upsertPointcrawlNode"))
+	if r.Services.SpatialCommands == nil {
+		return nil, fmt.Errorf("spatial commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SpatialCommands.UpsertPointcrawlNode(ctx, actor, spatial.UpsertPointcrawlNodeSpec{
+		MapId: mapID,
+		Input: toPointcrawlNodeFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toPointcrawlNodeType(view), nil
 }
 
 // SetPointcrawlEdge is the resolver for the setPointcrawlEdge field.
 func (r *mutationResolver) SetPointcrawlEdge(ctx context.Context, mapID string, input PointcrawlEdgeInput, meta CommandMeta) (*PointcrawlEdgeV2Type, error) {
-	panic(fmt.Errorf("not implemented: SetPointcrawlEdge - setPointcrawlEdge"))
+	if r.Services.SpatialCommands == nil {
+		return nil, fmt.Errorf("spatial commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SpatialCommands.SetPointcrawlEdge(ctx, actor, spatial.SetPointcrawlEdgeSpec{
+		MapId: mapID,
+		Input: toPointcrawlEdgeFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toPointcrawlEdgeType(view), nil
 }
 
 // LinkPointcrawlEntry is the resolver for the linkPointcrawlEntry field.
 func (r *mutationResolver) LinkPointcrawlEntry(ctx context.Context, mapID string, nodeID string, documentID string, relation string, meta CommandMeta) (*PointcrawlEntryLinkType, error) {
-	panic(fmt.Errorf("not implemented: LinkPointcrawlEntry - linkPointcrawlEntry"))
+	if r.Services.SpatialCommands == nil {
+		return nil, fmt.Errorf("spatial commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SpatialCommands.LinkPointcrawlEntry(ctx, actor, spatial.LinkPointcrawlEntrySpec{
+		MapId:      mapID,
+		NodeId:     nodeID,
+		DocumentId: documentID,
+		Relation:   relation,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toPointcrawlEntryLinkType(view), nil
 }
 
 // UnlinkPointcrawlEntry is the resolver for the unlinkPointcrawlEntry field.
 func (r *mutationResolver) UnlinkPointcrawlEntry(ctx context.Context, mapID string, nodeID string, documentID string, relation string, meta CommandMeta) (*CommandReceipt, error) {
-	panic(fmt.Errorf("not implemented: UnlinkPointcrawlEntry - unlinkPointcrawlEntry"))
+	if r.Services.SpatialCommands == nil {
+		return nil, fmt.Errorf("spatial commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	receipt, err := r.Services.SpatialCommands.UnlinkPointcrawlEntry(ctx, actor, spatial.UnlinkPointcrawlEntrySpec{
+		MapId:      mapID,
+		NodeId:     nodeID,
+		DocumentId: documentID,
+		Relation:   relation,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toCommandReceipt(receipt), nil
 }
 
 // Characters is the resolver for the characters field.
@@ -2142,35 +2367,133 @@ func (r *queryResolver) Regions(ctx context.Context, kind *string, limit int, of
 
 // ArchonAssignments is the resolver for the archonAssignments field.
 func (r *queryResolver) ArchonAssignments(ctx context.Context, regionID *string, memberID *string, limit int, offset int) (*ArchonPage, error) {
-	panic(fmt.Errorf("not implemented: ArchonAssignments - archonAssignments"))
+	if r.Services.SpatialQueries == nil {
+		return nil, fmt.Errorf("spatial queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	page, err := r.Services.SpatialQueries.ArchonAssignments(ctx, actor, spatial.ArchonAssignmentsSpec{
+		RegionId: regionID,
+		MemberId: memberID,
+		Limit:    int32(limit),
+		Offset:   int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toArchonPage(page), nil
 }
 
 // RegionCounts is the resolver for the regionCounts field.
 func (r *queryResolver) RegionCounts(ctx context.Context, regionID string) (*RegionCountsV2Type, error) {
-	panic(fmt.Errorf("not implemented: RegionCounts - regionCounts"))
+	if r.Services.SpatialQueries == nil {
+		return nil, fmt.Errorf("spatial queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SpatialQueries.RegionCounts(ctx, actor, spatial.RegionCountsSpec{RegionId: regionID})
+	if err != nil {
+		return nil, err
+	}
+	if view == nil {
+		return nil, nil
+	}
+	return toRegionCountsType(*view), nil
 }
 
 // RegionActivity is the resolver for the regionActivity field.
 func (r *queryResolver) RegionActivity(ctx context.Context, atlasCode string) (*RegionActivityV2Type, error) {
-	panic(fmt.Errorf("not implemented: RegionActivity - regionActivity"))
+	if r.Services.SpatialQueries == nil {
+		return nil, fmt.Errorf("spatial queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SpatialQueries.RegionActivity(ctx, actor, spatial.RegionActivitySpec{AtlasCode: atlasCode})
+	if err != nil {
+		return nil, err
+	}
+	if view == nil {
+		return nil, nil
+	}
+	return toRegionActivityType(*view), nil
 }
 
 // GameDate is the resolver for the gameDate field.
 func (r *queryResolver) GameDate(ctx context.Context, realDate product.Date) (*GameDateV2Type, error) {
-	panic(fmt.Errorf("not implemented: GameDate - gameDate"))
+	if r.Services.SpatialQueries == nil {
+		return nil, fmt.Errorf("spatial queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SpatialQueries.GameDate(ctx, actor, spatial.GameDateSpec{RealDate: realDate})
+	if err != nil {
+		return nil, err
+	}
+	return toGameDateType(view), nil
 }
 
 // RealDates is the resolver for the realDates field.
 func (r *queryResolver) RealDates(ctx context.Context, gameDay int, limit int, offset int) (*RealDatePage, error) {
-	panic(fmt.Errorf("not implemented: RealDates - realDates"))
+	if r.Services.SpatialQueries == nil {
+		return nil, fmt.Errorf("spatial queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	page, err := r.Services.SpatialQueries.RealDates(ctx, actor, spatial.RealDatesSpec{
+		GameDay: int32(gameDay),
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toRealDatePage(page), nil
 }
 
 // TimeAnchors is the resolver for the timeAnchors field.
 func (r *queryResolver) TimeAnchors(ctx context.Context, limit int, offset int) (*TimeAnchorPage, error) {
-	panic(fmt.Errorf("not implemented: TimeAnchors - timeAnchors"))
+	if r.Services.SpatialQueries == nil {
+		return nil, fmt.Errorf("spatial queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	page, err := r.Services.SpatialQueries.TimeAnchors(ctx, actor, spatial.TimeAnchorsSpec{
+		Limit:  int32(limit),
+		Offset: int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toTimeAnchorPage(page), nil
 }
 
 // GameCalendar is the resolver for the gameCalendar field.
 func (r *queryResolver) GameCalendar(ctx context.Context, realFrom product.Date, realTo product.Date) (*GameCalendarV2Type, error) {
-	panic(fmt.Errorf("not implemented: GameCalendar - gameCalendar"))
+	if r.Services.SpatialQueries == nil {
+		return nil, fmt.Errorf("spatial queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SpatialQueries.GameCalendar(ctx, actor, spatial.GameCalendarSpec{
+		RealFrom: realFrom,
+		RealTo:   realTo,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toGameCalendarType(view), nil
 }

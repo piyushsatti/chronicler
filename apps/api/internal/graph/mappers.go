@@ -1312,3 +1312,233 @@ func toLieutenantPage(v document.LieutenantPage) *LieutenantPage {
 func toPreviewAudience(v PreviewAudience) document.PreviewAudience {
 	return document.PreviewAudience(v)
 }
+
+func toMapViewType(v spatial.MapView) *MapV2Type {
+	return &MapV2Type{
+		ID:        v.Id,
+		Name:      v.Name,
+		AtlasCode: v.AtlasCode,
+		Family:    v.Family,
+		MapKind:   v.MapKind,
+		AssetPath: v.AssetPath,
+		RegionID:  v.RegionId,
+		CreatedBy: v.CreatedBy,
+		CreatedAt: v.CreatedAt,
+	}
+}
+
+func toRegionViewType(v spatial.RegionView) *RegionV2Type {
+	return &RegionV2Type{
+		ID:              v.Id,
+		Name:            v.Name,
+		Kind:            v.Kind,
+		CharterDeadline: v.CharterDeadline,
+		DocumentID:      v.DocumentId,
+		CreatedAt:       v.CreatedAt,
+	}
+}
+
+func toArchonAssignmentType(v spatial.ArchonAssignmentView) *ArchonAssignmentType {
+	return &ArchonAssignmentType{
+		MemberID:  v.MemberId,
+		RegionID:  v.RegionId,
+		GrantedAt: v.GrantedAt,
+		GrantedBy: v.GrantedBy,
+	}
+}
+
+func toArchonPage(v spatial.ArchonPage) *ArchonPage {
+	items := make([]*ArchonAssignmentType, len(v.Items))
+	for i, item := range v.Items {
+		items[i] = toArchonAssignmentType(item)
+	}
+	return &ArchonPage{Items: items, Total: int(v.Total)}
+}
+
+func toRegionCountsType(v spatial.RegionCountsView) *RegionCountsV2Type {
+	return &RegionCountsV2Type{
+		RegionID:            v.RegionId,
+		QuestCount:          int(v.QuestCount),
+		PointcrawlNodeCount: int(v.FeatureCount),
+		FeatureCount:        int(v.HexCount),
+	}
+}
+
+func toRegionActivityQuestRef(v spatial.RegionActivityQuestRefView) *RegionActivityQuestRefV2Type {
+	return &RegionActivityQuestRefV2Type{
+		ID:          v.Id,
+		ShortCode:   v.ShortCode,
+		ScheduledAt: v.ScheduledAt,
+		SlotsMax:    int(v.SlotsMax),
+		FilledCount: int(v.FilledCount),
+	}
+}
+
+func toRegionActivityType(v spatial.RegionActivityView) *RegionActivityV2Type {
+	openQuests := make([]*RegionActivityQuestRefV2Type, len(v.OpenQuests))
+	for i, item := range v.OpenQuests {
+		openQuests[i] = toRegionActivityQuestRef(item)
+	}
+	liveQuests := make([]*RegionActivityQuestRefV2Type, len(v.LiveQuests))
+	for i, item := range v.LiveQuests {
+		liveQuests[i] = toRegionActivityQuestRef(item)
+	}
+	return &RegionActivityV2Type{
+		RegionID:       v.RegionId,
+		RegionName:     v.RegionName,
+		FillingCount:   int(v.FillingCount),
+		ScheduledCount: int(v.ScheduledCount),
+		LiveCount:      int(v.LiveCount),
+		OpenQuests:     openQuests,
+		LiveQuests:     liveQuests,
+	}
+}
+
+func toGameDateType(v *product.GameDateView) *GameDateV2Type {
+	if v == nil {
+		return nil
+	}
+	return &GameDateV2Type{
+		EraAbbrev:   v.EraAbbrev,
+		Year:        int(v.Year),
+		PeriodName:  v.PeriodName,
+		PeriodIndex: int(v.PeriodIndex),
+		PeriodType:  v.PeriodType,
+		Day:         int(v.Day),
+	}
+}
+
+func toRealDatePage(v spatial.RealDatePage) *RealDatePage {
+	return &RealDatePage{Items: v.Items, Total: int(v.Total)}
+}
+
+func toTimeAnchorType(v spatial.TimeAnchorView) *TimeAnchorV2Type {
+	return &TimeAnchorV2Type{
+		ID:       v.Id,
+		RealUtc:  v.RealUtc,
+		EpochDay: int(v.EpochDay),
+		Rate:     v.Rate,
+		Note:     v.Note,
+	}
+}
+
+func toTimeAnchorPage(v spatial.TimeAnchorPage) *TimeAnchorPage {
+	items := make([]*TimeAnchorV2Type, len(v.Items))
+	for i, item := range v.Items {
+		items[i] = toTimeAnchorType(item)
+	}
+	return &TimeAnchorPage{Items: items, Total: int(v.Total)}
+}
+
+func toGameCalendarType(v spatial.GameCalendarView) *GameCalendarV2Type {
+	var definition json.RawMessage
+	if v.Definition != nil {
+		definition = *v.Definition
+	}
+	var currentGameDay *int
+	if v.CurrentGameDay != nil {
+		d := int(*v.CurrentGameDay)
+		currentGameDay = &d
+	}
+	grid := make([]*GameDayCellType, len(v.MonthGrid))
+	for i, cell := range v.MonthGrid {
+		var gameDay *int
+		if cell.GameDay != nil {
+			d := int(*cell.GameDay)
+			gameDay = &d
+		}
+		grid[i] = &GameDayCellType{RealDate: cell.RealDate, GameDay: gameDay}
+	}
+	return &GameCalendarV2Type{
+		Definition:     definition,
+		CurrentGameDay: currentGameDay,
+		MonthGrid:      grid,
+	}
+}
+
+func toPointcrawlNodeType(v spatial.PointcrawlNodeView) *PointcrawlNodeV2Type {
+	return &PointcrawlNodeV2Type{
+		ID:        v.Id,
+		MapID:     v.MapId,
+		X:         v.X,
+		Y:         v.Y,
+		Name:      v.Name,
+		SubmapID:  v.SubmapId,
+		CreatedAt: v.CreatedAt,
+	}
+}
+
+func toPointcrawlEdgeType(v spatial.PointcrawlEdgeView) *PointcrawlEdgeV2Type {
+	return &PointcrawlEdgeV2Type{
+		ID:         v.Id,
+		MapID:      v.MapId,
+		NodeA:      v.NodeA,
+		NodeB:      v.NodeB,
+		Directed:   v.Directed,
+		Kind:       v.Kind,
+		Label:      v.Label,
+		DocumentID: v.DocumentId,
+	}
+}
+
+func toPointcrawlEntryLinkType(v spatial.PointcrawlEntryLinkView) *PointcrawlEntryLinkType {
+	return &PointcrawlEntryLinkType{
+		MapID:      v.MapId,
+		NodeID:     v.NodeId,
+		DocumentID: v.DocumentId,
+		Relation:   v.Relation,
+		CreatedAt:  v.CreatedAt,
+		CreatedBy:  v.CreatedBy,
+	}
+}
+
+func toMapCreateFields(in MapCreateInput) spatial.MapCreateFields {
+	return spatial.MapCreateFields{
+		Name:      in.Name,
+		AtlasCode: in.AtlasCode,
+		Family:    in.Family,
+		MapKind:   in.MapKind,
+		RegionId:  in.RegionID,
+		AssetPath: in.AssetPath,
+	}
+}
+
+func toRegionFields(in RegionInput) spatial.RegionFields {
+	return spatial.RegionFields{
+		Name:            in.Name,
+		Kind:            in.Kind,
+		CharterDeadline: in.CharterDeadline,
+		DocumentId:      in.DocumentID,
+	}
+}
+
+func toTimeAnchorFields(in TimeAnchorInput) spatial.TimeAnchorFields {
+	return spatial.TimeAnchorFields{
+		RealUtc:  in.RealUtc,
+		EpochDay: int32(in.EpochDay),
+		Rate:     in.Rate,
+		Note:     in.Note,
+	}
+}
+
+func toPointcrawlNodeFields(in PointcrawlNodeInput) spatial.PointcrawlNodeFields {
+	return spatial.PointcrawlNodeFields{
+		Id:       in.ID,
+		X:        in.X,
+		Y:        in.Y,
+		Name:     in.Name,
+		SubmapId: in.SubmapID,
+	}
+}
+
+func toPointcrawlEdgeFields(in PointcrawlEdgeInput) spatial.PointcrawlEdgeFields {
+	return spatial.PointcrawlEdgeFields{
+		Id:         in.ID,
+		NodeA:      in.NodeA,
+		NodeB:      in.NodeB,
+		Directed:   in.Directed,
+		Kind:       in.Kind,
+		Label:      in.Label,
+		DocumentId: in.DocumentID,
+	}
+}
