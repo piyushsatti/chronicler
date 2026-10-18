@@ -1,0 +1,12 @@
+mutation UpdateHomeBanner($input: HomeBannerInput!, $meta: CommandMeta!) {
+  updateHomeBanner(input: $input, meta: $meta) {
+    enabled
+    title
+    body
+    ctaLabel
+    ctaHref
+    mediaKind
+    mediaUrl
+    mediaLabel
+  }
+}

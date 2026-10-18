@@ -1,0 +1,13 @@
+query AdminMembers($limit: Int!, $search: String) {
+  members(limit: $limit, filters: { search: $search }) {
+    total
+    items {
+      id
+      handle
+      displayName
+      roles
+      status
+      joinedAt
+    }
+  }
+}

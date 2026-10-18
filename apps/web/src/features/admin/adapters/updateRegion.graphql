@@ -1,0 +1,9 @@
+mutation UpdateRegion($id: ID!, $input: RegionInput!, $meta: CommandMeta!) {
+  updateRegion(id: $id, input: $input, meta: $meta) {
+    id
+    name
+    kind
+    charterDeadline
+    createdAt
+  }
+}

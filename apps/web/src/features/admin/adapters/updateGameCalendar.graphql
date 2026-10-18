@@ -1,0 +1,5 @@
+mutation UpdateGameCalendar($definition: JSON!, $meta: CommandMeta!) {
+  updateGameCalendar(definition: $definition, meta: $meta) {
+    definition
+  }
+}

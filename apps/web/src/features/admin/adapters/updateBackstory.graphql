@@ -1,0 +1,7 @@
+mutation UpdateBackstory($id: ID!, $input: BackstoryInput!, $meta: CommandMeta!) {
+  updateBackstory(id: $id, input: $input, meta: $meta) {
+    id
+    name
+    retired
+  }
+}

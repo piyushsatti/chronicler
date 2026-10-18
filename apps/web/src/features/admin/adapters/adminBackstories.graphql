@@ -1,0 +1,17 @@
+query AdminBackstories($limit: Int! = 50, $offset: Int! = 0, $includeRetired: Boolean! = true) {
+  backstories(
+    filters: { includeRetired: $includeRetired }
+    limit: $limit
+    offset: $offset
+  ) {
+    total
+    items {
+      id
+      name
+      lore
+      cohort
+      sourceRegionId
+      retired
+    }
+  }
+}

@@ -1,0 +1,10 @@
+mutation SetMemberRolesBatch(
+  $changes: [MemberRoleBatchInput!]!
+  $meta: CommandMeta!
+) {
+  setMemberRolesBatch(changes: $changes, meta: $meta) {
+    memberId
+    ok
+    error
+  }
+}

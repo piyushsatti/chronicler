@@ -1,0 +1,19 @@
+mutation DecideDmProfileVerification(
+  $memberId: ID!
+  $expectedRevision: Int!
+  $verdict: VerificationVerdict!
+  $note: String
+  $meta: CommandMeta!
+) {
+  decideDmProfileVerification(
+    memberId: $memberId
+    expectedRevision: $expectedRevision
+    verdict: $verdict
+    note: $note
+    meta: $meta
+  ) {
+    memberId
+    status
+    reviewRevision
+  }
+}

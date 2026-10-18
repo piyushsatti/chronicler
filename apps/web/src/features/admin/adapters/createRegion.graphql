@@ -1,0 +1,9 @@
+mutation CreateRegion($input: RegionInput!, $meta: CommandMeta!) {
+  createRegion(input: $input, meta: $meta) {
+    id
+    name
+    kind
+    charterDeadline
+    createdAt
+  }
+}

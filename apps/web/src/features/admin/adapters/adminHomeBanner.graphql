@@ -1,0 +1,12 @@
+query AdminHomeBanner {
+  homeBanner {
+    enabled
+    title
+    body
+    ctaLabel
+    ctaHref
+    mediaKind
+    mediaUrl
+    mediaLabel
+  }
+}

@@ -1,0 +1,6 @@
+mutation AssignArchon($memberId: ID!, $regionId: ID!, $meta: CommandMeta!) {
+  assignArchon(memberId: $memberId, regionId: $regionId, meta: $meta) {
+    memberId
+    regionId
+  }
+}

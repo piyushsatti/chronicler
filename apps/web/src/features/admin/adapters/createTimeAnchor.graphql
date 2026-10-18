@@ -1,0 +1,9 @@
+mutation CreateTimeAnchor($input: TimeAnchorInput!, $meta: CommandMeta!) {
+  createTimeAnchor(input: $input, meta: $meta) {
+    id
+    realUtc
+    epochDay
+    rate
+    note
+  }
+}

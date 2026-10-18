@@ -1,0 +1,19 @@
+mutation DecideVerification(
+  $characterId: ID!
+  $expectedSubmittedAt: DateTime!
+  $verdict: VerificationVerdict!
+  $note: String
+  $meta: CommandMeta!
+) {
+  decideVerification(
+    characterId: $characterId
+    expectedSubmittedAt: $expectedSubmittedAt
+    verdict: $verdict
+    note: $note
+    meta: $meta
+  ) {
+    id
+    verdict
+    note
+  }
+}

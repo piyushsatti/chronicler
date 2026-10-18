@@ -65,28 +65,36 @@ export function DmProfileVerifyTab({
             <div className="row">
               <Button
                 type="button"
-                disabled={decide.isPending}
-                onClick={() =>
+                disabled={decide.isPending || row.reviewRevision == null}
+                onClick={() => {
+                  if (row.reviewRevision == null) return;
                   decide.mutate({
                     memberId: row.memberId,
                     approve: true,
                     note: null,
-                  })
-                }
+                    expectedRevision: row.reviewRevision,
+                  });
+                }}
               >
                 Approve
               </Button>
               <Button
                 type="button"
                 variant="secondary"
-                disabled={decide.isPending || !(noteById[row.memberId] ?? '').trim()}
-                onClick={() =>
+                disabled={
+                  decide.isPending ||
+                  row.reviewRevision == null ||
+                  !(noteById[row.memberId] ?? '').trim()
+                }
+                onClick={() => {
+                  if (row.reviewRevision == null) return;
                   decide.mutate({
                     memberId: row.memberId,
                     approve: false,
                     note: (noteById[row.memberId] ?? '').trim(),
-                  })
-                }
+                    expectedRevision: row.reviewRevision,
+                  });
+                }}
               >
                 Request changes
               </Button>

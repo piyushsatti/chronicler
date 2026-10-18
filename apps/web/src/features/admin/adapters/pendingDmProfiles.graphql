@@ -1,0 +1,12 @@
+query PendingDmProfiles($limit: Int!, $offset: Int! = 0) {
+  pendingDmProfileVerifications(limit: $limit, offset: $offset) {
+    total
+    entries {
+      memberId
+      handle
+      displayName
+      dmProfileStatus
+      dmProfileReviewRevision
+    }
+  }
+}

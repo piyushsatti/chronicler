@@ -1,0 +1,12 @@
+query AdminTimeAnchors($limit: Int! = 50, $offset: Int! = 0) {
+  timeAnchors(limit: $limit, offset: $offset) {
+    total
+    items {
+      id
+      realUtc
+      epochDay
+      rate
+      note
+    }
+  }
+}

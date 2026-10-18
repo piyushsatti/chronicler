@@ -1,0 +1,13 @@
+query PendingCharacterVerifications($limit: Int! = 50, $offset: Int! = 0) {
+  pendingCharacterVerifications(limit: $limit, offset: $offset) {
+    total
+    items {
+      id
+      shortCode
+      name
+      ownerId
+      ddbUrl
+      verificationSubmittedAt
+    }
+  }
+}

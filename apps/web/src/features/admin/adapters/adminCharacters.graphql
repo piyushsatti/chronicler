@@ -1,0 +1,13 @@
+query AdminCharacters($limit: Int! = 50, $offset: Int! = 0) {
+  adminCharacterDirectory(limit: $limit, offset: $offset) {
+    total
+    items {
+      id
+      shortCode
+      name
+      ownerHandle
+      status
+      verificationStatus
+    }
+  }
+}

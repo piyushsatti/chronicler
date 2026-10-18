@@ -1,0 +1,10 @@
+mutation UpsertCreationCatalogEntry(
+  $input: UpsertCreationCatalogEntryInput!
+  $meta: CommandMeta!
+) {
+  upsertCreationCatalogEntry(input: $input, meta: $meta) {
+    id
+    kind
+    name
+  }
+}

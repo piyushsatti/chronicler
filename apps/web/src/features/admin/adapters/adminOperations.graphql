@@ -1,0 +1,18 @@
+query AdminOperations($limit: Int! = 25, $offset: Int! = 0) {
+  adminOperations(limit: $limit, offset: $offset) {
+    activeAlertCount
+    pendingDeliveryCount
+    deliveryTotal
+    deliveries {
+      id
+    }
+    activeAlerts {
+      key
+      label
+      severity
+      remediationHref
+      firstSeenAt
+      lastSeenAt
+    }
+  }
+}

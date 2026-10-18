@@ -1,0 +1,6 @@
+query AdminGameCalendar($realFrom: Date!, $realTo: Date!) {
+  gameCalendar(realFrom: $realFrom, realTo: $realTo) {
+    definition
+    currentGameDay
+  }
+}

@@ -1,0 +1,6 @@
+mutation CreateBackstory($input: BackstoryInput!, $meta: CommandMeta!) {
+  createBackstory(input: $input, meta: $meta) {
+    id
+    name
+  }
+}

@@ -1,4 +1,4 @@
-import { http, HttpResponse } from 'msw';
+import { HttpResponse } from 'msw';
 import type { FeatureGraphql, FeatureHandlers, FeatureRoute } from '../../chrome/featureModule.js';
 import { lazyElement } from '../../chrome/lazyElement.js';
 import { redirectRoute } from '../../chrome/routeBuilders.js';
@@ -9,29 +9,68 @@ import goodAdminOps from '../../../tests/fixtures/wire/admin/ops-good.json';
 import goodMembers from '../../../tests/fixtures/wire/admin/members-good.json';
 import goodHomeBanner from '../../../tests/fixtures/wire/admin/home-banner-good.json';
 
-const pendingCharacterVerifications = '/v1/characters/pending-verifications';
-const homeBanner = '/v1/site-settings/home-banner';
-
-export const endpoints = {
-  pendingCharacterVerifications,
-  homeBanner,
-  setMemberRoles: (id: string) => `/v1/members/${id}/roles`,
-  decideCharacterVerification: (id: string) =>
-    `/v1/characters/${id}/decide-verification`,
-  decideDmProfileVerification: (memberId: string) =>
-    `/v1/dm-profiles/${memberId}/decide`,
-  createRegion: '/v1/regions',
-  creationCatalog: '/v1/creation-catalog',
-  upsertCreationCatalog: '/v1/admin/creation-catalog',
-  createBackstory: '/v1/admin/backstories',
-  updateBackstory: (id: string) => `/v1/admin/backstories/${id}`,
-} as const;
+export const endpoints = {} as const;
 
 export const queryKeys = {
   pendingDmProfiles: ['pendingDmProfiles'] as const,
   pendingCharacters: ['pendingCharacters'] as const,
   adminOperations: ['adminOperations'] as const,
   adminCharacters: ['adminCharacters'] as const,
+};
+
+const goodRegion = {
+  id: 'rrrrrrrr-rrrr-4rrr-8rrr-rrrrrrrrrrrr',
+  name: 'Lightfall',
+  kind: 'server',
+  charterDeadline: null,
+  createdAt: '2026-01-01T00:00:00Z',
+};
+
+const goodBackstories = {
+  total: 1,
+  items: [
+    {
+      id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      name: 'Frontier Scout',
+      lore: 'Out beyond the wall',
+      cohort: 'player',
+      sourceRegionId: null,
+      retired: false,
+    },
+  ],
+};
+
+const goodCatalog = {
+  total: 1,
+  items: [
+    {
+      id: 'opt-1',
+      kind: 'class',
+      name: 'Ranger',
+      description: 'Bow and trail',
+      available: true,
+      retired: false,
+      introducedByRegionId: null,
+    },
+  ],
+};
+
+const goodTimeAnchors = {
+  total: 1,
+  items: [
+    {
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      realUtc: '2026-01-01T00:00:00Z',
+      epochDay: 1,
+      rate: 1,
+      note: null,
+    },
+  ],
+};
+
+const goodCalendar = {
+  definition: { era: { name: 'Common Year', abbrev: 'CY' } },
+  currentGameDay: 1,
 };
 
 export const graphql: FeatureGraphql = {
@@ -41,63 +80,128 @@ export const graphql: FeatureGraphql = {
   AdminCharacters: () =>
     HttpResponse.json({ data: { adminCharacterDirectory: goodAdminChars } }),
   AdminMembers: () => HttpResponse.json({ data: { members: goodMembers } }),
-  AdminRegions: () =>
+  AdminRegions: () => HttpResponse.json({ data: { regions: [goodRegion] } }),
+  PendingCharacterVerifications: () =>
     HttpResponse.json({
       data: {
-        regions: [
+        pendingCharacterVerifications: {
+          total: goodCharPending.items.length,
+          items: goodCharPending.items,
+        },
+      },
+    }),
+  AdminHomeBanner: () => HttpResponse.json({ data: { homeBanner: goodHomeBanner } }),
+  AdminBackstories: () => HttpResponse.json({ data: { backstories: goodBackstories } }),
+  AdminCreationCatalog: () =>
+    HttpResponse.json({ data: { creationCatalog: goodCatalog } }),
+  AdminTimeAnchors: () => HttpResponse.json({ data: { timeAnchors: goodTimeAnchors } }),
+  AdminGameCalendar: () => HttpResponse.json({ data: { gameCalendar: goodCalendar } }),
+  SetMemberRoles: () =>
+    HttpResponse.json({
+      data: {
+        setMemberRoles: {
+          id: '11111111-1111-4111-8111-111111111111',
+          roles: ['player'],
+        },
+      },
+    }),
+  SetMemberRolesBatch: () =>
+    HttpResponse.json({
+      data: {
+        setMemberRolesBatch: [
           {
-            id: 'rrrrrrrr-rrrr-4rrr-8rrr-rrrrrrrrrrrr',
-            name: 'Lightfall',
-            kind: 'server',
-            charterDeadline: null,
-            createdAt: '2026-01-01T00:00:00Z',
+            memberId: '11111111-1111-4111-8111-111111111111',
+            ok: true,
+            error: null,
           },
         ],
       },
     }),
+  UpdateHomeBanner: () => HttpResponse.json({ data: { updateHomeBanner: goodHomeBanner } }),
+  DecideVerification: () =>
+    HttpResponse.json({
+      data: {
+        decideVerification: {
+          id: 'vvvvvvvv-vvvv-4vvv-8vvv-vvvvvvvvvvvv',
+          verdict: 'APPROVED',
+          note: null,
+        },
+      },
+    }),
+  DecideDmProfileVerification: () =>
+    HttpResponse.json({
+      data: {
+        decideDmProfileVerification: {
+          memberId: '11111111-1111-4111-8111-111111111111',
+          status: 'verified',
+          reviewRevision: 2,
+        },
+      },
+    }),
+  CreateRegion: () =>
+    HttpResponse.json({
+      data: {
+        createRegion: {
+          id: 'rrrrrrrr-rrrr-4rrr-8rrr-rrrrrrrrrr01',
+          name: 'New Region',
+          kind: 'uncharted',
+          charterDeadline: null,
+          createdAt: '2026-01-02T00:00:00Z',
+        },
+      },
+    }),
+  UpdateRegion: () => HttpResponse.json({ data: { updateRegion: goodRegion } }),
+  AssignArchon: () =>
+    HttpResponse.json({
+      data: {
+        assignArchon: {
+          memberId: '11111111-1111-4111-8111-111111111111',
+          regionId: goodRegion.id,
+        },
+      },
+    }),
+  CreateBackstory: () =>
+    HttpResponse.json({
+      data: {
+        createBackstory: {
+          id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbb1',
+          name: 'New Backstory',
+        },
+      },
+    }),
+  UpdateBackstory: () =>
+    HttpResponse.json({
+      data: {
+        updateBackstory: {
+          id: goodBackstories.items[0]!.id,
+          name: goodBackstories.items[0]!.name,
+          retired: false,
+        },
+      },
+    }),
+  UpsertCreationCatalogEntry: () =>
+    HttpResponse.json({
+      data: {
+        upsertCreationCatalogEntry: {
+          id: 'opt-1',
+          kind: 'class',
+          name: 'Ranger',
+        },
+      },
+    }),
+  CreateTimeAnchor: () =>
+    HttpResponse.json({
+      data: { createTimeAnchor: goodTimeAnchors.items[0] },
+    }),
+  UpdateTimeAnchor: () =>
+    HttpResponse.json({
+      data: { updateTimeAnchor: goodTimeAnchors.items[0] },
+    }),
+  UpdateGameCalendar: () =>
+    HttpResponse.json({ data: { updateGameCalendar: goodCalendar } }),
 };
 
-export const handlers: FeatureHandlers = [
-  http.get(pendingCharacterVerifications, () => HttpResponse.json(goodCharPending)),
-  http.get(homeBanner, () => HttpResponse.json(goodHomeBanner)),
-  http.put(homeBanner, async ({ request }) => HttpResponse.json(await request.json())),
-  http.put('/v1/members/:id/roles', () => HttpResponse.json({ ok: true })),
-  http.post('/v1/characters/:id/decide-verification', () =>
-    HttpResponse.json({ ok: true }),
-  ),
-  http.post('/v1/dm-profiles/:memberId/decide', () => HttpResponse.json({ ok: true })),
-  http.post('/v1/regions', async ({ request }) => {
-    const body = (await request.json()) as { name: string; kind: string };
-    return HttpResponse.json({
-      id: 'rrrrrrrr-rrrr-4rrr-8rrr-rrrrrrrrrr01',
-      name: body.name,
-      kind: body.kind,
-      charterDeadline: null,
-    });
-  }),
-  http.get('/v1/creation-catalog', () =>
-    HttpResponse.json([
-      {
-        id: 'opt-1',
-        kind: 'class',
-        name: 'Ranger',
-        description: 'Bow and trail',
-        available: true,
-        retired: false,
-        introducedByRegionId: null,
-      },
-    ]),
-  ),
-  http.put('/v1/admin/creation-catalog', async ({ request }) =>
-    HttpResponse.json(await request.json()),
-  ),
-  http.post('/v1/admin/backstories', async ({ request }) =>
-    HttpResponse.json(await request.json()),
-  ),
-  http.patch('/v1/admin/backstories/:id', async ({ request }) =>
-    HttpResponse.json(await request.json()),
-  ),
-];
+export const handlers: FeatureHandlers = [];
 
 export const routes: readonly FeatureRoute[] = [
   {

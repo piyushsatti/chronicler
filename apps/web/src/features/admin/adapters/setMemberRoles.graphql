@@ -1,0 +1,11 @@
+mutation SetMemberRoles(
+  $memberId: ID!
+  $roles: [String!]!
+  $note: String
+  $meta: CommandMeta!
+) {
+  setMemberRoles(memberId: $memberId, roles: $roles, note: $note, meta: $meta) {
+    id
+    roles
+  }
+}

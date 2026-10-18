@@ -1,0 +1,9 @@
+query AdminRegions($kind: String, $limit: Int! = 50, $offset: Int! = 0) {
+  regions(kind: $kind, limit: $limit, offset: $offset) {
+    id
+    name
+    kind
+    charterDeadline
+    createdAt
+  }
+}
