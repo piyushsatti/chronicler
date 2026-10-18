@@ -1584,6 +1584,26 @@ func (q *Queries) RevokeProductArchon(ctx context.Context, arg RevokeProductArch
 	return result.RowsAffected(), nil
 }
 
+const softDeleteProductRegion = `-- name: SoftDeleteProductRegion :execrows
+UPDATE regions r SET deleted_at=$1,
+  deleted_by=(SELECT id FROM members WHERE public_id=$2::uuid)
+WHERE r.public_id=$3::uuid AND r.deleted_at IS NULL
+`
+
+type SoftDeleteProductRegionParams struct {
+	RecordedAt pgtype.Timestamptz `json:"recorded_at"`
+	ActorID    pgtype.UUID        `json:"actor_id"`
+	RegionID   pgtype.UUID        `json:"region_id"`
+}
+
+func (q *Queries) SoftDeleteProductRegion(ctx context.Context, arg SoftDeleteProductRegionParams) (int64, error) {
+	result, err := q.db.Exec(ctx, softDeleteProductRegion, arg.RecordedAt, arg.ActorID, arg.RegionID)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
 const setProductPointcrawlEdge = `-- name: SetProductPointcrawlEdge :one
 WITH input AS (
  SELECT COALESCE($1::uuid,gen_random_uuid()) AS edge_public_id,m.id AS map_internal_id,

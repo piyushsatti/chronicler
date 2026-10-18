@@ -2,7 +2,9 @@ package spatial
 
 import (
 	"context"
+	"encoding/json"
 	"reflect"
+	"strings"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
@@ -17,7 +19,7 @@ type ProductQueries struct {
 }
 
 func NewProductQueries(reads ProductReadRepos, policy *auth.Policy, clock product.Clock, overrideReads auth.OverrideReadObserver) (*ProductQueries, error) {
-	for _, dep := range []any{reads.Map, reads.Batch, policy, clock, overrideReads} {
+	for _, dep := range []any{reads.Map, reads.Region, reads.Time, reads.Batch, reads.TimeBatch, policy, clock, overrideReads} {
 		if dep == nil {
 			return nil, apierr.New(apierr.Internal, "spatial query dependencies required")
 		}
@@ -30,6 +32,170 @@ func NewProductQueries(reads ProductReadRepos, policy *auth.Policy, clock produc
 		}
 	}
 	return &ProductQueries{Reads: reads, Policy: policy, Clock: clock, OverrideReads: overrideReads}, nil
+}
+
+func (s ProductQueries) admit(ctx context.Context, actor auth.Authority, operation auth.Operation) error {
+	request, err := auth.ForOperation(operation)
+	if err != nil {
+		return err
+	}
+	decision, err := s.Policy.Decide(ctx, actor, request)
+	if err != nil {
+		return err
+	}
+	if !decision.Allowed {
+		return apierr.New(apierr.Forbidden, "spatial read forbidden")
+	}
+	if decision.UsedOverride {
+		at, err := product.UTCNow(s.Clock)
+		if err != nil {
+			return err
+		}
+		s.OverrideReads.Observe(ctx, auth.OverrideFact{
+			ActorID:   actor.Claims().MemberID,
+			Operation: request.Operation(),
+			RuleCode:  decision.RuleCode,
+			At:        at,
+		})
+	}
+	return nil
+}
+
+func spatialQueryPage(limit, offset int32) error {
+	if limit <= 0 || offset < 0 {
+		return apierr.New(apierr.Invalid, "invalid page")
+	}
+	return nil
+}
+
+func (s ProductQueries) RenderStoredGameDate(gameDay *int32, definition *json.RawMessage) (*product.GameDateView, error) {
+	if gameDay == nil {
+		return nil, nil
+	}
+	_ = definition
+	return &product.GameDateView{Day: *gameDay}, nil
+}
+
+func (s ProductQueries) ArchonAssignments(ctx context.Context, actor auth.Authority, spec ArchonAssignmentsSpec) (ArchonPage, error) {
+	if err := spatialQueryPage(spec.Limit, spec.Offset); err != nil {
+		return ArchonPage{}, err
+	}
+	if err := s.admit(ctx, actor, auth.Operation("Query.archonAssignments")); err != nil {
+		return ArchonPage{}, err
+	}
+	return s.Reads.Region.ReadArchonAssignments(ctx, actor, spec)
+}
+
+func (s ProductQueries) RegionCounts(ctx context.Context, actor auth.Authority, spec RegionCountsSpec) (*RegionCountsView, error) {
+	if strings.TrimSpace(spec.RegionId) == "" {
+		return nil, apierr.New(apierr.Invalid, "invalid public id")
+	}
+	if err := s.admit(ctx, actor, auth.Operation("Query.regionCounts")); err != nil {
+		return nil, err
+	}
+	return s.Reads.Region.ReadRegionCounts(ctx, actor, spec)
+}
+
+func (s ProductQueries) RegionActivity(ctx context.Context, actor auth.Authority, spec RegionActivitySpec) (*RegionActivityView, error) {
+	if strings.TrimSpace(spec.AtlasCode) == "" {
+		return nil, apierr.New(apierr.Invalid, "invalid atlas code")
+	}
+	if err := s.admit(ctx, actor, auth.Operation("Query.regionActivity")); err != nil {
+		return nil, err
+	}
+	return s.Reads.Region.ReadRegionActivity(ctx, actor, spec)
+}
+
+func (s ProductQueries) GameCalendar(ctx context.Context, actor auth.Authority, spec GameCalendarSpec) (GameCalendarView, error) {
+	if err := s.admit(ctx, actor, auth.Operation("Query.gameCalendar")); err != nil {
+		return GameCalendarView{}, err
+	}
+	snapshot, err := s.Reads.Time.ReadGameCalendar(ctx, actor, spec)
+	if err != nil {
+		return GameCalendarView{}, err
+	}
+	cells := make([]GameDayCellView, len(snapshot.Cells))
+	copy(cells, snapshot.Cells)
+	return GameCalendarView{
+		CurrentGameDay: snapshot.CurrentGameDay,
+		Definition:     snapshot.Definition,
+		MonthGrid:      cells,
+	}, nil
+}
+
+func (s ProductQueries) GameDate(ctx context.Context, actor auth.Authority, spec GameDateSpec) (*product.GameDateView, error) {
+	if err := s.admit(ctx, actor, auth.Operation("Query.gameDate")); err != nil {
+		return nil, err
+	}
+	snapshot, err := s.Reads.Time.ReadGameDate(ctx, actor, spec)
+	if err != nil {
+		return nil, err
+	}
+	return s.RenderStoredGameDate(snapshot.GameDay, snapshot.Definition)
+}
+
+func (s ProductQueries) RealDates(ctx context.Context, actor auth.Authority, spec RealDatesSpec) (RealDatePage, error) {
+	if err := spatialQueryPage(spec.Limit, spec.Offset); err != nil {
+		return RealDatePage{}, err
+	}
+	if err := s.admit(ctx, actor, auth.Operation("Query.realDates")); err != nil {
+		return RealDatePage{}, err
+	}
+	return s.Reads.Time.ReadRealDates(ctx, actor, spec)
+}
+
+func (s ProductQueries) TimeAnchors(ctx context.Context, actor auth.Authority, spec TimeAnchorsSpec) (TimeAnchorPage, error) {
+	if err := spatialQueryPage(spec.Limit, spec.Offset); err != nil {
+		return TimeAnchorPage{}, err
+	}
+	if err := s.admit(ctx, actor, auth.Operation("Query.timeAnchors")); err != nil {
+		return TimeAnchorPage{}, err
+	}
+	return s.Reads.Time.ReadTimeAnchors(ctx, actor, spec)
+}
+
+func (s ProductQueries) Regions(ctx context.Context, actor auth.Authority, spec RegionsSpec) ([]RegionView, error) {
+	if err := spatialQueryPage(spec.Limit, spec.Offset); err != nil {
+		return nil, err
+	}
+	if err := s.admit(ctx, actor, auth.Operation("Query.regions")); err != nil {
+		return nil, err
+	}
+	return s.Reads.Region.ReadRegions(ctx, actor, spec)
+}
+
+func (s ProductQueries) Maps(ctx context.Context, actor auth.Authority, spec MapsSpec) ([]MapView, error) {
+	if err := spatialQueryPage(spec.Limit, spec.Offset); err != nil {
+		return nil, err
+	}
+	if err := s.admit(ctx, actor, auth.Operation("Query.maps")); err != nil {
+		return nil, err
+	}
+	return s.Reads.Map.ReadMaps(ctx, actor, spec)
+}
+
+func (s ProductQueries) GameDatesForRealDates(ctx context.Context, dates []product.Date) ([]product.BatchResult[product.GameDateView], error) {
+	snapshots, err := s.Reads.TimeBatch.ReadGameDates(ctx, dates)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]product.BatchResult[product.GameDateView], len(snapshots))
+	for i, snap := range snapshots {
+		if snap.Err != nil {
+			out[i].Err = snap.Err
+			continue
+		}
+		if snap.Value == nil {
+			continue
+		}
+		view, err := s.RenderStoredGameDate(snap.Value.GameDay, snap.Value.Definition)
+		if err != nil {
+			out[i].Err = err
+			continue
+		}
+		out[i].Value = view
+	}
+	return out, nil
 }
 
 func (s ProductQueries) BatchMapHexes(ctx context.Context, actor auth.Authority, keys []MapHexesKey) ([]product.BatchResult[HexList], error) {
@@ -58,4 +224,18 @@ func (s ProductQueries) BatchNodeLinks(ctx context.Context, actor auth.Authority
 
 func (s ProductQueries) BatchPOIs(ctx context.Context, actor auth.Authority, keys []POIsKey) ([]product.BatchResult[PoiList], error) {
 	return s.Reads.Batch.ReadBatchPOIs(ctx, actor, keys)
+}
+
+func (s ProductQueries) Hex(ctx context.Context, actor auth.Authority, spec HexSpec) (*HexView, error) {
+	if err := s.admit(ctx, actor, auth.Operation("Query.hex")); err != nil {
+		return nil, err
+	}
+	return s.Reads.Map.ReadHex(ctx, actor, spec)
+}
+
+func (s ProductQueries) Map(ctx context.Context, actor auth.Authority, spec MapSpec) (*MapView, error) {
+	if err := s.admit(ctx, actor, auth.Operation("Query.map")); err != nil {
+		return nil, err
+	}
+	return s.Reads.Map.ReadMap(ctx, actor, spec)
 }

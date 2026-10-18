@@ -483,3 +483,7 @@ SELECT DISTINCT parent.public_id AS parent_map_id,child.public_id AS child_map_i
 FROM pointcrawl_nodes n JOIN maps parent ON parent.id=n.map_id
 JOIN maps child ON child.id=n.submap_id WHERE n.submap_id IS NOT NULL
 ORDER BY parent_map_id,child_map_id;
+-- name: SoftDeleteProductRegion :execrows
+UPDATE regions r SET deleted_at=sqlc.arg(recorded_at),
+  deleted_by=(SELECT id FROM members WHERE public_id=sqlc.arg(actor_id)::uuid)
+WHERE r.public_id=sqlc.arg(region_id)::uuid AND r.deleted_at IS NULL;
