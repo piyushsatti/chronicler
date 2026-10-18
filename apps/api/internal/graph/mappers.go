@@ -1213,3 +1213,102 @@ func toUpsertCreationCatalogEntryFields(in UpsertCreationCatalogEntryInput) char
 func toVerificationVerdict(v VerificationVerdict) member.VerificationVerdict {
 	return member.VerificationVerdict(v)
 }
+
+func optionalString(o gql.Omittable[*string]) product.Optional[string] {
+	if !o.IsSet() {
+		return product.Optional[string]{}
+	}
+	return product.Optional[string]{Set: true, Value: o.Value()}
+}
+
+func optionalRawMessage(o gql.Omittable[json.RawMessage]) product.Optional[json.RawMessage] {
+	if !o.IsSet() {
+		return product.Optional[json.RawMessage]{}
+	}
+	v := o.Value()
+	return product.Optional[json.RawMessage]{Set: true, Value: &v}
+}
+
+func toDocumentDraftFields(in DocumentDraftInput) document.DocumentDraftFields {
+	fm := in.Frontmatter
+	if len(fm) == 0 {
+		fm = json.RawMessage("{}")
+	}
+	return document.DocumentDraftFields{
+		Kind:        in.Kind,
+		Category:    in.Category,
+		Title:       in.Title,
+		Body:        in.Body,
+		Frontmatter: fm,
+		Visibility:  in.Visibility,
+		Policy:      in.Policy,
+	}
+}
+
+func toDocumentEditFields(in DocumentEditInput) document.DocumentEditFields {
+	return document.DocumentEditFields{
+		ExpectedRevision: int32(in.ExpectedRevision),
+		Title:            optionalString(in.Title),
+		Body:             optionalString(in.Body),
+		Frontmatter:      optionalRawMessage(in.Frontmatter),
+		Category:         optionalString(in.Category),
+	}
+}
+
+func toDocumentAudienceFields(in DocumentAudienceInput) document.DocumentAudienceFields {
+	return document.DocumentAudienceFields{
+		Visibility: in.Visibility,
+		Policy:     in.Policy,
+		ReaderIds:  in.ReaderIds,
+	}
+}
+
+func toDocumentRevisionType(v document.DocumentRevisionView) *DocumentRevisionType {
+	fm := v.Frontmatter
+	if len(fm) == 0 {
+		fm = json.RawMessage("{}")
+	}
+	return &DocumentRevisionType{
+		Reason:      v.Reason,
+		RecordedAt:  v.RecordedAt,
+		RecordedBy:  v.RecordedBy,
+		ID:          v.Id,
+		DocumentID:  v.DocumentId,
+		Rev:         int(v.Rev),
+		Title:       v.Title,
+		Frontmatter: fm,
+		Body:        v.Body,
+		Visibility:  v.Visibility,
+		PublishedAt: v.PublishedAt,
+		PublishedBy: v.PublishedBy,
+	}
+}
+
+func toDocumentRevisionPage(v document.DocumentRevisionPage) *DocumentRevisionPage {
+	items := make([]*DocumentRevisionType, len(v.Items))
+	for i, item := range v.Items {
+		items[i] = toDocumentRevisionType(item)
+	}
+	return &DocumentRevisionPage{Items: items, Total: int(v.Total)}
+}
+
+func toLieutenantAssignmentType(v document.LieutenantAssignmentView) *LieutenantAssignmentType {
+	return &LieutenantAssignmentType{
+		MemberID:      v.MemberId,
+		NpcDocumentID: v.NpcDocumentId,
+		GrantedAt:     v.GrantedAt,
+		GrantedBy:     v.GrantedBy,
+	}
+}
+
+func toLieutenantPage(v document.LieutenantPage) *LieutenantPage {
+	items := make([]*LieutenantAssignmentType, len(v.Items))
+	for i, item := range v.Items {
+		items[i] = toLieutenantAssignmentType(item)
+	}
+	return &LieutenantPage{Items: items, Total: int(v.Total)}
+}
+
+func toPreviewAudience(v PreviewAudience) document.PreviewAudience {
+	return document.PreviewAudience(v)
+}

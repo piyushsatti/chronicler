@@ -341,52 +341,199 @@ func (r *mutationResolver) RestoreCharacter(ctx context.Context, characterID str
 
 // CreateDocument is the resolver for the createDocument field.
 func (r *mutationResolver) CreateDocument(ctx context.Context, input DocumentDraftInput, meta CommandMeta) (*DocumentType, error) {
-	panic(fmt.Errorf("not implemented: CreateDocument - createDocument"))
+	if r.Services.DocumentCommands == nil {
+		return nil, fmt.Errorf("document commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.DocumentCommands.CreateDocument(ctx, actor, document.CreateDocumentSpec{
+		Input: toDocumentDraftFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toDocumentViewType(view), nil
 }
 
 // UpdateDocument is the resolver for the updateDocument field.
 func (r *mutationResolver) UpdateDocument(ctx context.Context, id string, input DocumentEditInput, meta CommandMeta) (*DocumentType, error) {
-	panic(fmt.Errorf("not implemented: UpdateDocument - updateDocument"))
+	if r.Services.DocumentCommands == nil {
+		return nil, fmt.Errorf("document commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.DocumentCommands.UpdateDocument(ctx, actor, document.UpdateDocumentSpec{
+		Id:    id,
+		Input: toDocumentEditFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toDocumentViewType(view), nil
 }
 
 // PublishDocument is the resolver for the publishDocument field.
 func (r *mutationResolver) PublishDocument(ctx context.Context, id string, expectedRevision int, meta CommandMeta) (*DocumentType, error) {
-	panic(fmt.Errorf("not implemented: PublishDocument - publishDocument"))
+	if r.Services.DocumentCommands == nil {
+		return nil, fmt.Errorf("document commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.DocumentCommands.PublishDocument(ctx, actor, document.PublishDocumentSpec{
+		Id:               id,
+		ExpectedRevision: int32(expectedRevision),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toDocumentViewType(view), nil
 }
 
 // UnpublishDocument is the resolver for the unpublishDocument field.
 func (r *mutationResolver) UnpublishDocument(ctx context.Context, id string, expectedRevision int, meta CommandMeta) (*DocumentType, error) {
-	panic(fmt.Errorf("not implemented: UnpublishDocument - unpublishDocument"))
+	if r.Services.DocumentCommands == nil {
+		return nil, fmt.Errorf("document commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.DocumentCommands.UnpublishDocument(ctx, actor, document.UnpublishDocumentSpec{
+		Id:               id,
+		ExpectedRevision: int32(expectedRevision),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toDocumentViewType(view), nil
 }
 
 // EditPublishedDocument is the resolver for the editPublishedDocument field.
 func (r *mutationResolver) EditPublishedDocument(ctx context.Context, id string, input DocumentEditInput, meta CommandMeta) (*DocumentType, error) {
-	panic(fmt.Errorf("not implemented: EditPublishedDocument - editPublishedDocument"))
+	if r.Services.DocumentCommands == nil {
+		return nil, fmt.Errorf("document commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.DocumentCommands.EditPublishedDocument(ctx, actor, document.EditPublishedDocumentSpec{
+		Id:    id,
+		Input: toDocumentEditFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toDocumentViewType(view), nil
 }
 
 // SetDocumentVisibility is the resolver for the setDocumentVisibility field.
 func (r *mutationResolver) SetDocumentVisibility(ctx context.Context, id string, expectedRevision int, input DocumentAudienceInput, meta CommandMeta) (*DocumentType, error) {
-	panic(fmt.Errorf("not implemented: SetDocumentVisibility - setDocumentVisibility"))
+	if r.Services.DocumentCommands == nil {
+		return nil, fmt.Errorf("document commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.DocumentCommands.SetDocumentVisibility(ctx, actor, document.SetDocumentVisibilitySpec{
+		Id:               id,
+		ExpectedRevision: int32(expectedRevision),
+		Input:            toDocumentAudienceFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toDocumentViewType(view), nil
 }
 
 // DeleteDocument is the resolver for the deleteDocument field.
 func (r *mutationResolver) DeleteDocument(ctx context.Context, id string, expectedRevision int, meta CommandMeta) (*CommandReceipt, error) {
-	panic(fmt.Errorf("not implemented: DeleteDocument - deleteDocument"))
+	if r.Services.DocumentCommands == nil {
+		return nil, fmt.Errorf("document commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	receipt, err := r.Services.DocumentCommands.DeleteDocument(ctx, actor, document.DeleteDocumentSpec{
+		Id:               id,
+		ExpectedRevision: int32(expectedRevision),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toCommandReceipt(receipt), nil
 }
 
 // RestoreDocument is the resolver for the restoreDocument field.
 func (r *mutationResolver) RestoreDocument(ctx context.Context, id string, meta CommandMeta) (*DocumentType, error) {
-	panic(fmt.Errorf("not implemented: RestoreDocument - restoreDocument"))
+	if r.Services.DocumentCommands == nil {
+		return nil, fmt.Errorf("document commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.DocumentCommands.RestoreDocument(ctx, actor, document.RestoreDocumentSpec{Id: id}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toDocumentViewType(view), nil
 }
 
 // AssignLieutenant is the resolver for the assignLieutenant field.
 func (r *mutationResolver) AssignLieutenant(ctx context.Context, memberID string, npcDocumentID string, meta CommandMeta) (*LieutenantAssignmentType, error) {
-	panic(fmt.Errorf("not implemented: AssignLieutenant - assignLieutenant"))
+	if r.Services.DocumentCommands == nil {
+		return nil, fmt.Errorf("document commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.DocumentCommands.AssignLieutenant(ctx, actor, document.AssignLieutenantSpec{
+		MemberId:      memberID,
+		NpcDocumentId: npcDocumentID,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toLieutenantAssignmentType(view), nil
 }
 
 // RevokeLieutenant is the resolver for the revokeLieutenant field.
 func (r *mutationResolver) RevokeLieutenant(ctx context.Context, memberID string, npcDocumentID string, meta CommandMeta) (*CommandReceipt, error) {
-	panic(fmt.Errorf("not implemented: RevokeLieutenant - revokeLieutenant"))
+	if r.Services.DocumentCommands == nil {
+		return nil, fmt.Errorf("document commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	receipt, err := r.Services.DocumentCommands.RevokeLieutenant(ctx, actor, document.RevokeLieutenantSpec{
+		MemberId:      memberID,
+		NpcDocumentId: npcDocumentID,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toCommandReceipt(receipt), nil
 }
 
 // SetMemberRoles is the resolver for the setMemberRoles field.
@@ -1184,22 +1331,78 @@ func (r *queryResolver) CodexCategories(ctx context.Context) ([]*CategoryCountTy
 
 // DocumentRevisions is the resolver for the documentRevisions field.
 func (r *queryResolver) DocumentRevisions(ctx context.Context, documentID string, limit int, offset int) (*DocumentRevisionPage, error) {
-	panic(fmt.Errorf("not implemented: DocumentRevisions - documentRevisions"))
+	if r.Services.DocumentQueries == nil {
+		return nil, fmt.Errorf("document queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	page, err := r.Services.DocumentQueries.DocumentRevisions(ctx, actor, document.DocumentRevisionsSpec{
+		DocumentId: documentID,
+		Limit:      int32(limit),
+		Offset:     int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toDocumentRevisionPage(page), nil
 }
 
 // DocumentsTrash is the resolver for the documentsTrash field.
 func (r *queryResolver) DocumentsTrash(ctx context.Context, limit int, offset int) (*DocumentListResult, error) {
-	panic(fmt.Errorf("not implemented: DocumentsTrash - documentsTrash"))
+	if r.Services.DocumentQueries == nil {
+		return nil, fmt.Errorf("document queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	result, err := r.Services.DocumentQueries.DocumentsTrash(ctx, actor, document.DocumentsTrashSpec{
+		Limit:  int32(limit),
+		Offset: int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toDocumentListResult(result), nil
 }
 
 // PreviewBody is the resolver for the previewBody field.
 func (r *queryResolver) PreviewBody(ctx context.Context, body string, audience PreviewAudience, authorID *string) (string, error) {
-	panic(fmt.Errorf("not implemented: PreviewBody - previewBody"))
+	if r.Services.DocumentQueries == nil {
+		return "", fmt.Errorf("document queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return "", err
+	}
+	return r.Services.DocumentQueries.PreviewBody(ctx, actor, document.PreviewBodySpec{
+		Body:     body,
+		Audience: toPreviewAudience(audience),
+		AuthorId: authorID,
+	})
 }
 
 // LieutenantAssignments is the resolver for the lieutenantAssignments field.
 func (r *queryResolver) LieutenantAssignments(ctx context.Context, memberID *string, npcDocumentID *string, limit int, offset int) (*LieutenantPage, error) {
-	panic(fmt.Errorf("not implemented: LieutenantAssignments - lieutenantAssignments"))
+	if r.Services.DocumentQueries == nil {
+		return nil, fmt.Errorf("document queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	page, err := r.Services.DocumentQueries.LieutenantAssignments(ctx, actor, document.LieutenantAssignmentsSpec{
+		MemberId:      memberID,
+		NpcDocumentId: npcDocumentID,
+		Limit:         int32(limit),
+		Offset:        int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toLieutenantPage(page), nil
 }
 
 // MyUnlocks is the resolver for the myUnlocks field.
