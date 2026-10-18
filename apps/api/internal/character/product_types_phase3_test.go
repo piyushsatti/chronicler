@@ -48,14 +48,14 @@ func TestPhase3TaskCHA02AdditionalTypeMaps(t *testing.T) {
 
 func TestPhase3TaskCHA01Acceptance(t *testing.T) {
 	t.Run("profile patch preserves omission, null, and value", func(t *testing.T) {
-		omitted := UpdateCharacterProfileV2Fields{}
-		cleared := UpdateCharacterProfileV2Fields{
+		omitted := UpdateCharacterProfileFields{}
+		cleared := UpdateCharacterProfileFields{
 			Description:    product.Optional[string]{Set: true},
 			BackgroundText: product.Optional[string]{Set: true},
 		}
 		description := "updated description"
 		background := "updated background"
-		set := UpdateCharacterProfileV2Fields{
+		set := UpdateCharacterProfileFields{
 			Description:    product.Optional[string]{Set: true, Value: &description},
 			BackgroundText: product.Optional[string]{Set: true, Value: &background},
 		}

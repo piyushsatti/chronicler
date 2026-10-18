@@ -332,60 +332,60 @@ func (p *ProductPostgres) ReadCharacter(ctx context.Context, _ auth.Authority, s
 	return &view, nil
 }
 
-func (p *ProductPostgres) ReadCharacters(ctx context.Context, _ auth.Authority, spec CharactersSpec) (CharacterV2ListResult, error) {
+func (p *ProductPostgres) ReadCharacters(ctx context.Context, _ auth.Authority, spec CharactersSpec) (CharacterListResult, error) {
 	arg := dbgen.CharacterProductListParams{RowLimit: spec.Limit, RowOffset: spec.Offset}
 	if spec.Filters != nil {
 		var err error
 		if arg.OwnerID, err = optionalCharacterID(spec.Filters.OwnerId); err != nil {
-			return CharacterV2ListResult{}, err
+			return CharacterListResult{}, err
 		}
 		if arg.RegionID, err = optionalCharacterID(spec.Filters.RegionId); err != nil {
-			return CharacterV2ListResult{}, err
+			return CharacterListResult{}, err
 		}
 		if arg.GuildID, err = optionalCharacterID(spec.Filters.GuildId); err != nil {
-			return CharacterV2ListResult{}, err
+			return CharacterListResult{}, err
 		}
 		arg.CharacterStatus = optionalCharacterText(spec.Filters.Status)
 		arg.NamePrefix = optionalCharacterText(spec.Filters.NamePrefix)
 	}
 	rows, err := p.queries().CharacterProductList(ctx, arg)
 	if err != nil {
-		return CharacterV2ListResult{}, err
+		return CharacterListResult{}, err
 	}
 	totalArg := dbgen.CharacterProductCountParams{OwnerID: arg.OwnerID, RegionID: arg.RegionID, GuildID: arg.GuildID, CharacterStatus: arg.CharacterStatus, NamePrefix: arg.NamePrefix}
 	total, err := p.queries().CharacterProductCount(ctx, totalArg)
 	if err != nil {
-		return CharacterV2ListResult{}, err
+		return CharacterListResult{}, err
 	}
-	out := CharacterV2ListResult{Items: make([]CharacterView, 0, len(rows)), Total: total}
+	out := CharacterListResult{Items: make([]CharacterView, 0, len(rows)), Total: total}
 	for _, row := range rows {
 		view, mapErr := mapProductCharacter(row.ID, row.ShortCode, row.Name, row.OwnerID, row.BackstoryID, row.GuildID, row.RegionID, row.Status, row.Description, row.DdbUrl, row.Pcxp, row.CreatedAt, row.UpdatedAt, row.VerificationSubmittedAt, row.VerificationStatus, row.DdbPayload, row.DdbSyncedAt)
 		if mapErr != nil {
-			return CharacterV2ListResult{}, mapErr
+			return CharacterListResult{}, mapErr
 		}
 		out.Items = append(out.Items, view)
 	}
 	return out, nil
 }
 
-func (p *ProductPostgres) ReadMyCharacters(ctx context.Context, actor auth.Authority, spec MyCharactersSpec) (CharacterV2ListResult, error) {
+func (p *ProductPostgres) ReadMyCharacters(ctx context.Context, actor auth.Authority, spec MyCharactersSpec) (CharacterListResult, error) {
 	ownerID, err := characterActorID(actor)
 	if err != nil {
-		return CharacterV2ListResult{}, err
+		return CharacterListResult{}, err
 	}
 	rows, err := p.queries().CharacterProductMyCharacters(ctx, dbgen.CharacterProductMyCharactersParams{OwnerID: ownerID, RowLimit: spec.Limit, RowOffset: spec.Offset})
 	if err != nil {
-		return CharacterV2ListResult{}, err
+		return CharacterListResult{}, err
 	}
 	total, err := p.queries().CharacterProductCountMyCharacters(ctx, ownerID)
 	if err != nil {
-		return CharacterV2ListResult{}, err
+		return CharacterListResult{}, err
 	}
-	out := CharacterV2ListResult{Items: make([]CharacterView, 0, len(rows)), Total: total}
+	out := CharacterListResult{Items: make([]CharacterView, 0, len(rows)), Total: total}
 	for _, row := range rows {
 		view, mapErr := mapProductCharacter(row.ID, row.ShortCode, row.Name, row.OwnerID, row.BackstoryID, row.GuildID, row.RegionID, row.Status, row.Description, row.DdbUrl, row.Pcxp, row.CreatedAt, row.UpdatedAt, row.VerificationSubmittedAt, row.VerificationStatus, row.DdbPayload, row.DdbSyncedAt)
 		if mapErr != nil {
-			return CharacterV2ListResult{}, mapErr
+			return CharacterListResult{}, mapErr
 		}
 		out.Items = append(out.Items, view)
 	}

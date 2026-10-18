@@ -315,50 +315,50 @@ func (s ProductQueries) CharacterVerificationHistory(ctx context.Context, actor 
 	return value, nil
 }
 
-func (s ProductQueries) Characters(ctx context.Context, actor auth.Authority, spec CharactersSpec) (CharacterV2ListResult, error) {
+func (s ProductQueries) Characters(ctx context.Context, actor auth.Authority, spec CharactersSpec) (CharacterListResult, error) {
 	if err := characterQueryPage(spec.Limit, spec.Offset); err != nil {
-		return CharacterV2ListResult{}, err
+		return CharacterListResult{}, err
 	}
 	if spec.Filters != nil {
 		if spec.Filters.RegionId != nil {
 			if err := characterQueryID(*spec.Filters.RegionId); err != nil {
-				return CharacterV2ListResult{}, err
+				return CharacterListResult{}, err
 			}
 		}
 		if spec.Filters.OwnerId != nil {
 			if err := characterQueryID(*spec.Filters.OwnerId); err != nil {
-				return CharacterV2ListResult{}, err
+				return CharacterListResult{}, err
 			}
 		}
 		if spec.Filters.GuildId != nil {
 			if err := characterQueryID(*spec.Filters.GuildId); err != nil {
-				return CharacterV2ListResult{}, err
+				return CharacterListResult{}, err
 			}
 		}
 		if spec.Filters.NamePrefix != nil {
 			if err := characterQueryText(*spec.Filters.NamePrefix, 200); err != nil {
-				return CharacterV2ListResult{}, err
+				return CharacterListResult{}, err
 			}
 		}
 		if spec.Filters.Status != nil {
 			switch *spec.Filters.Status {
 			case "active", "retired", "dead", "pending_approval":
 			default:
-				return CharacterV2ListResult{}, apierr.New(apierr.Invalid, "invalid character status")
+				return CharacterListResult{}, apierr.New(apierr.Invalid, "invalid character status")
 			}
 		}
 	}
 	observe, err := s.publicRead(ctx, actor, "Query.characters", "")
 	if err != nil {
-		return CharacterV2ListResult{}, err
+		return CharacterListResult{}, err
 	}
 	value, err := s.Reads.Character.ReadCharacters(ctx, actor, spec)
 	if err != nil {
-		return CharacterV2ListResult{}, err
+		return CharacterListResult{}, err
 	}
 	value.Items, err = s.projectCharacters(ctx, actor, value.Items)
 	if err != nil {
-		return CharacterV2ListResult{}, err
+		return CharacterListResult{}, err
 	}
 	observe()
 	return value, nil
@@ -430,21 +430,21 @@ func (s ProductQueries) DowntimeProjects(ctx context.Context, actor auth.Authori
 	return value, nil
 }
 
-func (s ProductQueries) MyCharacters(ctx context.Context, actor auth.Authority, spec MyCharactersSpec) (CharacterV2ListResult, error) {
+func (s ProductQueries) MyCharacters(ctx context.Context, actor auth.Authority, spec MyCharactersSpec) (CharacterListResult, error) {
 	if err := characterQueryPage(spec.Limit, spec.Offset); err != nil {
-		return CharacterV2ListResult{}, err
+		return CharacterListResult{}, err
 	}
 	observe, err := s.publicRead(ctx, actor, "Query.myCharacters", "")
 	if err != nil {
-		return CharacterV2ListResult{}, err
+		return CharacterListResult{}, err
 	}
 	value, err := s.Reads.Character.ReadMyCharacters(ctx, actor, spec)
 	if err != nil {
-		return CharacterV2ListResult{}, err
+		return CharacterListResult{}, err
 	}
 	value.Items, err = s.projectCharacters(ctx, actor, value.Items)
 	if err != nil {
-		return CharacterV2ListResult{}, err
+		return CharacterListResult{}, err
 	}
 	observe()
 	return value, nil

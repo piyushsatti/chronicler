@@ -658,11 +658,11 @@ func toUnlockableType(v member.UnlockableView) *UnlockableType {
 	}
 }
 
-func toCharacterFilters(filters *CharacterFiltersInput) *character.CharacterV2FiltersFields {
+func toCharacterFilters(filters *CharacterFiltersInput) *character.CharacterFiltersFields {
 	if filters == nil {
 		return nil
 	}
-	return &character.CharacterV2FiltersFields{
+	return &character.CharacterFiltersFields{
 		OwnerId:    filters.OwnerID,
 		GuildId:    filters.GuildID,
 		RegionId:   filters.RegionID,
@@ -694,7 +694,7 @@ func toCharacterView(v character.CharacterView) *CharacterType {
 	}
 }
 
-func toCharacterListResult(v character.CharacterV2ListResult) *CharacterListResult {
+func toCharacterListResult(v character.CharacterListResult) *CharacterListResult {
 	items := make([]*CharacterType, len(v.Items))
 	for i, item := range v.Items {
 		items[i] = toCharacterView(item)
@@ -1177,12 +1177,12 @@ func toDdbSyncReceipt(r character.DdbSyncReceipt) *DdbSyncReceipt {
 	}
 }
 
-func toCreateCharacterFields(in CreateCharacterInput) character.CreateCharacterV2Fields {
+func toCreateCharacterFields(in CreateCharacterInput) character.CreateCharacterFields {
 	picks := in.CatalogPickIds
 	if picks == nil {
 		picks = []string{}
 	}
-	return character.CreateCharacterV2Fields{
+	return character.CreateCharacterFields{
 		Name:           in.Name,
 		RegionId:       in.RegionID,
 		BackstoryId:    in.BackstoryID,
@@ -1195,8 +1195,8 @@ func toCreateCharacterFields(in CreateCharacterInput) character.CreateCharacterV
 	}
 }
 
-func toUpdateCharacterProfileFields(in UpdateCharacterProfileInput) character.UpdateCharacterProfileV2Fields {
-	out := character.UpdateCharacterProfileV2Fields{}
+func toUpdateCharacterProfileFields(in UpdateCharacterProfileInput) character.UpdateCharacterProfileFields {
+	out := character.UpdateCharacterProfileFields{}
 	if in.Description.IsSet() {
 		out.Description.Set = true
 		out.Description.Value = in.Description.Value()

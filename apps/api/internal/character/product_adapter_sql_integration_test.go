@@ -109,7 +109,7 @@ func TestCharacterProductPostgresReadAdapters(t *testing.T) {
 
 	status := "active"
 	prefix := "Read"
-	characters, err := adapter.ReadCharacters(ctx, actor, CharactersSpec{Filters: &CharacterV2FiltersFields{Status: &status, NamePrefix: &prefix}, Limit: 10})
+	characters, err := adapter.ReadCharacters(ctx, actor, CharactersSpec{Filters: &CharacterFiltersFields{Status: &status, NamePrefix: &prefix}, Limit: 10})
 	if err != nil || characters.Total != 3 || len(characters.Items) != 3 {
 		t.Fatalf("ReadCharacters = %+v, err=%v", characters, err)
 	}

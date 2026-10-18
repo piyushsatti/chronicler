@@ -51,9 +51,9 @@ func (r *cqRepo) ReadCharacterVerificationHistory(_ context.Context, _ auth.Auth
 	r.calls++
 	return member.VerificationPage{}, r.err
 }
-func (r *cqRepo) ReadCharacters(_ context.Context, _ auth.Authority, _ CharactersSpec) (CharacterV2ListResult, error) {
+func (r *cqRepo) ReadCharacters(_ context.Context, _ auth.Authority, _ CharactersSpec) (CharacterListResult, error) {
 	r.calls++
-	return CharacterV2ListResult{Items: []CharacterView{*r.value}, Total: 1}, r.err
+	return CharacterListResult{Items: []CharacterView{*r.value}, Total: 1}, r.err
 }
 func (r *cqRepo) ReadCoPlayers(_ context.Context, _ auth.Authority, _ CoPlayersSpec) (CoPlayerPage, error) {
 	r.calls++
@@ -67,9 +67,9 @@ func (r *cqRepo) ReadDowntimeProjects(_ context.Context, _ auth.Authority, _ Dow
 	r.calls++
 	return DowntimeProjectListResult{}, r.err
 }
-func (r *cqRepo) ReadMyCharacters(_ context.Context, _ auth.Authority, _ MyCharactersSpec) (CharacterV2ListResult, error) {
+func (r *cqRepo) ReadMyCharacters(_ context.Context, _ auth.Authority, _ MyCharactersSpec) (CharacterListResult, error) {
 	r.calls++
-	return CharacterV2ListResult{Items: []CharacterView{*r.value}, Total: 1}, r.err
+	return CharacterListResult{Items: []CharacterView{*r.value}, Total: 1}, r.err
 }
 func (r *cqRepo) ReadMyQuestRewards(_ context.Context, _ auth.Authority, _ MyQuestRewardsSpec) (RewardEntitlementPage, error) {
 	r.calls++
@@ -487,7 +487,7 @@ func TestCharacterProductQueriesUTCDateAndStatus(t *testing.T) {
 		t.Fatal(v, err)
 	}
 	for _, status := range []string{"active", "retired", "dead", "pending_approval"} {
-		if _, err := s.Characters(context.Background(), a, CharactersSpec{Limit: 1, Filters: &CharacterV2FiltersFields{Status: &status}}); err != nil {
+		if _, err := s.Characters(context.Background(), a, CharactersSpec{Limit: 1, Filters: &CharacterFiltersFields{Status: &status}}); err != nil {
 			t.Fatal(status, err)
 		}
 	}

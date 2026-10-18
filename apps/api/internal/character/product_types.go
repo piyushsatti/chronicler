@@ -107,7 +107,7 @@ const (
 	CharacterReviewStatusUnknown  CharacterReviewStatus = "UNKNOWN"
 )
 
-type CharacterV2FiltersFields struct {
+type CharacterFiltersFields struct {
 	GuildId    *string
 	NamePrefix *string
 	OwnerId    *string
@@ -115,7 +115,7 @@ type CharacterV2FiltersFields struct {
 	Status     *string
 }
 
-type CharacterV2ListResult struct {
+type CharacterListResult struct {
 	Items []CharacterView
 	Total int32
 }
@@ -155,7 +155,7 @@ type CoPlayerView struct {
 	QuestCount  int32
 }
 
-type CreateCharacterV2Fields struct {
+type CreateCharacterFields struct {
 	BackgroundText *string
 	BackstoryId    *string
 	CatalogPickIds []string
@@ -283,7 +283,7 @@ type RewardEntitlementPage struct {
 	Total int32
 }
 
-type UpdateCharacterProfileV2Fields struct {
+type UpdateCharacterProfileFields struct {
 	BackgroundText product.Optional[string]
 	Description    product.Optional[string]
 }
@@ -314,7 +314,7 @@ type CreateBackstorySpec struct {
 }
 
 type CreateCharacterSpec struct {
-	Input CreateCharacterV2Fields
+	Input CreateCharacterFields
 }
 
 type DecideVerificationSpec struct {
@@ -370,7 +370,7 @@ type UpdateBackstorySpec struct {
 
 type UpdateCharacterProfileSpec struct {
 	CharacterId string
-	Input       UpdateCharacterProfileV2Fields
+	Input       UpdateCharacterProfileFields
 }
 
 type UpsertCreationCatalogEntrySpec struct {
@@ -424,7 +424,7 @@ type CharacterVerificationHistorySpec struct {
 }
 
 type CharactersSpec struct {
-	Filters *CharacterV2FiltersFields
+	Filters *CharacterFiltersFields
 	Limit   int32
 	Offset  int32
 }

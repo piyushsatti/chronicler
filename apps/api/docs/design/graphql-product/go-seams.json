@@ -1660,7 +1660,7 @@
       "wire_name": "CharacterReviewStatus"
     },
     {
-      "name": "CharacterV2FiltersFields",
+      "name": "CharacterFiltersFields",
       "package": "character",
       "kind": "INPUT_OBJECT",
       "fields": [
@@ -1716,7 +1716,7 @@
       "wire_name": "CharacterV2FiltersInput"
     },
     {
-      "name": "CharacterV2ListResult",
+      "name": "CharacterListResult",
       "package": "character",
       "kind": "OBJECT",
       "fields": [
@@ -1742,7 +1742,7 @@
       "enum_values": [],
       "primary_task": "CHA01",
       "meaning": "immutable query/command DTO; repository inner rows never cross aggregate; nested fields resolved by mapped loader when selected",
-      "wire_name": "CharacterV2ListResult"
+      "wire_name": "CharacterListResult"
     },
     {
       "name": "CharacterView",
@@ -2254,7 +2254,7 @@
       "wire_name": "CountByKeyType"
     },
     {
-      "name": "CreateCharacterV2Fields",
+      "name": "CreateCharacterFields",
       "package": "character",
       "kind": "INPUT_OBJECT",
       "fields": [
@@ -9791,7 +9791,7 @@
       "wire_name": "UnlockableType"
     },
     {
-      "name": "UpdateCharacterProfileV2Fields",
+      "name": "UpdateCharacterProfileFields",
       "package": "character",
       "kind": "INPUT_OBJECT",
       "fields": [
@@ -10413,7 +10413,7 @@
         {
           "name": "Input",
           "wire_name": "input",
-          "go_type": "character.CreateCharacterV2Fields",
+          "go_type": "character.CreateCharacterFields",
           "sdl_type": "CreateCharacterV2Input!",
           "default": "",
           "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
@@ -11685,7 +11685,7 @@
         {
           "name": "Input",
           "wire_name": "input",
-          "go_type": "character.UpdateCharacterProfileV2Fields",
+          "go_type": "character.UpdateCharacterProfileFields",
           "sdl_type": "UpdateCharacterProfileV2Input!",
           "default": "",
           "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
@@ -12376,7 +12376,7 @@
         {
           "name": "Filters",
           "wire_name": "filters",
-          "go_type": "*character.CharacterV2FiltersFields",
+          "go_type": "*character.CharacterFiltersFields",
           "sdl_type": "CharacterV2FiltersInput",
           "default": "null",
           "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
@@ -22895,10 +22895,10 @@
         "ReadCharacterProgression(ctx context.Context, actor auth.Authority, spec character.CharacterProgressionSpec) (character.ProgressionListResult, error)",
         "ReadCharacterSummaries(ctx context.Context, actor auth.Authority, spec character.CharacterSummariesSpec) (document.DocumentListResult, error)",
         "ReadCharacterVerificationHistory(ctx context.Context, actor auth.Authority, spec character.CharacterVerificationHistorySpec) (member.VerificationPage, error)",
-        "ReadCharacters(ctx context.Context, actor auth.Authority, spec character.CharactersSpec) (character.CharacterV2ListResult, error)",
+        "ReadCharacters(ctx context.Context, actor auth.Authority, spec character.CharactersSpec) (character.CharacterListResult, error)",
         "ReadCoPlayers(ctx context.Context, actor auth.Authority, spec character.CoPlayersSpec) (character.CoPlayerPage, error)",
         "ReadDowntimeProjects(ctx context.Context, actor auth.Authority, spec character.DowntimeProjectsSpec) (character.DowntimeProjectListResult, error)",
-        "ReadMyCharacters(ctx context.Context, actor auth.Authority, spec character.MyCharactersSpec) (character.CharacterV2ListResult, error)",
+        "ReadMyCharacters(ctx context.Context, actor auth.Authority, spec character.MyCharactersSpec) (character.CharacterListResult, error)",
         "ReadMyQuestRewards(ctx context.Context, actor auth.Authority, spec character.MyQuestRewardsSpec) (character.RewardEntitlementPage, error)",
         "ReadParticipationsByCharacter(ctx context.Context, actor auth.Authority, spec character.ParticipationsByCharacterSpec) (character.ParticipationPageView, error)",
         "ReadPendingCharacterVerifications(ctx context.Context, actor auth.Authority, spec character.PendingCharacterVerificationsSpec) (character.AdminCharacterDirectoryView, error)"
@@ -25604,7 +25604,7 @@
     },
     {
       "id": "READ-character-Characters",
-      "signature": "ReadCharacters(ctx context.Context, actor auth.Authority, spec character.CharactersSpec) (character.CharacterV2ListResult, error)",
+      "signature": "ReadCharacters(ctx context.Context, actor auth.Authority, spec character.CharactersSpec) (character.CharacterListResult, error)",
       "interface": "character.CharacterReadRepository",
       "provider": "CHA04",
       "callers": ["CHA05"],
@@ -25955,7 +25955,7 @@
     },
     {
       "id": "READ-character-MyCharacters",
-      "signature": "ReadMyCharacters(ctx context.Context, actor auth.Authority, spec character.MyCharactersSpec) (character.CharacterV2ListResult, error)",
+      "signature": "ReadMyCharacters(ctx context.Context, actor auth.Authority, spec character.MyCharactersSpec) (character.CharacterListResult, error)",
       "interface": "character.CharacterReadRepository",
       "provider": "CHA04",
       "callers": ["CHA05"],
