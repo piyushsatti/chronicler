@@ -11,11 +11,7 @@ extend type Query {
     limit: Int! = 50
     offset: Int! = 0
   ): QuestListResult!
-  questBoard(
-    regionId: ID = null
-    limit: Int! = 50
-    offset: Int! = 0
-  ): QuestListResult!
+  questBoard(regionId: ID = null, limit: Int! = 50, offset: Int! = 0): QuestListResult!
   recentlyClosedQuests(
     regionId: ID = null
     closedSince: DateTime = null

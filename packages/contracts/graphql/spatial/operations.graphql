@@ -24,12 +24,7 @@ extend type Mutation {
   createMap(input: MapCreateInput!, meta: CommandMeta!): MapType!
   createRegion(input: RegionInput!, meta: CommandMeta!): RegionType!
   updateRegion(id: ID!, input: RegionInput!, meta: CommandMeta!): RegionType!
-  transitionRegion(
-    id: ID!
-    to: String!
-    note: String!
-    meta: CommandMeta!
-  ): RegionType!
+  transitionRegion(id: ID!, to: String!, note: String!, meta: CommandMeta!): RegionType!
   assignArchon(memberId: ID!, regionId: ID!, meta: CommandMeta!): ArchonAssignmentType!
   revokeArchon(memberId: ID!, regionId: ID!, meta: CommandMeta!): CommandReceipt!
   createTimeAnchor(input: TimeAnchorInput!, meta: CommandMeta!): TimeAnchorType!
