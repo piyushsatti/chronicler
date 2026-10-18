@@ -68,3 +68,55 @@ SET payload = sqlc.arg(payload)::jsonb,
     updated_at = sqlc.arg(at)::timestamptz
 WHERE key = sqlc.arg(setting_key)::text
 RETURNING key, payload, updated_at;
+-- name: SiteJobClock :one
+SELECT clock_timestamp()::timestamptz AS now;
+-- name: SiteAdminDeliveryCounts :one
+SELECT count(*) FILTER (WHERE state IN ('queued', 'running', 'retry_wait', 'repair_required'))::integer AS pending_count,
+       count(*) FILTER (WHERE state IN ('dead', 'succeeded', 'cancelled'))::integer AS terminal_count,
+       count(*)::integer AS total_count
+FROM background_jobs
+WHERE kind = 'quest_discord_delivery'
+  AND (sqlc.narg(delivery_state)::text IS NULL OR state = sqlc.narg(delivery_state));
+-- name: SiteAdminDeliveryJobs :many
+WITH matching AS (
+    SELECT b.public_id, b.state, b.attempts, b.redrive_count, b.safe_error_code, b.next_run_at,
+           b.created_at, b.updated_at, b.payload,
+           q.public_id AS quest_public_id, q.short_code AS quest_short_code, q.title AS quest_title,
+           q.discord_desired_revision, q.discord_applied_revision, q.discord_message_id, q.event_url
+    FROM background_jobs b
+    LEFT JOIN quests q ON q.public_id::text = b.payload ->> 'questId'
+    WHERE b.kind = 'quest_discord_delivery'
+      AND (sqlc.narg(delivery_state)::text IS NULL OR b.state = sqlc.narg(delivery_state))
+), page AS (
+    SELECT * FROM matching ORDER BY updated_at DESC, public_id LIMIT sqlc.arg(page_limit)::integer OFFSET sqlc.arg(page_offset)::integer
+)
+SELECT (SELECT count(*) FROM matching)::bigint AS total,
+       page.public_id, page.state, page.attempts, page.redrive_count, page.safe_error_code,
+       page.next_run_at, page.created_at, page.updated_at, page.quest_public_id, page.quest_short_code,
+       page.quest_title, page.discord_desired_revision, page.discord_applied_revision, page.discord_message_id,
+       page.event_url
+FROM (SELECT 1) marker LEFT JOIN page ON true;
+-- name: SiteLockDiscordDeliveryJob :one
+SELECT b.public_id, b.state, b.attempts, b.redrive_count, b.lease_token, b.next_run_at, b.created_at, b.updated_at,
+       b.completion_operation, b.completion_payload, b.error_message, b.safe_error_code,
+       q.public_id AS quest_public_id, q.discord_desired_revision, q.discord_applied_revision
+FROM background_jobs b
+LEFT JOIN quests q ON q.public_id::text = b.payload ->> 'questId'
+WHERE b.public_id = sqlc.arg(job_id)::uuid AND b.kind = 'quest_discord_delivery'
+FOR UPDATE OF b;
+-- name: SiteRedriveDiscordDeliveryJob :one
+UPDATE background_jobs
+SET state = 'queued',
+    attempts = 0,
+    error_message = NULL,
+    completion_operation = NULL,
+    completion_payload = NULL,
+    lease_expires_at = NULL,
+    claimed_at = NULL,
+    attempt_deadline_at = NULL,
+    safe_error_code = NULL,
+    next_run_at = sqlc.arg(next_run_at)::timestamptz,
+    redrive_count = redrive_count + 1,
+    updated_at = sqlc.arg(at)::timestamptz
+WHERE public_id = sqlc.arg(job_id)::uuid AND kind = 'quest_discord_delivery'
+RETURNING public_id, state, attempts, redrive_count, next_run_at, updated_at;

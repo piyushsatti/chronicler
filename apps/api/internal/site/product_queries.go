@@ -91,3 +91,47 @@ func (s ProductQueries) BatchActiveAlerts(ctx context.Context, actor auth.Author
 	}
 	return s.Reads.Batch.ReadBatchActiveAlerts(ctx, actor, keys)
 }
+
+func (s ProductQueries) SearchableKinds(ctx context.Context, actor auth.Authority, spec SearchableKindsSpec) ([]SearchKindView, error) {
+	if err := s.admit(ctx, actor, auth.Operation("Query.searchableKinds")); err != nil {
+		return nil, err
+	}
+	return s.Reads.Site.ReadSearchableKinds(ctx, actor, spec)
+}
+
+func (s ProductQueries) HomeBanner(ctx context.Context, actor auth.Authority, spec HomeBannerSpec) (HomeBannerView, error) {
+	if err := s.admit(ctx, actor, auth.Operation("Query.homeBanner")); err != nil {
+		return HomeBannerView{}, err
+	}
+	return s.Reads.Site.ReadHomeBanner(ctx, actor, spec)
+}
+
+func (s ProductQueries) QuestAnnouncementRoleSetting(ctx context.Context, actor auth.Authority, spec QuestAnnouncementRoleSettingSpec) (QuestAnnouncementRoleSettingView, error) {
+	if err := s.admit(ctx, actor, auth.Operation("Query.questAnnouncementRoleSetting")); err != nil {
+		return QuestAnnouncementRoleSettingView{}, err
+	}
+	return s.Reads.Site.ReadQuestAnnouncementRoleSetting(ctx, actor, spec)
+}
+
+func (s ProductQueries) DiscordDeliveryMode(ctx context.Context, actor auth.Authority, spec DiscordDeliveryModeSpec) (string, error) {
+	if err := s.admit(ctx, actor, auth.Operation("Query.discordDeliveryMode")); err != nil {
+		return "", err
+	}
+	if s.Reads.Operations == nil {
+		return "", apierr.New(apierr.Internal, "site operations reads unavailable")
+	}
+	return s.Reads.Operations.ReadDiscordDeliveryMode(ctx, actor, spec)
+}
+
+func (s ProductQueries) AdminOperations(ctx context.Context, actor auth.Authority, spec AdminOperationsSpec) (AdminOperationsView, error) {
+	if spec.Limit <= 0 || spec.Offset < 0 {
+		return AdminOperationsView{}, apierr.New(apierr.Invalid, "invalid admin operations page")
+	}
+	if err := s.admit(ctx, actor, auth.Operation("Query.adminOperations")); err != nil {
+		return AdminOperationsView{}, err
+	}
+	if s.Reads.Operations == nil {
+		return AdminOperationsView{}, apierr.New(apierr.Internal, "site operations reads unavailable")
+	}
+	return s.Reads.Operations.ReadAdminOperations(ctx, actor, spec)
+}

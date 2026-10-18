@@ -239,3 +239,210 @@ func (q *Queries) SiteReplaceSetting(ctx context.Context, arg SiteReplaceSetting
 	err := row.Scan(&i.Key, &i.Payload, &i.UpdatedAt)
 	return i, err
 }
+
+const siteJobClock = `-- name: SiteJobClock :one
+SELECT clock_timestamp()::timestamptz AS now
+`
+
+func (q *Queries) SiteJobClock(ctx context.Context) (pgtype.Timestamptz, error) {
+	row := q.db.QueryRow(ctx, siteJobClock)
+	var now pgtype.Timestamptz
+	err := row.Scan(&now)
+	return now, err
+}
+
+const siteAdminDeliveryCounts = `-- name: SiteAdminDeliveryCounts :one
+SELECT count(*) FILTER (WHERE state IN ('queued', 'running', 'retry_wait', 'repair_required'))::integer AS pending_count,
+       count(*) FILTER (WHERE state IN ('dead', 'succeeded', 'cancelled'))::integer AS terminal_count,
+       count(*)::integer AS total_count
+FROM background_jobs
+WHERE kind = 'quest_discord_delivery'
+  AND ($1::text IS NULL OR state = $1)
+`
+
+type SiteAdminDeliveryCountsRow struct {
+	PendingCount  int32 `json:"pending_count"`
+	TerminalCount int32 `json:"terminal_count"`
+	TotalCount    int32 `json:"total_count"`
+}
+
+func (q *Queries) SiteAdminDeliveryCounts(ctx context.Context, deliveryState pgtype.Text) (SiteAdminDeliveryCountsRow, error) {
+	row := q.db.QueryRow(ctx, siteAdminDeliveryCounts, deliveryState)
+	var i SiteAdminDeliveryCountsRow
+	err := row.Scan(&i.PendingCount, &i.TerminalCount, &i.TotalCount)
+	return i, err
+}
+
+const siteAdminDeliveryJobs = `-- name: SiteAdminDeliveryJobs :many
+WITH matching AS (
+    SELECT b.public_id, b.state, b.attempts, b.redrive_count, b.safe_error_code, b.next_run_at,
+           b.created_at, b.updated_at, b.payload,
+           q.public_id AS quest_public_id, q.short_code AS quest_short_code, q.title AS quest_title,
+           q.discord_desired_revision, q.discord_applied_revision, q.discord_message_id, q.event_url
+    FROM background_jobs b
+    LEFT JOIN quests q ON q.public_id::text = b.payload ->> 'questId'
+    WHERE b.kind = 'quest_discord_delivery'
+      AND ($1::text IS NULL OR b.state = $1)
+), page AS (
+    SELECT public_id, state, attempts, redrive_count, safe_error_code, next_run_at, created_at, updated_at, payload, quest_public_id, quest_short_code, quest_title, discord_desired_revision, discord_applied_revision, discord_message_id, event_url FROM matching ORDER BY updated_at DESC, public_id LIMIT $3::integer OFFSET $2::integer
+)
+SELECT (SELECT count(*) FROM matching)::bigint AS total,
+       page.public_id, page.state, page.attempts, page.redrive_count, page.safe_error_code,
+       page.next_run_at, page.created_at, page.updated_at, page.quest_public_id, page.quest_short_code,
+       page.quest_title, page.discord_desired_revision, page.discord_applied_revision, page.discord_message_id,
+       page.event_url
+FROM (SELECT 1) marker LEFT JOIN page ON true
+`
+
+type SiteAdminDeliveryJobsParams struct {
+	DeliveryState pgtype.Text `json:"delivery_state"`
+	PageOffset    int32       `json:"page_offset"`
+	PageLimit     int32       `json:"page_limit"`
+}
+
+type SiteAdminDeliveryJobsRow struct {
+	Total                  int64              `json:"total"`
+	PublicID               pgtype.UUID        `json:"public_id"`
+	State                  pgtype.Text        `json:"state"`
+	Attempts               pgtype.Int4        `json:"attempts"`
+	RedriveCount           pgtype.Int4        `json:"redrive_count"`
+	SafeErrorCode          pgtype.Text        `json:"safe_error_code"`
+	NextRunAt              pgtype.Timestamptz `json:"next_run_at"`
+	CreatedAt              pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
+	QuestPublicID          pgtype.UUID        `json:"quest_public_id"`
+	QuestShortCode         pgtype.Text        `json:"quest_short_code"`
+	QuestTitle             pgtype.Text        `json:"quest_title"`
+	DiscordDesiredRevision pgtype.Int4        `json:"discord_desired_revision"`
+	DiscordAppliedRevision pgtype.Int4        `json:"discord_applied_revision"`
+	DiscordMessageID       pgtype.Text        `json:"discord_message_id"`
+	EventUrl               pgtype.Text        `json:"event_url"`
+}
+
+func (q *Queries) SiteAdminDeliveryJobs(ctx context.Context, arg SiteAdminDeliveryJobsParams) ([]SiteAdminDeliveryJobsRow, error) {
+	rows, err := q.db.Query(ctx, siteAdminDeliveryJobs, arg.DeliveryState, arg.PageOffset, arg.PageLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SiteAdminDeliveryJobsRow{}
+	for rows.Next() {
+		var i SiteAdminDeliveryJobsRow
+		if err := rows.Scan(
+			&i.Total,
+			&i.PublicID,
+			&i.State,
+			&i.Attempts,
+			&i.RedriveCount,
+			&i.SafeErrorCode,
+			&i.NextRunAt,
+			&i.CreatedAt,
+			&i.UpdatedAt,
+			&i.QuestPublicID,
+			&i.QuestShortCode,
+			&i.QuestTitle,
+			&i.DiscordDesiredRevision,
+			&i.DiscordAppliedRevision,
+			&i.DiscordMessageID,
+			&i.EventUrl,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const siteLockDiscordDeliveryJob = `-- name: SiteLockDiscordDeliveryJob :one
+SELECT b.public_id, b.state, b.attempts, b.redrive_count, b.lease_token, b.next_run_at, b.created_at, b.updated_at,
+       b.completion_operation, b.completion_payload, b.error_message, b.safe_error_code,
+       q.public_id AS quest_public_id, q.discord_desired_revision, q.discord_applied_revision
+FROM background_jobs b
+LEFT JOIN quests q ON q.public_id::text = b.payload ->> 'questId'
+WHERE b.public_id = $1::uuid AND b.kind = 'quest_discord_delivery'
+FOR UPDATE OF b
+`
+
+type SiteLockDiscordDeliveryJobRow struct {
+	PublicID               pgtype.UUID        `json:"public_id"`
+	State                  string             `json:"state"`
+	Attempts               int32              `json:"attempts"`
+	RedriveCount           int32              `json:"redrive_count"`
+	LeaseToken             int64              `json:"lease_token"`
+	NextRunAt              pgtype.Timestamptz `json:"next_run_at"`
+	CreatedAt              pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
+	CompletionOperation    pgtype.Text        `json:"completion_operation"`
+	CompletionPayload      []byte             `json:"completion_payload"`
+	ErrorMessage           pgtype.Text        `json:"error_message"`
+	SafeErrorCode          pgtype.Text        `json:"safe_error_code"`
+	QuestPublicID          pgtype.UUID        `json:"quest_public_id"`
+	DiscordDesiredRevision pgtype.Int4        `json:"discord_desired_revision"`
+	DiscordAppliedRevision pgtype.Int4        `json:"discord_applied_revision"`
+}
+
+func (q *Queries) SiteLockDiscordDeliveryJob(ctx context.Context, jobID pgtype.UUID) (SiteLockDiscordDeliveryJobRow, error) {
+	row := q.db.QueryRow(ctx, siteLockDiscordDeliveryJob, jobID)
+	var i SiteLockDiscordDeliveryJobRow
+	err := row.Scan(
+		&i.PublicID,
+		&i.State,
+		&i.Attempts,
+		&i.RedriveCount,
+		&i.LeaseToken,
+		&i.NextRunAt,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.CompletionOperation,
+		&i.CompletionPayload,
+		&i.ErrorMessage,
+		&i.SafeErrorCode,
+		&i.QuestPublicID,
+		&i.DiscordDesiredRevision,
+		&i.DiscordAppliedRevision,
+	)
+	return i, err
+}
+
+const siteRedriveDiscordDeliveryJob = `-- name: SiteRedriveDiscordDeliveryJob :one
+UPDATE background_jobs
+SET state = 'queued',
+    attempts = 0,
+    error_message = NULL,
+    completion_operation = NULL,
+    completion_payload = NULL,
+    lease_expires_at = NULL,
+    claimed_at = NULL,
+    attempt_deadline_at = NULL,
+    safe_error_code = NULL,
+    next_run_at = $1::timestamptz,
+    redrive_count = redrive_count + 1,
+    updated_at = $2::timestamptz
+WHERE public_id = $3::uuid AND kind = 'quest_discord_delivery'
+RETURNING public_id, state, attempts, redrive_count, next_run_at, updated_at
+`
+
+type SiteRedriveDiscordDeliveryJobParams struct {
+	NextRunAt pgtype.Timestamptz `json:"next_run_at"`
+	At        pgtype.Timestamptz `json:"at"`
+	JobID     pgtype.UUID        `json:"job_id"`
+}
+
+type SiteRedriveDiscordDeliveryJobRow struct {
+	PublicID     pgtype.UUID        `json:"public_id"`
+	State        string             `json:"state"`
+	Attempts     int32              `json:"attempts"`
+	RedriveCount int32              `json:"redrive_count"`
+	NextRunAt    pgtype.Timestamptz `json:"next_run_at"`
+	UpdatedAt    pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) SiteRedriveDiscordDeliveryJob(ctx context.Context, arg SiteRedriveDiscordDeliveryJobParams) (SiteRedriveDiscordDeliveryJobRow, error) {
+	row := q.db.QueryRow(ctx, siteRedriveDiscordDeliveryJob, arg.NextRunAt, arg.At, arg.JobID)
+	var i SiteRedriveDiscordDeliveryJobRow
+	err := row.Scan(&i.PublicID, &i.State, &i.Attempts, &i.RedriveCount, &i.NextRunAt, &i.UpdatedAt)
+	return i, err
+}

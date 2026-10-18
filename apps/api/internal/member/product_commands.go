@@ -570,3 +570,91 @@ func (s ProductCommands) DecideRequest(ctx context.Context, actor auth.Authority
 	}
 	return result, nil
 }
+
+func dmProfileTableInfo(value *json.RawMessage) error {
+	if value == nil {
+		return nil
+	}
+	if !json.Valid(*value) {
+		return apierr.New(apierr.Invalid, "invalid dm profile table info")
+	}
+	return nil
+}
+
+func (s ProductCommands) UpdateMyDmProfile(ctx context.Context, actor auth.Authority, spec UpdateMyDmProfileSpec, meta product.CommandMeta) (DmProfileView, error) {
+	if spec.Input.Tagline != nil {
+		if err := queryText(*spec.Input.Tagline, 200); err != nil {
+			return DmProfileView{}, err
+		}
+	}
+	if spec.Input.Philosophy != nil {
+		if err := queryText(*spec.Input.Philosophy, 4000); err != nil {
+			return DmProfileView{}, err
+		}
+	}
+	if spec.Input.HouseRules != nil {
+		if err := queryText(*spec.Input.HouseRules, 4000); err != nil {
+			return DmProfileView{}, err
+		}
+	}
+	if err := dmProfileTableInfo(spec.Input.TableInfo); err != nil {
+		return DmProfileView{}, err
+	}
+	return runMemberCommand(ctx, s, actor, "updateMyDmProfile", spec, meta, actor.Claims().MemberID, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (DmProfileView, error) {
+		locked, err := repos.Member.LockUpdateMyDmProfile(ctx, fresh.Claims().MemberID, spec)
+		if err != nil {
+			return DmProfileView{}, err
+		}
+		if !locked.Exists {
+			return DmProfileView{}, apierr.New(apierr.NotFound, "member not found")
+		}
+		return repos.Member.StoreUpdateMyDmProfile(ctx, UpdateMyDmProfileWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked})
+	})
+}
+
+func (s ProductCommands) SubmitDmProfileForVerification(ctx context.Context, actor auth.Authority, spec SubmitDmProfileForVerificationSpec, meta product.CommandMeta) (DmProfileView, error) {
+	if spec.ExpectedRevision < 1 {
+		return DmProfileView{}, apierr.New(apierr.Invalid, "invalid dm profile revision")
+	}
+	return runMemberCommand(ctx, s, actor, "submitDmProfileForVerification", spec, meta, actor.Claims().MemberID, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (DmProfileView, error) {
+		locked, err := repos.Member.LockSubmitDmProfileForVerification(ctx, fresh.Claims().MemberID, spec)
+		if err != nil {
+			return DmProfileView{}, err
+		}
+		if !locked.Exists {
+			return DmProfileView{}, apierr.New(apierr.NotFound, "dm profile not found")
+		}
+		return repos.Member.StoreSubmitDmProfileForVerification(ctx, SubmitDmProfileForVerificationWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked})
+	})
+}
+
+func (s ProductCommands) DecideDmProfileVerification(ctx context.Context, actor auth.Authority, spec DecideDmProfileVerificationSpec, meta product.CommandMeta) (DmProfileView, error) {
+	if err := commandID(&spec.MemberId); err != nil {
+		return DmProfileView{}, err
+	}
+	if spec.ExpectedRevision < 1 {
+		return DmProfileView{}, apierr.New(apierr.Invalid, "invalid dm profile revision")
+	}
+	if spec.Verdict != VerificationVerdictApproved && spec.Verdict != VerificationVerdictRejected {
+		return DmProfileView{}, apierr.New(apierr.Invalid, "invalid verification verdict")
+	}
+	if err := commandNote(spec.Note); err != nil {
+		return DmProfileView{}, err
+	}
+	return runMemberCommand(ctx, s, actor, "decideDmProfileVerification", spec, meta, spec.MemberId, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (DmProfileView, error) {
+		locked, err := repos.Member.LockDecideDmProfileVerification(ctx, spec)
+		if err != nil {
+			return DmProfileView{}, err
+		}
+		if !locked.Exists {
+			return DmProfileView{}, apierr.New(apierr.NotFound, "dm profile not found")
+		}
+		id := s.IDs()
+		if err := commandID(&id); err != nil {
+			return DmProfileView{}, err
+		}
+		return repos.Member.StoreDecideDmProfileVerification(ctx, DecideDmProfileVerificationWrite{
+			ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked, DecisionID: &id,
+		})
+	})
+}

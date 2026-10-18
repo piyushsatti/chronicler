@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbgen"
@@ -1340,6 +1341,272 @@ func (p *ProductPostgres) StoreUnfollowPerson(ctx context.Context, write Unfollo
 
 func mapProductMember(id pgtype.UUID, discord string, handle, name string, avatar pgtype.Text, roles []string, status string, joined pgtype.Timestamptz) MemberView {
 	return MemberView{Id: db.UUIDString(id), DiscordId: nullableText(pgtype.Text{String: discord, Valid: discord != ""}), Handle: handle, DisplayName: name, AvatarUrl: nullableText(avatar), Roles: append([]string(nil), roles...), Status: status, JoinedAt: joined.Time}
+}
+
+func mapDirectoryEntry(publicID pgtype.UUID, handle, displayName pgtype.Text, avatar pgtype.Text, roles []string, status pgtype.Text, tagline pgtype.Text, tableInfo []byte, acceptingPlayers pgtype.Bool, dmProfileStatus pgtype.Text, reviewRevision pgtype.Int4, isDM pgtype.Bool, availableDays []int16) DirectoryEntryView {
+	entry := DirectoryEntryView{
+		MemberId: db.UUIDString(publicID), Handle: db.TextOrEmpty(handle), DisplayName: db.TextOrEmpty(displayName),
+		AvatarUrl: nullableText(avatar), Roles: append([]string(nil), roles...), Status: db.TextOrEmpty(status),
+		IsDm: isDM.Valid && isDM.Bool,
+	}
+	if tagline.Valid {
+		entry.Tagline = &tagline.String
+	}
+	if len(tableInfo) > 0 {
+		raw := json.RawMessage(append([]byte(nil), tableInfo...))
+		entry.TableInfo = &raw
+	}
+	if acceptingPlayers.Valid {
+		entry.AcceptingPlayers = &acceptingPlayers.Bool
+	}
+	if dmProfileStatus.Valid {
+		entry.DmProfileStatus = &dmProfileStatus.String
+	}
+	if reviewRevision.Valid {
+		entry.DmProfileReviewRevision = &reviewRevision.Int32
+	}
+	if len(availableDays) > 0 {
+		entry.AvailableDays = make([]string, 0, len(availableDays))
+		for _, day := range availableDays {
+			entry.AvailableDays = append(entry.AvailableDays, weekdayName(day))
+		}
+	}
+	return entry
+}
+
+func mapDmProfile(memberID string, row dbgen.ProductLockDmProfileRow) DmProfileView {
+	return mapDmProfileRow(memberID, row.Tagline, row.Philosophy, row.HouseRules, row.TableInfo, row.AcceptingPlayers, row.Status, row.ReviewRevision)
+}
+
+func mapDmProfileRow(memberID string, tagline, philosophy, houseRules pgtype.Text, tableInfo []byte, acceptingPlayers bool, status string, revision int32) DmProfileView {
+	view := DmProfileView{MemberId: memberID, AcceptingPlayers: acceptingPlayers, Status: status, ReviewRevision: revision}
+	view.Tagline = nullableText(tagline)
+	view.Philosophy = nullableText(philosophy)
+	view.HouseRules = nullableText(houseRules)
+	if len(tableInfo) > 0 {
+		raw := json.RawMessage(append([]byte(nil), tableInfo...))
+		view.TableInfo = &raw
+	}
+	return view
+}
+
+func (p *ProductPostgres) ReadPendingDmProfileVerifications(ctx context.Context, _ auth.Authority, spec PendingDmProfileVerificationsSpec) (CommunityDirectoryResult, error) {
+	rows, err := p.queries().ProductPendingDmProfiles(ctx, dbgen.ProductPendingDmProfilesParams{PageLimit: spec.Limit, PageOffset: spec.Offset})
+	if err != nil {
+		return CommunityDirectoryResult{}, err
+	}
+	out := CommunityDirectoryResult{Entries: []DirectoryEntryView{}}
+	if len(rows) == 0 {
+		return out, nil
+	}
+	out.Total = int32Total(rows[0].Total)
+	for _, row := range rows {
+		if !row.PublicID.Valid {
+			continue
+		}
+		out.Entries = append(out.Entries, mapDirectoryEntry(row.PublicID, row.Handle, row.DisplayName, row.AvatarUrl, row.Roles, row.Status, row.Tagline, row.TableInfo, row.AcceptingPlayers, row.DmProfileStatus, row.ReviewRevision, row.IsDm, row.AvailableDays))
+	}
+	return out, nil
+}
+
+func (p *ProductPostgres) LockUpdateMyDmProfile(ctx context.Context, actorID string, _ UpdateMyDmProfileSpec) (UpdateMyDmProfileState, error) {
+	memberID, err := productID(actorID)
+	if err != nil {
+		return UpdateMyDmProfileState{}, err
+	}
+	if _, err := p.queries().ProductLockMembers(ctx, []pgtype.UUID{memberID}); err != nil {
+		return UpdateMyDmProfileState{}, err
+	}
+	row, err := p.queries().ProductMemberIdentity(ctx, dbgen.ProductMemberIdentityParams{MemberID: memberID})
+	if err != nil {
+		return UpdateMyDmProfileState{}, err
+	}
+	before := mapProductMember(row.PublicID, row.DiscordID, row.Handle, row.DisplayName, row.AvatarUrl, row.Roles, row.Status, row.JoinedAt)
+	state := UpdateMyDmProfileState{
+		Exists: true, SubjectID: actorID, OwnerID: actorID, Before: &before, TargetMemberIDs: []string{actorID},
+	}
+	profileRow, err := p.queries().ProductLockDmProfile(ctx, memberID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return state, nil
+	}
+	if err != nil {
+		return UpdateMyDmProfileState{}, err
+	}
+	profile := mapDmProfile(actorID, profileRow)
+	state.Profile = &profile
+	state.ReviewRevision = int64(profile.ReviewRevision)
+	state.UpdatedAt = &profileRow.UpdatedAt.Time
+	return state, nil
+}
+
+func (p *ProductPostgres) StoreUpdateMyDmProfile(ctx context.Context, write UpdateMyDmProfileWrite) (DmProfileView, error) {
+	memberID, err := productID(write.ActorID)
+	if err != nil {
+		return DmProfileView{}, err
+	}
+	input := write.ValidatedInput.Input
+	status := "draft"
+	revision := int32(1)
+	if write.Locked.Profile != nil {
+		status = write.Locked.Profile.Status
+		revision = write.Locked.Profile.ReviewRevision
+		if write.Locked.Profile.Status == "approved" {
+			status = "draft"
+			revision++
+		}
+	}
+	var tableInfo []byte
+	if input.TableInfo != nil {
+		tableInfo = append([]byte(nil), (*input.TableInfo)...)
+	} else if write.Locked.Profile != nil {
+		tableInfo = dmProfileTableBytes(write.Locked.Profile)
+	}
+	tagline, philosophy, houseRules := input.Tagline, input.Philosophy, input.HouseRules
+	if write.Locked.Profile != nil {
+		if tagline == nil {
+			tagline = write.Locked.Profile.Tagline
+		}
+		if philosophy == nil {
+			philosophy = write.Locked.Profile.Philosophy
+		}
+		if houseRules == nil {
+			houseRules = write.Locked.Profile.HouseRules
+		}
+	}
+	stored, err := p.queries().ProductStoreDmProfile(ctx, dbgen.ProductStoreDmProfileParams{
+		MemberID: memberID, Tagline: optionalText(tagline), Philosophy: optionalText(philosophy), HouseRules: optionalText(houseRules),
+		TableInfo: tableInfo, AcceptingPlayers: input.AcceptingPlayers, Status: status, Revision: revision, At: pgtype.Timestamptz{Time: write.At, Valid: true},
+	})
+	if err != nil {
+		return DmProfileView{}, err
+	}
+	return mapDmProfileRow(write.ActorID, stored.Tagline, stored.Philosophy, stored.HouseRules, stored.TableInfo, stored.AcceptingPlayers, stored.Status, stored.ReviewRevision), nil
+}
+
+func (p *ProductPostgres) LockSubmitDmProfileForVerification(ctx context.Context, actorID string, spec SubmitDmProfileForVerificationSpec) (SubmitDmProfileForVerificationState, error) {
+	state, profile, err := p.lockDmProfileMutation(ctx, actorID)
+	if err != nil {
+		return SubmitDmProfileForVerificationState{}, err
+	}
+	if profile == nil {
+		return SubmitDmProfileForVerificationState{}, apierr.New(apierr.NotFound, "dm profile not found")
+	}
+	if profile.ReviewRevision != spec.ExpectedRevision {
+		return SubmitDmProfileForVerificationState{}, apierr.New(apierr.Conflict, "dm profile revision mismatch")
+	}
+	if profile.Status != "draft" && profile.Status != "rejected" {
+		return SubmitDmProfileForVerificationState{}, apierr.New(apierr.Conflict, "dm profile not submittable")
+	}
+	return SubmitDmProfileForVerificationState{
+		Exists: state.Exists, SubjectID: state.SubjectID, OwnerID: state.OwnerID, Before: state.Before,
+		TargetMemberIDs: state.TargetMemberIDs, ReviewRevision: int64(profile.ReviewRevision), Profile: *profile,
+		UpdatedAt: state.UpdatedAt,
+	}, nil
+}
+
+func (p *ProductPostgres) StoreSubmitDmProfileForVerification(ctx context.Context, write SubmitDmProfileForVerificationWrite) (DmProfileView, error) {
+	memberID, err := productID(write.ActorID)
+	if err != nil {
+		return DmProfileView{}, err
+	}
+	profile := write.Locked.Profile
+	stored, err := p.queries().ProductStoreDmProfile(ctx, dbgen.ProductStoreDmProfileParams{
+		MemberID: memberID, Tagline: optionalText(profile.Tagline), Philosophy: optionalText(profile.Philosophy), HouseRules: optionalText(profile.HouseRules),
+		TableInfo: dmProfileTableBytes(&profile), AcceptingPlayers: profile.AcceptingPlayers, Status: "pending", Revision: profile.ReviewRevision,
+		At: pgtype.Timestamptz{Time: write.At, Valid: true},
+	})
+	if err != nil {
+		return DmProfileView{}, err
+	}
+	return mapDmProfileRow(write.ActorID, stored.Tagline, stored.Philosophy, stored.HouseRules, stored.TableInfo, stored.AcceptingPlayers, stored.Status, stored.ReviewRevision), nil
+}
+
+func (p *ProductPostgres) LockDecideDmProfileVerification(ctx context.Context, spec DecideDmProfileVerificationSpec) (DecideDmProfileVerificationState, error) {
+	memberID, err := productID(spec.MemberId)
+	if err != nil {
+		return DecideDmProfileVerificationState{}, err
+	}
+	if _, err := p.queries().ProductLockMembers(ctx, []pgtype.UUID{memberID}); err != nil {
+		return DecideDmProfileVerificationState{}, err
+	}
+	row, err := p.queries().ProductMemberIdentity(ctx, dbgen.ProductMemberIdentityParams{MemberID: memberID})
+	if err != nil {
+		return DecideDmProfileVerificationState{}, err
+	}
+	before := mapProductMember(row.PublicID, row.DiscordID, row.Handle, row.DisplayName, row.AvatarUrl, row.Roles, row.Status, row.JoinedAt)
+	profileRow, err := p.queries().ProductLockDmProfile(ctx, memberID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return DecideDmProfileVerificationState{}, apierr.New(apierr.NotFound, "dm profile not found")
+	}
+	if err != nil {
+		return DecideDmProfileVerificationState{}, err
+	}
+	profile := mapDmProfile(spec.MemberId, profileRow)
+	if profile.ReviewRevision != spec.ExpectedRevision {
+		return DecideDmProfileVerificationState{}, apierr.New(apierr.Conflict, "dm profile revision mismatch")
+	}
+	if profile.Status != "pending" {
+		return DecideDmProfileVerificationState{}, apierr.New(apierr.Conflict, "dm profile not pending verification")
+	}
+	return DecideDmProfileVerificationState{
+		Exists: true, SubjectID: spec.MemberId, OwnerID: spec.MemberId, Before: &before,
+		TargetMemberIDs: []string{spec.MemberId}, ReviewRevision: int64(profile.ReviewRevision), Profile: profile,
+		UpdatedAt: &profileRow.UpdatedAt.Time,
+	}, nil
+}
+
+func (p *ProductPostgres) StoreDecideDmProfileVerification(ctx context.Context, write DecideDmProfileVerificationWrite) (DmProfileView, error) {
+	memberID, err := productID(write.ValidatedInput.MemberId)
+	if err != nil {
+		return DmProfileView{}, err
+	}
+	actorID, err := productID(write.ActorID)
+	if err != nil {
+		return DmProfileView{}, err
+	}
+	status := "rejected"
+	if write.ValidatedInput.Verdict == VerificationVerdictApproved {
+		status = "approved"
+	}
+	profile := write.Locked.Profile
+	stored, err := p.queries().ProductStoreDmProfile(ctx, dbgen.ProductStoreDmProfileParams{
+		MemberID: memberID, Tagline: optionalText(profile.Tagline), Philosophy: optionalText(profile.Philosophy), HouseRules: optionalText(profile.HouseRules),
+		TableInfo: dmProfileTableBytes(&profile), AcceptingPlayers: profile.AcceptingPlayers, Status: status, Revision: profile.ReviewRevision,
+		At: pgtype.Timestamptz{Time: write.At, Valid: true},
+	})
+	if err != nil {
+		return DmProfileView{}, err
+	}
+	verificationID := write.DecisionID
+	if verificationID == nil {
+		return DmProfileView{}, fmt.Errorf("dm profile verification id required")
+	}
+	id, err := productID(*verificationID)
+	if err != nil {
+		return DmProfileView{}, err
+	}
+	if _, err := p.queries().ProductAppendDmVerification(ctx, dbgen.ProductAppendDmVerificationParams{
+		VerificationID: id, MemberID: memberID, Verdict: status, ActorID: actorID, Note: optionalText(write.ValidatedInput.Note),
+		At: pgtype.Timestamptz{Time: write.At, Valid: true}, PendingRevision: profile.ReviewRevision,
+	}); err != nil {
+		return DmProfileView{}, err
+	}
+	return mapDmProfileRow(write.ValidatedInput.MemberId, stored.Tagline, stored.Philosophy, stored.HouseRules, stored.TableInfo, stored.AcceptingPlayers, stored.Status, stored.ReviewRevision), nil
+}
+
+func (p *ProductPostgres) lockDmProfileMutation(ctx context.Context, actorID string) (UpdateMyDmProfileState, *DmProfileView, error) {
+	state, err := p.LockUpdateMyDmProfile(ctx, actorID, UpdateMyDmProfileSpec{})
+	if err != nil {
+		return UpdateMyDmProfileState{}, nil, err
+	}
+	return state, state.Profile, nil
+}
+
+func dmProfileTableBytes(profile *DmProfileView) []byte {
+	if profile == nil || profile.TableInfo == nil {
+		return nil
+	}
+	return append([]byte(nil), (*profile.TableInfo)...)
 }
 
 func minuteTime(value int16) product.Time {
