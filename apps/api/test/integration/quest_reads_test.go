@@ -269,7 +269,7 @@ func TestQuestReadsNativeHTTP(t *testing.T) {
 	before := questReadSnapshot(t, pool)
 	t.Logf("persistent state before reads sha256=%x", sha256.Sum256([]byte(before)))
 	resolver := &graph.Resolver{Services: graph.Services{Quests: quest.Queries{Read: quest.NewReadModel(dbgen.New(pool))}, Documents: document.Queries{Repo: document.NewPostgresReadRepo(pool.Pool)}}}
-	handler := gqlserver.NewHandler(resolver, gqlserver.Limits{})
+	handler := gqlserver.NewHandler(resolver, gqlserver.Limits{}, nil)
 	fields := "{items{id shortCode status displayStatus durationHours} total}"
 	response := questReadRequest(t, handler, `{all:quests(filters:{},limit:100)`+fields+` open:quests(filters:{status:"OPEN"},limit:100)`+fields+` scheduled:quests(filters:{displayStatus:"scheduled"},limit:100)`+fields+` live:quests(filters:{status:"closed",displayStatus:"LIVE"},limit:100)`+fields+` zero:quests(limit:0)`+fields+` past:quests(offset:100)`+fields+` board:questBoard(limit:100)`+fields+` recent:recentlyClosedQuests(limit:100)`+fields+`}`)
 	for _, tc := range []struct {
@@ -349,7 +349,7 @@ func TestQuestReadsNativeHTTP(t *testing.T) {
 	if len(failure.Errors) != 1 || failure.Errors[0].Message != "Internal error" || failure.Errors[0].Extensions.Code != "INTERNAL" {
 		t.Fatalf("database failure=%+v", failure)
 	}
-	missing := questReadRequest(t, gqlserver.NewHandler(&graph.Resolver{}, gqlserver.Limits{}), `{quests{total items{id}}}`)
+	missing := questReadRequest(t, gqlserver.NewHandler(&graph.Resolver{}, gqlserver.Limits{}, nil), `{quests{total items{id}}}`)
 	if len(missing.Errors) != 1 || missing.Errors[0].Message != "Internal error" || missing.Errors[0].Extensions.Code != "INTERNAL" {
 		t.Fatalf("unconfigured=%+v", missing)
 	}

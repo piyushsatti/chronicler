@@ -1,8 +1,32 @@
 package document
 
-// DOC05 owns this file and the exact edit limits in its implementation handoff.
-// Responsibility: All own read operation typed methods, authority/scoped projection; no writes.
-// Dependencies: DOC04, P02, SPA05.
-// Acceptance: TASK-DOC05, AUTH-document, BATCH-document. No runtime behavior is implemented.
-// Exact declarations: apps/api/docs/design/graphql-product/go-seams.json.
-// Task handoff: .local/plans/graphql-implementation/phase2/handoffs/DOC05.json.
+import (
+	"reflect"
+
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
+)
+
+type ProductQueries struct {
+	Reads         ProductReadRepos
+	Policy        *auth.Policy
+	Clock         product.Clock
+	OverrideReads auth.OverrideReadObserver
+}
+
+func NewProductQueries(reads ProductReadRepos, policy *auth.Policy, clock product.Clock, overrideReads auth.OverrideReadObserver) (*ProductQueries, error) {
+	for _, dep := range []any{reads.Document, reads.Batch, policy, clock, overrideReads} {
+		if dep == nil {
+			return nil, apierr.New(apierr.Internal, "document query dependencies required")
+		}
+		v := reflect.ValueOf(dep)
+		switch v.Kind() {
+		case reflect.Pointer, reflect.Interface, reflect.Func, reflect.Map, reflect.Slice, reflect.Chan:
+			if v.IsNil() {
+				return nil, apierr.New(apierr.Internal, "document query dependencies required")
+			}
+		}
+	}
+	return &ProductQueries{Reads: reads, Policy: policy, Clock: clock, OverrideReads: overrideReads}, nil
+}
