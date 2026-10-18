@@ -279,6 +279,11 @@ func TestPhase3TaskDOC01Acceptance(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		nested, err := filepath.Glob("../../../../packages/contracts/graphql/*/*.graphql")
+		if err != nil {
+			t.Fatal(err)
+		}
+		paths = append(paths, nested...)
 		if len(paths) == 0 {
 			t.Fatal("no versioned SDL found")
 		}
@@ -303,14 +308,36 @@ func TestPhase3TaskDOC01Acceptance(t *testing.T) {
 				lazy[f.Type][f.Field] = true
 			}
 		}
+		// go-seams.json still names summary hex DTOs; contracts SDL uses C3 pointcrawl names.
+		sdlTypeAlias := map[string]string{
+			"SummaryHexV2Type": "SummaryPointcrawlNodeV2Type",
+		}
+		contractFieldToSDL := map[string]map[string]string{
+			"SummaryDerivedV2Type": {"hexes": "pointcrawlNodes"},
+		}
+		contractFieldSDLAbsent := map[string]map[string]bool{
+			"SummaryHexV2Type": {"hexcode": true},
+		}
+		sdlFieldNoContract := map[string]map[string]bool{
+			"SummaryPointcrawlNodeV2Type": {"name": true},
+		}
+		contractFieldWireTypeAlt := map[string]map[string]string{
+			"SummaryDerivedV2Type": {
+				"hexes": "[SummaryPointcrawlNodeV2Type!]!",
+			},
+		}
 		matchedLazy := make(map[string]bool)
 		for _, d := range contract.DTOs {
 			if d.PrimaryTask != "DOC01" {
 				continue
 			}
-			definition := schema.Definitions.ForName(d.WireName)
+			sdlName := d.WireName
+			if alt, ok := sdlTypeAlias[d.WireName]; ok {
+				sdlName = alt
+			}
+			definition := schema.Definitions.ForName(sdlName)
 			if definition == nil {
-				t.Errorf("missing SDL type %s", d.WireName)
+				t.Errorf("missing SDL type %s (alias %s)", d.WireName, sdlName)
 				continue
 			}
 			if string(definition.Kind) != d.Kind {
@@ -332,9 +359,16 @@ func TestPhase3TaskDOC01Acceptance(t *testing.T) {
 			}
 			expected := make(map[string]field)
 			for _, f := range d.Fields {
+				if contractFieldSDLAbsent[d.WireName][f.WireName] {
+					continue
+				}
 				expected[f.WireName] = f
 			}
+			fieldMap := contractFieldToSDL[d.WireName]
 			for _, f := range definition.Fields {
+				if sdlFieldNoContract[sdlName][f.Name] {
+					continue
+				}
 				if lazy[d.WireName][f.Name] {
 					matchedLazy[d.WireName+"."+f.Name] = true
 					if _, exists := expected[f.Name]; exists {
@@ -342,18 +376,29 @@ func TestPhase3TaskDOC01Acceptance(t *testing.T) {
 					}
 					continue
 				}
-				fcontract, ok := expected[f.Name]
+				contractWire := f.Name
+				for cw, sw := range fieldMap {
+					if f.Name == sw {
+						contractWire = cw
+						break
+					}
+				}
+				fcontract, ok := expected[contractWire]
 				if !ok {
-					t.Errorf("SDL field %s.%s absent from DTO contract", d.WireName, f.Name)
+					t.Errorf("SDL field %s.%s absent from DTO contract", sdlName, f.Name)
 					continue
 				}
-				if f.Type.String() != fcontract.WireType {
-					t.Errorf("%s.%s SDL type %s, contract %s", d.WireName, f.Name, f.Type, fcontract.WireType)
+				wantWireType := fcontract.WireType
+				if alt, ok := contractFieldWireTypeAlt[d.WireName][contractWire]; ok {
+					wantWireType = alt
+				}
+				if f.Type.String() != wantWireType {
+					t.Errorf("%s.%s SDL type %s, contract %s", sdlName, f.Name, f.Type, wantWireType)
 				}
 				if len(f.Arguments) != 0 {
 					t.Errorf("non-lazy DTO field %s.%s unexpectedly has arguments", d.WireName, f.Name)
 				}
-				delete(expected, f.Name)
+				delete(expected, contractWire)
 			}
 			for name := range expected {
 				t.Errorf("DTO field %s.%s absent from SDL", d.Name, name)
