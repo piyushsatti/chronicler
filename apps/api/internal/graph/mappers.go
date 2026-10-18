@@ -1542,3 +1542,71 @@ func toPointcrawlEdgeFields(in PointcrawlEdgeInput) spatial.PointcrawlEdgeFields
 		DocumentId: in.DocumentID,
 	}
 }
+
+func toHomeBannerFields(in HomeBannerInput) site.HomeBannerFields {
+	return site.HomeBannerFields{
+		Enabled:    in.Enabled,
+		Title:      in.Title,
+		Body:       in.Body,
+		CtaLabel:   in.CtaLabel,
+		CtaHref:    in.CtaHref,
+		MediaKind:  in.MediaKind,
+		MediaUrl:   in.MediaURL,
+		MediaLabel: in.MediaLabel,
+	}
+}
+
+func toHomeBannerType(v site.HomeBannerView) *HomeBannerType {
+	return &HomeBannerType{
+		Enabled:    v.Enabled,
+		Title:      v.Title,
+		Body:       v.Body,
+		CtaLabel:   v.CtaLabel,
+		CtaHref:    v.CtaHref,
+		MediaKind:  v.MediaKind,
+		MediaURL:   v.MediaUrl,
+		MediaLabel: v.MediaLabel,
+	}
+}
+
+func toAnnouncementRoleFields(in AnnouncementRoleInput) site.AnnouncementRoleFields {
+	return site.AnnouncementRoleFields{
+		Enabled: in.Enabled,
+		RoleId:  in.RoleID,
+	}
+}
+
+func toQuestAnnouncementRoleSettingType(v site.QuestAnnouncementRoleSettingView) *QuestAnnouncementRoleSettingType {
+	return &QuestAnnouncementRoleSettingType{
+		Enabled: v.Enabled,
+		RoleID:  v.RoleId,
+	}
+}
+
+func toDeliveryReceipt(v quest.DeliveryReceipt) *DeliveryReceipt {
+	return &DeliveryReceipt{
+		JobID:           v.JobId,
+		DesiredRevision: int(v.DesiredRevision),
+		AppliedRevision: int(v.AppliedRevision),
+		DeliveryStatus:  v.DeliveryStatus,
+	}
+}
+
+func toUpdateDmProfileFields(in UpdateDmProfileInput) member.UpdateDmProfileFields {
+	var tableInfo *json.RawMessage
+	if len(in.TableInfo) > 0 {
+		fm := in.TableInfo
+		tableInfo = &fm
+	}
+	return member.UpdateDmProfileFields{
+		Tagline:          in.Tagline,
+		Philosophy:       in.Philosophy,
+		HouseRules:       in.HouseRules,
+		TableInfo:        tableInfo,
+		AcceptingPlayers: in.AcceptingPlayers,
+	}
+}
+
+func toDmProfileV2View(v member.DmProfileView) *DmProfileV2Type {
+	return toDmProfileV2Type(&v)
+}

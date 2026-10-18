@@ -609,7 +609,21 @@ func (r *mutationResolver) UpdateMyProfile(ctx context.Context, input UpdateMyPr
 
 // UpdateMyDmProfile is the resolver for the updateMyDmProfile field.
 func (r *mutationResolver) UpdateMyDmProfile(ctx context.Context, input UpdateDmProfileInput, meta CommandMeta) (*DmProfileV2Type, error) {
-	panic(fmt.Errorf("not implemented: UpdateMyDmProfile - updateMyDmProfile"))
+	if r.Services.MemberCommands == nil {
+		return nil, memberCommandsUnavailable()
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.MemberCommands.UpdateMyDmProfile(ctx, actor, member.UpdateMyDmProfileSpec{
+		Input: toUpdateDmProfileFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toDmProfileV2View(view), nil
 }
 
 // SetMyAvailability is the resolver for the setMyAvailability field.
@@ -633,12 +647,43 @@ func (r *mutationResolver) SetMyAvailability(ctx context.Context, slots []*Avail
 
 // SubmitDmProfileForVerification is the resolver for the submitDmProfileForVerification field.
 func (r *mutationResolver) SubmitDmProfileForVerification(ctx context.Context, expectedRevision int, meta CommandMeta) (*DmProfileV2Type, error) {
-	panic(fmt.Errorf("not implemented: SubmitDmProfileForVerification - submitDmProfileForVerification"))
+	if r.Services.MemberCommands == nil {
+		return nil, memberCommandsUnavailable()
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.MemberCommands.SubmitDmProfileForVerification(ctx, actor, member.SubmitDmProfileForVerificationSpec{
+		ExpectedRevision: int32(expectedRevision),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toDmProfileV2View(view), nil
 }
 
 // DecideDmProfileVerification is the resolver for the decideDmProfileVerification field.
 func (r *mutationResolver) DecideDmProfileVerification(ctx context.Context, memberID string, expectedRevision int, verdict VerificationVerdict, note *string, meta CommandMeta) (*DmProfileV2Type, error) {
-	panic(fmt.Errorf("not implemented: DecideDmProfileVerification - decideDmProfileVerification"))
+	if r.Services.MemberCommands == nil {
+		return nil, memberCommandsUnavailable()
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.MemberCommands.DecideDmProfileVerification(ctx, actor, member.DecideDmProfileVerificationSpec{
+		MemberId:         memberID,
+		ExpectedRevision: int32(expectedRevision),
+		Verdict:          toVerificationVerdict(verdict),
+		Note:             note,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toDmProfileV2View(view), nil
 }
 
 // GrantUnlock is the resolver for the grantUnlock field.
@@ -852,17 +897,60 @@ func (r *mutationResolver) SetQuestPointcrawlLinks(ctx context.Context, questID 
 
 // UpdateHomeBanner is the resolver for the updateHomeBanner field.
 func (r *mutationResolver) UpdateHomeBanner(ctx context.Context, input HomeBannerInput, meta CommandMeta) (*HomeBannerType, error) {
-	panic(fmt.Errorf("not implemented: UpdateHomeBanner - updateHomeBanner"))
+	if r.Services.SiteCommands == nil {
+		return nil, fmt.Errorf("site commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SiteCommands.UpdateHomeBanner(ctx, actor, site.UpdateHomeBannerSpec{
+		Input: toHomeBannerFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toHomeBannerType(view), nil
 }
 
 // UpdateQuestAnnouncementRoleSetting is the resolver for the updateQuestAnnouncementRoleSetting field.
 func (r *mutationResolver) UpdateQuestAnnouncementRoleSetting(ctx context.Context, input AnnouncementRoleInput, meta CommandMeta) (*QuestAnnouncementRoleSettingType, error) {
-	panic(fmt.Errorf("not implemented: UpdateQuestAnnouncementRoleSetting - updateQuestAnnouncementRoleSetting"))
+	if r.Services.SiteCommands == nil {
+		return nil, fmt.Errorf("site commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SiteCommands.UpdateQuestAnnouncementRoleSetting(ctx, actor, site.UpdateQuestAnnouncementRoleSettingSpec{
+		Input: toAnnouncementRoleFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toQuestAnnouncementRoleSettingType(view), nil
 }
 
 // RedriveDiscordDelivery is the resolver for the redriveDiscordDelivery field.
 func (r *mutationResolver) RedriveDiscordDelivery(ctx context.Context, jobID string, reason string, meta CommandMeta) (*DeliveryReceipt, error) {
-	panic(fmt.Errorf("not implemented: RedriveDiscordDelivery - redriveDiscordDelivery"))
+	if r.Services.SiteCommands == nil {
+		return nil, fmt.Errorf("site commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	receipt, err := r.Services.SiteCommands.RedriveDiscordDelivery(ctx, actor, site.RedriveDiscordDeliverySpec{
+		JobId:  jobID,
+		Reason: reason,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toDeliveryReceipt(receipt), nil
 }
 
 // CreateMap is the resolver for the createMap field.
@@ -2317,17 +2405,46 @@ func (r *queryResolver) SiteStats(ctx context.Context) (*SiteStatsV2Type, error)
 
 // DiscordDeliveryMode is the resolver for the discordDeliveryMode field.
 func (r *queryResolver) DiscordDeliveryMode(ctx context.Context) (string, error) {
-	panic(fmt.Errorf("not implemented: DiscordDeliveryMode - discordDeliveryMode"))
+	if r.Services.SiteQueries == nil {
+		return "", fmt.Errorf("site queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return "", err
+	}
+	return r.Services.SiteQueries.DiscordDeliveryMode(ctx, actor, site.DiscordDeliveryModeSpec{})
 }
 
 // HomeBanner is the resolver for the homeBanner field.
 func (r *queryResolver) HomeBanner(ctx context.Context) (*HomeBannerType, error) {
-	panic(fmt.Errorf("not implemented: HomeBanner - homeBanner"))
+	if r.Services.SiteQueries == nil {
+		return nil, fmt.Errorf("site queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SiteQueries.HomeBanner(ctx, actor, site.HomeBannerSpec{})
+	if err != nil {
+		return nil, err
+	}
+	return toHomeBannerType(view), nil
 }
 
 // QuestAnnouncementRoleSetting is the resolver for the questAnnouncementRoleSetting field.
 func (r *queryResolver) QuestAnnouncementRoleSetting(ctx context.Context) (*QuestAnnouncementRoleSettingType, error) {
-	panic(fmt.Errorf("not implemented: QuestAnnouncementRoleSetting - questAnnouncementRoleSetting"))
+	if r.Services.SiteQueries == nil {
+		return nil, fmt.Errorf("site queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SiteQueries.QuestAnnouncementRoleSetting(ctx, actor, site.QuestAnnouncementRoleSettingSpec{})
+	if err != nil {
+		return nil, err
+	}
+	return toQuestAnnouncementRoleSettingType(view), nil
 }
 
 // Map is the resolver for the map field.
