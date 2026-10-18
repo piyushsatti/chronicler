@@ -1016,7 +1016,7 @@ type ListProductDocumentSubjectsParams struct {
 }
 
 type ListProductDocumentSubjectsRow struct {
-	TargetType pgtype.Text `json:"target_type"`
+	TargetType string      `json:"target_type"`
 	Relation   string      `json:"relation"`
 	TargetID   interface{} `json:"target_id"`
 }

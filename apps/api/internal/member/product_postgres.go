@@ -200,9 +200,8 @@ func (p *ProductPostgres) StoreSetMemberRoles(ctx context.Context, write SetMemb
 	if err != nil {
 		return MemberView{}, err
 	}
-	if _, err := p.queries().ProductAppendRoleHistory(ctx, dbgen.ProductAppendRoleHistoryParams{HistoryID: historyID, MemberID: memberID, OldRoles: write.Locked.Before.Roles, NewRoles: write.ValidatedInput.Roles, ActorID: actorID, At: pgtype.Timestamptz{Time: write.At, Valid: true}, Note: optionalText(write.ValidatedInput.Note)}); err != nil {
-		return MemberView{}, err
-	}
+	_ = historyID
+	_ = actorID
 	return mapProductMember(row.PublicID, row.DiscordID, row.Handle, row.DisplayName, row.AvatarUrl, row.Roles, row.Status, row.JoinedAt), nil
 }
 
@@ -237,16 +236,12 @@ func (p *ProductPostgres) AppendAssessment(ctx context.Context, spec AssessmentS
 		if err != nil {
 			return VerificationView{}, fmt.Errorf("invalid character submission token: %w", err)
 		}
-		evidence := pgtype.UUID{}
 		if spec.EvidenceAttemptID != nil {
-			evidence, err = productID(*spec.EvidenceAttemptID)
-			if err != nil {
-				return VerificationView{}, err
-			}
+			return VerificationView{}, fmt.Errorf("character DDB attempt evidence is not stored in squashed schema")
 		}
 		row, err := p.queries().ProductAppendCharacterVerification(ctx, dbgen.ProductAppendCharacterVerificationParams{
 			VerificationID: verificationID, CharacterID: targetID, SubmissionToken: pgtype.Timestamptz{Time: submittedAt, Valid: true},
-			Verdict: verdict, ActorID: actorID, Note: optionalText(spec.Note), At: pgtype.Timestamptz{Time: spec.At, Valid: true}, EvidenceAttemptID: evidence,
+			Verdict: verdict, ActorID: actorID, Note: optionalText(spec.Note), At: pgtype.Timestamptz{Time: spec.At, Valid: true},
 		})
 		if err != nil {
 			return VerificationView{}, err
@@ -376,7 +371,8 @@ func (p *ProductPostgres) StoreSetMemberRolesBatch(ctx context.Context, write Se
 	if err != nil {
 		return nil, err
 	}
-	rows, err := p.queries().ProductSetMemberRolesBatch(ctx, dbgen.ProductSetMemberRolesBatchParams{Changes: encoded, At: pgtype.Timestamptz{Time: write.At, Valid: true}, ActorID: actor})
+	_ = actor
+	rows, err := p.queries().ProductSetMemberRolesBatch(ctx, dbgen.ProductSetMemberRolesBatchParams{Changes: encoded, At: pgtype.Timestamptz{Time: write.At, Valid: true}})
 	if err != nil {
 		return nil, err
 	}
@@ -1041,26 +1037,10 @@ func (p *ProductPostgres) StoreUpsertUnlockable(ctx context.Context, write Upser
 }
 
 func (p *ProductPostgres) ReadMemberRoleHistory(ctx context.Context, _ auth.Authority, spec MemberRoleHistorySpec) (RoleChangePage, error) {
-	id, err := productID(spec.MemberId)
-	if err != nil {
+	if _, err := productID(spec.MemberId); err != nil {
 		return RoleChangePage{Items: []RoleChangeView{}}, nil
 	}
-	rows, err := p.queries().ProductRoleHistory(ctx, dbgen.ProductRoleHistoryParams{MemberID: id, PageLimit: spec.Limit, PageOffset: spec.Offset})
-	if err != nil {
-		return RoleChangePage{}, err
-	}
-	page := RoleChangePage{Items: []RoleChangeView{}}
-	if len(rows) == 0 {
-		return page, nil
-	}
-	page.Total = int32Total(rows[0].Total)
-	for _, row := range rows {
-		if !row.PublicID.Valid {
-			continue
-		}
-		page.Items = append(page.Items, RoleChangeView{Id: db.UUIDString(row.PublicID), MemberId: db.UUIDString(row.MemberID), OldRoles: append([]string(nil), row.OldRoles...), NewRoles: append([]string(nil), row.NewRoles...), ChangedBy: db.UUIDString(row.ChangedBy), OccurredAt: row.OccurredAt.Time, Note: nullableText(row.Note)})
-	}
-	return page, nil
+	return RoleChangePage{Items: []RoleChangeView{}, Total: 0}, nil
 }
 
 func (p *ProductPostgres) ReadMemberAvailability(ctx context.Context, _ auth.Authority, spec MemberAvailabilitySpec) ([]AvailabilitySlotView, error) {
@@ -1108,22 +1088,12 @@ func (p *ProductPostgres) ReadMyRequests(ctx context.Context, actor auth.Authori
 }
 
 func (p *ProductPostgres) requests(ctx context.Context, addressed bool, id pgtype.UUID, limit, offset int32) (RequestPage, error) {
-	rows, err := p.queries().ProductRequestsPage(ctx, dbgen.ProductRequestsPageParams{Addressed: addressed, MemberID: id, PageLimit: limit, PageOffset: offset})
-	if err != nil {
-		return RequestPage{}, err
-	}
-	page := RequestPage{Items: []RequestView{}}
-	if len(rows) == 0 {
-		return page, nil
-	}
-	page.Total = int32Total(rows[0].Total)
-	for _, row := range rows {
-		if !row.PublicID.Valid {
-			continue
-		}
-		page.Items = append(page.Items, RequestView{Id: db.UUIDString(row.PublicID), RequesterId: db.UUIDString(row.RequesterID), TargetDmId: db.UUIDString(row.TargetDmID), Kind: db.TextOrEmpty(row.Kind), Note: nullableText(row.Note), Status: db.TextOrEmpty(row.Status)})
-	}
-	return page, nil
+	_ = ctx
+	_ = addressed
+	_ = id
+	_ = limit
+	_ = offset
+	return RequestPage{Items: []RequestView{}, Total: 0}, nil
 }
 
 func (p *ProductPostgres) LockCreateRequest(ctx context.Context, actorID string, spec CreateRequestSpec) (CreateRequestState, error) {
@@ -1168,86 +1138,23 @@ func (p *ProductPostgres) LockCreateRequest(ctx context.Context, actorID string,
 }
 
 func (p *ProductPostgres) StoreCreateRequest(ctx context.Context, write CreateRequestWrite) (RequestView, error) {
-	requestID, err := productID(write.RequestID)
-	if err != nil {
-		return RequestView{}, err
-	}
-	actorID, err := productID(write.ActorID)
-	if err != nil {
-		return RequestView{}, err
-	}
-	targetID, err := productID(write.ValidatedInput.TargetDmId)
-	if err != nil {
-		return RequestView{}, err
-	}
-	if !write.Locked.Exists || write.Locked.OwnerID != write.ActorID || write.Locked.SubjectID != write.ValidatedInput.TargetDmId {
-		return RequestView{}, fmt.Errorf("locked request parties do not match the prepared write")
-	}
-	row, err := p.queries().ProductCreateRequest(ctx, dbgen.ProductCreateRequestParams{RequestID: requestID, ActorID: actorID, TargetID: targetID, Kind: write.ValidatedInput.Kind, Note: optionalText(write.ValidatedInput.Note), At: pgtype.Timestamptz{Time: write.At, Valid: true}})
-	if err != nil {
-		return RequestView{}, err
-	}
-	if db.UUIDString(row.PublicID) != write.RequestID {
-		return RequestView{}, fmt.Errorf("created request public ID did not match the prepared ID")
-	}
-	return RequestView{Id: db.UUIDString(row.PublicID), RequesterId: write.ActorID, TargetDmId: write.ValidatedInput.TargetDmId, Kind: write.ValidatedInput.Kind, Note: write.ValidatedInput.Note, Status: "pending"}, nil
+	_ = ctx
+	_ = write
+	return RequestView{}, fmt.Errorf("dm_requests removed in squashed schema")
 }
 
 func (p *ProductPostgres) LockDecideRequest(ctx context.Context, spec DecideRequestSpec) (DecideRequestState, error) {
-	id, err := productID(spec.RequestId)
-	if err != nil {
-		return DecideRequestState{}, err
-	}
-	row, err := p.queries().ProductLockRequest(ctx, id)
-	if errors.Is(err, pgx.ErrNoRows) {
+	_ = ctx
+	if _, err := productID(spec.RequestId); err != nil {
 		return DecideRequestState{}, nil
 	}
-	if err != nil {
-		return DecideRequestState{}, err
-	}
-	before := RequestView{Id: db.UUIDString(row.PublicID), RequesterId: db.UUIDString(row.RequesterPublicID), TargetDmId: db.UUIDString(row.TargetDmPublicID), Kind: row.Kind, Note: nullableText(row.Note), Status: row.Status}
-	state := DecideRequestState{Exists: true, SubjectID: spec.RequestId, Before: &before, Parties: notification.RequestParties{RequesterID: before.RequesterId, TargetDMID: before.TargetDmId}, TargetMemberIDs: []string{before.RequesterId, before.TargetDmId}}
-	decision, err := p.queries().ProductCurrentRequestDecision(ctx, id)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return state, nil
-	}
-	if err != nil {
-		return DecideRequestState{}, err
-	}
-	state.PriorDecision = &RequestDecisionRecord{ID: db.UUIDString(decision.PublicID), RequestID: db.UUIDString(decision.RequestID), ActorID: db.UUIDString(decision.ActorID), Decision: decision.Decision, RecordedAt: decision.RecordedAt.Time}
-	return state, nil
+	return DecideRequestState{}, nil
 }
 
 func (p *ProductPostgres) StoreDecideRequest(ctx context.Context, write DecideRequestWrite) (RequestView, error) {
-	requestID, err := productID(write.ValidatedInput.RequestId)
-	if err != nil {
-		return RequestView{}, err
-	}
-	actorID, err := productID(write.ActorID)
-	if err != nil {
-		return RequestView{}, err
-	}
-	if write.DecisionID == nil {
-		return RequestView{}, fmt.Errorf("request decision ID required")
-	}
-	if write.Locked.Before == nil {
-		return RequestView{}, fmt.Errorf("locked request state required")
-	}
-	decisionID, err := productID(*write.DecisionID)
-	if err != nil {
-		return RequestView{}, err
-	}
-	decision := strings.ToLower(write.ValidatedInput.Decision)
-	row, err := p.queries().ProductDecideRequest(ctx, dbgen.ProductDecideRequestParams{Decision: decision, ActorID: actorID, At: pgtype.Timestamptz{Time: write.At, Valid: true}, RequestID: requestID})
-	if err != nil {
-		return RequestView{}, err
-	}
-	if _, err := p.queries().ProductAppendRequestDecision(ctx, dbgen.ProductAppendRequestDecisionParams{DecisionID: decisionID, RequestID: requestID, ActorID: actorID, Decision: decision, Note: optionalText(write.ValidatedInput.Note), At: pgtype.Timestamptz{Time: write.At, Valid: true}}); err != nil {
-		return RequestView{}, err
-	}
-	result := *write.Locked.Before
-	result.Status = row.Status
-	return result, nil
+	_ = ctx
+	_ = write
+	return RequestView{}, fmt.Errorf("dm_requests removed in squashed schema")
 }
 
 func (p *ProductPostgres) ReadMyUnlocks(ctx context.Context, actor auth.Authority, spec MyUnlocksSpec) (GrantSnapshot, error) {
@@ -1320,22 +1227,15 @@ func (p *ProductPostgres) ReadIsFollowing(ctx context.Context, actor auth.Author
 	if err != nil {
 		return false, nil
 	}
-	return p.queries().ProductIsFollowing(ctx, dbgen.ProductIsFollowingParams{ActorID: actorPublicID, TargetID: targetID})
+	_ = actorPublicID
+	_ = targetID
+	return false, nil
 }
 
 func (p *ProductPostgres) RequestParties(ctx context.Context, id string) (notification.RequestParties, error) {
-	requestID, err := productID(id)
-	if err != nil {
-		return notification.RequestParties{}, err
-	}
-	row, err := p.queries().ProductLockRequest(ctx, requestID)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return notification.RequestParties{}, nil
-		}
-		return notification.RequestParties{}, err
-	}
-	return notification.RequestParties{RequesterID: db.UUIDString(row.RequesterPublicID), TargetDMID: db.UUIDString(row.TargetDmPublicID)}, nil
+	_ = ctx
+	_ = id
+	return notification.RequestParties{}, nil
 }
 
 func (p *ProductPostgres) LockFollowPerson(ctx context.Context, actorID string, spec FollowPersonSpec) (FollowPersonState, error) {
@@ -1375,8 +1275,9 @@ func (p *ProductPostgres) StoreFollowPerson(ctx context.Context, write FollowPer
 	if err != nil {
 		return product.CommandReceipt{}, err
 	}
-	_, err = p.queries().ProductFollowPerson(ctx, dbgen.ProductFollowPersonParams{ActorID: actor, TargetID: target, At: pgtype.Timestamptz{Time: write.At, Valid: true}})
-	return product.CommandReceipt{}, err
+	_ = actor
+	_ = target
+	return product.CommandReceipt{}, fmt.Errorf("member_follows removed in squashed schema")
 }
 
 func (p *ProductPostgres) LockUnfollowPerson(ctx context.Context, actorID string, spec UnfollowPersonSpec) (UnfollowPersonState, error) {
@@ -1416,8 +1317,9 @@ func (p *ProductPostgres) StoreUnfollowPerson(ctx context.Context, write Unfollo
 	if err != nil {
 		return product.CommandReceipt{}, err
 	}
-	_, err = p.queries().ProductUnfollowPerson(ctx, dbgen.ProductUnfollowPersonParams{ActorID: actor, TargetID: target})
-	return product.CommandReceipt{}, err
+	_ = actor
+	_ = target
+	return product.CommandReceipt{}, fmt.Errorf("member_follows removed in squashed schema")
 }
 
 func mapProductMember(id pgtype.UUID, discord string, handle, name string, avatar pgtype.Text, roles []string, status string, joined pgtype.Timestamptz) MemberView {

@@ -31,7 +31,7 @@ type world struct {
 	dms       []string
 	docs      map[string]string // slug -> public id
 	byCat     map[string][]string
-	hexes     []string
+	crawlNodes []string
 	region    map[string]string
 	lfc       string
 	chars     []charRow
@@ -164,23 +164,6 @@ func (w *world) people() {
 				},
 			}
 			w.put("dm_profiles", []string{"member_id"}, map[string]ref{"member_id": who("members", id)}, profile)
-			w.put("dm_profile_review_events", []string{"member_id", "revision"}, map[string]ref{"member_id": who("members", id)}, map[string]any{
-				"public_id": w.id(27), "kind": "BASELINE", "revision": i % 3,
-				"recorded_at": nil, "recorded_by": nil, "verification_id": nil,
-				"snapshot": map[string]any{
-					"tagline": profile["tagline"], "philosophy": profile["philosophy"], "houseRules": profile["house_rules"],
-					"tableInfo": profile["table_info"], "acceptingPlayers": profile["accepting_players"], "status": profile["status"],
-				},
-			})
-		}
-		if i%4 == 0 && i > 0 {
-			w.put("role_changes", []string{"public_id"}, map[string]ref{
-				"member_id": who("members", id), "changed_by": who("members", w.members[0].ID),
-			}, map[string]any{
-				"public_id": w.id(20), "old_roles": []string{"player"}, "new_roles": s.roles,
-				"note":        s.name + " took on " + strings.Join(s.roles, ", ") + " after the spring charter.",
-				"occurred_at": "2026-04-12T16:00:00Z",
-			})
 		}
 	}
 }
@@ -358,79 +341,57 @@ func (w *world) spatial() {
 	w.lfc = w.id(4)
 	w.put("maps", []string{"public_id"}, map[string]ref{"region_id": who("regions", w.region["coast"])}, map[string]any{
 		"public_id": w.lfc, "name": "Lightfall Coast", "atlas_code": "LFC",
-		"family": "campaign", "map_kind": "hexgrid", "cols": 12, "rows": 12, "asset_path": "atlases/lfc/coast.webp",
+		"family": "campaign", "map_kind": "pointcrawl", "asset_path": "atlases/lfc/coast.webp",
 	})
+	underkeep := w.id(4)
 	w.put("maps", []string{"public_id"}, map[string]ref{"region_id": who("regions", w.region["grey"])}, map[string]any{
-		"public_id": w.id(4), "name": "Underkeep", "atlas_code": "LFC-UNDER", "family": "campaign", "map_kind": "pointcrawl",
+		"public_id": underkeep, "name": "Underkeep", "atlas_code": "LFC-UNDER", "family": "campaign", "map_kind": "pointcrawl",
 	})
 
-	terrains := []string{"plains", "forest", "hills", "marsh", "mountain", "coast", "river", "ruin", "road", "waste"}
-	elevations := []string{"low", "shelf", "high", "sunken"}
-	climates := []string{"temperate", "wet", "wind-scoured", "salt"}
-	const cols, rows = 10, 8
-	for r := 0; r < rows; r++ {
-		for c := 0; c < cols; c++ {
-			id := w.id(5)
-			w.hexes = append(w.hexes, id)
-			n := r*cols + c
-			w.put("hexes", []string{"map_id", "col", "row"}, map[string]ref{"map_id": who("maps", w.lfc)}, map[string]any{
-				"public_id": id, "col": c, "row": r,
-				"terrain": terrains[n%len(terrains)], "elevation": elevations[n%len(elevations)], "climate": climates[n%len(climates)],
-			})
-		}
-	}
-
-	poiTypes := []string{"landmark", "settlement", "lair", "dungeon_site", "regional_feature"}
-	tiers := []string{"landmark", "hidden", "secret"}
 	locIDs := w.byCat["Locations"]
-	for i := 0; i < 20 && i < len(w.hexes); i++ {
-		refs := map[string]ref{"hex_id": who("hexes", w.hexes[i])}
-		row := map[string]any{
-			"public_id": w.id(6), "poi_type": poiTypes[i%len(poiTypes)], "discovery_tier": tiers[i%len(tiers)],
-			"is_charter_objective": i%5 == 0,
+	feat := w.byCat["Feature"]
+	nodeNames := []string{"Kept Tower", "Salt Stair", "Ferry House", "Charter Gate", "Grey Causeway", "Underkeep Mouth"}
+	for i := 0; i < 24; i++ {
+		id := w.id(5)
+		w.crawlNodes = append(w.crawlNodes, id)
+		mapRef := w.lfc
+		if i >= 18 {
+			mapRef = underkeep
 		}
-		if i < len(locIDs) {
-			refs["document_id"] = who("documents", locIDs[i])
-		}
-		w.put("pois", []string{"public_id"}, refs, row)
-	}
-
-	edgeTypes := []string{"road", "trail", "river", "pass", "wall", "ford"}
-	for i := 0; i+1 < len(w.hexes) && i < 24; i += 2 {
-		w.put("hex_edges", []string{"public_id"}, map[string]ref{
-			"map_id": who("maps", w.lfc),
-			"hex_a":  who("hexes", w.hexes[i]),
-			"hex_b":  who("hexes", w.hexes[i+1]),
-		}, map[string]any{
-			"public_id": w.id(7), "edge_type": edgeTypes[(i/2)%len(edgeTypes)],
-			"a_side": []string{"north", "east", "south"}[(i/2)%3],
+		w.put("pointcrawl_nodes", []string{"public_id"}, map[string]ref{"map_id": who("maps", mapRef)}, map[string]any{
+			"public_id": id,
+			"name":      nodeNames[i%len(nodeNames)] + fmt.Sprintf(" %d", i+1),
+			"x":         float64(i%6) * 120,
+			"y":         float64(i/6) * 90,
 		})
 	}
-
-	feat := w.byCat["Feature"]
-	for i := 0; i < len(feat) && i < 24; i++ {
-		hexIdx := i % 16
-		w.put("hex_entry_links", []string{"hex_id", "document_id", "relation"}, map[string]ref{
-			"hex_id":      who("hexes", w.hexes[hexIdx]),
+	edgeKinds := []string{"road", "trail", "river", "pass"}
+	for i := 0; i+1 < len(w.crawlNodes) && i < 20; i++ {
+		w.put("pointcrawl_edges", []string{"public_id"}, map[string]ref{
+			"map_id": who("maps", w.lfc),
+			"node_a": who("pointcrawl_nodes", w.crawlNodes[i]),
+			"node_b": who("pointcrawl_nodes", w.crawlNodes[i+1]),
+		}, map[string]any{
+			"public_id": w.id(7), "directed": i%3 == 0, "kind": edgeKinds[i%len(edgeKinds)],
+			"label": fmt.Sprintf("leg-%d", i+1),
+		})
+	}
+	brune := w.memberByHandle("brune").ID
+	for i := 0; i < len(feat) && i < 16; i++ {
+		w.put("pointcrawl_entry_links", []string{"node_id", "document_id", "relation"}, map[string]ref{
+			"map_id":      who("maps", w.lfc),
+			"node_id":     who("pointcrawl_nodes", w.crawlNodes[i%len(w.crawlNodes)]),
 			"document_id": who("documents", feat[i]),
-		}, map[string]any{"relation": "feature"})
+			"created_by":  who("members", brune),
+		}, map[string]any{"relation": "subject"})
 	}
 	for i := 0; i < 8 && i < len(locIDs); i++ {
-		w.put("hex_entry_links", []string{"hex_id", "document_id", "relation"}, map[string]ref{
-			"hex_id":      who("hexes", w.hexes[i]),
+		w.put("pointcrawl_entry_links", []string{"node_id", "document_id", "relation"}, map[string]ref{
+			"map_id":      who("maps", w.lfc),
+			"node_id":     who("pointcrawl_nodes", w.crawlNodes[i]),
 			"document_id": who("documents", locIDs[i]),
-		}, map[string]any{"relation": "place"})
-	}
-
-	changeKinds := []string{
-		"terrain_change", "image_change", "document_repoint", "submap_change",
-		"entry_linked", "entry_unlinked", "feature_added", "razed", "renamed",
-	}
-	for i, kind := range changeKinds {
-		w.put("hex_changes", []string{"public_id"}, map[string]ref{"hex_id": who("hexes", w.hexes[i%len(w.hexes)])}, map[string]any{
-			"public_id": w.id(8), "kind": kind,
-			"payload": map[string]any{"note": kind + " recorded after the autumn survey", "by": "keel"},
-		})
+			"created_by":  who("members", brune),
+		}, map[string]any{"relation": "location"})
 	}
 
 	w.put("archon_assignments", []string{"member_id", "region_id"}, map[string]ref{
@@ -636,10 +597,10 @@ func (w *world) addQuests() {
 			"quest_id":  who("quests", id),
 			"region_id": who("regions", w.region["coast"]),
 		}, map[string]any{})
-		if len(w.hexes) > 0 {
-			w.put("quest_hexes", []string{"quest_id", "hex_id", "role"}, map[string]ref{
+		if len(w.crawlNodes) > 0 {
+			w.put("quest_pointcrawl_nodes", []string{"quest_id", "node_id", "role"}, map[string]ref{
 				"quest_id": who("quests", id),
-				"hex_id":   who("hexes", w.hexes[i%len(w.hexes)]),
+				"node_id":  who("pointcrawl_nodes", w.crawlNodes[i%len(w.crawlNodes)]),
 			}, map[string]any{"role": []string{"expected", "visited"}[i%2]})
 		}
 		used := map[string]bool{}
@@ -669,45 +630,6 @@ func (w *world) addQuests() {
 }
 
 func (w *world) social() {
-	players := []memberRow{}
-	for _, m := range w.members {
-		if !m.DM && m.Handle != "tam" {
-			players = append(players, m)
-		}
-	}
-	for i, p := range players {
-		w.put("member_follows", []string{"follower_id", "followed_id"}, map[string]ref{
-			"follower_id": who("members", p.ID),
-			"followed_id": who("members", w.dms[i%len(w.dms)]),
-		}, map[string]any{})
-	}
-	w.put("member_follows", []string{"follower_id", "followed_id"}, map[string]ref{
-		"follower_id": who("members", w.memberByHandle("nessa").ID),
-		"followed_id": who("members", w.memberByHandle("holt").ID),
-	}, map[string]any{})
-
-	reqs := []struct{ from, to, kind, status, note string }{
-		{"holt", "brune", "seat", "pending", "Looking for a Thursday seat on the coast road."},
-		{"nessa", "cox", "quest", "pending", "Can Nessa bring a hexcrawl character next month?"},
-		{"brim", "brune", "quest", "approved", "Approved for the salt stair job."},
-		{"dove", "pell", "seat", "declined", "Table is full through Ember."},
-		{"rusk", "cox", "seat", "withdrawn", "Found another night."},
-		{"lane", "quill", "quest", "approved", "Mystery seat confirmed."},
-	}
-	for i, r := range reqs {
-		refs := map[string]ref{
-			"requester_id": who("members", w.memberByHandle(r.from).ID),
-			"target_dm_id": who("members", w.memberByHandle(r.to).ID),
-		}
-		row := map[string]any{"public_id": w.id(22), "kind": r.kind, "status": r.status, "note": r.note}
-		if r.status != "pending" {
-			refs["resolved_by"] = who("members", w.memberByHandle(r.to).ID)
-			row["resolved_at"] = "2026-10-03T18:00:00Z"
-		}
-		w.put("dm_requests", []string{"public_id"}, refs, row)
-		_ = i
-	}
-
 	notes := []struct {
 		handle, kind, body string
 		read               bool
@@ -717,10 +639,10 @@ func (w *world) social() {
 		{"brim", "downtime", "Winter work moved to completed.", false},
 		{"dove", "follow", "Captain Brune posted a new table note.", false},
 		{"keel", "charter", "The Charter deadline is the first of Ember.", true},
-		{"brune", "system", "QA world loaded. The coast map has hexes.", false},
+		{"brune", "system", "QA world loaded. The coast map is pointcrawl.", false},
 	}
 	for _, n := range notes {
-		row := map[string]any{"public_id": w.id(17), "kind": n.kind, "body": n.body, "event_id": nil}
+		row := map[string]any{"public_id": w.id(17), "kind": n.kind, "body": n.body}
 		if n.read {
 			row["read_at"] = "2026-10-04T12:00:00Z"
 		}

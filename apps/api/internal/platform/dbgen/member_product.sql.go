@@ -12,27 +12,24 @@ import (
 )
 
 const productAppendCharacterVerification = `-- name: ProductAppendCharacterVerification :one
-INSERT INTO verifications(public_id,subject_type,subject_id,verdict,decided_by,note,created_at,review_revision,evidence_attempt_id)
+INSERT INTO verifications(public_id,subject_type,subject_id,verdict,decided_by,note,created_at,review_revision)
 SELECT $1::uuid,'character',c.id,$2::text,a.id,$3::text,
- $4::timestamptz,NULL::int,e.id
+ $4::timestamptz,NULL::int
 FROM characters c
 JOIN members a ON a.public_id=$5::uuid
-LEFT JOIN character_ddb_attempts e ON e.public_id=$6::uuid AND e.character_id=c.id
-WHERE c.public_id=$7::uuid AND c.status='pending_approval'
- AND c.verification_submitted_at=$8::timestamptz
- AND ($6::uuid IS NULL OR e.id IS NOT NULL)
+WHERE c.public_id=$6::uuid AND c.status='pending_approval'
+ AND c.verification_submitted_at=$7::timestamptz
 RETURNING public_id,created_at
 `
 
 type ProductAppendCharacterVerificationParams struct {
-	VerificationID    pgtype.UUID        `json:"verification_id"`
-	Verdict           string             `json:"verdict"`
-	Note              pgtype.Text        `json:"note"`
-	At                pgtype.Timestamptz `json:"at"`
-	ActorID           pgtype.UUID        `json:"actor_id"`
-	EvidenceAttemptID pgtype.UUID        `json:"evidence_attempt_id"`
-	CharacterID       pgtype.UUID        `json:"character_id"`
-	SubmissionToken   pgtype.Timestamptz `json:"submission_token"`
+	VerificationID  pgtype.UUID        `json:"verification_id"`
+	Verdict         string             `json:"verdict"`
+	Note            pgtype.Text        `json:"note"`
+	At              pgtype.Timestamptz `json:"at"`
+	ActorID         pgtype.UUID        `json:"actor_id"`
+	CharacterID     pgtype.UUID        `json:"character_id"`
+	SubmissionToken pgtype.Timestamptz `json:"submission_token"`
 }
 
 type ProductAppendCharacterVerificationRow struct {
@@ -47,52 +44,11 @@ func (q *Queries) ProductAppendCharacterVerification(ctx context.Context, arg Pr
 		arg.Note,
 		arg.At,
 		arg.ActorID,
-		arg.EvidenceAttemptID,
 		arg.CharacterID,
 		arg.SubmissionToken,
 	)
 	var i ProductAppendCharacterVerificationRow
 	err := row.Scan(&i.PublicID, &i.CreatedAt)
-	return i, err
-}
-
-const productAppendDmReview = `-- name: ProductAppendDmReview :one
-INSERT INTO dm_profile_review_events(public_id,member_id,revision,kind,snapshot,recorded_by,recorded_at,verification_id)
-VALUES($1::uuid,(SELECT id FROM members WHERE public_id=$2::uuid),$3::int,
- $4::text,$5::jsonb,(SELECT id FROM members WHERE public_id=$6::uuid),$7::timestamptz,
- (SELECT id FROM verifications WHERE public_id=$8::uuid)) RETURNING public_id,revision,recorded_at
-`
-
-type ProductAppendDmReviewParams struct {
-	EventID        pgtype.UUID        `json:"event_id"`
-	MemberID       pgtype.UUID        `json:"member_id"`
-	Revision       int32              `json:"revision"`
-	Kind           string             `json:"kind"`
-	Snapshot       []byte             `json:"snapshot"`
-	ActorID        pgtype.UUID        `json:"actor_id"`
-	At             pgtype.Timestamptz `json:"at"`
-	VerificationID pgtype.UUID        `json:"verification_id"`
-}
-
-type ProductAppendDmReviewRow struct {
-	PublicID   pgtype.UUID        `json:"public_id"`
-	Revision   int32              `json:"revision"`
-	RecordedAt pgtype.Timestamptz `json:"recorded_at"`
-}
-
-func (q *Queries) ProductAppendDmReview(ctx context.Context, arg ProductAppendDmReviewParams) (ProductAppendDmReviewRow, error) {
-	row := q.db.QueryRow(ctx, productAppendDmReview,
-		arg.EventID,
-		arg.MemberID,
-		arg.Revision,
-		arg.Kind,
-		arg.Snapshot,
-		arg.ActorID,
-		arg.At,
-		arg.VerificationID,
-	)
-	var i ProductAppendDmReviewRow
-	err := row.Scan(&i.PublicID, &i.Revision, &i.RecordedAt)
 	return i, err
 }
 
@@ -130,78 +86,6 @@ func (q *Queries) ProductAppendDmVerification(ctx context.Context, arg ProductAp
 	)
 	var i ProductAppendDmVerificationRow
 	err := row.Scan(&i.PublicID, &i.CreatedAt)
-	return i, err
-}
-
-const productAppendRequestDecision = `-- name: ProductAppendRequestDecision :one
-INSERT INTO request_decisions(public_id,request_id,actor_id,decision,note,recorded_at)
-VALUES($1::uuid,(SELECT id FROM dm_requests WHERE public_id=$2::uuid),
- (SELECT id FROM members WHERE public_id=$3::uuid),$4::text,$5::text,$6::timestamptz)
-RETURNING public_id,recorded_at
-`
-
-type ProductAppendRequestDecisionParams struct {
-	DecisionID pgtype.UUID        `json:"decision_id"`
-	RequestID  pgtype.UUID        `json:"request_id"`
-	ActorID    pgtype.UUID        `json:"actor_id"`
-	Decision   string             `json:"decision"`
-	Note       pgtype.Text        `json:"note"`
-	At         pgtype.Timestamptz `json:"at"`
-}
-
-type ProductAppendRequestDecisionRow struct {
-	PublicID   pgtype.UUID        `json:"public_id"`
-	RecordedAt pgtype.Timestamptz `json:"recorded_at"`
-}
-
-func (q *Queries) ProductAppendRequestDecision(ctx context.Context, arg ProductAppendRequestDecisionParams) (ProductAppendRequestDecisionRow, error) {
-	row := q.db.QueryRow(ctx, productAppendRequestDecision,
-		arg.DecisionID,
-		arg.RequestID,
-		arg.ActorID,
-		arg.Decision,
-		arg.Note,
-		arg.At,
-	)
-	var i ProductAppendRequestDecisionRow
-	err := row.Scan(&i.PublicID, &i.RecordedAt)
-	return i, err
-}
-
-const productAppendRoleHistory = `-- name: ProductAppendRoleHistory :one
-INSERT INTO role_changes(public_id,member_id,old_roles,new_roles,changed_by,occurred_at,note)
-VALUES($1::uuid,(SELECT id FROM members WHERE public_id=$2::uuid),
- $3::text[],$4::text[],(SELECT id FROM members WHERE public_id=$5::uuid),$6::timestamptz,$7::text)
-RETURNING public_id,occurred_at
-`
-
-type ProductAppendRoleHistoryParams struct {
-	HistoryID pgtype.UUID        `json:"history_id"`
-	MemberID  pgtype.UUID        `json:"member_id"`
-	OldRoles  []string           `json:"old_roles"`
-	NewRoles  []string           `json:"new_roles"`
-	ActorID   pgtype.UUID        `json:"actor_id"`
-	At        pgtype.Timestamptz `json:"at"`
-	Note      pgtype.Text        `json:"note"`
-}
-
-type ProductAppendRoleHistoryRow struct {
-	PublicID   pgtype.UUID        `json:"public_id"`
-	OccurredAt pgtype.Timestamptz `json:"occurred_at"`
-}
-
-func (q *Queries) ProductAppendRoleHistory(ctx context.Context, arg ProductAppendRoleHistoryParams) (ProductAppendRoleHistoryRow, error) {
-	row := q.db.QueryRow(ctx, productAppendRoleHistory,
-		arg.HistoryID,
-		arg.MemberID,
-		arg.OldRoles,
-		arg.NewRoles,
-		arg.ActorID,
-		arg.At,
-		arg.Note,
-	)
-	var i ProductAppendRoleHistoryRow
-	err := row.Scan(&i.PublicID, &i.OccurredAt)
 	return i, err
 }
 
@@ -532,41 +416,6 @@ func (q *Queries) ProductCompleteUnlockCatalog(ctx context.Context) ([]ProductCo
 	return items, nil
 }
 
-const productCreateRequest = `-- name: ProductCreateRequest :one
-INSERT INTO dm_requests(public_id,requester_id,target_dm_id,kind,note,created_at)
-VALUES($1::uuid,(SELECT id FROM members WHERE public_id=$2::uuid),
- (SELECT id FROM members WHERE public_id=$3::uuid),$4::text,$5::text,$6::timestamptz)
-RETURNING public_id,created_at
-`
-
-type ProductCreateRequestParams struct {
-	RequestID pgtype.UUID        `json:"request_id"`
-	ActorID   pgtype.UUID        `json:"actor_id"`
-	TargetID  pgtype.UUID        `json:"target_id"`
-	Kind      string             `json:"kind"`
-	Note      pgtype.Text        `json:"note"`
-	At        pgtype.Timestamptz `json:"at"`
-}
-
-type ProductCreateRequestRow struct {
-	PublicID  pgtype.UUID        `json:"public_id"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-}
-
-func (q *Queries) ProductCreateRequest(ctx context.Context, arg ProductCreateRequestParams) (ProductCreateRequestRow, error) {
-	row := q.db.QueryRow(ctx, productCreateRequest,
-		arg.RequestID,
-		arg.ActorID,
-		arg.TargetID,
-		arg.Kind,
-		arg.Note,
-		arg.At,
-	)
-	var i ProductCreateRequestRow
-	err := row.Scan(&i.PublicID, &i.CreatedAt)
-	return i, err
-}
-
 const productCreateUnlockable = `-- name: ProductCreateUnlockable :one
 INSERT INTO unlockables(public_id,code,name,description,kind,active,payload,unlock_rule)
 VALUES($1::uuid,'unlock_' || replace($1::uuid::text,'-',''),$2::text,
@@ -606,99 +455,6 @@ func (q *Queries) ProductCreateUnlockable(ctx context.Context, arg ProductCreate
 		&i.Name,
 		&i.UnlockRule,
 	)
-	return i, err
-}
-
-const productCurrentDmReview = `-- name: ProductCurrentDmReview :one
-SELECT e.public_id,m.public_id AS member_id,e.revision,e.kind,e.snapshot,a.public_id AS recorded_by,e.recorded_at,v.public_id AS verification_id
-FROM dm_profile_review_events e JOIN members m ON m.id=e.member_id
-LEFT JOIN members a ON a.id=e.recorded_by LEFT JOIN verifications v ON v.id=e.verification_id
-WHERE m.public_id=$1::uuid ORDER BY e.revision DESC LIMIT 1
-`
-
-type ProductCurrentDmReviewRow struct {
-	PublicID       pgtype.UUID        `json:"public_id"`
-	MemberID       pgtype.UUID        `json:"member_id"`
-	Revision       int32              `json:"revision"`
-	Kind           string             `json:"kind"`
-	Snapshot       []byte             `json:"snapshot"`
-	RecordedBy     pgtype.UUID        `json:"recorded_by"`
-	RecordedAt     pgtype.Timestamptz `json:"recorded_at"`
-	VerificationID pgtype.UUID        `json:"verification_id"`
-}
-
-func (q *Queries) ProductCurrentDmReview(ctx context.Context, memberID pgtype.UUID) (ProductCurrentDmReviewRow, error) {
-	row := q.db.QueryRow(ctx, productCurrentDmReview, memberID)
-	var i ProductCurrentDmReviewRow
-	err := row.Scan(
-		&i.PublicID,
-		&i.MemberID,
-		&i.Revision,
-		&i.Kind,
-		&i.Snapshot,
-		&i.RecordedBy,
-		&i.RecordedAt,
-		&i.VerificationID,
-	)
-	return i, err
-}
-
-const productCurrentRequestDecision = `-- name: ProductCurrentRequestDecision :one
-SELECT d.public_id,r.public_id AS request_id,a.public_id AS actor_id,d.decision,d.note,d.recorded_at
-FROM request_decisions d JOIN dm_requests r ON r.id=d.request_id JOIN members a ON a.id=d.actor_id
-WHERE r.public_id=$1::uuid ORDER BY d.recorded_at DESC,d.public_id DESC LIMIT 1
-`
-
-type ProductCurrentRequestDecisionRow struct {
-	PublicID   pgtype.UUID        `json:"public_id"`
-	RequestID  pgtype.UUID        `json:"request_id"`
-	ActorID    pgtype.UUID        `json:"actor_id"`
-	Decision   string             `json:"decision"`
-	Note       pgtype.Text        `json:"note"`
-	RecordedAt pgtype.Timestamptz `json:"recorded_at"`
-}
-
-func (q *Queries) ProductCurrentRequestDecision(ctx context.Context, requestID pgtype.UUID) (ProductCurrentRequestDecisionRow, error) {
-	row := q.db.QueryRow(ctx, productCurrentRequestDecision, requestID)
-	var i ProductCurrentRequestDecisionRow
-	err := row.Scan(
-		&i.PublicID,
-		&i.RequestID,
-		&i.ActorID,
-		&i.Decision,
-		&i.Note,
-		&i.RecordedAt,
-	)
-	return i, err
-}
-
-const productDecideRequest = `-- name: ProductDecideRequest :one
-UPDATE dm_requests SET status=$1::text,resolved_by=(SELECT id FROM members WHERE public_id=$2::uuid),resolved_at=$3::timestamptz
-WHERE public_id=$4::uuid AND status='pending' RETURNING public_id,status,resolved_at
-`
-
-type ProductDecideRequestParams struct {
-	Decision  string             `json:"decision"`
-	ActorID   pgtype.UUID        `json:"actor_id"`
-	At        pgtype.Timestamptz `json:"at"`
-	RequestID pgtype.UUID        `json:"request_id"`
-}
-
-type ProductDecideRequestRow struct {
-	PublicID   pgtype.UUID        `json:"public_id"`
-	Status     string             `json:"status"`
-	ResolvedAt pgtype.Timestamptz `json:"resolved_at"`
-}
-
-func (q *Queries) ProductDecideRequest(ctx context.Context, arg ProductDecideRequestParams) (ProductDecideRequestRow, error) {
-	row := q.db.QueryRow(ctx, productDecideRequest,
-		arg.Decision,
-		arg.ActorID,
-		arg.At,
-		arg.RequestID,
-	)
-	var i ProductDecideRequestRow
-	err := row.Scan(&i.PublicID, &i.Status, &i.ResolvedAt)
 	return i, err
 }
 
@@ -745,26 +501,6 @@ func (q *Queries) ProductExistingGrant(ctx context.Context, arg ProductExistingG
 		&i.GrantedBy,
 	)
 	return i, err
-}
-
-const productFollowPerson = `-- name: ProductFollowPerson :execrows
-INSERT INTO member_follows(follower_id,followed_id,created_at)
-VALUES((SELECT id FROM members WHERE public_id=$1::uuid),(SELECT id FROM members WHERE public_id=$2::uuid),$3::timestamptz)
-ON CONFLICT(follower_id,followed_id) DO NOTHING
-`
-
-type ProductFollowPersonParams struct {
-	ActorID  pgtype.UUID        `json:"actor_id"`
-	TargetID pgtype.UUID        `json:"target_id"`
-	At       pgtype.Timestamptz `json:"at"`
-}
-
-func (q *Queries) ProductFollowPerson(ctx context.Context, arg ProductFollowPersonParams) (int64, error) {
-	result, err := q.db.Exec(ctx, productFollowPerson, arg.ActorID, arg.TargetID, arg.At)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
 }
 
 const productGrantUnlock = `-- name: ProductGrantUnlock :one
@@ -852,23 +588,6 @@ func (q *Queries) ProductInsertAvailability(ctx context.Context, arg ProductInse
 	return items, nil
 }
 
-const productIsFollowing = `-- name: ProductIsFollowing :one
-SELECT EXISTS(SELECT 1 FROM member_follows f JOIN members a ON a.id=f.follower_id JOIN members b ON b.id=f.followed_id
- WHERE a.public_id=$1::uuid AND b.public_id=$2::uuid)::boolean AS following
-`
-
-type ProductIsFollowingParams struct {
-	ActorID  pgtype.UUID `json:"actor_id"`
-	TargetID pgtype.UUID `json:"target_id"`
-}
-
-func (q *Queries) ProductIsFollowing(ctx context.Context, arg ProductIsFollowingParams) (bool, error) {
-	row := q.db.QueryRow(ctx, productIsFollowing, arg.ActorID, arg.TargetID)
-	var following bool
-	err := row.Scan(&following)
-	return following, err
-}
-
 const productLockDmProfile = `-- name: ProductLockDmProfile :one
 SELECT m.public_id,p.member_id, p.tagline, p.philosophy, p.house_rules, p.table_info, p.accepting_players, p.status, p.review_revision, p.updated_at FROM members m JOIN dm_profiles p ON p.member_id=m.id
 WHERE m.public_id=$1::uuid FOR UPDATE OF m,p
@@ -940,47 +659,6 @@ func (q *Queries) ProductLockMembers(ctx context.Context, memberIds []pgtype.UUI
 		return nil, err
 	}
 	return items, nil
-}
-
-const productLockRequest = `-- name: ProductLockRequest :one
-SELECT r.id, r.public_id, r.requester_id, r.target_dm_id, r.kind, r.note, r.status, r.resolved_by, r.resolved_at, r.created_at,a.public_id AS requester_public_id,b.public_id AS target_dm_public_id
-FROM dm_requests r JOIN members a ON a.id=r.requester_id JOIN members b ON b.id=r.target_dm_id
-WHERE r.public_id=$1::uuid FOR UPDATE OF r
-`
-
-type ProductLockRequestRow struct {
-	ID                int64              `json:"id"`
-	PublicID          pgtype.UUID        `json:"public_id"`
-	RequesterID       int64              `json:"requester_id"`
-	TargetDmID        int64              `json:"target_dm_id"`
-	Kind              string             `json:"kind"`
-	Note              pgtype.Text        `json:"note"`
-	Status            string             `json:"status"`
-	ResolvedBy        pgtype.Int8        `json:"resolved_by"`
-	ResolvedAt        pgtype.Timestamptz `json:"resolved_at"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	RequesterPublicID pgtype.UUID        `json:"requester_public_id"`
-	TargetDmPublicID  pgtype.UUID        `json:"target_dm_public_id"`
-}
-
-func (q *Queries) ProductLockRequest(ctx context.Context, requestID pgtype.UUID) (ProductLockRequestRow, error) {
-	row := q.db.QueryRow(ctx, productLockRequest, requestID)
-	var i ProductLockRequestRow
-	err := row.Scan(
-		&i.ID,
-		&i.PublicID,
-		&i.RequesterID,
-		&i.TargetDmID,
-		&i.Kind,
-		&i.Note,
-		&i.Status,
-		&i.ResolvedBy,
-		&i.ResolvedAt,
-		&i.CreatedAt,
-		&i.RequesterPublicID,
-		&i.TargetDmPublicID,
-	)
-	return i, err
 }
 
 const productLockUnlockable = `-- name: ProductLockUnlockable :one
@@ -1437,12 +1115,11 @@ WITH matching AS (
  p.tagline,p.table_info,p.accepting_players,p.status AS dm_profile_status,p.review_revision,
  (m.status='active' AND 'dm'=ANY(m.roles) AND p.status='approved')::boolean AS is_dm,
  ARRAY(SELECT DISTINCT a.weekday FROM member_availability a WHERE a.member_id=m.id ORDER BY a.weekday)::smallint[] AS available_days,
- e.public_id AS review_event_id,e.kind AS review_event_kind,e.snapshot AS review_event_snapshot,e.recorded_at AS submitted_at
+ p.updated_at AS submitted_at
  FROM dm_profiles p JOIN members m ON m.id=p.member_id
- LEFT JOIN dm_profile_review_events e ON e.member_id=p.member_id AND e.revision=p.review_revision
  WHERE p.status='pending'
-), page AS (SELECT public_id, handle, display_name, avatar_url, roles, status, tagline, table_info, accepting_players, dm_profile_status, review_revision, is_dm, available_days, review_event_id, review_event_kind, review_event_snapshot, submitted_at FROM matching ORDER BY submitted_at ASC NULLS LAST,public_id ASC LIMIT $2::int OFFSET $1::int)
-SELECT (SELECT count(*) FROM matching)::bigint AS total,p.public_id, p.handle, p.display_name, p.avatar_url, p.roles, p.status, p.tagline, p.table_info, p.accepting_players, p.dm_profile_status, p.review_revision, p.is_dm, p.available_days, p.review_event_id, p.review_event_kind, p.review_event_snapshot, p.submitted_at
+), page AS (SELECT public_id, handle, display_name, avatar_url, roles, status, tagline, table_info, accepting_players, dm_profile_status, review_revision, is_dm, available_days, submitted_at FROM matching ORDER BY submitted_at ASC NULLS LAST,public_id ASC LIMIT $2::int OFFSET $1::int)
+SELECT (SELECT count(*) FROM matching)::bigint AS total,p.public_id, p.handle, p.display_name, p.avatar_url, p.roles, p.status, p.tagline, p.table_info, p.accepting_players, p.dm_profile_status, p.review_revision, p.is_dm, p.available_days, p.submitted_at
 FROM (SELECT 1) marker LEFT JOIN page p ON true
 `
 
@@ -1452,24 +1129,21 @@ type ProductPendingDmProfilesParams struct {
 }
 
 type ProductPendingDmProfilesRow struct {
-	Total               int64              `json:"total"`
-	PublicID            pgtype.UUID        `json:"public_id"`
-	Handle              pgtype.Text        `json:"handle"`
-	DisplayName         pgtype.Text        `json:"display_name"`
-	AvatarUrl           pgtype.Text        `json:"avatar_url"`
-	Roles               []string           `json:"roles"`
-	Status              pgtype.Text        `json:"status"`
-	Tagline             pgtype.Text        `json:"tagline"`
-	TableInfo           []byte             `json:"table_info"`
-	AcceptingPlayers    pgtype.Bool        `json:"accepting_players"`
-	DmProfileStatus     pgtype.Text        `json:"dm_profile_status"`
-	ReviewRevision      pgtype.Int4        `json:"review_revision"`
-	IsDm                pgtype.Bool        `json:"is_dm"`
-	AvailableDays       []int16            `json:"available_days"`
-	ReviewEventID       pgtype.UUID        `json:"review_event_id"`
-	ReviewEventKind     pgtype.Text        `json:"review_event_kind"`
-	ReviewEventSnapshot []byte             `json:"review_event_snapshot"`
-	SubmittedAt         pgtype.Timestamptz `json:"submitted_at"`
+	Total            int64              `json:"total"`
+	PublicID         pgtype.UUID        `json:"public_id"`
+	Handle           pgtype.Text        `json:"handle"`
+	DisplayName      pgtype.Text        `json:"display_name"`
+	AvatarUrl        pgtype.Text        `json:"avatar_url"`
+	Roles            []string           `json:"roles"`
+	Status           pgtype.Text        `json:"status"`
+	Tagline          pgtype.Text        `json:"tagline"`
+	TableInfo        []byte             `json:"table_info"`
+	AcceptingPlayers pgtype.Bool        `json:"accepting_players"`
+	DmProfileStatus  pgtype.Text        `json:"dm_profile_status"`
+	ReviewRevision   pgtype.Int4        `json:"review_revision"`
+	IsDm             pgtype.Bool        `json:"is_dm"`
+	AvailableDays    []int16            `json:"available_days"`
+	SubmittedAt      pgtype.Timestamptz `json:"submitted_at"`
 }
 
 func (q *Queries) ProductPendingDmProfiles(ctx context.Context, arg ProductPendingDmProfilesParams) ([]ProductPendingDmProfilesRow, error) {
@@ -1496,128 +1170,7 @@ func (q *Queries) ProductPendingDmProfiles(ctx context.Context, arg ProductPendi
 			&i.ReviewRevision,
 			&i.IsDm,
 			&i.AvailableDays,
-			&i.ReviewEventID,
-			&i.ReviewEventKind,
-			&i.ReviewEventSnapshot,
 			&i.SubmittedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const productRequestsPage = `-- name: ProductRequestsPage :many
-WITH matching AS (
- SELECT r.public_id,a.public_id AS requester_id,b.public_id AS target_dm_id,
- r.kind,r.note,r.status,r.created_at
- FROM dm_requests r JOIN members a ON a.id=r.requester_id JOIN members b ON b.id=r.target_dm_id
- WHERE CASE WHEN $1::boolean THEN b.public_id ELSE a.public_id END=$2::uuid
-), page AS (SELECT public_id, requester_id, target_dm_id, kind, note, status, created_at FROM matching ORDER BY created_at DESC,public_id DESC LIMIT $4::int OFFSET $3::int)
-SELECT (SELECT count(*) FROM matching)::bigint AS total,p.public_id, p.requester_id, p.target_dm_id, p.kind, p.note, p.status, p.created_at FROM (SELECT 1) marker LEFT JOIN page p ON true
-`
-
-type ProductRequestsPageParams struct {
-	Addressed  bool        `json:"addressed"`
-	MemberID   pgtype.UUID `json:"member_id"`
-	PageOffset int32       `json:"page_offset"`
-	PageLimit  int32       `json:"page_limit"`
-}
-
-type ProductRequestsPageRow struct {
-	Total       int64              `json:"total"`
-	PublicID    pgtype.UUID        `json:"public_id"`
-	RequesterID pgtype.UUID        `json:"requester_id"`
-	TargetDmID  pgtype.UUID        `json:"target_dm_id"`
-	Kind        pgtype.Text        `json:"kind"`
-	Note        pgtype.Text        `json:"note"`
-	Status      pgtype.Text        `json:"status"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-}
-
-func (q *Queries) ProductRequestsPage(ctx context.Context, arg ProductRequestsPageParams) ([]ProductRequestsPageRow, error) {
-	rows, err := q.db.Query(ctx, productRequestsPage,
-		arg.Addressed,
-		arg.MemberID,
-		arg.PageOffset,
-		arg.PageLimit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ProductRequestsPageRow{}
-	for rows.Next() {
-		var i ProductRequestsPageRow
-		if err := rows.Scan(
-			&i.Total,
-			&i.PublicID,
-			&i.RequesterID,
-			&i.TargetDmID,
-			&i.Kind,
-			&i.Note,
-			&i.Status,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const productRoleHistory = `-- name: ProductRoleHistory :many
-WITH matching AS (
- SELECT c.public_id,m.public_id AS member_id,c.old_roles,c.new_roles,
- actor.public_id AS changed_by,c.occurred_at,c.note FROM role_changes c
- JOIN members m ON m.id=c.member_id JOIN members actor ON actor.id=c.changed_by
- WHERE m.public_id=$1::uuid
-), page AS (SELECT public_id, member_id, old_roles, new_roles, changed_by, occurred_at, note FROM matching ORDER BY occurred_at DESC,public_id DESC LIMIT $3::int OFFSET $2::int)
-SELECT (SELECT count(*) FROM matching)::bigint AS total,p.public_id, p.member_id, p.old_roles, p.new_roles, p.changed_by, p.occurred_at, p.note FROM (SELECT 1) marker LEFT JOIN page p ON true
-`
-
-type ProductRoleHistoryParams struct {
-	MemberID   pgtype.UUID `json:"member_id"`
-	PageOffset int32       `json:"page_offset"`
-	PageLimit  int32       `json:"page_limit"`
-}
-
-type ProductRoleHistoryRow struct {
-	Total      int64              `json:"total"`
-	PublicID   pgtype.UUID        `json:"public_id"`
-	MemberID   pgtype.UUID        `json:"member_id"`
-	OldRoles   []string           `json:"old_roles"`
-	NewRoles   []string           `json:"new_roles"`
-	ChangedBy  pgtype.UUID        `json:"changed_by"`
-	OccurredAt pgtype.Timestamptz `json:"occurred_at"`
-	Note       pgtype.Text        `json:"note"`
-}
-
-func (q *Queries) ProductRoleHistory(ctx context.Context, arg ProductRoleHistoryParams) ([]ProductRoleHistoryRow, error) {
-	rows, err := q.db.Query(ctx, productRoleHistory, arg.MemberID, arg.PageOffset, arg.PageLimit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ProductRoleHistoryRow{}
-	for rows.Next() {
-		var i ProductRoleHistoryRow
-		if err := rows.Scan(
-			&i.Total,
-			&i.PublicID,
-			&i.MemberID,
-			&i.OldRoles,
-			&i.NewRoles,
-			&i.ChangedBy,
-			&i.OccurredAt,
-			&i.Note,
 		); err != nil {
 			return nil, err
 		}
@@ -1641,20 +1194,14 @@ WITH inputs AS (
 ), changed AS (
  UPDATE members m SET roles=p.new_roles,updated_at=$2::timestamptz
  FROM prior p WHERE m.id=p.id RETURNING m.id,m.public_id,m.roles,m.updated_at
-), history AS (
- INSERT INTO role_changes(public_id,member_id,old_roles,new_roles,changed_by,occurred_at,note)
- SELECT p.history_id,c.id,p.old_roles,c.roles,(SELECT id FROM members WHERE public_id=$3::uuid),
- $2::timestamptz,p.note FROM changed c JOIN prior p ON p.id=c.id
- RETURNING member_id,public_id AS history_id
 )
-SELECT c.public_id,m.discord_id,m.handle,m.display_name,m.avatar_url,c.roles,m.status,m.joined_at,c.updated_at,h.history_id
-FROM changed c JOIN members m ON m.id=c.id JOIN history h ON h.member_id=c.id ORDER BY c.public_id
+SELECT c.public_id,m.discord_id,m.handle,m.display_name,m.avatar_url,c.roles,m.status,m.joined_at,c.updated_at,p.history_id
+FROM changed c JOIN members m ON m.id=c.id JOIN prior p ON p.id=c.id ORDER BY c.public_id
 `
 
 type ProductSetMemberRolesBatchParams struct {
 	Changes []byte             `json:"changes"`
 	At      pgtype.Timestamptz `json:"at"`
-	ActorID pgtype.UUID        `json:"actor_id"`
 }
 
 type ProductSetMemberRolesBatchRow struct {
@@ -1671,7 +1218,7 @@ type ProductSetMemberRolesBatchRow struct {
 }
 
 func (q *Queries) ProductSetMemberRolesBatch(ctx context.Context, arg ProductSetMemberRolesBatchParams) ([]ProductSetMemberRolesBatchRow, error) {
-	rows, err := q.db.Query(ctx, productSetMemberRolesBatch, arg.Changes, arg.At, arg.ActorID)
+	rows, err := q.db.Query(ctx, productSetMemberRolesBatch, arg.Changes, arg.At)
 	if err != nil {
 		return nil, err
 	}
@@ -1890,24 +1437,6 @@ func (q *Queries) ProductStoreSettings(ctx context.Context, arg ProductStoreSett
 		&i.Theme,
 	)
 	return i, err
-}
-
-const productUnfollowPerson = `-- name: ProductUnfollowPerson :execrows
-DELETE FROM member_follows WHERE follower_id=(SELECT id FROM members WHERE public_id=$1::uuid)
-AND followed_id=(SELECT id FROM members WHERE public_id=$2::uuid)
-`
-
-type ProductUnfollowPersonParams struct {
-	ActorID  pgtype.UUID `json:"actor_id"`
-	TargetID pgtype.UUID `json:"target_id"`
-}
-
-func (q *Queries) ProductUnfollowPerson(ctx context.Context, arg ProductUnfollowPersonParams) (int64, error) {
-	result, err := q.db.Exec(ctx, productUnfollowPerson, arg.ActorID, arg.TargetID)
-	if err != nil {
-		return 0, err
-	}
-	return result.RowsAffected(), nil
 }
 
 const productUnlockCatalog = `-- name: ProductUnlockCatalog :many

@@ -189,65 +189,6 @@ func (q *Queries) ListMemberAvailability(ctx context.Context, publicID pgtype.UU
 	return items, nil
 }
 
-const listMemberRoleHistory = `-- name: ListMemberRoleHistory :many
-SELECT rc.public_id AS id,
-       m.public_id AS member_id,
-       rc.old_roles,
-       rc.new_roles,
-       cb.public_id AS changed_by,
-       rc.occurred_at,
-       rc.note
-FROM role_changes rc
-JOIN members m ON m.id = rc.member_id
-JOIN members cb ON cb.id = rc.changed_by
-WHERE m.public_id = $1
-ORDER BY rc.occurred_at DESC
-LIMIT $2
-`
-
-type ListMemberRoleHistoryParams struct {
-	MemberID pgtype.UUID `json:"member_id"`
-	RowLimit int32       `json:"row_limit"`
-}
-
-type ListMemberRoleHistoryRow struct {
-	ID         pgtype.UUID        `json:"id"`
-	MemberID   pgtype.UUID        `json:"member_id"`
-	OldRoles   []string           `json:"old_roles"`
-	NewRoles   []string           `json:"new_roles"`
-	ChangedBy  pgtype.UUID        `json:"changed_by"`
-	OccurredAt pgtype.Timestamptz `json:"occurred_at"`
-	Note       pgtype.Text        `json:"note"`
-}
-
-func (q *Queries) ListMemberRoleHistory(ctx context.Context, arg ListMemberRoleHistoryParams) ([]ListMemberRoleHistoryRow, error) {
-	rows, err := q.db.Query(ctx, listMemberRoleHistory, arg.MemberID, arg.RowLimit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListMemberRoleHistoryRow{}
-	for rows.Next() {
-		var i ListMemberRoleHistoryRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.MemberID,
-			&i.OldRoles,
-			&i.NewRoles,
-			&i.ChangedBy,
-			&i.OccurredAt,
-			&i.Note,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listMembers = `-- name: ListMembers :many
 SELECT public_id AS id, discord_id, handle, display_name, avatar_url, roles, status
 FROM members

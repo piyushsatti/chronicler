@@ -19,45 +19,11 @@ type AgentQuestion struct {
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
-type ArcChange struct {
-	ActorID   int64              `json:"actor_id"`
-	ArcID     int64              `json:"arc_id"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	ID        int64              `json:"id"`
-	NewValue  []byte             `json:"new_value"`
-	OldValue  []byte             `json:"old_value"`
-	PublicID  pgtype.UUID        `json:"public_id"`
-}
-
 type ArchonAssignment struct {
 	MemberID  int64              `json:"member_id"`
 	RegionID  int64              `json:"region_id"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	GrantedBy pgtype.Int8        `json:"granted_by"`
-}
-
-type AssignmentChange struct {
-	ActorID        int64              `json:"actor_id"`
-	AssignmentKind string             `json:"assignment_kind"`
-	CreatedAt      pgtype.Timestamptz `json:"created_at"`
-	ID             int64              `json:"id"`
-	MemberID       int64              `json:"member_id"`
-	NewValue       []byte             `json:"new_value"`
-	NpcDocumentID  pgtype.Int8        `json:"npc_document_id"`
-	OldValue       []byte             `json:"old_value"`
-	PublicID       pgtype.UUID        `json:"public_id"`
-	RegionID       pgtype.Int8        `json:"region_id"`
-}
-
-type AuthOverrideAudit struct {
-	ActorID         int64              `json:"actor_id"`
-	ID              int64              `json:"id"`
-	Operation       string             `json:"operation"`
-	PublicID        pgtype.UUID        `json:"public_id"`
-	RecordedAt      pgtype.Timestamptz `json:"recorded_at"`
-	RuleCode        string             `json:"rule_code"`
-	SubjectPublicID pgtype.UUID        `json:"subject_public_id"`
-	SubjectType     string             `json:"subject_type"`
 }
 
 type BackgroundJob struct {
@@ -100,16 +66,6 @@ type BotHeartbeat struct {
 	ReceivedAt pgtype.Timestamptz `json:"received_at"`
 }
 
-type CalendarChange struct {
-	ActorID    int64              `json:"actor_id"`
-	CalendarID int16              `json:"calendar_id"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
-	ID         int64              `json:"id"`
-	NewValue   []byte             `json:"new_value"`
-	OldValue   []byte             `json:"old_value"`
-	PublicID   pgtype.UUID        `json:"public_id"`
-}
-
 type Character struct {
 	ID                      int64              `json:"id"`
 	PublicID                pgtype.UUID        `json:"public_id"`
@@ -136,39 +92,10 @@ type CharacterCatalogPick struct {
 	CharacterID int64 `json:"character_id"`
 }
 
-type CharacterChange struct {
-	AffectedPublicID pgtype.UUID        `json:"affected_public_id"`
-	AffectedType     string             `json:"affected_type"`
-	CharacterID      int64              `json:"character_id"`
-	ID               int64              `json:"id"`
-	Kind             string             `json:"kind"`
-	NewValue         []byte             `json:"new_value"`
-	OldValue         []byte             `json:"old_value"`
-	PublicID         pgtype.UUID        `json:"public_id"`
-	RecordedAt       pgtype.Timestamptz `json:"recorded_at"`
-	RecordedBy       int64              `json:"recorded_by"`
-}
-
-type CharacterDdbAttempt struct {
-	CharacterID int64              `json:"character_id"`
-	FinishedAt  pgtype.Timestamptz `json:"finished_at"`
-	ID          int64              `json:"id"`
-	PayloadHash pgtype.Text        `json:"payload_hash"`
-	Provenance  []byte             `json:"provenance"`
-	PublicID    pgtype.UUID        `json:"public_id"`
-	SafeError   pgtype.Text        `json:"safe_error"`
-	StartedAt   pgtype.Timestamptz `json:"started_at"`
-	Succeeded   pgtype.Bool        `json:"succeeded"`
-	Url         string             `json:"url"`
-}
-
 type CharacterDdbMirror struct {
 	CharacterID int64              `json:"character_id"`
 	Payload     []byte             `json:"payload"`
 	SyncedAt    pgtype.Timestamptz `json:"synced_at"`
-	PayloadHash pgtype.Text        `json:"payload_hash"`
-	Provenance  []byte             `json:"provenance"`
-	Url         pgtype.Text        `json:"url"`
 }
 
 type CharacterLog struct {
@@ -230,31 +157,6 @@ type DmProfile struct {
 	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
 }
 
-type DmProfileReviewEvent struct {
-	ID             int64              `json:"id"`
-	Kind           string             `json:"kind"`
-	MemberID       int64              `json:"member_id"`
-	PublicID       pgtype.UUID        `json:"public_id"`
-	RecordedAt     pgtype.Timestamptz `json:"recorded_at"`
-	RecordedBy     pgtype.Int8        `json:"recorded_by"`
-	Revision       int32              `json:"revision"`
-	Snapshot       []byte             `json:"snapshot"`
-	VerificationID pgtype.Int8        `json:"verification_id"`
-}
-
-type DmRequest struct {
-	ID          int64              `json:"id"`
-	PublicID    pgtype.UUID        `json:"public_id"`
-	RequesterID int64              `json:"requester_id"`
-	TargetDmID  int64              `json:"target_dm_id"`
-	Kind        string             `json:"kind"`
-	Note        pgtype.Text        `json:"note"`
-	Status      string             `json:"status"`
-	ResolvedBy  pgtype.Int8        `json:"resolved_by"`
-	ResolvedAt  pgtype.Timestamptz `json:"resolved_at"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-}
-
 type Document struct {
 	ID              int64              `json:"id"`
 	PublicID        pgtype.UUID        `json:"public_id"`
@@ -284,9 +186,9 @@ type DocumentLink struct {
 	QuestTargetID      pgtype.Int8 `json:"quest_target_id"`
 	CharacterTargetID  pgtype.Int8 `json:"character_target_id"`
 	RegionTargetID     pgtype.Int8 `json:"region_target_id"`
-	TargetType         pgtype.Text `json:"target_type"`
-	TargetID           pgtype.Int8 `json:"target_id"`
-	SummaryAppendOrder pgtype.Int8 `json:"summary_append_order"`
+	TargetType         string      `json:"target_type"`
+	TargetID           int64       `json:"target_id"`
+	SummaryAppendOrder int64       `json:"summary_append_order"`
 }
 
 type DocumentReader struct {
@@ -337,45 +239,6 @@ type GameTimeMap struct {
 	GameDay  int32       `json:"game_day"`
 }
 
-type Hex struct {
-	ID        int64              `json:"id"`
-	PublicID  pgtype.UUID        `json:"public_id"`
-	MapID     int64              `json:"map_id"`
-	Col       int32              `json:"col"`
-	Row       int32              `json:"row"`
-	Terrain   pgtype.Text        `json:"terrain"`
-	Elevation pgtype.Text        `json:"elevation"`
-	Climate   pgtype.Text        `json:"climate"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	SubmapID  pgtype.Int8        `json:"submap_id"`
-}
-
-type HexChange struct {
-	ID        int64              `json:"id"`
-	PublicID  pgtype.UUID        `json:"public_id"`
-	HexID     int64              `json:"hex_id"`
-	Kind      string             `json:"kind"`
-	Payload   []byte             `json:"payload"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-}
-
-type HexEdge struct {
-	ID         int64       `json:"id"`
-	PublicID   pgtype.UUID `json:"public_id"`
-	MapID      int64       `json:"map_id"`
-	HexA       int64       `json:"hex_a"`
-	HexB       int64       `json:"hex_b"`
-	EdgeType   string      `json:"edge_type"`
-	ASide      pgtype.Text `json:"a_side"`
-	DocumentID pgtype.Int8 `json:"document_id"`
-}
-
-type HexEntryLink struct {
-	HexID      int64  `json:"hex_id"`
-	DocumentID int64  `json:"document_id"`
-	Relation   string `json:"relation"`
-}
-
 type IdempotencyKey struct {
 	Endpoint    string             `json:"endpoint"`
 	Key         string             `json:"key"`
@@ -384,15 +247,6 @@ type IdempotencyKey struct {
 	CompletedAt pgtype.Timestamptz `json:"completed_at"`
 	Fingerprint pgtype.Text        `json:"fingerprint"`
 	Receipt     []byte             `json:"receipt"`
-}
-
-type JobRedrife struct {
-	ActorID   int64              `json:"actor_id"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	ID        int64              `json:"id"`
-	JobID     int64              `json:"job_id"`
-	PublicID  pgtype.UUID        `json:"public_id"`
-	Reason    string             `json:"reason"`
 }
 
 type LieutenantAssignment struct {
@@ -409,24 +263,10 @@ type Map struct {
 	AtlasCode string             `json:"atlas_code"`
 	MapKind   string             `json:"map_kind"`
 	RegionID  pgtype.Int8        `json:"region_id"`
-	Cols      pgtype.Int4        `json:"cols"`
-	Rows      pgtype.Int4        `json:"rows"`
 	AssetPath pgtype.Text        `json:"asset_path"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	CreatedBy pgtype.Int8        `json:"created_by"`
 	Family    string             `json:"family"`
-}
-
-type MapChange struct {
-	ActorID          int64              `json:"actor_id"`
-	AffectedPublicID pgtype.UUID        `json:"affected_public_id"`
-	AffectedType     string             `json:"affected_type"`
-	ID               int64              `json:"id"`
-	MapID            int64              `json:"map_id"`
-	NewValue         []byte             `json:"new_value"`
-	OldValue         []byte             `json:"old_value"`
-	PublicID         pgtype.UUID        `json:"public_id"`
-	RecordedAt       pgtype.Timestamptz `json:"recorded_at"`
 }
 
 type Member struct {
@@ -451,12 +291,6 @@ type MemberAvailability struct {
 	StartMinute int16       `json:"start_minute"`
 	EndMinute   int16       `json:"end_minute"`
 	Note        pgtype.Text `json:"note"`
-}
-
-type MemberFollow struct {
-	FollowerID int64              `json:"follower_id"`
-	FollowedID int64              `json:"followed_id"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
 }
 
 type MemberSetting struct {
@@ -497,48 +331,6 @@ type Notification struct {
 	Body        string             `json:"body"`
 	ReadAt      pgtype.Timestamptz `json:"read_at"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	EventID     pgtype.Int8        `json:"event_id"`
-}
-
-type NotificationChannelDelivery struct {
-	Channel     string             `json:"channel"`
-	DeliveredAt pgtype.Timestamptz `json:"delivered_at"`
-	EventID     int64              `json:"event_id"`
-	JobID       pgtype.Int8        `json:"job_id"`
-	LastError   pgtype.Text        `json:"last_error"`
-	MemberID    int64              `json:"member_id"`
-	State       string             `json:"state"`
-}
-
-type NotificationEvent struct {
-	ActorID         pgtype.Int8        `json:"actor_id"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	EventKey        string             `json:"event_key"`
-	Facts           []byte             `json:"facts"`
-	ID              int64              `json:"id"`
-	Kind            string             `json:"kind"`
-	PublicID        pgtype.UUID        `json:"public_id"`
-	SubjectPublicID pgtype.UUID        `json:"subject_public_id"`
-	SubjectType     string             `json:"subject_type"`
-}
-
-type OperationalObservation struct {
-	ID         int64              `json:"id"`
-	Key        string             `json:"key"`
-	ObservedAt pgtype.Timestamptz `json:"observed_at"`
-	Payload    []byte             `json:"payload"`
-	PublicID   pgtype.UUID        `json:"public_id"`
-	State      string             `json:"state"`
-}
-
-type Poi struct {
-	ID                 int64       `json:"id"`
-	PublicID           pgtype.UUID `json:"public_id"`
-	HexID              int64       `json:"hex_id"`
-	PoiType            string      `json:"poi_type"`
-	DiscoveryTier      string      `json:"discovery_tier"`
-	IsCharterObjective bool        `json:"is_charter_objective"`
-	DocumentID         pgtype.Int8 `json:"document_id"`
 }
 
 type PointcrawlEdge struct {
@@ -571,17 +363,6 @@ type PointcrawlNode struct {
 	SubmapID  pgtype.Int8        `json:"submap_id"`
 	X         float64            `json:"x"`
 	Y         float64            `json:"y"`
-}
-
-type PointcrawlNodeChange struct {
-	ActorID   int64              `json:"actor_id"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	ID        int64              `json:"id"`
-	Kind      string             `json:"kind"`
-	NewValue  []byte             `json:"new_value"`
-	NodeID    int64              `json:"node_id"`
-	OldValue  []byte             `json:"old_value"`
-	PublicID  pgtype.UUID        `json:"public_id"`
 }
 
 type Quest struct {
@@ -622,25 +403,9 @@ type QuestArc struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 }
 
-type QuestChange struct {
-	ActorID   int64              `json:"actor_id"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	Facts     []byte             `json:"facts"`
-	ID        int64              `json:"id"`
-	Kind      string             `json:"kind"`
-	PublicID  pgtype.UUID        `json:"public_id"`
-	QuestID   int64              `json:"quest_id"`
-}
-
 type QuestDisplayStatus struct {
 	ID            int64  `json:"id"`
 	DisplayStatus string `json:"display_status"`
-}
-
-type QuestHex struct {
-	QuestID int64  `json:"quest_id"`
-	HexID   int64  `json:"hex_id"`
-	Role    string `json:"role"`
 }
 
 type QuestParticipant struct {
@@ -653,30 +418,15 @@ type QuestParticipant struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
+type QuestPointcrawlNode struct {
+	QuestID int64  `json:"quest_id"`
+	NodeID  int64  `json:"node_id"`
+	Role    string `json:"role"`
+}
+
 type QuestRegion struct {
 	QuestID  int64 `json:"quest_id"`
 	RegionID int64 `json:"region_id"`
-}
-
-type QuestRewardDecision struct {
-	ClosureChangeID int64              `json:"closure_change_id"`
-	DecidedAt       pgtype.Timestamptz `json:"decided_at"`
-	DecidedBy       int64              `json:"decided_by"`
-	PublicID        pgtype.UUID        `json:"public_id"`
-	QuestID         int64              `json:"quest_id"`
-}
-
-type QuestRewardEntitlement struct {
-	AwardedAt          pgtype.Timestamptz `json:"awarded_at"`
-	AwardedBy          int64              `json:"awarded_by"`
-	CharacterID        int64              `json:"character_id"`
-	ClaimedAt          pgtype.Timestamptz `json:"claimed_at"`
-	ID                 int64              `json:"id"`
-	Note               pgtype.Text        `json:"note"`
-	Pcxp               int32              `json:"pcxp"`
-	ProgressionEntryID pgtype.Int8        `json:"progression_entry_id"`
-	PublicID           pgtype.UUID        `json:"public_id"`
-	QuestID            int64              `json:"quest_id"`
 }
 
 type Region struct {
@@ -691,53 +441,11 @@ type Region struct {
 	DeletedBy       pgtype.Int8        `json:"deleted_by"`
 }
 
-type RegionChange struct {
-	ActorID   int64              `json:"actor_id"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	ID        int64              `json:"id"`
-	Kind      string             `json:"kind"`
-	NewValue  []byte             `json:"new_value"`
-	OldValue  []byte             `json:"old_value"`
-	PublicID  pgtype.UUID        `json:"public_id"`
-	RegionID  int64              `json:"region_id"`
-}
-
-type RequestDecision struct {
-	ActorID    int64              `json:"actor_id"`
-	Decision   string             `json:"decision"`
-	ID         int64              `json:"id"`
-	Note       pgtype.Text        `json:"note"`
-	PublicID   pgtype.UUID        `json:"public_id"`
-	RecordedAt pgtype.Timestamptz `json:"recorded_at"`
-	RequestID  int64              `json:"request_id"`
-}
-
-type RoleChange struct {
-	ID         int64              `json:"id"`
-	PublicID   pgtype.UUID        `json:"public_id"`
-	MemberID   int64              `json:"member_id"`
-	OldRoles   []string           `json:"old_roles"`
-	NewRoles   []string           `json:"new_roles"`
-	ChangedBy  int64              `json:"changed_by"`
-	OccurredAt pgtype.Timestamptz `json:"occurred_at"`
-	Note       pgtype.Text        `json:"note"`
-}
-
 type SiteSetting struct {
 	Key        string             `json:"key"`
 	DocumentID pgtype.Int8        `json:"document_id"`
 	Payload    []byte             `json:"payload"`
 	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
-}
-
-type SiteSettingChange struct {
-	ActorID    int64              `json:"actor_id"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
-	ID         int64              `json:"id"`
-	NewValue   []byte             `json:"new_value"`
-	OldValue   []byte             `json:"old_value"`
-	PublicID   pgtype.UUID        `json:"public_id"`
-	SettingKey string             `json:"setting_key"`
 }
 
 type TimeAnchor struct {
@@ -747,16 +455,6 @@ type TimeAnchor struct {
 	EpochDay int32              `json:"epoch_day"`
 	Rate     float64            `json:"rate"`
 	Note     pgtype.Text        `json:"note"`
-}
-
-type TimeAnchorChange struct {
-	ActorID   int64              `json:"actor_id"`
-	AnchorID  int64              `json:"anchor_id"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	ID        int64              `json:"id"`
-	NewValue  []byte             `json:"new_value"`
-	OldValue  []byte             `json:"old_value"`
-	PublicID  pgtype.UUID        `json:"public_id"`
 }
 
 type Unlockable struct {
@@ -772,14 +470,13 @@ type Unlockable struct {
 }
 
 type Verification struct {
-	ID                int64              `json:"id"`
-	PublicID          pgtype.UUID        `json:"public_id"`
-	SubjectType       string             `json:"subject_type"`
-	SubjectID         int64              `json:"subject_id"`
-	Verdict           string             `json:"verdict"`
-	DecidedBy         int64              `json:"decided_by"`
-	Note              pgtype.Text        `json:"note"`
-	CreatedAt         pgtype.Timestamptz `json:"created_at"`
-	ReviewRevision    pgtype.Int4        `json:"review_revision"`
-	EvidenceAttemptID pgtype.Int8        `json:"evidence_attempt_id"`
+	ID             int64              `json:"id"`
+	PublicID       pgtype.UUID        `json:"public_id"`
+	SubjectType    string             `json:"subject_type"`
+	SubjectID      int64              `json:"subject_id"`
+	Verdict        string             `json:"verdict"`
+	DecidedBy      int64              `json:"decided_by"`
+	Note           pgtype.Text        `json:"note"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	ReviewRevision pgtype.Int4        `json:"review_revision"`
 }

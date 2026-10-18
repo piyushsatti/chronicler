@@ -11,68 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const countHexesForMap = `-- name: CountHexesForMap :one
-SELECT count(*)::int
-FROM hexes h
-JOIN maps m ON m.id = h.map_id
-WHERE m.public_id = $1
-`
-
-func (q *Queries) CountHexesForMap(ctx context.Context, publicID pgtype.UUID) (int32, error) {
-	row := q.db.QueryRow(ctx, countHexesForMap, publicID)
-	var column_1 int32
-	err := row.Scan(&column_1)
-	return column_1, err
-}
-
-const countMapPlaces = `-- name: CountMapPlaces :one
-SELECT count(*)::int AS total,
-       COALESCE(bool_or($1::boolean AND NOT document_readable(d.public_id, author.public_id, d.status, d.visibility, d.policy,
-      $2::uuid, $3::text[], $4::text,
-      FALSE, $5::boolean, $6::uuid[])), FALSE)::boolean AS admin_override
-FROM maps m
-JOIN hexes h ON h.map_id = m.id
-JOIN hex_entry_links hel ON hel.hex_id = h.id
-JOIN documents d ON d.id = hel.document_id
-LEFT JOIN members author ON author.id = d.author_id
-WHERE m.atlas_code = $7
-  AND d.deleted_at IS NULL AND d.status = 'published'
-  AND d.kind = 'codex_entry' AND d.category LIKE 'location/%'
-  AND document_readable(d.public_id, author.public_id, d.status, d.visibility, d.policy,
-      $2::uuid, $3::text[], $4::text,
-      $1::boolean, $5::boolean, $6::uuid[])
-`
-
-type CountMapPlacesParams struct {
-	ViewerAdmin  bool          `json:"viewer_admin"`
-	ViewerID     pgtype.UUID   `json:"viewer_id"`
-	ViewerRoles  []string      `json:"viewer_roles"`
-	ViewerHandle string        `json:"viewer_handle"`
-	ViewerLiveDm bool          `json:"viewer_live_dm"`
-	ReaderIds    []pgtype.UUID `json:"reader_ids"`
-	AtlasCode    string        `json:"atlas_code"`
-}
-
-type CountMapPlacesRow struct {
-	Total         int32 `json:"total"`
-	AdminOverride bool  `json:"admin_override"`
-}
-
-func (q *Queries) CountMapPlaces(ctx context.Context, arg CountMapPlacesParams) (CountMapPlacesRow, error) {
-	row := q.db.QueryRow(ctx, countMapPlaces,
-		arg.ViewerAdmin,
-		arg.ViewerID,
-		arg.ViewerRoles,
-		arg.ViewerHandle,
-		arg.ViewerLiveDm,
-		arg.ReaderIds,
-		arg.AtlasCode,
-	)
-	var i CountMapPlacesRow
-	err := row.Scan(&i.Total, &i.AdminOverride)
-	return i, err
-}
-
 const countOpenQuestsInRegion = `-- name: CountOpenQuestsInRegion :one
 SELECT count(*)::int FROM quests q
 JOIN quest_regions qr ON qr.quest_id = q.id
@@ -82,35 +20,6 @@ WHERE r.public_id = $1 AND q.status = 'open'
 
 func (q *Queries) CountOpenQuestsInRegion(ctx context.Context, publicID pgtype.UUID) (int32, error) {
 	row := q.db.QueryRow(ctx, countOpenQuestsInRegion, publicID)
-	var column_1 int32
-	err := row.Scan(&column_1)
-	return column_1, err
-}
-
-const countRecentHexChangesForMap = `-- name: CountRecentHexChangesForMap :one
-SELECT count(*)::int
-FROM hex_changes hc
-JOIN hexes h ON h.id = hc.hex_id
-JOIN maps m ON m.id = h.map_id
-WHERE m.atlas_code = $1 AND hc.created_at > now() - interval '30 days'
-`
-
-func (q *Queries) CountRecentHexChangesForMap(ctx context.Context, atlasCode string) (int32, error) {
-	row := q.db.QueryRow(ctx, countRecentHexChangesForMap, atlasCode)
-	var column_1 int32
-	err := row.Scan(&column_1)
-	return column_1, err
-}
-
-const countRegionHexes = `-- name: CountRegionHexes :one
-SELECT count(*)::int FROM hexes h
-JOIN maps m ON m.id = h.map_id
-JOIN regions r ON r.id = m.region_id
-WHERE r.public_id = $1
-`
-
-func (q *Queries) CountRegionHexes(ctx context.Context, publicID pgtype.UUID) (int32, error) {
-	row := q.db.QueryRow(ctx, countRegionHexes, publicID)
 	var column_1 int32
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -138,46 +47,8 @@ func (q *Queries) GetGameDayForRealDate(ctx context.Context, realDate pgtype.Dat
 	return game_day, err
 }
 
-const getHexByMapColRow = `-- name: GetHexByMapColRow :one
-SELECT h.public_id AS id, m.public_id AS map_id, h.col, h.row, h.terrain, h.elevation, h.climate
-FROM hexes h
-JOIN maps m ON m.id = h.map_id
-WHERE m.public_id = $1 AND h.col = $2 AND h.row = $3
-`
-
-type GetHexByMapColRowParams struct {
-	MapID pgtype.UUID `json:"map_id"`
-	Col   int32       `json:"col"`
-	Row   int32       `json:"row"`
-}
-
-type GetHexByMapColRowRow struct {
-	ID        pgtype.UUID `json:"id"`
-	MapID     pgtype.UUID `json:"map_id"`
-	Col       int32       `json:"col"`
-	Row       int32       `json:"row"`
-	Terrain   pgtype.Text `json:"terrain"`
-	Elevation pgtype.Text `json:"elevation"`
-	Climate   pgtype.Text `json:"climate"`
-}
-
-func (q *Queries) GetHexByMapColRow(ctx context.Context, arg GetHexByMapColRowParams) (GetHexByMapColRowRow, error) {
-	row := q.db.QueryRow(ctx, getHexByMapColRow, arg.MapID, arg.Col, arg.Row)
-	var i GetHexByMapColRowRow
-	err := row.Scan(
-		&i.ID,
-		&i.MapID,
-		&i.Col,
-		&i.Row,
-		&i.Terrain,
-		&i.Elevation,
-		&i.Climate,
-	)
-	return i, err
-}
-
 const getMapByAtlasCode = `-- name: GetMapByAtlasCode :one
-SELECT m.public_id AS id, m.name, m.atlas_code, m.map_kind AS family, r.public_id AS region_id, m.cols, m.rows
+SELECT m.public_id AS id, m.name, m.atlas_code, m.map_kind AS family, r.public_id AS region_id
 FROM maps m
 LEFT JOIN regions r ON r.id = m.region_id
 WHERE m.atlas_code = $1
@@ -189,8 +60,6 @@ type GetMapByAtlasCodeRow struct {
 	AtlasCode string      `json:"atlas_code"`
 	Family    string      `json:"family"`
 	RegionID  pgtype.UUID `json:"region_id"`
-	Cols      pgtype.Int4 `json:"cols"`
-	Rows      pgtype.Int4 `json:"rows"`
 }
 
 func (q *Queries) GetMapByAtlasCode(ctx context.Context, atlasCode string) (GetMapByAtlasCodeRow, error) {
@@ -202,197 +71,12 @@ func (q *Queries) GetMapByAtlasCode(ctx context.Context, atlasCode string) (GetM
 		&i.AtlasCode,
 		&i.Family,
 		&i.RegionID,
-		&i.Cols,
-		&i.Rows,
 	)
 	return i, err
 }
 
-const listHexChanges = `-- name: ListHexChanges :many
-SELECT hc.public_id AS id, h.public_id AS hex_id, hc.kind, hc.payload, hc.created_at
-FROM hex_changes hc
-JOIN hexes h ON h.id = hc.hex_id
-WHERE h.public_id = $1
-ORDER BY hc.created_at DESC
-LIMIT $2
-`
-
-type ListHexChangesParams struct {
-	HexID    pgtype.UUID `json:"hex_id"`
-	RowLimit int32       `json:"row_limit"`
-}
-
-type ListHexChangesRow struct {
-	ID        pgtype.UUID        `json:"id"`
-	HexID     pgtype.UUID        `json:"hex_id"`
-	Kind      string             `json:"kind"`
-	Payload   []byte             `json:"payload"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-}
-
-func (q *Queries) ListHexChanges(ctx context.Context, arg ListHexChangesParams) ([]ListHexChangesRow, error) {
-	rows, err := q.db.Query(ctx, listHexChanges, arg.HexID, arg.RowLimit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListHexChangesRow{}
-	for rows.Next() {
-		var i ListHexChangesRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.HexID,
-			&i.Kind,
-			&i.Payload,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listHexesForMap = `-- name: ListHexesForMap :many
-SELECT h.public_id AS id, m.public_id AS map_id, h.col, h.row, h.terrain, h.elevation, h.climate
-FROM hexes h
-JOIN maps m ON m.id = h.map_id
-WHERE m.public_id = $1
-ORDER BY h.row, h.col
-LIMIT $3 OFFSET $2
-`
-
-type ListHexesForMapParams struct {
-	MapID     pgtype.UUID `json:"map_id"`
-	RowOffset int32       `json:"row_offset"`
-	RowLimit  int32       `json:"row_limit"`
-}
-
-type ListHexesForMapRow struct {
-	ID        pgtype.UUID `json:"id"`
-	MapID     pgtype.UUID `json:"map_id"`
-	Col       int32       `json:"col"`
-	Row       int32       `json:"row"`
-	Terrain   pgtype.Text `json:"terrain"`
-	Elevation pgtype.Text `json:"elevation"`
-	Climate   pgtype.Text `json:"climate"`
-}
-
-func (q *Queries) ListHexesForMap(ctx context.Context, arg ListHexesForMapParams) ([]ListHexesForMapRow, error) {
-	rows, err := q.db.Query(ctx, listHexesForMap, arg.MapID, arg.RowOffset, arg.RowLimit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListHexesForMapRow{}
-	for rows.Next() {
-		var i ListHexesForMapRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.MapID,
-			&i.Col,
-			&i.Row,
-			&i.Terrain,
-			&i.Elevation,
-			&i.Climate,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listMapPlaces = `-- name: ListMapPlaces :many
-SELECT h.public_id AS hex_id, h.col, h.row, d.public_id AS document_id, d.slug, d.title, COALESCE(d.category, '') AS category,
-       COALESCE($1::boolean AND NOT document_readable(d.public_id, author.public_id, d.status, d.visibility, d.policy,
-      $2::uuid, $3::text[], $4::text,
-      FALSE, $5::boolean, $6::uuid[]), FALSE)::boolean AS admin_override
-FROM maps m
-JOIN hexes h ON h.map_id = m.id
-JOIN hex_entry_links hel ON hel.hex_id = h.id
-JOIN documents d ON d.id = hel.document_id
-LEFT JOIN members author ON author.id = d.author_id
-WHERE m.atlas_code = $7
-  AND d.deleted_at IS NULL AND d.status = 'published'
-  AND d.kind = 'codex_entry' AND d.category LIKE 'location/%'
-  AND document_readable(d.public_id, author.public_id, d.status, d.visibility, d.policy,
-      $2::uuid, $3::text[], $4::text,
-      $1::boolean, $5::boolean, $6::uuid[])
-ORDER BY d.title, d.id, h.id
-LIMIT $9 OFFSET $8
-`
-
-type ListMapPlacesParams struct {
-	ViewerAdmin  bool          `json:"viewer_admin"`
-	ViewerID     pgtype.UUID   `json:"viewer_id"`
-	ViewerRoles  []string      `json:"viewer_roles"`
-	ViewerHandle string        `json:"viewer_handle"`
-	ViewerLiveDm bool          `json:"viewer_live_dm"`
-	ReaderIds    []pgtype.UUID `json:"reader_ids"`
-	AtlasCode    string        `json:"atlas_code"`
-	RowOffset    int32         `json:"row_offset"`
-	RowLimit     int32         `json:"row_limit"`
-}
-
-type ListMapPlacesRow struct {
-	HexID         pgtype.UUID `json:"hex_id"`
-	Col           int32       `json:"col"`
-	Row           int32       `json:"row"`
-	DocumentID    pgtype.UUID `json:"document_id"`
-	Slug          string      `json:"slug"`
-	Title         string      `json:"title"`
-	Category      string      `json:"category"`
-	AdminOverride bool        `json:"admin_override"`
-}
-
-func (q *Queries) ListMapPlaces(ctx context.Context, arg ListMapPlacesParams) ([]ListMapPlacesRow, error) {
-	rows, err := q.db.Query(ctx, listMapPlaces,
-		arg.ViewerAdmin,
-		arg.ViewerID,
-		arg.ViewerRoles,
-		arg.ViewerHandle,
-		arg.ViewerLiveDm,
-		arg.ReaderIds,
-		arg.AtlasCode,
-		arg.RowOffset,
-		arg.RowLimit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListMapPlacesRow{}
-	for rows.Next() {
-		var i ListMapPlacesRow
-		if err := rows.Scan(
-			&i.HexID,
-			&i.Col,
-			&i.Row,
-			&i.DocumentID,
-			&i.Slug,
-			&i.Title,
-			&i.Category,
-			&i.AdminOverride,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listMaps = `-- name: ListMaps :many
-SELECT m.public_id AS id, m.name, m.atlas_code, m.map_kind AS family, r.public_id AS region_id, m.cols, m.rows
+SELECT m.public_id AS id, m.name, m.atlas_code, m.map_kind AS family, r.public_id AS region_id
 FROM maps m
 LEFT JOIN regions r ON r.id = m.region_id
 WHERE ($1::text IS NULL OR m.map_kind = $1)
@@ -405,8 +89,6 @@ type ListMapsRow struct {
 	AtlasCode string      `json:"atlas_code"`
 	Family    string      `json:"family"`
 	RegionID  pgtype.UUID `json:"region_id"`
-	Cols      pgtype.Int4 `json:"cols"`
-	Rows      pgtype.Int4 `json:"rows"`
 }
 
 func (q *Queries) ListMaps(ctx context.Context, dollar_1 string) ([]ListMapsRow, error) {
@@ -424,8 +106,6 @@ func (q *Queries) ListMaps(ctx context.Context, dollar_1 string) ([]ListMapsRow,
 			&i.AtlasCode,
 			&i.Family,
 			&i.RegionID,
-			&i.Cols,
-			&i.Rows,
 		); err != nil {
 			return nil, err
 		}

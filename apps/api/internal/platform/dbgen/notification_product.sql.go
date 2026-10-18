@@ -12,15 +12,11 @@ import (
 )
 
 const productNotificationInbox = `-- name: ProductNotificationInbox :many
+
 SELECT n.public_id, n.kind, n.subject_type, n.subject_id, n.body,
-       n.read_at, n.created_at, e.public_id AS event_public_id,
-       e.event_key, e.kind AS event_kind, e.subject_type AS event_subject_type,
-       e.subject_public_id AS event_subject_public_id, e.facts,
-       e.created_at AS event_created_at, a.public_id AS event_actor_public_id
+       n.read_at, n.created_at
 FROM notifications n
 JOIN members m ON m.id = n.member_id
-LEFT JOIN notification_events e ON e.id = n.event_id
-LEFT JOIN members a ON a.id = e.actor_id
 WHERE m.public_id = $1::uuid
   AND (NOT $2::boolean OR n.read_at IS NULL)
   AND ($3::timestamptz IS NULL
@@ -39,23 +35,16 @@ type ProductNotificationInboxParams struct {
 }
 
 type ProductNotificationInboxRow struct {
-	PublicID             pgtype.UUID        `json:"public_id"`
-	Kind                 string             `json:"kind"`
-	SubjectType          pgtype.Text        `json:"subject_type"`
-	SubjectID            pgtype.Int8        `json:"subject_id"`
-	Body                 string             `json:"body"`
-	ReadAt               pgtype.Timestamptz `json:"read_at"`
-	CreatedAt            pgtype.Timestamptz `json:"created_at"`
-	EventPublicID        pgtype.UUID        `json:"event_public_id"`
-	EventKey             pgtype.Text        `json:"event_key"`
-	EventKind            pgtype.Text        `json:"event_kind"`
-	EventSubjectType     pgtype.Text        `json:"event_subject_type"`
-	EventSubjectPublicID pgtype.UUID        `json:"event_subject_public_id"`
-	Facts                []byte             `json:"facts"`
-	EventCreatedAt       pgtype.Timestamptz `json:"event_created_at"`
-	EventActorPublicID   pgtype.UUID        `json:"event_actor_public_id"`
+	PublicID    pgtype.UUID        `json:"public_id"`
+	Kind        string             `json:"kind"`
+	SubjectType pgtype.Text        `json:"subject_type"`
+	SubjectID   pgtype.Int8        `json:"subject_id"`
+	Body        string             `json:"body"`
+	ReadAt      pgtype.Timestamptz `json:"read_at"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
+// Inbox-only notifications (D1). No notification_events ledger.
 func (q *Queries) ProductNotificationInbox(ctx context.Context, arg ProductNotificationInboxParams) ([]ProductNotificationInboxRow, error) {
 	rows, err := q.db.Query(ctx, productNotificationInbox,
 		arg.MemberID,
@@ -79,14 +68,6 @@ func (q *Queries) ProductNotificationInbox(ctx context.Context, arg ProductNotif
 			&i.Body,
 			&i.ReadAt,
 			&i.CreatedAt,
-			&i.EventPublicID,
-			&i.EventKey,
-			&i.EventKind,
-			&i.EventSubjectType,
-			&i.EventSubjectPublicID,
-			&i.Facts,
-			&i.EventCreatedAt,
-			&i.EventActorPublicID,
 		); err != nil {
 			return nil, err
 		}
@@ -98,85 +79,49 @@ func (q *Queries) ProductNotificationInbox(ctx context.Context, arg ProductNotif
 	return items, nil
 }
 
-const productNotificationInsertEvent = `-- name: ProductNotificationInsertEvent :one
-INSERT INTO notification_events (actor_id, created_at, event_key, facts, kind,
-                                 subject_public_id, subject_type)
-SELECT m.id, $1::timestamptz, $2::text,
-       $3::jsonb, $4::text,
-       $5::uuid, $6::text
+const productNotificationInsertInbox = `-- name: ProductNotificationInsertInbox :many
+INSERT INTO notifications (member_id, kind, subject_type, subject_id, body, created_at)
+SELECT m.id, $1::text, $2::text, $3::bigint,
+       $4::text, $5::timestamptz
 FROM members m
-WHERE m.public_id = $7::uuid
+WHERE m.public_id = ANY($6::uuid[])
 RETURNING public_id
 `
 
-type ProductNotificationInsertEventParams struct {
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	EventKey        string             `json:"event_key"`
-	Facts           []byte             `json:"facts"`
-	Kind            string             `json:"kind"`
-	SubjectPublicID pgtype.UUID        `json:"subject_public_id"`
-	SubjectType     string             `json:"subject_type"`
-	ActorID         pgtype.UUID        `json:"actor_id"`
+type ProductNotificationInsertInboxParams struct {
+	Kind        string             `json:"kind"`
+	SubjectType pgtype.Text        `json:"subject_type"`
+	SubjectID   pgtype.Int8        `json:"subject_id"`
+	Body        string             `json:"body"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	MemberIds   []pgtype.UUID      `json:"member_ids"`
 }
 
-func (q *Queries) ProductNotificationInsertEvent(ctx context.Context, arg ProductNotificationInsertEventParams) (pgtype.UUID, error) {
-	row := q.db.QueryRow(ctx, productNotificationInsertEvent,
-		arg.CreatedAt,
-		arg.EventKey,
-		arg.Facts,
+func (q *Queries) ProductNotificationInsertInbox(ctx context.Context, arg ProductNotificationInsertInboxParams) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, productNotificationInsertInbox,
 		arg.Kind,
-		arg.SubjectPublicID,
 		arg.SubjectType,
-		arg.ActorID,
+		arg.SubjectID,
+		arg.Body,
+		arg.CreatedAt,
+		arg.MemberIds,
 	)
-	var public_id pgtype.UUID
-	err := row.Scan(&public_id)
-	return public_id, err
-}
-
-const productNotificationInsertRecipients = `-- name: ProductNotificationInsertRecipients :one
-WITH inserted AS (
-    INSERT INTO notifications (member_id, event_id, kind, subject_type, created_at)
-    SELECT m.id, e.id, e.kind, e.subject_type, $3::timestamptz
-    FROM notification_events e
-    CROSS JOIN members m
-    WHERE e.public_id = $2::uuid
-      AND m.public_id = ANY($1::uuid[])
-    ON CONFLICT (event_id, member_id) DO NOTHING
-    RETURNING public_id
-)
-SELECT (SELECT count(*)::integer FROM inserted) AS affected_count,
-       (SELECT count(DISTINCT requested)::integer
-        FROM unnest($1::uuid[]) AS requested) AS requested_count,
-       (SELECT count(*)::integer FROM members
-        WHERE public_id = ANY($1::uuid[])) AS resolved_count,
-       EXISTS(SELECT 1 FROM notification_events
-              WHERE public_id = $2::uuid) AS event_found
-`
-
-type ProductNotificationInsertRecipientsParams struct {
-	MemberIds []pgtype.UUID      `json:"member_ids"`
-	EventID   pgtype.UUID        `json:"event_id"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-}
-
-type ProductNotificationInsertRecipientsRow struct {
-	AffectedCount  int32 `json:"affected_count"`
-	RequestedCount int32 `json:"requested_count"`
-	ResolvedCount  int32 `json:"resolved_count"`
-	EventFound     bool  `json:"event_found"`
-}
-
-func (q *Queries) ProductNotificationInsertRecipients(ctx context.Context, arg ProductNotificationInsertRecipientsParams) (ProductNotificationInsertRecipientsRow, error) {
-	row := q.db.QueryRow(ctx, productNotificationInsertRecipients, arg.MemberIds, arg.EventID, arg.CreatedAt)
-	var i ProductNotificationInsertRecipientsRow
-	err := row.Scan(
-		&i.AffectedCount,
-		&i.RequestedCount,
-		&i.ResolvedCount,
-		&i.EventFound,
-	)
-	return i, err
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.UUID{}
+	for rows.Next() {
+		var public_id pgtype.UUID
+		if err := rows.Scan(&public_id); err != nil {
+			return nil, err
+		}
+		items = append(items, public_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const productNotificationLockOldestUnread = `-- name: ProductNotificationLockOldestUnread :many
@@ -189,15 +134,10 @@ WITH selected AS MATERIALIZED (
     LIMIT LEAST($2::integer, 100)
 )
 SELECT n.public_id, n.kind, n.subject_type, n.subject_id, n.body,
-       n.read_at, n.created_at, e.public_id AS event_public_id,
-       e.event_key, e.kind AS event_kind, e.subject_type AS event_subject_type,
-       e.subject_public_id AS event_subject_public_id, e.facts,
-       e.created_at AS event_created_at, a.public_id AS event_actor_public_id
+       n.read_at, n.created_at
 FROM selected
 JOIN notifications n ON n.public_id = selected.public_id
 JOIN members m ON m.id = n.member_id
-LEFT JOIN notification_events e ON e.id = n.event_id
-LEFT JOIN members a ON a.id = e.actor_id
 WHERE m.public_id = $1::uuid AND n.read_at IS NULL
 ORDER BY n.public_id
 FOR UPDATE OF n
@@ -209,21 +149,13 @@ type ProductNotificationLockOldestUnreadParams struct {
 }
 
 type ProductNotificationLockOldestUnreadRow struct {
-	PublicID             pgtype.UUID        `json:"public_id"`
-	Kind                 string             `json:"kind"`
-	SubjectType          pgtype.Text        `json:"subject_type"`
-	SubjectID            pgtype.Int8        `json:"subject_id"`
-	Body                 string             `json:"body"`
-	ReadAt               pgtype.Timestamptz `json:"read_at"`
-	CreatedAt            pgtype.Timestamptz `json:"created_at"`
-	EventPublicID        pgtype.UUID        `json:"event_public_id"`
-	EventKey             pgtype.Text        `json:"event_key"`
-	EventKind            pgtype.Text        `json:"event_kind"`
-	EventSubjectType     pgtype.Text        `json:"event_subject_type"`
-	EventSubjectPublicID pgtype.UUID        `json:"event_subject_public_id"`
-	Facts                []byte             `json:"facts"`
-	EventCreatedAt       pgtype.Timestamptz `json:"event_created_at"`
-	EventActorPublicID   pgtype.UUID        `json:"event_actor_public_id"`
+	PublicID    pgtype.UUID        `json:"public_id"`
+	Kind        string             `json:"kind"`
+	SubjectType pgtype.Text        `json:"subject_type"`
+	SubjectID   pgtype.Int8        `json:"subject_id"`
+	Body        string             `json:"body"`
+	ReadAt      pgtype.Timestamptz `json:"read_at"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 }
 
 func (q *Queries) ProductNotificationLockOldestUnread(ctx context.Context, arg ProductNotificationLockOldestUnreadParams) ([]ProductNotificationLockOldestUnreadRow, error) {
@@ -243,14 +175,6 @@ func (q *Queries) ProductNotificationLockOldestUnread(ctx context.Context, arg P
 			&i.Body,
 			&i.ReadAt,
 			&i.CreatedAt,
-			&i.EventPublicID,
-			&i.EventKey,
-			&i.EventKind,
-			&i.EventSubjectType,
-			&i.EventSubjectPublicID,
-			&i.Facts,
-			&i.EventCreatedAt,
-			&i.EventActorPublicID,
 		); err != nil {
 			return nil, err
 		}
@@ -293,244 +217,6 @@ func (q *Queries) ProductNotificationMarkRead(ctx context.Context, arg ProductNo
 	var affected_count int32
 	err := row.Scan(&affected_count)
 	return affected_count, err
-}
-
-const productNotificationSubjectProofs = `-- name: ProductNotificationSubjectProofs :many
-WITH requested AS (
-    SELECT notification_id, ordinal,
-           ($2::uuid[])[ordinal] AS event_id,
-           ($3::text[])[ordinal] AS subject_type,
-           ($4::uuid[])[ordinal] AS subject_id
-    FROM unnest($5::uuid[])
-         WITH ORDINALITY AS k(notification_id, ordinal)
-)
-SELECT k.ordinal, k.notification_id AS requested_notification_id,
-       k.event_id AS requested_event_id, k.subject_type AS requested_subject_type,
-       k.subject_id AS requested_subject_id,
-       n.public_id AS notification_id, n.kind AS notification_kind,
-       n.subject_type AS notification_subject_type,
-       n.created_at AS notification_created_at,
-       e.public_id AS event_id, e.event_key, e.kind AS event_kind,
-       e.subject_type AS event_subject_type, e.subject_public_id AS event_subject_id,
-       e.facts AS event_facts, e.created_at AS event_occurred_at,
-       ea.public_id AS event_actor_id,
-       c.public_id AS current_character_id, c.name AS current_character_name,
-       c.short_code AS current_character_code, co.public_id AS character_owner_id,
-       q.public_id AS current_quest_id, q.short_code AS current_quest_code,
-       d.public_id AS current_document_id, d.deleted_at AS current_document_deleted_at,
-       da.public_id AS document_author_id,
-       rq.public_id AS current_request_id,
-       v.public_id AS verification_id, v.subject_type AS verification_subject_type,
-       vc.public_id AS verification_character_id, v.verdict AS verification_verdict, v.note AS verification_note,
-       va.public_id AS verification_actor_id, v.created_at AS verification_occurred_at,
-       r.public_id AS revision_id, rd.public_id AS revision_document_id,
-       ra.public_id AS revision_actor_id, r.created_at AS revision_occurred_at,
-       r.new_value AS revision_new_value, r.old_value AS revision_old_value,
-       r.reason AS revision_reason, r.published_at AS revision_published_at,
-       qc.public_id AS quest_change_id, qq.public_id AS quest_change_quest_id,
-       qa.public_id AS quest_change_actor_id, qc.created_at AS quest_change_occurred_at,
-       qc.kind AS quest_change_kind, qc.facts AS quest_change_facts,
-       pc.public_id AS participation_character_id, po.public_id AS participation_owner_id,
-       dec.public_id AS decision_id, dr.public_id AS decision_request_id,
-       dec.decision AS request_decision, dec.note AS request_note, dea.public_id AS decision_actor_id,
-       dec.recorded_at AS decision_occurred_at,
-       requester.public_id AS request_requester_id, target.public_id AS request_target_dm_id
-FROM requested k
-LEFT JOIN members recipient ON recipient.public_id = $1::uuid
-LEFT JOIN notifications n ON n.public_id = k.notification_id AND n.member_id = recipient.id
-LEFT JOIN notification_events e ON e.id = n.event_id AND e.public_id = k.event_id
-     AND e.subject_type = k.subject_type AND e.subject_public_id = k.subject_id
-LEFT JOIN members ea ON ea.id = e.actor_id
-LEFT JOIN characters c ON e.subject_type = 'character' AND c.public_id = e.subject_public_id
-LEFT JOIN members co ON co.id = c.owner_id
-LEFT JOIN quests q ON e.subject_type = 'quest' AND q.public_id = e.subject_public_id
-LEFT JOIN documents d ON e.subject_type = 'document' AND d.public_id = e.subject_public_id
-LEFT JOIN members da ON da.id = d.author_id
-LEFT JOIN dm_requests rq ON e.subject_type = 'request' AND rq.public_id = e.subject_public_id
-LEFT JOIN verifications v ON e.kind = 'CHARACTER_VERIFICATION_DECIDED'
-     AND v.public_id = (e.facts -> 'characterDecision' ->> 'verificationId')::uuid
-LEFT JOIN characters vc ON v.subject_type = 'character' AND vc.id = v.subject_id
-LEFT JOIN members va ON va.id = v.decided_by
-LEFT JOIN document_revisions r ON r.public_id = CASE
-     WHEN e.kind IN ('DOCUMENT_EDITED', 'DOCUMENT_PUBLISHED')
-          THEN (e.facts -> 'document' ->> 'revisionId')::uuid
-     WHEN e.kind = 'DM_MENTIONED' THEN (e.facts -> 'mention' ->> 'revisionId')::uuid
-     END
-LEFT JOIN documents rd ON rd.id = r.document_id
-LEFT JOIN members ra ON ra.id = r.created_by
-LEFT JOIN quest_changes qc ON qc.public_id = CASE
-     WHEN e.kind = 'QUEST_SCHEDULED' THEN (e.facts -> 'questChange' ->> 'questChangeId')::uuid
-     WHEN e.kind = 'QUEST_SIGNUP_CONFIRMED' THEN (e.facts -> 'signup' ->> 'questChangeId')::uuid
-     WHEN e.kind = 'QUEST_WAITLIST_PROMOTED' THEN (e.facts -> 'promotion' ->> 'questChangeId')::uuid
-     END
-LEFT JOIN quests qq ON qq.id = qc.quest_id
-LEFT JOIN members qa ON qa.id = qc.actor_id
-LEFT JOIN characters pc ON pc.public_id = CASE
-     WHEN e.kind = 'QUEST_SIGNUP_CONFIRMED' THEN (e.facts -> 'signup' ->> 'characterId')::uuid
-     WHEN e.kind = 'QUEST_WAITLIST_PROMOTED' THEN (e.facts -> 'promotion' ->> 'characterId')::uuid
-     END
-LEFT JOIN members po ON po.id = pc.owner_id
-LEFT JOIN request_decisions dec ON e.kind = 'DM_REQUEST_DECIDED'
-     AND dec.public_id = (e.facts -> 'request' ->> 'decisionId')::uuid
-LEFT JOIN dm_requests dr ON dr.id = dec.request_id
-LEFT JOIN members dea ON dea.id = dec.actor_id
-LEFT JOIN members requester ON requester.id = dr.requester_id
-LEFT JOIN members target ON target.id = dr.target_dm_id
-ORDER BY k.ordinal
-`
-
-type ProductNotificationSubjectProofsParams struct {
-	MemberID        pgtype.UUID   `json:"member_id"`
-	EventIds        []pgtype.UUID `json:"event_ids"`
-	SubjectTypes    []string      `json:"subject_types"`
-	SubjectIds      []pgtype.UUID `json:"subject_ids"`
-	NotificationIds []pgtype.UUID `json:"notification_ids"`
-}
-
-type ProductNotificationSubjectProofsRow struct {
-	Ordinal                  interface{}        `json:"ordinal"`
-	RequestedNotificationID  interface{}        `json:"requested_notification_id"`
-	RequestedEventID         interface{}        `json:"requested_event_id"`
-	RequestedSubjectType     interface{}        `json:"requested_subject_type"`
-	RequestedSubjectID       interface{}        `json:"requested_subject_id"`
-	NotificationID           pgtype.UUID        `json:"notification_id"`
-	NotificationKind         pgtype.Text        `json:"notification_kind"`
-	NotificationSubjectType  pgtype.Text        `json:"notification_subject_type"`
-	NotificationCreatedAt    pgtype.Timestamptz `json:"notification_created_at"`
-	EventID                  pgtype.UUID        `json:"event_id"`
-	EventKey                 pgtype.Text        `json:"event_key"`
-	EventKind                pgtype.Text        `json:"event_kind"`
-	EventSubjectType         pgtype.Text        `json:"event_subject_type"`
-	EventSubjectID           pgtype.UUID        `json:"event_subject_id"`
-	EventFacts               []byte             `json:"event_facts"`
-	EventOccurredAt          pgtype.Timestamptz `json:"event_occurred_at"`
-	EventActorID             pgtype.UUID        `json:"event_actor_id"`
-	CurrentCharacterID       pgtype.UUID        `json:"current_character_id"`
-	CurrentCharacterName     pgtype.Text        `json:"current_character_name"`
-	CurrentCharacterCode     pgtype.Text        `json:"current_character_code"`
-	CharacterOwnerID         pgtype.UUID        `json:"character_owner_id"`
-	CurrentQuestID           pgtype.UUID        `json:"current_quest_id"`
-	CurrentQuestCode         pgtype.Text        `json:"current_quest_code"`
-	CurrentDocumentID        pgtype.UUID        `json:"current_document_id"`
-	CurrentDocumentDeletedAt pgtype.Timestamptz `json:"current_document_deleted_at"`
-	DocumentAuthorID         pgtype.UUID        `json:"document_author_id"`
-	CurrentRequestID         pgtype.UUID        `json:"current_request_id"`
-	VerificationID           pgtype.UUID        `json:"verification_id"`
-	VerificationSubjectType  pgtype.Text        `json:"verification_subject_type"`
-	VerificationCharacterID  pgtype.UUID        `json:"verification_character_id"`
-	VerificationVerdict      pgtype.Text        `json:"verification_verdict"`
-	VerificationNote         pgtype.Text        `json:"verification_note"`
-	VerificationActorID      pgtype.UUID        `json:"verification_actor_id"`
-	VerificationOccurredAt   pgtype.Timestamptz `json:"verification_occurred_at"`
-	RevisionID               pgtype.UUID        `json:"revision_id"`
-	RevisionDocumentID       pgtype.UUID        `json:"revision_document_id"`
-	RevisionActorID          pgtype.UUID        `json:"revision_actor_id"`
-	RevisionOccurredAt       pgtype.Timestamptz `json:"revision_occurred_at"`
-	RevisionNewValue         []byte             `json:"revision_new_value"`
-	RevisionOldValue         []byte             `json:"revision_old_value"`
-	RevisionReason           pgtype.Text        `json:"revision_reason"`
-	RevisionPublishedAt      pgtype.Timestamptz `json:"revision_published_at"`
-	QuestChangeID            pgtype.UUID        `json:"quest_change_id"`
-	QuestChangeQuestID       pgtype.UUID        `json:"quest_change_quest_id"`
-	QuestChangeActorID       pgtype.UUID        `json:"quest_change_actor_id"`
-	QuestChangeOccurredAt    pgtype.Timestamptz `json:"quest_change_occurred_at"`
-	QuestChangeKind          pgtype.Text        `json:"quest_change_kind"`
-	QuestChangeFacts         []byte             `json:"quest_change_facts"`
-	ParticipationCharacterID pgtype.UUID        `json:"participation_character_id"`
-	ParticipationOwnerID     pgtype.UUID        `json:"participation_owner_id"`
-	DecisionID               pgtype.UUID        `json:"decision_id"`
-	DecisionRequestID        pgtype.UUID        `json:"decision_request_id"`
-	RequestDecision          pgtype.Text        `json:"request_decision"`
-	RequestNote              pgtype.Text        `json:"request_note"`
-	DecisionActorID          pgtype.UUID        `json:"decision_actor_id"`
-	DecisionOccurredAt       pgtype.Timestamptz `json:"decision_occurred_at"`
-	RequestRequesterID       pgtype.UUID        `json:"request_requester_id"`
-	RequestTargetDmID        pgtype.UUID        `json:"request_target_dm_id"`
-}
-
-func (q *Queries) ProductNotificationSubjectProofs(ctx context.Context, arg ProductNotificationSubjectProofsParams) ([]ProductNotificationSubjectProofsRow, error) {
-	rows, err := q.db.Query(ctx, productNotificationSubjectProofs,
-		arg.MemberID,
-		arg.EventIds,
-		arg.SubjectTypes,
-		arg.SubjectIds,
-		arg.NotificationIds,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ProductNotificationSubjectProofsRow{}
-	for rows.Next() {
-		var i ProductNotificationSubjectProofsRow
-		if err := rows.Scan(
-			&i.Ordinal,
-			&i.RequestedNotificationID,
-			&i.RequestedEventID,
-			&i.RequestedSubjectType,
-			&i.RequestedSubjectID,
-			&i.NotificationID,
-			&i.NotificationKind,
-			&i.NotificationSubjectType,
-			&i.NotificationCreatedAt,
-			&i.EventID,
-			&i.EventKey,
-			&i.EventKind,
-			&i.EventSubjectType,
-			&i.EventSubjectID,
-			&i.EventFacts,
-			&i.EventOccurredAt,
-			&i.EventActorID,
-			&i.CurrentCharacterID,
-			&i.CurrentCharacterName,
-			&i.CurrentCharacterCode,
-			&i.CharacterOwnerID,
-			&i.CurrentQuestID,
-			&i.CurrentQuestCode,
-			&i.CurrentDocumentID,
-			&i.CurrentDocumentDeletedAt,
-			&i.DocumentAuthorID,
-			&i.CurrentRequestID,
-			&i.VerificationID,
-			&i.VerificationSubjectType,
-			&i.VerificationCharacterID,
-			&i.VerificationVerdict,
-			&i.VerificationNote,
-			&i.VerificationActorID,
-			&i.VerificationOccurredAt,
-			&i.RevisionID,
-			&i.RevisionDocumentID,
-			&i.RevisionActorID,
-			&i.RevisionOccurredAt,
-			&i.RevisionNewValue,
-			&i.RevisionOldValue,
-			&i.RevisionReason,
-			&i.RevisionPublishedAt,
-			&i.QuestChangeID,
-			&i.QuestChangeQuestID,
-			&i.QuestChangeActorID,
-			&i.QuestChangeOccurredAt,
-			&i.QuestChangeKind,
-			&i.QuestChangeFacts,
-			&i.ParticipationCharacterID,
-			&i.ParticipationOwnerID,
-			&i.DecisionID,
-			&i.DecisionRequestID,
-			&i.RequestDecision,
-			&i.RequestNote,
-			&i.DecisionActorID,
-			&i.DecisionOccurredAt,
-			&i.RequestRequesterID,
-			&i.RequestTargetDmID,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }
 
 const productNotificationUnreadCount = `-- name: ProductNotificationUnreadCount :one

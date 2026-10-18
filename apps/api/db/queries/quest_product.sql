@@ -1,8 +1,3 @@
--- QUE03 owns the named SQL implementation after P04, QUE02.
--- Responsibility: Complete named set SQL projections, filters,count,page,locks,writes,histories; sqlc sources.
--- Acceptance: TASK-QUE03, AUTH-quest, BATCH-quest.
-
--- Product query code supplies one stable AsOf value for each read task.
 -- name: ProductQuestDisplayStatusAt :one
 SELECT quest_display_status_at(@status::text, @filled_count::integer, @scheduled_at::timestamptz, @duration_hours::double precision, @as_of::timestamptz)::text AS display_status;
 
@@ -44,7 +39,6 @@ SELECT counted.total, page.id, page.public_id, page.kind, page.slug, page.title,
        page.updated_at, page.admin_override
 FROM counted LEFT JOIN page ON TRUE
 ORDER BY page.updated_at DESC NULLS LAST, page.public_id DESC NULLS LAST;
-
 -- name: ProductQuestReadByID :one
 SELECT q.id, q.public_id, q.short_code, q.kinds, q.status,
        quest_display_status_at(q.status, q.filled_count, q.scheduled_at, q.duration_hours, @as_of::timestamptz) AS display_status,
@@ -62,7 +56,6 @@ JOIN documents doc ON doc.id = q.document_id
 LEFT JOIN quest_arcs arc ON arc.id = q.arc_id
 LEFT JOIN members deleted_by ON deleted_by.id = q.deleted_by
 WHERE q.public_id = @quest_id::uuid;
-
 -- name: ProductQuestReadByShortCode :one
 SELECT q.id, q.public_id, q.short_code, q.kinds, q.status,
        quest_display_status_at(q.status, q.filled_count, q.scheduled_at, q.duration_hours, @as_of::timestamptz) AS display_status,
@@ -80,7 +73,6 @@ JOIN documents doc ON doc.id = q.document_id
 LEFT JOIN quest_arcs arc ON arc.id = q.arc_id
 LEFT JOIN members deleted_by ON deleted_by.id = q.deleted_by
 WHERE q.short_code = @short_code::text;
-
 -- name: ProductQuestLockByID :one
 SELECT q.id, q.public_id, q.short_code, q.kinds, q.status, q.dm_id,
        q.arc_id, q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
@@ -92,15 +84,6 @@ SELECT q.id, q.public_id, q.short_code, q.kinds, q.status, q.dm_id,
 FROM quests q
 WHERE q.public_id = @quest_id::uuid
 FOR UPDATE OF q;
-
--- name: ProductQuestReadHexes :many
-SELECT h.public_id::text AS hex_id, q.public_id::text AS quest_id, qh.role
-FROM quest_hexes qh
-JOIN quests q ON q.id = qh.quest_id
-JOIN hexes h ON h.id = qh.hex_id
-WHERE q.public_id = @quest_id::uuid
-ORDER BY h.public_id, qh.role;
-
 -- name: ProductQuestReadRegions :many
 SELECT r.public_id::text AS region_id
 FROM quest_regions qr
@@ -108,7 +91,6 @@ JOIN quests q ON q.id = qr.quest_id
 JOIN regions r ON r.id = qr.region_id
 WHERE q.public_id = @quest_id::uuid
 ORDER BY r.public_id;
-
 -- name: ProductQuestReadParticipants :many
 SELECT q.public_id::text AS quest_id, m.public_id::text AS member_id,
        c.public_id::text AS character_id, c.name AS character_name,
@@ -122,7 +104,6 @@ JOIN characters c ON c.id = qp.character_id
 WHERE q.public_id = @quest_id::uuid
   AND (@status::text IS NULL OR qp.status = @status::text)
 ORDER BY qp.created_at, c.public_id;
-
 -- name: ProductQuestCountParticipants :one
 SELECT count(*)::bigint AS total
 FROM quest_participants qp
@@ -183,7 +164,6 @@ SELECT counted.total, page.id, page.public_id, page.short_code, page.kinds,
        page.deleted_at, page.deleted_by_public_id
 FROM counted LEFT JOIN page ON TRUE
 ORDER BY page.scheduled_at ASC NULLS LAST, page.public_id ASC NULLS LAST;
-
 -- name: ProductQuestBoardPage :many
 WITH filtered AS (
     SELECT q.id, q.public_id, q.short_code, q.kinds, q.status,
@@ -220,7 +200,6 @@ SELECT counted.total, page.id, page.public_id, page.short_code, page.kinds,
        page.created_by_public_id, page.created_at, page.updated_at
 FROM counted LEFT JOIN page ON TRUE
 ORDER BY page.scheduled_at ASC NULLS LAST, page.public_id ASC NULLS LAST;
-
 -- name: ProductQuestRecentlyClosedPage :many
 WITH filtered AS (
     SELECT q.id, q.public_id, q.short_code, q.kinds, q.status,
@@ -253,7 +232,6 @@ page AS (
 SELECT counted.total, page.*
 FROM counted LEFT JOIN page ON TRUE
 ORDER BY page.closed_at DESC NULLS LAST, page.public_id DESC NULLS LAST;
-
 -- name: ProductQuestOpenSeatsPage :many
 WITH filtered AS (
     SELECT q.id, q.public_id, q.short_code, q.dm_id, dm.public_id AS dm_public_id,
@@ -282,14 +260,12 @@ SELECT counted.total, page.id, page.public_id, page.short_code,
        page.open_seats, page.status, page.region_ids
 FROM counted LEFT JOIN page ON TRUE
 ORDER BY page.scheduled_at ASC NULLS LAST, page.public_id ASC NULLS LAST;
-
 -- name: ProductQuestGenreOptions :many
 SELECT DISTINCT genre
 FROM quests q
 CROSS JOIN LATERAL unnest(q.genres) AS genre
 WHERE q.deleted_at IS NULL
 ORDER BY genre;
-
 -- name: ProductQuestMySignupsPage :many
 WITH filtered AS (
     SELECT q.public_id::text AS quest_id, m.public_id::text AS member_id,
@@ -320,7 +296,6 @@ SELECT counted.total, page.quest_id, page.member_id, page.character_id,
 FROM counted LEFT JOIN page ON TRUE
 ORDER BY page.scheduled_at ASC NULLS LAST, page.quest_id ASC NULLS LAST,
          page.character_id ASC NULLS LAST;
-
 -- name: ProductQuestStateCounts :many
 WITH filtered AS (
     SELECT q.status
@@ -344,7 +319,6 @@ WITH filtered AS (
     UNION ALL SELECT 'cancelled'::text, 5, count(*) FILTER (WHERE status = 'cancelled')::bigint FROM filtered
 )
 SELECT state, count FROM counts ORDER BY sort_order;
-
 -- name: ProductQuestReadArc :one
 SELECT arc.id, arc.public_id, arc.name, creator.public_id AS created_by_public_id,
        arc.created_at, count(q.id)::integer AS quest_count
@@ -353,7 +327,6 @@ JOIN members creator ON creator.id = arc.created_by
 LEFT JOIN quests q ON q.arc_id = arc.id AND q.deleted_at IS NULL
 WHERE arc.public_id = @arc_id::uuid
 GROUP BY arc.id, arc.public_id, arc.name, creator.public_id, arc.created_at;
-
 -- name: ProductQuestListArcs :many
 WITH filtered AS (
     SELECT arc.id, arc.public_id, arc.name, creator.public_id AS created_by_public_id,
@@ -369,7 +342,6 @@ page AS (
 )
 SELECT counted.total, page.* FROM counted LEFT JOIN page ON TRUE
 ORDER BY page.created_at DESC NULLS LAST, page.public_id DESC NULLS LAST;
-
 -- name: ProductQuestBatchRead :many
 SELECT input.ordinality::integer AS input_index, input.public_id::uuid AS requested_id,
        q.id, q.public_id, q.short_code, q.kinds, q.status,
@@ -387,7 +359,6 @@ LEFT JOIN quest_arcs arc ON arc.id = q.arc_id
 LEFT JOIN documents doc ON doc.id = q.document_id
 LEFT JOIN members creator ON creator.id = q.created_by
 ORDER BY input.ordinality;
-
 -- name: ProductQuestBatchParticipants :many
 SELECT input.ordinality::integer AS input_index, input.quest_id,
        qp.status AS filter_status, qp.character_id,
@@ -415,7 +386,6 @@ SELECT q.id, q.public_id, q.short_code, q.status, q.dm_id, q.arc_id,
        q.created_by, q.created_at, q.updated_at, q.closed_at, q.deleted_at,
        q.deleted_by
 FROM quests q WHERE q.short_code = @short_code::text FOR UPDATE OF q;
-
 -- name: ProductQuestInsert :one
 INSERT INTO quests (
     short_code, kinds, dm_id, arc_id, scheduled_at, duration_hours, slots_max,
@@ -430,7 +400,6 @@ INSERT INTO quests (
 )
 RETURNING id, public_id, short_code, status, scheduled_at, duration_hours,
           slots_max, filled_count, created_at, updated_at;
-
 -- name: ProductQuestUpdateMetadata :one
 UPDATE quests q SET
     kinds = @kinds::text[], dm_id = @dm_id::bigint, arc_id = @arc_id::bigint,
@@ -442,55 +411,45 @@ UPDATE quests q SET
 WHERE q.public_id = @quest_id::uuid AND q.updated_at = @expected_updated_at::timestamptz
 RETURNING q.id, q.public_id, q.short_code, q.status, q.scheduled_at,
           q.duration_hours, q.slots_max, q.filled_count, q.updated_at;
-
 -- name: ProductQuestSetStatus :one
 UPDATE quests q SET status = @status::text,
     closed_at = CASE WHEN @status::text = 'closed' THEN @at::timestamptz ELSE q.closed_at END,
     updated_at = @at::timestamptz
 WHERE q.public_id = @quest_id::uuid
 RETURNING q.id, q.public_id, q.status, q.closed_at, q.updated_at;
-
 -- name: ProductQuestSetDeleted :one
 UPDATE quests q SET deleted_at = @deleted_at::timestamptz,
     deleted_by = @deleted_by::bigint, updated_at = @at::timestamptz
 WHERE q.public_id = @quest_id::uuid
 RETURNING q.id, q.public_id, q.deleted_at, q.deleted_by, q.updated_at;
-
 -- name: ProductQuestSetArc :one
 UPDATE quests q SET arc_id = @arc_id::bigint, updated_at = @at::timestamptz
 WHERE q.public_id = @quest_id::uuid
 RETURNING q.id, q.public_id, q.arc_id, q.updated_at;
-
 -- name: ProductQuestInsertArc :one
 INSERT INTO quest_arcs(name, created_by, created_at)
 VALUES (@name::text, @created_by::bigint, @at::timestamptz)
 RETURNING id, public_id, name, created_by, created_at;
-
 -- name: ProductQuestUpdateArc :one
 UPDATE quest_arcs SET name = @name::text
 WHERE public_id = @arc_id::uuid
 RETURNING id, public_id, name, created_by, created_at;
-
 -- name: ProductQuestInsertParticipant :one
 INSERT INTO quest_participants(quest_id, member_id, character_id, status, manual, created_at, updated_at)
 VALUES (@quest_id::bigint, @member_id::bigint, @character_id::bigint,
         @status::text, @manual::boolean, @at::timestamptz, @at::timestamptz)
 RETURNING quest_id, member_id, character_id, status, manual, created_at, updated_at;
-
 -- name: ProductQuestUpdateParticipant :one
 UPDATE quest_participants SET status = @status::text, manual = @manual::boolean,
        updated_at = @at::timestamptz
 WHERE quest_id = @quest_id::bigint AND character_id = @character_id::bigint
 RETURNING quest_id, member_id, character_id, status, manual, created_at, updated_at;
-
 -- name: ProductQuestDeleteParticipant :execrows
 DELETE FROM quest_participants
 WHERE quest_id = @quest_id::bigint AND character_id = @character_id::bigint;
-
 -- name: ProductQuestLockCapacity :one
 SELECT q.id, q.public_id, q.status, q.slots_max, q.filled_count
 FROM quests q WHERE q.id = @quest_id::bigint FOR UPDATE OF q;
-
 -- name: ProductQuestIncrementCapacity :one
 UPDATE quests q SET filled_count = q.filled_count + @delta::integer,
        status = CASE
@@ -502,20 +461,8 @@ UPDATE quests q SET filled_count = q.filled_count + @delta::integer,
 WHERE q.id = @quest_id::bigint
   AND q.filled_count + @delta::integer BETWEEN 0 AND q.slots_max
 RETURNING q.id, q.public_id, q.status, q.slots_max, q.filled_count, q.updated_at;
-
--- name: ProductQuestReplaceHexes :exec
-DELETE FROM quest_hexes WHERE quest_id = @quest_id::bigint;
-
--- name: ProductQuestInsertHexes :many
-INSERT INTO quest_hexes(quest_id, hex_id, role)
-SELECT @quest_id::bigint, h.id, (@roles::text[])[input.ordinality::integer]
-FROM unnest(@hex_ids::bigint[]) WITH ORDINALITY AS input(hex_id, ordinality)
-JOIN hexes h ON h.id = input.hex_id
-RETURNING quest_id, hex_id, role;
-
 -- name: ProductQuestReplaceRegions :exec
 DELETE FROM quest_regions WHERE quest_id = @quest_id::bigint;
-
 -- name: ProductQuestInsertRegions :many
 INSERT INTO quest_regions(quest_id, region_id)
 SELECT @quest_id::bigint, r.id
@@ -523,66 +470,23 @@ FROM unnest(@region_ids::bigint[]) AS input(region_id)
 JOIN regions r ON r.id = input.region_id
 RETURNING quest_id, region_id;
 
--- name: ProductQuestInsertHistory :one
-INSERT INTO quest_changes(quest_id, actor_id, kind, facts, created_at)
-VALUES (@quest_id::bigint, @actor_id::bigint, @kind::text, @facts::jsonb, @at::timestamptz)
-RETURNING id, public_id, quest_id, actor_id, kind, facts, created_at;
-
--- name: ProductQuestReadHistory :many
-SELECT qc.id, qc.public_id, q.public_id::text AS quest_id,
-       actor.public_id::text AS actor_id, qc.kind, qc.facts, qc.created_at
-FROM quest_changes qc
-JOIN quests q ON q.id = qc.quest_id
-JOIN members actor ON actor.id = qc.actor_id
+-- name: ProductQuestReadPointcrawlLinks :many
+SELECT n.public_id::text AS node_id, q.public_id::text AS quest_id, qpn.role
+FROM quest_pointcrawl_nodes qpn
+JOIN quests q ON q.id = qpn.quest_id
+JOIN pointcrawl_nodes n ON n.id = qpn.node_id
 WHERE q.public_id = @quest_id::uuid
-ORDER BY qc.created_at DESC, qc.public_id DESC
-LIMIT @row_limit::integer OFFSET @row_offset::integer;
+ORDER BY n.public_id, qpn.role;
 
--- name: ProductQuestUpsertRewardDecision :one
-INSERT INTO quest_reward_decisions(quest_id, closure_change_id, decided_by, decided_at)
-VALUES (@quest_id::bigint, @closure_change_id::bigint, @decided_by::bigint, @decided_at::timestamptz)
-RETURNING public_id, quest_id, closure_change_id, decided_by, decided_at;
+-- name: ProductQuestReplacePointcrawlLinks :exec
+DELETE FROM quest_pointcrawl_nodes WHERE quest_id = @quest_id::bigint;
 
--- name: ProductQuestReadRewardDecisionCoverage :many
-SELECT input.ordinality::integer AS input_index,
-       input.quest_id::uuid AS requested_quest_id,
-       q.public_id::text AS quest_id,
-       q.status = 'closed' AS closed,
-       (qrd.quest_id IS NOT NULL) AS has_full_closure_decision
-FROM unnest(@quest_ids::uuid[]) WITH ORDINALITY AS input(quest_id, ordinality)
-LEFT JOIN quests q ON q.public_id = input.quest_id AND q.deleted_at IS NULL
-LEFT JOIN quest_reward_decisions qrd ON qrd.quest_id = q.id
-ORDER BY input.ordinality;
+-- name: ProductQuestInsertPointcrawlLinks :many
+INSERT INTO quest_pointcrawl_nodes(quest_id, node_id, role)
+SELECT @quest_id::bigint, n.id, input.role
+FROM unnest(@node_ids::bigint[]) WITH ORDINALITY AS input(node_id, ordinality)
+JOIN unnest(@roles::text[]) WITH ORDINALITY AS roles(role, ordinality)
+  ON roles.ordinality = input.ordinality
+JOIN pointcrawl_nodes n ON n.id = input.node_id
+RETURNING quest_id, node_id, role;
 
--- name: ProductQuestInsertEntitlements :many
-INSERT INTO quest_reward_entitlements(quest_id, character_id, awarded_by, awarded_at, pcxp, note)
-SELECT @quest_id::bigint, input.character_id, @awarded_by::bigint,
-       @awarded_at::timestamptz, (@pcxp_values::integer[])[input.ordinality::integer],
-       (@notes::text[])[input.ordinality::integer]
-FROM unnest(@character_ids::bigint[]) WITH ORDINALITY AS input(character_id, ordinality)
-RETURNING id, public_id, quest_id, character_id, awarded_by, awarded_at, pcxp, note, claimed_at, progression_entry_id;
-
--- name: ProductQuestReadEntitlements :many
-SELECT e.id, e.public_id, q.public_id::text AS quest_id,
-       c.public_id::text AS character_id, actor.public_id::text AS awarded_by,
-       e.awarded_at, e.pcxp, e.note, e.claimed_at,
-       e.progression_entry_id
-FROM quest_reward_entitlements e
-JOIN quests q ON q.id = e.quest_id
-JOIN characters c ON c.id = e.character_id
-JOIN members actor ON actor.id = e.awarded_by
-WHERE q.public_id = @quest_id::uuid
-ORDER BY e.awarded_at, e.public_id;
-
--- name: ProductQuestBatchReadEntitlements :many
-SELECT input.ordinality::integer AS input_index,
-       input.quest_id::uuid AS requested_quest_id,
-       e.id, e.public_id, q.public_id::text AS quest_id,
-       c.public_id::text AS character_id, actor.public_id::text AS awarded_by,
-       e.awarded_at, e.pcxp, e.note, e.claimed_at, e.progression_entry_id
-FROM unnest(@quest_ids::uuid[]) WITH ORDINALITY AS input(quest_id, ordinality)
-LEFT JOIN quests q ON q.public_id = input.quest_id AND q.deleted_at IS NULL
-LEFT JOIN quest_reward_entitlements e ON e.quest_id = q.id
-LEFT JOIN characters c ON c.id = e.character_id
-LEFT JOIN members actor ON actor.id = e.awarded_by
-ORDER BY input.ordinality, e.awarded_at, e.public_id;

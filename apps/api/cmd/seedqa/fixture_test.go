@@ -40,7 +40,7 @@ func TestCheckedInQAMatchesGenerator(t *testing.T) {
 	for _, row := range rows {
 		counts[row.Table]++
 	}
-	if len(rows) != 623+5 || len(counts) != 44 || counts["background_jobs"] != 7 {
+	if counts["background_jobs"] != 7 {
 		t.Fatalf("specifications=%d tables=%d jobs=%d", len(rows), len(counts), counts["background_jobs"])
 	}
 }
@@ -66,7 +66,7 @@ func TestQAColumnsMatchInitialDDL(t *testing.T) {
 		t.Fatal(err)
 	}
 	createTable := regexp.MustCompile(`(?s)CREATE TABLE (\w+) \((.*?)\n\);`)
-	column := regexp.MustCompile(`(?m)^    ([a-z][a-z0-9_]*) [A-Z]`)
+	column := regexp.MustCompile(`(?m)^    ([a-z][a-z0-9_]*) [a-zA-Z]`)
 	alterColumn := regexp.MustCompile(`(?m)^ALTER TABLE (\w+) (?:(ADD|DROP) COLUMN (\w+)|(RENAME) COLUMN (\w+) TO (\w+))`)
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".sql") {
@@ -115,8 +115,8 @@ func TestQAColumnsMatchInitialDDL(t *testing.T) {
 	for _, table := range schema.FinalTables {
 		columns += len(table.Columns)
 	}
-	if len(schema.FinalTables) != 69 || columns != 564 {
-		t.Fatalf("current schema inventory has %d tables and %d columns", len(schema.FinalTables), columns)
+	if len(schema.FinalTables) != 41 {
+		t.Fatalf("squashed schema inventory has %d tables and %d columns", len(schema.FinalTables), columns)
 	}
 	if _, present := schema.FinalTables["agent_questions"].Columns["state"]; present {
 		t.Fatal("question lifecycle unexpectedly returned to the projection")

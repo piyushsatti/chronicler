@@ -11,62 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const appendProductCalendarChange = `-- name: AppendProductCalendarChange :exec
-INSERT INTO calendar_changes(public_id,calendar_id,old_value,new_value,actor_id,created_at)
-SELECT $1,1,$2::jsonb,$3::jsonb,
- actor.id,$4 FROM members actor WHERE actor.public_id=$5
- AND $2::jsonb IS DISTINCT FROM $3::jsonb
-`
-
-type AppendProductCalendarChangeParams struct {
-	HistoryID  pgtype.UUID        `json:"history_id"`
-	OldValue   []byte             `json:"old_value"`
-	NewValue   []byte             `json:"new_value"`
-	RecordedAt pgtype.Timestamptz `json:"recorded_at"`
-	ActorID    pgtype.UUID        `json:"actor_id"`
-}
-
-func (q *Queries) AppendProductCalendarChange(ctx context.Context, arg AppendProductCalendarChangeParams) error {
-	_, err := q.db.Exec(ctx, appendProductCalendarChange,
-		arg.HistoryID,
-		arg.OldValue,
-		arg.NewValue,
-		arg.RecordedAt,
-		arg.ActorID,
-	)
-	return err
-}
-
-const appendProductTimeAnchorChange = `-- name: AppendProductTimeAnchorChange :exec
-INSERT INTO time_anchor_changes(public_id,anchor_id,old_value,new_value,actor_id,created_at)
-SELECT $1,a.id,$2::jsonb,$3::jsonb,
-       actor.id,$4
-FROM time_anchors a JOIN members actor ON actor.public_id=$5
-WHERE a.public_id=$6
-  AND $2::jsonb IS DISTINCT FROM $3::jsonb
-`
-
-type AppendProductTimeAnchorChangeParams struct {
-	HistoryID  pgtype.UUID        `json:"history_id"`
-	OldValue   []byte             `json:"old_value"`
-	NewValue   []byte             `json:"new_value"`
-	RecordedAt pgtype.Timestamptz `json:"recorded_at"`
-	ActorID    pgtype.UUID        `json:"actor_id"`
-	AnchorID   pgtype.UUID        `json:"anchor_id"`
-}
-
-func (q *Queries) AppendProductTimeAnchorChange(ctx context.Context, arg AppendProductTimeAnchorChangeParams) error {
-	_, err := q.db.Exec(ctx, appendProductTimeAnchorChange,
-		arg.HistoryID,
-		arg.OldValue,
-		arg.NewValue,
-		arg.RecordedAt,
-		arg.ActorID,
-		arg.AnchorID,
-	)
-	return err
-}
-
 const assignProductArchon = `-- name: AssignProductArchon :one
 WITH inserted AS (
  INSERT INTO archon_assignments(member_id,region_id,granted_by,created_at)
@@ -75,14 +19,6 @@ WITH inserted AS (
  WHERE m.public_id=$3::uuid AND r.public_id=$4::uuid
  ON CONFLICT(member_id,region_id) DO NOTHING
  RETURNING member_id,region_id,granted_by,created_at
-), history AS (
- INSERT INTO assignment_changes(public_id,assignment_kind,member_id,region_id,npc_document_id,
-   old_value,new_value,actor_id,created_at)
- SELECT $5,'archon',i.member_id,i.region_id,NULL,NULL,
-        jsonb_build_object('memberId',m.public_id,'regionId',r.public_id,
-          'grantedBy',actor.public_id,'grantedAt',i.created_at),actor.id,$1
- FROM inserted i JOIN members m ON m.id=i.member_id
- JOIN regions r ON r.id=i.region_id JOIN members actor ON actor.id=i.granted_by
 )
 SELECT r.public_id AS region_id,m.public_id AS member_id,i.created_at AS granted_at,
        grantor.public_id AS granted_by
@@ -102,7 +38,6 @@ type AssignProductArchonParams struct {
 	ActorID    pgtype.UUID        `json:"actor_id"`
 	MemberID   pgtype.UUID        `json:"member_id"`
 	RegionID   pgtype.UUID        `json:"region_id"`
-	HistoryID  pgtype.UUID        `json:"history_id"`
 }
 
 type AssignProductArchonRow struct {
@@ -118,7 +53,6 @@ func (q *Queries) AssignProductArchon(ctx context.Context, arg AssignProductArch
 		arg.ActorID,
 		arg.MemberID,
 		arg.RegionID,
-		arg.HistoryID,
 	)
 	var i AssignProductArchonRow
 	err := row.Scan(
@@ -149,77 +83,12 @@ func (q *Queries) CountProductArchonAssignments(ctx context.Context, arg CountPr
 	return column_1, err
 }
 
-const countProductHexHistory = `-- name: CountProductHexHistory :one
-SELECT count(*)::int FROM hex_changes c JOIN hexes h ON h.id=c.hex_id
-WHERE h.public_id=$1
-`
-
-func (q *Queries) CountProductHexHistory(ctx context.Context, hexID pgtype.UUID) (int32, error) {
-	row := q.db.QueryRow(ctx, countProductHexHistory, hexID)
-	var column_1 int32
-	err := row.Scan(&column_1)
-	return column_1, err
-}
-
-const countProductMapViewPlaces = `-- name: CountProductMapViewPlaces :one
-SELECT count(*)::int AS total
-FROM maps m
-JOIN hexes h ON h.map_id = m.id
-JOIN hex_entry_links hel ON hel.hex_id = h.id
-JOIN documents d ON d.id = hel.document_id
-LEFT JOIN members author ON author.id=d.author_id
-WHERE m.atlas_code = $1
-  AND d.deleted_at IS NULL AND d.status = 'published'
-  AND d.kind = 'codex_entry' AND d.category='Locations' AND hel.relation='location'
-  AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
-      $2::uuid,$3::text[],$4::text,
-      $5::boolean,$6::boolean,$7::uuid[])
-`
-
-type CountProductMapViewPlacesParams struct {
-	AtlasCode    string        `json:"atlas_code"`
-	ViewerID     pgtype.UUID   `json:"viewer_id"`
-	ViewerRoles  []string      `json:"viewer_roles"`
-	ViewerHandle string        `json:"viewer_handle"`
-	ViewerAdmin  bool          `json:"viewer_admin"`
-	ViewerLiveDm bool          `json:"viewer_live_dm"`
-	ReaderIds    []pgtype.UUID `json:"reader_ids"`
-}
-
-func (q *Queries) CountProductMapViewPlaces(ctx context.Context, arg CountProductMapViewPlacesParams) (int32, error) {
-	row := q.db.QueryRow(ctx, countProductMapViewPlaces,
-		arg.AtlasCode,
-		arg.ViewerID,
-		arg.ViewerRoles,
-		arg.ViewerHandle,
-		arg.ViewerAdmin,
-		arg.ViewerLiveDm,
-		arg.ReaderIds,
-	)
-	var total int32
-	err := row.Scan(&total)
-	return total, err
-}
-
 const countProductRealDates = `-- name: CountProductRealDates :one
 SELECT count(*)::int FROM game_time_map WHERE game_day=$1
 `
 
 func (q *Queries) CountProductRealDates(ctx context.Context, gameDay int32) (int32, error) {
 	row := q.db.QueryRow(ctx, countProductRealDates, gameDay)
-	var column_1 int32
-	err := row.Scan(&column_1)
-	return column_1, err
-}
-
-const countProductRecentHexChanges = `-- name: CountProductRecentHexChanges :one
-SELECT count(*)::int FROM hex_changes c JOIN hexes h ON h.id=c.hex_id
-JOIN maps m ON m.id=h.map_id
-WHERE $1::uuid IS NULL OR m.public_id=$1
-`
-
-func (q *Queries) CountProductRecentHexChanges(ctx context.Context, mapID pgtype.UUID) (int32, error) {
-	row := q.db.QueryRow(ctx, countProductRecentHexChanges, mapID)
 	var column_1 int32
 	err := row.Scan(&column_1)
 	return column_1, err
@@ -238,42 +107,28 @@ func (q *Queries) CountProductTimeAnchors(ctx context.Context) (int32, error) {
 
 const createProductMap = `-- name: CreateProductMap :one
 WITH inserted AS (
-  INSERT INTO maps(name,atlas_code,map_kind,family,region_id,cols,rows,asset_path,created_by)
+  INSERT INTO maps(name,atlas_code,map_kind,family,region_id,asset_path,created_by)
   VALUES ($1,$2,$3,$4,
           (SELECT r.id FROM regions r WHERE r.public_id=$5::uuid),
-          $6,$7,$8,
-          (SELECT actor.id FROM members actor WHERE actor.public_id=$9::uuid))
-  RETURNING id, public_id, name, atlas_code, map_kind, region_id, cols, rows, asset_path, created_at, created_by, family
-), history AS (
-  INSERT INTO map_changes(public_id,map_id,affected_type,affected_public_id,old_value,new_value,actor_id,recorded_at)
-  SELECT $10,i.id,'map',i.public_id,NULL,
-         jsonb_build_object('id',i.public_id,'createdAt',i.created_at,
-           'name',i.name,'atlasCode',i.atlas_code,'mapKind',i.map_kind,
-           'family',i.family,'regionId',r.public_id,'cols',i.cols,'rows',i.rows,
-           'assetPath',i.asset_path,'createdBy',actor.public_id),
-         actor.id,$11
-  FROM inserted i LEFT JOIN regions r ON r.id=i.region_id
-  JOIN members actor ON actor.id=i.created_by
+          $6,
+          (SELECT actor.id FROM members actor WHERE actor.public_id=$7::uuid))
+  RETURNING id, public_id, name, atlas_code, map_kind, region_id, asset_path, created_at, created_by, family
 )
 SELECT i.public_id AS id,i.name,i.atlas_code,i.map_kind,i.family,
-       r.public_id AS region_id,i.cols,i.rows,i.asset_path,i.created_at,
+       r.public_id AS region_id,i.asset_path,i.created_at,
        a.public_id AS created_by
 FROM inserted i LEFT JOIN regions r ON r.id=i.region_id
 LEFT JOIN members a ON a.id=i.created_by
 `
 
 type CreateProductMapParams struct {
-	Name       string             `json:"name"`
-	AtlasCode  string             `json:"atlas_code"`
-	MapKind    string             `json:"map_kind"`
-	Family     string             `json:"family"`
-	RegionID   pgtype.UUID        `json:"region_id"`
-	Cols       pgtype.Int4        `json:"cols"`
-	Rows       pgtype.Int4        `json:"rows"`
-	AssetPath  pgtype.Text        `json:"asset_path"`
-	ActorID    pgtype.UUID        `json:"actor_id"`
-	HistoryID  pgtype.UUID        `json:"history_id"`
-	RecordedAt pgtype.Timestamptz `json:"recorded_at"`
+	Name      string      `json:"name"`
+	AtlasCode string      `json:"atlas_code"`
+	MapKind   string      `json:"map_kind"`
+	Family    string      `json:"family"`
+	RegionID  pgtype.UUID `json:"region_id"`
+	AssetPath pgtype.Text `json:"asset_path"`
+	ActorID   pgtype.UUID `json:"actor_id"`
 }
 
 type CreateProductMapRow struct {
@@ -283,8 +138,6 @@ type CreateProductMapRow struct {
 	MapKind   string             `json:"map_kind"`
 	Family    string             `json:"family"`
 	RegionID  pgtype.UUID        `json:"region_id"`
-	Cols      pgtype.Int4        `json:"cols"`
-	Rows      pgtype.Int4        `json:"rows"`
 	AssetPath pgtype.Text        `json:"asset_path"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	CreatedBy pgtype.UUID        `json:"created_by"`
@@ -297,12 +150,8 @@ func (q *Queries) CreateProductMap(ctx context.Context, arg CreateProductMapPara
 		arg.MapKind,
 		arg.Family,
 		arg.RegionID,
-		arg.Cols,
-		arg.Rows,
 		arg.AssetPath,
 		arg.ActorID,
-		arg.HistoryID,
-		arg.RecordedAt,
 	)
 	var i CreateProductMapRow
 	err := row.Scan(
@@ -312,8 +161,6 @@ func (q *Queries) CreateProductMap(ctx context.Context, arg CreateProductMapPara
 		&i.MapKind,
 		&i.Family,
 		&i.RegionID,
-		&i.Cols,
-		&i.Rows,
 		&i.AssetPath,
 		&i.CreatedAt,
 		&i.CreatedBy,
@@ -327,16 +174,6 @@ WITH inserted AS (
  SELECT $1,$2,$3,
         (SELECT d.id FROM documents d WHERE d.public_id=$4::uuid)
  RETURNING id, public_id, name, kind, charter_deadline, document_id, created_at, deleted_at, deleted_by
-), history AS (
- INSERT INTO region_changes(public_id,region_id,kind,old_value,new_value,actor_id,created_at)
- SELECT $5,i.id,'created',NULL,
-        jsonb_build_object('id',i.public_id,'name',i.name,'kind',i.kind,
-          'charterDeadline',i.charter_deadline,'documentId',d.public_id,
-          'createdAt',i.created_at,'deletedAt',i.deleted_at,'deletedBy',deleted_by.public_id),
-        actor.id,$6
- FROM inserted i LEFT JOIN documents d ON d.id=i.document_id
- LEFT JOIN members deleted_by ON deleted_by.id=i.deleted_by
- JOIN members actor ON actor.public_id=$7::uuid
 )
 SELECT i.public_id AS id,i.name,i.kind,i.charter_deadline,d.public_id AS document_id,i.created_at
 FROM inserted i LEFT JOIN documents d ON d.id=i.document_id
@@ -347,9 +184,6 @@ type CreateProductRegionParams struct {
 	Kind            string             `json:"kind"`
 	CharterDeadline pgtype.Timestamptz `json:"charter_deadline"`
 	DocumentID      pgtype.UUID        `json:"document_id"`
-	HistoryID       pgtype.UUID        `json:"history_id"`
-	RecordedAt      pgtype.Timestamptz `json:"recorded_at"`
-	ActorID         pgtype.UUID        `json:"actor_id"`
 }
 
 type CreateProductRegionRow struct {
@@ -367,9 +201,6 @@ func (q *Queries) CreateProductRegion(ctx context.Context, arg CreateProductRegi
 		arg.Kind,
 		arg.CharterDeadline,
 		arg.DocumentID,
-		arg.HistoryID,
-		arg.RecordedAt,
-		arg.ActorID,
 	)
 	var i CreateProductRegionRow
 	err := row.Scan(
@@ -424,92 +255,9 @@ func (q *Queries) CreateProductTimeAnchor(ctx context.Context, arg CreateProduct
 	return i, err
 }
 
-const getProductHex = `-- name: GetProductHex :one
-SELECT h.public_id AS id, m.public_id AS map_id, h.col, h.row, h.terrain,
-       h.elevation, h.climate, h.created_at,
-       submap.public_id AS submap_id
-FROM hexes h
-JOIN maps m ON m.id = h.map_id
-LEFT JOIN maps submap ON submap.id = h.submap_id
-WHERE m.public_id = $1 AND h.col = $2 AND h.row = $3
-`
-
-type GetProductHexParams struct {
-	MapID pgtype.UUID `json:"map_id"`
-	Col   int32       `json:"col"`
-	Row   int32       `json:"row"`
-}
-
-type GetProductHexRow struct {
-	ID        pgtype.UUID        `json:"id"`
-	MapID     pgtype.UUID        `json:"map_id"`
-	Col       int32              `json:"col"`
-	Row       int32              `json:"row"`
-	Terrain   pgtype.Text        `json:"terrain"`
-	Elevation pgtype.Text        `json:"elevation"`
-	Climate   pgtype.Text        `json:"climate"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	SubmapID  pgtype.UUID        `json:"submap_id"`
-}
-
-func (q *Queries) GetProductHex(ctx context.Context, arg GetProductHexParams) (GetProductHexRow, error) {
-	row := q.db.QueryRow(ctx, getProductHex, arg.MapID, arg.Col, arg.Row)
-	var i GetProductHexRow
-	err := row.Scan(
-		&i.ID,
-		&i.MapID,
-		&i.Col,
-		&i.Row,
-		&i.Terrain,
-		&i.Elevation,
-		&i.Climate,
-		&i.CreatedAt,
-		&i.SubmapID,
-	)
-	return i, err
-}
-
-const getProductHexByID = `-- name: GetProductHexByID :one
-SELECT h.public_id AS id, m.public_id AS map_id, h.col, h.row, h.terrain,
-       h.elevation, h.climate, h.created_at, submap.public_id AS submap_id
-FROM hexes h
-JOIN maps m ON m.id = h.map_id
-LEFT JOIN maps submap ON submap.id = h.submap_id
-WHERE h.public_id = $1
-`
-
-type GetProductHexByIDRow struct {
-	ID        pgtype.UUID        `json:"id"`
-	MapID     pgtype.UUID        `json:"map_id"`
-	Col       int32              `json:"col"`
-	Row       int32              `json:"row"`
-	Terrain   pgtype.Text        `json:"terrain"`
-	Elevation pgtype.Text        `json:"elevation"`
-	Climate   pgtype.Text        `json:"climate"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	SubmapID  pgtype.UUID        `json:"submap_id"`
-}
-
-func (q *Queries) GetProductHexByID(ctx context.Context, hexID pgtype.UUID) (GetProductHexByIDRow, error) {
-	row := q.db.QueryRow(ctx, getProductHexByID, hexID)
-	var i GetProductHexByIDRow
-	err := row.Scan(
-		&i.ID,
-		&i.MapID,
-		&i.Col,
-		&i.Row,
-		&i.Terrain,
-		&i.Elevation,
-		&i.Climate,
-		&i.CreatedAt,
-		&i.SubmapID,
-	)
-	return i, err
-}
-
 const getProductMap = `-- name: GetProductMap :one
 SELECT m.public_id AS id, m.name, m.atlas_code, m.map_kind, m.family,
-       r.public_id AS region_id, m.cols, m.rows, m.asset_path, m.created_at,
+       r.public_id AS region_id, m.asset_path, m.created_at,
        author.public_id AS created_by
 FROM maps m
 LEFT JOIN regions r ON r.id = m.region_id
@@ -524,8 +272,6 @@ type GetProductMapRow struct {
 	MapKind   string             `json:"map_kind"`
 	Family    string             `json:"family"`
 	RegionID  pgtype.UUID        `json:"region_id"`
-	Cols      pgtype.Int4        `json:"cols"`
-	Rows      pgtype.Int4        `json:"rows"`
 	AssetPath pgtype.Text        `json:"asset_path"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	CreatedBy pgtype.UUID        `json:"created_by"`
@@ -541,8 +287,6 @@ func (q *Queries) GetProductMap(ctx context.Context, atlasCode string) (GetProdu
 		&i.MapKind,
 		&i.Family,
 		&i.RegionID,
-		&i.Cols,
-		&i.Rows,
 		&i.AssetPath,
 		&i.CreatedAt,
 		&i.CreatedBy,
@@ -552,69 +296,23 @@ func (q *Queries) GetProductMap(ctx context.Context, atlasCode string) (GetProdu
 
 const getProductRegionCounts = `-- name: GetProductRegionCounts :one
 SELECT r.public_id AS region_id,
-       (SELECT count(*)::int FROM maps m JOIN hexes h ON h.map_id=m.id
-        WHERE m.region_id=r.id) AS hex_count,
+       (SELECT count(*)::int FROM maps m JOIN pointcrawl_nodes pn ON pn.map_id=m.id
+        WHERE m.region_id=r.id) AS pointcrawl_node_count,
        (SELECT count(*)::int FROM quest_regions qr JOIN quests q ON q.id=qr.quest_id
         WHERE qr.region_id=r.id AND q.deleted_at IS NULL) AS quest_count
 FROM regions r WHERE r.public_id=$1 AND r.deleted_at IS NULL
 `
 
 type GetProductRegionCountsRow struct {
-	RegionID   pgtype.UUID `json:"region_id"`
-	HexCount   int32       `json:"hex_count"`
-	QuestCount int32       `json:"quest_count"`
+	RegionID            pgtype.UUID `json:"region_id"`
+	PointcrawlNodeCount int32       `json:"pointcrawl_node_count"`
+	QuestCount          int32       `json:"quest_count"`
 }
 
 func (q *Queries) GetProductRegionCounts(ctx context.Context, regionID pgtype.UUID) (GetProductRegionCountsRow, error) {
 	row := q.db.QueryRow(ctx, getProductRegionCounts, regionID)
 	var i GetProductRegionCountsRow
-	err := row.Scan(&i.RegionID, &i.HexCount, &i.QuestCount)
-	return i, err
-}
-
-const linkProductHexEntry = `-- name: LinkProductHexEntry :one
-WITH inserted AS (
- INSERT INTO hex_entry_links(hex_id,document_id,relation)
- SELECT h.id,d.id,$1 FROM hexes h CROSS JOIN documents d
- WHERE h.public_id=$2::uuid AND d.public_id=$3::uuid
- RETURNING hex_id, document_id, relation
-), history AS (
- INSERT INTO hex_changes(public_id,hex_id,kind,payload,created_at)
- SELECT $4,i.hex_id,'entry_linked',jsonb_build_object(
-   'documentId',d.public_id,'relation',i.relation,'actorId',actor.public_id),$5
- FROM inserted i JOIN documents d ON d.id=i.document_id
- JOIN members actor ON actor.public_id=$6::uuid
-)
-SELECT h.public_id AS hex_id,d.public_id AS document_id,i.relation
-FROM inserted i JOIN hexes h ON h.id=i.hex_id JOIN documents d ON d.id=i.document_id
-`
-
-type LinkProductHexEntryParams struct {
-	Relation   string             `json:"relation"`
-	HexID      pgtype.UUID        `json:"hex_id"`
-	DocumentID pgtype.UUID        `json:"document_id"`
-	HistoryID  pgtype.UUID        `json:"history_id"`
-	RecordedAt pgtype.Timestamptz `json:"recorded_at"`
-	ActorID    pgtype.UUID        `json:"actor_id"`
-}
-
-type LinkProductHexEntryRow struct {
-	HexID      pgtype.UUID `json:"hex_id"`
-	DocumentID pgtype.UUID `json:"document_id"`
-	Relation   string      `json:"relation"`
-}
-
-func (q *Queries) LinkProductHexEntry(ctx context.Context, arg LinkProductHexEntryParams) (LinkProductHexEntryRow, error) {
-	row := q.db.QueryRow(ctx, linkProductHexEntry,
-		arg.Relation,
-		arg.HexID,
-		arg.DocumentID,
-		arg.HistoryID,
-		arg.RecordedAt,
-		arg.ActorID,
-	)
-	var i LinkProductHexEntryRow
-	err := row.Scan(&i.HexID, &i.DocumentID, &i.Relation)
+	err := row.Scan(&i.RegionID, &i.PointcrawlNodeCount, &i.QuestCount)
 	return i, err
 }
 
@@ -627,11 +325,6 @@ WITH inserted AS (
  JOIN members actor ON actor.public_id=$4::uuid
  WHERE m.public_id=$5::uuid AND n.public_id=$6::uuid
  RETURNING created_at, created_by, document_id, map_id, node_id, relation
-), history AS (
- INSERT INTO pointcrawl_node_changes(public_id,node_id,kind,old_value,new_value,actor_id,created_at)
- SELECT $7,i.node_id,'entry_linked',NULL,
-   jsonb_build_object('documentId',d.public_id,'relation',i.relation),i.created_by,$2
- FROM inserted i JOIN documents d ON d.id=i.document_id
 )
 SELECT m.public_id AS map_id,n.public_id AS node_id,d.public_id AS document_id,
        i.relation,i.created_at,creator.public_id AS created_by
@@ -646,7 +339,6 @@ type LinkProductPointcrawlEntryParams struct {
 	ActorID    pgtype.UUID        `json:"actor_id"`
 	MapID      pgtype.UUID        `json:"map_id"`
 	NodeID     pgtype.UUID        `json:"node_id"`
-	HistoryID  pgtype.UUID        `json:"history_id"`
 }
 
 type LinkProductPointcrawlEntryRow struct {
@@ -666,7 +358,6 @@ func (q *Queries) LinkProductPointcrawlEntry(ctx context.Context, arg LinkProduc
 		arg.ActorID,
 		arg.MapID,
 		arg.NodeID,
-		arg.HistoryID,
 	)
 	var i LinkProductPointcrawlEntryRow
 	err := row.Scan(
@@ -773,294 +464,9 @@ func (q *Queries) ListProductCalendarCells(ctx context.Context, arg ListProductC
 	return items, nil
 }
 
-const listProductHexEdgesForMaps = `-- name: ListProductHexEdgesForMaps :many
-WITH ranked AS (
-SELECT k.ordinality::int AS key_ordinal,(k.value->>'parent_id')::uuid AS parent_id,m.public_id AS map_id,e.public_id AS id,
-       a.public_id AS hex_a,b.public_id AS hex_b,e.edge_type,e.a_side,
-       CASE WHEN d.id IS NULL THEN NULL WHEN d.deleted_at IS NULL AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
-         $1::uuid,$2::text[],$3::text,
-         $4::boolean,$5::boolean,$6::uuid[])
-         THEN d.public_id END AS document_id
-       ,(k.value->>'offset')::int AS row_offset,(k.value->>'limit')::int AS row_limit,
-       row_number() OVER (PARTITION BY k.ordinality ORDER BY e.public_id) AS rn
-FROM jsonb_array_elements($7::jsonb) WITH ORDINALITY k(value,ordinality)
-JOIN maps m ON m.public_id=(k.value->>'parent_id')::uuid
-JOIN hex_edges e ON e.map_id=m.id JOIN hexes a ON a.id=e.hex_a JOIN hexes b ON b.id=e.hex_b
-LEFT JOIN documents d ON d.id=e.document_id LEFT JOIN members author ON author.id=d.author_id
-)
-SELECT key_ordinal,parent_id,map_id,true AS parent_exists,id,hex_a,hex_b,edge_type,a_side,document_id
-FROM ranked WHERE rn>row_offset AND rn<=row_offset+row_limit
-UNION ALL
-SELECT k.ordinality::int,(k.value->>'parent_id')::uuid,m.public_id,(m.id IS NOT NULL),
-       NULL::uuid,NULL::uuid,NULL::uuid,NULL::text,NULL::text,NULL::uuid
-FROM jsonb_array_elements($7::jsonb) WITH ORDINALITY k(value,ordinality)
-LEFT JOIN maps m ON m.public_id=(k.value->>'parent_id')::uuid
-WHERE NOT EXISTS (SELECT 1 FROM ranked r WHERE r.key_ordinal=k.ordinality AND r.rn>(k.value->>'offset')::int AND r.rn<=((k.value->>'offset')::int+(k.value->>'limit')::int))
-ORDER BY key_ordinal,id
-`
-
-type ListProductHexEdgesForMapsParams struct {
-	ViewerID     pgtype.UUID   `json:"viewer_id"`
-	ViewerRoles  []string      `json:"viewer_roles"`
-	ViewerHandle string        `json:"viewer_handle"`
-	ViewerAdmin  bool          `json:"viewer_admin"`
-	ViewerLiveDm bool          `json:"viewer_live_dm"`
-	ReaderIds    []pgtype.UUID `json:"reader_ids"`
-	Keys         []byte        `json:"keys"`
-}
-
-type ListProductHexEdgesForMapsRow struct {
-	KeyOrdinal   int32       `json:"key_ordinal"`
-	ParentID     pgtype.UUID `json:"parent_id"`
-	MapID        pgtype.UUID `json:"map_id"`
-	ParentExists bool        `json:"parent_exists"`
-	ID           pgtype.UUID `json:"id"`
-	HexA         pgtype.UUID `json:"hex_a"`
-	HexB         pgtype.UUID `json:"hex_b"`
-	EdgeType     string      `json:"edge_type"`
-	ASide        pgtype.Text `json:"a_side"`
-	DocumentID   interface{} `json:"document_id"`
-}
-
-func (q *Queries) ListProductHexEdgesForMaps(ctx context.Context, arg ListProductHexEdgesForMapsParams) ([]ListProductHexEdgesForMapsRow, error) {
-	rows, err := q.db.Query(ctx, listProductHexEdgesForMaps,
-		arg.ViewerID,
-		arg.ViewerRoles,
-		arg.ViewerHandle,
-		arg.ViewerAdmin,
-		arg.ViewerLiveDm,
-		arg.ReaderIds,
-		arg.Keys,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListProductHexEdgesForMapsRow{}
-	for rows.Next() {
-		var i ListProductHexEdgesForMapsRow
-		if err := rows.Scan(
-			&i.KeyOrdinal,
-			&i.ParentID,
-			&i.MapID,
-			&i.ParentExists,
-			&i.ID,
-			&i.HexA,
-			&i.HexB,
-			&i.EdgeType,
-			&i.ASide,
-			&i.DocumentID,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listProductHexHistory = `-- name: ListProductHexHistory :many
-SELECT c.public_id AS id, h.public_id AS hex_id, c.kind, c.payload,
-       c.created_at AS occurred_at
-FROM hex_changes c JOIN hexes h ON h.id=c.hex_id
-WHERE h.public_id=$1
-ORDER BY c.created_at DESC, c.public_id DESC
-LIMIT $3 OFFSET $2
-`
-
-type ListProductHexHistoryParams struct {
-	HexID     pgtype.UUID `json:"hex_id"`
-	RowOffset int32       `json:"row_offset"`
-	RowLimit  int32       `json:"row_limit"`
-}
-
-type ListProductHexHistoryRow struct {
-	ID         pgtype.UUID        `json:"id"`
-	HexID      pgtype.UUID        `json:"hex_id"`
-	Kind       string             `json:"kind"`
-	Payload    []byte             `json:"payload"`
-	OccurredAt pgtype.Timestamptz `json:"occurred_at"`
-}
-
-func (q *Queries) ListProductHexHistory(ctx context.Context, arg ListProductHexHistoryParams) ([]ListProductHexHistoryRow, error) {
-	rows, err := q.db.Query(ctx, listProductHexHistory, arg.HexID, arg.RowOffset, arg.RowLimit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListProductHexHistoryRow{}
-	for rows.Next() {
-		var i ListProductHexHistoryRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.HexID,
-			&i.Kind,
-			&i.Payload,
-			&i.OccurredAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listProductHexLinksForHexes = `-- name: ListProductHexLinksForHexes :many
-WITH ranked AS (
- SELECT k.ordinality::int AS key_ordinal,(k.value->>'parent_id')::uuid AS parent_id,h.public_id AS hex_id,d.public_id AS document_id,l.relation,
-        (k.value->>'offset')::int AS row_offset,(k.value->>'limit')::int AS row_limit,
-        row_number() OVER (PARTITION BY k.ordinality ORDER BY l.relation,d.public_id) AS rn
- FROM jsonb_array_elements($1::jsonb) WITH ORDINALITY k(value,ordinality)
- JOIN hexes h ON h.public_id=(k.value->>'parent_id')::uuid
- JOIN hex_entry_links l ON l.hex_id=h.id JOIN documents d ON d.id=l.document_id
- LEFT JOIN members author ON author.id=d.author_id
- WHERE d.deleted_at IS NULL AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
-   $2::uuid,$3::text[],$4::text,
-   $5::boolean,$6::boolean,$7::uuid[])
-)
-SELECT key_ordinal,parent_id,hex_id,true AS parent_exists,document_id,relation FROM ranked
-WHERE rn>row_offset AND rn<=row_offset+row_limit
-UNION ALL
-SELECT k.ordinality::int,(k.value->>'parent_id')::uuid,h.public_id,(h.id IS NOT NULL),NULL::uuid,NULL::text
-FROM jsonb_array_elements($1::jsonb) WITH ORDINALITY k(value,ordinality)
-LEFT JOIN hexes h ON h.public_id=(k.value->>'parent_id')::uuid
-WHERE NOT EXISTS (SELECT 1 FROM ranked r WHERE r.key_ordinal=k.ordinality AND r.rn>(k.value->>'offset')::int AND r.rn<=((k.value->>'offset')::int+(k.value->>'limit')::int))
-ORDER BY key_ordinal,relation,document_id
-`
-
-type ListProductHexLinksForHexesParams struct {
-	Keys         []byte        `json:"keys"`
-	ViewerID     pgtype.UUID   `json:"viewer_id"`
-	ViewerRoles  []string      `json:"viewer_roles"`
-	ViewerHandle string        `json:"viewer_handle"`
-	ViewerAdmin  bool          `json:"viewer_admin"`
-	ViewerLiveDm bool          `json:"viewer_live_dm"`
-	ReaderIds    []pgtype.UUID `json:"reader_ids"`
-}
-
-type ListProductHexLinksForHexesRow struct {
-	KeyOrdinal   int32       `json:"key_ordinal"`
-	ParentID     pgtype.UUID `json:"parent_id"`
-	HexID        pgtype.UUID `json:"hex_id"`
-	ParentExists bool        `json:"parent_exists"`
-	DocumentID   pgtype.UUID `json:"document_id"`
-	Relation     string      `json:"relation"`
-}
-
-func (q *Queries) ListProductHexLinksForHexes(ctx context.Context, arg ListProductHexLinksForHexesParams) ([]ListProductHexLinksForHexesRow, error) {
-	rows, err := q.db.Query(ctx, listProductHexLinksForHexes,
-		arg.Keys,
-		arg.ViewerID,
-		arg.ViewerRoles,
-		arg.ViewerHandle,
-		arg.ViewerAdmin,
-		arg.ViewerLiveDm,
-		arg.ReaderIds,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListProductHexLinksForHexesRow{}
-	for rows.Next() {
-		var i ListProductHexLinksForHexesRow
-		if err := rows.Scan(
-			&i.KeyOrdinal,
-			&i.ParentID,
-			&i.HexID,
-			&i.ParentExists,
-			&i.DocumentID,
-			&i.Relation,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const listProductHexesForMaps = `-- name: ListProductHexesForMaps :many
-WITH requested AS (
-  SELECT e.ordinality::int AS key_ordinal,
-         (e.value->>'parent_id')::uuid AS parent_id,
-         (e.value->>'limit')::int AS row_limit,
-         (e.value->>'offset')::int AS row_offset
-  FROM jsonb_array_elements($1::jsonb) WITH ORDINALITY AS e(value,ordinality)
-)
-SELECT k.key_ordinal,k.parent_id,m.public_id AS map_id,(m.id IS NOT NULL) AS parent_exists,
-       h.public_id AS id,h.col,h.row,h.terrain,h.elevation,h.climate,h.created_at,
-       submap.public_id AS submap_id
-FROM requested k
-LEFT JOIN maps m ON m.public_id=k.parent_id
-LEFT JOIN LATERAL (
-  SELECT candidate.id, candidate.public_id, candidate.map_id, candidate.col, candidate.row, candidate.terrain, candidate.elevation, candidate.climate, candidate.created_at, candidate.submap_id FROM hexes candidate
-  WHERE candidate.map_id=m.id
-  ORDER BY candidate.row,candidate.col,candidate.public_id
-  LIMIT k.row_limit OFFSET k.row_offset
-) h ON true
-LEFT JOIN maps submap ON submap.id=h.submap_id
-ORDER BY k.key_ordinal,h.row,h.col,h.public_id
-`
-
-type ListProductHexesForMapsRow struct {
-	KeyOrdinal   int32              `json:"key_ordinal"`
-	ParentID     pgtype.UUID        `json:"parent_id"`
-	MapID        pgtype.UUID        `json:"map_id"`
-	ParentExists interface{}        `json:"parent_exists"`
-	ID           pgtype.UUID        `json:"id"`
-	Col          int32              `json:"col"`
-	Row          int32              `json:"row"`
-	Terrain      pgtype.Text        `json:"terrain"`
-	Elevation    pgtype.Text        `json:"elevation"`
-	Climate      pgtype.Text        `json:"climate"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	SubmapID     pgtype.UUID        `json:"submap_id"`
-}
-
-func (q *Queries) ListProductHexesForMaps(ctx context.Context, keys []byte) ([]ListProductHexesForMapsRow, error) {
-	rows, err := q.db.Query(ctx, listProductHexesForMaps, keys)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListProductHexesForMapsRow{}
-	for rows.Next() {
-		var i ListProductHexesForMapsRow
-		if err := rows.Scan(
-			&i.KeyOrdinal,
-			&i.ParentID,
-			&i.MapID,
-			&i.ParentExists,
-			&i.ID,
-			&i.Col,
-			&i.Row,
-			&i.Terrain,
-			&i.Elevation,
-			&i.Climate,
-			&i.CreatedAt,
-			&i.SubmapID,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listProductMaps = `-- name: ListProductMaps :many
 SELECT m.public_id AS id, m.name, m.atlas_code, m.map_kind, m.family,
-       r.public_id AS region_id, m.cols, m.rows, m.asset_path, m.created_at,
+       r.public_id AS region_id, m.asset_path, m.created_at,
        author.public_id AS created_by
 FROM maps m
 LEFT JOIN regions r ON r.id = m.region_id
@@ -1085,8 +491,6 @@ type ListProductMapsRow struct {
 	MapKind   string             `json:"map_kind"`
 	Family    string             `json:"family"`
 	RegionID  pgtype.UUID        `json:"region_id"`
-	Cols      pgtype.Int4        `json:"cols"`
-	Rows      pgtype.Int4        `json:"rows"`
 	AssetPath pgtype.Text        `json:"asset_path"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	CreatedBy pgtype.UUID        `json:"created_by"`
@@ -1113,8 +517,6 @@ func (q *Queries) ListProductMaps(ctx context.Context, arg ListProductMapsParams
 			&i.MapKind,
 			&i.Family,
 			&i.RegionID,
-			&i.Cols,
-			&i.Rows,
 			&i.AssetPath,
 			&i.CreatedAt,
 			&i.CreatedBy,
@@ -1465,57 +867,6 @@ func (q *Queries) ListProductRealDates(ctx context.Context, arg ListProductRealD
 	return items, nil
 }
 
-const listProductRecentHexChanges = `-- name: ListProductRecentHexChanges :many
-SELECT c.public_id AS id, h.public_id AS hex_id, m.public_id AS map_id,
-       c.kind, c.payload, c.created_at AS occurred_at
-FROM hex_changes c JOIN hexes h ON h.id=c.hex_id JOIN maps m ON m.id=h.map_id
-WHERE ($1::uuid IS NULL OR m.public_id=$1)
-ORDER BY c.created_at DESC, c.public_id DESC
-LIMIT $3 OFFSET $2
-`
-
-type ListProductRecentHexChangesParams struct {
-	MapID     pgtype.UUID `json:"map_id"`
-	RowOffset int32       `json:"row_offset"`
-	RowLimit  int32       `json:"row_limit"`
-}
-
-type ListProductRecentHexChangesRow struct {
-	ID         pgtype.UUID        `json:"id"`
-	HexID      pgtype.UUID        `json:"hex_id"`
-	MapID      pgtype.UUID        `json:"map_id"`
-	Kind       string             `json:"kind"`
-	Payload    []byte             `json:"payload"`
-	OccurredAt pgtype.Timestamptz `json:"occurred_at"`
-}
-
-func (q *Queries) ListProductRecentHexChanges(ctx context.Context, arg ListProductRecentHexChangesParams) ([]ListProductRecentHexChangesRow, error) {
-	rows, err := q.db.Query(ctx, listProductRecentHexChanges, arg.MapID, arg.RowOffset, arg.RowLimit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ListProductRecentHexChangesRow{}
-	for rows.Next() {
-		var i ListProductRecentHexChangesRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.HexID,
-			&i.MapID,
-			&i.Kind,
-			&i.Payload,
-			&i.OccurredAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const listProductRegions = `-- name: ListProductRegions :many
 SELECT r.public_id AS id, r.name, r.kind, r.charter_deadline, r.created_at,
        CASE WHEN d.id IS NULL THEN NULL WHEN d.deleted_at IS NULL AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
@@ -1725,84 +1076,9 @@ func (q *Queries) LockProductContainmentGraph(ctx context.Context) error {
 	return err
 }
 
-const lockProductHex = `-- name: LockProductHex :one
-SELECT h.id, h.public_id, h.map_id, h.col, h.row, h.terrain, h.elevation,
-       h.climate, h.created_at, h.submap_id, m.public_id AS map_public_id
-FROM hexes h JOIN maps m ON m.id=h.map_id
-WHERE h.public_id=$1 FOR UPDATE OF h
-`
-
-type LockProductHexRow struct {
-	ID          int64              `json:"id"`
-	PublicID    pgtype.UUID        `json:"public_id"`
-	MapID       int64              `json:"map_id"`
-	Col         int32              `json:"col"`
-	Row         int32              `json:"row"`
-	Terrain     pgtype.Text        `json:"terrain"`
-	Elevation   pgtype.Text        `json:"elevation"`
-	Climate     pgtype.Text        `json:"climate"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	SubmapID    pgtype.Int8        `json:"submap_id"`
-	MapPublicID pgtype.UUID        `json:"map_public_id"`
-}
-
-func (q *Queries) LockProductHex(ctx context.Context, hexID pgtype.UUID) (LockProductHexRow, error) {
-	row := q.db.QueryRow(ctx, lockProductHex, hexID)
-	var i LockProductHexRow
-	err := row.Scan(
-		&i.ID,
-		&i.PublicID,
-		&i.MapID,
-		&i.Col,
-		&i.Row,
-		&i.Terrain,
-		&i.Elevation,
-		&i.Climate,
-		&i.CreatedAt,
-		&i.SubmapID,
-		&i.MapPublicID,
-	)
-	return i, err
-}
-
-const lockProductHexEdge = `-- name: LockProductHexEdge :one
-SELECT e.id,e.public_id AS edge_id,m.public_id AS map_id,a.public_id AS hex_a,
-       b.public_id AS hex_b,e.edge_type,e.a_side,d.public_id AS document_id
-FROM hex_edges e JOIN maps m ON m.id=e.map_id JOIN hexes a ON a.id=e.hex_a
-JOIN hexes b ON b.id=e.hex_b LEFT JOIN documents d ON d.id=e.document_id
-WHERE e.public_id=$1 FOR UPDATE OF e
-`
-
-type LockProductHexEdgeRow struct {
-	ID         int64       `json:"id"`
-	EdgeID     pgtype.UUID `json:"edge_id"`
-	MapID      pgtype.UUID `json:"map_id"`
-	HexA       pgtype.UUID `json:"hex_a"`
-	HexB       pgtype.UUID `json:"hex_b"`
-	EdgeType   string      `json:"edge_type"`
-	ASide      pgtype.Text `json:"a_side"`
-	DocumentID pgtype.UUID `json:"document_id"`
-}
-
-func (q *Queries) LockProductHexEdge(ctx context.Context, edgeID pgtype.UUID) (LockProductHexEdgeRow, error) {
-	row := q.db.QueryRow(ctx, lockProductHexEdge, edgeID)
-	var i LockProductHexEdgeRow
-	err := row.Scan(
-		&i.ID,
-		&i.EdgeID,
-		&i.MapID,
-		&i.HexA,
-		&i.HexB,
-		&i.EdgeType,
-		&i.ASide,
-		&i.DocumentID,
-	)
-	return i, err
-}
-
 const lockProductMap = `-- name: LockProductMap :one
 SELECT m.id,m.public_id AS map_id,m.name,m.atlas_code,m.map_kind,m.family,
-       r.public_id AS region_id,m.cols,m.rows,m.asset_path,m.created_at,
+       r.public_id AS region_id,m.asset_path,m.created_at,
        creator.public_id AS created_by
 FROM maps m LEFT JOIN regions r ON r.id=m.region_id
 LEFT JOIN members creator ON creator.id=m.created_by
@@ -1817,8 +1093,6 @@ type LockProductMapRow struct {
 	MapKind   string             `json:"map_kind"`
 	Family    string             `json:"family"`
 	RegionID  pgtype.UUID        `json:"region_id"`
-	Cols      pgtype.Int4        `json:"cols"`
-	Rows      pgtype.Int4        `json:"rows"`
 	AssetPath pgtype.Text        `json:"asset_path"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	CreatedBy pgtype.UUID        `json:"created_by"`
@@ -1835,8 +1109,6 @@ func (q *Queries) LockProductMap(ctx context.Context, mapID pgtype.UUID) (LockPr
 		&i.MapKind,
 		&i.Family,
 		&i.RegionID,
-		&i.Cols,
-		&i.Rows,
 		&i.AssetPath,
 		&i.CreatedAt,
 		&i.CreatedBy,
@@ -1846,7 +1118,7 @@ func (q *Queries) LockProductMap(ctx context.Context, mapID pgtype.UUID) (LockPr
 
 const lockProductMapByAtlasCode = `-- name: LockProductMapByAtlasCode :one
 SELECT m.id, m.public_id, m.name, m.atlas_code, m.map_kind, m.family,
-       m.region_id, m.cols, m.rows, m.asset_path, m.created_at, m.created_by
+       m.region_id, m.asset_path, m.created_at, m.created_by
 FROM maps m WHERE m.atlas_code=$1 FOR UPDATE
 `
 
@@ -1858,8 +1130,6 @@ type LockProductMapByAtlasCodeRow struct {
 	MapKind   string             `json:"map_kind"`
 	Family    string             `json:"family"`
 	RegionID  pgtype.Int8        `json:"region_id"`
-	Cols      pgtype.Int4        `json:"cols"`
-	Rows      pgtype.Int4        `json:"rows"`
 	AssetPath pgtype.Text        `json:"asset_path"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	CreatedBy pgtype.Int8        `json:"created_by"`
@@ -1876,43 +1146,9 @@ func (q *Queries) LockProductMapByAtlasCode(ctx context.Context, atlasCode strin
 		&i.MapKind,
 		&i.Family,
 		&i.RegionID,
-		&i.Cols,
-		&i.Rows,
 		&i.AssetPath,
 		&i.CreatedAt,
 		&i.CreatedBy,
-	)
-	return i, err
-}
-
-const lockProductPoi = `-- name: LockProductPoi :one
-SELECT p.id,p.public_id AS poi_id,h.public_id AS hex_id,p.poi_type,p.discovery_tier,
-       p.is_charter_objective,d.public_id AS document_id
-FROM pois p JOIN hexes h ON h.id=p.hex_id LEFT JOIN documents d ON d.id=p.document_id
-WHERE p.public_id=$1 FOR UPDATE OF p
-`
-
-type LockProductPoiRow struct {
-	ID                 int64       `json:"id"`
-	PoiID              pgtype.UUID `json:"poi_id"`
-	HexID              pgtype.UUID `json:"hex_id"`
-	PoiType            string      `json:"poi_type"`
-	DiscoveryTier      string      `json:"discovery_tier"`
-	IsCharterObjective bool        `json:"is_charter_objective"`
-	DocumentID         pgtype.UUID `json:"document_id"`
-}
-
-func (q *Queries) LockProductPoi(ctx context.Context, poiID pgtype.UUID) (LockProductPoiRow, error) {
-	row := q.db.QueryRow(ctx, lockProductPoi, poiID)
-	var i LockProductPoiRow
-	err := row.Scan(
-		&i.ID,
-		&i.PoiID,
-		&i.HexID,
-		&i.PoiType,
-		&i.DiscoveryTier,
-		&i.IsCharterObjective,
-		&i.DocumentID,
 	)
 	return i, err
 }
@@ -2074,10 +1310,6 @@ func (q *Queries) ReadProductCalendar(ctx context.Context, today pgtype.Date) (R
 
 const readProductContainmentEdges = `-- name: ReadProductContainmentEdges :many
 SELECT DISTINCT parent.public_id AS parent_map_id,child.public_id AS child_map_id
-FROM hexes h JOIN maps parent ON parent.id=h.map_id
-JOIN maps child ON child.id=h.submap_id WHERE h.submap_id IS NOT NULL
-UNION
-SELECT DISTINCT parent.public_id AS parent_map_id,child.public_id AS child_map_id
 FROM pointcrawl_nodes n JOIN maps parent ON parent.id=n.map_id
 JOIN maps child ON child.id=n.submap_id WHERE n.submap_id IS NOT NULL
 ORDER BY parent_map_id,child_map_id
@@ -2156,84 +1388,6 @@ func (q *Queries) ReadProductGameDates(ctx context.Context, realDates []pgtype.D
 			&i.RealDate,
 			&i.GameDay,
 			&i.Definition,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const readProductMapViewPlaces = `-- name: ReadProductMapViewPlaces :many
-SELECT h.public_id AS hex_id, h.col, h.row, d.public_id AS document_id,
-       d.slug, d.title, COALESCE(d.category, '') AS category
-FROM maps m
-JOIN hexes h ON h.map_id = m.id
-JOIN hex_entry_links hel ON hel.hex_id = h.id
-JOIN documents d ON d.id = hel.document_id
-LEFT JOIN members author ON author.id=d.author_id
-WHERE m.atlas_code = $1
-  AND d.deleted_at IS NULL AND d.status = 'published'
-  AND d.kind = 'codex_entry' AND d.category='Locations' AND hel.relation='location'
-  AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
-      $2::uuid,$3::text[],$4::text,
-      $5::boolean,$6::boolean,$7::uuid[])
-ORDER BY d.title, d.public_id, h.row, h.col, h.public_id
-LIMIT $9 OFFSET $8
-`
-
-type ReadProductMapViewPlacesParams struct {
-	AtlasCode    string        `json:"atlas_code"`
-	ViewerID     pgtype.UUID   `json:"viewer_id"`
-	ViewerRoles  []string      `json:"viewer_roles"`
-	ViewerHandle string        `json:"viewer_handle"`
-	ViewerAdmin  bool          `json:"viewer_admin"`
-	ViewerLiveDm bool          `json:"viewer_live_dm"`
-	ReaderIds    []pgtype.UUID `json:"reader_ids"`
-	RowOffset    int32         `json:"row_offset"`
-	RowLimit     int32         `json:"row_limit"`
-}
-
-type ReadProductMapViewPlacesRow struct {
-	HexID      pgtype.UUID `json:"hex_id"`
-	Col        int32       `json:"col"`
-	Row        int32       `json:"row"`
-	DocumentID pgtype.UUID `json:"document_id"`
-	Slug       string      `json:"slug"`
-	Title      string      `json:"title"`
-	Category   string      `json:"category"`
-}
-
-func (q *Queries) ReadProductMapViewPlaces(ctx context.Context, arg ReadProductMapViewPlacesParams) ([]ReadProductMapViewPlacesRow, error) {
-	rows, err := q.db.Query(ctx, readProductMapViewPlaces,
-		arg.AtlasCode,
-		arg.ViewerID,
-		arg.ViewerRoles,
-		arg.ViewerHandle,
-		arg.ViewerAdmin,
-		arg.ViewerLiveDm,
-		arg.ReaderIds,
-		arg.RowOffset,
-		arg.RowLimit,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ReadProductMapViewPlacesRow{}
-	for rows.Next() {
-		var i ReadProductMapViewPlacesRow
-		if err := rows.Scan(
-			&i.HexID,
-			&i.Col,
-			&i.Row,
-			&i.DocumentID,
-			&i.Slug,
-			&i.Title,
-			&i.Category,
 		); err != nil {
 			return nil, err
 		}
@@ -2381,34 +1535,12 @@ WITH prior AS (
 ), changed AS (
  UPDATE regions r SET deleted_at=NULL,deleted_by=NULL
  FROM prior p WHERE r.id=p.id AND p.deleted_at IS NOT NULL RETURNING r.id, r.public_id, r.name, r.kind, r.charter_deadline, r.document_id, r.created_at, r.deleted_at, r.deleted_by
-), history AS (
- INSERT INTO region_changes(public_id,region_id,kind,old_value,new_value,actor_id,created_at)
- SELECT $2,r.id,'restored',
-   jsonb_build_object('id',p.public_id,'name',p.name,'kind',p.kind,
-     'charterDeadline',p.charter_deadline,'documentId',old_doc.public_id,
-     'createdAt',p.created_at,'deletedAt',p.deleted_at,'deletedBy',old_deleted_by.public_id),
-   jsonb_build_object('id',r.public_id,'name',r.name,'kind',r.kind,
-     'charterDeadline',r.charter_deadline,'documentId',new_doc.public_id,
-     'createdAt',r.created_at,'deletedAt',r.deleted_at,'deletedBy',new_deleted_by.public_id),
-   actor.id,$3
- FROM changed r JOIN prior p ON p.id=r.id
- LEFT JOIN documents old_doc ON old_doc.id=p.document_id LEFT JOIN documents new_doc ON new_doc.id=r.document_id
- LEFT JOIN members old_deleted_by ON old_deleted_by.id=p.deleted_by
- LEFT JOIN members new_deleted_by ON new_deleted_by.id=r.deleted_by
- JOIN members actor ON actor.public_id=$4::uuid
 ), result_rows AS (
  SELECT id, public_id, name, kind, charter_deadline, document_id, created_at, deleted_at, deleted_by FROM changed UNION ALL SELECT id, public_id, name, kind, charter_deadline, document_id, created_at, deleted_at, deleted_by FROM prior WHERE NOT EXISTS(SELECT 1 FROM changed)
 )
 SELECT r.public_id AS id,r.name,r.kind,r.charter_deadline,d.public_id AS document_id,r.created_at
 FROM result_rows r LEFT JOIN documents d ON d.id=r.document_id
 `
-
-type RestoreProductRegionParams struct {
-	RegionID   pgtype.UUID        `json:"region_id"`
-	HistoryID  pgtype.UUID        `json:"history_id"`
-	RecordedAt pgtype.Timestamptz `json:"recorded_at"`
-	ActorID    pgtype.UUID        `json:"actor_id"`
-}
 
 type RestoreProductRegionRow struct {
 	ID              pgtype.UUID        `json:"id"`
@@ -2419,13 +1551,8 @@ type RestoreProductRegionRow struct {
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
 }
 
-func (q *Queries) RestoreProductRegion(ctx context.Context, arg RestoreProductRegionParams) (RestoreProductRegionRow, error) {
-	row := q.db.QueryRow(ctx, restoreProductRegion,
-		arg.RegionID,
-		arg.HistoryID,
-		arg.RecordedAt,
-		arg.ActorID,
-	)
+func (q *Queries) RestoreProductRegion(ctx context.Context, regionID pgtype.UUID) (RestoreProductRegionRow, error) {
+	row := q.db.QueryRow(ctx, restoreProductRegion, regionID)
 	var i RestoreProductRegionRow
 	err := row.Scan(
 		&i.ID,
@@ -2439,144 +1566,22 @@ func (q *Queries) RestoreProductRegion(ctx context.Context, arg RestoreProductRe
 }
 
 const revokeProductArchon = `-- name: RevokeProductArchon :execrows
-WITH removed AS (
- DELETE FROM archon_assignments a USING members m,regions r
- WHERE a.member_id=m.id AND a.region_id=r.id AND m.public_id=$4
-   AND r.public_id=$5
- RETURNING a.member_id, a.region_id, a.created_at, a.granted_by
-)
-INSERT INTO assignment_changes(public_id,assignment_kind,member_id,region_id,npc_document_id,
- old_value,new_value,actor_id,created_at)
-SELECT $1,'archon',removed.member_id,removed.region_id,NULL,
- jsonb_build_object('memberId',member.public_id,'regionId',region.public_id,
-   'grantedBy',grantor.public_id,'grantedAt',removed.created_at),NULL,
- actor.id,$2
-FROM removed
-JOIN members member ON member.id=removed.member_id
-JOIN regions region ON region.id=removed.region_id
-LEFT JOIN members grantor ON grantor.id=removed.granted_by
-JOIN members actor ON actor.public_id=$3::uuid
+DELETE FROM archon_assignments a USING members m,regions r
+WHERE a.member_id=m.id AND a.region_id=r.id AND m.public_id=$1
+  AND r.public_id=$2
 `
 
 type RevokeProductArchonParams struct {
-	HistoryID  pgtype.UUID        `json:"history_id"`
-	RecordedAt pgtype.Timestamptz `json:"recorded_at"`
-	ActorID    pgtype.UUID        `json:"actor_id"`
-	MemberID   pgtype.UUID        `json:"member_id"`
-	RegionID   pgtype.UUID        `json:"region_id"`
+	MemberID pgtype.UUID `json:"member_id"`
+	RegionID pgtype.UUID `json:"region_id"`
 }
 
 func (q *Queries) RevokeProductArchon(ctx context.Context, arg RevokeProductArchonParams) (int64, error) {
-	result, err := q.db.Exec(ctx, revokeProductArchon,
-		arg.HistoryID,
-		arg.RecordedAt,
-		arg.ActorID,
-		arg.MemberID,
-		arg.RegionID,
-	)
+	result, err := q.db.Exec(ctx, revokeProductArchon, arg.MemberID, arg.RegionID)
 	if err != nil {
 		return 0, err
 	}
 	return result.RowsAffected(), nil
-}
-
-const setProductHexEdge = `-- name: SetProductHexEdge :one
-WITH input AS (
- SELECT COALESCE((SELECT existing.public_id FROM hex_edges existing
-                  WHERE existing.map_id=m.id AND existing.hex_a=least(a.id,b.id)
-                    AND existing.hex_b=greatest(a.id,b.id) ORDER BY existing.public_id LIMIT 1),
-                gen_random_uuid()) AS edge_public_id,
-        m.id AS map_internal_id,a.id AS a_internal_id,b.id AS b_internal_id,
-        m.public_id AS map_public_id,a.public_id AS a_public_id,b.public_id AS b_public_id,
-        $1::text AS edge_type,$2::text AS a_side,
-        (SELECT d.id FROM documents d WHERE d.public_id=$3::uuid) AS document_internal_id,
-        $3::uuid AS document_public_id
- FROM maps m JOIN hexes a ON a.map_id=m.id AND a.public_id=$4::uuid
- JOIN hexes b ON b.map_id=m.id AND b.public_id=$5
- WHERE m.public_id=$6::uuid
-), prior AS (
- SELECT e.id, e.public_id, e.map_id, e.hex_a, e.hex_b, e.edge_type, e.a_side, e.document_id FROM hex_edges e JOIN input i ON i.edge_public_id=e.public_id FOR UPDATE OF e
-), saved AS (
- INSERT INTO hex_edges(public_id,map_id,hex_a,hex_b,edge_type,a_side,document_id)
- SELECT i.edge_public_id,i.map_internal_id,least(i.a_internal_id,i.b_internal_id),
-        greatest(i.a_internal_id,i.b_internal_id),i.edge_type,i.a_side,i.document_internal_id
- FROM input i
- ON CONFLICT(public_id) DO UPDATE SET map_id=EXCLUDED.map_id,hex_a=EXCLUDED.hex_a,
-   hex_b=EXCLUDED.hex_b,edge_type=EXCLUDED.edge_type,a_side=EXCLUDED.a_side,
-   document_id=EXCLUDED.document_id
- WHERE hex_edges.map_id=EXCLUDED.map_id AND
-   (hex_edges.hex_a IS DISTINCT FROM EXCLUDED.hex_a OR hex_edges.hex_b IS DISTINCT FROM EXCLUDED.hex_b
-    OR hex_edges.edge_type IS DISTINCT FROM EXCLUDED.edge_type OR hex_edges.a_side IS DISTINCT FROM EXCLUDED.a_side
-    OR hex_edges.document_id IS DISTINCT FROM EXCLUDED.document_id)
- RETURNING id, public_id, map_id, hex_a, hex_b, edge_type, a_side, document_id
-), history AS (
- INSERT INTO map_changes(public_id,map_id,affected_type,affected_public_id,old_value,new_value,actor_id,recorded_at)
- SELECT $7,s.map_id,'hex_edge',s.public_id,
-        CASE WHEN p.id IS NULL THEN NULL ELSE jsonb_build_object('hexA',pa.public_id,'hexB',pb.public_id,
-          'edgeType',p.edge_type,'aSide',p.a_side,'documentId',pd.public_id) END,
-        jsonb_build_object('hexA',a.public_id,'hexB',b.public_id,'edgeType',s.edge_type,
-          'aSide',s.a_side,'documentId',d.public_id),actor.id,$8
- FROM saved s LEFT JOIN prior p ON p.id=s.id
- JOIN hexes a ON a.id=s.hex_a JOIN hexes b ON b.id=s.hex_b
- LEFT JOIN documents d ON d.id=s.document_id
- LEFT JOIN hexes pa ON pa.id=p.hex_a LEFT JOIN hexes pb ON pb.id=p.hex_b
- LEFT JOIN documents pd ON pd.id=p.document_id
- JOIN members actor ON actor.public_id=$9::uuid
-), result_rows AS (
- SELECT id, public_id, map_id, hex_a, hex_b, edge_type, a_side, document_id FROM saved UNION ALL SELECT p.id, p.public_id, p.map_id, p.hex_a, p.hex_b, p.edge_type, p.a_side, p.document_id FROM prior p WHERE NOT EXISTS(SELECT 1 FROM saved)
-)
-SELECT s.public_id AS id,m.public_id AS map_id,a.public_id AS hex_a,b.public_id AS hex_b,
-       s.edge_type,s.a_side,d.public_id AS document_id
-FROM result_rows s JOIN maps m ON m.id=s.map_id
-JOIN hexes a ON a.id=s.hex_a JOIN hexes b ON b.id=s.hex_b
-LEFT JOIN documents d ON d.id=s.document_id
-`
-
-type SetProductHexEdgeParams struct {
-	EdgeType   string             `json:"edge_type"`
-	ASide      pgtype.Text        `json:"a_side"`
-	DocumentID pgtype.UUID        `json:"document_id"`
-	HexA       pgtype.UUID        `json:"hex_a"`
-	HexB       pgtype.UUID        `json:"hex_b"`
-	MapID      pgtype.UUID        `json:"map_id"`
-	HistoryID  pgtype.UUID        `json:"history_id"`
-	RecordedAt pgtype.Timestamptz `json:"recorded_at"`
-	ActorID    pgtype.UUID        `json:"actor_id"`
-}
-
-type SetProductHexEdgeRow struct {
-	ID         pgtype.UUID `json:"id"`
-	MapID      pgtype.UUID `json:"map_id"`
-	HexA       pgtype.UUID `json:"hex_a"`
-	HexB       pgtype.UUID `json:"hex_b"`
-	EdgeType   string      `json:"edge_type"`
-	ASide      pgtype.Text `json:"a_side"`
-	DocumentID pgtype.UUID `json:"document_id"`
-}
-
-func (q *Queries) SetProductHexEdge(ctx context.Context, arg SetProductHexEdgeParams) (SetProductHexEdgeRow, error) {
-	row := q.db.QueryRow(ctx, setProductHexEdge,
-		arg.EdgeType,
-		arg.ASide,
-		arg.DocumentID,
-		arg.HexA,
-		arg.HexB,
-		arg.MapID,
-		arg.HistoryID,
-		arg.RecordedAt,
-		arg.ActorID,
-	)
-	var i SetProductHexEdgeRow
-	err := row.Scan(
-		&i.ID,
-		&i.MapID,
-		&i.HexA,
-		&i.HexB,
-		&i.EdgeType,
-		&i.ASide,
-		&i.DocumentID,
-	)
-	return i, err
 }
 
 const setProductPointcrawlEdge = `-- name: SetProductPointcrawlEdge :one
@@ -2606,19 +1611,6 @@ WITH input AS (
     OR pointcrawl_edges.directed IS DISTINCT FROM EXCLUDED.directed OR pointcrawl_edges.kind IS DISTINCT FROM EXCLUDED.kind
     OR pointcrawl_edges.label IS DISTINCT FROM EXCLUDED.label OR pointcrawl_edges.document_id IS DISTINCT FROM EXCLUDED.document_id)
  RETURNING directed, document_id, id, kind, label, map_id, node_a, node_b, public_id
-), history AS (
- INSERT INTO map_changes(public_id,map_id,affected_type,affected_public_id,old_value,new_value,actor_id,recorded_at)
- SELECT $9,s.map_id,'pointcrawl_edge',s.public_id,
-        CASE WHEN p.id IS NULL THEN NULL ELSE jsonb_build_object('nodeA',pa.public_id,'nodeB',pb.public_id,
-          'directed',p.directed,'kind',p.kind,'label',p.label,'documentId',pd.public_id) END,
-        jsonb_build_object('nodeA',a.public_id,'nodeB',b.public_id,'directed',s.directed,
-          'kind',s.kind,'label',s.label,'documentId',d.public_id),actor.id,$10
- FROM saved s LEFT JOIN prior p ON p.id=s.id
- JOIN pointcrawl_nodes a ON a.id=s.node_a JOIN pointcrawl_nodes b ON b.id=s.node_b
- LEFT JOIN documents d ON d.id=s.document_id
- LEFT JOIN pointcrawl_nodes pa ON pa.id=p.node_a LEFT JOIN pointcrawl_nodes pb ON pb.id=p.node_b
- LEFT JOIN documents pd ON pd.id=p.document_id
- JOIN members actor ON actor.public_id=$11::uuid
 ), result_rows AS (
  SELECT directed, document_id, id, kind, label, map_id, node_a, node_b, public_id FROM saved UNION ALL SELECT p.directed, p.document_id, p.id, p.kind, p.label, p.map_id, p.node_a, p.node_b, p.public_id FROM prior p WHERE NOT EXISTS(SELECT 1 FROM saved)
 )
@@ -2630,17 +1622,14 @@ LEFT JOIN documents d ON d.id=s.document_id
 `
 
 type SetProductPointcrawlEdgeParams struct {
-	EdgeID     pgtype.UUID        `json:"edge_id"`
-	Directed   bool               `json:"directed"`
-	Kind       string             `json:"kind"`
-	Label      pgtype.Text        `json:"label"`
-	DocumentID pgtype.UUID        `json:"document_id"`
-	NodeA      pgtype.UUID        `json:"node_a"`
-	NodeB      pgtype.UUID        `json:"node_b"`
-	MapID      pgtype.UUID        `json:"map_id"`
-	HistoryID  pgtype.UUID        `json:"history_id"`
-	RecordedAt pgtype.Timestamptz `json:"recorded_at"`
-	ActorID    pgtype.UUID        `json:"actor_id"`
+	EdgeID     pgtype.UUID `json:"edge_id"`
+	Directed   bool        `json:"directed"`
+	Kind       string      `json:"kind"`
+	Label      pgtype.Text `json:"label"`
+	DocumentID pgtype.UUID `json:"document_id"`
+	NodeA      pgtype.UUID `json:"node_a"`
+	NodeB      pgtype.UUID `json:"node_b"`
+	MapID      pgtype.UUID `json:"map_id"`
 }
 
 type SetProductPointcrawlEdgeRow struct {
@@ -2664,9 +1653,6 @@ func (q *Queries) SetProductPointcrawlEdge(ctx context.Context, arg SetProductPo
 		arg.NodeA,
 		arg.NodeB,
 		arg.MapID,
-		arg.HistoryID,
-		arg.RecordedAt,
-		arg.ActorID,
 	)
 	var i SetProductPointcrawlEdgeRow
 	err := row.Scan(
@@ -2689,21 +1675,6 @@ WITH prior_row AS (
  UPDATE regions r SET kind=$2
  FROM prior_row p WHERE r.id=p.id AND r.kind IS DISTINCT FROM $2
  RETURNING r.id, r.public_id, r.name, r.kind, r.charter_deadline, r.document_id, r.created_at, r.deleted_at, r.deleted_by
-), history AS (
- INSERT INTO region_changes(public_id,region_id,kind,old_value,new_value,actor_id,created_at)
- SELECT $3,n.id,'transitioned',
-   jsonb_build_object('id',p.public_id,'name',p.name,'kind',p.kind,
-     'charterDeadline',p.charter_deadline,'documentId',old_doc.public_id,
-     'createdAt',p.created_at,'deletedAt',p.deleted_at,'deletedBy',old_deleted_by.public_id),
-   jsonb_build_object('id',n.public_id,'name',n.name,'kind',n.kind,
-     'charterDeadline',n.charter_deadline,'documentId',new_doc.public_id,
-     'createdAt',n.created_at,'deletedAt',n.deleted_at,'deletedBy',new_deleted_by.public_id,
-     'note',$4::text),
-   actor.id,$5 FROM changed n JOIN prior_row p ON p.id=n.id
- LEFT JOIN documents old_doc ON old_doc.id=p.document_id LEFT JOIN documents new_doc ON new_doc.id=n.document_id
- LEFT JOIN members old_deleted_by ON old_deleted_by.id=p.deleted_by
- LEFT JOIN members new_deleted_by ON new_deleted_by.id=n.deleted_by
- JOIN members actor ON actor.public_id=$6::uuid
 )
 SELECT r.public_id AS id,r.name,r.kind,r.charter_deadline,d.public_id AS document_id,r.created_at
 FROM (SELECT id, public_id, name, kind, charter_deadline, document_id, created_at, deleted_at, deleted_by FROM changed UNION ALL SELECT id, public_id, name, kind, charter_deadline, document_id, created_at, deleted_at, deleted_by FROM prior_row
@@ -2712,12 +1683,8 @@ LEFT JOIN documents d ON d.id=r.document_id
 `
 
 type TransitionProductRegionParams struct {
-	RegionID   pgtype.UUID        `json:"region_id"`
-	Kind       string             `json:"kind"`
-	HistoryID  pgtype.UUID        `json:"history_id"`
-	Note       string             `json:"note"`
-	RecordedAt pgtype.Timestamptz `json:"recorded_at"`
-	ActorID    pgtype.UUID        `json:"actor_id"`
+	RegionID pgtype.UUID `json:"region_id"`
+	Kind     string      `json:"kind"`
 }
 
 type TransitionProductRegionRow struct {
@@ -2730,14 +1697,7 @@ type TransitionProductRegionRow struct {
 }
 
 func (q *Queries) TransitionProductRegion(ctx context.Context, arg TransitionProductRegionParams) (TransitionProductRegionRow, error) {
-	row := q.db.QueryRow(ctx, transitionProductRegion,
-		arg.RegionID,
-		arg.Kind,
-		arg.HistoryID,
-		arg.Note,
-		arg.RecordedAt,
-		arg.ActorID,
-	)
+	row := q.db.QueryRow(ctx, transitionProductRegion, arg.RegionID, arg.Kind)
 	var i TransitionProductRegionRow
 	err := row.Scan(
 		&i.ID,
@@ -2750,45 +1710,6 @@ func (q *Queries) TransitionProductRegion(ctx context.Context, arg TransitionPro
 	return i, err
 }
 
-const unlinkProductHexEntry = `-- name: UnlinkProductHexEntry :one
-WITH removed AS (
- DELETE FROM hex_entry_links l USING hexes h,documents d
- WHERE l.hex_id=h.id AND l.document_id=d.id AND h.public_id=$1::uuid
-   AND d.public_id=$2::uuid AND l.relation=$3
- RETURNING l.hex_id, l.document_id, l.relation
-), history AS (
- INSERT INTO hex_changes(public_id,hex_id,kind,payload,created_at)
- SELECT $4,r.hex_id,'entry_unlinked',jsonb_build_object(
-   'documentId',d.public_id,'relation',r.relation,'actorId',actor.public_id),$5
- FROM removed r JOIN documents d ON d.id=r.document_id
- JOIN members actor ON actor.public_id=$6::uuid
-)
-SELECT count(*)::int FROM removed
-`
-
-type UnlinkProductHexEntryParams struct {
-	HexID      pgtype.UUID        `json:"hex_id"`
-	DocumentID pgtype.UUID        `json:"document_id"`
-	Relation   string             `json:"relation"`
-	HistoryID  pgtype.UUID        `json:"history_id"`
-	RecordedAt pgtype.Timestamptz `json:"recorded_at"`
-	ActorID    pgtype.UUID        `json:"actor_id"`
-}
-
-func (q *Queries) UnlinkProductHexEntry(ctx context.Context, arg UnlinkProductHexEntryParams) (int32, error) {
-	row := q.db.QueryRow(ctx, unlinkProductHexEntry,
-		arg.HexID,
-		arg.DocumentID,
-		arg.Relation,
-		arg.HistoryID,
-		arg.RecordedAt,
-		arg.ActorID,
-	)
-	var column_1 int32
-	err := row.Scan(&column_1)
-	return column_1, err
-}
-
 const unlinkProductPointcrawlEntry = `-- name: UnlinkProductPointcrawlEntry :one
 WITH removed AS (
  DELETE FROM pointcrawl_entry_links l USING maps m,pointcrawl_nodes n,documents d
@@ -2796,24 +1717,15 @@ WITH removed AS (
   AND m.public_id=$1::uuid AND n.public_id=$2::uuid
   AND d.public_id=$3::uuid AND l.relation=$4
  RETURNING l.created_at, l.created_by, l.document_id, l.map_id, l.node_id, l.relation
-), history AS (
- INSERT INTO pointcrawl_node_changes(public_id,node_id,kind,old_value,new_value,actor_id,created_at)
- SELECT $5,r.node_id,'entry_unlinked',
-   jsonb_build_object('documentId',d.public_id,'relation',r.relation),NULL,
-   (SELECT actor.id FROM members actor WHERE actor.public_id=$6::uuid),$7
- FROM removed r JOIN documents d ON d.id=r.document_id
 )
 SELECT count(*)::int FROM removed
 `
 
 type UnlinkProductPointcrawlEntryParams struct {
-	MapID      pgtype.UUID        `json:"map_id"`
-	NodeID     pgtype.UUID        `json:"node_id"`
-	DocumentID pgtype.UUID        `json:"document_id"`
-	Relation   string             `json:"relation"`
-	HistoryID  pgtype.UUID        `json:"history_id"`
-	ActorID    pgtype.UUID        `json:"actor_id"`
-	RecordedAt pgtype.Timestamptz `json:"recorded_at"`
+	MapID      pgtype.UUID `json:"map_id"`
+	NodeID     pgtype.UUID `json:"node_id"`
+	DocumentID pgtype.UUID `json:"document_id"`
+	Relation   string      `json:"relation"`
 }
 
 func (q *Queries) UnlinkProductPointcrawlEntry(ctx context.Context, arg UnlinkProductPointcrawlEntryParams) (int32, error) {
@@ -2822,9 +1734,6 @@ func (q *Queries) UnlinkProductPointcrawlEntry(ctx context.Context, arg UnlinkPr
 		arg.NodeID,
 		arg.DocumentID,
 		arg.Relation,
-		arg.HistoryID,
-		arg.ActorID,
-		arg.RecordedAt,
 	)
 	var column_1 int32
 	err := row.Scan(&column_1)
@@ -2865,104 +1774,6 @@ func (q *Queries) UpdateProductCalendar(ctx context.Context, arg UpdateProductCa
 	return i, err
 }
 
-const updateProductHex = `-- name: UpdateProductHex :one
-WITH prior_row AS (
- SELECT h.id, h.public_id, h.map_id, h.col, h.row, h.terrain, h.elevation, h.climate, h.created_at, h.submap_id FROM hexes h WHERE h.public_id=$1 FOR UPDATE
-), desired AS (
- SELECT b.id,b.public_id,b.map_id,b.col,b.row,b.terrain,b.elevation,b.climate,b.created_at,b.submap_id,
-   CASE WHEN $2::bool THEN $3::text ELSE b.terrain END AS next_terrain,
-   CASE WHEN $4::bool THEN $5::text ELSE b.elevation END AS next_elevation,
-   CASE WHEN $6::bool THEN $7::text ELSE b.climate END AS next_climate,
-   CASE WHEN $8::bool THEN (SELECT m.id FROM maps m WHERE m.public_id=$9::uuid)
-        ELSE b.submap_id END AS next_submap_id
- FROM prior_row b
-), changed AS (
- UPDATE hexes h SET terrain=d.next_terrain,elevation=d.next_elevation,
-   climate=d.next_climate,submap_id=d.next_submap_id
- FROM desired d WHERE h.id=d.id AND
-   (h.terrain IS DISTINCT FROM d.next_terrain OR h.elevation IS DISTINCT FROM d.next_elevation
-    OR h.climate IS DISTINCT FROM d.next_climate OR h.submap_id IS DISTINCT FROM d.next_submap_id)
- RETURNING h.id, h.public_id, h.map_id, h.col, h.row, h.terrain, h.elevation, h.climate, h.created_at, h.submap_id
-), history AS (
- INSERT INTO hex_changes(public_id,hex_id,kind,payload,created_at)
- SELECT $10,n.id,'terrain_change',jsonb_build_object(
-   'oldValue',jsonb_build_object('terrain',b.terrain,'elevation',b.elevation,'climate',b.climate,
-     'submapId',old_submap.public_id),
-   'newValue',jsonb_build_object('terrain',n.terrain,'elevation',n.elevation,'climate',n.climate,
-     'submapId',new_submap.public_id),
-   'actorId',actor.public_id,'note',$11::text),$12
- FROM changed n JOIN prior_row b ON b.id=n.id
- LEFT JOIN maps old_submap ON old_submap.id=b.submap_id
- LEFT JOIN maps new_submap ON new_submap.id=n.submap_id
- JOIN members actor ON actor.public_id=$13::uuid
-), result_rows AS (
- SELECT id, public_id, map_id, col, row, terrain, elevation, climate, created_at, submap_id FROM changed
- UNION ALL SELECT b.id, b.public_id, b.map_id, b.col, b.row, b.terrain, b.elevation, b.climate, b.created_at, b.submap_id FROM prior_row b WHERE NOT EXISTS(SELECT 1 FROM changed)
-)
-SELECT h.public_id AS id,m.public_id AS map_id,h.col,h.row,h.terrain,h.elevation,h.climate,
-       h.created_at,submap.public_id AS submap_id
-FROM result_rows h JOIN maps m ON m.id=h.map_id LEFT JOIN maps submap ON submap.id=h.submap_id
-`
-
-type UpdateProductHexParams struct {
-	HexID        pgtype.UUID        `json:"hex_id"`
-	TerrainSet   bool               `json:"terrain_set"`
-	Terrain      pgtype.Text        `json:"terrain"`
-	ElevationSet bool               `json:"elevation_set"`
-	Elevation    pgtype.Text        `json:"elevation"`
-	ClimateSet   bool               `json:"climate_set"`
-	Climate      pgtype.Text        `json:"climate"`
-	SubmapSet    bool               `json:"submap_set"`
-	SubmapID     pgtype.UUID        `json:"submap_id"`
-	HistoryID    pgtype.UUID        `json:"history_id"`
-	Note         string             `json:"note"`
-	RecordedAt   pgtype.Timestamptz `json:"recorded_at"`
-	ActorID      pgtype.UUID        `json:"actor_id"`
-}
-
-type UpdateProductHexRow struct {
-	ID        pgtype.UUID        `json:"id"`
-	MapID     pgtype.UUID        `json:"map_id"`
-	Col       int32              `json:"col"`
-	Row       int32              `json:"row"`
-	Terrain   pgtype.Text        `json:"terrain"`
-	Elevation pgtype.Text        `json:"elevation"`
-	Climate   pgtype.Text        `json:"climate"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-	SubmapID  pgtype.UUID        `json:"submap_id"`
-}
-
-func (q *Queries) UpdateProductHex(ctx context.Context, arg UpdateProductHexParams) (UpdateProductHexRow, error) {
-	row := q.db.QueryRow(ctx, updateProductHex,
-		arg.HexID,
-		arg.TerrainSet,
-		arg.Terrain,
-		arg.ElevationSet,
-		arg.Elevation,
-		arg.ClimateSet,
-		arg.Climate,
-		arg.SubmapSet,
-		arg.SubmapID,
-		arg.HistoryID,
-		arg.Note,
-		arg.RecordedAt,
-		arg.ActorID,
-	)
-	var i UpdateProductHexRow
-	err := row.Scan(
-		&i.ID,
-		&i.MapID,
-		&i.Col,
-		&i.Row,
-		&i.Terrain,
-		&i.Elevation,
-		&i.Climate,
-		&i.CreatedAt,
-		&i.SubmapID,
-	)
-	return i, err
-}
-
 const updateProductRegion = `-- name: UpdateProductRegion :one
 WITH prior_row AS (
  SELECT r.id, r.public_id, r.name, r.kind, r.charter_deadline, r.document_id, r.created_at, r.deleted_at, r.deleted_by FROM regions r WHERE r.public_id=$1 AND r.deleted_at IS NULL AND r.kind=$2 FOR UPDATE
@@ -2976,21 +1787,6 @@ WITH prior_row AS (
    (r.name IS DISTINCT FROM d.next_name OR r.charter_deadline IS DISTINCT FROM d.next_deadline
     OR r.document_id IS DISTINCT FROM d.next_document_id)
  RETURNING r.id, r.public_id, r.name, r.kind, r.charter_deadline, r.document_id, r.created_at, r.deleted_at, r.deleted_by
-), history AS (
- INSERT INTO region_changes(public_id,region_id,kind,old_value,new_value,actor_id,created_at)
- SELECT $6,n.id,'updated',
-   jsonb_build_object('id',p.public_id,'name',p.name,'kind',p.kind,
-     'charterDeadline',p.charter_deadline,'documentId',old_doc.public_id,
-     'createdAt',p.created_at,'deletedAt',p.deleted_at,'deletedBy',old_deleted_by.public_id),
-   jsonb_build_object('id',n.public_id,'name',n.name,'kind',n.kind,
-     'charterDeadline',n.charter_deadline,'documentId',new_doc.public_id,
-     'createdAt',n.created_at,'deletedAt',n.deleted_at,'deletedBy',new_deleted_by.public_id),
-   actor.id,$7
- FROM changed n JOIN prior_row p ON p.id=n.id
- LEFT JOIN documents old_doc ON old_doc.id=p.document_id LEFT JOIN documents new_doc ON new_doc.id=n.document_id
- LEFT JOIN members old_deleted_by ON old_deleted_by.id=p.deleted_by
- LEFT JOIN members new_deleted_by ON new_deleted_by.id=n.deleted_by
- JOIN members actor ON actor.public_id=$8::uuid
 ), result_rows AS (
  SELECT id, public_id, name, kind, charter_deadline, document_id, created_at, deleted_at, deleted_by FROM changed UNION ALL SELECT id, public_id, name, kind, charter_deadline, document_id, created_at, deleted_at, deleted_by FROM prior_row
  WHERE NOT EXISTS(SELECT 1 FROM changed)
@@ -3005,9 +1801,6 @@ type UpdateProductRegionParams struct {
 	Name            string             `json:"name"`
 	CharterDeadline pgtype.Timestamptz `json:"charter_deadline"`
 	DocumentID      pgtype.UUID        `json:"document_id"`
-	HistoryID       pgtype.UUID        `json:"history_id"`
-	RecordedAt      pgtype.Timestamptz `json:"recorded_at"`
-	ActorID         pgtype.UUID        `json:"actor_id"`
 }
 
 type UpdateProductRegionRow struct {
@@ -3026,9 +1819,6 @@ func (q *Queries) UpdateProductRegion(ctx context.Context, arg UpdateProductRegi
 		arg.Name,
 		arg.CharterDeadline,
 		arg.DocumentID,
-		arg.HistoryID,
-		arg.RecordedAt,
-		arg.ActorID,
 	)
 	var i UpdateProductRegionRow
 	err := row.Scan(
@@ -3084,93 +1874,6 @@ func (q *Queries) UpdateProductTimeAnchor(ctx context.Context, arg UpdateProduct
 	return i, err
 }
 
-const upsertProductPoi = `-- name: UpsertProductPoi :one
-WITH input AS (
- SELECT COALESCE($1::uuid,gen_random_uuid()) AS poi_public_id,h.id AS hex_internal_id,
-        h.public_id AS hex_public_id,$2::text AS poi_type,
-        $3::text AS discovery_tier,$4::bool AS is_charter_objective,
-        (SELECT d.id FROM documents d WHERE d.public_id=$5::uuid) AS document_internal_id
- FROM hexes h WHERE h.public_id=$6::uuid
-   AND ($1::uuid IS NULL OR EXISTS(
-     SELECT 1 FROM pois existing WHERE existing.public_id=$1::uuid
-       AND existing.hex_id=h.id))
-), prior AS (
- SELECT p.id, p.public_id, p.hex_id, p.poi_type, p.discovery_tier, p.is_charter_objective, p.document_id FROM pois p JOIN input i ON i.poi_public_id=p.public_id FOR UPDATE OF p
-), changed AS (
- INSERT INTO pois(public_id,hex_id,poi_type,discovery_tier,is_charter_objective,document_id)
- SELECT i.poi_public_id,i.hex_internal_id,i.poi_type,i.discovery_tier,i.is_charter_objective,i.document_internal_id FROM input i
- ON CONFLICT(public_id) DO UPDATE SET poi_type=EXCLUDED.poi_type,discovery_tier=EXCLUDED.discovery_tier,
-   is_charter_objective=EXCLUDED.is_charter_objective,document_id=EXCLUDED.document_id
- WHERE pois.hex_id=EXCLUDED.hex_id AND
-   (pois.poi_type IS DISTINCT FROM EXCLUDED.poi_type OR pois.discovery_tier IS DISTINCT FROM EXCLUDED.discovery_tier
-    OR pois.is_charter_objective IS DISTINCT FROM EXCLUDED.is_charter_objective
-    OR pois.document_id IS DISTINCT FROM EXCLUDED.document_id)
- RETURNING id, public_id, hex_id, poi_type, discovery_tier, is_charter_objective, document_id
-), history AS (
- INSERT INTO hex_changes(public_id,hex_id,kind,payload,created_at)
- SELECT $7,n.hex_id,'feature_added',jsonb_build_object(
-   'oldValue',CASE WHEN p.id IS NULL THEN NULL ELSE jsonb_build_object('poiType',p.poi_type,
-     'discoveryTier',p.discovery_tier,'isCharterObjective',p.is_charter_objective,
-     'documentId',old_doc.public_id) END,
-   'newValue',jsonb_build_object('id',n.public_id,'poiType',n.poi_type,'discoveryTier',n.discovery_tier,
-     'isCharterObjective',n.is_charter_objective,'documentId',new_doc.public_id),
-   'actorId',actor.public_id),$8
- FROM changed n LEFT JOIN prior p ON p.id=n.id LEFT JOIN documents old_doc ON old_doc.id=p.document_id
- LEFT JOIN documents new_doc ON new_doc.id=n.document_id
- JOIN members actor ON actor.public_id=$9::uuid
-), result_rows AS (
- SELECT id, public_id, hex_id, poi_type, discovery_tier, is_charter_objective, document_id FROM changed UNION ALL SELECT p.id, p.public_id, p.hex_id, p.poi_type, p.discovery_tier, p.is_charter_objective, p.document_id FROM prior p WHERE NOT EXISTS(SELECT 1 FROM changed)
-)
-SELECT r.public_id AS id,h.public_id AS hex_id,r.poi_type,r.discovery_tier,
-       r.is_charter_objective,d.public_id AS document_id
-FROM result_rows r JOIN hexes h ON h.id=r.hex_id LEFT JOIN documents d ON d.id=r.document_id
-`
-
-type UpsertProductPoiParams struct {
-	PoiID              pgtype.UUID        `json:"poi_id"`
-	PoiType            string             `json:"poi_type"`
-	DiscoveryTier      string             `json:"discovery_tier"`
-	IsCharterObjective bool               `json:"is_charter_objective"`
-	DocumentID         pgtype.UUID        `json:"document_id"`
-	HexID              pgtype.UUID        `json:"hex_id"`
-	HistoryID          pgtype.UUID        `json:"history_id"`
-	RecordedAt         pgtype.Timestamptz `json:"recorded_at"`
-	ActorID            pgtype.UUID        `json:"actor_id"`
-}
-
-type UpsertProductPoiRow struct {
-	ID                 pgtype.UUID `json:"id"`
-	HexID              pgtype.UUID `json:"hex_id"`
-	PoiType            string      `json:"poi_type"`
-	DiscoveryTier      string      `json:"discovery_tier"`
-	IsCharterObjective bool        `json:"is_charter_objective"`
-	DocumentID         pgtype.UUID `json:"document_id"`
-}
-
-func (q *Queries) UpsertProductPoi(ctx context.Context, arg UpsertProductPoiParams) (UpsertProductPoiRow, error) {
-	row := q.db.QueryRow(ctx, upsertProductPoi,
-		arg.PoiID,
-		arg.PoiType,
-		arg.DiscoveryTier,
-		arg.IsCharterObjective,
-		arg.DocumentID,
-		arg.HexID,
-		arg.HistoryID,
-		arg.RecordedAt,
-		arg.ActorID,
-	)
-	var i UpsertProductPoiRow
-	err := row.Scan(
-		&i.ID,
-		&i.HexID,
-		&i.PoiType,
-		&i.DiscoveryTier,
-		&i.IsCharterObjective,
-		&i.DocumentID,
-	)
-	return i, err
-}
-
 const upsertProductPointcrawlNode = `-- name: UpsertProductPointcrawlNode :one
 WITH input AS (
  SELECT COALESCE($1::uuid,gen_random_uuid()) AS node_public_id,m.id AS map_internal_id,
@@ -3192,17 +1895,6 @@ WITH input AS (
    (pointcrawl_nodes.name IS DISTINCT FROM EXCLUDED.name OR pointcrawl_nodes.x IS DISTINCT FROM EXCLUDED.x
     OR pointcrawl_nodes.y IS DISTINCT FROM EXCLUDED.y OR pointcrawl_nodes.submap_id IS DISTINCT FROM EXCLUDED.submap_id)
  RETURNING created_at, id, map_id, name, public_id, submap_id, x, y
-), history AS (
- INSERT INTO pointcrawl_node_changes(public_id,node_id,kind,old_value,new_value,actor_id,created_at)
- SELECT $8,n.id,'node_updated',
-   CASE WHEN p.id IS NULL THEN NULL ELSE jsonb_build_object('name',p.name,'x',p.x,'y',p.y,
-     'submapId',old_submap.public_id) END,
-   jsonb_build_object('name',n.name,'x',n.x,'y',n.y,'submapId',new_submap.public_id),
-   actor.id,$7
- FROM changed n LEFT JOIN prior p ON p.id=n.id
- LEFT JOIN maps old_submap ON old_submap.id=p.submap_id
- LEFT JOIN maps new_submap ON new_submap.id=n.submap_id
- JOIN members actor ON actor.public_id=$9::uuid
 ), result_rows AS (
  SELECT created_at, id, map_id, name, public_id, submap_id, x, y FROM changed UNION ALL SELECT p.created_at, p.id, p.map_id, p.name, p.public_id, p.submap_id, p.x, p.y FROM prior p WHERE NOT EXISTS(SELECT 1 FROM changed)
 )
@@ -3218,8 +1910,6 @@ type UpsertProductPointcrawlNodeParams struct {
 	SubmapID   pgtype.UUID        `json:"submap_id"`
 	MapID      pgtype.UUID        `json:"map_id"`
 	RecordedAt pgtype.Timestamptz `json:"recorded_at"`
-	HistoryID  pgtype.UUID        `json:"history_id"`
-	ActorID    pgtype.UUID        `json:"actor_id"`
 }
 
 type UpsertProductPointcrawlNodeRow struct {
@@ -3241,8 +1931,6 @@ func (q *Queries) UpsertProductPointcrawlNode(ctx context.Context, arg UpsertPro
 		arg.SubmapID,
 		arg.MapID,
 		arg.RecordedAt,
-		arg.HistoryID,
-		arg.ActorID,
 	)
 	var i UpsertProductPointcrawlNodeRow
 	err := row.Scan(

@@ -1,5 +1,3 @@
--- CHA03 owns named Character SQL sources. Command transactions remain with the UOW runner.
-
 -- name: CharacterProductByID :one
 SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
        c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id,
@@ -25,7 +23,6 @@ LEFT JOIN LATERAL (
     LIMIT 1
 ) latest ON true
 WHERE c.public_id = sqlc.arg(character_id)::uuid AND c.deleted_at IS NULL;
-
 -- name: CharacterProductByShortCode :one
 SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
        c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id,
@@ -51,7 +48,6 @@ LEFT JOIN LATERAL (
     LIMIT 1
 ) latest ON true
 WHERE c.short_code = sqlc.arg(short_code)::text AND c.deleted_at IS NULL;
-
 -- name: CharacterProductList :many
 SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
        c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id,
@@ -84,7 +80,6 @@ WHERE c.deleted_at IS NULL
   AND (sqlc.narg(guild_id)::uuid IS NULL OR c.guild_document_id = (SELECT id FROM documents WHERE public_id = sqlc.narg(guild_id)::uuid))
 ORDER BY c.created_at DESC, c.public_id DESC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
-
 -- name: CharacterProductCount :one
 SELECT count(*)::int AS total
 FROM characters c
@@ -95,7 +90,6 @@ WHERE c.deleted_at IS NULL
   AND (sqlc.narg(name_prefix)::text IS NULL OR left(lower(c.name), char_length(sqlc.narg(name_prefix)::text)) = lower(sqlc.narg(name_prefix)::text))
   AND (sqlc.narg(region_id)::uuid IS NULL OR c.region_id = (SELECT id FROM regions WHERE public_id = sqlc.narg(region_id)::uuid))
   AND (sqlc.narg(guild_id)::uuid IS NULL OR c.guild_document_id = (SELECT id FROM documents WHERE public_id = sqlc.narg(guild_id)::uuid));
-
 -- name: CharacterProductMyCharacters :many
 SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
        c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id, region.public_id AS region_id,
@@ -122,13 +116,11 @@ LEFT JOIN LATERAL (
 WHERE c.deleted_at IS NULL AND owner.public_id = sqlc.arg(owner_id)::uuid
 ORDER BY c.created_at DESC, c.public_id DESC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
-
 -- name: CharacterProductCountMyCharacters :one
 SELECT count(*)::int AS total
 FROM characters c
 JOIN members owner ON owner.id = c.owner_id
 WHERE c.deleted_at IS NULL AND owner.public_id = sqlc.arg(owner_id)::uuid;
-
 -- name: CharacterProductBatchByIDs :many
 WITH requested AS (
     SELECT requested.public_id, requested.ordinality
@@ -158,7 +150,6 @@ LEFT JOIN LATERAL (
     LIMIT 1
 ) latest ON true
 ORDER BY requested.ordinality;
-
 -- name: CharacterProductLockByID :one
 SELECT c.id, c.public_id, c.owner_id, c.status, c.updated_at, c.player_xp,
        c.backstory_id, c.guild_document_id, c.region_id, c.deleted_at,
@@ -166,7 +157,6 @@ SELECT c.id, c.public_id, c.owner_id, c.status, c.updated_at, c.player_xp,
 FROM characters c
 WHERE c.public_id = $1
 FOR UPDATE;
-
 -- name: CharacterProductSetGuild :one
 UPDATE characters AS target
 SET guild_document_id = guild.id, updated_at = sqlc.arg(at)::timestamptz
@@ -183,7 +173,6 @@ RETURNING target.public_id AS id, target.short_code, target.name,
           target.description, target.ddb_url, target.player_xp AS pcxp,
           target.created_at, target.updated_at,
           target.verification_submitted_at;
-
 -- name: CharacterProductClearGuild :one
 UPDATE characters AS target
 SET guild_document_id = NULL, updated_at = sqlc.arg(at)::timestamptz
@@ -196,7 +185,6 @@ RETURNING target.public_id AS id, target.short_code, target.name,
           target.description, target.ddb_url, target.player_xp AS pcxp,
           target.created_at, target.updated_at,
           target.verification_submitted_at;
-
 -- name: CharacterProductListProgression :many
 SELECT ledger.public_id AS id, character.public_id AS character_id,
        ledger.delta AS amount, ledger.kind, ledger.note,
@@ -209,13 +197,11 @@ LEFT JOIN members recorder ON recorder.id = ledger.recorded_by
 WHERE character.public_id = sqlc.arg(character_id)::uuid
 ORDER BY ledger.created_at DESC, ledger.public_id DESC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
-
 -- name: CharacterProductCountProgression :one
 SELECT count(*)::int AS total
 FROM character_progression_ledger ledger
 JOIN characters character ON character.id = ledger.character_id
 WHERE character.public_id = sqlc.arg(character_id)::uuid;
-
 -- name: CharacterProductAdjustPCXP :one
 WITH updated AS (
     UPDATE characters
@@ -237,26 +223,22 @@ FROM inserted
 JOIN characters character ON character.id = inserted.character_id
 LEFT JOIN quests quest ON quest.id = inserted.quest_id
 LEFT JOIN members actor ON actor.id = inserted.recorded_by;
-
 -- name: CharacterProductListVerificationHistory :many
 SELECT verification.public_id AS id, verification.subject_type,
        character.public_id AS subject_id, verification.verdict AS decision,
        reviewer.public_id AS decided_by, verification.note, verification.created_at,
-       evidence.public_id AS evidence_attempt_id
+       NULL::uuid AS evidence_attempt_id
 FROM verifications verification
 JOIN characters character ON character.id = verification.subject_id
 LEFT JOIN members reviewer ON reviewer.id = verification.decided_by
-LEFT JOIN character_ddb_attempts evidence ON evidence.id = verification.evidence_attempt_id
 WHERE verification.subject_type = 'character' AND character.public_id = sqlc.arg(character_id)::uuid
 ORDER BY verification.created_at DESC, verification.public_id DESC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
-
 -- name: CharacterProductCountVerificationHistory :one
 SELECT count(*)::int AS total
 FROM verifications verification
 JOIN characters character ON character.id = verification.subject_id
 WHERE verification.subject_type = 'character' AND character.public_id = sqlc.arg(character_id)::uuid;
-
 -- name: CharacterProductAdminDirectory :many
 SELECT character.public_id AS id, character.name, owner.public_id AS owner_id,
        owner.handle AS owner_handle, owner.display_name AS owner_display_name,
@@ -286,7 +268,6 @@ WHERE character.deleted_at IS NULL
   AND (sqlc.narg(character_status)::text IS NULL OR character.status = sqlc.narg(character_status)::text)
 ORDER BY character.name ASC, character.public_id ASC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
-
 -- name: CharacterProductPendingVerificationDirectory :many
 SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
        c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id, region.public_id AS region_id,
@@ -311,7 +292,6 @@ WHERE c.deleted_at IS NULL
   AND (latest.created_at IS NULL OR latest.created_at < c.verification_submitted_at)
 ORDER BY c.verification_submitted_at ASC, c.public_id ASC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
-
 -- name: CharacterProductCountPendingVerifications :one
 SELECT count(*)::int AS total
 FROM characters c
@@ -325,7 +305,6 @@ LEFT JOIN LATERAL (
 WHERE c.deleted_at IS NULL
   AND c.verification_submitted_at IS NOT NULL
   AND (latest.created_at IS NULL OR latest.created_at < c.verification_submitted_at);
-
 -- name: CharacterProductCountAdminDirectory :one
 SELECT count(*)::int AS total
 FROM characters character
@@ -334,7 +313,6 @@ WHERE character.deleted_at IS NULL
   AND (sqlc.narg(name_prefix)::text IS NULL OR left(lower(character.name), char_length(sqlc.narg(name_prefix)::text)) = lower(sqlc.narg(name_prefix)::text))
   AND (sqlc.narg(region_id)::uuid IS NULL OR region.public_id = sqlc.narg(region_id)::uuid)
   AND (sqlc.narg(character_status)::text IS NULL OR character.status = sqlc.narg(character_status)::text);
-
 -- name: CharacterProductCreationCatalog :many
 SELECT entry.public_id AS id, entry.kind, entry.name, entry.available,
        entry.description, region.public_id AS introduced_by_region_id, entry.retired
@@ -345,7 +323,6 @@ WHERE (sqlc.arg(include_all)::bool OR (entry.available AND NOT entry.retired))
   AND (sqlc.narg(region_id)::uuid IS NULL OR region.public_id = sqlc.narg(region_id)::uuid)
 ORDER BY lower(entry.name) ASC, entry.public_id ASC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
-
 -- name: CharacterProductCountCreationCatalog :one
 SELECT count(*)::int AS total
 FROM creation_catalog entry
@@ -353,14 +330,12 @@ LEFT JOIN regions region ON region.id = entry.introduced_by_region_id
 WHERE (sqlc.arg(include_all)::bool OR (entry.available AND NOT entry.retired))
   AND (sqlc.narg(kind)::text IS NULL OR entry.kind = sqlc.narg(kind)::text)
   AND (sqlc.narg(region_id)::uuid IS NULL OR region.public_id = sqlc.narg(region_id)::uuid);
-
 -- name: CharacterProductLockCreationCatalogEntry :one
 SELECT entry.id, entry.public_id, entry.kind, entry.code, entry.name,
        entry.available, entry.description, entry.introduced_by_region_id, entry.retired
 FROM creation_catalog entry
 WHERE entry.public_id = sqlc.arg(option_id)::uuid
 FOR UPDATE;
-
 -- name: CharacterProductUpsertCreationCatalogEntry :one
 WITH requested_region AS (
     SELECT region.id, region.public_id
@@ -406,7 +381,6 @@ SELECT updated.public_id AS id, updated.kind, updated.name, updated.available,
        (SELECT public_id FROM regions WHERE id = updated.introduced_by_region_id) AS introduced_by_region_id,
        updated.retired
 FROM updated;
-
 -- name: CharacterProductListParticipations :many
 SELECT quest.public_id AS quest_id, member.public_id AS member_id,
        character.public_id AS character_id, participant.status, participant.manual,
@@ -420,13 +394,11 @@ JOIN members member ON member.id = participant.member_id
 WHERE character.public_id = $1
 ORDER BY participant.created_at ASC, character.public_id ASC
 LIMIT $2 OFFSET $3;
-
 -- name: CharacterProductCountParticipations :one
 SELECT count(*)::int AS total
 FROM quest_participants participant
 JOIN characters character ON character.id = participant.character_id
 WHERE character.public_id = $1;
-
 -- name: CharacterProductListCoPlayers :many
 SELECT character.public_id AS character_id, member.public_id AS member_id,
        count(DISTINCT participant.quest_id)::int AS quest_count
@@ -442,7 +414,6 @@ WHERE source.character_id = (SELECT c.id FROM characters c WHERE c.public_id = $
 GROUP BY character.public_id, member.public_id
 ORDER BY character.public_id, member.public_id
 LIMIT $2 OFFSET $3;
-
 -- name: CharacterProductCountCoPlayers :one
 SELECT count(*)::int AS total
 FROM (
@@ -455,27 +426,6 @@ FROM (
       AND participant.member_id <> source.member_id
     GROUP BY participant.character_id, participant.member_id
 ) pairs;
-
--- name: CharacterProductListQuestRewards :many
-SELECT entitlement.public_id AS id, quest.public_id AS quest_id,
-       character.public_id AS character_id, awarded_by.public_id AS awarded_by,
-       entitlement.awarded_at, entitlement.pcxp, entitlement.note,
-       entitlement.claimed_at, ledger.public_id AS progression_entry_id
-FROM quest_reward_entitlements entitlement
-JOIN quests quest ON quest.id = entitlement.quest_id
-JOIN characters character ON character.id = entitlement.character_id
-JOIN members awarded_by ON awarded_by.id = entitlement.awarded_by
-LEFT JOIN character_progression_ledger ledger ON ledger.id = entitlement.progression_entry_id
-WHERE character.public_id = sqlc.arg(character_id)::uuid
-ORDER BY entitlement.awarded_at DESC, entitlement.public_id DESC
-LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
-
--- name: CharacterProductCountQuestRewards :one
-SELECT count(*)::int AS total
-FROM quest_reward_entitlements entitlement
-JOIN characters character ON character.id = entitlement.character_id
-WHERE character.public_id = sqlc.arg(character_id)::uuid;
-
 -- name: CharacterProductListDowntimeProjects :many
 SELECT project.public_id AS id, character.public_id AS character_id,
        project.name, project.target, project.goal, project.notes,
@@ -485,13 +435,11 @@ JOIN characters character ON character.id = project.character_id
 WHERE character.public_id = $1
 ORDER BY project.name ASC, project.public_id ASC
 LIMIT $2 OFFSET $3;
-
 -- name: CharacterProductCountDowntimeProjects :one
 SELECT count(*)::int AS total
 FROM downtime_projects project
 JOIN characters character ON character.id = project.character_id
 WHERE character.public_id = $1;
-
 -- name: CharacterProductLockDowntimeProject :one
 SELECT project.id, project.public_id, project.character_id, project.name,
        project.target, project.goal, project.notes, project.progress,
@@ -500,7 +448,6 @@ FROM downtime_projects project
 JOIN characters character ON character.id = project.character_id
 WHERE character.public_id = $1 AND project.public_id = $2
 FOR UPDATE OF project;
-
 -- name: CharacterProductInsertDowntimeProject :one
 WITH inserted AS (
     INSERT INTO downtime_projects (character_id, name, target, goal, notes, progress, status, updated_at)
@@ -514,7 +461,6 @@ SELECT inserted.public_id AS id, character.public_id AS character_id,
        inserted.name, inserted.target, inserted.goal, inserted.notes,
        inserted.progress, inserted.status, inserted.updated_at
 FROM inserted JOIN characters character ON character.id = inserted.character_id;
-
 -- name: CharacterProductUpdateDowntimeProject :one
 UPDATE downtime_projects project
 SET name = sqlc.arg(name), target = sqlc.narg(target), goal = sqlc.narg(goal),
@@ -529,7 +475,6 @@ RETURNING project.public_id AS id,
           project.name,
           project.target, project.goal, project.notes, project.progress,
           project.status, project.updated_at;
-
 -- name: CharacterProductDelete :one
 UPDATE characters
 SET deleted_at = sqlc.arg(at)::timestamptz,
@@ -538,13 +483,11 @@ SET deleted_at = sqlc.arg(at)::timestamptz,
 WHERE public_id = sqlc.arg(character_id)::uuid
   AND deleted_at IS NULL
 RETURNING public_id AS id, updated_at;
-
 -- name: CharacterProductRestore :one
 UPDATE characters
 SET deleted_at = NULL, deleted_by = NULL, updated_at = sqlc.arg(at)::timestamptz
 WHERE public_id = sqlc.arg(character_id)::uuid AND deleted_at IS NOT NULL
 RETURNING public_id AS id, updated_at;
-
 -- name: CharacterProductRetire :one
 UPDATE characters
 SET status = 'retired', updated_at = sqlc.arg(at)::timestamptz
@@ -553,7 +496,6 @@ WHERE public_id = sqlc.arg(character_id)::uuid
   AND status <> 'dead'
   AND updated_at = sqlc.arg(expected_updated_at)::timestamptz
 RETURNING public_id AS id, status, updated_at;
-
 -- name: CharacterProductSubmitForVerification :one
 UPDATE characters
 SET verification_submitted_at = sqlc.arg(at)::timestamptz,
@@ -563,42 +505,8 @@ WHERE public_id = sqlc.arg(character_id)::uuid
   AND status = 'pending_approval'
   AND updated_at = sqlc.arg(expected_updated_at)::timestamptz
 RETURNING public_id AS id, verification_submitted_at, updated_at;
-
 -- name: CharacterProductLockClaimCharacter :one
 SELECT character.id, character.public_id, character.owner_id, character.player_xp
 FROM characters character
 WHERE character.public_id = sqlc.arg(character_id)::uuid
 FOR UPDATE;
-
--- name: CharacterProductLockRewardClaims :many
-SELECT entitlement.public_id AS id, quest.public_id AS quest_id,
-       character.public_id AS character_id, awarded_by.public_id AS awarded_by,
-       entitlement.awarded_at, entitlement.pcxp, entitlement.note,
-       entitlement.claimed_at, ledger.public_id AS progression_entry_id
-FROM quest_reward_entitlements entitlement
-JOIN quests quest ON quest.id = entitlement.quest_id
-JOIN characters character ON character.id = entitlement.character_id
-JOIN members awarded_by ON awarded_by.id = entitlement.awarded_by
-LEFT JOIN character_progression_ledger ledger ON ledger.id = entitlement.progression_entry_id
-WHERE quest.public_id = sqlc.arg(quest_id)::uuid AND character.public_id = sqlc.arg(character_id)::uuid
-ORDER BY quest.id, entitlement.id
-FOR UPDATE OF quest, entitlement;
-
--- name: CharacterProductMarkRewardClaims :execrows
-WITH mappings AS (
-    SELECT entitlement_id.public_id::uuid AS entitlement_id, ledger.id AS ledger_id
-    FROM unnest(sqlc.arg(entitlement_ids)::text[]) WITH ORDINALITY AS entitlement_id(public_id, ordinality)
-    JOIN unnest(sqlc.arg(progression_ids)::text[]) WITH ORDINALITY AS progression_id(public_id, ordinality)
-      ON progression_id.ordinality = entitlement_id.ordinality
-    JOIN character_progression_ledger ledger ON ledger.public_id = progression_id.public_id::uuid
-    WHERE cardinality(sqlc.arg(entitlement_ids)::text[]) = cardinality(sqlc.arg(progression_ids)::text[])
-), updated AS (
-    UPDATE quest_reward_entitlements entitlement
-    SET claimed_at = sqlc.arg(at)::timestamptz, progression_entry_id = mappings.ledger_id
-    FROM mappings
-    WHERE entitlement.public_id = mappings.entitlement_id
-  AND entitlement.claimed_at IS NULL
-  AND entitlement.progression_entry_id IS NULL
-    RETURNING entitlement.public_id
-)
-SELECT public_id FROM updated;

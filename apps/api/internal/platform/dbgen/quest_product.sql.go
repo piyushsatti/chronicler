@@ -190,68 +190,6 @@ func (q *Queries) ProductQuestBatchRead(ctx context.Context, arg ProductQuestBat
 	return items, nil
 }
 
-const productQuestBatchReadEntitlements = `-- name: ProductQuestBatchReadEntitlements :many
-SELECT input.ordinality::integer AS input_index,
-       input.quest_id::uuid AS requested_quest_id,
-       e.id, e.public_id, q.public_id::text AS quest_id,
-       c.public_id::text AS character_id, actor.public_id::text AS awarded_by,
-       e.awarded_at, e.pcxp, e.note, e.claimed_at, e.progression_entry_id
-FROM unnest($1::uuid[]) WITH ORDINALITY AS input(quest_id, ordinality)
-LEFT JOIN quests q ON q.public_id = input.quest_id AND q.deleted_at IS NULL
-LEFT JOIN quest_reward_entitlements e ON e.quest_id = q.id
-LEFT JOIN characters c ON c.id = e.character_id
-LEFT JOIN members actor ON actor.id = e.awarded_by
-ORDER BY input.ordinality, e.awarded_at, e.public_id
-`
-
-type ProductQuestBatchReadEntitlementsRow struct {
-	InputIndex         int32              `json:"input_index"`
-	RequestedQuestID   pgtype.UUID        `json:"requested_quest_id"`
-	ID                 pgtype.Int8        `json:"id"`
-	PublicID           pgtype.UUID        `json:"public_id"`
-	QuestID            string             `json:"quest_id"`
-	CharacterID        string             `json:"character_id"`
-	AwardedBy          string             `json:"awarded_by"`
-	AwardedAt          pgtype.Timestamptz `json:"awarded_at"`
-	Pcxp               pgtype.Int4        `json:"pcxp"`
-	Note               pgtype.Text        `json:"note"`
-	ClaimedAt          pgtype.Timestamptz `json:"claimed_at"`
-	ProgressionEntryID pgtype.Int8        `json:"progression_entry_id"`
-}
-
-func (q *Queries) ProductQuestBatchReadEntitlements(ctx context.Context, questIds []pgtype.UUID) ([]ProductQuestBatchReadEntitlementsRow, error) {
-	rows, err := q.db.Query(ctx, productQuestBatchReadEntitlements, questIds)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ProductQuestBatchReadEntitlementsRow{}
-	for rows.Next() {
-		var i ProductQuestBatchReadEntitlementsRow
-		if err := rows.Scan(
-			&i.InputIndex,
-			&i.RequestedQuestID,
-			&i.ID,
-			&i.PublicID,
-			&i.QuestID,
-			&i.CharacterID,
-			&i.AwardedBy,
-			&i.AwardedAt,
-			&i.Pcxp,
-			&i.Note,
-			&i.ClaimedAt,
-			&i.ProgressionEntryID,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const productQuestBoardPage = `-- name: ProductQuestBoardPage :many
 WITH filtered AS (
     SELECT q.id, q.public_id, q.short_code, q.kinds, q.status,
@@ -417,7 +355,6 @@ func (q *Queries) ProductQuestDeleteParticipant(ctx context.Context, arg Product
 }
 
 const productQuestDisplayStatusAt = `-- name: ProductQuestDisplayStatusAt :one
-
 SELECT quest_display_status_at($1::text, $2::integer, $3::timestamptz, $4::double precision, $5::timestamptz)::text AS display_status
 `
 
@@ -429,10 +366,6 @@ type ProductQuestDisplayStatusAtParams struct {
 	AsOf          pgtype.Timestamptz `json:"as_of"`
 }
 
-// QUE03 owns the named SQL implementation after P04, QUE02.
-// Responsibility: Complete named set SQL projections, filters,count,page,locks,writes,histories; sqlc sources.
-// Acceptance: TASK-QUE03, AUTH-quest, BATCH-quest.
-// Product query code supplies one stable AsOf value for each read task.
 func (q *Queries) ProductQuestDisplayStatusAt(ctx context.Context, arg ProductQuestDisplayStatusAtParams) (string, error) {
 	row := q.db.QueryRow(ctx, productQuestDisplayStatusAt,
 		arg.Status,
@@ -744,154 +677,6 @@ func (q *Queries) ProductQuestInsertArc(ctx context.Context, arg ProductQuestIns
 	return i, err
 }
 
-const productQuestInsertEntitlements = `-- name: ProductQuestInsertEntitlements :many
-INSERT INTO quest_reward_entitlements(quest_id, character_id, awarded_by, awarded_at, pcxp, note)
-SELECT $1::bigint, input.character_id, $2::bigint,
-       $3::timestamptz, ($4::integer[])[input.ordinality::integer],
-       ($5::text[])[input.ordinality::integer]
-FROM unnest($6::bigint[]) WITH ORDINALITY AS input(character_id, ordinality)
-RETURNING id, public_id, quest_id, character_id, awarded_by, awarded_at, pcxp, note, claimed_at, progression_entry_id
-`
-
-type ProductQuestInsertEntitlementsParams struct {
-	QuestID      int64              `json:"quest_id"`
-	AwardedBy    int64              `json:"awarded_by"`
-	AwardedAt    pgtype.Timestamptz `json:"awarded_at"`
-	PcxpValues   []int32            `json:"pcxp_values"`
-	Notes        []string           `json:"notes"`
-	CharacterIds []int64            `json:"character_ids"`
-}
-
-type ProductQuestInsertEntitlementsRow struct {
-	ID                 int64              `json:"id"`
-	PublicID           pgtype.UUID        `json:"public_id"`
-	QuestID            int64              `json:"quest_id"`
-	CharacterID        int64              `json:"character_id"`
-	AwardedBy          int64              `json:"awarded_by"`
-	AwardedAt          pgtype.Timestamptz `json:"awarded_at"`
-	Pcxp               int32              `json:"pcxp"`
-	Note               pgtype.Text        `json:"note"`
-	ClaimedAt          pgtype.Timestamptz `json:"claimed_at"`
-	ProgressionEntryID pgtype.Int8        `json:"progression_entry_id"`
-}
-
-func (q *Queries) ProductQuestInsertEntitlements(ctx context.Context, arg ProductQuestInsertEntitlementsParams) ([]ProductQuestInsertEntitlementsRow, error) {
-	rows, err := q.db.Query(ctx, productQuestInsertEntitlements,
-		arg.QuestID,
-		arg.AwardedBy,
-		arg.AwardedAt,
-		arg.PcxpValues,
-		arg.Notes,
-		arg.CharacterIds,
-	)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ProductQuestInsertEntitlementsRow{}
-	for rows.Next() {
-		var i ProductQuestInsertEntitlementsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.PublicID,
-			&i.QuestID,
-			&i.CharacterID,
-			&i.AwardedBy,
-			&i.AwardedAt,
-			&i.Pcxp,
-			&i.Note,
-			&i.ClaimedAt,
-			&i.ProgressionEntryID,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const productQuestInsertHexes = `-- name: ProductQuestInsertHexes :many
-INSERT INTO quest_hexes(quest_id, hex_id, role)
-SELECT $1::bigint, h.id, ($2::text[])[input.ordinality::integer]
-FROM unnest($3::bigint[]) WITH ORDINALITY AS input(hex_id, ordinality)
-JOIN hexes h ON h.id = input.hex_id
-RETURNING quest_id, hex_id, role
-`
-
-type ProductQuestInsertHexesParams struct {
-	QuestID int64    `json:"quest_id"`
-	Roles   []string `json:"roles"`
-	HexIds  []int64  `json:"hex_ids"`
-}
-
-func (q *Queries) ProductQuestInsertHexes(ctx context.Context, arg ProductQuestInsertHexesParams) ([]QuestHex, error) {
-	rows, err := q.db.Query(ctx, productQuestInsertHexes, arg.QuestID, arg.Roles, arg.HexIds)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []QuestHex{}
-	for rows.Next() {
-		var i QuestHex
-		if err := rows.Scan(&i.QuestID, &i.HexID, &i.Role); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const productQuestInsertHistory = `-- name: ProductQuestInsertHistory :one
-INSERT INTO quest_changes(quest_id, actor_id, kind, facts, created_at)
-VALUES ($1::bigint, $2::bigint, $3::text, $4::jsonb, $5::timestamptz)
-RETURNING id, public_id, quest_id, actor_id, kind, facts, created_at
-`
-
-type ProductQuestInsertHistoryParams struct {
-	QuestID int64              `json:"quest_id"`
-	ActorID int64              `json:"actor_id"`
-	Kind    string             `json:"kind"`
-	Facts   []byte             `json:"facts"`
-	At      pgtype.Timestamptz `json:"at"`
-}
-
-type ProductQuestInsertHistoryRow struct {
-	ID        int64              `json:"id"`
-	PublicID  pgtype.UUID        `json:"public_id"`
-	QuestID   int64              `json:"quest_id"`
-	ActorID   int64              `json:"actor_id"`
-	Kind      string             `json:"kind"`
-	Facts     []byte             `json:"facts"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-}
-
-func (q *Queries) ProductQuestInsertHistory(ctx context.Context, arg ProductQuestInsertHistoryParams) (ProductQuestInsertHistoryRow, error) {
-	row := q.db.QueryRow(ctx, productQuestInsertHistory,
-		arg.QuestID,
-		arg.ActorID,
-		arg.Kind,
-		arg.Facts,
-		arg.At,
-	)
-	var i ProductQuestInsertHistoryRow
-	err := row.Scan(
-		&i.ID,
-		&i.PublicID,
-		&i.QuestID,
-		&i.ActorID,
-		&i.Kind,
-		&i.Facts,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
 const productQuestInsertParticipant = `-- name: ProductQuestInsertParticipant :one
 INSERT INTO quest_participants(quest_id, member_id, character_id, status, manual, created_at, updated_at)
 VALUES ($1::bigint, $2::bigint, $3::bigint,
@@ -928,6 +713,42 @@ func (q *Queries) ProductQuestInsertParticipant(ctx context.Context, arg Product
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const productQuestInsertPointcrawlLinks = `-- name: ProductQuestInsertPointcrawlLinks :many
+INSERT INTO quest_pointcrawl_nodes(quest_id, node_id, role)
+SELECT $1::bigint, n.id, input.role
+FROM unnest($2::bigint[]) WITH ORDINALITY AS input(node_id, ordinality)
+JOIN unnest($3::text[]) WITH ORDINALITY AS roles(role, ordinality)
+  ON roles.ordinality = input.ordinality
+JOIN pointcrawl_nodes n ON n.id = input.node_id
+RETURNING quest_id, node_id, role
+`
+
+type ProductQuestInsertPointcrawlLinksParams struct {
+	QuestID int64    `json:"quest_id"`
+	NodeIds []int64  `json:"node_ids"`
+	Roles   []string `json:"roles"`
+}
+
+func (q *Queries) ProductQuestInsertPointcrawlLinks(ctx context.Context, arg ProductQuestInsertPointcrawlLinksParams) ([]QuestPointcrawlNode, error) {
+	rows, err := q.db.Query(ctx, productQuestInsertPointcrawlLinks, arg.QuestID, arg.NodeIds, arg.Roles)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []QuestPointcrawlNode{}
+	for rows.Next() {
+		var i QuestPointcrawlNode
+		if err := rows.Scan(&i.QuestID, &i.NodeID, &i.Role); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const productQuestInsertRegions = `-- name: ProductQuestInsertRegions :many
@@ -1752,153 +1573,6 @@ func (q *Queries) ProductQuestReadByShortCode(ctx context.Context, arg ProductQu
 	return i, err
 }
 
-const productQuestReadEntitlements = `-- name: ProductQuestReadEntitlements :many
-SELECT e.id, e.public_id, q.public_id::text AS quest_id,
-       c.public_id::text AS character_id, actor.public_id::text AS awarded_by,
-       e.awarded_at, e.pcxp, e.note, e.claimed_at,
-       e.progression_entry_id
-FROM quest_reward_entitlements e
-JOIN quests q ON q.id = e.quest_id
-JOIN characters c ON c.id = e.character_id
-JOIN members actor ON actor.id = e.awarded_by
-WHERE q.public_id = $1::uuid
-ORDER BY e.awarded_at, e.public_id
-`
-
-type ProductQuestReadEntitlementsRow struct {
-	ID                 int64              `json:"id"`
-	PublicID           pgtype.UUID        `json:"public_id"`
-	QuestID            string             `json:"quest_id"`
-	CharacterID        string             `json:"character_id"`
-	AwardedBy          string             `json:"awarded_by"`
-	AwardedAt          pgtype.Timestamptz `json:"awarded_at"`
-	Pcxp               int32              `json:"pcxp"`
-	Note               pgtype.Text        `json:"note"`
-	ClaimedAt          pgtype.Timestamptz `json:"claimed_at"`
-	ProgressionEntryID pgtype.Int8        `json:"progression_entry_id"`
-}
-
-func (q *Queries) ProductQuestReadEntitlements(ctx context.Context, questID pgtype.UUID) ([]ProductQuestReadEntitlementsRow, error) {
-	rows, err := q.db.Query(ctx, productQuestReadEntitlements, questID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ProductQuestReadEntitlementsRow{}
-	for rows.Next() {
-		var i ProductQuestReadEntitlementsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.PublicID,
-			&i.QuestID,
-			&i.CharacterID,
-			&i.AwardedBy,
-			&i.AwardedAt,
-			&i.Pcxp,
-			&i.Note,
-			&i.ClaimedAt,
-			&i.ProgressionEntryID,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const productQuestReadHexes = `-- name: ProductQuestReadHexes :many
-SELECT h.public_id::text AS hex_id, q.public_id::text AS quest_id, qh.role
-FROM quest_hexes qh
-JOIN quests q ON q.id = qh.quest_id
-JOIN hexes h ON h.id = qh.hex_id
-WHERE q.public_id = $1::uuid
-ORDER BY h.public_id, qh.role
-`
-
-type ProductQuestReadHexesRow struct {
-	HexID   string `json:"hex_id"`
-	QuestID string `json:"quest_id"`
-	Role    string `json:"role"`
-}
-
-func (q *Queries) ProductQuestReadHexes(ctx context.Context, questID pgtype.UUID) ([]ProductQuestReadHexesRow, error) {
-	rows, err := q.db.Query(ctx, productQuestReadHexes, questID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ProductQuestReadHexesRow{}
-	for rows.Next() {
-		var i ProductQuestReadHexesRow
-		if err := rows.Scan(&i.HexID, &i.QuestID, &i.Role); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const productQuestReadHistory = `-- name: ProductQuestReadHistory :many
-SELECT qc.id, qc.public_id, q.public_id::text AS quest_id,
-       actor.public_id::text AS actor_id, qc.kind, qc.facts, qc.created_at
-FROM quest_changes qc
-JOIN quests q ON q.id = qc.quest_id
-JOIN members actor ON actor.id = qc.actor_id
-WHERE q.public_id = $1::uuid
-ORDER BY qc.created_at DESC, qc.public_id DESC
-LIMIT $3::integer OFFSET $2::integer
-`
-
-type ProductQuestReadHistoryParams struct {
-	QuestID   pgtype.UUID `json:"quest_id"`
-	RowOffset int32       `json:"row_offset"`
-	RowLimit  int32       `json:"row_limit"`
-}
-
-type ProductQuestReadHistoryRow struct {
-	ID        int64              `json:"id"`
-	PublicID  pgtype.UUID        `json:"public_id"`
-	QuestID   string             `json:"quest_id"`
-	ActorID   string             `json:"actor_id"`
-	Kind      string             `json:"kind"`
-	Facts     []byte             `json:"facts"`
-	CreatedAt pgtype.Timestamptz `json:"created_at"`
-}
-
-func (q *Queries) ProductQuestReadHistory(ctx context.Context, arg ProductQuestReadHistoryParams) ([]ProductQuestReadHistoryRow, error) {
-	rows, err := q.db.Query(ctx, productQuestReadHistory, arg.QuestID, arg.RowOffset, arg.RowLimit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ProductQuestReadHistoryRow{}
-	for rows.Next() {
-		var i ProductQuestReadHistoryRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.PublicID,
-			&i.QuestID,
-			&i.ActorID,
-			&i.Kind,
-			&i.Facts,
-			&i.CreatedAt,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const productQuestReadParticipants = `-- name: ProductQuestReadParticipants :many
 SELECT q.public_id::text AS quest_id, m.public_id::text AS member_id,
        c.public_id::text AS character_id, c.name AS character_name,
@@ -1965,6 +1639,41 @@ func (q *Queries) ProductQuestReadParticipants(ctx context.Context, arg ProductQ
 	return items, nil
 }
 
+const productQuestReadPointcrawlLinks = `-- name: ProductQuestReadPointcrawlLinks :many
+SELECT n.public_id::text AS node_id, q.public_id::text AS quest_id, qpn.role
+FROM quest_pointcrawl_nodes qpn
+JOIN quests q ON q.id = qpn.quest_id
+JOIN pointcrawl_nodes n ON n.id = qpn.node_id
+WHERE q.public_id = $1::uuid
+ORDER BY n.public_id, qpn.role
+`
+
+type ProductQuestReadPointcrawlLinksRow struct {
+	NodeID  string `json:"node_id"`
+	QuestID string `json:"quest_id"`
+	Role    string `json:"role"`
+}
+
+func (q *Queries) ProductQuestReadPointcrawlLinks(ctx context.Context, questID pgtype.UUID) ([]ProductQuestReadPointcrawlLinksRow, error) {
+	rows, err := q.db.Query(ctx, productQuestReadPointcrawlLinks, questID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ProductQuestReadPointcrawlLinksRow{}
+	for rows.Next() {
+		var i ProductQuestReadPointcrawlLinksRow
+		if err := rows.Scan(&i.NodeID, &i.QuestID, &i.Role); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const productQuestReadRegions = `-- name: ProductQuestReadRegions :many
 SELECT r.public_id::text AS region_id
 FROM quest_regions qr
@@ -1987,52 +1696,6 @@ func (q *Queries) ProductQuestReadRegions(ctx context.Context, questID pgtype.UU
 			return nil, err
 		}
 		items = append(items, region_id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
-const productQuestReadRewardDecisionCoverage = `-- name: ProductQuestReadRewardDecisionCoverage :many
-SELECT input.ordinality::integer AS input_index,
-       input.quest_id::uuid AS requested_quest_id,
-       q.public_id::text AS quest_id,
-       q.status = 'closed' AS closed,
-       (qrd.quest_id IS NOT NULL) AS has_full_closure_decision
-FROM unnest($1::uuid[]) WITH ORDINALITY AS input(quest_id, ordinality)
-LEFT JOIN quests q ON q.public_id = input.quest_id AND q.deleted_at IS NULL
-LEFT JOIN quest_reward_decisions qrd ON qrd.quest_id = q.id
-ORDER BY input.ordinality
-`
-
-type ProductQuestReadRewardDecisionCoverageRow struct {
-	InputIndex             int32       `json:"input_index"`
-	RequestedQuestID       pgtype.UUID `json:"requested_quest_id"`
-	QuestID                string      `json:"quest_id"`
-	Closed                 bool        `json:"closed"`
-	HasFullClosureDecision interface{} `json:"has_full_closure_decision"`
-}
-
-func (q *Queries) ProductQuestReadRewardDecisionCoverage(ctx context.Context, questIds []pgtype.UUID) ([]ProductQuestReadRewardDecisionCoverageRow, error) {
-	rows, err := q.db.Query(ctx, productQuestReadRewardDecisionCoverage, questIds)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ProductQuestReadRewardDecisionCoverageRow{}
-	for rows.Next() {
-		var i ProductQuestReadRewardDecisionCoverageRow
-		if err := rows.Scan(
-			&i.InputIndex,
-			&i.RequestedQuestID,
-			&i.QuestID,
-			&i.Closed,
-			&i.HasFullClosureDecision,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -2166,12 +1829,12 @@ func (q *Queries) ProductQuestRecentlyClosedPage(ctx context.Context, arg Produc
 	return items, nil
 }
 
-const productQuestReplaceHexes = `-- name: ProductQuestReplaceHexes :exec
-DELETE FROM quest_hexes WHERE quest_id = $1::bigint
+const productQuestReplacePointcrawlLinks = `-- name: ProductQuestReplacePointcrawlLinks :exec
+DELETE FROM quest_pointcrawl_nodes WHERE quest_id = $1::bigint
 `
 
-func (q *Queries) ProductQuestReplaceHexes(ctx context.Context, questID int64) error {
-	_, err := q.db.Exec(ctx, productQuestReplaceHexes, questID)
+func (q *Queries) ProductQuestReplacePointcrawlLinks(ctx context.Context, questID int64) error {
+	_, err := q.db.Exec(ctx, productQuestReplacePointcrawlLinks, questID)
 	return err
 }
 
@@ -2488,45 +2151,6 @@ func (q *Queries) ProductQuestUpdateParticipant(ctx context.Context, arg Product
 		&i.Manual,
 		&i.CreatedAt,
 		&i.UpdatedAt,
-	)
-	return i, err
-}
-
-const productQuestUpsertRewardDecision = `-- name: ProductQuestUpsertRewardDecision :one
-INSERT INTO quest_reward_decisions(quest_id, closure_change_id, decided_by, decided_at)
-VALUES ($1::bigint, $2::bigint, $3::bigint, $4::timestamptz)
-RETURNING public_id, quest_id, closure_change_id, decided_by, decided_at
-`
-
-type ProductQuestUpsertRewardDecisionParams struct {
-	QuestID         int64              `json:"quest_id"`
-	ClosureChangeID int64              `json:"closure_change_id"`
-	DecidedBy       int64              `json:"decided_by"`
-	DecidedAt       pgtype.Timestamptz `json:"decided_at"`
-}
-
-type ProductQuestUpsertRewardDecisionRow struct {
-	PublicID        pgtype.UUID        `json:"public_id"`
-	QuestID         int64              `json:"quest_id"`
-	ClosureChangeID int64              `json:"closure_change_id"`
-	DecidedBy       int64              `json:"decided_by"`
-	DecidedAt       pgtype.Timestamptz `json:"decided_at"`
-}
-
-func (q *Queries) ProductQuestUpsertRewardDecision(ctx context.Context, arg ProductQuestUpsertRewardDecisionParams) (ProductQuestUpsertRewardDecisionRow, error) {
-	row := q.db.QueryRow(ctx, productQuestUpsertRewardDecision,
-		arg.QuestID,
-		arg.ClosureChangeID,
-		arg.DecidedBy,
-		arg.DecidedAt,
-	)
-	var i ProductQuestUpsertRewardDecisionRow
-	err := row.Scan(
-		&i.PublicID,
-		&i.QuestID,
-		&i.ClosureChangeID,
-		&i.DecidedBy,
-		&i.DecidedAt,
 	)
 	return i, err
 }

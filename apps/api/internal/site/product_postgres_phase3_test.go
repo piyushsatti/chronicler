@@ -22,9 +22,9 @@ func TestNewProductPostgresRejectsNilExecutors(t *testing.T) {
 
 func TestMapCommunitySnapshotMapsStoredTotalsRolesAndActivity(t *testing.T) {
 	rows := []dbgen.SiteCommunitySnapshotRow{
-		{TotalMembers: 8, ActiveCharacters: 3, TotalMaps: 2, TotalHexes: 9, TotalRegions: 4, TotalQuests: 5, TotalDms: 1,
+		{TotalMembers: 8, ActiveCharacters: 3, TotalMaps: 2, TotalPointcrawlNodes: 9, TotalRegions: 4, TotalQuests: 5, TotalDms: 1,
 			VoiceMinutes: 12.5, Messages: 7, Reactions: 2, Role: "dm", MemberCount: pgtype.Int4{Int32: 2, Valid: true}},
-		{TotalMembers: 8, ActiveCharacters: 3, TotalMaps: 2, TotalHexes: 9, TotalRegions: 4, TotalQuests: 5, TotalDms: 1,
+		{TotalMembers: 8, ActiveCharacters: 3, TotalMaps: 2, TotalPointcrawlNodes: 9, TotalRegions: 4, TotalQuests: 5, TotalDms: 1,
 			VoiceMinutes: 12.5, Messages: 7, Reactions: 2, Role: "player", MemberCount: pgtype.Int4{Int32: 6, Valid: true}},
 	}
 	got, err := mapCommunitySnapshot(rows)

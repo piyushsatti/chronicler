@@ -136,30 +136,11 @@ func (s *PostgresStore) List(ctx context.Context, f ListFilter) ([]Member, int64
 }
 
 func (s *PostgresStore) RoleHistory(ctx context.Context, memberID string, limit int) ([]RoleChange, error) {
-	uid, err := db.ParseUUID(memberID)
-	if err != nil {
+	if _, err := db.ParseUUID(memberID); err != nil {
 		return nil, ErrNotFound
 	}
-	rows, err := s.q.ListMemberRoleHistory(ctx, dbgen.ListMemberRoleHistoryParams{
-		MemberID: uid,
-		RowLimit: int32(limit),
-	})
-	if err != nil {
-		return nil, err
-	}
-	out := make([]RoleChange, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, RoleChange{
-			ID:         db.UUIDString(row.ID),
-			MemberID:   db.UUIDString(row.MemberID),
-			OldRoles:   row.OldRoles,
-			NewRoles:   row.NewRoles,
-			ChangedBy:  db.UUIDString(row.ChangedBy),
-			OccurredAt: row.OccurredAt.Time,
-			Note:       db.TextOrEmpty(row.Note),
-		})
-	}
-	return out, nil
+	_ = limit
+	return nil, nil
 }
 
 func (s *PostgresStore) Availability(ctx context.Context, memberID string) ([]AvailabilityWindow, error) {

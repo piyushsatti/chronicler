@@ -11,70 +11,14 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const siteAppendSettingChange = `-- name: SiteAppendSettingChange :one
-WITH inserted AS (
-    INSERT INTO site_setting_changes
-        (public_id, setting_key, actor_id, old_value, new_value, created_at)
-    SELECT $1::uuid, $2::text, m.id,
-           $3::jsonb, $4::jsonb,
-           $5::timestamptz
-    FROM members m
-    WHERE m.public_id = $6::uuid
-    RETURNING public_id, setting_key, old_value, new_value, actor_id, created_at
-)
-SELECT inserted.public_id, inserted.setting_key, inserted.old_value,
-       inserted.new_value, actor.public_id AS actor_id, inserted.created_at
-FROM inserted JOIN members actor ON actor.id = inserted.actor_id
-`
-
-type SiteAppendSettingChangeParams struct {
-	ChangeID   pgtype.UUID        `json:"change_id"`
-	SettingKey string             `json:"setting_key"`
-	OldValue   []byte             `json:"old_value"`
-	NewValue   []byte             `json:"new_value"`
-	At         pgtype.Timestamptz `json:"at"`
-	ActorID    pgtype.UUID        `json:"actor_id"`
-}
-
-type SiteAppendSettingChangeRow struct {
-	PublicID   pgtype.UUID        `json:"public_id"`
-	SettingKey string             `json:"setting_key"`
-	OldValue   []byte             `json:"old_value"`
-	NewValue   []byte             `json:"new_value"`
-	ActorID    pgtype.UUID        `json:"actor_id"`
-	CreatedAt  pgtype.Timestamptz `json:"created_at"`
-}
-
-func (q *Queries) SiteAppendSettingChange(ctx context.Context, arg SiteAppendSettingChangeParams) (SiteAppendSettingChangeRow, error) {
-	row := q.db.QueryRow(ctx, siteAppendSettingChange,
-		arg.ChangeID,
-		arg.SettingKey,
-		arg.OldValue,
-		arg.NewValue,
-		arg.At,
-		arg.ActorID,
-	)
-	var i SiteAppendSettingChangeRow
-	err := row.Scan(
-		&i.PublicID,
-		&i.SettingKey,
-		&i.OldValue,
-		&i.NewValue,
-		&i.ActorID,
-		&i.CreatedAt,
-	)
-	return i, err
-}
-
 const siteCommunitySnapshot = `-- name: SiteCommunitySnapshot :many
-
 WITH totals AS (
     SELECT
         (SELECT count(*)::integer FROM members) AS total_members,
         (SELECT count(*)::integer FROM characters
          WHERE status = 'active' AND deleted_at IS NULL) AS active_characters,
         (SELECT count(*)::integer FROM maps) AS total_maps,
-        (SELECT count(*)::integer FROM hexes) AS total_hexes,
+        (SELECT count(*)::integer FROM pointcrawl_nodes) AS total_pointcrawl_nodes,
         (SELECT count(*)::integer FROM regions WHERE deleted_at IS NULL) AS total_regions,
         (SELECT count(*)::integer FROM quests WHERE deleted_at IS NULL) AS total_quests,
         (SELECT count(*)::integer FROM dm_profiles p
@@ -94,7 +38,7 @@ WITH totals AS (
     GROUP BY roles.role
 )
 SELECT totals.total_members, totals.active_characters, totals.total_maps,
-       totals.total_hexes, totals.total_regions, totals.total_quests,
+       totals.total_pointcrawl_nodes, totals.total_regions, totals.total_quests,
        totals.total_dms, activity.voice_minutes, activity.messages,
        activity.reactions, role_counts.role, role_counts.member_count
 FROM totals CROSS JOIN activity
@@ -103,22 +47,20 @@ ORDER BY role_counts.role
 `
 
 type SiteCommunitySnapshotRow struct {
-	TotalMembers     int32       `json:"total_members"`
-	ActiveCharacters int32       `json:"active_characters"`
-	TotalMaps        int32       `json:"total_maps"`
-	TotalHexes       int32       `json:"total_hexes"`
-	TotalRegions     int32       `json:"total_regions"`
-	TotalQuests      int32       `json:"total_quests"`
-	TotalDms         int32       `json:"total_dms"`
-	VoiceMinutes     float64     `json:"voice_minutes"`
-	Messages         float64     `json:"messages"`
-	Reactions        float64     `json:"reactions"`
-	Role             interface{} `json:"role"`
-	MemberCount      pgtype.Int4 `json:"member_count"`
+	TotalMembers         int32       `json:"total_members"`
+	ActiveCharacters     int32       `json:"active_characters"`
+	TotalMaps            int32       `json:"total_maps"`
+	TotalPointcrawlNodes int32       `json:"total_pointcrawl_nodes"`
+	TotalRegions         int32       `json:"total_regions"`
+	TotalQuests          int32       `json:"total_quests"`
+	TotalDms             int32       `json:"total_dms"`
+	VoiceMinutes         float64     `json:"voice_minutes"`
+	Messages             float64     `json:"messages"`
+	Reactions            float64     `json:"reactions"`
+	Role                 interface{} `json:"role"`
+	MemberCount          pgtype.Int4 `json:"member_count"`
 }
 
-// Persistent Site reads and setting writes. Authorization and transaction
-// ownership remain with the calling service and unit of work.
 func (q *Queries) SiteCommunitySnapshot(ctx context.Context) ([]SiteCommunitySnapshotRow, error) {
 	rows, err := q.db.Query(ctx, siteCommunitySnapshot)
 	if err != nil {
@@ -132,7 +74,7 @@ func (q *Queries) SiteCommunitySnapshot(ctx context.Context) ([]SiteCommunitySna
 			&i.TotalMembers,
 			&i.ActiveCharacters,
 			&i.TotalMaps,
-			&i.TotalHexes,
+			&i.TotalPointcrawlNodes,
 			&i.TotalRegions,
 			&i.TotalQuests,
 			&i.TotalDms,

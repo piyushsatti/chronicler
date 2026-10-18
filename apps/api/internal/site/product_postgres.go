@@ -53,7 +53,7 @@ func mapCommunitySnapshot(rows []dbgen.SiteCommunitySnapshotRow) (CommunityStats
 	first := rows[0]
 	snapshot := CommunityStatsSnapshot{
 		TotalMembers: first.TotalMembers, ActiveCharacters: first.ActiveCharacters,
-		TotalMaps: first.TotalMaps, TotalHexes: first.TotalHexes,
+		TotalMaps: first.TotalMaps, TotalHexes: first.TotalPointcrawlNodes,
 		TotalRegions: first.TotalRegions, TotalQuests: first.TotalQuests,
 		TotalDMs: first.TotalDms,
 		Activity: member.ActivitySummaryView{
@@ -63,7 +63,7 @@ func mapCommunitySnapshot(rows []dbgen.SiteCommunitySnapshotRow) (CommunityStats
 	}
 	for _, row := range rows {
 		if row.TotalMembers != first.TotalMembers || row.ActiveCharacters != first.ActiveCharacters ||
-			row.TotalMaps != first.TotalMaps || row.TotalHexes != first.TotalHexes ||
+			row.TotalMaps != first.TotalMaps || row.TotalPointcrawlNodes != first.TotalPointcrawlNodes ||
 			row.TotalRegions != first.TotalRegions || row.TotalQuests != first.TotalQuests ||
 			row.TotalDms != first.TotalDms || row.VoiceMinutes != first.VoiceMinutes ||
 			row.Messages != first.Messages || row.Reactions != first.Reactions {

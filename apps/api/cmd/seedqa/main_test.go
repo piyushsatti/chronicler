@@ -58,7 +58,7 @@ func TestGenerateQACoversTheWorld(t *testing.T) {
 	if codex["Entities"] < 20 || codex["Locations"] < 20 || codex["Feature"] < 20 || codex["Rules"] < 20 || codex["Lore"] < 20 {
 		t.Fatalf("codex=%v", codex)
 	}
-	for _, table := range []string{"members", "hexes", "pois", "characters", "quests", "quest_participants"} {
+	for _, table := range []string{"members", "pointcrawl_nodes", "characters", "quests", "quest_participants"} {
 		if counts[table] < 8 {
 			t.Fatalf("%s=%d", table, counts[table])
 		}
@@ -66,8 +66,8 @@ func TestGenerateQACoversTheWorld(t *testing.T) {
 	if counts["dm_profiles"] < 5 {
 		t.Fatalf("dm_profiles=%d", counts["dm_profiles"])
 	}
-	if counts["hexes"] < 64 || openQuests < 12 {
-		t.Fatalf("hexes=%d open quests=%d", counts["hexes"], openQuests)
+	if counts["pointcrawl_nodes"] < 20 || openQuests < 12 {
+		t.Fatalf("pointcrawl_nodes=%d open quests=%d", counts["pointcrawl_nodes"], openQuests)
 	}
 }
 

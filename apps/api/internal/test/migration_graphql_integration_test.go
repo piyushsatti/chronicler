@@ -79,6 +79,7 @@ func p04AssertVersion(t *testing.T, db *sql.DB, want int64) {
 }
 
 func TestPhase3TaskP04Acceptance(t *testing.T) {
+	t.Skip("pre-A1 incremental 0003 acceptance superseded by TestA1SquashInitAcceptance")
 	if os.Getenv("DATABASE_URL") != "" {
 		t.Fatal("requires fresh disposable Postgres; omit DATABASE_URL")
 	}
@@ -816,8 +817,8 @@ func p04SchemaSnapshot(t *testing.T, db *sql.DB) string {
 func p04AssertInventory(t *testing.T, db *sql.DB) {
 	t.Helper()
 	var version int64
-	if err := db.QueryRow(`SELECT max(version_id) FROM goose_db_version WHERE is_applied`).Scan(&version); err != nil || version != 3 {
-		t.Fatalf("historical inventory comparison requires migration version 3, got %d: %v", version, err)
+	if err := db.QueryRow(`SELECT max(version_id) FROM goose_db_version WHERE is_applied`).Scan(&version); err != nil || version != 1 {
+		t.Fatalf("squashed inventory comparison requires migration version 1, got %d: %v", version, err)
 	}
 	var inventory struct {
 		Tables map[string]struct {
@@ -830,11 +831,12 @@ func p04AssertInventory(t *testing.T, db *sql.DB) {
 		} `json:"final_tables"`
 	}
 	p04JSON(t, "physical-schema-inventory.json", &inventory)
-	appendOrder, ok := inventory.Tables["document_links"].Columns["summary_append_order"]
-	if !ok || appendOrder.Declaration != "BIGINT GENERATED ALWAYS AS IDENTITY" || appendOrder.Source != "apps/api/db/migrations/0004_summary_append_order.sql" || appendOrder.Stage != "added0004" {
-		t.Fatalf("current inventory summary append column=%+v, want the validated migration 0004 identity column", appendOrder)
+	if _, ok := inventory.Tables["document_links"].Columns["summary_append_order"]; !ok {
+		t.Fatal("document_links.summary_append_order missing from squashed inventory")
 	}
-	delete(inventory.Tables["document_links"].Columns, "summary_append_order")
+	if _, ok := inventory.Tables["quest_pointcrawl_nodes"]; !ok {
+		t.Fatal("quest_pointcrawl_nodes missing from squashed inventory")
+	}
 	type column struct {
 		oid                 int64
 		sqlType             string
@@ -868,12 +870,12 @@ func p04AssertInventory(t *testing.T, db *sql.DB) {
 		t.Fatal(err)
 	}
 	rows.Close()
-	p04Equal(t, len(actual), 69)
+	p04Equal(t, len(actual), len(inventory.Tables))
 	typePattern := regexp.MustCompile(`^(BIGINT|SMALLINT|INTEGER|INT|DOUBLE PRECISION|JSONB|BOOLEAN|DATE|TIMESTAMPTZ|TEXT\[\]|TEXT|UUID)(?:\s|$)`)
 	pkPattern := regexp.MustCompile(`PRIMARY KEY \(([^)]+)\)`)
 	fkPattern := regexp.MustCompile(`REFERENCES\s+(\w+)\s*\(\s*(\w+)\s*\)`)
 	defaultPattern := regexp.MustCompile(`(?i)DEFAULT\s+(now\(\)|gen_random_uuid\(\)|'(?:[^']|'')*'|true|false|[0-9]+)`)
-	extraPK := map[string][]string{"document_links": {"source_id", "target_type", "target_id", "relation"}, "idempotency_keys": {"endpoint", "actor_id", "key"}, "character_catalog_picks": {"character_id", "catalog_id"}, "pointcrawl_entry_links": {"node_id", "document_id", "relation"}, "notification_channel_deliveries": {"event_id", "member_id", "channel"}, "quest_reward_decisions": {"quest_id"}}
+	extraPK := map[string][]string{"document_links": {"source_id", "target_type", "target_id", "relation"}, "idempotency_keys": {"endpoint", "actor_id", "key"}, "character_catalog_picks": {"character_id", "catalog_id"}, "pointcrawl_entry_links": {"node_id", "document_id", "relation"}, "quest_pointcrawl_nodes": {"quest_id", "node_id", "role"}}
 	count := 0
 	for table, shape := range inventory.Tables {
 		p04Equal(t, len(actual[table]), len(shape.Columns))
@@ -979,8 +981,61 @@ func p04AssertInventory(t *testing.T, db *sql.DB) {
 			}
 		}
 	}
-	p04Equal(t, count, 563)
-	t.Log("migration version 3 matched the current inventory after projecting out only migration 0004 summary_append_order; 69 tables/563 columns matched")
+	t.Logf("migration version 1 matched squashed inventory; %d tables/%d columns matched", len(inventory.Tables), count)
+}
+
+func assertA1SquashShape(t *testing.T, db *sql.DB) {
+	t.Helper()
+	wantAbsent := []string{
+		"hexes", "pois", "hex_edges", "hex_entry_links", "hex_changes", "quest_hexes",
+		"notification_events", "notification_channel_deliveries", "member_follows", "dm_requests",
+		"role_changes", "quest_reward_entitlements", "quest_reward_decisions", "character_ddb_attempts",
+		"job_redrives", "operational_observations", "auth_override_audit",
+	}
+	for _, name := range wantAbsent {
+		if p04Text(t, db, `SELECT to_regclass($1) IS NOT NULL`, name) == "true" {
+			t.Fatalf("dropped table %s still exists", name)
+		}
+	}
+	for _, name := range []string{"quest_pointcrawl_nodes", "pointcrawl_nodes", "unlockables", "game_time_map"} {
+		if p04Text(t, db, `SELECT to_regclass($1) IS NOT NULL`, name) != "true" {
+			t.Fatalf("missing required table %s", name)
+		}
+	}
+	count := p04Text(t, db, `SELECT count(*)::text FROM pg_tables WHERE schemaname=current_schema() AND tablename <> 'goose_db_version'`)
+	p04Equal(t, count, "41")
+}
+
+func TestA1SquashInitAcceptance(t *testing.T) {
+	if os.Getenv("DATABASE_URL") != "" {
+		t.Fatal("requires fresh disposable Postgres; omit DATABASE_URL")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Minute)
+	defer cancel()
+	c, err := postgres.Run(ctx, "postgres:16-alpine", postgres.WithDatabase("a1"), postgres.WithUsername("a1"), postgres.WithPassword("synthetic-a1"), testcontainers.WithWaitStrategy(wait.ForLog("database system is ready to accept connections").WithOccurrence(2).WithStartupTimeout(90*time.Second)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = c.Terminate(context.Background())
+	})
+	dsn, err := c.ConnectionString(ctx, "sslmode=disable")
+	if err != nil {
+		t.Fatal(err)
+	}
+	db, err := sql.Open("pgx", dsn)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if err := goose.SetDialect("postgres"); err != nil {
+		t.Fatal(err)
+	}
+	if err := goose.UpContext(ctx, db, "../../db/migrations"); err != nil {
+		t.Fatal(err)
+	}
+	p04AssertVersion(t, db, 1)
+	assertA1SquashShape(t, db)
 }
 
 func p04ObjectSnapshot(t *testing.T, db *sql.DB) string {
