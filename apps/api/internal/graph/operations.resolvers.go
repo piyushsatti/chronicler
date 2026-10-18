@@ -786,12 +786,16 @@ func (r *mutationResolver) MarkNotificationsRead(ctx context.Context, ids []stri
 }
 
 // AcknowledgeSuppressedNotifications is the resolver for the acknowledgeSuppressedNotifications field.
-// Blocked: ProductCommands.AcknowledgeSuppressedNotifications is absent; Lock/Store and
-// ReadBatchNotificationSubjects still return "pending wiring" / Malformed stubs. Contract
-// requires document-subject proof selection before mark-read (notification-producer-contract /
-// notifications.md). Do not invent a mark-oldest-unread shortcut. Leave panic until NOT06.
+//
+// Owner ruling NOT06=C (2026-10-18): interim typed not-available (D25 apierr value).
+// Full document-subject proof + ProductCommands Lock/Store remain future work — do not
+// invent mark-oldest-unread or silent success. See .artifacts/plans/cutover/06-post-lanes.md.
 func (r *mutationResolver) AcknowledgeSuppressedNotifications(ctx context.Context, limit int, meta CommandMeta) (*NotificationWriteReceipt, error) {
-	panic(fmt.Errorf("not implemented: AcknowledgeSuppressedNotifications - acknowledgeSuppressedNotifications"))
+	_ = ctx
+	_ = limit
+	_ = meta
+	_ = r
+	return nil, notification.ErrAcknowledgeSuppressedNotAvailable
 }
 
 // CreateQuest is the resolver for the createQuest field.
