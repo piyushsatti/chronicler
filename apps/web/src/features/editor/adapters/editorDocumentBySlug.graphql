@@ -1,0 +1,12 @@
+query EditorDocumentBySlug($slug: String!) {
+  document(slug: $slug) {
+    id
+    slug
+    kind
+    category
+    title
+    status
+    version
+    effectiveBody
+  }
+}

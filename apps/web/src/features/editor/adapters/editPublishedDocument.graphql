@@ -1,0 +1,11 @@
+mutation EditPublishedDocument(
+  $id: ID!
+  $input: DocumentEditInput!
+  $meta: CommandMeta!
+) {
+  editPublishedDocument(id: $id, input: $input, meta: $meta) {
+    id
+    slug
+    version
+  }
+}

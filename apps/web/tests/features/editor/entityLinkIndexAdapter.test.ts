@@ -47,9 +47,8 @@ describe('entityLinkIndexAdapter', () => {
 });
 
 describe('questGenreOptionsAdapter', () => {
-  it('parses array and wrapped shapes', () => {
+  it('parses GraphQL string array', () => {
     expect(parseQuestGenreOptions(['a', 'b'])).toEqual({ ok: true, data: ['a', 'b'] });
-    expect(parseQuestGenreOptions({ options: ['x'] })).toEqual({ ok: true, data: ['x'] });
-    expect(parseQuestGenreOptions({ genres: ['y'] })).toEqual({ ok: true, data: ['y'] });
+    expect(parseQuestGenreOptions({ options: ['x'] }).ok).toBe(false);
   });
 });

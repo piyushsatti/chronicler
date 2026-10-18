@@ -1,0 +1,16 @@
+query EntityLinkSearch($query: String!, $limit: Int!) {
+  search(query: $query, kinds: null, limit: $limit) {
+    documents {
+      id
+      kind
+      slug
+      title
+      questShortCode
+    }
+    members {
+      memberId
+      handle
+      displayName
+    }
+  }
+}

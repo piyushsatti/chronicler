@@ -1,5 +1,5 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { graphql, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { server } from '../../../src/mocks/server.js';
 import { useEditorPreview } from '../../../src/features/editor/hooks/useEditorPreview.js';
@@ -16,14 +16,18 @@ describe('preview Zod edge and retained adapter hook (controlled local proof)', 
       ok: true,
       data: 'Compatible preview',
     });
+    expect(parseEditorPreview('Direct string')).toEqual({
+      ok: true,
+      data: 'Direct string',
+    });
   });
 
   it('does not request preview until its callback, then posts the selected body/audience', async () => {
     const requests: unknown[] = [];
     server.use(
-      http.post('/v1/documents/preview-body', async ({ request }) => {
-        requests.push(await request.json());
-        return HttpResponse.json({ body: 'Server preview' });
+      graphql.query('PreviewBody', ({ variables }) => {
+        requests.push(variables);
+        return HttpResponse.json({ data: { previewBody: 'Server preview' } });
       }),
     );
     const { result, rerender } = renderHook(({ body }) => useEditorPreview(body), {
@@ -39,14 +43,18 @@ describe('preview Zod edge and retained adapter hook (controlled local proof)', 
         body: 'Server preview',
       }),
     );
-    expect(requests).toEqual([{ body: 'Private draft', audience: 'public' }]);
+    expect(requests).toEqual([
+      { body: 'Private draft', audience: 'PLAYER', authorId: null },
+    ]);
     rerender({ body: 'Changed draft' });
     expect(result.current.preview.status).toBe('idle');
   });
 
   it('shows malformed-preview failure and retains a retry callback', async () => {
     server.use(
-      http.post('/v1/documents/preview-body', () => HttpResponse.json({ body: 42 })),
+      graphql.query('PreviewBody', () =>
+        HttpResponse.json({ data: { previewBody: 42 as unknown as string } }),
+      ),
     );
     const { result } = renderHook(
       () => useEditorPreview('Private draft'),
@@ -60,8 +68,8 @@ describe('preview Zod edge and retained adapter hook (controlled local proof)', 
       }),
     );
     server.use(
-      http.post('/v1/documents/preview-body', () =>
-        HttpResponse.json({ body: 'Safe retry' }),
+      graphql.query('PreviewBody', () =>
+        HttpResponse.json({ data: { previewBody: 'Safe retry' } }),
       ),
     );
     act(() => result.current.onPreview());
@@ -76,9 +84,9 @@ describe('preview Zod edge and retained adapter hook (controlled local proof)', 
       release = resolve;
     });
     server.use(
-      http.post('/v1/documents/preview-body', async () => {
+      graphql.query('PreviewBody', async () => {
         await pending;
-        return HttpResponse.json({ body: 'Old response' });
+        return HttpResponse.json({ data: { previewBody: 'Old response' } });
       }),
     );
     const harness = editorHarness('/editor-demo', '/editor-demo');

@@ -1,0 +1,10 @@
+query EntityLinkCodexDirectory {
+  codexDirectory(categoryPrefix: null, search: null) {
+    items {
+      id
+      slug
+      title
+      category
+    }
+  }
+}

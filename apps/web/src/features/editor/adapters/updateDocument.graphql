@@ -1,0 +1,11 @@
+mutation UpdateDocument(
+  $id: ID!
+  $input: DocumentEditInput!
+  $meta: CommandMeta!
+) {
+  updateDocument(id: $id, input: $input, meta: $meta) {
+    id
+    slug
+    version
+  }
+}

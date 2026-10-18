@@ -20,6 +20,8 @@ const PENDING: EditorLoadResult = {
   documentId: null,
   redirectHint: null,
   briefPublished: false,
+  updatedAt: null,
+  documentVersion: null,
 };
 
 export function useEditorPage({ typeKey, mode }: EditorRouteProps): EditorPageData {

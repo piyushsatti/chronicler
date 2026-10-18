@@ -1,0 +1,7 @@
+mutation PublishDocument($id: ID!, $expectedRevision: Int!, $meta: CommandMeta!) {
+  publishDocument(id: $id, expectedRevision: $expectedRevision, meta: $meta) {
+    id
+    slug
+    version
+  }
+}

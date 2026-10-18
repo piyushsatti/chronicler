@@ -1,4 +1,4 @@
-import { http, HttpResponse } from 'msw';
+import { HttpResponse } from 'msw';
 import type {
   FeatureGraphql,
   FeatureHandlers,
@@ -8,15 +8,7 @@ import type { EditorRouteProps } from './types.js';
 import { lazyElement } from '../../chrome/lazyElement.js';
 import { redirectRoute } from '../../chrome/routeBuilders.js';
 
-export const endpoints = {
-  questCreate: '/v1/quests',
-  questUpdate: (id: string) => `/v1/quests/${id}`,
-  questGenreOptions: '/v1/quests/genre-options',
-  documents: '/v1/documents',
-  documentUpdate: (id: string) => `/v1/documents/${id}`,
-  documentPublish: (id: string) => `/v1/documents/${id}/publish`,
-  documentPreviewBody: '/v1/documents/preview-body',
-} as const;
+export const endpoints = {} as const;
 
 export const queryKeys = {
   record: (
@@ -44,10 +36,13 @@ const editorQuestWire = {
   apl: 3,
   signupType: 'dm_pick',
   regions: [],
+  updatedAt: '2026-10-15T17:00:00Z',
   briefDocument: {
     id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
     slug: 'the-salt-stair',
     title: 'The Salt Stair',
+    status: 'published',
+    version: 1,
     effectiveBody: 'Descend the salt stair.',
   },
 };
@@ -59,6 +54,7 @@ const editorDocumentWire = {
   category: null,
   title: 'Guide smoke',
   status: 'published',
+  version: 1,
   effectiveBody: 'Guide body for edit.',
 };
 
@@ -126,53 +122,113 @@ export const graphql: FeatureGraphql = {
         },
       },
     }),
+  QuestGenreOptions: () =>
+    HttpResponse.json({
+      data: {
+        questGenreOptions: ['exploration', 'combat', 'social', 'mystery', 'horror'],
+      },
+    }),
+  PreviewBody: (body) => {
+    const text =
+      typeof body.variables?.['body'] === 'string' ? body.variables['body'] : '';
+    return HttpResponse.json({ data: { previewBody: text } });
+  },
+  DiscordDeliveryMode: () =>
+    HttpResponse.json({ data: { discordDeliveryMode: 'queue' } }),
+  CreateQuest: () =>
+    HttpResponse.json({
+      data: {
+        createQuest: {
+          id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          shortCode: 'Q-NEW',
+          updatedAt: '2026-10-15T18:00:00Z',
+        },
+      },
+    }),
+  UpdateQuest: (body) => {
+    const id =
+      typeof body.variables?.['id'] === 'string'
+        ? body.variables['id']
+        : 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+    return HttpResponse.json({
+      data: {
+        updateQuest: {
+          id,
+          shortCode: id,
+          updatedAt: '2026-10-15T18:30:00Z',
+        },
+      },
+    });
+  },
+  CreateDocument: () =>
+    HttpResponse.json({
+      data: {
+        createDocument: {
+          id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+          slug: 'new-doc',
+          version: 1,
+        },
+      },
+    }),
+  UpdateDocument: (body) => {
+    const id =
+      typeof body.variables?.['id'] === 'string'
+        ? body.variables['id']
+        : 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    return HttpResponse.json({
+      data: {
+        updateDocument: {
+          id,
+          slug: 'edited-doc',
+          version: 2,
+        },
+      },
+    });
+  },
+  PublishDocument: (body) => {
+    const id =
+      typeof body.variables?.['id'] === 'string'
+        ? body.variables['id']
+        : 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    return HttpResponse.json({
+      data: {
+        publishDocument: {
+          id,
+          slug: 'published-doc',
+          version: 3,
+        },
+      },
+    });
+  },
+  EditPublishedDocument: (body) => {
+    const id =
+      typeof body.variables?.['id'] === 'string'
+        ? body.variables['id']
+        : 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
+    return HttpResponse.json({
+      data: {
+        editPublishedDocument: {
+          id,
+          slug: 'edited-doc',
+          version: 2,
+        },
+      },
+    });
+  },
+  SyncQuestDiscord: () =>
+    HttpResponse.json({
+      data: {
+        syncQuestDiscord: {
+          jobId: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+          desiredRevision: 1,
+          appliedRevision: 1,
+          deliveryStatus: 'applied',
+        },
+      },
+    }),
 };
 
-export const handlers: FeatureHandlers = [
-  http.get('/v1/quests/genre-options', () =>
-    HttpResponse.json({
-      options: ['exploration', 'combat', 'social', 'mystery', 'horror'],
-    }),
-  ),
-  http.post('/v1/quests', async ({ request }) => {
-    const body = (await request.json()) as { title?: string };
-    return HttpResponse.json({
-      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-      shortCode: 'Q-NEW',
-      title: body.title ?? 'Untitled',
-    });
-  }),
-  http.patch('/v1/quests/:id', async ({ params, request }) => {
-    const body = (await request.json()) as { title?: string };
-    return HttpResponse.json({
-      id: String(params['id']),
-      shortCode: String(params['id']),
-      title: body.title ?? 'Untitled',
-    });
-  }),
-  http.post('/v1/documents', async ({ request }) => {
-    const body = (await request.json()) as { title?: string; kind?: string };
-    return HttpResponse.json({
-      id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
-      slug: 'new-doc',
-      title: body.title ?? 'Untitled',
-      kind: body.kind ?? 'codex',
-    });
-  }),
-  http.patch('/v1/documents/:id', async ({ params, request }) => {
-    const body = (await request.json()) as { title?: string };
-    return HttpResponse.json({
-      id: String(params['id']),
-      slug: 'edited-doc',
-      title: body.title ?? 'Untitled',
-    });
-  }),
-  http.post('/v1/documents/:id/publish', () => HttpResponse.json({ ok: true })),
-  http.post('/v1/documents/preview-body', async ({ request }) => {
-    const body = (await request.json()) as { body?: string };
-    return HttpResponse.json({ body: body.body ?? '' });
-  }),
-];
+export const handlers: FeatureHandlers = [];
 
 function editorRoute(
   path: string,

@@ -1,8 +1,16 @@
 import { z } from 'zod';
+import type {
+  EditorDocumentByIdQuery,
+  EditorDocumentBySlugQuery,
+  EditorQuestLoadQuery,
+} from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import type { EditorTypeKey } from '../types.js';
+import QUEST_LOAD from './editorQuestLoad.graphql?raw';
+import DOCUMENT_BY_ID from './editorDocumentById.graphql?raw';
+import DOCUMENT_BY_SLUG from './editorDocumentBySlug.graphql?raw';
 
 export type EditorMeta = {
   title: string;
@@ -22,6 +30,10 @@ export type EditorLoadResult = {
   redirectHint: string | null;
   /** True when the loaded brief/document is already published (use editPublishedDocument). */
   briefPublished: boolean;
+  /** Quest optimistic concurrency token (`QuestEditInput.expectedUpdatedAt`). */
+  updatedAt: string | null;
+  /** Document optimistic concurrency token (`DocumentEditInput.expectedRevision`). */
+  documentVersion: number | null;
 };
 
 const questLoadSchema = z.object({
@@ -36,12 +48,14 @@ const questLoadSchema = z.object({
   apl: z.number().nullable().optional(),
   signupType: z.string().nullable().optional(),
   regions: z.array(z.string()).optional().default([]),
+  updatedAt: z.string(),
   briefDocument: z
     .object({
       id: z.string(),
       slug: z.string().optional(),
       title: z.string(),
       status: z.string().optional(),
+      version: z.number().int(),
       effectiveBody: z.string().nullable().optional(),
     })
     .nullable()
@@ -55,61 +69,9 @@ const documentLoadSchema = z.object({
   category: z.string().nullable().optional(),
   title: z.string(),
   status: z.string().optional(),
+  version: z.number().int(),
   effectiveBody: z.string().nullable().optional(),
 });
-
-const QUEST_LOAD_QUERY = `
-  query EditorQuestLoad($id: ID, $shortCode: String) {
-    quest(id: $id, shortCode: $shortCode) {
-      id
-      shortCode
-      scheduledAt
-      durationHours
-      slotsMax
-      kinds
-      genres
-      tags
-      apl
-      signupType
-      regions
-      briefDocument {
-        id
-        slug
-        title
-        status
-        effectiveBody
-      }
-    }
-  }
-`;
-
-const DOCUMENT_BY_ID_QUERY = `
-  query EditorDocumentById($id: ID!) {
-    documentById(id: $id) {
-      id
-      slug
-      kind
-      category
-      title
-      status
-      effectiveBody
-    }
-  }
-`;
-
-const DOCUMENT_BY_SLUG_QUERY = `
-  query EditorDocumentBySlug($slug: String!) {
-    document(slug: $slug) {
-      id
-      slug
-      kind
-      category
-      title
-      status
-      effectiveBody
-    }
-  }
-`;
 
 export function parseQuestLoad(wire: unknown): AdapterResult<EditorLoadResult> {
   const parsed = questLoadSchema.safeParse(wire);
@@ -138,6 +100,8 @@ export function parseQuestLoad(wire: unknown): AdapterResult<EditorLoadResult> {
       documentId: brief?.id ?? null,
       redirectHint: q.shortCode,
       briefPublished: (brief?.status ?? '').toLowerCase() === 'published',
+      updatedAt: q.updatedAt,
+      documentVersion: brief?.version ?? null,
     },
   };
 }
@@ -162,6 +126,8 @@ export function parseDocumentLoad(wire: unknown): AdapterResult<EditorLoadResult
       documentId: d.id,
       redirectHint: d.slug,
       briefPublished: (d.status ?? '').toLowerCase() === 'published',
+      updatedAt: null,
+      documentVersion: d.version,
     },
   };
 }
@@ -184,6 +150,8 @@ function emptyDraft(
     documentId: null,
     redirectHint: null,
     briefPublished: false,
+    updatedAt: null,
+    documentVersion: null,
   };
 }
 
@@ -204,7 +172,7 @@ export async function loadEditorRecord(input: {
       const key = input.code ?? input.id;
       if (!key) throw toAppError({ failure: 'NotFound' }, 'editor:load');
       const looksUuid = key.includes('-') && key.length > 20;
-      const data = await graphqlRequest<{ quest: unknown | null }>(QUEST_LOAD_QUERY, {
+      const data = await graphqlRequest<EditorQuestLoadQuery>(QUEST_LOAD, {
         id: looksUuid ? key : null,
         shortCode: looksUuid ? null : key,
       });
@@ -218,15 +186,15 @@ export async function loadEditorRecord(input: {
     if (!key) throw toAppError({ failure: 'NotFound' }, 'editor:load');
     const looksUuid = /^[0-9a-f-]{36}$/i.test(key);
     const data = looksUuid
-      ? await graphqlRequest<{ documentById: unknown | null }>(DOCUMENT_BY_ID_QUERY, {
+      ? await graphqlRequest<EditorDocumentByIdQuery>(DOCUMENT_BY_ID, {
           id: key,
         })
-      : await graphqlRequest<{ document: unknown | null }>(DOCUMENT_BY_SLUG_QUERY, {
+      : await graphqlRequest<EditorDocumentBySlugQuery>(DOCUMENT_BY_SLUG, {
           slug: key,
         });
     const wire = looksUuid
-      ? (data as { documentById: unknown | null }).documentById
-      : (data as { document: unknown | null }).document;
+      ? (data as EditorDocumentByIdQuery).documentById
+      : (data as EditorDocumentBySlugQuery).document;
     if (wire == null) throw toAppError({ failure: 'NotFound' }, 'editor:load');
     const result = parseDocumentLoad(wire);
     if (!result.ok) throw toAppError({ failure: result.failure }, 'editor:load');

@@ -1,8 +1,16 @@
 import { z } from 'zod';
+import type {
+  EntityLinkCodexDirectoryQuery,
+  EntityLinkQuestBoardQuery,
+  EntityLinkSearchQuery,
+} from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import type { EntityLinkEntry, EntityLinkIndex } from '../types.js';
+import BOARD_QUERY from './entityLinkQuestBoard.graphql?raw';
+import CODEX_QUERY from './entityLinkCodexDirectory.graphql?raw';
+import SEARCH_QUERY from './entityLinkSearch.graphql?raw';
 
 const questItemSchema = z.object({
   id: z.string(),
@@ -35,50 +43,6 @@ const searchMemberSchema = z.object({
   handle: z.string(),
   displayName: z.string(),
 });
-
-const BOARD_QUERY = `
-  query EntityLinkQuestBoard($limit: Int!) {
-    questBoard(limit: $limit) {
-      items {
-        id
-        shortCode
-        briefDocument { title }
-      }
-    }
-  }
-`;
-
-const CODEX_QUERY = `
-  query EntityLinkCodexDirectory {
-    codexDirectory(categoryPrefix: null, search: null) {
-      items {
-        id
-        slug
-        title
-        category
-      }
-    }
-  }
-`;
-
-const SEARCH_QUERY = `
-  query EntityLinkSearch($query: String!, $limit: Int!) {
-    search(query: $query, kinds: null, limit: $limit) {
-      documents {
-        id
-        kind
-        slug
-        title
-        questShortCode
-      }
-      members {
-        memberId
-        handle
-        displayName
-      }
-    }
-  }
-`;
 
 const SUPPORTED_CODEX = new Set([
   'artifact',
@@ -132,10 +96,10 @@ export function parseEntityLinkIndex(wire: {
 export async function loadEntityLinkIndex(): Promise<EntityLinkIndex> {
   try {
     const [questData, codexData] = await Promise.all([
-      graphqlRequest<{ questBoard: { items: unknown } }>(BOARD_QUERY, {
+      graphqlRequest<EntityLinkQuestBoardQuery>(BOARD_QUERY, {
         limit: 200,
       }),
-      graphqlRequest<{ codexDirectory: { items: unknown } }>(CODEX_QUERY),
+      graphqlRequest<EntityLinkCodexDirectoryQuery>(CODEX_QUERY),
     ]);
     const result = parseEntityLinkIndex({
       quests: questData.questBoard?.items ?? [],
@@ -158,9 +122,10 @@ export async function searchEntityLinkFeed(
   const q = query.trim();
   if (!q) return [];
   try {
-    const data = await graphqlRequest<{
-      search: { documents: unknown; members: unknown };
-    }>(SEARCH_QUERY, { query: q, limit });
+    const data = await graphqlRequest<EntityLinkSearchQuery>(SEARCH_QUERY, {
+      query: q,
+      limit,
+    });
     const docs = z.array(searchDocSchema).safeParse(data.search?.documents ?? []);
     const members = z
       .array(searchMemberSchema)

@@ -1,0 +1,7 @@
+mutation CreateQuest($input: CreateQuestInput!, $meta: CommandMeta!) {
+  createQuest(input: $input, meta: $meta) {
+    id
+    shortCode
+    updatedAt
+  }
+}

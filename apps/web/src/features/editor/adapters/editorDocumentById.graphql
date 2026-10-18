@@ -1,0 +1,12 @@
+query EditorDocumentById($id: ID!) {
+  documentById(id: $id) {
+    id
+    slug
+    kind
+    category
+    title
+    status
+    version
+    effectiveBody
+  }
+}

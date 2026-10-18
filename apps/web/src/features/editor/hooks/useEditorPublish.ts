@@ -69,16 +69,39 @@ export function useEditorPublish({
         };
         let result;
         if (mode === 'edit' && initial.recordId !== 'new') {
-          result = await updateQuest(initial.recordId, payload);
+          if (!initial.updatedAt) {
+            throw safeAppError(
+              'Quest is missing an update token. Reload and try again.',
+              'editor:publish',
+            );
+          }
+          result = await updateQuest(initial.recordId, payload, initial.updatedAt);
           if (initial.documentId && initial.briefPublished) {
+            if (initial.documentVersion == null) {
+              throw safeAppError(
+                'Document is missing a revision. Reload and try again.',
+                'editor:publish',
+              );
+            }
             await editPublishedDocument({
               documentId: initial.documentId,
               title,
               body: body.trim(),
+              expectedRevision: initial.documentVersion,
             });
           } else if (initial.documentId) {
-            await updateDocument(initial.documentId, { title, body: body.trim() });
-            await publishDocument(initial.documentId);
+            if (initial.documentVersion == null) {
+              throw safeAppError(
+                'Document is missing a revision. Reload and try again.',
+                'editor:publish',
+              );
+            }
+            const updated = await updateDocument(initial.documentId, {
+              title,
+              body: body.trim(),
+              expectedRevision: initial.documentVersion,
+            });
+            await publishDocument(updated.id, updated.version ?? initial.documentVersion);
           }
         } else {
           result = await createQuest(payload);
@@ -91,11 +114,18 @@ export function useEditorPublish({
       const docCategory =
         category ?? (meta.category as string | null | undefined) ?? null;
       if (mode === 'edit' && initial.documentId) {
+        if (initial.documentVersion == null) {
+          throw safeAppError(
+            'Document is missing a revision. Reload and try again.',
+            'editor:publish',
+          );
+        }
         if (initial.briefPublished) {
           return editPublishedDocument({
             documentId: initial.documentId,
             title,
             body: body.trim(),
+            expectedRevision: initial.documentVersion,
           });
         }
         const updated = await updateDocument(initial.documentId, {
@@ -103,8 +133,9 @@ export function useEditorPublish({
           body,
           kind,
           category: docCategory,
+          expectedRevision: initial.documentVersion,
         });
-        await publishDocument(updated.id);
+        await publishDocument(updated.id, updated.version ?? initial.documentVersion);
         return updated;
       }
       const created = await createDocument({
@@ -114,7 +145,13 @@ export function useEditorPublish({
         category: docCategory,
         visibility: 'public',
       });
-      await publishDocument(created.id);
+      if (created.version == null) {
+        throw safeAppError(
+          'Created document is missing a revision. Reload and try again.',
+          'editor:publish',
+        );
+      }
+      await publishDocument(created.id, created.version);
       return created;
     },
     onSuccess,

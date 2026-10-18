@@ -1,0 +1,7 @@
+mutation CreateDocument($input: DocumentDraftInput!, $meta: CommandMeta!) {
+  createDocument(input: $input, meta: $meta) {
+    id
+    slug
+    version
+  }
+}

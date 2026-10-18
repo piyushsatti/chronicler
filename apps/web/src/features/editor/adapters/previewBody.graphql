@@ -1,0 +1,3 @@
+query PreviewBody($body: String!, $audience: PreviewAudience!, $authorId: ID) {
+  previewBody(body: $body, audience: $audience, authorId: $authorId)
+}

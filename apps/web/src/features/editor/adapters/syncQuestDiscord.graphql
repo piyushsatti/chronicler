@@ -1,0 +1,8 @@
+mutation SyncQuestDiscord($questId: ID!, $meta: CommandMeta!) {
+  syncQuestDiscord(questId: $questId, meta: $meta) {
+    jobId
+    desiredRevision
+    appliedRevision
+    deliveryStatus
+  }
+}

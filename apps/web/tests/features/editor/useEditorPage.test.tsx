@@ -1,11 +1,29 @@
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { graphql, http, HttpResponse, delay } from 'msw';
+import { graphql, HttpResponse, delay } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useNavigate } from 'react-router-dom';
 import { server } from '../../../src/mocks/server.js';
 import { useEditorPage } from '../../../src/features/editor/hooks/useEditorPage.js';
 import { draftStorageKey } from '../../../src/features/editor/hooks/useEditorDraft.js';
 import { editorHarness, seedEditorSession } from './editor-test-utils.js';
+
+function questWire(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'quest-1',
+    shortCode: 'Q-1',
+    scheduledAt: '2026-10-15T18:00:00Z',
+    durationHours: 3,
+    slotsMax: 4,
+    updatedAt: '2026-10-15T17:00:00Z',
+    briefDocument: {
+      id: 'doc-1',
+      title: 'Loaded quest',
+      version: 1,
+      effectiveBody: 'Loaded body',
+    },
+    ...overrides,
+  };
+}
 
 describe('useEditorPage (controlled MSW record and option reads)', () => {
   beforeEach(seedEditorSession);
@@ -19,20 +37,7 @@ describe('useEditorPage (controlled MSW record and option reads)', () => {
       graphql.query('EditorQuestLoad', async () => {
         await pending;
         return HttpResponse.json({
-          data: {
-            quest: {
-              id: 'quest-1',
-              shortCode: 'Q-1',
-              scheduledAt: '2026-10-15T18:00:00Z',
-              durationHours: 3,
-              slotsMax: 4,
-              briefDocument: {
-                id: 'doc-1',
-                title: 'Loaded quest',
-                effectiveBody: 'Loaded body',
-              },
-            },
-          },
+          data: { quest: questWire() },
         });
       }),
     );
@@ -60,18 +65,16 @@ describe('useEditorPage (controlled MSW record and option reads)', () => {
         if (code === 'Q-1') await pending;
         return HttpResponse.json({
           data: {
-            quest: {
+            quest: questWire({
               id: code,
               shortCode: code,
-              scheduledAt: '2026-10-15T18:00:00Z',
-              durationHours: 3,
-              slotsMax: 4,
               briefDocument: {
                 id: `${code}-doc`,
                 title: code,
+                version: 1,
                 effectiveBody: `${code} body`,
               },
-            },
+            }),
           },
         });
       }),
@@ -140,9 +143,9 @@ describe('useEditorPage (controlled MSW record and option reads)', () => {
   it('keeps a blank new document ready and does not request quest field options', async () => {
     let optionRequests = 0;
     server.use(
-      http.get('/v1/quests/genre-options', () => {
+      graphql.query('QuestGenreOptions', () => {
         optionRequests++;
-        return HttpResponse.json({ options: [] });
+        return HttpResponse.json({ data: { questGenreOptions: [] } });
       }),
       graphql.query('EditorRegions', () => {
         optionRequests++;
@@ -203,9 +206,9 @@ describe('useEditorPage (controlled MSW record and option reads)', () => {
       graphql.query('EditorRegions', () =>
         HttpResponse.json({ data: { regions: [{ id: 42 }] } }),
       ),
-      http.get('/v1/quests/genre-options', async () => {
+      graphql.query('QuestGenreOptions', async () => {
         await pending;
-        return HttpResponse.json({ options: ['exploration'] });
+        return HttpResponse.json({ data: { questGenreOptions: ['exploration'] } });
       }),
     );
     const { result } = renderHook(
@@ -251,7 +254,9 @@ describe('useEditorPage (controlled MSW record and option reads)', () => {
         await delay(100);
         return HttpResponse.json({ data: { regions: [] } });
       }),
-      http.get('/v1/quests/genre-options', () => HttpResponse.json({ options: [42] })),
+      graphql.query('QuestGenreOptions', () =>
+        HttpResponse.json({ data: { questGenreOptions: [42 as unknown as string] } }),
+      ),
     );
     const { result } = renderHook(
       () => useEditorPage({ typeKey: 'quest', mode: 'edit' }),
@@ -269,7 +274,9 @@ describe('useEditorPage (controlled MSW record and option reads)', () => {
       graphql.query('EditorRegions', () =>
         HttpResponse.json({ data: { regions: [] } }),
       ),
-      http.get('/v1/quests/genre-options', () => HttpResponse.json({ options: [] })),
+      graphql.query('QuestGenreOptions', () =>
+        HttpResponse.json({ data: { questGenreOptions: [] } }),
+      ),
     );
     const { result } = renderHook(
       () => useEditorPage({ typeKey: 'quest', mode: 'edit' }),

@@ -24,8 +24,21 @@ describe('editorMutations parsers', () => {
     const result = parseDocumentMutationResult({
       id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
       slug: 'lore-1',
+      version: 3,
     });
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.data.slug).toBe('lore-1');
+    if (result.ok) {
+      expect(result.data.slug).toBe('lore-1');
+      expect(result.data.version).toBe(3);
+    }
+  });
+
+  it('rejects document wire without version', () => {
+    expect(
+      parseDocumentMutationResult({
+        id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+        slug: 'lore-1',
+      }).ok,
+    ).toBe(false);
   });
 });

@@ -156,7 +156,7 @@ describe('useEditorPublish (local adapter-dispatch proof, not server parity)', (
       body: 'New body',
       expectedRevision: 1,
     });
-    expect(adapters.publishDocument).toHaveBeenCalledWith('doc-id', 1);
+    expect(adapters.publishDocument).toHaveBeenCalledWith('doc-id', 2);
     expect(adapters.editPublishedDocument).not.toHaveBeenCalled();
   });
 
@@ -197,15 +197,10 @@ describe('useEditorPublish (local adapter-dispatch proof, not server parity)', (
       category: 'faction',
       expectedRevision: 1,
     });
-    expect(adapters.publishDocument).toHaveBeenCalledWith('doc-id', 1);
+    expect(adapters.publishDocument).toHaveBeenCalledWith('doc-id', 2);
   });
 
   it('creates and publishes a new document with its mapped kind', async () => {
-    vi.mocked(adapters.createDocument).mockResolvedValue({
-      id: 'doc-new',
-      redirectPath: '/summaries/new',
-      version: 1,
-    });
     const hook = setup({ typeKey: 'dm-table', mode: 'new' });
     await publish(hook);
     expect(adapters.createDocument).toHaveBeenCalledWith({

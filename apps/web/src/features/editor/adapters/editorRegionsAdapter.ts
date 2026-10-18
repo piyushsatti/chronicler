@@ -1,7 +1,9 @@
 import { z } from 'zod';
+import type { EditorRegionsQuery } from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
+import REGIONS_QUERY from './editorRegions.graphql?raw';
 
 const regionSchema = z.object({
   id: z.string(),
@@ -13,16 +15,6 @@ export type EditorRegionRow = {
   id: string;
   name: string;
 };
-
-const REGIONS_QUERY = `
-  query EditorRegions($kind: String) {
-    regions(kind: $kind) {
-      id
-      name
-      kind
-    }
-  }
-`;
 
 export function parseEditorRegions(wire: unknown): AdapterResult<EditorRegionRow[]> {
   const parsed = z.array(regionSchema).safeParse(wire);
@@ -38,7 +30,7 @@ export function parseEditorRegions(wire: unknown): AdapterResult<EditorRegionRow
 /** Public regions list for editor RegionField / RegionMultiField. */
 export async function loadEditorRegions(): Promise<EditorRegionRow[]> {
   try {
-    const data = await graphqlRequest<{ regions: unknown }>(REGIONS_QUERY, {
+    const data = await graphqlRequest<EditorRegionsQuery>(REGIONS_QUERY, {
       kind: null,
     });
     const result = parseEditorRegions(data.regions);

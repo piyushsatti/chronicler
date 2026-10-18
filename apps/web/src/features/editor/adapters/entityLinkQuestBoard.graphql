@@ -1,0 +1,11 @@
+query EntityLinkQuestBoard($limit: Int!) {
+  questBoard(limit: $limit) {
+    items {
+      id
+      shortCode
+      briefDocument {
+        title
+      }
+    }
+  }
+}
