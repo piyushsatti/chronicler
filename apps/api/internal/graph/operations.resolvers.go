@@ -22,82 +22,321 @@ import (
 
 // CreateCharacter is the resolver for the createCharacter field.
 func (r *mutationResolver) CreateCharacter(ctx context.Context, input CreateCharacterV2Input, meta CommandMeta) (*CharacterV2Type, error) {
-	panic(fmt.Errorf("not implemented: CreateCharacter - createCharacter"))
+	if r.Services.CharacterCommands == nil {
+		return nil, fmt.Errorf("character commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.CharacterCommands.CreateCharacter(ctx, actor, character.CreateCharacterSpec{
+		Input: toCreateCharacterFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toCharacterV2View(view), nil
 }
 
 // AdjustPcxp is the resolver for the adjustPcxp field.
 func (r *mutationResolver) AdjustPcxp(ctx context.Context, characterID string, amount int, note string, meta CommandMeta) (*ProgressionEntryType, error) {
-	panic(fmt.Errorf("not implemented: AdjustPcxp - adjustPcxp"))
+	if r.Services.CharacterCommands == nil {
+		return nil, fmt.Errorf("character commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.CharacterCommands.AdjustPcxp(ctx, actor, character.AdjustPcxpSpec{
+		CharacterId: characterID,
+		Amount:      int32(amount),
+		Note:        note,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toProgressionEntryType(view), nil
 }
 
 // SubmitForVerification is the resolver for the submitForVerification field.
 func (r *mutationResolver) SubmitForVerification(ctx context.Context, characterID string, expectedUpdatedAt time.Time, meta CommandMeta) (*CharacterV2Type, error) {
-	panic(fmt.Errorf("not implemented: SubmitForVerification - submitForVerification"))
+	if r.Services.CharacterCommands == nil {
+		return nil, fmt.Errorf("character commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.CharacterCommands.SubmitForVerification(ctx, actor, character.SubmitForVerificationSpec{
+		CharacterId:       characterID,
+		ExpectedUpdatedAt: expectedUpdatedAt,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toCharacterV2View(view), nil
 }
 
 // RetireCharacter is the resolver for the retireCharacter field.
 func (r *mutationResolver) RetireCharacter(ctx context.Context, characterID string, expectedUpdatedAt time.Time, meta CommandMeta) (*CharacterV2Type, error) {
-	panic(fmt.Errorf("not implemented: RetireCharacter - retireCharacter"))
+	if r.Services.CharacterCommands == nil {
+		return nil, fmt.Errorf("character commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.CharacterCommands.RetireCharacter(ctx, actor, character.RetireCharacterSpec{
+		CharacterId:       characterID,
+		ExpectedUpdatedAt: expectedUpdatedAt,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toCharacterV2View(view), nil
 }
 
 // DecideVerification is the resolver for the decideVerification field.
 func (r *mutationResolver) DecideVerification(ctx context.Context, characterID string, expectedSubmittedAt time.Time, verdict VerificationVerdict, note *string, meta CommandMeta) (*VerificationType, error) {
-	panic(fmt.Errorf("not implemented: DecideVerification - decideVerification"))
+	if r.Services.CharacterCommands == nil {
+		return nil, fmt.Errorf("character commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.CharacterCommands.DecideVerification(ctx, actor, character.DecideVerificationSpec{
+		CharacterId:         characterID,
+		ExpectedSubmittedAt: expectedSubmittedAt,
+		Verdict:             toVerificationVerdict(verdict),
+		Note:                note,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toVerificationType(view), nil
 }
 
 // SetCharacterGuild is the resolver for the setCharacterGuild field.
 func (r *mutationResolver) SetCharacterGuild(ctx context.Context, characterID string, guildID *string, meta CommandMeta) (*CharacterV2Type, error) {
-	panic(fmt.Errorf("not implemented: SetCharacterGuild - setCharacterGuild"))
+	if r.Services.CharacterCommands == nil {
+		return nil, fmt.Errorf("character commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.CharacterCommands.SetCharacterGuild(ctx, actor, character.SetCharacterGuildSpec{
+		CharacterId: characterID,
+		GuildId:     guildID,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toCharacterV2View(view), nil
 }
 
 // UpdateCharacterProfile is the resolver for the updateCharacterProfile field.
 func (r *mutationResolver) UpdateCharacterProfile(ctx context.Context, characterID string, input UpdateCharacterProfileV2Input, meta CommandMeta) (*CharacterV2Type, error) {
-	panic(fmt.Errorf("not implemented: UpdateCharacterProfile - updateCharacterProfile"))
+	if r.Services.CharacterCommands == nil {
+		return nil, fmt.Errorf("character commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.CharacterCommands.UpdateCharacterProfile(ctx, actor, character.UpdateCharacterProfileSpec{
+		CharacterId: characterID,
+		Input:       toUpdateCharacterProfileFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toCharacterV2View(view), nil
 }
 
 // SyncCharacterDdb is the resolver for the syncCharacterDdb field.
 func (r *mutationResolver) SyncCharacterDdb(ctx context.Context, characterID string, ddbURL string, meta CommandMeta) (*DdbSyncReceipt, error) {
-	panic(fmt.Errorf("not implemented: SyncCharacterDdb - syncCharacterDdb"))
+	if r.Services.CharacterCommands == nil {
+		return nil, fmt.Errorf("character commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	receipt, err := r.Services.CharacterCommands.SyncCharacterDdb(ctx, actor, character.SyncCharacterDdbSpec{
+		CharacterId: characterID,
+		DdbUrl:      ddbURL,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toDdbSyncReceipt(receipt), nil
 }
 
 // LogCharacterEvent is the resolver for the logCharacterEvent field.
 func (r *mutationResolver) LogCharacterEvent(ctx context.Context, characterID string, body string, questID *string, meta CommandMeta) (*CharacterLogType, error) {
-	panic(fmt.Errorf("not implemented: LogCharacterEvent - logCharacterEvent"))
+	if r.Services.CharacterCommands == nil {
+		return nil, fmt.Errorf("character commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.CharacterCommands.LogCharacterEvent(ctx, actor, character.LogCharacterEventSpec{
+		CharacterId: characterID,
+		Body:        body,
+		QuestId:     questID,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toCharacterLogType(view), nil
 }
 
 // UpsertDowntimeProject is the resolver for the upsertDowntimeProject field.
 func (r *mutationResolver) UpsertDowntimeProject(ctx context.Context, characterID string, input DowntimeInput, meta CommandMeta) (*DowntimeProjectType, error) {
-	panic(fmt.Errorf("not implemented: UpsertDowntimeProject - upsertDowntimeProject"))
+	if r.Services.CharacterCommands == nil {
+		return nil, fmt.Errorf("character commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.CharacterCommands.UpsertDowntimeProject(ctx, actor, character.UpsertDowntimeProjectSpec{
+		CharacterId: characterID,
+		Input:       toDowntimeFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toDowntimeProjectType(view), nil
 }
 
 // UpsertCreationCatalogEntry is the resolver for the upsertCreationCatalogEntry field.
 func (r *mutationResolver) UpsertCreationCatalogEntry(ctx context.Context, input UpsertCreationCatalogEntryInput, meta CommandMeta) (*CreationCatalogEntryType, error) {
-	panic(fmt.Errorf("not implemented: UpsertCreationCatalogEntry - upsertCreationCatalogEntry"))
+	if r.Services.CharacterCommands == nil {
+		return nil, fmt.Errorf("character commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.CharacterCommands.UpsertCreationCatalogEntry(ctx, actor, character.UpsertCreationCatalogEntrySpec{
+		Input: toUpsertCreationCatalogEntryFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toCreationCatalogEntryType(view), nil
 }
 
 // CreateBackstory is the resolver for the createBackstory field.
 func (r *mutationResolver) CreateBackstory(ctx context.Context, input BackstoryInput, meta CommandMeta) (*BackstoryType, error) {
-	panic(fmt.Errorf("not implemented: CreateBackstory - createBackstory"))
+	if r.Services.CharacterCommands == nil {
+		return nil, fmt.Errorf("character commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.CharacterCommands.CreateBackstory(ctx, actor, character.CreateBackstorySpec{
+		Input: toBackstoryFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toBackstoryType(view), nil
 }
 
 // UpdateBackstory is the resolver for the updateBackstory field.
 func (r *mutationResolver) UpdateBackstory(ctx context.Context, id string, input BackstoryInput, meta CommandMeta) (*BackstoryType, error) {
-	panic(fmt.Errorf("not implemented: UpdateBackstory - updateBackstory"))
+	if r.Services.CharacterCommands == nil {
+		return nil, fmt.Errorf("character commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.CharacterCommands.UpdateBackstory(ctx, actor, character.UpdateBackstorySpec{
+		Id:    id,
+		Input: toBackstoryFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toBackstoryType(view), nil
 }
 
 // DeleteCharacterLog is the resolver for the deleteCharacterLog field.
 func (r *mutationResolver) DeleteCharacterLog(ctx context.Context, characterID string, logID string, meta CommandMeta) (*CommandReceipt, error) {
-	panic(fmt.Errorf("not implemented: DeleteCharacterLog - deleteCharacterLog"))
+	if r.Services.CharacterCommands == nil {
+		return nil, fmt.Errorf("character commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	receipt, err := r.Services.CharacterCommands.DeleteCharacterLog(ctx, actor, character.DeleteCharacterLogSpec{
+		CharacterId: characterID,
+		LogId:       logID,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toCommandReceipt(receipt), nil
 }
 
 // DeleteCharacter is the resolver for the deleteCharacter field.
 func (r *mutationResolver) DeleteCharacter(ctx context.Context, characterID string, meta CommandMeta) (*CommandReceipt, error) {
-	panic(fmt.Errorf("not implemented: DeleteCharacter - deleteCharacter"))
+	if r.Services.CharacterCommands == nil {
+		return nil, fmt.Errorf("character commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	receipt, err := r.Services.CharacterCommands.DeleteCharacter(ctx, actor, character.DeleteCharacterSpec{
+		CharacterId: characterID,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toCommandReceipt(receipt), nil
 }
 
 // RestoreCharacter is the resolver for the restoreCharacter field.
 func (r *mutationResolver) RestoreCharacter(ctx context.Context, characterID string, meta CommandMeta) (*CharacterV2Type, error) {
-	panic(fmt.Errorf("not implemented: RestoreCharacter - restoreCharacter"))
+	if r.Services.CharacterCommands == nil {
+		return nil, fmt.Errorf("character commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.CharacterCommands.RestoreCharacter(ctx, actor, character.RestoreCharacterSpec{
+		CharacterId: characterID,
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toCharacterV2View(view), nil
 }
 
 // CreateDocument is the resolver for the createDocument field.

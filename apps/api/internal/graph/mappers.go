@@ -1126,3 +1126,90 @@ func toMapV2(m spatial.LegacyMapView) *MapV2Type {
 		CreatedAt: time.Now(),
 	}
 }
+
+func toCommandReceipt(r product.CommandReceipt) *CommandReceipt {
+	return &CommandReceipt{Replayed: r.Replayed}
+}
+
+func toDdbSyncReceipt(r character.DdbSyncReceipt) *DdbSyncReceipt {
+	return &DdbSyncReceipt{
+		Character:   toCharacterV2View(r.Character),
+		Succeeded:   r.Succeeded,
+		AttemptedAt: r.AttemptedAt,
+		SafeError:   r.SafeError,
+	}
+}
+
+func toCreateCharacterFields(in CreateCharacterV2Input) character.CreateCharacterV2Fields {
+	picks := in.CatalogPickIds
+	if picks == nil {
+		picks = []string{}
+	}
+	return character.CreateCharacterV2Fields{
+		Name:           in.Name,
+		RegionId:       in.RegionID,
+		BackstoryId:    in.BackstoryID,
+		CatalogPickIds: picks,
+		GuildId:        in.GuildID,
+		Description:    in.Description,
+		BackgroundText: in.BackgroundText,
+		DdbUrl:         in.DdbURL,
+		ShortCode:      in.ShortCode,
+	}
+}
+
+func toUpdateCharacterProfileFields(in UpdateCharacterProfileV2Input) character.UpdateCharacterProfileV2Fields {
+	out := character.UpdateCharacterProfileV2Fields{}
+	if in.Description.IsSet() {
+		out.Description.Set = true
+		out.Description.Value = in.Description.Value()
+	}
+	if in.BackgroundText.IsSet() {
+		out.BackgroundText.Set = true
+		out.BackgroundText.Value = in.BackgroundText.Value()
+	}
+	return out
+}
+
+func toDowntimeFields(in DowntimeInput) character.DowntimeFields {
+	var target *int32
+	if in.Target != nil {
+		v := int32(*in.Target)
+		target = &v
+	}
+	return character.DowntimeFields{
+		Id:       in.ID,
+		Name:     in.Name,
+		Goal:     in.Goal,
+		Target:   target,
+		Progress: int32(in.Progress),
+		Status:   in.Status,
+		Notes:    in.Notes,
+	}
+}
+
+func toBackstoryFields(in BackstoryInput) character.BackstoryFields {
+	return character.BackstoryFields{
+		Name:           in.Name,
+		Lore:           in.Lore,
+		Cohort:         in.Cohort,
+		SourceRegionId: in.SourceRegionID,
+		Retired:        in.Retired,
+	}
+}
+
+func toUpsertCreationCatalogEntryFields(in UpsertCreationCatalogEntryInput) character.UpsertCreationCatalogEntryFields {
+	return character.UpsertCreationCatalogEntryFields{
+		Kind:                 in.Kind,
+		Name:                 in.Name,
+		OptionId:             in.OptionID,
+		Description:          in.Description,
+		Available:            in.Available,
+		Retired:              in.Retired,
+		IntroducedByRegionId: in.IntroducedByRegionID,
+	}
+}
+
+func toVerificationVerdict(v VerificationVerdict) member.VerificationVerdict {
+	return member.VerificationVerdict(v)
+}
