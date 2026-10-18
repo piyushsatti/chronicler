@@ -1,49 +1,76 @@
-import { restRequest } from '../../../api/rest.js';
-import { rest } from '../../../api/endpoints.js';
+import type {
+  RetireCharacterMutation,
+  SubmitForVerificationMutation,
+  SyncCharacterDdbMutation,
+  UpdateCharacterProfileMutation,
+} from '../../../api/graphql.operations.gen.js';
+import { graphqlRequest } from '../../../api/graphql.js';
 import { toAppError } from '../../../errors/toAppError.js';
+import UPDATE_PROFILE from './updateCharacterProfile.graphql?raw';
+import SYNC_DDB from './syncCharacterDdb.graphql?raw';
+import SUBMIT_VERIFICATION from './submitForVerification.graphql?raw';
+import RETIRE from './retireCharacter.graphql?raw';
 
-/** field-routing: updateCharacterProfileV2 → PATCH /v1/characters/{id}/profile */
+function commandMeta(): { idempotencyKey: string } {
+  return { idempotencyKey: crypto.randomUUID() };
+}
+
+/**
+ * field-routing: updateCharacterProfile (+ optional syncCharacterDdb for ddbUrl).
+ * Schema UpdateCharacterProfileV2Input is description/backgroundText only.
+ */
 export async function updateCharacterProfile(
   characterId: string,
   input: {
     description?: string | null;
     ddbUrl?: string | null;
-    displayIcon?: string | null;
   },
 ): Promise<void> {
   try {
-    await restRequest(rest.characterProfile(characterId), {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(input),
+    await graphqlRequest<UpdateCharacterProfileMutation>(UPDATE_PROFILE, {
+      characterId,
+      input: { description: input.description ?? null },
+      meta: commandMeta(),
     });
+    const ddbUrl = input.ddbUrl?.trim();
+    if (ddbUrl) {
+      await graphqlRequest<SyncCharacterDdbMutation>(SYNC_DDB, {
+        characterId,
+        ddbUrl,
+        meta: commandMeta(),
+      });
+    }
   } catch (err) {
     throw toAppError(err, 'character:profile:update');
   }
 }
 
-/** field-routing: submitForVerification → POST /v1/characters/{id}/submit-verification */
+/** field-routing: submitForVerification */
 export async function submitCharacterForVerification(
   characterId: string,
+  expectedUpdatedAt: string,
 ): Promise<void> {
   try {
-    await restRequest(rest.characterSubmitVerification(characterId), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idempotencyKey: crypto.randomUUID() }),
+    await graphqlRequest<SubmitForVerificationMutation>(SUBMIT_VERIFICATION, {
+      characterId,
+      expectedUpdatedAt,
+      meta: commandMeta(),
     });
   } catch (err) {
     throw toAppError(err, 'character:submit-verification');
   }
 }
 
-/** field-routing: retireCharacter → POST /v1/characters/{id}/retire */
-export async function retireCharacter(characterId: string): Promise<void> {
+/** field-routing: retireCharacter */
+export async function retireCharacter(
+  characterId: string,
+  expectedUpdatedAt: string,
+): Promise<void> {
   try {
-    await restRequest(rest.characterRetire(characterId), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ idempotencyKey: crypto.randomUUID() }),
+    await graphqlRequest<RetireCharacterMutation>(RETIRE, {
+      characterId,
+      expectedUpdatedAt,
+      meta: commandMeta(),
     });
   } catch (err) {
     throw toAppError(err, 'character:retire');

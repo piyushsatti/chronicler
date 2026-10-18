@@ -55,7 +55,12 @@ export function useOwnerActions({
   });
 
   const submit = useMutation({
-    mutationFn: () => submitCharacterForVerification(character.id),
+    mutationFn: () => {
+      if (!character.updatedAt) {
+        throw toAppError({ failure: 'InvalidWire' }, 'character:submit-verification');
+      }
+      return submitCharacterForVerification(character.id, character.updatedAt);
+    },
     onSuccess: async () => {
       setMessage('Submitted for verification.');
       await invalidate();
@@ -63,7 +68,12 @@ export function useOwnerActions({
   });
 
   const retire = useMutation({
-    mutationFn: () => retireCharacter(character.id),
+    mutationFn: () => {
+      if (!character.updatedAt) {
+        throw toAppError({ failure: 'InvalidWire' }, 'character:retire');
+      }
+      return retireCharacter(character.id, character.updatedAt);
+    },
     onSuccess: async () => {
       setMessage('Character retired.');
       await invalidate();

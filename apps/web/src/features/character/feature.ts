@@ -16,10 +16,6 @@ export const endpoints = {
   characterSummaries: (id: string) => `/v1/characters/${id}/summaries`,
   characterCoPlayers: (id: string) => `/v1/characters/${id}/co-players`,
   characterParticipations: (id: string) => `/v1/characters/${id}/participations`,
-  characterProfile: (id: string) => `/v1/characters/${id}/profile`,
-  characterSubmitVerification: (id: string) =>
-    `/v1/characters/${id}/submit-verification`,
-  characterRetire: (id: string) => `/v1/characters/${id}/retire`,
 } as const;
 
 export const queryKeys = {
@@ -45,8 +41,46 @@ export const graphql: FeatureGraphql = {
         ],
       },
     }),
+  UpdateCharacterProfile: () =>
+    HttpResponse.json({
+      data: {
+        updateCharacterProfile: {
+          id: goodCharacter.id,
+          description: goodCharacter.description,
+          updatedAt: goodCharacter.updatedAt,
+        },
+      },
+    }),
+  SyncCharacterDdb: () =>
+    HttpResponse.json({
+      data: {
+        syncCharacterDdb: {
+          succeeded: true,
+          attemptedAt: goodCharacter.updatedAt,
+        },
+      },
+    }),
+  SubmitForVerification: () =>
+    HttpResponse.json({
+      data: {
+        submitForVerification: {
+          id: goodCharacter.id,
+          verificationStatus: 'submitted',
+          updatedAt: goodCharacter.updatedAt,
+        },
+      },
+    }),
+  RetireCharacter: () =>
+    HttpResponse.json({
+      data: {
+        retireCharacter: {
+          id: goodCharacter.id,
+          status: 'retired',
+          updatedAt: goodCharacter.updatedAt,
+        },
+      },
+    }),
 };
-
 export const handlers: FeatureHandlers = [
   http.get(backstories, () => HttpResponse.json(goodBackstories)),
   http.get('/v1/characters/:id/progression', () => HttpResponse.json(goodProgression)),
@@ -73,13 +107,6 @@ export const handlers: FeatureHandlers = [
       ],
     }),
   ),
-  http.patch('/v1/characters/:id/profile', async ({ request }) =>
-    HttpResponse.json(await request.json()),
-  ),
-  http.post('/v1/characters/:id/submit-verification', () =>
-    HttpResponse.json({ ok: true }),
-  ),
-  http.post('/v1/characters/:id/retire', () => HttpResponse.json({ ok: true })),
 ];
 
 export const routes: readonly FeatureRoute[] = [

@@ -10,7 +10,8 @@
       "backstoryId": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
       "description": "A wanderer of Lightfall.",
       "ddbUrl": "https://example.com/ddb/lyra",
-      "displayIcon": null
+      "displayIcon": null,
+      "updatedAt": "2026-10-01T12:00:00Z"
     }
   ],
   "total": 1

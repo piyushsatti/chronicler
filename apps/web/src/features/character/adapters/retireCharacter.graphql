@@ -1,0 +1,15 @@
+mutation RetireCharacter(
+  $characterId: ID!
+  $expectedUpdatedAt: DateTime!
+  $meta: CommandMeta!
+) {
+  retireCharacter(
+    characterId: $characterId
+    expectedUpdatedAt: $expectedUpdatedAt
+    meta: $meta
+  ) {
+    id
+    status
+    updatedAt
+  }
+}

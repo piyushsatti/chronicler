@@ -1,0 +1,15 @@
+mutation SubmitForVerification(
+  $characterId: ID!
+  $expectedUpdatedAt: DateTime!
+  $meta: CommandMeta!
+) {
+  submitForVerification(
+    characterId: $characterId
+    expectedUpdatedAt: $expectedUpdatedAt
+    meta: $meta
+  ) {
+    id
+    verificationStatus
+    updatedAt
+  }
+}

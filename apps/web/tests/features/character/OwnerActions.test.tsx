@@ -2,7 +2,7 @@ import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { rest } from '../../../src/api/endpoints.js';
+import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
 import type { CharacterViewModel } from '../../../src/features/character/types.js';
 import { OwnerActions } from '../../../src/features/character/components/OwnerActions.js';
 import { server } from '../../../src/mocks/server.js';
@@ -22,6 +22,7 @@ const character: CharacterViewModel = {
   description: 'Old description',
   ddbUrl: null,
   displayIcon: null,
+  updatedAt: '2026-10-01T12:00:00Z',
 };
 
 describe('OwnerActions', () => {
@@ -32,9 +33,27 @@ describe('OwnerActions', () => {
   it('renders the view and dispatches profile updates through its hook', async () => {
     let submitted: unknown;
     server.use(
-      http.patch(rest.characterProfile(character.id), async ({ request }) => {
-        submitted = await request.json();
-        return HttpResponse.json({ ok: true });
+      http.post(GRAPHQL_PATH, async ({ request }) => {
+        const body = (await request.json()) as {
+          query?: string;
+          variables?: unknown;
+        };
+        const name = body.query?.match(/\b(query|mutation)\s+(\w+)/)?.[2];
+        if (name === 'UpdateCharacterProfile') {
+          submitted = body.variables;
+          return HttpResponse.json({
+            data: {
+              updateCharacterProfile: {
+                id: character.id,
+                description: 'New description',
+                updatedAt: character.updatedAt,
+              },
+            },
+          });
+        }
+        return HttpResponse.json({
+          errors: [{ message: 'Unhandled', extensions: { code: 'UNHANDLED' } }],
+        });
       }),
     );
     const user = userEvent.setup();
@@ -46,9 +65,9 @@ describe('OwnerActions', () => {
     await user.click(screen.getByRole('button', { name: 'Save profile' }));
 
     expect(await screen.findByText('Profile saved.')).toBeInTheDocument();
-    expect(submitted).toEqual({
-      description: 'New description',
-      ddbUrl: null,
+    expect(submitted).toMatchObject({
+      characterId: character.id,
+      input: { description: 'New description' },
     });
   });
 });

@@ -43,13 +43,18 @@ export type QuestV2FiltersInput = {
   tag?: string | null | undefined;
 };
 
+export type UpdateCharacterProfileV2Input = {
+  backgroundText?: string | null | undefined;
+  description?: string | null | undefined;
+};
+
 export type CharacterQueryVariables = Exact<{
   id?: string | null | undefined;
   shortCode?: string | null | undefined;
 }>;
 
 
-export type CharacterQuery = { character: { id: string, shortCode: string, name: string, status: string, ownerId: string, verificationStatus: CharacterReviewStatus, backstoryId: string | null, regionId: string | null, description: string | null, ddbUrl: string | null, displayIcon: string | null } | null };
+export type CharacterQuery = { character: { id: string, shortCode: string, name: string, status: string, ownerId: string, verificationStatus: CharacterReviewStatus, backstoryId: string | null, regionId: string | null, description: string | null, ddbUrl: string | null, displayIcon: string | null, updatedAt: string } | null };
 
 export type CharacterRegionsQueryVariables = Exact<{
   limit: number;
@@ -66,6 +71,42 @@ export type MyCharacterListQueryVariables = Exact<{
 
 
 export type MyCharacterListQuery = { myCharacters: { total: number, items: Array<{ id: string, shortCode: string, name: string, status: string, ownerId: string, verificationStatus: CharacterReviewStatus, backstoryId: string | null, regionId: string | null, description: string | null, ddbUrl: string | null, displayIcon: string | null }> } };
+
+export type RetireCharacterMutationVariables = Exact<{
+  characterId: string;
+  expectedUpdatedAt: string;
+  meta: CommandMeta;
+}>;
+
+
+export type RetireCharacterMutation = { retireCharacter: { id: string, status: string, updatedAt: string } };
+
+export type SubmitForVerificationMutationVariables = Exact<{
+  characterId: string;
+  expectedUpdatedAt: string;
+  meta: CommandMeta;
+}>;
+
+
+export type SubmitForVerificationMutation = { submitForVerification: { id: string, verificationStatus: CharacterReviewStatus, updatedAt: string } };
+
+export type SyncCharacterDdbMutationVariables = Exact<{
+  characterId: string;
+  ddbUrl: string;
+  meta: CommandMeta;
+}>;
+
+
+export type SyncCharacterDdbMutation = { syncCharacterDdb: { succeeded: boolean, attemptedAt: string } };
+
+export type UpdateCharacterProfileMutationVariables = Exact<{
+  characterId: string;
+  input: UpdateCharacterProfileV2Input;
+  meta: CommandMeta;
+}>;
+
+
+export type UpdateCharacterProfileMutation = { updateCharacterProfile: { id: string, description: string | null, updatedAt: string } };
 
 export type DocumentQueryVariables = Exact<{
   slug: string;

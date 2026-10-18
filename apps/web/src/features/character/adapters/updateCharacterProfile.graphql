@@ -1,0 +1,11 @@
+mutation UpdateCharacterProfile(
+  $characterId: ID!
+  $input: UpdateCharacterProfileV2Input!
+  $meta: CommandMeta!
+) {
+  updateCharacterProfile(characterId: $characterId, input: $input, meta: $meta) {
+    id
+    description
+    updatedAt
+  }
+}

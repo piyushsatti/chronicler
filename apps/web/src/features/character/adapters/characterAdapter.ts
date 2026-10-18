@@ -31,6 +31,8 @@ export type CharacterViewModel = {
   description: string | null;
   ddbUrl: string | null;
   displayIcon: string | null;
+  /** Optimistic concurrency token for submit/retire; ISO DateTime when present. */
+  updatedAt: string | null;
 };
 
 export function parseCharacter(
@@ -58,6 +60,7 @@ export function parseCharacter(
       description: parsed.data.description ?? null,
       ddbUrl: parsed.data.ddbUrl ?? null,
       displayIcon: parsed.data.displayIcon ?? null,
+      updatedAt: parsed.data.updatedAt ?? null,
     },
   };
 }

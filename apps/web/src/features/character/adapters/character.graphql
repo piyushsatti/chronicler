@@ -11,5 +11,6 @@ query Character($id: ID, $shortCode: String) {
     description
     ddbUrl
     displayIcon
+    updatedAt
   }
 }

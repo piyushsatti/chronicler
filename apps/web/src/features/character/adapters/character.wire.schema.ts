@@ -12,6 +12,7 @@ export const characterWireSchema = z.object({
   description: z.string().nullable().optional(),
   ddbUrl: z.string().nullable().optional(),
   displayIcon: z.string().nullable().optional(),
+  updatedAt: z.string().min(1).optional(),
 });
 
 export const backstoryWireSchema = z.object({
