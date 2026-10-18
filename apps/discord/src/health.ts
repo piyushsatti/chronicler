@@ -50,8 +50,8 @@ export type ProcessExit = (code: number) => void;
 export type HeartbeatDisposer = () => void;
 
 const HEARTBEAT_PATH = '/v1/ingest/heartbeat';
-// Default 60s matches the historical bot heartbeat watch interval. The bot
-// does not read API config; keep this literal aligned with ops docs by hand.
+// Default 60s matches the retained ingest heartbeat watch cadence (OP-040).
+// The bot does not read API config; keep this literal aligned by hand.
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 60_000;
 
 /**
@@ -110,11 +110,12 @@ export interface ShardHealthOptions {
  * Tracks, per shard, the moment a reconnect began, so the resolving event can
  * report how long the gap was and whether anything was lost.
  *
- * Also starts the heartbeat interval (#445): POSTs to the backend on a fixed
- * cadence so the backend can detect a wedged/dead bot process
- * (`services/heartbeat_watch.py`). Returns a disposer that stops the
- * interval -- callers that don't need it (production bootstrap) can ignore
- * the return value; tests use it to avoid leaking timers.
+ * Also starts the heartbeat interval (#445): POSTs to Go
+ * `POST /v1/ingest/heartbeat` (`apps/api/internal/ingest`, OpenAPI Heartbeat)
+ * on a fixed cadence so the API can detect a wedged/dead bot process.
+ * Returns a disposer that stops the interval -- callers that don't need it
+ * (production bootstrap) can ignore the return value; tests use it to avoid
+ * leaking timers.
  */
 export function mountShardHealth(
   client: Client,

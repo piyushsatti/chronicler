@@ -25,6 +25,39 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+describe('postHeartbeat', () => {
+  it('POSTs JSON to /v1/ingest/heartbeat with X-Ingest-Secret', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({ ok: true });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const { postHeartbeat } = await import('@discord/health.js');
+    const { config } = await import('@discord/config.js');
+    await postHeartbeat({
+      gateway_ready: true,
+      shard_state: { '0': 'ready' },
+      host: 'test-host',
+      build_sha: 'test-build',
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe(`${config.apiUrl}/v1/ingest/heartbeat`);
+    expect(init.method).toBe('POST');
+    expect(init.headers).toEqual(
+      expect.objectContaining({
+        'X-Ingest-Secret': config.ingestSecret,
+        'content-type': 'application/json',
+      }),
+    );
+    expect(JSON.parse(String(init.body))).toEqual({
+      gateway_ready: true,
+      shard_state: { '0': 'ready' },
+      host: 'test-host',
+      build_sha: 'test-build',
+    });
+  });
+});
+
 describe('mountShardHealth heartbeat', () => {
   it('can disable only the periodic ingest heartbeat for an isolated agent process', async () => {
     const { mountShardHealth } = await import('@discord/health.js');

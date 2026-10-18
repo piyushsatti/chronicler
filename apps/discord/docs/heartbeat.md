@@ -1,15 +1,16 @@
 # Heartbeat (`apps/discord`)
 
 **App:** `apps/discord`  
-**Implements:** [discord-ingest](/docs/interfaces/discord-ingest.md)
+**Implements:** [discord-ingest](/docs/interfaces/discord-ingest.md)  
+**Retained HTTP:** `POST /v1/ingest/heartbeat` (field-routing OP-040; OpenAPI `Heartbeat`; Go [`internal/ingest`](/apps/api/internal/ingest/ingest.go))
 
 ## Verdict
 
-`mountShardHealth` posts shard state to `POST /v1/ingest/heartbeat` every 60 seconds. A failed POST is logged and does not stop the process. Heartbeat is on unless `BOT_HEARTBEAT_ENABLED=false`.
+`mountShardHealth` posts shard state to `POST /v1/ingest/heartbeat` every 60 seconds. A failed POST is logged and does not stop the process. Heartbeat is on unless `BOT_HEARTBEAT_ENABLED=false`. No product GraphQL, announce, or agent path.
 
 ## How it works
 
-`postHeartbeat` sends `X-Ingest-Secret` and a `HeartbeatStatus`: `gateway_ready`, `shard_state`, `host`, `build_sha`. The default interval is `DEFAULT_HEARTBEAT_INTERVAL_MS` (60 seconds). The request times out after 10 seconds.
+`postHeartbeat` sends `X-Ingest-Secret` and a `HeartbeatStatus`: `gateway_ready`, `shard_state`, `host`, `build_sha`. The default interval is `DEFAULT_HEARTBEAT_INTERVAL_MS` (60 seconds; do not change without API watch agreement). The request times out after 10 seconds.
 
 `mountShardHealth` records, per shard, whether a reconnect ended in `shardResume` (Discord replayed the gap) or a fresh identify (the gap was not replayed). With `exitOnTerminal` — the value `start` passes — a terminal shard close or a gateway that stays non-ready exits the process.
 
