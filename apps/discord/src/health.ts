@@ -50,9 +50,8 @@ export type ProcessExit = (code: number) => void;
 export type HeartbeatDisposer = () => void;
 
 const HEARTBEAT_PATH = '/v1/ingest/heartbeat';
-// Mirrors chronicler.config.Settings.bot_heartbeat_interval_seconds (=60) on
-// the Python side by convention only -- this bot process cannot read Python
-// settings, so the two literals must be kept in sync by hand.
+// Default 60s matches the historical bot heartbeat watch interval. The bot
+// does not read API config; keep this literal aligned with ops docs by hand.
 const DEFAULT_HEARTBEAT_INTERVAL_MS = 60_000;
 
 /**

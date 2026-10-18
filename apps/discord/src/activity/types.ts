@@ -1,10 +1,10 @@
 /**
- * Wire shape for the v2 gateway sniffer (#91).
+ * Wire shape for the gateway sniffer.
  *
- * Matches `DiscordEventPayload` in
- * `chronicler/api/routers/ingest_v2.py` exactly (snake_case keys, same
- * field set) -- this is the bot's half of that contract. Do not rename
- * fields here without updating the backend router in lockstep.
+ * Matches OpenAPI `DiscordEvent` and Go `ingest.Event`
+ * (`apps/api/internal/ingest`) — snake_case keys, same field set.
+ * Do not rename fields here without updating OpenAPI and the Go handler
+ * in lockstep.
  */
 
 /** The three activity kinds the backend's `EventKind` enum accepts. */
