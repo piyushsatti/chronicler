@@ -17,7 +17,7 @@ function commandMeta(): { idempotencyKey: string } {
 
 /**
  * field-routing: updateCharacterProfile (+ optional syncCharacterDdb for ddbUrl).
- * Schema UpdateCharacterProfileV2Input is description/backgroundText only.
+ * Schema UpdateCharacterProfileInput is description/backgroundText only.
  */
 export async function updateCharacterProfile(
   characterId: string,

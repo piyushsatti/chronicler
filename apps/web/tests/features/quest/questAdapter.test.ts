@@ -137,7 +137,7 @@ describe('generic quest list', () => {
     const request = { filters: { displayStatus: 'scheduled' }, limit: 50, offset: 50 };
     expect(await loadQuestList(request)).toMatchObject({ total: 81, items: [{ shortCode: 'Q-202' }] });
     expect(body?.variables).toEqual(request);
-    expect(body?.query).toContain('query QuestList($filters: QuestV2FiltersInput!, $limit: Int!, $offset: Int!)');
+    expect(body?.query).toContain('query QuestList($filters: QuestFiltersInput!, $limit: Int!, $offset: Int!)');
     expect(body?.query).toContain('quests(filters: $filters, limit: $limit, offset: $offset)');
     expect(body?.query).toMatch(/total\s+items/);
     expect(body?.query).not.toContain('questBoard');

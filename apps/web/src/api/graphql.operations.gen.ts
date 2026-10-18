@@ -22,13 +22,7 @@ export type ParticipationAttestationInput = {
   status: string;
 };
 
-export type QuestPcxpAwardInput = {
-  characterId: string;
-  note?: string | null | undefined;
-  pcxp: number;
-};
-
-export type QuestV2FiltersInput = {
+export type QuestFiltersInput = {
   arcId?: string | null | undefined;
   displayStatus?: string | null | undefined;
   dmId?: string | null | undefined;
@@ -43,7 +37,13 @@ export type QuestV2FiltersInput = {
   tag?: string | null | undefined;
 };
 
-export type UpdateCharacterProfileV2Input = {
+export type QuestPcxpAwardInput = {
+  characterId: string;
+  note?: string | null | undefined;
+  pcxp: number;
+};
+
+export type UpdateCharacterProfileInput = {
   backgroundText?: string | null | undefined;
   description?: string | null | undefined;
 };
@@ -145,7 +145,7 @@ export type SyncCharacterDdbMutation = { syncCharacterDdb: { succeeded: boolean,
 
 export type UpdateCharacterProfileMutationVariables = Exact<{
   characterId: string;
-  input: UpdateCharacterProfileV2Input;
+  input: UpdateCharacterProfileInput;
   meta: CommandMeta;
 }>;
 
@@ -242,7 +242,7 @@ export type QuestQueryVariables = Exact<{
 export type QuestQuery = { quest: { id: string, shortCode: string, status: string, scheduledAt: string, durationHours: number, slotsMax: number, filledCount: number, displayStatus: string | null, genres: Array<string>, tags: Array<string>, dm: { handle: string, displayName: string } | null, briefDocument: { id: string, slug: string, title: string } | null, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string, nextRetryAt: string | null, errorMessage: string | null }, participants: Array<{ memberId: string, characterId: string, characterName: string, memberHandle: string, status: string }> } | null };
 
 export type QuestListQueryVariables = Exact<{
-  filters: QuestV2FiltersInput;
+  filters: QuestFiltersInput;
   limit: number;
   offset: number;
 }>;
@@ -258,6 +258,14 @@ export type SignupForQuestMutationVariables = Exact<{
 
 
 export type SignupForQuestMutation = { signupForQuest: { questId: string, characterId: string, status: string } };
+
+export type QuestSummaryPageQueryVariables = Exact<{
+  shortCode: string;
+  search: string;
+}>;
+
+
+export type QuestSummaryPageQuery = { quest: { id: string, shortCode: string, status: string, scheduledAt: string, durationHours: number, slotsMax: number, filledCount: number, displayStatus: string | null, genres: Array<string>, tags: Array<string>, dm: { handle: string, displayName: string } | null, briefDocument: { id: string, slug: string, title: string } | null, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string, nextRetryAt: string | null, errorMessage: string | null }, participants: Array<{ memberId: string, characterId: string, characterName: string, memberHandle: string, status: string }> } | null, documents: { total: number, items: Array<{ id: string, slug: string, title: string, category: string | null, effectiveBody: string | null }> } };
 
 export type TransitionQuestStatusMutationVariables = Exact<{
   id: string;

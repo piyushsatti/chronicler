@@ -1,4 +1,4 @@
-query QuestList($filters: QuestV2FiltersInput!, $limit: Int!, $offset: Int!) {
+query QuestList($filters: QuestFiltersInput!, $limit: Int!, $offset: Int!) {
   quests(filters: $filters, limit: $limit, offset: $offset) {
     total
     items {

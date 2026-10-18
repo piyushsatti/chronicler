@@ -26,7 +26,7 @@ export type ActivitySummaryType = {
   voiceMinutes: Scalars['Float']['output'];
 };
 
-export type AdminCharacterDirectoryEntryV2Type = {
+export type AdminCharacterDirectoryEntryType = {
   guildId?: Maybe<Scalars['ID']['output']>;
   id: Scalars['ID']['output'];
   name: Scalars['String']['output'];
@@ -49,12 +49,12 @@ export type AdminCharacterDirectoryFiltersInput = {
   status?: InputMaybe<Scalars['String']['input']>;
 };
 
-export type AdminCharacterDirectoryV2Type = {
-  items: Array<AdminCharacterDirectoryEntryV2Type>;
+export type AdminCharacterDirectoryType = {
+  items: Array<AdminCharacterDirectoryEntryType>;
   total: Scalars['Int']['output'];
 };
 
-export type AdminDeliveryConfigV2Type = {
+export type AdminDeliveryConfigType = {
   announcementRoleHealthy?: Maybe<Scalars['Boolean']['output']>;
   announcementRoleId?: Maybe<Scalars['String']['output']>;
   announcementRoleSource: Scalars['String']['output'];
@@ -63,7 +63,7 @@ export type AdminDeliveryConfigV2Type = {
   publicOriginHealthy?: Maybe<Scalars['Boolean']['output']>;
 };
 
-export type AdminDeliveryJobV2Type = {
+export type AdminDeliveryJobType = {
   appliedRevision?: Maybe<Scalars['Int']['output']>;
   createdAt: Scalars['DateTime']['output'];
   desiredRevision?: Maybe<Scalars['Int']['output']>;
@@ -83,7 +83,7 @@ export type AdminDeliveryJobV2Type = {
   updatedAt: Scalars['DateTime']['output'];
 };
 
-export type AdminHealthAlertV2Type = {
+export type AdminHealthAlertType = {
   firstSeenAt?: Maybe<Scalars['DateTime']['output']>;
   key: Scalars['String']['output'];
   label: Scalars['String']['output'];
@@ -92,11 +92,11 @@ export type AdminHealthAlertV2Type = {
   severity: Scalars['String']['output'];
 };
 
-export type AdminOperationsV2Type = {
+export type AdminOperationsType = {
   activeAlertCount: Scalars['Int']['output'];
-  activeAlerts: Array<AdminHealthAlertV2Type>;
-  config: AdminDeliveryConfigV2Type;
-  deliveries: Array<AdminDeliveryJobV2Type>;
+  activeAlerts: Array<AdminHealthAlertType>;
+  config: AdminDeliveryConfigType;
+  deliveries: Array<AdminDeliveryJobType>;
   deliveryTotal: Scalars['Int']['output'];
   pendingDeliveryCount: Scalars['Int']['output'];
   scheduledWork: Array<ScheduledWorkStatusType>;
@@ -104,7 +104,7 @@ export type AdminOperationsV2Type = {
 };
 
 
-export type AdminOperationsV2TypeActiveAlertsArgs = {
+export type AdminOperationsTypeActiveAlertsArgs = {
   limit?: Scalars['Int']['input'];
   offset?: Scalars['Int']['input'];
 };
@@ -190,6 +190,19 @@ export type CharacterDdbMirrorType = {
   xp?: Maybe<Scalars['Int']['output']>;
 };
 
+export type CharacterFiltersInput = {
+  guildId?: InputMaybe<Scalars['ID']['input']>;
+  namePrefix?: InputMaybe<Scalars['String']['input']>;
+  ownerId?: InputMaybe<Scalars['ID']['input']>;
+  regionId?: InputMaybe<Scalars['ID']['input']>;
+  status?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type CharacterListResult = {
+  items: Array<CharacterType>;
+  total: Scalars['Int']['output'];
+};
+
 export type CharacterLogListResult = {
   items: Array<CharacterLogType>;
   total: Scalars['Int']['output'];
@@ -211,20 +224,7 @@ export enum CharacterReviewStatus {
   Unknown = 'UNKNOWN'
 }
 
-export type CharacterV2FiltersInput = {
-  guildId?: InputMaybe<Scalars['ID']['input']>;
-  namePrefix?: InputMaybe<Scalars['String']['input']>;
-  ownerId?: InputMaybe<Scalars['ID']['input']>;
-  regionId?: InputMaybe<Scalars['ID']['input']>;
-  status?: InputMaybe<Scalars['String']['input']>;
-};
-
-export type CharacterV2ListResult = {
-  items: Array<CharacterV2Type>;
-  total: Scalars['Int']['output'];
-};
-
-export type CharacterV2Type = {
+export type CharacterType = {
   backgroundText?: Maybe<Scalars['String']['output']>;
   backstoryId?: Maybe<Scalars['ID']['output']>;
   createdAt: Scalars['DateTime']['output'];
@@ -254,11 +254,11 @@ export type CloseQuestInput = {
 };
 
 export type CoPlayerPage = {
-  items: Array<CoPlayerV2Type>;
+  items: Array<CoPlayerType>;
   total: Scalars['Int']['output'];
 };
 
-export type CoPlayerV2Type = {
+export type CoPlayerType = {
   characterId: Scalars['ID']['output'];
   memberId: Scalars['ID']['output'];
   questCount: Scalars['Int']['output'];
@@ -312,7 +312,7 @@ export type CountByKeyType = {
   key: Scalars['String']['output'];
 };
 
-export type CreateCharacterV2Input = {
+export type CreateCharacterInput = {
   backgroundText?: InputMaybe<Scalars['String']['input']>;
   backstoryId?: InputMaybe<Scalars['ID']['input']>;
   catalogPickIds?: Array<Scalars['ID']['input']>;
@@ -324,7 +324,7 @@ export type CreateCharacterV2Input = {
   shortCode?: InputMaybe<Scalars['String']['input']>;
 };
 
-export type CreateQuestV2Input = {
+export type CreateQuestInput = {
   additionalInfo?: InputMaybe<Scalars['String']['input']>;
   apl?: InputMaybe<Scalars['Int']['input']>;
   arcId?: InputMaybe<Scalars['ID']['input']>;
@@ -378,7 +378,7 @@ export type DdbAttemptType = {
 
 export type DdbSyncReceipt = {
   attemptedAt: Scalars['DateTime']['output'];
-  character: CharacterV2Type;
+  character: CharacterType;
   safeError?: Maybe<Scalars['String']['output']>;
   succeeded: Scalars['Boolean']['output'];
 };
@@ -411,12 +411,12 @@ export type DirectoryEntryType = {
   tagline?: Maybe<Scalars['String']['output']>;
 };
 
-export type DmLastSessionV2Type = {
-  quest: QuestV2Type;
+export type DmLastSessionType = {
+  quest: QuestType;
   recapDocument?: Maybe<DocumentType>;
 };
 
-export type DmProfileV2Type = {
+export type DmProfileType = {
   acceptingPlayers: Scalars['Boolean']['output'];
   houseRules?: Maybe<Scalars['String']['output']>;
   memberId: Scalars['ID']['output'];
@@ -427,17 +427,17 @@ export type DmProfileV2Type = {
   tagline?: Maybe<Scalars['String']['output']>;
 };
 
-export type DmSessionHistoryV2Result = {
-  items: Array<DmLastSessionV2Type>;
+export type DmSessionHistoryResult = {
+  items: Array<DmLastSessionType>;
   total: Scalars['Int']['output'];
 };
 
-export type DmStatsV2Type = {
-  lastSession?: Maybe<DmLastSessionV2Type>;
+export type DmStatsType = {
+  lastSession?: Maybe<DmLastSessionType>;
   sessionCount: Scalars['Int']['output'];
 };
 
-export type DmSummaryFiltersV2Input = {
+export type DmSummaryFiltersInput = {
   questId?: InputMaybe<Scalars['ID']['input']>;
   search?: InputMaybe<Scalars['String']['input']>;
 };
@@ -537,7 +537,7 @@ export type DocumentType = {
   readerIds?: Maybe<Array<Scalars['ID']['output']>>;
   slug: Scalars['String']['output'];
   status: Scalars['String']['output'];
-  summaryDerived?: Maybe<SummaryDerivedV2Type>;
+  summaryDerived?: Maybe<SummaryDerivedType>;
   title: Scalars['String']['output'];
   updatedAt: Scalars['DateTime']['output'];
   version: Scalars['Int']['output'];
@@ -577,14 +577,14 @@ export type DriverProgressType = {
   tenureMonths: Scalars['Int']['output'];
 };
 
-export type GameCalendarV2Type = {
-  currentGameDate?: Maybe<GameDateV2Type>;
+export type GameCalendarType = {
+  currentGameDate?: Maybe<GameDateType>;
   currentGameDay?: Maybe<Scalars['Int']['output']>;
   definition?: Maybe<Scalars['JSON']['output']>;
   monthGrid: Array<GameDayCellType>;
 };
 
-export type GameDateV2Type = {
+export type GameDateType = {
   day: Scalars['Int']['output'];
   eraAbbrev: Scalars['String']['output'];
   periodIndex: Scalars['Int']['output'];
@@ -625,8 +625,8 @@ export type HomeBucketType = {
   documents: Array<DocumentType>;
 };
 
-export type HomeV2Type = {
-  communityStats: SiteStatsV2Type;
+export type HomeType = {
+  communityStats: SiteStatsType;
   recentByCategory: Array<HomeBucketType>;
 };
 
@@ -651,7 +651,7 @@ export type MapCreateInput = {
   regionId?: InputMaybe<Scalars['ID']['input']>;
 };
 
-export type MapV2Type = {
+export type MapType = {
   assetPath?: Maybe<Scalars['String']['output']>;
   atlasCode: Scalars['String']['output'];
   createdAt: Scalars['DateTime']['output'];
@@ -660,19 +660,19 @@ export type MapV2Type = {
   id: Scalars['ID']['output'];
   mapKind: Scalars['String']['output'];
   name: Scalars['String']['output'];
-  pointcrawlEdges: Array<PointcrawlEdgeV2Type>;
-  pointcrawlNodes: Array<PointcrawlNodeV2Type>;
+  pointcrawlEdges: Array<PointcrawlEdgeType>;
+  pointcrawlNodes: Array<PointcrawlNodeType>;
   regionId?: Maybe<Scalars['ID']['output']>;
 };
 
 
-export type MapV2TypePointcrawlEdgesArgs = {
+export type MapTypePointcrawlEdgesArgs = {
   limit?: Scalars['Int']['input'];
   offset?: Scalars['Int']['input'];
 };
 
 
-export type MapV2TypePointcrawlNodesArgs = {
+export type MapTypePointcrawlNodesArgs = {
   limit?: Scalars['Int']['input'];
   offset?: Scalars['Int']['input'];
 };
@@ -714,7 +714,7 @@ export type MemberListResult = {
 export type MemberProfileType = {
   activitySummary: ActivitySummaryType;
   availability: Array<AvailabilitySlotType>;
-  dmProfile?: Maybe<DmProfileV2Type>;
+  dmProfile?: Maybe<DmProfileType>;
   member: MemberType;
   recentWeeks: Array<WeekActivityType>;
 };
@@ -820,16 +820,16 @@ export type Mutation = {
   adjustPcxp: ProgressionEntryType;
   assignArchon: ArchonAssignmentType;
   assignLieutenant: LieutenantAssignmentType;
-  attestQuestParticipation: Array<QuestParticipantV2Type>;
-  closeQuest: QuestV2Type;
+  attestQuestParticipation: Array<QuestParticipantType>;
+  closeQuest: QuestType;
   createBackstory: BackstoryType;
-  createCharacter: CharacterV2Type;
+  createCharacter: CharacterType;
   createDocument: DocumentType;
-  createMap: MapV2Type;
-  createQuest: QuestV2Type;
-  createRegion: RegionV2Type;
-  createTimeAnchor: TimeAnchorV2Type;
-  decideDmProfileVerification: DmProfileV2Type;
+  createMap: MapType;
+  createQuest: QuestType;
+  createRegion: RegionType;
+  createTimeAnchor: TimeAnchorType;
+  decideDmProfileVerification: DmProfileType;
   decideVerification: VerificationType;
   deleteCharacter: CommandReceipt;
   deleteCharacterLog: CommandReceipt;
@@ -843,51 +843,51 @@ export type Mutation = {
   markNotificationsRead: NotificationWriteReceipt;
   publishDocument: DocumentType;
   redriveDiscordDelivery: DeliveryReceipt;
-  removeQuestFromArc: QuestV2Type;
-  restoreCharacter: CharacterV2Type;
+  removeQuestFromArc: QuestType;
+  restoreCharacter: CharacterType;
   restoreDocument: DocumentType;
-  restoreQuest: QuestV2Type;
-  restoreRegion: RegionV2Type;
-  retireCharacter: CharacterV2Type;
+  restoreQuest: QuestType;
+  restoreRegion: RegionType;
+  retireCharacter: CharacterType;
   revokeArchon: CommandReceipt;
   revokeLieutenant: CommandReceipt;
-  selectQuestParticipants: Array<QuestParticipantV2Type>;
-  setCharacterGuild: CharacterV2Type;
+  selectQuestParticipants: Array<QuestParticipantType>;
+  setCharacterGuild: CharacterType;
   setDocumentVisibility: DocumentType;
   setMemberRoles: MemberType;
   setMemberRolesBatch: Array<MemberRoleBatchResultType>;
   setMyAvailability: Array<AvailabilitySlotType>;
-  setPointcrawlEdge: PointcrawlEdgeV2Type;
-  setQuestPointcrawlLinks: Array<QuestPointcrawlLinkV2Type>;
+  setPointcrawlEdge: PointcrawlEdgeType;
+  setQuestPointcrawlLinks: Array<QuestPointcrawlLinkType>;
   setUnlockableActive: UnlockableType;
-  signupForQuest: QuestParticipantV2Type;
-  submitDmProfileForVerification: DmProfileV2Type;
-  submitForVerification: CharacterV2Type;
+  signupForQuest: QuestParticipantType;
+  submitDmProfileForVerification: DmProfileType;
+  submitForVerification: CharacterType;
   syncCharacterDdb: DdbSyncReceipt;
   syncQuestDiscord: DeliveryReceipt;
-  transitionQuestStatus: QuestV2Type;
-  transitionRegion: RegionV2Type;
+  transitionQuestStatus: QuestType;
+  transitionRegion: RegionType;
   unlinkPointcrawlEntry: CommandReceipt;
   unpublishDocument: DocumentType;
   updateBackstory: BackstoryType;
-  updateCharacterProfile: CharacterV2Type;
+  updateCharacterProfile: CharacterType;
   updateDocument: DocumentType;
-  updateGameCalendar: GameCalendarV2Type;
+  updateGameCalendar: GameCalendarType;
   updateHomeBanner: HomeBannerType;
-  updateMyDmProfile: DmProfileV2Type;
+  updateMyDmProfile: DmProfileType;
   updateMyProfile: MemberType;
   updateMySettings: MemberSettingsType;
-  updateQuest: QuestV2Type;
+  updateQuest: QuestType;
   updateQuestAnnouncementRoleSetting: QuestAnnouncementRoleSettingType;
-  updateRegion: RegionV2Type;
-  updateTimeAnchor: TimeAnchorV2Type;
+  updateRegion: RegionType;
+  updateTimeAnchor: TimeAnchorType;
   upsertCreationCatalogEntry: CreationCatalogEntryType;
   upsertDowntimeProject: DowntimeProjectType;
-  upsertPointcrawlNode: PointcrawlNodeV2Type;
-  upsertQuestArc: QuestArcV2Type;
+  upsertPointcrawlNode: PointcrawlNodeType;
+  upsertQuestArc: QuestArcType;
   upsertQuestSummary: DocumentType;
   upsertUnlockable: UnlockableType;
-  withdrawFromQuest: QuestParticipantV2Type;
+  withdrawFromQuest: QuestParticipantType;
 };
 
 
@@ -940,7 +940,7 @@ export type MutationCreateBackstoryArgs = {
 
 
 export type MutationCreateCharacterArgs = {
-  input: CreateCharacterV2Input;
+  input: CreateCharacterInput;
   meta: CommandMeta;
 };
 
@@ -958,7 +958,7 @@ export type MutationCreateMapArgs = {
 
 
 export type MutationCreateQuestArgs = {
-  input: CreateQuestV2Input;
+  input: CreateQuestInput;
   meta: CommandMeta;
 };
 
@@ -1264,7 +1264,7 @@ export type MutationUpdateBackstoryArgs = {
 
 export type MutationUpdateCharacterProfileArgs = {
   characterId: Scalars['ID']['input'];
-  input: UpdateCharacterProfileV2Input;
+  input: UpdateCharacterProfileInput;
   meta: CommandMeta;
 };
 
@@ -1407,7 +1407,7 @@ export type NotificationWriteReceipt = {
   replayed: Scalars['Boolean']['output'];
 };
 
-export type OpenQuestSeatV2Type = {
+export type OpenQuestSeatType = {
   dmId: Scalars['ID']['output'];
   filledCount: Scalars['Int']['output'];
   openSeats: Scalars['Int']['output'];
@@ -1419,8 +1419,8 @@ export type OpenQuestSeatV2Type = {
   status: Scalars['String']['output'];
 };
 
-export type OpenQuestSeatsV2Result = {
-  entries: Array<OpenQuestSeatV2Type>;
+export type OpenQuestSeatsResult = {
+  entries: Array<OpenQuestSeatType>;
   total: Scalars['Int']['output'];
 };
 
@@ -1430,7 +1430,7 @@ export type ParticipationAttestationInput = {
 };
 
 export type ParticipationPage = {
-  items: Array<QuestParticipantV2Type>;
+  items: Array<QuestParticipantType>;
   total: Scalars['Int']['output'];
 };
 
@@ -1444,7 +1444,7 @@ export type PointcrawlEdgeInput = {
   nodeB: Scalars['ID']['input'];
 };
 
-export type PointcrawlEdgeV2Type = {
+export type PointcrawlEdgeType = {
   directed: Scalars['Boolean']['output'];
   documentId?: Maybe<Scalars['ID']['output']>;
   id: Scalars['ID']['output'];
@@ -1472,7 +1472,7 @@ export type PointcrawlNodeInput = {
   y: Scalars['Float']['input'];
 };
 
-export type PointcrawlNodeV2Type = {
+export type PointcrawlNodeType = {
   createdAt: Scalars['DateTime']['output'];
   id: Scalars['ID']['output'];
   linkedEntries: Array<PointcrawlEntryLinkType>;
@@ -1484,7 +1484,7 @@ export type PointcrawlNodeV2Type = {
 };
 
 
-export type PointcrawlNodeV2TypeLinkedEntriesArgs = {
+export type PointcrawlNodeTypeLinkedEntriesArgs = {
   limit?: Scalars['Int']['input'];
   offset?: Scalars['Int']['input'];
 };
@@ -1516,16 +1516,16 @@ export type Query = {
    * @deprecated M1 layout placeholder. Real Query fields extend this root.
    */
   _contractLayoutStub: Scalars['Boolean']['output'];
-  adminCharacterDirectory: AdminCharacterDirectoryV2Type;
-  adminOperations: AdminOperationsV2Type;
+  adminCharacterDirectory: AdminCharacterDirectoryType;
+  adminOperations: AdminOperationsType;
   archonAssignments: ArchonPage;
   backstories: BackstoryPage;
-  character?: Maybe<CharacterV2Type>;
+  character?: Maybe<CharacterType>;
   characterLogs: CharacterLogListResult;
   characterProgression: ProgressionListResult;
   characterSummaries: DocumentListResult;
   characterVerificationHistory: VerificationPage;
-  characters: CharacterV2ListResult;
+  characters: CharacterListResult;
   coPlayers: CoPlayerPage;
   codexCategories: Array<CategoryCountType>;
   codexDirectory: CodexDirectoryResult;
@@ -1533,8 +1533,8 @@ export type Query = {
   communityDirectory: CommunityDirectoryResult;
   creationCatalog: CreationCatalogPage;
   discordDeliveryMode: Scalars['String']['output'];
-  dmSessionHistory: DmSessionHistoryV2Result;
-  dmStats?: Maybe<DmStatsV2Type>;
+  dmSessionHistory: DmSessionHistoryResult;
+  dmStats?: Maybe<DmStatsType>;
   dmSummaries: DocumentListResult;
   document?: Maybe<DocumentType>;
   documentBacklinks: Array<DocumentLinkType>;
@@ -1543,13 +1543,13 @@ export type Query = {
   documents: DocumentListResult;
   documentsTrash: DocumentListResult;
   downtimeProjects: DowntimeProjectListResult;
-  gameCalendar: GameCalendarV2Type;
-  gameDate?: Maybe<GameDateV2Type>;
-  home: HomeV2Type;
+  gameCalendar: GameCalendarType;
+  gameDate?: Maybe<GameDateType>;
+  home: HomeType;
   homeBanner: HomeBannerType;
   lieutenantAssignments: LieutenantPage;
-  map?: Maybe<MapV2Type>;
-  maps: Array<MapV2Type>;
+  map?: Maybe<MapType>;
+  maps: Array<MapType>;
   member?: Maybe<MemberType>;
   memberActivityStats?: Maybe<MemberActivityStatsType>;
   memberAvailability: Array<AvailabilitySlotType>;
@@ -1559,34 +1559,34 @@ export type Query = {
   memberRoleHistory: RoleChangePage;
   members: MemberListResult;
   myAvailability: Array<AvailabilitySlotType>;
-  myCharacters: CharacterV2ListResult;
+  myCharacters: CharacterListResult;
   myNotifications: NotificationConnection;
   myPersonalization?: Maybe<MyPersonalizationType>;
   myQuestSignups: ParticipationPage;
   myUnlocks: MemberUnlockPage;
   myUnreadNotificationCount: Scalars['Int']['output'];
-  openQuestSeats: OpenQuestSeatsV2Result;
+  openQuestSeats: OpenQuestSeatsResult;
   participationsByCharacter: ParticipationPage;
-  pendingCharacterVerifications: CharacterV2ListResult;
+  pendingCharacterVerifications: CharacterListResult;
   pendingDmProfileVerifications: CommunityDirectoryResult;
   previewBody: Scalars['String']['output'];
-  quest?: Maybe<QuestV2Type>;
+  quest?: Maybe<QuestType>;
   questAnnouncementRoleSetting: QuestAnnouncementRoleSettingType;
-  questArc?: Maybe<QuestArcV2Type>;
-  questArcs: QuestArcV2ListResult;
-  questBoard: QuestV2ListResult;
+  questArc?: Maybe<QuestArcType>;
+  questArcs: QuestArcListResult;
+  questBoard: QuestListResult;
   questGenreOptions: Array<Scalars['String']['output']>;
-  questStateCounts: Array<QuestStateCountV2Type>;
-  questSummaries: QuestSummariesV2Result;
-  quests: QuestV2ListResult;
+  questStateCounts: Array<QuestStateCountType>;
+  questSummaries: QuestSummariesResult;
+  quests: QuestListResult;
   realDates: RealDatePage;
-  recentlyClosedQuests: QuestV2ListResult;
-  regionActivity?: Maybe<RegionActivityV2Type>;
-  regionCounts?: Maybe<RegionCountsV2Type>;
-  regions: Array<RegionV2Type>;
-  search: SearchResultV2Type;
+  recentlyClosedQuests: QuestListResult;
+  regionActivity?: Maybe<RegionActivityType>;
+  regionCounts?: Maybe<RegionCountsType>;
+  regions: Array<RegionType>;
+  search: SearchResultType;
   searchableKinds: Array<SearchKindType>;
-  siteStats: SiteStatsV2Type;
+  siteStats: SiteStatsType;
   timeAnchors: TimeAnchorPage;
   unlockablesCatalog: UnlockablePage;
 };
@@ -1656,7 +1656,7 @@ export type QueryCharacterVerificationHistoryArgs = {
 
 
 export type QueryCharactersArgs = {
-  filters?: InputMaybe<CharacterV2FiltersInput>;
+  filters?: InputMaybe<CharacterFiltersInput>;
   limit?: Scalars['Int']['input'];
   offset?: Scalars['Int']['input'];
 };
@@ -1709,7 +1709,7 @@ export type QueryDmStatsArgs = {
 
 
 export type QueryDmSummariesArgs = {
-  filters?: InputMaybe<DmSummaryFiltersV2Input>;
+  filters?: InputMaybe<DmSummaryFiltersInput>;
   limit?: Scalars['Int']['input'];
   offset?: Scalars['Int']['input'];
 };
@@ -1916,7 +1916,7 @@ export type QueryQuestBoardArgs = {
 
 
 export type QueryQuestStateCountsArgs = {
-  filters?: InputMaybe<QuestStateCountsFiltersV2Input>;
+  filters?: InputMaybe<QuestStateCountsFiltersInput>;
 };
 
 
@@ -1928,7 +1928,7 @@ export type QueryQuestSummariesArgs = {
 
 
 export type QueryQuestsArgs = {
-  filters?: InputMaybe<QuestV2FiltersInput>;
+  filters?: InputMaybe<QuestFiltersInput>;
   limit?: Scalars['Int']['input'];
   offset?: Scalars['Int']['input'];
 };
@@ -1991,27 +1991,27 @@ export type QuestAnnouncementRoleSettingType = {
   roleId?: Maybe<Scalars['String']['output']>;
 };
 
-export type QuestArcV2ListResult = {
-  items: Array<QuestArcV2Type>;
+export type QuestArcListResult = {
+  items: Array<QuestArcType>;
   total: Scalars['Int']['output'];
 };
 
-export type QuestArcV2Type = {
+export type QuestArcType = {
   createdAt: Scalars['DateTime']['output'];
   createdBy: Scalars['ID']['output'];
   id: Scalars['ID']['output'];
   name: Scalars['String']['output'];
   questCount: Scalars['Int']['output'];
-  quests: Array<QuestV2Type>;
+  quests: Array<QuestType>;
 };
 
 
-export type QuestArcV2TypeQuestsArgs = {
+export type QuestArcTypeQuestsArgs = {
   limit?: Scalars['Int']['input'];
   offset?: Scalars['Int']['input'];
 };
 
-export type QuestDiscordDeliveryV2Type = {
+export type QuestDiscordDeliveryType = {
   appliedRevision: Scalars['Int']['output'];
   desiredRevision: Scalars['Int']['output'];
   errorCode?: Maybe<Scalars['String']['output']>;
@@ -2024,7 +2024,7 @@ export type QuestDiscordDeliveryV2Type = {
   threadState?: Maybe<Scalars['String']['output']>;
 };
 
-export type QuestDmV2Type = {
+export type QuestDmType = {
   avatarUrl?: Maybe<Scalars['String']['output']>;
   displayName: Scalars['String']['output'];
   handle: Scalars['String']['output'];
@@ -2048,7 +2048,27 @@ export type QuestEditInput = {
   title?: InputMaybe<Scalars['String']['input']>;
 };
 
-export type QuestParticipantV2Type = {
+export type QuestFiltersInput = {
+  arcId?: InputMaybe<Scalars['ID']['input']>;
+  displayStatus?: InputMaybe<Scalars['String']['input']>;
+  dmId?: InputMaybe<Scalars['ID']['input']>;
+  genre?: InputMaybe<Scalars['String']['input']>;
+  kind?: InputMaybe<Scalars['String']['input']>;
+  regionId?: InputMaybe<Scalars['ID']['input']>;
+  scheduledFrom?: InputMaybe<Scalars['DateTime']['input']>;
+  scheduledTo?: InputMaybe<Scalars['DateTime']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
+  shortCodes?: InputMaybe<Array<Scalars['String']['input']>>;
+  status?: InputMaybe<Scalars['String']['input']>;
+  tag?: InputMaybe<Scalars['String']['input']>;
+};
+
+export type QuestListResult = {
+  items: Array<QuestType>;
+  total: Scalars['Int']['output'];
+};
+
+export type QuestParticipantType = {
   characterId: Scalars['ID']['output'];
   characterName: Scalars['String']['output'];
   createdAt: Scalars['DateTime']['output'];
@@ -2073,18 +2093,18 @@ export type QuestPointcrawlLinkInput = {
   role: Scalars['String']['input'];
 };
 
-export type QuestPointcrawlLinkV2Type = {
+export type QuestPointcrawlLinkType = {
   pointcrawlNodeId: Scalars['ID']['output'];
   questId: Scalars['ID']['output'];
   role: Scalars['String']['output'];
 };
 
-export type QuestStateCountV2Type = {
+export type QuestStateCountType = {
   count: Scalars['Int']['output'];
   state: Scalars['String']['output'];
 };
 
-export type QuestStateCountsFiltersV2Input = {
+export type QuestStateCountsFiltersInput = {
   arcId?: InputMaybe<Scalars['ID']['input']>;
   dmId?: InputMaybe<Scalars['ID']['input']>;
   kind?: InputMaybe<Scalars['String']['input']>;
@@ -2092,9 +2112,9 @@ export type QuestStateCountsFiltersV2Input = {
   tag?: InputMaybe<Scalars['String']['input']>;
 };
 
-export type QuestSummariesV2Result = {
+export type QuestSummariesResult = {
   summaries: Array<DocumentType>;
-  totals: QuestSummaryTotalsV2Type;
+  totals: QuestSummaryTotalsType;
 };
 
 export type QuestSummaryInput = {
@@ -2107,44 +2127,24 @@ export type QuestSummaryInput = {
   visibility: Scalars['String']['input'];
 };
 
-export type QuestSummaryTotalsV2Type = {
+export type QuestSummaryTotalsType = {
   coverage: RewardCoverage;
   totalPcxpAwarded?: Maybe<Scalars['Int']['output']>;
 };
 
-export type QuestV2FiltersInput = {
-  arcId?: InputMaybe<Scalars['ID']['input']>;
-  displayStatus?: InputMaybe<Scalars['String']['input']>;
-  dmId?: InputMaybe<Scalars['ID']['input']>;
-  genre?: InputMaybe<Scalars['String']['input']>;
-  kind?: InputMaybe<Scalars['String']['input']>;
-  regionId?: InputMaybe<Scalars['ID']['input']>;
-  scheduledFrom?: InputMaybe<Scalars['DateTime']['input']>;
-  scheduledTo?: InputMaybe<Scalars['DateTime']['input']>;
-  search?: InputMaybe<Scalars['String']['input']>;
-  shortCodes?: InputMaybe<Array<Scalars['String']['input']>>;
-  status?: InputMaybe<Scalars['String']['input']>;
-  tag?: InputMaybe<Scalars['String']['input']>;
-};
-
-export type QuestV2ListResult = {
-  items: Array<QuestV2Type>;
-  total: Scalars['Int']['output'];
-};
-
-export type QuestV2Type = {
+export type QuestType = {
   announceError?: Maybe<Scalars['String']['output']>;
   apl?: Maybe<Scalars['Int']['output']>;
-  arc?: Maybe<QuestArcV2Type>;
+  arc?: Maybe<QuestArcType>;
   arcId?: Maybe<Scalars['ID']['output']>;
   briefDocument?: Maybe<DocumentType>;
   createdAt: Scalars['DateTime']['output'];
   createdBy: Scalars['ID']['output'];
-  discordDelivery: QuestDiscordDeliveryV2Type;
+  discordDelivery: QuestDiscordDeliveryType;
   discordEventId?: Maybe<Scalars['String']['output']>;
   discordMessageId?: Maybe<Scalars['String']['output']>;
   displayStatus?: Maybe<Scalars['String']['output']>;
-  dm?: Maybe<QuestDmV2Type>;
+  dm?: Maybe<QuestDmType>;
   dmId: Scalars['ID']['output'];
   dmTable?: Maybe<DocumentType>;
   documentId?: Maybe<Scalars['ID']['output']>;
@@ -2154,8 +2154,8 @@ export type QuestV2Type = {
   genres: Array<Scalars['String']['output']>;
   id: Scalars['ID']['output'];
   kinds: Array<Scalars['String']['output']>;
-  participants: Array<QuestParticipantV2Type>;
-  pointcrawlLinks: Array<QuestPointcrawlLinkV2Type>;
+  participants: Array<QuestParticipantType>;
+  pointcrawlLinks: Array<QuestPointcrawlLinkType>;
   regions: Array<Scalars['ID']['output']>;
   scheduledAt: Scalars['DateTime']['output'];
   shortCode: Scalars['String']['output'];
@@ -2167,14 +2167,14 @@ export type QuestV2Type = {
 };
 
 
-export type QuestV2TypeParticipantsArgs = {
+export type QuestTypeParticipantsArgs = {
   limit?: Scalars['Int']['input'];
   offset?: Scalars['Int']['input'];
   status?: InputMaybe<Scalars['String']['input']>;
 };
 
 
-export type QuestV2TypePointcrawlLinksArgs = {
+export type QuestTypePointcrawlLinksArgs = {
   limit?: Scalars['Int']['input'];
   offset?: Scalars['Int']['input'];
   role?: InputMaybe<Scalars['String']['input']>;
@@ -2185,7 +2185,7 @@ export type RealDatePage = {
   total: Scalars['Int']['output'];
 };
 
-export type RegionActivityQuestRefV2Type = {
+export type RegionActivityQuestRefType = {
   filledCount: Scalars['Int']['output'];
   id: Scalars['ID']['output'];
   scheduledAt: Scalars['DateTime']['output'];
@@ -2193,17 +2193,17 @@ export type RegionActivityQuestRefV2Type = {
   slotsMax: Scalars['Int']['output'];
 };
 
-export type RegionActivityV2Type = {
+export type RegionActivityType = {
   fillingCount: Scalars['Int']['output'];
   liveCount: Scalars['Int']['output'];
-  liveQuests: Array<RegionActivityQuestRefV2Type>;
-  openQuests: Array<RegionActivityQuestRefV2Type>;
+  liveQuests: Array<RegionActivityQuestRefType>;
+  openQuests: Array<RegionActivityQuestRefType>;
   regionId: Scalars['ID']['output'];
   regionName: Scalars['String']['output'];
   scheduledCount: Scalars['Int']['output'];
 };
 
-export type RegionCountsV2Type = {
+export type RegionCountsType = {
   featureCount: Scalars['Int']['output'];
   pointcrawlNodeCount: Scalars['Int']['output'];
   questCount: Scalars['Int']['output'];
@@ -2217,7 +2217,7 @@ export type RegionInput = {
   name: Scalars['String']['input'];
 };
 
-export type RegionV2Type = {
+export type RegionType = {
   charterDeadline?: Maybe<Scalars['DateTime']['output']>;
   createdAt: Scalars['DateTime']['output'];
   documentId?: Maybe<Scalars['ID']['output']>;
@@ -2263,7 +2263,7 @@ export type SearchKindType = {
   searchable: Scalars['Boolean']['output'];
 };
 
-export type SearchResultV2Type = {
+export type SearchResultType = {
   documentOrder: Scalars['String']['output'];
   documentTotal: Scalars['Int']['output'];
   documents: Array<DocumentSearchHitType>;
@@ -2273,7 +2273,7 @@ export type SearchResultV2Type = {
   query: Scalars['String']['output'];
 };
 
-export type SiteStatsV2Type = {
+export type SiteStatsType = {
   activeCharacters: Scalars['Int']['output'];
   activity: ActivitySummaryType;
   membersByRole: Array<CountByKeyType>;
@@ -2286,23 +2286,23 @@ export type SiteStatsV2Type = {
   totalRegions: Scalars['Int']['output'];
 };
 
-export type SummaryDerivedV2Type = {
+export type SummaryDerivedType = {
   arc?: Maybe<Scalars['String']['output']>;
-  dms: Array<SummaryDmV2Type>;
-  gameDate?: Maybe<GameDateV2Type>;
+  dms: Array<SummaryDmType>;
+  gameDate?: Maybe<GameDateType>;
   gameDay?: Maybe<Scalars['Int']['output']>;
   occurredAt?: Maybe<Scalars['DateTime']['output']>;
-  players: Array<SummaryPlayerV2Type>;
-  pointcrawlNodes: Array<SummaryPointcrawlNodeV2Type>;
-  regions: Array<SummaryRegionV2Type>;
+  players: Array<SummaryPlayerType>;
+  pointcrawlNodes: Array<SummaryPointcrawlNodeType>;
+  regions: Array<SummaryRegionType>;
 };
 
-export type SummaryDmV2Type = {
+export type SummaryDmType = {
   displayName: Scalars['String']['output'];
   id: Scalars['ID']['output'];
 };
 
-export type SummaryPlayerV2Type = {
+export type SummaryPlayerType = {
   characterId: Scalars['ID']['output'];
   characterName: Scalars['String']['output'];
   characterShortCode: Scalars['String']['output'];
@@ -2310,13 +2310,13 @@ export type SummaryPlayerV2Type = {
   memberId: Scalars['ID']['output'];
 };
 
-export type SummaryPointcrawlNodeV2Type = {
+export type SummaryPointcrawlNodeType = {
   id: Scalars['ID']['output'];
   mapId: Scalars['ID']['output'];
   name?: Maybe<Scalars['String']['output']>;
 };
 
-export type SummaryRegionV2Type = {
+export type SummaryRegionType = {
   id: Scalars['ID']['output'];
   name: Scalars['String']['output'];
 };
@@ -2337,11 +2337,11 @@ export type TimeAnchorInput = {
 };
 
 export type TimeAnchorPage = {
-  items: Array<TimeAnchorV2Type>;
+  items: Array<TimeAnchorType>;
   total: Scalars['Int']['output'];
 };
 
-export type TimeAnchorV2Type = {
+export type TimeAnchorType = {
   epochDay: Scalars['Int']['output'];
   id: Scalars['ID']['output'];
   note?: Maybe<Scalars['String']['output']>;
@@ -2369,7 +2369,7 @@ export type UnlockableType = {
   unlockRule?: Maybe<Scalars['JSON']['output']>;
 };
 
-export type UpdateCharacterProfileV2Input = {
+export type UpdateCharacterProfileInput = {
   backgroundText?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
 };

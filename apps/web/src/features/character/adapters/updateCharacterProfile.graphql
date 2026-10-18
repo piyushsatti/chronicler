@@ -1,6 +1,6 @@
 mutation UpdateCharacterProfile(
   $characterId: ID!
-  $input: UpdateCharacterProfileV2Input!
+  $input: UpdateCharacterProfileInput!
   $meta: CommandMeta!
 ) {
   updateCharacterProfile(characterId: $characterId, input: $input, meta: $meta) {
