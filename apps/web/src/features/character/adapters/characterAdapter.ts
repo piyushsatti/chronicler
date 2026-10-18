@@ -1,4 +1,12 @@
+import type {
+  CharacterQuery,
+  CharacterRegionsQuery,
+  MyCharacterListQuery,
+} from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
+import CHARACTER_QUERY from './character.graphql?raw';
+import MY_CHARACTER_LIST_QUERY from './myCharacterList.graphql?raw';
+import CHARACTER_REGIONS_QUERY from './characterRegions.graphql?raw';
 import { restRequest } from '../../../api/rest.js';
 import { rest } from '../../../api/endpoints.js';
 import { toAppError } from '../../../errors/toAppError.js';
@@ -16,7 +24,7 @@ export type CharacterViewModel = {
   status: string;
   ownerId: string | null;
   verificationStatus: string | null;
-  backstoryId: string;
+  backstoryId: string | null;
   backstoryName: string | null;
   regionId: string | null;
   regionName: string | null;
@@ -24,54 +32,6 @@ export type CharacterViewModel = {
   ddbUrl: string | null;
   displayIcon: string | null;
 };
-
-const CHARACTER_QUERY = `
-  query Character($id: ID, $shortCode: String) {
-    character(id: $id, shortCode: $shortCode) {
-      id
-      shortCode
-      name
-      status
-      ownerId
-      verificationStatus
-      backstoryId
-      regionId
-      description
-      ddbUrl
-      displayIcon
-    }
-  }
-`;
-
-const MY_CHARACTERS_QUERY = `
-  query MyCharacters {
-    myCharacters {
-      items {
-        id
-        shortCode
-        name
-        status
-        ownerId
-        verificationStatus
-        backstoryId
-        regionId
-        description
-        ddbUrl
-        displayIcon
-      }
-      total
-    }
-  }
-`;
-
-const REGION_NAME_QUERY = `
-  query CharacterRegionName($id: ID!) {
-    region(id: $id) {
-      id
-      name
-    }
-  }
-`;
 
 export function parseCharacter(
   wire: unknown,
@@ -91,7 +51,7 @@ export function parseCharacter(
       status: parsed.data.status,
       ownerId: parsed.data.ownerId ?? null,
       verificationStatus: parsed.data.verificationStatus ?? null,
-      backstoryId: parsed.data.backstoryId,
+      backstoryId: parsed.data.backstoryId ?? null,
       backstoryName,
       regionId: parsed.data.regionId ?? null,
       regionName,
@@ -102,7 +62,8 @@ export function parseCharacter(
   };
 }
 
-export async function loadBackstoryName(id: string): Promise<string | null> {
+export async function loadBackstoryName(id: string | null): Promise<string | null> {
+  if (!id) return null;
   try {
     const list = await restRequest<unknown[]>(rest.backstories);
     if (!Array.isArray(list)) return null;
@@ -116,14 +77,23 @@ export async function loadBackstoryName(id: string): Promise<string | null> {
   }
 }
 
+/** Contracts expose `regions` list only (no `region(id:)`); page until found or exhausted. */
+const REGION_PAGE_SIZE = 200;
+const REGION_MAX_PAGES = 25; // 5_000 regions scanned at most
+
 export async function loadRegionName(id: string | null): Promise<string | null> {
   if (!id) return null;
   try {
-    const data = await graphqlRequest<{ region: { name?: string } | null }>(
-      REGION_NAME_QUERY,
-      { id },
-    );
-    return data.region?.name ?? null;
+    for (let page = 0; page < REGION_MAX_PAGES; page++) {
+      const data = await graphqlRequest<CharacterRegionsQuery>(CHARACTER_REGIONS_QUERY, {
+        limit: REGION_PAGE_SIZE,
+        offset: page * REGION_PAGE_SIZE,
+      });
+      const match = data.regions.find((r) => r.id === id);
+      if (match) return match.name;
+      if (data.regions.length < REGION_PAGE_SIZE) return null;
+    }
+    return null;
   } catch {
     return null;
   }
@@ -134,7 +104,7 @@ export async function loadCharacter(opts: {
   shortCode?: string;
 }): Promise<CharacterViewModel> {
   try {
-    const data = await graphqlRequest<{ character: unknown | null }>(CHARACTER_QUERY, {
+    const data = await graphqlRequest<CharacterQuery>(CHARACTER_QUERY, {
       id: opts.id ?? null,
       shortCode: opts.shortCode ?? null,
     });
@@ -157,7 +127,10 @@ export async function loadCharacter(opts: {
 
 export async function loadMyCharacters(): Promise<CharacterViewModel[]> {
   try {
-    const data = await graphqlRequest<{ myCharacters: unknown }>(MY_CHARACTERS_QUERY);
+    const data = await graphqlRequest<MyCharacterListQuery>(MY_CHARACTER_LIST_QUERY, {
+      limit: 50,
+      offset: 0,
+    });
     const parsed = characterListWireSchema.safeParse(data.myCharacters);
     if (!parsed.success) {
       throw toAppError({ failure: 'InvalidWire' }, 'character:list');

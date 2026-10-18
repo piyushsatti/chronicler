@@ -1,0 +1,13 @@
+query HomeBuckets {
+  home {
+    recentByCategory {
+      category
+      documents {
+        id
+        slug
+        title
+        category
+      }
+    }
+  }
+}

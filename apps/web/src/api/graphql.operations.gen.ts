@@ -2,6 +2,12 @@
 type Exact<T extends { [key: string]: unknown }> = { [K in keyof T]: T[K] };
 /** Internal type. DO NOT USE DIRECTLY. */
 export type Incremental<T> = T | { [P in keyof T]?: P extends ' $fragmentName' | '__typename' ? T[P] : never };
+export type CharacterReviewStatus =
+  | 'APPROVED'
+  | 'PENDING'
+  | 'REJECTED'
+  | 'UNKNOWN';
+
 export type QuestV2FiltersInput = {
   arcId?: string | null | undefined;
   displayStatus?: string | null | undefined;
@@ -16,6 +22,42 @@ export type QuestV2FiltersInput = {
   status?: string | null | undefined;
   tag?: string | null | undefined;
 };
+
+export type CharacterQueryVariables = Exact<{
+  id?: string | null | undefined;
+  shortCode?: string | null | undefined;
+}>;
+
+
+export type CharacterQuery = { character: { id: string, shortCode: string, name: string, status: string, ownerId: string, verificationStatus: CharacterReviewStatus, backstoryId: string | null, regionId: string | null, description: string | null, ddbUrl: string | null, displayIcon: string | null } | null };
+
+export type CharacterRegionsQueryVariables = Exact<{
+  limit: number;
+  offset: number;
+}>;
+
+
+export type CharacterRegionsQuery = { regions: Array<{ id: string, name: string }> };
+
+export type MyCharacterListQueryVariables = Exact<{
+  limit: number;
+  offset: number;
+}>;
+
+
+export type MyCharacterListQuery = { myCharacters: { total: number, items: Array<{ id: string, shortCode: string, name: string, status: string, ownerId: string, verificationStatus: CharacterReviewStatus, backstoryId: string | null, regionId: string | null, description: string | null, ddbUrl: string | null, displayIcon: string | null }> } };
+
+export type DocumentQueryVariables = Exact<{
+  slug: string;
+}>;
+
+
+export type DocumentQuery = { document: { id: string, slug: string, kind: string, category: string | null, status: string, visibility: string, title: string, effectiveBody: string | null, author: { handle: string } | null } | null };
+
+export type HomeBucketsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type HomeBucketsQuery = { home: { recentByCategory: Array<{ category: string | null, documents: Array<{ id: string, slug: string, title: string, category: string | null }> }> } };
 
 export type HomeWarRoomQueryVariables = Exact<{
   upcomingFrom: string;

@@ -1,0 +1,18 @@
+query MyCharacterList($limit: Int!, $offset: Int!) {
+  myCharacters(limit: $limit, offset: $offset) {
+    items {
+      id
+      shortCode
+      name
+      status
+      ownerId
+      verificationStatus
+      backstoryId
+      regionId
+      description
+      ddbUrl
+      displayIcon
+    }
+    total
+  }
+}

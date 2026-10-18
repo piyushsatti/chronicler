@@ -1,26 +1,7 @@
 import { z } from 'zod';
 import type { MyNotificationsQuery } from '../../../api/graphql.operations.gen.js';
-
-const NOTIFICATIONS_QUERY = `
-  query MyNotifications($limit: Int!, $before: String) {
-    myNotifications(limit: $limit, before: $before) {
-      hasMore
-      nextBefore
-      items {
-        id
-        kind
-        title
-        summary
-        label
-        readAt
-        subjectType
-        subjectCode
-        createdAt
-      }
-    }
-  }
-`;
 import { graphqlRequest } from '../../../api/graphql.js';
+import NOTIFICATIONS_QUERY from './myNotifications.graphql?raw';
 import { restRequest } from '../../../api/rest.js';
 import { rest } from '../../../api/endpoints.js';
 import { toAppError } from '../../../errors/toAppError.js';

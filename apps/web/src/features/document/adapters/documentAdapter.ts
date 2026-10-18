@@ -1,4 +1,6 @@
+import type { DocumentQuery } from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
+import DOCUMENT_QUERY from './document.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import { documentWireSchema } from './document.wire.schema.js';
@@ -12,22 +14,6 @@ export type DocumentView = {
   body: string | null;
   authorHandle: string | null;
 };
-
-const DOCUMENT_QUERY = `
-  query Document($slug: String!) {
-    document(slug: $slug) {
-      id
-      slug
-      kind
-      category
-      status
-      visibility
-      title
-      effectiveBody
-      author { handle }
-    }
-  }
-`;
 
 function mapDocument(
   d: ReturnType<typeof documentWireSchema.parse>,
@@ -53,10 +39,7 @@ export function parseDocument(wire: unknown): AdapterResult<DocumentView> {
 
 export async function loadDocument(slug: string): Promise<DocumentView> {
   try {
-    const data = await graphqlRequest<{ document: unknown | null }>(
-      DOCUMENT_QUERY,
-      { slug },
-    );
+    const data = await graphqlRequest<DocumentQuery>(DOCUMENT_QUERY, { slug });
     if (data.document == null) {
       throw toAppError({ failure: 'NotFound' }, 'document:load');
     }

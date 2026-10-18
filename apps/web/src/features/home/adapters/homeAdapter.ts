@@ -1,4 +1,6 @@
+import type { HomeBucketsQuery } from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
+import HOME_QUERY from './homeBuckets.graphql?raw';
 import { restRequest } from '../../../api/rest.js';
 import { rest } from '../../../api/endpoints.js';
 import { toAppError } from '../../../errors/toAppError.js';
@@ -13,7 +15,7 @@ export type HomeDocumentView = {
 };
 
 export type HomeBucketView = {
-  category: string;
+  category: string | null;
   documents: HomeDocumentView[];
 };
 
@@ -27,29 +29,13 @@ export type SiteStatsViewModel = {
   totalMembers: number;
 };
 
-const HOME_QUERY = `
-  query HomeBuckets {
-    home {
-      recentByCategory {
-        category
-        documents {
-          id
-          slug
-          title
-          category
-        }
-      }
-    }
-  }
-`;
-
 export function parseHome(wire: unknown): AdapterResult<HomeViewModel> {
   const parsed = homeWireSchema.safeParse(wire);
   if (!parsed.success) {
     return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
   }
   const recentByCategory = parsed.data.recentByCategory.map((bucket) => ({
-    category: bucket.category,
+    category: bucket.category ?? null,
     documents: bucket.documents.map((doc) => ({
       id: doc.id,
       slug: doc.slug,
@@ -72,7 +58,7 @@ export function parseSiteStats(wire: unknown): AdapterResult<SiteStatsViewModel>
 
 export async function loadHome(): Promise<HomeViewModel> {
   try {
-    const data = await graphqlRequest<{ home: unknown }>(HOME_QUERY);
+    const data = await graphqlRequest<HomeBucketsQuery>(HOME_QUERY);
     const result = parseHome(data.home);
     if (!result.ok) {
       throw toAppError({ failure: result.failure }, 'home:load');

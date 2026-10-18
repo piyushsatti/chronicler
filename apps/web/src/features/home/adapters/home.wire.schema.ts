@@ -4,7 +4,7 @@ import { z } from 'zod';
 export const homeWireSchema = z.object({
   recentByCategory: z.array(
     z.object({
-      category: z.string(),
+      category: z.string().nullable(),
       documents: z.array(
         z.object({
           id: z.string().uuid(),

@@ -7,7 +7,7 @@ export const characterWireSchema = z.object({
   status: z.string(),
   ownerId: z.string().uuid().optional(),
   verificationStatus: z.string().optional(),
-  backstoryId: z.string().uuid(),
+  backstoryId: z.string().uuid().nullable(),
   regionId: z.string().uuid().nullable().optional(),
   description: z.string().nullable().optional(),
   ddbUrl: z.string().nullable().optional(),

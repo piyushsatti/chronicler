@@ -1,0 +1,15 @@
+query Character($id: ID, $shortCode: String) {
+  character(id: $id, shortCode: $shortCode) {
+    id
+    shortCode
+    name
+    status
+    ownerId
+    verificationStatus
+    backstoryId
+    regionId
+    description
+    ddbUrl
+    displayIcon
+  }
+}

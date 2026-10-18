@@ -30,8 +30,21 @@ export const queryKeys = {
 };
 
 export const graphql: FeatureGraphql = {
+  /** Quest signup keeps a minimal MyCharacters op; list uses MyCharacterList. */
   MyCharacters: () => HttpResponse.json({ data: { myCharacters: goodCharacters } }),
+  MyCharacterList: () => HttpResponse.json({ data: { myCharacters: goodCharacters } }),
   Character: () => HttpResponse.json({ data: { character: goodCharacter } }),
+  CharacterRegions: () =>
+    HttpResponse.json({
+      data: {
+        regions: [
+          {
+            id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+            name: 'Lightfall',
+          },
+        ],
+      },
+    }),
 };
 
 export const handlers: FeatureHandlers = [
