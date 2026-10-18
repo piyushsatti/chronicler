@@ -46,11 +46,11 @@ func toDocumentType(d document.Document, body string) *DocumentType {
 	}
 }
 
-func toQuestFiltersFields(filters *QuestFiltersInput) *quest.QuestV2FiltersFields {
+func toQuestFiltersFields(filters *QuestFiltersInput) *quest.QuestFiltersFields {
 	if filters == nil {
 		return nil
 	}
-	return &quest.QuestV2FiltersFields{
+	return &quest.QuestFiltersFields{
 		Status:        filters.Status,
 		Kind:          filters.Kind,
 		DmId:          filters.DmID,
@@ -116,7 +116,7 @@ func toQuestView(v quest.QuestView) *QuestType {
 	}
 }
 
-func toQuestListResult(v quest.QuestV2ListResult) *QuestListResult {
+func toQuestListResult(v quest.QuestListResult) *QuestListResult {
 	items := make([]*QuestType, len(v.Items))
 	for i, item := range v.Items {
 		items[i] = toQuestView(item)
@@ -134,7 +134,7 @@ func toQuestArcView(v quest.QuestArcView) *QuestArcType {
 	}
 }
 
-func toQuestArcListResult(v quest.QuestArcV2ListResult) *QuestArcListResult {
+func toQuestArcListResult(v quest.QuestArcListResult) *QuestArcListResult {
 	items := make([]*QuestArcType, 0, len(v.Items))
 	for _, item := range v.Items {
 		items = append(items, toQuestArcView(item))
@@ -489,11 +489,11 @@ func toQuestParticipantFromQuest(v quest.QuestParticipantView) *QuestParticipant
 	}
 }
 
-func toQuestStateCountsFilters(filters *QuestStateCountsFiltersInput) *quest.QuestStateCountsFiltersV2Fields {
+func toQuestStateCountsFilters(filters *QuestStateCountsFiltersInput) *quest.QuestStateCountsFiltersFields {
 	if filters == nil {
 		return nil
 	}
-	return &quest.QuestStateCountsFiltersV2Fields{
+	return &quest.QuestStateCountsFiltersFields{
 		Kind:     filters.Kind,
 		DmId:     filters.DmID,
 		RegionId: filters.RegionID,
@@ -533,7 +533,7 @@ func toOpenQuestSeatType(v quest.OpenQuestSeatView) *OpenQuestSeatType {
 	}
 }
 
-func toOpenQuestSeatsResult(v quest.OpenQuestSeatsV2Result) *OpenQuestSeatsResult {
+func toOpenQuestSeatsResult(v quest.OpenQuestSeatsResult) *OpenQuestSeatsResult {
 	entries := make([]*OpenQuestSeatType, len(v.Entries))
 	for i, e := range v.Entries {
 		entries[i] = toOpenQuestSeatType(e)
@@ -549,17 +549,17 @@ func toQuestParticipationPage(v quest.ParticipationPage) *ParticipationPage {
 	return &ParticipationPage{Items: items, Total: int(v.Total)}
 }
 
-func toDmSummaryFilters(filters *DmSummaryFiltersInput) *quest.DmSummaryFiltersV2Fields {
+func toDmSummaryFilters(filters *DmSummaryFiltersInput) *quest.DmSummaryFiltersFields {
 	if filters == nil {
 		return nil
 	}
-	return &quest.DmSummaryFiltersV2Fields{
+	return &quest.DmSummaryFiltersFields{
 		QuestId: filters.QuestID,
 		Search:  filters.Search,
 	}
 }
 
-func toQuestSummariesResult(v quest.QuestSummariesV2Result) *QuestSummariesResult {
+func toQuestSummariesResult(v quest.QuestSummariesResult) *QuestSummariesResult {
 	summaries := make([]*DocumentType, len(v.Summaries))
 	for i, item := range v.Summaries {
 		summaries[i] = toDocumentViewType(item)
@@ -599,7 +599,7 @@ func toDmStatsType(v *quest.DmStatsView) *DmStatsType {
 	}
 }
 
-func toDmSessionHistoryResult(v quest.DmSessionHistoryV2Result) *DmSessionHistoryResult {
+func toDmSessionHistoryResult(v quest.DmSessionHistoryResult) *DmSessionHistoryResult {
 	items := make([]*DmLastSessionType, len(v.Items))
 	for i := range v.Items {
 		items[i] = toDmLastSessionType(&v.Items[i])
@@ -1695,13 +1695,13 @@ func optionalStringSlice(o gql.Omittable[[]string]) product.Optional[[]string] {
 	return product.Optional[[]string]{Set: true, Value: &v}
 }
 
-func toCreateQuestFields(in CreateQuestInput) quest.CreateQuestV2Fields {
+func toCreateQuestFields(in CreateQuestInput) quest.CreateQuestFields {
 	var apl *int32
 	if in.Apl != nil {
 		v := int32(*in.Apl)
 		apl = &v
 	}
-	return quest.CreateQuestV2Fields{
+	return quest.CreateQuestFields{
 		Title:          in.Title,
 		RegionIds:      in.RegionIds,
 		ScheduledAt:    in.ScheduledAt,

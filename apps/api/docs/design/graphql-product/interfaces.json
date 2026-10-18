@@ -319,7 +319,7 @@
       {
         "name": "Input",
         "wire_name": "input",
-        "go_type": "quest.CreateQuestV2Fields",
+        "go_type": "quest.CreateQuestFields",
         "sdl_type": "CreateQuestV2Input!",
         "default": "",
         "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
@@ -3101,9 +3101,9 @@
         "meaning": "one injected UTC clock sample for all display projection/filter/count SQL in owning query task"
       }
     ],
-    "result_go_type": "quest.DmSessionHistoryV2Result",
+    "result_go_type": "quest.DmSessionHistoryResult",
     "result_sdl_type": "DmSessionHistoryV2Result!",
-    "signature": "func (s ProductQueries) DmSessionHistory(ctx context.Context, actor auth.Authority, spec DmSessionHistorySpec) (quest.DmSessionHistoryV2Result, error)",
+    "signature": "func (s ProductQueries) DmSessionHistory(ctx context.Context, actor auth.Authority, spec DmSessionHistorySpec) (quest.DmSessionHistoryResult, error)",
     "owner_types_task": "QUE01",
     "owner_queries_commands_task": "QUE05"
   },
@@ -3145,7 +3145,7 @@
       {
         "name": "Filters",
         "wire_name": "filters",
-        "go_type": "*quest.DmSummaryFiltersV2Fields",
+        "go_type": "*quest.DmSummaryFiltersFields",
         "sdl_type": "DmSummaryFiltersV2Input",
         "default": "",
         "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
@@ -4245,9 +4245,9 @@
         "meaning": "one injected UTC clock sample for all display projection/filter/count SQL in owning query task"
       }
     ],
-    "result_go_type": "quest.OpenQuestSeatsV2Result",
+    "result_go_type": "quest.OpenQuestSeatsResult",
     "result_sdl_type": "OpenQuestSeatsV2Result!",
-    "signature": "func (s ProductQueries) OpenQuestSeats(ctx context.Context, actor auth.Authority, spec OpenQuestSeatsSpec) (quest.OpenQuestSeatsV2Result, error)",
+    "signature": "func (s ProductQueries) OpenQuestSeats(ctx context.Context, actor auth.Authority, spec OpenQuestSeatsSpec) (quest.OpenQuestSeatsResult, error)",
     "owner_types_task": "QUE01",
     "owner_queries_commands_task": "QUE05"
   },
@@ -4532,9 +4532,9 @@
         "meaning": "one injected UTC clock sample for all display projection/filter/count SQL in owning query task"
       }
     ],
-    "result_go_type": "quest.QuestArcV2ListResult",
+    "result_go_type": "quest.QuestArcListResult",
     "result_sdl_type": "QuestArcV2ListResult!",
-    "signature": "func (s ProductQueries) QuestArcs(ctx context.Context, actor auth.Authority, spec QuestArcsSpec) (quest.QuestArcV2ListResult, error)",
+    "signature": "func (s ProductQueries) QuestArcs(ctx context.Context, actor auth.Authority, spec QuestArcsSpec) (quest.QuestArcListResult, error)",
     "owner_types_task": "QUE01",
     "owner_queries_commands_task": "QUE05"
   },
@@ -4576,9 +4576,9 @@
         "meaning": "one injected UTC clock sample for all display projection/filter/count SQL in owning query task"
       }
     ],
-    "result_go_type": "quest.QuestV2ListResult",
+    "result_go_type": "quest.QuestListResult",
     "result_sdl_type": "QuestV2ListResult!",
-    "signature": "func (s ProductQueries) QuestBoard(ctx context.Context, actor auth.Authority, spec QuestBoardSpec) (quest.QuestV2ListResult, error)",
+    "signature": "func (s ProductQueries) QuestBoard(ctx context.Context, actor auth.Authority, spec QuestBoardSpec) (quest.QuestListResult, error)",
     "owner_types_task": "QUE01",
     "owner_queries_commands_task": "QUE05"
   },
@@ -4612,7 +4612,7 @@
       {
         "name": "Filters",
         "wire_name": "filters",
-        "go_type": "*quest.QuestStateCountsFiltersV2Fields",
+        "go_type": "*quest.QuestStateCountsFiltersFields",
         "sdl_type": "QuestStateCountsFiltersV2Input",
         "default": "",
         "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
@@ -4688,9 +4688,9 @@
         "meaning": "one injected UTC clock sample for all display projection/filter/count SQL in owning query task"
       }
     ],
-    "result_go_type": "quest.QuestSummariesV2Result",
+    "result_go_type": "quest.QuestSummariesResult",
     "result_sdl_type": "QuestSummariesV2Result!",
-    "signature": "func (s ProductQueries) QuestSummaries(ctx context.Context, actor auth.Authority, spec QuestSummariesSpec) (quest.QuestSummariesV2Result, error)",
+    "signature": "func (s ProductQueries) QuestSummaries(ctx context.Context, actor auth.Authority, spec QuestSummariesSpec) (quest.QuestSummariesResult, error)",
     "owner_types_task": "QUE01",
     "owner_queries_commands_task": "QUE05"
   },
@@ -4704,7 +4704,7 @@
       {
         "name": "Filters",
         "wire_name": "filters",
-        "go_type": "*quest.QuestV2FiltersFields",
+        "go_type": "*quest.QuestFiltersFields",
         "sdl_type": "QuestV2FiltersInput",
         "default": "null",
         "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
@@ -4752,9 +4752,9 @@
         "meaning": "one injected UTC clock sample for all display projection/filter/count SQL in owning query task"
       }
     ],
-    "result_go_type": "quest.QuestV2ListResult",
+    "result_go_type": "quest.QuestListResult",
     "result_sdl_type": "QuestV2ListResult!",
-    "signature": "func (s ProductQueries) Quests(ctx context.Context, actor auth.Authority, spec QuestsSpec) (quest.QuestV2ListResult, error)",
+    "signature": "func (s ProductQueries) Quests(ctx context.Context, actor auth.Authority, spec QuestsSpec) (quest.QuestListResult, error)",
     "owner_types_task": "QUE01",
     "owner_queries_commands_task": "QUE05"
   },
@@ -4880,9 +4880,9 @@
         "meaning": "one injected UTC clock sample for all display projection/filter/count SQL in owning query task"
       }
     ],
-    "result_go_type": "quest.QuestV2ListResult",
+    "result_go_type": "quest.QuestListResult",
     "result_sdl_type": "QuestV2ListResult!",
-    "signature": "func (s ProductQueries) RecentlyClosedQuests(ctx context.Context, actor auth.Authority, spec RecentlyClosedQuestsSpec) (quest.QuestV2ListResult, error)",
+    "signature": "func (s ProductQueries) RecentlyClosedQuests(ctx context.Context, actor auth.Authority, spec RecentlyClosedQuestsSpec) (quest.QuestListResult, error)",
     "owner_types_task": "QUE01",
     "owner_queries_commands_task": "QUE05"
   },

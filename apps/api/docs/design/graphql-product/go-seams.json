@@ -2346,7 +2346,7 @@
       "wire_name": "CreateCharacterV2Input"
     },
     {
-      "name": "CreateQuestV2Fields",
+      "name": "CreateQuestFields",
       "package": "quest",
       "kind": "INPUT_OBJECT",
       "fields": [
@@ -3062,7 +3062,7 @@
       "wire_name": "DmProfileV2Type"
     },
     {
-      "name": "DmSessionHistoryV2Result",
+      "name": "DmSessionHistoryResult",
       "package": "quest",
       "kind": "OBJECT",
       "fields": [
@@ -3088,7 +3088,7 @@
       "enum_values": [],
       "primary_task": "QUE01",
       "meaning": "immutable query/command DTO; repository inner rows never cross aggregate; nested fields resolved by mapped loader when selected",
-      "wire_name": "DmSessionHistoryV2Result"
+      "wire_name": "DmSessionHistoryResult"
     },
     {
       "name": "DmStatsView",
@@ -3120,7 +3120,7 @@
       "wire_name": "DmStatsV2Type"
     },
     {
-      "name": "DmSummaryFiltersV2Fields",
+      "name": "DmSummaryFiltersFields",
       "package": "quest",
       "kind": "INPUT_OBJECT",
       "fields": [
@@ -6385,7 +6385,7 @@
       "wire_name": "OpenQuestSeatV2Type"
     },
     {
-      "name": "OpenQuestSeatsV2Result",
+      "name": "OpenQuestSeatsResult",
       "package": "quest",
       "kind": "OBJECT",
       "fields": [
@@ -6411,7 +6411,7 @@
       "enum_values": [],
       "primary_task": "QUE01",
       "meaning": "immutable query/command DTO; repository inner rows never cross aggregate; nested fields resolved by mapped loader when selected",
-      "wire_name": "OpenQuestSeatsV2Result"
+      "wire_name": "OpenQuestSeatsResult"
     },
     {
       "name": "ParticipationAttestationFields",
@@ -7125,7 +7125,7 @@
       "wire_name": "QuestAnnouncementRoleSettingType"
     },
     {
-      "name": "QuestArcV2ListResult",
+      "name": "QuestArcListResult",
       "package": "quest",
       "kind": "OBJECT",
       "fields": [
@@ -7151,7 +7151,7 @@
       "enum_values": [],
       "primary_task": "QUE01",
       "meaning": "immutable query/command DTO; repository inner rows never cross aggregate; nested fields resolved by mapped loader when selected",
-      "wire_name": "QuestArcV2ListResult"
+      "wire_name": "QuestArcListResult"
     },
     {
       "name": "QuestArcView",
@@ -7831,7 +7831,7 @@
       "wire_name": "QuestStateCountV2Type"
     },
     {
-      "name": "QuestStateCountsFiltersV2Fields",
+      "name": "QuestStateCountsFiltersFields",
       "package": "quest",
       "kind": "INPUT_OBJECT",
       "fields": [
@@ -7887,7 +7887,7 @@
       "wire_name": "QuestStateCountsFiltersV2Input"
     },
     {
-      "name": "QuestSummariesV2Result",
+      "name": "QuestSummariesResult",
       "package": "quest",
       "kind": "OBJECT",
       "fields": [
@@ -7913,7 +7913,7 @@
       "enum_values": [],
       "primary_task": "QUE01",
       "meaning": "immutable query/command DTO; repository inner rows never cross aggregate; nested fields resolved by mapped loader when selected",
-      "wire_name": "QuestSummariesV2Result"
+      "wire_name": "QuestSummariesResult"
     },
     {
       "name": "QuestSummaryFields",
@@ -8019,7 +8019,7 @@
       "wire_name": "QuestSummaryTotalsV2Type"
     },
     {
-      "name": "QuestV2FiltersFields",
+      "name": "QuestFiltersFields",
       "package": "quest",
       "kind": "INPUT_OBJECT",
       "fields": [
@@ -8138,7 +8138,7 @@
       "wire_name": "QuestV2FiltersInput"
     },
     {
-      "name": "QuestV2ListResult",
+      "name": "QuestListResult",
       "package": "quest",
       "kind": "OBJECT",
       "fields": [
@@ -8164,7 +8164,7 @@
       "enum_values": [],
       "primary_task": "QUE01",
       "meaning": "immutable query/command DTO; repository inner rows never cross aggregate; nested fields resolved by mapped loader when selected",
-      "wire_name": "QuestV2ListResult"
+      "wire_name": "QuestListResult"
     },
     {
       "name": "QuestView",
@@ -10458,7 +10458,7 @@
         {
           "name": "Input",
           "wire_name": "input",
-          "go_type": "quest.CreateQuestV2Fields",
+          "go_type": "quest.CreateQuestFields",
           "sdl_type": "CreateQuestV2Input!",
           "default": "",
           "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
@@ -12647,7 +12647,7 @@
         {
           "name": "Filters",
           "wire_name": "filters",
-          "go_type": "*quest.DmSummaryFiltersV2Fields",
+          "go_type": "*quest.DmSummaryFiltersFields",
           "sdl_type": "DmSummaryFiltersV2Input",
           "default": "",
           "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
@@ -13778,7 +13778,7 @@
         {
           "name": "Filters",
           "wire_name": "filters",
-          "go_type": "*quest.QuestStateCountsFiltersV2Fields",
+          "go_type": "*quest.QuestStateCountsFiltersFields",
           "sdl_type": "QuestStateCountsFiltersV2Input",
           "default": "",
           "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
@@ -13856,7 +13856,7 @@
         {
           "name": "Filters",
           "wire_name": "filters",
-          "go_type": "*quest.QuestV2FiltersFields",
+          "go_type": "*quest.QuestFiltersFields",
           "sdl_type": "QuestV2FiltersInput",
           "default": "null",
           "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
@@ -23160,7 +23160,7 @@
       "name": "quest.ArcReadRepository",
       "methods": [
         "ReadQuestArc(ctx context.Context, actor auth.Authority, spec quest.QuestArcSpec) (*quest.QuestArcView, error)",
-        "ReadQuestArcs(ctx context.Context, actor auth.Authority, spec quest.QuestArcsSpec) (quest.QuestArcV2ListResult, error)"
+        "ReadQuestArcs(ctx context.Context, actor auth.Authority, spec quest.QuestArcsSpec) (quest.QuestArcListResult, error)"
       ],
       "owner": "QUE02",
       "provider": "QUE04"
@@ -23192,18 +23192,18 @@
     {
       "name": "quest.QuestReadRepository",
       "methods": [
-        "ReadDmSessionHistory(ctx context.Context, actor auth.Authority, spec quest.DmSessionHistorySpec) (quest.DmSessionHistoryV2Result, error)",
+        "ReadDmSessionHistory(ctx context.Context, actor auth.Authority, spec quest.DmSessionHistorySpec) (quest.DmSessionHistoryResult, error)",
         "ReadDmStats(ctx context.Context, actor auth.Authority, spec quest.DmStatsSpec) (*quest.DmStatsView, error)",
         "ReadDmSummaries(ctx context.Context, actor auth.Authority, spec quest.DmSummariesSpec) (document.DocumentListResult, error)",
         "ReadMyQuestSignups(ctx context.Context, actor auth.Authority, spec quest.MyQuestSignupsSpec) (quest.ParticipationPage, error)",
-        "ReadOpenQuestSeats(ctx context.Context, actor auth.Authority, spec quest.OpenQuestSeatsSpec) (quest.OpenQuestSeatsV2Result, error)",
+        "ReadOpenQuestSeats(ctx context.Context, actor auth.Authority, spec quest.OpenQuestSeatsSpec) (quest.OpenQuestSeatsResult, error)",
         "ReadQuest(ctx context.Context, actor auth.Authority, spec quest.QuestSpec) (*quest.QuestView, error)",
-        "ReadQuestBoard(ctx context.Context, actor auth.Authority, spec quest.QuestBoardSpec) (quest.QuestV2ListResult, error)",
+        "ReadQuestBoard(ctx context.Context, actor auth.Authority, spec quest.QuestBoardSpec) (quest.QuestListResult, error)",
         "ReadQuestGenreOptions(ctx context.Context, actor auth.Authority, spec quest.QuestGenreOptionsSpec) ([]string, error)",
         "ReadQuestStateCounts(ctx context.Context, actor auth.Authority, spec quest.QuestStateCountsSpec) ([]quest.QuestStateCountView, error)",
-        "ReadQuestSummaries(ctx context.Context, actor auth.Authority, spec quest.QuestSummariesSpec) (quest.QuestSummariesV2Result, error)",
-        "ReadQuests(ctx context.Context, actor auth.Authority, spec quest.QuestsSpec) (quest.QuestV2ListResult, error)",
-        "ReadRecentlyClosedQuests(ctx context.Context, actor auth.Authority, spec quest.RecentlyClosedQuestsSpec) (quest.QuestV2ListResult, error)"
+        "ReadQuestSummaries(ctx context.Context, actor auth.Authority, spec quest.QuestSummariesSpec) (quest.QuestSummariesResult, error)",
+        "ReadQuests(ctx context.Context, actor auth.Authority, spec quest.QuestsSpec) (quest.QuestListResult, error)",
+        "ReadRecentlyClosedQuests(ctx context.Context, actor auth.Authority, spec quest.RecentlyClosedQuestsSpec) (quest.QuestListResult, error)"
       ],
       "owner": "QUE02",
       "provider": "QUE04"
@@ -25685,7 +25685,7 @@
     },
     {
       "id": "READ-quest-DmSessionHistory",
-      "signature": "ReadDmSessionHistory(ctx context.Context, actor auth.Authority, spec quest.DmSessionHistorySpec) (quest.DmSessionHistoryV2Result, error)",
+      "signature": "ReadDmSessionHistory(ctx context.Context, actor auth.Authority, spec quest.DmSessionHistorySpec) (quest.DmSessionHistoryResult, error)",
       "interface": "quest.QuestReadRepository",
       "provider": "QUE04",
       "callers": ["QUE05"],
@@ -26027,7 +26027,7 @@
     },
     {
       "id": "READ-quest-OpenQuestSeats",
-      "signature": "ReadOpenQuestSeats(ctx context.Context, actor auth.Authority, spec quest.OpenQuestSeatsSpec) (quest.OpenQuestSeatsV2Result, error)",
+      "signature": "ReadOpenQuestSeats(ctx context.Context, actor auth.Authority, spec quest.OpenQuestSeatsSpec) (quest.OpenQuestSeatsResult, error)",
       "interface": "quest.QuestReadRepository",
       "provider": "QUE04",
       "callers": ["QUE05"],
@@ -26108,7 +26108,7 @@
     },
     {
       "id": "READ-quest-QuestArcs",
-      "signature": "ReadQuestArcs(ctx context.Context, actor auth.Authority, spec quest.QuestArcsSpec) (quest.QuestArcV2ListResult, error)",
+      "signature": "ReadQuestArcs(ctx context.Context, actor auth.Authority, spec quest.QuestArcsSpec) (quest.QuestArcListResult, error)",
       "interface": "quest.ArcReadRepository",
       "provider": "QUE04",
       "callers": ["QUE05"],
@@ -26117,7 +26117,7 @@
     },
     {
       "id": "READ-quest-QuestBoard",
-      "signature": "ReadQuestBoard(ctx context.Context, actor auth.Authority, spec quest.QuestBoardSpec) (quest.QuestV2ListResult, error)",
+      "signature": "ReadQuestBoard(ctx context.Context, actor auth.Authority, spec quest.QuestBoardSpec) (quest.QuestListResult, error)",
       "interface": "quest.QuestReadRepository",
       "provider": "QUE04",
       "callers": ["QUE05"],
@@ -26144,7 +26144,7 @@
     },
     {
       "id": "READ-quest-QuestSummaries",
-      "signature": "ReadQuestSummaries(ctx context.Context, actor auth.Authority, spec quest.QuestSummariesSpec) (quest.QuestSummariesV2Result, error)",
+      "signature": "ReadQuestSummaries(ctx context.Context, actor auth.Authority, spec quest.QuestSummariesSpec) (quest.QuestSummariesResult, error)",
       "interface": "quest.QuestReadRepository",
       "provider": "QUE04",
       "callers": ["QUE05"],
@@ -26153,7 +26153,7 @@
     },
     {
       "id": "READ-quest-Quests",
-      "signature": "ReadQuests(ctx context.Context, actor auth.Authority, spec quest.QuestsSpec) (quest.QuestV2ListResult, error)",
+      "signature": "ReadQuests(ctx context.Context, actor auth.Authority, spec quest.QuestsSpec) (quest.QuestListResult, error)",
       "interface": "quest.QuestReadRepository",
       "provider": "QUE04",
       "callers": ["QUE05"],
@@ -26180,7 +26180,7 @@
     },
     {
       "id": "READ-quest-RecentlyClosedQuests",
-      "signature": "ReadRecentlyClosedQuests(ctx context.Context, actor auth.Authority, spec quest.RecentlyClosedQuestsSpec) (quest.QuestV2ListResult, error)",
+      "signature": "ReadRecentlyClosedQuests(ctx context.Context, actor auth.Authority, spec quest.RecentlyClosedQuestsSpec) (quest.QuestListResult, error)",
       "interface": "quest.QuestReadRepository",
       "provider": "QUE04",
       "callers": ["QUE05"],

@@ -15,7 +15,7 @@ type CloseQuestFields struct {
 	Rewards    []QuestPcxpAwardFields
 }
 
-type CreateQuestV2Fields struct {
+type CreateQuestFields struct {
 	AdditionalInfo *string
 	Apl            *int32
 	ArcId          *string
@@ -44,7 +44,7 @@ type DmLastSessionView struct {
 	RecapDocument *document.DocumentView
 }
 
-type DmSessionHistoryV2Result struct {
+type DmSessionHistoryResult struct {
 	Items []DmLastSessionView
 	Total int32
 }
@@ -54,7 +54,7 @@ type DmStatsView struct {
 	SessionCount int32
 }
 
-type DmSummaryFiltersV2Fields struct {
+type DmSummaryFiltersFields struct {
 	QuestId *string
 	Search  *string
 }
@@ -71,7 +71,7 @@ type OpenQuestSeatView struct {
 	Status      string
 }
 
-type OpenQuestSeatsV2Result struct {
+type OpenQuestSeatsResult struct {
 	Entries []OpenQuestSeatView
 	Total   int32
 }
@@ -86,7 +86,7 @@ type ParticipationPage struct {
 	Total int32
 }
 
-type QuestArcV2ListResult struct {
+type QuestArcListResult struct {
 	Items []QuestArcView
 	Total int32
 }
@@ -172,7 +172,7 @@ type QuestStateCountView struct {
 	State string
 }
 
-type QuestStateCountsFiltersV2Fields struct {
+type QuestStateCountsFiltersFields struct {
 	ArcId    *string
 	DmId     *string
 	Kind     *string
@@ -180,7 +180,7 @@ type QuestStateCountsFiltersV2Fields struct {
 	Tag      *string
 }
 
-type QuestSummariesV2Result struct {
+type QuestSummariesResult struct {
 	Summaries []document.DocumentView
 	Totals    QuestSummaryTotalsView
 }
@@ -218,7 +218,7 @@ type QuestSummaryTotalsView struct {
 	TotalPcxpAwarded *int32
 }
 
-type QuestV2FiltersFields struct {
+type QuestFiltersFields struct {
 	ArcId         *string
 	DisplayStatus *string
 	DmId          *string
@@ -233,7 +233,7 @@ type QuestV2FiltersFields struct {
 	Tag           *string
 }
 
-type QuestV2ListResult struct {
+type QuestListResult struct {
 	Items []QuestView
 	Total int32
 }
@@ -285,7 +285,7 @@ type CloseQuestSpec struct {
 }
 
 type CreateQuestSpec struct {
-	Input CreateQuestV2Fields
+	Input CreateQuestFields
 	AsOf  time.Time
 }
 
@@ -369,7 +369,7 @@ type DmStatsSpec struct {
 }
 
 type DmSummariesSpec struct {
-	Filters *DmSummaryFiltersV2Fields
+	Filters *DmSummaryFiltersFields
 	Limit   int32
 	Offset  int32
 	AsOf    time.Time
@@ -418,7 +418,7 @@ type QuestGenreOptionsSpec struct {
 }
 
 type QuestStateCountsSpec struct {
-	Filters        *QuestStateCountsFiltersV2Fields
+	Filters        *QuestStateCountsFiltersFields
 	TagFilterSet   bool
 	TagVariants    []string
 	GenreFilterSet bool
@@ -434,7 +434,7 @@ type QuestSummariesSpec struct {
 }
 
 type QuestsSpec struct {
-	Filters        *QuestV2FiltersFields
+	Filters        *QuestFiltersFields
 	Limit          int32
 	Offset         int32
 	TagFilterSet   bool

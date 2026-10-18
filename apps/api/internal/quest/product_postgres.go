@@ -293,7 +293,7 @@ func questsListParams(spec QuestsSpec) (dbgen.ProductQuestListPageParams, error)
 	return params, nil
 }
 
-func questListFromPageRows(rows []dbgen.ProductQuestListPageRow) QuestV2ListResult {
+func questListFromPageRows(rows []dbgen.ProductQuestListPageRow) QuestListResult {
 	var total int32
 	items := make([]QuestView, 0, len(rows))
 	for i, row := range rows {
@@ -304,7 +304,7 @@ func questListFromPageRows(rows []dbgen.ProductQuestListPageRow) QuestV2ListResu
 			items = append(items, *view)
 		}
 	}
-	return QuestV2ListResult{Items: items, Total: total}
+	return QuestListResult{Items: items, Total: total}
 }
 
 func mapQuestArcReadRow(row dbgen.ProductQuestReadArcRow) *QuestArcView {
@@ -330,7 +330,7 @@ func mapQuestArcListPageRow(row dbgen.ProductQuestListArcsRow) *QuestArcView {
 	}
 }
 
-func questArcListFromPageRows(rows []dbgen.ProductQuestListArcsRow) QuestArcV2ListResult {
+func questArcListFromPageRows(rows []dbgen.ProductQuestListArcsRow) QuestArcListResult {
 	var total int32
 	items := make([]QuestArcView, 0, len(rows))
 	for i, row := range rows {
@@ -341,7 +341,7 @@ func questArcListFromPageRows(rows []dbgen.ProductQuestListArcsRow) QuestArcV2Li
 			items = append(items, *view)
 		}
 	}
-	return QuestArcV2ListResult{Items: items, Total: total}
+	return QuestArcListResult{Items: items, Total: total}
 }
 
 func strPtr(value string) *string {
@@ -683,14 +683,14 @@ func (p *ProductPostgres) ReadMyQuestSignups(ctx context.Context, actor auth.Aut
 	return ParticipationPage{Items: items, Total: total}, nil
 }
 
-func (p *ProductPostgres) ReadOpenQuestSeats(ctx context.Context, _ auth.Authority, spec OpenQuestSeatsSpec) (OpenQuestSeatsV2Result, error) {
+func (p *ProductPostgres) ReadOpenQuestSeats(ctx context.Context, _ auth.Authority, spec OpenQuestSeatsSpec) (OpenQuestSeatsResult, error) {
 	dmID, err := optionalPublicUUID(spec.DmId)
 	if err != nil {
-		return OpenQuestSeatsV2Result{}, err
+		return OpenQuestSeatsResult{}, err
 	}
 	regionID, err := optionalPublicUUID(spec.RegionId)
 	if err != nil {
-		return OpenQuestSeatsV2Result{}, err
+		return OpenQuestSeatsResult{}, err
 	}
 	rows, err := p.queries().ProductQuestOpenSeatsPage(ctx, dbgen.ProductQuestOpenSeatsPageParams{
 		DmID:      dmID,
@@ -699,7 +699,7 @@ func (p *ProductPostgres) ReadOpenQuestSeats(ctx context.Context, _ auth.Authori
 		RowLimit:  spec.Limit,
 	})
 	if err != nil {
-		return OpenQuestSeatsV2Result{}, err
+		return OpenQuestSeatsResult{}, err
 	}
 	var total int32
 	items := make([]OpenQuestSeatView, 0, len(rows))
@@ -722,7 +722,7 @@ func (p *ProductPostgres) ReadOpenQuestSeats(ctx context.Context, _ auth.Authori
 			OpenSeats:   row.OpenSeats.Int32,
 		})
 	}
-	return OpenQuestSeatsV2Result{Entries: items, Total: total}, nil
+	return OpenQuestSeatsResult{Entries: items, Total: total}, nil
 }
 func (p *ProductPostgres) ReadQuest(ctx context.Context, _ auth.Authority, spec QuestSpec) (*QuestView, error) {
 	asOf := questAsOf(spec.AsOf)
@@ -760,10 +760,10 @@ func (p *ProductPostgres) ReadQuest(ctx context.Context, _ auth.Authority, spec 
 	}
 }
 
-func (p *ProductPostgres) ReadQuestBoard(ctx context.Context, _ auth.Authority, spec QuestBoardSpec) (QuestV2ListResult, error) {
+func (p *ProductPostgres) ReadQuestBoard(ctx context.Context, _ auth.Authority, spec QuestBoardSpec) (QuestListResult, error) {
 	regionID, err := optionalPublicUUID(spec.RegionId)
 	if err != nil {
-		return QuestV2ListResult{}, err
+		return QuestListResult{}, err
 	}
 	rows, err := p.queries().ProductQuestBoardPage(ctx, dbgen.ProductQuestBoardPageParams{
 		AsOf:      questAsOf(spec.AsOf),
@@ -772,7 +772,7 @@ func (p *ProductPostgres) ReadQuestBoard(ctx context.Context, _ auth.Authority, 
 		RowLimit:  spec.Limit,
 	})
 	if err != nil {
-		return QuestV2ListResult{}, err
+		return QuestListResult{}, err
 	}
 	var total int32
 	items := make([]QuestView, 0, len(rows))
@@ -784,7 +784,7 @@ func (p *ProductPostgres) ReadQuestBoard(ctx context.Context, _ auth.Authority, 
 			items = append(items, *view)
 		}
 	}
-	return QuestV2ListResult{Items: items, Total: total}, nil
+	return QuestListResult{Items: items, Total: total}, nil
 }
 func (p *ProductPostgres) ReadQuestGenreOptions(ctx context.Context, _ auth.Authority, _ QuestGenreOptionsSpec) ([]string, error) {
 	rows, err := p.queries().ProductQuestGenreOptions(ctx)
@@ -817,22 +817,22 @@ func (p *ProductPostgres) ReadQuestStateCounts(ctx context.Context, _ auth.Autho
 	}
 	return out, nil
 }
-func (p *ProductPostgres) ReadQuests(ctx context.Context, _ auth.Authority, spec QuestsSpec) (QuestV2ListResult, error) {
+func (p *ProductPostgres) ReadQuests(ctx context.Context, _ auth.Authority, spec QuestsSpec) (QuestListResult, error) {
 	params, err := questsListParams(spec)
 	if err != nil {
-		return QuestV2ListResult{}, err
+		return QuestListResult{}, err
 	}
 	rows, err := p.queries().ProductQuestListPage(ctx, params)
 	if err != nil {
-		return QuestV2ListResult{}, err
+		return QuestListResult{}, err
 	}
 	return questListFromPageRows(rows), nil
 }
 
-func (p *ProductPostgres) ReadRecentlyClosedQuests(ctx context.Context, _ auth.Authority, spec RecentlyClosedQuestsSpec) (QuestV2ListResult, error) {
+func (p *ProductPostgres) ReadRecentlyClosedQuests(ctx context.Context, _ auth.Authority, spec RecentlyClosedQuestsSpec) (QuestListResult, error) {
 	regionID, err := optionalPublicUUID(spec.RegionId)
 	if err != nil {
-		return QuestV2ListResult{}, err
+		return QuestListResult{}, err
 	}
 	rows, err := p.queries().ProductQuestRecentlyClosedPage(ctx, dbgen.ProductQuestRecentlyClosedPageParams{
 		AsOf:        questAsOf(spec.AsOf),
@@ -842,7 +842,7 @@ func (p *ProductPostgres) ReadRecentlyClosedQuests(ctx context.Context, _ auth.A
 		RowLimit:    spec.Limit,
 	})
 	if err != nil {
-		return QuestV2ListResult{}, err
+		return QuestListResult{}, err
 	}
 	var total int32
 	items := make([]QuestView, 0, len(rows))
@@ -854,7 +854,7 @@ func (p *ProductPostgres) ReadRecentlyClosedQuests(ctx context.Context, _ auth.A
 			items = append(items, *view)
 		}
 	}
-	return QuestV2ListResult{Items: items, Total: total}, nil
+	return QuestListResult{Items: items, Total: total}, nil
 }
 func (p *ProductPostgres) ReadQuestArc(ctx context.Context, _ auth.Authority, spec QuestArcSpec) (*QuestArcView, error) {
 	arcID, err := questUUID(strings.TrimSpace(spec.Id))
@@ -870,13 +870,13 @@ func (p *ProductPostgres) ReadQuestArc(ctx context.Context, _ auth.Authority, sp
 	}
 	return mapQuestArcReadRow(row), nil
 }
-func (p *ProductPostgres) ReadQuestArcs(ctx context.Context, _ auth.Authority, spec QuestArcsSpec) (QuestArcV2ListResult, error) {
+func (p *ProductPostgres) ReadQuestArcs(ctx context.Context, _ auth.Authority, spec QuestArcsSpec) (QuestArcListResult, error) {
 	rows, err := p.queries().ProductQuestListArcs(ctx, dbgen.ProductQuestListArcsParams{
 		RowOffset: spec.Offset,
 		RowLimit:  spec.Limit,
 	})
 	if err != nil {
-		return QuestArcV2ListResult{}, err
+		return QuestArcListResult{}, err
 	}
 	return questArcListFromPageRows(rows), nil
 }

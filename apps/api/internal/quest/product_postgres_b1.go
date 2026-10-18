@@ -41,10 +41,10 @@ func (p *ProductPostgres) ReadDmStats(ctx context.Context, _ auth.Authority, spe
 	return view, nil
 }
 
-func (p *ProductPostgres) ReadDmSessionHistory(ctx context.Context, _ auth.Authority, spec DmSessionHistorySpec) (DmSessionHistoryV2Result, error) {
+func (p *ProductPostgres) ReadDmSessionHistory(ctx context.Context, _ auth.Authority, spec DmSessionHistorySpec) (DmSessionHistoryResult, error) {
 	dmID, err := questUUID(strings.TrimSpace(spec.MemberId))
 	if err != nil {
-		return DmSessionHistoryV2Result{}, apierr.New(apierr.Invalid, "invalid member id")
+		return DmSessionHistoryResult{}, apierr.New(apierr.Invalid, "invalid member id")
 	}
 	rows, err := p.queries().ProductQuestDmSessionHistoryPage(ctx, dbgen.ProductQuestDmSessionHistoryPageParams{
 		AsOf:      questAsOf(spec.AsOf),
@@ -53,7 +53,7 @@ func (p *ProductPostgres) ReadDmSessionHistory(ctx context.Context, _ auth.Autho
 		RowLimit:  spec.Limit,
 	})
 	if err != nil {
-		return DmSessionHistoryV2Result{}, err
+		return DmSessionHistoryResult{}, err
 	}
 	var total int32
 	items := make([]DmLastSessionView, 0, len(rows))
@@ -94,26 +94,26 @@ func (p *ProductPostgres) ReadDmSessionHistory(ctx context.Context, _ auth.Autho
 		}
 		items = append(items, item)
 	}
-	return DmSessionHistoryV2Result{Items: items, Total: total}, nil
+	return DmSessionHistoryResult{Items: items, Total: total}, nil
 }
 
-func (p *ProductPostgres) ReadQuestSummaries(ctx context.Context, actor auth.Authority, spec QuestSummariesSpec) (QuestSummariesV2Result, error) {
+func (p *ProductPostgres) ReadQuestSummaries(ctx context.Context, actor auth.Authority, spec QuestSummariesSpec) (QuestSummariesResult, error) {
 	questID, err := questUUID(strings.TrimSpace(spec.QuestId))
 	if err != nil {
-		return QuestSummariesV2Result{}, err
+		return QuestSummariesResult{}, err
 	}
 	if _, err := p.queries().ProductQuestReadByID(ctx, dbgen.ProductQuestReadByIDParams{
 		AsOf:    questAsOf(spec.AsOf),
 		QuestID: questID,
 	}); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return QuestSummariesV2Result{}, apierr.New(apierr.NotFound, "quest not found")
+			return QuestSummariesResult{}, apierr.New(apierr.NotFound, "quest not found")
 		}
-		return QuestSummariesV2Result{}, err
+		return QuestSummariesResult{}, err
 	}
 	viewer, err := p.documentSQLViewer(ctx, actor)
 	if err != nil {
-		return QuestSummariesV2Result{}, err
+		return QuestSummariesResult{}, err
 	}
 	rows, err := p.queries().ProductQuestSummariesPage(ctx, dbgen.ProductQuestSummariesPageParams{
 		ViewerAdmin:  viewer.Admin,
@@ -127,7 +127,7 @@ func (p *ProductPostgres) ReadQuestSummaries(ctx context.Context, actor auth.Aut
 		RowLimit:     spec.Limit,
 	})
 	if err != nil {
-		return QuestSummariesV2Result{}, err
+		return QuestSummariesResult{}, err
 	}
 	scope := document.ScopeFromAuthority(actor)
 	var total int32
@@ -153,9 +153,9 @@ func (p *ProductPostgres) ReadQuestSummaries(ctx context.Context, actor auth.Aut
 	_ = total // page total is embedded in document list semantics via summaries length for this surface
 	totals, err := p.questSummaryTotals(ctx, questID)
 	if err != nil {
-		return QuestSummariesV2Result{}, err
+		return QuestSummariesResult{}, err
 	}
-	return QuestSummariesV2Result{Summaries: summaries, Totals: totals}, nil
+	return QuestSummariesResult{Summaries: summaries, Totals: totals}, nil
 }
 
 func (p *ProductPostgres) questSummaryTotals(ctx context.Context, questID pgtype.UUID) (QuestSummaryTotalsView, error) {

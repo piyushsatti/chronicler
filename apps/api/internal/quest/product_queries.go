@@ -159,22 +159,22 @@ func (s ProductQueries) QuestGenreOptions(ctx context.Context, actor auth.Author
 	return value, nil
 }
 
-func (s ProductQueries) OpenQuestSeats(ctx context.Context, actor auth.Authority, spec OpenQuestSeatsSpec) (OpenQuestSeatsV2Result, error) {
+func (s ProductQueries) OpenQuestSeats(ctx context.Context, actor auth.Authority, spec OpenQuestSeatsSpec) (OpenQuestSeatsResult, error) {
 	if err := questQueryPage(spec.Limit, spec.Offset); err != nil {
-		return OpenQuestSeatsV2Result{}, err
+		return OpenQuestSeatsResult{}, err
 	}
 	asOf, err := s.questAsOf(spec.AsOf)
 	if err != nil {
-		return OpenQuestSeatsV2Result{}, err
+		return OpenQuestSeatsResult{}, err
 	}
 	spec.AsOf = asOf
 	observe, err := s.publicRead(ctx, actor, "Query.openQuestSeats", "")
 	if err != nil {
-		return OpenQuestSeatsV2Result{}, err
+		return OpenQuestSeatsResult{}, err
 	}
 	value, err := s.Reads.Quest.ReadOpenQuestSeats(ctx, actor, spec)
 	if err != nil {
-		return OpenQuestSeatsV2Result{}, err
+		return OpenQuestSeatsResult{}, err
 	}
 	observe()
 	return value, nil
@@ -202,64 +202,64 @@ func (s ProductQueries) Quest(ctx context.Context, actor auth.Authority, spec Qu
 	return value, nil
 }
 
-func (s ProductQueries) Quests(ctx context.Context, actor auth.Authority, spec QuestsSpec) (QuestV2ListResult, error) {
+func (s ProductQueries) Quests(ctx context.Context, actor auth.Authority, spec QuestsSpec) (QuestListResult, error) {
 	if err := questQueryPage(spec.Limit, spec.Offset); err != nil {
-		return QuestV2ListResult{}, err
+		return QuestListResult{}, err
 	}
 	asOf, err := s.questAsOf(spec.AsOf)
 	if err != nil {
-		return QuestV2ListResult{}, err
+		return QuestListResult{}, err
 	}
 	spec.AsOf = asOf
 	observe, err := s.publicRead(ctx, actor, "Query.quests", "")
 	if err != nil {
-		return QuestV2ListResult{}, err
+		return QuestListResult{}, err
 	}
 	value, err := s.Reads.Quest.ReadQuests(ctx, actor, spec)
 	if err != nil {
-		return QuestV2ListResult{}, err
+		return QuestListResult{}, err
 	}
 	observe()
 	return value, nil
 }
 
-func (s ProductQueries) QuestBoard(ctx context.Context, actor auth.Authority, spec QuestBoardSpec) (QuestV2ListResult, error) {
+func (s ProductQueries) QuestBoard(ctx context.Context, actor auth.Authority, spec QuestBoardSpec) (QuestListResult, error) {
 	if err := questQueryPage(spec.Limit, spec.Offset); err != nil {
-		return QuestV2ListResult{}, err
+		return QuestListResult{}, err
 	}
 	asOf, err := s.questAsOf(spec.AsOf)
 	if err != nil {
-		return QuestV2ListResult{}, err
+		return QuestListResult{}, err
 	}
 	spec.AsOf = asOf
 	observe, err := s.publicRead(ctx, actor, "Query.questBoard", "")
 	if err != nil {
-		return QuestV2ListResult{}, err
+		return QuestListResult{}, err
 	}
 	value, err := s.Reads.Quest.ReadQuestBoard(ctx, actor, spec)
 	if err != nil {
-		return QuestV2ListResult{}, err
+		return QuestListResult{}, err
 	}
 	observe()
 	return value, nil
 }
 
-func (s ProductQueries) RecentlyClosedQuests(ctx context.Context, actor auth.Authority, spec RecentlyClosedQuestsSpec) (QuestV2ListResult, error) {
+func (s ProductQueries) RecentlyClosedQuests(ctx context.Context, actor auth.Authority, spec RecentlyClosedQuestsSpec) (QuestListResult, error) {
 	if err := questQueryPage(spec.Limit, spec.Offset); err != nil {
-		return QuestV2ListResult{}, err
+		return QuestListResult{}, err
 	}
 	asOf, err := s.questAsOf(spec.AsOf)
 	if err != nil {
-		return QuestV2ListResult{}, err
+		return QuestListResult{}, err
 	}
 	spec.AsOf = asOf
 	observe, err := s.publicRead(ctx, actor, "Query.recentlyClosedQuests", "")
 	if err != nil {
-		return QuestV2ListResult{}, err
+		return QuestListResult{}, err
 	}
 	value, err := s.Reads.Quest.ReadRecentlyClosedQuests(ctx, actor, spec)
 	if err != nil {
-		return QuestV2ListResult{}, err
+		return QuestListResult{}, err
 	}
 	observe()
 	return value, nil
@@ -301,22 +301,22 @@ func (s ProductQueries) QuestArc(ctx context.Context, actor auth.Authority, spec
 	return value, nil
 }
 
-func (s ProductQueries) QuestArcs(ctx context.Context, actor auth.Authority, spec QuestArcsSpec) (QuestArcV2ListResult, error) {
+func (s ProductQueries) QuestArcs(ctx context.Context, actor auth.Authority, spec QuestArcsSpec) (QuestArcListResult, error) {
 	if err := questQueryPage(spec.Limit, spec.Offset); err != nil {
-		return QuestArcV2ListResult{}, err
+		return QuestArcListResult{}, err
 	}
 	asOf, err := s.questAsOf(spec.AsOf)
 	if err != nil {
-		return QuestArcV2ListResult{}, err
+		return QuestArcListResult{}, err
 	}
 	spec.AsOf = asOf
 	observe, err := s.publicRead(ctx, actor, "Query.questArcs", "")
 	if err != nil {
-		return QuestArcV2ListResult{}, err
+		return QuestArcListResult{}, err
 	}
 	value, err := s.Reads.Arc.ReadQuestArcs(ctx, actor, spec)
 	if err != nil {
-		return QuestArcV2ListResult{}, err
+		return QuestArcListResult{}, err
 	}
 	observe()
 	return value, nil
@@ -329,22 +329,22 @@ func dmSummariesSubject(spec DmSummariesSpec) string {
 	return ""
 }
 
-func (s ProductQueries) QuestSummaries(ctx context.Context, actor auth.Authority, spec QuestSummariesSpec) (QuestSummariesV2Result, error) {
+func (s ProductQueries) QuestSummaries(ctx context.Context, actor auth.Authority, spec QuestSummariesSpec) (QuestSummariesResult, error) {
 	if err := questQueryPage(spec.Limit, spec.Offset); err != nil {
-		return QuestSummariesV2Result{}, err
+		return QuestSummariesResult{}, err
 	}
 	asOf, err := s.questAsOf(spec.AsOf)
 	if err != nil {
-		return QuestSummariesV2Result{}, err
+		return QuestSummariesResult{}, err
 	}
 	spec.AsOf = asOf
 	observe, err := s.publicRead(ctx, actor, "Query.questSummaries", spec.QuestId)
 	if err != nil {
-		return QuestSummariesV2Result{}, err
+		return QuestSummariesResult{}, err
 	}
 	value, err := s.Reads.Quest.ReadQuestSummaries(ctx, actor, spec)
 	if err != nil {
-		return QuestSummariesV2Result{}, err
+		return QuestSummariesResult{}, err
 	}
 	observe()
 	return value, nil
@@ -368,22 +368,22 @@ func (s ProductQueries) DmStats(ctx context.Context, actor auth.Authority, spec 
 	return value, nil
 }
 
-func (s ProductQueries) DmSessionHistory(ctx context.Context, actor auth.Authority, spec DmSessionHistorySpec) (DmSessionHistoryV2Result, error) {
+func (s ProductQueries) DmSessionHistory(ctx context.Context, actor auth.Authority, spec DmSessionHistorySpec) (DmSessionHistoryResult, error) {
 	if err := questQueryPage(spec.Limit, spec.Offset); err != nil {
-		return DmSessionHistoryV2Result{}, err
+		return DmSessionHistoryResult{}, err
 	}
 	asOf, err := s.questAsOf(spec.AsOf)
 	if err != nil {
-		return DmSessionHistoryV2Result{}, err
+		return DmSessionHistoryResult{}, err
 	}
 	spec.AsOf = asOf
 	observe, err := s.publicRead(ctx, actor, "Query.dmSessionHistory", spec.MemberId)
 	if err != nil {
-		return DmSessionHistoryV2Result{}, err
+		return DmSessionHistoryResult{}, err
 	}
 	value, err := s.Reads.Quest.ReadDmSessionHistory(ctx, actor, spec)
 	if err != nil {
-		return DmSessionHistoryV2Result{}, err
+		return DmSessionHistoryResult{}, err
 	}
 	observe()
 	return value, nil

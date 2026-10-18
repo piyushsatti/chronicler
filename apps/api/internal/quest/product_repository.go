@@ -21,23 +21,23 @@ import (
 // Task handoff: .local/plans/graphql-implementation/phase2/handoffs/QUE02.json.
 
 type QuestReadRepository interface {
-	ReadDmSessionHistory(ctx context.Context, actor auth.Authority, spec DmSessionHistorySpec) (DmSessionHistoryV2Result, error)
+	ReadDmSessionHistory(ctx context.Context, actor auth.Authority, spec DmSessionHistorySpec) (DmSessionHistoryResult, error)
 	ReadDmStats(ctx context.Context, actor auth.Authority, spec DmStatsSpec) (*DmStatsView, error)
 	ReadDmSummaries(ctx context.Context, actor auth.Authority, spec DmSummariesSpec) (document.DocumentListResult, error)
 	ReadMyQuestSignups(ctx context.Context, actor auth.Authority, spec MyQuestSignupsSpec) (ParticipationPage, error)
-	ReadOpenQuestSeats(ctx context.Context, actor auth.Authority, spec OpenQuestSeatsSpec) (OpenQuestSeatsV2Result, error)
+	ReadOpenQuestSeats(ctx context.Context, actor auth.Authority, spec OpenQuestSeatsSpec) (OpenQuestSeatsResult, error)
 	ReadQuest(ctx context.Context, actor auth.Authority, spec QuestSpec) (*QuestView, error)
-	ReadQuestBoard(ctx context.Context, actor auth.Authority, spec QuestBoardSpec) (QuestV2ListResult, error)
+	ReadQuestBoard(ctx context.Context, actor auth.Authority, spec QuestBoardSpec) (QuestListResult, error)
 	ReadQuestGenreOptions(ctx context.Context, actor auth.Authority, spec QuestGenreOptionsSpec) ([]string, error)
 	ReadQuestStateCounts(ctx context.Context, actor auth.Authority, spec QuestStateCountsSpec) ([]QuestStateCountView, error)
-	ReadQuestSummaries(ctx context.Context, actor auth.Authority, spec QuestSummariesSpec) (QuestSummariesV2Result, error)
-	ReadQuests(ctx context.Context, actor auth.Authority, spec QuestsSpec) (QuestV2ListResult, error)
-	ReadRecentlyClosedQuests(ctx context.Context, actor auth.Authority, spec RecentlyClosedQuestsSpec) (QuestV2ListResult, error)
+	ReadQuestSummaries(ctx context.Context, actor auth.Authority, spec QuestSummariesSpec) (QuestSummariesResult, error)
+	ReadQuests(ctx context.Context, actor auth.Authority, spec QuestsSpec) (QuestListResult, error)
+	ReadRecentlyClosedQuests(ctx context.Context, actor auth.Authority, spec RecentlyClosedQuestsSpec) (QuestListResult, error)
 }
 
 type ArcReadRepository interface {
 	ReadQuestArc(ctx context.Context, actor auth.Authority, spec QuestArcSpec) (*QuestArcView, error)
-	ReadQuestArcs(ctx context.Context, actor auth.Authority, spec QuestArcsSpec) (QuestArcV2ListResult, error)
+	ReadQuestArcs(ctx context.Context, actor auth.Authority, spec QuestArcsSpec) (QuestArcListResult, error)
 }
 
 type ArcWriteRepository interface {
