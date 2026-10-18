@@ -7,11 +7,10 @@ import type { AppError } from '../../../errors/types.js';
 import { assertCanAddFeature } from '../adapters/mapFeaturesAdapter.js';
 import {
   DEFAULT_ATLAS,
-  hexesToNodes,
-  loadMapBundle,
+  loadMap,
   type MapFeatureView,
 } from '../adapters/mapAdapter.js';
-import { initialExploration } from '../mapExploration.js';
+import { demoHexNodes, initialExploration } from '../mapExploration.js';
 
 export type MapPageView =
   | { status: 'loading' }
@@ -27,17 +26,18 @@ export type MapPageView =
       tryCreateFeature: () => boolean;
     };
 
+/**
+ * Dormant hex UI hook. Atlas metadata comes from Query.map; hex exploration
+ * stays a client mock until pointcrawl map UI ships (not L1).
+ */
 export function useMapPage(): MapPageView {
   const mapQ = useQuery({
     queryKey: queryKeys.map(DEFAULT_ATLAS),
-    queryFn: () => loadMapBundle(DEFAULT_ATLAS),
+    queryFn: () => loadMap(DEFAULT_ATLAS),
   });
   const [selected, setSelected] = useState<string | null>(null);
 
-  const nodes = useMemo(
-    () => (mapQ.data ? hexesToNodes(mapQ.data.hexes) : []),
-    [mapQ.data],
-  );
+  const nodes = useMemo(() => demoHexNodes(), []);
   const exploration = useMemo(() => initialExploration(nodes), [nodes]);
 
   if (mapQ.isError) {
@@ -47,13 +47,12 @@ export function useMapPage(): MapPageView {
     return { status: 'loading' };
   }
 
-  const selectedHexcode = selected ?? mapQ.data.hexes[0]?.hexcode ?? null;
-  const hexes = mapQ.data.hexes.map((n) => ({
+  const selectedHexcode = selected ?? nodes[0]?.hexcode ?? null;
+  const hexes = nodes.map((n) => ({
     hexcode: n.hexcode,
     state: exploration[n.hexcode] ?? 'locked',
   }));
-  const features =
-    mapQ.data.hexes.find((h) => h.hexcode === selectedHexcode)?.features ?? [];
+  const features: MapFeatureView[] = [];
 
   return {
     status: 'ready',

@@ -2,20 +2,9 @@
   "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   "name": "Lightfall",
   "atlasCode": "LFC",
-  "hexes": [
-    {
-      "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
-      "hexcode": "C0R0",
-      "col": 0,
-      "row": 0,
-      "terrain": "plains"
-    },
-    {
-      "id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
-      "hexcode": "C1R0",
-      "col": 1,
-      "row": 0,
-      "terrain": "forest"
-    }
-  ]
+  "family": "lightfall",
+  "mapKind": "pointcrawl",
+  "assetPath": null,
+  "regionId": null,
+  "createdAt": "2024-01-01T00:00:00Z"
 }

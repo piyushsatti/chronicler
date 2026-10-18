@@ -1,38 +1,19 @@
 import { z } from 'zod';
+import type { MapAtlasQuery } from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
-import type { HexNode } from '../mapExploration.js';
-
-const hexWireSchema = z.object({
-  id: z.string().uuid(),
-  hexcode: z.string().nullable().optional(),
-  col: z.number().int(),
-  row: z.number().int(),
-  terrain: z.string(),
-});
+import MAP_ATLAS_QUERY from './map.graphql?raw';
 
 const mapWireSchema = z.object({
   id: z.string().uuid(),
   name: z.string(),
   atlasCode: z.string(),
-  hexes: z.array(hexWireSchema),
-});
-
-const placeWireSchema = z.object({
-  hexId: z.string().uuid(),
-  hexcode: z.string(),
-  documentId: z.string().uuid(),
-  slug: z.string(),
-  title: z.string(),
-  category: z.string(),
-});
-
-const mapViewWireSchema = z.object({
-  mapId: z.string().uuid(),
-  name: z.string(),
-  atlasCode: z.string(),
-  places: z.array(placeWireSchema),
+  family: z.string(),
+  mapKind: z.string(),
+  assetPath: z.string().nullable().optional(),
+  regionId: z.string().uuid().nullable().optional(),
+  createdAt: z.string(),
 });
 
 const featureWireSchema = z.object({
@@ -51,19 +32,15 @@ export type MapFeatureView = {
   slug: string;
 };
 
-export type MapHexView = {
-  id: string;
-  hexcode: string;
-  col: number;
-  row: number;
-  features: MapFeatureView[];
-};
-
-export type MapViewModel = {
+export type MapAtlasView = {
   id: string;
   name: string;
   atlasCode: string;
-  hexes: MapHexView[];
+  family: string;
+  mapKind: string;
+  assetPath: string | null;
+  regionId: string | null;
+  createdAt: string;
 };
 
 export function parseHexFeatures(wire: unknown): AdapterResult<MapFeatureView[]> {
@@ -81,117 +58,34 @@ export function parseHexFeatures(wire: unknown): AdapterResult<MapFeatureView[]>
   return { ok: true, data: parsed.data };
 }
 
-const MAP_QUERY = `
-  query MapAtlas($atlasCode: String!) {
-    map(atlasCode: $atlasCode) {
-      id
-      name
-      atlasCode
-      hexes(limit: 200) {
-        id
-        hexcode
-        col
-        row
-        terrain
-      }
-    }
-  }
-`;
-
-const MAP_VIEW_QUERY = `
-  query MapView($atlasCode: String!) {
-    mapView(atlasCode: $atlasCode, limit: 250) {
-      mapId
-      name
-      atlasCode
-      places {
-        hexId
-        hexcode
-        documentId
-        slug
-        title
-        category
-      }
-    }
-  }
-`;
-
-export function parseMapBundle(
-  mapWire: unknown,
-  viewWire: unknown,
-): AdapterResult<MapViewModel> {
-  const map = mapWireSchema.safeParse(mapWire);
-  if (!map.success) {
-    return { ok: false, failure: 'InvalidWire', detail: map.error.message };
-  }
-  const view = mapViewWireSchema.safeParse(viewWire);
-  if (!view.success) {
-    return { ok: false, failure: 'InvalidWire', detail: view.error.message };
-  }
-  const featuresByHex = new Map<string, MapFeatureView[]>();
-  for (const p of view.data.places) {
-    if (p.category !== 'Feature') continue;
-    const list = featuresByHex.get(p.hexcode) ?? [];
-    list.push({
-      id: p.documentId,
-      title: p.title,
-      summary: p.title,
-      slug: p.slug,
-    });
-    featuresByHex.set(p.hexcode, list);
-  }
-  const hexes: MapHexView[] = [];
-  for (const h of map.data.hexes) {
-    const hexcode = h.hexcode ?? `C${h.col}R${h.row}`;
-    const featureResult = parseHexFeatures(featuresByHex.get(hexcode) ?? []);
-    if (!featureResult.ok) return featureResult;
-    hexes.push({
-      id: h.id,
-      hexcode,
-      col: h.col,
-      row: h.row,
-      features: featureResult.data,
-    });
+export function parseMap(wire: unknown): AdapterResult<MapAtlasView> {
+  const parsed = mapWireSchema.safeParse(wire);
+  if (!parsed.success) {
+    return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
   }
   return {
     ok: true,
     data: {
-      id: map.data.id,
-      name: map.data.name,
-      atlasCode: map.data.atlasCode,
-      hexes,
+      id: parsed.data.id,
+      name: parsed.data.name,
+      atlasCode: parsed.data.atlasCode,
+      family: parsed.data.family,
+      mapKind: parsed.data.mapKind,
+      assetPath: parsed.data.assetPath ?? null,
+      regionId: parsed.data.regionId ?? null,
+      createdAt: parsed.data.createdAt,
     },
   };
 }
 
-/** Derive HexNode ring/neighbors for the client exploration mock. */
-export function hexesToNodes(hexes: MapHexView[]): HexNode[] {
-  if (hexes.length === 0) return [];
-  const center = hexes[0]!;
-  return hexes.map((h) => {
-    const dist = Math.abs(h.col - center.col) + Math.abs(h.row - center.row);
-    const ring = h.hexcode === center.hexcode ? 0 : dist <= 1 ? 1 : 2;
-    const neighbors = hexes
-      .filter(
-        (o) =>
-          o.hexcode !== h.hexcode &&
-          Math.abs(o.col - h.col) + Math.abs(o.row - h.row) <= 1,
-      )
-      .map((o) => o.hexcode);
-    return { hexcode: h.hexcode, ring, neighbors };
-  });
-}
-
-export async function loadMapBundle(atlasCode: string): Promise<MapViewModel> {
+/** Pointcrawl map atlas read — Query.map. Hex-grid selections retired (C3). */
+export async function loadMap(atlasCode: string): Promise<MapAtlasView> {
   try {
-    const [mapData, viewData] = await Promise.all([
-      graphqlRequest<{ map: unknown | null }>(MAP_QUERY, { atlasCode }),
-      graphqlRequest<{ mapView: unknown }>(MAP_VIEW_QUERY, { atlasCode }),
-    ]);
-    if (mapData.map == null) {
+    const data = await graphqlRequest<MapAtlasQuery>(MAP_ATLAS_QUERY, { atlasCode });
+    if (data.map == null) {
       throw toAppError({ failure: 'NotFound' }, 'map:load');
     }
-    const result = parseMapBundle(mapData.map, viewData.mapView);
+    const result = parseMap(data.map);
     if (!result.ok) throw toAppError({ failure: result.failure }, 'map:load');
     return result.data;
   } catch (err) {

@@ -1,0 +1,12 @@
+query MapAtlas($atlasCode: String!) {
+  map(atlasCode: $atlasCode) {
+    id
+    name
+    atlasCode
+    family
+    mapKind
+    assetPath
+    regionId
+    createdAt
+  }
+}
