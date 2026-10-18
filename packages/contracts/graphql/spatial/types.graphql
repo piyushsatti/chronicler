@@ -5,14 +5,14 @@ type ArchonAssignmentType {
   grantedBy: ID
 }
 
-type GameCalendarV2Type {
+type GameCalendarType {
   definition: JSON
   currentGameDay: Int
-  currentGameDate: GameDateV2Type
+  currentGameDate: GameDateType
   monthGrid: [GameDayCellType!]!
 }
 
-type GameDateV2Type {
+type GameDateType {
   eraAbbrev: String!
   year: Int!
   periodName: String!
@@ -21,7 +21,7 @@ type GameDateV2Type {
   day: Int!
 }
 
-type MapV2Type {
+type MapType {
   id: ID!
   name: String!
   atlasCode: String!
@@ -31,11 +31,11 @@ type MapV2Type {
   regionId: ID
   createdBy: ID
   createdAt: DateTime!
-  pointcrawlNodes(limit: Int! = 200, offset: Int! = 0): [PointcrawlNodeV2Type!]!
-  pointcrawlEdges(limit: Int! = 200, offset: Int! = 0): [PointcrawlEdgeV2Type!]!
+  pointcrawlNodes(limit: Int! = 200, offset: Int! = 0): [PointcrawlNodeType!]!
+  pointcrawlEdges(limit: Int! = 200, offset: Int! = 0): [PointcrawlEdgeType!]!
 }
 
-type PointcrawlEdgeV2Type {
+type PointcrawlEdgeType {
   id: ID!
   mapId: ID!
   nodeA: ID!
@@ -46,7 +46,7 @@ type PointcrawlEdgeV2Type {
   documentId: ID
 }
 
-type PointcrawlNodeV2Type {
+type PointcrawlNodeType {
   id: ID!
   mapId: ID!
   x: Float!
@@ -57,24 +57,24 @@ type PointcrawlNodeV2Type {
   createdAt: DateTime!
 }
 
-type RegionActivityV2Type {
+type RegionActivityType {
   regionId: ID!
   regionName: String!
   fillingCount: Int!
   scheduledCount: Int!
   liveCount: Int!
-  openQuests: [RegionActivityQuestRefV2Type!]!
-  liveQuests: [RegionActivityQuestRefV2Type!]!
+  openQuests: [RegionActivityQuestRefType!]!
+  liveQuests: [RegionActivityQuestRefType!]!
 }
 
-type RegionCountsV2Type {
+type RegionCountsType {
   regionId: ID!
   questCount: Int!
   pointcrawlNodeCount: Int!
   featureCount: Int!
 }
 
-type RegionV2Type {
+type RegionType {
   id: ID!
   name: String!
   kind: String!
@@ -83,7 +83,7 @@ type RegionV2Type {
   createdAt: DateTime!
 }
 
-type TimeAnchorV2Type {
+type TimeAnchorType {
   id: ID!
   realUtc: DateTime!
   epochDay: Int!

@@ -144,7 +144,7 @@ type NotificationWriteReceipt {
   affectedCount: Int!
 }
 type DdbSyncReceipt {
-  character: CharacterV2Type!
+  character: CharacterType!
   succeeded: Boolean!
   attemptedAt: DateTime!
   safeError: String

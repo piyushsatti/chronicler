@@ -4,14 +4,14 @@ Domain folders under this directory are the **authoritative** split SDL. `script
 
 ## Layout
 
-| Path | Role |
-| --- | --- |
-| `_roots.graphql` | Sole `type Query` / `type Mutation` declarations. Deprecated layout placeholders keep empty roots valid; all product fields live on `extend type Query` / `extend type Mutation` in domain operation files. |
-| `<domain>/types.graphql` | Object types, inputs, enums, and unions for that bounded context. No root types or scalars. |
-| `<domain>/operations.graphql` | `extend type Query` and `extend type Mutation` only (plus domain-local command inputs when not shared). |
-| `scalars.graphql` | Shared scalars |
-| `commands.graphql` | Shared command inputs, `CommandMeta`, receipts |
-| `product-reads.graphql` | Shared connection/page result types used across domains |
+| Path                          | Role                                                                                                                                                                                                        |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `_roots.graphql`              | Sole `type Query` / `type Mutation` declarations. Deprecated layout placeholders keep empty roots valid; all product fields live on `extend type Query` / `extend type Mutation` in domain operation files. |
+| `<domain>/types.graphql`      | Object types, inputs, enums, and unions for that bounded context. No root types or scalars.                                                                                                                 |
+| `<domain>/operations.graphql` | `extend type Query` and `extend type Mutation` only (plus domain-local command inputs when not shared).                                                                                                     |
+| `scalars.graphql`             | Shared scalars                                                                                                                                                                                              |
+| `commands.graphql`            | Shared command inputs, `CommandMeta`, receipts                                                                                                                                                              |
+| `product-reads.graphql`       | Shared connection/page result types used across domains                                                                                                                                                     |
 
 Domains: `member/`, `document/`, `quest/`, `spatial/`, `character/`, `site/`, `notification/`.
 
@@ -26,7 +26,7 @@ Do not reintroduce duplicate flat copies such as `member.graphql` at this direct
 
 ## Spatial / pointcrawl (C3)
 
-The `spatial/` domain declares **pointcrawl** map SDL only. Hex-grid types, map-view helpers, and hex mutations were removed at M1 per owner decision **C3** (details in `PHASE2-NOTES.md`). Quest ↔ map linkage uses pointcrawl junction fields per **N5** (`setQuestPointcrawlLinks`, `QuestV2.pointcrawlLinks`).
+The `spatial/` domain declares **pointcrawl** map SDL only. Hex-grid types, map-view helpers, and hex mutations were removed at M1 per owner decision **C3** (details in `PHASE2-NOTES.md`). Quest ↔ map linkage uses pointcrawl junction fields per **N5** (`setQuestPointcrawlLinks`, `Quest.pointcrawlLinks`).
 
 ## Codegen
 

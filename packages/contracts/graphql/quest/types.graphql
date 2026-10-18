@@ -1,4 +1,4 @@
-input CreateQuestV2Input {
+input CreateQuestInput {
   title: String!
   regionIds: [ID!]!
   scheduledAt: DateTime!
@@ -15,7 +15,7 @@ input CreateQuestV2Input {
   additionalInfo: String = null
 }
 
-type OpenQuestSeatV2Type {
+type OpenQuestSeatType {
   questId: ID!
   shortCode: String!
   dmId: ID!
@@ -27,8 +27,8 @@ type OpenQuestSeatV2Type {
   openSeats: Int!
 }
 
-type OpenQuestSeatsV2Result {
-  entries: [OpenQuestSeatV2Type!]!
+type OpenQuestSeatsResult {
+  entries: [OpenQuestSeatType!]!
   total: Int!
 }
 
@@ -37,21 +37,21 @@ type QuestAnnouncementRoleSettingType {
   roleId: String
 }
 
-type QuestArcV2ListResult {
-  items: [QuestArcV2Type!]!
+type QuestArcListResult {
+  items: [QuestArcType!]!
   total: Int!
 }
 
-type QuestArcV2Type {
+type QuestArcType {
   id: ID!
   name: String!
   createdBy: ID!
   createdAt: DateTime!
-  quests(limit: Int! = 50, offset: Int! = 0): [QuestV2Type!]!
+  quests(limit: Int! = 50, offset: Int! = 0): [QuestType!]!
   questCount: Int!
 }
 
-type QuestDiscordDeliveryV2Type {
+type QuestDiscordDeliveryType {
   jobId: ID
   desiredRevision: Int!
   appliedRevision: Int!
@@ -64,19 +64,19 @@ type QuestDiscordDeliveryV2Type {
   errorMessage: String
 }
 
-type QuestDmV2Type {
+type QuestDmType {
   handle: String!
   displayName: String!
   avatarUrl: String
 }
 
-type QuestPointcrawlLinkV2Type {
+type QuestPointcrawlLinkType {
   questId: ID!
   pointcrawlNodeId: ID!
   role: String!
 }
 
-type QuestParticipantV2Type {
+type QuestParticipantType {
   questId: ID!
   memberId: ID!
   characterId: ID!
@@ -90,12 +90,12 @@ type QuestParticipantV2Type {
   memberAvatarUrl: String
 }
 
-type QuestStateCountV2Type {
+type QuestStateCountType {
   state: String!
   count: Int!
 }
 
-input QuestStateCountsFiltersV2Input {
+input QuestStateCountsFiltersInput {
   kind: String = null
   dmId: ID = null
   regionId: ID = null
@@ -103,17 +103,17 @@ input QuestStateCountsFiltersV2Input {
   tag: String = null
 }
 
-type QuestSummariesV2Result {
+type QuestSummariesResult {
   summaries: [DocumentType!]!
-  totals: QuestSummaryTotalsV2Type!
+  totals: QuestSummaryTotalsType!
 }
 
-type QuestSummaryTotalsV2Type {
+type QuestSummaryTotalsType {
   totalPcxpAwarded: Int
   coverage: RewardCoverage!
 }
 
-input QuestV2FiltersInput {
+input QuestFiltersInput {
   status: String = null
   kind: String = null
   dmId: ID = null
@@ -128,12 +128,12 @@ input QuestV2FiltersInput {
   scheduledTo: DateTime = null
 }
 
-type QuestV2ListResult {
-  items: [QuestV2Type!]!
+type QuestListResult {
+  items: [QuestType!]!
   total: Int!
 }
 
-type QuestV2Type {
+type QuestType {
   id: ID!
   shortCode: String!
   kinds: [String!]!
@@ -157,25 +157,25 @@ type QuestV2Type {
   createdAt: DateTime!
   updatedAt: DateTime!
   displayStatus: String
-  dm: QuestDmV2Type
+  dm: QuestDmType
   briefDocument: DocumentType
   participants(
     status: String = null
     limit: Int! = 100
     offset: Int! = 0
-  ): [QuestParticipantV2Type!]!
+  ): [QuestParticipantType!]!
   pointcrawlLinks(
     role: String = null
     limit: Int! = 100
     offset: Int! = 0
-  ): [QuestPointcrawlLinkV2Type!]!
-  arc: QuestArcV2Type
+  ): [QuestPointcrawlLinkType!]!
+  arc: QuestArcType
   dmTable: DocumentType
   regions: [ID!]!
-  discordDelivery: QuestDiscordDeliveryV2Type!
+  discordDelivery: QuestDiscordDeliveryType!
 }
 
-type RegionActivityQuestRefV2Type {
+type RegionActivityQuestRefType {
   id: ID!
   shortCode: String!
   scheduledAt: DateTime!

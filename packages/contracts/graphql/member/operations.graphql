@@ -42,7 +42,7 @@ extend type Mutation {
     meta: CommandMeta!
   ): [MemberRoleBatchResultType!]!
   updateMyProfile(input: UpdateMyProfileInput!, meta: CommandMeta!): MemberType!
-  updateMyDmProfile(input: UpdateDmProfileInput!, meta: CommandMeta!): DmProfileV2Type!
+  updateMyDmProfile(input: UpdateDmProfileInput!, meta: CommandMeta!): DmProfileType!
   setMyAvailability(
     slots: [AvailabilitySlotInput!]!
     meta: CommandMeta!
@@ -50,14 +50,14 @@ extend type Mutation {
   submitDmProfileForVerification(
     expectedRevision: Int!
     meta: CommandMeta!
-  ): DmProfileV2Type!
+  ): DmProfileType!
   decideDmProfileVerification(
     memberId: ID!
     expectedRevision: Int!
     verdict: VerificationVerdict!
     note: String
     meta: CommandMeta!
-  ): DmProfileV2Type!
+  ): DmProfileType!
   grantUnlock(
     memberId: ID!
     unlockableId: ID!

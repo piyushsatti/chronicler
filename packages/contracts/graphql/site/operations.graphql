@@ -4,15 +4,15 @@ extend type Query {
     kinds: [String!] = null
     limit: Int! = 20
     offset: Int! = 0
-  ): SearchResultV2Type!
-  home: HomeV2Type!
+  ): SearchResultType!
+  home: HomeType!
   adminOperations(
     deliveryState: String = null
     limit: Int! = 25
     offset: Int! = 0
-  ): AdminOperationsV2Type!
+  ): AdminOperationsType!
   searchableKinds: [SearchKindType!]!
-  siteStats: SiteStatsV2Type!
+  siteStats: SiteStatsType!
   discordDeliveryMode: String!
   homeBanner: HomeBannerType!
   questAnnouncementRoleSetting: QuestAnnouncementRoleSettingType!

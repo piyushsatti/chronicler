@@ -1,4 +1,4 @@
-type AdminCharacterDirectoryEntryV2Type {
+type AdminCharacterDirectoryEntryType {
   id: ID!
   shortCode: String!
   name: String!
@@ -21,8 +21,8 @@ input AdminCharacterDirectoryFiltersInput {
   status: String = null
 }
 
-type AdminCharacterDirectoryV2Type {
-  items: [AdminCharacterDirectoryEntryV2Type!]!
+type AdminCharacterDirectoryType {
+  items: [AdminCharacterDirectoryEntryType!]!
   total: Int!
 }
 
@@ -74,7 +74,7 @@ enum CharacterReviewStatus {
   UNKNOWN
 }
 
-input CharacterV2FiltersInput {
+input CharacterFiltersInput {
   ownerId: ID = null
   guildId: ID = null
   regionId: ID = null
@@ -82,12 +82,12 @@ input CharacterV2FiltersInput {
   status: String = null
 }
 
-type CharacterV2ListResult {
-  items: [CharacterV2Type!]!
+type CharacterListResult {
+  items: [CharacterType!]!
   total: Int!
 }
 
-type CharacterV2Type {
+type CharacterType {
   id: ID!
   ownerId: ID!
   shortCode: String!
@@ -111,13 +111,13 @@ type CharacterV2Type {
   daysActive: Int!
 }
 
-type CoPlayerV2Type {
+type CoPlayerType {
   characterId: ID!
   memberId: ID!
   questCount: Int!
 }
 
-input CreateCharacterV2Input {
+input CreateCharacterInput {
   name: String!
   regionId: ID
   backstoryId: ID
@@ -183,7 +183,7 @@ type ProgressionListResult {
   total: Int!
 }
 
-input UpdateCharacterProfileV2Input {
+input UpdateCharacterProfileInput {
   description: String
   backgroundText: String
 }
@@ -216,4 +216,3 @@ type DdbAttemptType {
   safeError: String
   provenance: JSON!
 }
-

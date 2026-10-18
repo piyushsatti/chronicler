@@ -4,82 +4,82 @@ extend type Query {
     dmId: ID = null
     limit: Int! = 50
     offset: Int! = 0
-  ): OpenQuestSeatsV2Result!
-  quest(id: ID = null, shortCode: String = null): QuestV2Type
+  ): OpenQuestSeatsResult!
+  quest(id: ID = null, shortCode: String = null): QuestType
   quests(
-    filters: QuestV2FiltersInput = null
+    filters: QuestFiltersInput = null
     limit: Int! = 50
     offset: Int! = 0
-  ): QuestV2ListResult!
+  ): QuestListResult!
   questBoard(
     regionId: ID = null
     limit: Int! = 50
     offset: Int! = 0
-  ): QuestV2ListResult!
+  ): QuestListResult!
   recentlyClosedQuests(
     regionId: ID = null
     closedSince: DateTime = null
     limit: Int! = 50
     offset: Int! = 0
-  ): QuestV2ListResult!
-  questArcs(limit: Int! = 50, offset: Int! = 0): QuestArcV2ListResult!
-  questArc(id: ID!): QuestArcV2Type
+  ): QuestListResult!
+  questArcs(limit: Int! = 50, offset: Int! = 0): QuestArcListResult!
+  questArc(id: ID!): QuestArcType
   questGenreOptions: [String!]!
   myQuestSignups(limit: Int! = 50, offset: Int! = 0): ParticipationPage!
   questSummaries(
     questId: ID!
     limit: Int! = 50
     offset: Int! = 0
-  ): QuestSummariesV2Result!
-  questStateCounts(filters: QuestStateCountsFiltersV2Input): [QuestStateCountV2Type!]!
-  dmStats(memberId: ID!): DmStatsV2Type
+  ): QuestSummariesResult!
+  questStateCounts(filters: QuestStateCountsFiltersInput): [QuestStateCountType!]!
+  dmStats(memberId: ID!): DmStatsType
   dmSessionHistory(
     memberId: ID!
     limit: Int! = 50
     offset: Int! = 0
-  ): DmSessionHistoryV2Result!
+  ): DmSessionHistoryResult!
   dmSummaries(
-    filters: DmSummaryFiltersV2Input
+    filters: DmSummaryFiltersInput
     limit: Int! = 50
     offset: Int! = 0
   ): DocumentListResult!
 }
 extend type Mutation {
-  createQuest(input: CreateQuestV2Input!, meta: CommandMeta!): QuestV2Type!
-  updateQuest(id: ID!, input: QuestEditInput!, meta: CommandMeta!): QuestV2Type!
-  transitionQuestStatus(id: ID!, to: String!, meta: CommandMeta!): QuestV2Type!
-  closeQuest(id: ID!, input: CloseQuestInput!, meta: CommandMeta!): QuestV2Type!
+  createQuest(input: CreateQuestInput!, meta: CommandMeta!): QuestType!
+  updateQuest(id: ID!, input: QuestEditInput!, meta: CommandMeta!): QuestType!
+  transitionQuestStatus(id: ID!, to: String!, meta: CommandMeta!): QuestType!
+  closeQuest(id: ID!, input: CloseQuestInput!, meta: CommandMeta!): QuestType!
   upsertQuestSummary(input: QuestSummaryInput!, meta: CommandMeta!): DocumentType!
-  upsertQuestArc(id: ID, name: String!, meta: CommandMeta!): QuestArcV2Type!
-  removeQuestFromArc(questId: ID!, meta: CommandMeta!): QuestV2Type!
+  upsertQuestArc(id: ID, name: String!, meta: CommandMeta!): QuestArcType!
+  removeQuestFromArc(questId: ID!, meta: CommandMeta!): QuestType!
   signupForQuest(
     questId: ID!
     characterId: ID!
     meta: CommandMeta!
-  ): QuestParticipantV2Type!
+  ): QuestParticipantType!
   withdrawFromQuest(
     questId: ID!
     characterId: ID!
     meta: CommandMeta!
-  ): QuestParticipantV2Type!
+  ): QuestParticipantType!
   selectQuestParticipants(
     questId: ID!
     characterIds: [ID!]!
     meta: CommandMeta!
-  ): [QuestParticipantV2Type!]!
+  ): [QuestParticipantType!]!
   attestQuestParticipation(
     questId: ID!
     entries: [ParticipationAttestationInput!]!
     meta: CommandMeta!
-  ): [QuestParticipantV2Type!]!
+  ): [QuestParticipantType!]!
   syncQuestDiscord(questId: ID!, meta: CommandMeta!): DeliveryReceipt!
   deleteQuest(questId: ID!, meta: CommandMeta!): CommandReceipt!
-  restoreQuest(questId: ID!, meta: CommandMeta!): QuestV2Type!
+  restoreQuest(questId: ID!, meta: CommandMeta!): QuestType!
   setQuestPointcrawlLinks(
     questId: ID!
     links: [QuestPointcrawlLinkInput!]!
     meta: CommandMeta!
-  ): [QuestPointcrawlLinkV2Type!]!
+  ): [QuestPointcrawlLinkType!]!
 }
 
 input CloseQuestInput {

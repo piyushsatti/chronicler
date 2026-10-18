@@ -1,56 +1,56 @@
 extend type Query {
-  map(atlasCode: String!): MapV2Type
+  map(atlasCode: String!): MapType
   maps(
     family: String = null
     mapKind: String = null
     limit: Int! = 50
     offset: Int! = 0
-  ): [MapV2Type!]!
-  regions(kind: String = null, limit: Int! = 50, offset: Int! = 0): [RegionV2Type!]!
+  ): [MapType!]!
+  regions(kind: String = null, limit: Int! = 50, offset: Int! = 0): [RegionType!]!
   archonAssignments(
     regionId: ID
     memberId: ID
     limit: Int! = 50
     offset: Int! = 0
   ): ArchonPage!
-  regionCounts(regionId: ID!): RegionCountsV2Type
-  regionActivity(atlasCode: String!): RegionActivityV2Type
-  gameDate(realDate: Date!): GameDateV2Type
+  regionCounts(regionId: ID!): RegionCountsType
+  regionActivity(atlasCode: String!): RegionActivityType
+  gameDate(realDate: Date!): GameDateType
   realDates(gameDay: Int!, limit: Int! = 50, offset: Int! = 0): RealDatePage!
   timeAnchors(limit: Int! = 50, offset: Int! = 0): TimeAnchorPage!
-  gameCalendar(realFrom: Date!, realTo: Date!): GameCalendarV2Type!
+  gameCalendar(realFrom: Date!, realTo: Date!): GameCalendarType!
 }
 extend type Mutation {
-  createMap(input: MapCreateInput!, meta: CommandMeta!): MapV2Type!
-  createRegion(input: RegionInput!, meta: CommandMeta!): RegionV2Type!
-  updateRegion(id: ID!, input: RegionInput!, meta: CommandMeta!): RegionV2Type!
+  createMap(input: MapCreateInput!, meta: CommandMeta!): MapType!
+  createRegion(input: RegionInput!, meta: CommandMeta!): RegionType!
+  updateRegion(id: ID!, input: RegionInput!, meta: CommandMeta!): RegionType!
   transitionRegion(
     id: ID!
     to: String!
     note: String!
     meta: CommandMeta!
-  ): RegionV2Type!
+  ): RegionType!
   assignArchon(memberId: ID!, regionId: ID!, meta: CommandMeta!): ArchonAssignmentType!
   revokeArchon(memberId: ID!, regionId: ID!, meta: CommandMeta!): CommandReceipt!
-  createTimeAnchor(input: TimeAnchorInput!, meta: CommandMeta!): TimeAnchorV2Type!
+  createTimeAnchor(input: TimeAnchorInput!, meta: CommandMeta!): TimeAnchorType!
   updateTimeAnchor(
     id: ID!
     input: TimeAnchorInput!
     meta: CommandMeta!
-  ): TimeAnchorV2Type!
-  updateGameCalendar(definition: JSON!, meta: CommandMeta!): GameCalendarV2Type!
+  ): TimeAnchorType!
+  updateGameCalendar(definition: JSON!, meta: CommandMeta!): GameCalendarType!
   deleteRegion(regionId: ID!, meta: CommandMeta!): CommandReceipt!
-  restoreRegion(regionId: ID!, meta: CommandMeta!): RegionV2Type!
+  restoreRegion(regionId: ID!, meta: CommandMeta!): RegionType!
   upsertPointcrawlNode(
     mapId: ID!
     input: PointcrawlNodeInput!
     meta: CommandMeta!
-  ): PointcrawlNodeV2Type!
+  ): PointcrawlNodeType!
   setPointcrawlEdge(
     mapId: ID!
     input: PointcrawlEdgeInput!
     meta: CommandMeta!
-  ): PointcrawlEdgeV2Type!
+  ): PointcrawlEdgeType!
   linkPointcrawlEntry(
     mapId: ID!
     nodeId: ID!

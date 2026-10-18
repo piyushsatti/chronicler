@@ -53,7 +53,7 @@ type DirectoryEntryType {
   availableDays: [String!]!
 }
 
-type DmProfileV2Type {
+type DmProfileType {
   memberId: ID!
   tagline: String
   philosophy: String
@@ -94,7 +94,7 @@ type MemberListResult {
 
 type MemberProfileType {
   member: MemberType!
-  dmProfile: DmProfileV2Type
+  dmProfile: DmProfileType
   availability: [AvailabilitySlotType!]!
   activitySummary: ActivitySummaryType!
   recentWeeks(limit: Int! = 12, offset: Int! = 0): [WeekActivityType!]!

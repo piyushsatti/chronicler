@@ -5,33 +5,39 @@
 # Authoritative Query/Mutation roots (M1). Domain */operations.graphql extends these types.
 
 type Query {
-  """Layout placeholder until deprecated; real fields live on extend type Query blocks."""
-  _contractLayoutStub: Boolean! @deprecated(reason: "M1 layout placeholder. Real Query fields extend this root.")
+  """
+  Layout placeholder until deprecated; real fields live on extend type Query blocks.
+  """
+  _contractLayoutStub: Boolean!
+    @deprecated(reason: "M1 layout placeholder. Real Query fields extend this root.")
 }
 
 type Mutation {
-  """Layout placeholder until deprecated; real fields live on extend type Mutation blocks."""
-  _contractLayoutStub: Boolean! @deprecated(reason: "M1 layout placeholder. Real Mutation fields extend this root.")
+  """
+  Layout placeholder until deprecated; real fields live on extend type Mutation blocks.
+  """
+  _contractLayoutStub: Boolean!
+    @deprecated(reason: "M1 layout placeholder. Real Mutation fields extend this root.")
 }
 
 # --- character/operations.graphql ---
 extend type Query {
   characters(
-    filters: CharacterV2FiltersInput = null
+    filters: CharacterFiltersInput = null
     limit: Int! = 50
     offset: Int! = 0
-  ): CharacterV2ListResult!
-  myCharacters(limit: Int! = 50, offset: Int! = 0): CharacterV2ListResult!
-  character(id: ID = null, shortCode: String = null): CharacterV2Type
+  ): CharacterListResult!
+  myCharacters(limit: Int! = 50, offset: Int! = 0): CharacterListResult!
+  character(id: ID = null, shortCode: String = null): CharacterType
   adminCharacterDirectory(
     filters: AdminCharacterDirectoryFiltersInput = null
     limit: Int! = 50
     offset: Int! = 0
-  ): AdminCharacterDirectoryV2Type!
+  ): AdminCharacterDirectoryType!
   pendingCharacterVerifications(
     limit: Int! = 50
     offset: Int! = 0
-  ): CharacterV2ListResult!
+  ): CharacterListResult!
   characterVerificationHistory(
     characterId: ID!
     limit: Int! = 50
@@ -75,7 +81,7 @@ extend type Query {
   ): ParticipationPage!
 }
 extend type Mutation {
-  createCharacter(input: CreateCharacterV2Input!, meta: CommandMeta!): CharacterV2Type!
+  createCharacter(input: CreateCharacterInput!, meta: CommandMeta!): CharacterType!
   adjustPcxp(
     characterId: ID!
     amount: Int!
@@ -86,12 +92,12 @@ extend type Mutation {
     characterId: ID!
     expectedUpdatedAt: DateTime!
     meta: CommandMeta!
-  ): CharacterV2Type!
+  ): CharacterType!
   retireCharacter(
     characterId: ID!
     expectedUpdatedAt: DateTime!
     meta: CommandMeta!
-  ): CharacterV2Type!
+  ): CharacterType!
   decideVerification(
     characterId: ID!
     expectedSubmittedAt: DateTime!
@@ -99,12 +105,12 @@ extend type Mutation {
     note: String
     meta: CommandMeta!
   ): VerificationType!
-  setCharacterGuild(characterId: ID!, guildId: ID, meta: CommandMeta!): CharacterV2Type!
+  setCharacterGuild(characterId: ID!, guildId: ID, meta: CommandMeta!): CharacterType!
   updateCharacterProfile(
     characterId: ID!
-    input: UpdateCharacterProfileV2Input!
+    input: UpdateCharacterProfileInput!
     meta: CommandMeta!
-  ): CharacterV2Type!
+  ): CharacterType!
   syncCharacterDdb(
     characterId: ID!
     ddbUrl: String!
@@ -129,11 +135,11 @@ extend type Mutation {
   updateBackstory(id: ID!, input: BackstoryInput!, meta: CommandMeta!): BackstoryType!
   deleteCharacterLog(characterId: ID!, logId: ID!, meta: CommandMeta!): CommandReceipt!
   deleteCharacter(characterId: ID!, meta: CommandMeta!): CommandReceipt!
-  restoreCharacter(characterId: ID!, meta: CommandMeta!): CharacterV2Type!
+  restoreCharacter(characterId: ID!, meta: CommandMeta!): CharacterType!
 }
 
 # --- character/types.graphql ---
-type AdminCharacterDirectoryEntryV2Type {
+type AdminCharacterDirectoryEntryType {
   id: ID!
   shortCode: String!
   name: String!
@@ -156,8 +162,8 @@ input AdminCharacterDirectoryFiltersInput {
   status: String = null
 }
 
-type AdminCharacterDirectoryV2Type {
-  items: [AdminCharacterDirectoryEntryV2Type!]!
+type AdminCharacterDirectoryType {
+  items: [AdminCharacterDirectoryEntryType!]!
   total: Int!
 }
 
@@ -209,7 +215,7 @@ enum CharacterReviewStatus {
   UNKNOWN
 }
 
-input CharacterV2FiltersInput {
+input CharacterFiltersInput {
   ownerId: ID = null
   guildId: ID = null
   regionId: ID = null
@@ -217,12 +223,12 @@ input CharacterV2FiltersInput {
   status: String = null
 }
 
-type CharacterV2ListResult {
-  items: [CharacterV2Type!]!
+type CharacterListResult {
+  items: [CharacterType!]!
   total: Int!
 }
 
-type CharacterV2Type {
+type CharacterType {
   id: ID!
   ownerId: ID!
   shortCode: String!
@@ -246,13 +252,13 @@ type CharacterV2Type {
   daysActive: Int!
 }
 
-type CoPlayerV2Type {
+type CoPlayerType {
   characterId: ID!
   memberId: ID!
   questCount: Int!
 }
 
-input CreateCharacterV2Input {
+input CreateCharacterInput {
   name: String!
   regionId: ID
   backstoryId: ID
@@ -318,7 +324,7 @@ type ProgressionListResult {
   total: Int!
 }
 
-input UpdateCharacterProfileV2Input {
+input UpdateCharacterProfileInput {
   description: String
   backgroundText: String
 }
@@ -499,7 +505,7 @@ type NotificationWriteReceipt {
   affectedCount: Int!
 }
 type DdbSyncReceipt {
-  character: CharacterV2Type!
+  character: CharacterType!
   succeeded: Boolean!
   attemptedAt: DateTime!
   safeError: String
@@ -659,7 +665,7 @@ type DocumentType {
   effectiveBody: String
   author: DocumentAuthorType
   publishedAt: DateTime
-  summaryDerived: SummaryDerivedV2Type
+  summaryDerived: SummaryDerivedType
 }
 
 type LieutenantAssignmentType {
@@ -674,29 +680,29 @@ enum PreviewAudience {
   DM
 }
 
-type SummaryDerivedV2Type {
-  regions: [SummaryRegionV2Type!]!
-  pointcrawlNodes: [SummaryPointcrawlNodeV2Type!]!
-  dms: [SummaryDmV2Type!]!
-  players: [SummaryPlayerV2Type!]!
+type SummaryDerivedType {
+  regions: [SummaryRegionType!]!
+  pointcrawlNodes: [SummaryPointcrawlNodeType!]!
+  dms: [SummaryDmType!]!
+  players: [SummaryPlayerType!]!
   occurredAt: DateTime
   arc: String
   gameDay: Int
-  gameDate: GameDateV2Type
+  gameDate: GameDateType
 }
 
-type SummaryDmV2Type {
+type SummaryDmType {
   id: ID!
   displayName: String!
 }
 
-type SummaryPointcrawlNodeV2Type {
+type SummaryPointcrawlNodeType {
   id: ID!
   mapId: ID!
   name: String
 }
 
-type SummaryPlayerV2Type {
+type SummaryPlayerType {
   characterId: ID!
   characterShortCode: String!
   characterName: String!
@@ -704,7 +710,7 @@ type SummaryPlayerV2Type {
   manual: Boolean!
 }
 
-type SummaryRegionV2Type {
+type SummaryRegionType {
   id: ID!
   name: String!
 }
@@ -754,7 +760,7 @@ extend type Mutation {
     meta: CommandMeta!
   ): [MemberRoleBatchResultType!]!
   updateMyProfile(input: UpdateMyProfileInput!, meta: CommandMeta!): MemberType!
-  updateMyDmProfile(input: UpdateDmProfileInput!, meta: CommandMeta!): DmProfileV2Type!
+  updateMyDmProfile(input: UpdateDmProfileInput!, meta: CommandMeta!): DmProfileType!
   setMyAvailability(
     slots: [AvailabilitySlotInput!]!
     meta: CommandMeta!
@@ -762,14 +768,14 @@ extend type Mutation {
   submitDmProfileForVerification(
     expectedRevision: Int!
     meta: CommandMeta!
-  ): DmProfileV2Type!
+  ): DmProfileType!
   decideDmProfileVerification(
     memberId: ID!
     expectedRevision: Int!
     verdict: VerificationVerdict!
     note: String
     meta: CommandMeta!
-  ): DmProfileV2Type!
+  ): DmProfileType!
   grantUnlock(
     memberId: ID!
     unlockableId: ID!
@@ -841,7 +847,7 @@ type DirectoryEntryType {
   availableDays: [String!]!
 }
 
-type DmProfileV2Type {
+type DmProfileType {
   memberId: ID!
   tagline: String
   philosophy: String
@@ -882,7 +888,7 @@ type MemberListResult {
 
 type MemberProfileType {
   member: MemberType!
-  dmProfile: DmProfileV2Type
+  dmProfile: DmProfileType
   availability: [AvailabilitySlotType!]!
   activitySummary: ActivitySummaryType!
   recentWeeks(limit: Int! = 12, offset: Int! = 0): [WeekActivityType!]!
@@ -1081,7 +1087,7 @@ type RealDatePage {
   total: Int!
 }
 type TimeAnchorPage {
-  items: [TimeAnchorV2Type!]!
+  items: [TimeAnchorType!]!
   total: Int!
 }
 type VerificationPage {
@@ -1097,11 +1103,11 @@ type CreationCatalogPage {
   total: Int!
 }
 type CoPlayerPage {
-  items: [CoPlayerV2Type!]!
+  items: [CoPlayerType!]!
   total: Int!
 }
 type ParticipationPage {
-  items: [QuestParticipantV2Type!]!
+  items: [QuestParticipantType!]!
   total: Int!
 }
 
@@ -1112,82 +1118,82 @@ extend type Query {
     dmId: ID = null
     limit: Int! = 50
     offset: Int! = 0
-  ): OpenQuestSeatsV2Result!
-  quest(id: ID = null, shortCode: String = null): QuestV2Type
+  ): OpenQuestSeatsResult!
+  quest(id: ID = null, shortCode: String = null): QuestType
   quests(
-    filters: QuestV2FiltersInput = null
+    filters: QuestFiltersInput = null
     limit: Int! = 50
     offset: Int! = 0
-  ): QuestV2ListResult!
+  ): QuestListResult!
   questBoard(
     regionId: ID = null
     limit: Int! = 50
     offset: Int! = 0
-  ): QuestV2ListResult!
+  ): QuestListResult!
   recentlyClosedQuests(
     regionId: ID = null
     closedSince: DateTime = null
     limit: Int! = 50
     offset: Int! = 0
-  ): QuestV2ListResult!
-  questArcs(limit: Int! = 50, offset: Int! = 0): QuestArcV2ListResult!
-  questArc(id: ID!): QuestArcV2Type
+  ): QuestListResult!
+  questArcs(limit: Int! = 50, offset: Int! = 0): QuestArcListResult!
+  questArc(id: ID!): QuestArcType
   questGenreOptions: [String!]!
   myQuestSignups(limit: Int! = 50, offset: Int! = 0): ParticipationPage!
   questSummaries(
     questId: ID!
     limit: Int! = 50
     offset: Int! = 0
-  ): QuestSummariesV2Result!
-  questStateCounts(filters: QuestStateCountsFiltersV2Input): [QuestStateCountV2Type!]!
-  dmStats(memberId: ID!): DmStatsV2Type
+  ): QuestSummariesResult!
+  questStateCounts(filters: QuestStateCountsFiltersInput): [QuestStateCountType!]!
+  dmStats(memberId: ID!): DmStatsType
   dmSessionHistory(
     memberId: ID!
     limit: Int! = 50
     offset: Int! = 0
-  ): DmSessionHistoryV2Result!
+  ): DmSessionHistoryResult!
   dmSummaries(
-    filters: DmSummaryFiltersV2Input
+    filters: DmSummaryFiltersInput
     limit: Int! = 50
     offset: Int! = 0
   ): DocumentListResult!
 }
 extend type Mutation {
-  createQuest(input: CreateQuestV2Input!, meta: CommandMeta!): QuestV2Type!
-  updateQuest(id: ID!, input: QuestEditInput!, meta: CommandMeta!): QuestV2Type!
-  transitionQuestStatus(id: ID!, to: String!, meta: CommandMeta!): QuestV2Type!
-  closeQuest(id: ID!, input: CloseQuestInput!, meta: CommandMeta!): QuestV2Type!
+  createQuest(input: CreateQuestInput!, meta: CommandMeta!): QuestType!
+  updateQuest(id: ID!, input: QuestEditInput!, meta: CommandMeta!): QuestType!
+  transitionQuestStatus(id: ID!, to: String!, meta: CommandMeta!): QuestType!
+  closeQuest(id: ID!, input: CloseQuestInput!, meta: CommandMeta!): QuestType!
   upsertQuestSummary(input: QuestSummaryInput!, meta: CommandMeta!): DocumentType!
-  upsertQuestArc(id: ID, name: String!, meta: CommandMeta!): QuestArcV2Type!
-  removeQuestFromArc(questId: ID!, meta: CommandMeta!): QuestV2Type!
+  upsertQuestArc(id: ID, name: String!, meta: CommandMeta!): QuestArcType!
+  removeQuestFromArc(questId: ID!, meta: CommandMeta!): QuestType!
   signupForQuest(
     questId: ID!
     characterId: ID!
     meta: CommandMeta!
-  ): QuestParticipantV2Type!
+  ): QuestParticipantType!
   withdrawFromQuest(
     questId: ID!
     characterId: ID!
     meta: CommandMeta!
-  ): QuestParticipantV2Type!
+  ): QuestParticipantType!
   selectQuestParticipants(
     questId: ID!
     characterIds: [ID!]!
     meta: CommandMeta!
-  ): [QuestParticipantV2Type!]!
+  ): [QuestParticipantType!]!
   attestQuestParticipation(
     questId: ID!
     entries: [ParticipationAttestationInput!]!
     meta: CommandMeta!
-  ): [QuestParticipantV2Type!]!
+  ): [QuestParticipantType!]!
   syncQuestDiscord(questId: ID!, meta: CommandMeta!): DeliveryReceipt!
   deleteQuest(questId: ID!, meta: CommandMeta!): CommandReceipt!
-  restoreQuest(questId: ID!, meta: CommandMeta!): QuestV2Type!
+  restoreQuest(questId: ID!, meta: CommandMeta!): QuestType!
   setQuestPointcrawlLinks(
     questId: ID!
     links: [QuestPointcrawlLinkInput!]!
     meta: CommandMeta!
-  ): [QuestPointcrawlLinkV2Type!]!
+  ): [QuestPointcrawlLinkType!]!
 }
 
 input CloseQuestInput {
@@ -1201,7 +1207,7 @@ input QuestPcxpAwardInput {
 }
 
 # --- quest/types.graphql ---
-input CreateQuestV2Input {
+input CreateQuestInput {
   title: String!
   regionIds: [ID!]!
   scheduledAt: DateTime!
@@ -1218,7 +1224,7 @@ input CreateQuestV2Input {
   additionalInfo: String = null
 }
 
-type OpenQuestSeatV2Type {
+type OpenQuestSeatType {
   questId: ID!
   shortCode: String!
   dmId: ID!
@@ -1230,8 +1236,8 @@ type OpenQuestSeatV2Type {
   openSeats: Int!
 }
 
-type OpenQuestSeatsV2Result {
-  entries: [OpenQuestSeatV2Type!]!
+type OpenQuestSeatsResult {
+  entries: [OpenQuestSeatType!]!
   total: Int!
 }
 
@@ -1240,21 +1246,21 @@ type QuestAnnouncementRoleSettingType {
   roleId: String
 }
 
-type QuestArcV2ListResult {
-  items: [QuestArcV2Type!]!
+type QuestArcListResult {
+  items: [QuestArcType!]!
   total: Int!
 }
 
-type QuestArcV2Type {
+type QuestArcType {
   id: ID!
   name: String!
   createdBy: ID!
   createdAt: DateTime!
-  quests(limit: Int! = 50, offset: Int! = 0): [QuestV2Type!]!
+  quests(limit: Int! = 50, offset: Int! = 0): [QuestType!]!
   questCount: Int!
 }
 
-type QuestDiscordDeliveryV2Type {
+type QuestDiscordDeliveryType {
   jobId: ID
   desiredRevision: Int!
   appliedRevision: Int!
@@ -1267,19 +1273,19 @@ type QuestDiscordDeliveryV2Type {
   errorMessage: String
 }
 
-type QuestDmV2Type {
+type QuestDmType {
   handle: String!
   displayName: String!
   avatarUrl: String
 }
 
-type QuestPointcrawlLinkV2Type {
+type QuestPointcrawlLinkType {
   questId: ID!
   pointcrawlNodeId: ID!
   role: String!
 }
 
-type QuestParticipantV2Type {
+type QuestParticipantType {
   questId: ID!
   memberId: ID!
   characterId: ID!
@@ -1293,12 +1299,12 @@ type QuestParticipantV2Type {
   memberAvatarUrl: String
 }
 
-type QuestStateCountV2Type {
+type QuestStateCountType {
   state: String!
   count: Int!
 }
 
-input QuestStateCountsFiltersV2Input {
+input QuestStateCountsFiltersInput {
   kind: String = null
   dmId: ID = null
   regionId: ID = null
@@ -1306,17 +1312,17 @@ input QuestStateCountsFiltersV2Input {
   tag: String = null
 }
 
-type QuestSummariesV2Result {
+type QuestSummariesResult {
   summaries: [DocumentType!]!
-  totals: QuestSummaryTotalsV2Type!
+  totals: QuestSummaryTotalsType!
 }
 
-type QuestSummaryTotalsV2Type {
+type QuestSummaryTotalsType {
   totalPcxpAwarded: Int
   coverage: RewardCoverage!
 }
 
-input QuestV2FiltersInput {
+input QuestFiltersInput {
   status: String = null
   kind: String = null
   dmId: ID = null
@@ -1331,12 +1337,12 @@ input QuestV2FiltersInput {
   scheduledTo: DateTime = null
 }
 
-type QuestV2ListResult {
-  items: [QuestV2Type!]!
+type QuestListResult {
+  items: [QuestType!]!
   total: Int!
 }
 
-type QuestV2Type {
+type QuestType {
   id: ID!
   shortCode: String!
   kinds: [String!]!
@@ -1360,25 +1366,25 @@ type QuestV2Type {
   createdAt: DateTime!
   updatedAt: DateTime!
   displayStatus: String
-  dm: QuestDmV2Type
+  dm: QuestDmType
   briefDocument: DocumentType
   participants(
     status: String = null
     limit: Int! = 100
     offset: Int! = 0
-  ): [QuestParticipantV2Type!]!
+  ): [QuestParticipantType!]!
   pointcrawlLinks(
     role: String = null
     limit: Int! = 100
     offset: Int! = 0
-  ): [QuestPointcrawlLinkV2Type!]!
-  arc: QuestArcV2Type
+  ): [QuestPointcrawlLinkType!]!
+  arc: QuestArcType
   dmTable: DocumentType
   regions: [ID!]!
-  discordDelivery: QuestDiscordDeliveryV2Type!
+  discordDelivery: QuestDiscordDeliveryType!
 }
 
-type RegionActivityQuestRefV2Type {
+type RegionActivityQuestRefType {
   id: ID!
   shortCode: String!
   scheduledAt: DateTime!
@@ -1410,15 +1416,15 @@ extend type Query {
     kinds: [String!] = null
     limit: Int! = 20
     offset: Int! = 0
-  ): SearchResultV2Type!
-  home: HomeV2Type!
+  ): SearchResultType!
+  home: HomeType!
   adminOperations(
     deliveryState: String = null
     limit: Int! = 25
     offset: Int! = 0
-  ): AdminOperationsV2Type!
+  ): AdminOperationsType!
   searchableKinds: [SearchKindType!]!
-  siteStats: SiteStatsV2Type!
+  siteStats: SiteStatsType!
   discordDeliveryMode: String!
   homeBanner: HomeBannerType!
   questAnnouncementRoleSetting: QuestAnnouncementRoleSettingType!
@@ -1437,7 +1443,7 @@ extend type Mutation {
 }
 
 # --- site/types.graphql ---
-type AdminDeliveryConfigV2Type {
+type AdminDeliveryConfigType {
   publicOrigin: String!
   publicOriginHealthy: Boolean
   deliveryMode: String!
@@ -1446,7 +1452,7 @@ type AdminDeliveryConfigV2Type {
   announcementRoleHealthy: Boolean
 }
 
-type AdminDeliveryJobV2Type {
+type AdminDeliveryJobType {
   id: ID!
   questId: ID
   questShortCode: String
@@ -1466,7 +1472,7 @@ type AdminDeliveryJobV2Type {
   updatedAt: DateTime!
 }
 
-type AdminHealthAlertV2Type {
+type AdminHealthAlertType {
   key: String!
   label: String!
   severity: String!
@@ -1475,15 +1481,15 @@ type AdminHealthAlertV2Type {
   lastSeenAt: DateTime
 }
 
-type AdminOperationsV2Type {
+type AdminOperationsType {
   scheduledWork: [ScheduledWorkStatusType!]!
-  config: AdminDeliveryConfigV2Type!
+  config: AdminDeliveryConfigType!
   activeAlertCount: Int!
   pendingDeliveryCount: Int!
   terminalDeliveryCount: Int!
   deliveryTotal: Int!
-  deliveries: [AdminDeliveryJobV2Type!]!
-  activeAlerts(limit: Int! = 50, offset: Int! = 0): [AdminHealthAlertV2Type!]!
+  deliveries: [AdminDeliveryJobType!]!
+  activeAlerts(limit: Int! = 50, offset: Int! = 0): [AdminHealthAlertType!]!
 }
 
 type CategoryCountType {
@@ -1501,22 +1507,22 @@ type CountByKeyType {
   count: Int!
 }
 
-type DmLastSessionV2Type {
-  quest: QuestV2Type!
+type DmLastSessionType {
+  quest: QuestType!
   recapDocument: DocumentType
 }
 
-type DmSessionHistoryV2Result {
-  items: [DmLastSessionV2Type!]!
+type DmSessionHistoryResult {
+  items: [DmLastSessionType!]!
   total: Int!
 }
 
-type DmStatsV2Type {
+type DmStatsType {
   sessionCount: Int!
-  lastSession: DmLastSessionV2Type
+  lastSession: DmLastSessionType
 }
 
-input DmSummaryFiltersV2Input {
+input DmSummaryFiltersInput {
   questId: ID = null
   search: String = null
 }
@@ -1542,9 +1548,9 @@ type HomeBucketType {
   documents: [DocumentType!]!
 }
 
-type HomeV2Type {
+type HomeType {
   recentByCategory: [HomeBucketType!]!
-  communityStats: SiteStatsV2Type!
+  communityStats: SiteStatsType!
 }
 
 type SearchKindType {
@@ -1554,7 +1560,7 @@ type SearchKindType {
   exclusionReason: String
 }
 
-type SearchResultV2Type {
+type SearchResultType {
   query: String!
   documents: [DocumentSearchHitType!]!
   documentTotal: Int!
@@ -1564,7 +1570,7 @@ type SearchResultV2Type {
   memberOrder: String!
 }
 
-type SiteStatsV2Type {
+type SiteStatsType {
   totalMembers: Int!
   membersByRole: [CountByKeyType!]!
   activeCharacters: Int!
@@ -1589,58 +1595,58 @@ type ScheduledWorkStatusType {
 
 # --- spatial/operations.graphql ---
 extend type Query {
-  map(atlasCode: String!): MapV2Type
+  map(atlasCode: String!): MapType
   maps(
     family: String = null
     mapKind: String = null
     limit: Int! = 50
     offset: Int! = 0
-  ): [MapV2Type!]!
-  regions(kind: String = null, limit: Int! = 50, offset: Int! = 0): [RegionV2Type!]!
+  ): [MapType!]!
+  regions(kind: String = null, limit: Int! = 50, offset: Int! = 0): [RegionType!]!
   archonAssignments(
     regionId: ID
     memberId: ID
     limit: Int! = 50
     offset: Int! = 0
   ): ArchonPage!
-  regionCounts(regionId: ID!): RegionCountsV2Type
-  regionActivity(atlasCode: String!): RegionActivityV2Type
-  gameDate(realDate: Date!): GameDateV2Type
+  regionCounts(regionId: ID!): RegionCountsType
+  regionActivity(atlasCode: String!): RegionActivityType
+  gameDate(realDate: Date!): GameDateType
   realDates(gameDay: Int!, limit: Int! = 50, offset: Int! = 0): RealDatePage!
   timeAnchors(limit: Int! = 50, offset: Int! = 0): TimeAnchorPage!
-  gameCalendar(realFrom: Date!, realTo: Date!): GameCalendarV2Type!
+  gameCalendar(realFrom: Date!, realTo: Date!): GameCalendarType!
 }
 extend type Mutation {
-  createMap(input: MapCreateInput!, meta: CommandMeta!): MapV2Type!
-  createRegion(input: RegionInput!, meta: CommandMeta!): RegionV2Type!
-  updateRegion(id: ID!, input: RegionInput!, meta: CommandMeta!): RegionV2Type!
+  createMap(input: MapCreateInput!, meta: CommandMeta!): MapType!
+  createRegion(input: RegionInput!, meta: CommandMeta!): RegionType!
+  updateRegion(id: ID!, input: RegionInput!, meta: CommandMeta!): RegionType!
   transitionRegion(
     id: ID!
     to: String!
     note: String!
     meta: CommandMeta!
-  ): RegionV2Type!
+  ): RegionType!
   assignArchon(memberId: ID!, regionId: ID!, meta: CommandMeta!): ArchonAssignmentType!
   revokeArchon(memberId: ID!, regionId: ID!, meta: CommandMeta!): CommandReceipt!
-  createTimeAnchor(input: TimeAnchorInput!, meta: CommandMeta!): TimeAnchorV2Type!
+  createTimeAnchor(input: TimeAnchorInput!, meta: CommandMeta!): TimeAnchorType!
   updateTimeAnchor(
     id: ID!
     input: TimeAnchorInput!
     meta: CommandMeta!
-  ): TimeAnchorV2Type!
-  updateGameCalendar(definition: JSON!, meta: CommandMeta!): GameCalendarV2Type!
+  ): TimeAnchorType!
+  updateGameCalendar(definition: JSON!, meta: CommandMeta!): GameCalendarType!
   deleteRegion(regionId: ID!, meta: CommandMeta!): CommandReceipt!
-  restoreRegion(regionId: ID!, meta: CommandMeta!): RegionV2Type!
+  restoreRegion(regionId: ID!, meta: CommandMeta!): RegionType!
   upsertPointcrawlNode(
     mapId: ID!
     input: PointcrawlNodeInput!
     meta: CommandMeta!
-  ): PointcrawlNodeV2Type!
+  ): PointcrawlNodeType!
   setPointcrawlEdge(
     mapId: ID!
     input: PointcrawlEdgeInput!
     meta: CommandMeta!
-  ): PointcrawlEdgeV2Type!
+  ): PointcrawlEdgeType!
   linkPointcrawlEntry(
     mapId: ID!
     nodeId: ID!
@@ -1682,14 +1688,14 @@ type ArchonAssignmentType {
   grantedBy: ID
 }
 
-type GameCalendarV2Type {
+type GameCalendarType {
   definition: JSON
   currentGameDay: Int
-  currentGameDate: GameDateV2Type
+  currentGameDate: GameDateType
   monthGrid: [GameDayCellType!]!
 }
 
-type GameDateV2Type {
+type GameDateType {
   eraAbbrev: String!
   year: Int!
   periodName: String!
@@ -1698,7 +1704,7 @@ type GameDateV2Type {
   day: Int!
 }
 
-type MapV2Type {
+type MapType {
   id: ID!
   name: String!
   atlasCode: String!
@@ -1708,11 +1714,11 @@ type MapV2Type {
   regionId: ID
   createdBy: ID
   createdAt: DateTime!
-  pointcrawlNodes(limit: Int! = 200, offset: Int! = 0): [PointcrawlNodeV2Type!]!
-  pointcrawlEdges(limit: Int! = 200, offset: Int! = 0): [PointcrawlEdgeV2Type!]!
+  pointcrawlNodes(limit: Int! = 200, offset: Int! = 0): [PointcrawlNodeType!]!
+  pointcrawlEdges(limit: Int! = 200, offset: Int! = 0): [PointcrawlEdgeType!]!
 }
 
-type PointcrawlEdgeV2Type {
+type PointcrawlEdgeType {
   id: ID!
   mapId: ID!
   nodeA: ID!
@@ -1723,7 +1729,7 @@ type PointcrawlEdgeV2Type {
   documentId: ID
 }
 
-type PointcrawlNodeV2Type {
+type PointcrawlNodeType {
   id: ID!
   mapId: ID!
   x: Float!
@@ -1734,24 +1740,24 @@ type PointcrawlNodeV2Type {
   createdAt: DateTime!
 }
 
-type RegionActivityV2Type {
+type RegionActivityType {
   regionId: ID!
   regionName: String!
   fillingCount: Int!
   scheduledCount: Int!
   liveCount: Int!
-  openQuests: [RegionActivityQuestRefV2Type!]!
-  liveQuests: [RegionActivityQuestRefV2Type!]!
+  openQuests: [RegionActivityQuestRefType!]!
+  liveQuests: [RegionActivityQuestRefType!]!
 }
 
-type RegionCountsV2Type {
+type RegionCountsType {
   regionId: ID!
   questCount: Int!
   pointcrawlNodeCount: Int!
   featureCount: Int!
 }
 
-type RegionV2Type {
+type RegionType {
   id: ID!
   name: String!
   kind: String!
@@ -1760,7 +1766,7 @@ type RegionV2Type {
   createdAt: DateTime!
 }
 
-type TimeAnchorV2Type {
+type TimeAnchorType {
   id: ID!
   realUtc: DateTime!
   epochDay: Int!

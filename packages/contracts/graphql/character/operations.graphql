@@ -1,20 +1,20 @@
 extend type Query {
   characters(
-    filters: CharacterV2FiltersInput = null
+    filters: CharacterFiltersInput = null
     limit: Int! = 50
     offset: Int! = 0
-  ): CharacterV2ListResult!
-  myCharacters(limit: Int! = 50, offset: Int! = 0): CharacterV2ListResult!
-  character(id: ID = null, shortCode: String = null): CharacterV2Type
+  ): CharacterListResult!
+  myCharacters(limit: Int! = 50, offset: Int! = 0): CharacterListResult!
+  character(id: ID = null, shortCode: String = null): CharacterType
   adminCharacterDirectory(
     filters: AdminCharacterDirectoryFiltersInput = null
     limit: Int! = 50
     offset: Int! = 0
-  ): AdminCharacterDirectoryV2Type!
+  ): AdminCharacterDirectoryType!
   pendingCharacterVerifications(
     limit: Int! = 50
     offset: Int! = 0
-  ): CharacterV2ListResult!
+  ): CharacterListResult!
   characterVerificationHistory(
     characterId: ID!
     limit: Int! = 50
@@ -58,7 +58,7 @@ extend type Query {
   ): ParticipationPage!
 }
 extend type Mutation {
-  createCharacter(input: CreateCharacterV2Input!, meta: CommandMeta!): CharacterV2Type!
+  createCharacter(input: CreateCharacterInput!, meta: CommandMeta!): CharacterType!
   adjustPcxp(
     characterId: ID!
     amount: Int!
@@ -69,12 +69,12 @@ extend type Mutation {
     characterId: ID!
     expectedUpdatedAt: DateTime!
     meta: CommandMeta!
-  ): CharacterV2Type!
+  ): CharacterType!
   retireCharacter(
     characterId: ID!
     expectedUpdatedAt: DateTime!
     meta: CommandMeta!
-  ): CharacterV2Type!
+  ): CharacterType!
   decideVerification(
     characterId: ID!
     expectedSubmittedAt: DateTime!
@@ -82,12 +82,12 @@ extend type Mutation {
     note: String
     meta: CommandMeta!
   ): VerificationType!
-  setCharacterGuild(characterId: ID!, guildId: ID, meta: CommandMeta!): CharacterV2Type!
+  setCharacterGuild(characterId: ID!, guildId: ID, meta: CommandMeta!): CharacterType!
   updateCharacterProfile(
     characterId: ID!
-    input: UpdateCharacterProfileV2Input!
+    input: UpdateCharacterProfileInput!
     meta: CommandMeta!
-  ): CharacterV2Type!
+  ): CharacterType!
   syncCharacterDdb(
     characterId: ID!
     ddbUrl: String!
@@ -112,5 +112,5 @@ extend type Mutation {
   updateBackstory(id: ID!, input: BackstoryInput!, meta: CommandMeta!): BackstoryType!
   deleteCharacterLog(characterId: ID!, logId: ID!, meta: CommandMeta!): CommandReceipt!
   deleteCharacter(characterId: ID!, meta: CommandMeta!): CommandReceipt!
-  restoreCharacter(characterId: ID!, meta: CommandMeta!): CharacterV2Type!
+  restoreCharacter(characterId: ID!, meta: CommandMeta!): CharacterType!
 }

@@ -23,7 +23,7 @@ type RealDatePage {
   total: Int!
 }
 type TimeAnchorPage {
-  items: [TimeAnchorV2Type!]!
+  items: [TimeAnchorType!]!
   total: Int!
 }
 type VerificationPage {
@@ -39,10 +39,10 @@ type CreationCatalogPage {
   total: Int!
 }
 type CoPlayerPage {
-  items: [CoPlayerV2Type!]!
+  items: [CoPlayerType!]!
   total: Int!
 }
 type ParticipationPage {
-  items: [QuestParticipantV2Type!]!
+  items: [QuestParticipantType!]!
   total: Int!
 }

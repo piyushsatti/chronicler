@@ -79,7 +79,7 @@ type DocumentType {
   effectiveBody: String
   author: DocumentAuthorType
   publishedAt: DateTime
-  summaryDerived: SummaryDerivedV2Type
+  summaryDerived: SummaryDerivedType
 }
 
 type LieutenantAssignmentType {
@@ -94,29 +94,29 @@ enum PreviewAudience {
   DM
 }
 
-type SummaryDerivedV2Type {
-  regions: [SummaryRegionV2Type!]!
-  pointcrawlNodes: [SummaryPointcrawlNodeV2Type!]!
-  dms: [SummaryDmV2Type!]!
-  players: [SummaryPlayerV2Type!]!
+type SummaryDerivedType {
+  regions: [SummaryRegionType!]!
+  pointcrawlNodes: [SummaryPointcrawlNodeType!]!
+  dms: [SummaryDmType!]!
+  players: [SummaryPlayerType!]!
   occurredAt: DateTime
   arc: String
   gameDay: Int
-  gameDate: GameDateV2Type
+  gameDate: GameDateType
 }
 
-type SummaryDmV2Type {
+type SummaryDmType {
   id: ID!
   displayName: String!
 }
 
-type SummaryPointcrawlNodeV2Type {
+type SummaryPointcrawlNodeType {
   id: ID!
   mapId: ID!
   name: String
 }
 
-type SummaryPlayerV2Type {
+type SummaryPlayerType {
   characterId: ID!
   characterShortCode: String!
   characterName: String!
@@ -124,7 +124,7 @@ type SummaryPlayerV2Type {
   manual: Boolean!
 }
 
-type SummaryRegionV2Type {
+type SummaryRegionType {
   id: ID!
   name: String!
 }

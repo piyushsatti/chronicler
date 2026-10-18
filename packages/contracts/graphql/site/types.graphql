@@ -1,4 +1,4 @@
-type AdminDeliveryConfigV2Type {
+type AdminDeliveryConfigType {
   publicOrigin: String!
   publicOriginHealthy: Boolean
   deliveryMode: String!
@@ -7,7 +7,7 @@ type AdminDeliveryConfigV2Type {
   announcementRoleHealthy: Boolean
 }
 
-type AdminDeliveryJobV2Type {
+type AdminDeliveryJobType {
   id: ID!
   questId: ID
   questShortCode: String
@@ -27,7 +27,7 @@ type AdminDeliveryJobV2Type {
   updatedAt: DateTime!
 }
 
-type AdminHealthAlertV2Type {
+type AdminHealthAlertType {
   key: String!
   label: String!
   severity: String!
@@ -36,15 +36,15 @@ type AdminHealthAlertV2Type {
   lastSeenAt: DateTime
 }
 
-type AdminOperationsV2Type {
+type AdminOperationsType {
   scheduledWork: [ScheduledWorkStatusType!]!
-  config: AdminDeliveryConfigV2Type!
+  config: AdminDeliveryConfigType!
   activeAlertCount: Int!
   pendingDeliveryCount: Int!
   terminalDeliveryCount: Int!
   deliveryTotal: Int!
-  deliveries: [AdminDeliveryJobV2Type!]!
-  activeAlerts(limit: Int! = 50, offset: Int! = 0): [AdminHealthAlertV2Type!]!
+  deliveries: [AdminDeliveryJobType!]!
+  activeAlerts(limit: Int! = 50, offset: Int! = 0): [AdminHealthAlertType!]!
 }
 
 type CategoryCountType {
@@ -62,22 +62,22 @@ type CountByKeyType {
   count: Int!
 }
 
-type DmLastSessionV2Type {
-  quest: QuestV2Type!
+type DmLastSessionType {
+  quest: QuestType!
   recapDocument: DocumentType
 }
 
-type DmSessionHistoryV2Result {
-  items: [DmLastSessionV2Type!]!
+type DmSessionHistoryResult {
+  items: [DmLastSessionType!]!
   total: Int!
 }
 
-type DmStatsV2Type {
+type DmStatsType {
   sessionCount: Int!
-  lastSession: DmLastSessionV2Type
+  lastSession: DmLastSessionType
 }
 
-input DmSummaryFiltersV2Input {
+input DmSummaryFiltersInput {
   questId: ID = null
   search: String = null
 }
@@ -103,9 +103,9 @@ type HomeBucketType {
   documents: [DocumentType!]!
 }
 
-type HomeV2Type {
+type HomeType {
   recentByCategory: [HomeBucketType!]!
-  communityStats: SiteStatsV2Type!
+  communityStats: SiteStatsType!
 }
 
 type SearchKindType {
@@ -115,7 +115,7 @@ type SearchKindType {
   exclusionReason: String
 }
 
-type SearchResultV2Type {
+type SearchResultType {
   query: String!
   documents: [DocumentSearchHitType!]!
   documentTotal: Int!
@@ -125,7 +125,7 @@ type SearchResultV2Type {
   memberOrder: String!
 }
 
-type SiteStatsV2Type {
+type SiteStatsType {
   totalMembers: Int!
   membersByRole: [CountByKeyType!]!
   activeCharacters: Int!
