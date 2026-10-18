@@ -21,57 +21,6 @@ type GameDateV2Type {
   day: Int!
 }
 
-type HexChangeV2Type {
-  id: ID!
-  hexId: ID!
-  occurredAt: DateTime!
-  kind: String!
-  oldValue: String
-  newValue: String
-  causedByQuest: ID
-  causedByMember: ID
-  note: String
-}
-
-type HexEdgeV2Type {
-  id: ID!
-  mapId: ID!
-  hexA: ID!
-  hexB: ID!
-  edgeType: String!
-  aSide: String
-  documentId: ID
-}
-
-type HexEntryLinkV2Type {
-  hexId: ID!
-  documentId: ID!
-  relation: String!
-}
-
-type HexV2Type {
-  id: ID!
-  mapId: ID!
-  col: Int!
-  row: Int!
-  hexcode: String
-  terrain: String
-  elevation: String
-  climate: String
-  submapId: ID
-  createdAt: DateTime
-  linkedEntries(limit: Int! = 50, offset: Int! = 0): [HexEntryLinkV2Type!]!
-}
-
-type MapPlaceV2Type {
-  hexId: ID!
-  hexcode: String!
-  documentId: ID!
-  slug: String!
-  title: String!
-  category: String!
-}
-
 type MapV2Type {
   id: ID!
   name: String!
@@ -79,34 +28,11 @@ type MapV2Type {
   family: String!
   mapKind: String!
   assetPath: String
-  cols: Int
-  rows: Int
   regionId: ID
   createdBy: ID
   createdAt: DateTime!
-  hexes(limit: Int! = 200, offset: Int! = 0): [HexV2Type!]!
-  edges(limit: Int! = 200, offset: Int! = 0): [HexEdgeV2Type!]!
   pointcrawlNodes(limit: Int! = 200, offset: Int! = 0): [PointcrawlNodeV2Type!]!
   pointcrawlEdges(limit: Int! = 200, offset: Int! = 0): [PointcrawlEdgeV2Type!]!
-}
-
-type MapViewV2Type {
-  mapId: ID!
-  name: String!
-  atlasCode: String!
-  cols: Int
-  rows: Int
-  places: [MapPlaceV2Type!]!
-  totalPlaces: Int!
-}
-
-type PoiV2Type {
-  id: ID!
-  hexId: ID!
-  poiType: String!
-  discoveryTier: String!
-  isCharterObjective: Boolean!
-  documentId: ID
 }
 
 type PointcrawlEdgeV2Type {
@@ -144,7 +70,7 @@ type RegionActivityV2Type {
 type RegionCountsV2Type {
   regionId: ID!
   questCount: Int!
-  hexCount: Int!
+  pointcrawlNodeCount: Int!
   featureCount: Int!
 }
 

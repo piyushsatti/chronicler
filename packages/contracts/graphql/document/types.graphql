@@ -96,7 +96,7 @@ enum PreviewAudience {
 
 type SummaryDerivedV2Type {
   regions: [SummaryRegionV2Type!]!
-  hexes: [SummaryHexV2Type!]!
+  pointcrawlNodes: [SummaryPointcrawlNodeV2Type!]!
   dms: [SummaryDmV2Type!]!
   players: [SummaryPlayerV2Type!]!
   occurredAt: DateTime
@@ -110,10 +110,10 @@ type SummaryDmV2Type {
   displayName: String!
 }
 
-type SummaryHexV2Type {
+type SummaryPointcrawlNodeV2Type {
   id: ID!
   mapId: ID!
-  hexcode: String
+  name: String
 }
 
 type SummaryPlayerV2Type {

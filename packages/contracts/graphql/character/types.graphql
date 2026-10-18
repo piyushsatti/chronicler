@@ -217,28 +217,3 @@ type DdbAttemptType {
   provenance: JSON!
 }
 
-enum RewardClaimStatus {
-  UNCLAIMED
-  CLAIMED
-}
-type QuestRewardEntitlementType {
-  id: ID!
-  questId: ID!
-  characterId: ID!
-  pcxp: Int!
-  note: String
-  awardedBy: ID!
-  awardedAt: DateTime!
-  claimedAt: DateTime
-  progressionEntryId: ID
-}
-type RewardEntitlementPage {
-  items: [QuestRewardEntitlementType!]!
-  total: Int!
-}
-type RewardClaimReceipt {
-  entitlementIds: [ID!]!
-  progressionEntries: [ProgressionEntryType!]!
-  replayed: Boolean!
-  alreadyClaimed: Boolean!
-}

@@ -132,7 +132,6 @@ type SiteStatsV2Type {
   publishedDocumentsByKind: [CountByKeyType!]!
   publishedDocumentsByCategory: [CountByKeyType!]!
   totalMaps: Int!
-  totalHexes: Int!
   totalRegions: Int!
   totalQuests: Int!
   totalDms: Int!

@@ -26,7 +26,6 @@ input MemberSettingsPatch {
   notifyDocumentActivity: Boolean
   notifyQuestScheduled: Boolean
   notifyDmMentioned: Boolean
-  notifyDmRequestDecided: Boolean
 }
 input DocumentDraftInput {
   kind: String!
@@ -56,29 +55,10 @@ input MapCreateInput {
   mapKind: String!
   regionId: ID
   assetPath: String
-  cols: Int
-  rows: Int
 }
-input HexEditInput {
-  terrain: String
-  elevation: String
-  climate: String
-  submapId: ID
-  note: String!
-}
-input PoiInput {
-  id: ID
-  poiType: String!
-  discoveryTier: String!
-  isCharterObjective: Boolean!
-  documentId: ID
-}
-input HexEdgeInput {
-  hexA: ID!
-  hexB: ID!
-  edgeType: String!
-  aSide: String
-  documentId: ID
+input QuestPointcrawlLinkInput {
+  pointcrawlNodeId: ID!
+  role: String!
 }
 input RegionInput {
   name: String!
@@ -133,10 +113,6 @@ input QuestSummaryInput {
   body: String!
   visibility: String!
   frontmatter: JSON!
-}
-input QuestHexInput {
-  hexId: ID!
-  role: String!
 }
 input ParticipationAttestationInput {
   characterId: ID!

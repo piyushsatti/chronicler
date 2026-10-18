@@ -70,9 +70,9 @@ type QuestDmV2Type {
   avatarUrl: String
 }
 
-type QuestHexV2Type {
+type QuestPointcrawlLinkV2Type {
   questId: ID!
-  hexId: ID!
+  pointcrawlNodeId: ID!
   role: String!
 }
 
@@ -134,7 +134,6 @@ type QuestV2ListResult {
 }
 
 type QuestV2Type {
-  rewardEntitlements(limit: Int! = 50, offset: Int! = 0): [QuestRewardEntitlementType!]!
   id: ID!
   shortCode: String!
   kinds: [String!]!
@@ -165,7 +164,11 @@ type QuestV2Type {
     limit: Int! = 100
     offset: Int! = 0
   ): [QuestParticipantV2Type!]!
-  hexes(role: String = null, limit: Int! = 100, offset: Int! = 0): [QuestHexV2Type!]!
+  pointcrawlLinks(
+    role: String = null
+    limit: Int! = 100
+    offset: Int! = 0
+  ): [QuestPointcrawlLinkV2Type!]!
   arc: QuestArcV2Type
   dmTable: DocumentType
   regions: [ID!]!
@@ -178,15 +181,6 @@ type RegionActivityQuestRefV2Type {
   scheduledAt: DateTime!
   slotsMax: Int!
   filledCount: Int!
-}
-
-type RequestV2Type {
-  id: ID!
-  requesterId: ID!
-  targetDmId: ID!
-  kind: String!
-  note: String
-  status: String!
 }
 
 enum RewardCoverage {

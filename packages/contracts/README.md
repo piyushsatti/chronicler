@@ -9,7 +9,7 @@ Design rationale and wire patterns: [`docs/`](docs/) — start at [`docs/README.
 | Path                | Purpose                                                     |
 | ------------------- | ----------------------------------------------------------- |
 | [`docs/`](docs/)    | Why / patterns (teachable notes)                            |
-| `graphql/*.graphql` | Source SDL, one file per slice plus scalars and roots       |
+| `graphql/`          | Source SDL: domain `types`/`operations`, `_roots.graphql`, shared scalars/commands |
 | `schema.graphql`    | Merged SDL (`scripts/merge-graphql-schema`) for web codegen |
 | `openapi.yaml`      | REST routes under `/v1` and auth/ingest                     |
 | `field-routing.md`  | Old field → GraphQL / REST / DROP map                       |

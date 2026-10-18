@@ -1,0 +1,11 @@
+# Authoritative Query/Mutation roots (M1). Domain */operations.graphql extends these types.
+
+type Query {
+  """Layout placeholder until deprecated; real fields live on extend type Query blocks."""
+  _contractLayoutStub: Boolean! @deprecated(reason: "M1 layout placeholder. Real Query fields extend this root.")
+}
+
+type Mutation {
+  """Layout placeholder until deprecated; real fields live on extend type Mutation blocks."""
+  _contractLayoutStub: Boolean! @deprecated(reason: "M1 layout placeholder. Real Mutation fields extend this root.")
+}

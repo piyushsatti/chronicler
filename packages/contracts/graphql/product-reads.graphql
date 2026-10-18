@@ -18,14 +18,6 @@ type ArchonPage {
   items: [ArchonAssignmentType!]!
   total: Int!
 }
-type HexChangePage {
-  items: [HexChangeV2Type!]!
-  total: Int!
-}
-type PoiPage {
-  items: [PoiV2Type!]!
-  total: Int!
-}
 type RealDatePage {
   items: [Date!]!
   total: Int!
@@ -52,9 +44,5 @@ type CoPlayerPage {
 }
 type ParticipationPage {
   items: [QuestParticipantV2Type!]!
-  total: Int!
-}
-type RequestPage {
-  items: [RequestV2Type!]!
   total: Int!
 }

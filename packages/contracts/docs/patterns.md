@@ -4,13 +4,15 @@ Locked conventions from [D40](../../../apps/api/docs/decisions/D40-GraphQL-Versu
 
 ## GraphQL vs REST vs DROP
 
-| Transport   | When                                                                                                                                                             | Where              |
-| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------ |
-| **GraphQL** | Screen selects a tree of related fields in one round trip (list or detail with nested children)                                                                  | `POST /v1/graphql` |
-| **REST**    | Command (old mutation); pure lookup with fixed response; static config / fixed aggregate; read-that-writes (become an explicit command, then optionally a query) | Path under `/v1`   |
-| **DROP**    | Alias, deprecated path, or placeholder that always returned empty                                                                                                | Not ported         |
+Locked by [D40](../../../apps/api/docs/decisions/D40-GraphQL-Versus-REST.md) (2026-10-14): **every product query and business command** uses `POST /v1/graphql`. HTTP under `/v1` (and a few machine routes) remains for **non-product** protocols only — authentication, health, Discord ingest/heartbeat, agent Q&A — not parallel product commands.
 
-Reads that write split into a command plus a follow-up read (e.g. acknowledge notifications, then `myNotifications`). Full map: [field-routing.md](../field-routing.md).
+| Transport   | When                                                                                                      | Where              |
+| ----------- | --------------------------------------------------------------------------------------------------------- | ------------------ |
+| **GraphQL** | Product reads (field trees) **and** product mutations (commands, mark-read, transitions, …)             | `POST /v1/graphql` |
+| **REST**    | Retained **protocol** endpoints (auth, ingest, agent); legacy OpenAPI product paths are cutover debt      | Path under `/v1` or machine routes |
+| **DROP**    | Alias, deprecated path, or placeholder that always returned empty; retired REST product command wrappers | Not ported         |
+
+Explicit commands that change state still use GraphQL mutations with [CommandMeta](design.md) + replay receipts (**I2**). Follow-up reads use GraphQL queries (e.g. mark-read mutation, then `myNotifications`). Full legacy map: [field-routing.md](../field-routing.md) (update rows toward **D40** as REST product paths are removed).
 
 ## Naming — no `V2` suffixes
 

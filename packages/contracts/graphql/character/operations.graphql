@@ -56,11 +56,6 @@ extend type Query {
     limit: Int! = 50
     offset: Int! = 0
   ): ParticipationPage!
-  myQuestRewards(
-    status: RewardClaimStatus
-    limit: Int! = 50
-    offset: Int! = 0
-  ): RewardEntitlementPage!
 }
 extend type Mutation {
   createCharacter(input: CreateCharacterV2Input!, meta: CommandMeta!): CharacterV2Type!
@@ -118,9 +113,4 @@ extend type Mutation {
   deleteCharacterLog(characterId: ID!, logId: ID!, meta: CommandMeta!): CommandReceipt!
   deleteCharacter(characterId: ID!, meta: CommandMeta!): CommandReceipt!
   restoreCharacter(characterId: ID!, meta: CommandMeta!): CharacterV2Type!
-  claimQuestRewards(
-    questId: ID!
-    characterId: ID!
-    meta: CommandMeta!
-  ): RewardClaimReceipt!
 }

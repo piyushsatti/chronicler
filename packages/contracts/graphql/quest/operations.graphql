@@ -75,11 +75,11 @@ extend type Mutation {
   syncQuestDiscord(questId: ID!, meta: CommandMeta!): DeliveryReceipt!
   deleteQuest(questId: ID!, meta: CommandMeta!): CommandReceipt!
   restoreQuest(questId: ID!, meta: CommandMeta!): QuestV2Type!
-  setQuestHexes(
+  setQuestPointcrawlLinks(
     questId: ID!
-    hexes: [QuestHexInput!]!
+    links: [QuestPointcrawlLinkInput!]!
     meta: CommandMeta!
-  ): [QuestHexV2Type!]!
+  ): [QuestPointcrawlLinkV2Type!]!
 }
 
 input CloseQuestInput {

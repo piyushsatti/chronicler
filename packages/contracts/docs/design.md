@@ -16,7 +16,7 @@ Interface rule: [graphql-schema](../../../docs/interfaces/graphql-schema.md).
 
 | Layer          | Location                                          | Role                                                                                                                                              |
 | -------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1. Split SDL   | `graphql/*.graphql`                               | Edit here. One file per slice + `scalars.graphql` + `roots.graphql`.                                                                              |
+| 1. Split SDL   | `graphql/*.graphql`                               | Edit here. Domain `types.graphql` / `operations.graphql`, plus `scalars.graphql`, `commands.graphql`, and **`_roots.graphql`** (sole `Query`/`Mutation` declarations — **M1**). |
 | 2. Merge       | `scripts/merge-graphql-schema` → `schema.graphql` | Committed artifact for codegen and `bun run check-schema`.                                                                                        |
 | 3. REST        | `openapi.yaml`                                    | Commands, fixed lookups, auth/ingest under `/v1` (and a few non-`/v1` machine routes).                                                            |
 | 4. Routing map | `field-routing.md`                                | Old GraphQL field → GQL / REST / DROP. Must stay in sync with SDL + OpenAPI ([D40](../../../apps/api/docs/decisions/D40-GraphQL-Versus-REST.md)). |
@@ -35,7 +35,7 @@ Local notes: `apps/web/README.md`, `apps/discord/docs/`, `apps/api/README.md`.
 
 ## How to evolve
 
-1. Decide transport with [D40](../../../apps/api/docs/decisions/D40-GraphQL-Versus-REST.md) (tree → GraphQL; command / fixed shape → REST; alias / empty → DROP).
+1. Decide transport with [D40](../../../apps/api/docs/decisions/D40-GraphQL-Versus-REST.md) (product read **and** command → GraphQL; protocol HTTP retained; alias / empty → DROP).
 2. Edit the matching `graphql/*.graphql` slice and/or `openapi.yaml`.
 3. Update `field-routing.md` in the same change.
 4. Run `scripts/merge-graphql-schema` (or `bun run export-schema`) and keep `schema.graphql` committed.

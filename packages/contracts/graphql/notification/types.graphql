@@ -1,0 +1,18 @@
+type NotificationConnection {
+  items: [NotificationType!]!
+  hasMore: Boolean!
+  nextBefore: String
+}
+
+type NotificationType {
+  id: ID!
+  kind: String!
+  subjectType: String!
+  subjectId: ID!
+  createdAt: DateTime!
+  readAt: DateTime
+  title: String
+  summary: String
+  label: String!
+  subjectCode: String
+}
