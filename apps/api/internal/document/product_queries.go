@@ -59,6 +59,14 @@ func (s ProductQueries) publicRead(ctx context.Context, actor auth.Authority, op
 	return s.authorizeRead(ctx, actor, request, subject)
 }
 
+func (s ProductQueries) audienceRead(ctx context.Context, actor auth.Authority, op auth.Operation, refs []auth.DocumentRef, subject string) (func(), error) {
+	request, err := auth.ForDocumentRead(op, refs)
+	if err != nil {
+		return nil, err
+	}
+	return s.authorizeRead(ctx, actor, request, subject)
+}
+
 func (s ProductQueries) documentPage(limit, offset int32) error {
 	if limit <= 0 || offset < 0 {
 		return apierr.New(apierr.Invalid, "invalid document page")
@@ -83,11 +91,14 @@ func (s ProductQueries) BatchDocumentSubjects(ctx context.Context, actor auth.Au
 }
 
 func (s ProductQueries) Document(ctx context.Context, actor auth.Authority, spec DocumentSpec) (*DocumentView, error) {
-	observe, err := s.publicRead(ctx, actor, "Query.document", spec.Slug)
+	value, err := s.Reads.Document.ReadDocument(ctx, actor, spec)
 	if err != nil {
 		return nil, err
 	}
-	value, err := s.Reads.Document.ReadDocument(ctx, actor, spec)
+	if value == nil {
+		return nil, nil
+	}
+	observe, err := s.audienceRead(ctx, actor, "Query.document", []auth.DocumentRef{{ID: value.Id}}, value.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -96,7 +107,7 @@ func (s ProductQueries) Document(ctx context.Context, actor auth.Authority, spec
 }
 
 func (s ProductQueries) DocumentById(ctx context.Context, actor auth.Authority, spec DocumentByIdSpec) (*DocumentView, error) {
-	observe, err := s.publicRead(ctx, actor, "Query.documentById", spec.Id)
+	observe, err := s.audienceRead(ctx, actor, "Query.documentById", []auth.DocumentRef{{ID: spec.Id}}, spec.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +123,7 @@ func (s ProductQueries) Documents(ctx context.Context, actor auth.Authority, spe
 	if err := s.documentPage(spec.Limit, spec.Offset); err != nil {
 		return DocumentListResult{}, err
 	}
-	observe, err := s.publicRead(ctx, actor, "Query.documents", "")
+	observe, err := s.audienceRead(ctx, actor, "Query.documents", nil, "")
 	if err != nil {
 		return DocumentListResult{}, err
 	}
@@ -128,7 +139,7 @@ func (s ProductQueries) DocumentBacklinks(ctx context.Context, actor auth.Author
 	if err := s.documentPage(spec.Limit, spec.Offset); err != nil {
 		return nil, err
 	}
-	observe, err := s.publicRead(ctx, actor, "Query.documentBacklinks", spec.Slug)
+	observe, err := s.audienceRead(ctx, actor, "Query.documentBacklinks", nil, spec.Slug)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +248,7 @@ func (s ProductQueries) LieutenantAssignments(ctx context.Context, actor auth.Au
 }
 
 func (s ProductQueries) CodexCategories(ctx context.Context, actor auth.Authority, spec CodexCategoriesSpec) ([]CategoryCountView, error) {
-	observe, err := s.publicRead(ctx, actor, "Query.codexCategories", "")
+	observe, err := s.audienceRead(ctx, actor, "Query.codexCategories", nil, "")
 	if err != nil {
 		return nil, err
 	}
@@ -253,7 +264,7 @@ func (s ProductQueries) CodexDirectory(ctx context.Context, actor auth.Authority
 	if err := s.documentPage(spec.Limit, spec.Offset); err != nil {
 		return CodexDirectoryResult{}, err
 	}
-	observe, err := s.publicRead(ctx, actor, "Query.codexDirectory", "")
+	observe, err := s.audienceRead(ctx, actor, "Query.codexDirectory", nil, "")
 	if err != nil {
 		return CodexDirectoryResult{}, err
 	}
@@ -266,11 +277,14 @@ func (s ProductQueries) CodexDirectory(ctx context.Context, actor auth.Authority
 }
 
 func (s ProductQueries) CodexEntry(ctx context.Context, actor auth.Authority, spec CodexEntrySpec) (*CodexEntryCardView, error) {
-	observe, err := s.publicRead(ctx, actor, "Query.codexEntry", spec.Slug)
+	value, err := s.Reads.Document.ReadCodexEntry(ctx, actor, spec)
 	if err != nil {
 		return nil, err
 	}
-	value, err := s.Reads.Document.ReadCodexEntry(ctx, actor, spec)
+	if value == nil {
+		return nil, nil
+	}
+	observe, err := s.audienceRead(ctx, actor, "Query.codexEntry", []auth.DocumentRef{{ID: value.Document.Id}}, value.Document.Id)
 	if err != nil {
 		return nil, err
 	}
