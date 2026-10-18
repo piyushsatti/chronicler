@@ -115,6 +115,9 @@ describe('AuthProvider session lifecycle', () => {
   });
 
   it('shows an anonymous public 401 once without repeatedly resetting its query', async () => {
+    // HomePage fans out HomeWarRoom + HomeBanner + SiteStats; each must fail once
+    // without React Query retry storms (retry: false in the test client).
+    const HOME_PUBLIC_OPS = 3;
     let requested = 0;
     server.use(
       http.post(GRAPHQL_PATH, () => {
@@ -126,11 +129,14 @@ describe('AuthProvider session lifecycle', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Your session ended. Sign in again.',
     );
-    expect(requested).toBe(1);
+    expect(requested).toBe(HOME_PUBLIC_OPS);
   });
 
   it('recovers an observed public query on logout without remounting an unrelated draft', async () => {
     localStorage.setItem(TOKEN_KEY, token());
+    // HomePage fans out three public GraphQL reads; logout clears cache and each
+    // observed query refetches once (no remount of unrelated draft state).
+    const HOME_PUBLIC_OPS = 3;
     let requested = 0;
     const record = ({ request }: { request: Request }) => {
       if (new URL(request.url).pathname === GRAPHQL_PATH) requested++;
@@ -161,12 +167,12 @@ describe('AuthProvider session lifecycle', () => {
         </>,
       );
       await screen.findByRole('heading', { name: 'Welcome to Chronicler.' });
-      expect(requested).toBe(1);
+      expect(requested).toBe(HOME_PUBLIC_OPS);
       fireEvent.change(screen.getByRole('textbox', { name: 'Unrelated draft' }), {
         target: { value: 'Keep this draft' },
       });
       fireEvent.click(screen.getByRole('button', { name: 'End session' }));
-      await waitFor(() => expect(requested).toBe(2));
+      await waitFor(() => expect(requested).toBe(HOME_PUBLIC_OPS * 2));
       expect(
         await screen.findByRole('heading', { name: 'Welcome to Chronicler.' }),
       ).toBeInTheDocument();

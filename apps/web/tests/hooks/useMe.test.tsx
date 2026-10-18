@@ -1,8 +1,9 @@
 import { QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
+import { GRAPHQL_PATH } from '../../src/api/endpoints.js';
 import { queryKeys } from '../../src/api/queryKeys.js';
 import { AuthProvider, useAuth } from '../../src/context/AuthContext.js';
 import { TOKEN_KEY } from '../../src/auth/storage.js';
@@ -11,6 +12,10 @@ import { useMe } from '../../src/hooks/useMe.js';
 import { server } from '../../src/mocks/server.js';
 import { createTestQueryClient } from '../../src/providers.js';
 import goodMe from '../fixtures/wire/me/good.json';
+import {
+  graphqlOperationName,
+  mockMemberMe,
+} from '../features/admin/authority-test-utils.js';
 
 function signIn() {
   localStorage.setItem(
@@ -38,24 +43,47 @@ function setup(seedMe = false) {
   };
 }
 
+function trackMemberMeRequests() {
+  let count = 0;
+  const record = async ({ request }: { request: Request }) => {
+    if (new URL(request.url).pathname !== GRAPHQL_PATH) return;
+    try {
+      const body = (await request.clone().json()) as { query?: string };
+      if (graphqlOperationName(body.query) === 'MemberMe') count++;
+    } catch {
+      // ignore unreadable bodies
+    }
+  };
+  server.events.on('request:start', record);
+  return {
+    get count() {
+      return count;
+    },
+    stop: () => server.events.removeListener('request:start', record),
+  };
+}
+
 describe('useMe validated authority lifecycle', () => {
   it('does not query or expose cached roles to an anonymous session', async () => {
-    let requested = 0;
-    server.use(
-      http.get('/v1/members/me', () => {
-        requested++;
-        return HttpResponse.json(goodMe);
-      }),
+    const me = { ...goodMe, roles: ['admin'] };
+    mockMemberMe(
+      () => HttpResponse.json(me),
+      () => me,
     );
-    const { result } = setup(true);
-    expect(result.current.me.data).toBeUndefined();
-    expect(result.current.me.isSuccess).toBe(false);
-    expect(result.current.authority.allowed).toBe(false);
-    await act(async () => {
-      await result.current.me.refetch();
-    });
-    expect(requested).toBe(0);
-    expect(result.current.authority.allowed).toBe(false);
+    const tracker = trackMemberMeRequests();
+    try {
+      const { result } = setup(true);
+      expect(result.current.me.data).toBeUndefined();
+      expect(result.current.me.isSuccess).toBe(false);
+      expect(result.current.authority.allowed).toBe(false);
+      await act(async () => {
+        await result.current.me.refetch();
+      });
+      expect(tracker.count).toBe(0);
+      expect(result.current.authority.allowed).toBe(false);
+    } finally {
+      tracker.stop();
+    }
   });
 
   it('does not approve stored cached admin roles before the current me request validates', async () => {
@@ -64,11 +92,16 @@ describe('useMe validated authority lifecycle', () => {
     const pending = new Promise<void>((resolve) => {
       release = resolve;
     });
-    server.use(
-      http.get('/v1/members/me', async () => {
+    const me = { ...goodMe, roles: ['verifier'] };
+    mockMemberMe(
+      async () => {
         await pending;
-        return HttpResponse.json({ ...goodMe, roles: ['verifier'] });
-      }),
+        return HttpResponse.json(me);
+      },
+      async () => {
+        await pending;
+        return me;
+      },
     );
     const { result } = setup(true);
     expect(result.current.authority.allowed).toBe(false);
@@ -83,10 +116,10 @@ describe('useMe validated authority lifecycle', () => {
 
   it('clears private caches on same-token role revocation and denies a retained callback', async () => {
     signIn();
-    server.use(
-      http.get('/v1/members/me', () =>
-        HttpResponse.json({ ...goodMe, roles: ['admin'] }),
-      ),
+    const admin = { ...goodMe, roles: ['admin'] };
+    mockMemberMe(
+      () => HttpResponse.json(admin),
+      () => admin,
     );
     const { result, queryClient } = setup();
     await waitFor(() => expect(result.current.authority.allowed).toBe(true));
@@ -97,10 +130,10 @@ describe('useMe validated authority lifecycle', () => {
     queryClient
       .getMutationCache()
       .build(queryClient, { mutationKey: ['private-write'] });
-    server.use(
-      http.get('/v1/members/me', () =>
-        HttpResponse.json({ ...goodMe, roles: ['verifier'] }),
-      ),
+    const verifier = { ...goodMe, roles: ['verifier'] };
+    mockMemberMe(
+      () => HttpResponse.json(verifier),
+      () => verifier,
     );
     await act(async () => {
       await result.current.me.refetch();
@@ -116,10 +149,10 @@ describe('useMe validated authority lifecycle', () => {
 
   it('cancels an in-flight private query so its late response cannot restore revoked data', async () => {
     signIn();
-    server.use(
-      http.get('/v1/members/me', () =>
-        HttpResponse.json({ ...goodMe, roles: ['admin'] }),
-      ),
+    const admin = { ...goodMe, roles: ['admin'] };
+    mockMemberMe(
+      () => HttpResponse.json(admin),
+      () => admin,
     );
     const { result, queryClient } = setup();
     await waitFor(() => expect(result.current.authority.allowed).toBe(true));
@@ -133,10 +166,10 @@ describe('useMe validated authority lifecycle', () => {
         queryFn: () => pending,
       })
       .catch((error: unknown) => error);
-    server.use(
-      http.get('/v1/members/me', () =>
-        HttpResponse.json({ ...goodMe, roles: ['verifier'] }),
-      ),
+    const verifier = { ...goodMe, roles: ['verifier'] };
+    mockMemberMe(
+      () => HttpResponse.json(verifier),
+      () => verifier,
     );
     await act(async () => {
       await result.current.me.refetch();
@@ -151,22 +184,22 @@ describe('useMe validated authority lifecycle', () => {
 
   it('clears private caches when the server changes member identity with unchanged roles', async () => {
     signIn();
-    server.use(
-      http.get('/v1/members/me', () =>
-        HttpResponse.json({ ...goodMe, roles: ['admin'] }),
-      ),
+    const admin = { ...goodMe, roles: ['admin'] };
+    mockMemberMe(
+      () => HttpResponse.json(admin),
+      () => admin,
     );
     const { result, queryClient } = setup();
     await waitFor(() => expect(result.current.me.isSuccess).toBe(true));
     queryClient.setQueryData(['private-directory'], 'old member data');
-    server.use(
-      http.get('/v1/members/me', () =>
-        HttpResponse.json({
-          ...goodMe,
-          id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
-          roles: ['admin'],
-        }),
-      ),
+    const swapped = {
+      ...goodMe,
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+      roles: ['admin'],
+    };
+    mockMemberMe(
+      () => HttpResponse.json(swapped),
+      () => swapped,
     );
     await act(async () => {
       await result.current.me.refetch();
@@ -179,18 +212,18 @@ describe('useMe validated authority lifecycle', () => {
 
   it('keeps caches for an unchanged authority even if role order changes', async () => {
     signIn();
-    server.use(
-      http.get('/v1/members/me', () =>
-        HttpResponse.json({ ...goodMe, roles: ['admin', 'dm'] }),
-      ),
+    const ordered = { ...goodMe, roles: ['admin', 'dm'] };
+    mockMemberMe(
+      () => HttpResponse.json(ordered),
+      () => ordered,
     );
     const { result, queryClient } = setup();
     await waitFor(() => expect(result.current.me.isSuccess).toBe(true));
     queryClient.setQueryData(['private-directory'], 'still permitted');
-    server.use(
-      http.get('/v1/members/me', () =>
-        HttpResponse.json({ ...goodMe, roles: ['dm', 'admin'] }),
-      ),
+    const reordered = { ...goodMe, roles: ['dm', 'admin'] };
+    mockMemberMe(
+      () => HttpResponse.json(reordered),
+      () => reordered,
     );
     await act(async () => {
       await result.current.me.refetch();
@@ -199,30 +232,37 @@ describe('useMe validated authority lifecycle', () => {
   });
 
   it.each([
-    ['invalid', () => HttpResponse.json({ ...goodMe, roles: [7] }), 'invalid'],
+    [
+      'invalid',
+      () => HttpResponse.json({ ...goodMe, roles: [7] }),
+      () => ({ ...goodMe, roles: [7] }),
+      'invalid',
+    ],
     [
       'upstream',
       () => HttpResponse.json({ title: 'private detail' }, { status: 500 }),
+      null,
       'upstream',
     ],
     [
       'forbidden',
       () => HttpResponse.json({ title: 'private detail' }, { status: 403 }),
+      null,
       'forbidden',
     ],
   ] as const)(
     'masks prior authority and private caches after a %s me response',
-    async (_label, response, kind) => {
+    async (_label, restResponse, graphqlData, kind) => {
       signIn();
-      server.use(
-        http.get('/v1/members/me', () =>
-          HttpResponse.json({ ...goodMe, roles: ['admin'] }),
-        ),
+      const admin = { ...goodMe, roles: ['admin'] };
+      mockMemberMe(
+        () => HttpResponse.json(admin),
+        () => admin,
       );
       const { result, queryClient } = setup();
       await waitFor(() => expect(result.current.authority.allowed).toBe(true));
       queryClient.setQueryData(['private-directory'], 'secret');
-      server.use(http.get('/v1/members/me', response));
+      mockMemberMe(restResponse, graphqlData ?? undefined);
       await act(async () => {
         await result.current.me.refetch();
       });
@@ -237,49 +277,58 @@ describe('useMe validated authority lifecycle', () => {
 
   it('ends a 401 me session without retrying or exposing private data', async () => {
     signIn();
-    let requested = 0;
-    server.use(
-      http.get('/v1/members/me', () => {
-        requested++;
-        return HttpResponse.json({ code: 'UNAUTHORIZED' }, { status: 401 });
-      }),
-    );
-    const { result, queryClient } = setup();
-    queryClient.setQueryData(['private-directory'], 'secret');
-    await waitFor(() => expect(result.current.auth.isAuthenticated).toBe(false));
-    expect(result.current.me.data).toBeUndefined();
-    expect(result.current.authority.allowed).toBe(false);
-    expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
-    expect(queryClient.getQueryData(['private-directory'])).toBeUndefined();
-    expect(requested).toBe(1);
+    const tracker = trackMemberMeRequests();
+    try {
+      mockMemberMe(() =>
+        HttpResponse.json({ code: 'UNAUTHORIZED' }, { status: 401 }),
+      );
+      const { result, queryClient } = setup();
+      queryClient.setQueryData(['private-directory'], 'secret');
+      await waitFor(() => expect(result.current.auth.isAuthenticated).toBe(false));
+      expect(result.current.me.data).toBeUndefined();
+      expect(result.current.authority.allowed).toBe(false);
+      expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
+      expect(queryClient.getQueryData(['private-directory'])).toBeUndefined();
+      expect(tracker.count).toBe(1);
+    } finally {
+      tracker.stop();
+    }
   });
 
   it('does not accept a late old-session me response after logout', async () => {
     signIn();
-    let requested = 0;
+    const tracker = trackMemberMeRequests();
     let release!: () => void;
     const pending = new Promise<void>((resolve) => {
       release = resolve;
     });
-    server.use(
-      http.get('/v1/members/me', async () => {
-        requested++;
-        await pending;
-        return HttpResponse.json({ ...goodMe, roles: ['admin'] });
-      }),
-    );
-    const { result, queryClient } = setup();
-    await waitFor(() => expect(requested).toBe(1));
-    const retainedRefetch = result.current.me.refetch;
-    act(() => result.current.auth.logout());
-    await act(async () => {
-      release();
-      await retainedRefetch();
-    });
-    expect(result.current.auth.isAuthenticated).toBe(false);
-    expect(result.current.me.data).toBeUndefined();
-    expect(result.current.authority.allowed).toBe(false);
-    expect(queryClient.getQueryData(queryKeys.me)).toBeUndefined();
-    expect(requested).toBe(1);
+    const admin = { ...goodMe, roles: ['admin'] };
+    try {
+      mockMemberMe(
+        async () => {
+          await pending;
+          return HttpResponse.json(admin);
+        },
+        async () => {
+          await pending;
+          return admin;
+        },
+      );
+      const { result, queryClient } = setup();
+      await waitFor(() => expect(tracker.count).toBe(1));
+      const retainedRefetch = result.current.me.refetch;
+      act(() => result.current.auth.logout());
+      await act(async () => {
+        release();
+        await retainedRefetch();
+      });
+      expect(result.current.auth.isAuthenticated).toBe(false);
+      expect(result.current.me.data).toBeUndefined();
+      expect(result.current.authority.allowed).toBe(false);
+      expect(queryClient.getQueryData(queryKeys.me)).toBeUndefined();
+      expect(tracker.count).toBe(1);
+    } finally {
+      tracker.stop();
+    }
   });
 });

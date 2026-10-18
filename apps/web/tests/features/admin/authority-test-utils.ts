@@ -41,18 +41,24 @@ export function mockMemberMe(
         }
         const restResponse = await respond();
         if (!restResponse.ok) {
+          const code =
+            restResponse.status === 401
+              ? 'UNAUTHORIZED'
+              : restResponse.status === 403
+                ? 'FORBIDDEN'
+                : 'INTERNAL';
           return HttpResponse.json(
             {
               errors: [
                 {
                   message: 'account failure',
-                  extensions: {
-                    code: restResponse.status === 403 ? 'FORBIDDEN' : 'INTERNAL',
-                  },
+                  extensions: { code },
                 },
               ],
             },
-            { status: 200 },
+            // Preserve HTTP 401 so graphqlRequest ends the session the same way a
+            // gateway challenge would (status checked after errors[]).
+            { status: restResponse.status === 401 ? 401 : 200 },
           );
         }
         const payload = await restResponse.json();
