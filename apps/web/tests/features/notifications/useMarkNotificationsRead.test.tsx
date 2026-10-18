@@ -1,12 +1,13 @@
 import { onlineManager, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
-import { http, HttpResponse, passthrough } from 'msw';
+import { http, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { GRAPHQL_PATH, rest } from '../../../src/api/endpoints.js';
+import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
 import { queryKeys } from '../../../src/api/queryKeys.js';
 import { AuthProvider, useAuth } from '../../../src/auth/AuthContext.js';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
+import type { GraphqlRequestBody } from '../../../src/chrome/featureModule.js';
 import { useMe } from '../../../src/hooks/useMe.js';
 import { useMarkNotificationsRead } from '../../../src/features/notifications/hooks/useMarkNotificationsRead.js';
 import { useNotificationsPage } from '../../../src/features/notifications/hooks/useNotificationsPage.js';
@@ -14,6 +15,10 @@ import { useUnreadCount } from '../../../src/features/notifications/hooks/useUnr
 import { server } from '../../../src/mocks/server.js';
 import { createTestQueryClient } from '../../../src/providers.js';
 import goodMe from '../../fixtures/wire/me/good.json';
+import {
+  dispatchFeatureGraphql,
+  graphqlOperationName,
+} from './graphql-test-utils.js';
 
 const READ_AT = '2026-10-11T12:00:00Z';
 function ids(count: number, start = 1): string[] {
@@ -70,14 +75,14 @@ function recordReads(
   const requests: ReadRequest[] = [];
   server.use(
     http.post(GRAPHQL_PATH, async ({ request }) => {
-      const raw = await request.text();
-      const body = JSON.parse(raw) as {
-        query?: string;
+      const body = (await request.json()) as GraphqlRequestBody & {
         variables?: { ids?: string[] };
       };
-      const name = body.query?.match(/\b(query|mutation)\s+(\w+)/)?.[2];
+      const name = graphqlOperationName(body.query);
       if (name !== 'MarkNotificationsRead') {
-        return passthrough();
+        // Do not passthrough after reading the body — MSW cannot re-read it for
+        // MemberMe / other feature handlers (Wave A memberMe cutover join).
+        return dispatchFeatureGraphql(body);
       }
       const idsPayload = JSON.stringify({ ids: body.variables?.ids ?? [] });
       const row = {
@@ -225,19 +230,39 @@ describe('mark-read viewer ownership', () => {
       let switched = false;
       const switchedMemberId = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc';
       expect(switchedMemberId).not.toBe(goodMe.id);
+      const requests: ReadRequest[] = [];
       server.use(
-        http.get(rest.membersMe, () =>
-          HttpResponse.json({
-            ...goodMe,
-            id: switched ? switchedMemberId : goodMe.id,
-          }),
-        ),
+        http.post(GRAPHQL_PATH, async ({ request }) => {
+          const body = (await request.json()) as GraphqlRequestBody & {
+            variables?: { ids?: string[] };
+          };
+          const name = graphqlOperationName(body.query);
+          if (name === 'MemberMe') {
+            return HttpResponse.json({
+              data: {
+                memberMe: {
+                  ...goodMe,
+                  id: switched ? switchedMemberId : goodMe.id,
+                },
+              },
+            });
+          }
+          if (name !== 'MarkNotificationsRead') {
+            return dispatchFeatureGraphql(body);
+          }
+          const idsPayload = JSON.stringify({ ids: body.variables?.ids ?? [] });
+          const row = {
+            ids: body.variables?.ids ?? [],
+            bytes: new TextEncoder().encode(idsPayload).length,
+            authorization: request.headers.get('authorization'),
+          };
+          const index = requests.length;
+          requests.push(row);
+          if (index === 0) return failure();
+          if (index === 1) await gate.promise;
+          return success();
+        }),
       );
-      const requests = recordReads(async (_row, index) => {
-        if (index === 0) return failure();
-        if (index === 1) await gate.promise;
-        return success();
-      });
       const h = queueHarness();
       try {
         await waitFor(() => expect(h.result.current.me.isSuccess).toBe(true));
@@ -314,15 +339,14 @@ describe('mark-read accumulated inbox pages', () => {
     );
     server.use(
       http.post(GRAPHQL_PATH, async ({ request }) => {
-        const body = (await request.json()) as {
-          query?: string;
+        const body = (await request.json()) as GraphqlRequestBody & {
           variables?: {
             before?: string | null;
             limit?: number;
             ids?: string[];
           };
         };
-        const name = body.query?.match(/\b(query|mutation)\s+(\w+)/)?.[2];
+        const name = graphqlOperationName(body.query);
         if (name === 'MyUnreadNotificationCount') {
           return HttpResponse.json({
             data: { myUnreadNotificationCount: all.length - read.size },
@@ -340,23 +364,26 @@ describe('mark-read accumulated inbox pages', () => {
           row.ids.forEach((id) => read.add(id));
           return success();
         }
-        const page = body.variables?.before
-          ? cursors.indexOf(body.variables.before) + 1
-          : 0;
-        return HttpResponse.json({
-          data: {
-            myNotifications: {
-              items: all.slice(page * 20, (page + 1) * 20).map((id) => ({
-                id,
-                kind: 'quest_signup',
-                label: `Notice ${id}`,
-                readAt: read.has(id) ? READ_AT : null,
-              })),
-              hasMore: page < 5,
-              nextBefore: cursors[page] ?? null,
+        if (name === 'MyNotifications') {
+          const page = body.variables?.before
+            ? cursors.indexOf(body.variables.before) + 1
+            : 0;
+          return HttpResponse.json({
+            data: {
+              myNotifications: {
+                items: all.slice(page * 20, (page + 1) * 20).map((id) => ({
+                  id,
+                  kind: 'quest_signup',
+                  label: `Notice ${id}`,
+                  readAt: read.has(id) ? READ_AT : null,
+                })),
+                hasMore: page < 5,
+                nextBefore: cursors[page] ?? null,
+              },
             },
-          },
-        });
+          });
+        }
+        return dispatchFeatureGraphql(body);
       }),
     );
     const h = harness(() => ({

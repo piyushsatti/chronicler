@@ -8,10 +8,15 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
 import { queryKeys } from '../../../src/api/queryKeys.js';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
+import type { GraphqlRequestBody } from '../../../src/chrome/featureModule.js';
 import { LoginRoute } from '../../../src/chrome/LoginRoute.js';
 import { NotificationsPage } from '../../../src/features/notifications/pages/NotificationsPage.js';
 import { server } from '../../../src/mocks/server.js';
 import { renderWithProviders } from '../../test-utils.js';
+import {
+  dispatchFeatureGraphql,
+  graphqlOperationName,
+} from './graphql-test-utils.js';
 
 const FIRST_CURSOR = '2026-10-01T12:00:00Z';
 const READ_AT = '2026-10-02T12:00:00Z';
@@ -52,11 +57,10 @@ function notificationsWire() {
   let acknowledgements = 0;
   server.use(
     http.post(GRAPHQL_PATH, async ({ request }) => {
-      const body = (await request.json()) as {
-        query?: string;
+      const body = (await request.json()) as GraphqlRequestBody & {
         variables?: { limit?: number; before?: string | null };
       };
-      const name = body.query?.match(/\b(query|mutation)\s+(\w+)/)?.[2];
+      const name = graphqlOperationName(body.query);
       if (name === 'MyUnreadNotificationCount') {
         return HttpResponse.json({ data: { myUnreadNotificationCount: 0 } });
       }
@@ -77,6 +81,10 @@ function notificationsWire() {
             markNotificationsRead: { replayed: false, affectedCount: 1 },
           },
         });
+      }
+      if (name !== 'MyNotifications') {
+        // Wave A memberMe cutover: do not count MemberMe as an inbox fetch.
+        return dispatchFeatureGraphql(body);
       }
       const variables = {
         limit: body.variables?.limit ?? 20,

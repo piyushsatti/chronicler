@@ -8,11 +8,16 @@ import { MemoryRouter } from 'react-router-dom';
 import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
 import { AuthProvider } from '../../../src/auth/AuthContext.js';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
+import type { GraphqlRequestBody } from '../../../src/chrome/featureModule.js';
 import { useNotificationsPage } from '../../../src/features/notifications/hooks/useNotificationsPage.js';
 import { createTestQueryClient } from '../../../src/providers.js';
 import { createAppStore } from '../../../src/store/store.js';
 import { server } from '../../../src/mocks/server.js';
 import goodNotifications from '../../fixtures/wire/notifications/list-good.json';
+import {
+  dispatchFeatureGraphql,
+  graphqlOperationName,
+} from './graphql-test-utils.js';
 
 function seedToken(): void {
   const header = btoa(JSON.stringify({ alg: 'none', typ: 'JWT' }));
@@ -78,11 +83,10 @@ describe('useNotificationsPage', () => {
     const readRequests: unknown[] = [];
     server.use(
       http.post(GRAPHQL_PATH, async ({ request }) => {
-        const body = (await request.json()) as {
-          query?: string;
+        const body = (await request.json()) as GraphqlRequestBody & {
           variables?: { ids?: string[] };
         };
-        const name = body.query?.match(/\b(query|mutation)\s+(\w+)/)?.[2];
+        const name = graphqlOperationName(body.query);
         if (name === 'MarkNotificationsRead') {
           readRequests.push({ ids: body.variables?.ids ?? [] });
           return HttpResponse.json({
@@ -96,9 +100,7 @@ describe('useNotificationsPage', () => {
             data: { myNotifications: goodNotifications },
           });
         }
-        return HttpResponse.json({
-          errors: [{ message: 'Unhandled', extensions: { code: 'UNHANDLED' } }],
-        });
+        return dispatchFeatureGraphql(body);
       }),
     );
     const { result } = renderHook(() => useNotificationsPage(), { wrapper });
