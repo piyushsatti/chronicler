@@ -8,6 +8,7 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/member"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
+	"github.com/piyushsatti/chronicler/apps/api/internal/quest"
 )
 
 func TestRequestLoadersClearEveryRegisteredCache(t *testing.T) {
@@ -27,6 +28,44 @@ func TestRequestLoadersClearEveryRegisteredCache(t *testing.T) {
 	}
 	(&RequestLoaders{}).clear()
 	(*RequestLoaders)(nil).clear()
+}
+
+func TestArcBatchLoaderPreservesInputOrder(t *testing.T) {
+	admin, err := auth.NewAuthority("ada", []auth.Role{auth.Admin}, "active", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	state, err := NewRequestState(auth.Claims{MemberID: "ada"}, func(context.Context, string) (auth.Authority, error) {
+		return admin, nil
+	}, &admin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	loader := newKeyedLoader(state, func(ctx context.Context, actor auth.Authority, keys []quest.IDKey) ([]product.BatchResult[quest.QuestArcView], error) {
+		out := make([]product.BatchResult[quest.QuestArcView], len(keys))
+		for i, key := range keys {
+			out[i] = product.BatchResult[quest.QuestArcView]{Value: &quest.QuestArcView{Id: key.ID, Name: "arc-" + key.ID}}
+		}
+		return out, nil
+	})
+	keys := []quest.IDKey{
+		{ID: "10000000-0000-4000-8000-00000000000a"},
+		{ID: "10000000-0000-4000-8000-00000000000b"},
+		{ID: "10000000-0000-4000-8000-00000000000a"},
+		{ID: "10000000-0000-4000-8000-00000000000c"},
+	}
+	results, err := loader.LoadMany(context.Background(), keys)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(results) != len(keys) {
+		t.Fatalf("len=%d", len(results))
+	}
+	for i, key := range keys {
+		if results[i].Value == nil || results[i].Value.Id != key.ID {
+			t.Fatalf("slot %d = %+v, want %s", i, results[i], key.ID)
+		}
+	}
 }
 
 func TestNewLoaderRegistryChunksAndCaches(t *testing.T) {

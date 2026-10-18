@@ -245,12 +245,15 @@ func (p *ProductPostgres) ReadBatchParticipants(ctx context.Context, _ auth.Auth
 			UpdatedAt:         row.UpdatedAt.Time,
 		})
 	}
-	for _, slot := range positions {
-		items := grouped[slot]
+	for i, key := range keys {
+		if out[i].Err != nil {
+			continue
+		}
+		items := grouped[i]
 		if items == nil {
 			items = []QuestParticipantView{}
 		}
-		out[slot] = product.BatchResult[ParticipantList]{Value: &ParticipantList{Items: items}}
+		out[i] = product.BatchResult[ParticipantList]{Value: &ParticipantList{Items: pageItems(items, key.Limit, key.Offset)}}
 	}
 	return out, nil
 }

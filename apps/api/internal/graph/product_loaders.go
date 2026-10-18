@@ -36,16 +36,11 @@ type RequestLoaders struct {
 	Arcs                 *Loader[quest.IDKey, quest.QuestArcView]
 	ArcQuests            *Loader[quest.ArcQuestsKey, quest.QuestList]
 	Delivery             *Loader[quest.IDKey, quest.QuestDiscordDeliveryView]
-	MapHexes             *Loader[spatial.MapHexesKey, spatial.HexList]
-	MapEdges             *Loader[spatial.MapEdgesKey, spatial.EdgeList]
 	MapNodes             *Loader[spatial.MapNodesKey, spatial.NodeList]
 	MapNodeEdges         *Loader[spatial.MapNodeEdgesKey, spatial.NodeEdgeList]
-	HexLinks             *Loader[spatial.HexLinksKey, spatial.HexLinkList]
 	NodeLinks            *Loader[spatial.NodeLinksKey, spatial.NodeLinkList]
-	POIs                 *Loader[spatial.POIsKey, spatial.PoiList]
 	SummaryDerived       *Loader[document.IDKey, document.SummaryDerivedView]
 	NotificationSubjects *Loader[notification.SubjectKey, notification.SubjectProjection]
-	RewardEntitlements   *Loader[quest.RewardEntitlementsKey, quest.RewardList]
 	MemberVoiceChannels  *Loader[member.MemberVoiceChannelsKey, member.VoiceChannelList]
 	MemberRecentSessions *Loader[member.MemberRecentSessionsKey, member.ActivityEventList]
 	MemberRecentWeeks    *Loader[member.MemberRecentWeeksKey, member.WeekActivityList]
@@ -57,95 +52,85 @@ func (l *RequestLoaders) clear() {
 	if l == nil {
 		return
 	}
-	if l.Members != nil && l.Members.Clear != nil {
-		l.Members.Clear()
+	clearOne := func(c func()) {
+		if c != nil {
+			c()
+		}
 	}
-	if l.Documents != nil && l.Documents.Clear != nil {
-		l.Documents.Clear()
+	if l.Members != nil {
+		clearOne(l.Members.Clear)
 	}
-	if l.DmTables != nil && l.DmTables.Clear != nil {
-		l.DmTables.Clear()
+	if l.Documents != nil {
+		clearOne(l.Documents.Clear)
 	}
-	if l.Characters != nil && l.Characters.Clear != nil {
-		l.Characters.Clear()
+	if l.DmTables != nil {
+		clearOne(l.DmTables.Clear)
 	}
-	if l.Quests != nil && l.Quests.Clear != nil {
-		l.Quests.Clear()
+	if l.Characters != nil {
+		clearOne(l.Characters.Clear)
 	}
-	if l.Participants != nil && l.Participants.Clear != nil {
-		l.Participants.Clear()
+	if l.Quests != nil {
+		clearOne(l.Quests.Clear)
 	}
-	if l.QuestPointcrawlLinks != nil && l.QuestPointcrawlLinks.Clear != nil {
-		l.QuestPointcrawlLinks.Clear()
+	if l.Participants != nil {
+		clearOne(l.Participants.Clear)
 	}
-	if l.QuestRegions != nil && l.QuestRegions.Clear != nil {
-		l.QuestRegions.Clear()
+	if l.QuestPointcrawlLinks != nil {
+		clearOne(l.QuestPointcrawlLinks.Clear)
 	}
-	if l.Arcs != nil && l.Arcs.Clear != nil {
-		l.Arcs.Clear()
+	if l.QuestRegions != nil {
+		clearOne(l.QuestRegions.Clear)
 	}
-	if l.ArcQuests != nil && l.ArcQuests.Clear != nil {
-		l.ArcQuests.Clear()
+	if l.Arcs != nil {
+		clearOne(l.Arcs.Clear)
 	}
-	if l.Delivery != nil && l.Delivery.Clear != nil {
-		l.Delivery.Clear()
+	if l.ArcQuests != nil {
+		clearOne(l.ArcQuests.Clear)
 	}
-	if l.MapHexes != nil && l.MapHexes.Clear != nil {
-		l.MapHexes.Clear()
+	if l.Delivery != nil {
+		clearOne(l.Delivery.Clear)
 	}
-	if l.MapEdges != nil && l.MapEdges.Clear != nil {
-		l.MapEdges.Clear()
+	if l.MapNodes != nil {
+		clearOne(l.MapNodes.Clear)
 	}
-	if l.MapNodes != nil && l.MapNodes.Clear != nil {
-		l.MapNodes.Clear()
+	if l.MapNodeEdges != nil {
+		clearOne(l.MapNodeEdges.Clear)
 	}
-	if l.MapNodeEdges != nil && l.MapNodeEdges.Clear != nil {
-		l.MapNodeEdges.Clear()
+	if l.NodeLinks != nil {
+		clearOne(l.NodeLinks.Clear)
 	}
-	if l.HexLinks != nil && l.HexLinks.Clear != nil {
-		l.HexLinks.Clear()
+	if l.SummaryDerived != nil {
+		clearOne(l.SummaryDerived.Clear)
 	}
-	if l.NodeLinks != nil && l.NodeLinks.Clear != nil {
-		l.NodeLinks.Clear()
+	if l.NotificationSubjects != nil {
+		clearOne(l.NotificationSubjects.Clear)
 	}
-	if l.POIs != nil && l.POIs.Clear != nil {
-		l.POIs.Clear()
+	if l.MemberVoiceChannels != nil {
+		clearOne(l.MemberVoiceChannels.Clear)
 	}
-	if l.SummaryDerived != nil && l.SummaryDerived.Clear != nil {
-		l.SummaryDerived.Clear()
+	if l.MemberRecentSessions != nil {
+		clearOne(l.MemberRecentSessions.Clear)
 	}
-	if l.NotificationSubjects != nil && l.NotificationSubjects.Clear != nil {
-		l.NotificationSubjects.Clear()
+	if l.MemberRecentWeeks != nil {
+		clearOne(l.MemberRecentWeeks.Clear)
 	}
-	if l.RewardEntitlements != nil && l.RewardEntitlements.Clear != nil {
-		l.RewardEntitlements.Clear()
+	if l.DocumentSubjects != nil {
+		clearOne(l.DocumentSubjects.Clear)
 	}
-	if l.MemberVoiceChannels != nil && l.MemberVoiceChannels.Clear != nil {
-		l.MemberVoiceChannels.Clear()
-	}
-	if l.MemberRecentSessions != nil && l.MemberRecentSessions.Clear != nil {
-		l.MemberRecentSessions.Clear()
-	}
-	if l.MemberRecentWeeks != nil && l.MemberRecentWeeks.Clear != nil {
-		l.MemberRecentWeeks.Clear()
-	}
-	if l.DocumentSubjects != nil && l.DocumentSubjects.Clear != nil {
-		l.DocumentSubjects.Clear()
-	}
-	if l.ActiveAlerts != nil && l.ActiveAlerts.Clear != nil {
-		l.ActiveAlerts.Clear()
+	if l.ActiveAlerts != nil {
+		clearOne(l.ActiveAlerts.Clear)
 	}
 }
 
 // BatchProviders exposes domain batch read entry points for request-scoped loaders (K1).
 type BatchProviders struct {
-	Member         *member.ProductQueries
-	Document       *document.ProductQueries
-	Character      *character.ProductQueries
-	Quest          *quest.ProductQueries
-	Notification   *notification.ProductQueries
-	Site           *site.ProductQueries
-	Spatial        *spatial.ProductQueries
+	Member       *member.ProductQueries
+	Document     *document.ProductQueries
+	Character    *character.ProductQueries
+	Quest        *quest.ProductQueries
+	Notification *notification.ProductQueries
+	Site         *site.ProductQueries
+	Spatial      *spatial.ProductQueries
 }
 
 // LoaderRegistry is the request-scoped loader bundle installed before GraphQL execution.
@@ -193,16 +178,11 @@ func NewRequestLoaders(providers BatchProviders, state *RequestState) (*RequestL
 		reg.Arcs = newKeyedLoader(state, providers.Quest.BatchArcs)
 		reg.ArcQuests = newKeyedLoader(state, providers.Quest.BatchArcQuests)
 		reg.Delivery = newKeyedLoader(state, providers.Quest.BatchDelivery)
-		reg.RewardEntitlements = newKeyedLoader(state, providers.Quest.BatchRewardEntitlements)
 	}
 	if providers.Spatial != nil {
-		reg.MapHexes = newKeyedLoader(state, providers.Spatial.BatchMapHexes)
-		reg.MapEdges = newKeyedLoader(state, providers.Spatial.BatchMapEdges)
 		reg.MapNodes = newKeyedLoader(state, providers.Spatial.BatchMapNodes)
 		reg.MapNodeEdges = newKeyedLoader(state, providers.Spatial.BatchMapNodeEdges)
-		reg.HexLinks = newKeyedLoader(state, providers.Spatial.BatchHexLinks)
 		reg.NodeLinks = newKeyedLoader(state, providers.Spatial.BatchNodeLinks)
-		reg.POIs = newKeyedLoader(state, providers.Spatial.BatchPOIs)
 	}
 	if providers.Notification != nil {
 		reg.NotificationSubjects = newKeyedLoader(state, providers.Notification.BatchNotificationSubjects)

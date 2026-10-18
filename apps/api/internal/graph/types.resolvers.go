@@ -6,29 +6,90 @@ package graph
 
 import (
 	"context"
-	"fmt"
+	"encoding/json"
 
+	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/member"
+	"github.com/piyushsatti/chronicler/apps/api/internal/quest"
+	"github.com/piyushsatti/chronicler/apps/api/internal/site"
+	"github.com/piyushsatti/chronicler/apps/api/internal/spatial"
 )
 
 // ActiveAlerts is the resolver for the activeAlerts field.
 func (r *adminOperationsTypeResolver) ActiveAlerts(ctx context.Context, obj *AdminOperationsType, limit int, offset int) ([]*AdminHealthAlertType, error) {
-	panic(fmt.Errorf("not implemented: ActiveAlerts - activeAlerts"))
+	loaders, err := requestLoaders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	loader, err := requireLoader(loaders.ActiveAlerts, "activeAlerts")
+	if err != nil {
+		return nil, err
+	}
+	list, err := loader.Load(ctx, site.ActiveAlertsKey{Limit: int32(limit), Offset: int32(offset)})
+	if err != nil {
+		return nil, err
+	}
+	if list == nil {
+		return []*AdminHealthAlertType{}, nil
+	}
+	return toAdminHealthAlertTypes(list.Items), nil
 }
 
 // Subjects is the resolver for the subjects field.
 func (r *codexEntryCardTypeResolver) Subjects(ctx context.Context, obj *CodexEntryCardType, limit int, offset int) ([]*DocumentLinkType, error) {
-	panic(fmt.Errorf("not implemented: Subjects - subjects"))
+	if obj == nil || obj.Document == nil || obj.Document.ID == "" {
+		return []*DocumentLinkType{}, nil
+	}
+	loaders, err := requestLoaders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	loader, err := requireLoader(loaders.DocumentSubjects, "documentSubjects")
+	if err != nil {
+		return nil, err
+	}
+	list, err := loader.Load(ctx, document.DocumentSubjectsKey{
+		ParentID: obj.Document.ID,
+		Limit:    int32(limit),
+		Offset:   int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	if list == nil {
+		return []*DocumentLinkType{}, nil
+	}
+	return toDocumentLinkTypes(list.Items), nil
 }
 
 // Policy is the resolver for the policy field.
 func (r *documentTypeResolver) Policy(ctx context.Context, obj *DocumentType) ([]string, error) {
-	panic(fmt.Errorf("not implemented: Policy - policy"))
+	if obj == nil {
+		return nil, nil
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil || !canSeeDocumentAudience(actor, obj.AuthorID) {
+		// Do not leak policy principals to ordinary readers.
+		return nil, nil
+	}
+	return obj.Policy, nil
 }
 
 // ReaderIds is the resolver for the readerIds field.
 func (r *documentTypeResolver) ReaderIds(ctx context.Context, obj *DocumentType) ([]string, error) {
-	panic(fmt.Errorf("not implemented: ReaderIds - readerIds"))
+	if obj == nil {
+		return nil, nil
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil || !canSeeDocumentAudience(actor, obj.AuthorID) {
+		return nil, nil
+	}
+	// DocumentView keeps readers off the base DTO (go-seams). Prefer parent
+	// projection when present; otherwise an empty authorized list.
+	if obj.ReaderIds != nil {
+		return obj.ReaderIds, nil
+	}
+	return []string{}, nil
 }
 
 // Author is the resolver for the author field.
@@ -36,15 +97,15 @@ func (r *documentTypeResolver) Author(ctx context.Context, obj *DocumentType) (*
 	if obj == nil || obj.AuthorID == "" {
 		return nil, nil
 	}
-	if r.Services.MemberQueries == nil {
-		return nil, nil
-	}
-	actor, err := LiveAuthority(ctx)
+	loaders, err := requestLoaders(ctx)
 	if err != nil {
-		return nil, nil
+		return nil, err
 	}
-	id := obj.AuthorID
-	view, err := r.Services.MemberQueries.Member(ctx, actor, member.MemberSpec{Id: &id})
+	loader, err := requireLoader(loaders.Members, "members")
+	if err != nil {
+		return nil, err
+	}
+	view, err := loader.Load(ctx, member.IDKey{ID: obj.AuthorID})
 	if err != nil || view == nil {
 		return nil, nil
 	}
@@ -53,87 +114,402 @@ func (r *documentTypeResolver) Author(ctx context.Context, obj *DocumentType) (*
 
 // SummaryDerived is the resolver for the summaryDerived field.
 func (r *documentTypeResolver) SummaryDerived(ctx context.Context, obj *DocumentType) (*SummaryDerivedType, error) {
-	panic(fmt.Errorf("not implemented: SummaryDerived - summaryDerived"))
+	if obj == nil || obj.ID == "" {
+		return nil, nil
+	}
+	loaders, err := requestLoaders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	loader, err := requireLoader(loaders.SummaryDerived, "summaryDerived")
+	if err != nil {
+		return nil, err
+	}
+	view, err := loader.Load(ctx, document.IDKey{ID: obj.ID})
+	if err != nil {
+		return nil, err
+	}
+	if view == nil {
+		return nil, nil
+	}
+	return toSummaryDerivedType(*view), nil
 }
 
 // CurrentGameDate is the resolver for the currentGameDate field.
 func (r *gameCalendarTypeResolver) CurrentGameDate(ctx context.Context, obj *GameCalendarType) (*GameDateType, error) {
-	panic(fmt.Errorf("not implemented: CurrentGameDate - currentGameDate"))
+	if obj == nil || obj.CurrentGameDay == nil {
+		return nil, nil
+	}
+	if r.Services.SpatialQueries == nil {
+		return nil, nil
+	}
+	day := int32(*obj.CurrentGameDay)
+	var definition *json.RawMessage
+	if len(obj.Definition) > 0 {
+		fm := obj.Definition
+		definition = &fm
+	}
+	view, err := r.Services.SpatialQueries.RenderStoredGameDate(&day, definition)
+	if err != nil {
+		return nil, err
+	}
+	return toGameDateType(view), nil
 }
 
 // PointcrawlNodes is the resolver for the pointcrawlNodes field.
 func (r *mapTypeResolver) PointcrawlNodes(ctx context.Context, obj *MapType, limit int, offset int) ([]*PointcrawlNodeType, error) {
-	panic(fmt.Errorf("not implemented: PointcrawlNodes - pointcrawlNodes"))
+	if obj == nil || obj.ID == "" {
+		return []*PointcrawlNodeType{}, nil
+	}
+	loaders, err := requestLoaders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	loader, err := requireLoader(loaders.MapNodes, "mapNodes")
+	if err != nil {
+		return nil, err
+	}
+	list, err := loader.Load(ctx, spatial.MapNodesKey{ParentID: obj.ID, Limit: int32(limit), Offset: int32(offset)})
+	if err != nil {
+		return nil, err
+	}
+	if list == nil {
+		return []*PointcrawlNodeType{}, nil
+	}
+	out := make([]*PointcrawlNodeType, len(list.Items))
+	for i, item := range list.Items {
+		out[i] = toPointcrawlNodeType(item)
+	}
+	return out, nil
 }
 
 // PointcrawlEdges is the resolver for the pointcrawlEdges field.
 func (r *mapTypeResolver) PointcrawlEdges(ctx context.Context, obj *MapType, limit int, offset int) ([]*PointcrawlEdgeType, error) {
-	panic(fmt.Errorf("not implemented: PointcrawlEdges - pointcrawlEdges"))
+	if obj == nil || obj.ID == "" {
+		return []*PointcrawlEdgeType{}, nil
+	}
+	loaders, err := requestLoaders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	loader, err := requireLoader(loaders.MapNodeEdges, "mapNodeEdges")
+	if err != nil {
+		return nil, err
+	}
+	list, err := loader.Load(ctx, spatial.MapNodeEdgesKey{ParentID: obj.ID, Limit: int32(limit), Offset: int32(offset)})
+	if err != nil {
+		return nil, err
+	}
+	if list == nil {
+		return []*PointcrawlEdgeType{}, nil
+	}
+	out := make([]*PointcrawlEdgeType, len(list.Items))
+	for i, item := range list.Items {
+		out[i] = toPointcrawlEdgeType(item)
+	}
+	return out, nil
 }
 
 // VoiceByChannel is the resolver for the voiceByChannel field.
 func (r *memberActivityStatsTypeResolver) VoiceByChannel(ctx context.Context, obj *MemberActivityStatsType, limit int, offset int) ([]*ChannelVoiceMinutesType, error) {
-	panic(fmt.Errorf("not implemented: VoiceByChannel - voiceByChannel"))
+	if obj == nil || obj.MemberID == "" {
+		return []*ChannelVoiceMinutesType{}, nil
+	}
+	loaders, err := requestLoaders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	loader, err := requireLoader(loaders.MemberVoiceChannels, "memberVoiceChannels")
+	if err != nil {
+		return nil, err
+	}
+	list, err := loader.Load(ctx, member.MemberVoiceChannelsKey{ParentID: obj.MemberID, Limit: int32(limit), Offset: int32(offset)})
+	if err != nil {
+		return nil, err
+	}
+	if list == nil {
+		return []*ChannelVoiceMinutesType{}, nil
+	}
+	return toChannelVoiceMinutesTypes(list.Items), nil
 }
 
 // RecentSessions is the resolver for the recentSessions field.
 func (r *memberActivityStatsTypeResolver) RecentSessions(ctx context.Context, obj *MemberActivityStatsType, limit int, offset int) ([]*ActivityEventType, error) {
-	panic(fmt.Errorf("not implemented: RecentSessions - recentSessions"))
+	if obj == nil || obj.MemberID == "" {
+		return []*ActivityEventType{}, nil
+	}
+	loaders, err := requestLoaders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	loader, err := requireLoader(loaders.MemberRecentSessions, "memberRecentSessions")
+	if err != nil {
+		return nil, err
+	}
+	list, err := loader.Load(ctx, member.MemberRecentSessionsKey{ParentID: obj.MemberID, Limit: int32(limit), Offset: int32(offset)})
+	if err != nil {
+		return nil, err
+	}
+	if list == nil {
+		return []*ActivityEventType{}, nil
+	}
+	return toActivityEventTypes(list.Items), nil
 }
 
 // RecentWeeks is the resolver for the recentWeeks field.
 func (r *memberProfileTypeResolver) RecentWeeks(ctx context.Context, obj *MemberProfileType, limit int, offset int) ([]*WeekActivityType, error) {
-	panic(fmt.Errorf("not implemented: RecentWeeks - recentWeeks"))
+	if obj == nil || obj.Member == nil || obj.Member.ID == "" {
+		return []*WeekActivityType{}, nil
+	}
+	loaders, err := requestLoaders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	loader, err := requireLoader(loaders.MemberRecentWeeks, "memberRecentWeeks")
+	if err != nil {
+		return nil, err
+	}
+	list, err := loader.Load(ctx, member.MemberRecentWeeksKey{ParentID: obj.Member.ID, Limit: int32(limit), Offset: int32(offset)})
+	if err != nil {
+		return nil, err
+	}
+	if list == nil {
+		return []*WeekActivityType{}, nil
+	}
+	return toWeekActivityTypes(list.Items), nil
 }
 
 // DiscordID is the resolver for the discordId field.
 func (r *memberTypeResolver) DiscordID(ctx context.Context, obj *MemberType) (*string, error) {
-	panic(fmt.Errorf("not implemented: DiscordID - discordId"))
+	if obj == nil || obj.ID == "" {
+		return nil, nil
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil || !canSeeDiscordID(actor, obj.ID) {
+		return nil, nil
+	}
+	loaders, err := requestLoaders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	loader, err := requireLoader(loaders.Members, "members")
+	if err != nil {
+		return nil, err
+	}
+	view, err := loader.Load(ctx, member.IDKey{ID: obj.ID})
+	if err != nil || view == nil {
+		return obj.DiscordID, nil
+	}
+	return view.DiscordId, nil
 }
 
 // LinkedEntries is the resolver for the linkedEntries field.
 func (r *pointcrawlNodeTypeResolver) LinkedEntries(ctx context.Context, obj *PointcrawlNodeType, limit int, offset int) ([]*PointcrawlEntryLinkType, error) {
-	panic(fmt.Errorf("not implemented: LinkedEntries - linkedEntries"))
+	if obj == nil || obj.ID == "" {
+		return []*PointcrawlEntryLinkType{}, nil
+	}
+	loaders, err := requestLoaders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	loader, err := requireLoader(loaders.NodeLinks, "nodeLinks")
+	if err != nil {
+		return nil, err
+	}
+	list, err := loader.Load(ctx, spatial.NodeLinksKey{ParentID: obj.ID, Limit: int32(limit), Offset: int32(offset)})
+	if err != nil {
+		return nil, err
+	}
+	if list == nil {
+		return []*PointcrawlEntryLinkType{}, nil
+	}
+	out := make([]*PointcrawlEntryLinkType, len(list.Items))
+	for i, item := range list.Items {
+		out[i] = toPointcrawlEntryLinkType(item)
+	}
+	return out, nil
 }
 
 // Quests is the resolver for the quests field.
 func (r *questArcTypeResolver) Quests(ctx context.Context, obj *QuestArcType, limit int, offset int) ([]*QuestType, error) {
-	panic(fmt.Errorf("not implemented: Quests - quests"))
+	if obj == nil || obj.ID == "" {
+		return []*QuestType{}, nil
+	}
+	loaders, err := requestLoaders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	loader, err := requireLoader(loaders.ArcQuests, "arcQuests")
+	if err != nil {
+		return nil, err
+	}
+	list, err := loader.Load(ctx, quest.ArcQuestsKey{ParentID: obj.ID, Limit: int32(limit), Offset: int32(offset)})
+	if err != nil {
+		return nil, err
+	}
+	if list == nil {
+		return []*QuestType{}, nil
+	}
+	out := make([]*QuestType, len(list.Items))
+	for i, item := range list.Items {
+		out[i] = toQuestView(item)
+	}
+	return out, nil
 }
 
 // Dm is the resolver for the dm field.
 func (r *questTypeResolver) Dm(ctx context.Context, obj *QuestType) (*QuestDmType, error) {
-	panic(fmt.Errorf("not implemented: Dm - dm"))
+	if obj == nil || obj.DmID == "" {
+		return nil, nil
+	}
+	loaders, err := requestLoaders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	loader, err := requireLoader(loaders.Members, "members")
+	if err != nil {
+		return nil, err
+	}
+	view, err := loader.Load(ctx, member.IDKey{ID: obj.DmID})
+	if err != nil || view == nil {
+		return nil, nil
+	}
+	return &QuestDmType{
+		Handle:      view.Handle,
+		DisplayName: view.DisplayName,
+		AvatarURL:   view.AvatarUrl,
+	}, nil
 }
 
 // BriefDocument is the resolver for the briefDocument field.
 func (r *questTypeResolver) BriefDocument(ctx context.Context, obj *QuestType) (*DocumentType, error) {
-	panic(fmt.Errorf("not implemented: BriefDocument - briefDocument"))
+	if obj == nil || obj.DocumentID == nil || *obj.DocumentID == "" {
+		return nil, nil
+	}
+	view, err := loadDocumentByID(ctx, *obj.DocumentID)
+	if err != nil || view == nil {
+		return nil, err
+	}
+	return toDocumentViewType(*view), nil
 }
 
 // Participants is the resolver for the participants field.
 func (r *questTypeResolver) Participants(ctx context.Context, obj *QuestType, status *string, limit int, offset int) ([]*QuestParticipantType, error) {
-	panic(fmt.Errorf("not implemented: Participants - participants"))
+	if obj == nil || obj.ID == "" {
+		return []*QuestParticipantType{}, nil
+	}
+	loaders, err := requestLoaders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	loader, err := requireLoader(loaders.Participants, "participants")
+	if err != nil {
+		return nil, err
+	}
+	key := quest.ParticipantsKey{ParentID: obj.ID, Limit: int32(limit), Offset: int32(offset)}
+	if status != nil {
+		key.Status = *status
+		key.HasStatus = true
+	}
+	list, err := loader.Load(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	if list == nil {
+		return []*QuestParticipantType{}, nil
+	}
+	return toQuestParticipantTypes(list.Items), nil
 }
 
 // PointcrawlLinks is the resolver for the pointcrawlLinks field.
 func (r *questTypeResolver) PointcrawlLinks(ctx context.Context, obj *QuestType, role *string, limit int, offset int) ([]*QuestPointcrawlLinkType, error) {
-	panic(fmt.Errorf("not implemented: PointcrawlLinks - pointcrawlLinks"))
+	if obj == nil || obj.ID == "" {
+		return []*QuestPointcrawlLinkType{}, nil
+	}
+	loaders, err := requestLoaders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	loader, err := requireLoader(loaders.QuestPointcrawlLinks, "questPointcrawlLinks")
+	if err != nil {
+		return nil, err
+	}
+	key := quest.QuestHexesKey{ParentID: obj.ID, Limit: int32(limit), Offset: int32(offset)}
+	if role != nil {
+		key.Role = *role
+		key.HasRole = true
+	}
+	list, err := loader.Load(ctx, key)
+	if err != nil {
+		return nil, err
+	}
+	if list == nil {
+		return []*QuestPointcrawlLinkType{}, nil
+	}
+	return toQuestPointcrawlLinkTypes(list.Items), nil
 }
 
 // Arc is the resolver for the arc field.
 func (r *questTypeResolver) Arc(ctx context.Context, obj *QuestType) (*QuestArcType, error) {
-	panic(fmt.Errorf("not implemented: Arc - arc"))
+	if obj == nil || obj.ArcID == nil || *obj.ArcID == "" {
+		return nil, nil
+	}
+	loaders, err := requestLoaders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	loader, err := requireLoader(loaders.Arcs, "arcs")
+	if err != nil {
+		return nil, err
+	}
+	view, err := loader.Load(ctx, quest.IDKey{ID: *obj.ArcID})
+	if err != nil || view == nil {
+		return nil, err
+	}
+	return toQuestArcView(*view), nil
 }
 
 // DmTable is the resolver for the dmTable field.
 func (r *questTypeResolver) DmTable(ctx context.Context, obj *QuestType) (*DocumentType, error) {
-	panic(fmt.Errorf("not implemented: DmTable - dmTable"))
+	if obj == nil || obj.DmID == "" {
+		return nil, nil
+	}
+	loaders, err := requestLoaders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	loader, err := requireLoader(loaders.DmTables, "dmTables")
+	if err != nil {
+		return nil, err
+	}
+	view, err := loader.Load(ctx, document.IDKey{ID: obj.DmID})
+	if err != nil || view == nil {
+		return nil, err
+	}
+	return toDocumentViewType(*view), nil
 }
 
 // DiscordDelivery is the resolver for the discordDelivery field.
 func (r *questTypeResolver) DiscordDelivery(ctx context.Context, obj *QuestType) (*QuestDiscordDeliveryType, error) {
-	panic(fmt.Errorf("not implemented: DiscordDelivery - discordDelivery"))
+	if obj == nil || obj.ID == "" {
+		return &QuestDiscordDeliveryType{OverallStatus: "idle"}, nil
+	}
+	loaders, err := requestLoaders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	loader, err := requireLoader(loaders.Delivery, "delivery")
+	if err != nil {
+		return nil, err
+	}
+	view, err := loader.Load(ctx, quest.IDKey{ID: obj.ID})
+	if err != nil {
+		return nil, err
+	}
+	if view == nil {
+		return &QuestDiscordDeliveryType{OverallStatus: "idle"}, nil
+	}
+	return toQuestDiscordDeliveryType(*view), nil
 }
 
 // AdminOperationsType returns AdminOperationsTypeResolver implementation.
@@ -190,3 +566,15 @@ type memberTypeResolver struct{ *Resolver }
 type pointcrawlNodeTypeResolver struct{ *Resolver }
 type questArcTypeResolver struct{ *Resolver }
 type questTypeResolver struct{ *Resolver }
+
+func loadDocumentByID(ctx context.Context, id string) (*document.DocumentView, error) {
+	loaders, err := requestLoaders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	loader, err := requireLoader(loaders.Documents, "documents")
+	if err != nil {
+		return nil, err
+	}
+	return loader.Load(ctx, document.DocumentKey{ID: id})
+}

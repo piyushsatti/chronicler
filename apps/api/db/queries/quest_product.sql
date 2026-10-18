@@ -646,3 +646,143 @@ WHERE c.public_id = @character_id::uuid AND c.deleted_at IS NULL;
 -- name: ProductQuestArcInternalID :one
 SELECT arc.id FROM quest_arcs arc WHERE arc.public_id = @arc_id::uuid;
 
+
+-- Nested loaders (K1): batch slot order matches unnest ordinality / jsonb key ordinality.
+-- name: ProductQuestBatchArcs :many
+SELECT input.ordinality::integer AS input_index,
+       arc.public_id, arc.name, creator.public_id AS created_by_public_id,
+       arc.created_at, count(q.id)::integer AS quest_count
+FROM unnest(@arc_ids::uuid[]) WITH ORDINALITY AS input(public_id, ordinality)
+LEFT JOIN quest_arcs arc ON arc.public_id = input.public_id
+LEFT JOIN members creator ON creator.id = arc.created_by
+LEFT JOIN quests q ON q.arc_id = arc.id AND q.deleted_at IS NULL
+GROUP BY input.ordinality, arc.public_id, arc.name, creator.public_id, arc.created_at
+ORDER BY input.ordinality;
+
+-- name: ProductQuestBatchArcQuests :many
+WITH requested AS (
+    SELECT k.ordinality::int AS key_ordinal,
+           (k.value->>'parent_id')::uuid AS parent_id,
+           (k.value->>'limit')::int AS row_limit,
+           (k.value->>'offset')::int AS row_offset
+    FROM jsonb_array_elements(@keys::jsonb) WITH ORDINALITY AS k(value, ordinality)
+), ranked AS (
+    SELECT r.key_ordinal, r.parent_id, r.row_limit, r.row_offset,
+           q.public_id, q.short_code, q.kinds, q.status,
+           quest_display_status_at(q.status, q.filled_count, q.scheduled_at, q.duration_hours, @as_of::timestamptz) AS display_status,
+           dm.public_id AS dm_public_id, arc.public_id AS arc_public_id,
+           q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
+           doc.public_id AS document_public_id, q.tags, q.genres, q.avg_party_level AS apl,
+           q.signup_type, q.discord_desired_revision, q.discord_applied_revision,
+           q.discord_message_id, q.discord_event_id, q.event_url,
+           creator.public_id AS created_by_public_id, q.created_at, q.updated_at,
+           row_number() OVER (PARTITION BY r.key_ordinal ORDER BY q.scheduled_at, q.public_id) AS rn
+    FROM requested r
+    JOIN quest_arcs arc ON arc.public_id = r.parent_id
+    JOIN quests q ON q.arc_id = arc.id AND q.deleted_at IS NULL
+    JOIN members dm ON dm.id = q.dm_id
+    JOIN members creator ON creator.id = q.created_by
+    LEFT JOIN documents doc ON doc.id = q.document_id
+)
+SELECT key_ordinal, parent_id, true AS parent_exists,
+       public_id, short_code, kinds, status, display_status, dm_public_id, arc_public_id,
+       scheduled_at, duration_hours, slots_max, filled_count, document_public_id,
+       tags, genres, apl, signup_type, discord_desired_revision, discord_applied_revision,
+       discord_message_id, discord_event_id, event_url, created_by_public_id, created_at, updated_at
+FROM ranked
+WHERE rn > row_offset AND rn <= row_offset + row_limit
+UNION ALL
+SELECT r.key_ordinal, r.parent_id, (arc.id IS NOT NULL) AS parent_exists,
+       NULL::uuid, NULL::text, NULL::text[], NULL::text, NULL::text, NULL::uuid, NULL::uuid,
+       NULL::timestamptz, NULL::double precision, NULL::integer, NULL::integer, NULL::uuid,
+       NULL::text[], NULL::text[], NULL::integer, NULL::text, NULL::integer, NULL::integer,
+       NULL::text, NULL::text, NULL::text, NULL::uuid, NULL::timestamptz, NULL::timestamptz
+FROM requested r
+LEFT JOIN quest_arcs arc ON arc.public_id = r.parent_id
+WHERE NOT EXISTS (
+    SELECT 1 FROM ranked x
+    WHERE x.key_ordinal = r.key_ordinal
+      AND x.rn > r.row_offset AND x.rn <= r.row_offset + r.row_limit
+)
+ORDER BY key_ordinal, scheduled_at NULLS LAST, public_id NULLS LAST;
+
+-- name: ProductQuestBatchRegions :many
+WITH requested AS (
+    SELECT k.ordinality::int AS key_ordinal,
+           (k.value->>'parent_id')::uuid AS parent_id,
+           (k.value->>'limit')::int AS row_limit,
+           (k.value->>'offset')::int AS row_offset
+    FROM jsonb_array_elements(@keys::jsonb) WITH ORDINALITY AS k(value, ordinality)
+), ranked AS (
+    SELECT r.key_ordinal, r.parent_id, r.row_limit, r.row_offset,
+           reg.public_id::text AS region_id,
+           row_number() OVER (PARTITION BY r.key_ordinal ORDER BY reg.public_id) AS rn
+    FROM requested r
+    JOIN quests q ON q.public_id = r.parent_id AND q.deleted_at IS NULL
+    JOIN quest_regions qr ON qr.quest_id = q.id
+    JOIN regions reg ON reg.id = qr.region_id
+)
+SELECT key_ordinal, parent_id, true AS parent_exists, region_id
+FROM ranked
+WHERE rn > row_offset AND rn <= row_offset + row_limit
+UNION ALL
+SELECT r.key_ordinal, r.parent_id, (q.id IS NOT NULL) AS parent_exists, NULL::text
+FROM requested r
+LEFT JOIN quests q ON q.public_id = r.parent_id AND q.deleted_at IS NULL
+WHERE NOT EXISTS (
+    SELECT 1 FROM ranked x
+    WHERE x.key_ordinal = r.key_ordinal
+      AND x.rn > r.row_offset AND x.rn <= r.row_offset + r.row_limit
+)
+ORDER BY key_ordinal, region_id NULLS LAST;
+
+-- name: ProductQuestBatchPointcrawlLinks :many
+WITH requested AS (
+    SELECT k.ordinality::int AS key_ordinal,
+           (k.value->>'parent_id')::uuid AS parent_id,
+           (k.value->>'limit')::int AS row_limit,
+           (k.value->>'offset')::int AS row_offset,
+           NULLIF(k.value->>'role', '') AS role_filter
+    FROM jsonb_array_elements(@keys::jsonb) WITH ORDINALITY AS k(value, ordinality)
+), ranked AS (
+    SELECT r.key_ordinal, r.parent_id, r.row_limit, r.row_offset,
+           q.public_id::text AS quest_id, n.public_id::text AS node_id, qpn.role,
+           row_number() OVER (PARTITION BY r.key_ordinal ORDER BY n.public_id, qpn.role) AS rn
+    FROM requested r
+    JOIN quests q ON q.public_id = r.parent_id AND q.deleted_at IS NULL
+    JOIN quest_pointcrawl_nodes qpn ON qpn.quest_id = q.id
+    JOIN pointcrawl_nodes n ON n.id = qpn.node_id
+    WHERE r.role_filter IS NULL OR qpn.role = r.role_filter
+)
+SELECT key_ordinal, parent_id, true AS parent_exists, quest_id, node_id, role
+FROM ranked
+WHERE rn > row_offset AND rn <= row_offset + row_limit
+UNION ALL
+SELECT r.key_ordinal, r.parent_id, (q.id IS NOT NULL) AS parent_exists,
+       NULL::text, NULL::text, NULL::text
+FROM requested r
+LEFT JOIN quests q ON q.public_id = r.parent_id AND q.deleted_at IS NULL
+WHERE NOT EXISTS (
+    SELECT 1 FROM ranked x
+    WHERE x.key_ordinal = r.key_ordinal
+      AND x.rn > r.row_offset AND x.rn <= r.row_offset + r.row_limit
+)
+ORDER BY key_ordinal, node_id NULLS LAST, role NULLS LAST;
+
+-- name: ProductQuestBatchDelivery :many
+SELECT input.ordinality::integer AS input_index,
+       q.public_id AS quest_public_id,
+       q.discord_desired_revision, q.discord_applied_revision,
+       job.public_id AS job_public_id, job.state AS job_state,
+       job.next_run_at, job.safe_error_code, job.error_message
+FROM unnest(@quest_ids::uuid[]) WITH ORDINALITY AS input(public_id, ordinality)
+LEFT JOIN quests q ON q.public_id = input.public_id AND q.deleted_at IS NULL
+LEFT JOIN LATERAL (
+    SELECT b.public_id, b.state, b.next_run_at, b.safe_error_code, b.error_message
+    FROM background_jobs b
+    WHERE b.kind = 'quest_discord_delivery'
+      AND b.payload->>'questId' = q.public_id::text
+    ORDER BY b.updated_at DESC, b.public_id DESC
+    LIMIT 1
+) job ON TRUE
+ORDER BY input.ordinality;

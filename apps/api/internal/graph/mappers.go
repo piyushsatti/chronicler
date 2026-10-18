@@ -1828,3 +1828,107 @@ func toQuestPointcrawlLinkTypes(items []quest.QuestHexView) []*QuestPointcrawlLi
 	}
 	return out
 }
+
+func toAdminHealthAlertTypes(items []site.AdminHealthAlertView) []*AdminHealthAlertType {
+	out := make([]*AdminHealthAlertType, len(items))
+	for i, item := range items {
+		out[i] = &AdminHealthAlertType{
+			Key:             item.Key,
+			Label:           item.Label,
+			Severity:        item.Severity,
+			RemediationHref: item.RemediationHref,
+			FirstSeenAt:     item.FirstSeenAt,
+			LastSeenAt:      item.LastSeenAt,
+		}
+	}
+	return out
+}
+
+func toChannelVoiceMinutesTypes(items []member.ChannelVoiceMinutesView) []*ChannelVoiceMinutesType {
+	out := make([]*ChannelVoiceMinutesType, len(items))
+	for i, item := range items {
+		out[i] = &ChannelVoiceMinutesType{ChannelID: item.ChannelId, Minutes: item.Minutes}
+	}
+	return out
+}
+
+func toActivityEventTypes(items []member.ActivityEventView) []*ActivityEventType {
+	out := make([]*ActivityEventType, len(items))
+	for i, item := range items {
+		out[i] = &ActivityEventType{
+			Kind:       item.Kind,
+			ChannelID:  item.ChannelId,
+			OccurredAt: item.OccurredAt,
+			Amount:     item.Amount,
+		}
+	}
+	return out
+}
+
+func toWeekActivityTypes(items []member.WeekActivityView) []*WeekActivityType {
+	out := make([]*WeekActivityType, len(items))
+	for i, item := range items {
+		out[i] = &WeekActivityType{
+			PeriodStart:  item.PeriodStart,
+			VoiceMinutes: item.VoiceMinutes,
+			Messages:     item.Messages,
+			Reactions:    item.Reactions,
+		}
+	}
+	return out
+}
+
+func toQuestDiscordDeliveryType(v quest.QuestDiscordDeliveryView) *QuestDiscordDeliveryType {
+	return &QuestDiscordDeliveryType{
+		JobID:           v.JobId,
+		DesiredRevision: int(v.DesiredRevision),
+		AppliedRevision: int(v.AppliedRevision),
+		OverallStatus:   v.OverallStatus,
+		MessageState:    v.MessageState,
+		ThreadState:     v.ThreadState,
+		EventState:      v.EventState,
+		NextRetryAt:     v.NextRetryAt,
+		ErrorCode:       v.ErrorCode,
+		ErrorMessage:    v.ErrorMessage,
+	}
+}
+
+func toSummaryDerivedType(v document.SummaryDerivedView) *SummaryDerivedType {
+	regions := make([]*SummaryRegionType, len(v.Regions))
+	for i, item := range v.Regions {
+		regions[i] = &SummaryRegionType{ID: item.Id, Name: item.Name}
+	}
+	nodes := make([]*SummaryPointcrawlNodeType, len(v.Hexes))
+	for i, item := range v.Hexes {
+		nodes[i] = &SummaryPointcrawlNodeType{ID: item.Id, MapID: item.MapId, Name: item.Hexcode}
+	}
+	dms := make([]*SummaryDmType, len(v.Dms))
+	for i, item := range v.Dms {
+		dms[i] = &SummaryDmType{ID: item.Id, DisplayName: item.DisplayName}
+	}
+	players := make([]*SummaryPlayerType, len(v.Players))
+	for i, item := range v.Players {
+		players[i] = &SummaryPlayerType{
+			CharacterID:        item.CharacterId,
+			CharacterShortCode: item.CharacterShortCode,
+			CharacterName:      item.CharacterName,
+			MemberID:           item.MemberId,
+			Manual:             item.Manual,
+		}
+	}
+	var gameDay *int
+	if v.GameDay != nil {
+		d := int(*v.GameDay)
+		gameDay = &d
+	}
+	return &SummaryDerivedType{
+		Regions:         regions,
+		PointcrawlNodes: nodes,
+		Dms:             dms,
+		Players:         players,
+		OccurredAt:      v.OccurredAt,
+		Arc:             v.Arc,
+		GameDay:         gameDay,
+		GameDate:        toGameDateType(v.GameDate),
+	}
+}

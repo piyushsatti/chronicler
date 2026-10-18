@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/piyushsatti/chronicler/apps/api/internal/character"
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
@@ -567,23 +568,34 @@ func (p *ProductPostgres) ReadBatchQuests(ctx context.Context, _ auth.Authority,
 	return out, nil
 }
 
-func (p *ProductPostgres) ReadBatchQuestHexes(context.Context, auth.Authority, []QuestHexesKey) ([]product.BatchResult[HexList], error) {
-	return nil, p.pending()
+// ReadBatchQuestHexes serves N5 pointcrawl links through the retained HexList shape.
+func (p *ProductPostgres) ReadBatchQuestHexes(ctx context.Context, actor auth.Authority, keys []QuestHexesKey) ([]product.BatchResult[HexList], error) {
+	return p.readBatchPointcrawlLinks(ctx, actor, keys)
 }
-func (p *ProductPostgres) ReadBatchQuestRegions(context.Context, auth.Authority, []QuestRegionsKey) ([]product.BatchResult[RegionIDList], error) {
-	return nil, p.pending()
+
+func (p *ProductPostgres) ReadBatchQuestRegions(ctx context.Context, actor auth.Authority, keys []QuestRegionsKey) ([]product.BatchResult[RegionIDList], error) {
+	return p.readBatchQuestRegions(ctx, actor, keys)
 }
-func (p *ProductPostgres) ReadBatchArcs(context.Context, auth.Authority, []IDKey) ([]product.BatchResult[QuestArcView], error) {
-	return nil, p.pending()
+
+func (p *ProductPostgres) ReadBatchArcs(ctx context.Context, actor auth.Authority, keys []IDKey) ([]product.BatchResult[QuestArcView], error) {
+	return p.readBatchArcs(ctx, actor, keys)
 }
-func (p *ProductPostgres) ReadBatchArcQuests(context.Context, auth.Authority, []ArcQuestsKey) ([]product.BatchResult[QuestList], error) {
-	return nil, p.pending()
+
+func (p *ProductPostgres) ReadBatchArcQuests(ctx context.Context, actor auth.Authority, keys []ArcQuestsKey) ([]product.BatchResult[QuestList], error) {
+	return p.readBatchArcQuests(ctx, actor, keys)
 }
-func (p *ProductPostgres) ReadBatchDelivery(context.Context, auth.Authority, []IDKey) ([]product.BatchResult[QuestDiscordDeliveryView], error) {
-	return nil, p.pending()
+
+func (p *ProductPostgres) ReadBatchDelivery(ctx context.Context, actor auth.Authority, keys []IDKey) ([]product.BatchResult[QuestDiscordDeliveryView], error) {
+	return p.readBatchDelivery(ctx, actor, keys)
 }
-func (p *ProductPostgres) ReadBatchRewardEntitlements(context.Context, auth.Authority, []RewardEntitlementsKey) ([]product.BatchResult[RewardList], error) {
-	return nil, p.pending()
+
+// ReadBatchRewardEntitlements returns empty slots: E1 dropped quest_reward_entitlements.
+func (p *ProductPostgres) ReadBatchRewardEntitlements(_ context.Context, _ auth.Authority, keys []RewardEntitlementsKey) ([]product.BatchResult[RewardList], error) {
+	out := make([]product.BatchResult[RewardList], len(keys))
+	for i := range out {
+		out[i] = product.BatchResult[RewardList]{Value: &RewardList{Items: []character.QuestRewardEntitlementView{}}}
+	}
+	return out, nil
 }
 
 func (p *ProductPostgres) ReadRewardDecisionCoverage(_ context.Context, questIDs []string) ([]RewardDecisionCoverage, error) {

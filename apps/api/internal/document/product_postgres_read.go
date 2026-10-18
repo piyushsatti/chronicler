@@ -396,22 +396,7 @@ func (p *ProductPostgres) ReadBatchDocuments(ctx context.Context, actor auth.Aut
 	return out, nil
 }
 
-func (p *ProductPostgres) ReadBatchDmTables(ctx context.Context, actor auth.Authority, keys []IDKey) ([]product.BatchResult[DocumentView], error) {
-	out := make([]product.BatchResult[DocumentView], len(keys))
-	for i, key := range keys {
-		view, err := p.ReadDocumentById(ctx, actor, DocumentByIdSpec{Id: key.ID})
-		if err != nil {
-			out[i] = product.BatchResult[DocumentView]{Err: err}
-			continue
-		}
-		if view.Kind != "dm_table" {
-			out[i] = product.BatchResult[DocumentView]{Err: apierr.New(apierr.NotFound, "document not found")}
-			continue
-		}
-		out[i] = product.BatchResult[DocumentView]{Value: view}
-	}
-	return out, nil
-}
+// ReadBatchDmTables is implemented in product_postgres_dm_tables.go (member-keyed D5 lookup).
 
 func (p *ProductPostgres) ReadBatchSummaryDerived(ctx context.Context, actor auth.Authority, keys []IDKey) ([]product.BatchResult[SummaryDerivedView], error) {
 	out := make([]product.BatchResult[SummaryDerivedView], len(keys))

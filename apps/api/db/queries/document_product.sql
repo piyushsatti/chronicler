@@ -385,3 +385,22 @@ WHERE member.public_id=sqlc.arg(member_id)::uuid ON CONFLICT(member_id,npc_docum
 DELETE FROM lieutenant_assignments la USING members member,documents d
 WHERE la.member_id=member.id AND la.npc_document_id=d.id
 AND member.public_id=sqlc.arg(member_id)::uuid AND d.public_id=sqlc.arg(npc_document_id)::uuid;
+
+-- name: ListProductDmTablesForMembers :many
+SELECT input.ordinality::integer AS input_index,
+       input.public_id AS member_public_id,
+       d.public_id AS id, d.kind, d.slug, d.title, d.category, d.status, d.visibility,
+       d.policy, d.body, d.frontmatter_yaml, author.public_id AS author_id,
+       d.published_at, d.deleted_at, deleter.public_id AS deleted_by, d.updated_at, d.version,
+       document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,sqlc.narg(viewer_id)::uuid,
+         sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,sqlc.arg(viewer_admin)::boolean,
+         sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id),ARRAY[]::uuid[])) AS readable,
+       COALESCE(sqlc.arg(viewer_admin)::boolean AND NOT document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,sqlc.narg(viewer_id)::uuid,
+         sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,FALSE,
+         sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id),ARRAY[]::uuid[])),FALSE) AS admin_override
+FROM unnest(sqlc.arg(member_ids)::uuid[]) WITH ORDINALITY AS input(public_id, ordinality)
+LEFT JOIN members m ON m.public_id = input.public_id
+LEFT JOIN documents d ON d.author_id = m.id AND d.kind = 'community' AND d.category = 'dm_table' AND d.deleted_at IS NULL
+LEFT JOIN members author ON author.id = d.author_id
+LEFT JOIN members deleter ON deleter.id = d.deleted_by
+ORDER BY input.ordinality;
