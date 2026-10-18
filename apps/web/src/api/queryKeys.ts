@@ -12,7 +12,6 @@ export const queryKeys = featureQueryKeys as {
   codexDirectory: (prefix: string) => readonly ['codexDirectory', string];
   codexEntry: (slug: string) => readonly ['codexEntry', string];
   map: (atlasCode: string) => readonly ['map', string];
-  mapView: (atlasCode: string) => readonly ['mapView', string];
   hexFeatures: (hexcode: string) => readonly ['hexFeatures', string];
   questBoard: readonly ['questBoard'];
   questLists: readonly ['quests'];
