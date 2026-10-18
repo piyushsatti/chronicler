@@ -23,7 +23,7 @@ FROM unnest($1::uuid[]) WITH ORDINALITY AS input(quest_id, ordinality)
 LEFT JOIN unnest($2::text[]) WITH ORDINALITY AS status_input(status, ordinality)
   ON status_input.ordinality = input.ordinality
 LEFT JOIN quests q ON q.public_id = input.quest_id AND q.deleted_at IS NULL
-LEFT JOIN quest_participants qp ON qp.quest_id = q.id AND (status_input.status IS NULL OR qp.status = status_input.status)
+LEFT JOIN quest_participants qp ON qp.quest_id = q.id AND (status_input.status IS NULL OR status_input.status = '' OR qp.status = status_input.status)
 LEFT JOIN members m ON m.id = qp.member_id
 LEFT JOIN characters c ON c.id = qp.character_id
 ORDER BY input.ordinality, qp.created_at, c.public_id
@@ -605,52 +605,55 @@ func (q *Queries) ProductQuestIncrementCapacity(ctx context.Context, arg Product
 
 const productQuestInsert = `-- name: ProductQuestInsert :one
 INSERT INTO quests (
-    short_code, kinds, dm_id, arc_id, scheduled_at, duration_hours, slots_max,
+    public_id, short_code, kinds, dm_id, arc_id, scheduled_at, duration_hours, slots_max,
     document_id, tags, genres, avg_party_level, signup_type, created_by,
-    created_at, updated_at
+    created_at, updated_at, discord_desired_revision
 ) VALUES (
-    $1::text, $2::text[], $3::bigint, $4::bigint,
-    $5::timestamptz, $6::double precision,
-    $7::integer, $8::bigint, $9::text[], $10::text[],
-    $11::integer, $12::text, $13::bigint,
-    $14::timestamptz, $14::timestamptz
+    $1::uuid, $2::text, $3::text[], $4::bigint, $5::bigint,
+    $6::timestamptz, $7::double precision,
+    $8::integer, $9::bigint, $10::text[], $11::text[],
+    $12::integer, $13::text, $14::bigint,
+    $15::timestamptz, $15::timestamptz, 1
 )
 RETURNING id, public_id, short_code, status, scheduled_at, duration_hours,
-          slots_max, filled_count, created_at, updated_at
+          slots_max, filled_count, created_at, updated_at, discord_desired_revision
 `
 
 type ProductQuestInsertParams struct {
+	PublicID      pgtype.UUID        `json:"public_id"`
 	ShortCode     string             `json:"short_code"`
 	Kinds         []string           `json:"kinds"`
 	DmID          int64              `json:"dm_id"`
-	ArcID         int64              `json:"arc_id"`
+	ArcID         pgtype.Int8        `json:"arc_id"`
 	ScheduledAt   pgtype.Timestamptz `json:"scheduled_at"`
 	DurationHours float64            `json:"duration_hours"`
 	SlotsMax      int32              `json:"slots_max"`
 	DocumentID    int64              `json:"document_id"`
 	Tags          []string           `json:"tags"`
 	Genres        []string           `json:"genres"`
-	Apl           int32              `json:"apl"`
-	SignupType    string             `json:"signup_type"`
+	Apl           pgtype.Int4        `json:"apl"`
+	SignupType    pgtype.Text        `json:"signup_type"`
 	CreatedBy     int64              `json:"created_by"`
 	At            pgtype.Timestamptz `json:"at"`
 }
 
 type ProductQuestInsertRow struct {
-	ID            int64              `json:"id"`
-	PublicID      pgtype.UUID        `json:"public_id"`
-	ShortCode     string             `json:"short_code"`
-	Status        string             `json:"status"`
-	ScheduledAt   pgtype.Timestamptz `json:"scheduled_at"`
-	DurationHours float64            `json:"duration_hours"`
-	SlotsMax      int32              `json:"slots_max"`
-	FilledCount   int32              `json:"filled_count"`
-	CreatedAt     pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt     pgtype.Timestamptz `json:"updated_at"`
+	ID                     int64              `json:"id"`
+	PublicID               pgtype.UUID        `json:"public_id"`
+	ShortCode              string             `json:"short_code"`
+	Status                 string             `json:"status"`
+	ScheduledAt            pgtype.Timestamptz `json:"scheduled_at"`
+	DurationHours          float64            `json:"duration_hours"`
+	SlotsMax               int32              `json:"slots_max"`
+	FilledCount            int32              `json:"filled_count"`
+	CreatedAt              pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
+	DiscordDesiredRevision int32              `json:"discord_desired_revision"`
 }
 
 func (q *Queries) ProductQuestInsert(ctx context.Context, arg ProductQuestInsertParams) (ProductQuestInsertRow, error) {
 	row := q.db.QueryRow(ctx, productQuestInsert,
+		arg.PublicID,
 		arg.ShortCode,
 		arg.Kinds,
 		arg.DmID,
@@ -678,6 +681,7 @@ func (q *Queries) ProductQuestInsert(ctx context.Context, arg ProductQuestInsert
 		&i.FilledCount,
 		&i.CreatedAt,
 		&i.UpdatedAt,
+		&i.DiscordDesiredRevision,
 	)
 	return i, err
 }
@@ -2212,4 +2216,419 @@ func (q *Queries) ProductQuestUpdateParticipant(ctx context.Context, arg Product
 		&i.UpdatedAt,
 	)
 	return i, err
+}
+
+const productQuestDmSessionHistoryPage = `-- name: ProductQuestDmSessionHistoryPage :many
+WITH filtered AS (
+    SELECT q.id, q.public_id, q.short_code, q.kinds, q.status,
+           quest_display_status_at(q.status, q.filled_count, q.scheduled_at, q.duration_hours, $1::timestamptz) AS display_status,
+           dm.public_id AS dm_public_id, arc.public_id AS arc_public_id,
+           q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
+           doc.public_id AS document_public_id, q.tags, q.genres, q.avg_party_level AS apl,
+           q.signup_type, q.discord_desired_revision, q.discord_applied_revision,
+           q.discord_message_id, q.discord_event_id, q.event_url,
+           creator.public_id AS created_by_public_id, q.created_at, q.updated_at, q.closed_at,
+           recap.public_id AS recap_public_id, recap.kind AS recap_kind, recap.slug AS recap_slug,
+           recap.title AS recap_title, recap.status AS recap_status, recap.visibility AS recap_visibility,
+           recap_author.public_id AS recap_author_public_id, recap.created_at AS recap_created_at,
+           recap.updated_at AS recap_updated_at
+    FROM quests q
+    JOIN members dm ON dm.id = q.dm_id
+    JOIN members creator ON creator.id = q.created_by
+    JOIN documents doc ON doc.id = q.document_id
+    LEFT JOIN quest_arcs arc ON arc.id = q.arc_id
+    LEFT JOIN LATERAL (
+        SELECT d.public_id, d.kind, d.slug, d.title, d.status, d.visibility, d.author_id, d.created_at, d.updated_at
+        FROM document_links dl
+        JOIN documents d ON d.id = dl.source_id
+        WHERE dl.quest_target_id = q.id AND d.kind = 'summary' AND d.deleted_at IS NULL
+        ORDER BY d.updated_at DESC, d.public_id DESC
+        LIMIT 1
+    ) recap ON TRUE
+    LEFT JOIN members recap_author ON recap_author.id = recap.author_id
+    WHERE dm.public_id = $2::uuid
+      AND q.deleted_at IS NULL
+      AND q.status IN ('played', 'closed')
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT * FROM filtered
+    ORDER BY scheduled_at DESC, public_id DESC
+    LIMIT $4::integer OFFSET $3::integer
+)
+SELECT counted.total, page.public_id, page.short_code, page.kinds, page.status, page.display_status,
+       page.dm_public_id, page.arc_public_id, page.scheduled_at, page.duration_hours,
+       page.slots_max, page.filled_count, page.document_public_id, page.tags, page.genres, page.apl,
+       page.signup_type, page.discord_desired_revision, page.discord_applied_revision,
+       page.discord_message_id, page.discord_event_id, page.event_url,
+       page.created_by_public_id, page.created_at, page.updated_at, page.closed_at,
+       page.recap_public_id, page.recap_kind, page.recap_slug, page.recap_title,
+       page.recap_status, page.recap_visibility, page.recap_author_public_id,
+       page.recap_created_at, page.recap_updated_at
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.scheduled_at DESC NULLS LAST, page.public_id DESC NULLS LAST
+`
+
+type ProductQuestDmSessionHistoryPageParams struct {
+	AsOf      pgtype.Timestamptz `json:"as_of"`
+	DmID      pgtype.UUID        `json:"dm_id"`
+	RowOffset int32              `json:"row_offset"`
+	RowLimit  int32              `json:"row_limit"`
+}
+
+type ProductQuestDmSessionHistoryPageRow struct {
+	Total                  int64              `json:"total"`
+	PublicID               pgtype.UUID        `json:"public_id"`
+	ShortCode              pgtype.Text        `json:"short_code"`
+	Kinds                  []string           `json:"kinds"`
+	Status                 pgtype.Text        `json:"status"`
+	DisplayStatus          pgtype.Text        `json:"display_status"`
+	DmPublicID             pgtype.UUID        `json:"dm_public_id"`
+	ArcPublicID            pgtype.UUID        `json:"arc_public_id"`
+	ScheduledAt            pgtype.Timestamptz `json:"scheduled_at"`
+	DurationHours          pgtype.Float8      `json:"duration_hours"`
+	SlotsMax               pgtype.Int4        `json:"slots_max"`
+	FilledCount            pgtype.Int4        `json:"filled_count"`
+	DocumentPublicID       pgtype.UUID        `json:"document_public_id"`
+	Tags                   []string           `json:"tags"`
+	Genres                 []string           `json:"genres"`
+	Apl                    pgtype.Int4        `json:"apl"`
+	SignupType             pgtype.Text        `json:"signup_type"`
+	DiscordDesiredRevision pgtype.Int4        `json:"discord_desired_revision"`
+	DiscordAppliedRevision pgtype.Int4        `json:"discord_applied_revision"`
+	DiscordMessageID       pgtype.Text        `json:"discord_message_id"`
+	DiscordEventID         pgtype.Text        `json:"discord_event_id"`
+	EventUrl               pgtype.Text        `json:"event_url"`
+	CreatedByPublicID      pgtype.UUID        `json:"created_by_public_id"`
+	CreatedAt              pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
+	ClosedAt               pgtype.Timestamptz `json:"closed_at"`
+	RecapPublicID          pgtype.UUID        `json:"recap_public_id"`
+	RecapKind              pgtype.Text        `json:"recap_kind"`
+	RecapSlug              pgtype.Text        `json:"recap_slug"`
+	RecapTitle             pgtype.Text        `json:"recap_title"`
+	RecapStatus            pgtype.Text        `json:"recap_status"`
+	RecapVisibility        pgtype.Text        `json:"recap_visibility"`
+	RecapAuthorPublicID    pgtype.UUID        `json:"recap_author_public_id"`
+	RecapCreatedAt         pgtype.Timestamptz `json:"recap_created_at"`
+	RecapUpdatedAt         pgtype.Timestamptz `json:"recap_updated_at"`
+}
+
+func (q *Queries) ProductQuestDmSessionHistoryPage(ctx context.Context, arg ProductQuestDmSessionHistoryPageParams) ([]ProductQuestDmSessionHistoryPageRow, error) {
+	rows, err := q.db.Query(ctx, productQuestDmSessionHistoryPage, arg.AsOf, arg.DmID, arg.RowOffset, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ProductQuestDmSessionHistoryPageRow{}
+	for rows.Next() {
+		var i ProductQuestDmSessionHistoryPageRow
+		if err := rows.Scan(
+			&i.Total, &i.PublicID, &i.ShortCode, &i.Kinds, &i.Status, &i.DisplayStatus,
+			&i.DmPublicID, &i.ArcPublicID, &i.ScheduledAt, &i.DurationHours,
+			&i.SlotsMax, &i.FilledCount, &i.DocumentPublicID, &i.Tags, &i.Genres, &i.Apl,
+			&i.SignupType, &i.DiscordDesiredRevision, &i.DiscordAppliedRevision,
+			&i.DiscordMessageID, &i.DiscordEventID, &i.EventUrl,
+			&i.CreatedByPublicID, &i.CreatedAt, &i.UpdatedAt, &i.ClosedAt,
+			&i.RecapPublicID, &i.RecapKind, &i.RecapSlug, &i.RecapTitle,
+			&i.RecapStatus, &i.RecapVisibility, &i.RecapAuthorPublicID,
+			&i.RecapCreatedAt, &i.RecapUpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	return items, rows.Err()
+}
+
+const productQuestDmStats = `-- name: ProductQuestDmStats :one
+SELECT count(*)::integer AS session_count
+FROM quests q
+JOIN members dm ON dm.id = q.dm_id
+WHERE dm.public_id = $1::uuid
+  AND q.deleted_at IS NULL
+  AND q.status IN ('played', 'closed')
+`
+
+func (q *Queries) ProductQuestDmStats(ctx context.Context, dmID pgtype.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, productQuestDmStats, dmID)
+	var sessionCount int32
+	err := row.Scan(&sessionCount)
+	return sessionCount, err
+}
+
+const productQuestSummariesPage = `-- name: ProductQuestSummariesPage :many
+WITH filtered AS (
+    SELECT DISTINCT d.id, d.public_id, d.kind, d.slug, d.title, d.category, d.status,
+           d.visibility, d.body, d.policy, author.public_id AS author_public_id,
+           d.published_at, d.deleted_at, d.created_at, d.updated_at,
+           COALESCE($1::boolean AND NOT document_readable(
+               d.public_id, author.public_id, d.status, d.visibility, d.policy,
+               $2::uuid, $3::text[], $4::text,
+               FALSE, $5::boolean, $6::uuid[]), FALSE) AS admin_override
+    FROM document_links dl
+    JOIN documents d ON d.id = dl.source_id
+    JOIN members author ON author.id = d.author_id
+    JOIN quests q ON q.id = dl.quest_target_id
+    WHERE dl.quest_target_id IS NOT NULL
+      AND d.kind = 'summary'
+      AND d.deleted_at IS NULL
+      AND q.public_id = $7::uuid
+      AND q.deleted_at IS NULL
+      AND document_readable(d.public_id, author.public_id, d.status, d.visibility, d.policy,
+          $2::uuid, $3::text[], $4::text,
+          $1::boolean, $5::boolean, $6::uuid[])
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT * FROM filtered
+    ORDER BY updated_at DESC, public_id DESC
+    LIMIT $9::integer OFFSET $8::integer
+)
+SELECT counted.total, page.id, page.public_id, page.kind, page.slug, page.title,
+       page.category, page.status, page.visibility, page.body, page.policy,
+       page.author_public_id, page.published_at, page.deleted_at, page.created_at,
+       page.updated_at, page.admin_override
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.updated_at DESC NULLS LAST, page.public_id DESC NULLS LAST
+`
+
+type ProductQuestSummariesPageParams struct {
+	ViewerAdmin  bool        `json:"viewer_admin"`
+	ViewerID     pgtype.UUID `json:"viewer_id"`
+	ViewerRoles  []string    `json:"viewer_roles"`
+	ViewerHandle string      `json:"viewer_handle"`
+	ViewerLiveDm bool        `json:"viewer_live_dm"`
+	ReaderIds    []pgtype.UUID `json:"reader_ids"`
+	QuestID      pgtype.UUID `json:"quest_id"`
+	RowOffset    int32       `json:"row_offset"`
+	RowLimit     int32       `json:"row_limit"`
+}
+
+type ProductQuestSummariesPageRow struct {
+	Total          int64              `json:"total"`
+	ID             pgtype.Int8        `json:"id"`
+	PublicID       pgtype.UUID        `json:"public_id"`
+	Kind           pgtype.Text        `json:"kind"`
+	Slug           pgtype.Text        `json:"slug"`
+	Title          pgtype.Text        `json:"title"`
+	Category       pgtype.Text        `json:"category"`
+	Status         pgtype.Text        `json:"status"`
+	Visibility     pgtype.Text        `json:"visibility"`
+	Body           pgtype.Text        `json:"body"`
+	Policy         []byte             `json:"policy"`
+	AuthorPublicID pgtype.UUID        `json:"author_public_id"`
+	PublishedAt    pgtype.Timestamptz `json:"published_at"`
+	DeletedAt      pgtype.Timestamptz `json:"deleted_at"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt      pgtype.Timestamptz `json:"updated_at"`
+	AdminOverride  interface{}        `json:"admin_override"`
+}
+
+func (q *Queries) ProductQuestSummariesPage(ctx context.Context, arg ProductQuestSummariesPageParams) ([]ProductQuestSummariesPageRow, error) {
+	rows, err := q.db.Query(ctx, productQuestSummariesPage,
+		arg.ViewerAdmin, arg.ViewerID, arg.ViewerRoles, arg.ViewerHandle, arg.ViewerLiveDm, arg.ReaderIds,
+		arg.QuestID, arg.RowOffset, arg.RowLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ProductQuestSummariesPageRow{}
+	for rows.Next() {
+		var i ProductQuestSummariesPageRow
+		if err := rows.Scan(
+			&i.Total, &i.ID, &i.PublicID, &i.Kind, &i.Slug, &i.Title,
+			&i.Category, &i.Status, &i.Visibility, &i.Body, &i.Policy,
+			&i.AuthorPublicID, &i.PublishedAt, &i.DeletedAt, &i.CreatedAt,
+			&i.UpdatedAt, &i.AdminOverride,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	return items, rows.Err()
+}
+
+const productQuestSummaryTotals = `-- name: ProductQuestSummaryTotals :one
+SELECT q.status,
+       COALESCE((
+           SELECT sum(ledger.delta)::bigint
+           FROM character_progression_ledger ledger
+           WHERE ledger.quest_id = q.id AND ledger.reason = 'quest_reward'
+       ), 0)::bigint AS total_pcxp,
+       EXISTS(
+           SELECT 1 FROM character_progression_ledger ledger
+           WHERE ledger.quest_id = q.id AND ledger.reason = 'quest_reward'
+       ) AS has_quest_reward_rows
+FROM quests q
+WHERE q.public_id = $1::uuid AND q.deleted_at IS NULL
+`
+
+type ProductQuestSummaryTotalsRow struct {
+	Status             string `json:"status"`
+	TotalPcxp          int64  `json:"total_pcxp"`
+	HasQuestRewardRows bool   `json:"has_quest_reward_rows"`
+}
+
+func (q *Queries) ProductQuestSummaryTotals(ctx context.Context, questID pgtype.UUID) (ProductQuestSummaryTotalsRow, error) {
+	row := q.db.QueryRow(ctx, productQuestSummaryTotals, questID)
+	var i ProductQuestSummaryTotalsRow
+	err := row.Scan(&i.Status, &i.TotalPcxp, &i.HasQuestRewardRows)
+	return i, err
+}
+
+const productQuestClearDeleted = `-- name: ProductQuestClearDeleted :one
+UPDATE quests q SET deleted_at = NULL, deleted_by = NULL, updated_at = $1::timestamptz
+WHERE q.public_id = $2::uuid AND q.deleted_at IS NOT NULL
+RETURNING q.id, q.public_id, q.deleted_at, q.deleted_by, q.updated_at
+`
+
+type ProductQuestClearDeletedParams struct {
+	At      pgtype.Timestamptz `json:"at"`
+	QuestID pgtype.UUID        `json:"quest_id"`
+}
+
+type ProductQuestClearDeletedRow struct {
+	ID        int64              `json:"id"`
+	PublicID  pgtype.UUID        `json:"public_id"`
+	DeletedAt pgtype.Timestamptz `json:"deleted_at"`
+	DeletedBy pgtype.Int8        `json:"deleted_by"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) ProductQuestClearDeleted(ctx context.Context, arg ProductQuestClearDeletedParams) (ProductQuestClearDeletedRow, error) {
+	row := q.db.QueryRow(ctx, productQuestClearDeleted, arg.At, arg.QuestID)
+	var i ProductQuestClearDeletedRow
+	err := row.Scan(&i.ID, &i.PublicID, &i.DeletedAt, &i.DeletedBy, &i.UpdatedAt)
+	return i, err
+}
+
+const productQuestBumpDiscordDesired = `-- name: ProductQuestBumpDiscordDesired :one
+UPDATE quests q
+SET discord_desired_revision = q.discord_desired_revision + 1, updated_at = $1::timestamptz
+WHERE q.public_id = $2::uuid AND q.deleted_at IS NULL
+RETURNING q.id, q.public_id, q.discord_desired_revision, q.discord_applied_revision
+`
+
+type ProductQuestBumpDiscordDesiredParams struct {
+	At      pgtype.Timestamptz `json:"at"`
+	QuestID pgtype.UUID        `json:"quest_id"`
+}
+
+type ProductQuestBumpDiscordDesiredRow struct {
+	ID                     int64       `json:"id"`
+	PublicID               pgtype.UUID `json:"public_id"`
+	DiscordDesiredRevision int32       `json:"discord_desired_revision"`
+	DiscordAppliedRevision int32       `json:"discord_applied_revision"`
+}
+
+func (q *Queries) ProductQuestBumpDiscordDesired(ctx context.Context, arg ProductQuestBumpDiscordDesiredParams) (ProductQuestBumpDiscordDesiredRow, error) {
+	row := q.db.QueryRow(ctx, productQuestBumpDiscordDesired, arg.At, arg.QuestID)
+	var i ProductQuestBumpDiscordDesiredRow
+	err := row.Scan(&i.ID, &i.PublicID, &i.DiscordDesiredRevision, &i.DiscordAppliedRevision)
+	return i, err
+}
+
+const productQuestDocumentInternalID = `-- name: ProductQuestDocumentInternalID :one
+SELECT d.id FROM documents d WHERE d.public_id = $1::uuid AND d.deleted_at IS NULL
+`
+
+func (q *Queries) ProductQuestDocumentInternalID(ctx context.Context, documentID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, productQuestDocumentInternalID, documentID)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
+}
+
+const productQuestRegionInternalIDs = `-- name: ProductQuestRegionInternalIDs :many
+SELECT r.id, r.public_id
+FROM regions r
+JOIN unnest($1::uuid[]) WITH ORDINALITY AS input(region_id, ordinality)
+  ON r.public_id = input.region_id
+ORDER BY input.ordinality
+`
+
+type ProductQuestRegionInternalIDsRow struct {
+	ID       int64       `json:"id"`
+	PublicID pgtype.UUID `json:"public_id"`
+}
+
+func (q *Queries) ProductQuestRegionInternalIDs(ctx context.Context, regionIds []pgtype.UUID) ([]ProductQuestRegionInternalIDsRow, error) {
+	rows, err := q.db.Query(ctx, productQuestRegionInternalIDs, regionIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ProductQuestRegionInternalIDsRow{}
+	for rows.Next() {
+		var i ProductQuestRegionInternalIDsRow
+		if err := rows.Scan(&i.ID, &i.PublicID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	return items, rows.Err()
+}
+
+const productQuestNodeInternalIDs = `-- name: ProductQuestNodeInternalIDs :many
+SELECT n.id, n.public_id
+FROM pointcrawl_nodes n
+JOIN unnest($1::uuid[]) WITH ORDINALITY AS input(node_id, ordinality)
+  ON n.public_id = input.node_id
+ORDER BY input.ordinality
+`
+
+type ProductQuestNodeInternalIDsRow struct {
+	ID       int64       `json:"id"`
+	PublicID pgtype.UUID `json:"public_id"`
+}
+
+func (q *Queries) ProductQuestNodeInternalIDs(ctx context.Context, nodeIds []pgtype.UUID) ([]ProductQuestNodeInternalIDsRow, error) {
+	rows, err := q.db.Query(ctx, productQuestNodeInternalIDs, nodeIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ProductQuestNodeInternalIDsRow{}
+	for rows.Next() {
+		var i ProductQuestNodeInternalIDsRow
+		if err := rows.Scan(&i.ID, &i.PublicID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	return items, rows.Err()
+}
+
+const productQuestCharacterInternal = `-- name: ProductQuestCharacterInternal :one
+SELECT c.id, c.public_id, owner.public_id AS owner_public_id, c.status
+FROM characters c
+JOIN members owner ON owner.id = c.owner_id
+WHERE c.public_id = $1::uuid AND c.deleted_at IS NULL
+`
+
+type ProductQuestCharacterInternalRow struct {
+	ID            int64       `json:"id"`
+	PublicID      pgtype.UUID `json:"public_id"`
+	OwnerPublicID pgtype.UUID `json:"owner_public_id"`
+	Status        string      `json:"status"`
+}
+
+func (q *Queries) ProductQuestCharacterInternal(ctx context.Context, characterID pgtype.UUID) (ProductQuestCharacterInternalRow, error) {
+	row := q.db.QueryRow(ctx, productQuestCharacterInternal, characterID)
+	var i ProductQuestCharacterInternalRow
+	err := row.Scan(&i.ID, &i.PublicID, &i.OwnerPublicID, &i.Status)
+	return i, err
+}
+
+const productQuestArcInternalID = `-- name: ProductQuestArcInternalID :one
+SELECT arc.id FROM quest_arcs arc WHERE arc.public_id = $1::uuid
+`
+
+func (q *Queries) ProductQuestArcInternalID(ctx context.Context, arcID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, productQuestArcInternalID, arcID)
+	var id int64
+	err := row.Scan(&id)
+	return id, err
 }

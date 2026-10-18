@@ -371,7 +371,7 @@ FROM unnest(@quest_ids::uuid[]) WITH ORDINALITY AS input(quest_id, ordinality)
 LEFT JOIN unnest(@statuses::text[]) WITH ORDINALITY AS status_input(status, ordinality)
   ON status_input.ordinality = input.ordinality
 LEFT JOIN quests q ON q.public_id = input.quest_id AND q.deleted_at IS NULL
-LEFT JOIN quest_participants qp ON qp.quest_id = q.id AND (status_input.status IS NULL OR qp.status = status_input.status)
+LEFT JOIN quest_participants qp ON qp.quest_id = q.id AND (status_input.status IS NULL OR status_input.status = '' OR qp.status = status_input.status)
 LEFT JOIN members m ON m.id = qp.member_id
 LEFT JOIN characters c ON c.id = qp.character_id
 ORDER BY input.ordinality, qp.created_at, c.public_id;
@@ -388,18 +388,18 @@ SELECT q.id, q.public_id, q.short_code, q.status, q.dm_id, q.arc_id,
 FROM quests q WHERE q.short_code = @short_code::text FOR UPDATE OF q;
 -- name: ProductQuestInsert :one
 INSERT INTO quests (
-    short_code, kinds, dm_id, arc_id, scheduled_at, duration_hours, slots_max,
+    public_id, short_code, kinds, dm_id, arc_id, scheduled_at, duration_hours, slots_max,
     document_id, tags, genres, avg_party_level, signup_type, created_by,
-    created_at, updated_at
+    created_at, updated_at, discord_desired_revision
 ) VALUES (
-    @short_code::text, @kinds::text[], @dm_id::bigint, @arc_id::bigint,
+    @public_id::uuid, @short_code::text, @kinds::text[], @dm_id::bigint, sqlc.narg(arc_id)::bigint,
     @scheduled_at::timestamptz, @duration_hours::double precision,
     @slots_max::integer, @document_id::bigint, @tags::text[], @genres::text[],
-    @apl::integer, @signup_type::text, @created_by::bigint,
-    @at::timestamptz, @at::timestamptz
+    sqlc.narg(apl)::integer, sqlc.narg(signup_type)::text, @created_by::bigint,
+    @at::timestamptz, @at::timestamptz, 1
 )
 RETURNING id, public_id, short_code, status, scheduled_at, duration_hours,
-          slots_max, filled_count, created_at, updated_at;
+          slots_max, filled_count, created_at, updated_at, discord_desired_revision;
 -- name: ProductQuestUpdateMetadata :one
 UPDATE quests q SET
     kinds = @kinds::text[], dm_id = @dm_id::bigint, arc_id = @arc_id::bigint,
@@ -499,4 +499,150 @@ JOIN unnest(@roles::text[]) WITH ORDINALITY AS roles(role, ordinality)
   ON roles.ordinality = input.ordinality
 JOIN pointcrawl_nodes n ON n.id = input.node_id
 RETURNING quest_id, node_id, role;
+
+-- B1 DM session reads: played/closed only; cancelled excluded; newest scheduled first.
+-- name: ProductQuestDmSessionHistoryPage :many
+WITH filtered AS (
+    SELECT q.id, q.public_id, q.short_code, q.kinds, q.status,
+           quest_display_status_at(q.status, q.filled_count, q.scheduled_at, q.duration_hours, @as_of::timestamptz) AS display_status,
+           dm.public_id AS dm_public_id, arc.public_id AS arc_public_id,
+           q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
+           doc.public_id AS document_public_id, q.tags, q.genres, q.avg_party_level AS apl,
+           q.signup_type, q.discord_desired_revision, q.discord_applied_revision,
+           q.discord_message_id, q.discord_event_id, q.event_url,
+           creator.public_id AS created_by_public_id, q.created_at, q.updated_at, q.closed_at,
+           recap.public_id AS recap_public_id, recap.kind AS recap_kind, recap.slug AS recap_slug,
+           recap.title AS recap_title, recap.status AS recap_status, recap.visibility AS recap_visibility,
+           recap_author.public_id AS recap_author_public_id, recap.created_at AS recap_created_at,
+           recap.updated_at AS recap_updated_at
+    FROM quests q
+    JOIN members dm ON dm.id = q.dm_id
+    JOIN members creator ON creator.id = q.created_by
+    JOIN documents doc ON doc.id = q.document_id
+    LEFT JOIN quest_arcs arc ON arc.id = q.arc_id
+    LEFT JOIN LATERAL (
+        SELECT d.public_id, d.kind, d.slug, d.title, d.status, d.visibility, d.author_id, d.created_at, d.updated_at
+        FROM document_links dl
+        JOIN documents d ON d.id = dl.source_id
+        WHERE dl.quest_target_id = q.id AND d.kind = 'summary' AND d.deleted_at IS NULL
+        ORDER BY d.updated_at DESC, d.public_id DESC
+        LIMIT 1
+    ) recap ON TRUE
+    LEFT JOIN members recap_author ON recap_author.id = recap.author_id
+    WHERE dm.public_id = @dm_id::uuid
+      AND q.deleted_at IS NULL
+      AND q.status IN ('played', 'closed')
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT * FROM filtered
+    ORDER BY scheduled_at DESC, public_id DESC
+    LIMIT @row_limit::integer OFFSET @row_offset::integer
+)
+SELECT counted.total, page.public_id, page.short_code, page.kinds, page.status, page.display_status,
+       page.dm_public_id, page.arc_public_id, page.scheduled_at, page.duration_hours,
+       page.slots_max, page.filled_count, page.document_public_id, page.tags, page.genres, page.apl,
+       page.signup_type, page.discord_desired_revision, page.discord_applied_revision,
+       page.discord_message_id, page.discord_event_id, page.event_url,
+       page.created_by_public_id, page.created_at, page.updated_at, page.closed_at,
+       page.recap_public_id, page.recap_kind, page.recap_slug, page.recap_title,
+       page.recap_status, page.recap_visibility, page.recap_author_public_id,
+       page.recap_created_at, page.recap_updated_at
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.scheduled_at DESC NULLS LAST, page.public_id DESC NULLS LAST;
+
+-- name: ProductQuestDmStats :one
+SELECT count(*)::integer AS session_count
+FROM quests q
+JOIN members dm ON dm.id = q.dm_id
+WHERE dm.public_id = @dm_id::uuid
+  AND q.deleted_at IS NULL
+  AND q.status IN ('played', 'closed');
+
+-- Quest-linked summary documents for one quest, plus ledger coverage totals.
+-- name: ProductQuestSummariesPage :many
+WITH filtered AS (
+    SELECT DISTINCT d.id, d.public_id, d.kind, d.slug, d.title, d.category, d.status,
+           d.visibility, d.body, d.policy, author.public_id AS author_public_id,
+           d.published_at, d.deleted_at, d.created_at, d.updated_at,
+           COALESCE(@viewer_admin::boolean AND NOT document_readable(
+               d.public_id, author.public_id, d.status, d.visibility, d.policy,
+               @viewer_id::uuid, @viewer_roles::text[], @viewer_handle::text,
+               FALSE, @viewer_live_dm::boolean, @reader_ids::uuid[]), FALSE) AS admin_override
+    FROM document_links dl
+    JOIN documents d ON d.id = dl.source_id
+    JOIN members author ON author.id = d.author_id
+    JOIN quests q ON q.id = dl.quest_target_id
+    WHERE dl.quest_target_id IS NOT NULL
+      AND d.kind = 'summary'
+      AND d.deleted_at IS NULL
+      AND q.public_id = @quest_id::uuid
+      AND q.deleted_at IS NULL
+      AND document_readable(d.public_id, author.public_id, d.status, d.visibility, d.policy,
+          @viewer_id::uuid, @viewer_roles::text[], @viewer_handle::text,
+          @viewer_admin::boolean, @viewer_live_dm::boolean, @reader_ids::uuid[])
+), counted AS (
+    SELECT count(*)::bigint AS total FROM filtered
+), page AS (
+    SELECT * FROM filtered
+    ORDER BY updated_at DESC, public_id DESC
+    LIMIT @row_limit::integer OFFSET @row_offset::integer
+)
+SELECT counted.total, page.id, page.public_id, page.kind, page.slug, page.title,
+       page.category, page.status, page.visibility, page.body, page.policy,
+       page.author_public_id, page.published_at, page.deleted_at, page.created_at,
+       page.updated_at, page.admin_override
+FROM counted LEFT JOIN page ON TRUE
+ORDER BY page.updated_at DESC NULLS LAST, page.public_id DESC NULLS LAST;
+
+-- name: ProductQuestSummaryTotals :one
+SELECT q.status,
+       COALESCE((
+           SELECT sum(ledger.delta)::bigint
+           FROM character_progression_ledger ledger
+           WHERE ledger.quest_id = q.id AND ledger.reason = 'quest_reward'
+       ), 0)::bigint AS total_pcxp,
+       EXISTS(
+           SELECT 1 FROM character_progression_ledger ledger
+           WHERE ledger.quest_id = q.id AND ledger.reason = 'quest_reward'
+       ) AS has_quest_reward_rows
+FROM quests q
+WHERE q.public_id = @quest_id::uuid AND q.deleted_at IS NULL;
+
+-- name: ProductQuestClearDeleted :one
+UPDATE quests q SET deleted_at = NULL, deleted_by = NULL, updated_at = @at::timestamptz
+WHERE q.public_id = @quest_id::uuid AND q.deleted_at IS NOT NULL
+RETURNING q.id, q.public_id, q.deleted_at, q.deleted_by, q.updated_at;
+
+-- name: ProductQuestBumpDiscordDesired :one
+UPDATE quests q
+SET discord_desired_revision = q.discord_desired_revision + 1, updated_at = @at::timestamptz
+WHERE q.public_id = @quest_id::uuid AND q.deleted_at IS NULL
+RETURNING q.id, q.public_id, q.discord_desired_revision, q.discord_applied_revision;
+
+-- name: ProductQuestDocumentInternalID :one
+SELECT d.id FROM documents d WHERE d.public_id = @document_id::uuid AND d.deleted_at IS NULL;
+
+-- name: ProductQuestRegionInternalIDs :many
+SELECT r.id, r.public_id
+FROM regions r
+JOIN unnest(@region_ids::uuid[]) WITH ORDINALITY AS input(region_id, ordinality)
+  ON r.public_id = input.region_id
+ORDER BY input.ordinality;
+
+-- name: ProductQuestNodeInternalIDs :many
+SELECT n.id, n.public_id
+FROM pointcrawl_nodes n
+JOIN unnest(@node_ids::uuid[]) WITH ORDINALITY AS input(node_id, ordinality)
+  ON n.public_id = input.node_id
+ORDER BY input.ordinality;
+
+-- name: ProductQuestCharacterInternal :one
+SELECT c.id, c.public_id, owner.public_id AS owner_public_id, c.status
+FROM characters c
+JOIN members owner ON owner.id = c.owner_id
+WHERE c.public_id = @character_id::uuid AND c.deleted_at IS NULL;
+
+-- name: ProductQuestArcInternalID :one
+SELECT arc.id FROM quest_arcs arc WHERE arc.public_id = @arc_id::uuid;
 

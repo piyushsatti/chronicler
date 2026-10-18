@@ -567,9 +567,6 @@ func (p *ProductPostgres) ReadBatchQuests(ctx context.Context, _ auth.Authority,
 	return out, nil
 }
 
-func (p *ProductPostgres) ReadBatchParticipants(context.Context, auth.Authority, []ParticipantsKey) ([]product.BatchResult[ParticipantList], error) {
-	return nil, p.pending()
-}
 func (p *ProductPostgres) ReadBatchQuestHexes(context.Context, auth.Authority, []QuestHexesKey) ([]product.BatchResult[HexList], error) {
 	return nil, p.pending()
 }
@@ -597,12 +594,6 @@ func (p *ProductPostgres) ReadRewardDecisionCoverage(_ context.Context, questIDs
 	return out, nil
 }
 
-func (p *ProductPostgres) ReadDmSessionHistory(context.Context, auth.Authority, DmSessionHistorySpec) (DmSessionHistoryV2Result, error) {
-	return DmSessionHistoryV2Result{}, p.pending()
-}
-func (p *ProductPostgres) ReadDmStats(context.Context, auth.Authority, DmStatsSpec) (*DmStatsView, error) {
-	return nil, p.pending()
-}
 func (p *ProductPostgres) ReadDmSummaries(ctx context.Context, actor auth.Authority, spec DmSummariesSpec) (document.DocumentListResult, error) {
 	viewer, err := p.documentSQLViewer(ctx, actor)
 	if err != nil {
@@ -826,9 +817,6 @@ func (p *ProductPostgres) ReadQuestStateCounts(ctx context.Context, _ auth.Autho
 	}
 	return out, nil
 }
-func (p *ProductPostgres) ReadQuestSummaries(context.Context, auth.Authority, QuestSummariesSpec) (QuestSummariesV2Result, error) {
-	return QuestSummariesV2Result{}, p.pending()
-}
 func (p *ProductPostgres) ReadQuests(ctx context.Context, _ auth.Authority, spec QuestsSpec) (QuestV2ListResult, error) {
 	params, err := questsListParams(spec)
 	if err != nil {
@@ -983,30 +971,6 @@ func (p *ProductPostgres) StoreUpsertQuestArc(ctx context.Context, write UpsertQ
 	}
 	return *view, nil
 }
-func (p *ProductPostgres) LockAttestQuestParticipation(context.Context, AttestQuestParticipationSpec) (AttestQuestParticipationState, error) {
-	return AttestQuestParticipationState{}, p.pending()
-}
-func (p *ProductPostgres) StoreAttestQuestParticipation(context.Context, AttestQuestParticipationWrite) ([]QuestParticipantView, error) {
-	return nil, p.pending()
-}
-func (p *ProductPostgres) LockCloseQuest(context.Context, CloseQuestSpec) (CloseQuestState, error) {
-	return CloseQuestState{}, p.pending()
-}
-func (p *ProductPostgres) StoreCloseQuest(context.Context, CloseQuestWrite) (QuestView, error) {
-	return QuestView{}, p.pending()
-}
-func (p *ProductPostgres) LockCreateQuest(context.Context, CreateQuestSpec) (CreateQuestState, error) {
-	return CreateQuestState{}, p.pending()
-}
-func (p *ProductPostgres) StoreCreateQuest(context.Context, CreateQuestWrite) (QuestView, error) {
-	return QuestView{}, p.pending()
-}
-func (p *ProductPostgres) LockDeleteQuest(context.Context, DeleteQuestSpec) (DeleteQuestState, error) {
-	return DeleteQuestState{}, p.pending()
-}
-func (p *ProductPostgres) StoreDeleteQuest(context.Context, DeleteQuestWrite) (product.CommandReceipt, error) {
-	return product.CommandReceipt{}, p.pending()
-}
 func (p *ProductPostgres) LockRemoveQuestFromArc(ctx context.Context, spec RemoveQuestFromArcSpec) (RemoveQuestFromArcState, error) {
 	questID, err := questUUID(spec.QuestId)
 	if err != nil {
@@ -1062,58 +1026,4 @@ func (p *ProductPostgres) StoreRemoveQuestFromArc(ctx context.Context, write Rem
 		return QuestView{}, apierr.New(apierr.NotFound, "quest not found")
 	}
 	return *view, nil
-}
-func (p *ProductPostgres) LockRestoreQuest(context.Context, RestoreQuestSpec) (RestoreQuestState, error) {
-	return RestoreQuestState{}, p.pending()
-}
-func (p *ProductPostgres) StoreRestoreQuest(context.Context, RestoreQuestWrite) (QuestView, error) {
-	return QuestView{}, p.pending()
-}
-func (p *ProductPostgres) LockSelectQuestParticipants(context.Context, SelectQuestParticipantsSpec) (SelectQuestParticipantsState, error) {
-	return SelectQuestParticipantsState{}, p.pending()
-}
-func (p *ProductPostgres) StoreSelectQuestParticipants(context.Context, SelectQuestParticipantsWrite) ([]QuestParticipantView, error) {
-	return nil, p.pending()
-}
-func (p *ProductPostgres) LockSetQuestHexes(context.Context, SetQuestHexesSpec) (SetQuestHexesState, error) {
-	return SetQuestHexesState{}, p.pending()
-}
-func (p *ProductPostgres) StoreSetQuestHexes(context.Context, SetQuestHexesWrite) ([]QuestHexView, error) {
-	return nil, p.pending()
-}
-func (p *ProductPostgres) LockSignupForQuest(context.Context, SignupForQuestSpec) (SignupForQuestState, error) {
-	return SignupForQuestState{}, p.pending()
-}
-func (p *ProductPostgres) StoreSignupForQuest(context.Context, SignupForQuestWrite) (QuestParticipantView, error) {
-	return QuestParticipantView{}, p.pending()
-}
-func (p *ProductPostgres) LockSyncQuestDiscord(context.Context, SyncQuestDiscordSpec) (SyncQuestDiscordState, error) {
-	return SyncQuestDiscordState{}, p.pending()
-}
-func (p *ProductPostgres) StoreSyncQuestDiscord(context.Context, SyncQuestDiscordWrite) (DeliveryReceipt, error) {
-	return DeliveryReceipt{}, p.pending()
-}
-func (p *ProductPostgres) LockTransitionQuestStatus(context.Context, TransitionQuestStatusSpec) (TransitionQuestStatusState, error) {
-	return TransitionQuestStatusState{}, p.pending()
-}
-func (p *ProductPostgres) StoreTransitionQuestStatus(context.Context, TransitionQuestStatusWrite) (QuestView, error) {
-	return QuestView{}, p.pending()
-}
-func (p *ProductPostgres) LockUpdateQuest(context.Context, UpdateQuestSpec) (UpdateQuestState, error) {
-	return UpdateQuestState{}, p.pending()
-}
-func (p *ProductPostgres) StoreUpdateQuest(context.Context, UpdateQuestWrite) (QuestView, error) {
-	return QuestView{}, p.pending()
-}
-func (p *ProductPostgres) LockUpsertQuestSummary(context.Context, UpsertQuestSummarySpec) (UpsertQuestSummaryState, error) {
-	return UpsertQuestSummaryState{}, p.pending()
-}
-func (p *ProductPostgres) StoreUpsertQuestSummary(context.Context, UpsertQuestSummaryWrite) (document.DocumentView, error) {
-	return document.DocumentView{}, p.pending()
-}
-func (p *ProductPostgres) LockWithdrawFromQuest(context.Context, WithdrawFromQuestSpec) (WithdrawFromQuestState, error) {
-	return WithdrawFromQuestState{}, p.pending()
-}
-func (p *ProductPostgres) StoreWithdrawFromQuest(context.Context, WithdrawFromQuestWrite) (QuestParticipantView, error) {
-	return QuestParticipantView{}, p.pending()
 }
