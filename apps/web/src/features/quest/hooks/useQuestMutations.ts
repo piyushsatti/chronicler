@@ -40,7 +40,7 @@ export function useQuestMutations(shortCode: string, questId: string) {
   });
 
   const close = useMutation({
-    mutationFn: () => closeQuest(questId, crypto.randomUUID()),
+    mutationFn: () => closeQuest(questId),
     onSuccess: invalidate,
     onError,
   });

@@ -8,6 +8,26 @@ export type CharacterReviewStatus =
   | 'REJECTED'
   | 'UNKNOWN';
 
+export type CloseQuestInput = {
+  attendance: Array<ParticipationAttestationInput>;
+  rewards: Array<QuestPcxpAwardInput>;
+};
+
+export type CommandMeta = {
+  idempotencyKey: string;
+};
+
+export type ParticipationAttestationInput = {
+  characterId: string;
+  status: string;
+};
+
+export type QuestPcxpAwardInput = {
+  characterId: string;
+  note?: string | null | undefined;
+  pcxp: number;
+};
+
 export type QuestV2FiltersInput = {
   arcId?: string | null | undefined;
   displayStatus?: string | null | undefined;
@@ -88,6 +108,15 @@ export type QuestBoardQueryVariables = Exact<{
 
 export type QuestBoardQuery = { questBoard: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, slotsMax: number, filledCount: number, displayStatus: string | null, dm: { handle: string, displayName: string } | null, briefDocument: { id: string, slug: string, title: string } | null, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string, nextRetryAt: string | null, errorMessage: string | null } }> } };
 
+export type CloseQuestMutationVariables = Exact<{
+  id: string;
+  input: CloseQuestInput;
+  meta: CommandMeta;
+}>;
+
+
+export type CloseQuestMutation = { closeQuest: { id: string, status: string } };
+
 export type QuestQueryVariables = Exact<{
   id?: string | null | undefined;
   shortCode?: string | null | undefined;
@@ -104,3 +133,21 @@ export type QuestListQueryVariables = Exact<{
 
 
 export type QuestListQuery = { quests: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, slotsMax: number, filledCount: number, displayStatus: string | null, dm: { handle: string, displayName: string } | null, briefDocument: { id: string, slug: string, title: string } | null, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string, nextRetryAt: string | null, errorMessage: string | null } }> } };
+
+export type SignupForQuestMutationVariables = Exact<{
+  questId: string;
+  characterId: string;
+  meta: CommandMeta;
+}>;
+
+
+export type SignupForQuestMutation = { signupForQuest: { questId: string, characterId: string, status: string } };
+
+export type TransitionQuestStatusMutationVariables = Exact<{
+  id: string;
+  to: string;
+  meta: CommandMeta;
+}>;
+
+
+export type TransitionQuestStatusMutation = { transitionQuestStatus: { id: string, status: string } };

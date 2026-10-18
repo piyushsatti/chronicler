@@ -1,0 +1,6 @@
+mutation TransitionQuestStatus($id: ID!, $to: String!, $meta: CommandMeta!) {
+  transitionQuestStatus(id: $id, to: $to, meta: $meta) {
+    id
+    status
+  }
+}

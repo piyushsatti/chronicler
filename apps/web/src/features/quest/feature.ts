@@ -1,4 +1,4 @@
-import { http, HttpResponse } from 'msw';
+import { HttpResponse } from 'msw';
 import type { FeatureGraphql, FeatureHandlers, FeatureRoute } from '../../chrome/featureModule.js';
 import { lazyElement } from '../../chrome/lazyElement.js';
 import { redirectRoute, shortCodeRedirectRoute } from '../../chrome/routeBuilders.js';
@@ -7,11 +7,7 @@ import goodQuestList from '../../../tests/fixtures/wire/quest/list-good.json';
 import goodQuestDetail from '../../../tests/fixtures/wire/quest/detail-good.json';
 import goodSummaryDocuments from '../../../tests/fixtures/wire/quest/summary-documents-good.json';
 
-export const endpoints = {
-  questSignup: (id: string) => `/v1/quests/${id}/signup`,
-  questTransition: (id: string) => `/v1/quests/${id}/transition`,
-  questClose: (id: string) => `/v1/quests/${id}/close`,
-} as const;
+export const endpoints = {} as const;
 
 export const queryKeys = {
   questBoard: ['questBoard'] as const,
@@ -49,13 +45,37 @@ export const graphql: FeatureGraphql = {
         documents: goodSummaryDocuments,
       },
     }),
+  SignupForQuest: () =>
+    HttpResponse.json({
+      data: {
+        signupForQuest: {
+          questId: goodQuestDetail.id,
+          characterId: '00000000-0000-4000-8000-000000000002',
+          status: 'signed_up',
+        },
+      },
+    }),
+  TransitionQuestStatus: () =>
+    HttpResponse.json({
+      data: {
+        transitionQuestStatus: {
+          id: goodQuestDetail.id,
+          status: 'played',
+        },
+      },
+    }),
+  CloseQuest: () =>
+    HttpResponse.json({
+      data: {
+        closeQuest: {
+          id: goodQuestDetail.id,
+          status: 'closed',
+        },
+      },
+    }),
 };
 
-export const handlers: FeatureHandlers = [
-  http.post('/v1/quests/:id/signup', () => HttpResponse.json({ ok: true })),
-  http.post('/v1/quests/:id/transition', () => HttpResponse.json({ ok: true })),
-  http.post('/v1/quests/:id/close', () => HttpResponse.json({ ok: true })),
-];
+export const handlers: FeatureHandlers = [];
 
 export const routes: readonly FeatureRoute[] = [
   redirectRoute('/quests/open', '/quests'),

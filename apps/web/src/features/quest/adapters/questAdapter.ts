@@ -1,22 +1,30 @@
 import type {
+  CloseQuestMutation,
   MyCharactersQuery,
   QuestBoardQuery,
   QuestListQuery,
   QuestQuery,
+  SignupForQuestMutation,
+  TransitionQuestStatusMutation,
 } from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import MY_CHARACTERS_QUERY from './myCharacters.graphql?raw';
 import BOARD_QUERY from './questBoard.graphql?raw';
 import DETAIL_QUERY from './questDetail.graphql?raw';
 import LIST_QUERY from './questList.graphql?raw';
-import { restRequest } from '../../../api/rest.js';
-import { rest } from '../../../api/endpoints.js';
+import SIGNUP_MUTATION from './questSignup.graphql?raw';
+import TRANSITION_MUTATION from './questTransition.graphql?raw';
+import CLOSE_MUTATION from './questClose.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import {
   questBoardWireSchema,
   questDetailWireSchema,
 } from './quest.wire.schema.js';
+
+function commandMeta(): { idempotencyKey: string } {
+  return { idempotencyKey: crypto.randomUUID() };
+}
 
 export type DiscordDeliveryView = {
   desiredRevision: number;
@@ -214,9 +222,10 @@ export async function signupForQuest(
   characterId: string,
 ): Promise<void> {
   try {
-    await restRequest(rest.questSignup(questId), {
-      method: 'POST',
-      body: JSON.stringify({ characterId }),
+    await graphqlRequest<SignupForQuestMutation>(SIGNUP_MUTATION, {
+      questId,
+      characterId,
+      meta: commandMeta(),
     });
   } catch (err) {
     throw toAppError(err, 'quest:signup');
@@ -228,23 +237,22 @@ export async function transitionQuest(
   to: 'open' | 'full' | 'played' | 'cancelled',
 ): Promise<void> {
   try {
-    await restRequest(rest.questTransition(questId), {
-      method: 'POST',
-      body: JSON.stringify({ to }),
+    await graphqlRequest<TransitionQuestStatusMutation>(TRANSITION_MUTATION, {
+      id: questId,
+      to,
+      meta: commandMeta(),
     });
   } catch (err) {
     throw toAppError(err, 'quest:transition');
   }
 }
 
-export async function closeQuest(
-  questId: string,
-  idempotencyKey: string,
-): Promise<void> {
+export async function closeQuest(questId: string): Promise<void> {
   try {
-    await restRequest(rest.questClose(questId), {
-      method: 'POST',
-      body: JSON.stringify({ idempotencyKey, rewards: [] }),
+    await graphqlRequest<CloseQuestMutation>(CLOSE_MUTATION, {
+      id: questId,
+      input: { attendance: [], rewards: [] },
+      meta: commandMeta(),
     });
   } catch (err) {
     throw toAppError(err, 'quest:close');

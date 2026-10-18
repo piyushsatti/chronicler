@@ -1,0 +1,6 @@
+mutation CloseQuest($id: ID!, $input: CloseQuestInput!, $meta: CommandMeta!) {
+  closeQuest(id: $id, input: $input, meta: $meta) {
+    id
+    status
+  }
+}
