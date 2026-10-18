@@ -1,4 +1,5 @@
 import type {
+  BackstoriesQuery,
   CharacterQuery,
   CharacterRegionsQuery,
   MyCharacterListQuery,
@@ -7,12 +8,10 @@ import { graphqlRequest } from '../../../api/graphql.js';
 import CHARACTER_QUERY from './character.graphql?raw';
 import MY_CHARACTER_LIST_QUERY from './myCharacterList.graphql?raw';
 import CHARACTER_REGIONS_QUERY from './characterRegions.graphql?raw';
-import { restRequest } from '../../../api/rest.js';
-import { rest } from '../../../api/endpoints.js';
+import BACKSTORIES_QUERY from './backstories.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import {
-  backstoryWireSchema,
   characterListWireSchema,
   characterWireSchema,
 } from './character.wire.schema.js';
@@ -65,14 +64,20 @@ export function parseCharacter(
   };
 }
 
+const BACKSTORY_PAGE_SIZE = 50;
+const BACKSTORY_MAX_PAGES = 20;
+
 export async function loadBackstoryName(id: string | null): Promise<string | null> {
   if (!id) return null;
   try {
-    const list = await restRequest<unknown[]>(rest.backstories);
-    if (!Array.isArray(list)) return null;
-    for (const item of list) {
-      const parsed = backstoryWireSchema.safeParse(item);
-      if (parsed.success && parsed.data.id === id) return parsed.data.name;
+    for (let page = 0; page < BACKSTORY_MAX_PAGES; page++) {
+      const data = await graphqlRequest<BackstoriesQuery>(BACKSTORIES_QUERY, {
+        limit: BACKSTORY_PAGE_SIZE,
+        offset: page * BACKSTORY_PAGE_SIZE,
+      });
+      const match = data.backstories.items.find((item) => item.id === id);
+      if (match) return match.name;
+      if (data.backstories.items.length < BACKSTORY_PAGE_SIZE) return null;
     }
     return null;
   } catch {

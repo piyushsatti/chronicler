@@ -1,0 +1,11 @@
+query ParticipationsByCharacter($characterId: ID!, $limit: Int!, $offset: Int!) {
+  participationsByCharacter(characterId: $characterId, limit: $limit, offset: $offset) {
+    items {
+      questId
+      status
+      characterName
+      createdAt
+    }
+    total
+  }
+}

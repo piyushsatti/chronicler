@@ -1,0 +1,10 @@
+query CoPlayers($characterId: ID!, $limit: Int!, $offset: Int!) {
+  coPlayers(characterId: $characterId, limit: $limit, offset: $offset) {
+    items {
+      characterId
+      memberId
+      questCount
+    }
+    total
+  }
+}

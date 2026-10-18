@@ -8,15 +8,30 @@ import {
 describe('characterTabsAdapter', () => {
   it('parses co-players', () => {
     const result = parseCoPlayers({
-      items: [{ handle: 'alex', displayName: 'Alex', sharedQuests: 2 }],
+      items: [
+        {
+          characterId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+          memberId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          questCount: 2,
+        },
+      ],
     });
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.data[0]?.label).toBe('Alex');
+    if (result.ok) {
+      expect(result.data[0]?.sharedQuests).toBe(2);
+      expect(result.data[0]?.key).toBe('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+    }
   });
 
   it('parses summaries', () => {
     const result = parseCharacterSummaries({
-      items: [{ slug: 'vault', title: 'Vault notes', questShortCode: 'Q-1' }],
+      items: [
+        {
+          id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+          slug: 'vault',
+          title: 'Vault notes',
+        },
+      ],
     });
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.data[0]?.href).toBe('/summaries/vault');
@@ -24,9 +39,16 @@ describe('characterTabsAdapter', () => {
 
   it('parses participations', () => {
     const result = parseParticipations({
-      items: [{ questShortCode: 'Q-101', questTitle: 'Siege', status: 'played' }],
+      items: [
+        {
+          questId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+          status: 'played',
+          characterName: 'Lyra',
+          createdAt: '2026-01-01T18:00:00Z',
+        },
+      ],
     });
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.data[0]?.label).toBe('Siege');
+    if (result.ok) expect(result.data[0]?.label).toBe('Lyra');
   });
 });

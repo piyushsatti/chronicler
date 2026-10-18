@@ -48,6 +48,14 @@ export type UpdateCharacterProfileV2Input = {
   description?: string | null | undefined;
 };
 
+export type BackstoriesQueryVariables = Exact<{
+  limit: number;
+  offset: number;
+}>;
+
+
+export type BackstoriesQuery = { backstories: { total: number, items: Array<{ id: string, name: string }> } };
+
 export type CharacterQueryVariables = Exact<{
   id?: string | null | undefined;
   shortCode?: string | null | undefined;
@@ -55,6 +63,15 @@ export type CharacterQueryVariables = Exact<{
 
 
 export type CharacterQuery = { character: { id: string, shortCode: string, name: string, status: string, ownerId: string, verificationStatus: CharacterReviewStatus, backstoryId: string | null, regionId: string | null, description: string | null, ddbUrl: string | null, displayIcon: string | null, updatedAt: string } | null };
+
+export type CharacterProgressionQueryVariables = Exact<{
+  characterId: string;
+  limit: number;
+  offset: number;
+}>;
+
+
+export type CharacterProgressionQuery = { characterProgression: { total: number, items: Array<{ id: string, amount: number | null, note: string | null, recordedAt: string }> } };
 
 export type CharacterRegionsQueryVariables = Exact<{
   limit: number;
@@ -64,6 +81,24 @@ export type CharacterRegionsQueryVariables = Exact<{
 
 export type CharacterRegionsQuery = { regions: Array<{ id: string, name: string }> };
 
+export type CharacterSummariesQueryVariables = Exact<{
+  characterId: string;
+  limit: number;
+  offset: number;
+}>;
+
+
+export type CharacterSummariesQuery = { characterSummaries: { total: number, items: Array<{ id: string, slug: string, title: string }> } };
+
+export type CoPlayersQueryVariables = Exact<{
+  characterId: string;
+  limit: number;
+  offset: number;
+}>;
+
+
+export type CoPlayersQuery = { coPlayers: { total: number, items: Array<{ characterId: string, memberId: string, questCount: number }> } };
+
 export type MyCharacterListQueryVariables = Exact<{
   limit: number;
   offset: number;
@@ -71,6 +106,15 @@ export type MyCharacterListQueryVariables = Exact<{
 
 
 export type MyCharacterListQuery = { myCharacters: { total: number, items: Array<{ id: string, shortCode: string, name: string, status: string, ownerId: string, verificationStatus: CharacterReviewStatus, backstoryId: string | null, regionId: string | null, description: string | null, ddbUrl: string | null, displayIcon: string | null }> } };
+
+export type ParticipationsByCharacterQueryVariables = Exact<{
+  characterId: string;
+  limit: number;
+  offset: number;
+}>;
+
+
+export type ParticipationsByCharacterQuery = { participationsByCharacter: { total: number, items: Array<{ questId: string, status: string, characterName: string, createdAt: string }> } };
 
 export type RetireCharacterMutationVariables = Exact<{
   characterId: string;

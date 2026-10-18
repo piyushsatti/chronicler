@@ -1,18 +1,19 @@
 import { z } from 'zod';
-import { restRequest } from '../../../api/rest.js';
-import { rest } from '../../../api/endpoints.js';
+import type { CharacterProgressionQuery } from '../../../api/graphql.operations.gen.js';
+import { graphqlRequest } from '../../../api/graphql.js';
+import PROGRESSION_QUERY from './characterProgression.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 
 const entrySchema = z.object({
   id: z.string().uuid().optional(),
-  amount: z.number().int(),
+  amount: z.number().int().nullable().optional(),
   note: z.string().nullable().optional(),
-  occurredAt: z.string().optional(),
+  recordedAt: z.string().optional(),
 });
 
 const progressionWireSchema = z.object({
-  entries: z.array(entrySchema).optional().default([]),
+  items: z.array(entrySchema).optional().default([]),
   total: z.number().int().optional(),
 });
 
@@ -26,28 +27,16 @@ export function parseProgression(
 ): AdapterResult<ProgressionEntryView[]> {
   const parsed = progressionWireSchema.safeParse(wire);
   if (!parsed.success) {
-    // Accept bare arrays from incomplete OpenAPI.
-    if (Array.isArray(wire)) {
-      const items = z.array(entrySchema).safeParse(wire);
-      if (!items.success) {
-        return { ok: false, failure: 'InvalidWire', detail: items.error.message };
-      }
-      return {
-        ok: true,
-        data: items.data.map((e) => ({
-          amount: e.amount,
-          note: e.note ?? null,
-        })),
-      };
-    }
     return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
   }
   return {
     ok: true,
-    data: parsed.data.entries.map((e) => ({
-      amount: e.amount,
-      note: e.note ?? null,
-    })),
+    data: parsed.data.items
+      .filter((e): e is typeof e & { amount: number } => typeof e.amount === 'number')
+      .map((e) => ({
+        amount: e.amount,
+        note: e.note ?? null,
+      })),
   };
 }
 
@@ -55,10 +44,12 @@ export async function loadCharacterProgression(
   characterId: string,
 ): Promise<ProgressionEntryView[]> {
   try {
-    const wire = await restRequest<unknown>(
-      rest.characterProgression(characterId),
-    );
-    const result = parseProgression(wire);
+    const data = await graphqlRequest<CharacterProgressionQuery>(PROGRESSION_QUERY, {
+      characterId,
+      limit: 50,
+      offset: 0,
+    });
+    const result = parseProgression(data.characterProgression);
     if (!result.ok) {
       throw toAppError({ failure: result.failure }, 'character:progression');
     }

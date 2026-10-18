@@ -1,10 +1,10 @@
 {
-  "entries": [
+  "items": [
     {
       "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       "amount": 100,
       "note": "Session reward",
-      "occurredAt": "2026-10-01T12:00:00Z"
+      "recordedAt": "2026-10-01T12:00:00Z"
     }
   ],
   "total": 1

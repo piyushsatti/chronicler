@@ -1,0 +1,11 @@
+query CharacterProgression($characterId: ID!, $limit: Int!, $offset: Int!) {
+  characterProgression(characterId: $characterId, limit: $limit, offset: $offset) {
+    items {
+      id
+      amount
+      note
+      recordedAt
+    }
+    total
+  }
+}

@@ -1,4 +1,4 @@
-import { http, HttpResponse } from 'msw';
+import { HttpResponse } from 'msw';
 import type { FeatureGraphql, FeatureHandlers, FeatureRoute } from '../../chrome/featureModule.js';
 import { lazyElement } from '../../chrome/lazyElement.js';
 import { shortCodeRedirectRoute } from '../../chrome/routeBuilders.js';
@@ -7,16 +7,7 @@ import goodCharacters from '../../../tests/fixtures/wire/character/list-good.jso
 import goodCharacter from '../../../tests/fixtures/wire/character/good.json';
 import goodProgression from '../../../tests/fixtures/wire/character/progression-good.json';
 
-const backstories = '/v1/backstories';
-
-export const endpoints = {
-  backstories,
-  characterProgression: (id: string) => `/v1/characters/${id}/progression`,
-  characterLogs: (id: string) => `/v1/characters/${id}/logs`,
-  characterSummaries: (id: string) => `/v1/characters/${id}/summaries`,
-  characterCoPlayers: (id: string) => `/v1/characters/${id}/co-players`,
-  characterParticipations: (id: string) => `/v1/characters/${id}/participations`,
-} as const;
+export const endpoints = {} as const;
 
 export const queryKeys = {
   character: (id: string) => ['character', id] as const,
@@ -80,34 +71,66 @@ export const graphql: FeatureGraphql = {
         },
       },
     }),
-};
-export const handlers: FeatureHandlers = [
-  http.get(backstories, () => HttpResponse.json(goodBackstories)),
-  http.get('/v1/characters/:id/progression', () => HttpResponse.json(goodProgression)),
-  http.get('/v1/characters/:id/summaries', () =>
+  Backstories: () =>
     HttpResponse.json({
-      items: [{ id: 's1', slug: 'vault-delve', title: 'Vault notes', questShortCode: 'Q-103' }],
-    }),
-  ),
-  http.get('/v1/characters/:id/co-players', () =>
-    HttpResponse.json({
-      items: [{ memberId: 'm1', handle: 'player1', displayName: 'Alex', sharedQuests: 2 }],
-    }),
-  ),
-  http.get('/v1/characters/:id/participations', () =>
-    HttpResponse.json({
-      items: [
-        {
-          questId: 'q1',
-          questShortCode: 'Q-101',
-          questTitle: 'Siege of Kraghold',
-          status: 'played',
-          scheduledAt: '2026-01-01T18:00:00Z',
+      data: {
+        backstories: {
+          items: goodBackstories,
+          total: goodBackstories.length,
         },
-      ],
+      },
     }),
-  ),
-];
+  CharacterProgression: () =>
+    HttpResponse.json({ data: { characterProgression: goodProgression } }),
+  CharacterSummaries: () =>
+    HttpResponse.json({
+      data: {
+        characterSummaries: {
+          items: [
+            {
+              id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+              slug: 'vault-delve',
+              title: 'Vault notes',
+            },
+          ],
+          total: 1,
+        },
+      },
+    }),
+  CoPlayers: () =>
+    HttpResponse.json({
+      data: {
+        coPlayers: {
+          items: [
+            {
+              characterId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+              memberId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+              questCount: 2,
+            },
+          ],
+          total: 1,
+        },
+      },
+    }),
+  ParticipationsByCharacter: () =>
+    HttpResponse.json({
+      data: {
+        participationsByCharacter: {
+          items: [
+            {
+              questId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+              status: 'played',
+              characterName: 'Lyra Storm',
+              createdAt: '2026-01-01T18:00:00Z',
+            },
+          ],
+          total: 1,
+        },
+      },
+    }),
+};
+
+export const handlers: FeatureHandlers = [];
 
 export const routes: readonly FeatureRoute[] = [
   {
