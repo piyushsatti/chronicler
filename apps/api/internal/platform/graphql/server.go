@@ -14,10 +14,11 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/graph"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 )
 
-func NewHandler(resolver *graph.Resolver, limits Limits) http.Handler {
+func NewHandler(resolver *graph.Resolver, limits Limits, authority auth.AuthorityResolver) http.Handler {
 	if resolver == nil {
 		return PlaceholderHandler()
 	}
@@ -45,7 +46,22 @@ func NewHandler(resolver *graph.Resolver, limits Limits) http.Handler {
 		srv.Use(extension.FixedComplexityLimit(limits.MaxComplexity))
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := WithLoaders(document.WithScopeCache(r.Context()), NewLoaderRegistry())
+		ctx := document.WithScopeCache(r.Context())
+		ctx = WithLoaders(ctx, NewLoaderRegistry())
+		if authority != nil {
+			claims := auth.FromContext(r.Context())
+			var initial *auth.Authority
+			if live, ok := auth.AuthorityFromContext(r.Context()); ok {
+				copy := live
+				initial = &copy
+			}
+			state, err := graph.NewRequestState(claims, authority, initial)
+			if err == nil {
+				if _, err := graph.NewLoaderRegistry(resolver.BatchProviders, state); err == nil {
+					ctx = graph.WithRequestState(ctx, state)
+				}
+			}
+		}
 		srv.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

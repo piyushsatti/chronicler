@@ -48,7 +48,7 @@ func TestDocumentGraphQLErrorPresenter(t *testing.T) {
 		{"ordinary public usable", documentErrorRepo{doc: document.Document{ID: "public-id", Status: document.StatusPublished, Visibility: document.VisibilityPublic, Body: "ordinary-public-body"}}, "", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			handler := NewHandler(&graph.Resolver{Services: graph.Services{Documents: document.Queries{Repo: tc.repo}}}, Limits{})
+			handler := NewHandler(&graph.Resolver{Services: graph.Services{Documents: document.Queries{Repo: tc.repo}}}, Limits{}, nil)
 			request := httptest.NewRequest(http.MethodPost, "/v1/graphql", bytes.NewBufferString(`{"query":"{documentById(id:\"fixture\"){id effectiveBody}}"}`))
 			request.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()

@@ -13,6 +13,7 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/member"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/idempotency"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 	"github.com/piyushsatti/chronicler/apps/api/internal/quest"
 	"github.com/piyushsatti/chronicler/apps/api/internal/site"
@@ -150,7 +151,28 @@ func (r *mutationResolver) RevokeLieutenant(ctx context.Context, memberID string
 
 // SetMemberRoles is the resolver for the setMemberRoles field.
 func (r *mutationResolver) SetMemberRoles(ctx context.Context, memberID string, roles []string, note *string, meta CommandMeta) (*MemberType, error) {
-	panic(fmt.Errorf("not implemented: SetMemberRoles - setMemberRoles"))
+	if r.Services.MemberCommands == nil {
+		return nil, fmt.Errorf("member commands unavailable")
+	}
+	if err := idempotency.Require(meta.IdempotencyKey); err != nil {
+		return nil, err
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.MemberCommands.SetMemberRoles(ctx, actor, member.SetMemberRolesSpec{
+		MemberId: memberID,
+		Roles:    roles,
+		Note:     note,
+	}, product.CommandMeta{IdempotencyKey: meta.IdempotencyKey})
+	if err != nil {
+		return nil, err
+	}
+	if state, ok := RequestStateFromContext(ctx); ok {
+		state.ClearLoaders()
+	}
+	return toMemberViewType(view), nil
 }
 
 // SetMemberRolesBatch is the resolver for the setMemberRolesBatch field.

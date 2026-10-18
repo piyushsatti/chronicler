@@ -82,6 +82,19 @@ func toMemberType(m member.Member) *MemberType {
 	}
 }
 
+func toMemberViewType(v member.MemberView) *MemberType {
+	return &MemberType{
+		ID:          v.Id,
+		Handle:      v.Handle,
+		DisplayName: v.DisplayName,
+		Status:      v.Status,
+		Roles:       v.Roles,
+		AvatarURL:   v.AvatarUrl,
+		DiscordID:   v.DiscordId,
+		JoinedAt:    v.JoinedAt,
+	}
+}
+
 func toCharacterV2(c character.LegacyCharacterView) *CharacterV2Type {
 	now := time.Now()
 	return &CharacterV2Type{

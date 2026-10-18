@@ -13,6 +13,7 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/member"
 	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/config"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/graphql"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/httpserver"
@@ -26,6 +27,7 @@ import (
 // Notification routes stay registered, but absent read/command dependencies fail internally.
 type HTTPDeps struct {
 	Resolver        *graph.Resolver
+	Authority       auth.AuthorityResolver
 	QuestCmd        quest.Commands
 	Notifications   notification.Queries
 	NotificationCmd notification.Commands
@@ -46,7 +48,7 @@ func Mount(mux httpserver.Router, d HTTPDeps) {
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	})
-	mux.Handle("POST /v1/graphql", graphql.NewHandler(d.Resolver, graphql.DefaultLimits()))
+	mux.Handle("POST /v1/graphql", graphql.NewHandler(d.Resolver, graphql.DefaultLimits(), d.Authority))
 
 	if d.Login != nil {
 		d.Login.Routes(mux)
@@ -124,6 +126,7 @@ func MountFromAPI(mux httpserver.Router, runtime API, cfg config.Config) {
 
 	Mount(mux, HTTPDeps{
 		Resolver:        runtime.Resolver,
+		Authority:       runtime.Authority,
 		QuestCmd:        runtime.QuestCmd,
 		Documents:       runtime.Documents,
 		Notifications:   runtime.Notifications,
