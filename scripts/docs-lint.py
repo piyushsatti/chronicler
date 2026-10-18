@@ -81,6 +81,17 @@ def resolve_repo_link(target_path: str) -> Path | None:
     return (REPO / target_path.lstrip("/")).resolve()
 
 
+def resolve_doc_link(source: Path, target_path: str) -> Path | None:
+    """Resolve in-repo link target from a living doc (absolute or relative)."""
+    if target_path.startswith("/"):
+        return resolve_repo_link(target_path)
+    return (source.parent / target_path).resolve()
+
+
+def audits_allow_relative(rel: Path) -> bool:
+    return str(rel).startswith("docs/audits/")
+
+
 def has_content(path: Path) -> bool:
     """True if the path is a non-empty doc (or a dir with a contentful README)."""
     if path.is_dir():
@@ -166,12 +177,15 @@ def check_links_and_patterns(findings: list[str]) -> None:
             if file_part == "":
                 continue
             if not file_part.startswith("/"):
-                findings.append(
-                    f"{rel}: use repo-root absolute link (/{file_part.lstrip('./')}) "
-                    f"not relative ({raw.strip().split()[0]})"
-                )
-                continue
-            resolved = resolve_repo_link(file_part)
+                if not audits_allow_relative(rel):
+                    findings.append(
+                        f"{rel}: use repo-root absolute link (/{file_part.lstrip('./')}) "
+                        f"not relative ({raw.strip().split()[0]})"
+                    )
+                    continue
+                resolved = resolve_doc_link(path, file_part)
+            else:
+                resolved = resolve_repo_link(file_part)
             if resolved is None:
                 continue
             try:

@@ -1,6 +1,82 @@
-# Migration 0003 exact persistence work specification
+# Squashed init — persistence authority (N9 / A1)
 
-**Status:** accepted design. Published schema/config and comment scaffolds do not implement these contracts. Runtime enforcement remains pending the owning implementation tasks and their tests.
+**Status:** accepted target inventory (2026-10-18).  
+**Locked by:** [owner-decisions](/docs/audits/owner-decisions.md) **A–M** and **N1–N9** (gate **9B**).  
+**Supersedes:** the [Migration 0003 specification](#legacy-migration-0003-specification-superseded) below for any DDL or storage contract that conflicts with the locked set.
+
+Published Goose files (`0001`–`0004`) and comment scaffolds are not the squashed end state. **A1** collapses to one `0001_init.sql` on disposable dev DBs after this doc reconcile completes. Do not treat backend product or major frontend as started until **9B** exit criteria in owner-decisions are met.
+
+## Conventions (unchanged)
+
+- UUID-addressable rows: `id bigint generated identity`, `public_id uuid unique default gen_random_uuid()`; FKs use internal bigint resolved from public IDs at the boundary.
+- Product idempotency: **I2** — `idempotency_keys` with `endpoint` `graphql:<MutationField>`, fingerprint, completed receipt JSONB ([command-fingerprint-contract.md](/apps/api/docs/design/graphql-product/command-fingerprint-contract.md)).
+- Document history: **J1** — `document_revisions` only for authored codex history; no parallel `document_changes`.
+- Map model: **C3** — pointcrawl-only in squashed schema (nodes, edges, entry links); no `hexes`, `hex_edges`, `hex_entry_links`, `pois`, or hex-based quest placement.
+- Quest ↔ map: **N5** — pointcrawl association (replace `quest_hexes`); exact junction name/columns follow squash implementation, not legacy hex roles.
+- Notifications: **D1**, **N4** — inbox `notifications` rows only; no `notification_events`, no `notification_channel_deliveries`, no delivery ledger.
+- Quest XP: **E1** — `character_progression_ledger` only; no `quest_reward_entitlements` or parallel reward banks.
+- Social/DM: **F1**, **N3** — `members`, optional `dm_profiles`; drop `member_follows`, `dm_requests`, `request_decisions`.
+- DDB: **G2**, **N7** — `character_ddb_mirrors.payload` JSONB; no `character_ddb_attempts`.
+- Unlockables: **N1** — keep `unlockables`, `member_unlocks` ([unlock-catalog-storage-contract.md](/apps/api/docs/design/graphql-product/unlock-catalog-storage-contract.md)).
+- Ops: **N8** — no `job_redrives`, no `operational_observations`; `background_jobs` retains D44 lifecycle only.
+- Non-document aggregate history: **N2** — drop `*_changes` / review-event tables except **J1** `document_revisions`.
+
+## Target table inventory (squashed `0001_init.sql`)
+
+Authoritative row-level census until squash lands: [tables.md](/apps/api/db/docs/tables.md) plus this delta. **Mark superseded** any graphql-product paragraph that adds a row in the “Not in squash” column.
+
+### Retain from current 0001 (subject to C3 / N3 / N2 trim)
+
+| Domain | Tables |
+|--------|--------|
+| Members | `members`, `role_changes`, `member_settings`, `member_availability`, `dm_profiles`, `unlockables`, `member_unlocks`, `notifications` |
+| Documents | `documents`, `document_revisions`, `document_links`, `document_readers`, `lieutenant_assignments` |
+| Spatial (C3) | `regions`, `maps`, `pointcrawl_nodes`, `pointcrawl_edges`, `pointcrawl_entry_links`, `archon_assignments`, `time_anchors`, `game_calendar`, `game_time_map` (trajectory materialization; **A–M** / **N1–N8** do not drop it — hobby memo “optional” is research-only) |
+| Characters | `backstories`, `creation_catalog`, `character_catalog_picks`, `characters`, `character_ddb_mirrors`, `character_progression_ledger`, `downtime_projects`, `verifications`, `character_logs` |
+| Quests | `quest_arcs`, `quests`, `quest_participants`, `quest_regions`, quest↔pointcrawl junction (**N5**, not `quest_hexes`) |
+| Work / site | `background_jobs`, `idempotency_keys`, `agent_questions`, `discord_activity_events`, `bot_heartbeats`, `site_settings` |
+| Views / functions | `quest_display_status_at()` and display wrapper per [display-state-contract.md](/apps/api/docs/design/graphql-product/display-state-contract.md) |
+
+### Drop vs mounted 0001 / 0003 (do not resurrect in docs or DDL)
+
+| Table / pattern | Superseded by owner-decisions |
+|-----------------|--------------------------------|
+| `hexes`, `hex_edges`, `hex_entry_links`, `pois`, `hex_changes`, `map_changes` (hex-affected), `quest_hexes` | **C3**, **N5** |
+| `member_follows`, `dm_requests`, `request_decisions` | **F1**, **N3** |
+| `notification_events`, `notification_channel_deliveries` | **D1**, **N4** |
+| `character_ddb_attempts` | **G2**, **N7** |
+| `job_redrives`, `operational_observations` | **N8** |
+| `quest_reward_entitlements`, `quest_reward_decisions` (entitlement bank) | **E1**, **N2** |
+| Aggregate `*_changes` (`quest_changes`, `region_changes`, `character_changes`, `site_setting_changes`, `calendar_changes`, `time_anchor_changes`, `arc_changes`, `assignment_changes`, `pointcrawl_node_changes`, …) | **N2** (keep **J1** only) |
+| `auth_override_audit` | Reconcile with override policy at squash time; not a 0003 automatic add |
+
+### 0003-era additions — disposition
+
+| 0003 topic | Disposition |
+|------------|-------------|
+| Normalized `member_settings`, D5 DM-table partial unique | Keep substance in squash init ([settings-storage-contract.md](/apps/api/docs/design/graphql-product/settings-storage-contract.md), [dm-table-contract.md](/apps/api/docs/design/graphql-product/dm-table-contract.md)) |
+| Pointcrawl DDL | **C3** — authoritative map geometry |
+| Document `version`, revision ordinals / snapshots | Keep per [document-storage-contract.md](/apps/api/docs/design/graphql-product/document-storage-contract.md) |
+| Idempotency PK `(endpoint, actor_id, key)` + GraphQL receipts | **I2** |
+| `documents.deleted_by`, `published_by` | Keep per document contract |
+| Summary link `summary_append_order` (0004) | Keep typed `document_links` column |
+
+## Related contracts
+
+| Contract | N9 note |
+|----------|---------|
+| [notification-producer-contract.md](/apps/api/docs/design/graphql-product/notification-producer-contract.md) | Inbox-only generation; no event ledger; **N3** removes request-decision kinds |
+| [spatial-admission-contract.md](/apps/api/docs/design/graphql-product/spatial-admission-contract.md) | Pointcrawl admission; hex/grid sections **superseded by C3** |
+| [performance.md](/apps/api/docs/design/graphql-product/performance.md) | Loaders for pointcrawl / quest map links, not `mapHexes` / `mapView` |
+| [work-contract.md](/apps/api/docs/design/graphql-product/work-contract.md) | No `operational_observations` / `job_redrives` tables |
+| [rewards-and-policy.md](/apps/api/docs/design/graphql-product/rewards-and-policy.md) | Ledger-only closure; no entitlement table |
+| [behavior.md](/apps/api/docs/design/graphql-product/behavior.md) | No social follow/request aggregate; quest map via pointcrawl |
+
+---
+
+## Legacy: Migration 0003 specification (superseded)
+
+> **Superseded by owner-decisions N9 9B (2026-10-18).** The text below records the pre-cutover 0003 engineering spec. **Do not implement** rows that contradict **N1–N8** or **A–M**. When implementing **A1**, use the [target inventory](#target-table-inventory-squashed-0001_initsql) above, not this section wholesale.
 
 Create one real Goose forward/down migration, no empty placeholder. All added UUID-addressable rows `id bigint generated identity`, `public_id uuid unique default gen_random_uuid()`; references use internal bigint FK resolved from public IDs at boundary. Schema defaults never substitute for absent historical provenance. New commands always fill provenance; existing rows retain nullable unknown fields. Do NOT backfill notification facts from current entity state (HISTORY-1). Disposable fixtures explicitly supply provenance.
 
@@ -20,15 +96,15 @@ add maps.family TEXT NOT NULL DEFAULT 'campaign' with checked 1–64 safe groupi
 
 Time add `time_anchor_changes(id,public_id,anchor_id,old_value jsonb nullable,new_value jsonb,actor_id,created_at)`, calendar_changes uses the explicit singleton schema below. Future trajectory materialization is Time-owned one transaction; game_time_map unique real_date. No live real→game conversion in GraphQL.
 
-Notification add `notification_events(id,public_id,event_key text unique,kind,subject_type,subject_public_id uuid,actor_id,facts jsonb notnull,created_at)`; notifications add event_id nullable FK (legacy allowed), unique(event_id,member_id), keep existingkind/subject cols with validation matching event. facts discriminated schema: characterDecision {verificationId,verdict,note?}; questChange {questChangeId,changedFields,oldScheduledAt?,newScheduledAt?}; document {revisionId}; mention {revisionId,newMentionMemberIds}; signup {questChangeId,questId,characterId,status}; promotion {questChangeId,questId,characterId,from,to}; request {decisionId,decision}. Facts.Version=1 is the semantic codec version; no stored top-level version is added. Exact per-kind validation and independent immutable proof are in notification-producer-contract.md. The mentioned IDs are one distinct resolved UUID set for one event, not a singular alias. Request identity derives from the proved decision FK. No frozen protected text in fact. New producer writes typed facts; legacy rawbody is never emitted. `notification_channel_deliveries(event_id,member_id,channel,state,job_id nullable,delivered_at,last_error)` PK(event_id,member_id,channel), channel CHECK in_app (additional channel only separately approved), state undelivered/delivered/failed; in_app durable presence means delivered at creation, read_at separate.
+**Superseded by N4 / D1:** Notification add `notification_events(...)`; `notification_channel_deliveries(...)`.
 
-DDB add `character_ddb_attempts(id,public_id,character_id,url,started_at,finished_at,succeeded,safe_error,provenance jsonb,payload_hash text)`; successful normalized mirror stored only after validated complete fetch, add mirror url,payload_hash,provenance. No unvalidated raw body/API secrets in safeError. Character sync receipt sourced actual attempt. Character.verification_submitted_at is the existing actual submission timestamp and remains literal; no duplicate submission column is added. verifications adds evidence_attempt_id BIGINT NULL REFERENCES character_ddb_attempts(id) as informational evidence provenance; review_revision is specified separately below. Approval has no matching-attempt, success or age gate. Attempts are retained indefinitely in this scope; no purge scheduler is introduced.
+**Superseded by N7 / G2:** DDB add `character_ddb_attempts(...)`.
 
 Replay: existing idempotency_keys replaced/extended with operation+actor+key primary, fingerprint text64, receipt jsonb nullable until completed, created_at/completed_at; only complete receipt committed. Claim locks uniqueness inside Tx; duplicate claim waits, then matching replay. Read isolation independent tasks. No committed `incomplete` receipt can escape normal command path.
 
-Operational visibility: background_jobs add redrive_count intnotnull0, safe_error_code nullable, attempts history `job_redrives(job_id,actor_id,reason,created_at)`; preserve D44 lifecycle/leases; immutable job/condition/probe projection operational_observations has exact fields/unique-key replay rules in work-contract.md, read-only from GraphQL; absent observation yields unknown nullable health flags, not successful boolean. Scheduler slot execution visibility uses existing background jobs; no production backup or release mutation.
+**Superseded by N8:** Operational visibility: `job_redrives(...)`, `operational_observations` in work-contract.
 
-Quest-owned `quest_reward_entitlements(id,public_id,quest_id,character_id,pcxp integer CHECK(pcxp>0),note,awarded_by,awarded_at,claimed_at nullable,progression_entry_id nullable)` has UNIQUE(quest_id,character_id), real Character/Quest/ledger FKs and paired claimed_at/progression nullness. Existing progression ledger remains the sole actual bank. `request_decisions(id,public_id,request_id,decision,note nullable text,actor_id,recorded_at)` stores immutable exclusive-DM decisions. Both new histories are transaction-bound; no reward inbox event is added. Changing0001 is forbidden. Fixture generator SQL column validation and double-load must include all new tables/columns; qa row count expected to grow, not preserve637 as new invariant.
+**Superseded by E1 / N2:** Quest-owned `quest_reward_entitlements(...)`, `request_decisions(...)`.
 
 D5 DM-table uniqueness is required: P04 adds partial unique uq_documents_dm_table_per_member on documents(author_id) WHERE kind='community' AND category='dm_table' AND deleted_at IS NULL. Preflight fails on duplicate live owned slots and reports their owner/document IDs; it never chooses a survivor or deletes authored data. Deleted tables do not occupy a slot. Document owns create/category-change/restore prechecks and maps this exact unique violation to the same expected CONFLICT/DUPLICATE_DM_TABLE. dm-table-contract.md defines producer and lookup; no backfill/table placeholder is created.
 
@@ -44,6 +120,8 @@ Map-owned map_changes has id bigint identity PK, public_id UUID unique NOT NULL,
 
 ## Final aggregate-history and code decisions, 2026-10-16
 
+**Superseded by N2** except **J1** document_revisions passages above.
+
 Document new draft version is1 with immutable CREATE_DRAFT snapshot; legacy version0 remains literal. Each actual Document write increments version once. Replay/no-op does not. Immutable history includes full prior/new snapshots, actor/time and stable mechanism reason CREATE_DRAFT, UPDATE_DRAFT, PUBLISH, EDIT_PUBLISHED, UNPUBLISH, SET_AUDIENCE, DELETE or RESTORE. Revision ordinal is distinct from concurrency version. Unpublish clears current publication provenance while preserving previous immutable snapshot. Delete preserves the internal prior lifecycle/publication fields; restore returns that lifecycle and does not invent a republish notice. SetAudience preserves publication provenance. Draft updates generate no author notice or mention event. Existing obsolete history prose must converge on these exact writer facts during final audit.
 
 Character-owned character_changes has id bigint identity PK, public_id UUID unique not null, character_id FK not null, affected_type text not null (character/downtime_project/character_log), affected_public_id UUID not null, kind text not null, old_value JSONB nullable, new_value JSONB nullable, recorded_by FK not null, recorded_at timestamptz not null. Every actual profile/guild/status/downtime/log change appends its full own before/after fact in the command transaction. No-op/replay has zero new history. Catalog and Backstory commands preserve actual rows, command receipt and actual-override audit without an invented extra reference ledger. CHA04/CHA06 own writer/producer, P04 schema, S04 mounted effect/rollback assertions.
@@ -52,25 +130,27 @@ Character creation's optional region/backstory/guild may be null and supplied re
 
 Member unlockables adds name/description/nullable unlock_rule with real payload preserved. Create code is unlock_ plus the same generated public UUID stripped hyphens; updates retain original code. Purged cosmetic paths do not justify invented classification of retained catalog rows. Exact old-schema preflight/approved purge/column conversion and lowercase mapping are frozen in unlock-catalog-storage-contract.md; no admitted old noncosmetic row is claimed. member_unlocks adds nullable note, legacyNULL. grantUnlock persists canonical source grant, given granted_at maps unlockedAt. Duplicate existing grant under new key returns original immutable grant plus a new command receipt. The required note is trimmed nonempty<=2000. No source enum expansion to manual is allowed.
 
-Site setting commands append site_setting_changes(id bigint identity PK, public_id UUID unique not null, setting_key text not null, old_value JSONB nullable, new_value JSONB not null, actor_id FK not null, created_at timestamptz not null) in the same UOW as the replacement and receipt. SIT04 persists and SIT06 produces the history. job_redrives adds its own id bigint identity PK and public_id UUID unique not null so the command can capture the immutable audit identity. An admitted explicit redrive locks a dead/repair_required quest-discord job and preserves its public ID, stable key, lease token and desired/applied revision. It clears completed-attempt fields/error, resets attempts0, queues at actual post-lock JobClock and increments redrive_count. It never redrives another job kind or active/succeeded/cancelled job and never performs remote I/O.
+Site setting commands append site_setting_changes(...) in the same UOW as the replacement and receipt. SIT04 persists and SIT06 produces the history. **Superseded by N8:** job_redrives adds its own id bigint identity PK and public_id UUID unique not null so the command can capture the immutable audit identity. An admitted explicit redrive locks a dead/repair_required quest-discord job and preserves its public ID, stable key, lease token and desired/applied revision. It clears completed-attempt fields/error, resets attempts0, queues at actual post-lock JobClock and increments redrive_count. It never redrives another job kind or active/succeeded/cancelled job and never performs remote I/O.
 
 calendar_changes has id bigint identity PK, public_id UUID unique not null, calendar_id smallint FK game_calendar(id) not null, old_value JSONB nullable, new_value JSONB not null, actor_id FK not null, created_at timestamptz not null. game_calendar has no existing updated_at; P04 adds nullable updated_at with no fabricated legacy timestamp, and new writes set the actual command clock. It has singleton id1. This explicitly replaces the earlier ambiguous 'same shape as anchor_changes' shorthand. Calendar definition updates leave game_time_map and anchors unchanged.
 
 Quest arc_changes has id bigint identity PK, public_id UUID unique not null, arc_id FK not null, old_value JSONB nullable, new_value JSONB not null, actor_id FK not null, created_at timestamptz not null. QUE04 persists actual arc create/update full snapshots on QUE06's transaction; unchanged/no-op and replay create no history. Quest brief/summary writes invoke the Document-owned transaction-bound writer and its existing document_revisions history, not a duplicate Quest text history. They return exact inserted Document identity/history IDs and event facts to the owning Quest action before its sole receipt/commit.
 
-Spatial PlaceReader.ResolveQuestHexIDs now accepts typed QuestHexCandidate{ID,Role} for every input and returns HexAdmission{ID,MapID,RegionID,Role} in correspondence. It validates expected/visited literal and current visited stewardship for each candidate; it cannot authorize from IDs alone or ignore the role. QUE06 passes exact normalized input roles, SPA04 provides current authoritative admission on the same transaction, and Quest alone writes quest_hexes. No foreign relationship writer is added.
+**Superseded by C3 / N5:** Spatial PlaceReader.ResolveQuestHexIDs ... Quest alone writes quest_hexes.
 
 Document exclusive-arc link DDL, real author_id D5 preflight/index, server slug allocation and trusted brief/summary identities follow document-storage-contract.md. P04 executes its exact schema/FK/up-down acceptance; DOC03/04 own query/mapping migration and DOC06 the single transaction-bound writer.
 
 Migration 0004 adds the Quest summary append ordinal to the existing typed `document_links` association. It takes an access-exclusive link/document lock and refuses with a diagnostic before DDL if a summary-to-Quest edge already exists, because no accepted source records its append order. The failed migration transaction preserves every existing row. The identity is preserved on retained summary links, while remove-and-readd allocates a new ordinal. Quest locks follow the shared ascending public UUID order in [participation-locking.md](/apps/api/docs/design/graphql-product/participation-locking.md). Down also refuses while summary-to-Quest edges exist, rather than deleting their ordering meaning. The private `ReplaceProductSummaryLinks` SQL parameters now include the requested Quest UUID set and nullable Character UUID so it can reconcile retained memberships; dependent SQL adapters must pass both explicitly. This is current migration version 4. P04 history tests remain pinned to version 3 and project only this added column out of the current inventory.
 
-request_decisions.note is a genuine nullable decision-rationale TEXT column: omitted/null storesNULL, supplied string including empty persists literally, maximum2000 Unicode codepoints. It never overwrites dm_requests.note. MEM06 writes it with the immutable decision, notification and receipt in the same UOW; final write failure restores all. Exact mutation argument cases bind the supplied note readback/history/receipt.
+**Superseded by N3:** request_decisions.note ... never overwrites dm_requests.note. MEM06 writes it with the immutable decision, notification and receipt in the same UOW; final write failure restores all. Exact mutation argument cases bind the supplied note readback/history/receipt.
 
 P04 adds documents.deleted_by BIGINT NULL REFERENCES members(id) and documents.published_by BIGINT NULL REFERENCES members(id), preserving all legacyunknownNULL without inferring actor from author or currentrequest. Existing published_at/deleted_at remain. New publish sets published_by=actual publishingactor, distinctfrom author_id; unpublish clears current published_at/published_by while immutable priorhistory remains. Softdelete sets deleted_by=actualactor and retains lifecycle/publication fields. Restore clears deleted_by/deleted_at and preserves the original publication fields, including legacyNULL; no synthetic republish. Document-owned revision snapshots capture actual before/after provenance in the same transaction. physical-schema-inventory.json is the exhaustive column authority assembled from actual0001/0002 and these explicit0003 changes.
 
-P04 adds hexes.submap_id BIGINT NULL REFERENCES maps(id), with legacyNULL and no inferred containment. SPA04 maps HexEditInput.submapId into this literal nullable FK and the existing Hex projection resolves it to the map publicUUID. Omittable patch semantics preserve omitted and clear explicitnull. The Map-owned shared containment lock covers both hex submap and pointcrawl-node submap writes; the same current stewardship on both distinct maps and transactional directed-cycle refusal apply. No implicit graph edge is derived from a title or map family.
+**Superseded by C3:** P04 adds hexes.submap_id BIGINT NULL REFERENCES maps(id), with legacyNULL and no inferred containment. SPA04 maps HexEditInput.submapId into this literal nullable FK and the existing Hex projection resolves it to the map publicUUID. Omittable patch semantics preserve omitted and clear explicitnull. The Map-owned shared containment lock covers both hex submap and pointcrawl-node submap writes; the same current stewardship on both distinct maps and transactional directed-cycle refusal apply. No implicit graph edge is derived from a title or map family.
 
 ## Exhaustive history column closure
+
+**Superseded by N2** except document_revisions subsection.
 
 The following literal names close earlier shorthand and are P04-owned engineering schema decisions. region_changes has id BIGINT identity PK, public_id UUID UNIQUE NOT NULL, region_id BIGINT NOT NULL REFERENCES regions(id), kind TEXT NOT NULL, old_value JSONB NULL, new_value JSONB NULL, actor_id BIGINT NOT NULL REFERENCES members(id), created_at TIMESTAMPTZ NOT NULL. Both snapshots are full Region facts; no-op/replay has no row.
 

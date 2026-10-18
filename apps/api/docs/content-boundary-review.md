@@ -31,7 +31,7 @@ New `product_*` files include implementation scaffolds. Their filenames and API 
 
 The [initial migration](/apps/api/db/migrations/0001_init.sql) puts `tagline`, `philosophy`, `house_rules`, and free-form `table_info` on `dm_profiles`. [Member product SQL](/apps/api/db/queries/member_product.sql) reads and writes those fields. They are a separate prose contract from the DM-table Document consumed by the [DM table adapter](/apps/web/src/features/profile/adapters/dmTableAdapter.ts).
 
-There is no `dm_profiles.document_id`. However, the [product migration](/apps/api/db/migrations/0003_product_graphql.sql) defines `uq_documents_dm_table_per_member`, which permits at most one live `community` Document with category `dm_table` per author. That is a schema association through authorship. Its application to a running database is unverified. The current mounted profile read does not compose that Document, and the separate DM-table page resolves a Document by slug.
+There is no `dm_profiles.document_id`. However, the [squashed init migration](/apps/api/db/migrations/0001_init.sql) defines `uq_documents_dm_table_per_member`, which permits at most one live `community` Document with category `dm_table` per author. That is a schema association through authorship. Its application to a running database is unverified. The current mounted profile read does not compose that Document, and the separate DM-table page resolves a Document by slug.
 
 Consolidating this prose moves toward one content authority. Keep member identity, availability, approval state, and review tracking in Member. The `table_info` seed keys `night`, `seats`, `style`, and `safety` are fixture examples, not an enforced runtime contract. Style and safety prose fit authored content. Any actual scheduling or capacity control needs an explicit operational owner.
 
@@ -39,13 +39,13 @@ Consolidating this prose moves toward one content authority. Keep member identit
 
 ### Backstory lore
 
-The [initial migration](/apps/api/db/migrations/0001_init.sql) stores `backstories.lore` beside reference identity, cohort, source region, and retirement state. [Character SDL](/packages/contracts/graphql/character.graphql) exposes that lore directly. Seed examples contain authored narrative, but a complete mounted backstory read and edit implementation was not established.
+The [initial migration](/apps/api/db/migrations/0001_init.sql) stores `backstories.lore` beside reference identity, cohort, source region, and retirement state. [Character SDL](/packages/contracts/graphql/character/types.graphql) exposes that lore directly. Seed examples contain authored narrative, but a complete mounted backstory read and edit implementation was not established.
 
 The lore is a strong Document candidate. Backstory identity, eligibility, and character selection remain structured reference data. Whether the lore gets its own Document or references an existing Codex entry needs an owner decision. Moving the prose does not remove `characters.backstory_id`.
 
 ### Proposed character description and background
 
-The [product migration](/apps/api/db/migrations/0003_product_graphql.sql) adds `characters.description` and `background_text`. These are proposed prose owners separate from Document. The web has a description editor, but the mounted Go Character routes and current mapper do not establish a complete persistence and readback flow for these fields.
+The [squashed init migration](/apps/api/db/migrations/0001_init.sql) adds `characters.description` and `background_text`. These are proposed prose owners separate from Document. The web has a description editor, but the mounted Go Character routes and current mapper do not establish a complete persistence and readback flow for these fields.
 
 Consolidate authored description and background through a Document reference before implementing another independent prose lifecycle. Keep Character identity, owner, status, selection relationships, submission tracking, DDB integration, and progression structured. Decide whether personal background and reusable backstory lore are separate Documents, and decide their audiences. Personal authorship does not itself exclude prose from Document.
 
@@ -65,7 +65,7 @@ If logs are authored journals, their prose belongs in Document. Their character 
 | `site_settings` banner text                                           | The seed `home_banner` payload combines `enabled` and `text`. An active banner render and write path was not established. | Decide whether this is short UI configuration or authored content with publication and revisions. If Document-backed, keep the switch and reference in settings. |
 | Contextual notes on requests, availability, rewards, and time anchors | Text columns exist beside operational facts. Field type alone does not establish a document feature.                      | Keep concise reasons with the operation. Link a Document only for separately authored content.                                                                   |
 
-These candidates come from the [initial migration](/apps/api/db/migrations/0001_init.sql), [product migration](/apps/api/db/migrations/0003_product_graphql.sql), [QA seed](/apps/api/db/seed/qa.jsonl), and their inspected consumers. Fixture keys do not authorize new product features.
+These candidates come from the [squashed init migration](/apps/api/db/migrations/0001_init.sql), [QA seed](/apps/api/db/seed/qa.jsonl), and their inspected consumers. Fixture keys do not authorize new product features.
 
 ## Operational data that belongs outside authored bodies
 

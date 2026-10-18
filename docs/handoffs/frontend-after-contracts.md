@@ -13,7 +13,7 @@ Paste-ready brief for a new chat that owns the web client. Sibling track (Go API
 | Field map      | `packages/contracts/field-routing.md`                | Old field → GraphQL / REST / DROP                               |
 | Patterns       | `packages/contracts/docs/patterns.md`                | D40 transport rules, `ID` = UUID, no new `V2` names             |
 | Dual-key DB    | `apps/api/db/docs/design.md`, `0001_init.sql`        | Wire `public_id` (UUID) only; bigint `id` never leaves the API  |
-| Transport rule | `apps/api/docs/decisions/D40-GraphQL-Versus-REST.md` | Trees → GraphQL; commands / fixed shapes → REST                 |
+| Transport rule | `apps/api/docs/decisions/D40-GraphQL-Versus-REST.md` | Product reads **and** commands → GraphQL; auth/ingest/agent stay HTTP |
 
 Design notes for contracts: [`packages/contracts/docs/README.md`](/packages/contracts/docs/README.md).
 
@@ -21,16 +21,16 @@ Design notes for contracts: [`packages/contracts/docs/README.md`](/packages/cont
 
 1. **`@pi/contracts`** — workspace dependency; generate client types from `schema.graphql` (`bun run --filter @pi/contracts build` / package codegen).
 2. **`POST /v1/graphql`** — nested reads: quest board/detail, characters, documents, maps, members, home, admin trees. Select only fields the screen needs.
-3. **REST under `/v1`** — commands and fixed-shape reads per `field-routing.md` / OpenAPI (e.g. `POST /v1/quests/{id}/transition`, `POST /v1/quests/{id}/close`, `POST /v1/quests/{id}/signup`, auth, site stats, config).
-4. **Auth** — Discord OAuth at `/auth/discord` + callback (outside `/v1`); bearer JWT on member routes.
+3. **GraphQL mutations** — product commands per merged SDL / `field-routing.md` (e.g. quest transition, close, signup as Mutation fields on `POST /v1/graphql`). OpenAPI REST product paths are **legacy cutover debt**; do not scaffold new UI against them ([D40](/apps/api/docs/decisions/D40-GraphQL-Versus-REST.md)).
+4. **Auth** — Discord OAuth at `/auth/discord` + callback (outside `/v1`); bearer JWT on member GraphQL and protocol routes.
 
 Do **not** invent parallel `/v2` paths or new `*V2*` type names on the wire.
 
 ## `/v1` rules (D40)
 
 - Version lives **once** in the path: `/v1/graphql`, `/v1/quests/...`.
-- GraphQL when a screen needs a **tree** in one round trip.
-- REST when the call is a **command**, a **fixed-shape** lookup, or **static/config** aggregate.
+- GraphQL for product **reads** (field trees) and product **commands** (mutations).
+- HTTP only for **auth**, **health**, and other **machine protocols** declared in OpenAPI — not parallel quest/character REST commands.
 - GraphQL `ID` and REST `{id}` are the row’s **`public_id` (UUID)**. Never bigint.
 - Reads that write split into a command + follow-up read (see field-routing “Reads that write”).
 
@@ -71,7 +71,7 @@ API + DB + Discord **listener** (Gateway sensor) + **posting quests via Discord*
 1. Wire `@pi/contracts` + GraphQL client to `POST /v1/graphql`.
 2. Auth session against Discord OAuth + bearer.
 3. Quest board / detail from GraphQL; show `discordDelivery` as async status when present.
-4. Commands via REST (`transition`, `signup`, …) as OpenAPI lands in the running API.
+4. Commands via GraphQL mutations as the Go API lands resolver slices.
 5. Leave agent/mention UI out unless a later milestone turns the flag on.
 
 ## Quick links

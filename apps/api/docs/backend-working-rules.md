@@ -5,10 +5,11 @@ Working discipline for the Go API and worker in `apps/api`. [AGENTS.md](/AGENTS.
 ## Transport and layer boundaries
 
 ```text
-GraphQL tree read / REST command or fixed read → command/query → repository → sqlc/pgx
+POST /v1/graphql (product read or mutation) → command/query → repository → sqlc/pgx
+HTTP protocols (auth, ingest, agent, health) → dedicated handlers
 ```
 
-- Follow [D40](/apps/api/docs/decisions/D40-GraphQL-Versus-REST.md): GraphQL serves selected trees of related fields; REST owns commands, fixed-shape reads and reads that write. Routing authority is [field-routing.md](/packages/contracts/field-routing.md), with wire shapes in [OpenAPI](/packages/contracts/openapi.yaml) and the contract SDL.
+- Follow [D40](/apps/api/docs/decisions/D40-GraphQL-Versus-REST.md): **product** reads and business commands use GraphQL only; REST retains authentication, health, Discord observation ingest/heartbeat, and agent question protocols — not a second product command surface. Routing authority is [field-routing.md](/packages/contracts/field-routing.md) (converging toward D40), with wire shapes in [OpenAPI](/packages/contracts/openapi.yaml) and the contract SDL.
 - Adapters decode and validate input, establish caller authority, call a command/query and map its result. Domain rules and transaction orchestration belong in the owning slice.
 - New API code belongs under `apps/api/internal/`. The [quest commands](/apps/api/internal/quest/command.go) and [repository interface](/apps/api/internal/quest/repository.go) demonstrate the transaction boundary; their presence does not certify every quest behavior as complete.
 
@@ -27,7 +28,7 @@ Validate request shape and domain constraints at their owning boundaries. Do not
 ## Database and background work
 
 - [D42](/apps/api/docs/decisions/D42-Worker-And-Migrations.md) selects fresh Postgres and Goose. SQL migrations in `apps/api/db/migrations` define schema; queries in `apps/api/db/queries` generate `internal/platform/dbgen` through [sqlc configuration](/apps/api/sqlc.yaml). Change source inputs and regenerate; do not hand-edit generated files.
-- Use pgx repositories and explicit transactions. Do not copy SQLAlchemy session/flush/commit patterns into Go. Hex coordinates remain axial integer columns; JSONB is used where the schema allows flexible data.
+- Use pgx repositories and explicit transactions. Do not copy SQLAlchemy session/flush/commit patterns into Go. Squashed map model is **pointcrawl-only** ([owner-decisions](/docs/audits/owner-decisions.md) **C3**); JSONB is used where the schema allows flexible data.
 - Preserve append-only history where an aggregate defines it ([D16](/apps/api/docs/decisions/D16-Ledgers-Share-A-Shape-Not-A-Table.md)). The current backend also persists aggregate state directly; a universal event-replay source-of-truth claim is not an as-built rule.
 - `cmd/worker` owns Discord delivery and scheduled jobs. [D43](/apps/api/docs/decisions/D43-Agent-Worker-HTTP-Claim.md) and [agent-qa-http](/docs/interfaces/agent-qa-http.md) give the API durable question ownership and the Python agent HTTP claim/complete; the model stays in `apps/agent`.
 - [D44](/apps/api/docs/decisions/D44-Leased-Work-With-Fencing.md) gives `background_jobs` sole lifecycle authority, post-lock clock sampling, expiry/reclaim and receipt-fenced completion. [Background work](/apps/api/docs/background-work.md) records budgets and limits. Validate recovery against disposable Postgres and the actual consumer; source implementation alone is not execution evidence.

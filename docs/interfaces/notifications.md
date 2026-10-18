@@ -2,11 +2,13 @@
 
 **Status:** accepted requirements; implementation partial  
 **Provider:** `apps/api`  
-**Consumers:** `apps/web`; any separately approved delivery adapter
+**Consumers:** `apps/web`
+
+**Locked (2026-10-18):** [owner-decisions](/docs/audits/owner-decisions.md) **D1**, **N4** — inbox `notifications` rows only. No `notification_events`, no `notification_channel_deliveries`, and no channel-delivery ledger in the squashed schema. **F1**, **N3** — no `dm_requests` / `request_decisions`; the `DM_REQUEST_DECIDED` kind is **retired** (see [Events and recipients](#events-and-recipients)).
 
 ## Rule
 
-Generate notifications at the business event's write, address them to the concerned members, and resolve protected display text under each reader's current authority. Recipient routing, document visibility, unread state, and channel delivery are separate concerns.
+Generate notifications at the business event's write, address them to the concerned members, and resolve protected display text under each reader's current authority. Recipient routing, document visibility, and unread state are separate concerns; optional external channels are product work **outside** a durable delivery ledger.
 
 ### Events and recipients
 
@@ -20,9 +22,9 @@ This is the retained event vocabulary and recipient contract. It is not evidence
 | `DOCUMENT_EDITED`, `DOCUMENT_PUBLISHED` | The document author, excluding the actor                                                                                 |
 | `DM_MENTIONED`                          | Newly named, resolvable `[!dm:@handle]` members, excluding the actor; editing an unchanged mention does not notify again |
 | `QUEST_SCHEDULED`                       | Signed-up and waitlisted members, excluding the actor; includes rescheduling and the recorded quest-change variants      |
-| `DM_REQUEST_DECIDED`                    | The request's concerned member(s); exact routing and the decision producer remain unresolved                             |
+| ~~`DM_REQUEST_DECIDED`~~                | **Retired** — superseded by owner-decisions **N3** / **F1** (no DM request workflow tables). Do not add producers or SDL for this kind on the product cutover. |
 
-One provider module owns recipient derivation. Write sites validate actors; delivery adapters must not reconstruct recipient or event rules. A public Discord quest-board announcement is a broadcast and does not satisfy addressed delivery.
+One provider module owns recipient derivation. Write sites validate actors. A public Discord quest-board announcement is a broadcast and does not satisfy addressed inbox delivery.
 
 ### Privacy and read state
 
@@ -32,13 +34,13 @@ One provider module owns recipient derivation. Write sites validate actors; deli
 - Recheck after audience or identity changes. Suppress invisible or missing document subjects without returning their text, codes, or links; retain the notification record. The retained suppression contract marks those rows read so the badge converges. In the rebuilt CQRS API this needs a real acknowledgement command, not a write hidden inside an unread-count read.
 - Page cursors advance from the raw rows considered, before suppression, so an entirely suppressed page does not loop. Mark-read and suppression acknowledgement may affect only the current member's rows. Clear client caches on viewer/token transitions.
 
-### Generation, delivery, and failure
+### Generation and failure
 
-Generate once at the event site, inside its business unit of work. Repositories never commit independently. Persist queryable per-member unread state and separate per-channel undelivered, delivered, and failed state; reading a notice is not proof that an external channel delivered it. Channels consume the generated event and current privacy decision rather than generating their own event logic. Recipient preferences select channels in one bounded/batched decision.
+Generate once at the event site, inside its business unit of work. Repositories never commit independently. Persist queryable per-member unread state on **`notifications`** only (**N4**). There is no separate event row or per-channel delivery table in the squashed schema; do not document or implement `notification_events` / `notification_channel_deliveries` as product authority.
 
-**Unresolved durability guarantee:** the older target called this a transactional outbox, but the later legacy implementation ran generation inside a savepoint and caught failures so the business write could commit without a notice. That provided failure isolation, not guaranteed atomic event/notification durability. Decide whether to preserve that failure policy or require durable intent/recovery before claiming the generation durability requirement complete. No new outbox, retry contract, or public seam is approved by this consolidation.
+**Durability:** generation should commit with the originating command when feasible. The legacy savepoint/isolation pattern is not resurrected as a parallel event ledger. Optional email/Discord/push channels, if added later, consume inbox rows or side-effect outside Postgres — not a second durable delivery ledger in the hobby cutover.
 
-In-app is the retained baseline channel. Additional email/Discord DM channels, push versus revisit/refetch, copy/grouping/digests, retry and terminal-failure policy remain product/implementation work. Any live signal must satisfy the same current-authority privacy boundary; a subject identifier can itself reveal hidden existence.
+In-app inbox is the baseline surface. Additional channels, copy/grouping/digests, and retry policy remain product/implementation work. Any live signal must satisfy the same current-authority privacy boundary; a subject identifier can itself reveal hidden existence.
 
 ## Enforcement
 

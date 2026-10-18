@@ -40,7 +40,7 @@ cd apps/api
 go test ./test/contract/...
 ```
 
-These assert OpenAPI ↔ mux registration and GraphQL `roots.graphql` ↔ gqlgen schema/resolvers.
+These assert OpenAPI ↔ mux registration and GraphQL `_roots.graphql` ↔ gqlgen schema/resolvers (see [graphql-contract.md](docs/graphql-contract.md)).
 CI also fails on sqlc/gqlgen generate drift (`sqlc generate` / `gqlgen generate` + `git diff --exit-code`) and merged `schema.graphql` drift — see `.github/workflows/api.yml`.
 
 ## Quest reads

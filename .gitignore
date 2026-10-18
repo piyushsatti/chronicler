@@ -15,3 +15,6 @@ dist/
 
 # Local docs quarry (superseded / migration ledger — not authority)
 .local/
+
+# Local agent/workspace artifacts (plans, scratch audits); not pushed
+.artifacts/

@@ -13,7 +13,7 @@ There is one product GraphQL SDL source under packages/contracts/graphql, recurs
 | Mechanism                                      | Location                                             | Status                            |
 | ---------------------------------------------- | ---------------------------------------------------- | --------------------------------- |
 | Full recursive discovery and schema validation | scripts/merge-graphql-schema and TestSchemaDiscovery | implemented/tested                |
-| Aggregate drift vs source                      | bun run check-schema                                 | pending controlled regeneration   |
+| Aggregate drift vs source                      | bun run check-schema                                 | enforced                          |
 | Generated/executable field/argument parity     | TestGraphQLContract and mounted product tests        | not enforced until implementation |
 
 ## Provider

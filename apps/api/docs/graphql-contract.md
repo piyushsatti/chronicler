@@ -8,6 +8,8 @@ The provider implements [graphql-schema](/docs/interfaces/graphql-schema.md), [G
 
 The recursive split SDL in packages/contracts/graphql is the source. scripts/merge-graphql-schema discovers every .graphql file in sorted relative-path order, fully parses and validates the combined schema, rejects duplicate definitions/fields and invalid references, then atomically replaces the root-controlled aggregate. The pinned gqlgen schema pattern is the same recursive set. TestSchemaDiscovery exercises nested-source parity, deterministic bytes and failure preservation using an exact-script scratch fixture. No aggregate or codegen output is authored by contract publication.
 
+**M1 roots and gqlgen.** Contract roots are `_roots.graphql` (empty `Query` / `Mutation` plus `_contractLayoutStub`). gqlgen emits `_roots.resolvers.go`, which the Go toolchain ignores. Keep compiled root resolvers in `internal/graph/roots.resolvers.go` after each `gqlgen generate`. Domain fields stay on `extend type Query/Mutation` in domain `operations.graphql` files.
+
 The accepted contract has 82 business queries and 82 mutations. Full parsed field/argument/type comparisons belong to TestGraphQLContract and the mounted integration tests after generation. Historical Python QUERY_AUTH_REGISTRY and MUTATION_AUTH_REGISTRY inventories do not authorize Go operations. The exact Go policy and current resolved Authority govern execution.
 
 ## Request and command rules
