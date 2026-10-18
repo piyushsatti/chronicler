@@ -27,6 +27,7 @@ export type ActivitySummaryType = {
 };
 
 export type AdminCharacterDirectoryEntryType = {
+  ddbUrl?: Maybe<Scalars['String']['output']>;
   guildId?: Maybe<Scalars['ID']['output']>;
   id: Scalars['ID']['output'];
   name: Scalars['String']['output'];
@@ -1567,7 +1568,7 @@ export type Query = {
   myUnreadNotificationCount: Scalars['Int']['output'];
   openQuestSeats: OpenQuestSeatsResult;
   participationsByCharacter: ParticipationPage;
-  pendingCharacterVerifications: CharacterListResult;
+  pendingCharacterVerifications: AdminCharacterDirectoryType;
   pendingDmProfileVerifications: CommunityDirectoryResult;
   previewBody: Scalars['String']['output'];
   quest?: Maybe<QuestType>;

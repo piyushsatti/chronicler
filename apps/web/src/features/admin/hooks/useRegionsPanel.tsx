@@ -8,6 +8,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   createRegion,
   loadAdminRegions,
+  loadRegionArchonMemberId,
   updateRegion,
   type AdminRegionRow,
 } from '../adapters/adminAdapter.js';
@@ -29,6 +30,7 @@ export function useRegionsPanel() {
   const [editName, setEditName] = useState('');
   const [editKind, setEditKind] = useState('uncharted');
   const [editArchon, setEditArchon] = useState('');
+  const [previousArchon, setPreviousArchon] = useState<string | null>(null);
 
   const create = useMutation({
     mutationFn: authority.guardMutation(() =>
@@ -41,6 +43,21 @@ export function useRegionsPanel() {
     },
   });
 
+  const beginEdit = async (region: AdminRegionRow) => {
+    setEditing(region);
+    setEditName(region.name);
+    setEditKind(region.kind);
+    setEditArchon('');
+    setPreviousArchon(null);
+    try {
+      const current = await loadRegionArchonMemberId(region.id);
+      setPreviousArchon(current);
+      setEditArchon(current ?? '');
+    } catch {
+      // Authority failure path still surfaces via saveEdit / regions.
+    }
+  };
+
   const saveEdit = useMutation({
     mutationFn: authority.guardMutation(() => {
       if (!editing) throw new Error('No region selected');
@@ -49,11 +66,13 @@ export function useRegionsPanel() {
         name: editName.trim(),
         kind: editKind,
         archonMemberId: editArchon.trim() || null,
+        previousArchonMemberId: previousArchon,
       });
     }),
     onSuccess: async (region) => {
       setMessage(`Region "${region.name}" updated.`);
       setEditing(null);
+      setPreviousArchon(null);
       await queryClient.invalidateQueries({ queryKey: KEY });
     },
   });
@@ -66,6 +85,7 @@ export function useRegionsPanel() {
     setKind,
     message,
     editing,
+    beginEdit,
     setEditing,
     editName,
     setEditName,

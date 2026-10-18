@@ -17,6 +17,7 @@ export function RegionsPanel({
     setKind,
     message,
     editing,
+    beginEdit,
     setEditing,
     editName,
     setEditName,
@@ -139,10 +140,7 @@ export function RegionsPanel({
                 size="sm"
                 variant="ghost"
                 onClick={() => {
-                  setEditing(region);
-                  setEditName(region.name);
-                  setEditKind(region.kind);
-                  setEditArchon('');
+                  void beginEdit(region);
                 }}
               >
                 Edit

@@ -151,12 +151,29 @@ export const graphql: FeatureGraphql = {
       },
     }),
   UpdateRegion: () => HttpResponse.json({ data: { updateRegion: goodRegion } }),
+  ArchonAssignments: () =>
+    HttpResponse.json({
+      data: {
+        archonAssignments: {
+          total: 0,
+          items: [],
+        },
+      },
+    }),
   AssignArchon: () =>
     HttpResponse.json({
       data: {
         assignArchon: {
           memberId: '11111111-1111-4111-8111-111111111111',
           regionId: goodRegion.id,
+        },
+      },
+    }),
+  RevokeArchon: () =>
+    HttpResponse.json({
+      data: {
+        revokeArchon: {
+          replayed: false,
         },
       },
     }),

@@ -229,6 +229,16 @@ export type AdminTimeAnchorsQueryVariables = Exact<{
 
 export type AdminTimeAnchorsQuery = { timeAnchors: { total: number, items: Array<{ id: string, realUtc: string, epochDay: number, rate: number, note: string | null }> } };
 
+export type ArchonAssignmentsQueryVariables = Exact<{
+  regionId?: string | null | undefined;
+  memberId?: string | null | undefined;
+  limit?: number;
+  offset?: number;
+}>;
+
+
+export type ArchonAssignmentsQuery = { archonAssignments: { total: number, items: Array<{ memberId: string, regionId: string, grantedAt: string }> } };
+
 export type AssignArchonMutationVariables = Exact<{
   memberId: string;
   regionId: string;
@@ -290,7 +300,7 @@ export type PendingCharacterVerificationsQueryVariables = Exact<{
 }>;
 
 
-export type PendingCharacterVerificationsQuery = { pendingCharacterVerifications: { total: number, items: Array<{ id: string, shortCode: string, name: string, ownerId: string, ddbUrl: string | null, verificationSubmittedAt: string | null }> } };
+export type PendingCharacterVerificationsQuery = { pendingCharacterVerifications: { total: number, items: Array<{ id: string, shortCode: string, name: string, ownerHandle: string, ddbUrl: string | null, verificationSubmittedAt: string | null }> } };
 
 export type PendingDmProfilesQueryVariables = Exact<{
   limit: number;
@@ -299,6 +309,15 @@ export type PendingDmProfilesQueryVariables = Exact<{
 
 
 export type PendingDmProfilesQuery = { pendingDmProfileVerifications: { total: number, entries: Array<{ memberId: string, handle: string, displayName: string, dmProfileStatus: string | null, dmProfileReviewRevision: number | null }> } };
+
+export type RevokeArchonMutationVariables = Exact<{
+  memberId: string;
+  regionId: string;
+  meta: CommandMeta;
+}>;
+
+
+export type RevokeArchonMutation = { revokeArchon: { replayed: boolean } };
 
 export type SetMemberRolesMutationVariables = Exact<{
   memberId: string;

@@ -1,0 +1,5 @@
+mutation RevokeArchon($memberId: ID!, $regionId: ID!, $meta: CommandMeta!) {
+  revokeArchon(memberId: $memberId, regionId: $regionId, meta: $meta) {
+    replayed
+  }
+}

@@ -1,0 +1,20 @@
+query ArchonAssignments(
+  $regionId: ID
+  $memberId: ID
+  $limit: Int! = 50
+  $offset: Int! = 0
+) {
+  archonAssignments(
+    regionId: $regionId
+    memberId: $memberId
+    limit: $limit
+    offset: $offset
+  ) {
+    total
+    items {
+      memberId
+      regionId
+      grantedAt
+    }
+  }
+}

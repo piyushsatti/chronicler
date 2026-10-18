@@ -9,6 +9,7 @@ import type {
   AdminOperationsQuery,
   AdminRegionsQuery,
   AdminTimeAnchorsQuery,
+  ArchonAssignmentsQuery,
   AssignArchonMutation,
   CreateBackstoryMutation,
   CreateRegionMutation,
@@ -17,6 +18,7 @@ import type {
   DecideVerificationMutation,
   PendingCharacterVerificationsQuery,
   PendingDmProfilesQuery,
+  RevokeArchonMutation,
   SetMemberRolesBatchMutation,
   SetMemberRolesMutation,
   UpdateBackstoryMutation,
@@ -43,7 +45,9 @@ import DECIDE_DM_PROFILE from './decideDmProfileVerification.graphql?raw';
 import ADMIN_REGIONS from './adminRegions.graphql?raw';
 import CREATE_REGION from './createRegion.graphql?raw';
 import UPDATE_REGION from './updateRegion.graphql?raw';
+import ARCHON_ASSIGNMENTS from './archonAssignments.graphql?raw';
 import ASSIGN_ARCHON from './assignArchon.graphql?raw';
+import REVOKE_ARCHON from './revokeArchon.graphql?raw';
 import ADMIN_BACKSTORIES from './adminBackstories.graphql?raw';
 import CREATE_BACKSTORY from './createBackstory.graphql?raw';
 import UPDATE_BACKSTORY from './updateBackstory.graphql?raw';
@@ -95,14 +99,14 @@ const charPendingSchema = z.object({
         id: z.string().uuid(),
         shortCode: z.string(),
         name: z.string(),
-        ownerId: z.string().optional(),
-        ownerHandle: z.string().optional(),
+        ownerHandle: z.string(),
         ddbUrl: z.string().nullable().optional(),
         verificationSubmittedAt: z.string().nullable().optional(),
       }),
     )
     .optional()
     .default([]),
+  total: z.number().int().optional(),
 });
 
 const adminAlertSchema = z.object({
@@ -158,7 +162,7 @@ export type CharVerifyRow = {
   id: string;
   shortCode: string;
   name: string;
-  ownerHandle: string | null;
+  ownerHandle: string;
   ddbUrl: string | null;
   verificationSubmittedAt: string | null;
 };
@@ -216,8 +220,7 @@ export function parseCharPending(wire: unknown): AdapterResult<CharVerifyRow[]> 
       id: i.id,
       shortCode: i.shortCode,
       name: i.name,
-      // CharacterType has ownerId only; ownerHandle lives on admin directory entries.
-      ownerHandle: i.ownerHandle ?? null,
+      ownerHandle: i.ownerHandle,
       ddbUrl: i.ddbUrl ?? null,
       verificationSubmittedAt: i.verificationSubmittedAt ?? null,
     })),
@@ -779,15 +782,37 @@ export type AdminRegionDetail = AdminRegionRow & {
 };
 
 /**
- * field-routing: updateRegion (+ assignArchon when archonMemberId set).
- * RegionInput has no archon field; clearing archon via revokeArchon is blocked
- * without a prior assignment id on RegionType.
+ * field-routing: archonAssignments(regionId) — RegionType has no archon field;
+ * assignments live on Query.archonAssignments. Single-field admin UX uses the
+ * first assignment when multiple exist.
+ */
+export async function loadRegionArchonMemberId(
+  regionId: string,
+): Promise<string | null> {
+  try {
+    const data = await graphqlRequest<ArchonAssignmentsQuery>(ARCHON_ASSIGNMENTS, {
+      regionId,
+      memberId: null,
+      limit: 50,
+      offset: 0,
+    });
+    return data.archonAssignments.items[0]?.memberId ?? null;
+  } catch (err) {
+    throw toAppError(err, 'admin:region:archon');
+  }
+}
+
+/**
+ * field-routing: updateRegion (+ assignArchon / revokeArchon).
+ * Clear: empty archonMemberId + previousArchonMemberId → revokeArchon.
+ * Replace: revoke previous (when set and different) then assignArchon.
  */
 export async function updateRegion(input: {
   regionId: string;
   name?: string;
   kind?: string;
   archonMemberId?: string | null;
+  previousArchonMemberId?: string | null;
   charterDeadline?: string | null;
 }): Promise<AdminRegionDetail> {
   try {
@@ -804,10 +829,18 @@ export async function updateRegion(input: {
     if (!parsed.success) {
       throw toAppError({ failure: 'InvalidWire' }, 'admin:region:update');
     }
-    const archonMemberId = optionalId(input.archonMemberId);
-    if (archonMemberId) {
+    const next = optionalId(input.archonMemberId);
+    const previous = optionalId(input.previousArchonMemberId);
+    if (previous && previous !== next) {
+      await graphqlRequest<RevokeArchonMutation>(REVOKE_ARCHON, {
+        memberId: previous,
+        regionId: input.regionId,
+        meta: commandMeta(),
+      });
+    }
+    if (next && next !== previous) {
       await graphqlRequest<AssignArchonMutation>(ASSIGN_ARCHON, {
-        memberId: archonMemberId,
+        memberId: next,
         regionId: input.regionId,
         meta: commandMeta(),
       });
@@ -817,7 +850,7 @@ export async function updateRegion(input: {
       name: parsed.data.name,
       kind: parsed.data.kind,
       charterDeadline: parsed.data.charterDeadline ?? null,
-      archonMemberId,
+      archonMemberId: next,
     };
   } catch (err) {
     throw toAppError(err, 'admin:region:update');
