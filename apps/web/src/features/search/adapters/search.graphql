@@ -1,0 +1,18 @@
+query Search($query: String!, $kinds: [String!], $limit: Int!) {
+  search(query: $query, kinds: $kinds, limit: $limit) {
+    query
+    documents {
+      id
+      kind
+      slug
+      title
+      snippet
+      questShortCode
+    }
+    members {
+      memberId
+      handle
+      displayName
+    }
+  }
+}

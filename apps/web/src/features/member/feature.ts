@@ -19,19 +19,11 @@ export const queryKeys = {
   me: ['me'] as const,
 };
 
-export const graphql: FeatureGraphql = {};
+export const graphql: FeatureGraphql = {
+  MemberMe: () => HttpResponse.json({ data: { memberMe: goodMe } }),
+};
 
 export const handlers: FeatureHandlers = [
-  http.get(membersMe, ({ request }) => {
-    const auth = request.headers.get('Authorization');
-    if (!auth) {
-      return HttpResponse.json(
-        { title: 'Unauthorized', status: 401, code: 'UNAUTHORIZED' },
-        { status: 401 },
-      );
-    }
-    return HttpResponse.json(goodMe);
-  }),
   http.patch(updateMySettings, () => HttpResponse.json({ ok: true })),
   http.post(authCallback, async ({ request }) => {
     const body = (await request.json()) as { code?: string };

@@ -7,7 +7,7 @@ import goodMe from '../../fixtures/wire/me/good.json';
 import badMe from '../../fixtures/wire/me/bad-missing-field.json';
 
 describe('parseMe', () => {
-  it('parses roles from members/me wire', () => {
+  it('parses roles from memberMe wire', () => {
     const result = parseMe(goodMe);
     expect(result.ok).toBe(true);
     if (result.ok) {

@@ -24,9 +24,22 @@ describe('parseSearch', () => {
 });
 
 describe('parseSearchKinds', () => {
-  it('accepts a string array', () => {
+  it('maps searchable kind keys', () => {
     const result = parseSearchKinds(kinds);
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.data).toContain('codex');
+  });
+
+  it('drops non-searchable kinds', () => {
+    const result = parseSearchKinds([
+      {
+        key: "hidden",
+        label: 'Hidden',
+        searchable: false,
+        exclusionReason: 'retired',
+      },
+    ]);
+    expect(result.ok).toBe(true);
+    if (result.ok) expect(result.data).toEqual([]);
   });
 });

@@ -1,0 +1,8 @@
+query MemberMe {
+  memberMe {
+    id
+    handle
+    displayName
+    roles
+  }
+}

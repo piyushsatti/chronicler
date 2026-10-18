@@ -1,9 +1,11 @@
+import type { MemberMeQuery } from '../../../api/graphql.operations.gen.js';
+import { graphqlRequest } from '../../../api/graphql.js';
 import { restRequest } from '../../../api/rest.js';
 import { AUTH_CALLBACK_PATH } from '../../../api/endpoints.js';
-import { rest } from '../../../api/endpoints.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import { memberMeWireSchema } from './member.wire.schema.js';
+import MEMBER_ME_QUERY from './memberMe.graphql?raw';
 import { z } from 'zod';
 
 const authCallbackWireSchema = z.object({ token: z.string().min(1) });
@@ -60,8 +62,8 @@ export function parseMe(wire: unknown): AdapterResult<MemberViewModel> {
 
 export async function loadMe(): Promise<MemberViewModel> {
   try {
-    const wire = await restRequest<unknown>(rest.membersMe);
-    const result = parseMe(wire);
+    const data = await graphqlRequest<MemberMeQuery>(MEMBER_ME_QUERY);
+    const result = parseMe(data.memberMe);
     if (!result.ok) {
       throw toAppError({ failure: result.failure }, 'me:load');
     }

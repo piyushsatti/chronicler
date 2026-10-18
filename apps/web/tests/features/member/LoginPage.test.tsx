@@ -1,8 +1,11 @@
 import { http, HttpResponse } from 'msw';
-import { rest } from '../../../src/api/endpoints.js';
+import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
 import { LoginRoute } from '../../../src/chrome/LoginRoute.js';
+import type { GraphqlRequestBody } from '../../../src/chrome/featureModule.js';
 import { server } from '../../../src/mocks/server.js';
 import adminMe from '../../fixtures/wire/me/admin-good.json';
+import goodNotifications from '../../fixtures/wire/notifications/list-good.json';
+import goodUnread from '../../fixtures/wire/notifications/unread-good.json';
 import { fireEvent, screen } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LoginPage } from '../../../src/features/member/pages/LoginPage.js';
@@ -67,7 +70,28 @@ describe('LoginRoute', () => {
   it('shows account links and notifications when signed in as admin', async () => {
     seedToken();
     server.use(
-      http.get(rest.membersMe, () => HttpResponse.json(adminMe)),
+      http.post(GRAPHQL_PATH, async ({ request }) => {
+        const body = (await request.json()) as GraphqlRequestBody;
+        const q = body.query ?? '';
+        if (/\bquery\s+MemberMe\b/.test(q)) {
+          return HttpResponse.json({ data: { memberMe: adminMe } });
+        }
+        if (/\bquery\s+MyUnreadNotificationCount\b/.test(q)) {
+          return HttpResponse.json({
+            data: { myUnreadNotificationCount: goodUnread.count },
+          });
+        }
+        if (/\bquery\s+MyNotifications\b/.test(q)) {
+          return HttpResponse.json({
+            data: { myNotifications: goodNotifications },
+          });
+        }
+        return HttpResponse.json({
+          errors: [
+            { message: 'Unhandled operation', extensions: { code: 'UNHANDLED' } },
+          ],
+        });
+      }),
     );
     renderWithProviders(<LoginRoute />);
     expect(

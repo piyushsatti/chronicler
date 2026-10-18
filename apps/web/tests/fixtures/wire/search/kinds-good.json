@@ -1,1 +1,20 @@
-["codex", "quest", "member"]
+[
+  {
+    "key": "codex",
+    "label": "Codex",
+    "searchable": true,
+    "exclusionReason": null
+  },
+  {
+    "key": "quest",
+    "label": "Quest",
+    "searchable": true,
+    "exclusionReason": null
+  },
+  {
+    "key": "member",
+    "label": "Member",
+    "searchable": true,
+    "exclusionReason": null
+  }
+]

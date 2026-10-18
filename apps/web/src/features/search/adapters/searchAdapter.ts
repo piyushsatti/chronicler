@@ -1,9 +1,13 @@
 import { z } from 'zod';
+import type {
+  SearchQuery,
+  SearchableKindsQuery,
+} from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
-import { restRequest } from '../../../api/rest.js';
-import { rest } from '../../../api/endpoints.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
+import SEARCH_QUERY from './search.graphql?raw';
+import SEARCHABLE_KINDS_QUERY from './searchableKinds.graphql?raw';
 
 const docHitSchema = z.object({
   id: z.string(),
@@ -26,10 +30,14 @@ const searchWireSchema = z.object({
   members: z.array(memberHitSchema),
 });
 
-const kindsWireSchema = z.union([
-  z.array(z.string()),
-  z.object({ kinds: z.array(z.string()) }),
-]);
+const kindWireSchema = z.object({
+  key: z.string().min(1),
+  label: z.string().min(1),
+  searchable: z.boolean(),
+  exclusionReason: z.string().nullable().optional(),
+});
+
+const kindsWireSchema = z.array(kindWireSchema);
 
 export type SearchHitView = {
   id: string;
@@ -68,35 +76,14 @@ export function parseSearchKinds(wire: unknown): AdapterResult<string[]> {
   }
   return {
     ok: true,
-    data: Array.isArray(parsed.data) ? parsed.data : parsed.data.kinds,
+    data: parsed.data.filter((k) => k.searchable).map((k) => k.key),
   };
 }
 
-const SEARCH_QUERY = `
-  query Search($query: String!, $kinds: [String!], $limit: Int!) {
-    search(query: $query, kinds: $kinds, limit: $limit) {
-      query
-      documents {
-        id
-        kind
-        slug
-        title
-        snippet
-        questShortCode
-      }
-      members {
-        memberId
-        handle
-        displayName
-      }
-    }
-  }
-`;
-
 export async function loadSearchKinds(): Promise<string[]> {
   try {
-    const wire = await restRequest<unknown>(rest.searchKinds);
-    const result = parseSearchKinds(wire);
+    const data = await graphqlRequest<SearchableKindsQuery>(SEARCHABLE_KINDS_QUERY);
+    const result = parseSearchKinds(data.searchableKinds);
     if (!result.ok) throw toAppError({ failure: result.failure }, 'search:kinds');
     return result.data;
   } catch (err) {
@@ -109,7 +96,7 @@ export async function loadSearch(
   kinds?: string[],
 ): Promise<SearchHitView[]> {
   try {
-    const data = await graphqlRequest<{ search: unknown }>(SEARCH_QUERY, {
+    const data = await graphqlRequest<SearchQuery>(SEARCH_QUERY, {
       query,
       kinds: kinds?.length ? kinds : null,
       limit: 20,

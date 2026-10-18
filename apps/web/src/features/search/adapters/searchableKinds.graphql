@@ -1,0 +1,8 @@
+query SearchableKinds {
+  searchableKinds {
+    key
+    label
+    searchable
+    exclusionReason
+  }
+}
