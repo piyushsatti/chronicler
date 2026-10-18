@@ -47,7 +47,7 @@
             ],
         },
       'Int': { 'model': ['github.com/99designs/gqlgen/graphql.Int'] },
-      'AdminOperationsV2Type': { 'fields': { 'activeAlerts': { 'resolver': true } } },
+      'AdminOperationsType': { 'fields': { 'activeAlerts': { 'resolver': true } } },
       'CodexEntryCardType': { 'fields': { 'subjects': { 'resolver': true } } },
       'DocumentType':
         {
@@ -59,8 +59,8 @@
               'readerIds': { 'resolver': true },
             },
         },
-      'GameCalendarV2Type': { 'fields': { 'currentGameDate': { 'resolver': true } } },
-      'MapV2Type':
+      'GameCalendarType': { 'fields': { 'currentGameDate': { 'resolver': true } } },
+      'MapType':
         {
           'fields':
             {
@@ -79,9 +79,9 @@
             { 'MemberID': { 'type': 'string', 'overrideTags': 'json:"-"' } },
         },
       'MemberProfileType': { 'fields': { 'recentWeeks': { 'resolver': true } } },
-      'PointcrawlNodeV2Type': { 'fields': { 'linkedEntries': { 'resolver': true } } },
-      'QuestArcV2Type': { 'fields': { 'quests': { 'resolver': true } } },
-      'QuestV2Type':
+      'PointcrawlNodeType': { 'fields': { 'linkedEntries': { 'resolver': true } } },
+      'QuestArcType': { 'fields': { 'quests': { 'resolver': true } } },
+      'QuestType':
         {
           'fields':
             {
@@ -144,7 +144,7 @@
               'title': { 'omittable': true },
             },
         },
-      'UpdateCharacterProfileV2Input':
+      'UpdateCharacterProfileInput':
         {
           'fields':
             {

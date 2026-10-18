@@ -46,7 +46,7 @@ func toDocumentType(d document.Document, body string) *DocumentType {
 	}
 }
 
-func toQuestV2FiltersFields(filters *QuestV2FiltersInput) *quest.QuestV2FiltersFields {
+func toQuestFiltersFields(filters *QuestFiltersInput) *quest.QuestV2FiltersFields {
 	if filters == nil {
 		return nil
 	}
@@ -66,9 +66,9 @@ func toQuestV2FiltersFields(filters *QuestV2FiltersInput) *quest.QuestV2FiltersF
 	}
 }
 
-func toQuestsSpec(filters *QuestV2FiltersInput, limit, offset int) quest.QuestsSpec {
+func toQuestsSpec(filters *QuestFiltersInput, limit, offset int) quest.QuestsSpec {
 	spec := quest.QuestsSpec{Limit: int32(limit), Offset: int32(offset)}
-	spec.Filters = toQuestV2FiltersFields(filters)
+	spec.Filters = toQuestFiltersFields(filters)
 	if filters != nil {
 		if filters.Tag != nil && *filters.Tag != "" {
 			spec.TagFilterSet = true
@@ -82,13 +82,13 @@ func toQuestsSpec(filters *QuestV2FiltersInput, limit, offset int) quest.QuestsS
 	return spec
 }
 
-func toQuestV2View(v quest.QuestView) *QuestV2Type {
+func toQuestView(v quest.QuestView) *QuestType {
 	var apl *int
 	if v.Apl != nil {
 		i := int(*v.Apl)
 		apl = &i
 	}
-	return &QuestV2Type{
+	return &QuestType{
 		ID:               v.Id,
 		ShortCode:        v.ShortCode,
 		Kinds:            v.Kinds,
@@ -116,16 +116,16 @@ func toQuestV2View(v quest.QuestView) *QuestV2Type {
 	}
 }
 
-func toQuestV2ListResult(v quest.QuestV2ListResult) *QuestV2ListResult {
-	items := make([]*QuestV2Type, len(v.Items))
+func toQuestListResult(v quest.QuestV2ListResult) *QuestListResult {
+	items := make([]*QuestType, len(v.Items))
 	for i, item := range v.Items {
-		items[i] = toQuestV2View(item)
+		items[i] = toQuestView(item)
 	}
-	return &QuestV2ListResult{Items: items, Total: int(v.Total)}
+	return &QuestListResult{Items: items, Total: int(v.Total)}
 }
 
-func toQuestArcV2View(v quest.QuestArcView) *QuestArcV2Type {
-	return &QuestArcV2Type{
+func toQuestArcView(v quest.QuestArcView) *QuestArcType {
+	return &QuestArcType{
 		ID:         v.Id,
 		Name:       v.Name,
 		CreatedBy:  v.CreatedBy,
@@ -134,17 +134,17 @@ func toQuestArcV2View(v quest.QuestArcView) *QuestArcV2Type {
 	}
 }
 
-func toQuestArcV2ListResult(v quest.QuestArcV2ListResult) *QuestArcV2ListResult {
-	items := make([]*QuestArcV2Type, 0, len(v.Items))
+func toQuestArcListResult(v quest.QuestArcV2ListResult) *QuestArcListResult {
+	items := make([]*QuestArcType, 0, len(v.Items))
 	for _, item := range v.Items {
-		items = append(items, toQuestArcV2View(item))
+		items = append(items, toQuestArcView(item))
 	}
-	return &QuestArcV2ListResult{Items: items, Total: int(v.Total)}
+	return &QuestArcListResult{Items: items, Total: int(v.Total)}
 }
 
-func toQuestV2(q quest.LegacyQuestView) *QuestV2Type {
+func toQuest(q quest.LegacyQuestView) *QuestType {
 	status := string(q.Status)
-	return &QuestV2Type{
+	return &QuestType{
 		ID:            q.ID,
 		ShortCode:     q.ShortCode,
 		Kinds:         []string{"standard"},
@@ -161,7 +161,7 @@ func toQuestV2(q quest.LegacyQuestView) *QuestV2Type {
 		CreatedBy:     q.DMID,
 		CreatedAt:     time.Now(),
 		UpdatedAt:     time.Now(),
-		DiscordDelivery: &QuestDiscordDeliveryV2Type{
+		DiscordDelivery: &QuestDiscordDeliveryType{
 			DesiredRevision: q.DiscordDesiredRevision,
 			AppliedRevision: q.DiscordAppliedRevision,
 			OverallStatus:   "pending",
@@ -221,7 +221,7 @@ func toAvailabilitySlots(in []*AvailabilitySlotInput) []member.AvailabilitySlotF
 	return out
 }
 
-func toDmProfileV2Type(v *member.DmProfileView) *DmProfileV2Type {
+func toDmProfileType(v *member.DmProfileView) *DmProfileType {
 	if v == nil {
 		return nil
 	}
@@ -229,7 +229,7 @@ func toDmProfileV2Type(v *member.DmProfileView) *DmProfileV2Type {
 	if v.TableInfo != nil {
 		tableInfo = *v.TableInfo
 	}
-	return &DmProfileV2Type{
+	return &DmProfileType{
 		MemberID:         v.MemberId,
 		Tagline:          v.Tagline,
 		Philosophy:       v.Philosophy,
@@ -244,7 +244,7 @@ func toDmProfileV2Type(v *member.DmProfileView) *DmProfileV2Type {
 func toMemberProfileType(v member.MemberProfileView) *MemberProfileType {
 	return &MemberProfileType{
 		Member:          toMemberViewType(v.Member),
-		DmProfile:       toDmProfileV2Type(v.DmProfile),
+		DmProfile:       toDmProfileType(v.DmProfile),
 		Availability:    toAvailabilitySlotTypes(v.Availability),
 		ActivitySummary: toActivitySummaryType(v.ActivitySummary),
 		RecentWeeks:     []*WeekActivityType{},
@@ -473,8 +473,8 @@ func toMyPersonalizationType(v member.MyPersonalizationView) *MyPersonalizationT
 	return out
 }
 
-func toQuestParticipantV2FromQuest(v quest.QuestParticipantView) *QuestParticipantV2Type {
-	return &QuestParticipantV2Type{
+func toQuestParticipantFromQuest(v quest.QuestParticipantView) *QuestParticipantType {
+	return &QuestParticipantType{
 		QuestID:           v.QuestId,
 		MemberID:          v.MemberId,
 		CharacterID:       v.CharacterId,
@@ -489,7 +489,7 @@ func toQuestParticipantV2FromQuest(v quest.QuestParticipantView) *QuestParticipa
 	}
 }
 
-func toQuestStateCountsFilters(filters *QuestStateCountsFiltersV2Input) *quest.QuestStateCountsFiltersV2Fields {
+func toQuestStateCountsFilters(filters *QuestStateCountsFiltersInput) *quest.QuestStateCountsFiltersV2Fields {
 	if filters == nil {
 		return nil
 	}
@@ -502,7 +502,7 @@ func toQuestStateCountsFilters(filters *QuestStateCountsFiltersV2Input) *quest.Q
 	}
 }
 
-func toQuestStateCountsSpec(filters *QuestStateCountsFiltersV2Input) quest.QuestStateCountsSpec {
+func toQuestStateCountsSpec(filters *QuestStateCountsFiltersInput) quest.QuestStateCountsSpec {
 	spec := quest.QuestStateCountsSpec{Filters: toQuestStateCountsFilters(filters)}
 	if filters != nil && filters.Tag != nil && *filters.Tag != "" {
 		spec.TagFilterSet = true
@@ -511,16 +511,16 @@ func toQuestStateCountsSpec(filters *QuestStateCountsFiltersV2Input) quest.Quest
 	return spec
 }
 
-func toQuestStateCountV2Types(items []quest.QuestStateCountView) []*QuestStateCountV2Type {
-	out := make([]*QuestStateCountV2Type, len(items))
+func toQuestStateCountTypes(items []quest.QuestStateCountView) []*QuestStateCountType {
+	out := make([]*QuestStateCountType, len(items))
 	for i, item := range items {
-		out[i] = &QuestStateCountV2Type{State: item.State, Count: int(item.Count)}
+		out[i] = &QuestStateCountType{State: item.State, Count: int(item.Count)}
 	}
 	return out
 }
 
-func toOpenQuestSeatV2Type(v quest.OpenQuestSeatView) *OpenQuestSeatV2Type {
-	return &OpenQuestSeatV2Type{
+func toOpenQuestSeatType(v quest.OpenQuestSeatView) *OpenQuestSeatType {
+	return &OpenQuestSeatType{
 		QuestID:     v.QuestId,
 		ShortCode:   v.ShortCode,
 		DmID:        v.DmId,
@@ -533,23 +533,23 @@ func toOpenQuestSeatV2Type(v quest.OpenQuestSeatView) *OpenQuestSeatV2Type {
 	}
 }
 
-func toOpenQuestSeatsV2Result(v quest.OpenQuestSeatsV2Result) *OpenQuestSeatsV2Result {
-	entries := make([]*OpenQuestSeatV2Type, len(v.Entries))
+func toOpenQuestSeatsResult(v quest.OpenQuestSeatsV2Result) *OpenQuestSeatsResult {
+	entries := make([]*OpenQuestSeatType, len(v.Entries))
 	for i, e := range v.Entries {
-		entries[i] = toOpenQuestSeatV2Type(e)
+		entries[i] = toOpenQuestSeatType(e)
 	}
-	return &OpenQuestSeatsV2Result{Entries: entries, Total: int(v.Total)}
+	return &OpenQuestSeatsResult{Entries: entries, Total: int(v.Total)}
 }
 
 func toQuestParticipationPage(v quest.ParticipationPage) *ParticipationPage {
-	items := make([]*QuestParticipantV2Type, len(v.Items))
+	items := make([]*QuestParticipantType, len(v.Items))
 	for i, item := range v.Items {
-		items[i] = toQuestParticipantV2FromQuest(item)
+		items[i] = toQuestParticipantFromQuest(item)
 	}
 	return &ParticipationPage{Items: items, Total: int(v.Total)}
 }
 
-func toDmSummaryFilters(filters *DmSummaryFiltersV2Input) *quest.DmSummaryFiltersV2Fields {
+func toDmSummaryFilters(filters *DmSummaryFiltersInput) *quest.DmSummaryFiltersV2Fields {
 	if filters == nil {
 		return nil
 	}
@@ -559,7 +559,7 @@ func toDmSummaryFilters(filters *DmSummaryFiltersV2Input) *quest.DmSummaryFilter
 	}
 }
 
-func toQuestSummariesV2Result(v quest.QuestSummariesV2Result) *QuestSummariesV2Result {
+func toQuestSummariesResult(v quest.QuestSummariesV2Result) *QuestSummariesResult {
 	summaries := make([]*DocumentType, len(v.Summaries))
 	for i, item := range v.Summaries {
 		summaries[i] = toDocumentViewType(item)
@@ -569,42 +569,42 @@ func toQuestSummariesV2Result(v quest.QuestSummariesV2Result) *QuestSummariesV2R
 		awarded := int(*v.Totals.TotalPcxpAwarded)
 		totalPcxp = &awarded
 	}
-	return &QuestSummariesV2Result{
+	return &QuestSummariesResult{
 		Summaries: summaries,
-		Totals: &QuestSummaryTotalsV2Type{
+		Totals: &QuestSummaryTotalsType{
 			TotalPcxpAwarded: totalPcxp,
 			Coverage:         RewardCoverage(v.Totals.Coverage),
 		},
 	}
 }
 
-func toDmLastSessionV2Type(v *quest.DmLastSessionView) *DmLastSessionV2Type {
+func toDmLastSessionType(v *quest.DmLastSessionView) *DmLastSessionType {
 	if v == nil {
 		return nil
 	}
-	out := &DmLastSessionV2Type{Quest: toQuestV2View(v.Quest)}
+	out := &DmLastSessionType{Quest: toQuestView(v.Quest)}
 	if v.RecapDocument != nil {
 		out.RecapDocument = toDocumentViewType(*v.RecapDocument)
 	}
 	return out
 }
 
-func toDmStatsV2Type(v *quest.DmStatsView) *DmStatsV2Type {
+func toDmStatsType(v *quest.DmStatsView) *DmStatsType {
 	if v == nil {
 		return nil
 	}
-	return &DmStatsV2Type{
+	return &DmStatsType{
 		SessionCount: int(v.SessionCount),
-		LastSession:  toDmLastSessionV2Type(v.LastSession),
+		LastSession:  toDmLastSessionType(v.LastSession),
 	}
 }
 
-func toDmSessionHistoryV2Result(v quest.DmSessionHistoryV2Result) *DmSessionHistoryV2Result {
-	items := make([]*DmLastSessionV2Type, len(v.Items))
+func toDmSessionHistoryResult(v quest.DmSessionHistoryV2Result) *DmSessionHistoryResult {
+	items := make([]*DmLastSessionType, len(v.Items))
 	for i := range v.Items {
-		items[i] = toDmLastSessionV2Type(&v.Items[i])
+		items[i] = toDmLastSessionType(&v.Items[i])
 	}
-	return &DmSessionHistoryV2Result{Items: items, Total: int(v.Total)}
+	return &DmSessionHistoryResult{Items: items, Total: int(v.Total)}
 }
 
 func toMemberSettingsType(v member.MemberSettingsView) *MemberSettingsType {
@@ -658,7 +658,7 @@ func toUnlockableType(v member.UnlockableView) *UnlockableType {
 	}
 }
 
-func toCharacterV2Filters(filters *CharacterV2FiltersInput) *character.CharacterV2FiltersFields {
+func toCharacterFilters(filters *CharacterFiltersInput) *character.CharacterV2FiltersFields {
 	if filters == nil {
 		return nil
 	}
@@ -671,8 +671,8 @@ func toCharacterV2Filters(filters *CharacterV2FiltersInput) *character.Character
 	}
 }
 
-func toCharacterV2View(v character.CharacterView) *CharacterV2Type {
-	return &CharacterV2Type{
+func toCharacterView(v character.CharacterView) *CharacterType {
+	return &CharacterType{
 		ID:                      v.Id,
 		OwnerID:                 v.OwnerId,
 		ShortCode:               v.ShortCode,
@@ -694,12 +694,12 @@ func toCharacterV2View(v character.CharacterView) *CharacterV2Type {
 	}
 }
 
-func toCharacterV2ListResult(v character.CharacterV2ListResult) *CharacterV2ListResult {
-	items := make([]*CharacterV2Type, len(v.Items))
+func toCharacterListResult(v character.CharacterV2ListResult) *CharacterListResult {
+	items := make([]*CharacterType, len(v.Items))
 	for i, item := range v.Items {
-		items[i] = toCharacterV2View(item)
+		items[i] = toCharacterView(item)
 	}
-	return &CharacterV2ListResult{Items: items, Total: int(v.Total)}
+	return &CharacterListResult{Items: items, Total: int(v.Total)}
 }
 
 func toBackstoryFilters(filters *BackstoryFiltersInput) *character.BackstoryFiltersFields {
@@ -835,8 +835,8 @@ func toDowntimeProjectListResult(v character.DowntimeProjectListResult) *Downtim
 	return &DowntimeProjectListResult{Items: items, Total: int(v.Total)}
 }
 
-func toCoPlayerV2Type(v character.CoPlayerView) *CoPlayerV2Type {
-	return &CoPlayerV2Type{
+func toCoPlayerType(v character.CoPlayerView) *CoPlayerType {
+	return &CoPlayerType{
 		CharacterID: v.CharacterId,
 		MemberID:    v.MemberId,
 		QuestCount:  int(v.QuestCount),
@@ -844,15 +844,15 @@ func toCoPlayerV2Type(v character.CoPlayerView) *CoPlayerV2Type {
 }
 
 func toCoPlayerPage(v character.CoPlayerPage) *CoPlayerPage {
-	items := make([]*CoPlayerV2Type, len(v.Items))
+	items := make([]*CoPlayerType, len(v.Items))
 	for i, item := range v.Items {
-		items[i] = toCoPlayerV2Type(item)
+		items[i] = toCoPlayerType(item)
 	}
 	return &CoPlayerPage{Items: items, Total: int(v.Total)}
 }
 
-func toQuestParticipantV2Type(v character.ParticipationView) *QuestParticipantV2Type {
-	return &QuestParticipantV2Type{
+func toQuestParticipantType(v character.ParticipationView) *QuestParticipantType {
+	return &QuestParticipantType{
 		QuestID:           v.QuestID,
 		MemberID:          v.MemberID,
 		CharacterID:       v.CharacterID,
@@ -868,9 +868,9 @@ func toQuestParticipantV2Type(v character.ParticipationView) *QuestParticipantV2
 }
 
 func toParticipationPage(v character.ParticipationPageView) *ParticipationPage {
-	items := make([]*QuestParticipantV2Type, len(v.Items))
+	items := make([]*QuestParticipantType, len(v.Items))
 	for i, item := range v.Items {
-		items[i] = toQuestParticipantV2Type(item)
+		items[i] = toQuestParticipantType(item)
 	}
 	return &ParticipationPage{Items: items, Total: int(v.Total)}
 }
@@ -939,8 +939,8 @@ func toAdminCharacterDirectoryFilters(filters *AdminCharacterDirectoryFiltersInp
 	}
 }
 
-func toAdminCharacterDirectoryEntryV2Type(v character.AdminCharacterDirectoryEntryView) *AdminCharacterDirectoryEntryV2Type {
-	return &AdminCharacterDirectoryEntryV2Type{
+func toAdminCharacterDirectoryEntryType(v character.AdminCharacterDirectoryEntryView) *AdminCharacterDirectoryEntryType {
+	return &AdminCharacterDirectoryEntryType{
 		ID:                      v.Id,
 		ShortCode:               v.ShortCode,
 		Name:                    v.Name,
@@ -958,17 +958,17 @@ func toAdminCharacterDirectoryEntryV2Type(v character.AdminCharacterDirectoryEnt
 	}
 }
 
-func toAdminCharacterDirectoryV2Type(v character.AdminCharacterDirectoryView) *AdminCharacterDirectoryV2Type {
-	items := make([]*AdminCharacterDirectoryEntryV2Type, len(v.Items))
+func toAdminCharacterDirectoryType(v character.AdminCharacterDirectoryView) *AdminCharacterDirectoryType {
+	items := make([]*AdminCharacterDirectoryEntryType, len(v.Items))
 	for i, item := range v.Items {
-		items[i] = toAdminCharacterDirectoryEntryV2Type(item)
+		items[i] = toAdminCharacterDirectoryEntryType(item)
 	}
-	return &AdminCharacterDirectoryV2Type{Items: items, Total: int(v.Total)}
+	return &AdminCharacterDirectoryType{Items: items, Total: int(v.Total)}
 }
 
-func toCharacterV2(c character.LegacyCharacterView) *CharacterV2Type {
+func toCharacter(c character.LegacyCharacterView) *CharacterType {
 	now := time.Now()
-	return &CharacterV2Type{
+	return &CharacterType{
 		ID:                      c.ID,
 		ShortCode:               c.ShortCode,
 		Name:                    c.Name,
@@ -999,8 +999,8 @@ func toActivitySummaryType(v member.ActivitySummaryView) *ActivitySummaryType {
 	}
 }
 
-func toSiteStatsV2View(v site.SiteStatsView) *SiteStatsV2Type {
-	return &SiteStatsV2Type{
+func toSiteStatsView(v site.SiteStatsView) *SiteStatsType {
+	return &SiteStatsType{
 		TotalMembers:                 int(v.TotalMembers),
 		MembersByRole:                toCountByKeyTypes(v.MembersByRole),
 		ActiveCharacters:             int(v.ActiveCharacters),
@@ -1014,8 +1014,8 @@ func toSiteStatsV2View(v site.SiteStatsView) *SiteStatsV2Type {
 	}
 }
 
-func toSiteStatsV2FromSnapshot(snapshot site.CommunityStatsSnapshot) *SiteStatsV2Type {
-	return toSiteStatsV2View(site.SiteStatsView{
+func toSiteStatsFromSnapshot(snapshot site.CommunityStatsSnapshot) *SiteStatsType {
+	return toSiteStatsView(site.SiteStatsView{
 		TotalMembers:     snapshot.TotalMembers,
 		MembersByRole:    snapshot.MembersByRole,
 		ActiveCharacters: snapshot.ActiveCharacters,
@@ -1027,7 +1027,7 @@ func toSiteStatsV2FromSnapshot(snapshot site.CommunityStatsSnapshot) *SiteStatsV
 	})
 }
 
-func toHomeV2View(v site.HomeView) *HomeV2Type {
+func toHomeView(v site.HomeView) *HomeType {
 	buckets := make([]*HomeBucketType, len(v.RecentByCategory))
 	for i, bucket := range v.RecentByCategory {
 		docs := make([]*DocumentType, len(bucket.Documents))
@@ -1041,9 +1041,9 @@ func toHomeV2View(v site.HomeView) *HomeV2Type {
 		}
 		buckets[i] = &HomeBucketType{Category: bucket.Category, Documents: docs}
 	}
-	return &HomeV2Type{
+	return &HomeType{
 		RecentByCategory: buckets,
-		CommunityStats:   toSiteStatsV2View(v.CommunityStats),
+		CommunityStats:   toSiteStatsView(v.CommunityStats),
 	}
 }
 
@@ -1071,10 +1071,10 @@ func toMembersSpec(filters *MemberFiltersInput, sort *MemberSortInput, limit, of
 	return spec
 }
 
-func toHome(stats site.Stats) *HomeV2Type {
-	return &HomeV2Type{
+func toHome(stats site.Stats) *HomeType {
+	return &HomeType{
 		RecentByCategory: []*HomeBucketType{},
-		CommunityStats: &SiteStatsV2Type{
+		CommunityStats: &SiteStatsType{
 			TotalMembers: stats.TotalMembers,
 		},
 	}
@@ -1111,12 +1111,12 @@ func toNotificationConnectionType(conn notification.NotificationConnection) *Not
 	}
 }
 
-func toMapV2(m spatial.LegacyMapView) *MapV2Type {
+func toMap(m spatial.LegacyMapView) *MapType {
 	var regionID *string
 	if m.RegionID != "" {
 		regionID = &m.RegionID
 	}
-	return &MapV2Type{
+	return &MapType{
 		ID:        m.ID,
 		Name:      m.Name,
 		AtlasCode: m.AtlasCode,
@@ -1133,14 +1133,14 @@ func toCommandReceipt(r product.CommandReceipt) *CommandReceipt {
 
 func toDdbSyncReceipt(r character.DdbSyncReceipt) *DdbSyncReceipt {
 	return &DdbSyncReceipt{
-		Character:   toCharacterV2View(r.Character),
+		Character:   toCharacterView(r.Character),
 		Succeeded:   r.Succeeded,
 		AttemptedAt: r.AttemptedAt,
 		SafeError:   r.SafeError,
 	}
 }
 
-func toCreateCharacterFields(in CreateCharacterV2Input) character.CreateCharacterV2Fields {
+func toCreateCharacterFields(in CreateCharacterInput) character.CreateCharacterV2Fields {
 	picks := in.CatalogPickIds
 	if picks == nil {
 		picks = []string{}
@@ -1158,7 +1158,7 @@ func toCreateCharacterFields(in CreateCharacterV2Input) character.CreateCharacte
 	}
 }
 
-func toUpdateCharacterProfileFields(in UpdateCharacterProfileV2Input) character.UpdateCharacterProfileV2Fields {
+func toUpdateCharacterProfileFields(in UpdateCharacterProfileInput) character.UpdateCharacterProfileV2Fields {
 	out := character.UpdateCharacterProfileV2Fields{}
 	if in.Description.IsSet() {
 		out.Description.Set = true
@@ -1313,8 +1313,8 @@ func toPreviewAudience(v PreviewAudience) document.PreviewAudience {
 	return document.PreviewAudience(v)
 }
 
-func toMapViewType(v spatial.MapView) *MapV2Type {
-	return &MapV2Type{
+func toMapViewType(v spatial.MapView) *MapType {
+	return &MapType{
 		ID:        v.Id,
 		Name:      v.Name,
 		AtlasCode: v.AtlasCode,
@@ -1327,8 +1327,8 @@ func toMapViewType(v spatial.MapView) *MapV2Type {
 	}
 }
 
-func toRegionViewType(v spatial.RegionView) *RegionV2Type {
-	return &RegionV2Type{
+func toRegionViewType(v spatial.RegionView) *RegionType {
+	return &RegionType{
 		ID:              v.Id,
 		Name:            v.Name,
 		Kind:            v.Kind,
@@ -1355,8 +1355,8 @@ func toArchonPage(v spatial.ArchonPage) *ArchonPage {
 	return &ArchonPage{Items: items, Total: int(v.Total)}
 }
 
-func toRegionCountsType(v spatial.RegionCountsView) *RegionCountsV2Type {
-	return &RegionCountsV2Type{
+func toRegionCountsType(v spatial.RegionCountsView) *RegionCountsType {
+	return &RegionCountsType{
 		RegionID:            v.RegionId,
 		QuestCount:          int(v.QuestCount),
 		PointcrawlNodeCount: int(v.FeatureCount),
@@ -1364,8 +1364,8 @@ func toRegionCountsType(v spatial.RegionCountsView) *RegionCountsV2Type {
 	}
 }
 
-func toRegionActivityQuestRef(v spatial.RegionActivityQuestRefView) *RegionActivityQuestRefV2Type {
-	return &RegionActivityQuestRefV2Type{
+func toRegionActivityQuestRef(v spatial.RegionActivityQuestRefView) *RegionActivityQuestRefType {
+	return &RegionActivityQuestRefType{
 		ID:          v.Id,
 		ShortCode:   v.ShortCode,
 		ScheduledAt: v.ScheduledAt,
@@ -1374,16 +1374,16 @@ func toRegionActivityQuestRef(v spatial.RegionActivityQuestRefView) *RegionActiv
 	}
 }
 
-func toRegionActivityType(v spatial.RegionActivityView) *RegionActivityV2Type {
-	openQuests := make([]*RegionActivityQuestRefV2Type, len(v.OpenQuests))
+func toRegionActivityType(v spatial.RegionActivityView) *RegionActivityType {
+	openQuests := make([]*RegionActivityQuestRefType, len(v.OpenQuests))
 	for i, item := range v.OpenQuests {
 		openQuests[i] = toRegionActivityQuestRef(item)
 	}
-	liveQuests := make([]*RegionActivityQuestRefV2Type, len(v.LiveQuests))
+	liveQuests := make([]*RegionActivityQuestRefType, len(v.LiveQuests))
 	for i, item := range v.LiveQuests {
 		liveQuests[i] = toRegionActivityQuestRef(item)
 	}
-	return &RegionActivityV2Type{
+	return &RegionActivityType{
 		RegionID:       v.RegionId,
 		RegionName:     v.RegionName,
 		FillingCount:   int(v.FillingCount),
@@ -1394,11 +1394,11 @@ func toRegionActivityType(v spatial.RegionActivityView) *RegionActivityV2Type {
 	}
 }
 
-func toGameDateType(v *product.GameDateView) *GameDateV2Type {
+func toGameDateType(v *product.GameDateView) *GameDateType {
 	if v == nil {
 		return nil
 	}
-	return &GameDateV2Type{
+	return &GameDateType{
 		EraAbbrev:   v.EraAbbrev,
 		Year:        int(v.Year),
 		PeriodName:  v.PeriodName,
@@ -1412,8 +1412,8 @@ func toRealDatePage(v spatial.RealDatePage) *RealDatePage {
 	return &RealDatePage{Items: v.Items, Total: int(v.Total)}
 }
 
-func toTimeAnchorType(v spatial.TimeAnchorView) *TimeAnchorV2Type {
-	return &TimeAnchorV2Type{
+func toTimeAnchorType(v spatial.TimeAnchorView) *TimeAnchorType {
+	return &TimeAnchorType{
 		ID:       v.Id,
 		RealUtc:  v.RealUtc,
 		EpochDay: int(v.EpochDay),
@@ -1423,14 +1423,14 @@ func toTimeAnchorType(v spatial.TimeAnchorView) *TimeAnchorV2Type {
 }
 
 func toTimeAnchorPage(v spatial.TimeAnchorPage) *TimeAnchorPage {
-	items := make([]*TimeAnchorV2Type, len(v.Items))
+	items := make([]*TimeAnchorType, len(v.Items))
 	for i, item := range v.Items {
 		items[i] = toTimeAnchorType(item)
 	}
 	return &TimeAnchorPage{Items: items, Total: int(v.Total)}
 }
 
-func toGameCalendarType(v spatial.GameCalendarView) *GameCalendarV2Type {
+func toGameCalendarType(v spatial.GameCalendarView) *GameCalendarType {
 	var definition json.RawMessage
 	if v.Definition != nil {
 		definition = *v.Definition
@@ -1449,15 +1449,15 @@ func toGameCalendarType(v spatial.GameCalendarView) *GameCalendarV2Type {
 		}
 		grid[i] = &GameDayCellType{RealDate: cell.RealDate, GameDay: gameDay}
 	}
-	return &GameCalendarV2Type{
+	return &GameCalendarType{
 		Definition:     definition,
 		CurrentGameDay: currentGameDay,
 		MonthGrid:      grid,
 	}
 }
 
-func toPointcrawlNodeType(v spatial.PointcrawlNodeView) *PointcrawlNodeV2Type {
-	return &PointcrawlNodeV2Type{
+func toPointcrawlNodeType(v spatial.PointcrawlNodeView) *PointcrawlNodeType {
+	return &PointcrawlNodeType{
 		ID:        v.Id,
 		MapID:     v.MapId,
 		X:         v.X,
@@ -1468,8 +1468,8 @@ func toPointcrawlNodeType(v spatial.PointcrawlNodeView) *PointcrawlNodeV2Type {
 	}
 }
 
-func toPointcrawlEdgeType(v spatial.PointcrawlEdgeView) *PointcrawlEdgeV2Type {
-	return &PointcrawlEdgeV2Type{
+func toPointcrawlEdgeType(v spatial.PointcrawlEdgeView) *PointcrawlEdgeType {
+	return &PointcrawlEdgeType{
 		ID:         v.Id,
 		MapID:      v.MapId,
 		NodeA:      v.NodeA,
@@ -1607,6 +1607,6 @@ func toUpdateDmProfileFields(in UpdateDmProfileInput) member.UpdateDmProfileFiel
 	}
 }
 
-func toDmProfileV2View(v member.DmProfileView) *DmProfileV2Type {
-	return toDmProfileV2Type(&v)
+func toDmProfileView(v member.DmProfileView) *DmProfileType {
+	return toDmProfileType(&v)
 }

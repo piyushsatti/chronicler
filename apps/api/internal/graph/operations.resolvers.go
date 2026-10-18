@@ -22,7 +22,7 @@ import (
 )
 
 // CreateCharacter is the resolver for the createCharacter field.
-func (r *mutationResolver) CreateCharacter(ctx context.Context, input CreateCharacterV2Input, meta CommandMeta) (*CharacterV2Type, error) {
+func (r *mutationResolver) CreateCharacter(ctx context.Context, input CreateCharacterInput, meta CommandMeta) (*CharacterType, error) {
 	if r.Services.CharacterCommands == nil {
 		return nil, fmt.Errorf("character commands unavailable")
 	}
@@ -37,7 +37,7 @@ func (r *mutationResolver) CreateCharacter(ctx context.Context, input CreateChar
 		return nil, err
 	}
 	clearMutationLoaders(ctx)
-	return toCharacterV2View(view), nil
+	return toCharacterView(view), nil
 }
 
 // AdjustPcxp is the resolver for the adjustPcxp field.
@@ -62,7 +62,7 @@ func (r *mutationResolver) AdjustPcxp(ctx context.Context, characterID string, a
 }
 
 // SubmitForVerification is the resolver for the submitForVerification field.
-func (r *mutationResolver) SubmitForVerification(ctx context.Context, characterID string, expectedUpdatedAt time.Time, meta CommandMeta) (*CharacterV2Type, error) {
+func (r *mutationResolver) SubmitForVerification(ctx context.Context, characterID string, expectedUpdatedAt time.Time, meta CommandMeta) (*CharacterType, error) {
 	if r.Services.CharacterCommands == nil {
 		return nil, fmt.Errorf("character commands unavailable")
 	}
@@ -78,11 +78,11 @@ func (r *mutationResolver) SubmitForVerification(ctx context.Context, characterI
 		return nil, err
 	}
 	clearMutationLoaders(ctx)
-	return toCharacterV2View(view), nil
+	return toCharacterView(view), nil
 }
 
 // RetireCharacter is the resolver for the retireCharacter field.
-func (r *mutationResolver) RetireCharacter(ctx context.Context, characterID string, expectedUpdatedAt time.Time, meta CommandMeta) (*CharacterV2Type, error) {
+func (r *mutationResolver) RetireCharacter(ctx context.Context, characterID string, expectedUpdatedAt time.Time, meta CommandMeta) (*CharacterType, error) {
 	if r.Services.CharacterCommands == nil {
 		return nil, fmt.Errorf("character commands unavailable")
 	}
@@ -98,7 +98,7 @@ func (r *mutationResolver) RetireCharacter(ctx context.Context, characterID stri
 		return nil, err
 	}
 	clearMutationLoaders(ctx)
-	return toCharacterV2View(view), nil
+	return toCharacterView(view), nil
 }
 
 // DecideVerification is the resolver for the decideVerification field.
@@ -124,7 +124,7 @@ func (r *mutationResolver) DecideVerification(ctx context.Context, characterID s
 }
 
 // SetCharacterGuild is the resolver for the setCharacterGuild field.
-func (r *mutationResolver) SetCharacterGuild(ctx context.Context, characterID string, guildID *string, meta CommandMeta) (*CharacterV2Type, error) {
+func (r *mutationResolver) SetCharacterGuild(ctx context.Context, characterID string, guildID *string, meta CommandMeta) (*CharacterType, error) {
 	if r.Services.CharacterCommands == nil {
 		return nil, fmt.Errorf("character commands unavailable")
 	}
@@ -140,11 +140,11 @@ func (r *mutationResolver) SetCharacterGuild(ctx context.Context, characterID st
 		return nil, err
 	}
 	clearMutationLoaders(ctx)
-	return toCharacterV2View(view), nil
+	return toCharacterView(view), nil
 }
 
 // UpdateCharacterProfile is the resolver for the updateCharacterProfile field.
-func (r *mutationResolver) UpdateCharacterProfile(ctx context.Context, characterID string, input UpdateCharacterProfileV2Input, meta CommandMeta) (*CharacterV2Type, error) {
+func (r *mutationResolver) UpdateCharacterProfile(ctx context.Context, characterID string, input UpdateCharacterProfileInput, meta CommandMeta) (*CharacterType, error) {
 	if r.Services.CharacterCommands == nil {
 		return nil, fmt.Errorf("character commands unavailable")
 	}
@@ -160,7 +160,7 @@ func (r *mutationResolver) UpdateCharacterProfile(ctx context.Context, character
 		return nil, err
 	}
 	clearMutationLoaders(ctx)
-	return toCharacterV2View(view), nil
+	return toCharacterView(view), nil
 }
 
 // SyncCharacterDdb is the resolver for the syncCharacterDdb field.
@@ -322,7 +322,7 @@ func (r *mutationResolver) DeleteCharacter(ctx context.Context, characterID stri
 }
 
 // RestoreCharacter is the resolver for the restoreCharacter field.
-func (r *mutationResolver) RestoreCharacter(ctx context.Context, characterID string, meta CommandMeta) (*CharacterV2Type, error) {
+func (r *mutationResolver) RestoreCharacter(ctx context.Context, characterID string, meta CommandMeta) (*CharacterType, error) {
 	if r.Services.CharacterCommands == nil {
 		return nil, fmt.Errorf("character commands unavailable")
 	}
@@ -337,7 +337,7 @@ func (r *mutationResolver) RestoreCharacter(ctx context.Context, characterID str
 		return nil, err
 	}
 	clearMutationLoaders(ctx)
-	return toCharacterV2View(view), nil
+	return toCharacterView(view), nil
 }
 
 // CreateDocument is the resolver for the createDocument field.
@@ -608,7 +608,7 @@ func (r *mutationResolver) UpdateMyProfile(ctx context.Context, input UpdateMyPr
 }
 
 // UpdateMyDmProfile is the resolver for the updateMyDmProfile field.
-func (r *mutationResolver) UpdateMyDmProfile(ctx context.Context, input UpdateDmProfileInput, meta CommandMeta) (*DmProfileV2Type, error) {
+func (r *mutationResolver) UpdateMyDmProfile(ctx context.Context, input UpdateDmProfileInput, meta CommandMeta) (*DmProfileType, error) {
 	if r.Services.MemberCommands == nil {
 		return nil, memberCommandsUnavailable()
 	}
@@ -623,7 +623,7 @@ func (r *mutationResolver) UpdateMyDmProfile(ctx context.Context, input UpdateDm
 		return nil, err
 	}
 	clearMutationLoaders(ctx)
-	return toDmProfileV2View(view), nil
+	return toDmProfileView(view), nil
 }
 
 // SetMyAvailability is the resolver for the setMyAvailability field.
@@ -646,7 +646,7 @@ func (r *mutationResolver) SetMyAvailability(ctx context.Context, slots []*Avail
 }
 
 // SubmitDmProfileForVerification is the resolver for the submitDmProfileForVerification field.
-func (r *mutationResolver) SubmitDmProfileForVerification(ctx context.Context, expectedRevision int, meta CommandMeta) (*DmProfileV2Type, error) {
+func (r *mutationResolver) SubmitDmProfileForVerification(ctx context.Context, expectedRevision int, meta CommandMeta) (*DmProfileType, error) {
 	if r.Services.MemberCommands == nil {
 		return nil, memberCommandsUnavailable()
 	}
@@ -661,11 +661,11 @@ func (r *mutationResolver) SubmitDmProfileForVerification(ctx context.Context, e
 		return nil, err
 	}
 	clearMutationLoaders(ctx)
-	return toDmProfileV2View(view), nil
+	return toDmProfileView(view), nil
 }
 
 // DecideDmProfileVerification is the resolver for the decideDmProfileVerification field.
-func (r *mutationResolver) DecideDmProfileVerification(ctx context.Context, memberID string, expectedRevision int, verdict VerificationVerdict, note *string, meta CommandMeta) (*DmProfileV2Type, error) {
+func (r *mutationResolver) DecideDmProfileVerification(ctx context.Context, memberID string, expectedRevision int, verdict VerificationVerdict, note *string, meta CommandMeta) (*DmProfileType, error) {
 	if r.Services.MemberCommands == nil {
 		return nil, memberCommandsUnavailable()
 	}
@@ -683,7 +683,7 @@ func (r *mutationResolver) DecideDmProfileVerification(ctx context.Context, memb
 		return nil, err
 	}
 	clearMutationLoaders(ctx)
-	return toDmProfileV2View(view), nil
+	return toDmProfileView(view), nil
 }
 
 // GrantUnlock is the resolver for the grantUnlock field.
@@ -792,22 +792,22 @@ func (r *mutationResolver) AcknowledgeSuppressedNotifications(ctx context.Contex
 }
 
 // CreateQuest is the resolver for the createQuest field.
-func (r *mutationResolver) CreateQuest(ctx context.Context, input CreateQuestV2Input, meta CommandMeta) (*QuestV2Type, error) {
+func (r *mutationResolver) CreateQuest(ctx context.Context, input CreateQuestInput, meta CommandMeta) (*QuestType, error) {
 	panic(fmt.Errorf("not implemented: CreateQuest - createQuest"))
 }
 
 // UpdateQuest is the resolver for the updateQuest field.
-func (r *mutationResolver) UpdateQuest(ctx context.Context, id string, input QuestEditInput, meta CommandMeta) (*QuestV2Type, error) {
+func (r *mutationResolver) UpdateQuest(ctx context.Context, id string, input QuestEditInput, meta CommandMeta) (*QuestType, error) {
 	panic(fmt.Errorf("not implemented: UpdateQuest - updateQuest"))
 }
 
 // TransitionQuestStatus is the resolver for the transitionQuestStatus field.
-func (r *mutationResolver) TransitionQuestStatus(ctx context.Context, id string, to string, meta CommandMeta) (*QuestV2Type, error) {
+func (r *mutationResolver) TransitionQuestStatus(ctx context.Context, id string, to string, meta CommandMeta) (*QuestType, error) {
 	panic(fmt.Errorf("not implemented: TransitionQuestStatus - transitionQuestStatus"))
 }
 
 // CloseQuest is the resolver for the closeQuest field.
-func (r *mutationResolver) CloseQuest(ctx context.Context, id string, input CloseQuestInput, meta CommandMeta) (*QuestV2Type, error) {
+func (r *mutationResolver) CloseQuest(ctx context.Context, id string, input CloseQuestInput, meta CommandMeta) (*QuestType, error) {
 	panic(fmt.Errorf("not implemented: CloseQuest - closeQuest"))
 }
 
@@ -817,7 +817,7 @@ func (r *mutationResolver) UpsertQuestSummary(ctx context.Context, input QuestSu
 }
 
 // UpsertQuestArc is the resolver for the upsertQuestArc field.
-func (r *mutationResolver) UpsertQuestArc(ctx context.Context, id *string, name string, meta CommandMeta) (*QuestArcV2Type, error) {
+func (r *mutationResolver) UpsertQuestArc(ctx context.Context, id *string, name string, meta CommandMeta) (*QuestArcType, error) {
 	if r.Services.QuestCommands == nil {
 		return nil, fmt.Errorf("quest commands unavailable")
 	}
@@ -833,11 +833,11 @@ func (r *mutationResolver) UpsertQuestArc(ctx context.Context, id *string, name 
 		return nil, err
 	}
 	clearMutationLoaders(ctx)
-	return toQuestArcV2View(view), nil
+	return toQuestArcView(view), nil
 }
 
 // RemoveQuestFromArc is the resolver for the removeQuestFromArc field.
-func (r *mutationResolver) RemoveQuestFromArc(ctx context.Context, questID string, meta CommandMeta) (*QuestV2Type, error) {
+func (r *mutationResolver) RemoveQuestFromArc(ctx context.Context, questID string, meta CommandMeta) (*QuestType, error) {
 	if r.Services.QuestCommands == nil {
 		return nil, fmt.Errorf("quest commands unavailable")
 	}
@@ -852,26 +852,26 @@ func (r *mutationResolver) RemoveQuestFromArc(ctx context.Context, questID strin
 		return nil, err
 	}
 	clearMutationLoaders(ctx)
-	return toQuestV2View(view), nil
+	return toQuestView(view), nil
 }
 
 // SignupForQuest is the resolver for the signupForQuest field.
-func (r *mutationResolver) SignupForQuest(ctx context.Context, questID string, characterID string, meta CommandMeta) (*QuestParticipantV2Type, error) {
+func (r *mutationResolver) SignupForQuest(ctx context.Context, questID string, characterID string, meta CommandMeta) (*QuestParticipantType, error) {
 	panic(fmt.Errorf("not implemented: SignupForQuest - signupForQuest"))
 }
 
 // WithdrawFromQuest is the resolver for the withdrawFromQuest field.
-func (r *mutationResolver) WithdrawFromQuest(ctx context.Context, questID string, characterID string, meta CommandMeta) (*QuestParticipantV2Type, error) {
+func (r *mutationResolver) WithdrawFromQuest(ctx context.Context, questID string, characterID string, meta CommandMeta) (*QuestParticipantType, error) {
 	panic(fmt.Errorf("not implemented: WithdrawFromQuest - withdrawFromQuest"))
 }
 
 // SelectQuestParticipants is the resolver for the selectQuestParticipants field.
-func (r *mutationResolver) SelectQuestParticipants(ctx context.Context, questID string, characterIds []string, meta CommandMeta) ([]*QuestParticipantV2Type, error) {
+func (r *mutationResolver) SelectQuestParticipants(ctx context.Context, questID string, characterIds []string, meta CommandMeta) ([]*QuestParticipantType, error) {
 	panic(fmt.Errorf("not implemented: SelectQuestParticipants - selectQuestParticipants"))
 }
 
 // AttestQuestParticipation is the resolver for the attestQuestParticipation field.
-func (r *mutationResolver) AttestQuestParticipation(ctx context.Context, questID string, entries []*ParticipationAttestationInput, meta CommandMeta) ([]*QuestParticipantV2Type, error) {
+func (r *mutationResolver) AttestQuestParticipation(ctx context.Context, questID string, entries []*ParticipationAttestationInput, meta CommandMeta) ([]*QuestParticipantType, error) {
 	panic(fmt.Errorf("not implemented: AttestQuestParticipation - attestQuestParticipation"))
 }
 
@@ -886,12 +886,12 @@ func (r *mutationResolver) DeleteQuest(ctx context.Context, questID string, meta
 }
 
 // RestoreQuest is the resolver for the restoreQuest field.
-func (r *mutationResolver) RestoreQuest(ctx context.Context, questID string, meta CommandMeta) (*QuestV2Type, error) {
+func (r *mutationResolver) RestoreQuest(ctx context.Context, questID string, meta CommandMeta) (*QuestType, error) {
 	panic(fmt.Errorf("not implemented: RestoreQuest - restoreQuest"))
 }
 
 // SetQuestPointcrawlLinks is the resolver for the setQuestPointcrawlLinks field.
-func (r *mutationResolver) SetQuestPointcrawlLinks(ctx context.Context, questID string, links []*QuestPointcrawlLinkInput, meta CommandMeta) ([]*QuestPointcrawlLinkV2Type, error) {
+func (r *mutationResolver) SetQuestPointcrawlLinks(ctx context.Context, questID string, links []*QuestPointcrawlLinkInput, meta CommandMeta) ([]*QuestPointcrawlLinkType, error) {
 	panic(fmt.Errorf("not implemented: SetQuestPointcrawlLinks - setQuestPointcrawlLinks"))
 }
 
@@ -954,7 +954,7 @@ func (r *mutationResolver) RedriveDiscordDelivery(ctx context.Context, jobID str
 }
 
 // CreateMap is the resolver for the createMap field.
-func (r *mutationResolver) CreateMap(ctx context.Context, input MapCreateInput, meta CommandMeta) (*MapV2Type, error) {
+func (r *mutationResolver) CreateMap(ctx context.Context, input MapCreateInput, meta CommandMeta) (*MapType, error) {
 	if r.Services.SpatialCommands == nil {
 		return nil, fmt.Errorf("spatial commands unavailable")
 	}
@@ -973,7 +973,7 @@ func (r *mutationResolver) CreateMap(ctx context.Context, input MapCreateInput, 
 }
 
 // CreateRegion is the resolver for the createRegion field.
-func (r *mutationResolver) CreateRegion(ctx context.Context, input RegionInput, meta CommandMeta) (*RegionV2Type, error) {
+func (r *mutationResolver) CreateRegion(ctx context.Context, input RegionInput, meta CommandMeta) (*RegionType, error) {
 	if r.Services.SpatialCommands == nil {
 		return nil, fmt.Errorf("spatial commands unavailable")
 	}
@@ -992,7 +992,7 @@ func (r *mutationResolver) CreateRegion(ctx context.Context, input RegionInput, 
 }
 
 // UpdateRegion is the resolver for the updateRegion field.
-func (r *mutationResolver) UpdateRegion(ctx context.Context, id string, input RegionInput, meta CommandMeta) (*RegionV2Type, error) {
+func (r *mutationResolver) UpdateRegion(ctx context.Context, id string, input RegionInput, meta CommandMeta) (*RegionType, error) {
 	if r.Services.SpatialCommands == nil {
 		return nil, fmt.Errorf("spatial commands unavailable")
 	}
@@ -1012,7 +1012,7 @@ func (r *mutationResolver) UpdateRegion(ctx context.Context, id string, input Re
 }
 
 // TransitionRegion is the resolver for the transitionRegion field.
-func (r *mutationResolver) TransitionRegion(ctx context.Context, id string, to string, note string, meta CommandMeta) (*RegionV2Type, error) {
+func (r *mutationResolver) TransitionRegion(ctx context.Context, id string, to string, note string, meta CommandMeta) (*RegionType, error) {
 	if r.Services.SpatialCommands == nil {
 		return nil, fmt.Errorf("spatial commands unavailable")
 	}
@@ -1073,7 +1073,7 @@ func (r *mutationResolver) RevokeArchon(ctx context.Context, memberID string, re
 }
 
 // CreateTimeAnchor is the resolver for the createTimeAnchor field.
-func (r *mutationResolver) CreateTimeAnchor(ctx context.Context, input TimeAnchorInput, meta CommandMeta) (*TimeAnchorV2Type, error) {
+func (r *mutationResolver) CreateTimeAnchor(ctx context.Context, input TimeAnchorInput, meta CommandMeta) (*TimeAnchorType, error) {
 	if r.Services.SpatialCommands == nil {
 		return nil, fmt.Errorf("spatial commands unavailable")
 	}
@@ -1092,7 +1092,7 @@ func (r *mutationResolver) CreateTimeAnchor(ctx context.Context, input TimeAncho
 }
 
 // UpdateTimeAnchor is the resolver for the updateTimeAnchor field.
-func (r *mutationResolver) UpdateTimeAnchor(ctx context.Context, id string, input TimeAnchorInput, meta CommandMeta) (*TimeAnchorV2Type, error) {
+func (r *mutationResolver) UpdateTimeAnchor(ctx context.Context, id string, input TimeAnchorInput, meta CommandMeta) (*TimeAnchorType, error) {
 	if r.Services.SpatialCommands == nil {
 		return nil, fmt.Errorf("spatial commands unavailable")
 	}
@@ -1112,7 +1112,7 @@ func (r *mutationResolver) UpdateTimeAnchor(ctx context.Context, id string, inpu
 }
 
 // UpdateGameCalendar is the resolver for the updateGameCalendar field.
-func (r *mutationResolver) UpdateGameCalendar(ctx context.Context, definition json.RawMessage, meta CommandMeta) (*GameCalendarV2Type, error) {
+func (r *mutationResolver) UpdateGameCalendar(ctx context.Context, definition json.RawMessage, meta CommandMeta) (*GameCalendarType, error) {
 	if r.Services.SpatialCommands == nil {
 		return nil, fmt.Errorf("spatial commands unavailable")
 	}
@@ -1150,7 +1150,7 @@ func (r *mutationResolver) DeleteRegion(ctx context.Context, regionID string, me
 }
 
 // RestoreRegion is the resolver for the restoreRegion field.
-func (r *mutationResolver) RestoreRegion(ctx context.Context, regionID string, meta CommandMeta) (*RegionV2Type, error) {
+func (r *mutationResolver) RestoreRegion(ctx context.Context, regionID string, meta CommandMeta) (*RegionType, error) {
 	if r.Services.SpatialCommands == nil {
 		return nil, fmt.Errorf("spatial commands unavailable")
 	}
@@ -1169,7 +1169,7 @@ func (r *mutationResolver) RestoreRegion(ctx context.Context, regionID string, m
 }
 
 // UpsertPointcrawlNode is the resolver for the upsertPointcrawlNode field.
-func (r *mutationResolver) UpsertPointcrawlNode(ctx context.Context, mapID string, input PointcrawlNodeInput, meta CommandMeta) (*PointcrawlNodeV2Type, error) {
+func (r *mutationResolver) UpsertPointcrawlNode(ctx context.Context, mapID string, input PointcrawlNodeInput, meta CommandMeta) (*PointcrawlNodeType, error) {
 	if r.Services.SpatialCommands == nil {
 		return nil, fmt.Errorf("spatial commands unavailable")
 	}
@@ -1189,7 +1189,7 @@ func (r *mutationResolver) UpsertPointcrawlNode(ctx context.Context, mapID strin
 }
 
 // SetPointcrawlEdge is the resolver for the setPointcrawlEdge field.
-func (r *mutationResolver) SetPointcrawlEdge(ctx context.Context, mapID string, input PointcrawlEdgeInput, meta CommandMeta) (*PointcrawlEdgeV2Type, error) {
+func (r *mutationResolver) SetPointcrawlEdge(ctx context.Context, mapID string, input PointcrawlEdgeInput, meta CommandMeta) (*PointcrawlEdgeType, error) {
 	if r.Services.SpatialCommands == nil {
 		return nil, fmt.Errorf("spatial commands unavailable")
 	}
@@ -1253,21 +1253,21 @@ func (r *mutationResolver) UnlinkPointcrawlEntry(ctx context.Context, mapID stri
 }
 
 // Characters is the resolver for the characters field.
-func (r *queryResolver) Characters(ctx context.Context, filters *CharacterV2FiltersInput, limit int, offset int) (*CharacterV2ListResult, error) {
+func (r *queryResolver) Characters(ctx context.Context, filters *CharacterFiltersInput, limit int, offset int) (*CharacterListResult, error) {
 	if r.Services.CharacterQueries != nil {
 		actor, err := LiveAuthority(ctx)
 		if err != nil {
 			return nil, err
 		}
 		result, err := r.Services.CharacterQueries.Characters(ctx, actor, character.CharactersSpec{
-			Filters: toCharacterV2Filters(filters),
+			Filters: toCharacterFilters(filters),
 			Limit:   int32(limit),
 			Offset:  int32(offset),
 		})
 		if err != nil {
 			return nil, err
 		}
-		return toCharacterV2ListResult(result), nil
+		return toCharacterListResult(result), nil
 	}
 	var status *string
 	if filters != nil && filters.Status != nil {
@@ -1277,22 +1277,22 @@ func (r *queryResolver) Characters(ctx context.Context, filters *CharacterV2Filt
 	if err != nil {
 		return nil, err
 	}
-	items := make([]*CharacterV2Type, 0, len(rows))
+	items := make([]*CharacterType, 0, len(rows))
 	for _, c := range rows {
-		items = append(items, toCharacterV2(c))
+		items = append(items, toCharacter(c))
 	}
-	return &CharacterV2ListResult{Items: items, Total: len(items)}, nil
+	return &CharacterListResult{Items: items, Total: len(items)}, nil
 }
 
 // MyCharacters is the resolver for the myCharacters field.
-func (r *queryResolver) MyCharacters(ctx context.Context, limit int, offset int) (*CharacterV2ListResult, error) {
+func (r *queryResolver) MyCharacters(ctx context.Context, limit int, offset int) (*CharacterListResult, error) {
 	if r.Services.CharacterQueries != nil {
 		actor, err := LiveAuthority(ctx)
 		if err != nil {
 			return nil, err
 		}
 		if actor.Claims().Anonymous() {
-			return &CharacterV2ListResult{Items: []*CharacterV2Type{}, Total: 0}, nil
+			return &CharacterListResult{Items: []*CharacterType{}, Total: 0}, nil
 		}
 		result, err := r.Services.CharacterQueries.MyCharacters(ctx, actor, character.MyCharactersSpec{
 			Limit:  int32(limit),
@@ -1301,25 +1301,25 @@ func (r *queryResolver) MyCharacters(ctx context.Context, limit int, offset int)
 		if err != nil {
 			return nil, err
 		}
-		return toCharacterV2ListResult(result), nil
+		return toCharacterListResult(result), nil
 	}
 	c := auth.FromContext(ctx)
 	if c.Anonymous() {
-		return &CharacterV2ListResult{Items: []*CharacterV2Type{}, Total: 0}, nil
+		return &CharacterListResult{Items: []*CharacterType{}, Total: 0}, nil
 	}
 	rows, err := r.Services.Characters.ListByOwner(ctx, c.MemberID, limit, offset)
 	if err != nil {
 		return nil, err
 	}
-	items := make([]*CharacterV2Type, 0, len(rows))
+	items := make([]*CharacterType, 0, len(rows))
 	for _, ch := range rows {
-		items = append(items, toCharacterV2(ch))
+		items = append(items, toCharacter(ch))
 	}
-	return &CharacterV2ListResult{Items: items, Total: len(items)}, nil
+	return &CharacterListResult{Items: items, Total: len(items)}, nil
 }
 
 // Character is the resolver for the character field.
-func (r *queryResolver) Character(ctx context.Context, id *string, shortCode *string) (*CharacterV2Type, error) {
+func (r *queryResolver) Character(ctx context.Context, id *string, shortCode *string) (*CharacterType, error) {
 	if r.Services.CharacterQueries != nil {
 		actor, err := LiveAuthority(ctx)
 		if err != nil {
@@ -1332,19 +1332,19 @@ func (r *queryResolver) Character(ctx context.Context, id *string, shortCode *st
 		if view == nil {
 			return nil, nil
 		}
-		return toCharacterV2View(*view), nil
+		return toCharacterView(*view), nil
 	}
 	c, err := r.Services.Characters.Character(ctx, id, shortCode)
 	if err != nil {
 		return nil, nil
 	}
-	return toCharacterV2(c), nil
+	return toCharacter(c), nil
 }
 
 // AdminCharacterDirectory is the resolver for the adminCharacterDirectory field.
-func (r *queryResolver) AdminCharacterDirectory(ctx context.Context, filters *AdminCharacterDirectoryFiltersInput, limit int, offset int) (*AdminCharacterDirectoryV2Type, error) {
+func (r *queryResolver) AdminCharacterDirectory(ctx context.Context, filters *AdminCharacterDirectoryFiltersInput, limit int, offset int) (*AdminCharacterDirectoryType, error) {
 	if r.Services.CharacterQueries == nil {
-		return &AdminCharacterDirectoryV2Type{Items: []*AdminCharacterDirectoryEntryV2Type{}, Total: 0}, nil
+		return &AdminCharacterDirectoryType{Items: []*AdminCharacterDirectoryEntryType{}, Total: 0}, nil
 	}
 	actor, err := LiveAuthority(ctx)
 	if err != nil {
@@ -1358,11 +1358,11 @@ func (r *queryResolver) AdminCharacterDirectory(ctx context.Context, filters *Ad
 	if err != nil {
 		return nil, err
 	}
-	return toAdminCharacterDirectoryV2Type(view), nil
+	return toAdminCharacterDirectoryType(view), nil
 }
 
 // PendingCharacterVerifications is the resolver for the pendingCharacterVerifications field.
-func (r *queryResolver) PendingCharacterVerifications(ctx context.Context, limit int, offset int) (*CharacterV2ListResult, error) {
+func (r *queryResolver) PendingCharacterVerifications(ctx context.Context, limit int, offset int) (*CharacterListResult, error) {
 	if r.Services.CharacterQueries == nil {
 		return nil, fmt.Errorf("character queries unavailable")
 	}
@@ -1377,7 +1377,7 @@ func (r *queryResolver) PendingCharacterVerifications(ctx context.Context, limit
 	if err != nil {
 		return nil, err
 	}
-	return toCharacterV2ListResult(result), nil
+	return toCharacterListResult(result), nil
 }
 
 // CharacterVerificationHistory is the resolver for the characterVerificationHistory field.
@@ -2049,7 +2049,7 @@ func (r *queryResolver) MyUnreadNotificationCount(ctx context.Context) (int, err
 }
 
 // OpenQuestSeats is the resolver for the openQuestSeats field.
-func (r *queryResolver) OpenQuestSeats(ctx context.Context, regionID *string, dmID *string, limit int, offset int) (*OpenQuestSeatsV2Result, error) {
+func (r *queryResolver) OpenQuestSeats(ctx context.Context, regionID *string, dmID *string, limit int, offset int) (*OpenQuestSeatsResult, error) {
 	if r.Services.QuestQueries == nil {
 		return nil, fmt.Errorf("quest queries unavailable")
 	}
@@ -2066,11 +2066,11 @@ func (r *queryResolver) OpenQuestSeats(ctx context.Context, regionID *string, dm
 	if err != nil {
 		return nil, err
 	}
-	return toOpenQuestSeatsV2Result(result), nil
+	return toOpenQuestSeatsResult(result), nil
 }
 
 // Quest is the resolver for the quest field.
-func (r *queryResolver) Quest(ctx context.Context, id *string, shortCode *string) (*QuestV2Type, error) {
+func (r *queryResolver) Quest(ctx context.Context, id *string, shortCode *string) (*QuestType, error) {
 	if r.Services.QuestQueries != nil {
 		actor, err := LiveAuthority(ctx)
 		if err != nil {
@@ -2083,17 +2083,17 @@ func (r *queryResolver) Quest(ctx context.Context, id *string, shortCode *string
 		if view == nil {
 			return nil, nil
 		}
-		return toQuestV2View(*view), nil
+		return toQuestView(*view), nil
 	}
 	q, err := r.Services.Quests.Get(ctx, id, shortCode)
 	if err != nil {
 		return nil, err
 	}
-	return toQuestV2(q), nil
+	return toQuest(q), nil
 }
 
 // Quests is the resolver for the quests field.
-func (r *queryResolver) Quests(ctx context.Context, filters *QuestV2FiltersInput, limit int, offset int) (*QuestV2ListResult, error) {
+func (r *queryResolver) Quests(ctx context.Context, filters *QuestFiltersInput, limit int, offset int) (*QuestListResult, error) {
 	if r.Services.QuestQueries != nil {
 		actor, err := LiveAuthority(ctx)
 		if err != nil {
@@ -2103,7 +2103,7 @@ func (r *queryResolver) Quests(ctx context.Context, filters *QuestV2FiltersInput
 		if err != nil {
 			return nil, err
 		}
-		return toQuestV2ListResult(result), nil
+		return toQuestListResult(result), nil
 	}
 	filter := quest.ListFilter{Limit: limit, Offset: offset, Order: quest.OldestFirst}
 	if filters != nil {
@@ -2114,15 +2114,15 @@ func (r *queryResolver) Quests(ctx context.Context, filters *QuestV2FiltersInput
 	if err != nil {
 		return nil, err
 	}
-	items := make([]*QuestV2Type, 0, len(rows))
+	items := make([]*QuestType, 0, len(rows))
 	for _, q := range rows {
-		items = append(items, toQuestV2(q))
+		items = append(items, toQuest(q))
 	}
-	return &QuestV2ListResult{Items: items, Total: int(total)}, nil
+	return &QuestListResult{Items: items, Total: int(total)}, nil
 }
 
 // QuestBoard is the resolver for the questBoard field.
-func (r *queryResolver) QuestBoard(ctx context.Context, regionID *string, limit int, offset int) (*QuestV2ListResult, error) {
+func (r *queryResolver) QuestBoard(ctx context.Context, regionID *string, limit int, offset int) (*QuestListResult, error) {
 	if r.Services.QuestQueries != nil {
 		actor, err := LiveAuthority(ctx)
 		if err != nil {
@@ -2136,22 +2136,22 @@ func (r *queryResolver) QuestBoard(ctx context.Context, regionID *string, limit 
 		if err != nil {
 			return nil, err
 		}
-		return toQuestV2ListResult(result), nil
+		return toQuestListResult(result), nil
 	}
 	open := "open"
 	rows, total, err := r.Services.Quests.List(ctx, quest.ListFilter{Status: &open, Limit: limit, Offset: offset, Order: quest.NewestFirst})
 	if err != nil {
 		return nil, err
 	}
-	items := make([]*QuestV2Type, 0, len(rows))
+	items := make([]*QuestType, 0, len(rows))
 	for _, q := range rows {
-		items = append(items, toQuestV2(q))
+		items = append(items, toQuest(q))
 	}
-	return &QuestV2ListResult{Items: items, Total: int(total)}, nil
+	return &QuestListResult{Items: items, Total: int(total)}, nil
 }
 
 // RecentlyClosedQuests is the resolver for the recentlyClosedQuests field.
-func (r *queryResolver) RecentlyClosedQuests(ctx context.Context, regionID *string, closedSince *time.Time, limit int, offset int) (*QuestV2ListResult, error) {
+func (r *queryResolver) RecentlyClosedQuests(ctx context.Context, regionID *string, closedSince *time.Time, limit int, offset int) (*QuestListResult, error) {
 	if r.Services.QuestQueries != nil {
 		actor, err := LiveAuthority(ctx)
 		if err != nil {
@@ -2166,22 +2166,22 @@ func (r *queryResolver) RecentlyClosedQuests(ctx context.Context, regionID *stri
 		if err != nil {
 			return nil, err
 		}
-		return toQuestV2ListResult(result), nil
+		return toQuestListResult(result), nil
 	}
 	closed := "closed"
 	rows, total, err := r.Services.Quests.List(ctx, quest.ListFilter{Status: &closed, Limit: limit, Offset: offset, Order: quest.NewestFirst})
 	if err != nil {
 		return nil, err
 	}
-	items := make([]*QuestV2Type, 0, len(rows))
+	items := make([]*QuestType, 0, len(rows))
 	for _, q := range rows {
-		items = append(items, toQuestV2(q))
+		items = append(items, toQuest(q))
 	}
-	return &QuestV2ListResult{Items: items, Total: int(total)}, nil
+	return &QuestListResult{Items: items, Total: int(total)}, nil
 }
 
 // QuestArcs is the resolver for the questArcs field.
-func (r *queryResolver) QuestArcs(ctx context.Context, limit int, offset int) (*QuestArcV2ListResult, error) {
+func (r *queryResolver) QuestArcs(ctx context.Context, limit int, offset int) (*QuestArcListResult, error) {
 	if r.Services.QuestQueries == nil {
 		return nil, fmt.Errorf("quest queries unavailable")
 	}
@@ -2196,11 +2196,11 @@ func (r *queryResolver) QuestArcs(ctx context.Context, limit int, offset int) (*
 	if err != nil {
 		return nil, err
 	}
-	return toQuestArcV2ListResult(result), nil
+	return toQuestArcListResult(result), nil
 }
 
 // QuestArc is the resolver for the questArc field.
-func (r *queryResolver) QuestArc(ctx context.Context, id string) (*QuestArcV2Type, error) {
+func (r *queryResolver) QuestArc(ctx context.Context, id string) (*QuestArcType, error) {
 	if r.Services.QuestQueries == nil {
 		return nil, fmt.Errorf("quest queries unavailable")
 	}
@@ -2215,7 +2215,7 @@ func (r *queryResolver) QuestArc(ctx context.Context, id string) (*QuestArcV2Typ
 	if view == nil {
 		return nil, nil
 	}
-	return toQuestArcV2View(*view), nil
+	return toQuestArcView(*view), nil
 }
 
 // QuestGenreOptions is the resolver for the questGenreOptions field.
@@ -2250,7 +2250,7 @@ func (r *queryResolver) MyQuestSignups(ctx context.Context, limit int, offset in
 }
 
 // QuestSummaries is the resolver for the questSummaries field.
-func (r *queryResolver) QuestSummaries(ctx context.Context, questID string, limit int, offset int) (*QuestSummariesV2Result, error) {
+func (r *queryResolver) QuestSummaries(ctx context.Context, questID string, limit int, offset int) (*QuestSummariesResult, error) {
 	if r.Services.QuestQueries == nil {
 		return nil, fmt.Errorf("quest queries unavailable")
 	}
@@ -2266,11 +2266,11 @@ func (r *queryResolver) QuestSummaries(ctx context.Context, questID string, limi
 	if err != nil {
 		return nil, err
 	}
-	return toQuestSummariesV2Result(result), nil
+	return toQuestSummariesResult(result), nil
 }
 
 // QuestStateCounts is the resolver for the questStateCounts field.
-func (r *queryResolver) QuestStateCounts(ctx context.Context, filters *QuestStateCountsFiltersV2Input) ([]*QuestStateCountV2Type, error) {
+func (r *queryResolver) QuestStateCounts(ctx context.Context, filters *QuestStateCountsFiltersInput) ([]*QuestStateCountType, error) {
 	if r.Services.QuestQueries == nil {
 		return nil, fmt.Errorf("quest queries unavailable")
 	}
@@ -2282,11 +2282,11 @@ func (r *queryResolver) QuestStateCounts(ctx context.Context, filters *QuestStat
 	if err != nil {
 		return nil, err
 	}
-	return toQuestStateCountV2Types(counts), nil
+	return toQuestStateCountTypes(counts), nil
 }
 
 // DmStats is the resolver for the dmStats field.
-func (r *queryResolver) DmStats(ctx context.Context, memberID string) (*DmStatsV2Type, error) {
+func (r *queryResolver) DmStats(ctx context.Context, memberID string) (*DmStatsType, error) {
 	if r.Services.QuestQueries == nil {
 		return nil, fmt.Errorf("quest queries unavailable")
 	}
@@ -2298,11 +2298,11 @@ func (r *queryResolver) DmStats(ctx context.Context, memberID string) (*DmStatsV
 	if err != nil {
 		return nil, err
 	}
-	return toDmStatsV2Type(stats), nil
+	return toDmStatsType(stats), nil
 }
 
 // DmSessionHistory is the resolver for the dmSessionHistory field.
-func (r *queryResolver) DmSessionHistory(ctx context.Context, memberID string, limit int, offset int) (*DmSessionHistoryV2Result, error) {
+func (r *queryResolver) DmSessionHistory(ctx context.Context, memberID string, limit int, offset int) (*DmSessionHistoryResult, error) {
 	if r.Services.QuestQueries == nil {
 		return nil, fmt.Errorf("quest queries unavailable")
 	}
@@ -2318,11 +2318,11 @@ func (r *queryResolver) DmSessionHistory(ctx context.Context, memberID string, l
 	if err != nil {
 		return nil, err
 	}
-	return toDmSessionHistoryV2Result(result), nil
+	return toDmSessionHistoryResult(result), nil
 }
 
 // DmSummaries is the resolver for the dmSummaries field.
-func (r *queryResolver) DmSummaries(ctx context.Context, filters *DmSummaryFiltersV2Input, limit int, offset int) (*DocumentListResult, error) {
+func (r *queryResolver) DmSummaries(ctx context.Context, filters *DmSummaryFiltersInput, limit int, offset int) (*DocumentListResult, error) {
 	if r.Services.QuestQueries == nil {
 		return nil, fmt.Errorf("quest queries unavailable")
 	}
@@ -2342,7 +2342,7 @@ func (r *queryResolver) DmSummaries(ctx context.Context, filters *DmSummaryFilte
 }
 
 // Search is the resolver for the search field.
-func (r *queryResolver) Search(ctx context.Context, query string, kinds []string, limit int, offset int) (*SearchResultV2Type, error) {
+func (r *queryResolver) Search(ctx context.Context, query string, kinds []string, limit int, offset int) (*SearchResultType, error) {
 	search := query
 	items, total, err := r.Services.Documents.List(ctx, document.ListFilter{Search: &search, Limit: limit, Offset: offset})
 	if err != nil {
@@ -2354,11 +2354,11 @@ func (r *queryResolver) Search(ctx context.Context, query string, kinds []string
 			ID: d.ID, Kind: d.Kind, Slug: d.Slug, Title: d.Title, Snippet: d.Title,
 		})
 	}
-	return &SearchResultV2Type{Query: query, Documents: hits, DocumentTotal: int(total)}, nil
+	return &SearchResultType{Query: query, Documents: hits, DocumentTotal: int(total)}, nil
 }
 
 // Home is the resolver for the home field.
-func (r *queryResolver) Home(ctx context.Context) (*HomeV2Type, error) {
+func (r *queryResolver) Home(ctx context.Context) (*HomeType, error) {
 	if r.Services.SiteQueries != nil {
 		actor, err := LiveAuthority(ctx)
 		if err != nil {
@@ -2368,7 +2368,7 @@ func (r *queryResolver) Home(ctx context.Context) (*HomeV2Type, error) {
 		if err != nil {
 			return nil, err
 		}
-		return toHomeV2View(view), nil
+		return toHomeView(view), nil
 	}
 	st, err := r.Services.Site.Home(ctx)
 	if err != nil {
@@ -2378,8 +2378,8 @@ func (r *queryResolver) Home(ctx context.Context) (*HomeV2Type, error) {
 }
 
 // AdminOperations is the resolver for the adminOperations field.
-func (r *queryResolver) AdminOperations(ctx context.Context, deliveryState *string, limit int, offset int) (*AdminOperationsV2Type, error) {
-	return &AdminOperationsV2Type{Deliveries: []*AdminDeliveryJobV2Type{}}, nil
+func (r *queryResolver) AdminOperations(ctx context.Context, deliveryState *string, limit int, offset int) (*AdminOperationsType, error) {
+	return &AdminOperationsType{Deliveries: []*AdminDeliveryJobType{}}, nil
 }
 
 // SearchableKinds is the resolver for the searchableKinds field.
@@ -2388,7 +2388,7 @@ func (r *queryResolver) SearchableKinds(ctx context.Context) ([]*SearchKindType,
 }
 
 // SiteStats is the resolver for the siteStats field.
-func (r *queryResolver) SiteStats(ctx context.Context) (*SiteStatsV2Type, error) {
+func (r *queryResolver) SiteStats(ctx context.Context) (*SiteStatsType, error) {
 	if r.Services.SiteQueries == nil {
 		return nil, fmt.Errorf("site queries unavailable")
 	}
@@ -2400,7 +2400,7 @@ func (r *queryResolver) SiteStats(ctx context.Context) (*SiteStatsV2Type, error)
 	if err != nil {
 		return nil, err
 	}
-	return toSiteStatsV2FromSnapshot(snapshot), nil
+	return toSiteStatsFromSnapshot(snapshot), nil
 }
 
 // DiscordDeliveryMode is the resolver for the discordDeliveryMode field.
@@ -2448,36 +2448,36 @@ func (r *queryResolver) QuestAnnouncementRoleSetting(ctx context.Context) (*Ques
 }
 
 // Map is the resolver for the map field.
-func (r *queryResolver) Map(ctx context.Context, atlasCode string) (*MapV2Type, error) {
+func (r *queryResolver) Map(ctx context.Context, atlasCode string) (*MapType, error) {
 	m, err := r.Services.Spatial.Map(ctx, atlasCode)
 	if err != nil {
 		return nil, nil
 	}
-	return toMapV2(m), nil
+	return toMap(m), nil
 }
 
 // Maps is the resolver for the maps field.
-func (r *queryResolver) Maps(ctx context.Context, family *string, mapKind *string, limit int, offset int) ([]*MapV2Type, error) {
+func (r *queryResolver) Maps(ctx context.Context, family *string, mapKind *string, limit int, offset int) ([]*MapType, error) {
 	rows, err := r.Services.Spatial.ListMaps(ctx, family)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]*MapV2Type, 0, len(rows))
+	out := make([]*MapType, 0, len(rows))
 	for _, m := range rows {
-		out = append(out, toMapV2(m))
+		out = append(out, toMap(m))
 	}
 	return out, nil
 }
 
 // Regions is the resolver for the regions field.
-func (r *queryResolver) Regions(ctx context.Context, kind *string, limit int, offset int) ([]*RegionV2Type, error) {
+func (r *queryResolver) Regions(ctx context.Context, kind *string, limit int, offset int) ([]*RegionType, error) {
 	rows, err := r.Services.Spatial.ListRegions(ctx, kind)
 	if err != nil {
 		return nil, err
 	}
-	out := make([]*RegionV2Type, 0, len(rows))
+	out := make([]*RegionType, 0, len(rows))
 	for _, reg := range rows {
-		out = append(out, &RegionV2Type{ID: reg.ID, Name: reg.Name, Kind: reg.Kind, CreatedAt: time.Now()})
+		out = append(out, &RegionType{ID: reg.ID, Name: reg.Name, Kind: reg.Kind, CreatedAt: time.Now()})
 	}
 	return out, nil
 }
@@ -2504,7 +2504,7 @@ func (r *queryResolver) ArchonAssignments(ctx context.Context, regionID *string,
 }
 
 // RegionCounts is the resolver for the regionCounts field.
-func (r *queryResolver) RegionCounts(ctx context.Context, regionID string) (*RegionCountsV2Type, error) {
+func (r *queryResolver) RegionCounts(ctx context.Context, regionID string) (*RegionCountsType, error) {
 	if r.Services.SpatialQueries == nil {
 		return nil, fmt.Errorf("spatial queries unavailable")
 	}
@@ -2523,7 +2523,7 @@ func (r *queryResolver) RegionCounts(ctx context.Context, regionID string) (*Reg
 }
 
 // RegionActivity is the resolver for the regionActivity field.
-func (r *queryResolver) RegionActivity(ctx context.Context, atlasCode string) (*RegionActivityV2Type, error) {
+func (r *queryResolver) RegionActivity(ctx context.Context, atlasCode string) (*RegionActivityType, error) {
 	if r.Services.SpatialQueries == nil {
 		return nil, fmt.Errorf("spatial queries unavailable")
 	}
@@ -2542,7 +2542,7 @@ func (r *queryResolver) RegionActivity(ctx context.Context, atlasCode string) (*
 }
 
 // GameDate is the resolver for the gameDate field.
-func (r *queryResolver) GameDate(ctx context.Context, realDate product.Date) (*GameDateV2Type, error) {
+func (r *queryResolver) GameDate(ctx context.Context, realDate product.Date) (*GameDateType, error) {
 	if r.Services.SpatialQueries == nil {
 		return nil, fmt.Errorf("spatial queries unavailable")
 	}
@@ -2597,7 +2597,7 @@ func (r *queryResolver) TimeAnchors(ctx context.Context, limit int, offset int) 
 }
 
 // GameCalendar is the resolver for the gameCalendar field.
-func (r *queryResolver) GameCalendar(ctx context.Context, realFrom product.Date, realTo product.Date) (*GameCalendarV2Type, error) {
+func (r *queryResolver) GameCalendar(ctx context.Context, realFrom product.Date, realTo product.Date) (*GameCalendarType, error) {
 	if r.Services.SpatialQueries == nil {
 		return nil, fmt.Errorf("spatial queries unavailable")
 	}

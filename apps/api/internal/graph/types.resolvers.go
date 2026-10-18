@@ -7,11 +7,10 @@ package graph
 import (
 	"context"
 	"fmt"
-	"time"
 )
 
 // ActiveAlerts is the resolver for the activeAlerts field.
-func (r *adminOperationsV2TypeResolver) ActiveAlerts(ctx context.Context, obj *AdminOperationsV2Type, limit int, offset int) ([]*AdminHealthAlertV2Type, error) {
+func (r *adminOperationsTypeResolver) ActiveAlerts(ctx context.Context, obj *AdminOperationsType, limit int, offset int) ([]*AdminHealthAlertType, error) {
 	panic(fmt.Errorf("not implemented: ActiveAlerts - activeAlerts"))
 }
 
@@ -43,22 +42,22 @@ func (r *documentTypeResolver) Author(ctx context.Context, obj *DocumentType) (*
 }
 
 // SummaryDerived is the resolver for the summaryDerived field.
-func (r *documentTypeResolver) SummaryDerived(ctx context.Context, obj *DocumentType) (*SummaryDerivedV2Type, error) {
+func (r *documentTypeResolver) SummaryDerived(ctx context.Context, obj *DocumentType) (*SummaryDerivedType, error) {
 	panic(fmt.Errorf("not implemented: SummaryDerived - summaryDerived"))
 }
 
 // CurrentGameDate is the resolver for the currentGameDate field.
-func (r *gameCalendarV2TypeResolver) CurrentGameDate(ctx context.Context, obj *GameCalendarV2Type) (*GameDateV2Type, error) {
+func (r *gameCalendarTypeResolver) CurrentGameDate(ctx context.Context, obj *GameCalendarType) (*GameDateType, error) {
 	panic(fmt.Errorf("not implemented: CurrentGameDate - currentGameDate"))
 }
 
 // PointcrawlNodes is the resolver for the pointcrawlNodes field.
-func (r *mapV2TypeResolver) PointcrawlNodes(ctx context.Context, obj *MapV2Type, limit int, offset int) ([]*PointcrawlNodeV2Type, error) {
+func (r *mapTypeResolver) PointcrawlNodes(ctx context.Context, obj *MapType, limit int, offset int) ([]*PointcrawlNodeType, error) {
 	panic(fmt.Errorf("not implemented: PointcrawlNodes - pointcrawlNodes"))
 }
 
 // PointcrawlEdges is the resolver for the pointcrawlEdges field.
-func (r *mapV2TypeResolver) PointcrawlEdges(ctx context.Context, obj *MapV2Type, limit int, offset int) ([]*PointcrawlEdgeV2Type, error) {
+func (r *mapTypeResolver) PointcrawlEdges(ctx context.Context, obj *MapType, limit int, offset int) ([]*PointcrawlEdgeType, error) {
 	panic(fmt.Errorf("not implemented: PointcrawlEdges - pointcrawlEdges"))
 }
 
@@ -83,87 +82,53 @@ func (r *memberTypeResolver) DiscordID(ctx context.Context, obj *MemberType) (*s
 }
 
 // LinkedEntries is the resolver for the linkedEntries field.
-func (r *pointcrawlNodeV2TypeResolver) LinkedEntries(ctx context.Context, obj *PointcrawlNodeV2Type, limit int, offset int) ([]*PointcrawlEntryLinkType, error) {
+func (r *pointcrawlNodeTypeResolver) LinkedEntries(ctx context.Context, obj *PointcrawlNodeType, limit int, offset int) ([]*PointcrawlEntryLinkType, error) {
 	panic(fmt.Errorf("not implemented: LinkedEntries - linkedEntries"))
 }
 
 // Quests is the resolver for the quests field.
-func (r *questArcV2TypeResolver) Quests(ctx context.Context, obj *QuestArcV2Type, limit int, offset int) ([]*QuestV2Type, error) {
+func (r *questArcTypeResolver) Quests(ctx context.Context, obj *QuestArcType, limit int, offset int) ([]*QuestType, error) {
 	panic(fmt.Errorf("not implemented: Quests - quests"))
 }
 
 // Dm is the resolver for the dm field.
-func (r *questV2TypeResolver) Dm(ctx context.Context, obj *QuestV2Type) (*QuestDmV2Type, error) {
-	if obj == nil || obj.DmID == "" {
-		return nil, nil
-	}
-	m, err := r.Services.Members.Get(ctx, &obj.DmID, nil)
-	if err != nil {
-		return nil, nil
-	}
-	return &QuestDmV2Type{DisplayName: m.DisplayName, Handle: m.Handle}, nil
+func (r *questTypeResolver) Dm(ctx context.Context, obj *QuestType) (*QuestDmType, error) {
+	panic(fmt.Errorf("not implemented: Dm - dm"))
 }
 
 // BriefDocument is the resolver for the briefDocument field.
-func (r *questV2TypeResolver) BriefDocument(ctx context.Context, obj *QuestV2Type) (*DocumentType, error) {
-	if obj == nil || obj.DocumentID == nil || *obj.DocumentID == "" {
-		return nil, nil
-	}
-	d, err := r.Services.Documents.ByID(ctx, *obj.DocumentID)
-	if err != nil {
-		return nil, err
-	}
-	return toDocumentType(d, d.Body), nil
+func (r *questTypeResolver) BriefDocument(ctx context.Context, obj *QuestType) (*DocumentType, error) {
+	panic(fmt.Errorf("not implemented: BriefDocument - briefDocument"))
 }
 
 // Participants is the resolver for the participants field.
-func (r *questV2TypeResolver) Participants(ctx context.Context, obj *QuestV2Type, status *string, limit int, offset int) ([]*QuestParticipantV2Type, error) {
-	if obj == nil {
-		return nil, nil
-	}
-	rows, err := r.Services.Quests.Participants(ctx, obj.ID, status)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]*QuestParticipantV2Type, 0, len(rows))
-	for _, p := range rows {
-		now := time.Now()
-		out = append(out, &QuestParticipantV2Type{
-			QuestID:     obj.ID,
-			MemberID:    p.MemberID,
-			CharacterID: p.CharacterID,
-			Status:      p.Status,
-			Manual:      p.Manual,
-			CreatedAt:   now,
-			UpdatedAt:   now,
-		})
-	}
-	return out, nil
+func (r *questTypeResolver) Participants(ctx context.Context, obj *QuestType, status *string, limit int, offset int) ([]*QuestParticipantType, error) {
+	panic(fmt.Errorf("not implemented: Participants - participants"))
 }
 
 // PointcrawlLinks is the resolver for the pointcrawlLinks field.
-func (r *questV2TypeResolver) PointcrawlLinks(ctx context.Context, obj *QuestV2Type, role *string, limit int, offset int) ([]*QuestPointcrawlLinkV2Type, error) {
+func (r *questTypeResolver) PointcrawlLinks(ctx context.Context, obj *QuestType, role *string, limit int, offset int) ([]*QuestPointcrawlLinkType, error) {
 	panic(fmt.Errorf("not implemented: PointcrawlLinks - pointcrawlLinks"))
 }
 
 // Arc is the resolver for the arc field.
-func (r *questV2TypeResolver) Arc(ctx context.Context, obj *QuestV2Type) (*QuestArcV2Type, error) {
+func (r *questTypeResolver) Arc(ctx context.Context, obj *QuestType) (*QuestArcType, error) {
 	panic(fmt.Errorf("not implemented: Arc - arc"))
 }
 
 // DmTable is the resolver for the dmTable field.
-func (r *questV2TypeResolver) DmTable(ctx context.Context, obj *QuestV2Type) (*DocumentType, error) {
+func (r *questTypeResolver) DmTable(ctx context.Context, obj *QuestType) (*DocumentType, error) {
 	panic(fmt.Errorf("not implemented: DmTable - dmTable"))
 }
 
 // DiscordDelivery is the resolver for the discordDelivery field.
-func (r *questV2TypeResolver) DiscordDelivery(ctx context.Context, obj *QuestV2Type) (*QuestDiscordDeliveryV2Type, error) {
+func (r *questTypeResolver) DiscordDelivery(ctx context.Context, obj *QuestType) (*QuestDiscordDeliveryType, error) {
 	panic(fmt.Errorf("not implemented: DiscordDelivery - discordDelivery"))
 }
 
-// AdminOperationsV2Type returns AdminOperationsV2TypeResolver implementation.
-func (r *Resolver) AdminOperationsV2Type() AdminOperationsV2TypeResolver {
-	return &adminOperationsV2TypeResolver{r}
+// AdminOperationsType returns AdminOperationsTypeResolver implementation.
+func (r *Resolver) AdminOperationsType() AdminOperationsTypeResolver {
+	return &adminOperationsTypeResolver{r}
 }
 
 // CodexEntryCardType returns CodexEntryCardTypeResolver implementation.
@@ -174,13 +139,11 @@ func (r *Resolver) CodexEntryCardType() CodexEntryCardTypeResolver {
 // DocumentType returns DocumentTypeResolver implementation.
 func (r *Resolver) DocumentType() DocumentTypeResolver { return &documentTypeResolver{r} }
 
-// GameCalendarV2Type returns GameCalendarV2TypeResolver implementation.
-func (r *Resolver) GameCalendarV2Type() GameCalendarV2TypeResolver {
-	return &gameCalendarV2TypeResolver{r}
-}
+// GameCalendarType returns GameCalendarTypeResolver implementation.
+func (r *Resolver) GameCalendarType() GameCalendarTypeResolver { return &gameCalendarTypeResolver{r} }
 
-// MapV2Type returns MapV2TypeResolver implementation.
-func (r *Resolver) MapV2Type() MapV2TypeResolver { return &mapV2TypeResolver{r} }
+// MapType returns MapTypeResolver implementation.
+func (r *Resolver) MapType() MapTypeResolver { return &mapTypeResolver{r} }
 
 // MemberActivityStatsType returns MemberActivityStatsTypeResolver implementation.
 func (r *Resolver) MemberActivityStatsType() MemberActivityStatsTypeResolver {
@@ -195,25 +158,25 @@ func (r *Resolver) MemberProfileType() MemberProfileTypeResolver {
 // MemberType returns MemberTypeResolver implementation.
 func (r *Resolver) MemberType() MemberTypeResolver { return &memberTypeResolver{r} }
 
-// PointcrawlNodeV2Type returns PointcrawlNodeV2TypeResolver implementation.
-func (r *Resolver) PointcrawlNodeV2Type() PointcrawlNodeV2TypeResolver {
-	return &pointcrawlNodeV2TypeResolver{r}
+// PointcrawlNodeType returns PointcrawlNodeTypeResolver implementation.
+func (r *Resolver) PointcrawlNodeType() PointcrawlNodeTypeResolver {
+	return &pointcrawlNodeTypeResolver{r}
 }
 
-// QuestArcV2Type returns QuestArcV2TypeResolver implementation.
-func (r *Resolver) QuestArcV2Type() QuestArcV2TypeResolver { return &questArcV2TypeResolver{r} }
+// QuestArcType returns QuestArcTypeResolver implementation.
+func (r *Resolver) QuestArcType() QuestArcTypeResolver { return &questArcTypeResolver{r} }
 
-// QuestV2Type returns QuestV2TypeResolver implementation.
-func (r *Resolver) QuestV2Type() QuestV2TypeResolver { return &questV2TypeResolver{r} }
+// QuestType returns QuestTypeResolver implementation.
+func (r *Resolver) QuestType() QuestTypeResolver { return &questTypeResolver{r} }
 
-type adminOperationsV2TypeResolver struct{ *Resolver }
+type adminOperationsTypeResolver struct{ *Resolver }
 type codexEntryCardTypeResolver struct{ *Resolver }
 type documentTypeResolver struct{ *Resolver }
-type gameCalendarV2TypeResolver struct{ *Resolver }
-type mapV2TypeResolver struct{ *Resolver }
+type gameCalendarTypeResolver struct{ *Resolver }
+type mapTypeResolver struct{ *Resolver }
 type memberActivityStatsTypeResolver struct{ *Resolver }
 type memberProfileTypeResolver struct{ *Resolver }
 type memberTypeResolver struct{ *Resolver }
-type pointcrawlNodeV2TypeResolver struct{ *Resolver }
-type questArcV2TypeResolver struct{ *Resolver }
-type questV2TypeResolver struct{ *Resolver }
+type pointcrawlNodeTypeResolver struct{ *Resolver }
+type questArcTypeResolver struct{ *Resolver }
+type questTypeResolver struct{ *Resolver }

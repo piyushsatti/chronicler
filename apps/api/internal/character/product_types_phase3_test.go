@@ -94,9 +94,9 @@ func TestPhase3TaskCHA01Acceptance(t *testing.T) {
 
 	schema := loadCharacterSourceSchema(t)
 	t.Run("profile SDL remains nullable with no default", func(t *testing.T) {
-		definition := schema.Definitions.ForName("UpdateCharacterProfileV2Input")
+		definition := schema.Definitions.ForName("UpdateCharacterProfileInput")
 		if definition == nil || definition.Kind != ast.InputObject {
-			t.Fatal("UpdateCharacterProfileV2Input is missing or has the wrong kind")
+			t.Fatal("UpdateCharacterProfileInput is missing or has the wrong kind")
 		}
 		wantFields := map[string]bool{"description": false, "backgroundText": false}
 		for _, field := range definition.Fields {

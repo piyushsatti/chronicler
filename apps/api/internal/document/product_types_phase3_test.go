@@ -308,9 +308,14 @@ func TestPhase3TaskDOC01Acceptance(t *testing.T) {
 				lazy[f.Type][f.Field] = true
 			}
 		}
-		// go-seams.json still names summary hex DTOs; contracts SDL uses C3 pointcrawl names.
+		// go-seams.json still names summary hex DTOs; contracts SDL uses C3 pointcrawl names without V2.
 		sdlTypeAlias := map[string]string{
-			"SummaryHexV2Type": "SummaryPointcrawlNodeV2Type",
+			"SummaryHexV2Type":        "SummaryPointcrawlNodeType",
+			"SummaryDerivedV2Type":    "SummaryDerivedType",
+			"SummaryDmV2Type":         "SummaryDmType",
+			"SummaryPlayerV2Type":     "SummaryPlayerType",
+			"SummaryRegionV2Type":     "SummaryRegionType",
+			"SummaryPointcrawlNodeV2Type": "SummaryPointcrawlNodeType",
 		}
 		contractFieldToSDL := map[string]map[string]string{
 			"SummaryDerivedV2Type": {"hexes": "pointcrawlNodes"},
@@ -319,11 +324,15 @@ func TestPhase3TaskDOC01Acceptance(t *testing.T) {
 			"SummaryHexV2Type": {"hexcode": true},
 		}
 		sdlFieldNoContract := map[string]map[string]bool{
-			"SummaryPointcrawlNodeV2Type": {"name": true},
+			"SummaryPointcrawlNodeType": {"name": true},
 		}
 		contractFieldWireTypeAlt := map[string]map[string]string{
 			"SummaryDerivedV2Type": {
-				"hexes": "[SummaryPointcrawlNodeV2Type!]!",
+				"hexes":    "[SummaryPointcrawlNodeType!]!",
+				"regions":  "[SummaryRegionType!]!",
+				"dms":      "[SummaryDmType!]!",
+				"players":  "[SummaryPlayerType!]!",
+				"gameDate": "GameDateType",
 			},
 		}
 		matchedLazy := make(map[string]bool)

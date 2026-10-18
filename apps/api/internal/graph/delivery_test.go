@@ -7,7 +7,7 @@ import (
 )
 
 func TestQuestViewMapsDiscordDelivery(t *testing.T) {
-	got := toQuestV2(quest.LegacyQuestView{
+	got := toQuest(quest.LegacyQuestView{
 		ID:                     "q",
 		Status:                 quest.Open,
 		DiscordDesiredRevision: 3,

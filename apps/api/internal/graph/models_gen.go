@@ -27,7 +27,7 @@ type ActivitySummaryType struct {
 	Reactions    float64 `json:"reactions"`
 }
 
-type AdminCharacterDirectoryEntryV2Type struct {
+type AdminCharacterDirectoryEntryType struct {
 	ID                      string     `json:"id"`
 	ShortCode               string     `json:"shortCode"`
 	Name                    string     `json:"name"`
@@ -50,12 +50,12 @@ type AdminCharacterDirectoryFiltersInput struct {
 	Status     *string `json:"status,omitempty"`
 }
 
-type AdminCharacterDirectoryV2Type struct {
-	Items []*AdminCharacterDirectoryEntryV2Type `json:"items"`
-	Total int                                   `json:"total"`
+type AdminCharacterDirectoryType struct {
+	Items []*AdminCharacterDirectoryEntryType `json:"items"`
+	Total int                                 `json:"total"`
 }
 
-type AdminDeliveryConfigV2Type struct {
+type AdminDeliveryConfigType struct {
 	PublicOrigin            string  `json:"publicOrigin"`
 	PublicOriginHealthy     *bool   `json:"publicOriginHealthy,omitempty"`
 	DeliveryMode            string  `json:"deliveryMode"`
@@ -64,7 +64,7 @@ type AdminDeliveryConfigV2Type struct {
 	AnnouncementRoleHealthy *bool   `json:"announcementRoleHealthy,omitempty"`
 }
 
-type AdminDeliveryJobV2Type struct {
+type AdminDeliveryJobType struct {
 	ID              string    `json:"id"`
 	QuestID         *string   `json:"questId,omitempty"`
 	QuestShortCode  *string   `json:"questShortCode,omitempty"`
@@ -84,7 +84,7 @@ type AdminDeliveryJobV2Type struct {
 	UpdatedAt       time.Time `json:"updatedAt"`
 }
 
-type AdminHealthAlertV2Type struct {
+type AdminHealthAlertType struct {
 	Key             string     `json:"key"`
 	Label           string     `json:"label"`
 	Severity        string     `json:"severity"`
@@ -93,15 +93,15 @@ type AdminHealthAlertV2Type struct {
 	LastSeenAt      *time.Time `json:"lastSeenAt,omitempty"`
 }
 
-type AdminOperationsV2Type struct {
+type AdminOperationsType struct {
 	ScheduledWork         []*ScheduledWorkStatusType `json:"scheduledWork"`
-	Config                *AdminDeliveryConfigV2Type `json:"config"`
+	Config                *AdminDeliveryConfigType   `json:"config"`
 	ActiveAlertCount      int                        `json:"activeAlertCount"`
 	PendingDeliveryCount  int                        `json:"pendingDeliveryCount"`
 	TerminalDeliveryCount int                        `json:"terminalDeliveryCount"`
 	DeliveryTotal         int                        `json:"deliveryTotal"`
-	Deliveries            []*AdminDeliveryJobV2Type  `json:"deliveries"`
-	ActiveAlerts          []*AdminHealthAlertV2Type  `json:"activeAlerts"`
+	Deliveries            []*AdminDeliveryJobType    `json:"deliveries"`
+	ActiveAlerts          []*AdminHealthAlertType    `json:"activeAlerts"`
 }
 
 type AnnouncementRoleInput struct {
@@ -185,6 +185,19 @@ type CharacterDDBMirrorType struct {
 	SyncedAt    *time.Time `json:"syncedAt,omitempty"`
 }
 
+type CharacterFiltersInput struct {
+	OwnerID    *string `json:"ownerId,omitempty"`
+	GuildID    *string `json:"guildId,omitempty"`
+	RegionID   *string `json:"regionId,omitempty"`
+	NamePrefix *string `json:"namePrefix,omitempty"`
+	Status     *string `json:"status,omitempty"`
+}
+
+type CharacterListResult struct {
+	Items []*CharacterType `json:"items"`
+	Total int              `json:"total"`
+}
+
 type CharacterLogListResult struct {
 	Items []*CharacterLogType `json:"items"`
 	Total int                 `json:"total"`
@@ -199,20 +212,7 @@ type CharacterLogType struct {
 	CreatedAt   time.Time `json:"createdAt"`
 }
 
-type CharacterV2FiltersInput struct {
-	OwnerID    *string `json:"ownerId,omitempty"`
-	GuildID    *string `json:"guildId,omitempty"`
-	RegionID   *string `json:"regionId,omitempty"`
-	NamePrefix *string `json:"namePrefix,omitempty"`
-	Status     *string `json:"status,omitempty"`
-}
-
-type CharacterV2ListResult struct {
-	Items []*CharacterV2Type `json:"items"`
-	Total int                `json:"total"`
-}
-
-type CharacterV2Type struct {
+type CharacterType struct {
 	ID                      string                  `json:"id"`
 	OwnerID                 string                  `json:"ownerId"`
 	ShortCode               string                  `json:"shortCode"`
@@ -242,11 +242,11 @@ type CloseQuestInput struct {
 }
 
 type CoPlayerPage struct {
-	Items []*CoPlayerV2Type `json:"items"`
-	Total int               `json:"total"`
+	Items []*CoPlayerType `json:"items"`
+	Total int             `json:"total"`
 }
 
-type CoPlayerV2Type struct {
+type CoPlayerType struct {
 	CharacterID string `json:"characterId"`
 	MemberID    string `json:"memberId"`
 	QuestCount  int    `json:"questCount"`
@@ -288,7 +288,7 @@ type CountByKeyType struct {
 	Count int    `json:"count"`
 }
 
-type CreateCharacterV2Input struct {
+type CreateCharacterInput struct {
 	Name           string   `json:"name"`
 	RegionID       *string  `json:"regionId,omitempty"`
 	BackstoryID    *string  `json:"backstoryId,omitempty"`
@@ -300,7 +300,7 @@ type CreateCharacterV2Input struct {
 	ShortCode      *string  `json:"shortCode,omitempty"`
 }
 
-type CreateQuestV2Input struct {
+type CreateQuestInput struct {
 	Title          string    `json:"title"`
 	RegionIds      []string  `json:"regionIds"`
 	ScheduledAt    time.Time `json:"scheduledAt"`
@@ -353,10 +353,10 @@ type DdbAttemptType struct {
 }
 
 type DdbSyncReceipt struct {
-	Character   *CharacterV2Type `json:"character"`
-	Succeeded   bool             `json:"succeeded"`
-	AttemptedAt time.Time        `json:"attemptedAt"`
-	SafeError   *string          `json:"safeError,omitempty"`
+	Character   *CharacterType `json:"character"`
+	Succeeded   bool           `json:"succeeded"`
+	AttemptedAt time.Time      `json:"attemptedAt"`
+	SafeError   *string        `json:"safeError,omitempty"`
 }
 
 type DeliveryReceipt struct {
@@ -382,12 +382,12 @@ type DirectoryEntryType struct {
 	AvailableDays           []string        `json:"availableDays"`
 }
 
-type DmLastSessionV2Type struct {
-	Quest         *QuestV2Type  `json:"quest"`
+type DmLastSessionType struct {
+	Quest         *QuestType    `json:"quest"`
 	RecapDocument *DocumentType `json:"recapDocument,omitempty"`
 }
 
-type DmProfileV2Type struct {
+type DmProfileType struct {
 	MemberID         string          `json:"memberId"`
 	Tagline          *string         `json:"tagline,omitempty"`
 	Philosophy       *string         `json:"philosophy,omitempty"`
@@ -398,17 +398,17 @@ type DmProfileV2Type struct {
 	ReviewRevision   int             `json:"reviewRevision"`
 }
 
-type DmSessionHistoryV2Result struct {
-	Items []*DmLastSessionV2Type `json:"items"`
-	Total int                    `json:"total"`
+type DmSessionHistoryResult struct {
+	Items []*DmLastSessionType `json:"items"`
+	Total int                  `json:"total"`
 }
 
-type DmStatsV2Type struct {
-	SessionCount int                  `json:"sessionCount"`
-	LastSession  *DmLastSessionV2Type `json:"lastSession,omitempty"`
+type DmStatsType struct {
+	SessionCount int                `json:"sessionCount"`
+	LastSession  *DmLastSessionType `json:"lastSession,omitempty"`
 }
 
-type DmSummaryFiltersV2Input struct {
+type DmSummaryFiltersInput struct {
 	QuestID *string `json:"questId,omitempty"`
 	Search  *string `json:"search,omitempty"`
 }
@@ -494,25 +494,25 @@ type DocumentSearchHitType struct {
 }
 
 type DocumentType struct {
-	ID             string                `json:"id"`
-	Version        int                   `json:"version"`
-	Slug           string                `json:"slug"`
-	Kind           string                `json:"kind"`
-	Category       *string               `json:"category,omitempty"`
-	Status         string                `json:"status"`
-	Visibility     string                `json:"visibility"`
-	Policy         []string              `json:"policy,omitempty"`
-	ReaderIds      []string              `json:"readerIds,omitempty"`
-	Title          string                `json:"title"`
-	Frontmatter    json.RawMessage       `json:"frontmatter"`
-	AuthorID       string                `json:"authorId"`
-	UpdatedAt      time.Time             `json:"updatedAt"`
-	DeletedAt      *time.Time            `json:"deletedAt,omitempty"`
-	DeletedBy      *string               `json:"deletedBy,omitempty"`
-	EffectiveBody  *string               `json:"effectiveBody,omitempty"`
-	Author         *DocumentAuthorType   `json:"author,omitempty"`
-	PublishedAt    *time.Time            `json:"publishedAt,omitempty"`
-	SummaryDerived *SummaryDerivedV2Type `json:"summaryDerived,omitempty"`
+	ID             string              `json:"id"`
+	Version        int                 `json:"version"`
+	Slug           string              `json:"slug"`
+	Kind           string              `json:"kind"`
+	Category       *string             `json:"category,omitempty"`
+	Status         string              `json:"status"`
+	Visibility     string              `json:"visibility"`
+	Policy         []string            `json:"policy,omitempty"`
+	ReaderIds      []string            `json:"readerIds,omitempty"`
+	Title          string              `json:"title"`
+	Frontmatter    json.RawMessage     `json:"frontmatter"`
+	AuthorID       string              `json:"authorId"`
+	UpdatedAt      time.Time           `json:"updatedAt"`
+	DeletedAt      *time.Time          `json:"deletedAt,omitempty"`
+	DeletedBy      *string             `json:"deletedBy,omitempty"`
+	EffectiveBody  *string             `json:"effectiveBody,omitempty"`
+	Author         *DocumentAuthorType `json:"author,omitempty"`
+	PublishedAt    *time.Time          `json:"publishedAt,omitempty"`
+	SummaryDerived *SummaryDerivedType `json:"summaryDerived,omitempty"`
 }
 
 type DowntimeInput struct {
@@ -548,14 +548,14 @@ type DriverProgressType struct {
 	DmSessionsCount   int `json:"dmSessionsCount"`
 }
 
-type GameCalendarV2Type struct {
+type GameCalendarType struct {
 	Definition      json.RawMessage    `json:"definition,omitempty"`
 	CurrentGameDay  *int               `json:"currentGameDay,omitempty"`
-	CurrentGameDate *GameDateV2Type    `json:"currentGameDate,omitempty"`
+	CurrentGameDate *GameDateType      `json:"currentGameDate,omitempty"`
 	MonthGrid       []*GameDayCellType `json:"monthGrid"`
 }
 
-type GameDateV2Type struct {
+type GameDateType struct {
 	EraAbbrev   string `json:"eraAbbrev"`
 	Year        int    `json:"year"`
 	PeriodName  string `json:"periodName"`
@@ -596,9 +596,9 @@ type HomeBucketType struct {
 	Documents []*DocumentType `json:"documents"`
 }
 
-type HomeV2Type struct {
+type HomeType struct {
 	RecentByCategory []*HomeBucketType `json:"recentByCategory"`
-	CommunityStats   *SiteStatsV2Type  `json:"communityStats"`
+	CommunityStats   *SiteStatsType    `json:"communityStats"`
 }
 
 type LieutenantAssignmentType struct {
@@ -622,18 +622,18 @@ type MapCreateInput struct {
 	AssetPath *string `json:"assetPath,omitempty"`
 }
 
-type MapV2Type struct {
-	ID              string                  `json:"id"`
-	Name            string                  `json:"name"`
-	AtlasCode       string                  `json:"atlasCode"`
-	Family          string                  `json:"family"`
-	MapKind         string                  `json:"mapKind"`
-	AssetPath       *string                 `json:"assetPath,omitempty"`
-	RegionID        *string                 `json:"regionId,omitempty"`
-	CreatedBy       *string                 `json:"createdBy,omitempty"`
-	CreatedAt       time.Time               `json:"createdAt"`
-	PointcrawlNodes []*PointcrawlNodeV2Type `json:"pointcrawlNodes"`
-	PointcrawlEdges []*PointcrawlEdgeV2Type `json:"pointcrawlEdges"`
+type MapType struct {
+	ID              string                `json:"id"`
+	Name            string                `json:"name"`
+	AtlasCode       string                `json:"atlasCode"`
+	Family          string                `json:"family"`
+	MapKind         string                `json:"mapKind"`
+	AssetPath       *string               `json:"assetPath,omitempty"`
+	RegionID        *string               `json:"regionId,omitempty"`
+	CreatedBy       *string               `json:"createdBy,omitempty"`
+	CreatedAt       time.Time             `json:"createdAt"`
+	PointcrawlNodes []*PointcrawlNodeType `json:"pointcrawlNodes"`
+	PointcrawlEdges []*PointcrawlEdgeType `json:"pointcrawlEdges"`
 }
 
 type MemberActivityStatsType struct {
@@ -661,7 +661,7 @@ type MemberListResult struct {
 
 type MemberProfileType struct {
 	Member          *MemberType             `json:"member"`
-	DmProfile       *DmProfileV2Type        `json:"dmProfile,omitempty"`
+	DmProfile       *DmProfileType          `json:"dmProfile,omitempty"`
 	Availability    []*AvailabilitySlotType `json:"availability"`
 	ActivitySummary *ActivitySummaryType    `json:"activitySummary"`
 	RecentWeeks     []*WeekActivityType     `json:"recentWeeks"`
@@ -777,7 +777,7 @@ type NotificationWriteReceipt struct {
 	AffectedCount int  `json:"affectedCount"`
 }
 
-type OpenQuestSeatV2Type struct {
+type OpenQuestSeatType struct {
 	QuestID     string    `json:"questId"`
 	ShortCode   string    `json:"shortCode"`
 	DmID        string    `json:"dmId"`
@@ -789,9 +789,9 @@ type OpenQuestSeatV2Type struct {
 	OpenSeats   int       `json:"openSeats"`
 }
 
-type OpenQuestSeatsV2Result struct {
-	Entries []*OpenQuestSeatV2Type `json:"entries"`
-	Total   int                    `json:"total"`
+type OpenQuestSeatsResult struct {
+	Entries []*OpenQuestSeatType `json:"entries"`
+	Total   int                  `json:"total"`
 }
 
 type ParticipationAttestationInput struct {
@@ -800,8 +800,8 @@ type ParticipationAttestationInput struct {
 }
 
 type ParticipationPage struct {
-	Items []*QuestParticipantV2Type `json:"items"`
-	Total int                       `json:"total"`
+	Items []*QuestParticipantType `json:"items"`
+	Total int                     `json:"total"`
 }
 
 type PointcrawlEdgeInput struct {
@@ -814,7 +814,7 @@ type PointcrawlEdgeInput struct {
 	DocumentID *string `json:"documentId,omitempty"`
 }
 
-type PointcrawlEdgeV2Type struct {
+type PointcrawlEdgeType struct {
 	ID         string  `json:"id"`
 	MapID      string  `json:"mapId"`
 	NodeA      string  `json:"nodeA"`
@@ -842,7 +842,7 @@ type PointcrawlNodeInput struct {
 	SubmapID *string `json:"submapId,omitempty"`
 }
 
-type PointcrawlNodeV2Type struct {
+type PointcrawlNodeType struct {
 	ID            string                     `json:"id"`
 	MapID         string                     `json:"mapId"`
 	X             float64                    `json:"x"`
@@ -877,21 +877,21 @@ type QuestAnnouncementRoleSettingType struct {
 	RoleID  *string `json:"roleId,omitempty"`
 }
 
-type QuestArcV2ListResult struct {
-	Items []*QuestArcV2Type `json:"items"`
-	Total int               `json:"total"`
+type QuestArcListResult struct {
+	Items []*QuestArcType `json:"items"`
+	Total int             `json:"total"`
 }
 
-type QuestArcV2Type struct {
-	ID         string         `json:"id"`
-	Name       string         `json:"name"`
-	CreatedBy  string         `json:"createdBy"`
-	CreatedAt  time.Time      `json:"createdAt"`
-	Quests     []*QuestV2Type `json:"quests"`
-	QuestCount int            `json:"questCount"`
+type QuestArcType struct {
+	ID         string       `json:"id"`
+	Name       string       `json:"name"`
+	CreatedBy  string       `json:"createdBy"`
+	CreatedAt  time.Time    `json:"createdAt"`
+	Quests     []*QuestType `json:"quests"`
+	QuestCount int          `json:"questCount"`
 }
 
-type QuestDiscordDeliveryV2Type struct {
+type QuestDiscordDeliveryType struct {
 	JobID           *string    `json:"jobId,omitempty"`
 	DesiredRevision int        `json:"desiredRevision"`
 	AppliedRevision int        `json:"appliedRevision"`
@@ -904,7 +904,7 @@ type QuestDiscordDeliveryV2Type struct {
 	ErrorMessage    *string    `json:"errorMessage,omitempty"`
 }
 
-type QuestDmV2Type struct {
+type QuestDmType struct {
 	Handle      string  `json:"handle"`
 	DisplayName string  `json:"displayName"`
 	AvatarURL   *string `json:"avatarUrl,omitempty"`
@@ -928,7 +928,27 @@ type QuestEditInput struct {
 	AdditionalInfo    graphql.Omittable[*string]    `json:"additionalInfo,omitempty"`
 }
 
-type QuestParticipantV2Type struct {
+type QuestFiltersInput struct {
+	Status        *string    `json:"status,omitempty"`
+	Kind          *string    `json:"kind,omitempty"`
+	DmID          *string    `json:"dmId,omitempty"`
+	RegionID      *string    `json:"regionId,omitempty"`
+	ArcID         *string    `json:"arcId,omitempty"`
+	Tag           *string    `json:"tag,omitempty"`
+	Genre         *string    `json:"genre,omitempty"`
+	ShortCodes    []string   `json:"shortCodes,omitempty"`
+	Search        *string    `json:"search,omitempty"`
+	DisplayStatus *string    `json:"displayStatus,omitempty"`
+	ScheduledFrom *time.Time `json:"scheduledFrom,omitempty"`
+	ScheduledTo   *time.Time `json:"scheduledTo,omitempty"`
+}
+
+type QuestListResult struct {
+	Items []*QuestType `json:"items"`
+	Total int          `json:"total"`
+}
+
+type QuestParticipantType struct {
 	QuestID           string    `json:"questId"`
 	MemberID          string    `json:"memberId"`
 	CharacterID       string    `json:"characterId"`
@@ -953,18 +973,18 @@ type QuestPointcrawlLinkInput struct {
 	Role             string `json:"role"`
 }
 
-type QuestPointcrawlLinkV2Type struct {
+type QuestPointcrawlLinkType struct {
 	QuestID          string `json:"questId"`
 	PointcrawlNodeID string `json:"pointcrawlNodeId"`
 	Role             string `json:"role"`
 }
 
-type QuestStateCountV2Type struct {
+type QuestStateCountType struct {
 	State string `json:"state"`
 	Count int    `json:"count"`
 }
 
-type QuestStateCountsFiltersV2Input struct {
+type QuestStateCountsFiltersInput struct {
 	Kind     *string `json:"kind,omitempty"`
 	DmID     *string `json:"dmId,omitempty"`
 	RegionID *string `json:"regionId,omitempty"`
@@ -972,9 +992,9 @@ type QuestStateCountsFiltersV2Input struct {
 	Tag      *string `json:"tag,omitempty"`
 }
 
-type QuestSummariesV2Result struct {
-	Summaries []*DocumentType           `json:"summaries"`
-	Totals    *QuestSummaryTotalsV2Type `json:"totals"`
+type QuestSummariesResult struct {
+	Summaries []*DocumentType         `json:"summaries"`
+	Totals    *QuestSummaryTotalsType `json:"totals"`
 }
 
 type QuestSummaryInput struct {
@@ -987,63 +1007,43 @@ type QuestSummaryInput struct {
 	Frontmatter json.RawMessage `json:"frontmatter"`
 }
 
-type QuestSummaryTotalsV2Type struct {
+type QuestSummaryTotalsType struct {
 	TotalPcxpAwarded *int           `json:"totalPcxpAwarded,omitempty"`
 	Coverage         RewardCoverage `json:"coverage"`
 }
 
-type QuestV2FiltersInput struct {
-	Status        *string    `json:"status,omitempty"`
-	Kind          *string    `json:"kind,omitempty"`
-	DmID          *string    `json:"dmId,omitempty"`
-	RegionID      *string    `json:"regionId,omitempty"`
-	ArcID         *string    `json:"arcId,omitempty"`
-	Tag           *string    `json:"tag,omitempty"`
-	Genre         *string    `json:"genre,omitempty"`
-	ShortCodes    []string   `json:"shortCodes,omitempty"`
-	Search        *string    `json:"search,omitempty"`
-	DisplayStatus *string    `json:"displayStatus,omitempty"`
-	ScheduledFrom *time.Time `json:"scheduledFrom,omitempty"`
-	ScheduledTo   *time.Time `json:"scheduledTo,omitempty"`
-}
-
-type QuestV2ListResult struct {
-	Items []*QuestV2Type `json:"items"`
-	Total int            `json:"total"`
-}
-
-type QuestV2Type struct {
-	ID               string                       `json:"id"`
-	ShortCode        string                       `json:"shortCode"`
-	Kinds            []string                     `json:"kinds"`
-	Status           string                       `json:"status"`
-	DmID             string                       `json:"dmId"`
-	ArcID            *string                      `json:"arcId,omitempty"`
-	ScheduledAt      time.Time                    `json:"scheduledAt"`
-	DurationHours    float64                      `json:"durationHours"`
-	SlotsMax         int                          `json:"slotsMax"`
-	FilledCount      int                          `json:"filledCount"`
-	DocumentID       *string                      `json:"documentId,omitempty"`
-	DiscordMessageID *string                      `json:"discordMessageId,omitempty"`
-	DiscordEventID   *string                      `json:"discordEventId,omitempty"`
-	EventURL         *string                      `json:"eventUrl,omitempty"`
-	AnnounceError    *string                      `json:"announceError,omitempty"`
-	Tags             []string                     `json:"tags"`
-	Genres           []string                     `json:"genres"`
-	Apl              *int                         `json:"apl,omitempty"`
-	SignupType       *string                      `json:"signupType,omitempty"`
-	CreatedBy        string                       `json:"createdBy"`
-	CreatedAt        time.Time                    `json:"createdAt"`
-	UpdatedAt        time.Time                    `json:"updatedAt"`
-	DisplayStatus    *string                      `json:"displayStatus,omitempty"`
-	Dm               *QuestDmV2Type               `json:"dm,omitempty"`
-	BriefDocument    *DocumentType                `json:"briefDocument,omitempty"`
-	Participants     []*QuestParticipantV2Type    `json:"participants"`
-	PointcrawlLinks  []*QuestPointcrawlLinkV2Type `json:"pointcrawlLinks"`
-	Arc              *QuestArcV2Type              `json:"arc,omitempty"`
-	DmTable          *DocumentType                `json:"dmTable,omitempty"`
-	Regions          []string                     `json:"regions"`
-	DiscordDelivery  *QuestDiscordDeliveryV2Type  `json:"discordDelivery"`
+type QuestType struct {
+	ID               string                     `json:"id"`
+	ShortCode        string                     `json:"shortCode"`
+	Kinds            []string                   `json:"kinds"`
+	Status           string                     `json:"status"`
+	DmID             string                     `json:"dmId"`
+	ArcID            *string                    `json:"arcId,omitempty"`
+	ScheduledAt      time.Time                  `json:"scheduledAt"`
+	DurationHours    float64                    `json:"durationHours"`
+	SlotsMax         int                        `json:"slotsMax"`
+	FilledCount      int                        `json:"filledCount"`
+	DocumentID       *string                    `json:"documentId,omitempty"`
+	DiscordMessageID *string                    `json:"discordMessageId,omitempty"`
+	DiscordEventID   *string                    `json:"discordEventId,omitempty"`
+	EventURL         *string                    `json:"eventUrl,omitempty"`
+	AnnounceError    *string                    `json:"announceError,omitempty"`
+	Tags             []string                   `json:"tags"`
+	Genres           []string                   `json:"genres"`
+	Apl              *int                       `json:"apl,omitempty"`
+	SignupType       *string                    `json:"signupType,omitempty"`
+	CreatedBy        string                     `json:"createdBy"`
+	CreatedAt        time.Time                  `json:"createdAt"`
+	UpdatedAt        time.Time                  `json:"updatedAt"`
+	DisplayStatus    *string                    `json:"displayStatus,omitempty"`
+	Dm               *QuestDmType               `json:"dm,omitempty"`
+	BriefDocument    *DocumentType              `json:"briefDocument,omitempty"`
+	Participants     []*QuestParticipantType    `json:"participants"`
+	PointcrawlLinks  []*QuestPointcrawlLinkType `json:"pointcrawlLinks"`
+	Arc              *QuestArcType              `json:"arc,omitempty"`
+	DmTable          *DocumentType              `json:"dmTable,omitempty"`
+	Regions          []string                   `json:"regions"`
+	DiscordDelivery  *QuestDiscordDeliveryType  `json:"discordDelivery"`
 }
 
 type RealDatePage struct {
@@ -1051,7 +1051,7 @@ type RealDatePage struct {
 	Total int            `json:"total"`
 }
 
-type RegionActivityQuestRefV2Type struct {
+type RegionActivityQuestRefType struct {
 	ID          string    `json:"id"`
 	ShortCode   string    `json:"shortCode"`
 	ScheduledAt time.Time `json:"scheduledAt"`
@@ -1059,17 +1059,17 @@ type RegionActivityQuestRefV2Type struct {
 	FilledCount int       `json:"filledCount"`
 }
 
-type RegionActivityV2Type struct {
-	RegionID       string                          `json:"regionId"`
-	RegionName     string                          `json:"regionName"`
-	FillingCount   int                             `json:"fillingCount"`
-	ScheduledCount int                             `json:"scheduledCount"`
-	LiveCount      int                             `json:"liveCount"`
-	OpenQuests     []*RegionActivityQuestRefV2Type `json:"openQuests"`
-	LiveQuests     []*RegionActivityQuestRefV2Type `json:"liveQuests"`
+type RegionActivityType struct {
+	RegionID       string                        `json:"regionId"`
+	RegionName     string                        `json:"regionName"`
+	FillingCount   int                           `json:"fillingCount"`
+	ScheduledCount int                           `json:"scheduledCount"`
+	LiveCount      int                           `json:"liveCount"`
+	OpenQuests     []*RegionActivityQuestRefType `json:"openQuests"`
+	LiveQuests     []*RegionActivityQuestRefType `json:"liveQuests"`
 }
 
-type RegionCountsV2Type struct {
+type RegionCountsType struct {
 	RegionID            string `json:"regionId"`
 	QuestCount          int    `json:"questCount"`
 	PointcrawlNodeCount int    `json:"pointcrawlNodeCount"`
@@ -1083,7 +1083,7 @@ type RegionInput struct {
 	DocumentID      *string    `json:"documentId,omitempty"`
 }
 
-type RegionV2Type struct {
+type RegionType struct {
 	ID              string     `json:"id"`
 	Name            string     `json:"name"`
 	Kind            string     `json:"kind"`
@@ -1124,7 +1124,7 @@ type SearchKindType struct {
 	ExclusionReason *string `json:"exclusionReason,omitempty"`
 }
 
-type SearchResultV2Type struct {
+type SearchResultType struct {
 	Query         string                   `json:"query"`
 	Documents     []*DocumentSearchHitType `json:"documents"`
 	DocumentTotal int                      `json:"documentTotal"`
@@ -1134,7 +1134,7 @@ type SearchResultV2Type struct {
 	MemberOrder   string                   `json:"memberOrder"`
 }
 
-type SiteStatsV2Type struct {
+type SiteStatsType struct {
 	TotalMembers                 int                  `json:"totalMembers"`
 	MembersByRole                []*CountByKeyType    `json:"membersByRole"`
 	ActiveCharacters             int                  `json:"activeCharacters"`
@@ -1147,23 +1147,23 @@ type SiteStatsV2Type struct {
 	Activity                     *ActivitySummaryType `json:"activity"`
 }
 
-type SummaryDerivedV2Type struct {
-	Regions         []*SummaryRegionV2Type         `json:"regions"`
-	PointcrawlNodes []*SummaryPointcrawlNodeV2Type `json:"pointcrawlNodes"`
-	Dms             []*SummaryDmV2Type             `json:"dms"`
-	Players         []*SummaryPlayerV2Type         `json:"players"`
-	OccurredAt      *time.Time                     `json:"occurredAt,omitempty"`
-	Arc             *string                        `json:"arc,omitempty"`
-	GameDay         *int                           `json:"gameDay,omitempty"`
-	GameDate        *GameDateV2Type                `json:"gameDate,omitempty"`
+type SummaryDerivedType struct {
+	Regions         []*SummaryRegionType         `json:"regions"`
+	PointcrawlNodes []*SummaryPointcrawlNodeType `json:"pointcrawlNodes"`
+	Dms             []*SummaryDmType             `json:"dms"`
+	Players         []*SummaryPlayerType         `json:"players"`
+	OccurredAt      *time.Time                   `json:"occurredAt,omitempty"`
+	Arc             *string                      `json:"arc,omitempty"`
+	GameDay         *int                         `json:"gameDay,omitempty"`
+	GameDate        *GameDateType                `json:"gameDate,omitempty"`
 }
 
-type SummaryDmV2Type struct {
+type SummaryDmType struct {
 	ID          string `json:"id"`
 	DisplayName string `json:"displayName"`
 }
 
-type SummaryPlayerV2Type struct {
+type SummaryPlayerType struct {
 	CharacterID        string `json:"characterId"`
 	CharacterShortCode string `json:"characterShortCode"`
 	CharacterName      string `json:"characterName"`
@@ -1171,13 +1171,13 @@ type SummaryPlayerV2Type struct {
 	Manual             bool   `json:"manual"`
 }
 
-type SummaryPointcrawlNodeV2Type struct {
+type SummaryPointcrawlNodeType struct {
 	ID    string  `json:"id"`
 	MapID string  `json:"mapId"`
 	Name  *string `json:"name,omitempty"`
 }
 
-type SummaryRegionV2Type struct {
+type SummaryRegionType struct {
 	ID   string `json:"id"`
 	Name string `json:"name"`
 }
@@ -1190,11 +1190,11 @@ type TimeAnchorInput struct {
 }
 
 type TimeAnchorPage struct {
-	Items []*TimeAnchorV2Type `json:"items"`
-	Total int                 `json:"total"`
+	Items []*TimeAnchorType `json:"items"`
+	Total int               `json:"total"`
 }
 
-type TimeAnchorV2Type struct {
+type TimeAnchorType struct {
 	ID       string    `json:"id"`
 	RealUtc  time.Time `json:"realUtc"`
 	EpochDay int       `json:"epochDay"`
@@ -1217,7 +1217,7 @@ type UnlockableType struct {
 	Active      bool            `json:"active"`
 }
 
-type UpdateCharacterProfileV2Input struct {
+type UpdateCharacterProfileInput struct {
 	Description    graphql.Omittable[*string] `json:"description,omitempty"`
 	BackgroundText graphql.Omittable[*string] `json:"backgroundText,omitempty"`
 }

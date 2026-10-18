@@ -39,7 +39,7 @@ func TestQuestReadResolverFiltersAndOrder(t *testing.T) {
 			var want []any
 			switch name {
 			case "generic":
-				_, err = r.Query().Quests(context.Background(), &QuestV2FiltersInput{Status: &status, DisplayStatus: &display, ScheduledFrom: &at, ScheduledTo: &end}, 7, 2)
+				_, err = r.Query().Quests(context.Background(), &QuestFiltersInput{Status: &status, DisplayStatus: &display, ScheduledFrom: &at, ScheduledTo: &end}, 7, 2)
 				want = []any{false, pgtype.Text{}, pgtype.Text{String: "live", Valid: true}, pgtype.Timestamptz{Time: at, Valid: true}, pgtype.Timestamptz{Time: end, Valid: true}, int32(2), int32(7)}
 			case "board":
 				_, err = r.Query().QuestBoard(context.Background(), nil, 7, 2)
@@ -56,7 +56,7 @@ func TestQuestReadResolverFiltersAndOrder(t *testing.T) {
 }
 func TestQuestReadGraphMapper(t *testing.T) {
 	at := time.Date(2035, 1, 1, 12, 0, 0, 0, time.UTC)
-	q := toQuestV2(quest.LegacyQuestView{ID: "public-id", ShortCode: "Q-oracle", Status: quest.Open, DisplayStatus: "live", DurationHours: 1.5, DMID: "dm-id", DocumentID: "doc-id", ScheduledAt: at, FilledCount: 2, SlotsMax: 5, DiscordDesiredRevision: 8, DiscordAppliedRevision: 3})
+	q := toQuest(quest.LegacyQuestView{ID: "public-id", ShortCode: "Q-oracle", Status: quest.Open, DisplayStatus: "live", DurationHours: 1.5, DMID: "dm-id", DocumentID: "doc-id", ScheduledAt: at, FilledCount: 2, SlotsMax: 5, DiscordDesiredRevision: 8, DiscordAppliedRevision: 3})
 	if q.Status != "open" || q.DisplayStatus == nil || *q.DisplayStatus != "live" || q.DurationHours != 1.5 || q.ID != "public-id" || q.DmID != "dm-id" || q.DocumentID == nil || *q.DocumentID != "doc-id" || !q.ScheduledAt.Equal(at) || q.DiscordDelivery.DesiredRevision != 8 || q.DiscordDelivery.AppliedRevision != 3 {
 		t.Fatalf("bad projection: %+v", q)
 	}
