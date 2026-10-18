@@ -1777,6 +1777,51 @@
       },
       "baseline_ddl": "\n\n    id bigint NOT NULL,\n    public_id uuid DEFAULT gen_random_uuid() NOT NULL,\n    name text NOT NULL,\n    kind text NOT NULL,\n    charter_deadline timestamp with time zone,\n    document_id bigint,\n    created_at timestamp with time zone DEFAULT now() NOT NULL,\n    deleted_at timestamp with time zone,\n    deleted_by bigint,\n    CONSTRAINT regions_kind_check CHECK ((kind = ANY (ARRAY['server'::text, 'archon'::text, 'uncharted'::text])))\n"
     },
+    "role_changes": {
+      "columns": {
+        "id": {
+          "declaration": "BIGINT NOT NULL",
+          "source": "apps/api/db/migrations/0001_init.sql",
+          "stage": "squash_a1"
+        },
+        "public_id": {
+          "declaration": "UUID DEFAULT GEN_RANDOM_UUID() NOT NULL",
+          "source": "apps/api/db/migrations/0001_init.sql",
+          "stage": "squash_a1"
+        },
+        "member_id": {
+          "declaration": "BIGINT NOT NULL",
+          "source": "apps/api/db/migrations/0001_init.sql",
+          "stage": "squash_a1"
+        },
+        "old_roles": {
+          "declaration": "TEXT[] NOT NULL",
+          "source": "apps/api/db/migrations/0001_init.sql",
+          "stage": "squash_a1"
+        },
+        "new_roles": {
+          "declaration": "TEXT[] NOT NULL",
+          "source": "apps/api/db/migrations/0001_init.sql",
+          "stage": "squash_a1"
+        },
+        "changed_by": {
+          "declaration": "BIGINT NOT NULL",
+          "source": "apps/api/db/migrations/0001_init.sql",
+          "stage": "squash_a1"
+        },
+        "occurred_at": {
+          "declaration": "TIMESTAMPTZ DEFAULT NOW() NOT NULL",
+          "source": "apps/api/db/migrations/0001_init.sql",
+          "stage": "squash_a1"
+        },
+        "note": {
+          "declaration": "TEXT",
+          "source": "apps/api/db/migrations/0001_init.sql",
+          "stage": "squash_a1"
+        }
+      },
+      "baseline_ddl": "\n\n    id bigint NOT NULL,\n    public_id uuid DEFAULT gen_random_uuid() NOT NULL,\n    member_id bigint NOT NULL,\n    old_roles text[] NOT NULL,\n    new_roles text[] NOT NULL,\n    changed_by bigint NOT NULL,\n    occurred_at timestamp with time zone DEFAULT now() NOT NULL,\n    note text\n"
+    },
     "site_settings": {
       "columns": {
         "key": {

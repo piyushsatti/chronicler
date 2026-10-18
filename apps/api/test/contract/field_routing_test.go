@@ -47,14 +47,20 @@ func TestLoopFieldRoutingIsOnMuxAndOpenAPI(t *testing.T) {
 		mux[op] = struct{}{}
 	}
 	for _, op := range loopOperations {
-		if _, ok := openapi[op]; !ok {
-			t.Errorf("OpenAPI missing %s", op)
+		// Ingest stays in OpenAPI; product quest loop is GraphQL-first and
+		// allowlisted on the mux until REST handlers are removed.
+		if strings.HasPrefix(op, "POST /v1/ingest/") {
+			if _, ok := openapi[op]; !ok {
+				t.Errorf("OpenAPI missing %s", op)
+			}
+			if _, hidden := muxOnlyAllowlist[op]; hidden {
+				t.Errorf("%s must not be hidden on the mux allowlist", op)
+			}
+		} else if _, hidden := muxOnlyAllowlist[op]; !hidden {
+			t.Errorf("%s must stay on muxOnlyAllowlist until REST product routes are deleted", op)
 		}
 		if _, ok := mux[op]; !ok {
 			t.Errorf("mux missing %s", op)
-		}
-		if _, hidden := muxOnlyAllowlist[op]; hidden {
-			t.Errorf("%s is hidden on the mux allowlist", op)
 		}
 	}
 }

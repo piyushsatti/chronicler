@@ -144,10 +144,6 @@ func TestCharacterProductQueriesBoundariesAndAuthorization(t *testing.T) {
 			return e
 		},
 		func() error {
-			_, e := s.MyQuestRewards(ctx, a, MyQuestRewardsSpec{Limit: 1, Status: &[]RewardClaimStatus{"bad"}[0]})
-			return e
-		},
-		func() error {
 			_, e := s.AdminCharacterDirectory(ctx, a, AdminCharacterDirectorySpec{Limit: 1})
 			return e
 		},
@@ -412,20 +408,6 @@ func TestCharacterProductQueriesDispatch(t *testing.T) {
 			t.Fatal(err)
 		}
 		if _, err := s.MyCharacters(context.Background(), a, MyCharactersSpec{Limit: 1}); err != nil {
-			t.Fatal(err)
-		}
-		if r.calls == 0 {
-			t.Fatal("repository not called")
-		}
-	})
-	t.Run("MyQuestRewards", func(t *testing.T) {
-		s, r, _, a := cqService(t)
-		r.value.OwnerId = cqSelf
-		a, err := auth.NewAuthority(cqSelf, []auth.Role{auth.Player, auth.Admin, auth.Verifier}, "active", "")
-		if err != nil {
-			t.Fatal(err)
-		}
-		if _, err := s.MyQuestRewards(context.Background(), a, MyQuestRewardsSpec{Limit: 1}); err != nil {
 			t.Fatal(err)
 		}
 		if r.calls == 0 {

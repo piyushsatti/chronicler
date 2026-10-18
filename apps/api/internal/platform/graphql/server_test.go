@@ -42,14 +42,15 @@ func TestDocumentGraphQLErrorPresenter(t *testing.T) {
 		code    string
 		allowed bool
 	}{
-		{"existing denied", documentErrorRepo{doc: document.Document{ID: "secret-id", Status: document.StatusPublished, Visibility: document.VisibilityPublic, Policy: json.RawMessage(`[]`), Body: "secret-body"}}, "FORBIDDEN", false},
+		{"existing denied", documentErrorRepo{doc: document.Document{ID: "22222222-2222-4222-8222-222222222222", Status: document.StatusPublished, Visibility: document.VisibilityPublic, Policy: json.RawMessage(`[]`), Body: "secret-body"}}, "FORBIDDEN", false},
 		{"actually missing", documentErrorRepo{err: document.ErrNotFound}, "NOT_FOUND", false},
 		{"unexpected failure opaque", documentErrorRepo{err: errors.New("database password private-internal-error")}, "INTERNAL", false},
-		{"ordinary public usable", documentErrorRepo{doc: document.Document{ID: "public-id", Status: document.StatusPublished, Visibility: document.VisibilityPublic, Body: "ordinary-public-body"}}, "", true},
+		{"ordinary public usable", documentErrorRepo{doc: document.Document{ID: "11111111-1111-4111-8111-111111111111", Status: document.StatusPublished, Visibility: document.VisibilityPublic, Body: "ordinary-public-body"}}, "", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			handler := NewHandler(&graph.Resolver{Services: graph.Services{Documents: document.Queries{Repo: tc.repo}}}, Limits{}, nil)
-			request := httptest.NewRequest(http.MethodPost, "/v1/graphql", bytes.NewBufferString(`{"query":"{documentById(id:\"fixture\"){id effectiveBody}}"}`))
+			// ID scalar requires a UUID wire value (same as product GraphQL).
+			request := httptest.NewRequest(http.MethodPost, "/v1/graphql", bytes.NewBufferString(`{"query":"{documentById(id:\"11111111-1111-4111-8111-111111111111\"){id effectiveBody}}"}`))
 			request.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()
 			handler.ServeHTTP(w, request)
@@ -77,7 +78,7 @@ func TestDocumentGraphQLErrorPresenter(t *testing.T) {
 				if result.Data.Doc != nil || len(result.Errors) != 1 || result.Errors[0].Extensions.Code != tc.code {
 					t.Fatalf("denial response=%s want=%s", w.Body, tc.code)
 				}
-				for _, secret := range []string{"secret-id", "secret-body", "private-internal-error", "password"} {
+				for _, secret := range []string{"22222222-2222-4222-8222-222222222222", "secret-body", "private-internal-error", "password"} {
 					if bytes.Contains(w.Body.Bytes(), []byte(secret)) {
 						t.Fatalf("error leaked %q: %s", secret, w.Body)
 					}

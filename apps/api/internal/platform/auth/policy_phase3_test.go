@@ -363,24 +363,12 @@ func testPolicyAuthorizationContrasts(t *testing.T) {
 		policyExpect(t, p, player, req, Decision{Allowed: true})
 	})
 	t.Run("all literal character operations refuse staff bypass", func(t *testing.T) {
-		for _, op := range []Operation{"Mutation.adjustPcxp", "Mutation.claimQuestRewards", "Mutation.deleteCharacter", "Mutation.deleteCharacterLog", "Mutation.logCharacterEvent", "Mutation.restoreCharacter", "Mutation.retireCharacter", "Mutation.setCharacterGuild", "Mutation.submitForVerification", "Mutation.syncCharacterDdb", "Mutation.updateCharacterProfile", "Mutation.upsertDowntimeProject", "Mutation.signupForQuest", "Mutation.withdrawFromQuest"} {
+		for _, op := range []Operation{"Mutation.adjustPcxp", "Mutation.deleteCharacter", "Mutation.deleteCharacterLog", "Mutation.logCharacterEvent", "Mutation.restoreCharacter", "Mutation.retireCharacter", "Mutation.setCharacterGuild", "Mutation.submitForVerification", "Mutation.syncCharacterDdb", "Mutation.updateCharacterProfile", "Mutation.upsertDowntimeProject", "Mutation.signupForQuest", "Mutation.withdrawFromQuest"} {
 			req, e := ForCharacter(op, CharacterFacts{policySubject, policyActor})
 			req = policyMustRequest(t, req, e)
 			policyExpect(t, p, player, req, Decision{Allowed: true})
 			for _, actor := range []Authority{admin, owner, policyAuthority(t, policyOther, []Role{Role("verifier")}, false, false), policyAuthority(t, policyOther, []Role{DM}, true, false)} {
 				policyExpect(t, p, actor, req, Decision{RuleCode: "OWNERSHIP"})
-			}
-		}
-	})
-	t.Run("addressed approved DM only", func(t *testing.T) {
-		req, e := ForRequestDecision(RequestDecisionFacts{policySubject, policyActor})
-		req = policyMustRequest(t, req, e)
-		policyExpect(t, p, dm, req, Decision{Allowed: true})
-		policyExpect(t, p, heldDM, req, Decision{RuleCode: "ROLE"})
-		for _, a := range []Authority{admin, owner, policyAuthority(t, policyOther, []Role{DM}, true, false)} {
-			got, err := p.Decide(t.Context(), a, req)
-			if err != nil || got.Allowed || got.UsedOverride {
-				t.Fatalf("nonaddressed admitted %+v %v", got, err)
 			}
 		}
 	})
@@ -535,7 +523,7 @@ func testPolicyOwningProviderContrasts(t *testing.T) {
 		policyExpect(t, p, player, req, Decision{RuleCode: "ROLE"})
 		policyExpect(t, p, admin, req, Decision{Allowed: true})
 		policyExpect(t, p, owner, req, Decision{true, true, "ROLE"})
-		req, e = ForMap("Mutation.updateHex", MapFacts{ID: policyPointer(policySubject), RegionID: policyPointer(policyRegion), Submap: &MapRef{policyOther, policyPointer(policySecondRegion)}})
+		req, e = ForMap("Mutation.upsertPointcrawlNode", MapFacts{ID: policyPointer(policySubject), RegionID: policyPointer(policyRegion), Submap: &MapRef{policyOther, policyPointer(policySecondRegion)}})
 		req = policyMustRequest(t, req, e)
 		archon := policyAuthority(t, policyActor, []Role{Role("archon")}, false, false)
 		policyExpect(t, p, archon, req, Decision{Allowed: true})
@@ -548,10 +536,10 @@ func testPolicyOwningProviderContrasts(t *testing.T) {
 	})
 	t.Run("expected and visited hex role distinction", func(t *testing.T) {
 		dm := policyAuthority(t, policyActor, []Role{DM}, true, false)
-		req, e := ForQuest("Mutation.setQuestHexes", QuestFacts{policySubject, policyActor, []QuestHexFacts{{policyOther, "expected", policyPointer(policyRegion)}}})
+		req, e := ForQuest("Mutation.setQuestPointcrawlLinks", QuestFacts{policySubject, policyActor, []QuestHexFacts{{policyOther, "expected", policyPointer(policyRegion)}}})
 		req = policyMustRequest(t, req, e)
 		policyExpect(t, p, dm, req, Decision{Allowed: true})
-		req, e = ForQuest("Mutation.setQuestHexes", QuestFacts{policySubject, policyActor, []QuestHexFacts{{policyOther, "visited", policyPointer(policyRegion)}}})
+		req, e = ForQuest("Mutation.setQuestPointcrawlLinks", QuestFacts{policySubject, policyActor, []QuestHexFacts{{policyOther, "visited", policyPointer(policyRegion)}}})
 		req = policyMustRequest(t, req, e)
 		policyExpect(t, p, dm, req, Decision{RuleCode: "ROLE"})
 		steward := policyAuthority(t, policyActor, []Role{DM, Role("archon")}, true, false)
@@ -599,7 +587,19 @@ func testPolicyOwningProviderContrasts(t *testing.T) {
 }
 
 func testPolicyExactSDLInventory(t *testing.T) {
-	files, err := filepath.Glob("../../../../../packages/contracts/graphql/*.graphql")
+	// Match gqlgen.yml: packages/contracts/graphql/**/*.graphql
+	root := filepath.Join("..", "..", "..", "..", "..", "packages", "contracts", "graphql")
+	var files []string
+	err := filepath.WalkDir(root, func(path string, d os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if d.IsDir() || !strings.HasSuffix(path, ".graphql") {
+			return nil
+		}
+		files = append(files, path)
+		return nil
+	})
 	if err != nil || len(files) == 0 {
 		t.Fatalf("SDL %v %d", err, len(files))
 	}
@@ -621,7 +621,6 @@ func testPolicyExactSDLInventory(t *testing.T) {
 		"Mutation.assignArchon":                       "ADMIN",
 		"Mutation.assignLieutenant":                   "LIEUTENANT_WRITE",
 		"Mutation.attestQuestParticipation":           "QUEST_DM",
-		"Mutation.claimQuestRewards":                  "CHAR_OWNER",
 		"Mutation.closeQuest":                         "QUEST_DM",
 		"Mutation.createBackstory":                    "ADMIN",
 		"Mutation.createCharacter":                    "CHAR_CREATE",
@@ -629,10 +628,8 @@ func testPolicyExactSDLInventory(t *testing.T) {
 		"Mutation.createMap":                          "MAP_STEWARD",
 		"Mutation.createQuest":                        "QUEST_CREATE",
 		"Mutation.createRegion":                       "ADMIN",
-		"Mutation.createRequest":                      "SELF",
 		"Mutation.createTimeAnchor":                   "ADMIN",
 		"Mutation.decideDmProfileVerification":        "STAFF",
-		"Mutation.decideRequest":                      "REQUEST_ADDRESSED_DM",
 		"Mutation.decideVerification":                 "STAFF",
 		"Mutation.deleteCharacter":                    "CHAR_OWNER",
 		"Mutation.deleteCharacterLog":                 "CHAR_OWNER",
@@ -640,9 +637,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 		"Mutation.deleteQuest":                        "QUEST_DM",
 		"Mutation.deleteRegion":                       "REGION_STEWARD",
 		"Mutation.editPublishedDocument":              "DOC_WRITE",
-		"Mutation.followPerson":                       "SELF",
 		"Mutation.grantUnlock":                        "ADMIN",
-		"Mutation.linkHexEntry":                       "MAP_STEWARD",
 		"Mutation.linkPointcrawlEntry":                "MAP_STEWARD",
 		"Mutation.logCharacterEvent":                  "CHAR_OWNER",
 		"Mutation.markNotificationsRead":              "SELF",
@@ -659,12 +654,11 @@ func testPolicyExactSDLInventory(t *testing.T) {
 		"Mutation.selectQuestParticipants":            "QUEST_DM",
 		"Mutation.setCharacterGuild":                  "CHAR_OWNER",
 		"Mutation.setDocumentVisibility":              "DOC_WRITE",
-		"Mutation.setHexEdge":                         "MAP_STEWARD",
 		"Mutation.setMemberRoles":                     "ADMIN",
 		"Mutation.setMemberRolesBatch":                "ADMIN",
 		"Mutation.setMyAvailability":                  "PLAYER_SELF",
+		"Mutation.setQuestPointcrawlLinks":             "QUEST_DM",
 		"Mutation.setPointcrawlEdge":                  "MAP_STEWARD",
-		"Mutation.setQuestHexes":                      "QUEST_DM",
 		"Mutation.setUnlockableActive":                "ADMIN",
 		"Mutation.signupForQuest":                     "CHAR_SIGNUP",
 		"Mutation.submitDmProfileForVerification":     "DM_SELF",
@@ -673,15 +667,12 @@ func testPolicyExactSDLInventory(t *testing.T) {
 		"Mutation.syncQuestDiscord":                   "QUEST_DM",
 		"Mutation.transitionQuestStatus":              "QUEST_DM",
 		"Mutation.transitionRegion":                   "ADMIN",
-		"Mutation.unfollowPerson":                     "SELF",
-		"Mutation.unlinkHexEntry":                     "MAP_STEWARD",
 		"Mutation.unlinkPointcrawlEntry":              "MAP_STEWARD",
 		"Mutation.unpublishDocument":                  "DOC_WRITE",
 		"Mutation.updateBackstory":                    "ADMIN",
 		"Mutation.updateCharacterProfile":             "CHAR_OWNER",
 		"Mutation.updateDocument":                     "DOC_WRITE",
 		"Mutation.updateGameCalendar":                 "ADMIN",
-		"Mutation.updateHex":                          "MAP_STEWARD",
 		"Mutation.updateHomeBanner":                   "ADMIN",
 		"Mutation.updateMyDmProfile":                  "DM_SELF",
 		"Mutation.updateMyProfile":                    "SELF",
@@ -692,7 +683,6 @@ func testPolicyExactSDLInventory(t *testing.T) {
 		"Mutation.updateTimeAnchor":                   "ADMIN",
 		"Mutation.upsertCreationCatalogEntry":         "ADMIN",
 		"Mutation.upsertDowntimeProject":              "CHAR_OWNER",
-		"Mutation.upsertPoi":                          "MAP_STEWARD",
 		"Mutation.upsertPointcrawlNode":               "MAP_STEWARD",
 		"Mutation.upsertQuestArc":                     "ARC_AUTHOR",
 		"Mutation.upsertQuestSummary":                 "SUMMARY_AUTHOR",
@@ -715,7 +705,6 @@ func testPolicyExactSDLInventory(t *testing.T) {
 		"Query.communityDirectory":                    "PUBLIC",
 		"Query.creationCatalog":                       "CATALOG_PUBLIC_OR_ADMIN",
 		"Query.discordDeliveryMode":                   "ADMIN",
-		"Query.dmRequests":                            "DM_INBOX",
 		"Query.dmSessionHistory":                      "PUBLIC",
 		"Query.dmStats":                               "PUBLIC",
 		"Query.dmSummaries":                           "PUBLIC",
@@ -728,14 +717,10 @@ func testPolicyExactSDLInventory(t *testing.T) {
 		"Query.downtimeProjects":                      "PUBLIC",
 		"Query.gameCalendar":                          "PUBLIC",
 		"Query.gameDate":                              "PUBLIC",
-		"Query.hex":                                   "PUBLIC",
-		"Query.hexHistory":                            "PUBLIC",
 		"Query.home":                                  "PUBLIC",
 		"Query.homeBanner":                            "PUBLIC",
-		"Query.isFollowing":                           "SELF",
 		"Query.lieutenantAssignments":                 "LIEUTENANT_READ",
 		"Query.map":                                   "PUBLIC",
-		"Query.mapView":                               "PUBLIC",
 		"Query.maps":                                  "PUBLIC",
 		"Query.member":                                "PUBLIC",
 		"Query.memberActivityStats":                   "PUBLIC",
@@ -749,16 +734,13 @@ func testPolicyExactSDLInventory(t *testing.T) {
 		"Query.myCharacters":                          "SELF",
 		"Query.myNotifications":                       "SELF",
 		"Query.myPersonalization":                     "SELF",
-		"Query.myQuestRewards":                        "SELF",
 		"Query.myQuestSignups":                        "SELF",
-		"Query.myRequests":                            "SELF",
 		"Query.myUnlocks":                             "SELF",
 		"Query.myUnreadNotificationCount":             "SELF",
 		"Query.openQuestSeats":                        "PUBLIC",
 		"Query.participationsByCharacter":             "PUBLIC",
 		"Query.pendingCharacterVerifications":         "STAFF",
 		"Query.pendingDmProfileVerifications":         "STAFF",
-		"Query.poisForHex":                            "PUBLIC",
 		"Query.previewBody":                           "PREVIEW",
 		"Query.quest":                                 "PUBLIC",
 		"Query.questAnnouncementRoleSetting":          "PUBLIC",
@@ -770,7 +752,6 @@ func testPolicyExactSDLInventory(t *testing.T) {
 		"Query.questSummaries":                        "PUBLIC",
 		"Query.quests":                                "PUBLIC",
 		"Query.realDates":                             "PUBLIC",
-		"Query.recentHexChanges":                      "PUBLIC",
 		"Query.recentlyClosedQuests":                  "PUBLIC",
 		"Query.regionActivity":                        "PUBLIC",
 		"Query.regionCounts":                          "PUBLIC",
@@ -784,7 +765,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 	actual := map[Operation]bool{}
 	for _, root := range []*ast.Definition{schema.Query, schema.Mutation} {
 		for _, field := range root.Fields {
-			if strings.HasPrefix(field.Name, "__") {
+			if strings.HasPrefix(field.Name, "__") || strings.HasPrefix(field.Name, "_") {
 				continue
 			}
 			op := Operation(root.Name + "." + field.Name)
@@ -797,7 +778,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 			}
 		}
 	}
-	if len(expected) != 164 || len(actual) != len(expected) || len(operationRules) != len(expected) {
+	if len(expected) != 145 || len(actual) != len(expected) || len(operationRules) != len(expected) {
 		t.Fatalf("coverage expected%d SDL%d registry%d", len(expected), len(actual), len(operationRules))
 	}
 	p, _, facts := policyTestProvider(t)
@@ -859,10 +840,6 @@ func testPolicyExactSDLInventory(t *testing.T) {
 			case "SUMMARY_AUTHOR":
 				request, err = ForSummary(SummaryFacts{QuestIDs: []string{policyRegion}})
 				facts.summary = SummaryEvidence{Relations: []SummaryRelation{{policyRegion, policyOther, policyPointer(policyActor), policyPointer("played")}}}
-			case "REQUEST_ADDRESSED_DM":
-				request, err = ForRequestDecision(RequestDecisionFacts{policySubject, policyActor})
-				wantPlayer = Decision{RuleCode: "ROLE"}
-				wantAdmin = Decision{RuleCode: "ROLE"}
 			default:
 				t.Fatalf("missing behavioral case for %s", group)
 			}
@@ -870,7 +847,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 			policyExpect(t, p, player, request, wantPlayer)
 			policyExpect(t, p, admin, request, wantAdmin)
 			wantOwner := wantPlayer
-			if !wantOwner.Allowed && group != "REQUEST_ADDRESSED_DM" {
+			if !wantOwner.Allowed {
 				wantOwner.Allowed = true
 				wantOwner.UsedOverride = true
 			}

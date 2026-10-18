@@ -253,8 +253,6 @@ func TestProductQueriesReadMethodsDelegateExactAuthorityAndSpecs(t *testing.T) {
 		{"CommunityDirectory", CommunityDirectorySpec{Limit: 50, Offset: 3}, func() (any, error) {
 			return s.CommunityDirectory(t.Context(), actor, CommunityDirectorySpec{Limit: 50, Offset: 3})
 		}},
-		{"DmRequests", DmRequestsSpec{Limit: 10, Offset: 3}, func() (any, error) { return s.DmRequests(t.Context(), actor, DmRequestsSpec{Limit: 10, Offset: 3}) }},
-		{"IsFollowing", IsFollowingSpec{MemberId: queryOtherID}, func() (any, error) { return s.IsFollowing(t.Context(), actor, IsFollowingSpec{MemberId: queryOtherID}) }},
 		{"Member", MemberSpec{Id: queryPointer(queryOtherID)}, func() (any, error) { return s.Member(t.Context(), actor, MemberSpec{Id: queryPointer(queryOtherID)}) }},
 		{"MemberActivityStats", MemberActivityStatsSpec{MemberId: queryOtherID}, func() (any, error) {
 			return s.MemberActivityStats(t.Context(), actor, MemberActivityStatsSpec{MemberId: queryOtherID})
@@ -273,7 +271,6 @@ func TestProductQueriesReadMethodsDelegateExactAuthorityAndSpecs(t *testing.T) {
 		{"Members", MembersSpec{Limit: 10, Offset: 3}, func() (any, error) { return s.Members(t.Context(), actor, MembersSpec{Limit: 10, Offset: 3}) }},
 		{"MyAvailability", MyAvailabilitySpec{}, func() (any, error) { return s.MyAvailability(t.Context(), actor, MyAvailabilitySpec{}) }},
 		{"MyPersonalization", MyPersonalizationSpec{}, func() (any, error) { return s.MyPersonalization(t.Context(), actor, MyPersonalizationSpec{}) }},
-		{"MyRequests", MyRequestsSpec{Limit: 10, Offset: 3}, func() (any, error) { return s.MyRequests(t.Context(), actor, MyRequestsSpec{Limit: 10, Offset: 3}) }},
 		{"MyUnlocks", MyUnlocksSpec{Limit: 10, Offset: 3}, func() (any, error) { return s.MyUnlocks(t.Context(), actor, MyUnlocksSpec{Limit: 10, Offset: 3}) }},
 		{"PendingDmProfileVerifications", PendingDmProfileVerificationsSpec{Limit: 10, Offset: 3}, func() (any, error) {
 			return s.PendingDmProfileVerifications(t.Context(), actor, PendingDmProfileVerificationsSpec{Limit: 10, Offset: 3})
@@ -331,10 +328,6 @@ func TestProductQueriesRejectInvalidInputsBeforeRepository(t *testing.T) {
 			return err
 		},
 		func() error {
-			_, err := s.IsFollowing(t.Context(), actor, IsFollowingSpec{MemberId: "invalid"})
-			return err
-		},
-		func() error {
 			_, err := s.MemberActivityStats(t.Context(), actor, MemberActivityStatsSpec{MemberId: "invalid"})
 			return err
 		},
@@ -367,7 +360,6 @@ func TestProductQueriesCanonicalPolicyDeniesBeforeDataAndObservesOwnerOverride(t
 			_, err := s.MyPersonalization(t.Context(), anonymous, MyPersonalizationSpec{})
 			return err
 		},
-		func() error { _, err := s.MyRequests(t.Context(), anonymous, MyRequestsSpec{Limit: 1}); return err },
 		func() error { _, err := s.MyUnlocks(t.Context(), anonymous, MyUnlocksSpec{Limit: 1}); return err },
 		func() error {
 			_, err := s.MemberRoleHistory(t.Context(), player, MemberRoleHistorySpec{MemberId: queryOtherID, Limit: 1})
@@ -377,7 +369,6 @@ func TestProductQueriesCanonicalPolicyDeniesBeforeDataAndObservesOwnerOverride(t
 			_, err := s.PendingDmProfileVerifications(t.Context(), dm, PendingDmProfileVerificationsSpec{Limit: 1})
 			return err
 		},
-		func() error { _, err := s.DmRequests(t.Context(), player, DmRequestsSpec{Limit: 1}); return err },
 		func() error {
 			_, err := s.MemberByDiscordId(t.Context(), player, MemberByDiscordIdSpec{DiscordId: "foreign"})
 			return err
@@ -389,12 +380,6 @@ func TestProductQueriesCanonicalPolicyDeniesBeforeDataAndObservesOwnerOverride(t
 	if len(r.calls) != 0 || len(o.facts) != 0 {
 		t.Fatal("denied read reached data or observation")
 	}
-	held, err := auth.NewAuthority(querySelfID, []auth.Role{auth.DM}, "active", "pending")
-	if err != nil {
-		t.Fatal(err)
-	}
-	_, err = s.DmRequests(t.Context(), held, DmRequestsSpec{Limit: 1})
-	requireQueryCode(t, err, apierr.Forbidden)
 	owner, err := auth.NewAuthorityWithOwner(querySelfID, []auth.Role{auth.Player}, "active", "", "owner", querySelfID)
 	if err != nil {
 		t.Fatal(err)

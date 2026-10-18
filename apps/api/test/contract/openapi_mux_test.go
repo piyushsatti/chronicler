@@ -24,13 +24,37 @@ import (
 // HTTP methods we care about on the public surface.
 var httpMethods = []string{"get", "post", "put", "patch", "delete"}
 
-// muxOnlyAllowlist: /v1 routes registered in Go but not yet listed under
-// openapi.yaml paths. Quest loop + ingest paths must NOT appear here — they
-// are real OpenAPI entries. Keep this list shrinking as OpenAPI catches up.
+// muxOnlyAllowlist: product REST routes still mounted on the mux while
+ // openapi.yaml is GraphQL-first (product REST removed in 9daaef2). Ingest,
+ // agent, and auth paths remain real OpenAPI entries and must NOT appear here.
+ // Shrink this list as REST handlers are deleted.
 var muxOnlyAllowlist = map[string]struct{}{
-	"POST /v1/graphql":                 {}, // described in openapi info; not a REST path entry
-	"GET /v1/documents/{id}/revisions": {}, // field-routing; OpenAPI pending
-	"GET /v1/documents/trash":          {}, // field-routing; OpenAPI pending
+	"POST /v1/graphql": {}, // described in openapi info; not a REST path entry
+	"GET /v1/characters/{id}/logs":                     {},
+	"GET /v1/characters/{id}/progression":              {},
+	"GET /v1/characters/{id}/verification-history":     {},
+	"GET /v1/documents/{id}/revisions":                 {},
+	"GET /v1/documents/trash":                          {},
+	"GET /v1/hexes/{id}/history":                       {},
+	"GET /v1/maps/{atlasCode}/activity":                {},
+	"GET /v1/me/notifications/unread-count":            {},
+	"GET /v1/members/by-discord/{discordId}":           {},
+	"GET /v1/members/me":                               {},
+	"GET /v1/members/{id}/availability":                {},
+	"GET /v1/members/{id}/role-history":                {},
+	"GET /v1/regions/{id}/counts":                      {},
+	"GET /v1/search/kinds":                             {},
+	"GET /v1/stats":                                    {},
+	"GET /v1/time/game-date":                           {},
+	"GET /v1/time/real-dates":                          {},
+	"POST /v1/me/notifications/acknowledge-suppressed": {},
+	"POST /v1/me/notifications/read":                   {},
+	"POST /v1/me/personalization/reconcile":            {},
+	"POST /v1/quests":                                  {},
+	"POST /v1/quests/{id}/close":                       {},
+	"POST /v1/quests/{id}/discord/sync":                {},
+	"POST /v1/quests/{id}/signup":                      {},
+	"POST /v1/quests/{id}/transition":                  {},
 }
 
 func TestOpenAPIMatchesMux(t *testing.T) {
@@ -89,84 +113,40 @@ func TestMuxOnlyAllowlistStillRegistered(t *testing.T) {
 	}
 }
 
-func TestMemberMeCanonicalOpenAPIShape(t *testing.T) {
-	raw, err := os.ReadFile(filepath.Join(contractsDir(t), "openapi.yaml"))
+func TestMemberMeCanonicalGraphQLAndMount(t *testing.T) {
+	// Product identity is GraphQL Query.memberMe; REST /v1/members/me remains
+	// mounted during transition and is allowlisted out of OpenAPI.
+	routing, err := os.ReadFile(filepath.Join(contractsDir(t), "field-routing.md"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	type schema struct {
-		Type      string `yaml:"type"`
-		Format    string `yaml:"format"`
-		MinLength int    `yaml:"minLength"`
-		Items     struct {
-			Type string `yaml:"type"`
-		} `yaml:"items"`
+	if !strings.Contains(string(routing), "`GET /v1/members/me`") || !strings.Contains(string(routing), "Query.memberMe") {
+		t.Fatal("memberMe lost canonical field-routing")
 	}
-	var doc struct {
-		Paths map[string]map[string]struct {
-			ID        string                `yaml:"operationId"`
-			Security  []map[string][]string `yaml:"security"`
-			Responses map[string]struct {
-				Ref     string `yaml:"$ref"`
-				Content map[string]struct {
-					Schema struct {
-						Ref string `yaml:"$ref"`
-					} `yaml:"schema"`
-				} `yaml:"content"`
-			} `yaml:"responses"`
-		} `yaml:"paths"`
-		Components struct {
-			// Other OpenAPI 3.1 schemas may use nullable type arrays. Decode
-			// only the canonical me schema into the strict nonnullable shape.
-			Schemas map[string]yaml.Node `yaml:"schemas"`
-		} `yaml:"components"`
-	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	schema, err := os.ReadFile(filepath.Join(contractsDir(t), "schema.graphql"))
+	if err != nil {
 		t.Fatal(err)
 	}
-	op := doc.Paths["/v1/members/me"]["get"]
-	if op.ID != "memberMe" || len(op.Security) != 1 {
-		t.Fatal("me operation/security missing")
+	doc := string(schema)
+	if !strings.Contains(doc, "memberMe:") || !strings.Contains(doc, "type MemberType") {
+		t.Fatal("memberMe GraphQL surface missing")
 	}
-	if roles, ok := op.Security[0]["bearer"]; !ok || len(roles) != 0 || len(op.Security[0]) != 1 {
-		t.Fatal("me bearer security changed")
-	}
-	if op.Responses["200"].Content["application/json"].Schema.Ref != "#/components/schemas/MemberMe" {
-		t.Fatal("me success does not use canonical schema")
-	}
-	for _, code := range []string{"401", "403", "404", "500"} {
-		if op.Responses[code].Ref != "#/components/responses/Problem" {
-			t.Fatalf("me %s must use existing Problem", code)
+	for _, field := range []string{"id: ID!", "handle: String!", "displayName: String!", "roles: [String!]!"} {
+		if !strings.Contains(doc, field) {
+			t.Fatalf("MemberType missing %s", field)
 		}
 	}
-	node, ok := doc.Components.Schemas["MemberMe"]
-	if !ok {
-		t.Fatal("canonical me schema missing")
+	registrations := 0
+	for _, got := range mountMuxOperations(t) {
+		if got == "GET /v1/members/me" {
+			registrations++
+		}
 	}
-	var s struct {
-		Type                 string            `yaml:"type"`
-		AdditionalProperties *bool             `yaml:"additionalProperties"`
-		Required             []string          `yaml:"required"`
-		Properties           map[string]schema `yaml:"properties"`
+	if registrations != 1 {
+		t.Fatalf("members/me registrations=%d want=1", registrations)
 	}
-	if err := node.Decode(&s); err != nil {
-		t.Fatalf("me must have the exact nonnullable schema: %v", err)
-	}
-	sort.Strings(s.Required)
-	keys := []string{}
-	for key := range s.Properties {
-		keys = append(keys, key)
-	}
-	sort.Strings(keys)
-	want := "displayName,handle,id,roles"
-	if s.Type != "object" || s.AdditionalProperties == nil || *s.AdditionalProperties || strings.Join(s.Required, ",") != want || strings.Join(keys, ",") != want {
-		t.Fatal("me must have exactly four required properties and no extras")
-	}
-	if s.Properties["id"].Type != "string" || s.Properties["id"].Format != "uuid" || s.Properties["handle"].Type != "string" || s.Properties["handle"].MinLength != 1 || s.Properties["displayName"].Type != "string" || s.Properties["displayName"].MinLength != 1 || s.Properties["roles"].Type != "array" || s.Properties["roles"].Items.Type != "string" {
-		t.Fatal("me property shape differs from existing adapter")
-	}
-	if _, ok := muxOnlyAllowlist["GET /v1/members/me"]; ok {
-		t.Fatal("canonical me route cannot retain parity exception")
+	if _, ok := muxOnlyAllowlist["GET /v1/members/me"]; !ok {
+		t.Fatal("transitional REST members/me must stay on muxOnlyAllowlist until deleted")
 	}
 }
 

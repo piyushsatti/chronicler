@@ -430,11 +430,11 @@ func (s ProductCommands) SetQuestHexes(ctx context.Context, actor auth.Authority
 	if err != nil {
 		return nil, err
 	}
-	request, err := auth.ForQuest("Mutation.setQuestHexes", auth.QuestFacts{ID: questID, DMID: preview.DmId, Hexes: hexFacts})
+	request, err := auth.ForQuest("Mutation.setQuestPointcrawlLinks", auth.QuestFacts{ID: questID, DMID: preview.DmId, Hexes: hexFacts})
 	if err != nil {
 		return nil, err
 	}
-	return runQuestCommand(ctx, s, actor, "setQuestHexes", request, spec, meta, questID, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) ([]QuestHexView, error) {
+	return runQuestCommand(ctx, s, actor, "setQuestPointcrawlLinks", request, spec, meta, questID, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) ([]QuestHexView, error) {
 		locked, err := repos.Quest.LockSetQuestHexes(ctx, SetQuestHexesSpec{QuestId: questID, Hexes: hexes, AsOf: at})
 		if err != nil {
 			return nil, err

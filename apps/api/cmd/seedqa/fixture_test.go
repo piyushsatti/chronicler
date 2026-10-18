@@ -115,7 +115,7 @@ func TestQAColumnsMatchInitialDDL(t *testing.T) {
 	for _, table := range schema.FinalTables {
 		columns += len(table.Columns)
 	}
-	if len(schema.FinalTables) != 41 {
+	if len(schema.FinalTables) != 42 {
 		t.Fatalf("squashed schema inventory has %d tables and %d columns", len(schema.FinalTables), columns)
 	}
 	if _, present := schema.FinalTables["agent_questions"].Columns["state"]; present {
