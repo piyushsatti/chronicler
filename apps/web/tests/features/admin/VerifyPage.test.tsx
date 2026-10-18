@@ -21,12 +21,6 @@ describe('VerifyPage', () => {
 
   it('shows controlled error', async () => {
     server.use(
-      http.get('/v1/characters/pending-verifications', () =>
-        HttpResponse.json(
-          { title: 'Boom', status: 500, code: 'INTERNAL' },
-          { status: 500 },
-        ),
-      ),
       http.post(GRAPHQL_PATH, () =>
         HttpResponse.json({
           errors: [{ message: 'boom', extensions: { code: 'INTERNAL' } }],

@@ -1,10 +1,9 @@
 import { act, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { http, HttpResponse } from 'msw';
+import { HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Routes, Route } from 'react-router-dom';
 import { renderWithProviders } from '../../test-utils.js';
-import { server } from '../../../src/mocks/server.js';
 import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
 import { queryKeys } from '../../../src/api/queryKeys.js';
 import { AdminWorkspaceShell } from '../../../src/features/admin/AdminWorkspaceShell.js';
@@ -20,7 +19,12 @@ import {
   DMDashboardPage,
 } from '../../../src/features/admin/pages/AdminSectionPage.js';
 import { useMembersPanel } from '../../../src/features/admin/hooks/useMembersPanel.js';
-import { signIn, trackPrivilegedRequests } from './authority-test-utils.js';
+import {
+  mockGraphqlOps,
+  mockMemberMe,
+  signIn,
+  trackPrivilegedRequests,
+} from './authority-test-utils.js';
 import goodMe from '../../fixtures/wire/me/good.json';
 import goodMembers from '../../fixtures/wire/admin/members-good.json';
 
@@ -91,7 +95,7 @@ describe('validated workspace authority', () => {
     );
     expect(screen.queryByRole('link', { name: 'People' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'World' })).not.toBeInTheDocument();
-    expect(requested).toEqual(['/v1/characters/pending-verifications']);
+    expect(requested).toEqual([GRAPHQL_PATH]);
   });
 
   it.each([{ roles: ['player'] }, { roles: ['dm'] }, { roles: [] }])(
@@ -144,12 +148,14 @@ describe('validated workspace authority', () => {
     const pending = new Promise<void>((resolve) => {
       release = resolve;
     });
-    server.use(
-      http.get('/v1/members/me', async () => {
-        await pending;
-        return HttpResponse.json({ ...goodMe, roles: ['admin'] });
-      }),
-    );
+    const me = { ...goodMe, roles: ['admin'] };
+    mockMemberMe(async () => {
+      await pending;
+      return HttpResponse.json(me);
+    }, async () => {
+      await pending;
+      return me;
+    });
     const requested = track();
     renderWithProviders(<AdminPeoplePage />, { route: '/admin/people' });
     expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
@@ -168,23 +174,26 @@ describe('validated workspace authority', () => {
     [
       'invalid',
       () => HttpResponse.json({ ...goodMe, roles: [7] }),
+      () => ({ ...goodMe, roles: [7] }),
       'The server returned data this screen cannot use.',
     ],
     [
       'upstream',
       () => HttpResponse.json({ title: 'private server detail' }, { status: 500 }),
+      null,
       'Something went wrong. Please try again.',
     ],
     [
       'forbidden',
       () => HttpResponse.json({ title: 'private server detail' }, { status: 403 }),
+      null,
       'Permissions may have changed. Reload or sign in again.',
     ],
   ] as const)(
     'shows controlled %s account failure without querying privileged data',
-    async (_name, response, copy) => {
+    async (_name, restResponse, graphqlData, copy) => {
       signIn();
-      server.use(http.get('/v1/members/me', response));
+      mockMemberMe(restResponse, graphqlData ?? undefined);
       const requested = track();
       renderWithProviders(<AdminPeoplePage />, { route: '/admin/people' });
       expect(await screen.findByRole('alert')).toHaveTextContent(copy);
@@ -202,13 +211,14 @@ describe('validated workspace authority', () => {
 
   it('invalidates me once for simultaneous and repeated forbidden queries within a page session', async () => {
     signIn();
-    server.use(
-      http.post(GRAPHQL_PATH, () =>
-        HttpResponse.json({
-          errors: [{ message: 'private detail', extensions: { code: 'FORBIDDEN' } }],
-        }),
-      ),
-    );
+    const forbidden = () =>
+      HttpResponse.json({
+        errors: [{ message: 'private detail', extensions: { code: 'FORBIDDEN' } }],
+      });
+    mockGraphqlOps({
+      AdminOperations: forbidden,
+      AdminCharacters: forbidden,
+    });
     const { queryClient } = renderWithProviders(<AdminPage />, { route: '/admin' });
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
     expect(await screen.findAllByRole('alert')).toHaveLength(1);
@@ -235,13 +245,14 @@ describe('validated workspace authority', () => {
 
   it('shares a single permission refresh across Review tabs', async () => {
     signIn(['verifier']);
-    server.use(
-      http.get('/v1/characters/pending-verifications', () =>
-        HttpResponse.json({ code: 'FORBIDDEN' }, { status: 403 }),
-      ),
-      http.post(GRAPHQL_PATH, () =>
-        HttpResponse.json({ errors: [{ extensions: { code: 'FORBIDDEN' } }] }),
-      ),
+    const forbidden = () =>
+      HttpResponse.json({ errors: [{ extensions: { code: 'FORBIDDEN' } }] });
+    mockGraphqlOps(
+      {
+        PendingCharacterVerifications: forbidden,
+        PendingDmProfiles: forbidden,
+      },
+      { ...goodMe, roles: ['verifier'] },
     );
     const { queryClient } = renderWithProviders(<AdminReviewPage />, {
       route: '/admin/review',
@@ -268,18 +279,19 @@ describe('validated workspace authority', () => {
     renderWithProviders(<AdminPeoplePage />, { route: '/admin/people' });
     await userEvent.click(await screen.findByRole('button', { name: /Mira/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Save roles' }));
-    await waitFor(() =>
-      expect(requested).toContain(`/v1/members/${goodMembers.items[0].id}/roles`),
-    );
+    await waitFor(() => expect(requested).toContain(GRAPHQL_PATH));
   });
 
   it('shows controlled mutation 403 and refreshes account authority once', async () => {
     signIn();
-    server.use(
-      http.put('/v1/members/:id/roles', () =>
-        HttpResponse.json({ title: 'private detail' }, { status: 403 }),
-      ),
-    );
+    mockGraphqlOps({
+      SetMemberRoles: () =>
+        HttpResponse.json({
+          errors: [
+            { message: 'private detail', extensions: { code: 'FORBIDDEN' } },
+          ],
+        }),
+    });
     const { queryClient } = renderWithProviders(<AdminPeoplePage />, {
       route: '/admin/people',
     });
@@ -308,20 +320,24 @@ describe('validated workspace authority', () => {
     await act(async () => {
       current.setSelected(goodMembers.items[0]);
     });
-    server.use(
-      http.get('/v1/members/me', () =>
-        HttpResponse.json({ ...goodMe, roles: ['verifier'] }),
-      ),
+    const verifier = { ...goodMe, roles: ['verifier'] };
+    mockMemberMe(
+      () => HttpResponse.json(verifier),
+      () => verifier,
     );
     await act(async () => {
-      queryClient.setQueryData(queryKeys.me, { ...goodMe, roles: ['verifier'] });
+      queryClient.setQueryData(queryKeys.me, verifier);
     });
+    const graphqlBefore = requested.filter((path) => path === GRAPHQL_PATH).length;
     await act(async () => {
       await expect(current.saveRoles.mutateAsync()).rejects.toMatchObject({
         kind: 'forbidden',
       });
     });
-    expect(requested.filter((path) => path.includes('/roles'))).toEqual([]);
+    // Guard rejects locally — SetMemberRoles must not hit the wire.
+    expect(requested.filter((path) => path === GRAPHQL_PATH)).toHaveLength(
+      graphqlBefore,
+    );
   });
 
   it('disables admin query hooks even when called outside their routed gate', async () => {
