@@ -1,0 +1,17 @@
+query MyNotifications($limit: Int!, $before: String) {
+  myNotifications(limit: $limit, before: $before) {
+    hasMore
+    nextBefore
+    items {
+      id
+      kind
+      title
+      summary
+      label
+      readAt
+      subjectType
+      subjectCode
+      createdAt
+    }
+  }
+}

@@ -1,4 +1,8 @@
 import { z } from 'zod';
+import {
+  MyNotificationsDocument as NOTIFICATIONS_QUERY,
+  type MyNotificationsQuery,
+} from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import { restRequest } from '../../../api/rest.js';
 import { rest } from '../../../api/endpoints.js';
@@ -92,32 +96,12 @@ export function parseUnreadCount(wire: unknown): AdapterResult<number> {
   return { ok: true, data: parsed.data.count };
 }
 
-const NOTIFICATIONS_QUERY = `
-  query MyNotifications($limit: Int!, $before: DateTime) {
-    myNotifications(limit: $limit, before: $before) {
-      hasMore
-      nextBefore
-      items {
-        id
-        kind
-        title
-        summary
-        label
-        readAt
-        subjectType
-        subjectCode
-        createdAt
-      }
-    }
-  }
-`;
-
 export async function loadNotifications(opts?: {
   limit?: number;
   before?: string | null;
 }): Promise<NotificationPage> {
   try {
-    const data = await graphqlRequest<{ myNotifications: unknown }>(
+    const data = await graphqlRequest<MyNotificationsQuery>(
       NOTIFICATIONS_QUERY,
       { limit: opts?.limit ?? 20, before: opts?.before ?? null },
     );
