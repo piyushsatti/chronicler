@@ -510,3 +510,225 @@ SELECT character.id, character.public_id, character.owner_id, character.player_x
 FROM characters character
 WHERE character.public_id = sqlc.arg(character_id)::uuid
 FOR UPDATE;
+-- name: CharacterProductListQuestRewards :many
+SELECT entitlement.public_id AS id, quest.public_id AS quest_id,
+       character.public_id AS character_id, awarded_by.public_id AS awarded_by,
+       entitlement.awarded_at, entitlement.pcxp, entitlement.note,
+       entitlement.claimed_at, ledger.public_id AS progression_entry_id
+FROM quest_reward_entitlements entitlement
+JOIN quests quest ON quest.id = entitlement.quest_id
+JOIN characters character ON character.id = entitlement.character_id
+JOIN members awarded_by ON awarded_by.id = entitlement.awarded_by
+LEFT JOIN character_progression_ledger ledger ON ledger.id = entitlement.progression_entry_id
+WHERE character.public_id = sqlc.arg(character_id)::uuid
+ORDER BY entitlement.awarded_at DESC, entitlement.public_id DESC
+LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
+-- name: CharacterProductCountQuestRewards :one
+SELECT count(*)::int AS total
+FROM quest_reward_entitlements entitlement
+JOIN characters character ON character.id = entitlement.character_id
+WHERE character.public_id = sqlc.arg(character_id)::uuid;
+-- name: CharacterProductLockRewardClaims :many
+SELECT entitlement.public_id AS id, quest.public_id AS quest_id,
+       character.public_id AS character_id, awarded_by.public_id AS awarded_by,
+       entitlement.awarded_at, entitlement.pcxp, entitlement.note,
+       entitlement.claimed_at, ledger.public_id AS progression_entry_id
+FROM quest_reward_entitlements entitlement
+JOIN quests quest ON quest.id = entitlement.quest_id
+JOIN characters character ON character.id = entitlement.character_id
+JOIN members awarded_by ON awarded_by.id = entitlement.awarded_by
+LEFT JOIN character_progression_ledger ledger ON ledger.id = entitlement.progression_entry_id
+WHERE quest.public_id = sqlc.arg(quest_id)::uuid AND character.public_id = sqlc.arg(character_id)::uuid
+ORDER BY quest.id, entitlement.id
+FOR UPDATE OF quest, entitlement;
+-- name: CharacterProductMarkRewardClaims :execrows
+WITH mappings AS (
+    SELECT entitlement_id.public_id::uuid AS entitlement_id, ledger.id AS ledger_id
+    FROM unnest(sqlc.arg(entitlement_ids)::text[]) WITH ORDINALITY AS entitlement_id(public_id, ordinality)
+    JOIN unnest(sqlc.arg(progression_ids)::text[]) WITH ORDINALITY AS progression_id(public_id, ordinality)
+      ON progression_id.ordinality = entitlement_id.ordinality
+    JOIN character_progression_ledger ledger ON ledger.public_id = progression_id.public_id::uuid
+    WHERE cardinality(sqlc.arg(entitlement_ids)::text[]) = cardinality(sqlc.arg(progression_ids)::text[])
+), updated AS (
+    UPDATE quest_reward_entitlements entitlement
+    SET claimed_at = sqlc.arg(at)::timestamptz, progression_entry_id = mappings.ledger_id
+    FROM mappings
+    WHERE entitlement.public_id = mappings.entitlement_id
+  AND entitlement.claimed_at IS NULL
+  AND entitlement.progression_entry_id IS NULL
+    RETURNING entitlement.public_id
+)
+SELECT public_id FROM updated;
+-- name: CharacterProductListLogs :many
+SELECT log.public_id AS id, character.public_id AS character_id, quest.public_id AS quest_id,
+       log.body, log.created_at, creator.public_id AS created_by
+FROM character_logs log
+JOIN characters character ON character.id = log.character_id
+LEFT JOIN quests quest ON quest.id = log.quest_id
+LEFT JOIN members creator ON creator.id = log.created_by
+WHERE character.public_id = sqlc.arg(character_id)::uuid
+ORDER BY log.created_at DESC, log.public_id DESC
+LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
+-- name: CharacterProductCountLogs :one
+SELECT count(*)::int AS total
+FROM character_logs log
+JOIN characters character ON character.id = log.character_id
+WHERE character.public_id = sqlc.arg(character_id)::uuid;
+-- name: CharacterProductListBackstories :many
+SELECT backstory.public_id AS id, backstory.name, backstory.lore, backstory.cohort,
+       backstory.retired, region.public_id AS source_region_id
+FROM backstories backstory
+LEFT JOIN regions region ON region.id = backstory.source_region_id
+WHERE (sqlc.arg(include_retired)::bool OR NOT backstory.retired)
+  AND (sqlc.narg(region_id)::uuid IS NULL OR region.public_id = sqlc.narg(region_id)::uuid)
+  AND (sqlc.narg(cohort)::text IS NULL OR backstory.cohort = sqlc.narg(cohort)::text)
+ORDER BY lower(backstory.name) ASC, backstory.public_id ASC
+LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
+-- name: CharacterProductCountBackstories :one
+SELECT count(*)::int AS total
+FROM backstories backstory
+LEFT JOIN regions region ON region.id = backstory.source_region_id
+WHERE (sqlc.arg(include_retired)::bool OR NOT backstory.retired)
+  AND (sqlc.narg(region_id)::uuid IS NULL OR region.public_id = sqlc.narg(region_id)::uuid)
+  AND (sqlc.narg(cohort)::text IS NULL OR backstory.cohort = sqlc.narg(cohort)::text);
+-- name: CharacterProductLockBackstory :one
+SELECT backstory.id, backstory.public_id, backstory.name, backstory.lore, backstory.cohort,
+       backstory.source_region_id, backstory.retired
+FROM backstories backstory
+WHERE backstory.public_id = sqlc.arg(backstory_id)::uuid
+FOR UPDATE;
+-- name: CharacterProductInsertBackstory :one
+INSERT INTO backstories (public_id, name, lore, cohort, source_region_id, retired)
+SELECT sqlc.arg(backstory_id)::uuid, sqlc.arg(name)::text, sqlc.arg(lore)::text,
+       sqlc.arg(cohort)::text, region.id, sqlc.arg(retired)::bool
+FROM (SELECT 1) AS seed
+LEFT JOIN regions region ON region.public_id = sqlc.narg(region_id)::uuid
+WHERE sqlc.narg(region_id)::uuid IS NULL OR region.id IS NOT NULL
+RETURNING public_id AS id, name, lore, cohort, retired,
+          (SELECT public_id FROM regions WHERE id = source_region_id) AS source_region_id;
+-- name: CharacterProductUpdateBackstory :one
+UPDATE backstories backstory
+SET name = sqlc.arg(name)::text,
+    lore = sqlc.arg(lore)::text,
+    cohort = sqlc.arg(cohort)::text,
+    source_region_id = CASE
+        WHEN sqlc.narg(region_id)::uuid IS NULL THEN NULL
+        ELSE (SELECT id FROM regions WHERE public_id = sqlc.narg(region_id)::uuid)
+    END,
+    retired = sqlc.arg(retired)::bool
+WHERE backstory.public_id = sqlc.arg(backstory_id)::uuid
+  AND (sqlc.narg(region_id)::uuid IS NULL OR EXISTS (SELECT 1 FROM regions WHERE public_id = sqlc.narg(region_id)::uuid))
+RETURNING backstory.public_id AS id, backstory.name, backstory.lore, backstory.cohort,
+          backstory.retired,
+          (SELECT public_id FROM regions WHERE id = backstory.source_region_id) AS source_region_id;
+-- name: CharacterProductInsertCharacter :one
+INSERT INTO characters (
+    public_id, short_code, name, owner_id, status, backstory_id, guild_document_id,
+    region_id, description, background_text, ddb_url, created_at, updated_at
+)
+SELECT sqlc.arg(character_id)::uuid, sqlc.arg(short_code)::text, sqlc.arg(name)::text,
+       owner.id, 'pending_approval', backstory.id, guild.id, region.id,
+       sqlc.narg(description)::text, sqlc.narg(background_text)::text, sqlc.narg(ddb_url)::text,
+       sqlc.arg(at)::timestamptz, sqlc.arg(at)::timestamptz
+FROM members owner
+LEFT JOIN backstories backstory ON backstory.public_id = sqlc.narg(backstory_id)::uuid
+LEFT JOIN documents guild ON guild.public_id = sqlc.narg(guild_id)::uuid
+    AND guild.kind = 'codex_entry' AND guild.deleted_at IS NULL
+LEFT JOIN regions region ON region.public_id = sqlc.narg(region_id)::uuid
+WHERE owner.public_id = sqlc.arg(owner_id)::uuid
+  AND (sqlc.narg(backstory_id)::uuid IS NULL OR backstory.id IS NOT NULL)
+  AND (sqlc.narg(guild_id)::uuid IS NULL OR guild.id IS NOT NULL)
+  AND (sqlc.narg(region_id)::uuid IS NULL OR region.id IS NOT NULL)
+RETURNING public_id AS id;
+-- name: CharacterProductReplaceCatalogPicks :exec
+DELETE FROM character_catalog_picks
+WHERE character_id = (SELECT id FROM characters WHERE public_id = sqlc.arg(character_id)::uuid);
+INSERT INTO character_catalog_picks (character_id, catalog_id)
+SELECT character.id, catalog.id
+FROM characters character
+JOIN unnest(sqlc.arg(catalog_ids)::uuid[]) AS requested(catalog_id) ON true
+JOIN creation_catalog catalog ON catalog.public_id = requested.catalog_id
+WHERE character.public_id = sqlc.arg(character_id)::uuid;
+-- name: CharacterProductUpdateCharacterProfile :one
+UPDATE characters
+SET description = CASE WHEN sqlc.arg(description_set)::bool THEN sqlc.narg(description)::text ELSE description END,
+    background_text = CASE WHEN sqlc.arg(background_set)::bool THEN sqlc.narg(background_text)::text ELSE background_text END,
+    updated_at = sqlc.arg(at)::timestamptz
+WHERE public_id = sqlc.arg(character_id)::uuid
+  AND deleted_at IS NULL
+RETURNING public_id AS id, updated_at;
+-- name: CharacterProductUpdateCharacterDdbUrl :one
+UPDATE characters
+SET ddb_url = sqlc.arg(ddb_url)::text, updated_at = sqlc.arg(at)::timestamptz
+WHERE public_id = sqlc.arg(character_id)::uuid AND deleted_at IS NULL
+RETURNING public_id AS id;
+-- name: CharacterProductUpsertDdbMirror :exec
+INSERT INTO character_ddb_mirrors (character_id, payload, synced_at)
+SELECT character.id, sqlc.arg(payload)::jsonb, sqlc.arg(at)::timestamptz
+FROM characters character
+WHERE character.public_id = sqlc.arg(character_id)::uuid
+ON CONFLICT (character_id) DO UPDATE
+SET payload = EXCLUDED.payload, synced_at = EXCLUDED.synced_at;
+-- name: CharacterProductInsertCharacterLog :one
+INSERT INTO character_logs (public_id, character_id, quest_id, body, created_at, created_by)
+SELECT sqlc.arg(log_id)::uuid, character.id, quest.id, sqlc.arg(body)::text,
+       sqlc.arg(at)::timestamptz, actor.id
+FROM characters character
+JOIN members actor ON actor.public_id = sqlc.arg(actor_id)::uuid
+LEFT JOIN quests quest ON quest.public_id = sqlc.narg(quest_id)::uuid
+WHERE character.public_id = sqlc.arg(character_id)::uuid
+  AND character.deleted_at IS NULL
+  AND (sqlc.narg(quest_id)::uuid IS NULL OR quest.id IS NOT NULL)
+RETURNING public_id AS id, body, created_at;
+-- name: CharacterProductLockCharacterLog :one
+SELECT log.id, log.public_id, log.character_id, log.quest_id, log.body, log.created_at, log.created_by
+FROM character_logs log
+JOIN characters character ON character.id = log.character_id
+WHERE character.public_id = sqlc.arg(character_id)::uuid
+  AND log.public_id = sqlc.arg(log_id)::uuid
+FOR UPDATE OF log;
+-- name: CharacterProductDeleteCharacterLog :one
+DELETE FROM character_logs log
+USING characters character
+WHERE log.character_id = character.id
+  AND character.public_id = sqlc.arg(character_id)::uuid
+  AND log.public_id = sqlc.arg(log_id)::uuid
+RETURNING log.public_id AS id;
+-- name: CharacterProductListSummaries :many
+SELECT document.public_id AS id, document.kind, document.slug, document.title,
+       document.category, document.status, document.visibility, document.policy,
+       document.frontmatter_yaml, author.public_id AS author_id, document.published_at,
+       document.deleted_at, deleted_by.public_id AS deleted_by, document.updated_at,
+       document.version, document.body
+FROM document_links link
+JOIN documents document ON document.id = link.source_id
+JOIN characters character ON character.id = link.character_target_id
+JOIN members author ON author.id = document.author_id
+LEFT JOIN members deleted_by ON deleted_by.id = document.deleted_by
+WHERE character.public_id = sqlc.arg(character_id)::uuid
+  AND link.relation = 'summarizes'
+  AND document.kind = 'summary'
+  AND document.deleted_at IS NULL
+ORDER BY link.summary_append_order ASC, document.public_id ASC
+LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
+-- name: CharacterProductCountSummaries :one
+SELECT count(*)::int AS total
+FROM document_links link
+JOIN documents document ON document.id = link.source_id
+JOIN characters character ON character.id = link.character_target_id
+WHERE character.public_id = sqlc.arg(character_id)::uuid
+  AND link.relation = 'summarizes'
+  AND document.kind = 'summary'
+  AND document.deleted_at IS NULL;
+-- name: CharacterProductSumProgression :one
+SELECT COALESCE(sum(ledger.delta), 0)::int AS total
+FROM character_progression_ledger ledger
+JOIN characters character ON character.id = ledger.character_id
+WHERE character.public_id = sqlc.arg(character_id)::uuid;
+-- name: CharacterProductListCatalogPickIds :many
+SELECT catalog.public_id AS id
+FROM character_catalog_picks pick
+JOIN characters character ON character.id = pick.character_id
+JOIN creation_catalog catalog ON catalog.id = pick.catalog_id
+WHERE character.public_id = sqlc.arg(character_id)::uuid
+ORDER BY catalog.public_id ASC;

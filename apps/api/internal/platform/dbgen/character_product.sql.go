@@ -1831,3 +1831,326 @@ func (q *Queries) CharacterProductUpsertCreationCatalogEntry(ctx context.Context
 	)
 	return i, err
 }
+
+
+const characterProductListQuestRewards = `-- name: CharacterProductListQuestRewards :many
+SELECT entitlement.public_id AS id, quest.public_id AS quest_id,
+       character.public_id AS character_id, awarded_by.public_id AS awarded_by,
+       entitlement.awarded_at, entitlement.pcxp, entitlement.note,
+       entitlement.claimed_at, ledger.public_id AS progression_entry_id
+FROM quest_reward_entitlements entitlement
+JOIN quests quest ON quest.id = entitlement.quest_id
+JOIN characters character ON character.id = entitlement.character_id
+JOIN members awarded_by ON awarded_by.id = entitlement.awarded_by
+LEFT JOIN character_progression_ledger ledger ON ledger.id = entitlement.progression_entry_id
+WHERE character.public_id = $1::uuid
+ORDER BY entitlement.awarded_at DESC, entitlement.public_id DESC
+LIMIT $3::int OFFSET $2::int
+`
+
+type CharacterProductListQuestRewardsParams struct {
+	CharacterID pgtype.UUID `json:"character_id"`
+	RowOffset   int32       `json:"row_offset"`
+	RowLimit    int32       `json:"row_limit"`
+}
+
+type CharacterProductListQuestRewardsRow struct {
+	ID                 pgtype.UUID        `json:"id"`
+	QuestID            pgtype.UUID        `json:"quest_id"`
+	CharacterID        pgtype.UUID        `json:"character_id"`
+	AwardedBy          pgtype.UUID        `json:"awarded_by"`
+	AwardedAt          pgtype.Timestamptz `json:"awarded_at"`
+	Pcxp               int32              `json:"pcxp"`
+	Note               pgtype.Text        `json:"note"`
+	ClaimedAt          pgtype.Timestamptz `json:"claimed_at"`
+	ProgressionEntryID pgtype.UUID        `json:"progression_entry_id"`
+}
+
+func (q *Queries) CharacterProductListQuestRewards(ctx context.Context, arg CharacterProductListQuestRewardsParams) ([]CharacterProductListQuestRewardsRow, error) {
+	rows, err := q.db.Query(ctx, characterProductListQuestRewards, arg.CharacterID, arg.RowOffset, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CharacterProductListQuestRewardsRow{}
+	for rows.Next() {
+		var i CharacterProductListQuestRewardsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.QuestID,
+			&i.CharacterID,
+			&i.AwardedBy,
+			&i.AwardedAt,
+			&i.Pcxp,
+			&i.Note,
+			&i.ClaimedAt,
+			&i.ProgressionEntryID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+
+const characterProductCountQuestRewards = `-- name: CharacterProductCountQuestRewards :one
+SELECT count(*)::int AS total
+FROM quest_reward_entitlements entitlement
+JOIN characters character ON character.id = entitlement.character_id
+WHERE character.public_id = $1::uuid
+`
+
+func (q *Queries) CharacterProductCountQuestRewards(ctx context.Context, characterID pgtype.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, characterProductCountQuestRewards, characterID)
+	var total int32
+	err := row.Scan(&total)
+	return total, err
+}
+
+
+const characterProductLockRewardClaims = `-- name: CharacterProductLockRewardClaims :many
+SELECT entitlement.public_id AS id, quest.public_id AS quest_id,
+       character.public_id AS character_id, awarded_by.public_id AS awarded_by,
+       entitlement.awarded_at, entitlement.pcxp, entitlement.note,
+       entitlement.claimed_at, ledger.public_id AS progression_entry_id
+FROM quest_reward_entitlements entitlement
+JOIN quests quest ON quest.id = entitlement.quest_id
+JOIN characters character ON character.id = entitlement.character_id
+JOIN members awarded_by ON awarded_by.id = entitlement.awarded_by
+LEFT JOIN character_progression_ledger ledger ON ledger.id = entitlement.progression_entry_id
+WHERE quest.public_id = $1::uuid AND character.public_id = $2::uuid
+ORDER BY quest.id, entitlement.id
+FOR UPDATE OF quest, entitlement
+`
+
+type CharacterProductLockRewardClaimsParams struct {
+	QuestID     pgtype.UUID `json:"quest_id"`
+	CharacterID pgtype.UUID `json:"character_id"`
+}
+
+type CharacterProductLockRewardClaimsRow struct {
+	ID                 pgtype.UUID        `json:"id"`
+	QuestID            pgtype.UUID        `json:"quest_id"`
+	CharacterID        pgtype.UUID        `json:"character_id"`
+	AwardedBy          pgtype.UUID        `json:"awarded_by"`
+	AwardedAt          pgtype.Timestamptz `json:"awarded_at"`
+	Pcxp               int32              `json:"pcxp"`
+	Note               pgtype.Text        `json:"note"`
+	ClaimedAt          pgtype.Timestamptz `json:"claimed_at"`
+	ProgressionEntryID pgtype.UUID        `json:"progression_entry_id"`
+}
+
+func (q *Queries) CharacterProductLockRewardClaims(ctx context.Context, arg CharacterProductLockRewardClaimsParams) ([]CharacterProductLockRewardClaimsRow, error) {
+	rows, err := q.db.Query(ctx, characterProductLockRewardClaims, arg.QuestID, arg.CharacterID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CharacterProductLockRewardClaimsRow{}
+	for rows.Next() {
+		var i CharacterProductLockRewardClaimsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.QuestID,
+			&i.CharacterID,
+			&i.AwardedBy,
+			&i.AwardedAt,
+			&i.Pcxp,
+			&i.Note,
+			&i.ClaimedAt,
+			&i.ProgressionEntryID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+
+const characterProductMarkRewardClaims = `-- name: CharacterProductMarkRewardClaims :execrows
+WITH mappings AS (
+    SELECT entitlement_id.public_id::uuid AS entitlement_id, ledger.id AS ledger_id
+    FROM unnest($1::text[]) WITH ORDINALITY AS entitlement_id(public_id, ordinality)
+    JOIN unnest($2::text[]) WITH ORDINALITY AS progression_id(public_id, ordinality)
+      ON progression_id.ordinality = entitlement_id.ordinality
+    JOIN character_progression_ledger ledger ON ledger.public_id = progression_id.public_id::uuid
+    WHERE cardinality($1::text[]) = cardinality($2::text[])
+), updated AS (
+    UPDATE quest_reward_entitlements entitlement
+    SET claimed_at = $3::timestamptz, progression_entry_id = mappings.ledger_id
+    FROM mappings
+    WHERE entitlement.public_id = mappings.entitlement_id
+  AND entitlement.claimed_at IS NULL
+  AND entitlement.progression_entry_id IS NULL
+    RETURNING entitlement.public_id
+)
+SELECT public_id FROM updated
+`
+
+type CharacterProductMarkRewardClaimsParams struct {
+	EntitlementIds []string           `json:"entitlement_ids"`
+	ProgressionIds []string           `json:"progression_ids"`
+	At             pgtype.Timestamptz `json:"at"`
+}
+
+func (q *Queries) CharacterProductMarkRewardClaims(ctx context.Context, arg CharacterProductMarkRewardClaimsParams) (int64, error) {
+	result, err := q.db.Exec(ctx, characterProductMarkRewardClaims, arg.EntitlementIds, arg.ProgressionIds, arg.At)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected(), nil
+}
+
+const characterProductListLogs = `-- name: CharacterProductListLogs :many
+SELECT log.public_id AS id, character.public_id AS character_id, quest.public_id AS quest_id,
+       log.body, log.created_at, creator.public_id AS created_by
+FROM character_logs log
+JOIN characters character ON character.id = log.character_id
+LEFT JOIN quests quest ON quest.id = log.quest_id
+LEFT JOIN members creator ON creator.id = log.created_by
+WHERE character.public_id = $1::uuid
+ORDER BY log.created_at DESC, log.public_id DESC
+LIMIT $3::int OFFSET $2::int
+`
+
+type CharacterProductListLogsParams struct {
+	CharacterID pgtype.UUID `json:"character_id"`
+	RowOffset   int32       `json:"row_offset"`
+	RowLimit    int32       `json:"row_limit"`
+}
+
+type CharacterProductListLogsRow struct {
+	ID          pgtype.UUID        `json:"id"`
+	CharacterID pgtype.UUID        `json:"character_id"`
+	QuestID     pgtype.UUID        `json:"quest_id"`
+	Body        string             `json:"body"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	CreatedBy   pgtype.UUID        `json:"created_by"`
+}
+
+func (q *Queries) CharacterProductListLogs(ctx context.Context, arg CharacterProductListLogsParams) ([]CharacterProductListLogsRow, error) {
+	rows, err := q.db.Query(ctx, characterProductListLogs, arg.CharacterID, arg.RowOffset, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CharacterProductListLogsRow{}
+	for rows.Next() {
+		var i CharacterProductListLogsRow
+		if err := rows.Scan(&i.ID, &i.CharacterID, &i.QuestID, &i.Body, &i.CreatedAt, &i.CreatedBy); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const characterProductCountLogs = `-- name: CharacterProductCountLogs :one
+SELECT count(*)::int AS total
+FROM character_logs log
+JOIN characters character ON character.id = log.character_id
+WHERE character.public_id = $1::uuid
+`
+
+func (q *Queries) CharacterProductCountLogs(ctx context.Context, characterID pgtype.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, characterProductCountLogs, characterID)
+	var total int32
+	err := row.Scan(&total)
+	return total, err
+}
+
+const characterProductListBackstories = `-- name: CharacterProductListBackstories :many
+SELECT backstory.public_id AS id, backstory.name, backstory.lore, backstory.cohort,
+       backstory.retired, region.public_id AS source_region_id
+FROM backstories backstory
+LEFT JOIN regions region ON region.id = backstory.source_region_id
+WHERE ($1::bool OR NOT backstory.retired)
+  AND ($2::uuid IS NULL OR region.public_id = $2::uuid)
+  AND ($3::text IS NULL OR backstory.cohort = $3::text)
+ORDER BY lower(backstory.name) ASC, backstory.public_id ASC
+LIMIT $5::int OFFSET $4::int
+`
+
+type CharacterProductListBackstoriesParams struct {
+	IncludeRetired bool        `json:"include_retired"`
+	RegionID       pgtype.UUID `json:"region_id"`
+	Cohort         pgtype.Text `json:"cohort"`
+	RowOffset      int32       `json:"row_offset"`
+	RowLimit       int32       `json:"row_limit"`
+}
+
+type CharacterProductListBackstoriesRow struct {
+	ID             pgtype.UUID `json:"id"`
+	Name           string      `json:"name"`
+	Lore           string      `json:"lore"`
+	Cohort         string      `json:"cohort"`
+	Retired        bool        `json:"retired"`
+	SourceRegionID pgtype.UUID `json:"source_region_id"`
+}
+
+func (q *Queries) CharacterProductListBackstories(ctx context.Context, arg CharacterProductListBackstoriesParams) ([]CharacterProductListBackstoriesRow, error) {
+	rows, err := q.db.Query(ctx, characterProductListBackstories, arg.IncludeRetired, arg.RegionID, arg.Cohort, arg.RowOffset, arg.RowLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CharacterProductListBackstoriesRow{}
+	for rows.Next() {
+		var i CharacterProductListBackstoriesRow
+		if err := rows.Scan(&i.ID, &i.Name, &i.Lore, &i.Cohort, &i.Retired, &i.SourceRegionID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const characterProductCountBackstories = `-- name: CharacterProductCountBackstories :one
+SELECT count(*)::int AS total
+FROM backstories backstory
+LEFT JOIN regions region ON region.id = backstory.source_region_id
+WHERE ($1::bool OR NOT backstory.retired)
+  AND ($2::uuid IS NULL OR region.public_id = $2::uuid)
+  AND ($3::text IS NULL OR backstory.cohort = $3::text)
+`
+
+type CharacterProductCountBackstoriesParams struct {
+	IncludeRetired bool        `json:"include_retired"`
+	RegionID       pgtype.UUID `json:"region_id"`
+	Cohort         pgtype.Text `json:"cohort"`
+}
+
+func (q *Queries) CharacterProductCountBackstories(ctx context.Context, arg CharacterProductCountBackstoriesParams) (int32, error) {
+	row := q.db.QueryRow(ctx, characterProductCountBackstories, arg.IncludeRetired, arg.RegionID, arg.Cohort)
+	var total int32
+	err := row.Scan(&total)
+	return total, err
+}
+
+const characterProductSumProgression = `-- name: CharacterProductSumProgression :one
+SELECT COALESCE(sum(ledger.delta), 0)::int AS total
+FROM character_progression_ledger ledger
+JOIN characters character ON character.id = ledger.character_id
+WHERE character.public_id = $1::uuid
+`
+
+func (q *Queries) CharacterProductSumProgression(ctx context.Context, characterID pgtype.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, characterProductSumProgression, characterID)
+	var total int32
+	err := row.Scan(&total)
+	return total, err
+}
