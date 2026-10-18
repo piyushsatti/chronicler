@@ -1,3 +1,5 @@
 {
-  "catalog": []
+  "settings": {
+    "memberId": "not-a-settings-object"
+  }
 }

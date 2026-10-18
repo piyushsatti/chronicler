@@ -95,13 +95,6 @@ export const rest = {
   acknowledgeNotifications:
     (merged.acknowledgeNotifications as string | undefined) ??
     '/v1/me/notifications/acknowledge-suppressed',
-  reconcilePersonalization:
-    (merged.reconcilePersonalization as string | undefined) ??
-    '/v1/me/personalization/reconcile',
-  equipCosmetic:
-    (merged.equipCosmetic as string | undefined) ?? '/v1/me/cosmetics/equip',
-  updateMySettings:
-    (merged.updateMySettings as string | undefined) ?? '/v1/me/settings',
   createRegion: (merged.createRegion as string | undefined) ?? '/v1/regions',
   creationCatalog:
     (merged.creationCatalog as string | undefined) ?? '/v1/creation-catalog',

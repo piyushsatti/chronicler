@@ -1,1 +1,4 @@
-export type { CatalogItemView } from './adapters/personalizationAdapter.js';
+export type {
+  PersonalizationView,
+  SettingsPatch,
+} from './adapters/personalizationAdapter.js';

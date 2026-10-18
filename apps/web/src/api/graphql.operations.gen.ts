@@ -21,6 +21,11 @@ export type CloseQuestInput = {
   rewards: Array<QuestPcxpAwardInput>;
 };
 
+export type ColorMode =
+  | 'DARK'
+  | 'LIGHT'
+  | 'SYSTEM';
+
 export type CommandMeta = {
   idempotencyKey: string;
 };
@@ -41,6 +46,10 @@ export type CreateQuestInput = {
   tags?: Array<string>;
   title: string;
 };
+
+export type Density =
+  | 'COMFORTABLE'
+  | 'COMPACT';
 
 export type DocumentDraftInput = {
   body: string;
@@ -75,6 +84,21 @@ export type MemberRoleBatchInput = {
   memberId: string;
   note?: string | null | undefined;
   roles: Array<string>;
+};
+
+export type MemberSettingsPatch = {
+  colorblindSafe?: boolean | null | undefined;
+  density?: Density | null | undefined;
+  effectsEnabled?: boolean | null | undefined;
+  mode?: ColorMode | null | undefined;
+  notifyCharacterVerification?: boolean | null | undefined;
+  notifyDmMentioned?: boolean | null | undefined;
+  notifyDocumentActivity?: boolean | null | undefined;
+  notifyQuestScheduled?: boolean | null | undefined;
+  notifyQuestSignup?: boolean | null | undefined;
+  reducedMotion?: boolean | null | undefined;
+  theme?: Theme | null | undefined;
+  timezone?: string | null | undefined;
 };
 
 export type ParticipationAttestationInput = {
@@ -131,6 +155,13 @@ export type RegionInput = {
   kind: string;
   name: string;
 };
+
+export type Theme =
+  | 'DRACULA'
+  | 'EMBER'
+  | 'MIDNIGHT'
+  | 'PARCHMENT'
+  | 'VEGAN';
 
 export type TimeAnchorInput = {
   epochDay: number;
@@ -727,6 +758,19 @@ export type MyUnreadNotificationCountQueryVariables = Exact<{ [key: string]: nev
 
 
 export type MyUnreadNotificationCountQuery = { myUnreadNotificationCount: number };
+
+export type MyPersonalizationQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type MyPersonalizationQuery = { myPersonalization: { settings: { memberId: string, theme: Theme, mode: ColorMode, effectsEnabled: boolean, colorblindSafe: boolean, reducedMotion: boolean, density: Density, timezone: string | null, updatedAt: string | null, notifyCharacterVerification: boolean, notifyQuestSignup: boolean, notifyDocumentActivity: boolean, notifyQuestScheduled: boolean, notifyDmMentioned: boolean } | null } | null };
+
+export type UpdateMySettingsMutationVariables = Exact<{
+  input: MemberSettingsPatch;
+  meta: CommandMeta;
+}>;
+
+
+export type UpdateMySettingsMutation = { updateMySettings: { memberId: string, theme: Theme, mode: ColorMode, effectsEnabled: boolean, colorblindSafe: boolean, reducedMotion: boolean, density: Density, timezone: string | null, updatedAt: string | null, notifyCharacterVerification: boolean, notifyQuestSignup: boolean, notifyDocumentActivity: boolean, notifyQuestScheduled: boolean, notifyDmMentioned: boolean } };
 
 export type DmTableBySlugQueryVariables = Exact<{
   slug: string;

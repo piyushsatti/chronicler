@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../../api/queryKeys.js';
 import {
-  equipCosmetic,
   loadPersonalization,
   updateMySettings,
 } from '../adapters/personalizationAdapter.js';
@@ -20,12 +19,5 @@ export function usePersonalizePage() {
     },
   });
 
-  const equipMutation = useMutation({
-    mutationFn: equipCosmetic,
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: queryKeys.personalization });
-    },
-  });
-
-  return { personalization, settingsMutation, equipMutation };
+  return { personalization, settingsMutation };
 }

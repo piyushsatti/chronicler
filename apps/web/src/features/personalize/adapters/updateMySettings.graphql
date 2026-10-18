@@ -1,0 +1,18 @@
+mutation UpdateMySettings($input: MemberSettingsPatch!, $meta: CommandMeta!) {
+  updateMySettings(input: $input, meta: $meta) {
+    memberId
+    theme
+    mode
+    effectsEnabled
+    colorblindSafe
+    reducedMotion
+    density
+    timezone
+    updatedAt
+    notifyCharacterVerification
+    notifyQuestSignup
+    notifyDocumentActivity
+    notifyQuestScheduled
+    notifyDmMentioned
+  }
+}

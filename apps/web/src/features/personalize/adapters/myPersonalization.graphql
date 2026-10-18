@@ -1,0 +1,20 @@
+query MyPersonalization {
+  myPersonalization {
+    settings {
+      memberId
+      theme
+      mode
+      effectsEnabled
+      colorblindSafe
+      reducedMotion
+      density
+      timezone
+      updatedAt
+      notifyCharacterVerification
+      notifyQuestSignup
+      notifyDocumentActivity
+      notifyQuestScheduled
+      notifyDmMentioned
+    }
+  }
+}

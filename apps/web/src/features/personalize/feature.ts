@@ -1,15 +1,9 @@
-import { http, HttpResponse } from 'msw';
+import { HttpResponse } from 'msw';
 import type { FeatureGraphql, FeatureHandlers, FeatureRoute } from '../../chrome/featureModule.js';
 import { lazyElement } from '../../chrome/lazyElement.js';
 import goodPersonalization from '../../../tests/fixtures/wire/personalize/good.json';
 
-const reconcilePersonalization = '/v1/me/personalization/reconcile';
-const equipCosmetic = '/v1/me/cosmetics/equip';
-
-export const endpoints = {
-  reconcilePersonalization,
-  equipCosmetic,
-} as const;
+export const endpoints = {} as const;
 
 export const queryKeys = {
   personalization: ['personalization'] as const,
@@ -18,12 +12,13 @@ export const queryKeys = {
 export const graphql: FeatureGraphql = {
   MyPersonalization: () =>
     HttpResponse.json({ data: { myPersonalization: goodPersonalization } }),
+  UpdateMySettings: () =>
+    HttpResponse.json({
+      data: { updateMySettings: goodPersonalization.settings },
+    }),
 };
 
-export const handlers: FeatureHandlers = [
-  http.post(reconcilePersonalization, () => HttpResponse.json({ ok: true })),
-  http.post(equipCosmetic, () => HttpResponse.json({ ok: true })),
-];
+export const handlers: FeatureHandlers = [];
 
 export const routes: readonly FeatureRoute[] = [
   {

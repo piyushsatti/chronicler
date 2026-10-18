@@ -31,9 +31,13 @@ describe('PersonalizePage', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Personalize' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Look' })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Catalog' })).toBeInTheDocument();
-    expect(await screen.findByText(/Progress · 4 quests/)).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Theme' }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Color mode' })).toBeInTheDocument();
+    expect(
+      await screen.findByText(/Saved settings · parchment/),
+    ).toBeInTheDocument();
   });
 
   it('shows controlled error on GraphQL failure', async () => {
