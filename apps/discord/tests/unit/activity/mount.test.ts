@@ -1,6 +1,6 @@
 /**
- * Tests for sniffer/mount.ts (#91) -- SNIFFER_ENABLED gating and that the
- * sniffer attaches its own listeners independent of events/dispatcher.ts.
+ * Tests for mount.ts — SNIFFER_ENABLED gating and direct client.on listeners
+ * for the retained `/v1/ingest/discord-event` path.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';

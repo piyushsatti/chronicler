@@ -1,17 +1,12 @@
 /**
- * Attaches the bot's gateway listeners to the discord.js Client.
+ * Attaches gateway listeners on the discord.js Client for the activity sensor.
  *
- * Post-#300 the bot is a pure activity sensor -- no command registry, no
- * interaction router, and no shared event dispatcher to register through
- * (that v1 pipeline, along with its GraphQL/raw-archive forwarding, is gone).
- * mountActivity attaches client.on() listeners directly for messageCreate and
- * voiceStateUpdate plus a raw MESSAGE_REACTION_ADD Gateway dispatch; each
- * event is normalized to a SniffedEvent (normalize.ts) and enqueued (queue.ts) for POST to the
- * backend's /v1/ingest/discord-event (forward.ts), incrementing
- * member_activity_rollups.
+ * No command registry, interaction router, GraphQL client, or announce path.
+ * Listeners cover messageCreate, voiceStateUpdate, and raw MESSAGE_REACTION_ADD;
+ * each accepted payload becomes a SniffedEvent (normalize.ts) and is POSTed via
+ * deliverActivity (forward.ts) to Go `/v1/ingest/discord-event`.
  *
- * Gated by SNIFFER_ENABLED (default false, #91 item 2) -- prod safety while
- * the v2 ingest path is rolled out gradually.
+ * Gated by SNIFFER_ENABLED (default false).
  */
 
 import { Events } from 'discord.js';
@@ -26,9 +21,8 @@ import {
 import { deliverActivity } from './forward.js';
 
 /**
- * Mount the sniffer's gateway listeners on `client` (call before login, same
- * as mountEventListeners). No-ops (with a log line) when SNIFFER_ENABLED is
- * not "true".
+ * Mount gateway listeners on `client` (call before login). No-ops (with a
+ * log line) when SNIFFER_ENABLED is not "true".
  *
  * @param voiceTracker - injectable for tests; defaults to a fresh tracker.
  */

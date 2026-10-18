@@ -1,5 +1,5 @@
 /**
- * Tests for the v2 gateway sniffer normalizers (#91).
+ * Tests for gateway activity normalizers (message / voice / reaction).
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';

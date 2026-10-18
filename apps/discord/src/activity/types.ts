@@ -13,8 +13,8 @@ export type SniffedEventKind = 'message' | 'voice' | 'reaction';
 /** One normalized gateway event, ready to POST to `/v1/ingest/discord-event`. */
 export interface SniffedEvent {
   /** Stable id for this event. Snowflake for messages; deterministic
-   *  composite for voice/reaction (see sniffer/normalize.ts). Reused
-   *  verbatim across queue retries so backend dedup (decision 70) applies. */
+   *  composite for voice/reaction (see normalize.ts). Reused
+   *  verbatim across queue retries so backend dedup applies. */
   event_id: string;
   kind: SniffedEventKind;
   discord_user_id: string;
