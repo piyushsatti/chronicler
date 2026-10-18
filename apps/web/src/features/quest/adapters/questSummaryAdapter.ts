@@ -1,5 +1,7 @@
 import { z } from 'zod';
+import type { QuestSummaryPageQuery } from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
+import SUMMARY_PAGE_QUERY from './questSummary.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import {
@@ -33,49 +35,6 @@ export type QuestSummaryPageView = {
   documents: QuestSummaryDocumentView[];
 };
 
-const SUMMARY_PAGE_QUERY = `
-  query QuestSummaryPage($shortCode: String!, $search: String!) {
-    quest(shortCode: $shortCode) {
-      id
-      shortCode
-      status
-      scheduledAt
-      durationHours
-      slotsMax
-      filledCount
-      displayStatus
-      genres
-      tags
-      dm { handle displayName }
-      briefDocument { id slug title }
-      discordDelivery {
-        desiredRevision
-        appliedRevision
-        overallStatus
-        nextRetryAt
-        errorMessage
-      }
-      participants {
-        memberId
-        characterId
-        characterName
-        memberHandle
-        status
-      }
-    }
-    documents(filters: { kind: "summary", search: $search }, limit: 20) {
-      items {
-        id
-        slug
-        title
-        category
-        effectiveBody
-      }
-      total
-    }
-  }
-`;
-
 function parseSummaryDocuments(wire: unknown): AdapterResult<QuestSummaryDocumentView[]> {
   const parsed = summaryDocsWireSchema.safeParse(wire);
   if (!parsed.success) {
@@ -108,10 +67,10 @@ export async function loadQuestSummaryPage(
   shortCode: string,
 ): Promise<QuestSummaryPageView> {
   try {
-    const data = await graphqlRequest<{
-      quest: unknown | null;
-      documents: unknown;
-    }>(SUMMARY_PAGE_QUERY, { shortCode, search: shortCode });
+    const data = await graphqlRequest<QuestSummaryPageQuery>(SUMMARY_PAGE_QUERY, {
+      shortCode,
+      search: shortCode,
+    });
     if (data.quest == null) {
       throw toAppError({ failure: 'NotFound' }, 'quest:summary');
     }

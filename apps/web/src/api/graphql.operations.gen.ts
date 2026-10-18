@@ -275,3 +275,12 @@ export type TransitionQuestStatusMutationVariables = Exact<{
 
 
 export type TransitionQuestStatusMutation = { transitionQuestStatus: { id: string, status: string } };
+
+export type SearchQueryVariables = Exact<{
+  query: string;
+  kinds?: Array<string> | string | null | undefined;
+  limit: number;
+}>;
+
+
+export type SearchQuery = { search: { query: string, documents: Array<{ id: string, kind: string, slug: string, title: string, snippet: string, questShortCode: string | null }>, members: Array<{ memberId: string, handle: string, displayName: string }> } };

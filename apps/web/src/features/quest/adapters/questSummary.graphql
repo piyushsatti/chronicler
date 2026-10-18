@@ -1,0 +1,47 @@
+query QuestSummaryPage($shortCode: String!, $search: String!) {
+  quest(shortCode: $shortCode) {
+    id
+    shortCode
+    status
+    scheduledAt
+    durationHours
+    slotsMax
+    filledCount
+    displayStatus
+    genres
+    tags
+    dm {
+      handle
+      displayName
+    }
+    briefDocument {
+      id
+      slug
+      title
+    }
+    discordDelivery {
+      desiredRevision
+      appliedRevision
+      overallStatus
+      nextRetryAt
+      errorMessage
+    }
+    participants {
+      memberId
+      characterId
+      characterName
+      memberHandle
+      status
+    }
+  }
+  documents(filters: { kind: "summary", search: $search }, limit: 20) {
+    items {
+      id
+      slug
+      title
+      category
+      effectiveBody
+    }
+    total
+  }
+}
