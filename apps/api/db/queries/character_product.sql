@@ -249,7 +249,7 @@ SELECT character.public_id AS id, character.name, owner.public_id AS owner_id,
                   AND (latest.created_at IS NULL OR latest.created_at < character.verification_submitted_at)
             THEN 'PENDING'
             ELSE UPPER(COALESCE(latest.verdict, 'unknown')) END AS verification_status,
-       character.verification_submitted_at, character.updated_at
+       character.verification_submitted_at, character.ddb_url, character.updated_at
 FROM characters character
 JOIN members owner ON owner.id = character.owner_id
 LEFT JOIN regions region ON region.id = character.region_id
@@ -269,17 +269,17 @@ WHERE character.deleted_at IS NULL
 ORDER BY character.name ASC, character.public_id ASC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
 -- name: CharacterProductPendingVerificationDirectory :many
-SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
-       c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id, region.public_id AS region_id,
-       c.description, c.ddb_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
-       ddb.payload AS ddb_payload, ddb.synced_at AS ddb_synced_at,
-       c.verification_submitted_at, 'PENDING'::text AS verification_status
+SELECT c.public_id AS id, c.name, owner.public_id AS owner_id,
+       owner.handle AS owner_handle, owner.display_name AS owner_display_name,
+       owner.avatar_url AS owner_avatar_url, c.short_code, c.status,
+       region.public_id AS region_id, region.name AS region_name,
+       guild.public_id AS guild_id,
+       'PENDING'::text AS verification_status,
+       c.verification_submitted_at, c.ddb_url, c.updated_at
 FROM characters c
 JOIN members owner ON owner.id = c.owner_id
-LEFT JOIN backstories backstory ON backstory.id = c.backstory_id
 LEFT JOIN documents guild ON guild.id = c.guild_document_id
 LEFT JOIN regions region ON region.id = c.region_id
-LEFT JOIN character_ddb_mirrors ddb ON ddb.character_id = c.id
 LEFT JOIN LATERAL (
     SELECT verification.created_at
     FROM verifications verification

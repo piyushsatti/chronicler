@@ -12,6 +12,7 @@ type AdminCharacterDirectoryEntryType {
   status: String!
   verificationStatus: String!
   verificationSubmittedAt: DateTime
+  ddbUrl: String
   updatedAt: DateTime!
 }
 

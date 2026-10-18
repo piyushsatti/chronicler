@@ -128,10 +128,9 @@ func TestCharacterProductPostgresReadAdapters(t *testing.T) {
 		t.Fatalf("ReadAdminCharacterDirectory = %+v, err=%v", directory, err)
 	}
 	queue, err := adapter.ReadPendingCharacterVerifications(ctx, actor, PendingCharacterVerificationsSpec{Limit: 10})
-	if err != nil || queue.Total != 1 || len(queue.Items) != 1 || queue.Items[0].Id != pendingID || queue.Items[0].VerificationStatus != CharacterReviewStatusPending || queue.Items[0].BackstoryId == nil || *queue.Items[0].BackstoryId != backstoryID {
+	if err != nil || queue.Total != 1 || len(queue.Items) != 1 || queue.Items[0].Id != pendingID || queue.Items[0].VerificationStatus != string(CharacterReviewStatusPending) || queue.Items[0].OwnerHandle == "" {
 		t.Fatalf("ReadPendingCharacterVerifications = %+v, err=%v", queue, err)
 	}
-	assertCharacterDDBMirrorInList(t, queue.Items, pendingID, syncedAt)
 
 	progression, err := adapter.ReadCharacterProgression(ctx, actor, CharacterProgressionSpec{CharacterId: pendingID, Limit: 10})
 	if err != nil || progression.Total != 1 || len(progression.Items) != 1 || progression.Items[0].Amount == nil || *progression.Items[0].Amount != 3 || progression.Items[0].RecordedBy == nil || *progression.Items[0].RecordedBy != reviewerID {

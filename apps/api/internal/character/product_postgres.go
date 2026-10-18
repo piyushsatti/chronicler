@@ -255,6 +255,31 @@ func mapAdminCharacterDirectory(row dbgen.CharacterProductAdminDirectoryRow) (Ad
 		return AdminCharacterDirectoryEntryView{}, err
 	}
 	return AdminCharacterDirectoryEntryView{
+		DdbUrl:                  characterTextPointer(row.DdbUrl),
+		GuildId:                 characterUUIDPointer(row.GuildID),
+		Id:                      db.UUIDString(row.ID),
+		Name:                    row.Name,
+		OwnerAvatarUrl:          characterTextPointer(row.OwnerAvatarUrl),
+		OwnerDisplayName:        row.OwnerDisplayName,
+		OwnerHandle:             row.OwnerHandle,
+		OwnerId:                 db.UUIDString(row.OwnerID),
+		RegionId:                characterUUIDPointer(row.RegionID),
+		RegionName:              characterTextPointer(row.RegionName),
+		ShortCode:               row.ShortCode,
+		Status:                  row.Status,
+		UpdatedAt:               row.UpdatedAt.Time,
+		VerificationStatus:      string(verification),
+		VerificationSubmittedAt: characterTimePointer(row.VerificationSubmittedAt),
+	}, nil
+}
+
+func mapPendingCharacterDirectory(row dbgen.CharacterProductPendingVerificationDirectoryRow) (AdminCharacterDirectoryEntryView, error) {
+	verification, err := characterVerificationStatus(row.VerificationStatus)
+	if err != nil {
+		return AdminCharacterDirectoryEntryView{}, err
+	}
+	return AdminCharacterDirectoryEntryView{
+		DdbUrl:                  characterTextPointer(row.DdbUrl),
 		GuildId:                 characterUUIDPointer(row.GuildID),
 		Id:                      db.UUIDString(row.ID),
 		Name:                    row.Name,
@@ -397,22 +422,22 @@ func (p *ProductPostgres) ReadAdminCharacterDirectory(ctx context.Context, _ aut
 	return out, nil
 }
 
-func (p *ProductPostgres) ReadPendingCharacterVerifications(ctx context.Context, _ auth.Authority, spec PendingCharacterVerificationsSpec) (CharacterV2ListResult, error) {
+func (p *ProductPostgres) ReadPendingCharacterVerifications(ctx context.Context, _ auth.Authority, spec PendingCharacterVerificationsSpec) (AdminCharacterDirectoryView, error) {
 	rows, err := p.queries().CharacterProductPendingVerificationDirectory(ctx, dbgen.CharacterProductPendingVerificationDirectoryParams{RowLimit: spec.Limit, RowOffset: spec.Offset})
 	if err != nil {
-		return CharacterV2ListResult{}, err
+		return AdminCharacterDirectoryView{}, err
 	}
 	total, err := p.queries().CharacterProductCountPendingVerifications(ctx)
 	if err != nil {
-		return CharacterV2ListResult{}, err
+		return AdminCharacterDirectoryView{}, err
 	}
-	out := CharacterV2ListResult{Items: make([]CharacterView, 0, len(rows)), Total: total}
+	out := AdminCharacterDirectoryView{Items: make([]AdminCharacterDirectoryEntryView, 0, len(rows)), Total: total}
 	for _, row := range rows {
-		view, mapErr := mapProductCharacter(row.ID, row.ShortCode, row.Name, row.OwnerID, row.BackstoryID, row.GuildID, row.RegionID, row.Status, row.Description, row.DdbUrl, row.Pcxp, row.CreatedAt, row.UpdatedAt, row.VerificationSubmittedAt, row.VerificationStatus, row.DdbPayload, row.DdbSyncedAt)
+		entry, mapErr := mapPendingCharacterDirectory(row)
 		if mapErr != nil {
-			return CharacterV2ListResult{}, mapErr
+			return AdminCharacterDirectoryView{}, mapErr
 		}
-		out.Items = append(out.Items, view)
+		out.Items = append(out.Items, entry)
 	}
 	return out, nil
 }

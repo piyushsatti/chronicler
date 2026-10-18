@@ -79,9 +79,9 @@ func (r *cqRepo) ReadParticipationsByCharacter(_ context.Context, _ auth.Authori
 	r.calls++
 	return ParticipationPageView{}, r.err
 }
-func (r *cqRepo) ReadPendingCharacterVerifications(_ context.Context, _ auth.Authority, _ PendingCharacterVerificationsSpec) (CharacterV2ListResult, error) {
+func (r *cqRepo) ReadPendingCharacterVerifications(_ context.Context, _ auth.Authority, _ PendingCharacterVerificationsSpec) (AdminCharacterDirectoryView, error) {
 	r.calls++
-	return CharacterV2ListResult{Items: []CharacterView{*r.value}, Total: 1}, r.err
+	return AdminCharacterDirectoryView{}, r.err
 }
 func (r *cqRepo) ReadBatchCharacters(_ context.Context, _ auth.Authority, keys []IDKey) ([]product.BatchResult[CharacterView], error) {
 	r.calls++

@@ -491,21 +491,17 @@ func (s ProductQueries) ParticipationsByCharacter(ctx context.Context, actor aut
 	return value, nil
 }
 
-func (s ProductQueries) PendingCharacterVerifications(ctx context.Context, actor auth.Authority, spec PendingCharacterVerificationsSpec) (CharacterV2ListResult, error) {
+func (s ProductQueries) PendingCharacterVerifications(ctx context.Context, actor auth.Authority, spec PendingCharacterVerificationsSpec) (AdminCharacterDirectoryView, error) {
 	if err := characterQueryPage(spec.Limit, spec.Offset); err != nil {
-		return CharacterV2ListResult{}, err
+		return AdminCharacterDirectoryView{}, err
 	}
 	observe, err := s.publicRead(ctx, actor, "Query.pendingCharacterVerifications", "")
 	if err != nil {
-		return CharacterV2ListResult{}, err
+		return AdminCharacterDirectoryView{}, err
 	}
 	value, err := s.Reads.Character.ReadPendingCharacterVerifications(ctx, actor, spec)
 	if err != nil {
-		return CharacterV2ListResult{}, err
-	}
-	value.Items, err = s.projectCharacters(ctx, actor, value.Items)
-	if err != nil {
-		return CharacterV2ListResult{}, err
+		return AdminCharacterDirectoryView{}, err
 	}
 	observe()
 	return value, nil

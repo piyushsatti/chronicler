@@ -41,6 +41,7 @@ type AdminCharacterDirectoryEntryType struct {
 	Status                  string     `json:"status"`
 	VerificationStatus      string     `json:"verificationStatus"`
 	VerificationSubmittedAt *time.Time `json:"verificationSubmittedAt,omitempty"`
+	DdbURL                  *string    `json:"ddbUrl,omitempty"`
 	UpdatedAt               time.Time  `json:"updatedAt"`
 }
 

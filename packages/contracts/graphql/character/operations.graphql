@@ -14,7 +14,7 @@ extend type Query {
   pendingCharacterVerifications(
     limit: Int! = 50
     offset: Int! = 0
-  ): CharacterListResult!
+  ): AdminCharacterDirectoryType!
   characterVerificationHistory(
     characterId: ID!
     limit: Int! = 50

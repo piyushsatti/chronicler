@@ -1556,7 +1556,7 @@ func (r *queryResolver) AdminCharacterDirectory(ctx context.Context, filters *Ad
 }
 
 // PendingCharacterVerifications is the resolver for the pendingCharacterVerifications field.
-func (r *queryResolver) PendingCharacterVerifications(ctx context.Context, limit int, offset int) (*CharacterListResult, error) {
+func (r *queryResolver) PendingCharacterVerifications(ctx context.Context, limit int, offset int) (*AdminCharacterDirectoryType, error) {
 	if r.Services.CharacterQueries == nil {
 		return nil, fmt.Errorf("character queries unavailable")
 	}
@@ -1571,7 +1571,7 @@ func (r *queryResolver) PendingCharacterVerifications(ctx context.Context, limit
 	if err != nil {
 		return nil, err
 	}
-	return toCharacterListResult(result), nil
+	return toAdminCharacterDirectoryType(result), nil
 }
 
 // CharacterVerificationHistory is the resolver for the characterVerificationHistory field.

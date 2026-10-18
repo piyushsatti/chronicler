@@ -74,6 +74,7 @@ type ComplexityRoot struct {
 	}
 
 	AdminCharacterDirectoryEntryType struct {
+		DdbURL                  func(childComplexity int) int
 		GuildID                 func(childComplexity int) int
 		ID                      func(childComplexity int) int
 		Name                    func(childComplexity int) int
@@ -1261,7 +1262,7 @@ type QueryResolver interface {
 	MyCharacters(ctx context.Context, limit int, offset int) (*CharacterListResult, error)
 	Character(ctx context.Context, id *string, shortCode *string) (*CharacterType, error)
 	AdminCharacterDirectory(ctx context.Context, filters *AdminCharacterDirectoryFiltersInput, limit int, offset int) (*AdminCharacterDirectoryType, error)
-	PendingCharacterVerifications(ctx context.Context, limit int, offset int) (*CharacterListResult, error)
+	PendingCharacterVerifications(ctx context.Context, limit int, offset int) (*AdminCharacterDirectoryType, error)
 	CharacterVerificationHistory(ctx context.Context, characterID string, limit int, offset int) (*VerificationPage, error)
 	Backstories(ctx context.Context, filters *BackstoryFiltersInput, limit int, offset int) (*BackstoryPage, error)
 	CreationCatalog(ctx context.Context, filters *CreationCatalogFiltersInput, limit int, offset int) (*CreationCatalogPage, error)
@@ -1412,6 +1413,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.ActivitySummaryType.VoiceMinutes(childComplexity), true
+
+	case "AdminCharacterDirectoryEntryType.ddbUrl":
+		if e.complexity.AdminCharacterDirectoryEntryType.DdbURL == nil {
+			break
+		}
+
+		return e.complexity.AdminCharacterDirectoryEntryType.DdbURL(childComplexity), true
 
 	case "AdminCharacterDirectoryEntryType.guildId":
 		if e.complexity.AdminCharacterDirectoryEntryType.GuildID == nil {
@@ -7442,7 +7450,7 @@ type Mutation {
   pendingCharacterVerifications(
     limit: Int! = 50
     offset: Int! = 0
-  ): CharacterListResult!
+  ): AdminCharacterDirectoryType!
   characterVerificationHistory(
     characterId: ID!
     limit: Int! = 50
@@ -7557,6 +7565,7 @@ extend type Mutation {
   status: String!
   verificationStatus: String!
   verificationSubmittedAt: DateTime
+  ddbUrl: String
   updatedAt: DateTime!
 }
 
@@ -8520,11 +8529,7 @@ type ParticipationPage {
     limit: Int! = 50
     offset: Int! = 0
   ): QuestListResult!
-  questBoard(
-    regionId: ID = null
-    limit: Int! = 50
-    offset: Int! = 0
-  ): QuestListResult!
+  questBoard(regionId: ID = null, limit: Int! = 50, offset: Int! = 0): QuestListResult!
   recentlyClosedQuests(
     regionId: ID = null
     closedSince: DateTime = null
@@ -9010,12 +9015,7 @@ extend type Mutation {
   createMap(input: MapCreateInput!, meta: CommandMeta!): MapType!
   createRegion(input: RegionInput!, meta: CommandMeta!): RegionType!
   updateRegion(id: ID!, input: RegionInput!, meta: CommandMeta!): RegionType!
-  transitionRegion(
-    id: ID!
-    to: String!
-    note: String!
-    meta: CommandMeta!
-  ): RegionType!
+  transitionRegion(id: ID!, to: String!, note: String!, meta: CommandMeta!): RegionType!
   assignArchon(memberId: ID!, regionId: ID!, meta: CommandMeta!): ArchonAssignmentType!
   revokeArchon(memberId: ID!, regionId: ID!, meta: CommandMeta!): CommandReceipt!
   createTimeAnchor(input: TimeAnchorInput!, meta: CommandMeta!): TimeAnchorType!
@@ -12851,6 +12851,47 @@ func (ec *executionContext) fieldContext_AdminCharacterDirectoryEntryType_verifi
 	return fc, nil
 }
 
+func (ec *executionContext) _AdminCharacterDirectoryEntryType_ddbUrl(ctx context.Context, field graphql.CollectedField, obj *AdminCharacterDirectoryEntryType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_AdminCharacterDirectoryEntryType_ddbUrl(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.DdbURL, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_AdminCharacterDirectoryEntryType_ddbUrl(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "AdminCharacterDirectoryEntryType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _AdminCharacterDirectoryEntryType_updatedAt(ctx context.Context, field graphql.CollectedField, obj *AdminCharacterDirectoryEntryType) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_AdminCharacterDirectoryEntryType_updatedAt(ctx, field)
 	if err != nil {
@@ -12960,6 +13001,8 @@ func (ec *executionContext) fieldContext_AdminCharacterDirectoryType_items(_ con
 				return ec.fieldContext_AdminCharacterDirectoryEntryType_verificationStatus(ctx, field)
 			case "verificationSubmittedAt":
 				return ec.fieldContext_AdminCharacterDirectoryEntryType_verificationSubmittedAt(ctx, field)
+			case "ddbUrl":
+				return ec.fieldContext_AdminCharacterDirectoryEntryType_ddbUrl(ctx, field)
 			case "updatedAt":
 				return ec.fieldContext_AdminCharacterDirectoryEntryType_updatedAt(ctx, field)
 			}
@@ -36691,9 +36734,9 @@ func (ec *executionContext) _Query_pendingCharacterVerifications(ctx context.Con
 		}
 		return graphql.Null
 	}
-	res := resTmp.(*CharacterListResult)
+	res := resTmp.(*AdminCharacterDirectoryType)
 	fc.Result = res
-	return ec.marshalNCharacterListResult2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐCharacterListResult(ctx, field.Selections, res)
+	return ec.marshalNAdminCharacterDirectoryType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐAdminCharacterDirectoryType(ctx, field.Selections, res)
 }
 
 func (ec *executionContext) fieldContext_Query_pendingCharacterVerifications(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
@@ -36705,11 +36748,11 @@ func (ec *executionContext) fieldContext_Query_pendingCharacterVerifications(ctx
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "items":
-				return ec.fieldContext_CharacterListResult_items(ctx, field)
+				return ec.fieldContext_AdminCharacterDirectoryType_items(ctx, field)
 			case "total":
-				return ec.fieldContext_CharacterListResult_total(ctx, field)
+				return ec.fieldContext_AdminCharacterDirectoryType_total(ctx, field)
 			}
-			return nil, fmt.Errorf("no field named %q was found under type CharacterListResult", field.Name)
+			return nil, fmt.Errorf("no field named %q was found under type AdminCharacterDirectoryType", field.Name)
 		},
 	}
 	defer func() {
@@ -54144,6 +54187,8 @@ func (ec *executionContext) _AdminCharacterDirectoryEntryType(ctx context.Contex
 			}
 		case "verificationSubmittedAt":
 			out.Values[i] = ec._AdminCharacterDirectoryEntryType_verificationSubmittedAt(ctx, field, obj)
+		case "ddbUrl":
+			out.Values[i] = ec._AdminCharacterDirectoryEntryType_ddbUrl(ctx, field, obj)
 		case "updatedAt":
 			out.Values[i] = ec._AdminCharacterDirectoryEntryType_updatedAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {

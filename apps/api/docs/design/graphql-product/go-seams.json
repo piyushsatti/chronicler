@@ -443,6 +443,15 @@
       "kind": "OBJECT",
       "fields": [
         {
+          "name": "DdbUrl",
+          "wire_name": "ddbUrl",
+          "go_type": "*string",
+          "wire_type": "String",
+          "resolver_args": [],
+          "kind": "OBJECT",
+          "owner": "CHA01"
+        },
+        {
           "name": "GuildId",
           "wire_name": "guildId",
           "go_type": "*string",
@@ -22892,7 +22901,7 @@
         "ReadMyCharacters(ctx context.Context, actor auth.Authority, spec character.MyCharactersSpec) (character.CharacterV2ListResult, error)",
         "ReadMyQuestRewards(ctx context.Context, actor auth.Authority, spec character.MyQuestRewardsSpec) (character.RewardEntitlementPage, error)",
         "ReadParticipationsByCharacter(ctx context.Context, actor auth.Authority, spec character.ParticipationsByCharacterSpec) (character.ParticipationPageView, error)",
-        "ReadPendingCharacterVerifications(ctx context.Context, actor auth.Authority, spec character.PendingCharacterVerificationsSpec) (character.CharacterV2ListResult, error)"
+        "ReadPendingCharacterVerifications(ctx context.Context, actor auth.Authority, spec character.PendingCharacterVerificationsSpec) (character.AdminCharacterDirectoryView, error)"
       ],
       "owner": "CHA02",
       "provider": "CHA04"
@@ -26036,7 +26045,7 @@
     },
     {
       "id": "READ-character-PendingCharacterVerifications",
-      "signature": "ReadPendingCharacterVerifications(ctx context.Context, actor auth.Authority, spec character.PendingCharacterVerificationsSpec) (character.CharacterV2ListResult, error)",
+      "signature": "ReadPendingCharacterVerifications(ctx context.Context, actor auth.Authority, spec character.PendingCharacterVerificationsSpec) (character.AdminCharacterDirectoryView, error)",
       "interface": "character.CharacterReadRepository",
       "provider": "CHA04",
       "callers": ["CHA05"],

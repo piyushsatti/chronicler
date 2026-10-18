@@ -85,7 +85,7 @@ SELECT character.public_id AS id, character.name, owner.public_id AS owner_id,
                   AND (latest.created_at IS NULL OR latest.created_at < character.verification_submitted_at)
             THEN 'PENDING'
             ELSE UPPER(COALESCE(latest.verdict, 'unknown')) END AS verification_status,
-       character.verification_submitted_at, character.updated_at
+       character.verification_submitted_at, character.ddb_url, character.updated_at
 FROM characters character
 JOIN members owner ON owner.id = character.owner_id
 LEFT JOIN regions region ON region.id = character.region_id
@@ -128,6 +128,7 @@ type CharacterProductAdminDirectoryRow struct {
 	GuildID                 pgtype.UUID        `json:"guild_id"`
 	VerificationStatus      interface{}        `json:"verification_status"`
 	VerificationSubmittedAt pgtype.Timestamptz `json:"verification_submitted_at"`
+	DdbUrl                  pgtype.Text        `json:"ddb_url"`
 	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
 }
 
@@ -160,6 +161,7 @@ func (q *Queries) CharacterProductAdminDirectory(ctx context.Context, arg Charac
 			&i.GuildID,
 			&i.VerificationStatus,
 			&i.VerificationSubmittedAt,
+			&i.DdbUrl,
 			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
@@ -1443,17 +1445,17 @@ func (q *Queries) CharacterProductMyCharacters(ctx context.Context, arg Characte
 }
 
 const characterProductPendingVerificationDirectory = `-- name: CharacterProductPendingVerificationDirectory :many
-SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
-       c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id, region.public_id AS region_id,
-       c.description, c.ddb_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
-       ddb.payload AS ddb_payload, ddb.synced_at AS ddb_synced_at,
-       c.verification_submitted_at, 'PENDING'::text AS verification_status
+SELECT c.public_id AS id, c.name, owner.public_id AS owner_id,
+       owner.handle AS owner_handle, owner.display_name AS owner_display_name,
+       owner.avatar_url AS owner_avatar_url, c.short_code, c.status,
+       region.public_id AS region_id, region.name AS region_name,
+       guild.public_id AS guild_id,
+       'PENDING'::text AS verification_status,
+       c.verification_submitted_at, c.ddb_url, c.updated_at
 FROM characters c
 JOIN members owner ON owner.id = c.owner_id
-LEFT JOIN backstories backstory ON backstory.id = c.backstory_id
 LEFT JOIN documents guild ON guild.id = c.guild_document_id
 LEFT JOIN regions region ON region.id = c.region_id
-LEFT JOIN character_ddb_mirrors ddb ON ddb.character_id = c.id
 LEFT JOIN LATERAL (
     SELECT verification.created_at
     FROM verifications verification
@@ -1475,22 +1477,20 @@ type CharacterProductPendingVerificationDirectoryParams struct {
 
 type CharacterProductPendingVerificationDirectoryRow struct {
 	ID                      pgtype.UUID        `json:"id"`
-	ShortCode               string             `json:"short_code"`
 	Name                    string             `json:"name"`
 	OwnerID                 pgtype.UUID        `json:"owner_id"`
+	OwnerHandle             string             `json:"owner_handle"`
+	OwnerDisplayName        string             `json:"owner_display_name"`
+	OwnerAvatarUrl          pgtype.Text        `json:"owner_avatar_url"`
+	ShortCode               string             `json:"short_code"`
 	Status                  string             `json:"status"`
-	BackstoryID             pgtype.UUID        `json:"backstory_id"`
-	GuildID                 pgtype.UUID        `json:"guild_id"`
 	RegionID                pgtype.UUID        `json:"region_id"`
-	Description             pgtype.Text        `json:"description"`
-	DdbUrl                  pgtype.Text        `json:"ddb_url"`
-	Pcxp                    int32              `json:"pcxp"`
-	CreatedAt               pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
-	DdbPayload              []byte             `json:"ddb_payload"`
-	DdbSyncedAt             pgtype.Timestamptz `json:"ddb_synced_at"`
-	VerificationSubmittedAt pgtype.Timestamptz `json:"verification_submitted_at"`
+	RegionName              pgtype.Text        `json:"region_name"`
+	GuildID                 pgtype.UUID        `json:"guild_id"`
 	VerificationStatus      string             `json:"verification_status"`
+	VerificationSubmittedAt pgtype.Timestamptz `json:"verification_submitted_at"`
+	DdbUrl                  pgtype.Text        `json:"ddb_url"`
+	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
 }
 
 func (q *Queries) CharacterProductPendingVerificationDirectory(ctx context.Context, arg CharacterProductPendingVerificationDirectoryParams) ([]CharacterProductPendingVerificationDirectoryRow, error) {
@@ -1504,22 +1504,20 @@ func (q *Queries) CharacterProductPendingVerificationDirectory(ctx context.Conte
 		var i CharacterProductPendingVerificationDirectoryRow
 		if err := rows.Scan(
 			&i.ID,
-			&i.ShortCode,
 			&i.Name,
 			&i.OwnerID,
+			&i.OwnerHandle,
+			&i.OwnerDisplayName,
+			&i.OwnerAvatarUrl,
+			&i.ShortCode,
 			&i.Status,
-			&i.BackstoryID,
-			&i.GuildID,
 			&i.RegionID,
-			&i.Description,
-			&i.DdbUrl,
-			&i.Pcxp,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DdbPayload,
-			&i.DdbSyncedAt,
-			&i.VerificationSubmittedAt,
+			&i.RegionName,
+			&i.GuildID,
 			&i.VerificationStatus,
+			&i.VerificationSubmittedAt,
+			&i.DdbUrl,
+			&i.UpdatedAt,
 		); err != nil {
 			return nil, err
 		}

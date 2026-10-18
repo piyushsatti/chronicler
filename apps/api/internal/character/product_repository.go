@@ -33,7 +33,7 @@ type CharacterReadRepository interface {
 	ReadMyCharacters(ctx context.Context, actor auth.Authority, spec MyCharactersSpec) (CharacterV2ListResult, error)
 	ReadMyQuestRewards(ctx context.Context, actor auth.Authority, spec MyQuestRewardsSpec) (RewardEntitlementPage, error)
 	ReadParticipationsByCharacter(ctx context.Context, actor auth.Authority, spec ParticipationsByCharacterSpec) (ParticipationPageView, error)
-	ReadPendingCharacterVerifications(ctx context.Context, actor auth.Authority, spec PendingCharacterVerificationsSpec) (CharacterV2ListResult, error)
+	ReadPendingCharacterVerifications(ctx context.Context, actor auth.Authority, spec PendingCharacterVerificationsSpec) (AdminCharacterDirectoryView, error)
 }
 
 type CharacterWriteRepository interface {

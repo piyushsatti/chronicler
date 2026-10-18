@@ -4313,9 +4313,9 @@
         "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
       }
     ],
-    "result_go_type": "character.CharacterV2ListResult",
-    "result_sdl_type": "CharacterV2ListResult!",
-    "signature": "func (s ProductQueries) PendingCharacterVerifications(ctx context.Context, actor auth.Authority, spec PendingCharacterVerificationsSpec) (character.CharacterV2ListResult, error)",
+    "result_go_type": "character.AdminCharacterDirectoryView",
+    "result_sdl_type": "AdminCharacterDirectoryV2Type!",
+    "signature": "func (s ProductQueries) PendingCharacterVerifications(ctx context.Context, actor auth.Authority, spec PendingCharacterVerificationsSpec) (character.AdminCharacterDirectoryView, error)",
     "owner_types_task": "CHA01",
     "owner_queries_commands_task": "CHA05"
   },

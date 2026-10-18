@@ -16,6 +16,7 @@ import (
 )
 
 type AdminCharacterDirectoryEntryView struct {
+	DdbUrl                  *string
 	GuildId                 *string
 	Id                      string
 	Name                    string
