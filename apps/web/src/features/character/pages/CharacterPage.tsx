@@ -9,11 +9,13 @@ import {
   type LifeStatus,
   type Status,
 } from '../../../components/foundation/StatusBadge.js';
-import { Tabs } from '../../../components/primitives/Tabs.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
+import { Tabs } from '../../../components/primitives/Tabs.js';
+import type { AppError } from '../../../errors/types.js';
 import { useMe } from '../../../hooks/useMe.js';
 import { canEditOwned } from '../../../utils/permissions.js';
 import { isSafeDdbUrl } from '../../../utils/url.js';
+import type { CharacterViewModel } from '../adapters/characterAdapter.js';
 import { OwnerActions } from '../components/OwnerActions.js';
 import { useCharacterPage } from '../hooks/useCharacterPage.js';
 import {
@@ -22,6 +24,7 @@ import {
   useCharacterProgression,
   useCharacterSummaries,
 } from '../hooks/useCharacterTabs.js';
+import styles from './characterDetail.module.css';
 
 const DECLARATION: PageDeclaration = {
   page: 'character',
@@ -30,6 +33,23 @@ const DECLARATION: PageDeclaration = {
     { role: 'tabs', priority: 2 },
   ],
 };
+
+function emptyRegion(): React.JSX.Element {
+  return <div hidden />;
+}
+
+function lifeBadge(status: string): Status {
+  const raw = (status || 'active').toLowerCase();
+  return (LIFE_STATUS_VALUES as readonly string[]).includes(raw)
+    ? (raw as LifeStatus)
+    : 'active';
+}
+
+function tokenLabel(character: CharacterViewModel): string {
+  const fromIcon = character.displayIcon?.trim();
+  if (fromIcon) return fromIcon.slice(0, 2);
+  return (character.name.slice(0, 1) || '?').slice(0, 2);
+}
 
 function ProgressionPanel({ characterId }: { characterId: string }): React.JSX.Element {
   const progression = useCharacterProgression(characterId);
@@ -40,10 +60,14 @@ function ProgressionPanel({ characterId }: { characterId: string }): React.JSX.E
     return <StatePanel status="loading" />;
   }
   if (progression.status === 'empty') {
-    return <EmptyState kind="generic" message="No progression entries." />;
+    return (
+      <p className={styles.emptyNote} data-el="character.progressionEmpty">
+        No progression entries yet.
+      </p>
+    );
   }
   return (
-    <ul className="stack">
+    <ul className={styles.tabList} data-el="character.progressionReady">
       {progression.items.map((entry, index) => (
         <li key={`${entry.amount}-${index}`}>
           <span className="type-title">+{entry.amount} PCXP</span>
@@ -61,12 +85,16 @@ function HistoryPanel({ characterId }: { characterId: string }): React.JSX.Eleme
   }
   if (history.status === 'loading') return <StatePanel status="loading" />;
   if (history.status === 'empty') {
-    return <EmptyState kind="generic" message="No quest history yet." />;
+    return (
+      <p className={styles.emptyNote} data-el="character.historyEmpty">
+        No quest history yet.
+      </p>
+    );
   }
   return (
-    <ul className="stack">
+    <ul className={styles.tabList} data-el="character.historyReady">
       {history.items.map((row) => (
-        <li key={row.key} className="card stack">
+        <li key={row.key}>
           <p className="type-title">{row.label}</p>
           <p className="type-caption">
             {[row.status, row.scheduledAt].filter(Boolean).join(' · ')}
@@ -86,12 +114,16 @@ function ConnectionsPanel({ characterId }: { characterId: string }): React.JSX.E
     return <StatePanel status="loading" />;
   }
   if (connections.status === 'empty') {
-    return <EmptyState kind="generic" message="No co-players recorded yet." />;
+    return (
+      <p className={styles.emptyNote} data-el="character.connectionsEmpty">
+        No co-players recorded yet.
+      </p>
+    );
   }
   return (
-    <ul className="stack">
+    <ul className={styles.tabList} data-el="character.connectionsReady">
       {connections.items.map((row) => (
-        <li key={row.key} className="card stack">
+        <li key={row.key}>
           <p className="type-title">{row.label}</p>
           {row.sharedQuests != null ? (
             <p className="type-caption">{row.sharedQuests} shared quests</p>
@@ -109,12 +141,16 @@ function SummariesPanel({ characterId }: { characterId: string }): React.JSX.Ele
   }
   if (summaries.status === 'loading') return <StatePanel status="loading" />;
   if (summaries.status === 'empty') {
-    return <EmptyState kind="generic" message="No summaries yet." />;
+    return (
+      <p className={styles.emptyNote} data-el="character.summariesEmpty">
+        No summaries yet.
+      </p>
+    );
   }
   return (
-    <ul className="stack">
+    <ul className={styles.tabList} data-el="character.summariesReady">
       {summaries.items.map((row) => (
-        <li key={row.key} className="card stack">
+        <li key={row.key}>
           {row.href ? (
             <Link className="type-title" to={row.href}>
               {row.title}
@@ -131,85 +167,79 @@ function SummariesPanel({ characterId }: { characterId: string }): React.JSX.Ele
   );
 }
 
-export function CharacterPage(): React.JSX.Element {
-  const { code = '' } = useParams();
-  const page = useCharacterPage(code);
-  const me = useMe();
-  const characterId = page.status === 'ready' ? page.view.id : '';
+function readyRegions(
+  character: CharacterViewModel,
+  opts: { showOwner: boolean },
+): PageRegionRenderers {
+  const badge = lifeBadge(character.status);
+  const safeDdb = isSafeDdbUrl(character.ddbUrl) ? character.ddbUrl : null;
 
-  if (page.status === 'error') {
-    return (
-      <PageShell title="Character">
-        <StatePanel status="error" error={page.error} />
-      </PageShell>
-    );
-  }
-  if (page.status === 'loading' || page.status === 'empty') {
-    return (
-      <PageShell title="Character">
-        <StatePanel
-          status={page.status === 'empty' ? 'empty' : 'loading'}
-          emptyMessage="Character not found."
-        />
-      </PageShell>
-    );
-  }
-
-  const c = page.view;
-  const showOwner = canEditOwned(me.data?.id, c.ownerId, me.data?.roles);
-  const rawStatus = (c.status || 'active').toLowerCase();
-  const lifeStatus: Status = (LIFE_STATUS_VALUES as readonly string[]).includes(
-    rawStatus,
-  )
-    ? (rawStatus as LifeStatus)
-    : 'active';
-  const tokenLabel = (c.displayIcon || c.name.slice(0, 1) || '?').slice(0, 2);
-  const safeDdb = isSafeDdbUrl(c.ddbUrl) ? c.ddbUrl : null;
-  const regions: PageRegionRenderers = {
+  return {
     profile: () => (
-      <div className="stack">
-        <header className="phead" data-el="character.phead">
-          <div className="token" aria-hidden>
-            {tokenLabel}
+      <header className={styles.hero} data-el="character.profile">
+        <div className={styles.heroRow}>
+          <div className={styles.token} aria-hidden>
+            {tokenLabel(character)}
           </div>
-          <div className="phead__body stack">
-            <p className="type-caption">{c.shortCode}</p>
-            <div className="row" data-gap="2" data-wrap="1">
-              <StatusBadge status={lifeStatus} />
-              {c.verificationStatus ? (
+          <div className={styles.heroBody}>
+            <p className="eyebrow">{character.shortCode}</p>
+            <h1 className="type-display">{character.name}</h1>
+            <div className={styles.meta}>
+              <StatusBadge status={badge} />
+              {character.verificationStatus ? (
                 <span className="chip" data-el="character.verificationStatus">
-                  {c.verificationStatus}
+                  {character.verificationStatus}
                 </span>
               ) : null}
+              {character.regionName ? (
+                <p className="type-caption" data-el="character.region">
+                  Region · {character.regionName}
+                </p>
+              ) : null}
             </div>
-            {c.regionName ? (
-              <p className="type-caption" data-el="character.region">
-                Region · {c.regionName}
+            {safeDdb ? (
+              <div className={styles.actionRow}>
+                <a
+                  className="btn"
+                  href={safeDdb}
+                  rel="noopener noreferrer"
+                  target="_blank"
+                  data-el="character.ddbLink"
+                >
+                  D&amp;D Beyond
+                </a>
+              </div>
+            ) : (
+              <p className={styles.emptyNote} data-el="character.ddbMissing">
+                No D&amp;D Beyond link on file.
               </p>
-            ) : null}
+            )}
           </div>
-          {safeDdb ? (
-            <div className="phead__actions">
-              <a className="btn" href={safeDdb} rel="noopener noreferrer" target="_blank">
-                D&amp;D Beyond
-              </a>
-            </div>
-          ) : null}
-        </header>
-        <section className="card stack" aria-labelledby="backstory-heading">
+        </div>
+        <section className={styles.narrative} aria-labelledby="backstory-heading">
           <h2 id="backstory-heading" className="type-heading">
             Backstory
           </h2>
-          <p className="type-body">{c.backstoryName ?? 'Unknown backstory'}</p>
+          <p className="type-body">{character.backstoryName ?? 'Unknown backstory'}</p>
         </section>
-        {c.description ? (
-          <section className="card stack">
-            <h2 className="type-heading">Description</h2>
-            <p className="type-body">{c.description}</p>
+        {character.description ? (
+          <section className={styles.narrative} aria-labelledby="description-heading">
+            <h2 id="description-heading" className="type-heading">
+              Description
+            </h2>
+            <p className="type-narrative">{character.description}</p>
           </section>
+        ) : (
+          <p className={styles.emptyNote} data-el="character.descriptionEmpty">
+            No description yet.
+          </p>
+        )}
+        {opts.showOwner ? (
+          <div className={styles.ownerShelf}>
+            <OwnerActions character={character} />
+          </div>
         ) : null}
-        {showOwner ? <OwnerActions character={c} /> : null}
-      </div>
+      </header>
     ),
     tabs: () => (
       <Tabs
@@ -217,31 +247,67 @@ export function CharacterPage(): React.JSX.Element {
           {
             id: 'progression',
             label: 'Progression',
-            panel: <ProgressionPanel characterId={characterId} />,
+            panel: <ProgressionPanel characterId={character.id} />,
           },
           {
             id: 'history',
             label: 'Quest history',
-            panel: <HistoryPanel characterId={characterId} />,
+            panel: <HistoryPanel characterId={character.id} />,
           },
           {
             id: 'connections',
             label: 'Connections',
-            panel: <ConnectionsPanel characterId={characterId} />,
+            panel: <ConnectionsPanel characterId={character.id} />,
           },
           {
             id: 'summaries',
             label: 'Summaries',
-            panel: <SummariesPanel characterId={characterId} />,
+            panel: <SummariesPanel characterId={character.id} />,
           },
         ]}
       />
     ),
   };
+}
+
+function statusRegions(
+  status: 'error' | 'loading' | 'empty',
+  error?: AppError,
+): PageRegionRenderers {
+  return {
+    profile: () =>
+      status === 'error' ? (
+        <StatePanel status="error" error={error} />
+      ) : status === 'loading' ? (
+        <StatePanel status="loading" />
+      ) : (
+        <EmptyState kind="not-found" message="That character is not on the roster." />
+      ),
+    tabs: emptyRegion,
+  };
+}
+
+export function CharacterPage(): React.JSX.Element {
+  const { code = '' } = useParams();
+  const page = useCharacterPage(code);
+  const me = useMe();
+
+  const regions: PageRegionRenderers =
+    page.status === 'error'
+      ? statusRegions('error', page.error)
+      : page.status === 'loading'
+        ? statusRegions('loading')
+        : page.status === 'empty'
+          ? statusRegions('empty')
+          : readyRegions(page.view, {
+              showOwner: canEditOwned(me.data?.id, page.view.ownerId, me.data?.roles),
+            });
 
   return (
-    <PageShell title={c.name}>
-      <PageHost declaration={DECLARATION} regions={regions} />
+    <PageShell>
+      <div className={`ctx-rpg ${styles.root}`} data-el="character.detail">
+        <PageHost declaration={DECLARATION} regions={regions} />
+      </div>
     </PageShell>
   );
 }

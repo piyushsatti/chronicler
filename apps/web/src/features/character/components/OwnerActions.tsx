@@ -1,7 +1,6 @@
 import { useOwnerActions } from '../hooks/useOwnerActions.js';
 import type { CharacterViewModel } from '../types.js';
 import { Button } from '../../../components/primitives/Button.js';
-import { Card } from '../../../components/primitives/Card.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 
 export function OwnerActions({
@@ -11,8 +10,10 @@ export function OwnerActions({
 }): React.JSX.Element {
   const actions = useOwnerActions({ character });
   return (
-    <Card className="stack" data-el="character.ownerActions">
-      <h2 className="type-heading">Owner actions</h2>
+    <section className="stack" data-el="character.ownerActions" aria-labelledby="owner-actions-heading">
+      <h2 id="owner-actions-heading" className="type-heading">
+        Owner actions
+      </h2>
       <p className="type-caption">
         Verification: {character.verificationStatus ?? 'unknown'}
       </p>
@@ -31,6 +32,7 @@ export function OwnerActions({
           className="field"
           value={actions.ddbUrl}
           onChange={(e) => actions.setDdbUrl(e.target.value)}
+          placeholder="Optional — syncs when set"
         />
       </label>
       <div className="row" data-wrap="1">
@@ -58,6 +60,6 @@ export function OwnerActions({
       </div>
       {actions.message ? <p className="type-caption">{actions.message}</p> : null}
       {actions.error ? <StatePanel status="error" error={actions.error} /> : null}
-    </Card>
+    </section>
   );
 }

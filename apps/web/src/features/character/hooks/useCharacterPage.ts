@@ -19,8 +19,11 @@ export function useCharacterPage(shortCode: string): PageData<CharacterViewModel
     queryFn: () => loadCharacter({ shortCode }),
     enabled: Boolean(shortCode),
   });
-  if (q.isError)
-    return { status: 'error', error: toAppError(q.error, 'character:page') };
+  if (q.isError) {
+    const error = toAppError(q.error, 'character:page');
+    if (error.kind === 'not_found') return { status: 'empty' };
+    return { status: 'error', error };
+  }
   if (q.isLoading || !q.data) return { status: 'loading' };
   return { status: 'ready', view: q.data };
 }

@@ -69,5 +69,18 @@ describe('OwnerActions', () => {
       characterId: character.id,
       input: { description: 'New description' },
     });
+    expect(submitted).not.toMatchObject({
+      input: expect.objectContaining({
+        ddbUrl: expect.anything(),
+        displayIcon: expect.anything(),
+      }),
+    });
+  });
+
+  it('does not offer a displayIcon control (schema limit)', () => {
+    renderWithProviders(<OwnerActions character={character} />);
+    expect(screen.queryByLabelText(/display icon/i)).not.toBeInTheDocument();
+    expect(screen.getByLabelText('D&D Beyond URL')).toBeInTheDocument();
   });
 });
+

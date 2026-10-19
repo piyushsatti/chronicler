@@ -45,4 +45,23 @@ describe('useCharacterPage', () => {
       );
     }
   });
+
+  it('maps missing character to empty', async () => {
+    server.use(
+      http.post(GRAPHQL_PATH, async ({ request }) => {
+        const body = (await request.json()) as { query?: string };
+        const name = body.query?.match(/\b(query|mutation)\s+(\w+)/)?.[2];
+        if (name === 'Character') {
+          return HttpResponse.json({ data: { character: null } });
+        }
+        return HttpResponse.json({
+          errors: [{ message: 'Unhandled', extensions: { code: 'UNHANDLED' } }],
+        });
+      }),
+    );
+    const { result } = renderHook(() => useCharacterPage('C-404'), { wrapper });
+    await waitFor(() => {
+      expect(result.current.status).toBe('empty');
+    });
+  });
 });
