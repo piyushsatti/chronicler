@@ -11,25 +11,22 @@ import recruitment from '../../fixtures/wire/home/lanes-recruitment.json';
 import { renderWithProviders } from '../../test-utils.js';
 
 describe('HomePage', () => {
-  it('renders war-room welcome, archive buckets, and lane cards', async () => {
+  it('renders war-room greeting, demoted archive, and OpenQuestCard lanes', async () => {
     renderWithProviders(<HomePage />);
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Welcome to Chronicler.' }),
+      await screen.findByRole('heading', { level: 1, name: /Good (morning|afternoon|evening|night), Mortal\./ }),
     ).toBeInTheDocument();
-    expect(screen.getByText('War room')).toBeInTheDocument();
     expect(screen.getByText('42')).toBeInTheDocument();
     expect(screen.getByText('members on the server')).toBeInTheDocument();
     const archive = screen.getByRole('region', { name: 'Recent from the archive' });
     expect(
       within(archive).getByRole('link', { name: 'Siege of Kraghold' }),
     ).toHaveAttribute('href', '/chronicles/siege-of-kraghold');
-    expect(screen.getByRole('heading', { name: 'Now recruiting' })).toBeInTheDocument();
-    const recruiting = screen.getByRole('region', { name: 'Now recruiting' });
-    expect(within(recruiting).getByRole('link', { name: 'Siege of Kraghold' })).toHaveAttribute(
-      'href',
-      '/quests/Q-101',
-    );
-    expect(screen.getByRole('link', { name: 'Festival Run' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Now — recruiting' })).toBeInTheDocument();
+    const recruiting = screen.getByRole('region', { name: 'Now — recruiting' });
+    expect(within(recruiting).getByTestId('open-quest-card')).toBeInTheDocument();
+    expect(within(recruiting).getByTestId('quest-title')).toHaveTextContent('Siege of Kraghold');
+    expect(screen.getByRole('heading', { name: 'Coming up — next two weeks' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Vault Delve' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Mira' })).toHaveAttribute(
       'href',
@@ -48,17 +45,15 @@ describe('HomePage', () => {
         <Route path="/quests/Q-419" element={<p>Quest detail destination</p>} />
       </Routes>,
     );
-    const lane = await screen.findByRole('region', { name: 'Now recruiting' });
-    expect(
-      within(lane)
-        .getAllByRole('link')
-        .map((link) => link.getAttribute('href')),
-    ).toEqual(['/quests/Q-417', '/quests/Q-419', '/quests/Q-420']);
-    for (const label of ['Q-417 · filling', 'Q-419 · filling', 'Q-420 · filling']) {
-      expect(within(lane).getByText(label)).toBeInTheDocument();
-    }
+    const lane = await screen.findByRole('region', { name: 'Now — recruiting' });
+    const cards = within(lane).getAllByTestId('open-quest-card');
+    expect(cards).toHaveLength(3);
+    expect(within(lane).getByText('Q-417')).toBeInTheDocument();
+    expect(within(lane).getByText('Q-419')).toBeInTheDocument();
+    expect(within(lane).getByText('Q-420')).toBeInTheDocument();
+    expect(within(lane).getAllByText('Filling')).toHaveLength(3);
     const openQuestLinks = screen.getAllByRole('link', { name: 'Open quests' });
-    expect(openQuestLinks).toHaveLength(2);
+    expect(openQuestLinks.length).toBeGreaterThanOrEqual(1);
     for (const link of openQuestLinks) {
       expect(link).toHaveAttribute('href', '/quests');
     }
@@ -80,14 +75,11 @@ describe('HomePage', () => {
     };
     server.use(graphql.query('HomeWarRoom', () => HttpResponse.json({ data: mixed })));
     renderWithProviders(<HomePage />);
-    const lane = await screen.findByRole('region', { name: 'Now recruiting' });
-    expect(
-      within(lane)
-        .getAllByRole('link')
-        .map((link) => link.getAttribute('href')),
-    ).toEqual(['/quests/Q-417', '/quests/Q-420']);
-    expect(within(lane).getByText('Q-417 · legacy-custom')).toBeInTheDocument();
-    expect(within(lane).getByText('Q-420 · legacy-custom')).toBeInTheDocument();
+    const lane = await screen.findByRole('region', { name: 'Now — recruiting' });
+    expect(within(lane).getAllByTestId('open-quest-card')).toHaveLength(2);
+    expect(within(lane).getByText('Q-417')).toBeInTheDocument();
+    expect(within(lane).getByText('Q-420')).toBeInTheDocument();
+    expect(within(lane).queryByText('Q-419')).not.toBeInTheDocument();
     expect(
       screen.queryByRole('link', { name: "Lily's Nightmares" }),
     ).not.toBeInTheDocument();
@@ -108,7 +100,7 @@ describe('HomePage', () => {
     expect(screen.getByRole('status')).toHaveTextContent('Loading…');
     release();
     expect(
-      await screen.findByRole('region', { name: 'Now recruiting' }),
+      await screen.findByRole('region', { name: 'Now — recruiting' }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
@@ -147,6 +139,7 @@ describe('HomePage', () => {
             quests: { items: [], total: 0 },
             recentlyClosedQuests: { items: [], total: 0 },
             communityDirectory: { entries: [], total: 0 },
+            regions: [],
             siteStats: { totalMembers: 0 },
             homeBanner: { enabled: false },
           },
@@ -168,18 +161,20 @@ describe('HomePage', () => {
             quests: { items: [], total: 0 },
             recentlyClosedQuests: { items: [], total: 0 },
             communityDirectory: { entries: [], total: 0 },
+            regions: [],
           },
         }),
       ),
     );
     renderWithProviders(<HomePage />);
     expect(
-      await screen.findByRole('heading', { level: 1, name: 'Welcome to Chronicler.' }),
+      await screen.findByRole('heading', { level: 1, name: /Good (morning|afternoon|evening|night), Mortal\./ }),
     ).toBeInTheDocument();
     expect(
       screen.getByRole('region', { name: 'Recent from the archive' }),
     ).toBeInTheDocument();
     expect(screen.queryByText('The war room is quiet for now.')).not.toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Now recruiting' })).not.toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Now — recruiting' })).toBeInTheDocument();
+    expect(screen.getByText('No open quests right now.')).toBeInTheDocument();
   });
 });

@@ -3,11 +3,15 @@ import { graphqlRequest } from '../../../api/graphql.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import LANES_QUERY from './homeWarRoom.graphql?raw';
 import type { AdapterResult } from '../../../errors/types.js';
-import type { QuestCardView } from '../../../components/domain/QuestCard.js';
 import {
   communityDirectoryWireSchema,
   questListWireSchema,
+  regionCatalogWireSchema,
 } from './homeLanes.wire.schema.js';
+import type { QuestCardStatus } from '../../../view-models/questCard.js';
+import { toCardStatus } from '../../../view-models/questCard.js';
+import { formatScheduled } from '../../../utils/format.js';
+import type { OpenQuestCardProps } from '../components/openQuestCard.types.js';
 
 export type DmAcceptingView = {
   memberId: string;
@@ -16,8 +20,41 @@ export type DmAcceptingView = {
   tagline: string | null;
 };
 
-export type HomeQuestView = QuestCardView & {
+export type HomeQuestParticipantView = {
+  memberId: string;
+  characterId: string;
+  characterName: string;
+  memberHandle: string;
+  memberAvatarUrl: string | null;
+  status: string;
+};
+
+export type HomeQuestView = {
+  id: string;
+  shortCode: string;
+  title: string;
+  hookText: string | null;
+  status: string;
   machineStatus: string;
+  cardStatus: QuestCardStatus;
+  scheduledAt: string;
+  slotsMax: number;
+  filledCount: number;
+  tags: string[];
+  regionIds: string[];
+  regionName: string | null;
+  dmHandle: string | null;
+  dmDisplayName: string | null;
+  dmAvatarUrl: string | null;
+  participants: HomeQuestParticipantView[];
+  waitlistCount: number;
+  dmName: string | null;
+  discordDelivery: {
+    desiredRevision: number;
+    appliedRevision: number;
+    overallStatus: string;
+    isTerminal: boolean;
+  };
 };
 
 export type HomeLanesViewModel = {
@@ -28,19 +65,47 @@ export type HomeLanesViewModel = {
 };
 
 const TERMINAL_DELIVERY = new Set(['applied', 'failed', 'cancelled', 'skipped']);
+const SEATED = new Set(['signed_up', 'played', 'selected']);
+
+type WireQuestItem = (typeof questListWireSchema)['_output']['items'][number];
 
 function mapQuestItem(
-  item: (typeof questListWireSchema)['_output']['items'][number],
+  item: WireQuestItem,
+  regionNameById: Map<string, string>,
 ): HomeQuestView {
   const status = item.displayStatus ?? item.status;
   const deliveryStatus = item.discordDelivery.overallStatus.toLowerCase();
+  const participants: HomeQuestParticipantView[] = item.participants.map((p) => ({
+    memberId: p.memberId,
+    characterId: p.characterId,
+    characterName: p.characterName,
+    memberHandle: p.memberHandle,
+    memberAvatarUrl: p.memberAvatarUrl ?? null,
+    status: p.status,
+  }));
+  const waitlistCount = participants.filter((p) => p.status === 'waitlisted').length;
+  const regionName =
+    item.regions.map((id) => regionNameById.get(id)).find(Boolean) ?? null;
+
   return {
+    id: item.id,
     shortCode: item.shortCode,
     title: item.briefDocument?.title ?? item.shortCode,
+    hookText: item.briefDocument?.effectiveBody ?? null,
     status,
     machineStatus: item.status,
+    cardStatus: toCardStatus(item.displayStatus ?? null, item.status),
+    scheduledAt: item.scheduledAt,
     slotsMax: item.slotsMax,
     filledCount: item.filledCount,
+    tags: item.tags,
+    regionIds: item.regions,
+    regionName,
+    dmHandle: item.dm?.handle ?? null,
+    dmDisplayName: item.dm?.displayName ?? null,
+    dmAvatarUrl: item.dm?.avatarUrl ?? null,
+    participants,
+    waitlistCount,
     dmName: item.dm?.displayName ?? item.dm?.handle ?? null,
     discordDelivery: {
       desiredRevision: item.discordDelivery.desiredRevision,
@@ -53,12 +118,18 @@ function mapQuestItem(
   };
 }
 
-function parseQuestList(wire: unknown): AdapterResult<HomeQuestView[]> {
+function parseQuestList(
+  wire: unknown,
+  regionNameById: Map<string, string>,
+): AdapterResult<HomeQuestView[]> {
   const parsed = questListWireSchema.safeParse(wire);
   if (!parsed.success) {
     return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
   }
-  return { ok: true, data: parsed.data.items.map(mapQuestItem) };
+  return {
+    ok: true,
+    data: parsed.data.items.map((item) => mapQuestItem(item, regionNameById)),
+  };
 }
 
 function parseCommunity(wire: unknown): AdapterResult<DmAcceptingView[]> {
@@ -76,6 +147,17 @@ function parseCommunity(wire: unknown): AdapterResult<DmAcceptingView[]> {
         displayName: e.displayName,
         tagline: e.tagline ?? null,
       })),
+  };
+}
+
+function parseRegionCatalog(wire: unknown): AdapterResult<Map<string, string>> {
+  const parsed = regionCatalogWireSchema.safeParse(wire ?? []);
+  if (!parsed.success) {
+    return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
+  }
+  return {
+    ok: true,
+    data: new Map(parsed.data.map((r) => [r.id, r.name])),
   };
 }
 
@@ -101,12 +183,15 @@ export function parseHomeLanesWire(wire: {
   quests: unknown;
   recentlyClosedQuests: unknown;
   communityDirectory: unknown;
+  regions?: unknown;
 }): AdapterResult<HomeLanesViewModel> {
-  const recruiting = parseQuestList(wire.questBoard);
+  const catalog = parseRegionCatalog(wire.regions);
+  if (!catalog.ok) return catalog;
+  const recruiting = parseQuestList(wire.questBoard, catalog.data);
   if (!recruiting.ok) return recruiting;
-  const upcoming = parseQuestList(wire.quests);
+  const upcoming = parseQuestList(wire.quests, catalog.data);
   if (!upcoming.ok) return upcoming;
-  const recentlyClosed = parseQuestList(wire.recentlyClosedQuests);
+  const recentlyClosed = parseQuestList(wire.recentlyClosedQuests, catalog.data);
   if (!recentlyClosed.ok) return recentlyClosed;
   const dmsAccepting = parseCommunity(wire.communityDirectory);
   if (!dmsAccepting.ok) return dmsAccepting;
@@ -118,6 +203,49 @@ export function parseHomeLanesWire(wire: {
       recentlyClosed: recentlyClosed.data,
       dmsAccepting: dmsAccepting.data,
     },
+  };
+}
+
+/** Map a home quest lane item into OpenQuestCard presentation props. */
+export function mapToOpenQuestCardProps(
+  quest: HomeQuestView,
+  opts: {
+    animIndex?: number;
+    myCharacterIds?: ReadonlySet<string>;
+    isMutating?: boolean;
+    onWithdrawConfirm?: () => void;
+  } = {},
+): OpenQuestCardProps {
+  const myCharacterIds = opts.myCharacterIds ?? new Set<string>();
+  const seated = quest.participants.filter((p) => SEATED.has(p.status));
+  const mine = seated.some((p) => myCharacterIds.has(p.characterId));
+  const isGw =
+    quest.tags.some((t) => t.toLowerCase().includes('guild-quest')) ||
+    quest.title.startsWith(':gw:');
+
+  return {
+    code: quest.shortCode,
+    title: quest.title,
+    description: quest.hookText,
+    region: quest.regionName ?? undefined,
+    status: quest.cardStatus,
+    gw: isGw,
+    cancelled: quest.cardStatus === 'cancelled',
+    mine,
+    isMutating: opts.isMutating,
+    onWithdrawConfirm: opts.onWithdrawConfirm,
+    animIndex: opts.animIndex,
+    dm: {
+      name: quest.dmDisplayName ?? quest.dmHandle ?? '—',
+      avatarUrl: quest.dmAvatarUrl ?? undefined,
+    },
+    party: seated.map((p) => ({
+      name: p.characterName,
+      avatarUrl: p.memberAvatarUrl ?? undefined,
+      state: 'confirmed' as const,
+    })),
+    totalSlots: quest.slotsMax,
+    when: formatScheduled(quest.scheduledAt),
   };
 }
 

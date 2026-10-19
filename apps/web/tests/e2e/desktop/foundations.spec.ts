@@ -79,7 +79,10 @@ for (const theme of THEMES) {
 
     expect(page.viewportSize()).toEqual({ width: 1920, height: 1080 });
     await expect(
-      page.getByRole('heading', { name: 'Welcome to Chronicler.' }),
+      page.getByRole('heading', {
+        level: 1,
+        name: /Good (morning|afternoon|evening|night), Mortal\./,
+      }),
     ).toBeVisible();
     await expect(page.getByRole('link', { name: 'Siege of Kraghold' })).toBeVisible();
 
@@ -161,7 +164,10 @@ test('parchment light and midnight dark paint distinct page backgrounds', async 
   });
   await page.reload();
   await expect(
-    page.getByRole('heading', { name: 'Welcome to Chronicler.' }),
+    page.getByRole('heading', {
+      level: 1,
+      name: /Good (morning|afternoon|evening|night), Mortal\./,
+    }),
   ).toBeVisible();
   const midnightBackground = await page
     .locator('body')

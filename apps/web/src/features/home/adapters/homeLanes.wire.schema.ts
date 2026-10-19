@@ -6,6 +6,15 @@ const discordDeliveryWireSchema = z.object({
   overallStatus: z.string().min(1),
 });
 
+const participantWireSchema = z.object({
+  memberId: z.string().uuid(),
+  characterId: z.string().uuid(),
+  characterName: z.string(),
+  memberHandle: z.string(),
+  memberAvatarUrl: z.string().nullable().optional(),
+  status: z.string().min(1),
+});
+
 const questBoardItemWireSchema = z.object({
   id: z.string().uuid(),
   shortCode: z.string().min(1),
@@ -14,10 +23,13 @@ const questBoardItemWireSchema = z.object({
   slotsMax: z.number().int(),
   filledCount: z.number().int(),
   displayStatus: z.string().nullable().optional(),
+  tags: z.array(z.string()).optional().default([]),
+  regions: z.array(z.string().uuid()).optional().default([]),
   dm: z
     .object({
       handle: z.string(),
       displayName: z.string(),
+      avatarUrl: z.string().nullable().optional(),
     })
     .nullable()
     .optional(),
@@ -26,9 +38,11 @@ const questBoardItemWireSchema = z.object({
       id: z.string().uuid(),
       slug: z.string(),
       title: z.string(),
+      effectiveBody: z.string().nullable().optional(),
     })
     .nullable()
     .optional(),
+  participants: z.array(participantWireSchema).optional().default([]),
   discordDelivery: discordDeliveryWireSchema,
 });
 
@@ -50,3 +64,10 @@ export const communityDirectoryWireSchema = z.object({
   entries: z.array(communityEntryWireSchema),
   total: z.number().int().nonnegative(),
 });
+
+export const regionCatalogWireSchema = z.array(
+  z.object({
+    id: z.string().uuid(),
+    name: z.string().min(1),
+  }),
+);

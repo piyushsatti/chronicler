@@ -12,7 +12,7 @@ const DECLARATION: PageDeclaration = {
 export function QuestBoardPage(): React.JSX.Element {
   const page = useQuestBoardPage();
   return (
-    <PageShell>
+    <PageShell context="tavern" max="wide" className="hf2">
       <PageHost
         declaration={DECLARATION}
         regions={{ body: () => <QuestBoardView {...page} /> }}

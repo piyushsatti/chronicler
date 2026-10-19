@@ -23,7 +23,57 @@ describe('parseQuestBoard', () => {
     if (result.ok) {
       expect(result.data[0]?.title).toBe('Siege of Kraghold');
       expect(result.data[0]?.discordDelivery.isTerminal).toBe(false);
+      expect(result.data[0]?.cardStatus).toBe('open');
+      expect(result.data[0]?.waitlistCount).toBe(0);
+      expect(result.data[0]?.participants).toEqual([]);
     }
+  });
+
+  it('maps hook, regions, party, and waitlist from richer wire', () => {
+    const regionId = '11111111-1111-4111-8111-111111111111';
+    const result = parseQuestBoard(
+      {
+        total: 1,
+        items: [
+          {
+            ...boardGood.items[0],
+            regions: [regionId],
+            tags: ['guild-quest'],
+            briefDocument: {
+              ...boardGood.items[0].briefDocument,
+              effectiveBody: 'Hook blurb',
+            },
+            participants: [
+              {
+                memberId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                characterId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+                characterName: 'Rook',
+                memberHandle: 'rook',
+                memberAvatarUrl: null,
+                status: 'signed_up',
+              },
+              {
+                memberId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+                characterId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+                characterName: 'Wait',
+                memberHandle: 'wait',
+                memberAvatarUrl: null,
+                status: 'waitlisted',
+              },
+            ],
+          },
+        ],
+      },
+      new Map([[regionId, 'The Marches']]),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data[0]).toMatchObject({
+      hookText: 'Hook blurb',
+      regionName: 'The Marches',
+      waitlistCount: 1,
+    });
+    expect(result.data[0]?.participants).toHaveLength(2);
   });
 
   it('preserves all six recruiting identities, order, and distinct display labels', () => {

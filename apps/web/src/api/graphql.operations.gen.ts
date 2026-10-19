@@ -535,7 +535,7 @@ export type ChronicleListQueryVariables = Exact<{
 }>;
 
 
-export type ChronicleListQuery = { documents: { total: number, items: Array<{ id: string, slug: string, kind: string, category: string | null, title: string, effectiveBody: string | null, author: { handle: string } | null }> } };
+export type ChronicleListQuery = { documents: { total: number, items: Array<{ id: string, slug: string, category: string | null, title: string, frontmatter: unknown, updatedAt: string, author: { handle: string } | null, summaryDerived: { occurredAt: string | null, arc: string | null, gameDay: number | null, regions: Array<{ id: string, name: string }>, dms: Array<{ id: string, displayName: string }>, gameDate: { eraAbbrev: string, year: number, periodName: string, periodIndex: number, periodType: string, day: number } | null } | null }> } };
 
 export type CodexDirectoryQueryVariables = Exact<{
   categoryPrefix?: string | null | undefined;
@@ -711,7 +711,7 @@ export type HomeWarRoomQueryVariables = Exact<{
 }>;
 
 
-export type HomeWarRoomQuery = { questBoard: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, slotsMax: number, filledCount: number, displayStatus: string | null, dm: { handle: string, displayName: string } | null, briefDocument: { id: string, slug: string, title: string } | null, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string } }> }, quests: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, slotsMax: number, filledCount: number, displayStatus: string | null, dm: { handle: string, displayName: string } | null, briefDocument: { id: string, slug: string, title: string } | null, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string } }> }, recentlyClosedQuests: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, slotsMax: number, filledCount: number, displayStatus: string | null, dm: { handle: string, displayName: string } | null, briefDocument: { id: string, slug: string, title: string } | null, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string } }> }, communityDirectory: { total: number, entries: Array<{ memberId: string, handle: string, displayName: string, tagline: string | null, acceptingPlayers: boolean | null, isDm: boolean }> } };
+export type HomeWarRoomQuery = { questBoard: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, slotsMax: number, filledCount: number, displayStatus: string | null, tags: Array<string>, regions: Array<string>, dm: { handle: string, displayName: string, avatarUrl: string | null } | null, briefDocument: { id: string, slug: string, title: string, effectiveBody: string | null } | null, participants: Array<{ memberId: string, characterId: string, characterName: string, memberHandle: string, memberAvatarUrl: string | null, status: string }>, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string } }> }, quests: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, slotsMax: number, filledCount: number, displayStatus: string | null, tags: Array<string>, regions: Array<string>, dm: { handle: string, displayName: string, avatarUrl: string | null } | null, briefDocument: { id: string, slug: string, title: string, effectiveBody: string | null } | null, participants: Array<{ memberId: string, characterId: string, characterName: string, memberHandle: string, memberAvatarUrl: string | null, status: string }>, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string } }> }, recentlyClosedQuests: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, slotsMax: number, filledCount: number, displayStatus: string | null, tags: Array<string>, regions: Array<string>, dm: { handle: string, displayName: string, avatarUrl: string | null } | null, briefDocument: { id: string, slug: string, title: string, effectiveBody: string | null } | null, participants: Array<{ memberId: string, characterId: string, characterName: string, memberHandle: string, memberAvatarUrl: string | null, status: string }>, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string } }> }, communityDirectory: { total: number, entries: Array<{ memberId: string, handle: string, displayName: string, tagline: string | null, acceptingPlayers: boolean | null, isDm: boolean }> }, regions: Array<{ id: string, name: string }> };
 
 export type SiteStatsQueryVariables = Exact<{ [key: string]: never; }>;
 
@@ -803,14 +803,19 @@ export type ProfileCommunityDirectoryQuery = { communityDirectory: { total: numb
 export type MyCharactersQueryVariables = Exact<{ [key: string]: never; }>;
 
 
-export type MyCharactersQuery = { myCharacters: { total: number, items: Array<{ id: string }> } };
+export type MyCharactersQuery = { myCharacters: { total: number, items: Array<{ id: string, status: string }> } };
 
 export type QuestBoardQueryVariables = Exact<{
   limit: number;
 }>;
 
 
-export type QuestBoardQuery = { questBoard: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, slotsMax: number, filledCount: number, displayStatus: string | null, dm: { handle: string, displayName: string } | null, briefDocument: { id: string, slug: string, title: string } | null, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string, nextRetryAt: string | null, errorMessage: string | null } }> } };
+export type QuestBoardQuery = { questBoard: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, slotsMax: number, filledCount: number, displayStatus: string | null, tags: Array<string>, regions: Array<string>, dm: { handle: string, displayName: string, avatarUrl: string | null } | null, briefDocument: { id: string, slug: string, title: string, effectiveBody: string | null } | null, participants: Array<{ memberId: string, characterId: string, characterName: string, memberHandle: string, memberAvatarUrl: string | null, status: string }>, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string, nextRetryAt: string | null, errorMessage: string | null } }> } };
+
+export type QuestBoardChromeQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type QuestBoardChromeQuery = { communityDirectory: { total: number, entries: Array<{ memberId: string, handle: string, acceptingPlayers: boolean | null, isDm: boolean }> } };
 
 export type CloseQuestMutationVariables = Exact<{
   id: string;
@@ -836,7 +841,14 @@ export type QuestListQueryVariables = Exact<{
 }>;
 
 
-export type QuestListQuery = { quests: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, slotsMax: number, filledCount: number, displayStatus: string | null, dm: { handle: string, displayName: string } | null, briefDocument: { id: string, slug: string, title: string } | null, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string, nextRetryAt: string | null, errorMessage: string | null } }> } };
+export type QuestListQuery = { quests: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, slotsMax: number, filledCount: number, displayStatus: string | null, tags: Array<string>, regions: Array<string>, dm: { handle: string, displayName: string, avatarUrl: string | null } | null, briefDocument: { id: string, slug: string, title: string, effectiveBody: string | null } | null, participants: Array<{ memberId: string, characterId: string, characterName: string, memberHandle: string, memberAvatarUrl: string | null, status: string }>, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string, nextRetryAt: string | null, errorMessage: string | null } }> } };
+
+export type QuestRegionsQueryVariables = Exact<{
+  limit: number;
+}>;
+
+
+export type QuestRegionsQuery = { regions: Array<{ id: string, name: string }> };
 
 export type SignupForQuestMutationVariables = Exact<{
   questId: string;
@@ -863,6 +875,15 @@ export type TransitionQuestStatusMutationVariables = Exact<{
 
 
 export type TransitionQuestStatusMutation = { transitionQuestStatus: { id: string, status: string } };
+
+export type WithdrawFromQuestMutationVariables = Exact<{
+  questId: string;
+  characterId: string;
+  meta: CommandMeta;
+}>;
+
+
+export type WithdrawFromQuestMutation = { withdrawFromQuest: { questId: string, characterId: string, status: string } };
 
 export type RuleDetailQueryVariables = Exact<{
   slug: string;

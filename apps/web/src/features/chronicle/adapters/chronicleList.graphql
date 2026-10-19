@@ -3,12 +3,33 @@ query ChronicleList($limit: Int!) {
     items {
       id
       slug
-      kind
       category
       title
-      effectiveBody
+      frontmatter
       author {
         handle
+      }
+      updatedAt
+      summaryDerived {
+        regions {
+          id
+          name
+        }
+        dms {
+          id
+          displayName
+        }
+        occurredAt
+        arc
+        gameDay
+        gameDate {
+          eraAbbrev
+          year
+          periodName
+          periodIndex
+          periodType
+          day
+        }
       }
     }
     total

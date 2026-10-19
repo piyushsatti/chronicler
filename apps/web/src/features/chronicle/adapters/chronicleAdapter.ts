@@ -12,6 +12,15 @@ import {
   chronicleListWireSchema,
 } from './chronicle.wire.schema.js';
 
+export type ChronicleGameDateView = {
+  eraAbbrev: string;
+  year: number;
+  periodName: string;
+  periodIndex: number;
+  periodType: string;
+  day: number;
+};
+
 export type ChronicleListItemView = {
   id: string;
   slug: string;
@@ -19,6 +28,18 @@ export type ChronicleListItemView = {
   category: string | null;
   authorHandle: string | null;
   excerpt: string | null;
+  tags: string[];
+  region: string | null;
+  arc: string | null;
+  occurredAt: string | null;
+  gameDay: number | null;
+  gameDate: ChronicleGameDateView | null;
+  updatedAt: string | null;
+};
+
+export type ChronicleListView = {
+  items: ChronicleListItemView[];
+  total: number;
 };
 
 export type ChronicleDetailView = {
@@ -30,25 +51,53 @@ export type ChronicleDetailView = {
   authorHandle: string | null;
 };
 
+type FrontmatterShape = {
+  excerpt?: unknown;
+  tags?: unknown;
+};
+
+function frontmatterOf(value: unknown): FrontmatterShape {
+  if (value == null || typeof value !== 'object' || Array.isArray(value)) return {};
+  return value as FrontmatterShape;
+}
+
 function mapListItem(
   item: (typeof chronicleListWireSchema)['_output']['items'][number],
 ): ChronicleListItemView {
+  const fm = frontmatterOf(item.frontmatter);
+  const derived = item.summaryDerived ?? null;
+  const tags = Array.isArray(fm.tags)
+    ? fm.tags.filter((t): t is string => typeof t === 'string')
+    : [];
   return {
     id: item.id,
     slug: item.slug,
     title: item.title,
     category: item.category ?? null,
     authorHandle: item.author?.handle ?? null,
-    excerpt: item.effectiveBody ?? null,
+    excerpt: typeof fm.excerpt === 'string' ? fm.excerpt : null,
+    tags,
+    region: derived?.regions?.[0]?.name ?? null,
+    arc: derived?.arc ?? null,
+    occurredAt: derived?.occurredAt ?? null,
+    gameDay: derived?.gameDay ?? null,
+    gameDate: derived?.gameDate ?? null,
+    updatedAt: item.updatedAt ?? null,
   };
 }
 
-export function parseChronicleList(wire: unknown): AdapterResult<ChronicleListItemView[]> {
+export function parseChronicleList(wire: unknown): AdapterResult<ChronicleListView> {
   const parsed = chronicleListWireSchema.safeParse(wire);
   if (!parsed.success) {
     return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
   }
-  return { ok: true, data: parsed.data.items.map(mapListItem) };
+  return {
+    ok: true,
+    data: {
+      items: parsed.data.items.map(mapListItem),
+      total: parsed.data.total,
+    },
+  };
 }
 
 export function parseChronicleDetail(wire: unknown): AdapterResult<ChronicleDetailView> {
@@ -69,10 +118,10 @@ export function parseChronicleDetail(wire: unknown): AdapterResult<ChronicleDeta
   };
 }
 
-export async function loadChronicleList(): Promise<ChronicleListItemView[]> {
+export async function loadChronicleList(): Promise<ChronicleListView> {
   try {
     const data = await graphqlRequest<ChronicleListQuery>(LIST_QUERY, {
-      limit: 50,
+      limit: 100,
     });
     const result = parseChronicleList(data.documents);
     if (!result.ok) throw toAppError({ failure: result.failure }, 'chronicle:list');

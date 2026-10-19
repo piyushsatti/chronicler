@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { parseHomeLanesWire } from '../../../src/features/home/adapters/homeLanesAdapter.js';
+import {
+  mapToOpenQuestCardProps,
+  parseHomeLanesWire,
+} from '../../../src/features/home/adapters/homeLanesAdapter.js';
 import good from '../../fixtures/wire/home/lanes-good.json';
 import bad from '../../fixtures/wire/home/lanes-bad-board.json';
 import recruitment from '../../fixtures/wire/home/lanes-recruitment.json';
+
+const REGION_ID = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaa01';
+const CHAR_ID = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbb01';
+const MEMBER_ID = 'cccccccc-cccc-4ccc-8ccc-cccccccccc01';
 
 describe('homeLanesAdapter', () => {
   it('parses recruiting, upcoming, closed, and DMs from wire', () => {
@@ -12,6 +19,65 @@ describe('homeLanesAdapter', () => {
     expect(result.data.recruiting[0]?.title).toBe('Siege of Kraghold');
     expect(result.data.dmsAccepting[0]?.handle).toBe('mira');
   });
+
+  it('resolves region names, hook body, participants, and waitlist for OpenQuestCard', () => {
+    const result = parseHomeLanesWire({
+      ...good,
+      regions: [{ id: REGION_ID, name: 'Ashen Coast' }],
+      questBoard: {
+        items: [
+          {
+            ...good.questBoard.items[0],
+            tags: ['guild-quest'],
+            regions: [REGION_ID],
+            briefDocument: {
+              ...good.questBoard.items[0].briefDocument,
+              effectiveBody: 'Hold the gate until dawn.',
+            },
+            participants: [
+              {
+                memberId: MEMBER_ID,
+                characterId: CHAR_ID,
+                characterName: 'Rook',
+                memberHandle: 'rook',
+                memberAvatarUrl: null,
+                status: 'signed_up',
+              },
+              {
+                memberId: 'dddddddd-dddd-4ddd-8ddd-dddddddddd01',
+                characterId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeee01',
+                characterName: 'Waiter',
+                memberHandle: 'waiter',
+                status: 'waitlisted',
+              },
+            ],
+          },
+        ],
+        total: 1,
+      },
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const quest = result.data.recruiting[0];
+    expect(quest).toMatchObject({
+      regionName: 'Ashen Coast',
+      hookText: 'Hold the gate until dawn.',
+      waitlistCount: 1,
+    });
+    const props = mapToOpenQuestCardProps(quest!, {
+      myCharacterIds: new Set([CHAR_ID]),
+    });
+    expect(props).toMatchObject({
+      code: 'Q-101',
+      description: 'Hold the gate until dawn.',
+      region: 'Ashen Coast',
+      gw: true,
+      mine: true,
+      party: [{ name: 'Rook', state: 'confirmed' }],
+      totalSlots: 4,
+    });
+  });
+
 
   it('retains the three filling quests in recruiting with their order and labels', () => {
     const result = parseHomeLanesWire(recruitment);

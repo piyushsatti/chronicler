@@ -1,0 +1,11 @@
+query QuestBoardChrome {
+  communityDirectory(filters: { acceptingPlayers: true, role: "dm" }, limit: 50) {
+    total
+    entries {
+      memberId
+      handle
+      acceptingPlayers
+      isDm
+    }
+  }
+}

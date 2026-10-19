@@ -3,14 +3,57 @@
     {
       "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       "slug": "vault-delve-summary",
-      "kind": "summary",
-      "category": "session",
-      "status": "published",
-      "visibility": "public",
+      "category": "character",
       "title": "Vault Delve — Session recap",
-      "effectiveBody": "The vault door finally gave way.",
-      "author": { "handle": "mira" }
+      "frontmatter": {
+        "excerpt": "The vault door finally gave way.",
+        "tags": ["delve", "vault"]
+      },
+      "author": { "handle": "mira" },
+      "updatedAt": "2026-03-01T12:00:00Z",
+      "summaryDerived": {
+        "regions": [{ "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", "name": "Dalmond" }],
+        "dms": [{ "id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc", "displayName": "Ash" }],
+        "occurredAt": "2026-02-20T18:00:00Z",
+        "arc": "Deep Roads",
+        "gameDay": 142,
+        "gameDate": {
+          "eraAbbrev": "AE",
+          "year": 412,
+          "periodName": "Frostmelt",
+          "periodIndex": 2,
+          "periodType": "month",
+          "day": 14
+        }
+      }
+    },
+    {
+      "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+      "slug": "dm-table-notes",
+      "category": "dm",
+      "title": "Ash's table notes",
+      "frontmatter": {
+        "excerpt": "What the party did not see.",
+        "tags": ["recap"]
+      },
+      "author": { "handle": "ash" },
+      "updatedAt": "2026-03-02T12:00:00Z",
+      "summaryDerived": {
+        "regions": [{ "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", "name": "Dalmond" }],
+        "dms": [{ "id": "cccccccc-cccc-4ccc-8ccc-cccccccccccc", "displayName": "Ash" }],
+        "occurredAt": "2026-02-20T18:00:00Z",
+        "arc": "Deep Roads",
+        "gameDay": 142,
+        "gameDate": {
+          "eraAbbrev": "AE",
+          "year": 412,
+          "periodName": "Frostmelt",
+          "periodIndex": 2,
+          "periodType": "month",
+          "day": 14
+        }
+      }
     }
   ],
-  "total": 1
+  "total": 2
 }

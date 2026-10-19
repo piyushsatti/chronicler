@@ -41,7 +41,12 @@ test.describe('data walkthrough', () => {
       });
       await expect(page).toHaveURL(new RegExp(`${route.path}$`));
       if (route.path === '/') {
-        await expect(page.getByRole('heading', { name: 'Welcome to Chronicler.', exact: true })).toBeVisible();
+        await expect(
+          page.getByRole('heading', {
+            level: 1,
+            name: /Good (morning|afternoon|evening|night), Mortal\./,
+          }),
+        ).toBeVisible();
         await expect(page.getByRole('link', { name: new RegExp(boardExpectation) }).first()).toBeVisible();
       } else if (route.path === '/quests') {
         await expect(page.getByRole('link', { name: new RegExp(boardExpectation) }).first()).toBeVisible();

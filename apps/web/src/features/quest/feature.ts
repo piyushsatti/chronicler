@@ -37,6 +37,30 @@ export const graphql: FeatureGraphql = {
       data: { quests: { items: matching.slice(offset, offset + limit), total: matching.length } },
     });
   },
+  QuestRegions: () =>
+    HttpResponse.json({
+      data: {
+        regions: [
+          { id: '11111111-1111-4111-8111-111111111111', name: 'The Marches' },
+        ],
+      },
+    }),
+  QuestBoardChrome: () =>
+    HttpResponse.json({
+      data: {
+        communityDirectory: {
+          total: 1,
+          entries: [
+            {
+              memberId: '22222222-2222-4222-8222-222222222222',
+              handle: 'mira',
+              acceptingPlayers: true,
+              isDm: true,
+            },
+          ],
+        },
+      },
+    }),
   Quest: () => HttpResponse.json({ data: { quest: goodQuestDetail } }),
   QuestSummaryPage: () =>
     HttpResponse.json({
@@ -52,6 +76,16 @@ export const graphql: FeatureGraphql = {
           questId: goodQuestDetail.id,
           characterId: '00000000-0000-4000-8000-000000000002',
           status: 'signed_up',
+        },
+      },
+    }),
+  WithdrawFromQuest: () =>
+    HttpResponse.json({
+      data: {
+        withdrawFromQuest: {
+          questId: goodQuestDetail.id,
+          characterId: '00000000-0000-4000-8000-000000000002',
+          status: 'withdrawn',
         },
       },
     }),

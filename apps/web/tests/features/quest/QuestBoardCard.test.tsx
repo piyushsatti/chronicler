@@ -1,56 +1,113 @@
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { screen, within } from '@testing-library/react';
-import { QuestBoardCard, type QuestBoardCardView } from '../../../src/features/quest/components/QuestBoardCard.js';
+import userEvent from '@testing-library/user-event';
+import { Route, Routes } from 'react-router-dom';
+import { TOKEN_KEY } from '../../../src/auth/storage.js';
+import { QuestBoardCard } from '../../../src/features/quest/components/QuestBoardCard.js';
 import { renderWithProviders } from '../../test-utils.js';
 
-const quest: QuestBoardCardView = {
-  id: '00000000-0000-4000-8000-000000000001',
-  shortCode: 'Q-101',
+function token(exp = Date.now() / 1000 + 3600): string {
+  return `${btoa('{}')}.${btoa(JSON.stringify({ sub: 'discord-one', exp }))}.test`;
+}
+
+const baseProps = {
+  code: 'Q-101',
   title: 'Siege of Kraghold',
-  status: 'filling',
-  scheduledAt: '2026-10-20T19:00:00Z',
-  slotsMax: 4,
-  filledCount: 1,
-  dmName: 'Mira',
+  description: 'The walls still stand. For now.',
+  status: 'filling' as const,
+  region: 'The Marches',
+  dmUsername: 'mira',
+  party: [{ characterName: 'Rook', characterId: 'c1', avatarUrl: null }],
+  totalSlots: 4,
+  waitlistCount: 0,
+  when: 'Sat 20 Oct 2026, 20:00 BST',
 };
 
+beforeEach(() => {
+  localStorage.clear();
+});
+
 describe('QuestBoardCard', () => {
-  it('presents selected identity, capacity, DM, schedule and real routes', () => {
-    renderWithProviders(<QuestBoardCard quest={quest} />);
-    const card = screen.getByRole('article', { name: 'Siege of Kraghold' });
-    const title = within(card).getByRole('heading', { level: 2 });
-    expect(within(title).getByRole('link', { name: 'Siege of Kraghold' })).toHaveAttribute('href', '/quests/Q-101');
+  it('presents Atlas board chrome: code, spots, title, hook, DM, party, signup', () => {
+    renderWithProviders(<QuestBoardCard {...baseProps} />);
+    const card = screen.getByRole('article', { name: /Siege of Kraghold/i });
     expect(within(card).getByText('Q-101')).toBeInTheDocument();
-    expect(within(card).getByText('filling')).toBeInTheDocument();
-    expect(within(card).getByText('1/4 seats filled')).toBeInTheDocument();
-    expect(within(card).getByText('Mira')).toBeInTheDocument();
-    const time = card.querySelector('time');
-    expect(time).toHaveAttribute('datetime', '2026-10-20T19:00:00Z');
-    expect(time).toHaveTextContent(/Oct.*2026/);
-    expect(within(card).getByRole('link', { name: 'View quest' })).toHaveAttribute('href', '/quests/Q-101');
-    expect(within(card).getByRole('link', { name: 'Session summaries' })).toHaveAttribute('href', '/quests/Q-101/summary');
-    expect(within(card).queryByRole('button')).not.toBeInTheDocument();
-    expect(within(card).queryByRole('img')).not.toBeInTheDocument();
+    expect(within(card).getByTestId('qboard-title')).toHaveTextContent('Siege of Kraghold');
+    expect(within(card).getByTestId('qboard-hook')).toHaveTextContent(
+      'The walls still stand. For now.',
+    );
+    expect(within(card).getByText('3 spots left')).toBeInTheDocument();
+    expect(within(card).getByText('mira')).toBeInTheDocument();
+    expect(within(card).getByText('new DM')).toBeInTheDocument();
+    expect(within(card).getByText('The Marches')).toBeInTheDocument();
+    expect(within(card).getByText(/Sat 20 Oct/)).toBeInTheDocument();
+    expect(within(card).getByRole('button', { name: /Sign up/i })).toBeInTheDocument();
   });
 
-  it.each([null, '', '   '])('omits unavailable DM and invalid schedule without inventing values (%s)', (dmName) => {
-    renderWithProviders(<QuestBoardCard quest={{ ...quest, dmName, scheduledAt: 'not-a-time' }} />);
-    const card = screen.getByRole('article');
-    expect(within(card).queryByText('DM')).not.toBeInTheDocument();
-    expect(within(card).queryByText('Scheduled')).not.toBeInTheDocument();
-    expect(card.querySelector('time')).toBeNull();
-    expect(within(card).queryByText(/Unknown DM|new DM|Time TBA|not-a-time/)).not.toBeInTheDocument();
-    expect(within(card).getByRole('link', { name: 'View quest' })).toBeInTheDocument();
+  it('shows waitlist affordance next to spots left', () => {
+    renderWithProviders(
+      <QuestBoardCard
+        {...baseProps}
+        waitlistCount={3}
+        totalSlots={4}
+        party={[
+          { characterName: 'A' },
+          { characterName: 'B' },
+          { characterName: 'C' },
+          { characterName: 'D' },
+        ]}
+      />,
+    );
+    expect(screen.getByTestId('qboard-waitlist-count')).toHaveTextContent('3 waitlisted');
+    expect(screen.getByText('Full')).toBeInTheDocument();
   });
 
-  it.each([
-    ['scheduled', '2000-01-01T00:00:00Z'],
-    ['live', '2100-01-01T00:00:00Z'],
-    ['cancelled', '2026-10-20T19:00:00Z'],
-  ])('preserves the server %s label independently of the browser clock', (status, scheduledAt) => {
-    renderWithProviders(<QuestBoardCard quest={{ ...quest, status, scheduledAt }} />);
-    expect(screen.getByText(status)).toBeInTheDocument();
-    expect(screen.getByRole('article')).toHaveAttribute('data-status', status);
-    expect(screen.getByRole('link', { name: 'View quest' })).toHaveAttribute('href', '/quests/Q-101');
+  it('shows Now chip for live status and strikethrough for cancelled', () => {
+    const { rerender } = renderWithProviders(<QuestBoardCard {...baseProps} status="live" />);
+    expect(screen.getByText('Now')).toBeInTheDocument();
+    rerender(<QuestBoardCard {...baseProps} status="cancelled" />);
+    expect(screen.getByRole('button', { name: 'Cancelled' })).toBeDisabled();
+    expect(screen.getByTestId('qboard-title')).toHaveStyle({ textDecoration: 'line-through' });
+  });
+
+  it('sends guests to login on Sign up', async () => {
+    const user = userEvent.setup();
+    const onSignUpClick = vi.fn();
+    renderWithProviders(
+      <Routes>
+        <Route path="/" element={<QuestBoardCard {...baseProps} onSignUpClick={onSignUpClick} />} />
+        <Route path="/login" element={<p>Login destination</p>} />
+      </Routes>,
+    );
+    await user.click(screen.getByRole('button', { name: /Sign up/i }));
+    expect(await screen.findByText('Login destination')).toBeInTheDocument();
+    expect(onSignUpClick).not.toHaveBeenCalled();
+  });
+
+  it('fires onSignUpClick when authenticated', async () => {
+    const user = userEvent.setup();
+    const onSignUpClick = vi.fn();
+    localStorage.setItem(TOKEN_KEY, token());
+    renderWithProviders(<QuestBoardCard {...baseProps} onSignUpClick={onSignUpClick} />);
+    await user.click(screen.getByRole('button', { name: /Sign up/i }));
+    expect(onSignUpClick).toHaveBeenCalledOnce();
+  });
+
+  it('opens confirm before withdraw and only then fires onWithdrawConfirm', async () => {
+    const user = userEvent.setup();
+    const onWithdrawConfirm = vi.fn();
+    renderWithProviders(
+      <QuestBoardCard {...baseProps} mine onWithdrawConfirm={onWithdrawConfirm} />,
+    );
+    await user.click(screen.getByRole('button', { name: 'Withdraw' }));
+    expect(screen.getByText('Withdraw from this quest?')).toBeInTheDocument();
+    expect(onWithdrawConfirm).not.toHaveBeenCalled();
+    const confirm = screen.getAllByRole('button', { name: 'Withdraw' }).find(
+      (btn) => btn.getAttribute('data-el') !== 'boardCard.withdrawBtn',
+    );
+    expect(confirm).toBeTruthy();
+    await user.click(confirm!);
+    expect(onWithdrawConfirm).toHaveBeenCalledOnce();
   });
 });
+

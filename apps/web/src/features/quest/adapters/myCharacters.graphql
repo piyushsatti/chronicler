@@ -2,6 +2,7 @@ query MyCharacters {
   myCharacters {
     items {
       id
+      status
     }
     total
   }

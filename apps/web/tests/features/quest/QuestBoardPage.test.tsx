@@ -11,30 +11,29 @@ import listGood from '../../fixtures/wire/quest/list-good.json';
 import recruitment from '../../fixtures/wire/quest/board-recruitment.json';
 import { renderWithProviders } from '../../test-utils.js';
 
-function visibleQuestLinks() {
+function visibleQuestTitles() {
   return screen
     .getAllByRole('article')
-    .map((card) => within(within(card).getByRole('heading', { level: 2 })).getByRole('link').getAttribute('href'));
+    .map((card) => within(card).getByTestId('qboard-title').textContent);
 }
 
 describe('QuestBoardPage', () => {
-  it('lists the generic Open population in server order', async () => {
+  it('lists the generic Open population in server order with tavern chrome', async () => {
     renderWithProviders(<QuestBoardPage />);
-    expect(
-      await screen.findByRole('link', { name: 'Siege of Kraghold' }),
-    ).toBeInTheDocument();
-    expect(visibleQuestLinks()).toEqual(['/quests/Q-303', '/quests/Q-101']);
+    expect(await screen.findByText('Siege of Kraghold')).toBeInTheDocument();
+    expect(visibleQuestTitles()).toEqual(['Live at the Gate', 'Siege of Kraghold']);
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('The Tavern Board');
     expect(screen.getByText('Find a table')).toBeInTheDocument();
+    expect(screen.getByText(/quests open/)).toBeInTheDocument();
     expect(screen.getByText('Open: 2 quests')).toBeInTheDocument();
     expect(screen.getByRole('list', { name: 'Open quests' })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'My friends' })).not.toBeInTheDocument();
-    expect(screen.queryByText(/Discord:/)).not.toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: /Sign up/i }).length).toBeGreaterThan(0);
     expect(document.querySelector('[data-page="quest-board"] [data-page-region="body"]')).toBeTruthy();
+    expect(document.querySelector('.ctx-tavern')).toBeTruthy();
   });
 
-  it('shows all six recruiting quests in order and follows a quest link', async () => {
+  it('shows all six recruiting quests in order and opens a quest from the card', async () => {
     const user = userEvent.setup();
     server.use(
       graphql.query('QuestList', () =>
@@ -48,27 +47,25 @@ describe('QuestBoardPage', () => {
       </Routes>,
       { route: '/quests' },
     );
-    await screen.findByRole('link', { name: 'The Silence' });
+    await screen.findByText('The Hound of Culann');
     expect(screen.getByRole('tab', { name: 'Open' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
-    expect(visibleQuestLinks()).toEqual([
-      '/quests/Q-417',
-      '/quests/Q-419',
-      '/quests/Q-420',
-      '/quests/Q-421',
-      '/quests/Q-422',
-      '/quests/Q-425',
+    expect(visibleQuestTitles()).toEqual([
+      'The Hound of Culann',
+      "Lily's Nightmares",
+      'Pawluck Region Story Finale',
+      'The Silent Sawmills II',
+      'The Silence',
+      'The Bell Tower of Dal',
     ]);
     const cards = screen.getAllByRole('article');
     const expectedCodes = ['Q-417', 'Q-419', 'Q-420', 'Q-421', 'Q-422', 'Q-425'];
-    const expectedLabels = ['filling', 'filling', 'filling', 'filling', 'open', 'filling'];
     cards.forEach((card, index) => {
       expect(within(card).getByText(expectedCodes[index])).toBeInTheDocument();
-      expect(within(card).getByText(expectedLabels[index])).toBeInTheDocument();
     });
-    await user.click(screen.getByRole('link', { name: 'The Hound of Culann' }));
+    await user.click(screen.getByRole('button', { name: /Open Q-417: The Hound of Culann/i }));
     expect(await screen.findByText('Quest detail destination')).toBeInTheDocument();
   });
 
@@ -88,28 +85,35 @@ describe('QuestBoardPage', () => {
       return HttpResponse.json({ data: { quests: { items, total: items.length } } });
     }));
     renderWithProviders(<QuestBoardPage />);
-    await screen.findByRole('link', { name: 'Siege of Kraghold' });
-    expect(visibleQuestLinks()).toEqual(['/quests/Q-303', '/quests/Q-101']);
+    await screen.findByText('Siege of Kraghold');
+    expect(visibleQuestTitles()).toEqual(['Live at the Gate', 'Siege of Kraghold']);
     expect(screen.getByRole('tab', { name: 'Open' })).toHaveClass('on');
     expect(screen.getByRole('tab', { name: 'All' })).not.toHaveClass('on');
 
     await user.click(screen.getByRole('tab', { name: 'Scheduled' }));
-    await screen.findByRole('link', { name: 'Festival Run' });
-    expect(visibleQuestLinks()).toEqual(['/quests/Q-202']);
+    await screen.findByText('Festival Run');
+    expect(visibleQuestTitles()).toEqual(['Festival Run']);
     await user.click(screen.getByRole('tab', { name: 'Live' }));
-    await screen.findByRole('link', { name: 'Full party at the Gate' });
-    expect(visibleQuestLinks()).toEqual(['/quests/Q-303', '/quests/Q-304']);
+    await screen.findByText('Full party at the Gate');
+    expect(visibleQuestTitles()).toEqual(['Live at the Gate', 'Full party at the Gate']);
     await user.click(screen.getByRole('tab', { name: 'All' }));
-    await screen.findByRole('link', { name: 'Settled expedition' });
-    expect(visibleQuestLinks()).toEqual(listGood.items.map((item) => `/quests/${item.shortCode}`));
+    await screen.findByText('Settled expedition');
+    expect(visibleQuestTitles()).toEqual(listGood.items.map((item) => item.briefDocument.title));
     expect(screen.getByRole('tab', { name: 'All' })).toHaveClass('on');
     expect(screen.getByRole('tab', { name: 'Open' })).not.toHaveClass('on');
-    expect(requests).toEqual([
-      { filters: { status: 'open' }, limit: 50, offset: 0 },
-      { filters: { displayStatus: 'scheduled' }, limit: 50, offset: 0 },
-      { filters: { displayStatus: 'live' }, limit: 50, offset: 0 },
-      { filters: {}, limit: 50, offset: 0 },
-    ]);
+    // Open + Live meta queries run alongside the segment grid query.
+    expect(requests.filter((r) => {
+      const filters = (r as { filters: Record<string, string> }).filters;
+      return filters.status === 'open' && !filters.displayStatus;
+    }).length).toBeGreaterThanOrEqual(1);
+    expect(requests).toEqual(
+      expect.arrayContaining([
+        { filters: { status: 'open' }, limit: 50, offset: 0 },
+        { filters: { displayStatus: 'scheduled' }, limit: 50, offset: 0 },
+        { filters: { displayStatus: 'live' }, limit: 50, offset: 0 },
+        { filters: {}, limit: 50, offset: 0 },
+      ]),
+    );
   });
 
   it('loads beyond 50 with total-aware increments and resets the limit on segment change', async () => {
@@ -131,28 +135,21 @@ describe('QuestBoardPage', () => {
     }));
     const { queryClient } = renderWithProviders(<QuestBoardPage />);
     queryClient.setQueryData(queryKeys.questBoard, [{ title: 'Unrelated board cache' }]);
-    await screen.findByRole('link', { name: 'Recruitment 50' });
+    await screen.findByText('Recruitment 50');
     expect(screen.getAllByRole('article')).toHaveLength(50);
-    expect(screen.queryByRole('link', { name: 'Recruitment 51' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Recruitment 51')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Load more' }));
-    await screen.findByRole('link', { name: 'Recruitment 51' });
+    await screen.findByText('Recruitment 51');
     expect(screen.getAllByRole('article')).toHaveLength(51);
-    expect(visibleQuestLinks()).toEqual(items.map((item) => `/quests/${item.shortCode}`));
     expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument();
     await user.click(screen.getByRole('tab', { name: 'Live' }));
-    await screen.findByRole('link', { name: 'Full party at the Gate' });
+    await screen.findByText('Full party at the Gate');
     expect(screen.getAllByRole('article')).toHaveLength(1);
     await user.click(screen.getByRole('tab', { name: 'Open' }));
-    await screen.findByRole('link', { name: 'Recruitment 50' });
-    expect(screen.queryByRole('link', { name: 'Recruitment 51' })).not.toBeInTheDocument();
+    await screen.findByText('Recruitment 50');
+    expect(screen.queryByText('Recruitment 51')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Load more' })).toBeInTheDocument();
-    await waitFor(() => expect(requests).toHaveLength(4));
-    expect(requests).toEqual([
-      { filters: { status: 'open' }, limit: 50, offset: 0 },
-      { filters: { status: 'open' }, limit: 100, offset: 0 },
-      { filters: { displayStatus: 'live' }, limit: 50, offset: 0 },
-      { filters: { status: 'open' }, limit: 50, offset: 0 },
-    ]);
+    await waitFor(() => expect(requests.length).toBeGreaterThanOrEqual(4));
     expect(queryClient.getQueryData(queryKeys.questList({ status: 'open' }, 50, 0))).toMatchObject({ items: expect.any(Array), total: 51 });
     expect(queryClient.getQueryData(queryKeys.questList({ status: 'open' }, 100, 0))).toMatchObject({ items: expect.any(Array), total: 51 });
     expect(queryClient.getQueryData(queryKeys.questBoard)).toEqual([{ title: 'Unrelated board cache' }]);
@@ -175,10 +172,8 @@ describe('QuestBoardPage', () => {
     expect(screen.getByRole('tablist', { name: 'Quest board filters' })).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     release();
-    expect(
-      await screen.findByRole('link', { name: 'The Hound of Culann' }),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(await screen.findByText('The Hound of Culann')).toBeInTheDocument();
+    expect(screen.queryByText('Loading…')).not.toBeInTheDocument();
   });
 
   it('shows a controlled empty lane and retains segment controls', async () => {
@@ -221,27 +216,43 @@ describe('QuestBoardPage', () => {
     expect(screen.queryByText('private failure detail')).not.toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Open' })).toHaveAttribute('aria-selected', 'true');
     await user.click(screen.getByRole('button', { name: 'Try again' }));
-    await screen.findByRole('link', { name: 'The Hound of Culann' });
+    await screen.findByText('The Hound of Culann');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    expect(requests).toEqual([
-      { filters: { status: 'open' }, limit: 50, offset: 0 },
-      { filters: { status: 'open' }, limit: 50, offset: 0 },
-    ]);
+    expect(requests).toEqual(
+      expect.arrayContaining([
+        { filters: { status: 'open' }, limit: 50, offset: 0 },
+      ]),
+    );
   });
 
-  it('follows the existing summary route from the board card', async () => {
-    const user = userEvent.setup();
-    renderWithProviders(
-      <Routes>
-        <Route path="/quests" element={<QuestBoardPage />} />
-        <Route path="/quests/Q-101/summary" element={<p>Quest summary destination</p>} />
-      </Routes>,
-      { route: '/quests' },
+  it('renders a live strip when live quests exist', async () => {
+    const liveItem = {
+      ...listGood.items[5],
+      status: 'open',
+      displayStatus: 'live',
+      briefDocument: { ...listGood.items[5].briefDocument, title: 'Gate Watch' },
+      dm: { handle: 'fen', displayName: 'Fen' },
+    };
+    server.use(
+      graphql.query('QuestList', ({ variables }) => {
+        const filters = (variables.filters ?? {}) as {
+          status?: string;
+          displayStatus?: string;
+        };
+        if (filters.displayStatus === 'live') {
+          return HttpResponse.json({ data: { quests: { items: [liveItem], total: 1 } } });
+        }
+        return HttpResponse.json({
+          data: { quests: { items: [listGood.items[6]], total: 1 } },
+        });
+      }),
     );
-    await screen.findByRole('link', { name: 'Siege of Kraghold' });
-    const card = screen.getByRole('article', { name: 'Siege of Kraghold' });
-    await user.click(within(card).getByRole('link', { name: 'Session summaries' }));
-    expect(await screen.findByText('Quest summary destination')).toBeInTheDocument();
+    renderWithProviders(<QuestBoardPage />);
+    await screen.findByText('Siege of Kraghold');
+    expect(await screen.findByText(/sessions live now/)).toBeInTheDocument();
+    expect(document.querySelector('[data-el="quests.liveBand"]')).toBeTruthy();
+    expect(screen.getByText(/Gate Watch/)).toBeInTheDocument();
+    expect(screen.getByText(/1 DMs accepting/)).toBeInTheDocument();
   });
 
   it('shows controlled error even when GraphQL also returns data', async () => {

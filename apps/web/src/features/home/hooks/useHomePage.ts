@@ -48,7 +48,8 @@ export function useHomePage(): PageData<HomePageView> {
   if (buckets.isLoading || !buckets.data || lanes.isLoading || !lanes.data) {
     return { status: 'loading' };
   }
-  if (bucketsAreEmpty(buckets.data) && lanesAreEmpty(lanes.data)) {
+  // Archive buckets are demoted; ready when Legacy lanes OR demoted archive has content.
+  if (lanesAreEmpty(lanes.data) && bucketsAreEmpty(buckets.data)) {
     return { status: 'empty' };
   }
   return {

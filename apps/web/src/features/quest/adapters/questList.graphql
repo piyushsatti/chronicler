@@ -9,14 +9,26 @@ query QuestList($filters: QuestFiltersInput!, $limit: Int!, $offset: Int!) {
       slotsMax
       filledCount
       displayStatus
+      tags
+      regions
       dm {
         handle
         displayName
+        avatarUrl
       }
       briefDocument {
         id
         slug
         title
+        effectiveBody
+      }
+      participants(limit: 100) {
+        memberId
+        characterId
+        characterName
+        memberHandle
+        memberAvatarUrl
+        status
       }
       discordDelivery {
         desiredRevision

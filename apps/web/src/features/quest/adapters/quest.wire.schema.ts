@@ -8,6 +8,15 @@ export const discordDeliveryWireSchema = z.object({
   errorMessage: z.string().nullable().optional(),
 });
 
+export const questParticipantWireSchema = z.object({
+  memberId: z.string().uuid(),
+  characterId: z.string().uuid(),
+  characterName: z.string(),
+  memberHandle: z.string(),
+  memberAvatarUrl: z.string().nullable().optional(),
+  status: z.string(),
+});
+
 export const questBoardItemWireSchema = z.object({
   id: z.string().uuid(),
   shortCode: z.string().min(1),
@@ -16,10 +25,13 @@ export const questBoardItemWireSchema = z.object({
   slotsMax: z.number().int(),
   filledCount: z.number().int(),
   displayStatus: z.string().nullable().optional(),
+  tags: z.array(z.string()).optional().default([]),
+  regions: z.array(z.string().uuid()).optional().default([]),
   dm: z
     .object({
       handle: z.string(),
       displayName: z.string(),
+      avatarUrl: z.string().nullable().optional(),
     })
     .nullable()
     .optional(),
@@ -28,9 +40,11 @@ export const questBoardItemWireSchema = z.object({
       id: z.string().uuid(),
       slug: z.string(),
       title: z.string(),
+      effectiveBody: z.string().nullable().optional(),
     })
     .nullable()
     .optional(),
+  participants: z.array(questParticipantWireSchema).optional().default([]),
   discordDelivery: discordDeliveryWireSchema,
 });
 
@@ -39,17 +53,28 @@ export const questBoardWireSchema = z.object({
   total: z.number().int().nonnegative(),
 });
 
-export const questParticipantWireSchema = z.object({
-  memberId: z.string().uuid(),
-  characterId: z.string().uuid(),
-  characterName: z.string(),
-  memberHandle: z.string(),
-  status: z.string(),
-});
-
 export const questDetailWireSchema = questBoardItemWireSchema.extend({
   participants: z.array(questParticipantWireSchema).optional().default([]),
   durationHours: z.number(),
   genres: z.array(z.string()).optional().default([]),
   tags: z.array(z.string()).optional().default([]),
+});
+
+export const questRegionCatalogWireSchema = z.array(
+  z.object({
+    id: z.string().uuid(),
+    name: z.string().min(1),
+  }),
+);
+
+export const questBoardChromeWireSchema = z.object({
+  total: z.number().int().nonnegative(),
+  entries: z.array(
+    z.object({
+      memberId: z.string().uuid(),
+      handle: z.string(),
+      acceptingPlayers: z.boolean().nullable().optional(),
+      isDm: z.boolean(),
+    }),
+  ),
 });

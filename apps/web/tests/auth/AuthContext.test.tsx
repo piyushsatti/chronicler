@@ -90,7 +90,10 @@ describe('AuthProvider session lifecycle', () => {
   it('lets a whole anonymous public page reach ready after cache initialization', async () => {
     renderWithProviders(<HomePage />);
     expect(
-      await screen.findByRole('heading', { name: 'Welcome to Chronicler.' }),
+      await screen.findByRole('heading', {
+        level: 1,
+        name: /Good (morning|afternoon|evening|night), Mortal\./,
+      }),
     ).toBeInTheDocument();
     expect(screen.getAllByRole('link', { name: 'Siege of Kraghold' }).length).toBeGreaterThan(0);
   });
@@ -134,8 +137,8 @@ describe('AuthProvider session lifecycle', () => {
 
   it('recovers an observed public query on logout without remounting an unrelated draft', async () => {
     localStorage.setItem(TOKEN_KEY, token());
-    // HomePage fans out four public GraphQL reads; logout clears cache and each
-    // observed query refetches once (no remount of unrelated draft state).
+    // HomePage fans out four public GraphQL reads plus authenticated me/characters.
+    // Logout clears cache; the public ops refetch once without remounting draft state.
     const HOME_PUBLIC_OPS = 4;
     let requested = 0;
     const record = ({ request }: { request: Request }) => {
@@ -166,15 +169,22 @@ describe('AuthProvider session lifecycle', () => {
           <PublicDraft />
         </>,
       );
-      await screen.findByRole('heading', { name: 'Welcome to Chronicler.' });
-      expect(requested).toBe(HOME_PUBLIC_OPS);
+      await screen.findByRole('heading', {
+        level: 1,
+        name: /Good (morning|afternoon|evening|night), .+\./,
+      });
+      const initialRequested = requested;
+      expect(initialRequested).toBeGreaterThanOrEqual(HOME_PUBLIC_OPS);
       fireEvent.change(screen.getByRole('textbox', { name: 'Unrelated draft' }), {
         target: { value: 'Keep this draft' },
       });
       fireEvent.click(screen.getByRole('button', { name: 'End session' }));
-      await waitFor(() => expect(requested).toBe(HOME_PUBLIC_OPS * 2));
+      await waitFor(() => expect(requested).toBeGreaterThanOrEqual(initialRequested + HOME_PUBLIC_OPS));
       expect(
-        await screen.findByRole('heading', { name: 'Welcome to Chronicler.' }),
+        await screen.findByRole('heading', {
+          level: 1,
+          name: /Good (morning|afternoon|evening|night), Mortal\./,
+        }),
       ).toBeInTheDocument();
       expect(screen.getByRole('textbox', { name: 'Unrelated draft' })).toHaveValue(
         'Keep this draft',

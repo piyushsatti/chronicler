@@ -1,0 +1,6 @@
+query QuestRegions($limit: Int!) {
+  regions(limit: $limit) {
+    id
+    name
+  }
+}
