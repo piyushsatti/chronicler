@@ -66,6 +66,9 @@ func (searchDocumentsBatch) ReadBatchSummaryDerived(context.Context, auth.Author
 func (searchDocumentsBatch) ReadBatchDocumentSubjects(context.Context, auth.Authority, []document.DocumentSubjectsKey) ([]product.BatchResult[document.SubjectLinkList], error) {
 	return nil, nil
 }
+func (searchDocumentsBatch) ReadBatchReaderIds(context.Context, auth.Authority, []document.IDKey) ([]product.BatchResult[document.ReaderIDList], error) {
+	return nil, nil
+}
 
 type searchAudience struct{}
 

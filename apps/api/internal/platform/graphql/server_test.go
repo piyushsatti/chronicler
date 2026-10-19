@@ -70,6 +70,9 @@ func (documentErrorBatch) ReadBatchSummaryDerived(context.Context, auth.Authorit
 func (documentErrorBatch) ReadBatchDocumentSubjects(context.Context, auth.Authority, []document.DocumentSubjectsKey) ([]product.BatchResult[document.SubjectLinkList], error) {
 	return nil, nil
 }
+func (documentErrorBatch) ReadBatchReaderIds(context.Context, auth.Authority, []document.IDKey) ([]product.BatchResult[document.ReaderIDList], error) {
+	return nil, nil
+}
 
 type documentErrorAudience struct{}
 

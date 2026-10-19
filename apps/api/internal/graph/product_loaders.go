@@ -40,6 +40,7 @@ type RequestLoaders struct {
 	MapNodeEdges         *Loader[spatial.MapNodeEdgesKey, spatial.NodeEdgeList]
 	NodeLinks            *Loader[spatial.NodeLinksKey, spatial.NodeLinkList]
 	SummaryDerived       *Loader[document.IDKey, document.SummaryDerivedView]
+	DocumentReaders      *Loader[document.IDKey, document.ReaderIDList]
 	NotificationSubjects *Loader[notification.SubjectKey, notification.SubjectProjection]
 	MemberVoiceChannels  *Loader[member.MemberVoiceChannelsKey, member.VoiceChannelList]
 	MemberRecentSessions *Loader[member.MemberRecentSessionsKey, member.ActivityEventList]
@@ -101,6 +102,9 @@ func (l *RequestLoaders) clear() {
 	}
 	if l.SummaryDerived != nil {
 		clearOne(l.SummaryDerived.Clear)
+	}
+	if l.DocumentReaders != nil {
+		clearOne(l.DocumentReaders.Clear)
 	}
 	if l.NotificationSubjects != nil {
 		clearOne(l.NotificationSubjects.Clear)
@@ -165,6 +169,7 @@ func NewRequestLoaders(providers BatchProviders, state *RequestState) (*RequestL
 		reg.Documents = newKeyedLoader(state, providers.Document.BatchDocuments)
 		reg.DmTables = newKeyedLoader(state, providers.Document.BatchDmTables)
 		reg.SummaryDerived = newKeyedLoader(state, providers.Document.BatchSummaryDerived)
+		reg.DocumentReaders = newKeyedLoader(state, providers.Document.BatchReaderIds)
 		reg.DocumentSubjects = newKeyedLoader(state, providers.Document.BatchDocumentSubjects)
 	}
 	if providers.Character != nil {

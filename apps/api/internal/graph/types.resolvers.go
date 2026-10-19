@@ -85,11 +85,29 @@ func (r *documentTypeResolver) ReaderIds(ctx context.Context, obj *DocumentType)
 		return nil, nil
 	}
 	// DocumentView keeps readers off the base DTO (go-seams). Prefer parent
-	// projection when present; otherwise an empty authorized list.
+	// projection when present; otherwise hydrate through the documentReaders loader.
 	if obj.ReaderIds != nil {
 		return obj.ReaderIds, nil
 	}
-	return []string{}, nil
+	if obj.ID == "" {
+		return []string{}, nil
+	}
+	loaders, err := requestLoaders(ctx)
+	if err != nil {
+		return nil, err
+	}
+	loader, err := requireLoader(loaders.DocumentReaders, "documentReaders")
+	if err != nil {
+		return nil, err
+	}
+	view, err := loader.Load(ctx, document.IDKey{ID: obj.ID})
+	if err != nil {
+		return nil, err
+	}
+	if view == nil || view.Items == nil {
+		return []string{}, nil
+	}
+	return view.Items, nil
 }
 
 // Author is the resolver for the author field.
