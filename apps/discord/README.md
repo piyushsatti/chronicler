@@ -4,17 +4,17 @@ discord.js bot for Chronicler. It records guild activity and answers a mention t
 
 ## Layout
 
-| Path                 | Purpose                                               |
-| -------------------- | ----------------------------------------------------- |
-| `src/session.ts`     | Log in, mount activity and agent, shut down           |
-| `src/activity/`      | Guild events posted to the API                        |
-| `src/agent/`         | Mentions posted to the API, replies posted in Discord |
-| `src/health.ts`      | Shard resume and re-identify logs                     |
-| `tests/unit/`        | One module at a time, dependencies mocked             |
-| `tests/integration/` | Real client code against a local HTTP fixture         |
-| `tests/integration/live-ingest.test.ts` | Opt-in POSTs to a running Go `/v1/ingest/*` |
-| `tests/e2e/`         | `start()` with a scripted Discord client              |
-| `tests/fixtures/`    | Shared payloads                                       |
+| Path                                    | Purpose                                               |
+| --------------------------------------- | ----------------------------------------------------- |
+| `src/session.ts`                        | Log in, mount activity and agent, shut down           |
+| `src/activity/`                         | Guild events posted to the API                        |
+| `src/agent/`                            | Mentions posted to the API, replies posted in Discord |
+| `src/health.ts`                         | Shard resume and re-identify logs                     |
+| `tests/unit/`                           | One module at a time, dependencies mocked             |
+| `tests/integration/`                    | Real client code against a local HTTP fixture         |
+| `tests/integration/live-ingest.test.ts` | Opt-in POSTs to a running Go `/v1/ingest/*`           |
+| `tests/e2e/`                            | `start()` with a scripted Discord client              |
+| `tests/fixtures/`                       | Shared payloads                                       |
 
 App-local docs: [docs/README.md](/apps/discord/docs/README.md). Interfaces: [discord-sensor](/docs/interfaces/discord-sensor.md), [discord-ingest](/docs/interfaces/discord-ingest.md).
 

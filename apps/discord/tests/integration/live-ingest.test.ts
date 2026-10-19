@@ -18,10 +18,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { messageEvent } from '../fixtures/api.js';
 
 const liveEnabled = process.env['CHRONICLER_LIVE_INGEST'] === '1';
-const liveApiUrl = (process.env['CHRONICLER_LIVE_API_URL'] ?? 'http://127.0.0.1:8080').replace(
-  /\/$/,
-  '',
-);
+const liveApiUrl = (
+  process.env['CHRONICLER_LIVE_API_URL'] ?? 'http://127.0.0.1:8080'
+).replace(/\/$/, '');
 const liveSecret =
   process.env['CHRONICLER_LIVE_INGEST_SECRET'] ?? 'local-test-only-ingest-secret';
 
@@ -56,7 +55,10 @@ describe.skipIf(!liveEnabled)('live ingest against running Go API', () => {
       }),
       signal: AbortSignal.timeout(10_000),
     });
-    expect(response.status, `live API unreachable or misconfigured at ${liveApiUrl}`).toBe(401);
+    expect(
+      response.status,
+      `live API unreachable or misconfigured at ${liveApiUrl}`,
+    ).toBe(401);
   });
 
   it('posts a bot-shaped discord-event through postDiscordEvent', async () => {
