@@ -14,14 +14,14 @@ Generate notifications at the business event's write, address them to the concer
 
 This is the retained event vocabulary and recipient contract. It is not evidence of producers in the rebuilt API; expansion or retirement requires a product decision.
 
-| Kind                                    | Recipient                                                                                                                |
-| --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `CHARACTER_VERIFICATION_DECIDED`        | The character's owner                                                                                                    |
-| `QUEST_SIGNUP_CONFIRMED`                | The signing-up member; signup is self-service, not an approval                                                           |
-| `QUEST_WAITLIST_PROMOTED`               | The promoted member, not the withdrawing actor                                                                           |
-| `DOCUMENT_EDITED`, `DOCUMENT_PUBLISHED` | The document author, excluding the actor                                                                                 |
-| `DM_MENTIONED`                          | Newly named, resolvable `[!dm:@handle]` members, excluding the actor; editing an unchanged mention does not notify again |
-| `QUEST_SCHEDULED`                       | Signed-up and waitlisted members, excluding the actor; includes rescheduling and the recorded quest-change variants      |
+| Kind                                    | Recipient                                                                                                                                                      |
+| --------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `CHARACTER_VERIFICATION_DECIDED`        | The character's owner                                                                                                                                          |
+| `QUEST_SIGNUP_CONFIRMED`                | The signing-up member; signup is self-service, not an approval                                                                                                 |
+| `QUEST_WAITLIST_PROMOTED`               | The promoted member, not the withdrawing actor                                                                                                                 |
+| `DOCUMENT_EDITED`, `DOCUMENT_PUBLISHED` | The document author, excluding the actor                                                                                                                       |
+| `DM_MENTIONED`                          | Newly named, resolvable `[!dm:@handle]` members, excluding the actor; editing an unchanged mention does not notify again                                       |
+| `QUEST_SCHEDULED`                       | Signed-up and waitlisted members, excluding the actor; includes rescheduling and the recorded quest-change variants                                            |
 | ~~`DM_REQUEST_DECIDED`~~                | **Retired** — superseded by owner-decisions **N3** / **F1** (no DM request workflow tables). Do not add producers or SDL for this kind on the product cutover. |
 
 One provider module owns recipient derivation. Write sites validate actors. A public Discord quest-board announcement is a broadcast and does not satisfy addressed inbox delivery.

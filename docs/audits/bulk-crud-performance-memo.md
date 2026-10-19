@@ -9,16 +9,16 @@ Related: [interface-contract-audit.md](interface-contract-audit.md), [postgres-s
 
 ## 1. Current state (intent vs runtime)
 
-| Layer | Status |
-| ----- | ------ |
-| **Contracts** | Root lists use `*ListResult { items, total }` with `limit`/`offset`; shared `*Page` in [product-reads.graphql](../../packages/contracts/graphql/product-reads.graphql); notifications use keyset `NotificationConnection`; batch command `setMemberRolesBatch` |
-| **Design docs** | DataLoader, chunk ≤100, offset+total, complexity/depth caps — [performance.md](../../apps/api/docs/design/graphql-product/performance.md), [behavior.md](../../apps/api/docs/design/graphql-product/behavior.md) |
-| **G02 loaders** | [product_loaders.go](../../apps/api/internal/graph/product_loaders.go) **stub** |
-| **Product resolvers** | `*-operations.resolvers.go` largely **stub** |
-| **Legacy resolvers** | Roots call `Services.*.List`; nested fields often **N+1** (`Get`/`ByID` per row) |
-| **sqlc product SQL** | Batch/list queries exist (e.g. `ProductQuestBatchRead`, `ProductBatchMembers`) |
-| **Product postgres** | **Member** batch reads implemented; quest/document batch on interfaces, limited impl |
-| **Transport** | Product via **POST `/v1/graphql`**; no HTTP GraphQL batching |
+| Layer                 | Status                                                                                                                                                                                                                                                         |
+| --------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Contracts**         | Root lists use `*ListResult { items, total }` with `limit`/`offset`; shared `*Page` in [product-reads.graphql](../../packages/contracts/graphql/product-reads.graphql); notifications use keyset `NotificationConnection`; batch command `setMemberRolesBatch` |
+| **Design docs**       | DataLoader, chunk ≤100, offset+total, complexity/depth caps — [performance.md](../../apps/api/docs/design/graphql-product/performance.md), [behavior.md](../../apps/api/docs/design/graphql-product/behavior.md)                                               |
+| **G02 loaders**       | [product_loaders.go](../../apps/api/internal/graph/product_loaders.go) **stub**                                                                                                                                                                                |
+| **Product resolvers** | `*-operations.resolvers.go` largely **stub**                                                                                                                                                                                                                   |
+| **Legacy resolvers**  | Roots call `Services.*.List`; nested fields often **N+1** (`Get`/`ByID` per row)                                                                                                                                                                               |
+| **sqlc product SQL**  | Batch/list queries exist (e.g. `ProductQuestBatchRead`, `ProductBatchMembers`)                                                                                                                                                                                 |
+| **Product postgres**  | **Member** batch reads implemented; quest/document batch on interfaces, limited impl                                                                                                                                                                           |
+| **Transport**         | Product via **POST `/v1/graphql`**; no HTTP GraphQL batching                                                                                                                                                                                                   |
 
 Endpoint review: ignored filters on quest board/members; page-length used as totals in places; phase-two pagination/perf **not certified**.
 
@@ -26,14 +26,14 @@ Endpoint review: ignored filters on quest board/members; page-length used as tot
 
 ## 2. Named patterns (use these)
 
-| Pattern | Rule |
-| ------- | ---- |
-| **Request-scoped DataLoader** | One registry per request; dedupe keys; **≤100 keys/chunk**; one set SQL per entity family |
-| **List + total** | Root lists: filtered SQL + count (or CTE); default limit 50, max 100; reject invalid args |
-| **Keyset** | **Notifications only** (`before` cursor) — not generic lists without ADR |
-| **Batch mutation** | e.g. `setMemberRolesBatch`: **one transaction**, all-or-nothing |
-| **CQRS** | Reads → `ProductQueries` / batch SQL; writes → `ProductCommands` + one UoW tx per command |
-| **Session per task** | No shared tx across concurrent resolver goroutines; flush loaders after self-affecting mutations |
+| Pattern                       | Rule                                                                                             |
+| ----------------------------- | ------------------------------------------------------------------------------------------------ |
+| **Request-scoped DataLoader** | One registry per request; dedupe keys; **≤100 keys/chunk**; one set SQL per entity family        |
+| **List + total**              | Root lists: filtered SQL + count (or CTE); default limit 50, max 100; reject invalid args        |
+| **Keyset**                    | **Notifications only** (`before` cursor) — not generic lists without ADR                         |
+| **Batch mutation**            | e.g. `setMemberRolesBatch`: **one transaction**, all-or-nothing                                  |
+| **CQRS**                      | Reads → `ProductQueries` / batch SQL; writes → `ProductCommands` + one UoW tx per command        |
+| **Session per task**          | No shared tx across concurrent resolver goroutines; flush loaders after self-affecting mutations |
 
 ---
 
@@ -41,7 +41,7 @@ Endpoint review: ignored filters on quest board/members; page-length used as tot
 
 1. One GraphQL request per screen tree — no REST fan-out for the same graph.
 2. Root lists always return **items + total**; apply SDL filters in SQL.
-3. Nested fields on lists → **loaders → ReadBatch* → sqlc unnest/ANY**, never per-row `Get`.
+3. Nested fields on lists → _*loaders → ReadBatch* → sqlc unnest/ANY_*, never per-row `Get`.
 4. Pagination args are part of the **loader cache key** (e.g. quest id + participant status + limit + offset).
 5. Enforce depth/complexity/response size before DB ([performance.md](../../apps/api/docs/design/graphql-product/performance.md)).
 6. Quest UI: bounded `questBoard` / `quests(limit:50)`; use `questStateCounts` for dashboards.

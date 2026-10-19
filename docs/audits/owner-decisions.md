@@ -10,21 +10,21 @@
 
 ## Decisions (A–M)
 
-| ID | Topic | Choice | Summary |
-|----|-------|--------|---------|
-| A | Migration history | A1 | Squash to single `0001_init.sql`; disposable dev DBs OK |
-| B | Authoritative stack | B1 | Product GraphQL + product SQL only; legacy discarded (site down, 0 users) |
-| C | Map model | C3 | Pointcrawl-only; no hex-based maps in squashed schema |
-| D | Notifications | D1 | Inbox `notifications` only; no event ledger |
-| E | Quest XP | E1 | `character_progression_ledger` only |
-| F | Social/DM | F1 | Minimal members + optional `dm_profiles` |
-| G | DDB | G2 | `character_ddb_mirrors.payload` JSONB in Postgres (1:1 with character) |
-| H | Agent questions | H1 | Separate `agent_questions` table |
-| I | Idempotency | I2 | Product-grade CommandMeta + DB receipts |
-| J | Document revisions | J1 | Keep `document_revisions` (history, publish workflow) |
-| K | DataLoaders | K1 | Mandatory request-scoped loaders + batch SQL on product resolvers; no legacy N+1 under B1 |
-| L | Web `@pi/contracts` | L1 | Adopt package types before major UI on new stack |
-| M | GraphQL phase 2 | M1 | Domain SDL + `_roots.graphql` part of "interface done" |
+| ID  | Topic               | Choice | Summary                                                                                   |
+| --- | ------------------- | ------ | ----------------------------------------------------------------------------------------- |
+| A   | Migration history   | A1     | Squash to single `0001_init.sql`; disposable dev DBs OK                                   |
+| B   | Authoritative stack | B1     | Product GraphQL + product SQL only; legacy discarded (site down, 0 users)                 |
+| C   | Map model           | C3     | Pointcrawl-only; no hex-based maps in squashed schema                                     |
+| D   | Notifications       | D1     | Inbox `notifications` only; no event ledger                                               |
+| E   | Quest XP            | E1     | `character_progression_ledger` only                                                       |
+| F   | Social/DM           | F1     | Minimal members + optional `dm_profiles`                                                  |
+| G   | DDB                 | G2     | `character_ddb_mirrors.payload` JSONB in Postgres (1:1 with character)                    |
+| H   | Agent questions     | H1     | Separate `agent_questions` table                                                          |
+| I   | Idempotency         | I2     | Product-grade CommandMeta + DB receipts                                                   |
+| J   | Document revisions  | J1     | Keep `document_revisions` (history, publish workflow)                                     |
+| K   | DataLoaders         | K1     | Mandatory request-scoped loaders + batch SQL on product resolvers; no legacy N+1 under B1 |
+| L   | Web `@pi/contracts` | L1     | Adopt package types before major UI on new stack                                          |
+| M   | GraphQL phase 2     | M1     | Domain SDL + `_roots.graphql` part of "interface done"                                    |
 
 **Notes on divergence from audit memos:** [hobby-db-simplification-memo.md](hobby-db-simplification-memo.md) listed hex-only maps and minimal idempotency as hobby defaults; **C3** and **I2** lock the opposite product-grade choices above. **B1** + **K1** align with the convergence direction in [bulk-crud-performance-memo.md](bulk-crud-performance-memo.md).
 
@@ -36,17 +36,17 @@
 
 Locked in chat after cutover plan audit (local copy: `.artifacts/plans/cutover/AUDIT.md`, gitignored).
 
-| ID | Topic | Choice | Summary |
-|----|-------|--------|---------|
-| N1 | Unlockables | 1A | Keep `unlockables` + `member_unlocks` in squashed init |
-| N2 | Non-document history | 2B | Drop aggregate `*_changes` / review-event tables; keep **J1** `document_revisions` only |
-| N3 | F1 extras | 3C | Drop `member_follows`, `dm_requests`, `request_decisions` |
-| N4 | D1 vs delivery | 4A | Inbox-only; update notifications interface (no delivery ledger tables) |
-| N5 | Quest ↔ map | 5B | Replace `quest_hexes` with pointcrawl association in squash + SDL |
-| N6 | Site stats | 6A | Remove `totalHexes` from site contract |
-| N7 | DDB attempts | 7B | Drop `character_ddb_attempts`; **G2** mirror JSONB only |
-| N8 | Ops tables | 8C | Drop `job_redrives` and `operational_observations` |
-| N9 | Design-doc authority | 9B | Reconcile graphql-product migrations/storage **before** serious backend/frontend work |
+| ID  | Topic                | Choice | Summary                                                                                 |
+| --- | -------------------- | ------ | --------------------------------------------------------------------------------------- |
+| N1  | Unlockables          | 1A     | Keep `unlockables` + `member_unlocks` in squashed init                                  |
+| N2  | Non-document history | 2B     | Drop aggregate `*_changes` / review-event tables; keep **J1** `document_revisions` only |
+| N3  | F1 extras            | 3C     | Drop `member_follows`, `dm_requests`, `request_decisions`                               |
+| N4  | D1 vs delivery       | 4A     | Inbox-only; update notifications interface (no delivery ledger tables)                  |
+| N5  | Quest ↔ map          | 5B     | Replace `quest_hexes` with pointcrawl association in squash + SDL                       |
+| N6  | Site stats           | 6A     | Remove `totalHexes` from site contract                                                  |
+| N7  | DDB attempts         | 7B     | Drop `character_ddb_attempts`; **G2** mirror JSONB only                                 |
+| N8  | Ops tables           | 8C     | Drop `job_redrives` and `operational_observations`                                      |
+| N9  | Design-doc authority | 9B     | Reconcile graphql-product migrations/storage **before** serious backend/frontend work   |
 
 ---
 
@@ -81,13 +81,13 @@ flowchart LR
   BE --> FE
 ```
 
-| Workstream | Can start when | Blocks |
-|------------|----------------|--------|
-| **Doc reconcile + grep (N9 9B)** | Immediately | Serious **01 / 03 / L1 UI** until graphql-product + interfaces + stale greps are clean |
-| **Database** (squash **A1**, schema per **C–J**, **N1–N8**) | After **9B** (or parallel only on reconciled doc inventory) | Backend product work is not **done** until DB matches locked decisions |
-| **Interface** (`@pi/contracts`, SDL, OpenAPI transport, **M1**) | In parallel with DB | **Frontend** major UI (**L1**); backend product **done** |
-| **Backend product** (resolvers, product SQL, loaders **K1**, idempotency **I2**) | DB + interface both underway | Declaring cutover complete under **B1** |
-| **Frontend** (web on new stack) | After interface complete (**L1**) | — |
+| Workstream                                                                       | Can start when                                              | Blocks                                                                                 |
+| -------------------------------------------------------------------------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| **Doc reconcile + grep (N9 9B)**                                                 | Immediately                                                 | Serious **01 / 03 / L1 UI** until graphql-product + interfaces + stale greps are clean |
+| **Database** (squash **A1**, schema per **C–J**, **N1–N8**)                      | After **9B** (or parallel only on reconciled doc inventory) | Backend product work is not **done** until DB matches locked decisions                 |
+| **Interface** (`@pi/contracts`, SDL, OpenAPI transport, **M1**)                  | In parallel with DB                                         | **Frontend** major UI (**L1**); backend product **done**                               |
+| **Backend product** (resolvers, product SQL, loaders **K1**, idempotency **I2**) | DB + interface both underway                                | Declaring cutover complete under **B1**                                                |
+| **Frontend** (web on new stack)                                                  | After interface complete (**L1**)                           | —                                                                                      |
 
 **Owner rules (explicit):**
 
@@ -100,14 +100,14 @@ flowchart LR
 
 ## Implementation pointers (not a full plan)
 
-| Area | Pointer |
-|------|---------|
-| Schema squash and table targets | [hobby-db-simplification-memo.md](hobby-db-simplification-memo.md) |
-| Loaders, list/total, batch SQL | [bulk-crud-performance-memo.md](bulk-crud-performance-memo.md) |
-| SDL layout, OpenAPI, cutover gaps | [interface-contract-audit-summary.md](interface-contract-audit-summary.md) → [interface-contract-audit.md](interface-contract-audit.md) |
-| GraphQL transport | **POST `/v1/graphql`** remains declared in [openapi.yaml](../../packages/contracts/openapi.yaml) (transport only; product reads/commands stay GraphQL, not duplicated as REST) |
-| Interface M1 layout | Authoritative domain SDL under [packages/contracts/graphql/](../../packages/contracts/graphql/) (`_roots.graphql`, domain `types.graphql` / `operations.graphql`; see [PHASE2-NOTES.md](../../packages/contracts/graphql/PHASE2-NOTES.md)) |
-| Migrations authority | [D42 Worker and migrations](../../apps/api/docs/decisions/D42-Worker-And-Migrations.md); squash **A1** implies reconcile docs/tests that still assume four goose files |
+| Area                              | Pointer                                                                                                                                                                                                                                    |
+| --------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Schema squash and table targets   | [hobby-db-simplification-memo.md](hobby-db-simplification-memo.md)                                                                                                                                                                         |
+| Loaders, list/total, batch SQL    | [bulk-crud-performance-memo.md](bulk-crud-performance-memo.md)                                                                                                                                                                             |
+| SDL layout, OpenAPI, cutover gaps | [interface-contract-audit-summary.md](interface-contract-audit-summary.md) → [interface-contract-audit.md](interface-contract-audit.md)                                                                                                    |
+| GraphQL transport                 | **POST `/v1/graphql`** remains declared in [openapi.yaml](../../packages/contracts/openapi.yaml) (transport only; product reads/commands stay GraphQL, not duplicated as REST)                                                             |
+| Interface M1 layout               | Authoritative domain SDL under [packages/contracts/graphql/](../../packages/contracts/graphql/) (`_roots.graphql`, domain `types.graphql` / `operations.graphql`; see [PHASE2-NOTES.md](../../packages/contracts/graphql/PHASE2-NOTES.md)) |
+| Migrations authority              | [D42 Worker and migrations](../../apps/api/docs/decisions/D42-Worker-And-Migrations.md); squash **A1** implies reconcile docs/tests that still assume four goose files                                                                     |
 
 Re-run or extend dated audit siblings when evidence drifts; this file records **choices**, not live schema fingerprints.
 
@@ -115,9 +115,9 @@ Re-run or extend dated audit siblings when evidence drifts; this file records **
 
 ## Related audits
 
-| Audit | Role |
-| ----- | ---- |
-| [postgres-schema-audit-summary.md](postgres-schema-audit-summary.md) | Pre-cutover table census |
+| Audit                                                                      | Role                           |
+| -------------------------------------------------------------------------- | ------------------------------ |
+| [postgres-schema-audit-summary.md](postgres-schema-audit-summary.md)       | Pre-cutover table census       |
 | [interface-contract-audit-summary.md](interface-contract-audit-summary.md) | Contract vs implementation map |
-| [hobby-db-simplification-memo.md](hobby-db-simplification-memo.md) | Research backing for **A–J** |
-| [bulk-crud-performance-memo.md](bulk-crud-performance-memo.md) | Research backing for **K1** |
+| [hobby-db-simplification-memo.md](hobby-db-simplification-memo.md)         | Research backing for **A–J**   |
+| [bulk-crud-performance-memo.md](bulk-crud-performance-memo.md)             | Research backing for **K1**    |

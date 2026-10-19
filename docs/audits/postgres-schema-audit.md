@@ -20,17 +20,17 @@ This audit answers:
 
 ## Schema authority and migration timeline
 
-| Authority | Location | Role |
-| --------- | -------- | ---- |
-| Executable DDL | [0001_init.sql](../../apps/api/db/migrations/0001_init.sql) (squashed **A1**) | Single goose file is production schema authority |
-| Narrative inventory | [db/docs/tables.md](../../apps/api/db/docs/tables.md) | Domain-grouped table list aligned to `0001_init.sql` banners |
-| Vocabulary reference | [schema-v2.md](../../apps/api/docs/schema-v2.md) | Label/check vocabulary from the port; **not** a second DDL source |
-| Product GraphQL physical design | [design/graphql-product/migrations.md](../../apps/api/docs/design/graphql-product/migrations.md) | Acceptance expectations; must match or explain gaps vs goose |
+| Authority                       | Location                                                                                         | Role                                                              |
+| ------------------------------- | ------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| Executable DDL                  | [0001_init.sql](../../apps/api/db/migrations/0001_init.sql) (squashed **A1**)                    | Single goose file is production schema authority                  |
+| Narrative inventory             | [db/docs/tables.md](../../apps/api/db/docs/tables.md)                                            | Domain-grouped table list aligned to `0001_init.sql` banners      |
+| Vocabulary reference            | [schema-v2.md](../../apps/api/docs/schema-v2.md)                                                 | Label/check vocabulary from the port; **not** a second DDL source |
+| Product GraphQL physical design | [design/graphql-product/migrations.md](../../apps/api/docs/design/graphql-product/migrations.md) | Acceptance expectations; must match or explain gaps vs goose      |
 
 ### Migration summary
 
-| Migration | File | What it does |
-| --------- | ---- | ------------ |
+| Migration       | File                                                        | What it does                                                                                                                                                                                                                                                                                                                     |
+| --------------- | ----------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 0001 (squashed) | [0001_init.sql](../../apps/api/db/migrations/0001_init.sql) | End-state hobby schema after **A1**: dual-key rows, pointcrawl-only spatial (**C3**), inbox notifications, product idempotency receipts, typed `document_links` (including `summary_append_order`), `quest_display_status_at()` display wrapper, `quest_pointcrawl_nodes` (**N5B**), no legacy hex grid or dropped N1–N8 tables. |
 
 **Former incremental files (removed at squash, cited here for research continuity only):** `0002_quest_display_status.sql` (display view), `0003_product_graphql.sql` (pre-cutover product DDL), `0004_summary_append_order.sql` (summary link ordering). Do not link them as live paths; [migrations.md](../../apps/api/docs/design/graphql-product/migrations.md) owns the target inventory narrative.
@@ -75,33 +75,33 @@ Regions, maps, hex grid (`hexes`, `hex_edges`, `hex_entry_links`, `hex_changes`)
 
 ### Legacy stack (production wiring today)
 
-| SQL file | Generated | Primary Go consumers |
-| -------- | --------- | -------------------- |
-| [agent.sql](../../apps/api/db/queries/agent.sql) | `agent.sql.go` | [internal/agent/postgres.go](../../apps/api/internal/agent/postgres.go) |
-| [characters.sql](../../apps/api/db/queries/characters.sql) | `characters.sql.go` | [internal/character/postgres.go](../../apps/api/internal/character/postgres.go) |
-| [documents.sql](../../apps/api/db/queries/documents.sql) | `documents.sql.go` | [internal/document/postgres.go](../../apps/api/internal/document/postgres.go) |
-| [ingest.sql](../../apps/api/db/queries/ingest.sql) | `ingest.sql.go` | [internal/ingest/postgres.go](../../apps/api/internal/ingest/postgres.go) |
-| [jobs.sql](../../apps/api/db/queries/jobs.sql) | `jobs.sql.go` | [internal/platform/jobs/postgres.go](../../apps/api/internal/platform/jobs/postgres.go), agent locks |
-| [members.sql](../../apps/api/db/queries/members.sql) | `members.sql.go` | [internal/member/postgres.go](../../apps/api/internal/member/postgres.go), [worker/maintenance.go](../../apps/api/internal/worker/maintenance.go) |
-| [notifications.sql](../../apps/api/db/queries/notifications.sql) | `notifications.sql.go` | [internal/notification/postgres.go](../../apps/api/internal/notification/postgres.go) |
-| *(removed at **A1** / **N8**)* | — | `observations.sql` and `operational_observations` dropped from [0001_init.sql](../../apps/api/db/migrations/0001_init.sql); operator visibility via `background_jobs` per [work-contract](../../apps/api/docs/design/graphql-product/work-contract.md) |
-| [quests.sql](../../apps/api/db/queries/quests.sql) | `quests.sql.go` | [internal/quest/postgres.go](../../apps/api/internal/quest/postgres.go), [delivery/postgres_revision.go](../../apps/api/internal/delivery/postgres_revision.go) |
-| [spatial.sql](../../apps/api/db/queries/spatial.sql) | `spatial.sql.go` | [internal/spatial/postgres.go](../../apps/api/internal/spatial/postgres.go), worker calendar maintenance |
-| [site.sql](../../apps/api/db/queries/site.sql) | `site.sql.go` | [internal/site/postgres.go](../../apps/api/internal/site/postgres.go) (member count); `GetSiteSetting` unused |
+| SQL file                                                         | Generated              | Primary Go consumers                                                                                                                                                                                                                                   |
+| ---------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| [agent.sql](../../apps/api/db/queries/agent.sql)                 | `agent.sql.go`         | [internal/agent/postgres.go](../../apps/api/internal/agent/postgres.go)                                                                                                                                                                                |
+| [characters.sql](../../apps/api/db/queries/characters.sql)       | `characters.sql.go`    | [internal/character/postgres.go](../../apps/api/internal/character/postgres.go)                                                                                                                                                                        |
+| [documents.sql](../../apps/api/db/queries/documents.sql)         | `documents.sql.go`     | [internal/document/postgres.go](../../apps/api/internal/document/postgres.go)                                                                                                                                                                          |
+| [ingest.sql](../../apps/api/db/queries/ingest.sql)               | `ingest.sql.go`        | [internal/ingest/postgres.go](../../apps/api/internal/ingest/postgres.go)                                                                                                                                                                              |
+| [jobs.sql](../../apps/api/db/queries/jobs.sql)                   | `jobs.sql.go`          | [internal/platform/jobs/postgres.go](../../apps/api/internal/platform/jobs/postgres.go), agent locks                                                                                                                                                   |
+| [members.sql](../../apps/api/db/queries/members.sql)             | `members.sql.go`       | [internal/member/postgres.go](../../apps/api/internal/member/postgres.go), [worker/maintenance.go](../../apps/api/internal/worker/maintenance.go)                                                                                                      |
+| [notifications.sql](../../apps/api/db/queries/notifications.sql) | `notifications.sql.go` | [internal/notification/postgres.go](../../apps/api/internal/notification/postgres.go)                                                                                                                                                                  |
+| _(removed at **A1** / **N8**)_                                   | —                      | `observations.sql` and `operational_observations` dropped from [0001_init.sql](../../apps/api/db/migrations/0001_init.sql); operator visibility via `background_jobs` per [work-contract](../../apps/api/docs/design/graphql-product/work-contract.md) |
+| [quests.sql](../../apps/api/db/queries/quests.sql)               | `quests.sql.go`        | [internal/quest/postgres.go](../../apps/api/internal/quest/postgres.go), [delivery/postgres_revision.go](../../apps/api/internal/delivery/postgres_revision.go)                                                                                        |
+| [spatial.sql](../../apps/api/db/queries/spatial.sql)             | `spatial.sql.go`       | [internal/spatial/postgres.go](../../apps/api/internal/spatial/postgres.go), worker calendar maintenance                                                                                                                                               |
+| [site.sql](../../apps/api/db/queries/site.sql)                   | `site.sql.go`          | [internal/site/postgres.go](../../apps/api/internal/site/postgres.go) (member count); `GetSiteSetting` unused                                                                                                                                          |
 
 **Central wiring:** [internal/app/wire.go](../../apps/api/internal/app/wire.go) binds **legacy** repositories for the mounted GraphQL/REST API. [product_uow.go](../../apps/api/internal/app/product_uow.go) is a **stub** — product GraphQL UoW is not production-bound yet.
 
 ### Product stack (`*_product.sql`)
 
-| SQL file | Approx. scale | Runtime adapter | Notes |
-| -------- | ------------- | --------------- | ----- |
-| [member_product.sql](../../apps/api/db/queries/member_product.sql) | ~48 named queries | [member/product_postgres.go](../../apps/api/internal/member/product_postgres.go) | Furthest along: reads + many writes; some SQL only in dbgen (e.g. community directory, DM review append) |
-| [character_product.sql](../../apps/api/db/queries/character_product.sql) | ~41 queries | [character/product_postgres.go](../../apps/api/internal/character/product_postgres.go) | **Reads only** in adapter; writes covered by integration tests |
-| [site_product.sql](../../apps/api/db/queries/site_product.sql) | 7 queries | [site/product_postgres.go](../../apps/api/internal/site/product_postgres.go) | **Two reads** (`SiteCommunitySnapshot`, `SiteMemberDiscovery`); settings writes test-only |
-| [document_product.sql](../../apps/api/db/queries/document_product.sql) | ~31 queries | [document/product_postgres.go](../../apps/api/internal/document/product_postgres.go) stub | SQL validated in `product_sql_integration_test.go` |
-| [quest_product.sql](../../apps/api/db/queries/quest_product.sql) | ~44 queries | [quest/product_postgres.go](../../apps/api/internal/quest/product_postgres.go) stub | Test-only |
-| [spatial_product.sql](../../apps/api/db/queries/spatial_product.sql) | ~67 queries | [spatial/product_postgres.go](../../apps/api/internal/spatial/product_postgres.go) stub | Legacy [spatial/postgres.go](../../apps/api/internal/spatial/postgres.go) still serves live map reads |
-| [notification_product.sql](../../apps/api/db/queries/notification_product.sql) | 7 queries | [notification/product_postgres.go](../../apps/api/internal/notification/product_postgres.go) stub | Event-backed model vs legacy row notifications |
+| SQL file                                                                       | Approx. scale     | Runtime adapter                                                                                   | Notes                                                                                                    |
+| ------------------------------------------------------------------------------ | ----------------- | ------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| [member_product.sql](../../apps/api/db/queries/member_product.sql)             | ~48 named queries | [member/product_postgres.go](../../apps/api/internal/member/product_postgres.go)                  | Furthest along: reads + many writes; some SQL only in dbgen (e.g. community directory, DM review append) |
+| [character_product.sql](../../apps/api/db/queries/character_product.sql)       | ~41 queries       | [character/product_postgres.go](../../apps/api/internal/character/product_postgres.go)            | **Reads only** in adapter; writes covered by integration tests                                           |
+| [site_product.sql](../../apps/api/db/queries/site_product.sql)                 | 7 queries         | [site/product_postgres.go](../../apps/api/internal/site/product_postgres.go)                      | **Two reads** (`SiteCommunitySnapshot`, `SiteMemberDiscovery`); settings writes test-only                |
+| [document_product.sql](../../apps/api/db/queries/document_product.sql)         | ~31 queries       | [document/product_postgres.go](../../apps/api/internal/document/product_postgres.go) stub         | SQL validated in `product_sql_integration_test.go`                                                       |
+| [quest_product.sql](../../apps/api/db/queries/quest_product.sql)               | ~44 queries       | [quest/product_postgres.go](../../apps/api/internal/quest/product_postgres.go) stub               | Test-only                                                                                                |
+| [spatial_product.sql](../../apps/api/db/queries/spatial_product.sql)           | ~67 queries       | [spatial/product_postgres.go](../../apps/api/internal/spatial/product_postgres.go) stub           | Legacy [spatial/postgres.go](../../apps/api/internal/spatial/postgres.go) still serves live map reads    |
+| [notification_product.sql](../../apps/api/db/queries/notification_product.sql) | 7 queries         | [notification/product_postgres.go](../../apps/api/internal/notification/product_postgres.go) stub | Event-backed model vs legacy row notifications                                                           |
 
 Product repositories also carry **phase-3 declaration tests** (`product_repository_phase3_test.go`, `product_types.go`) that lock GraphQL DTO shapes to Go — parallel to sqlc, not a replacement.
 
@@ -111,10 +111,10 @@ Product repositories also carry **phase-3 declaration tests** (`product_reposito
 
 ### What “v1 vs v2” means in the database
 
-| Generation | SQL | Schema emphasis | API binding |
-| ------------ | --- | --------------- | ----------- |
-| Legacy / mounted API | `*.sql` (no suffix) | Pre–product GraphQL shapes; simpler notification rows; narrower spatial reads | [wire.go](../../apps/api/internal/app/wire.go) |
-| Product / declared GraphQL | `*_product.sql` | 0003+ history tables, typed links, pointcrawl, notification events, idempotency receipts | Mostly integration tests + partial adapters |
+| Generation                 | SQL                 | Schema emphasis                                                                          | API binding                                    |
+| -------------------------- | ------------------- | ---------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| Legacy / mounted API       | `*.sql` (no suffix) | Pre–product GraphQL shapes; simpler notification rows; narrower spatial reads            | [wire.go](../../apps/api/internal/app/wire.go) |
+| Product / declared GraphQL | `*_product.sql`     | 0003+ history tables, typed links, pointcrawl, notification events, idempotency receipts | Mostly integration tests + partial adapters    |
 
 Both stacks compile into **one** `dbgen.Queries`. There is no compile-time enforcement that legacy and product queries stay mutually consistent on shared tables.
 
@@ -138,11 +138,11 @@ Until product UoW replaces legacy wiring, **only one stack should mutate a given
 
 ## Seeds, fixtures, and QA
 
-| Asset | Path | Role |
-| ----- | ---- | ---- |
-| Local dev seed | [seed/local.sql](../../apps/api/db/seed/local.sql) | Small hand seed (seven tables cited in endpoint review) |
-| QA generator output | [seed/qa.jsonl](../../apps/api/db/seed/qa.jsonl) | 637 insert specs across 45 tables; repaired 2026-10-13/14 per [endpoint-review.md](../../apps/api/docs/endpoint-review.md) |
-| Integration harness | `dbtest` + Docker Postgres | Applies migrations + seed; not a schema authority |
+| Asset               | Path                                               | Role                                                                                                                       |
+| ------------------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Local dev seed      | [seed/local.sql](../../apps/api/db/seed/local.sql) | Small hand seed (seven tables cited in endpoint review)                                                                    |
+| QA generator output | [seed/qa.jsonl](../../apps/api/db/seed/qa.jsonl)   | 637 insert specs across 45 tables; repaired 2026-10-13/14 per [endpoint-review.md](../../apps/api/docs/endpoint-review.md) |
+| Integration harness | `dbtest` + Docker Postgres                         | Applies migrations + seed; not a schema authority                                                                          |
 
 QA seed proves **table coverage**, not endpoint or product-SQL completeness. Loader uses `ON CONFLICT DO NOTHING` — not a full reset semantics.
 
@@ -150,12 +150,12 @@ QA seed proves **table coverage**, not endpoint or product-SQL completeness. Loa
 
 ## Doc drift and stale references
 
-| Reference | Issue |
-| --------- | ----- |
-| [endpoint-review.md](../../apps/api/docs/endpoint-review.md) migration count | Baseline dated 2026-10-13 cites two migrations; repo now has **four** (0003 product, 0004 summary order). Reconcile baseline JSON when refreshing review. |
-| [schema-v2.md](../../apps/api/docs/schema-v2.md) | Vocabulary doc; easy to confuse with live goose DDL. |
-| graphql-product [migrations.md](../../apps/api/docs/design/graphql-product/migrations.md) | Acceptance spec; audit diff against 0003/0004 when changing either side. |
-| Historical Python/Alembic | Mentioned in endpoint review as **non-authoritative** for Go schema. |
+| Reference                                                                                 | Issue                                                                                                                                                     |
+| ----------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [endpoint-review.md](../../apps/api/docs/endpoint-review.md) migration count              | Baseline dated 2026-10-13 cites two migrations; repo now has **four** (0003 product, 0004 summary order). Reconcile baseline JSON when refreshing review. |
+| [schema-v2.md](../../apps/api/docs/schema-v2.md)                                          | Vocabulary doc; easy to confuse with live goose DDL.                                                                                                      |
+| graphql-product [migrations.md](../../apps/api/docs/design/graphql-product/migrations.md) | Acceptance spec; audit diff against 0003/0004 when changing either side.                                                                                  |
+| Historical Python/Alembic                                                                 | Mentioned in endpoint review as **non-authoritative** for Go schema.                                                                                      |
 
 ---
 

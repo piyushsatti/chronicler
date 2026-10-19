@@ -18,16 +18,16 @@ This audit answers:
 
 ## Authority layers
 
-| Layer | Path | Human-edited? | Role |
-| ----- | ---- | ------------- | ---- |
-| Split SDL | [graphql/**](../../packages/contracts/graphql/) | **Yes** | Authoritative product GraphQL source (recursive discovery; M1 domain folders) |
-| Merged SDL | [schema.graphql](../../packages/contracts/schema.graphql) | **No** | Committed merge for TS codegen + drift checks |
-| TS types | [src/generated/graphql.ts](../../packages/contracts/src/generated/graphql.ts) | **No** | `@graphql-codegen/typescript` single output |
-| Package export | [src/index.ts](../../packages/contracts/src/index.ts) | Minimal | Re-exports all generated types |
-| REST | [openapi.yaml](../../packages/contracts/openapi.yaml) | **Yes** | Machine routes + GraphQL transport POST |
-| Routing map | [field-routing.md](../../packages/contracts/field-routing.md) | **Yes** | Legacy REST operation → GraphQL / HTTP / DROP |
-| Go executable schema | [apps/api/internal/graph/generated.go](../../apps/api/internal/graph/generated.go) | Generated + hand resolvers | Implements **subset** of declared roots today |
-| Product declarations | [go-seams.json](../../apps/api/docs/design/graphql-product/go-seams.json), phase-3 `product_types.go` | **Yes** (design) | Planned backend; not fully wired |
+| Layer                | Path                                                                                                  | Human-edited?              | Role                                                                          |
+| -------------------- | ----------------------------------------------------------------------------------------------------- | -------------------------- | ----------------------------------------------------------------------------- |
+| Split SDL            | [graphql/**](../../packages/contracts/graphql/)                                                       | **Yes**                    | Authoritative product GraphQL source (recursive discovery; M1 domain folders) |
+| Merged SDL           | [schema.graphql](../../packages/contracts/schema.graphql)                                             | **No**                     | Committed merge for TS codegen + drift checks                                 |
+| TS types             | [src/generated/graphql.ts](../../packages/contracts/src/generated/graphql.ts)                         | **No**                     | `@graphql-codegen/typescript` single output                                   |
+| Package export       | [src/index.ts](../../packages/contracts/src/index.ts)                                                 | Minimal                    | Re-exports all generated types                                                |
+| REST                 | [openapi.yaml](../../packages/contracts/openapi.yaml)                                                 | **Yes**                    | Machine routes + GraphQL transport POST                                       |
+| Routing map          | [field-routing.md](../../packages/contracts/field-routing.md)                                         | **Yes**                    | Legacy REST operation → GraphQL / HTTP / DROP                                 |
+| Go executable schema | [apps/api/internal/graph/generated.go](../../apps/api/internal/graph/generated.go)                    | Generated + hand resolvers | Implements **subset** of declared roots today                                 |
+| Product declarations | [go-seams.json](../../apps/api/docs/design/graphql-product/go-seams.json), phase-3 `product_types.go` | **Yes** (design)           | Planned backend; not fully wired                                              |
 
 **Interface rule:** [docs/interfaces/graphql-schema.md](../interfaces/graphql-schema.md) — one SDL under `packages/contracts/graphql`; clients must not fork schema.
 
@@ -84,12 +84,12 @@ Result: ~2,884 lines, all `export type` / enums in one module ([package.json](..
 
 ### Must `graphql.ts` stay monolithic?
 
-| Option | Description | Tradeoffs |
-| ------ | ----------- | --------- |
-| **A. Status quo** | Single codegen target | Simple build; large diffs; editors choke on one file; matches one schema |
-| **B. Multi-file codegen** | Multiple `generates` entries (e.g. per domain slice) | Smaller files; must avoid duplicate type names; needs `import type` graph or `preset: import-types` |
-| **C. Re-export barrels only** | Still one codegen run, post-process split (custom script) | Extra maintenance; not standard codegen |
-| **D. Consumers use schema + operations codegen** | `typescript-operations` near adapters | Better for web than dumping full schema types; more moving parts |
+| Option                                           | Description                                               | Tradeoffs                                                                                           |
+| ------------------------------------------------ | --------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| **A. Status quo**                                | Single codegen target                                     | Simple build; large diffs; editors choke on one file; matches one schema                            |
+| **B. Multi-file codegen**                        | Multiple `generates` entries (e.g. per domain slice)      | Smaller files; must avoid duplicate type names; needs `import type` graph or `preset: import-types` |
+| **C. Re-export barrels only**                    | Still one codegen run, post-process split (custom script) | Extra maintenance; not standard codegen                                                             |
+| **D. Consumers use schema + operations codegen** | `typescript-operations` near adapters                     | Better for web than dumping full schema types; more moving parts                                    |
 
 **Observation:** [apps/web](../../apps/web) feature adapters use **`graphqlRequest` with inline query strings** and **Zod** (or hand types) — they do **not** import `@pi/contracts` generated types today (grep shows no `@pi/contracts` in `apps/web/src`). The monolith primarily serves **potential** shared typing and package `dist` — not current web runtime.
 
@@ -119,12 +119,12 @@ Result: ~2,884 lines, all `export type` / enums in one module ([package.json](..
 
 ## Multi-generation tech debt
 
-| Generation | Artifacts | Runtime today |
-| ---------- | --------- | --------------- |
-| Legacy GraphQL roots | gqlgen schema from split SDL; resolvers in [internal/graph/](../../apps/api/internal/graph/generated.go) | Mounted; 12+ hard-coded empty roots per endpoint review |
-| Legacy REST | OpenAPI subset + mux tests | Partial CRUD; some no-ops |
-| Product GraphQL declaration | Full split SDL + field-routing + go-seams | SQL/product repos mostly **ahead** of resolvers |
-| Client adapters | Web inline GraphQL + Zod | Not on generated `@pi/contracts` types |
+| Generation                  | Artifacts                                                                                                | Runtime today                                           |
+| --------------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| Legacy GraphQL roots        | gqlgen schema from split SDL; resolvers in [internal/graph/](../../apps/api/internal/graph/generated.go) | Mounted; 12+ hard-coded empty roots per endpoint review |
+| Legacy REST                 | OpenAPI subset + mux tests                                                                               | Partial CRUD; some no-ops                               |
+| Product GraphQL declaration | Full split SDL + field-routing + go-seams                                                                | SQL/product repos mostly **ahead** of resolvers         |
+| Client adapters             | Web inline GraphQL + Zod                                                                                 | Not on generated `@pi/contracts` types                  |
 
 This explains “no clarity across generations”: **authority is unified in split SDL**, but **consumers and backend implement different slices**.
 

@@ -11,7 +11,7 @@ Use [start-here.md](/docs/start-here.md) for the human path. This page is the in
 | **Systems**      | [systems.md](/docs/systems.md)                | Thin map of product areas (including Agent Q&A)              |
 | **Interfaces**   | [interfaces/](/docs/interfaces/README.md)     | Boundaries both sides must honor                             |
 | **Decisions**    | [decisions/](/docs/decisions/README.md)       | Short boundary ADRs (D-ids)                                  |
-| **Audits**        | [audits/](/docs/audits/README.md)               | In-repo research snapshots (not authority)                   |
+| **Audits**       | [audits/](/docs/audits/README.md)             | In-repo research snapshots (not authority)                   |
 
 **Requirements** are the most product-facing. **Semantics** nail vocabulary. **Systems** point at **interfaces**; apps implement interfaces. Tooling rules: [CONTRIBUTING.md](/CONTRIBUTING.md), [AGENTS.md](/AGENTS.md).
 

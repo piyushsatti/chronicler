@@ -4,15 +4,15 @@ Paste-ready brief for a new chat that owns the web client. Sibling track (Go API
 
 ## What’s already committed (consume these)
 
-| Artifact       | Path                                                 | Use                                                             |
-| -------------- | ---------------------------------------------------- | --------------------------------------------------------------- |
-| Shared package | `packages/contracts` (`@pi/contracts`)               | GraphQL codegen types, OpenAPI as source of truth for REST      |
-| Merged SDL     | `packages/contracts/schema.graphql`                  | Web GraphQL codegen input                                       |
-| Split SDL      | `packages/contracts/graphql/*.graphql`               | Edit sources; refresh merge with `scripts/merge-graphql-schema` |
-| OpenAPI        | `packages/contracts/openapi.yaml`                    | REST under `/v1` (+ machine auth/ingest)                        |
-| Field map      | `packages/contracts/field-routing.md`                | Old field → GraphQL / REST / DROP                               |
-| Patterns       | `packages/contracts/docs/patterns.md`                | D40 transport rules, `ID` = UUID, no new `V2` names             |
-| Dual-key DB    | `apps/api/db/docs/design.md`, `0001_init.sql`        | Wire `public_id` (UUID) only; bigint `id` never leaves the API  |
+| Artifact       | Path                                                 | Use                                                                   |
+| -------------- | ---------------------------------------------------- | --------------------------------------------------------------------- |
+| Shared package | `packages/contracts` (`@pi/contracts`)               | GraphQL codegen types, OpenAPI as source of truth for REST            |
+| Merged SDL     | `packages/contracts/schema.graphql`                  | Web GraphQL codegen input                                             |
+| Split SDL      | `packages/contracts/graphql/*.graphql`               | Edit sources; refresh merge with `scripts/merge-graphql-schema`       |
+| OpenAPI        | `packages/contracts/openapi.yaml`                    | REST under `/v1` (+ machine auth/ingest)                              |
+| Field map      | `packages/contracts/field-routing.md`                | Old field → GraphQL / REST / DROP                                     |
+| Patterns       | `packages/contracts/docs/patterns.md`                | D40 transport rules, `ID` = UUID, no new `V2` names                   |
+| Dual-key DB    | `apps/api/db/docs/design.md`, `0001_init.sql`        | Wire `public_id` (UUID) only; bigint `id` never leaves the API        |
 | Transport rule | `apps/api/docs/decisions/D40-GraphQL-Versus-REST.md` | Product reads **and** commands → GraphQL; auth/ingest/agent stay HTTP |
 
 Design notes for contracts: [`packages/contracts/docs/README.md`](/packages/contracts/docs/README.md).

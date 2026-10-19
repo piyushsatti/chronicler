@@ -48,14 +48,14 @@ Endpoint review predates migrations 0003/0004; `schema-v2.md` is vocabulary, not
 
 ## What needs attention
 
-| Priority | Topic | Why | Detail |
-| -------- | ----- | --- | ------ |
-| **P0** | Dual-stack on shared tables | Legacy and product SQL can diverge on quests, documents, notifications, spatial | [Dual-stack analysis](postgres-schema-audit.md#dual-stack-analysis) |
-| **P0** | Production still on legacy wiring | Product GraphQL DDL exists; UoW stub | [Query layer map](postgres-schema-audit.md#query-layer-map) |
-| **P1** | Member product partial coverage | Some `member_product` queries have no Go caller yet | [Query layer map](postgres-schema-audit.md#query-layer-map) |
-| **P1** | Refresh endpoint-review baseline | Migration count and product work moved since 2026-10-13 | [Doc drift](postgres-schema-audit.md#doc-drift-and-stale-references) |
-| **P2** | Unused legacy sqlc queries | Dead code vs planned use unclear | [Query layer map](postgres-schema-audit.md#query-layer-map) |
-| **P2** | Observations adapter stub | Schema + sqlc without runtime consumer | [Risks and gaps](postgres-schema-audit.md#risks-and-gaps) |
+| Priority | Topic                             | Why                                                                             | Detail                                                               |
+| -------- | --------------------------------- | ------------------------------------------------------------------------------- | -------------------------------------------------------------------- |
+| **P0**   | Dual-stack on shared tables       | Legacy and product SQL can diverge on quests, documents, notifications, spatial | [Dual-stack analysis](postgres-schema-audit.md#dual-stack-analysis)  |
+| **P0**   | Production still on legacy wiring | Product GraphQL DDL exists; UoW stub                                            | [Query layer map](postgres-schema-audit.md#query-layer-map)          |
+| **P1**   | Member product partial coverage   | Some `member_product` queries have no Go caller yet                             | [Query layer map](postgres-schema-audit.md#query-layer-map)          |
+| **P1**   | Refresh endpoint-review baseline  | Migration count and product work moved since 2026-10-13                         | [Doc drift](postgres-schema-audit.md#doc-drift-and-stale-references) |
+| **P2**   | Unused legacy sqlc queries        | Dead code vs planned use unclear                                                | [Query layer map](postgres-schema-audit.md#query-layer-map)          |
+| **P2**   | Observations adapter stub         | Schema + sqlc without runtime consumer                                          | [Risks and gaps](postgres-schema-audit.md#risks-and-gaps)            |
 
 ---
 

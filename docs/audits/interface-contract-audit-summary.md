@@ -54,14 +54,14 @@ Full SDL + field-routing describe the target; OpenAPI + partial resolvers + lega
 
 ## What needs attention
 
-| Priority | Topic | Why | Detail |
-| -------- | ----- | --- | ------ |
-| **P0** | SDL vs implementation gap | Large declared API; many roots stubbed or legacy-mapped | [Multi-generation tech debt](interface-contract-audit.md#multi-generation-tech-debt) |
-| **P0** | `roots.graphql` drift | Docs/tests out of sync with repo layout | [Authority layers](interface-contract-audit.md#authority-layers) |
-| **P1** | field-routing / OpenAPI / SDL triangle | Three lists must move together on every wire change | [REST, OpenAPI, and field routing](interface-contract-audit.md#rest-openapi-and-field-routing) |
-| **P1** | Web not on generated types | Schema can drift from adapter query strings | [TypeScript consumer surface](interface-contract-audit.md#typescript-consumer-surface) |
-| **P2** | `V2` suffix policy | Cleaner names vs breaking rename | [Naming inconsistencies](interface-contract-audit.md#naming-and-export-inconsistencies) |
-| **P2** | Split or keep monolithic `graphql.ts` | DX vs build complexity | [TypeScript consumer surface](interface-contract-audit.md#typescript-consumer-surface) |
+| Priority | Topic                                  | Why                                                     | Detail                                                                                         |
+| -------- | -------------------------------------- | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| **P0**   | SDL vs implementation gap              | Large declared API; many roots stubbed or legacy-mapped | [Multi-generation tech debt](interface-contract-audit.md#multi-generation-tech-debt)           |
+| **P0**   | `roots.graphql` drift                  | Docs/tests out of sync with repo layout                 | [Authority layers](interface-contract-audit.md#authority-layers)                               |
+| **P1**   | field-routing / OpenAPI / SDL triangle | Three lists must move together on every wire change     | [REST, OpenAPI, and field routing](interface-contract-audit.md#rest-openapi-and-field-routing) |
+| **P1**   | Web not on generated types             | Schema can drift from adapter query strings             | [TypeScript consumer surface](interface-contract-audit.md#typescript-consumer-surface)         |
+| **P2**   | `V2` suffix policy                     | Cleaner names vs breaking rename                        | [Naming inconsistencies](interface-contract-audit.md#naming-and-export-inconsistencies)        |
+| **P2**   | Split or keep monolithic `graphql.ts`  | DX vs build complexity                                  | [TypeScript consumer surface](interface-contract-audit.md#typescript-consumer-surface)         |
 
 ---
 
