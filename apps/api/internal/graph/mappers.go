@@ -15,16 +15,6 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/spatial"
 )
 
-func intPtr(v int) *int       { return &v }
-func strPtr(v string) *string { return &v }
-
-func optionalID(id string) *string {
-	if id == "" {
-		return nil
-	}
-	return &id
-}
-
 func clockToProductTime(t time.Time) product.Time {
 	return product.Time(t.Format("15:04:05"))
 }
@@ -140,33 +130,6 @@ func toQuestArcListResult(v quest.QuestArcListResult) *QuestArcListResult {
 		items = append(items, toQuestArcView(item))
 	}
 	return &QuestArcListResult{Items: items, Total: int(v.Total)}
-}
-
-func toQuest(q quest.LegacyQuestView) *QuestType {
-	status := string(q.Status)
-	return &QuestType{
-		ID:            q.ID,
-		ShortCode:     q.ShortCode,
-		Kinds:         []string{"standard"},
-		Status:        status,
-		DmID:          q.DMID,
-		ScheduledAt:   q.ScheduledAt,
-		DurationHours: q.DurationHours,
-		DisplayStatus: strPtr(q.DisplayStatus),
-		SlotsMax:      q.SlotsMax,
-		FilledCount:   q.FilledCount,
-		DocumentID:    optionalID(q.DocumentID),
-		Tags:          []string{},
-		Genres:        []string{},
-		CreatedBy:     q.DMID,
-		CreatedAt:     time.Now(),
-		UpdatedAt:     time.Now(),
-		DiscordDelivery: &QuestDiscordDeliveryType{
-			DesiredRevision: q.DiscordDesiredRevision,
-			AppliedRevision: q.DiscordAppliedRevision,
-			OverallStatus:   "pending",
-		},
-	}
 }
 
 func toMemberType(m member.Member) *MemberType {
@@ -1003,23 +966,6 @@ func toAdminCharacterDirectoryType(v character.AdminCharacterDirectoryView) *Adm
 	return &AdminCharacterDirectoryType{Items: items, Total: int(v.Total)}
 }
 
-func toCharacter(c character.LegacyCharacterView) *CharacterType {
-	now := time.Now()
-	return &CharacterType{
-		ID:                      c.ID,
-		ShortCode:               c.ShortCode,
-		Name:                    c.Name,
-		OwnerID:                 c.OwnerID,
-		Status:                  c.Status,
-		RegionID:                nil,
-		BackstoryID:             nil,
-		Pcxp:                    c.PCXP,
-		CreatedAt:               now,
-		UpdatedAt:               now,
-		VerificationSubmittedAt: &now,
-	}
-}
-
 func toCountByKeyTypes(items []site.CountByKeyView) []*CountByKeyType {
 	out := make([]*CountByKeyType, len(items))
 	for i, item := range items {
@@ -1108,15 +1054,6 @@ func toMembersSpec(filters *MemberFiltersInput, sort *MemberSortInput, limit, of
 	return spec
 }
 
-func toHome(stats site.Stats) *HomeType {
-	return &HomeType{
-		RecentByCategory: []*HomeBucketType{},
-		CommunityStats: &SiteStatsType{
-			TotalMembers: stats.TotalMembers,
-		},
-	}
-}
-
 func toNotificationType(v notification.NotificationView) *NotificationType {
 	label := v.Label
 	if label == "" {
@@ -1145,22 +1082,6 @@ func toNotificationConnectionType(conn notification.NotificationConnection) *Not
 		HasMore:    conn.HasMore,
 		NextBefore: conn.NextBefore,
 		Items:      items,
-	}
-}
-
-func toMap(m spatial.LegacyMapView) *MapType {
-	var regionID *string
-	if m.RegionID != "" {
-		regionID = &m.RegionID
-	}
-	return &MapType{
-		ID:        m.ID,
-		Name:      m.Name,
-		AtlasCode: m.AtlasCode,
-		Family:    m.Family,
-		MapKind:   "",
-		RegionID:  regionID,
-		CreatedAt: time.Now(),
 	}
 }
 

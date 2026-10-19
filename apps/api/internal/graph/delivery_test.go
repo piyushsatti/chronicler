@@ -7,16 +7,17 @@ import (
 )
 
 func TestQuestViewMapsDiscordDelivery(t *testing.T) {
-	got := toQuest(quest.LegacyQuestView{
-		ID:                     "q",
-		Status:                 quest.Open,
-		DiscordDesiredRevision: 3,
-		DiscordAppliedRevision: 1,
+	jobID := "job-1"
+	got := toQuestDiscordDeliveryType(quest.QuestDiscordDeliveryView{
+		JobId:           &jobID,
+		DesiredRevision: 3,
+		AppliedRevision: 1,
+		OverallStatus:   "pending",
 	})
-	if got.DiscordDelivery == nil {
+	if got == nil {
 		t.Fatal("discordDelivery is nil")
 	}
-	if got.DiscordDelivery.DesiredRevision != 3 || got.DiscordDelivery.AppliedRevision != 1 {
-		t.Fatalf("delivery=%+v", got.DiscordDelivery)
+	if got.DesiredRevision != 3 || got.AppliedRevision != 1 || got.OverallStatus != "pending" || got.JobID == nil || *got.JobID != jobID {
+		t.Fatalf("delivery=%+v", got)
 	}
 }
