@@ -2,9 +2,7 @@ package character
 
 import (
 	"context"
-	"errors"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
@@ -17,100 +15,6 @@ type PostgresQueries struct {
 
 func NewPostgresQueries(pool *pgxpool.Pool) *PostgresQueries {
 	return &PostgresQueries{q: dbgen.New(pool)}
-}
-
-func mapChar(row dbgen.GetCharacterRow) LegacyCharacterView {
-	return LegacyCharacterView{
-		ID:        db.UUIDString(row.ID),
-		ShortCode: row.ShortCode,
-		Name:      row.Name,
-		OwnerID:   db.UUIDString(row.OwnerID),
-		Status:    row.Status,
-		PCXP:      int(row.Pcxp),
-	}
-}
-
-func (p *PostgresQueries) GetByID(ctx context.Context, id string) (LegacyCharacterView, error) {
-	uid, err := db.ParseUUID(id)
-	if err != nil {
-		return LegacyCharacterView{}, ErrNotFound
-	}
-	row, err := p.q.GetCharacter(ctx, uid)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return LegacyCharacterView{}, ErrNotFound
-		}
-		return LegacyCharacterView{}, err
-	}
-	return mapChar(row), nil
-}
-
-func (p *PostgresQueries) GetByShortCode(ctx context.Context, code string) (LegacyCharacterView, error) {
-	row, err := p.q.GetCharacterByShortCode(ctx, code)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return LegacyCharacterView{}, ErrNotFound
-		}
-		return LegacyCharacterView{}, err
-	}
-	return LegacyCharacterView{
-		ID:        db.UUIDString(row.ID),
-		ShortCode: row.ShortCode,
-		Name:      row.Name,
-		OwnerID:   db.UUIDString(row.OwnerID),
-		Status:    row.Status,
-		PCXP:      int(row.Pcxp),
-	}, nil
-}
-
-func (p *PostgresQueries) ListByOwner(ctx context.Context, ownerID string, limit, offset int) ([]LegacyCharacterView, error) {
-	uid, err := db.ParseUUID(ownerID)
-	if err != nil {
-		return nil, nil
-	}
-	rows, err := p.q.ListCharactersByOwner(ctx, dbgen.ListCharactersByOwnerParams{
-		OwnerID:   uid,
-		RowLimit:  int32(limit),
-		RowOffset: int32(offset),
-	})
-	if err != nil {
-		return nil, err
-	}
-	out := make([]LegacyCharacterView, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, LegacyCharacterView{
-			ID:        db.UUIDString(row.ID),
-			ShortCode: row.ShortCode,
-			Name:      row.Name,
-			OwnerID:   db.UUIDString(row.OwnerID),
-			Status:    row.Status,
-			PCXP:      int(row.Pcxp),
-		})
-	}
-	return out, nil
-}
-
-func (p *PostgresQueries) List(ctx context.Context, status *string, limit, offset int) ([]LegacyCharacterView, error) {
-	rows, err := p.q.ListCharacters(ctx, dbgen.ListCharactersParams{
-		Column1: db.OptString(status),
-		Limit:   int32(limit),
-		Offset:  int32(offset),
-	})
-	if err != nil {
-		return nil, err
-	}
-	out := make([]LegacyCharacterView, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, LegacyCharacterView{
-			ID:        db.UUIDString(row.ID),
-			ShortCode: row.ShortCode,
-			Name:      row.Name,
-			OwnerID:   db.UUIDString(row.OwnerID),
-			Status:    row.Status,
-			PCXP:      int(row.Pcxp),
-		})
-	}
-	return out, nil
 }
 
 func (p *PostgresQueries) Progression(ctx context.Context, characterID string, limit int) ([]ProgressionEntry, error) {

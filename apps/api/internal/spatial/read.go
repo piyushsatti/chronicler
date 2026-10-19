@@ -20,22 +20,6 @@ type HexChange struct {
 	CreatedAt time.Time
 }
 
-type MapPlace struct {
-	HexID      string
-	Col        int
-	Row        int
-	DocumentID string
-	Slug       string
-	Title      string
-	Category   string
-}
-
-type MapViewPage struct {
-	Map          LegacyMapView
-	Places       []MapPlace
-	TotalPlaces  int
-}
-
 type RegionCounts struct {
 	Hexes      int
 	OpenQuests int

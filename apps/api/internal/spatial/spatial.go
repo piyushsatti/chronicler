@@ -10,6 +10,8 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/httpserver"
 )
 
+var ErrNotFound = apierr.New(apierr.NotFound, "spatial entity not found")
+
 type TimeMap interface {
 	GameDay(realDate time.Time) (int, error)
 	RealDates(gameDay int) ([]time.Time, error)

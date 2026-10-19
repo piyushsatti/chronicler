@@ -5,8 +5,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/piyushsatti/chronicler/apps/api/internal/document"
-
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -23,64 +21,6 @@ func NewPostgresQueries(pool *pgxpool.Pool) *PostgresQueries {
 	return &PostgresQueries{q: dbgen.New(pool)}
 }
 
-func int4(v pgtype.Int4) int {
-	if !v.Valid {
-		return 0
-	}
-	return int(v.Int32)
-}
-
-func (p *PostgresQueries) MapByAtlas(ctx context.Context, code string) (LegacyMapView, error) {
-	row, err := p.q.GetMapByAtlasCode(ctx, code)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return LegacyMapView{}, ErrNotFound
-		}
-		return LegacyMapView{}, err
-	}
-	return LegacyMapView{
-		ID:        db.UUIDString(row.ID),
-		Name:      row.Name,
-		AtlasCode: row.AtlasCode,
-		Family:    row.Family,
-		RegionID:  db.UUIDString(row.RegionID),
-	}, nil
-}
-
-func (p *PostgresQueries) ListMaps(ctx context.Context, family *string) ([]LegacyMapView, error) {
-	rows, err := p.q.ListMaps(ctx, db.OptString(family))
-	if err != nil {
-		return nil, err
-	}
-	out := make([]LegacyMapView, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, LegacyMapView{
-			ID:        db.UUIDString(row.ID),
-			Name:      row.Name,
-			AtlasCode: row.AtlasCode,
-			Family:    row.Family,
-			RegionID:  db.UUIDString(row.RegionID),
-		})
-	}
-	return out, nil
-}
-
-func (p *PostgresQueries) ListRegions(ctx context.Context, kind *string) ([]Region, error) {
-	rows, err := p.q.ListRegions(ctx, db.OptString(kind))
-	if err != nil {
-		return nil, err
-	}
-	out := make([]Region, 0, len(rows))
-	for _, row := range rows {
-		out = append(out, Region{
-			ID:   db.UUIDString(row.ID),
-			Name: row.Name,
-			Kind: row.Kind,
-		})
-	}
-	return out, nil
-}
-
 func (p *PostgresQueries) GameDay(ctx context.Context, realDate time.Time) (int, error) {
 	var d pgtype.Date
 	_ = d.Scan(realDate.Format("2006-01-02"))
@@ -92,36 +32,6 @@ func (p *PostgresQueries) GameDay(ctx context.Context, realDate time.Time) (int,
 		return 0, err
 	}
 	return int(day), nil
-}
-
-func mapHex(id, mapID pgtype.UUID, col, row int32, terrain, elevation, climate pgtype.Text) Hex {
-	return Hex{
-		ID:        db.UUIDString(id),
-		MapID:     db.UUIDString(mapID),
-		Col:       int(col),
-		Row:       int(row),
-		Terrain:   db.TextOrEmpty(terrain),
-		Elevation: db.TextOrEmpty(elevation),
-		Climate:   db.TextOrEmpty(climate),
-	}
-}
-
-func (p *PostgresQueries) HexAt(ctx context.Context, mapID string, col, row int) (Hex, error) {
-	_ = p
-	_ = ctx
-	_ = mapID
-	_ = col
-	_ = row
-	return Hex{}, ErrNotFound
-}
-
-func (p *PostgresQueries) MapViewPage(ctx context.Context, scope document.ViewerScope, atlasCode string, limit, offset int) (MapViewPage, error) {
-	m, err := p.MapByAtlas(ctx, atlasCode)
-	if err != nil {
-		return MapViewPage{}, err
-	}
-	_ = scope
-	return MapViewPage{Map: m, Places: []MapPlace{}, TotalPlaces: 0}, nil
 }
 
 func (p *PostgresQueries) HexHistory(ctx context.Context, hexID string, limit int) ([]HexChange, error) {
