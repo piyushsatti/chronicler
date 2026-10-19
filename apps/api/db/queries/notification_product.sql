@@ -28,14 +28,39 @@ WITH selected AS MATERIALIZED (
     ORDER BY n.created_at ASC, n.public_id ASC
     LIMIT LEAST(sqlc.arg(row_limit)::integer, 100)
 )
-SELECT n.public_id, n.kind, n.subject_type, n.subject_id, n.body,
-       n.read_at, n.created_at
+SELECT n.public_id, n.kind, n.subject_type,
+       (CASE n.subject_type
+         WHEN 'document' THEN d.public_id
+         WHEN 'character' THEN c.public_id
+         WHEN 'quest' THEN q.public_id
+         ELSE NULL
+       END)::uuid AS subject_public_id,
+       (n.subject_id IS NOT NULL)::boolean AS subject_ref_present,
+       n.body, n.read_at, n.created_at
 FROM selected
 JOIN notifications n ON n.public_id = selected.public_id
 JOIN members m ON m.id = n.member_id
+LEFT JOIN documents d ON n.subject_type = 'document' AND d.id = n.subject_id
+LEFT JOIN characters c ON n.subject_type = 'character' AND c.id = n.subject_id
+LEFT JOIN quests q ON n.subject_type = 'quest' AND q.id = n.subject_id
 WHERE m.public_id = sqlc.arg(member_id)::uuid AND n.read_at IS NULL
 ORDER BY n.public_id
 FOR UPDATE OF n;
+
+-- name: ProductNotificationSubjectDocuments :many
+SELECT d.public_id
+FROM documents d
+WHERE d.public_id = ANY(sqlc.arg(ids)::uuid[]);
+
+-- name: ProductNotificationSubjectCharacters :many
+SELECT c.public_id
+FROM characters c
+WHERE c.public_id = ANY(sqlc.arg(ids)::uuid[]);
+
+-- name: ProductNotificationSubjectQuests :many
+SELECT q.public_id
+FROM quests q
+WHERE q.public_id = ANY(sqlc.arg(ids)::uuid[]);
 
 -- name: ProductNotificationMarkRead :one
 WITH locked AS MATERIALIZED (

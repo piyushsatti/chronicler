@@ -133,11 +133,21 @@ WITH selected AS MATERIALIZED (
     ORDER BY n.created_at ASC, n.public_id ASC
     LIMIT LEAST($2::integer, 100)
 )
-SELECT n.public_id, n.kind, n.subject_type, n.subject_id, n.body,
-       n.read_at, n.created_at
+SELECT n.public_id, n.kind, n.subject_type,
+       (CASE n.subject_type
+         WHEN 'document' THEN d.public_id
+         WHEN 'character' THEN c.public_id
+         WHEN 'quest' THEN q.public_id
+         ELSE NULL
+       END)::uuid AS subject_public_id,
+       (n.subject_id IS NOT NULL)::boolean AS subject_ref_present,
+       n.body, n.read_at, n.created_at
 FROM selected
 JOIN notifications n ON n.public_id = selected.public_id
 JOIN members m ON m.id = n.member_id
+LEFT JOIN documents d ON n.subject_type = 'document' AND d.id = n.subject_id
+LEFT JOIN characters c ON n.subject_type = 'character' AND c.id = n.subject_id
+LEFT JOIN quests q ON n.subject_type = 'quest' AND q.id = n.subject_id
 WHERE m.public_id = $1::uuid AND n.read_at IS NULL
 ORDER BY n.public_id
 FOR UPDATE OF n
@@ -149,13 +159,14 @@ type ProductNotificationLockOldestUnreadParams struct {
 }
 
 type ProductNotificationLockOldestUnreadRow struct {
-	PublicID    pgtype.UUID        `json:"public_id"`
-	Kind        string             `json:"kind"`
-	SubjectType pgtype.Text        `json:"subject_type"`
-	SubjectID   pgtype.Int8        `json:"subject_id"`
-	Body        string             `json:"body"`
-	ReadAt      pgtype.Timestamptz `json:"read_at"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	PublicID          pgtype.UUID        `json:"public_id"`
+	Kind              string             `json:"kind"`
+	SubjectType       pgtype.Text        `json:"subject_type"`
+	SubjectPublicID   pgtype.UUID        `json:"subject_public_id"`
+	SubjectRefPresent bool               `json:"subject_ref_present"`
+	Body              string             `json:"body"`
+	ReadAt            pgtype.Timestamptz `json:"read_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 }
 
 func (q *Queries) ProductNotificationLockOldestUnread(ctx context.Context, arg ProductNotificationLockOldestUnreadParams) ([]ProductNotificationLockOldestUnreadRow, error) {
@@ -171,7 +182,8 @@ func (q *Queries) ProductNotificationLockOldestUnread(ctx context.Context, arg P
 			&i.PublicID,
 			&i.Kind,
 			&i.SubjectType,
-			&i.SubjectID,
+			&i.SubjectPublicID,
+			&i.SubjectRefPresent,
 			&i.Body,
 			&i.ReadAt,
 			&i.CreatedAt,
@@ -217,6 +229,84 @@ func (q *Queries) ProductNotificationMarkRead(ctx context.Context, arg ProductNo
 	var affected_count int32
 	err := row.Scan(&affected_count)
 	return affected_count, err
+}
+
+const productNotificationSubjectCharacters = `-- name: ProductNotificationSubjectCharacters :many
+SELECT c.public_id
+FROM characters c
+WHERE c.public_id = ANY($1::uuid[])
+`
+
+func (q *Queries) ProductNotificationSubjectCharacters(ctx context.Context, ids []pgtype.UUID) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, productNotificationSubjectCharacters, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.UUID{}
+	for rows.Next() {
+		var public_id pgtype.UUID
+		if err := rows.Scan(&public_id); err != nil {
+			return nil, err
+		}
+		items = append(items, public_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const productNotificationSubjectDocuments = `-- name: ProductNotificationSubjectDocuments :many
+SELECT d.public_id
+FROM documents d
+WHERE d.public_id = ANY($1::uuid[])
+`
+
+func (q *Queries) ProductNotificationSubjectDocuments(ctx context.Context, ids []pgtype.UUID) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, productNotificationSubjectDocuments, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.UUID{}
+	for rows.Next() {
+		var public_id pgtype.UUID
+		if err := rows.Scan(&public_id); err != nil {
+			return nil, err
+		}
+		items = append(items, public_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const productNotificationSubjectQuests = `-- name: ProductNotificationSubjectQuests :many
+SELECT q.public_id
+FROM quests q
+WHERE q.public_id = ANY($1::uuid[])
+`
+
+func (q *Queries) ProductNotificationSubjectQuests(ctx context.Context, ids []pgtype.UUID) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, productNotificationSubjectQuests, ids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.UUID{}
+	for rows.Next() {
+		var public_id pgtype.UUID
+		if err := rows.Scan(&public_id); err != nil {
+			return nil, err
+		}
+		items = append(items, public_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const productNotificationUnreadCount = `-- name: ProductNotificationUnreadCount :one
