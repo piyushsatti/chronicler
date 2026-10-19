@@ -1,0 +1,25 @@
+{
+  "member": {
+    "id": "00000001-0000-4000-8000-000000000001",
+    "handle": "brune",
+    "displayName": "Brune",
+    "avatarUrl": null,
+    "roles": ["player"],
+    "status": "active",
+    "joinedAt": "2026-01-01T00:00:00Z"
+  },
+  "dmProfile": null,
+  "availability": [
+    {
+      "day": "fri",
+      "startTime": "18:00:00",
+      "endTime": "22:00:00",
+      "note": null
+    }
+  ],
+  "activitySummary": {
+    "voiceMinutes": 120,
+    "messages": 40,
+    "reactions": 8
+  }
+}

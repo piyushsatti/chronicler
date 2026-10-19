@@ -1,0 +1,33 @@
+query MemberProfile($handle: String!) {
+  memberProfile(handle: $handle) {
+    member {
+      id
+      handle
+      displayName
+      avatarUrl
+      roles
+      status
+      joinedAt
+    }
+    dmProfile {
+      memberId
+      tagline
+      philosophy
+      houseRules
+      acceptingPlayers
+      status
+      reviewRevision
+    }
+    availability {
+      day
+      startTime
+      endTime
+      note
+    }
+    activitySummary {
+      voiceMinutes
+      messages
+      reactions
+    }
+  }
+}

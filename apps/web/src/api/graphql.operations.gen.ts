@@ -786,6 +786,13 @@ export type DmTableScheduleQueryVariables = Exact<{
 
 export type DmTableScheduleQuery = { questBoard: { items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, slotsMax: number, filledCount: number, displayStatus: string | null, dm: { handle: string, displayName: string } | null, briefDocument: { title: string } | null }> } };
 
+export type MemberProfileQueryVariables = Exact<{
+  handle: string;
+}>;
+
+
+export type MemberProfileQuery = { memberProfile: { member: { id: string, handle: string, displayName: string, avatarUrl: string | null, roles: Array<string>, status: string, joinedAt: string }, dmProfile: { memberId: string, tagline: string | null, philosophy: string | null, houseRules: string | null, acceptingPlayers: boolean, status: string, reviewRevision: number } | null, availability: Array<{ day: string, startTime: string, endTime: string, note: string | null }>, activitySummary: { voiceMinutes: number, messages: number, reactions: number } } | null };
+
 export type ProfileCommunityDirectoryQueryVariables = Exact<{
   limit: number;
 }>;
