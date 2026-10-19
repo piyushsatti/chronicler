@@ -77,7 +77,10 @@ function mapProfile(wire: MemberProfileWire): MemberProfileView {
   };
 }
 
-export function parseMemberProfile(wire: unknown): AdapterResult<MemberProfileView> {
+export function parseMemberProfile(
+  wire: unknown,
+): AdapterResult<MemberProfileView | null> {
+  if (wire == null) return { ok: true, data: null };
   const parsed = memberProfileWireSchema.safeParse(wire);
   if (!parsed.success) {
     return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
@@ -85,11 +88,15 @@ export function parseMemberProfile(wire: unknown): AdapterResult<MemberProfileVi
   return { ok: true, data: mapProfile(parsed.data) };
 }
 
-/** Typed memberProfile read. Pages stay on community directory until BE clears ReadMemberProfile. */
-export async function loadMemberProfile(handle: string): Promise<MemberProfileView> {
+/** field-routing: memberProfile → Query.memberProfile (BE may still return pending). */
+export async function loadMemberProfile(
+  handle: string,
+): Promise<MemberProfileView | null> {
+  const needle = handle.replace(/^@/, '').trim();
+  if (!needle) return null;
   try {
     const data = await graphqlRequest<MemberProfileQuery>(MEMBER_PROFILE_QUERY, {
-      handle,
+      handle: needle,
     });
     const result = parseMemberProfile(data.memberProfile);
     if (!result.ok) {
