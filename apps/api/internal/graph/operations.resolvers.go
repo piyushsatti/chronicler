@@ -1841,12 +1841,34 @@ func (r *queryResolver) CodexDirectory(ctx context.Context, categoryPrefix *stri
 
 // CodexEntry is the resolver for the codexEntry field.
 func (r *queryResolver) CodexEntry(ctx context.Context, slug string) (*CodexEntryCardType, error) {
-	return nil, nil
+	if r.Services.DocumentQueries == nil {
+		return nil, fmt.Errorf("document queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.DocumentQueries.CodexEntry(ctx, actor, document.CodexEntrySpec{Slug: slug})
+	if err != nil {
+		return nil, err
+	}
+	return toCodexEntryCardType(view), nil
 }
 
 // CodexCategories is the resolver for the codexCategories field.
 func (r *queryResolver) CodexCategories(ctx context.Context) ([]*CategoryCountType, error) {
-	return []*CategoryCountType{}, nil
+	if r.Services.DocumentQueries == nil {
+		return nil, fmt.Errorf("document queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	items, err := r.Services.DocumentQueries.CodexCategories(ctx, actor, document.CodexCategoriesSpec{})
+	if err != nil {
+		return nil, err
+	}
+	return toCategoryCountTypes(items), nil
 }
 
 // DocumentRevisions is the resolver for the documentRevisions field.
@@ -2478,8 +2500,9 @@ func (r *queryResolver) DmSummaries(ctx context.Context, filters *DmSummaryFilte
 }
 
 // Search is the resolver for the search field.
+// Search=A (documents-only): kinds is ignored; Members stays empty. Do not invent a member hybrid.
 func (r *queryResolver) Search(ctx context.Context, query string, kinds []string, limit int, offset int) (*SearchResultType, error) {
-	_ = kinds
+	_ = kinds // Search=A: kinds filter not applied
 	if r.Services.DocumentQueries == nil {
 		return nil, fmt.Errorf("document queries unavailable")
 	}
@@ -2501,7 +2524,7 @@ func (r *queryResolver) Search(ctx context.Context, query string, kinds []string
 		Documents:     toDocumentSearchHitTypes(result.Items),
 		DocumentTotal: int(result.Total),
 		DocumentOrder: documentListOrder,
-		Members:       []*MemberSearchHitType{},
+		Members:       []*MemberSearchHitType{}, // Search=A: members intentionally empty
 	}, nil
 }
 
@@ -2523,7 +2546,22 @@ func (r *queryResolver) Home(ctx context.Context) (*HomeType, error) {
 
 // AdminOperations is the resolver for the adminOperations field.
 func (r *queryResolver) AdminOperations(ctx context.Context, deliveryState *string, limit int, offset int) (*AdminOperationsType, error) {
-	return &AdminOperationsType{Deliveries: []*AdminDeliveryJobType{}}, nil
+	if r.Services.SiteQueries == nil {
+		return nil, fmt.Errorf("site queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SiteQueries.AdminOperations(ctx, actor, site.AdminOperationsSpec{
+		DeliveryState: deliveryState,
+		Limit:         int32(limit),
+		Offset:        int32(offset),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return toAdminOperationsType(view), nil
 }
 
 // SearchableKinds is the resolver for the searchableKinds field.

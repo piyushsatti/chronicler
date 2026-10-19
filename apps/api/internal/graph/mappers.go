@@ -927,6 +927,97 @@ func toCodexDirectoryResult(v document.CodexDirectoryResult) *CodexDirectoryResu
 	return &CodexDirectoryResult{Items: items, Total: int(v.Total)}
 }
 
+func toCategoryCountTypes(items []document.CategoryCountView) []*CategoryCountType {
+	out := make([]*CategoryCountType, len(items))
+	for i, item := range items {
+		out[i] = &CategoryCountType{Category: item.Category, Count: int(item.Count)}
+	}
+	return out
+}
+
+func toCodexEntryCardType(v *document.CodexEntryCardView) *CodexEntryCardType {
+	if v == nil {
+		return nil
+	}
+	return &CodexEntryCardType{
+		Document:      toDocumentViewType(v.Document),
+		BacklinkCount: int(v.BacklinkCount),
+	}
+}
+
+func intPtrFromInt32(v *int32) *int {
+	if v == nil {
+		return nil
+	}
+	n := int(*v)
+	return &n
+}
+
+func toAdminDeliveryJobType(v site.AdminDeliveryJobView) *AdminDeliveryJobType {
+	return &AdminDeliveryJobType{
+		ID:              v.Id,
+		QuestID:         v.QuestId,
+		QuestShortCode:  v.QuestShortCode,
+		QuestTitle:      v.QuestTitle,
+		QuestLink:       v.QuestLink,
+		EventLink:       v.EventLink,
+		MessageID:       v.MessageId,
+		State:           v.State,
+		DesiredRevision: intPtrFromInt32(v.DesiredRevision),
+		AppliedRevision: intPtrFromInt32(v.AppliedRevision),
+		FailureStreak:   int(v.FailureStreak),
+		MaxAttempts:     int(v.MaxAttempts),
+		NextAttemptAt:   v.NextAttemptAt,
+		SafeError:       v.SafeError,
+		RedriveCount:    int(v.RedriveCount),
+		CreatedAt:       v.CreatedAt,
+		UpdatedAt:       v.UpdatedAt,
+	}
+}
+
+func toAdminDeliveryConfigType(v site.AdminDeliveryConfigView) *AdminDeliveryConfigType {
+	return &AdminDeliveryConfigType{
+		PublicOrigin:            v.PublicOrigin,
+		PublicOriginHealthy:     v.PublicOriginHealthy,
+		DeliveryMode:            v.DeliveryMode,
+		AnnouncementRoleID:      v.AnnouncementRoleId,
+		AnnouncementRoleSource:  v.AnnouncementRoleSource,
+		AnnouncementRoleHealthy: v.AnnouncementRoleHealthy,
+	}
+}
+
+func toScheduledWorkStatusTypes(items []site.ScheduledWorkStatusView) []*ScheduledWorkStatusType {
+	out := make([]*ScheduledWorkStatusType, len(items))
+	for i, item := range items {
+		out[i] = &ScheduledWorkStatusType{
+			Kind:           item.Kind,
+			ExpectedSlot:   item.ExpectedSlot,
+			Outcome:        item.Outcome,
+			LastStartedAt:  item.LastStartedAt,
+			LastFinishedAt: item.LastFinishedAt,
+			JobID:          item.JobId,
+			SafeErrorCode:  item.SafeErrorCode,
+		}
+	}
+	return out
+}
+
+func toAdminOperationsType(v site.AdminOperationsView) *AdminOperationsType {
+	deliveries := make([]*AdminDeliveryJobType, len(v.Deliveries))
+	for i, job := range v.Deliveries {
+		deliveries[i] = toAdminDeliveryJobType(job)
+	}
+	return &AdminOperationsType{
+		ScheduledWork:         toScheduledWorkStatusTypes(v.ScheduledWork),
+		Config:                toAdminDeliveryConfigType(v.Config),
+		ActiveAlertCount:      int(v.ActiveAlertCount),
+		PendingDeliveryCount:  int(v.PendingDeliveryCount),
+		TerminalDeliveryCount: int(v.TerminalDeliveryCount),
+		DeliveryTotal:         int(v.DeliveryTotal),
+		Deliveries:            deliveries,
+	}
+}
+
 func toAdminCharacterDirectoryFilters(filters *AdminCharacterDirectoryFiltersInput) *character.AdminCharacterDirectoryFiltersFields {
 	if filters == nil {
 		return nil
