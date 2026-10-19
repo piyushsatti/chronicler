@@ -11,13 +11,24 @@ import recruitment from '../../fixtures/wire/home/lanes-recruitment.json';
 import { renderWithProviders } from '../../test-utils.js';
 
 describe('HomePage', () => {
-  it('renders war-room welcome and lane cards', async () => {
+  it('renders war-room welcome, archive buckets, and lane cards', async () => {
     renderWithProviders(<HomePage />);
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Welcome to Chronicler.' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('01 — Now recruiting')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Siege of Kraghold' })).toBeInTheDocument();
+    expect(screen.getByText('War room')).toBeInTheDocument();
+    expect(screen.getByText('42')).toBeInTheDocument();
+    expect(screen.getByText('members on the server')).toBeInTheDocument();
+    const archive = screen.getByRole('region', { name: 'Recent from the archive' });
+    expect(
+      within(archive).getByRole('link', { name: 'Siege of Kraghold' }),
+    ).toHaveAttribute('href', '/chronicles/siege-of-kraghold');
+    expect(screen.getByRole('heading', { name: 'Now recruiting' })).toBeInTheDocument();
+    const recruiting = screen.getByRole('region', { name: 'Now recruiting' });
+    expect(within(recruiting).getByRole('link', { name: 'Siege of Kraghold' })).toHaveAttribute(
+      'href',
+      '/quests/Q-101',
+    );
     expect(screen.getByRole('link', { name: 'Festival Run' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Vault Delve' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Mira' })).toHaveAttribute(
@@ -107,10 +118,13 @@ describe('HomePage', () => {
       http.post(GRAPHQL_PATH, () =>
         HttpResponse.json({
           data: {
+            home: { recentByCategory: [] },
             questBoard: lanesBad.questBoard,
             quests: lanesBad.quests,
             recentlyClosedQuests: lanesBad.recentlyClosedQuests,
             communityDirectory: lanesBad.communityDirectory,
+            siteStats: { totalMembers: 42 },
+            homeBanner: { enabled: false },
           },
         }),
       ),
@@ -123,9 +137,31 @@ describe('HomePage', () => {
     });
   });
 
-  it('shows empty when all lanes are empty', async () => {
+  it('shows empty when buckets and lanes are empty', async () => {
     server.use(
       http.post(GRAPHQL_PATH, () =>
+        HttpResponse.json({
+          data: {
+            home: { recentByCategory: [] },
+            questBoard: { items: [], total: 0 },
+            quests: { items: [], total: 0 },
+            recentlyClosedQuests: { items: [], total: 0 },
+            communityDirectory: { entries: [], total: 0 },
+            siteStats: { totalMembers: 0 },
+            homeBanner: { enabled: false },
+          },
+        }),
+      ),
+    );
+    renderWithProviders(<HomePage />);
+    expect(
+      await screen.findByText('The war room is quiet for now.'),
+    ).toBeInTheDocument();
+  });
+
+  it('stays ready when lanes are empty but archive buckets have documents', async () => {
+    server.use(
+      graphql.query('HomeWarRoom', () =>
         HttpResponse.json({
           data: {
             questBoard: { items: [], total: 0 },
@@ -138,7 +174,12 @@ describe('HomePage', () => {
     );
     renderWithProviders(<HomePage />);
     expect(
-      await screen.findByText('The war room is quiet for now.'),
+      await screen.findByRole('heading', { level: 1, name: 'Welcome to Chronicler.' }),
     ).toBeInTheDocument();
+    expect(
+      screen.getByRole('region', { name: 'Recent from the archive' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText('The war room is quiet for now.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Now recruiting' })).not.toBeInTheDocument();
   });
 });

@@ -58,8 +58,47 @@ describe('useHomePage', () => {
       expect(result.current.status).toBe('ready');
     });
     if (result.current.status === 'ready') {
-      expect(result.current.view.recruiting[0]?.title).toBe('Siege of Kraghold');
-      expect(result.current.view.dmsAccepting[0]?.handle).toBe('mira');
+      expect(result.current.view.buckets.headingTitle).toBe('Siege of Kraghold');
+      expect(result.current.view.lanes.recruiting[0]?.title).toBe('Siege of Kraghold');
+      expect(result.current.view.lanes.dmsAccepting[0]?.handle).toBe('mira');
+    }
+  });
+
+  it('stays ready when only buckets have content', async () => {
+    server.use(
+      http.post(GRAPHQL_PATH, () =>
+        HttpResponse.json({
+          data: {
+            home: {
+              recentByCategory: [
+                {
+                  category: 'Chronicles',
+                  documents: [
+                    {
+                      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                      slug: 'siege-of-kraghold',
+                      title: 'Siege of Kraghold',
+                      category: 'Chronicles',
+                    },
+                  ],
+                },
+              ],
+            },
+            questBoard: { items: [], total: 0 },
+            quests: { items: [], total: 0 },
+            recentlyClosedQuests: { items: [], total: 0 },
+            communityDirectory: { entries: [], total: 0 },
+          },
+        }),
+      ),
+    );
+    const { result } = renderHook(() => useHomePage(), { wrapper });
+    await waitFor(() => {
+      expect(result.current.status).toBe('ready');
+    });
+    if (result.current.status === 'ready') {
+      expect(result.current.view.buckets.headingTitle).toBe('Siege of Kraghold');
+      expect(result.current.view.lanes.recruiting).toHaveLength(0);
     }
   });
 });
