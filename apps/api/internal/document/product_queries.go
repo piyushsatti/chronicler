@@ -90,6 +90,10 @@ func (s ProductQueries) BatchDocumentSubjects(ctx context.Context, actor auth.Au
 	return s.Reads.Batch.ReadBatchDocumentSubjects(ctx, actor, keys)
 }
 
+func (s ProductQueries) BatchReaderIds(ctx context.Context, actor auth.Authority, keys []IDKey) ([]product.BatchResult[ReaderIDList], error) {
+	return s.Reads.Batch.ReadBatchReaderIds(ctx, actor, keys)
+}
+
 func (s ProductQueries) Document(ctx context.Context, actor auth.Authority, spec DocumentSpec) (*DocumentView, error) {
 	value, err := s.Reads.Document.ReadDocument(ctx, actor, spec)
 	if err != nil {

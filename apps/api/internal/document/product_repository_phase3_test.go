@@ -111,6 +111,7 @@ func TestPhase3TaskDOC02Acceptance(t *testing.T) {
 		reflect.TypeFor[BriefEdit](),
 		reflect.TypeFor[WriteResult](),
 		reflect.TypeFor[SubjectLinkList](),
+		reflect.TypeFor[ReaderIDList](),
 		reflect.TypeFor[DocumentSubjectsKey](),
 		reflect.TypeFor[DocumentKey](),
 		reflect.TypeFor[IDKey](),
@@ -191,6 +192,7 @@ func TestPhase3TaskDOC02Acceptance(t *testing.T) {
 		"product.BatchResult[document.DocumentView]":       reflect.TypeFor[product.BatchResult[DocumentView]](),
 		"product.BatchResult[document.SummaryDerivedView]": reflect.TypeFor[product.BatchResult[SummaryDerivedView]](),
 		"product.BatchResult[document.SubjectLinkList]":    reflect.TypeFor[product.BatchResult[SubjectLinkList]](),
+		"product.BatchResult[document.ReaderIDList]":       reflect.TypeFor[product.BatchResult[ReaderIDList]](),
 	}
 	for _, typ := range registered {
 		name := "document." + typ.Name()
@@ -249,10 +251,10 @@ func TestPhase3TaskDOC02Acceptance(t *testing.T) {
 		}{
 			{"DocumentReadRepository", []int{5}, false, 11},
 			{"DocumentWriteRepository", []int{6}, false, 22},
-			{"ProductBatchRepository", []int{7}, false, 4},
+			{"ProductBatchRepository", []int{7}, false, 5},
 			{"ReferenceAudienceReader", []int{260}, true, 1},
-			{"MentionMemberReader", []int{402}, true, 1},
-			{"LocationAdmissionReader", []int{408}, true, 1},
+			{"MentionMemberReader", []int{404}, true, 1},
+			{"LocationAdmissionReader", []int{410}, true, 1},
 			{"BriefWriter", []int{269, 270}, true, 2},
 			{"SummaryWriter", []int{271}, true, 1},
 		}
@@ -311,8 +313,8 @@ func TestPhase3TaskDOC02Acceptance(t *testing.T) {
 				total += typ.NumMethod()
 			})
 		}
-		if total != 43 {
-			t.Errorf("compiled methods=%d, want 43", total)
+		if total != 44 {
+			t.Errorf("compiled methods=%d, want 44", total)
 		}
 	})
 

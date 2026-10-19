@@ -1473,6 +1473,374 @@ func (q *Queries) LockProductDocumentByID(ctx context.Context, documentID pgtype
 	return i, err
 }
 
+const productBatchDocumentReaderIds = `-- name: ProductBatchDocumentReaderIds :many
+SELECT input.ordinality::integer AS input_index,
+       input.public_id AS document_id,
+       reader.public_id AS reader_id
+FROM unnest($1::uuid[]) WITH ORDINALITY AS input(public_id, ordinality)
+LEFT JOIN documents d ON d.public_id = input.public_id AND d.deleted_at IS NULL
+LEFT JOIN document_readers dr ON dr.document_id = d.id
+LEFT JOIN members reader ON reader.id = dr.member_id
+ORDER BY input.ordinality, reader.public_id NULLS LAST
+`
+
+type ProductBatchDocumentReaderIdsRow struct {
+	InputIndex int32       `json:"input_index"`
+	DocumentID interface{} `json:"document_id"`
+	ReaderID   pgtype.UUID `json:"reader_id"`
+}
+
+func (q *Queries) ProductBatchDocumentReaderIds(ctx context.Context, documentIds []pgtype.UUID) ([]ProductBatchDocumentReaderIdsRow, error) {
+	rows, err := q.db.Query(ctx, productBatchDocumentReaderIds, documentIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ProductBatchDocumentReaderIdsRow{}
+	for rows.Next() {
+		var i ProductBatchDocumentReaderIdsRow
+		if err := rows.Scan(&i.InputIndex, &i.DocumentID, &i.ReaderID); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const productSummaryDerivedPlaces = `-- name: ProductSummaryDerivedPlaces :many
+WITH requested AS (
+    SELECT input.ordinality::integer AS input_index,
+           input.public_id AS document_id
+    FROM unnest($1::uuid[]) WITH ORDINALITY AS input(public_id, ordinality)
+), summaries AS (
+    SELECT r.input_index, r.document_id, d.id AS document_internal_id
+    FROM requested r
+    JOIN documents d ON d.public_id = r.document_id AND d.deleted_at IS NULL AND d.kind = 'summary'
+), admitted AS (
+    SELECT s.input_index, s.document_id, q.id AS quest_internal_id, l.summary_append_order
+    FROM summaries s
+    JOIN document_links l ON l.source_id = s.document_internal_id
+      AND l.relation = 'summarizes' AND l.quest_target_id IS NOT NULL
+    JOIN quests q ON q.id = l.quest_target_id AND q.deleted_at IS NULL
+    JOIN documents brief ON brief.id = q.document_id AND brief.deleted_at IS NULL
+    JOIN members brief_author ON brief_author.id = brief.author_id
+    WHERE document_readable(
+        brief.public_id, brief_author.public_id, brief.status, brief.visibility, brief.policy,
+        $2::uuid, $3::text[], $4::text,
+        $5::boolean, $6::boolean,
+        COALESCE(ARRAY(
+            SELECT reader.public_id FROM document_readers dr
+            JOIN members reader ON reader.id = dr.member_id
+            WHERE dr.document_id = brief.id
+        ), ARRAY[]::uuid[])
+    )
+), regions AS (
+    SELECT a.input_index, a.document_id, 'region'::text AS place_kind,
+           r.public_id AS place_id, r.name AS place_name, NULL::uuid AS map_id,
+           a.summary_append_order, r.public_id AS sort_id
+    FROM admitted a
+    JOIN quest_regions qr ON qr.quest_id = a.quest_internal_id
+    JOIN regions r ON r.id = qr.region_id AND r.deleted_at IS NULL
+), nodes AS (
+    SELECT a.input_index, a.document_id, 'node'::text AS place_kind,
+           n.public_id AS place_id, n.name AS place_name, m.public_id AS map_id,
+           a.summary_append_order, n.public_id AS sort_id
+    FROM admitted a
+    JOIN quest_pointcrawl_nodes qpn ON qpn.quest_id = a.quest_internal_id
+    JOIN pointcrawl_nodes n ON n.id = qpn.node_id
+    JOIN maps m ON m.id = n.map_id
+)
+SELECT input_index, document_id, place_kind, place_id, place_name, map_id, summary_append_order, sort_id
+FROM regions
+UNION ALL
+SELECT input_index, document_id, place_kind, place_id, place_name, map_id, summary_append_order, sort_id
+FROM nodes
+ORDER BY input_index, place_kind, summary_append_order, sort_id
+`
+
+type ProductSummaryDerivedPlacesParams struct {
+	DocumentIds  []pgtype.UUID `json:"document_ids"`
+	ViewerID     pgtype.UUID   `json:"viewer_id"`
+	ViewerRoles  []string      `json:"viewer_roles"`
+	ViewerHandle string        `json:"viewer_handle"`
+	ViewerAdmin  bool          `json:"viewer_admin"`
+	ViewerLiveDm bool          `json:"viewer_live_dm"`
+}
+
+type ProductSummaryDerivedPlacesRow struct {
+	InputIndex         int32       `json:"input_index"`
+	DocumentID         interface{} `json:"document_id"`
+	PlaceKind          string      `json:"place_kind"`
+	PlaceID            pgtype.UUID `json:"place_id"`
+	PlaceName          string      `json:"place_name"`
+	MapID              pgtype.UUID `json:"map_id"`
+	SummaryAppendOrder int64       `json:"summary_append_order"`
+	SortID             pgtype.UUID `json:"sort_id"`
+}
+
+func (q *Queries) ProductSummaryDerivedPlaces(ctx context.Context, arg ProductSummaryDerivedPlacesParams) ([]ProductSummaryDerivedPlacesRow, error) {
+	rows, err := q.db.Query(ctx, productSummaryDerivedPlaces,
+		arg.DocumentIds,
+		arg.ViewerID,
+		arg.ViewerRoles,
+		arg.ViewerHandle,
+		arg.ViewerAdmin,
+		arg.ViewerLiveDm,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ProductSummaryDerivedPlacesRow{}
+	for rows.Next() {
+		var i ProductSummaryDerivedPlacesRow
+		if err := rows.Scan(
+			&i.InputIndex,
+			&i.DocumentID,
+			&i.PlaceKind,
+			&i.PlaceID,
+			&i.PlaceName,
+			&i.MapID,
+			&i.SummaryAppendOrder,
+			&i.SortID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const productSummaryDerivedPlayers = `-- name: ProductSummaryDerivedPlayers :many
+WITH requested AS (
+    SELECT input.ordinality::integer AS input_index,
+           input.public_id AS document_id
+    FROM unnest($1::uuid[]) WITH ORDINALITY AS input(public_id, ordinality)
+), summaries AS (
+    SELECT r.input_index, r.document_id, d.id AS document_internal_id
+    FROM requested r
+    JOIN documents d ON d.public_id = r.document_id AND d.deleted_at IS NULL AND d.kind = 'summary'
+), admitted AS (
+    SELECT s.input_index, s.document_id, s.document_internal_id,
+           q.id AS quest_internal_id, l.summary_append_order
+    FROM summaries s
+    JOIN document_links l ON l.source_id = s.document_internal_id
+      AND l.relation = 'summarizes' AND l.quest_target_id IS NOT NULL
+    JOIN quests q ON q.id = l.quest_target_id AND q.deleted_at IS NULL
+    JOIN documents brief ON brief.id = q.document_id AND brief.deleted_at IS NULL
+    JOIN members brief_author ON brief_author.id = brief.author_id
+    WHERE document_readable(
+        brief.public_id, brief_author.public_id, brief.status, brief.visibility, brief.policy,
+        $2::uuid, $3::text[], $4::text,
+        $5::boolean, $6::boolean,
+        COALESCE(ARRAY(
+            SELECT reader.public_id FROM document_readers dr
+            JOIN members reader ON reader.id = dr.member_id
+            WHERE dr.document_id = brief.id
+        ), ARRAY[]::uuid[])
+    )
+), quest_players AS (
+    SELECT a.input_index, a.document_id,
+           c.public_id AS character_id, c.short_code AS character_short_code, c.name AS character_name,
+           m.public_id AS member_id, qp.manual,
+           0 AS source_rank, a.summary_append_order AS quest_order,
+           qp.created_at AS tie_time, 0::bigint AS tie_order
+    FROM admitted a
+    JOIN quest_participants qp ON qp.quest_id = a.quest_internal_id
+      AND qp.status IN ('signed_up', 'played')
+    JOIN characters c ON c.id = qp.character_id AND c.deleted_at IS NULL
+    JOIN members m ON m.id = qp.member_id
+), manual_players AS (
+    SELECT s.input_index, s.document_id,
+           c.public_id AS character_id, c.short_code AS character_short_code, c.name AS character_name,
+           owner.public_id AS member_id, TRUE AS manual,
+           1 AS source_rank, l.summary_append_order AS quest_order,
+           NULL::timestamptz AS tie_time, l.summary_append_order AS tie_order
+    FROM summaries s
+    JOIN document_links l ON l.source_id = s.document_internal_id
+      AND l.relation = 'manual_player' AND l.character_target_id IS NOT NULL
+    JOIN characters c ON c.id = l.character_target_id AND c.deleted_at IS NULL
+    JOIN members owner ON owner.id = c.owner_id
+)
+SELECT input_index, document_id, character_id, character_short_code, character_name, member_id, manual,
+       source_rank, quest_order, tie_time, tie_order
+FROM quest_players
+UNION ALL
+SELECT input_index, document_id, character_id, character_short_code, character_name, member_id, manual,
+       source_rank, quest_order, tie_time, tie_order
+FROM manual_players
+ORDER BY input_index, source_rank, quest_order, tie_time NULLS LAST, tie_order, character_id
+`
+
+type ProductSummaryDerivedPlayersParams struct {
+	DocumentIds  []pgtype.UUID `json:"document_ids"`
+	ViewerID     pgtype.UUID   `json:"viewer_id"`
+	ViewerRoles  []string      `json:"viewer_roles"`
+	ViewerHandle string        `json:"viewer_handle"`
+	ViewerAdmin  bool          `json:"viewer_admin"`
+	ViewerLiveDm bool          `json:"viewer_live_dm"`
+}
+
+type ProductSummaryDerivedPlayersRow struct {
+	InputIndex         int32              `json:"input_index"`
+	DocumentID         interface{}        `json:"document_id"`
+	CharacterID        pgtype.UUID        `json:"character_id"`
+	CharacterShortCode string             `json:"character_short_code"`
+	CharacterName      string             `json:"character_name"`
+	MemberID           pgtype.UUID        `json:"member_id"`
+	Manual             bool               `json:"manual"`
+	SourceRank         int32              `json:"source_rank"`
+	QuestOrder         int64              `json:"quest_order"`
+	TieTime            pgtype.Timestamptz `json:"tie_time"`
+	TieOrder           int64              `json:"tie_order"`
+}
+
+func (q *Queries) ProductSummaryDerivedPlayers(ctx context.Context, arg ProductSummaryDerivedPlayersParams) ([]ProductSummaryDerivedPlayersRow, error) {
+	rows, err := q.db.Query(ctx, productSummaryDerivedPlayers,
+		arg.DocumentIds,
+		arg.ViewerID,
+		arg.ViewerRoles,
+		arg.ViewerHandle,
+		arg.ViewerAdmin,
+		arg.ViewerLiveDm,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ProductSummaryDerivedPlayersRow{}
+	for rows.Next() {
+		var i ProductSummaryDerivedPlayersRow
+		if err := rows.Scan(
+			&i.InputIndex,
+			&i.DocumentID,
+			&i.CharacterID,
+			&i.CharacterShortCode,
+			&i.CharacterName,
+			&i.MemberID,
+			&i.Manual,
+			&i.SourceRank,
+			&i.QuestOrder,
+			&i.TieTime,
+			&i.TieOrder,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const productSummaryDerivedQuestFacts = `-- name: ProductSummaryDerivedQuestFacts :many
+
+WITH requested AS (
+    SELECT input.ordinality::integer AS input_index,
+           input.public_id AS document_id
+    FROM unnest($1::uuid[]) WITH ORDINALITY AS input(public_id, ordinality)
+), summaries AS (
+    SELECT r.input_index, r.document_id, d.id AS document_internal_id
+    FROM requested r
+    JOIN documents d ON d.public_id = r.document_id AND d.deleted_at IS NULL AND d.kind = 'summary'
+), admitted AS (
+    SELECT s.input_index, s.document_id,
+           q.public_id AS quest_id, q.scheduled_at, l.summary_append_order,
+           dm.public_id AS dm_id, dm.display_name AS dm_display_name,
+           arc.name AS arc_name, gtm.game_day
+    FROM summaries s
+    JOIN document_links l ON l.source_id = s.document_internal_id
+      AND l.relation = 'summarizes' AND l.quest_target_id IS NOT NULL
+    JOIN quests q ON q.id = l.quest_target_id AND q.deleted_at IS NULL
+    JOIN documents brief ON brief.id = q.document_id AND brief.deleted_at IS NULL
+    JOIN members brief_author ON brief_author.id = brief.author_id
+    JOIN members dm ON dm.id = q.dm_id
+    LEFT JOIN quest_arcs arc ON arc.id = q.arc_id
+    LEFT JOIN game_time_map gtm ON gtm.real_date = ((q.scheduled_at AT TIME ZONE 'UTC')::date)
+    WHERE document_readable(
+        brief.public_id, brief_author.public_id, brief.status, brief.visibility, brief.policy,
+        $2::uuid, $3::text[], $4::text,
+        $5::boolean, $6::boolean,
+        COALESCE(ARRAY(
+            SELECT reader.public_id FROM document_readers dr
+            JOIN members reader ON reader.id = dr.member_id
+            WHERE dr.document_id = brief.id
+        ), ARRAY[]::uuid[])
+    )
+)
+SELECT input_index, document_id, quest_id, scheduled_at, summary_append_order,
+       dm_id, dm_display_name, arc_name, game_day
+FROM admitted
+ORDER BY input_index, summary_append_order, quest_id
+`
+
+type ProductSummaryDerivedQuestFactsParams struct {
+	DocumentIds  []pgtype.UUID `json:"document_ids"`
+	ViewerID     pgtype.UUID   `json:"viewer_id"`
+	ViewerRoles  []string      `json:"viewer_roles"`
+	ViewerHandle string        `json:"viewer_handle"`
+	ViewerAdmin  bool          `json:"viewer_admin"`
+	ViewerLiveDm bool          `json:"viewer_live_dm"`
+}
+
+type ProductSummaryDerivedQuestFactsRow struct {
+	InputIndex         int32              `json:"input_index"`
+	DocumentID         interface{}        `json:"document_id"`
+	QuestID            pgtype.UUID        `json:"quest_id"`
+	ScheduledAt        pgtype.Timestamptz `json:"scheduled_at"`
+	SummaryAppendOrder int64              `json:"summary_append_order"`
+	DmID               pgtype.UUID        `json:"dm_id"`
+	DmDisplayName      string             `json:"dm_display_name"`
+	ArcName            pgtype.Text        `json:"arc_name"`
+	GameDay            pgtype.Int4        `json:"game_day"`
+}
+
+// SummaryDerived set queries (≤3/chunk): quest links, participants, regions/pointcrawl.
+// Quest brief visibility gates admitted source quests before any derived union rows.
+func (q *Queries) ProductSummaryDerivedQuestFacts(ctx context.Context, arg ProductSummaryDerivedQuestFactsParams) ([]ProductSummaryDerivedQuestFactsRow, error) {
+	rows, err := q.db.Query(ctx, productSummaryDerivedQuestFacts,
+		arg.DocumentIds,
+		arg.ViewerID,
+		arg.ViewerRoles,
+		arg.ViewerHandle,
+		arg.ViewerAdmin,
+		arg.ViewerLiveDm,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ProductSummaryDerivedQuestFactsRow{}
+	for rows.Next() {
+		var i ProductSummaryDerivedQuestFactsRow
+		if err := rows.Scan(
+			&i.InputIndex,
+			&i.DocumentID,
+			&i.QuestID,
+			&i.ScheduledAt,
+			&i.SummaryAppendOrder,
+			&i.DmID,
+			&i.DmDisplayName,
+			&i.ArcName,
+			&i.GameDay,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const replaceProductDocumentLinks = `-- name: ReplaceProductDocumentLinks :exec
 DELETE FROM document_links WHERE source_id=(SELECT id FROM documents WHERE public_id=$1::uuid) AND target_type='document'
 `

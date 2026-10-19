@@ -64,6 +64,7 @@ type ProductBatchRepository interface {
 	ReadBatchDmTables(ctx context.Context, actor auth.Authority, keys []IDKey) ([]product.BatchResult[DocumentView], error)
 	ReadBatchSummaryDerived(ctx context.Context, actor auth.Authority, keys []IDKey) ([]product.BatchResult[SummaryDerivedView], error)
 	ReadBatchDocumentSubjects(ctx context.Context, actor auth.Authority, keys []DocumentSubjectsKey) ([]product.BatchResult[SubjectLinkList], error)
+	ReadBatchReaderIds(ctx context.Context, actor auth.Authority, keys []IDKey) ([]product.BatchResult[ReaderIDList], error)
 }
 
 type ReferenceAudienceReader interface {
@@ -124,6 +125,10 @@ type WriteResult struct {
 
 type SubjectLinkList struct {
 	Items []DocumentLinkView
+}
+
+type ReaderIDList struct {
+	Items []string
 }
 
 type DocumentSubjectsKey struct {

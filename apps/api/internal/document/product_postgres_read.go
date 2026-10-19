@@ -398,11 +398,105 @@ func (p *ProductPostgres) ReadBatchDocuments(ctx context.Context, actor auth.Aut
 
 // ReadBatchDmTables is implemented in product_postgres_dm_tables.go (member-keyed D5 lookup).
 
+func (p *ProductPostgres) ReadBatchReaderIds(ctx context.Context, _ auth.Authority, keys []IDKey) ([]product.BatchResult[ReaderIDList], error) {
+	out := make([]product.BatchResult[ReaderIDList], len(keys))
+	for i := range keys {
+		out[i] = product.BatchResult[ReaderIDList]{Value: &ReaderIDList{Items: []string{}}}
+	}
+	if len(keys) == 0 {
+		return out, nil
+	}
+	ids := make([]pgtype.UUID, 0, len(keys))
+	positions := make([]int, 0, len(keys))
+	for i, key := range keys {
+		id, err := productDocumentID(key.ID)
+		if err != nil {
+			out[i] = product.BatchResult[ReaderIDList]{Err: err}
+			continue
+		}
+		ids = append(ids, id)
+		positions = append(positions, i)
+	}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	rows, err := p.queries().ProductBatchDocumentReaderIds(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		position := int(row.InputIndex) - 1
+		if position < 0 || position >= len(positions) {
+			continue
+		}
+		slot := positions[position]
+		if out[slot].Err != nil || !row.ReaderID.Valid {
+			continue
+		}
+		list := out[slot].Value
+		if list == nil {
+			list = &ReaderIDList{Items: []string{}}
+			out[slot] = product.BatchResult[ReaderIDList]{Value: list}
+		}
+		list.Items = append(list.Items, db.UUIDString(row.ReaderID))
+	}
+	return out, nil
+}
+
 func (p *ProductPostgres) ReadBatchSummaryDerived(ctx context.Context, actor auth.Authority, keys []IDKey) ([]product.BatchResult[SummaryDerivedView], error) {
 	out := make([]product.BatchResult[SummaryDerivedView], len(keys))
 	for i := range keys {
-		out[i] = product.BatchResult[SummaryDerivedView]{Value: &SummaryDerivedView{}}
+		out[i] = product.BatchResult[SummaryDerivedView]{Value: &SummaryDerivedView{
+			Dms:     []SummaryDmView{},
+			Hexes:   []SummaryHexView{},
+			Players: []SummaryPlayerView{},
+			Regions: []SummaryRegionView{},
+		}}
 	}
+	if len(keys) == 0 {
+		return out, nil
+	}
+	scope, err := p.viewerScope(ctx, actor)
+	if err != nil {
+		return nil, err
+	}
+	viewerID, roles, handle, admin, liveDM := viewerParams(scope)
+	ids := make([]pgtype.UUID, 0, len(keys))
+	positions := make([]int, 0, len(keys))
+	for i, key := range keys {
+		id, err := productDocumentID(key.ID)
+		if err != nil {
+			out[i] = product.BatchResult[SummaryDerivedView]{Err: err}
+			continue
+		}
+		ids = append(ids, id)
+		positions = append(positions, i)
+	}
+	if len(ids) == 0 {
+		return out, nil
+	}
+	params := dbgen.ProductSummaryDerivedQuestFactsParams{
+		DocumentIds: ids, ViewerID: viewerID, ViewerRoles: roles, ViewerHandle: handle, ViewerAdmin: admin, ViewerLiveDm: liveDM,
+	}
+	questRows, err := p.queries().ProductSummaryDerivedQuestFacts(ctx, params)
+	if err != nil {
+		return nil, err
+	}
+	playerRows, err := p.queries().ProductSummaryDerivedPlayers(ctx, dbgen.ProductSummaryDerivedPlayersParams{
+		DocumentIds: ids, ViewerID: viewerID, ViewerRoles: roles, ViewerHandle: handle, ViewerAdmin: admin, ViewerLiveDm: liveDM,
+	})
+	if err != nil {
+		return nil, err
+	}
+	placeRows, err := p.queries().ProductSummaryDerivedPlaces(ctx, dbgen.ProductSummaryDerivedPlacesParams{
+		DocumentIds: ids, ViewerID: viewerID, ViewerRoles: roles, ViewerHandle: handle, ViewerAdmin: admin, ViewerLiveDm: liveDM,
+	})
+	if err != nil {
+		return nil, err
+	}
+	applySummaryDerivedQuestFacts(out, positions, questRows)
+	applySummaryDerivedPlayers(out, positions, playerRows)
+	applySummaryDerivedPlaces(out, positions, placeRows)
 	return out, nil
 }
 

@@ -21970,6 +21970,9 @@
     "document.SubjectLinkList": {
       "Items": "[]document.DocumentLinkView"
     },
+    "document.ReaderIDList": {
+      "Items": "[]string"
+    },
     "site.AlertList": {
       "Items": "[]site.AdminHealthAlertView"
     },
@@ -22092,6 +22095,7 @@
       "NodeLinks": "*graph.Loader[spatial.NodeLinksKey,spatial.NodeLinkList]",
       "POIs": "*graph.Loader[spatial.POIsKey,spatial.PoiList]",
       "SummaryDerived": "*graph.Loader[document.IDKey,document.SummaryDerivedView]",
+      "DocumentReaders": "*graph.Loader[document.IDKey,document.ReaderIDList]",
       "NotificationSubjects": "*graph.Loader[notification.SubjectKey,notification.SubjectProjection]",
       "RewardEntitlements": "*graph.Loader[quest.RewardEntitlementsKey,quest.RewardList]",
       "MemberVoiceChannels": "*graph.Loader[member.MemberVoiceChannelsKey,member.VoiceChannelList]",
@@ -23024,7 +23028,8 @@
         "ReadBatchDocuments(ctx context.Context, actor auth.Authority, keys []document.DocumentKey) ([]product.BatchResult[document.DocumentView],error)",
         "ReadBatchDmTables(ctx context.Context, actor auth.Authority, keys []document.IDKey) ([]product.BatchResult[document.DocumentView],error)",
         "ReadBatchSummaryDerived(ctx context.Context, actor auth.Authority, keys []document.IDKey) ([]product.BatchResult[document.SummaryDerivedView],error)",
-        "ReadBatchDocumentSubjects(ctx context.Context, actor auth.Authority, keys []document.DocumentSubjectsKey) ([]product.BatchResult[document.SubjectLinkList],error)"
+        "ReadBatchDocumentSubjects(ctx context.Context, actor auth.Authority, keys []document.DocumentSubjectsKey) ([]product.BatchResult[document.SubjectLinkList],error)",
+        "ReadBatchReaderIds(ctx context.Context, actor auth.Authority, keys []document.IDKey) ([]product.BatchResult[document.ReaderIDList],error)"
       ],
       "owner": "DOC02",
       "provider": "DOC04"
@@ -27096,6 +27101,14 @@
       "transaction": "one task connection per batch/group/chunk, no shared resolver transaction; document predicate currentAuthority"
     },
     {
+      "id": "BATCH-ReaderIds",
+      "interface": "document.ProductBatchReader",
+      "signature": "BatchReaderIds(ctx context.Context, actor auth.Authority, keys []document.IDKey) ([]product.BatchResult[document.ReaderIDList],error)",
+      "provider": "DOC05",
+      "callers": ["G02"],
+      "transaction": "one task connection per batch/group/chunk, no shared resolver transaction; document predicate currentAuthority"
+    },
+    {
       "id": "BATCH-NotificationSubjects",
       "interface": "notification.ProductBatchReader",
       "signature": "BatchNotificationSubjects(ctx context.Context, actor auth.Authority, keys []notification.SubjectKey) ([]product.BatchResult[notification.SubjectProjection],error)",
@@ -27299,6 +27312,14 @@
       "id": "BATCHREPO-SummaryDerived",
       "interface": "document.ProductBatchRepository",
       "signature": "ReadBatchSummaryDerived(ctx context.Context, actor auth.Authority, keys []document.IDKey) ([]product.BatchResult[document.SummaryDerivedView],error)",
+      "provider": "DOC04",
+      "callers": ["DOC05"],
+      "transaction": "one set SQL task per correlated key group/chunk; no loop over root Read methods; preserve duplicates, actual normalized predicates and errors"
+    },
+    {
+      "id": "BATCHREPO-ReaderIds",
+      "interface": "document.ProductBatchRepository",
+      "signature": "ReadBatchReaderIds(ctx context.Context, actor auth.Authority, keys []document.IDKey) ([]product.BatchResult[document.ReaderIDList],error)",
       "provider": "DOC04",
       "callers": ["DOC05"],
       "transaction": "one set SQL task per correlated key group/chunk; no loop over root Read methods; preserve duplicates, actual normalized predicates and errors"
@@ -27980,6 +28001,17 @@
       "value": "document.SummaryDerivedView",
       "registry_field": "SummaryDerived *graph.Loader[document.IDKey,document.SummaryDerivedView]",
       "batch_signature": "BatchSummaryDerived(ctx context.Context, actor auth.Authority, keys []document.IDKey) ([]product.BatchResult[document.SummaryDerivedView],error)",
+      "provider": "DOC05",
+      "caller": "G02",
+      "key_owner": "DOC01",
+      "missing": "nil Value only valid missing nullableentity; listparentmissingNOT_FOUND; exact inputcorrespondence inclduplicates"
+    },
+    {
+      "name": "DocumentReaders",
+      "key": "document.IDKey",
+      "value": "document.ReaderIDList",
+      "registry_field": "DocumentReaders *graph.Loader[document.IDKey,document.ReaderIDList]",
+      "batch_signature": "BatchReaderIds(ctx context.Context, actor auth.Authority, keys []document.IDKey) ([]product.BatchResult[document.ReaderIDList],error)",
       "provider": "DOC05",
       "caller": "G02",
       "key_owner": "DOC01",
