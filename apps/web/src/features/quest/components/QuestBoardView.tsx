@@ -71,7 +71,9 @@ export function QuestBoardView(page: QuestBoardViewProps): React.JSX.Element {
           </div>
         </div>
       ) : page.status === 'empty' ? (
-        <StatePanel status="empty" emptyMessage="No quests in this lane." />
+        <div data-el="quest-board-empty">
+          <StatePanel status="empty" emptyMessage="No quests in this lane." />
+        </div>
       ) : (
         <>
           <ul className={styles.grid} data-columns={page.columns} aria-label={`${page.segment} quests`}>
