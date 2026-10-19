@@ -101,7 +101,7 @@ func wireProductServices(pgxPool dbgen.DBTX, pool *db.Pool, memberPool *member.P
 		return graph.Services{}, err
 	}
 	spatialQueries, err := spatial.NewProductQueries(
-		spatial.ProductReadRepos{Map: spatialPG, Region: spatialPG, Time: spatialPG, Batch: spatialPG},
+		spatial.ProductReadRepos{Map: spatialPG, Region: spatialPG, Time: spatialPG, Batch: spatialPG, TimeBatch: spatialPG},
 		policy, clock, observer,
 	)
 	if err != nil {
