@@ -2468,18 +2468,30 @@ func (r *queryResolver) DmSummaries(ctx context.Context, filters *DmSummaryFilte
 
 // Search is the resolver for the search field.
 func (r *queryResolver) Search(ctx context.Context, query string, kinds []string, limit int, offset int) (*SearchResultType, error) {
-	search := query
-	items, total, err := r.Services.Documents.List(ctx, document.ListFilter{Search: &search, Limit: limit, Offset: offset})
+	_ = kinds
+	if r.Services.DocumentQueries == nil {
+		return nil, fmt.Errorf("document queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
 	if err != nil {
 		return nil, err
 	}
-	hits := make([]*DocumentSearchHitType, 0, len(items))
-	for _, d := range items {
-		hits = append(hits, &DocumentSearchHitType{
-			ID: d.ID, Kind: d.Kind, Slug: d.Slug, Title: d.Title, Snippet: d.Title,
-		})
+	search := query
+	result, err := r.Services.DocumentQueries.Documents(ctx, actor, document.DocumentsSpec{
+		Filters: &document.DocumentFiltersFields{Search: &search},
+		Limit:   int32(limit),
+		Offset:  int32(offset),
+	})
+	if err != nil {
+		return nil, err
 	}
-	return &SearchResultType{Query: query, Documents: hits, DocumentTotal: int(total)}, nil
+	return &SearchResultType{
+		Query:         query,
+		Documents:     toDocumentSearchHitTypes(result.Items),
+		DocumentTotal: int(result.Total),
+		DocumentOrder: documentListOrder,
+		Members:       []*MemberSearchHitType{},
+	}, nil
 }
 
 // Home is the resolver for the home field.

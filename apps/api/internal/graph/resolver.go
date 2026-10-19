@@ -28,8 +28,6 @@ type Services struct {
 	QuestCommands        *quest.ProductCommands
 	SiteCommands         *site.ProductCommands
 	NotificationCommands *notification.ProductCommands
-	// Documents remains for Query.search until owner decides Search semantics.
-	Documents document.Queries
 }
 
 type Resolver struct {

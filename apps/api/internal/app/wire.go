@@ -67,9 +67,7 @@ func Wire(ctx context.Context, cfg config.Config) API {
 }
 
 func emptyServices(_ quest.Commands) graph.Services {
-	return graph.Services{
-		Documents: document.Queries{},
-	}
+	return graph.Services{}
 }
 
 func wirePostgres(_ context.Context, cfg config.Config, pool *db.Pool, base API) API {
@@ -94,7 +92,7 @@ func wirePostgres(_ context.Context, cfg config.Config, pool *db.Pool, base API)
 	}
 	sitePG := site.NewPostgresStats(pgxPool)
 
-	services, err := wireProductServices(pgxPool, pool, memStore, []byte(cfg.JWTSecret), graph.Services{Documents: docQ})
+	services, err := wireProductServices(pgxPool, pool, memStore, []byte(cfg.JWTSecret), graph.Services{})
 	if err != nil {
 		slog.Error("product GraphQL wiring failed", "error", err)
 		panic("product GraphQL wiring: " + err.Error())

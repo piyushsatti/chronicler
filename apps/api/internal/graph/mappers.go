@@ -1527,6 +1527,23 @@ func toHomeBannerType(v site.HomeBannerView) *HomeBannerType {
 	}
 }
 
+const documentListOrder = "updated_at_desc_id_desc"
+
+func toDocumentSearchHitTypes(items []document.DocumentView) []*DocumentSearchHitType {
+	hits := make([]*DocumentSearchHitType, 0, len(items))
+	for _, d := range items {
+		hits = append(hits, &DocumentSearchHitType{
+			ID:       d.Id,
+			Kind:     d.Kind,
+			Category: d.Category,
+			Slug:     d.Slug,
+			Title:    d.Title,
+			Snippet:  d.Title,
+		})
+	}
+	return hits
+}
+
 func toSearchKindTypes(kinds []site.SearchKindView) []*SearchKindType {
 	out := make([]*SearchKindType, len(kinds))
 	for i, kind := range kinds {

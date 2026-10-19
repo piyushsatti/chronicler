@@ -302,7 +302,6 @@ func TestQuestReadsNativeHTTP(t *testing.T) {
 	memStore := member.NewPostgresStore(pool.Pool)
 	resolver := &graph.Resolver{Services: graph.Services{
 		QuestQueries: questQueries,
-		Documents:    document.Queries{Repo: document.NewPostgresReadRepo(pool.Pool)},
 	}}
 	handler := gqlserver.NewHandler(resolver, gqlserver.Limits{}, memStore.ResolveAuthority)
 	fields := "{items{id shortCode status displayStatus durationHours} total}"
