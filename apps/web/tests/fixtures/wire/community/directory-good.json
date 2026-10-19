@@ -9,7 +9,6 @@
       "isDm": true,
       "roles": ["dm"],
       "status": "active",
-      "lookingToPlay": false,
       "availableDays": []
     },
     {
@@ -21,7 +20,6 @@
       "isDm": false,
       "roles": ["player"],
       "status": "active",
-      "lookingToPlay": true,
       "availableDays": ["Sat"]
     }
   ],

@@ -12,7 +12,6 @@ export type CommunityMemberView = {
   tagline: string | null;
   acceptingPlayers: boolean;
   isDm: boolean;
-  lookingToPlay: boolean;
 };
 
 export type CommunityHubView = {
@@ -31,7 +30,6 @@ function mapEntry(
     tagline: entry.tagline ?? null,
     acceptingPlayers: entry.acceptingPlayers === true,
     isDm: entry.isDm,
-    lookingToPlay: entry.lookingToPlay === true,
   };
 }
 

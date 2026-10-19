@@ -13,7 +13,6 @@ const entrySchema = z.object({
   tagline: z.string().nullable().optional(),
   isDm: z.boolean(),
   roles: z.array(z.string()).optional().default([]),
-  lookingToPlay: z.boolean().optional(),
 });
 
 const directorySchema = z.object({
@@ -28,7 +27,6 @@ export type ProfileMemberView = {
   tagline: string | null;
   acceptingPlayers: boolean;
   isDm: boolean;
-  lookingToPlay: boolean;
 };
 
 export type ProfileHubView = {
@@ -45,7 +43,6 @@ function mapEntry(entry: z.infer<typeof entrySchema>): ProfileMemberView {
     tagline: entry.tagline ?? null,
     acceptingPlayers: entry.acceptingPlayers === true,
     isDm: entry.isDm,
-    lookingToPlay: entry.lookingToPlay === true,
   };
 }
 

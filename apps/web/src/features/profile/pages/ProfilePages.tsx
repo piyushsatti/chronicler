@@ -39,11 +39,7 @@ function ProfileBody({
         <p className="type-caption">
           {member.acceptingPlayers ? 'Accepting players' : 'Not accepting players'}
         </p>
-      ) : (
-        <p className="type-caption">
-          {member.lookingToPlay ? 'Looking to play' : 'Not looking right now'}
-        </p>
-      )}
+      ) : null}
       <Link className="type-link" to={member.isDm ? '/dms' : '/players'}>
         Back to directory
       </Link>

@@ -9,7 +9,6 @@ export const communityEntryWireSchema = z.object({
   isDm: z.boolean(),
   roles: z.array(z.string()).optional().default([]),
   status: z.string().optional(),
-  lookingToPlay: z.boolean().optional(),
   availableDays: z.array(z.string()).optional().default([]),
 });
 

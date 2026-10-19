@@ -37,9 +37,6 @@ export function PlayersDirectoryPage(): React.JSX.Element {
               <li key={member.memberId} className="card stack">
                 <p className="type-title">{member.displayName}</p>
                 <p className="type-caption">@{member.handle}</p>
-                {member.lookingToPlay ? (
-                  <p className="type-caption">Looking to play</p>
-                ) : null}
               </li>
             ))}
           </ul>
