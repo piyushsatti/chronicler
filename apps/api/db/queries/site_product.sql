@@ -121,3 +121,63 @@ SET state = 'queued',
     updated_at = sqlc.arg(at)::timestamptz
 WHERE public_id = sqlc.arg(job_id)::uuid AND kind = 'quest_discord_delivery'
 RETURNING public_id, state, attempts, redrive_count, next_run_at, updated_at;
+-- Active alerts are derived from durable background_jobs / bot_heartbeats evidence.
+-- N8 removed operational_observations from the squashed schema; do not invent that table.
+-- name: SiteActiveAlerts :many
+WITH job_alerts AS (
+    SELECT
+        ('job:' || public_id::text || ':state:' || state)::text AS key,
+        CASE state
+            WHEN 'dead' THEN 'Background job is dead'
+            WHEN 'repair_required' THEN 'Background job requires repair'
+            ELSE 'Background job needs attention'
+        END::text AS label,
+        'warning'::text AS severity,
+        '/admin/operations'::text AS remediation_href,
+        created_at AS first_seen_at,
+        updated_at AS last_seen_at
+    FROM background_jobs
+    WHERE state IN ('dead', 'repair_required')
+),
+heartbeat_alerts AS (
+    SELECT
+        'bot:heartbeat:stale'::text AS key,
+        'Bot heartbeat is stale'::text AS label,
+        'warning'::text AS severity,
+        '/admin/operations'::text AS remediation_href,
+        latest.received_at AS first_seen_at,
+        latest.received_at AS last_seen_at
+    FROM (SELECT max(received_at) AS received_at FROM bot_heartbeats) latest
+    WHERE latest.received_at IS NULL
+       OR latest.received_at < clock_timestamp() - interval '3 minutes'
+),
+alerts AS (
+    SELECT * FROM job_alerts
+    UNION ALL
+    SELECT * FROM heartbeat_alerts
+),
+page AS (
+    SELECT * FROM alerts
+    ORDER BY last_seen_at DESC NULLS LAST, key ASC
+    LIMIT sqlc.arg(page_limit)::integer OFFSET sqlc.arg(page_offset)::integer
+)
+SELECT (SELECT count(*)::integer FROM alerts) AS total,
+       page.key, page.label, page.severity, page.remediation_href,
+       page.first_seen_at, page.last_seen_at
+FROM (SELECT 1) marker
+LEFT JOIN page ON true
+ORDER BY page.last_seen_at DESC NULLS LAST, page.key ASC NULLS LAST;
+-- name: SiteActiveAlertCount :one
+WITH job_alerts AS (
+    SELECT public_id
+    FROM background_jobs
+    WHERE state IN ('dead', 'repair_required')
+),
+heartbeat_alerts AS (
+    SELECT 1
+    FROM (SELECT max(received_at) AS received_at FROM bot_heartbeats) latest
+    WHERE latest.received_at IS NULL
+       OR latest.received_at < clock_timestamp() - interval '3 minutes'
+)
+SELECT (SELECT count(*)::integer FROM job_alerts)
+     + (SELECT count(*)::integer FROM heartbeat_alerts) AS total;

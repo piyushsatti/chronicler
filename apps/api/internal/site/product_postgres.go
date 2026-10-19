@@ -59,8 +59,24 @@ func (p *ProductPostgres) ReadMemberSearch(ctx context.Context, _ auth.Authority
 	return mapMemberDiscovery(rows)
 }
 
-func (p *ProductPostgres) ReadBatchActiveAlerts(_ context.Context, _ auth.Authority, keys []ActiveAlertsKey) ([]product.BatchResult[AlertList], error) {
-	return make([]product.BatchResult[AlertList], len(keys)), nil
+func (p *ProductPostgres) ReadBatchActiveAlerts(ctx context.Context, _ auth.Authority, keys []ActiveAlertsKey) ([]product.BatchResult[AlertList], error) {
+	out := make([]product.BatchResult[AlertList], len(keys))
+	for i, key := range keys {
+		rows, err := p.queries().SiteActiveAlerts(ctx, dbgen.SiteActiveAlertsParams{
+			PageLimit: key.Limit, PageOffset: key.Offset,
+		})
+		if err != nil {
+			out[i] = product.BatchResult[AlertList]{Err: err}
+			continue
+		}
+		list, err := mapActiveAlerts(rows)
+		if err != nil {
+			out[i] = product.BatchResult[AlertList]{Err: err}
+			continue
+		}
+		out[i] = product.BatchResult[AlertList]{Value: &list}
+	}
+	return out, nil
 }
 
 func (p *ProductPostgres) ReadSearchableKinds(context.Context, auth.Authority, SearchableKindsSpec) ([]SearchKindView, error) {
@@ -143,8 +159,12 @@ func (p *ProductPostgres) ReadAdminOperations(ctx context.Context, _ auth.Author
 	if len(rows) > 0 {
 		total = int32(rows[0].Total)
 	}
+	alertCount, err := p.queries().SiteActiveAlertCount(ctx)
+	if err != nil {
+		return AdminOperationsView{}, err
+	}
 	return AdminOperationsView{
-		ActiveAlertCount:      0,
+		ActiveAlertCount:      alertCount,
 		Config:                config,
 		Deliveries:            deliveries,
 		DeliveryTotal:         total,
@@ -152,6 +172,44 @@ func (p *ProductPostgres) ReadAdminOperations(ctx context.Context, _ auth.Author
 		TerminalDeliveryCount: counts.TerminalCount,
 		ScheduledWork:         []ScheduledWorkStatusView{},
 	}, nil
+}
+
+func mapActiveAlerts(rows []dbgen.SiteActiveAlertsRow) (AlertList, error) {
+	if len(rows) == 0 {
+		return AlertList{Items: []AdminHealthAlertView{}}, nil
+	}
+	list := AlertList{Items: make([]AdminHealthAlertView, 0, len(rows))}
+	total := rows[0].Total
+	for _, row := range rows {
+		if row.Total != total {
+			return AlertList{}, fmt.Errorf("site active alerts totals differ across page rows")
+		}
+		if !row.Key.Valid {
+			if row.Label.Valid || row.Severity.Valid || row.RemediationHref.Valid {
+				return AlertList{}, fmt.Errorf("site active alerts returned fields without a key")
+			}
+			continue
+		}
+		if !row.Label.Valid || !row.Severity.Valid || !row.RemediationHref.Valid {
+			return AlertList{}, fmt.Errorf("site active alerts returned an incomplete alert row")
+		}
+		alert := AdminHealthAlertView{
+			Key: row.Key.String, Label: row.Label.String, Severity: row.Severity.String,
+			RemediationHref: row.RemediationHref.String,
+			FirstSeenAt:     productTimePointer(row.FirstSeenAt),
+			LastSeenAt:      productTimePointer(row.LastSeenAt),
+		}
+		list.Items = append(list.Items, alert)
+	}
+	return list, nil
+}
+
+func productTimePointer(value pgtype.Timestamptz) *time.Time {
+	if !value.Valid {
+		return nil
+	}
+	out := value.Time
+	return &out
 }
 
 func (p *ProductPostgres) LockUpdateHomeBanner(ctx context.Context, _ UpdateHomeBannerSpec) (UpdateHomeBannerState, error) {

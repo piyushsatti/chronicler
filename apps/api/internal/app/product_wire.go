@@ -109,7 +109,7 @@ func wireProductServices(pgxPool dbgen.DBTX, pool *db.Pool, memberPool *member.P
 	}
 	siteQueries, err := site.NewProductQueries(
 		site.ProductReadRepos{Operations: sitePG, Site: sitePG, Batch: sitePG},
-		policy, clock, observer,
+		policy, clock, observer, docPG,
 	)
 	if err != nil {
 		return graph.Services{}, err

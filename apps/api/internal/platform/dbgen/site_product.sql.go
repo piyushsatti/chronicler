@@ -11,6 +11,120 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const siteActiveAlertCount = `-- name: SiteActiveAlertCount :one
+WITH job_alerts AS (
+    SELECT public_id
+    FROM background_jobs
+    WHERE state IN ('dead', 'repair_required')
+),
+heartbeat_alerts AS (
+    SELECT 1
+    FROM (SELECT max(received_at) AS received_at FROM bot_heartbeats) latest
+    WHERE latest.received_at IS NULL
+       OR latest.received_at < clock_timestamp() - interval '3 minutes'
+)
+SELECT (SELECT count(*)::integer FROM job_alerts)
+     + (SELECT count(*)::integer FROM heartbeat_alerts) AS total
+`
+
+func (q *Queries) SiteActiveAlertCount(ctx context.Context) (int32, error) {
+	row := q.db.QueryRow(ctx, siteActiveAlertCount)
+	var total int32
+	err := row.Scan(&total)
+	return total, err
+}
+
+const siteActiveAlerts = `-- name: SiteActiveAlerts :many
+WITH job_alerts AS (
+    SELECT
+        ('job:' || public_id::text || ':state:' || state)::text AS key,
+        CASE state
+            WHEN 'dead' THEN 'Background job is dead'
+            WHEN 'repair_required' THEN 'Background job requires repair'
+            ELSE 'Background job needs attention'
+        END::text AS label,
+        'warning'::text AS severity,
+        '/admin/operations'::text AS remediation_href,
+        created_at AS first_seen_at,
+        updated_at AS last_seen_at
+    FROM background_jobs
+    WHERE state IN ('dead', 'repair_required')
+),
+heartbeat_alerts AS (
+    SELECT
+        'bot:heartbeat:stale'::text AS key,
+        'Bot heartbeat is stale'::text AS label,
+        'warning'::text AS severity,
+        '/admin/operations'::text AS remediation_href,
+        latest.received_at AS first_seen_at,
+        latest.received_at AS last_seen_at
+    FROM (SELECT max(received_at) AS received_at FROM bot_heartbeats) latest
+    WHERE latest.received_at IS NULL
+       OR latest.received_at < clock_timestamp() - interval '3 minutes'
+),
+alerts AS (
+    SELECT key, label, severity, remediation_href, first_seen_at, last_seen_at FROM job_alerts
+    UNION ALL
+    SELECT key, label, severity, remediation_href, first_seen_at, last_seen_at FROM heartbeat_alerts
+),
+page AS (
+    SELECT key, label, severity, remediation_href, first_seen_at, last_seen_at FROM alerts
+    ORDER BY last_seen_at DESC NULLS LAST, key ASC
+    LIMIT $2::integer OFFSET $1::integer
+)
+SELECT (SELECT count(*)::integer FROM alerts) AS total,
+       page.key, page.label, page.severity, page.remediation_href,
+       page.first_seen_at, page.last_seen_at
+FROM (SELECT 1) marker
+LEFT JOIN page ON true
+ORDER BY page.last_seen_at DESC NULLS LAST, page.key ASC NULLS LAST
+`
+
+type SiteActiveAlertsParams struct {
+	PageOffset int32 `json:"page_offset"`
+	PageLimit  int32 `json:"page_limit"`
+}
+
+type SiteActiveAlertsRow struct {
+	Total           int32              `json:"total"`
+	Key             pgtype.Text        `json:"key"`
+	Label           pgtype.Text        `json:"label"`
+	Severity        pgtype.Text        `json:"severity"`
+	RemediationHref pgtype.Text        `json:"remediation_href"`
+	FirstSeenAt     pgtype.Timestamptz `json:"first_seen_at"`
+	LastSeenAt      pgtype.Timestamptz `json:"last_seen_at"`
+}
+
+// Active alerts are derived from durable background_jobs / bot_heartbeats evidence.
+// N8 removed operational_observations from the squashed schema; do not invent that table.
+func (q *Queries) SiteActiveAlerts(ctx context.Context, arg SiteActiveAlertsParams) ([]SiteActiveAlertsRow, error) {
+	rows, err := q.db.Query(ctx, siteActiveAlerts, arg.PageOffset, arg.PageLimit)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []SiteActiveAlertsRow{}
+	for rows.Next() {
+		var i SiteActiveAlertsRow
+		if err := rows.Scan(
+			&i.Total,
+			&i.Key,
+			&i.Label,
+			&i.Severity,
+			&i.RemediationHref,
+			&i.FirstSeenAt,
+			&i.LastSeenAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const siteAdminDeliveryCounts = `-- name: SiteAdminDeliveryCounts :one
 SELECT count(*) FILTER (WHERE state IN ('queued', 'running', 'retry_wait', 'repair_required'))::integer AS pending_count,
        count(*) FILTER (WHERE state IN ('dead', 'succeeded', 'cancelled'))::integer AS terminal_count,

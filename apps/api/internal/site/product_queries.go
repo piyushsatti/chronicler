@@ -4,6 +4,7 @@ import (
 	"context"
 	"reflect"
 
+	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
@@ -14,10 +15,11 @@ type ProductQueries struct {
 	Policy        *auth.Policy
 	Clock         product.Clock
 	OverrideReads auth.OverrideReadObserver
+	Discovery     document.DiscoveryReader
 }
 
-func NewProductQueries(reads ProductReadRepos, policy *auth.Policy, clock product.Clock, overrideReads auth.OverrideReadObserver) (*ProductQueries, error) {
-	for _, dep := range []any{reads.Site, policy, clock, overrideReads} {
+func NewProductQueries(reads ProductReadRepos, policy *auth.Policy, clock product.Clock, overrideReads auth.OverrideReadObserver, discovery document.DiscoveryReader) (*ProductQueries, error) {
+	for _, dep := range []any{reads.Site, policy, clock, overrideReads, discovery} {
 		if dep == nil {
 			return nil, apierr.New(apierr.Internal, "site query dependencies required")
 		}
@@ -29,7 +31,7 @@ func NewProductQueries(reads ProductReadRepos, policy *auth.Policy, clock produc
 			}
 		}
 	}
-	return &ProductQueries{Reads: reads, Policy: policy, Clock: clock, OverrideReads: overrideReads}, nil
+	return &ProductQueries{Reads: reads, Policy: policy, Clock: clock, OverrideReads: overrideReads, Discovery: discovery}, nil
 }
 
 func (s ProductQueries) admit(ctx context.Context, actor auth.Authority, operation auth.Operation) error {
@@ -55,7 +57,15 @@ func (s ProductQueries) Home(ctx context.Context, actor auth.Authority, spec Hom
 	if err != nil {
 		return HomeView{}, err
 	}
-	return HomeView{CommunityStats: siteStatsFromSnapshot(stats)}, nil
+	buckets, err := s.Discovery.RecentDiscovery(ctx, actor)
+	if err != nil {
+		return HomeView{}, err
+	}
+	recent := make([]HomeBucketView, len(buckets))
+	for i, bucket := range buckets {
+		recent[i] = HomeBucketView{Category: bucket.Category, Documents: bucket.Documents}
+	}
+	return HomeView{CommunityStats: siteStatsFromSnapshot(stats), RecentByCategory: recent}, nil
 }
 
 func siteStatsFromSnapshot(snapshot CommunityStatsSnapshot) SiteStatsView {
