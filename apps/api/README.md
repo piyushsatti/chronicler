@@ -27,6 +27,19 @@ go run ./cmd/api
 
 Health: `GET /health`. GraphQL placeholder: `POST /v1/graphql`. Dev login: `POST /auth/discord/callback` with `{"code":"dev:<discordId>"}` when `DISCORD_CLIENT_SECRET=dev`.
 
+### Live product Discord delivery (opt-in)
+
+Default `go test` skips live network. With `chronicler-dev` up (`scripts/dev-stack`):
+
+```bash
+CHRONICLER_LIVE_GRAPHQL_DISCORD=1 \
+CHRONICLER_LIVE_API_URL=http://127.0.0.1:8080 \
+CHRONICLER_LIVE_JWT_SECRET=local-test-only-jwt-secret \
+go test ./internal/delivery/ -run LiveProductDiscordDelivery -count=1
+```
+
+API-owned GraphQL only (`discordDeliveryMode`, `syncQuestDiscord`, `redriveDiscordDelivery`). Does not go through the Discord bot (D1).
+
 ## Contract
 
 - GraphQL: `packages/contracts/graphql/`

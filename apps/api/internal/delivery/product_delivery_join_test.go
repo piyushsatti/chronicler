@@ -12,7 +12,8 @@ import (
 
 // D-API-JOIN product-delivery half (fixture-only): API owns Discord product
 // delivery GraphQL per D1/D40. The Discord bot must not call these ops
-// (apps/discord sensor tests).
+// (apps/discord sensor tests). Opt-in live GraphQL proof:
+// TestLiveProductDiscordDelivery (CHRONICLER_LIVE_GRAPHQL_DISCORD=1).
 func TestDiscordProductDeliveryOwnedByGraphQL(t *testing.T) {
 	contracts := contractsDir(t)
 
