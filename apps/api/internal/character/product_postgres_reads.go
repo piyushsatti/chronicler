@@ -192,44 +192,9 @@ func int32PointerFromInt4(value pgtype.Int4) *int32 {
 	return &v
 }
 
-func (p *ProductPostgres) ReadMyQuestRewards(ctx context.Context, actor auth.Authority, spec MyQuestRewardsSpec) (RewardEntitlementPage, error) {
-	characterID, err := characterActorID(actor)
-	if err != nil {
-		return RewardEntitlementPage{}, err
-	}
-	rows, err := p.queries().CharacterProductListQuestRewards(ctx, dbgen.CharacterProductListQuestRewardsParams{
-		CharacterID: characterID, RowLimit: spec.Limit, RowOffset: spec.Offset,
-	})
-	if err != nil {
-		return RewardEntitlementPage{}, err
-	}
-	total, err := p.queries().CharacterProductCountQuestRewards(ctx, characterID)
-	if err != nil {
-		return RewardEntitlementPage{}, err
-	}
-	out := RewardEntitlementPage{Items: make([]QuestRewardEntitlementView, 0, len(rows)), Total: total}
-	for _, row := range rows {
-		if spec.Status != nil {
-			claimed := row.ClaimedAt.Valid
-			if *spec.Status == RewardClaimStatusClaimed && !claimed {
-				continue
-			}
-			if *spec.Status == RewardClaimStatusUnclaimed && claimed {
-				continue
-			}
-		}
-		out.Items = append(out.Items, mapQuestRewardRow(row))
-	}
-	return out, nil
-}
-
-func mapQuestRewardRow(row dbgen.CharacterProductListQuestRewardsRow) QuestRewardEntitlementView {
-	return QuestRewardEntitlementView{
-		Id: db.UUIDString(row.ID), QuestId: db.UUIDString(row.QuestID), CharacterId: db.UUIDString(row.CharacterID),
-		AwardedBy: db.UUIDString(row.AwardedBy), AwardedAt: row.AwardedAt.Time, Pcxp: row.Pcxp,
-		Note: characterTextPointer(row.Note), ClaimedAt: characterTimePointer(row.ClaimedAt),
-		ProgressionEntryId: characterUUIDPointer(row.ProgressionEntryID),
-	}
+// ReadMyQuestRewards returns an empty page: E1 dropped quest_reward_entitlements.
+func (p *ProductPostgres) ReadMyQuestRewards(context.Context, auth.Authority, MyQuestRewardsSpec) (RewardEntitlementPage, error) {
+	return RewardEntitlementPage{Items: []QuestRewardEntitlementView{}}, nil
 }
 
 func (p *ProductPostgres) ReadParticipationsByCharacter(ctx context.Context, _ auth.Authority, spec ParticipationsByCharacterSpec) (ParticipationPageView, error) {

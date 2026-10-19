@@ -510,55 +510,6 @@ SELECT character.id, character.public_id, character.owner_id, character.player_x
 FROM characters character
 WHERE character.public_id = sqlc.arg(character_id)::uuid
 FOR UPDATE;
--- name: CharacterProductListQuestRewards :many
-SELECT entitlement.public_id AS id, quest.public_id AS quest_id,
-       character.public_id AS character_id, awarded_by.public_id AS awarded_by,
-       entitlement.awarded_at, entitlement.pcxp, entitlement.note,
-       entitlement.claimed_at, ledger.public_id AS progression_entry_id
-FROM quest_reward_entitlements entitlement
-JOIN quests quest ON quest.id = entitlement.quest_id
-JOIN characters character ON character.id = entitlement.character_id
-JOIN members awarded_by ON awarded_by.id = entitlement.awarded_by
-LEFT JOIN character_progression_ledger ledger ON ledger.id = entitlement.progression_entry_id
-WHERE character.public_id = sqlc.arg(character_id)::uuid
-ORDER BY entitlement.awarded_at DESC, entitlement.public_id DESC
-LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
--- name: CharacterProductCountQuestRewards :one
-SELECT count(*)::int AS total
-FROM quest_reward_entitlements entitlement
-JOIN characters character ON character.id = entitlement.character_id
-WHERE character.public_id = sqlc.arg(character_id)::uuid;
--- name: CharacterProductLockRewardClaims :many
-SELECT entitlement.public_id AS id, quest.public_id AS quest_id,
-       character.public_id AS character_id, awarded_by.public_id AS awarded_by,
-       entitlement.awarded_at, entitlement.pcxp, entitlement.note,
-       entitlement.claimed_at, ledger.public_id AS progression_entry_id
-FROM quest_reward_entitlements entitlement
-JOIN quests quest ON quest.id = entitlement.quest_id
-JOIN characters character ON character.id = entitlement.character_id
-JOIN members awarded_by ON awarded_by.id = entitlement.awarded_by
-LEFT JOIN character_progression_ledger ledger ON ledger.id = entitlement.progression_entry_id
-WHERE quest.public_id = sqlc.arg(quest_id)::uuid AND character.public_id = sqlc.arg(character_id)::uuid
-ORDER BY quest.id, entitlement.id
-FOR UPDATE OF quest, entitlement;
--- name: CharacterProductMarkRewardClaims :execrows
-WITH mappings AS (
-    SELECT entitlement_id.public_id::uuid AS entitlement_id, ledger.id AS ledger_id
-    FROM unnest(sqlc.arg(entitlement_ids)::text[]) WITH ORDINALITY AS entitlement_id(public_id, ordinality)
-    JOIN unnest(sqlc.arg(progression_ids)::text[]) WITH ORDINALITY AS progression_id(public_id, ordinality)
-      ON progression_id.ordinality = entitlement_id.ordinality
-    JOIN character_progression_ledger ledger ON ledger.public_id = progression_id.public_id::uuid
-    WHERE cardinality(sqlc.arg(entitlement_ids)::text[]) = cardinality(sqlc.arg(progression_ids)::text[])
-), updated AS (
-    UPDATE quest_reward_entitlements entitlement
-    SET claimed_at = sqlc.arg(at)::timestamptz, progression_entry_id = mappings.ledger_id
-    FROM mappings
-    WHERE entitlement.public_id = mappings.entitlement_id
-  AND entitlement.claimed_at IS NULL
-  AND entitlement.progression_entry_id IS NULL
-    RETURNING entitlement.public_id
-)
-SELECT public_id FROM updated;
 -- name: CharacterProductListLogs :many
 SELECT log.public_id AS id, character.public_id AS character_id, quest.public_id AS quest_id,
        log.body, log.created_at, creator.public_id AS created_by

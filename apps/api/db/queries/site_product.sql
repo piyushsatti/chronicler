@@ -81,10 +81,11 @@ WHERE kind = 'quest_discord_delivery'
 WITH matching AS (
     SELECT b.public_id, b.state, b.attempts, b.redrive_count, b.safe_error_code, b.next_run_at,
            b.created_at, b.updated_at, b.payload,
-           q.public_id AS quest_public_id, q.short_code AS quest_short_code, q.title AS quest_title,
+           q.public_id AS quest_public_id, q.short_code AS quest_short_code, d.title AS quest_title,
            q.discord_desired_revision, q.discord_applied_revision, q.discord_message_id, q.event_url
     FROM background_jobs b
     LEFT JOIN quests q ON q.public_id::text = b.payload ->> 'questId'
+    LEFT JOIN documents d ON d.id = q.document_id
     WHERE b.kind = 'quest_discord_delivery'
       AND (sqlc.narg(delivery_state)::text IS NULL OR b.state = sqlc.narg(delivery_state))
 ), page AS (
