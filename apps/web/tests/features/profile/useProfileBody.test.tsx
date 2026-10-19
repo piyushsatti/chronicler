@@ -27,7 +27,7 @@ function wrapper({ children }: { children: ReactNode }) {
 }
 
 describe('useProfileBody', () => {
-  it('surfaces AppError when directory wire fails', async () => {
+  it('surfaces AppError when memberProfile wire fails', async () => {
     server.use(
       http.post(GRAPHQL_PATH, () =>
         HttpResponse.json({

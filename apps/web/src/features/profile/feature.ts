@@ -13,8 +13,16 @@ export const queryKeys = {} as const;
 export const graphql: FeatureGraphql = {
   ProfileCommunityDirectory: () =>
     HttpResponse.json({ data: { communityDirectory: goodCommunity } }),
-  MemberProfile: () =>
-    HttpResponse.json({ data: { memberProfile: goodMemberProfile } }),
+  MemberProfile: (body) => {
+    const handle =
+      typeof body.variables?.handle === 'string'
+        ? body.variables.handle.replace(/^@/, '').trim().toLowerCase()
+        : '';
+    if (handle && handle !== goodMemberProfile.member.handle.toLowerCase()) {
+      return HttpResponse.json({ data: { memberProfile: null } });
+    }
+    return HttpResponse.json({ data: { memberProfile: goodMemberProfile } });
+  },
   DmTableBySlug: () => HttpResponse.json({ data: { document: goodDmTable } }),
   DmTableSchedule: () =>
     HttpResponse.json({ data: { questBoard: goodQuestBoard } }),

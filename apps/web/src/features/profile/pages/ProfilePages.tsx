@@ -27,12 +27,12 @@ function ProfileBody({
     return <StatePanel status="loading" />;
   }
   if (page.status === 'empty') {
-    return <EmptyState kind="generic" message="Profile not found in the directory." />;
+    return <EmptyState kind="generic" message="Profile not found." />;
   }
 
   const { member } = page;
   return (
-    <Card className="stack">
+    <Card className="stack" data-el="profile.body">
       <p className="type-caption">@{member.handle}</p>
       <p className="type-body">{member.tagline ?? 'No tagline yet.'}</p>
       {member.isDm ? (

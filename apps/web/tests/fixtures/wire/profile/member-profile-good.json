@@ -1,14 +1,22 @@
 {
   "member": {
-    "id": "00000001-0000-4000-8000-000000000001",
-    "handle": "brune",
-    "displayName": "Brune",
+    "id": "11111111-1111-4111-8111-111111111111",
+    "handle": "mira",
+    "displayName": "Mira",
     "avatarUrl": null,
-    "roles": ["player"],
+    "roles": ["dm"],
     "status": "active",
     "joinedAt": "2026-01-01T00:00:00Z"
   },
-  "dmProfile": null,
+  "dmProfile": {
+    "memberId": "11111111-1111-4111-8111-111111111111",
+    "tagline": "Horror & heists",
+    "philosophy": null,
+    "houseRules": null,
+    "acceptingPlayers": true,
+    "status": "active",
+    "reviewRevision": 1
+  },
   "availability": [
     {
       "day": "fri",

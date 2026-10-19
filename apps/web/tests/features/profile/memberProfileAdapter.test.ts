@@ -8,10 +8,10 @@ describe('parseMemberProfile', () => {
     const result = parseMemberProfile(goodProfile);
     expect(result.ok).toBe(true);
     if (!result.ok) return;
-    expect(result.data?.member.handle).toBe('brune');
+    expect(result.data?.member.handle).toBe('mira');
     expect(result.data?.activitySummary.messages).toBe(40);
     expect(result.data?.availability).toHaveLength(1);
-    expect(result.data?.dmProfile).toBeNull();
+    expect(result.data?.dmProfile?.tagline).toBe('Horror & heists');
   });
 
   it('returns null when profile is missing', () => {

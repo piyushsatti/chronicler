@@ -88,7 +88,7 @@ export function parseMemberProfile(
   return { ok: true, data: mapProfile(parsed.data) };
 }
 
-/** field-routing: memberProfile → Query.memberProfile (BE may still return pending). */
+/** field-routing: memberProfile → Query.memberProfile. */
 export async function loadMemberProfile(
   handle: string,
 ): Promise<MemberProfileView | null> {

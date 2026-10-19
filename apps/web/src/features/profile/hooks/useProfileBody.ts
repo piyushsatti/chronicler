@@ -1,24 +1,20 @@
 import { useQuery } from '@tanstack/react-query';
-import { queryKeys } from '../../../api/queryKeys.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AppError } from '../../../errors/types.js';
-import {
-  loadProfileHub,
-  type ProfileMemberView,
-} from '../adapters/profileCommunityAdapter.js';
+import { loadMemberProfile } from '../adapters/memberProfileAdapter.js';
 
 function normalizeHandle(raw: string | undefined): string {
   if (!raw) return '';
   return raw.startsWith('@') ? raw.slice(1) : raw;
 }
 
-function findMember(
-  members: ProfileMemberView[],
-  shortCode: string,
-): ProfileMemberView | undefined {
-  const handle = normalizeHandle(shortCode).toLowerCase();
-  return members.find((member) => member.handle.toLowerCase() === handle);
-}
+export type ProfileMemberView = {
+  handle: string;
+  displayName: string;
+  tagline: string | null;
+  acceptingPlayers: boolean;
+  isDm: boolean;
+};
 
 export type ProfileBodyView =
   | { status: 'loading' }
@@ -27,28 +23,38 @@ export type ProfileBodyView =
   | { status: 'ready'; member: ProfileMemberView };
 
 export function useProfileBody(
-  role: 'dm' | 'player',
+  _role: 'dm' | 'player',
   shortCode: string,
 ): ProfileBodyView {
-  const hub = useQuery({
-    queryKey: queryKeys.communityHub,
-    queryFn: loadProfileHub,
+  const handle = normalizeHandle(shortCode);
+  const profile = useQuery({
+    queryKey: ['memberProfile', handle],
+    queryFn: () => loadMemberProfile(handle),
+    enabled: handle.length > 0,
   });
 
-  if (hub.isError) {
-    return { status: 'error', error: toAppError(hub.error, 'profile:page') };
+  if (!handle) return { status: 'empty' };
+  if (profile.isError) {
+    return { status: 'error', error: toAppError(profile.error, 'profile:page') };
   }
-  if (hub.isLoading || !hub.data) {
+  if (profile.isLoading || profile.data === undefined) {
     return { status: 'loading' };
   }
+  if (profile.data == null) return { status: 'empty' };
 
-  const pool = role === 'dm' ? hub.data.dms : hub.data.players;
-  const member =
-    findMember(pool, shortCode) ??
-    findMember([...hub.data.dms, ...hub.data.players], shortCode);
-
-  if (!member) return { status: 'empty' };
-  return { status: 'ready', member };
+  const view = profile.data;
+  const isDm =
+    view.dmProfile != null || view.member.roles.includes('dm');
+  return {
+    status: 'ready',
+    member: {
+      handle: view.member.handle,
+      displayName: view.member.displayName,
+      tagline: view.dmProfile?.tagline ?? null,
+      acceptingPlayers: view.dmProfile?.acceptingPlayers === true,
+      isDm,
+    },
+  };
 }
 
 export { normalizeHandle };
