@@ -182,7 +182,7 @@ The following164 roots are the accepted business API. Introspection fields are e
 | Mutation.assignArchon                       | spatial-operations.graphql      |
 | Mutation.assignLieutenant                   | document-operations.graphql     |
 | Mutation.attestQuestParticipation           | quest-operations.graphql        |
-| ~~Mutation.claimQuestRewards~~                | **DROP** (E1)                   |
+| ~~Mutation.claimQuestRewards~~              | **DROP** (E1)                   |
 | Mutation.closeQuest                         | quest-operations.graphql        |
 | Mutation.createBackstory                    | character-operations.graphql    |
 | Mutation.createCharacter                    | character-operations.graphql    |
@@ -190,10 +190,10 @@ The following164 roots are the accepted business API. Introspection fields are e
 | Mutation.createMap                          | spatial-operations.graphql      |
 | Mutation.createQuest                        | quest-operations.graphql        |
 | Mutation.createRegion                       | spatial-operations.graphql      |
-| ~~Mutation.createRequest~~                    | **DROP** (N3)                   |
+| ~~Mutation.createRequest~~                  | **DROP** (N3)                   |
 | Mutation.createTimeAnchor                   | spatial-operations.graphql      |
 | Mutation.decideDmProfileVerification        | member-operations.graphql       |
-| ~~Mutation.decideRequest~~                    | **DROP** (N3)                   |
+| ~~Mutation.decideRequest~~                  | **DROP** (N3)                   |
 | Mutation.decideVerification                 | character-operations.graphql    |
 | Mutation.deleteCharacter                    | character-operations.graphql    |
 | Mutation.deleteCharacterLog                 | character-operations.graphql    |
@@ -201,7 +201,7 @@ The following164 roots are the accepted business API. Introspection fields are e
 | Mutation.deleteQuest                        | quest-operations.graphql        |
 | Mutation.deleteRegion                       | spatial-operations.graphql      |
 | Mutation.editPublishedDocument              | document-operations.graphql     |
-| ~~Mutation.followPerson~~                     | **DROP** (N3)                   |
+| ~~Mutation.followPerson~~                   | **DROP** (N3)                   |
 | Mutation.grantUnlock                        | member-operations.graphql       |
 | Mutation.linkHexEntry                       | spatial-operations.graphql      |
 | Mutation.linkPointcrawlEntry                | spatial-operations.graphql      |
@@ -225,7 +225,7 @@ The following164 roots are the accepted business API. Introspection fields are e
 | Mutation.setMemberRolesBatch                | member-operations.graphql       |
 | Mutation.setMyAvailability                  | member-operations.graphql       |
 | Mutation.setPointcrawlEdge                  | spatial-operations.graphql      |
-| Mutation.setQuestPointcrawlLinks              | quest/operations.graphql        |
+| Mutation.setQuestPointcrawlLinks            | quest/operations.graphql        |
 | Mutation.setUnlockableActive                | member-operations.graphql       |
 | Mutation.signupForQuest                     | quest-operations.graphql        |
 | Mutation.submitDmProfileForVerification     | member-operations.graphql       |
@@ -234,7 +234,7 @@ The following164 roots are the accepted business API. Introspection fields are e
 | Mutation.syncQuestDiscord                   | quest-operations.graphql        |
 | Mutation.transitionQuestStatus              | quest-operations.graphql        |
 | Mutation.transitionRegion                   | spatial-operations.graphql      |
-| ~~Mutation.unfollowPerson~~                   | **DROP** (N3)                   |
+| ~~Mutation.unfollowPerson~~                 | **DROP** (N3)                   |
 | Mutation.unlinkHexEntry                     | spatial-operations.graphql      |
 | Mutation.unlinkPointcrawlEntry              | spatial-operations.graphql      |
 | Mutation.unpublishDocument                  | document-operations.graphql     |
@@ -276,7 +276,7 @@ The following164 roots are the accepted business API. Introspection fields are e
 | Query.communityDirectory                    | member-operations.graphql       |
 | Query.creationCatalog                       | character-operations.graphql    |
 | Query.discordDeliveryMode                   | site-operations.graphql         |
-| ~~Query.dmRequests~~                          | **DROP** (N3)                   |
+| ~~Query.dmRequests~~                        | **DROP** (N3)                   |
 | Query.dmSessionHistory                      | quest-operations.graphql        |
 | Query.dmStats                               | quest-operations.graphql        |
 | Query.dmSummaries                           | quest-operations.graphql        |
@@ -293,7 +293,7 @@ The following164 roots are the accepted business API. Introspection fields are e
 | Query.hexHistory                            | spatial-operations.graphql      |
 | Query.home                                  | site-operations.graphql         |
 | Query.homeBanner                            | site-operations.graphql         |
-| ~~Query.isFollowing~~                         | **DROP** (N3)                   |
+| ~~Query.isFollowing~~                       | **DROP** (N3)                   |
 | Query.lieutenantAssignments                 | document-operations.graphql     |
 | Query.map                                   | spatial-operations.graphql      |
 | Query.mapView                               | spatial-operations.graphql      |
@@ -310,9 +310,9 @@ The following164 roots are the accepted business API. Introspection fields are e
 | Query.myCharacters                          | character-operations.graphql    |
 | Query.myNotifications                       | notification-operations.graphql |
 | Query.myPersonalization                     | member-operations.graphql       |
-| ~~Query.myQuestRewards~~                      | **DROP** (E1)                   |
+| ~~Query.myQuestRewards~~                    | **DROP** (E1)                   |
 | Query.myQuestSignups                        | quest-operations.graphql        |
-| ~~Query.myRequests~~                          | **DROP** (N3)                   |
+| ~~Query.myRequests~~                        | **DROP** (N3)                   |
 | Query.myUnlocks                             | member-operations.graphql       |
 | Query.myUnreadNotificationCount             | notification-operations.graphql |
 | Query.openQuestSeats                        | quest-operations.graphql        |

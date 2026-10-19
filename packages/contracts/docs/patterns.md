@@ -6,11 +6,11 @@ Locked conventions from [D40](../../../apps/api/docs/decisions/D40-GraphQL-Versu
 
 Locked by [D40](../../../apps/api/docs/decisions/D40-GraphQL-Versus-REST.md) (2026-10-14): **every product query and business command** uses `POST /v1/graphql`. HTTP under `/v1` (and a few machine routes) remains for **non-product** protocols only — authentication, health, Discord ingest/heartbeat, agent Q&A — not parallel product commands.
 
-| Transport   | When                                                                                                      | Where              |
-| ----------- | --------------------------------------------------------------------------------------------------------- | ------------------ |
-| **GraphQL** | Product reads (field trees) **and** product mutations (commands, mark-read, transitions, …)             | `POST /v1/graphql` |
-| **REST**    | Retained **protocol** endpoints (auth, ingest, agent); legacy OpenAPI product paths are cutover debt      | Path under `/v1` or machine routes |
-| **DROP**    | Alias, deprecated path, or placeholder that always returned empty; retired REST product command wrappers | Not ported         |
+| Transport   | When                                                                                                     | Where                              |
+| ----------- | -------------------------------------------------------------------------------------------------------- | ---------------------------------- |
+| **GraphQL** | Product reads (field trees) **and** product mutations (commands, mark-read, transitions, …)              | `POST /v1/graphql`                 |
+| **REST**    | Retained **protocol** endpoints (auth, ingest, agent); legacy OpenAPI product paths are cutover debt     | Path under `/v1` or machine routes |
+| **DROP**    | Alias, deprecated path, or placeholder that always returned empty; retired REST product command wrappers | Not ported                         |
 
 Explicit commands that change state still use GraphQL mutations with [CommandMeta](design.md) + replay receipts (**I2**). Follow-up reads use GraphQL queries (e.g. mark-read mutation, then `myNotifications`). Full legacy map: [field-routing.md](../field-routing.md) (update rows toward **D40** as REST product paths are removed).
 
