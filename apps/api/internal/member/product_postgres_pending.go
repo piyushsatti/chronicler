@@ -11,9 +11,8 @@ func (p *ProductPostgres) productPending() error {
 	return fmt.Errorf("member product surface pending wiring")
 }
 
-func (p *ProductPostgres) ReadCommunityDirectory(context.Context, auth.Authority, CommunityDirectorySpec) (CommunityDirectoryResult, error) {
-	return CommunityDirectoryResult{}, p.productPending()
-}
+// ReadMemberProfile remains held: ProductMemberProfile SQL exists, but the
+// GraphQL memberProfile projection still needs a dedicated product mapper.
 func (p *ProductPostgres) ReadMemberProfile(context.Context, auth.Authority, MemberProfileSpec) (*MemberProfileView, error) {
 	return nil, p.productPending()
 }

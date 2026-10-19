@@ -1390,6 +1390,34 @@ func mapDmProfileRow(memberID string, tagline, philosophy, houseRules pgtype.Tex
 	return view
 }
 
+func (p *ProductPostgres) ReadCommunityDirectory(ctx context.Context, _ auth.Authority, spec CommunityDirectorySpec) (CommunityDirectoryResult, error) {
+	arg := dbgen.ProductCommunityDirectoryParams{PageLimit: spec.Limit, PageOffset: spec.Offset}
+	if spec.Filters != nil {
+		arg.Role = optionalText(spec.Filters.Role)
+		arg.Search = optionalText(spec.Filters.Search)
+		arg.ProfileStatus = optionalText(spec.Filters.DmProfileStatus)
+		if spec.Filters.AcceptingPlayers != nil {
+			arg.AcceptingPlayers = pgtype.Bool{Bool: *spec.Filters.AcceptingPlayers, Valid: true}
+		}
+	}
+	rows, err := p.queries().ProductCommunityDirectory(ctx, arg)
+	if err != nil {
+		return CommunityDirectoryResult{}, err
+	}
+	out := CommunityDirectoryResult{Entries: []DirectoryEntryView{}}
+	if len(rows) == 0 {
+		return out, nil
+	}
+	out.Total = int32Total(rows[0].Total)
+	for _, row := range rows {
+		if !row.PublicID.Valid {
+			continue
+		}
+		out.Entries = append(out.Entries, mapDirectoryEntry(row.PublicID, row.Handle, row.DisplayName, row.AvatarUrl, row.Roles, row.Status, row.Tagline, row.TableInfo, row.AcceptingPlayers, row.DmProfileStatus, row.ReviewRevision, row.IsDm, row.AvailableDays))
+	}
+	return out, nil
+}
+
 func (p *ProductPostgres) ReadPendingDmProfileVerifications(ctx context.Context, _ auth.Authority, spec PendingDmProfileVerificationsSpec) (CommunityDirectoryResult, error) {
 	rows, err := p.queries().ProductPendingDmProfiles(ctx, dbgen.ProductPendingDmProfilesParams{PageLimit: spec.Limit, PageOffset: spec.Offset})
 	if err != nil {

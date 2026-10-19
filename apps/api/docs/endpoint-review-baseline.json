@@ -563,33 +563,33 @@
     },
     {
       "operation": "memberActivityStats",
-      "status": "Placeholder",
-      "evidence": "Hard-coded empty/null; registration is not value coverage."
+      "status": "Partial",
+      "evidence": "ProductQueries to ProductMemberActivity; no complete seeded HTTP value proof identified."
     },
     {
       "operation": "memberProfile",
       "status": "Partial",
-      "evidence": "Calls services; no complete seeded HTTP value proof identified."
+      "evidence": "Calls services; ReadMemberProfile product mapper still pending; no complete seeded HTTP value proof identified."
     },
     {
       "operation": "communityDirectory",
-      "status": "Placeholder",
-      "evidence": "Hard-coded empty/null; registration is not value coverage."
+      "status": "Partial",
+      "evidence": "ProductQueries to ProductCommunityDirectory; no complete seeded HTTP value proof identified."
     },
     {
       "operation": "pendingDmProfileVerifications",
-      "status": "Placeholder",
-      "evidence": "Hard-coded empty/null; registration is not value coverage."
+      "status": "Partial",
+      "evidence": "ProductQueries to ProductPendingDmProfiles; no complete seeded HTTP value proof identified."
     },
     {
       "operation": "openQuestSeats",
-      "status": "Placeholder",
-      "evidence": "Hard-coded empty/null; registration is not value coverage."
+      "status": "Partial",
+      "evidence": "ProductQueries to ProductQuestOpenSeatsPage; no complete seeded HTTP value proof identified."
     },
     {
       "operation": "myPersonalization",
-      "status": "Placeholder",
-      "evidence": "Hard-coded empty/null; registration is not value coverage."
+      "status": "Partial",
+      "evidence": "ProductQueries to ProductMemberSettings; no complete seeded HTTP value proof identified."
     },
     {
       "operation": "document",
@@ -618,13 +618,13 @@
     },
     {
       "operation": "codexEntry",
-      "status": "Placeholder",
-      "evidence": "Hard-coded empty/null; registration is not value coverage."
+      "status": "Partial",
+      "evidence": "ProductQueries document codex read; no complete seeded HTTP value proof identified."
     },
     {
       "operation": "codexCategories",
-      "status": "Placeholder",
-      "evidence": "Hard-coded empty/null; registration is not value coverage."
+      "status": "Partial",
+      "evidence": "ProductQueries document codex categories; no complete seeded HTTP value proof identified."
     },
     {
       "operation": "map",
@@ -698,28 +698,28 @@
     },
     {
       "operation": "questArcs",
-      "status": "Placeholder",
-      "evidence": "Hard-coded empty/null; registration is not value coverage."
+      "status": "Partial",
+      "evidence": "ProductQueries to ProductQuestListArcs; no complete seeded HTTP value proof identified."
     },
     {
       "operation": "questArc",
-      "status": "Placeholder",
-      "evidence": "Hard-coded empty/null; registration is not value coverage."
+      "status": "Partial",
+      "evidence": "ProductQueries to ProductQuestReadArc; no complete seeded HTTP value proof identified."
     },
     {
       "operation": "myNotifications",
-      "status": "Placeholder",
-      "evidence": "Hard-coded empty/null; registration is not value coverage."
+      "status": "Partial",
+      "evidence": "ProductQueries to ProductNotificationInbox; no complete seeded HTTP value proof identified."
     },
     {
       "operation": "adminCharacterDirectory",
-      "status": "Placeholder",
-      "evidence": "Hard-coded empty/null; registration is not value coverage."
+      "status": "Partial",
+      "evidence": "ProductQueries to CharacterProductAdminDirectory; no complete seeded HTTP value proof identified."
     },
     {
       "operation": "adminOperations",
-      "status": "Placeholder",
-      "evidence": "Hard-coded empty/null; registration is not value coverage."
+      "status": "Partial",
+      "evidence": "ProductQueries site admin operations read; no complete seeded HTTP value proof identified."
     }
   ],
   "unimplemented_rest_operations": [
@@ -875,8 +875,8 @@
     },
     {
       "id": "graph-placeholders",
-      "status": "source-confirmed",
-      "summary": "12 of 34 roots return hard-coded empty/null responses."
+      "status": "source-cleared-2026-10-18",
+      "summary": "Prior twelve hard-coded empty roots (including the nine listed after codex/adminOperations clearance) now wire through ProductQueries to product Postgres reads. Remaining gaps are Partial/behavioral (e.g. Search=A, ReadMemberProfile mapper pending), not hard-coded empty roots."
     },
     {
       "id": "no-op-commands",
