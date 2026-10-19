@@ -12,6 +12,7 @@
     "test": "vitest run --config vitest.config.ts tests/unit tests/integration tests/e2e",
     "test:unit": "vitest run --config vitest.config.ts tests/unit",
     "test:integration": "vitest run --config vitest.config.ts tests/integration",
+    "test:live-ingest": "vitest run --config vitest.config.ts tests/integration/live-ingest.test.ts",
     "test:e2e": "vitest run --config vitest.config.ts tests/e2e",
     "test:watch": "vitest --config vitest.config.ts tests/unit tests/integration tests/e2e"
   },
