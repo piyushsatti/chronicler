@@ -92,7 +92,7 @@ describe('AuthProvider session lifecycle', () => {
     expect(
       await screen.findByRole('heading', { name: 'Welcome to Chronicler.' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Siege of Kraghold' })).toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: 'Siege of Kraghold' }).length).toBeGreaterThan(0);
   });
 
   it('lets a whole anonymous public page surface a controlled query error', async () => {
@@ -115,9 +115,9 @@ describe('AuthProvider session lifecycle', () => {
   });
 
   it('shows an anonymous public 401 once without repeatedly resetting its query', async () => {
-    // HomePage fans out HomeWarRoom + HomeBanner + SiteStats; each must fail once
+    // HomePage fans out Home + HomeLanes + HomeBanner + SiteStats; each must fail once
     // without React Query retry storms (retry: false in the test client).
-    const HOME_PUBLIC_OPS = 3;
+    const HOME_PUBLIC_OPS = 4;
     let requested = 0;
     server.use(
       http.post(GRAPHQL_PATH, () => {
@@ -134,9 +134,9 @@ describe('AuthProvider session lifecycle', () => {
 
   it('recovers an observed public query on logout without remounting an unrelated draft', async () => {
     localStorage.setItem(TOKEN_KEY, token());
-    // HomePage fans out three public GraphQL reads; logout clears cache and each
+    // HomePage fans out four public GraphQL reads; logout clears cache and each
     // observed query refetches once (no remount of unrelated draft state).
-    const HOME_PUBLIC_OPS = 3;
+    const HOME_PUBLIC_OPS = 4;
     let requested = 0;
     const record = ({ request }: { request: Request }) => {
       if (new URL(request.url).pathname === GRAPHQL_PATH) requested++;
