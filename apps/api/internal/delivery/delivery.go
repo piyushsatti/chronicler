@@ -3,6 +3,7 @@ package delivery
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"log/slog"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/jobs"
@@ -10,14 +11,17 @@ import (
 
 func parseQuestPayload(payload []byte) (string, int, error) {
 	if len(payload) == 0 {
-		return "", 0, ErrBadPayload
+		return "", 0, fmt.Errorf("%w: empty body", ErrBadPayload)
 	}
 	var body jobs.QuestDiscordPayload
 	if err := json.Unmarshal(payload, &body); err != nil {
-		return "", 0, ErrBadPayload
+		return "", 0, fmt.Errorf("%w: %v", ErrBadPayload, err)
 	}
-	if body.PublicID == "" || body.DesiredRevision < 1 {
-		return "", 0, ErrBadPayload
+	if body.PublicID == "" {
+		return "", 0, fmt.Errorf("%w: missing public_id", ErrBadPayload)
+	}
+	if body.DesiredRevision < 1 {
+		return "", 0, fmt.Errorf("%w: desired_revision must be >= 1", ErrBadPayload)
 	}
 	return body.PublicID, body.DesiredRevision, nil
 }

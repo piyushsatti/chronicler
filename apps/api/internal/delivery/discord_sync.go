@@ -8,6 +8,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"strings"
 	"sync"
 )
 
@@ -34,20 +35,22 @@ type RESTSync struct {
 	HTTP      *http.Client
 	Apply     RevisionApplier
 	Messages  MessageStore
-	// DryRun applies the revision without calling Discord. Opt-in only.
+	// DryRun applies the revision without calling Discord. Opt-in only;
+	// takes precedence over configured credentials (local/dev workers).
 	DryRun bool
 	// APIBase overrides the Discord API host (tests). Empty = production.
 	APIBase string
 }
 
 func (r RESTSync) SyncQuest(ctx context.Context, questID string, desiredRevision int) error {
-	if r.Token == "" || r.ChannelID == "" {
-		if r.DryRun {
-			if r.Apply != nil {
-				return r.Apply.ApplyDiscordRevision(ctx, questID, desiredRevision)
-			}
-			return nil
+	if r.DryRun {
+		slog.InfoContext(ctx, "discord delivery dry-run", "quest", questID, "revision", desiredRevision)
+		if r.Apply != nil {
+			return r.Apply.ApplyDiscordRevision(ctx, questID, desiredRevision)
 		}
+		return nil
+	}
+	if r.Token == "" || r.ChannelID == "" {
 		return ErrDiscordNotConfigured
 	}
 
@@ -62,7 +65,7 @@ func (r RESTSync) SyncQuest(ctx context.Context, questID string, desiredRevision
 	if r.Messages != nil {
 		messageID, err = r.Messages.GetDiscordMessageID(ctx, questID)
 		if err != nil {
-			return err
+			return fmt.Errorf("discord message id lookup: %w", err)
 		}
 	}
 
@@ -86,7 +89,7 @@ func (r RESTSync) SyncQuest(ctx context.Context, questID string, desiredRevision
 		r.setHeaders(req)
 		res, err = client.Do(req)
 		if err != nil {
-			return err
+			return fmt.Errorf("discord patch message: %w", err)
 		}
 	} else {
 		req, err := http.NewRequestWithContext(ctx, http.MethodPost,
@@ -98,13 +101,13 @@ func (r RESTSync) SyncQuest(ctx context.Context, questID string, desiredRevision
 		r.setHeaders(req)
 		res, err = client.Do(req)
 		if err != nil {
-			return err
+			return fmt.Errorf("discord create message: %w", err)
 		}
 	}
 	defer res.Body.Close()
 	raw, _ := io.ReadAll(io.LimitReader(res.Body, 1<<20))
 	if res.StatusCode >= 300 {
-		return fmt.Errorf("discord api status %d", res.StatusCode)
+		return discordAPIStatusError(res.StatusCode, raw)
 	}
 
 	if messageID == "" {
@@ -116,7 +119,7 @@ func (r RESTSync) SyncQuest(ctx context.Context, questID string, desiredRevision
 		}
 		if r.Messages != nil {
 			if err := r.Messages.SetDiscordMessageID(ctx, questID, resp.ID); err != nil {
-				return err
+				return fmt.Errorf("discord message id persist: %w", err)
 			}
 		}
 		slog.InfoContext(ctx, "discord message created", "quest", questID, "revision", desiredRevision, "message", resp.ID)
@@ -128,6 +131,17 @@ func (r RESTSync) SyncQuest(ctx context.Context, questID string, desiredRevision
 		return r.Apply.ApplyDiscordRevision(ctx, questID, desiredRevision)
 	}
 	return nil
+}
+
+func discordAPIStatusError(status int, raw []byte) error {
+	snippet := strings.TrimSpace(string(raw))
+	if len(snippet) > 200 {
+		snippet = snippet[:200]
+	}
+	if snippet == "" {
+		return fmt.Errorf("discord api status %d", status)
+	}
+	return fmt.Errorf("discord api status %d: %s", status, snippet)
 }
 
 func (r RESTSync) setHeaders(req *http.Request) {

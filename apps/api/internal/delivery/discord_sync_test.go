@@ -3,6 +3,7 @@ package delivery_test
 import (
 	"context"
 	"errors"
+	"net/http"
 	"testing"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/delivery"
@@ -37,6 +38,35 @@ func TestRESTSyncRequiresConfigUnlessDryRun(t *testing.T) {
 		t.Fatalf("applied=%v revisions=%v", applier.applied, applier.revisions)
 	}
 }
+
+func TestRESTSyncDryRunSkipsDiscordWhenConfigured(t *testing.T) {
+	applier := &fakeApplier{}
+	msgs := &memoryMessages{}
+	sync := delivery.RESTSync{
+		Token:     "tok",
+		ChannelID: "chan",
+		DryRun:    true,
+		Apply:     applier,
+		Messages:  msgs,
+		HTTP: &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
+			t.Fatal("dry-run must not call Discord")
+			return nil, nil
+		})},
+	}
+	if err := sync.SyncQuest(context.Background(), "quest-1", 9); err != nil {
+		t.Fatal(err)
+	}
+	if len(applier.revisions) != 1 || applier.revisions[0] != 9 {
+		t.Fatalf("revisions=%v", applier.revisions)
+	}
+	if msgs.set != 0 || msgs.id != "" {
+		t.Fatalf("dry-run must not touch message store id=%q set=%d", msgs.id, msgs.set)
+	}
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
 
 func TestRecordingSyncAppliesRevision(t *testing.T) {
 	applier := &fakeApplier{}

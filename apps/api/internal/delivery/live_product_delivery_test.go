@@ -27,11 +27,13 @@ import (
 //	CHRONICLER_LIVE_JWT_SECRET=local-test-only-jwt-secret \
 //	go test ./internal/delivery/ -run LiveProductDiscordDelivery -count=1
 //
-// Evidence level is live GraphQL auth/resolver path only when this suite runs
-// green. Fixture join tests and Discord bot ingest do not count as product
-// delivery live proof. Full announce (syncQuestDiscord enqueue through worker
-// Discord I/O) needs a seeded quest and non-dry-run Discord config; local seed
-// has no quests and the worker runs DISCORD_DELIVERY_DRY_RUN=1.
+// Evidence levels when this suite is enabled:
+//   - Auth/resolver path: green runs below (mode query, forbidden, NOT_FOUND).
+//   - Full announce (syncQuestDiscord bump → enqueue → worker Discord I/O):
+//     evidence-gated. Needs a seeded quest plus DISCORD_DELIVERY_DRY_RUN unset
+//     (or 0) with real bot token/channel. Local seed has no quests and the
+//     worker typically runs dry-run; do not claim live announce from fixtures
+//     or from NOT_FOUND-only harness results.
 
 const (
 	liveAdminMemberID = "11111111-1111-4111-8111-111111111111"

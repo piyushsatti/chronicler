@@ -83,3 +83,51 @@ func TestRESTSyncPostsThenPatches(t *testing.T) {
 		t.Fatalf("revisions=%v", applier.revisions)
 	}
 }
+
+func TestRESTSyncAPIErrorDoesNotApplyRevision(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+		_, _ = w.Write([]byte(`{"message":"Invalid Form Body","code":50035}`))
+	}))
+	defer srv.Close()
+
+	applier := &fakeApplier{}
+	sync := delivery.RESTSync{
+		Token:     "tok",
+		ChannelID: "chan",
+		HTTP:      srv.Client(),
+		APIBase:   srv.URL,
+		Apply:     applier,
+		Messages:  &memoryMessages{},
+	}
+	err := sync.SyncQuest(context.Background(), "quest-1", 1)
+	if err == nil {
+		t.Fatal("expected discord api error")
+	}
+	if !strings.Contains(err.Error(), "status 400") || !strings.Contains(err.Error(), "Invalid Form Body") {
+		t.Fatalf("want status+body in error, got %v", err)
+	}
+	if len(applier.applied) != 0 {
+		t.Fatalf("must not apply on api error: %v", applier.applied)
+	}
+}
+
+func TestRESTSyncMissingMessageIDDoesNotApply(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, _ = w.Write([]byte(`{}`))
+	}))
+	defer srv.Close()
+
+	applier := &fakeApplier{}
+	err := delivery.RESTSync{
+		Token: "tok", ChannelID: "chan",
+		HTTP: srv.Client(), APIBase: srv.URL,
+		Apply: applier, Messages: &memoryMessages{},
+	}.SyncQuest(context.Background(), "quest-1", 2)
+	if err == nil || !strings.Contains(err.Error(), "missing message id") {
+		t.Fatalf("want missing message id, got %v", err)
+	}
+	if len(applier.applied) != 0 {
+		t.Fatalf("must not apply: %v", applier.applied)
+	}
+}

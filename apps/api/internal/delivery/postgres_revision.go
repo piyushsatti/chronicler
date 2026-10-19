@@ -2,6 +2,7 @@ package delivery
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -19,8 +20,16 @@ func NewPostgresRevisionApplier(pool *pgxpool.Pool) *PostgresRevisionApplier {
 	return &PostgresRevisionApplier{q: dbgen.New(pool)}
 }
 
-func (p *PostgresRevisionApplier) ApplyDiscordRevision(ctx context.Context, questID string, desired int) error {
+func parseQuestPublicID(questID string) (pgtype.UUID, error) {
 	uid, err := db.ParseUUID(questID)
+	if err != nil {
+		return pgtype.UUID{}, fmt.Errorf("invalid quest public id: %w", err)
+	}
+	return uid, nil
+}
+
+func (p *PostgresRevisionApplier) ApplyDiscordRevision(ctx context.Context, questID string, desired int) error {
+	uid, err := parseQuestPublicID(questID)
 	if err != nil {
 		return err
 	}
@@ -31,7 +40,7 @@ func (p *PostgresRevisionApplier) ApplyDiscordRevision(ctx context.Context, ques
 }
 
 func (p *PostgresRevisionApplier) GetDiscordMessageID(ctx context.Context, questID string) (string, error) {
-	uid, err := db.ParseUUID(questID)
+	uid, err := parseQuestPublicID(questID)
 	if err != nil {
 		return "", err
 	}
@@ -46,7 +55,7 @@ func (p *PostgresRevisionApplier) GetDiscordMessageID(ctx context.Context, quest
 }
 
 func (p *PostgresRevisionApplier) SetDiscordMessageID(ctx context.Context, questID string, messageID string) error {
-	uid, err := db.ParseUUID(questID)
+	uid, err := parseQuestPublicID(questID)
 	if err != nil {
 		return err
 	}
@@ -71,7 +80,7 @@ func (p *PostgresReconciler) Reconcile(ctx context.Context, questPublicID string
 	if p.enqueuer == nil {
 		return nil
 	}
-	uid, err := db.ParseUUID(questPublicID)
+	uid, err := parseQuestPublicID(questPublicID)
 	if err != nil {
 		return err
 	}
