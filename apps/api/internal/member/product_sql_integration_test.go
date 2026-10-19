@@ -172,6 +172,14 @@ func TestPhase3TaskMEM04PostgresAcceptance(t *testing.T) {
 	if err != nil || missing != nil {
 		t.Fatalf("unknown member=%+v err=%v", missing, err)
 	}
+	profile, err := adapter.ReadMemberProfile(ctx, requesterAuthority, MemberProfileSpec{Handle: "dungeon-master"})
+	if err != nil || profile == nil || profile.Member.Id != dm || profile.DmProfile == nil || profile.DmProfile.Status != "approved" {
+		t.Fatalf("member profile=%+v err=%v", profile, err)
+	}
+	missingProfile, err := adapter.ReadMemberProfile(ctx, requesterAuthority, MemberProfileSpec{Handle: "no-such-handle"})
+	if err != nil || missingProfile != nil {
+		t.Fatalf("missing member profile=%+v err=%v", missingProfile, err)
+	}
 	const unlockable = "40000000-0000-4000-8000-000000000001"
 	if _, err := fixture.Pool.Exec(ctx, `INSERT INTO unlockables(public_id,code,name,kind,active,payload,unlock_rule) VALUES($1::uuid,'mem04-achievement','Table Hero','achievement',false,'{}'::jsonb,'{"type":"admin_grant"}'::jsonb)`, unlockable); err != nil {
 		t.Fatal(err)
