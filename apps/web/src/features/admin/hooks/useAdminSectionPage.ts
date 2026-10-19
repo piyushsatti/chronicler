@@ -61,17 +61,18 @@ export function useAdminContentPage() {
 }
 
 export function useAdminTodayPage() {
-  const data = {
-    delivery: useDeliveryPanel(),
-    characters: useCharacterDirectoryPanel(),
-  };
-  if (data.delivery.status === 'error')
-    return { status: 'error' as const, error: data.delivery.error };
-  if (data.characters.status === 'error')
-    return { status: 'error' as const, error: data.characters.error };
-  if (data.delivery.status === 'loading' || data.characters.status === 'loading')
+  const delivery = useDeliveryPanel();
+  const characters = useCharacterDirectoryPanel();
+  if (delivery.status === 'error')
+    return { status: 'error' as const, error: delivery.error };
+  if (characters.status === 'error')
+    return { status: 'error' as const, error: characters.error };
+  if (delivery.status === 'loading' || characters.status === 'loading')
     return { status: 'loading' as const };
-  return { status: 'ready' as const, data };
+  return {
+    status: 'ready' as const,
+    data: { delivery, characters },
+  };
 }
 
 /** DM data has no selected adapter yet. Do not substitute administrator operations. */

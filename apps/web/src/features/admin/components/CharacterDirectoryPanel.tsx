@@ -16,7 +16,12 @@ export function CharacterDirectoryPanel({
   }
   if (view.status === 'empty') {
     return (
-      <EmptyState kind="no-characters" message="No characters in the admin directory." />
+      <section className="stack" aria-label="Character directory" data-el="admin.characterDirectory">
+        <div className="sec-label">
+          <h3>Character directory</h3>
+        </div>
+        <EmptyState kind="no-characters" message="No characters in the admin directory." />
+      </section>
     );
   }
 

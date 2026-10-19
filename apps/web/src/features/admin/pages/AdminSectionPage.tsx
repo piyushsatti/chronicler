@@ -37,11 +37,38 @@ export function AdminSectionPage({
   );
 }
 
+function SectionIntro({
+  label,
+  heading,
+  caption,
+}: {
+  label: string;
+  heading: string;
+  caption: string;
+}): React.JSX.Element {
+  return (
+    <div className="stack">
+      <span className="type-label">{label}</span>
+      <h2 className="type-heading">{heading}</h2>
+      <p className="type-caption">{caption}</p>
+    </div>
+  );
+}
+
 function PeopleBody(): React.JSX.Element {
   const view = useAdminPeoplePage();
   if (view.status === 'error') return <StatePanel status="error" error={view.error} />;
   if (view.status !== 'ready') return <StatePanel status={view.status} />;
-  return <MembersPanel view={view.data} />;
+  return (
+    <div className="stack">
+      <SectionIntro
+        label="Directory"
+        heading="Members & roles"
+        caption="Search the roster and assign staff roles."
+      />
+      <MembersPanel view={view.data} />
+    </div>
+  );
 }
 export function AdminPeoplePage(): React.JSX.Element {
   return (
@@ -52,7 +79,16 @@ export function AdminPeoplePage(): React.JSX.Element {
 }
 
 function CharactersBody(): React.JSX.Element {
-  return <CharacterDirectoryPanel view={useAdminCharactersPage()} />;
+  return (
+    <div className="stack">
+      <SectionIntro
+        label="Directory"
+        heading="Characters"
+        caption="Browse campaign characters and open ownership records."
+      />
+      <CharacterDirectoryPanel view={useAdminCharactersPage()} />
+    </div>
+  );
 }
 export function AdminCharactersPage(): React.JSX.Element {
   return (
@@ -67,25 +103,32 @@ function WorldBody(): React.JSX.Element {
   if (view.status === 'error') return <StatePanel status="error" error={view.error} />;
   if (view.status !== 'ready') return <StatePanel status={view.status} />;
   return (
-    <Tabs
-      items={[
-        {
-          id: 'regions',
-          label: 'Regions',
-          panel: <RegionsPanel view={view.data.regions} />,
-        },
-        {
-          id: 'anchors',
-          label: 'Time anchors',
-          panel: <TimeAnchorPanel view={view.data.anchors} />,
-        },
-        {
-          id: 'calendar',
-          label: 'Calendar',
-          panel: <GameCalendarPanel view={view.data.calendar} />,
-        },
-      ]}
-    />
+    <div className="stack">
+      <SectionIntro
+        label="World"
+        heading="Regions, anchors, calendar"
+        caption="Maintain geography, timeline anchors, and the game calendar."
+      />
+      <Tabs
+        items={[
+          {
+            id: 'regions',
+            label: 'Regions',
+            panel: <RegionsPanel view={view.data.regions} />,
+          },
+          {
+            id: 'anchors',
+            label: 'Time anchors',
+            panel: <TimeAnchorPanel view={view.data.anchors} />,
+          },
+          {
+            id: 'calendar',
+            label: 'Calendar',
+            panel: <GameCalendarPanel view={view.data.calendar} />,
+          },
+        ]}
+      />
+    </div>
   );
 }
 export function AdminWorldPage(): React.JSX.Element {
@@ -101,25 +144,32 @@ function ContentBody(): React.JSX.Element {
   if (view.status === 'error') return <StatePanel status="error" error={view.error} />;
   if (view.status !== 'ready') return <StatePanel status={view.status} />;
   return (
-    <Tabs
-      items={[
-        {
-          id: 'home',
-          label: 'Home banner',
-          panel: <HomeBannerPanel view={view.data.home} />,
-        },
-        {
-          id: 'backstories',
-          label: 'Backstories',
-          panel: <BackstoriesPanel view={view.data.backstories} />,
-        },
-        {
-          id: 'catalog',
-          label: 'Creation catalog',
-          panel: <CreationCatalogPanel view={view.data.catalog} />,
-        },
-      ]}
-    />
+    <div className="stack">
+      <SectionIntro
+        label="Content"
+        heading="Site surfaces"
+        caption="Edit the home banner, backstories, and creation catalog."
+      />
+      <Tabs
+        items={[
+          {
+            id: 'home',
+            label: 'Home banner',
+            panel: <HomeBannerPanel view={view.data.home} />,
+          },
+          {
+            id: 'backstories',
+            label: 'Backstories',
+            panel: <BackstoriesPanel view={view.data.backstories} />,
+          },
+          {
+            id: 'catalog',
+            label: 'Creation catalog',
+            panel: <CreationCatalogPanel view={view.data.catalog} />,
+          },
+        ]}
+      />
+    </div>
   );
 }
 export function AdminContentPage(): React.JSX.Element {
@@ -131,7 +181,16 @@ export function AdminContentPage(): React.JSX.Element {
 }
 
 function DeliveryBody(): React.JSX.Element {
-  return <DeliveryPanel view={useAdminDeliveryPage()} />;
+  return (
+    <div className="stack">
+      <SectionIntro
+        label="Delivery"
+        heading="Discord delivery"
+        caption="Watch pending jobs and active delivery alerts."
+      />
+      <DeliveryPanel view={useAdminDeliveryPage()} />
+    </div>
+  );
 }
 export function AdminDeliveryPage(): React.JSX.Element {
   return (
@@ -142,7 +201,16 @@ export function AdminDeliveryPage(): React.JSX.Element {
 }
 
 function DataHealthBody(): React.JSX.Element {
-  return <DataHealthPanel view={useAdminDataHealthPage()} />;
+  return (
+    <div className="stack">
+      <SectionIntro
+        label="Integrity"
+        heading="Data health"
+        caption="Watchdog alerts and remediation surfaces from live operations."
+      />
+      <DataHealthPanel view={useAdminDataHealthPage()} />
+    </div>
+  );
 }
 export function AdminDataHealthPage(): React.JSX.Element {
   return (

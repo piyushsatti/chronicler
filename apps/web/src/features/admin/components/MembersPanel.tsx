@@ -38,9 +38,6 @@ export function MembersPanel({
       data-el="admin.membersPanel"
       aria-label="Members & roles"
     >
-      <div className="sec-label">
-        <h3>Members &amp; roles</h3>
-      </div>
       <label className="stack">
         <span className="type-label">Search</span>
         <input
