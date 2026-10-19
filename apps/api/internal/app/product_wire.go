@@ -307,6 +307,7 @@ func bindSiteCommandRepos(tx pgx.Tx, policy *auth.Policy, authority auth.Authori
 
 func bindNotificationCommandRepos(tx pgx.Tx, policy *auth.Policy, memberPool *member.PostgresStore) notification.ProductCommandRepos {
 	pg, _ := notification.NewProductPostgres(tx)
+	docPG, _ := document.NewProductPostgres(tx)
 	replay, _ := idempotency.NewRepository(tx)
 	audit, _ := auth.NewOverrideRecorder(tx)
 	txStore, err := member.NewFromDBTX(tx, memberPool.ConfiguredOwnerID())
@@ -314,11 +315,13 @@ func bindNotificationCommandRepos(tx pgx.Tx, policy *auth.Policy, memberPool *me
 		panic("notification command authority store: " + err.Error())
 	}
 	return notification.ProductCommandRepos{
-		Notification: pg,
-		Policy:       policy,
-		Authority:    txStore.ResolveAuthority,
-		Replay:       replay,
-		Audit:        audit,
+		Notification:     pg,
+		Batch:            pg,
+		DocumentAudience: docPG,
+		Policy:           policy,
+		Authority:        txStore.ResolveAuthority,
+		Replay:           replay,
+		Audit:            audit,
 	}
 }
 

@@ -124,3 +124,30 @@ func (s ProductCommands) MarkNotificationsRead(ctx context.Context, actor auth.A
 		})
 	})
 }
+
+func (s ProductCommands) AcknowledgeSuppressedNotifications(ctx context.Context, actor auth.Authority, spec AcknowledgeSuppressedNotificationsSpec, meta product.CommandMeta) (NotificationWriteReceipt, error) {
+	limit, err := normalizeAckLimit(spec.Limit)
+	if err != nil {
+		return NotificationWriteReceipt{}, err
+	}
+	spec = AcknowledgeSuppressedNotificationsSpec{Limit: limit}
+	return runNotificationCommand(ctx, s, actor, "acknowledgeSuppressedNotifications", spec, meta, actor.Claims().MemberID, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (NotificationWriteReceipt, error) {
+		if commandDependencyMissing(repos.Notification) || commandDependencyMissing(repos.Batch) || commandDependencyMissing(repos.DocumentAudience) {
+			return NotificationWriteReceipt{}, apierr.New(apierr.Internal, "notification transaction dependencies required")
+		}
+		locked, err := repos.Notification.LockAcknowledgeSuppressedNotifications(ctx, fresh.Claims().MemberID, spec)
+		if err != nil {
+			return NotificationWriteReceipt{}, err
+		}
+		selected, err := selectSuppressedNotificationIDs(ctx, repos.Batch, repos.DocumentAudience, fresh, locked.Candidates)
+		if err != nil {
+			return NotificationWriteReceipt{}, err
+		}
+		return repos.Notification.StoreAcknowledgeSuppressedNotifications(ctx, AcknowledgeSuppressedNotificationsWrite{
+			ActorID:     fresh.Claims().MemberID,
+			At:          at,
+			Locked:      locked,
+			SelectedIDs: selected,
+		})
+	})
+}

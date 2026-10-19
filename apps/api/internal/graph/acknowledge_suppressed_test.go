@@ -2,32 +2,22 @@ package graph
 
 import (
 	"context"
-	"errors"
+	"strings"
 	"testing"
-
-	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
-	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 )
 
-func TestAcknowledgeSuppressedNotificationsReturnsNotAvailable(t *testing.T) {
-	r := &Resolver{}
+func TestAcknowledgeSuppressedNotificationsRequiresCommands(t *testing.T) {
+	r := &Resolver{Services: Services{}}
 	receipt, err := r.Mutation().AcknowledgeSuppressedNotifications(context.Background(), 10, CommandMeta{
 		IdempotencyKey: "test-ack-suppressed",
 	})
 	if receipt != nil {
-		t.Fatalf("expected nil receipt, got %+v", receipt)
+		t.Fatalf("receipt = %#v, want nil", receipt)
 	}
-	if !errors.Is(err, notification.ErrAcknowledgeSuppressedNotAvailable) {
-		t.Fatalf("err = %v, want ErrAcknowledgeSuppressedNotAvailable", err)
+	if err == nil {
+		t.Fatal("expected unavailable commands error")
 	}
-	expected, ok := errors.AsType[*apierr.Error](err)
-	if !ok {
-		t.Fatalf("err type %T, want *apierr.Error", err)
-	}
-	if expected.Code != apierr.Conflict {
-		t.Fatalf("code = %s, want CONFLICT", expected.Code)
-	}
-	if expected.Message != "acknowledge suppressed notifications is not available" {
-		t.Fatalf("message = %q", expected.Message)
+	if strings.Contains(err.Error(), "not available") {
+		t.Fatalf("interim not-available path remains: %v", err)
 	}
 }

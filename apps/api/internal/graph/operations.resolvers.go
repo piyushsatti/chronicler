@@ -787,15 +787,26 @@ func (r *mutationResolver) MarkNotificationsRead(ctx context.Context, ids []stri
 
 // AcknowledgeSuppressedNotifications is the resolver for the acknowledgeSuppressedNotifications field.
 //
-// Owner ruling NOT06=C (2026-10-18): interim typed not-available (D25 apierr value).
-// Full document-subject proof + ProductCommands Lock/Store remain future work — do not
-// invent mark-oldest-unread or silent success. See .artifacts/plans/cutover/06-post-lanes.md.
+// Owner ruling NOT06=B (2026-10-18): product Lock → document-subject proof → Store selected IDs only.
 func (r *mutationResolver) AcknowledgeSuppressedNotifications(ctx context.Context, limit int, meta CommandMeta) (*NotificationWriteReceipt, error) {
-	_ = ctx
-	_ = limit
-	_ = meta
-	_ = r
-	return nil, notification.ErrAcknowledgeSuppressedNotAvailable
+	if r.Services.NotificationCommands == nil {
+		return nil, fmt.Errorf("notification commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	receipt, err := r.Services.NotificationCommands.AcknowledgeSuppressedNotifications(ctx, actor, notification.AcknowledgeSuppressedNotificationsSpec{
+		Limit: int32(limit),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return &NotificationWriteReceipt{
+		Replayed:      receipt.Replayed,
+		AffectedCount: int(receipt.AffectedCount),
+	}, nil
 }
 
 // CreateQuest is the resolver for the createQuest field.
