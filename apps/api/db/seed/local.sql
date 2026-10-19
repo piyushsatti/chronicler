@@ -34,15 +34,14 @@ INSERT INTO regions (public_id, name, kind)
 VALUES ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'Starting Marches', 'server')
 ON CONFLICT (public_id) DO NOTHING;
 
-INSERT INTO maps (public_id, name, atlas_code, map_kind, region_id, cols, rows)
+INSERT INTO maps (public_id, name, atlas_code, map_kind, region_id, family)
 SELECT
   'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
   'Starting Map',
   'start',
-  'hexgrid',
+  'pointcrawl',
   r.id,
-  10,
-  10
+  'campaign'
 FROM regions r
 WHERE r.public_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
 ON CONFLICT (atlas_code) DO NOTHING;
@@ -51,8 +50,8 @@ INSERT INTO game_calendar (id, definition)
 VALUES (1, '{"months":[{"name":"First","days":30}]}')
 ON CONFLICT (id) DO NOTHING;
 
+-- home_banner is owned by apps/api/scripts/load-qa.sh (qa.jsonl). Do not
+-- pre-insert a disabled stub here or QA's ON CONFLICT DO NOTHING cannot win.
 INSERT INTO site_settings (key, payload)
-VALUES
-  ('discord_delivery_mode', '{"mode":"queue"}'),
-  ('home_banner', '{"enabled":false}')
-ON CONFLICT (key) DO UPDATE SET payload = EXCLUDED.payload;
+VALUES ('discord_delivery_mode', '{"mode":"queue"}')
+ON CONFLICT (key) DO NOTHING;

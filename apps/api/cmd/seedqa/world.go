@@ -359,31 +359,44 @@ func (w *world) spatial() {
 			mapRef = underkeep
 		}
 		w.put("pointcrawl_nodes", []string{"public_id"}, map[string]ref{"map_id": who("maps", mapRef)}, map[string]any{
-			"public_id": id,
-			"name":      nodeNames[i%len(nodeNames)] + fmt.Sprintf(" %d", i+1),
-			"x":         float64(i%6) * 120,
-			"y":         float64(i/6) * 90,
+			"public_id":  id,
+			"name":       nodeNames[i%len(nodeNames)] + fmt.Sprintf(" %d", i+1),
+			"x":          float64(i%6) * 120,
+			"y":          float64(i/6) * 90,
+			"created_at": "2026-09-20T12:00:00Z",
 		})
 	}
+	// Nodes 0..17 are on Lightfall Coast; 18..23 on Underkeep. Edges must stay
+	// inside one map or (map_id, node_*) FKs fail.
+	const lfcNodeCount = 18
 	edgeKinds := []string{"road", "trail", "river", "pass"}
-	for i := 0; i+1 < len(w.crawlNodes) && i < 20; i++ {
+	putEdge := func(mapRef string, a, b string, i int) {
 		w.put("pointcrawl_edges", []string{"public_id"}, map[string]ref{
-			"map_id": who("maps", w.lfc),
-			"node_a": who("pointcrawl_nodes", w.crawlNodes[i]),
-			"node_b": who("pointcrawl_nodes", w.crawlNodes[i+1]),
+			"map_id": who("maps", mapRef),
+			"node_a": who("pointcrawl_nodes", a),
+			"node_b": who("pointcrawl_nodes", b),
 		}, map[string]any{
 			"public_id": w.id(7), "directed": i%3 == 0, "kind": edgeKinds[i%len(edgeKinds)],
 			"label": fmt.Sprintf("leg-%d", i+1),
 		})
 	}
+	edgeN := 0
+	for i := 0; i+1 < lfcNodeCount && edgeN < 20; i++ {
+		putEdge(w.lfc, w.crawlNodes[i], w.crawlNodes[i+1], edgeN)
+		edgeN++
+	}
+	for i := lfcNodeCount; i+1 < len(w.crawlNodes); i++ {
+		putEdge(underkeep, w.crawlNodes[i], w.crawlNodes[i+1], edgeN)
+		edgeN++
+	}
 	brune := w.memberByHandle("brune").ID
 	for i := 0; i < len(feat) && i < 16; i++ {
 		w.put("pointcrawl_entry_links", []string{"node_id", "document_id", "relation"}, map[string]ref{
 			"map_id":      who("maps", w.lfc),
-			"node_id":     who("pointcrawl_nodes", w.crawlNodes[i%len(w.crawlNodes)]),
+			"node_id":     who("pointcrawl_nodes", w.crawlNodes[i%lfcNodeCount]),
 			"document_id": who("documents", feat[i]),
 			"created_by":  who("members", brune),
-		}, map[string]any{"relation": "subject"})
+		}, map[string]any{"relation": "subject", "created_at": "2026-09-20T12:00:00Z"})
 	}
 	for i := 0; i < 8 && i < len(locIDs); i++ {
 		w.put("pointcrawl_entry_links", []string{"node_id", "document_id", "relation"}, map[string]ref{
@@ -391,7 +404,7 @@ func (w *world) spatial() {
 			"node_id":     who("pointcrawl_nodes", w.crawlNodes[i]),
 			"document_id": who("documents", locIDs[i]),
 			"created_by":  who("members", brune),
-		}, map[string]any{"relation": "location"})
+		}, map[string]any{"relation": "location", "created_at": "2026-09-20T12:00:00Z"})
 	}
 
 	w.put("archon_assignments", []string{"member_id", "region_id"}, map[string]ref{
@@ -492,10 +505,18 @@ func (w *world) cast() {
 			row["verification_submitted_at"] = "2026-10-01T12:00:00Z"
 		}
 		w.put("characters", []string{"public_id"}, refs, row)
+		// Stored mirrors must match decodeStoredCharacterDDBMirror (closed field set).
+		classes := []string{"Warden", "Chronicler", "Ferryman"}[i%3]
+		level := 1 + i%8
 		w.put("character_ddb_mirrors", []string{"character_id"}, map[string]ref{"character_id": who("characters", id)}, map[string]any{
 			"payload": map[string]any{
-				"name": names[i], "level": 1 + i%8, "class": []string{"warden", "chronicler", "ferryman"}[i%3],
-				"hp": map[string]any{"current": 12 + i, "max": 20 + i},
+				"level": level, "xp": level * 100, "armorClass": 12 + i%4, "maxHp": 20 + i,
+				"species": []string{"Human", "Elf", "Dwarf"}[i%3], "classes": fmt.Sprintf("%s %d", classes, level),
+				"background": []string{"Soldier", "Sailor", "Sage"}[i%3],
+				"proficiencies": []map[string]any{
+					{"kind": "language", "name": "Common"},
+					{"kind": "proficiency", "name": "Athletics"},
+				},
 			},
 			"synced_at": "2026-10-02T12:00:00Z",
 		})
@@ -721,7 +742,12 @@ func (w *world) jobsAndSite() {
 		"key": "qa_world", "payload": map[string]any{"loaded": true, "atlas": "LFC", "codex": 100},
 	})
 	w.put("site_settings", []string{"key"}, nil, map[string]any{
-		"key": "home_banner", "payload": map[string]any{"enabled": true, "text": "Lightfall Coast is on the board."},
+		"key": "home_banner", "payload": map[string]any{
+			"enabled": true,
+			"title":   "Lightfall Coast",
+			"body":    "Lightfall Coast is on the board.",
+			"text":    "Lightfall Coast is on the board.",
+		},
 	})
 }
 
