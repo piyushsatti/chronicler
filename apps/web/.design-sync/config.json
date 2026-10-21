@@ -1,0 +1,74 @@
+{
+  "pkg": "@pi/chronicler-ds",
+  "globalName": "Chronicler",
+  "shape": "package",
+  "entry": "./.design-sync/ds-pkg/index.ts",
+  "tsconfig": "../../tsconfig.json",
+  "cssEntry": "dist/styles.css",
+  "componentSrcMap": {
+    "DsRoot": null,
+    "BannerMediaEmbed": null
+  },
+  "provider": {
+    "component": "DsRoot"
+  },
+  "buildCmd": "node .design-sync/build-css.mjs",
+  "srcDir": "../../src/components",
+  "libOverrides": {
+    "dts.mjs": "DS source lives in apps/web/src outside the sync entry package; treat its props as own API"
+  },
+  "dtsPropsFor": {
+    "Button": "children?: React.ReactNode; variant?: \"primary\" | \"secondary\" | \"ghost\" | \"danger\"; size?: \"sm\" | \"md\" | \"lg\"; pending?: boolean; disabled?: boolean; type?: \"button\" | \"submit\" | \"reset\"; onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void; className?: string; style?: React.CSSProperties; id?: string; \"aria-label\"?: string",
+    "Card": "children?: React.ReactNode; variant?: \"plain\" | \"clickable\" | \"sidebar\"; tone?: 1 | 2 | 3 | \"flat\"; pad?: 0 | 3 | 4 | 5 | 6; as?: \"div\" | \"article\" | \"section\"; /** clickable only: native anchor target */ href?: string; /** clickable only: in-app route (react-router) */ to?: string; /** clickable only (no href/to): renders a button */ onClick?: (e: React.MouseEvent<HTMLElement>) => void; className?: string; style?: React.CSSProperties; id?: string; \"data-component\"?: string",
+    "Field": "label: string; error?: string; children?: React.ReactNode; className?: string; id?: string; style?: React.CSSProperties",
+    "Listbox": "/** options: { value: string; label: string; disabled?: boolean }[] */ options?: { value: string; label: string; disabled?: boolean }[]; value?: string; defaultValue?: string; onValueChange?: (value: string) => void; size?: \"sm\" | \"md\" | \"lg\"; className?: string; children?: React.ReactNode; \"aria-label\"?: string",
+    "SegmentedControl": "options?: { value: string; label: React.ReactNode; disabled?: boolean }[]; value?: string; defaultValue?: string; onValueChange?: (v: string) => void; size?: \"sm\" | \"md\"; className?: string; children?: React.ReactNode; \"aria-label\"?: string",
+    "MasterDetail": "items: any[]; itemKey: (item: any) => string; renderItem: (item: any) => React.ReactNode; renderDetail: (item: any) => React.ReactNode; selectedKey?: string; className?: string",
+    "StatePanel": "status: \"empty\" | \"loading\" | \"error\"; /** required when status=\"error\" */ error?: { kind: \"network\" | \"unauthorized\" | \"forbidden\" | \"not_found\" | \"invalid\" | \"upstream\" | \"safe\" | \"unknown\"; userMessage: string; debugId?: string }; emptyMessage?: string",
+    "Legend": "items: { id: string; label: string }[]; \"aria-label\"?: string; className?: string",
+    "Table": "columns?: { key: string; label: string; sortable?: boolean; render?: (row: any) => React.ReactNode; align?: \"start\" | \"end\"; width?: string }[]; rows?: any[]; rowKey?: (row: any) => string | number; sortKey?: string; sortDir?: \"asc\" | \"desc\"; onSortChange?: (k: string, d: \"asc\" | \"desc\") => void; defaultSortKey?: string; defaultSortDir?: \"asc\" | \"desc\"; onRowClick?: (row: any) => void; loading?: boolean; empty?: React.ReactNode; className?: string; children?: React.ReactNode",
+    "Avatar": "name?: string; src?: string; size?: \"xs\" | \"sm\" | \"md\" | \"lg\" | \"token\"; ring?: \"role\" | \"none\" | \"accent\" | \"selected\"; online?: boolean; you?: boolean; empty?: boolean; framed?: boolean; onClick?: () => void; disabled?: boolean; className?: string; style?: React.CSSProperties; children?: React.ReactNode",
+    "WeekGrid": "/** one cell per day; bucket 0-4 drives heat shading */ days?: { date: string; count: number; bucket: 0 | 1 | 2 | 3 | 4 }[]; /** ISO date (YYYY-MM-DD) of the week's first day */ weekStart?: string; onWeekStartChange?: (d: string) => void; defaultWeekStart?: string; selectedDate?: string; onSelectedDateChange?: (d: string | null) => void; defaultSelectedDate?: string; renderCell?: (cell: { date: string; count: number; bucket: 0 | 1 | 2 | 3 | 4 }, state: { selected: boolean }) => React.ReactNode; onDrillDown?: (date: string) => void; heat?: boolean; className?: string; ariaLabel?: string; children?: React.ReactNode"
+  },
+  "overrides": {
+    "Modal": {
+      "cardMode": "single",
+      "viewport": "720x520"
+    },
+    "Popover": {
+      "cardMode": "single",
+      "viewport": "640x420"
+    },
+    "Table": {
+      "cardMode": "column"
+    },
+    "MasterDetail": {
+      "cardMode": "column"
+    },
+    "SplitPane": {
+      "cardMode": "column"
+    },
+    "PageShell": {
+      "cardMode": "column"
+    },
+    "WeekGrid": {
+      "cardMode": "column"
+    },
+    "Calendar": {
+      "cardMode": "column"
+    },
+    "Field": {
+      "cardMode": "column"
+    },
+    "StubNotice": {
+      "cardMode": "column"
+    },
+    "Avatar": {
+      "cardMode": "column"
+    },
+    "Skeleton": {
+      "cardMode": "column"
+    }
+  },
+  "readmeHeader": ".design-sync/conventions.md"
+}

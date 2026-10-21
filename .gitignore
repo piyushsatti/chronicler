@@ -21,3 +21,11 @@ dist/
 
 # Go API binary from `go build -o api` in apps/api
 apps/api/api
+
+# claude.ai/design sync: staged converter, build output, machine state
+apps/web/.ds-sync/
+apps/web/ds-bundle/
+apps/web/.design-sync/.cache/
+apps/web/.design-sync/learnings/
+apps/web/.design-sync/node_modules
+apps/web/.design-sync/*.log

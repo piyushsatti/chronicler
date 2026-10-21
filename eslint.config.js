@@ -5,6 +5,10 @@ export default tseslint.config(
   {
     ignores: [
       '**/.local/**',
+      // claude.ai/design sync: staged converter, its output, and the forked converter module
+      'apps/web/.ds-sync/**',
+      'apps/web/ds-bundle/**',
+      'apps/web/.design-sync/overrides/**',
       '**/.artifacts/**',
       '**/node_modules/**',
       '**/dist/**',
