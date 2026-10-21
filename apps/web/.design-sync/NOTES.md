@@ -44,7 +44,7 @@ Preview authoring exposed primitives whose markup and stylesheet disagreed (Chip
 
 ## Re-sync risks
 
-- Upload has not happened yet: this session could not get claude.ai/design authorization (`/design-login` unavailable in the remote environment). The first upload must come from a session with design authorization; it creates the project (record `projectId` in config) and pushes the verified `ds-bundle/`.
+- First upload done 2026-10-21 into project "Chronicler" (`projectId` in config.json), 174 files. DesignSync auth on triton comes from running `/design-login` once in an interactive `claude` terminal there; desktop-app sessions cannot run it themselves. Re-syncs are anchored: fetch the project's `_ds_sync.json` to `.design-sync/.cache/remote-sync.json` and pass `--remote`.
 - `ds-pkg/index.ts` is a hand-curated export list. New primitives are not synced until added there (and to `primitives.registry.ts`). `ContentRenderer`/`MermaidBlock` stay excluded: the converter's single-file bundle inlines Mermaid's dynamic import (~7.8 MB).
 - `dtsPropsFor` bodies are hand-written copies of prop types (Button, Card, Field, Listbox, SegmentedControl, MasterDetail, StatePanel, Legend, Table, Avatar, WeekGrid). They go stale silently when those props change; diff them against the source on every re-sync.
 - `overrides/dts.mjs` is a fork of the converter's `lib/dts.mjs` (one added line). On re-sync, diff it against the bundled `lib/dts.mjs` and merge upstream changes.

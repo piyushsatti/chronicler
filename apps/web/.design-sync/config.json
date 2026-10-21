@@ -1,4 +1,5 @@
 {
+  "projectId": "25e0a022-2efb-4585-bc5f-4abb5b3518d1",
   "pkg": "@pi/chronicler-ds",
   "globalName": "Chronicler",
   "shape": "package",
