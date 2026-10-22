@@ -1,10 +1,24 @@
-query CodexDirectory($categoryPrefix: String, $search: String) {
-  codexDirectory(categoryPrefix: $categoryPrefix, search: $search) {
+query CodexDirectory(
+  $categoryPrefix: String
+  $search: String
+  $limit: Int!
+  $offset: Int!
+) {
+  codexCategories {
+    category
+  }
+  codexDirectory(
+    categoryPrefix: $categoryPrefix
+    search: $search
+    limit: $limit
+    offset: $offset
+  ) {
     items {
       id
       slug
       title
       category
+      effectiveBody
     }
     total
   }

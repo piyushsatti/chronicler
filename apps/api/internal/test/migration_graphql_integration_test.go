@@ -1034,7 +1034,8 @@ func TestA1SquashInitAcceptance(t *testing.T) {
 	if err := goose.UpContext(ctx, db, "../../db/migrations"); err != nil {
 		t.Fatal(err)
 	}
-	p04AssertVersion(t, db, 1)
+	// 0001 is the A1 squash; 0002 adds characters.image_url (D5).
+	p04AssertVersion(t, db, 2)
 	assertA1SquashShape(t, db)
 }
 

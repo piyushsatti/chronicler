@@ -1,5 +1,9 @@
-query RulesList($limit: Int!) {
-  documents(filters: { kind: "rule", status: "published" }, limit: $limit) {
+query RulesList($limit: Int!, $offset: Int!) {
+  documents(
+    filters: { kind: "rule", status: "published" }
+    limit: $limit
+    offset: $offset
+  ) {
     items {
       id
       slug

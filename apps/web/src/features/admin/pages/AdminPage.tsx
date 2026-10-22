@@ -1,69 +1,193 @@
+import { AdminReadFailure } from '../components/AdminReadFailure.js';
 import { Link } from 'react-router-dom';
 import { AdminWorkspaceShell } from '../AdminWorkspaceShell.js';
-import { CharacterDirectoryPanel } from '../components/CharacterDirectoryPanel.js';
-import { DeliveryPanel } from '../components/DeliveryPanel.js';
+import { Card } from '../../../components/primitives/Card.js';
+import { Chip } from '../../../components/primitives/Chip.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
+import { StatTile } from '../../../components/primitives/StatTile.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
+import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
+import { humanizeKey, labelFor, pluralize } from '../../../utils/format.js';
+import { isSafeInternalPath } from '../../../utils/url.js';
 import type { AdminOpsView } from '../types.js';
 import { useAdminTodayPage } from '../hooks/useAdminSectionPage.js';
 import styles from './adminToday.module.css';
 
-function TodaySummary({ ops }: { ops: AdminOpsView }): React.JSX.Element {
+/** How many alerts and deliveries the overview previews before linking on. */
+const PREVIEW = 3;
+
+const DELIVERY_STATES: Record<string, string> = {
+  queued: 'Queued',
+  succeeded: 'Delivered',
+  retry_wait: 'Waiting to retry',
+  repair_required: 'Needs repair',
+  dead: 'Gave up',
+  cancelled: 'Cancelled',
+};
+
+function TodaySummary({
+  ops,
+  characterTotal,
+  reviewTotal,
+}: {
+  ops: AdminOpsView;
+  characterTotal: number | null;
+  reviewTotal: number | null;
+}): React.JSX.Element {
   return (
-    <div className="stack" data-el="admin.today.summary">
-      <p className="eyebrow">Operations</p>
+    <section className="stack" data-gap="3" data-el="admin.today.summary">
+      <h2 className="type-label">At a glance</h2>
       <div className={styles.summary}>
         <Link
           className={styles.stat}
           to="/admin/data-health"
           data-el="admin.today.alerts"
         >
-          <p className="type-value">{ops.activeAlertCount}</p>
-          <p className="type-caption">Active alerts</p>
+          <StatTile
+            label="Active alerts"
+            value={ops.activeAlertCount}
+            tone={ops.activeAlertCount ? 'warn' : 'good'}
+            hint="Data health"
+          />
         </Link>
         <Link className={styles.stat} to="/admin/delivery">
-          <p className="type-value">{ops.pendingDeliveryCount}</p>
-          <p className="type-caption">Pending deliveries</p>
-        </Link>
-        <Link className={styles.stat} to="/admin/delivery">
-          <p className="type-value">{ops.deliveryTotal}</p>
-          <p className="type-caption">Delivery total</p>
+          <StatTile
+            label="Pending deliveries"
+            value={ops.pendingDeliveryCount}
+            tone={ops.pendingDeliveryCount ? 'accent' : 'neutral'}
+            hint={`of ${pluralize(ops.deliveryTotal, 'delivery', 'deliveries')}`}
+          />
         </Link>
         <Link className={styles.stat} to="/admin/review">
-          <p className="type-value">Review</p>
-          <p className="type-caption">Verification queue</p>
+          <StatTile
+            label="Awaiting review"
+            value={reviewTotal ?? '–'}
+            tone={reviewTotal ? 'accent' : 'neutral'}
+            hint="Character verification"
+          />
+        </Link>
+        <Link className={styles.stat} to="/admin/characters">
+          <StatTile label="Characters" value={characterTotal ?? '–'} hint="Directory" />
         </Link>
       </div>
-      {ops.activeAlerts.length === 0 ? (
-        <EmptyState kind="no-events" message="No active alerts." />
+    </section>
+  );
+}
+
+function AttentionCard({ ops }: { ops: AdminOpsView }): React.JSX.Element {
+  const { formatDateTime } = useDateFormatter();
+  const shown = ops.activeAlerts.slice(0, PREVIEW);
+  return (
+    <Card className={`stack ${styles.panel}`} data-el="admin.today.attention">
+      <div className="row" data-justify="between" data-align="center">
+        <h2 className="type-title">Needs attention</h2>
+        <Link
+          className="btn btn--ghost btn--sm"
+          to="/admin/data-health"
+          aria-label="View all alerts"
+        >
+          View all
+        </Link>
+      </div>
+      {shown.length === 0 ? (
+        <EmptyState
+          kind="no-events"
+          message="No active alerts. Everything is running."
+        />
       ) : (
-        <ul className={styles.alerts} aria-label="Active alerts">
-          {ops.activeAlerts.map((alert) => (
-            <li key={alert.key} className="row" data-justify="between">
-              <span className="type-title">{alert.label}</span>
-              <Link className="type-link" to={alert.remediationHref}>
-                Open
-              </Link>
+        <ul className={styles.list} aria-label="Active alerts">
+          {shown.map((alert) => (
+            <li key={alert.key} className={styles.item}>
+              <div className="stack" data-gap="1">
+                <span className="type-title">{alert.label}</span>
+                <span className="type-caption">
+                  Last seen {formatDateTime(alert.lastSeenAt)}
+                </span>
+              </div>
+              <div className="row" data-gap="2" data-align="center">
+                <Chip tone="status" size="sm">
+                  {humanizeKey(alert.severity)}
+                </Chip>
+                {isSafeInternalPath(alert.remediationHref) ? (
+                  <Link
+                    className="btn btn--secondary btn--sm"
+                    to={alert.remediationHref}
+                  >
+                    Open
+                  </Link>
+                ) : null}
+              </div>
             </li>
           ))}
         </ul>
       )}
-    </div>
+      {ops.activeAlertCount > shown.length ? (
+        <p className="type-caption">
+          {pluralize(ops.activeAlertCount - shown.length, 'more alert')} in Data health.
+        </p>
+      ) : null}
+    </Card>
+  );
+}
+
+function RecentDeliveriesCard({ ops }: { ops: AdminOpsView }): React.JSX.Element {
+  const { formatDateTime } = useDateFormatter();
+  const shown = ops.deliveries.slice(0, PREVIEW);
+  return (
+    <Card className={`stack ${styles.panel}`} data-el="admin.today.deliveries">
+      <div className="row" data-justify="between" data-align="center">
+        <h2 className="type-title">Recent Discord deliveries</h2>
+        <Link
+          className="btn btn--ghost btn--sm"
+          to="/admin/delivery"
+          aria-label="View all deliveries"
+        >
+          View all
+        </Link>
+      </div>
+      {shown.length === 0 ? (
+        <EmptyState kind="no-events" message="No deliveries recorded yet." />
+      ) : (
+        <ul className={styles.list} aria-label="Recent deliveries">
+          {shown.map((delivery) => (
+            <li key={delivery.id} className={styles.item}>
+              <div className="stack" data-gap="1">
+                <span className="type-title">
+                  {delivery.questTitle ?? delivery.questShortCode ?? 'Untitled quest'}
+                </span>
+                <span className="type-caption">
+                  Updated {formatDateTime(delivery.updatedAt)}
+                </span>
+              </div>
+              <Chip tone={delivery.state === 'succeeded' ? 'line' : 'status'} size="sm">
+                {labelFor(delivery.state, DELIVERY_STATES)}
+              </Chip>
+            </li>
+          ))}
+        </ul>
+      )}
+    </Card>
   );
 }
 
 /** Body used by route shell and direct unit tests. */
 export function AdminTodayBody(): React.JSX.Element {
   const view = useAdminTodayPage();
-  if (view.status === 'error') return <StatePanel status="error" error={view.error} />;
+  if (view.status === 'error')
+    return <AdminReadFailure error={view.error} retry={view.retry} />;
   if (view.status === 'loading') return <StatePanel status="loading" />;
-  const { delivery, characters } = view.data;
-  if (delivery.status !== 'ready') return <StatePanel status="loading" />;
+  const { ops, characterTotal, reviewTotal } = view.data;
   return (
-    <div className="stack">
-      <TodaySummary ops={delivery.ops} />
-      <DeliveryPanel view={delivery} />
-      <CharacterDirectoryPanel view={characters} />
+    <div className="stack" data-gap="5">
+      <TodaySummary
+        ops={ops}
+        characterTotal={characterTotal}
+        reviewTotal={reviewTotal}
+      />
+      <div className={styles.panels}>
+        <AttentionCard ops={ops} />
+        <RecentDeliveriesCard ops={ops} />
+      </div>
     </div>
   );
 }

@@ -7,7 +7,7 @@ describe('parseQuestSummaryPage', () => {
   it('maps quest header and linked documents', () => {
     const result = parseQuestSummaryPage({
       quest: goodQuestDetail,
-      documents: goodSummaryDocuments,
+      summaries: goodSummaryDocuments,
     });
     expect(result.ok).toBe(true);
     if (result.ok) {

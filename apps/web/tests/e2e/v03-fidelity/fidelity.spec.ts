@@ -20,7 +20,7 @@ test.describe('v03 fidelity', () => {
     await page.goto('/gallery');
     await expect(page.getByRole('heading', { name: 'Gallery', exact: true })).toBeVisible();
     await expect(page.locator('#gallery-modal')).toBeVisible();
-    assertRequests();
+    expect(assertRequests()).toContain('CurrentAdminAccess');
   });
   });
 });

@@ -1,0 +1,7 @@
+query EditorAudienceMember($id: ID!) {
+  member(id: $id) {
+    id
+    handle
+    displayName
+  }
+}

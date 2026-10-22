@@ -42,6 +42,7 @@ type Config struct {
 
 type ResolverRoot interface {
 	AdminOperationsType() AdminOperationsTypeResolver
+	CharacterType() CharacterTypeResolver
 	CodexEntryCardType() CodexEntryCardTypeResolver
 	DocumentType() DocumentTypeResolver
 	GameCalendarType() GameCalendarTypeResolver
@@ -54,6 +55,7 @@ type ResolverRoot interface {
 	Query() QueryResolver
 	QuestArcType() QuestArcTypeResolver
 	QuestType() QuestTypeResolver
+	RegionType() RegionTypeResolver
 }
 
 type DirectiveRoot struct {
@@ -231,6 +233,7 @@ type ComplexityRoot struct {
 		DisplayIcon             func(childComplexity int) int
 		GuildID                 func(childComplexity int) int
 		ID                      func(childComplexity int) int
+		ImageURL                func(childComplexity int) int
 		Name                    func(childComplexity int) int
 		OwnerID                 func(childComplexity int) int
 		Pcxp                    func(childComplexity int) int
@@ -411,25 +414,27 @@ type ComplexityRoot struct {
 	}
 
 	DocumentType struct {
-		Author         func(childComplexity int) int
-		AuthorID       func(childComplexity int) int
-		Category       func(childComplexity int) int
-		DeletedAt      func(childComplexity int) int
-		DeletedBy      func(childComplexity int) int
-		EffectiveBody  func(childComplexity int) int
-		Frontmatter    func(childComplexity int) int
-		ID             func(childComplexity int) int
-		Kind           func(childComplexity int) int
-		Policy         func(childComplexity int) int
-		PublishedAt    func(childComplexity int) int
-		ReaderIds      func(childComplexity int) int
-		Slug           func(childComplexity int) int
-		Status         func(childComplexity int) int
-		SummaryDerived func(childComplexity int) int
-		Title          func(childComplexity int) int
-		UpdatedAt      func(childComplexity int) int
-		Version        func(childComplexity int) int
-		Visibility     func(childComplexity int) int
+		Author          func(childComplexity int) int
+		AuthorID        func(childComplexity int) int
+		CanEditBody     func(childComplexity int) int
+		CanEditMetadata func(childComplexity int) int
+		Category        func(childComplexity int) int
+		DeletedAt       func(childComplexity int) int
+		DeletedBy       func(childComplexity int) int
+		EffectiveBody   func(childComplexity int) int
+		Frontmatter     func(childComplexity int) int
+		ID              func(childComplexity int) int
+		Kind            func(childComplexity int) int
+		Policy          func(childComplexity int) int
+		PublishedAt     func(childComplexity int) int
+		ReaderIds       func(childComplexity int) int
+		Slug            func(childComplexity int) int
+		Status          func(childComplexity int) int
+		SummaryDerived  func(childComplexity int) int
+		Title           func(childComplexity int) int
+		UpdatedAt       func(childComplexity int) int
+		Version         func(childComplexity int) int
+		Visibility      func(childComplexity int) int
 	}
 
 	DowntimeProjectListResult struct {
@@ -512,6 +517,7 @@ type ComplexityRoot struct {
 	MapType struct {
 		AssetPath       func(childComplexity int) int
 		AtlasCode       func(childComplexity int) int
+		CanEdit         func(childComplexity int) int
 		CreatedAt       func(childComplexity int) int
 		CreatedBy       func(childComplexity int) int
 		Family          func(childComplexity int) int
@@ -648,6 +654,7 @@ type ComplexityRoot struct {
 		SetMemberRoles                     func(childComplexity int, memberID string, roles []string, note *string, meta CommandMeta) int
 		SetMemberRolesBatch                func(childComplexity int, changes []*MemberRoleBatchInput, meta CommandMeta) int
 		SetMyAvailability                  func(childComplexity int, slots []*AvailabilitySlotInput, meta CommandMeta) int
+		SetMyPrivateNotes                  func(childComplexity int, body string, meta CommandMeta) int
 		SetPointcrawlEdge                  func(childComplexity int, mapID string, input PointcrawlEdgeInput, meta CommandMeta) int
 		SetQuestPointcrawlLinks            func(childComplexity int, questID string, links []*QuestPointcrawlLinkInput, meta CommandMeta) int
 		SetUnlockableActive                func(childComplexity int, id string, active bool, meta CommandMeta) int
@@ -683,6 +690,11 @@ type ComplexityRoot struct {
 
 	MyPersonalizationType struct {
 		Settings func(childComplexity int) int
+	}
+
+	MyPrivateNotesType struct {
+		Body      func(childComplexity int) int
+		UpdatedAt func(childComplexity int) int
 	}
 
 	NotificationConnection struct {
@@ -826,6 +838,7 @@ type ComplexityRoot struct {
 		MyCharacters                  func(childComplexity int, limit int, offset int) int
 		MyNotifications               func(childComplexity int, limit int, unreadOnly bool, before *string) int
 		MyPersonalization             func(childComplexity int) int
+		MyPrivateNotes                func(childComplexity int) int
 		MyQuestSignups                func(childComplexity int, limit int, offset int) int
 		MyUnlocks                     func(childComplexity int, limit int, offset int) int
 		MyUnreadNotificationCount     func(childComplexity int) int
@@ -998,6 +1011,7 @@ type ComplexityRoot struct {
 	}
 
 	RegionType struct {
+		CanCreateMap    func(childComplexity int) int
 		CharterDeadline func(childComplexity int) int
 		CreatedAt       func(childComplexity int) int
 		DocumentID      func(childComplexity int) int
@@ -1061,14 +1075,22 @@ type ComplexityRoot struct {
 		TotalRegions                 func(childComplexity int) int
 	}
 
+	SummaryAuthoringType struct {
+		CharacterID func(childComplexity int) int
+		Complete    func(childComplexity int) int
+		QuestIds    func(childComplexity int) int
+	}
+
 	SummaryDerivedType struct {
 		Arc             func(childComplexity int) int
+		Authoring       func(childComplexity int) int
 		Dms             func(childComplexity int) int
 		GameDate        func(childComplexity int) int
 		GameDay         func(childComplexity int) int
 		OccurredAt      func(childComplexity int) int
 		Players         func(childComplexity int) int
 		PointcrawlNodes func(childComplexity int) int
+		Quests          func(childComplexity int) int
 		Regions         func(childComplexity int) int
 	}
 
@@ -1089,6 +1111,12 @@ type ComplexityRoot struct {
 		ID    func(childComplexity int) int
 		MapID func(childComplexity int) int
 		Name  func(childComplexity int) int
+	}
+
+	SummaryQuestRefType struct {
+		ID        func(childComplexity int) int
+		ShortCode func(childComplexity int) int
+		Title     func(childComplexity int) int
 	}
 
 	SummaryRegionType struct {
@@ -1149,6 +1177,9 @@ type ComplexityRoot struct {
 
 type AdminOperationsTypeResolver interface {
 	ActiveAlerts(ctx context.Context, obj *AdminOperationsType, limit int, offset int) ([]*AdminHealthAlertType, error)
+}
+type CharacterTypeResolver interface {
+	GuildID(ctx context.Context, obj *CharacterType) (*string, error)
 }
 type CodexEntryCardTypeResolver interface {
 	Subjects(ctx context.Context, obj *CodexEntryCardType, limit int, offset int) ([]*DocumentLinkType, error)
@@ -1215,6 +1246,7 @@ type MutationResolver interface {
 	DecideDmProfileVerification(ctx context.Context, memberID string, expectedRevision int, verdict VerificationVerdict, note *string, meta CommandMeta) (*DmProfileType, error)
 	GrantUnlock(ctx context.Context, memberID string, unlockableID string, note string, meta CommandMeta) (*MemberUnlockType, error)
 	UpdateMySettings(ctx context.Context, input MemberSettingsPatch, meta CommandMeta) (*MemberSettingsType, error)
+	SetMyPrivateNotes(ctx context.Context, body string, meta CommandMeta) (*MyPrivateNotesType, error)
 	UpsertUnlockable(ctx context.Context, id *string, input UpsertUnlockableInput, meta CommandMeta) (*UnlockableType, error)
 	SetUnlockableActive(ctx context.Context, id string, active bool, meta CommandMeta) (*UnlockableType, error)
 	MarkNotificationsRead(ctx context.Context, ids []string, meta CommandMeta) (*NotificationWriteReceipt, error)
@@ -1291,6 +1323,7 @@ type QueryResolver interface {
 	CommunityDirectory(ctx context.Context, filters *CommunityDirectoryFiltersInput, limit int, offset int) (*CommunityDirectoryResult, error)
 	PendingDmProfileVerifications(ctx context.Context, limit int, offset int) (*CommunityDirectoryResult, error)
 	MyPersonalization(ctx context.Context) (*MyPersonalizationType, error)
+	MyPrivateNotes(ctx context.Context) (*MyPrivateNotesType, error)
 	MemberMe(ctx context.Context) (*MemberType, error)
 	MemberByDiscordID(ctx context.Context, discordID string) (*MemberType, error)
 	MemberRoleHistory(ctx context.Context, memberID string, limit int, offset int) (*RoleChangePage, error)
@@ -1336,6 +1369,8 @@ type QuestArcTypeResolver interface {
 	Quests(ctx context.Context, obj *QuestArcType, limit int, offset int) ([]*QuestType, error)
 }
 type QuestTypeResolver interface {
+	DocumentID(ctx context.Context, obj *QuestType) (*string, error)
+
 	Dm(ctx context.Context, obj *QuestType) (*QuestDmType, error)
 	BriefDocument(ctx context.Context, obj *QuestType) (*DocumentType, error)
 	Participants(ctx context.Context, obj *QuestType, status *string, limit int, offset int) ([]*QuestParticipantType, error)
@@ -1344,6 +1379,9 @@ type QuestTypeResolver interface {
 	DmTable(ctx context.Context, obj *QuestType) (*DocumentType, error)
 
 	DiscordDelivery(ctx context.Context, obj *QuestType) (*QuestDiscordDeliveryType, error)
+}
+type RegionTypeResolver interface {
+	DocumentID(ctx context.Context, obj *RegionType) (*string, error)
 }
 
 type executableSchema struct {
@@ -2161,6 +2199,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.CharacterType.ID(childComplexity), true
 
+	case "CharacterType.imageUrl":
+		if e.complexity.CharacterType.ImageURL == nil {
+			break
+		}
+
+		return e.complexity.CharacterType.ImageURL(childComplexity), true
+
 	case "CharacterType.name":
 		if e.complexity.CharacterType.Name == nil {
 			break
@@ -2915,6 +2960,20 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.DocumentType.AuthorID(childComplexity), true
 
+	case "DocumentType.canEditBody":
+		if e.complexity.DocumentType.CanEditBody == nil {
+			break
+		}
+
+		return e.complexity.DocumentType.CanEditBody(childComplexity), true
+
+	case "DocumentType.canEditMetadata":
+		if e.complexity.DocumentType.CanEditMetadata == nil {
+			break
+		}
+
+		return e.complexity.DocumentType.CanEditMetadata(childComplexity), true
+
 	case "DocumentType.category":
 		if e.complexity.DocumentType.Category == nil {
 			break
@@ -3355,6 +3414,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.MapType.AtlasCode(childComplexity), true
+
+	case "MapType.canEdit":
+		if e.complexity.MapType.CanEdit == nil {
+			break
+		}
+
+		return e.complexity.MapType.CanEdit(childComplexity), true
 
 	case "MapType.createdAt":
 		if e.complexity.MapType.CreatedAt == nil {
@@ -4328,6 +4394,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.SetMyAvailability(childComplexity, args["slots"].([]*AvailabilitySlotInput), args["meta"].(CommandMeta)), true
 
+	case "Mutation.setMyPrivateNotes":
+		if e.complexity.Mutation.SetMyPrivateNotes == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_setMyPrivateNotes_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SetMyPrivateNotes(childComplexity, args["body"].(string), args["meta"].(CommandMeta)), true
+
 	case "Mutation.setPointcrawlEdge":
 		if e.complexity.Mutation.SetPointcrawlEdge == nil {
 			break
@@ -4706,6 +4784,20 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.MyPersonalizationType.Settings(childComplexity), true
+
+	case "MyPrivateNotesType.body":
+		if e.complexity.MyPrivateNotesType.Body == nil {
+			break
+		}
+
+		return e.complexity.MyPrivateNotesType.Body(childComplexity), true
+
+	case "MyPrivateNotesType.updatedAt":
+		if e.complexity.MyPrivateNotesType.UpdatedAt == nil {
+			break
+		}
+
+		return e.complexity.MyPrivateNotesType.UpdatedAt(childComplexity), true
 
 	case "NotificationConnection.hasMore":
 		if e.complexity.NotificationConnection.HasMore == nil {
@@ -5655,6 +5747,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Query.MyPersonalization(childComplexity), true
+
+	case "Query.myPrivateNotes":
+		if e.complexity.Query.MyPrivateNotes == nil {
+			break
+		}
+
+		return e.complexity.Query.MyPrivateNotes(childComplexity), true
 
 	case "Query.myQuestSignups":
 		if e.complexity.Query.MyQuestSignups == nil {
@@ -6628,6 +6727,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.RegionCountsType.RegionID(childComplexity), true
 
+	case "RegionType.canCreateMap":
+		if e.complexity.RegionType.CanCreateMap == nil {
+			break
+		}
+
+		return e.complexity.RegionType.CanCreateMap(childComplexity), true
+
 	case "RegionType.charterDeadline":
 		if e.complexity.RegionType.CharterDeadline == nil {
 			break
@@ -6929,12 +7035,40 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.SiteStatsType.TotalRegions(childComplexity), true
 
+	case "SummaryAuthoringType.characterId":
+		if e.complexity.SummaryAuthoringType.CharacterID == nil {
+			break
+		}
+
+		return e.complexity.SummaryAuthoringType.CharacterID(childComplexity), true
+
+	case "SummaryAuthoringType.complete":
+		if e.complexity.SummaryAuthoringType.Complete == nil {
+			break
+		}
+
+		return e.complexity.SummaryAuthoringType.Complete(childComplexity), true
+
+	case "SummaryAuthoringType.questIds":
+		if e.complexity.SummaryAuthoringType.QuestIds == nil {
+			break
+		}
+
+		return e.complexity.SummaryAuthoringType.QuestIds(childComplexity), true
+
 	case "SummaryDerivedType.arc":
 		if e.complexity.SummaryDerivedType.Arc == nil {
 			break
 		}
 
 		return e.complexity.SummaryDerivedType.Arc(childComplexity), true
+
+	case "SummaryDerivedType.authoring":
+		if e.complexity.SummaryDerivedType.Authoring == nil {
+			break
+		}
+
+		return e.complexity.SummaryDerivedType.Authoring(childComplexity), true
 
 	case "SummaryDerivedType.dms":
 		if e.complexity.SummaryDerivedType.Dms == nil {
@@ -6977,6 +7111,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.SummaryDerivedType.PointcrawlNodes(childComplexity), true
+
+	case "SummaryDerivedType.quests":
+		if e.complexity.SummaryDerivedType.Quests == nil {
+			break
+		}
+
+		return e.complexity.SummaryDerivedType.Quests(childComplexity), true
 
 	case "SummaryDerivedType.regions":
 		if e.complexity.SummaryDerivedType.Regions == nil {
@@ -7054,6 +7195,27 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.SummaryPointcrawlNodeType.Name(childComplexity), true
+
+	case "SummaryQuestRefType.id":
+		if e.complexity.SummaryQuestRefType.ID == nil {
+			break
+		}
+
+		return e.complexity.SummaryQuestRefType.ID(childComplexity), true
+
+	case "SummaryQuestRefType.shortCode":
+		if e.complexity.SummaryQuestRefType.ShortCode == nil {
+			break
+		}
+
+		return e.complexity.SummaryQuestRefType.ShortCode(childComplexity), true
+
+	case "SummaryQuestRefType.title":
+		if e.complexity.SummaryQuestRefType.Title == nil {
+			break
+		}
+
+		return e.complexity.SummaryQuestRefType.Title(childComplexity), true
 
 	case "SummaryRegionType.id":
 		if e.complexity.SummaryRegionType.ID == nil {
@@ -7662,6 +7824,8 @@ type CharacterType {
   ddbMirror: CharacterDDBMirrorType
   proficiencies: [DDBProficiencyType!]!
   displayIcon: String
+  "Owner-supplied https portrait URL (D5); null shows the initials token."
+  imageUrl: String
   daysActive: Int!
 }
 
@@ -7679,7 +7843,10 @@ input CreateCharacterInput {
   guildId: ID = null
   description: String = null
   backgroundText: String = null
+  "Required on create (D4): a https://www.dndbeyond.com/characters/<id> sheet URL."
   ddbUrl: String = null
+  "Optional https URL, at most 2048 characters."
+  imageUrl: String = null
   shortCode: String = null
 }
 
@@ -7740,6 +7907,8 @@ type ProgressionListResult {
 input UpdateCharacterProfileInput {
   description: String
   backgroundText: String
+  "Omit to keep, null to clear, or an https URL of at most 2048 characters."
+  imageUrl: String
 }
 
 input UpsertCreationCatalogEntryInput {
@@ -7880,6 +8049,7 @@ input QuestEditInput {
 }
 input QuestSummaryInput {
   documentId: ID
+  expectedRevision: Int
   questIds: [ID!]!
   characterId: ID
   title: String!
@@ -8073,6 +8243,8 @@ type DocumentType {
   deletedAt: DateTime
   deletedBy: ID
   effectiveBody: String
+  canEditBody: Boolean!
+  canEditMetadata: Boolean!
   author: DocumentAuthorType
   publishedAt: DateTime
   summaryDerived: SummaryDerivedType
@@ -8091,6 +8263,8 @@ enum PreviewAudience {
 }
 
 type SummaryDerivedType {
+  authoring: SummaryAuthoringType
+  quests: [SummaryQuestRefType!]!
   regions: [SummaryRegionType!]!
   pointcrawlNodes: [SummaryPointcrawlNodeType!]!
   dms: [SummaryDmType!]!
@@ -8099,6 +8273,18 @@ type SummaryDerivedType {
   arc: String
   gameDay: Int
   gameDate: GameDateType
+}
+
+type SummaryAuthoringType {
+  characterId: ID
+  complete: Boolean!
+  questIds: [ID!]!
+}
+
+type SummaryQuestRefType {
+  id: ID!
+  shortCode: String!
+  title: String
 }
 
 type SummaryDmType {
@@ -8146,6 +8332,7 @@ type SummaryRegionType {
     offset: Int! = 0
   ): CommunityDirectoryResult!
   myPersonalization: MyPersonalizationType
+  myPrivateNotes: MyPrivateNotesType!
   memberMe: MemberType!
   memberByDiscordId(discordId: String!): MemberType
   memberRoleHistory(memberId: ID!, limit: Int! = 50, offset: Int! = 0): RoleChangePage!
@@ -8192,6 +8379,7 @@ extend type Mutation {
     meta: CommandMeta!
   ): MemberUnlockType!
   updateMySettings(input: MemberSettingsPatch!, meta: CommandMeta!): MemberSettingsType!
+  setMyPrivateNotes(body: String!, meta: CommandMeta!): MyPrivateNotesType!
   upsertUnlockable(
     id: ID
     input: UpsertUnlockableInput!
@@ -8382,6 +8570,16 @@ type MemberUnlockType {
 
 type MyPersonalizationType {
   settings: MemberSettingsType
+}
+
+"""
+The caller's own private notes (D6): Markdown, at most 10,000 characters.
+Readable and writable only by the member who owns them; never exposed on
+any member, profile or admin read.
+"""
+type MyPrivateNotesType {
+  body: String!
+  updatedAt: DateTime
 }
 
 type RoleChangeType {
@@ -9095,6 +9293,7 @@ type GameDateType {
 
 type MapType {
   id: ID!
+  canEdit: Boolean!
   name: String!
   atlasCode: String!
   family: String!
@@ -9147,6 +9346,7 @@ type RegionCountsType {
 }
 
 type RegionType {
+  canCreateMap: Boolean!
   id: ID!
   name: String!
   kind: String!
@@ -10104,6 +10304,22 @@ func (ec *executionContext) field_Mutation_setMyAvailability_args(ctx context.Co
 		return nil, err
 	}
 	args["slots"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "meta", ec.unmarshalNCommandMeta2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐCommandMeta)
+	if err != nil {
+		return nil, err
+	}
+	args["meta"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_setMyPrivateNotes_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "body", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["body"] = arg0
 	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "meta", ec.unmarshalNCommandMeta2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐCommandMeta)
 	if err != nil {
 		return nil, err
@@ -16167,6 +16383,8 @@ func (ec *executionContext) fieldContext_CharacterListResult_items(_ context.Con
 				return ec.fieldContext_CharacterType_proficiencies(ctx, field)
 			case "displayIcon":
 				return ec.fieldContext_CharacterType_displayIcon(ctx, field)
+			case "imageUrl":
+				return ec.fieldContext_CharacterType_imageUrl(ctx, field)
 			case "daysActive":
 				return ec.fieldContext_CharacterType_daysActive(ctx, field)
 			}
@@ -16855,7 +17073,7 @@ func (ec *executionContext) _CharacterType_guildId(ctx context.Context, field gr
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.GuildID, nil
+		return ec.resolvers.CharacterType().GuildID(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -16873,8 +17091,8 @@ func (ec *executionContext) fieldContext_CharacterType_guildId(_ context.Context
 	fc = &graphql.FieldContext{
 		Object:     "CharacterType",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type ID does not have child fields")
 		},
@@ -17470,6 +17688,47 @@ func (ec *executionContext) fieldContext_CharacterType_displayIcon(_ context.Con
 	return fc, nil
 }
 
+func (ec *executionContext) _CharacterType_imageUrl(ctx context.Context, field graphql.CollectedField, obj *CharacterType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_CharacterType_imageUrl(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ImageURL, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_CharacterType_imageUrl(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "CharacterType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _CharacterType_daysActive(ctx context.Context, field graphql.CollectedField, obj *CharacterType) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_CharacterType_daysActive(ctx, field)
 	if err != nil {
@@ -17813,6 +18072,10 @@ func (ec *executionContext) fieldContext_CodexDirectoryResult_items(_ context.Co
 				return ec.fieldContext_DocumentType_deletedBy(ctx, field)
 			case "effectiveBody":
 				return ec.fieldContext_DocumentType_effectiveBody(ctx, field)
+			case "canEditBody":
+				return ec.fieldContext_DocumentType_canEditBody(ctx, field)
+			case "canEditMetadata":
+				return ec.fieldContext_DocumentType_canEditMetadata(ctx, field)
 			case "author":
 				return ec.fieldContext_DocumentType_author(ctx, field)
 			case "publishedAt":
@@ -17941,6 +18204,10 @@ func (ec *executionContext) fieldContext_CodexEntryCardType_document(_ context.C
 				return ec.fieldContext_DocumentType_deletedBy(ctx, field)
 			case "effectiveBody":
 				return ec.fieldContext_DocumentType_effectiveBody(ctx, field)
+			case "canEditBody":
+				return ec.fieldContext_DocumentType_canEditBody(ctx, field)
+			case "canEditMetadata":
+				return ec.fieldContext_DocumentType_canEditMetadata(ctx, field)
 			case "author":
 				return ec.fieldContext_DocumentType_author(ctx, field)
 			case "publishedAt":
@@ -19145,6 +19412,8 @@ func (ec *executionContext) fieldContext_DdbSyncReceipt_character(_ context.Cont
 				return ec.fieldContext_CharacterType_proficiencies(ctx, field)
 			case "displayIcon":
 				return ec.fieldContext_CharacterType_displayIcon(ctx, field)
+			case "imageUrl":
+				return ec.fieldContext_CharacterType_imageUrl(ctx, field)
 			case "daysActive":
 				return ec.fieldContext_CharacterType_daysActive(ctx, field)
 			}
@@ -20189,6 +20458,10 @@ func (ec *executionContext) fieldContext_DmLastSessionType_recapDocument(_ conte
 				return ec.fieldContext_DocumentType_deletedBy(ctx, field)
 			case "effectiveBody":
 				return ec.fieldContext_DocumentType_effectiveBody(ctx, field)
+			case "canEditBody":
+				return ec.fieldContext_DocumentType_canEditBody(ctx, field)
+			case "canEditMetadata":
+				return ec.fieldContext_DocumentType_canEditMetadata(ctx, field)
 			case "author":
 				return ec.fieldContext_DocumentType_author(ctx, field)
 			case "publishedAt":
@@ -21018,6 +21291,10 @@ func (ec *executionContext) fieldContext_DocumentListResult_items(_ context.Cont
 				return ec.fieldContext_DocumentType_deletedBy(ctx, field)
 			case "effectiveBody":
 				return ec.fieldContext_DocumentType_effectiveBody(ctx, field)
+			case "canEditBody":
+				return ec.fieldContext_DocumentType_canEditBody(ctx, field)
+			case "canEditMetadata":
+				return ec.fieldContext_DocumentType_canEditMetadata(ctx, field)
 			case "author":
 				return ec.fieldContext_DocumentType_author(ctx, field)
 			case "publishedAt":
@@ -22693,6 +22970,94 @@ func (ec *executionContext) fieldContext_DocumentType_effectiveBody(_ context.Co
 	return fc, nil
 }
 
+func (ec *executionContext) _DocumentType_canEditBody(ctx context.Context, field graphql.CollectedField, obj *DocumentType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DocumentType_canEditBody(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CanEditBody, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DocumentType_canEditBody(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DocumentType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _DocumentType_canEditMetadata(ctx context.Context, field graphql.CollectedField, obj *DocumentType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_DocumentType_canEditMetadata(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CanEditMetadata, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_DocumentType_canEditMetadata(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "DocumentType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _DocumentType_author(ctx context.Context, field graphql.CollectedField, obj *DocumentType) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_DocumentType_author(ctx, field)
 	if err != nil {
@@ -22815,6 +23180,10 @@ func (ec *executionContext) fieldContext_DocumentType_summaryDerived(_ context.C
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "authoring":
+				return ec.fieldContext_SummaryDerivedType_authoring(ctx, field)
+			case "quests":
+				return ec.fieldContext_SummaryDerivedType_quests(ctx, field)
 			case "regions":
 				return ec.fieldContext_SummaryDerivedType_regions(ctx, field)
 			case "pointcrawlNodes":
@@ -24444,6 +24813,10 @@ func (ec *executionContext) fieldContext_HomeBucketType_documents(_ context.Cont
 				return ec.fieldContext_DocumentType_deletedBy(ctx, field)
 			case "effectiveBody":
 				return ec.fieldContext_DocumentType_effectiveBody(ctx, field)
+			case "canEditBody":
+				return ec.fieldContext_DocumentType_canEditBody(ctx, field)
+			case "canEditMetadata":
+				return ec.fieldContext_DocumentType_canEditMetadata(ctx, field)
 			case "author":
 				return ec.fieldContext_DocumentType_author(ctx, field)
 			case "publishedAt":
@@ -24883,6 +25256,50 @@ func (ec *executionContext) fieldContext_MapType_id(_ context.Context, field gra
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MapType_canEdit(ctx context.Context, field graphql.CollectedField, obj *MapType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_MapType_canEdit(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CanEdit, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_MapType_canEdit(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MapType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
 		},
 	}
 	return fc, nil
@@ -28056,6 +28473,8 @@ func (ec *executionContext) fieldContext_Mutation_createCharacter(ctx context.Co
 				return ec.fieldContext_CharacterType_proficiencies(ctx, field)
 			case "displayIcon":
 				return ec.fieldContext_CharacterType_displayIcon(ctx, field)
+			case "imageUrl":
+				return ec.fieldContext_CharacterType_imageUrl(ctx, field)
 			case "daysActive":
 				return ec.fieldContext_CharacterType_daysActive(ctx, field)
 			}
@@ -28228,6 +28647,8 @@ func (ec *executionContext) fieldContext_Mutation_submitForVerification(ctx cont
 				return ec.fieldContext_CharacterType_proficiencies(ctx, field)
 			case "displayIcon":
 				return ec.fieldContext_CharacterType_displayIcon(ctx, field)
+			case "imageUrl":
+				return ec.fieldContext_CharacterType_imageUrl(ctx, field)
 			case "daysActive":
 				return ec.fieldContext_CharacterType_daysActive(ctx, field)
 			}
@@ -28327,6 +28748,8 @@ func (ec *executionContext) fieldContext_Mutation_retireCharacter(ctx context.Co
 				return ec.fieldContext_CharacterType_proficiencies(ctx, field)
 			case "displayIcon":
 				return ec.fieldContext_CharacterType_displayIcon(ctx, field)
+			case "imageUrl":
+				return ec.fieldContext_CharacterType_imageUrl(ctx, field)
 			case "daysActive":
 				return ec.fieldContext_CharacterType_daysActive(ctx, field)
 			}
@@ -28497,6 +28920,8 @@ func (ec *executionContext) fieldContext_Mutation_setCharacterGuild(ctx context.
 				return ec.fieldContext_CharacterType_proficiencies(ctx, field)
 			case "displayIcon":
 				return ec.fieldContext_CharacterType_displayIcon(ctx, field)
+			case "imageUrl":
+				return ec.fieldContext_CharacterType_imageUrl(ctx, field)
 			case "daysActive":
 				return ec.fieldContext_CharacterType_daysActive(ctx, field)
 			}
@@ -28596,6 +29021,8 @@ func (ec *executionContext) fieldContext_Mutation_updateCharacterProfile(ctx con
 				return ec.fieldContext_CharacterType_proficiencies(ctx, field)
 			case "displayIcon":
 				return ec.fieldContext_CharacterType_displayIcon(ctx, field)
+			case "imageUrl":
+				return ec.fieldContext_CharacterType_imageUrl(ctx, field)
 			case "daysActive":
 				return ec.fieldContext_CharacterType_daysActive(ctx, field)
 			}
@@ -29231,6 +29658,8 @@ func (ec *executionContext) fieldContext_Mutation_restoreCharacter(ctx context.C
 				return ec.fieldContext_CharacterType_proficiencies(ctx, field)
 			case "displayIcon":
 				return ec.fieldContext_CharacterType_displayIcon(ctx, field)
+			case "imageUrl":
+				return ec.fieldContext_CharacterType_imageUrl(ctx, field)
 			case "daysActive":
 				return ec.fieldContext_CharacterType_daysActive(ctx, field)
 			}
@@ -29322,6 +29751,10 @@ func (ec *executionContext) fieldContext_Mutation_createDocument(ctx context.Con
 				return ec.fieldContext_DocumentType_deletedBy(ctx, field)
 			case "effectiveBody":
 				return ec.fieldContext_DocumentType_effectiveBody(ctx, field)
+			case "canEditBody":
+				return ec.fieldContext_DocumentType_canEditBody(ctx, field)
+			case "canEditMetadata":
+				return ec.fieldContext_DocumentType_canEditMetadata(ctx, field)
 			case "author":
 				return ec.fieldContext_DocumentType_author(ctx, field)
 			case "publishedAt":
@@ -29417,6 +29850,10 @@ func (ec *executionContext) fieldContext_Mutation_updateDocument(ctx context.Con
 				return ec.fieldContext_DocumentType_deletedBy(ctx, field)
 			case "effectiveBody":
 				return ec.fieldContext_DocumentType_effectiveBody(ctx, field)
+			case "canEditBody":
+				return ec.fieldContext_DocumentType_canEditBody(ctx, field)
+			case "canEditMetadata":
+				return ec.fieldContext_DocumentType_canEditMetadata(ctx, field)
 			case "author":
 				return ec.fieldContext_DocumentType_author(ctx, field)
 			case "publishedAt":
@@ -29512,6 +29949,10 @@ func (ec *executionContext) fieldContext_Mutation_publishDocument(ctx context.Co
 				return ec.fieldContext_DocumentType_deletedBy(ctx, field)
 			case "effectiveBody":
 				return ec.fieldContext_DocumentType_effectiveBody(ctx, field)
+			case "canEditBody":
+				return ec.fieldContext_DocumentType_canEditBody(ctx, field)
+			case "canEditMetadata":
+				return ec.fieldContext_DocumentType_canEditMetadata(ctx, field)
 			case "author":
 				return ec.fieldContext_DocumentType_author(ctx, field)
 			case "publishedAt":
@@ -29607,6 +30048,10 @@ func (ec *executionContext) fieldContext_Mutation_unpublishDocument(ctx context.
 				return ec.fieldContext_DocumentType_deletedBy(ctx, field)
 			case "effectiveBody":
 				return ec.fieldContext_DocumentType_effectiveBody(ctx, field)
+			case "canEditBody":
+				return ec.fieldContext_DocumentType_canEditBody(ctx, field)
+			case "canEditMetadata":
+				return ec.fieldContext_DocumentType_canEditMetadata(ctx, field)
 			case "author":
 				return ec.fieldContext_DocumentType_author(ctx, field)
 			case "publishedAt":
@@ -29702,6 +30147,10 @@ func (ec *executionContext) fieldContext_Mutation_editPublishedDocument(ctx cont
 				return ec.fieldContext_DocumentType_deletedBy(ctx, field)
 			case "effectiveBody":
 				return ec.fieldContext_DocumentType_effectiveBody(ctx, field)
+			case "canEditBody":
+				return ec.fieldContext_DocumentType_canEditBody(ctx, field)
+			case "canEditMetadata":
+				return ec.fieldContext_DocumentType_canEditMetadata(ctx, field)
 			case "author":
 				return ec.fieldContext_DocumentType_author(ctx, field)
 			case "publishedAt":
@@ -29797,6 +30246,10 @@ func (ec *executionContext) fieldContext_Mutation_setDocumentVisibility(ctx cont
 				return ec.fieldContext_DocumentType_deletedBy(ctx, field)
 			case "effectiveBody":
 				return ec.fieldContext_DocumentType_effectiveBody(ctx, field)
+			case "canEditBody":
+				return ec.fieldContext_DocumentType_canEditBody(ctx, field)
+			case "canEditMetadata":
+				return ec.fieldContext_DocumentType_canEditMetadata(ctx, field)
 			case "author":
 				return ec.fieldContext_DocumentType_author(ctx, field)
 			case "publishedAt":
@@ -29951,6 +30404,10 @@ func (ec *executionContext) fieldContext_Mutation_restoreDocument(ctx context.Co
 				return ec.fieldContext_DocumentType_deletedBy(ctx, field)
 			case "effectiveBody":
 				return ec.fieldContext_DocumentType_effectiveBody(ctx, field)
+			case "canEditBody":
+				return ec.fieldContext_DocumentType_canEditBody(ctx, field)
+			case "canEditMetadata":
+				return ec.fieldContext_DocumentType_canEditMetadata(ctx, field)
 			case "author":
 				return ec.fieldContext_DocumentType_author(ctx, field)
 			case "publishedAt":
@@ -30740,6 +31197,67 @@ func (ec *executionContext) fieldContext_Mutation_updateMySettings(ctx context.C
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_updateMySettings_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_setMyPrivateNotes(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_setMyPrivateNotes(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().SetMyPrivateNotes(rctx, fc.Args["body"].(string), fc.Args["meta"].(CommandMeta))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*MyPrivateNotesType)
+	fc.Result = res
+	return ec.marshalNMyPrivateNotesType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐMyPrivateNotesType(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_setMyPrivateNotes(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "body":
+				return ec.fieldContext_MyPrivateNotesType_body(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_MyPrivateNotesType_updatedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type MyPrivateNotesType", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_setMyPrivateNotes_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -31557,6 +32075,10 @@ func (ec *executionContext) fieldContext_Mutation_upsertQuestSummary(ctx context
 				return ec.fieldContext_DocumentType_deletedBy(ctx, field)
 			case "effectiveBody":
 				return ec.fieldContext_DocumentType_effectiveBody(ctx, field)
+			case "canEditBody":
+				return ec.fieldContext_DocumentType_canEditBody(ctx, field)
+			case "canEditMetadata":
+				return ec.fieldContext_DocumentType_canEditMetadata(ctx, field)
 			case "author":
 				return ec.fieldContext_DocumentType_author(ctx, field)
 			case "publishedAt":
@@ -32631,6 +33153,8 @@ func (ec *executionContext) fieldContext_Mutation_createMap(ctx context.Context,
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_MapType_id(ctx, field)
+			case "canEdit":
+				return ec.fieldContext_MapType_canEdit(ctx, field)
 			case "name":
 				return ec.fieldContext_MapType_name(ctx, field)
 			case "atlasCode":
@@ -32708,6 +33232,8 @@ func (ec *executionContext) fieldContext_Mutation_createRegion(ctx context.Conte
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "canCreateMap":
+				return ec.fieldContext_RegionType_canCreateMap(ctx, field)
 			case "id":
 				return ec.fieldContext_RegionType_id(ctx, field)
 			case "name":
@@ -32777,6 +33303,8 @@ func (ec *executionContext) fieldContext_Mutation_updateRegion(ctx context.Conte
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "canCreateMap":
+				return ec.fieldContext_RegionType_canCreateMap(ctx, field)
 			case "id":
 				return ec.fieldContext_RegionType_id(ctx, field)
 			case "name":
@@ -32846,6 +33374,8 @@ func (ec *executionContext) fieldContext_Mutation_transitionRegion(ctx context.C
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "canCreateMap":
+				return ec.fieldContext_RegionType_canCreateMap(ctx, field)
 			case "id":
 				return ec.fieldContext_RegionType_id(ctx, field)
 			case "name":
@@ -33297,6 +33827,8 @@ func (ec *executionContext) fieldContext_Mutation_restoreRegion(ctx context.Cont
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "canCreateMap":
+				return ec.fieldContext_RegionType_canCreateMap(ctx, field)
 			case "id":
 				return ec.fieldContext_RegionType_id(ctx, field)
 			case "name":
@@ -33667,6 +34199,91 @@ func (ec *executionContext) fieldContext_MyPersonalizationType_settings(_ contex
 				return ec.fieldContext_MemberSettingsType_notifyDmMentioned(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type MemberSettingsType", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MyPrivateNotesType_body(ctx context.Context, field graphql.CollectedField, obj *MyPrivateNotesType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_MyPrivateNotesType_body(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Body, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_MyPrivateNotesType_body(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MyPrivateNotesType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _MyPrivateNotesType_updatedAt(ctx context.Context, field graphql.CollectedField, obj *MyPrivateNotesType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_MyPrivateNotesType_updatedAt(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.UpdatedAt, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*time.Time)
+	fc.Result = res
+	return ec.marshalODateTime2ᚖtimeᚐTime(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_MyPrivateNotesType_updatedAt(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MyPrivateNotesType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type DateTime does not have child fields")
 		},
 	}
 	return fc, nil
@@ -36627,6 +37244,8 @@ func (ec *executionContext) fieldContext_Query_character(ctx context.Context, fi
 				return ec.fieldContext_CharacterType_proficiencies(ctx, field)
 			case "displayIcon":
 				return ec.fieldContext_CharacterType_displayIcon(ctx, field)
+			case "imageUrl":
+				return ec.fieldContext_CharacterType_imageUrl(ctx, field)
 			case "daysActive":
 				return ec.fieldContext_CharacterType_daysActive(ctx, field)
 			}
@@ -37386,6 +38005,10 @@ func (ec *executionContext) fieldContext_Query_document(ctx context.Context, fie
 				return ec.fieldContext_DocumentType_deletedBy(ctx, field)
 			case "effectiveBody":
 				return ec.fieldContext_DocumentType_effectiveBody(ctx, field)
+			case "canEditBody":
+				return ec.fieldContext_DocumentType_canEditBody(ctx, field)
+			case "canEditMetadata":
+				return ec.fieldContext_DocumentType_canEditMetadata(ctx, field)
 			case "author":
 				return ec.fieldContext_DocumentType_author(ctx, field)
 			case "publishedAt":
@@ -37478,6 +38101,10 @@ func (ec *executionContext) fieldContext_Query_documentById(ctx context.Context,
 				return ec.fieldContext_DocumentType_deletedBy(ctx, field)
 			case "effectiveBody":
 				return ec.fieldContext_DocumentType_effectiveBody(ctx, field)
+			case "canEditBody":
+				return ec.fieldContext_DocumentType_canEditBody(ctx, field)
+			case "canEditMetadata":
+				return ec.fieldContext_DocumentType_canEditMetadata(ctx, field)
 			case "author":
 				return ec.fieldContext_DocumentType_author(ctx, field)
 			case "publishedAt":
@@ -38531,6 +39158,56 @@ func (ec *executionContext) fieldContext_Query_myPersonalization(_ context.Conte
 				return ec.fieldContext_MyPersonalizationType_settings(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type MyPersonalizationType", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_myPrivateNotes(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_myPrivateNotes(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().MyPrivateNotes(rctx)
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*MyPrivateNotesType)
+	fc.Result = res
+	return ec.marshalNMyPrivateNotesType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐMyPrivateNotesType(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_myPrivateNotes(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "body":
+				return ec.fieldContext_MyPrivateNotesType_body(ctx, field)
+			case "updatedAt":
+				return ec.fieldContext_MyPrivateNotesType_updatedAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type MyPrivateNotesType", field.Name)
 		},
 	}
 	return fc, nil
@@ -40418,6 +41095,8 @@ func (ec *executionContext) fieldContext_Query_map(ctx context.Context, field gr
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_MapType_id(ctx, field)
+			case "canEdit":
+				return ec.fieldContext_MapType_canEdit(ctx, field)
 			case "name":
 				return ec.fieldContext_MapType_name(ctx, field)
 			case "atlasCode":
@@ -40497,6 +41176,8 @@ func (ec *executionContext) fieldContext_Query_maps(ctx context.Context, field g
 			switch field.Name {
 			case "id":
 				return ec.fieldContext_MapType_id(ctx, field)
+			case "canEdit":
+				return ec.fieldContext_MapType_canEdit(ctx, field)
 			case "name":
 				return ec.fieldContext_MapType_name(ctx, field)
 			case "atlasCode":
@@ -40574,6 +41255,8 @@ func (ec *executionContext) fieldContext_Query_regions(ctx context.Context, fiel
 		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
+			case "canCreateMap":
+				return ec.fieldContext_RegionType_canCreateMap(ctx, field)
 			case "id":
 				return ec.fieldContext_RegionType_id(ctx, field)
 			case "name":
@@ -43177,6 +43860,10 @@ func (ec *executionContext) fieldContext_QuestSummariesResult_summaries(_ contex
 				return ec.fieldContext_DocumentType_deletedBy(ctx, field)
 			case "effectiveBody":
 				return ec.fieldContext_DocumentType_effectiveBody(ctx, field)
+			case "canEditBody":
+				return ec.fieldContext_DocumentType_canEditBody(ctx, field)
+			case "canEditMetadata":
+				return ec.fieldContext_DocumentType_canEditMetadata(ctx, field)
 			case "author":
 				return ec.fieldContext_DocumentType_author(ctx, field)
 			case "publishedAt":
@@ -43776,7 +44463,7 @@ func (ec *executionContext) _QuestType_documentId(ctx context.Context, field gra
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.DocumentID, nil
+		return ec.resolvers.QuestType().DocumentID(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -43794,8 +44481,8 @@ func (ec *executionContext) fieldContext_QuestType_documentId(_ context.Context,
 	fc = &graphql.FieldContext{
 		Object:     "QuestType",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type ID does not have child fields")
 		},
@@ -44427,6 +45114,10 @@ func (ec *executionContext) fieldContext_QuestType_briefDocument(_ context.Conte
 				return ec.fieldContext_DocumentType_deletedBy(ctx, field)
 			case "effectiveBody":
 				return ec.fieldContext_DocumentType_effectiveBody(ctx, field)
+			case "canEditBody":
+				return ec.fieldContext_DocumentType_canEditBody(ctx, field)
+			case "canEditMetadata":
+				return ec.fieldContext_DocumentType_canEditMetadata(ctx, field)
 			case "author":
 				return ec.fieldContext_DocumentType_author(ctx, field)
 			case "publishedAt":
@@ -44705,6 +45396,10 @@ func (ec *executionContext) fieldContext_QuestType_dmTable(_ context.Context, fi
 				return ec.fieldContext_DocumentType_deletedBy(ctx, field)
 			case "effectiveBody":
 				return ec.fieldContext_DocumentType_effectiveBody(ctx, field)
+			case "canEditBody":
+				return ec.fieldContext_DocumentType_canEditBody(ctx, field)
+			case "canEditMetadata":
+				return ec.fieldContext_DocumentType_canEditMetadata(ctx, field)
 			case "author":
 				return ec.fieldContext_DocumentType_author(ctx, field)
 			case "publishedAt":
@@ -45644,6 +46339,50 @@ func (ec *executionContext) fieldContext_RegionCountsType_featureCount(_ context
 	return fc, nil
 }
 
+func (ec *executionContext) _RegionType_canCreateMap(ctx context.Context, field graphql.CollectedField, obj *RegionType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_RegionType_canCreateMap(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CanCreateMap, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_RegionType_canCreateMap(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "RegionType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _RegionType_id(ctx context.Context, field graphql.CollectedField, obj *RegionType) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_RegionType_id(ctx, field)
 	if err != nil {
@@ -45831,7 +46570,7 @@ func (ec *executionContext) _RegionType_documentId(ctx context.Context, field gr
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.DocumentID, nil
+		return ec.resolvers.RegionType().DocumentID(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -45849,8 +46588,8 @@ func (ec *executionContext) fieldContext_RegionType_documentId(_ context.Context
 	fc = &graphql.FieldContext{
 		Object:     "RegionType",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type ID does not have child fields")
 		},
@@ -47580,6 +48319,236 @@ func (ec *executionContext) fieldContext_SiteStatsType_activity(_ context.Contex
 	return fc, nil
 }
 
+func (ec *executionContext) _SummaryAuthoringType_characterId(ctx context.Context, field graphql.CollectedField, obj *SummaryAuthoringType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SummaryAuthoringType_characterId(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.CharacterID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOID2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SummaryAuthoringType_characterId(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SummaryAuthoringType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SummaryAuthoringType_complete(ctx context.Context, field graphql.CollectedField, obj *SummaryAuthoringType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SummaryAuthoringType_complete(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Complete, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(bool)
+	fc.Result = res
+	return ec.marshalNBoolean2bool(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SummaryAuthoringType_complete(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SummaryAuthoringType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SummaryAuthoringType_questIds(ctx context.Context, field graphql.CollectedField, obj *SummaryAuthoringType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SummaryAuthoringType_questIds(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.QuestIds, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]string)
+	fc.Result = res
+	return ec.marshalNID2ᚕstringᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SummaryAuthoringType_questIds(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SummaryAuthoringType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SummaryDerivedType_authoring(ctx context.Context, field graphql.CollectedField, obj *SummaryDerivedType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SummaryDerivedType_authoring(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Authoring, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*SummaryAuthoringType)
+	fc.Result = res
+	return ec.marshalOSummaryAuthoringType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐSummaryAuthoringType(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SummaryDerivedType_authoring(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SummaryDerivedType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "characterId":
+				return ec.fieldContext_SummaryAuthoringType_characterId(ctx, field)
+			case "complete":
+				return ec.fieldContext_SummaryAuthoringType_complete(ctx, field)
+			case "questIds":
+				return ec.fieldContext_SummaryAuthoringType_questIds(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type SummaryAuthoringType", field.Name)
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SummaryDerivedType_quests(ctx context.Context, field graphql.CollectedField, obj *SummaryDerivedType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SummaryDerivedType_quests(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Quests, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*SummaryQuestRefType)
+	fc.Result = res
+	return ec.marshalNSummaryQuestRefType2ᚕᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐSummaryQuestRefTypeᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SummaryDerivedType_quests(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SummaryDerivedType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_SummaryQuestRefType_id(ctx, field)
+			case "shortCode":
+				return ec.fieldContext_SummaryQuestRefType_shortCode(ctx, field)
+			case "title":
+				return ec.fieldContext_SummaryQuestRefType_title(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type SummaryQuestRefType", field.Name)
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _SummaryDerivedType_regions(ctx context.Context, field graphql.CollectedField, obj *SummaryDerivedType) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_SummaryDerivedType_regions(ctx, field)
 	if err != nil {
@@ -48393,6 +49362,135 @@ func (ec *executionContext) _SummaryPointcrawlNodeType_name(ctx context.Context,
 func (ec *executionContext) fieldContext_SummaryPointcrawlNodeType_name(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
 	fc = &graphql.FieldContext{
 		Object:     "SummaryPointcrawlNodeType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SummaryQuestRefType_id(ctx context.Context, field graphql.CollectedField, obj *SummaryQuestRefType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SummaryQuestRefType_id(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ID, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNID2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SummaryQuestRefType_id(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SummaryQuestRefType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type ID does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SummaryQuestRefType_shortCode(ctx context.Context, field graphql.CollectedField, obj *SummaryQuestRefType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SummaryQuestRefType_shortCode(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.ShortCode, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SummaryQuestRefType_shortCode(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SummaryQuestRefType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _SummaryQuestRefType_title(ctx context.Context, field graphql.CollectedField, obj *SummaryQuestRefType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_SummaryQuestRefType_title(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Title, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_SummaryQuestRefType_title(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "SummaryQuestRefType",
 		Field:      field,
 		IsMethod:   false,
 		IsResolver: false,
@@ -52148,7 +53246,7 @@ func (ec *executionContext) unmarshalInputCreateCharacterInput(ctx context.Conte
 		asMap["catalogPickIds"] = []any{}
 	}
 
-	fieldsInOrder := [...]string{"name", "regionId", "backstoryId", "catalogPickIds", "guildId", "description", "backgroundText", "ddbUrl", "shortCode"}
+	fieldsInOrder := [...]string{"name", "regionId", "backstoryId", "catalogPickIds", "guildId", "description", "backgroundText", "ddbUrl", "imageUrl", "shortCode"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -52211,6 +53309,13 @@ func (ec *executionContext) unmarshalInputCreateCharacterInput(ctx context.Conte
 				return it, err
 			}
 			it.DdbURL = data
+		case "imageUrl":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("imageUrl"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ImageURL = data
 		case "shortCode":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("shortCode"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -52468,7 +53573,7 @@ func (ec *executionContext) unmarshalInputDocumentAudienceInput(ctx context.Cont
 			if err != nil {
 				return it, err
 			}
-			it.Policy = data
+			it.Policy = graphql.OmittableOf(data)
 		case "readerIds":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("readerIds"))
 			data, err := ec.unmarshalNID2ᚕstringᚄ(ctx, v)
@@ -53592,7 +54697,7 @@ func (ec *executionContext) unmarshalInputQuestSummaryInput(ctx context.Context,
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"documentId", "questIds", "characterId", "title", "body", "visibility", "frontmatter"}
+	fieldsInOrder := [...]string{"documentId", "expectedRevision", "questIds", "characterId", "title", "body", "visibility", "frontmatter"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -53606,6 +54711,13 @@ func (ec *executionContext) unmarshalInputQuestSummaryInput(ctx context.Context,
 				return it, err
 			}
 			it.DocumentID = data
+		case "expectedRevision":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("expectedRevision"))
+			data, err := ec.unmarshalOInt2ᚖint(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ExpectedRevision = data
 		case "questIds":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("questIds"))
 			data, err := ec.unmarshalNID2ᚕstringᚄ(ctx, v)
@@ -53757,7 +54869,7 @@ func (ec *executionContext) unmarshalInputUpdateCharacterProfileInput(ctx contex
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"description", "backgroundText"}
+	fieldsInOrder := [...]string{"description", "backgroundText", "imageUrl"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -53778,6 +54890,13 @@ func (ec *executionContext) unmarshalInputUpdateCharacterProfileInput(ctx contex
 				return it, err
 			}
 			it.BackgroundText = graphql.OmittableOf(data)
+		case "imageUrl":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("imageUrl"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.ImageURL = graphql.OmittableOf(data)
 		}
 	}
 
@@ -55125,38 +56244,69 @@ func (ec *executionContext) _CharacterType(ctx context.Context, sel ast.Selectio
 		case "id":
 			out.Values[i] = ec._CharacterType_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "ownerId":
 			out.Values[i] = ec._CharacterType_ownerId(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "shortCode":
 			out.Values[i] = ec._CharacterType_shortCode(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "name":
 			out.Values[i] = ec._CharacterType_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "status":
 			out.Values[i] = ec._CharacterType_status(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "regionId":
 			out.Values[i] = ec._CharacterType_regionId(ctx, field, obj)
 		case "guildId":
-			out.Values[i] = ec._CharacterType_guildId(ctx, field, obj)
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._CharacterType_guildId(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "backstoryId":
 			out.Values[i] = ec._CharacterType_backstoryId(ctx, field, obj)
 		case "pcxp":
 			out.Values[i] = ec._CharacterType_pcxp(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "description":
 			out.Values[i] = ec._CharacterType_description(ctx, field, obj)
@@ -55167,19 +56317,19 @@ func (ec *executionContext) _CharacterType(ctx context.Context, sel ast.Selectio
 		case "createdAt":
 			out.Values[i] = ec._CharacterType_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "updatedAt":
 			out.Values[i] = ec._CharacterType_updatedAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "verificationSubmittedAt":
 			out.Values[i] = ec._CharacterType_verificationSubmittedAt(ctx, field, obj)
 		case "verificationStatus":
 			out.Values[i] = ec._CharacterType_verificationStatus(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "ddbLastAttempt":
 			out.Values[i] = ec._CharacterType_ddbLastAttempt(ctx, field, obj)
@@ -55188,14 +56338,16 @@ func (ec *executionContext) _CharacterType(ctx context.Context, sel ast.Selectio
 		case "proficiencies":
 			out.Values[i] = ec._CharacterType_proficiencies(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "displayIcon":
 			out.Values[i] = ec._CharacterType_displayIcon(ctx, field, obj)
+		case "imageUrl":
+			out.Values[i] = ec._CharacterType_imageUrl(ctx, field, obj)
 		case "daysActive":
 			out.Values[i] = ec._CharacterType_daysActive(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -56611,6 +57763,16 @@ func (ec *executionContext) _DocumentType(ctx context.Context, sel ast.Selection
 			out.Values[i] = ec._DocumentType_deletedBy(ctx, field, obj)
 		case "effectiveBody":
 			out.Values[i] = ec._DocumentType_effectiveBody(ctx, field, obj)
+		case "canEditBody":
+			out.Values[i] = ec._DocumentType_canEditBody(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "canEditMetadata":
+			out.Values[i] = ec._DocumentType_canEditMetadata(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
 		case "author":
 			field := field
 
@@ -57292,6 +58454,11 @@ func (ec *executionContext) _MapType(ctx context.Context, sel ast.SelectionSet, 
 			out.Values[i] = graphql.MarshalString("MapType")
 		case "id":
 			out.Values[i] = ec._MapType_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "canEdit":
+			out.Values[i] = ec._MapType_canEdit(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
@@ -58364,6 +59531,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "setMyPrivateNotes":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_setMyPrivateNotes(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "upsertUnlockable":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_upsertUnlockable(ctx, field)
@@ -58659,6 +59833,47 @@ func (ec *executionContext) _MyPersonalizationType(ctx context.Context, sel ast.
 			out.Values[i] = graphql.MarshalString("MyPersonalizationType")
 		case "settings":
 			out.Values[i] = ec._MyPersonalizationType_settings(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var myPrivateNotesTypeImplementors = []string{"MyPrivateNotesType"}
+
+func (ec *executionContext) _MyPrivateNotesType(ctx context.Context, sel ast.SelectionSet, obj *MyPrivateNotesType) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, myPrivateNotesTypeImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("MyPrivateNotesType")
+		case "body":
+			out.Values[i] = ec._MyPrivateNotesType_body(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updatedAt":
+			out.Values[i] = ec._MyPrivateNotesType_updatedAt(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -60085,6 +61300,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 					}
 				}()
 				res = ec._Query_myPersonalization(ctx, field)
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "myPrivateNotes":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_myPrivateNotes(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
 				return res
 			}
 
@@ -61637,7 +62874,38 @@ func (ec *executionContext) _QuestType(ctx context.Context, sel ast.SelectionSet
 				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "documentId":
-			out.Values[i] = ec._QuestType_documentId(ctx, field, obj)
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._QuestType_documentId(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "discordMessageId":
 			out.Values[i] = ec._QuestType_discordMessageId(ctx, field, obj)
 		case "discordEventId":
@@ -62182,29 +63450,65 @@ func (ec *executionContext) _RegionType(ctx context.Context, sel ast.SelectionSe
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("RegionType")
+		case "canCreateMap":
+			out.Values[i] = ec._RegionType_canCreateMap(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
 		case "id":
 			out.Values[i] = ec._RegionType_id(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "name":
 			out.Values[i] = ec._RegionType_name(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "kind":
 			out.Values[i] = ec._RegionType_kind(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		case "charterDeadline":
 			out.Values[i] = ec._RegionType_charterDeadline(ctx, field, obj)
 		case "documentId":
-			out.Values[i] = ec._RegionType_documentId(ctx, field, obj)
+			field := field
+
+			innerFunc := func(ctx context.Context, _ *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._RegionType_documentId(ctx, field, obj)
+				return res
+			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "createdAt":
 			out.Values[i] = ec._RegionType_createdAt(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
-				out.Invalids++
+				atomic.AddUint32(&out.Invalids, 1)
 			}
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
@@ -62600,6 +63904,52 @@ func (ec *executionContext) _SiteStatsType(ctx context.Context, sel ast.Selectio
 	return out
 }
 
+var summaryAuthoringTypeImplementors = []string{"SummaryAuthoringType"}
+
+func (ec *executionContext) _SummaryAuthoringType(ctx context.Context, sel ast.SelectionSet, obj *SummaryAuthoringType) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, summaryAuthoringTypeImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SummaryAuthoringType")
+		case "characterId":
+			out.Values[i] = ec._SummaryAuthoringType_characterId(ctx, field, obj)
+		case "complete":
+			out.Values[i] = ec._SummaryAuthoringType_complete(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "questIds":
+			out.Values[i] = ec._SummaryAuthoringType_questIds(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var summaryDerivedTypeImplementors = []string{"SummaryDerivedType"}
 
 func (ec *executionContext) _SummaryDerivedType(ctx context.Context, sel ast.SelectionSet, obj *SummaryDerivedType) graphql.Marshaler {
@@ -62611,6 +63961,13 @@ func (ec *executionContext) _SummaryDerivedType(ctx context.Context, sel ast.Sel
 		switch field.Name {
 		case "__typename":
 			out.Values[i] = graphql.MarshalString("SummaryDerivedType")
+		case "authoring":
+			out.Values[i] = ec._SummaryDerivedType_authoring(ctx, field, obj)
+		case "quests":
+			out.Values[i] = ec._SummaryDerivedType_quests(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "regions":
 			out.Values[i] = ec._SummaryDerivedType_regions(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -62788,6 +64145,52 @@ func (ec *executionContext) _SummaryPointcrawlNodeType(ctx context.Context, sel 
 			}
 		case "name":
 			out.Values[i] = ec._SummaryPointcrawlNodeType_name(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
+var summaryQuestRefTypeImplementors = []string{"SummaryQuestRefType"}
+
+func (ec *executionContext) _SummaryQuestRefType(ctx context.Context, sel ast.SelectionSet, obj *SummaryQuestRefType) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, summaryQuestRefTypeImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("SummaryQuestRefType")
+		case "id":
+			out.Values[i] = ec._SummaryQuestRefType_id(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "shortCode":
+			out.Values[i] = ec._SummaryQuestRefType_shortCode(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "title":
+			out.Values[i] = ec._SummaryQuestRefType_title(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -65918,6 +67321,20 @@ func (ec *executionContext) marshalNMemberUnlockType2ᚖgithubᚗcomᚋpiyushsat
 	return ec._MemberUnlockType(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNMyPrivateNotesType2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐMyPrivateNotesType(ctx context.Context, sel ast.SelectionSet, v MyPrivateNotesType) graphql.Marshaler {
+	return ec._MyPrivateNotesType(ctx, sel, &v)
+}
+
+func (ec *executionContext) marshalNMyPrivateNotesType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐMyPrivateNotesType(ctx context.Context, sel ast.SelectionSet, v *MyPrivateNotesType) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._MyPrivateNotesType(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNNotificationConnection2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐNotificationConnection(ctx context.Context, sel ast.SelectionSet, v NotificationConnection) graphql.Marshaler {
 	return ec._NotificationConnection(ctx, sel, &v)
 }
@@ -67333,6 +68750,60 @@ func (ec *executionContext) marshalNSummaryPointcrawlNodeType2ᚖgithubᚗcomᚋ
 	return ec._SummaryPointcrawlNodeType(ctx, sel, v)
 }
 
+func (ec *executionContext) marshalNSummaryQuestRefType2ᚕᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐSummaryQuestRefTypeᚄ(ctx context.Context, sel ast.SelectionSet, v []*SummaryQuestRefType) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNSummaryQuestRefType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐSummaryQuestRefType(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNSummaryQuestRefType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐSummaryQuestRefType(ctx context.Context, sel ast.SelectionSet, v *SummaryQuestRefType) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._SummaryQuestRefType(ctx, sel, v)
+}
+
 func (ec *executionContext) marshalNSummaryRegionType2ᚕᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐSummaryRegionTypeᚄ(ctx context.Context, sel ast.SelectionSet, v []*SummaryRegionType) graphql.Marshaler {
 	ret := make(graphql.Array, len(v))
 	var wg sync.WaitGroup
@@ -68465,6 +69936,13 @@ func (ec *executionContext) marshalOString2ᚖstring(ctx context.Context, sel as
 	_ = ctx
 	res := graphql.MarshalString(*v)
 	return res
+}
+
+func (ec *executionContext) marshalOSummaryAuthoringType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐSummaryAuthoringType(ctx context.Context, sel ast.SelectionSet, v *SummaryAuthoringType) graphql.Marshaler {
+	if v == nil {
+		return graphql.Null
+	}
+	return ec._SummaryAuthoringType(ctx, sel, v)
 }
 
 func (ec *executionContext) marshalOSummaryDerivedType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐSummaryDerivedType(ctx context.Context, sel ast.SelectionSet, v *SummaryDerivedType) graphql.Marshaler {

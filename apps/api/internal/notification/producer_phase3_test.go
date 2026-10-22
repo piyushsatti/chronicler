@@ -81,14 +81,14 @@ func (p *producerPorts) ReadPreferences(_ context.Context, ids []string) ([]Pref
 	}
 	return result, nil
 }
-func (p *producerPorts) InsertEvent(_ context.Context, event Event) (string, error) {
+func (p *producerPorts) InsertInbox(_ context.Context, event Event, ids []string) error {
 	p.events = append(p.events, event)
-	return p.eventID, p.eventErr
-}
-func (p *producerPorts) InsertRecipients(_ context.Context, id string, ids []string, at time.Time) error {
-	p.recipientEvent = id
+	if p.eventErr != nil {
+		return p.eventErr
+	}
+	p.recipientEvent = p.eventID
 	p.recipientIDs = append([]string(nil), ids...)
-	p.recipientAt = at
+	p.recipientAt = event.OccurredAt
 	return p.recipientErr
 }
 func (p *producerPorts) repos() ProducerRepos {
@@ -108,7 +108,6 @@ func producerInput(kind EventKind) Event {
 	case QuestSignupConfirmed, QuestWaitlistPromoted:
 		event.SubjectType = "quest"
 		event.SubjectID = producerQuest
-		event.Facts.QuestChangeID = producerPointer(producerProof)
 		event.Facts.CharacterID = producerPointer(producerCharacter)
 		event.Facts.ToStatus = producerPointer("signed_up")
 		if kind == QuestSignupConfirmed {
@@ -129,9 +128,9 @@ func producerInput(kind EventKind) Event {
 		event.Facts.NewMentionMemberIDs = []string{producerB, producerReed, producerB, producerC}
 	case QuestScheduled:
 		event.Facts.ChangedFields = []string{"scheduledAt"}
+		event.Facts.RecipientMemberIDs = []string{producerB, producerA, producerC, producerB}
 		event.SubjectType = "quest"
 		event.SubjectID = producerQuest
-		event.Facts.QuestChangeID = producerPointer(producerProof)
 	case DMRequestDecided:
 		event.Facts.Decision = producerPointer("approved")
 		event.SubjectType = "request"
@@ -154,7 +153,6 @@ func TestPhase3TaskNOT08Acceptance(t *testing.T) {
 		{DocumentPublished, "", []string{producerA}},
 		{DMMentioned, "", []string{producerB, producerReed}},
 		{QuestScheduled, "", []string{producerA, producerB}},
-		{DMRequestDecided, "", []string{producerA}},
 	} {
 		t.Run(string(tc.kind), func(t *testing.T) {
 			ports := &producerPorts{owner: tc.owner, author: producerA, questRecipients: []string{producerB, producerA, producerC, producerB}, parties: RequestParties{RequesterID: producerA, TargetDMID: producerC}, eventID: producerEvent}
@@ -175,8 +173,8 @@ func TestPhase3TaskNOT08Acceptance(t *testing.T) {
 			if !reflect.DeepEqual(event.Facts.NewMentionMemberIDs, before) {
 				t.Fatal("producer mutated caller-owned fact slice")
 			}
-			if tc.kind == QuestScheduled && (ports.questLookups != 1 || ports.lookedQuest != producerQuest || ports.lookedChange != producerProof) {
-				t.Fatal("recipient lookup lost original immutable Quest change")
+			if tc.kind == QuestScheduled && ports.questLookups != 0 {
+				t.Fatal("schedule must use the originating participant snapshot")
 			}
 			if tc.kind == DMMentioned && ports.characterLookups+ports.documentLookups+ports.questLookups+ports.requestLookups != 0 {
 				t.Fatal("resolved mentions must not be filtered through current roles/audience or another recipient lookup")
@@ -188,7 +186,7 @@ func TestPhase3TaskNOT08Acceptance(t *testing.T) {
 	}
 }
 func TestProducerActorRules(t *testing.T) {
-	for _, kind := range []EventKind{CharacterVerificationDecided, DocumentEdited, DocumentPublished, DMRequestDecided, DMMentioned} {
+	for _, kind := range []EventKind{CharacterVerificationDecided, DocumentEdited, DocumentPublished, DMMentioned} {
 		t.Run(string(kind), func(t *testing.T) {
 			event := producerInput(kind)
 			event.ActorID = producerA
@@ -318,41 +316,14 @@ func TestProducerSignupSelectionPreservesTransition(t *testing.T) {
 	}
 }
 
-func TestProducerRequestDecisionUsesImmutableDecisionValue(t *testing.T) {
-	for _, decision := range []string{"approved", "declined"} {
-		t.Run(decision, func(t *testing.T) {
-			event := producerInput(DMRequestDecided)
-			event.Facts.Decision = producerPointer(decision)
-			ports := &producerPorts{parties: RequestParties{RequesterID: producerA, TargetDMID: producerC}, eventID: producerEvent}
-			if err := NewProducer().Record(context.Background(), ports.repos(), event); err != nil {
-				t.Fatal(err)
-			}
-			if len(ports.events) != 1 || ports.events[0].Facts.Decision == nil || *ports.events[0].Facts.Decision != decision || *ports.events[0].Facts.DecisionID != producerProof || *ports.events[0].Facts.RequestID != producerRequest {
-				t.Fatal("request event lost immutable decision value or provenance")
-			}
-		})
-	}
-	for _, decision := range []string{"", "accepted", "requested", "pending", "Approved", " approved "} {
-		t.Run("reject-"+decision, func(t *testing.T) {
-			event := producerInput(DMRequestDecided)
-			if decision == "" {
-				event.Facts.Decision = nil
-			} else {
-				event.Facts.Decision = producerPointer(decision)
-			}
-			ports := &producerPorts{parties: RequestParties{RequesterID: producerA, TargetDMID: producerC}, eventID: producerEvent}
-			if err := NewProducer().Record(context.Background(), ports.repos(), event); err == nil {
-				t.Fatal("unsupported/missing decision accepted")
-			}
-			if len(ports.events) != 0 || ports.requestLookups != 0 || ports.preferenceReads != 0 {
-				t.Fatal("invalid decision continued to recipient lookup or writes")
-			}
-		})
-	}
-	event := producerInput(CharacterVerificationDecided)
-	event.Facts.Decision = producerPointer("approved")
-	ports := &producerPorts{owner: producerA, eventID: producerEvent}
-	if err := NewProducer().Record(context.Background(), ports.repos(), event); err == nil || len(ports.events) != 0 {
-		t.Fatal("request decision fact accepted on verification event")
+func TestProducerRejectsRetiredRequestAndQuestChangeProof(t *testing.T) {
+	for _, event := range []Event{producerInput(DMRequestDecided), producerInput(QuestSignupConfirmed)} {
+		if event.Kind == QuestSignupConfirmed {
+			event.Facts.QuestChangeID = producerPointer(producerProof)
+		}
+		ports := &producerPorts{owner: producerA, eventID: producerEvent}
+		if err := NewProducer().Record(context.Background(), ports.repos(), event); err == nil || len(ports.events) != 0 {
+			t.Fatal("retired proof accepted")
+		}
 	}
 }

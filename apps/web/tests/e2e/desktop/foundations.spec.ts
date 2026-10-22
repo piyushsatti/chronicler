@@ -39,26 +39,29 @@ async function expectRenderedFont(
   selector: string,
   family: 'Fraunces Variable' | 'Geist' | 'Geist Mono',
 ): Promise<void> {
-  const result = await page.locator(selector).first().evaluate(async (element) => {
-    const style = getComputedStyle(element);
-    const family = style.fontFamily
-      .split(',')[0]
-      ?.trim()
-      .replaceAll('"', '')
-      .replaceAll("'", '');
-    const text = element.textContent?.trim() || 'Chronicler';
-    const loadedFaces = await document.fonts.load(
-      `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`,
-      text,
-    );
-    return {
-      computedFamily: family,
-      loadedFamilies: loadedFaces
-        .filter((face) => face.status === 'loaded')
-        .map((face) => face.family.replaceAll('"', '').replaceAll("'", '')),
-      faceStatuses: loadedFaces.map((face) => face.status),
-    };
-  });
+  const result = await page
+    .locator(selector)
+    .first()
+    .evaluate(async (element) => {
+      const style = getComputedStyle(element);
+      const family = style.fontFamily
+        .split(',')[0]
+        ?.trim()
+        .replaceAll('"', '')
+        .replaceAll("'", '');
+      const text = element.textContent?.trim() || 'Chronicler';
+      const loadedFaces = await document.fonts.load(
+        `${style.fontStyle} ${style.fontWeight} ${style.fontSize} ${style.fontFamily}`,
+        text,
+      );
+      return {
+        computedFamily: family,
+        loadedFamilies: loadedFaces
+          .filter((face) => face.status === 'loaded')
+          .map((face) => face.family.replaceAll('"', '').replaceAll("'", '')),
+        faceStatuses: loadedFaces.map((face) => face.status),
+      };
+    });
 
   expect(result.computedFamily, `${selector} should use its intended face`).toBe(
     family,
@@ -81,13 +84,14 @@ for (const theme of THEMES) {
     await expect(
       page.getByRole('heading', {
         level: 1,
-        name: /Good (morning|afternoon|evening|night), Mortal\./,
+        name: 'Welcome to Chronicler.',
       }),
     ).toBeVisible();
     await expect(page.getByRole('link', { name: 'Siege of Kraghold' })).toBeVisible();
 
     await expect(page.locator('[data-site-chrome]')).toHaveAttribute(
-      'data-site-pattern', 'inline-row',
+      'data-site-pattern',
+      'inline-row',
     );
     const primaryNavigation = page.getByRole('navigation', { name: 'Primary' });
     await expect(primaryNavigation).toBeVisible();
@@ -166,7 +170,7 @@ test('parchment light and midnight dark paint distinct page backgrounds', async 
   await expect(
     page.getByRole('heading', {
       level: 1,
-      name: /Good (morning|afternoon|evening|night), Mortal\./,
+      name: 'Welcome to Chronicler.',
     }),
   ).toBeVisible();
   const midnightBackground = await page

@@ -1,0 +1,10 @@
+mutation TransitionRegion($id: ID!, $to: String!, $note: String!, $meta: CommandMeta!) {
+  transitionRegion(id: $id, to: $to, note: $note, meta: $meta) {
+    id
+    name
+    kind
+    charterDeadline
+    documentId
+    createdAt
+  }
+}

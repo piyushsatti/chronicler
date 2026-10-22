@@ -1,0 +1,9 @@
+query RetainedDocumentBySlug($slug: String!) {
+  document(slug: $slug) {
+    id
+    slug
+    kind
+    category
+    title
+  }
+}

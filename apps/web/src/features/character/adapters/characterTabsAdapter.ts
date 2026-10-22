@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import type {
+  CharacterHistoryQuestQuery,
   CharacterSummariesQuery,
   CoPlayersQuery,
   ParticipationsByCharacterQuery,
@@ -8,6 +9,7 @@ import { graphqlRequest } from '../../../api/graphql.js';
 import CO_PLAYERS_QUERY from './coPlayers.graphql?raw';
 import SUMMARIES_QUERY from './characterSummaries.graphql?raw';
 import PARTICIPATIONS_QUERY from './participationsByCharacter.graphql?raw';
+import HISTORY_QUEST_QUERY from './characterHistoryQuest.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 
@@ -57,22 +59,38 @@ const participationSchema = z.object({
 export type CoPlayerView = {
   key: string;
   label: string;
-  sharedQuests: number | null;
+  sharedQuests: number;
 };
 
 export type CharacterSummaryView = {
   key: string;
   title: string;
-  href: string | null;
-  questShortCode: string | null;
+  href: string;
 };
 
 export type ParticipationView = {
   key: string;
+  /** The quest's brief title, else its short code; never the character's own name. */
   label: string;
+  href: string | null;
   status: string | null;
   scheduledAt: string | null;
 };
+
+/** The quest a participation row points at, as this viewer can read it. */
+export type HistoryQuest = {
+  shortCode: string;
+  title: string | null;
+  scheduledAt: string | null;
+};
+
+const historyQuestSchema = z
+  .object({
+    shortCode: z.string().min(1),
+    scheduledAt: z.string().nullable().optional(),
+    briefDocument: z.object({ title: z.string() }).nullable().optional(),
+  })
+  .nullable();
 
 export function parseCoPlayers(wire: unknown): AdapterResult<CoPlayerView[]> {
   const parsed = coPlayerSchema.safeParse(wire);
@@ -102,13 +120,18 @@ export function parseCharacterSummaries(
       key: item.id,
       title: item.title,
       href: `/summaries/${item.slug}`,
-      questShortCode: null,
     })),
   };
 }
 
+/**
+ * A participation carries only its quest id; `quests` supplies each quest's
+ * title and date. A quest this viewer cannot read is named as such rather than
+ * shown by id.
+ */
 export function parseParticipations(
   wire: unknown,
+  quests: Readonly<Record<string, HistoryQuest | null>> = {},
 ): AdapterResult<ParticipationView[]> {
   const parsed = participationSchema.safeParse(wire);
   if (!parsed.success) {
@@ -116,12 +139,30 @@ export function parseParticipations(
   }
   return {
     ok: true,
-    data: parsed.data.items.map((item) => ({
-      key: item.questId,
-      label: item.characterName || item.questId,
-      status: item.status,
-      scheduledAt: item.createdAt ?? null,
-    })),
+    data: parsed.data.items.map((item) => {
+      const quest = quests[item.questId] ?? null;
+      return {
+        key: item.questId,
+        label: quest ? (quest.title ?? quest.shortCode) : 'Quest not available',
+        href: quest ? `/quests/${encodeURIComponent(quest.shortCode)}` : null,
+        status: item.status,
+        scheduledAt: quest?.scheduledAt ?? null,
+      };
+    }),
+  };
+}
+
+async function loadHistoryQuest(id: string): Promise<HistoryQuest | null> {
+  const data = await graphqlRequest<CharacterHistoryQuestQuery>(HISTORY_QUEST_QUERY, {
+    id,
+  });
+  const parsed = historyQuestSchema.safeParse(data.quest ?? null);
+  if (!parsed.success) throw toAppError({ failure: 'InvalidWire' }, 'character:history');
+  if (!parsed.data) return null;
+  return {
+    shortCode: parsed.data.shortCode,
+    title: parsed.data.briefDocument?.title ?? null,
+    scheduledAt: parsed.data.scheduledAt ?? null,
   };
 }
 
@@ -133,7 +174,8 @@ export async function loadCoPlayers(characterId: string): Promise<CoPlayerView[]
       offset: 0,
     });
     const result = parseCoPlayers(data.coPlayers);
-    if (!result.ok) throw toAppError({ failure: result.failure }, 'character:co-players');
+    if (!result.ok)
+      throw toAppError({ failure: result.failure }, 'character:co-players');
     return result.data;
   } catch (err) {
     throw toAppError(err, 'character:co-players');
@@ -150,7 +192,8 @@ export async function loadCharacterSummaries(
       offset: 0,
     });
     const result = parseCharacterSummaries(data.characterSummaries);
-    if (!result.ok) throw toAppError({ failure: result.failure }, 'character:summaries');
+    if (!result.ok)
+      throw toAppError({ failure: result.failure }, 'character:summaries');
     return result.data;
   } catch (err) {
     throw toAppError(err, 'character:summaries');
@@ -165,7 +208,13 @@ export async function loadCharacterParticipations(
       PARTICIPATIONS_QUERY,
       { characterId, limit: 50, offset: 0 },
     );
-    const result = parseParticipations(data.participationsByCharacter);
+    const rows = participationSchema.safeParse(data.participationsByCharacter);
+    // The participation page names no quest, so each distinct quest is read once.
+    const ids = rows.success ? [...new Set(rows.data.items.map((i) => i.questId))] : [];
+    const quests = Object.fromEntries(
+      await Promise.all(ids.map(async (id) => [id, await loadHistoryQuest(id)] as const)),
+    );
+    const result = parseParticipations(data.participationsByCharacter, quests);
     if (!result.ok) {
       throw toAppError({ failure: result.failure }, 'character:participations');
     }

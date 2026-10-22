@@ -1,0 +1,137 @@
+import { Link } from 'react-router-dom';
+import { ContentRenderer } from '../../../components/foundation/ContentRenderer.js';
+import { Button } from '../../../components/primitives/Button.js';
+import { documentHref } from '../../../utils/documentHref.js';
+import {
+  useMapNodeDetails,
+  type MapNodeDetailsProps,
+} from '../hooks/useMapNodeDetails.js';
+import { Chip } from '../../../components/primitives/Chip.js';
+import { humanizeKey } from '../../../utils/format.js';
+import styles from '../pages/map.module.css';
+export function MapNodeDetails(props: MapNodeDetailsProps) {
+  const { map, node, maps, onEdit, onReload } = props;
+  const { pending, error, documentIds, documents, submap, unlink } =
+    useMapNodeDetails(props);
+  return (
+    <section
+      className={`card stack ${styles.details}`}
+      id="map-location-details"
+      aria-label="Selected location"
+      data-map-selected={node.id}
+    >
+      <div className={styles.toolbar}>
+        <h2 className="type-title">{node.name}</h2>
+        {map.canEdit ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onEdit({ kind: 'node', map, node, maps })}
+          >
+            Edit location
+          </Button>
+        ) : null}
+      </div>
+      {/* Canvas positions only matter to the people who arrange the map. */}
+      {map.canEdit ? (
+        <p className="type-caption">
+          Canvas position {node.x}, {node.y}
+        </p>
+      ) : null}
+      {submap ? (
+        <Link
+          className={`btn btn--secondary btn--sm ${styles.start}`}
+          to={`/map/${encodeURIComponent(submap.atlasCode)}`}
+        >
+          Explore {submap.name}
+        </Link>
+      ) : node.submapId ? (
+        <p className="type-caption">This submap is unavailable for this viewer.</p>
+      ) : null}
+      <h3 className="type-label">Linked documents</h3>
+      {node.linkedEntries.length === 0 ? (
+        <p>No documents linked to this location.</p>
+      ) : (
+        node.linkedEntries.map((link) => {
+          const documentIndex = documentIds.indexOf(link.documentId);
+          const query = documents[Math.floor(documentIndex / 5)];
+          const document = query?.data?.[documentIndex % 5];
+          const href = document ? documentHref(document) : null;
+          return (
+            <article
+              className={styles.linkedDocument}
+              key={`${link.documentId}:${link.relation}`}
+            >
+              {query?.isPending ? (
+                <p role="status">Loading linked document…</p>
+              ) : query?.isError ? (
+                <p role="alert">
+                  A linked document could not load.{' '}
+                  <Button variant="ghost" size="sm" onClick={query.retry}>
+                    Retry
+                  </Button>
+                </p>
+              ) : document ? (
+                <>
+                  <h4 className="type-title">
+                    {href ? (
+                      <Link className={styles.docLink} to={href}>
+                        {document.title}
+                      </Link>
+                    ) : (
+                      document.title
+                    )}
+                  </h4>
+                  <div className={styles.docMeta}>
+                    <Chip size="sm" tone="category">
+                      {document.category ?? humanizeKey(document.kind)}
+                    </Chip>
+                    <span className="type-caption">
+                      {humanizeKey(link.relation)}
+                    </span>
+                  </div>
+                  {document.effectiveBody ? (
+                    <ContentRenderer body={document.effectiveBody} />
+                  ) : null}
+                  {map.canEdit ? (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      pending={pending === `${link.documentId}:${link.relation}`}
+                      disabled={Boolean(pending)}
+                      onClick={() => {
+                        void unlink(link.documentId, link.relation);
+                      }}
+                    >
+                      Unlink {document.title}
+                    </Button>
+                  ) : null}
+                </>
+              ) : (
+                <p>This linked document is unavailable for this viewer.</p>
+              )}
+            </article>
+          );
+        })
+      )}
+      {error ? (
+        <p role="alert">
+          {error}{' '}
+          <Button
+            variant="ghost"
+            onClick={() => {
+              void onReload();
+            }}
+          >
+            Refresh map
+          </Button>
+        </p>
+      ) : null}
+      {map.canEdit ? (
+        <Button variant="secondary" onClick={() => onEdit({ kind: 'link', map, node })}>
+          Link Location document
+        </Button>
+      ) : null}
+    </section>
+  );
+}

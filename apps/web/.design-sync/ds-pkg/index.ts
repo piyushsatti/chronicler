@@ -13,6 +13,7 @@ export * from '../../src/components/primitives/Legend.js';
 export * from '../../src/components/primitives/ListRow.js';
 export * from '../../src/components/primitives/Listbox.js';
 export * from '../../src/components/primitives/MasterDetail.js';
+export * from '../../src/components/primitives/Menu.js';
 export * from '../../src/components/primitives/Modal.js';
 export * from '../../src/components/primitives/Popover.js';
 export * from '../../src/components/primitives/SegmentedControl.js';

@@ -1,0 +1,18 @@
+query RetainedSeriesArc($id: ID!, $offset: Int!) {
+  questArc(id: $id) {
+    id
+    name
+    createdBy
+    createdAt
+    questCount
+    quests(limit: 50, offset: $offset) {
+      id
+      shortCode
+      status
+      scheduledAt
+      briefDocument {
+        title
+      }
+    }
+  }
+}

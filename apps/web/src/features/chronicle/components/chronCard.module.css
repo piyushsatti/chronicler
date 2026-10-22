@@ -1,0 +1,58 @@
+/* ChronCard: one timeline entry (marker + card). Per-entry category
+   colours arrive as --chron-type-color / --chron-type-bg on the element. */
+
+.entry {
+  margin-bottom: var(--sp-3);
+}
+
+.markerColumn {
+  padding-top: var(--sp-4);
+}
+
+.marker {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--chron-type-color);
+  box-shadow:
+    0 0 0 3px var(--color-bg-panel),
+    0 0 0 4.5px color-mix(in srgb, var(--chron-type-color) 31%, transparent);
+  flex-shrink: 0;
+  z-index: 1;
+}
+
+.section {
+  margin-bottom: var(--sp-2);
+}
+
+.typeChip {
+  color: var(--chron-type-color);
+  background: var(--chron-type-bg);
+  border: 1px solid color-mix(in srgb, var(--chron-type-color) 19%, transparent);
+}
+
+.entry .title {
+  margin: 0 0 var(--sp-2);
+  color: var(--color-text);
+}
+
+.tags {
+  gap: 6px;
+}
+
+.tag {
+  cursor: default;
+}
+
+.entry .excerpt {
+  margin: 4px 0 0;
+  color: var(--color-text-2);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.footer {
+  margin-top: var(--sp-3);
+}

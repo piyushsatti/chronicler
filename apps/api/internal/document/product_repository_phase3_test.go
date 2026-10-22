@@ -249,8 +249,8 @@ func TestPhase3TaskDOC02Acceptance(t *testing.T) {
 			cross       bool
 			methodCount int
 		}{
-			{"DocumentReadRepository", []int{5}, false, 11},
-			{"DocumentWriteRepository", []int{6}, false, 22},
+			{"DocumentReadRepository", []int{5}, false, 12},
+			{"DocumentWriteRepository", []int{6}, false, 23},
 			{"ProductBatchRepository", []int{7}, false, 5},
 			{"ReferenceAudienceReader", []int{260}, true, 1},
 			{"MentionMemberReader", []int{404}, true, 1},
@@ -313,8 +313,8 @@ func TestPhase3TaskDOC02Acceptance(t *testing.T) {
 				total += typ.NumMethod()
 			})
 		}
-		if total != 44 {
-			t.Errorf("compiled methods=%d, want 44", total)
+		if total != 46 {
+			t.Errorf("compiled methods=%d, want 46", total)
 		}
 	})
 

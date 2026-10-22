@@ -1,8 +1,11 @@
+import { AdminReadFailure } from './AdminReadFailure.js';
+import { AdminPagination } from './AdminPagination.js';
 import { Button } from '../../../components/primitives/Button.js';
 import { Card } from '../../../components/primitives/Card.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import type { useBackstoriesPanel } from '../hooks/useBackstoriesPanel.js';
+import { Checkbox } from '../../../components/primitives/Checkbox.js';
 
 export function BackstoriesPanel({
   view,
@@ -23,7 +26,7 @@ export function BackstoriesPanel({
   } = view;
 
   if (backstories.isError) {
-    return <StatePanel status="error" error={backstories.error} />;
+    return <AdminReadFailure error={backstories.error} retry={backstories.retry} />;
   }
   if (backstories.isLoading || !backstories.data) {
     return <StatePanel status="loading" />;
@@ -37,6 +40,7 @@ export function BackstoriesPanel({
           type="button"
           variant="secondary"
           size="sm"
+          disabled={save.isPending}
           onClick={() => {
             setForm(BLANK);
             setEditing(true);
@@ -45,12 +49,40 @@ export function BackstoriesPanel({
           New backstory
         </Button>
       </div>
+      <div className="row" data-wrap="1">
+        <label className="stack">
+          <span className="type-label">Cohort filter</span>
+          <input
+            className="field-input"
+            value={view.cohort}
+            onChange={(e) => view.setCohort(e.target.value)}
+          />
+        </label>
+        <label className="stack">
+          <span className="type-label">Region filter</span>
+          <select
+            className="field-input"
+            value={view.regionId}
+            onChange={(e) => view.setRegionId(e.target.value)}
+          >
+            <option value="">All regions</option>
+            {(regions.data ?? []).map((region) => (
+              <option key={region.id} value={region.id}>
+                {region.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      {regions.isError ? <StatePanel status="error" error={regions.error} /> : null}
+      <AdminPagination page={view.pagination} />
       {editing ? (
         <div className="stack">
           <label className="stack">
             <span className="type-label">Name</span>
             <input
-              className="field"
+              disabled={save.isPending}
+              className="field-input"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             />
@@ -58,7 +90,8 @@ export function BackstoriesPanel({
           <label className="stack">
             <span className="type-label">Lore</span>
             <textarea
-              className="field"
+              disabled={save.isPending}
+              className="field-input"
               rows={3}
               value={form.lore}
               onChange={(e) => setForm((f) => ({ ...f, lore: e.target.value }))}
@@ -67,7 +100,8 @@ export function BackstoriesPanel({
           <label className="stack">
             <span className="type-label">Cohort</span>
             <input
-              className="field"
+              disabled={save.isPending}
+              className="field-input"
               value={form.cohort}
               onChange={(e) => setForm((f) => ({ ...f, cohort: e.target.value }))}
             />
@@ -75,7 +109,8 @@ export function BackstoriesPanel({
           <label className="stack">
             <span className="type-label">Source region</span>
             <select
-              className="field"
+              disabled={save.isPending}
+              className="field-input"
               value={form.sourceRegionId}
               onChange={(e) =>
                 setForm((f) => ({ ...f, sourceRegionId: e.target.value }))
@@ -90,14 +125,12 @@ export function BackstoriesPanel({
             </select>
           </label>
           {form.backstoryId ? (
-            <label className="row">
-              <input
-                type="checkbox"
-                checked={form.retired}
-                onChange={(e) => setForm((f) => ({ ...f, retired: e.target.checked }))}
-              />
-              <span className="type-body">Retired</span>
-            </label>
+            <Checkbox
+              label="Retired"
+              disabled={save.isPending}
+              checked={form.retired}
+              onCheckedChange={(retired) => setForm((f) => ({ ...f, retired }))}
+            />
           ) : null}
           <div className="row">
             <Button
@@ -116,6 +149,7 @@ export function BackstoriesPanel({
             <Button
               type="button"
               variant="ghost"
+              disabled={save.isPending}
               onClick={() => {
                 setEditing(false);
                 setForm(BLANK);
@@ -143,6 +177,7 @@ export function BackstoriesPanel({
                 type="button"
                 variant="ghost"
                 size="sm"
+                disabled={save.isPending}
                 onClick={() => startEdit(row)}
               >
                 Edit

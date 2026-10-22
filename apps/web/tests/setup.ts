@@ -68,6 +68,24 @@ Object.defineProperty(globalThis, 'IntersectionObserver', {
   configurable: true,
 });
 
+// jsdom has no PointerEvent; Base UI's keyboard activation (Enter on a menu
+// item) dispatches `new window.PointerEvent('click', …)`. Additive only.
+if (typeof window !== 'undefined' && typeof window.PointerEvent === 'undefined') {
+  class PointerEventStub extends MouseEvent {
+    readonly pointerId: number;
+    readonly pointerType: string;
+    constructor(type: string, init: PointerEventInit = {}) {
+      super(type, init);
+      this.pointerId = init.pointerId ?? 0;
+      this.pointerType = init.pointerType ?? '';
+    }
+  }
+  Object.defineProperty(window, 'PointerEvent', {
+    value: PointerEventStub,
+    configurable: true,
+  });
+}
+
 beforeAll(() => {
   server.listen({ onUnhandledRequest: 'error' });
 });

@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { Button } from './Button.js';
-import { cx } from './cx.js';
 
 export type ErrorStateProps = {
   title?: string;
@@ -18,7 +17,7 @@ export function ErrorState({
   children,
 }: ErrorStateProps): React.JSX.Element {
   return (
-    <div className={cx('error-state', className)} data-component="ErrorState" role="alert">
+    <div className={className} data-component="ErrorState" role="alert">
       <h2 className="type-heading">{title}</h2>
       {message ? <p className="type-body">{message}</p> : null}
       {children}

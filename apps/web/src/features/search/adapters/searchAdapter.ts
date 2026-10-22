@@ -10,77 +10,69 @@ import SEARCH_QUERY from './search.graphql?raw';
 import SEARCHABLE_KINDS_QUERY from './searchableKinds.graphql?raw';
 
 const docHitSchema = z.object({
-  id: z.string(),
-  kind: z.string(),
-  slug: z.string(),
+  id: z.string().min(1),
+  kind: z.enum(['codex_entry', 'rule', 'summary', 'quest_brief', 'community']),
+  category: z.string().nullable(),
+  slug: z.string().min(1),
   title: z.string(),
   snippet: z.string(),
-  questShortCode: z.string().nullable().optional(),
+  questShortCode: z.string().nullable(),
 });
-
 const memberHitSchema = z.object({
-  memberId: z.string(),
-  handle: z.string(),
+  memberId: z.string().min(1),
+  handle: z.string().min(1),
   displayName: z.string(),
+  avatarUrl: z.string().nullable(),
 });
+const searchWireSchema = z
+  .object({
+    query: z.string(),
+    documents: z.array(docHitSchema),
+    documentTotal: z.number().int().nonnegative(),
+    documentOrder: z.literal('rank_desc_updated_at_desc_id_desc'),
+    members: z.array(memberHitSchema),
+    memberTotal: z.number().int().nonnegative(),
+    memberOrder: z.literal('handle_asc_id_asc'),
+  })
+  .refine(
+    (value) =>
+      value.documentTotal >= value.documents.length &&
+      value.memberTotal >= value.members.length,
+  );
+const kindsWireSchema = z.array(
+  z.object({
+    key: z.enum([
+      'codex_entry',
+      'rule',
+      'summary',
+      'quest_brief',
+      'community',
+      'member',
+    ]),
+    label: z.string().min(1),
+    searchable: z.boolean(),
+    exclusionReason: z.string().nullable(),
+  }),
+);
 
-const searchWireSchema = z.object({
-  query: z.string(),
-  documents: z.array(docHitSchema),
-  members: z.array(memberHitSchema),
-});
+type SearchResultView = z.infer<typeof searchWireSchema>;
+export type SearchHitView =
+  z.infer<typeof docHitSchema> | z.infer<typeof memberHitSchema>;
+type SearchKindView = z.infer<typeof kindsWireSchema>[number];
 
-const kindWireSchema = z.object({
-  key: z.string().min(1),
-  label: z.string().min(1),
-  searchable: z.boolean(),
-  exclusionReason: z.string().nullable().optional(),
-});
-
-const kindsWireSchema = z.array(kindWireSchema);
-
-export type SearchHitView = {
-  id: string;
-  kind: string;
-  title: string;
-  slug: string | null;
-  snippet: string | null;
-};
-
-export function parseSearch(wire: unknown): AdapterResult<SearchHitView[]> {
+export function parseSearch(wire: unknown): AdapterResult<SearchResultView> {
   const parsed = searchWireSchema.safeParse(wire);
-  if (!parsed.success) {
-    return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
-  }
-  const docs = parsed.data.documents.map((h) => ({
-    id: h.id,
-    kind: h.kind,
-    title: h.title,
-    slug: h.slug,
-    snippet: h.snippet,
-  }));
-  const members = parsed.data.members.map((h) => ({
-    id: h.memberId,
-    kind: 'member',
-    title: h.displayName,
-    slug: h.handle,
-    snippet: `@${h.handle}`,
-  }));
-  return { ok: true, data: [...docs, ...members] };
+  return parsed.success
+    ? { ok: true, data: parsed.data }
+    : { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
 }
-
-export function parseSearchKinds(wire: unknown): AdapterResult<string[]> {
+export function parseSearchKinds(wire: unknown): AdapterResult<SearchKindView[]> {
   const parsed = kindsWireSchema.safeParse(wire);
-  if (!parsed.success) {
-    return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
-  }
-  return {
-    ok: true,
-    data: parsed.data.filter((k) => k.searchable).map((k) => k.key),
-  };
+  return parsed.success
+    ? { ok: true, data: parsed.data.filter((kind) => kind.searchable) }
+    : { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
 }
-
-export async function loadSearchKinds(): Promise<string[]> {
+export async function loadSearchKinds(): Promise<SearchKindView[]> {
   try {
     const data = await graphqlRequest<SearchableKindsQuery>(SEARCHABLE_KINDS_QUERY);
     const result = parseSearchKinds(data.searchableKinds);
@@ -90,16 +82,18 @@ export async function loadSearchKinds(): Promise<string[]> {
     throw toAppError(err, 'search:kinds');
   }
 }
-
 export async function loadSearch(
   query: string,
-  kinds?: string[],
-): Promise<SearchHitView[]> {
+  kinds: string[] | null = null,
+  limit = 20,
+  offset = 0,
+): Promise<SearchResultView> {
   try {
     const data = await graphqlRequest<SearchQuery>(SEARCH_QUERY, {
       query,
-      kinds: kinds?.length ? kinds : null,
-      limit: 20,
+      kinds,
+      limit,
+      offset,
     });
     const result = parseSearch(data.search);
     if (!result.ok) throw toAppError({ failure: result.failure }, 'search:load');

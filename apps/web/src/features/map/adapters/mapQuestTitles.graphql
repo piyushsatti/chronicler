@@ -1,0 +1,12 @@
+query MapQuestTitles($codes: [String!]!) {
+  quests(filters: { shortCodes: $codes }, limit: 50) {
+    items {
+      shortCode
+      status
+      displayStatus
+      briefDocument {
+        title
+      }
+    }
+  }
+}

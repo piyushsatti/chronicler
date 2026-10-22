@@ -1,18 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import {
-  canAccessAdmin,
-  canEditOwned,
-  canVerify,
-  isAdmin,
-  isCharacterOwner,
-} from '../../src/utils/permissions.js';
+import { canAccessVerify, isAdmin } from '../../src/auth/roles.js';
+import { canEditOwned, isCharacterOwner } from '../../src/utils/permissions.js';
 
 describe('permissions', () => {
   it('detects admin and verify roles', () => {
     expect(isAdmin(['admin'])).toBe(true);
-    expect(canVerify(['verifier'])).toBe(true);
-    expect(canAccessAdmin(['player'])).toBe(false);
-    expect(canAccessAdmin(['verifier'])).toBe(false);
+    expect(canAccessVerify(['verifier'])).toBe(true);
+    expect(isAdmin(['player'])).toBe(false);
+    expect(isAdmin(['verifier'])).toBe(false);
   });
 
   it('detects character ownership and edit rights', () => {

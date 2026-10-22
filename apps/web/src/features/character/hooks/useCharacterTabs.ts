@@ -11,7 +11,7 @@ import {
 
 type ListView<T> =
   | { status: 'loading' }
-  | { status: 'error'; error: AppError }
+  | { status: 'error'; error: AppError; retry: () => void }
   | { status: 'empty' }
   | { status: 'ready'; items: T };
 
@@ -21,11 +21,16 @@ function toListView<T>(
     isLoading: boolean;
     error: unknown;
     data: T[] | undefined;
+    refetch: () => unknown;
   },
   scope: string,
 ): ListView<T[]> {
   if (q.isError) {
-    return { status: 'error', error: toAppError(q.error, scope) };
+    return {
+      status: 'error',
+      error: toAppError(q.error, scope),
+      retry: () => void q.refetch(),
+    };
   }
   if (q.isLoading || !q.data) return { status: 'loading' };
   if (q.data.length === 0) return { status: 'empty' };

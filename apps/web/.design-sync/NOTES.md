@@ -22,7 +22,7 @@ Config home is `apps/web` (run everything from there). Package shape, no Storybo
 - Layout vocabulary for previews: `.stack` / `.row` with `data-gap="1".."8"`, `data-align`, `data-wrap="1"`; type classes `.type-display|heading|title|label|body|narrative|caption|code|value|ui`.
 - `Card.Header` and `Card.Footer` are flex rows (`align-items: center`). Put `Card.Eyebrow` outside the header, otherwise it squeezes beside the title.
 - Content theme: tabletop campaign management (quests, sessions, chronicles, characters, DMs).
-- Modal (and any fixed-position overlay) in a cardMode single card needs a wrapper with explicit height (480px) in the preview: the single-card container is a transformed containing block with no height, so the fixed backdrop otherwise collapses to a 32px strip.
+- Modal, Popover and Menu are Base UI parts (since 2026-10-22) and portal to `<body>`, so they escape the transformed single-card container. Modal previews keep a 480px wrapper only so `DsRoot` paints a page surface behind the dialog. Overlay previews pass `open` with a no-op `onOpenChange`/`onClose`.
 
 ## App styling defects found and fixed during the first sync (2026-10-21)
 
@@ -46,7 +46,7 @@ Preview authoring exposed primitives whose markup and stylesheet disagreed (Chip
 
 - First upload done 2026-10-21 into project "Chronicler" (`projectId` in config.json), 174 files. DesignSync auth on triton comes from running `/design-login` once in an interactive `claude` terminal there; desktop-app sessions cannot run it themselves. Re-syncs are anchored: fetch the project's `_ds_sync.json` to `.design-sync/.cache/remote-sync.json` and pass `--remote`.
 - `ds-pkg/index.ts` is a hand-curated export list. New primitives are not synced until added there (and to `primitives.registry.ts`). `ContentRenderer`/`MermaidBlock` stay excluded: the converter's single-file bundle inlines Mermaid's dynamic import (~7.8 MB).
-- `dtsPropsFor` bodies are hand-written copies of prop types (Button, Card, Field, Listbox, SegmentedControl, MasterDetail, StatePanel, Legend, Table, Avatar, WeekGrid). They go stale silently when those props change; diff them against the source on every re-sync.
+- `dtsPropsFor` bodies are hand-written copies of prop types (Button, Card, Field, Listbox, Menu, SegmentedControl, MasterDetail, StatePanel, Legend, Table, Avatar, WeekGrid). They go stale silently when those props change; diff them against the source on every re-sync.
 - `overrides/dts.mjs` is a fork of the converter's `lib/dts.mjs` (one added line). On re-sync, diff it against the bundled `lib/dts.mjs` and merge upstream changes.
 - `build-css.mjs` hardcodes the five font files from `public/fonts/`. A new or renamed font needs adding there.
 - Previews were graded on the parchment dark theme only; other themes and light mode were not visually verified.

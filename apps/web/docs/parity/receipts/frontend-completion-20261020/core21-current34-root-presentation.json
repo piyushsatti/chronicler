@@ -1,0 +1,298 @@
+{
+  "at": "2026-10-20T20:54:23.944428+00:00",
+  "acceptanceSha256": "114c5e35233cb058906456c46c3465680d3f265e8c2a8dee6c7492b71245ac7a",
+  "browserReceiptSha256": "e571b61abf548a65c7cd2acee1fa0c82ce981efd255914a5efce6489c5f46202",
+  "responsiveCases": [
+    {
+      "actor": "admin",
+      "route": "/admin",
+      "state": "today",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "completed": true,
+      "image": "responsive-admin-390-today.png",
+      "sha256": "4d82c3252232b63e77d13dba242c6168b28bb4fe9a2c56c28c53befe4eba0e0a"
+    },
+    {
+      "actor": "admin",
+      "route": "/admin/world",
+      "state": "time-anchor-edit",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "completed": true,
+      "image": "responsive-admin-390-time-anchor-edit.png",
+      "sha256": "30c31b3a27898ffb2c651c2015d1227accd783fef1d9dbe3e9a14c2d2eb1c63a"
+    },
+    {
+      "actor": "admin",
+      "route": "/admin/world",
+      "state": "calendar-form",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "completed": true,
+      "image": "responsive-admin-390-calendar-form.png",
+      "sha256": "0cd403e52766db278e53f9961800400936581f4f61f3fc7c6cf47e5ac51796b4"
+    },
+    {
+      "actor": "admin",
+      "route": "/admin/content",
+      "state": "banner-form",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "completed": true,
+      "image": "responsive-admin-390-banner-form.png",
+      "sha256": "dd8e5d294765d33f2d1cff05b4a96efa94247db7067452f206cd531531755113"
+    },
+    {
+      "actor": "admin",
+      "route": "/admin/delivery",
+      "state": "delivery",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "completed": true,
+      "image": "responsive-admin-390-delivery.png",
+      "sha256": "29cb57032ba90757688289862664e6712def7e7be85e5e51be074cd1df411fa1"
+    },
+    {
+      "actor": "admin",
+      "route": "/admin/data-health",
+      "state": "data-health",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "completed": true,
+      "image": "responsive-admin-390-data-health.png",
+      "sha256": "c482ce5b15dccf4e4e8653a56e714fd22e327da145b31bc01a053f9a26ce7647"
+    },
+    {
+      "actor": "admin",
+      "route": "/admin",
+      "state": "today",
+      "viewport": {
+        "width": 900,
+        "height": 1080
+      },
+      "completed": true,
+      "image": "responsive-admin-900-today.png",
+      "sha256": "5f880aa58e6dbb8e09f1ac42fa54ab61a20739783eb732378b35e6a1fdfc2f7c"
+    },
+    {
+      "actor": "admin",
+      "route": "/admin/world",
+      "state": "time-anchor-edit",
+      "viewport": {
+        "width": 900,
+        "height": 1080
+      },
+      "completed": true,
+      "image": "responsive-admin-900-time-anchor-edit.png",
+      "sha256": "275071fe34b3ecf632874409b33be1d5c839995e25faabff9645c05803a32343"
+    },
+    {
+      "actor": "admin",
+      "route": "/admin/world",
+      "state": "calendar-form",
+      "viewport": {
+        "width": 900,
+        "height": 1080
+      },
+      "completed": true,
+      "image": "responsive-admin-900-calendar-form.png",
+      "sha256": "a5e323aed7b98df814ddf7ceb7253a4ba883c5a0317d13b04f23341142531112"
+    },
+    {
+      "actor": "admin",
+      "route": "/admin/content",
+      "state": "banner-form",
+      "viewport": {
+        "width": 900,
+        "height": 1080
+      },
+      "completed": true,
+      "image": "responsive-admin-900-banner-form.png",
+      "sha256": "f78ddb4826748eb22396f0fe75f53ba166fc2d2e9310d6d9953f65d91859b9ad"
+    },
+    {
+      "actor": "admin",
+      "route": "/admin/delivery",
+      "state": "delivery",
+      "viewport": {
+        "width": 900,
+        "height": 1080
+      },
+      "completed": true,
+      "image": "responsive-admin-900-delivery.png",
+      "sha256": "6f77f9c03bbc2fd80f5df79186fab772c7825ed65653f08bc2170a3bdd191b7b"
+    },
+    {
+      "actor": "admin",
+      "route": "/admin/data-health",
+      "state": "data-health",
+      "viewport": {
+        "width": 900,
+        "height": 1080
+      },
+      "completed": true,
+      "image": "responsive-admin-900-data-health.png",
+      "sha256": "c05585a4363c11713b3b39f6185cc0498a9e869bf4755867aa5f30b1e332eb4f"
+    },
+    {
+      "actor": "admin",
+      "route": "/admin",
+      "state": "today",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "completed": true,
+      "image": "responsive-admin-1920-today.png",
+      "sha256": "0049474b3187cf96a4e7e8dc618f9e74cbce5a7f334c9d3cd915bb8451081933"
+    },
+    {
+      "actor": "admin",
+      "route": "/admin/world",
+      "state": "time-anchor-edit",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "completed": true,
+      "image": "responsive-admin-1920-time-anchor-edit.png",
+      "sha256": "58ad531fafe94ef36ab786220b6a4540a64cfb653521b29bfbe025fa5ded9799"
+    },
+    {
+      "actor": "admin",
+      "route": "/admin/world",
+      "state": "calendar-form",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "completed": true,
+      "image": "responsive-admin-1920-calendar-form.png",
+      "sha256": "d80c819e19daf1dc573b4ca32961c5d3f1ad7b6384707379942790e39ed276a6"
+    },
+    {
+      "actor": "admin",
+      "route": "/admin/content",
+      "state": "banner-form",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "completed": true,
+      "image": "responsive-admin-1920-banner-form.png",
+      "sha256": "8f96ac7112a1dbddff2173d11c8cbeff41f06212540db8bc183887d3f861e5c4"
+    },
+    {
+      "actor": "admin",
+      "route": "/admin/delivery",
+      "state": "delivery",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "completed": true,
+      "image": "responsive-admin-1920-delivery.png",
+      "sha256": "467015186314018412e3b2482cfd897a05291ee736499be905ef1fadfda0e0e0"
+    },
+    {
+      "actor": "admin",
+      "route": "/admin/data-health",
+      "state": "data-health",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "completed": true,
+      "image": "responsive-admin-1920-data-health.png",
+      "sha256": "741730ee42d21b6722cd989d9b5082948bf8d034a18df18275e75954462f5f3a"
+    },
+    {
+      "actor": "dm",
+      "route": "/dm",
+      "state": "dm-dashboard",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "completed": true,
+      "image": "responsive-dm-390-dm-dashboard.png",
+      "sha256": "821bc6aa6867696a898841680d0e44346c11cde6a5ec2ee7e949a4e1c4609829"
+    },
+    {
+      "actor": "dm",
+      "route": "/dm",
+      "state": "dm-dashboard",
+      "viewport": {
+        "width": 900,
+        "height": 1080
+      },
+      "completed": true,
+      "image": "responsive-dm-900-dm-dashboard.png",
+      "sha256": "a6dc5554e3dfd249a02ee265288c8d7ee8f787448470adbeac22f2703c331eed"
+    },
+    {
+      "actor": "dm",
+      "route": "/dm",
+      "state": "dm-dashboard",
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "completed": true,
+      "image": "responsive-dm-1920-dm-dashboard.png",
+      "sha256": "fa2de19152820b94d8d687bc1d9de06ecdca658f6e21da27b42032ab3270afca"
+    }
+  ],
+  "nativeKeyboardProfiles": [
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "completed": true,
+      "image": "anchor-keyboard-390.png",
+      "sha256": "f7a646edbc2e36d46e102269cfc5ca80aa8902cb0cbbf78e68fd11ad125bcb09"
+    },
+    {
+      "viewport": {
+        "width": 900,
+        "height": 1080
+      },
+      "completed": true,
+      "image": "anchor-keyboard-900.png",
+      "sha256": "f267e603774307c9cbd93537e6c4bde77483560b27b551a174ecc6f3d887f29d"
+    },
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "completed": true,
+      "image": "anchor-keyboard-1920.png",
+      "sha256": "17c246291ea8a7dfe55385c7f0885b24ec9d63544ceab29b41292a024e3958a7"
+    }
+  ],
+  "actualRootImagesViewed": [
+    "anchor-keyboard-390.png",
+    "responsive-dm-900-dm-dashboard.png"
+  ],
+  "ownerVisualApproval": false,
+  "limits": [
+    "Current34 source via isolated native13 fixture Vite/realAPI; not immutable timing.",
+    "Aborted queries remain under unchanged causal navigation/teardown guards and are never counted successful. No zero-network-failure claim.",
+    "Twenty-one actual responsive states and three nativeRate keyboard profiles; no allrole/theme/action Cartesian orownerLegacyapproval."
+  ]
+}

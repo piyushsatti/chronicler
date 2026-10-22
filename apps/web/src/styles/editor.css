@@ -30,7 +30,7 @@
   .hf2 .pf-caret{ color:var(--color-text-4); font-size:10px; margin-left:2px; }
   .hf2 .pf-backdrop{ position:fixed; inset:0; z-index:40; }
   .hf2 .pf-menu{ position:absolute; z-index:41; top:calc(100% + 4px); left:0; min-width:170px; max-height:240px; overflow:auto;
-    background:var(--color-bg-panel); border:1px solid var(--color-border-2); border-radius:10px; box-shadow:var(--shadow-lift); padding:5px; }
+    background:var(--color-bg-panel); border:1px solid var(--color-border-2); border-radius:10px; box-shadow:var(--shadow-3); padding:5px; }
   .hf2 .pf-opt{ all:unset; cursor:pointer; display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:7px; font-size:13px; color:var(--color-text-2); }
   .hf2 .pf-opt:hover{ background:var(--color-bg-surface); color:var(--color-text); }
   .hf2 .pf-dot{ width:8px; height:8px; border-radius:2px; flex-shrink:0; }
@@ -136,7 +136,7 @@
   }
 
   .hf2 .le-menu-backdrop{ position:fixed; inset:0; z-index:50; }
-  .hf2 .le-menu{ position:absolute; z-index:51; top:calc(100% + 6px); right:0; width:300px; max-width:78vw; background:var(--color-bg-panel); border:1px solid var(--color-border-2); border-radius:12px; box-shadow:var(--shadow-lift); padding:8px; }
+  .hf2 .le-menu{ position:absolute; z-index:51; top:calc(100% + 6px); right:0; width:300px; max-width:78vw; background:var(--color-bg-panel); border:1px solid var(--color-border-2); border-radius:12px; box-shadow:var(--shadow-3); padding:8px; }
   .hf2 .le-menu-head{ font-family:var(--font-mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--color-text-3); padding:4px 8px 8px; }
   .hf2 .le-menu-search{ all:unset; box-sizing:border-box; width:100%; padding:8px 10px; margin-bottom:6px; border:1px solid var(--color-border); border-radius:8px; font-size:13px; color:var(--color-text); }
   .hf2 .le-menu-search:focus{ border-color:var(--color-border-2); box-shadow:0 0 0 3px color-mix(in srgb, var(--color-accent) 8%, transparent); }
@@ -149,7 +149,7 @@
   .hf2 .le-menu-field{ display:grid; gap:4px; padding:5px 8px; color:var(--color-text-3); font-family:var(--font-mono); font-size:9px; letter-spacing:.06em; text-transform:uppercase; }
   .hf2 .le-menu-field input, .hf2 .le-menu-field select{ box-sizing:border-box; width:100%; padding:7px 8px; border:1px solid var(--color-border); border-radius:7px; background:var(--color-bg-panel); color:var(--color-text); font:inherit; font-family:var(--font-body); font-size:12px; letter-spacing:0; text-transform:none; }
   .hf2 .le-menu-item:disabled{ cursor:not-allowed; opacity:.45; }
-  .hf2 .le-ac{ position:fixed; z-index:60; width:260px; max-width:80vw; background:var(--color-bg-panel); border:1px solid var(--color-border-2); border-radius:10px; box-shadow:var(--shadow-lift); padding:6px; }
+  .hf2 .le-ac{ position:fixed; z-index:60; width:260px; max-width:80vw; background:var(--color-bg-panel); border:1px solid var(--color-border-2); border-radius:10px; box-shadow:var(--shadow-3); padding:6px; }
   .hf2 .le-ac-head{ font-family:var(--font-mono); font-size:8.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--color-text-3); padding:3px 8px 6px; }
   .hf2 .le-ac-item{ all:unset; cursor:pointer; display:flex; align-items:center; gap:8px; padding:6px 9px; border-radius:7px; font-size:13px; color:var(--color-text); }
   .hf2 .le-ac-item:hover{ background:var(--color-bg-surface); }

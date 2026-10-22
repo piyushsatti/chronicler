@@ -1,10 +1,12 @@
+import { queryKeys } from '../../../api/queryKeys.js';
+import { useAdminPage } from './useAdminPage.js';
 import {
   useAdminAuthority,
   useAuthorityFailures,
   panelState,
 } from './useAdminAuthority.js';
-import { useEffect, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useEffect, useMemo, useState } from 'react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   loadAdminMembers,
   setMemberRoles,
@@ -37,29 +39,55 @@ export function useMembersPanel() {
     return () => window.clearTimeout(handle);
   }, [searchInput]);
 
-  const directory = useQuery({
-    enabled: authority.allowed,
-    queryKey: [...MEMBERS_KEY, search],
-    queryFn: () => loadAdminMembers(search),
-  });
+  const [role, setRole] = useState('');
+  const [status, setStatus] = useState('');
+  const { query: directory, pagination } = useAdminPage(
+    MEMBERS_KEY,
+    authority,
+    { search, role, status },
+    (page, request) =>
+      loadAdminMembers(
+        {
+          ...page,
+          ...{
+            search: search.trim() || undefined,
+            role: role || undefined,
+            status: status || undefined,
+          },
+        },
+        request,
+      ),
+  );
 
   const saveRoles = useMutation({
-    mutationFn: authority.guardMutation(() => {
+    mutationKey: ['adminCommand', authority.commandKey, 'useMembersPanel'],
+    networkMode: 'always',
+    retry: false,
+    mutationFn: authority.guardMutation((command) => {
       if (!selected) throw new Error('No member selected');
-      return setMemberRoles(selected.id, draftRoles);
+      return setMemberRoles(selected.id, draftRoles, command);
     }),
     onSuccess: async () => {
+      if (!authority.isCurrent()) return;
+      if (selected?.id === authority.actorId)
+        await queryClient.invalidateQueries({ queryKey: queryKeys.me });
       await queryClient.invalidateQueries({ queryKey: MEMBERS_KEY });
     },
   });
 
-  const bulkSelected = (directory.data ?? []).filter((m) => checkedIds.has(m.id));
+  const bulkSelected = useMemo(
+    () =>
+      (directory.data ?? [])
+        .filter((member) => checkedIds.has(member.id))
+        .map((member) => ({
+          id: member.id,
+          handle: member.handle,
+          roles: member.roles,
+        })),
+    [directory.data, checkedIds],
+  );
   const bulkBar = useBulkRoleBar({
-    selected: bulkSelected.map((m) => ({
-      id: m.id,
-      handle: m.handle,
-      roles: m.roles,
-    })),
+    selected: bulkSelected,
     onApplied: (succeededIds) => {
       setCheckedIds((prev) => {
         const next = new Set(prev);
@@ -71,6 +99,11 @@ export function useMembersPanel() {
   });
   useAuthorityFailures(directory.error, saveRoles.error);
   return {
+    pagination,
+    role,
+    setRole,
+    status,
+    setStatus,
     ROLE_OPTIONS,
     searchInput,
     setSearchInput,

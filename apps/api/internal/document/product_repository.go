@@ -27,6 +27,7 @@ type DocumentReadRepository interface {
 	ReadDocument(ctx context.Context, actor auth.Authority, spec DocumentSpec) (*DocumentView, error)
 	ReadDocumentBacklinks(ctx context.Context, actor auth.Authority, spec DocumentBacklinksSpec) ([]DocumentLinkView, error)
 	ReadDocumentById(ctx context.Context, actor auth.Authority, spec DocumentByIdSpec) (*DocumentView, error)
+	ReadDocumentRevisionParent(ctx context.Context, actor auth.Authority, documentID string) (*DocumentView, error)
 	ReadDocumentRevisions(ctx context.Context, actor auth.Authority, spec DocumentRevisionsSpec) (DocumentRevisionPage, error)
 	ReadDocuments(ctx context.Context, actor auth.Authority, spec DocumentsSpec) (DocumentListResult, error)
 	ReadDocumentsTrash(ctx context.Context, actor auth.Authority, spec DocumentsTrashSpec) (DocumentListResult, error)
@@ -35,6 +36,7 @@ type DocumentReadRepository interface {
 }
 
 type DocumentWriteRepository interface {
+	ReadCommandDocument(ctx context.Context, actor auth.Authority, documentID string) (DocumentView, error)
 	LockAssignLieutenant(ctx context.Context, spec AssignLieutenantSpec) (AssignLieutenantState, error)
 	StoreAssignLieutenant(ctx context.Context, write AssignLieutenantWrite) (LieutenantAssignmentView, error)
 	LockCreateDocument(ctx context.Context, spec CreateDocumentSpec) (CreateDocumentState, error)
@@ -89,14 +91,15 @@ type LocationAdmissionReader interface {
 }
 
 type SummaryWrite struct {
-	DocumentID  *string
-	QuestIDs    []string
-	CharacterID *string
-	Title       string
-	Body        string
-	Visibility  string
-	Frontmatter json.RawMessage
-	At          time.Time
+	DocumentID       *string
+	ExpectedRevision *int32
+	QuestIDs         []string
+	CharacterID      *string
+	Title            string
+	Body             string
+	Visibility       string
+	Frontmatter      json.RawMessage
+	At               time.Time
 }
 
 type BriefCreate struct {

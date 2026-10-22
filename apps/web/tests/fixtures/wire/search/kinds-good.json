@@ -1,19 +1,37 @@
 [
   {
-    "key": "codex",
-    "label": "Codex",
+    "key": "codex_entry",
+    "label": "Codex entries",
     "searchable": true,
     "exclusionReason": null
   },
   {
-    "key": "quest",
-    "label": "Quest",
+    "key": "rule",
+    "label": "Rules",
+    "searchable": true,
+    "exclusionReason": null
+  },
+  {
+    "key": "summary",
+    "label": "Summaries",
+    "searchable": true,
+    "exclusionReason": null
+  },
+  {
+    "key": "quest_brief",
+    "label": "Quest briefs",
+    "searchable": true,
+    "exclusionReason": null
+  },
+  {
+    "key": "community",
+    "label": "Community",
     "searchable": true,
     "exclusionReason": null
   },
   {
     "key": "member",
-    "label": "Member",
+    "label": "Members",
     "searchable": true,
     "exclusionReason": null
   }

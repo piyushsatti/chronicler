@@ -19,7 +19,7 @@ type ProductQueries struct {
 }
 
 func NewProductQueries(reads ProductReadRepos, policy *auth.Policy, clock product.Clock, overrideReads auth.OverrideReadObserver) (*ProductQueries, error) {
-	for _, dep := range []any{reads.Quest, reads.Batch, policy, clock, overrideReads} {
+	for _, dep := range []any{reads.Quest, reads.Arc, reads.Batch, policy, clock, overrideReads} {
 		if dep == nil {
 			return nil, apierr.New(apierr.Internal, "quest query dependencies required")
 		}
@@ -205,6 +205,9 @@ func (s ProductQueries) Quest(ctx context.Context, actor auth.Authority, spec Qu
 func (s ProductQueries) Quests(ctx context.Context, actor auth.Authority, spec QuestsSpec) (QuestListResult, error) {
 	if err := questQueryPage(spec.Limit, spec.Offset); err != nil {
 		return QuestListResult{}, err
+	}
+	if filters := spec.Filters; filters != nil && filters.ScheduledFrom != nil && filters.ScheduledTo != nil && !filters.ScheduledFrom.Before(*filters.ScheduledTo) {
+		return QuestListResult{}, apierr.New(apierr.Invalid, "scheduledFrom must be before scheduledTo")
 	}
 	asOf, err := s.questAsOf(spec.AsOf)
 	if err != nil {

@@ -1,8 +1,12 @@
+import { AdminReadFailure } from './AdminReadFailure.js';
+import { AdminPagination } from './AdminPagination.js';
 import { Button } from '../../../components/primitives/Button.js';
 import { Card } from '../../../components/primitives/Card.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
+import { humanizeKey } from '../../../utils/format.js';
 import type { useCreationCatalogPanel } from '../hooks/useCreationCatalogPanel.js';
+import { Checkbox } from '../../../components/primitives/Checkbox.js';
 
 export function CreationCatalogPanel({
   view,
@@ -23,7 +27,7 @@ export function CreationCatalogPanel({
   } = view;
 
   if (catalog.isError) {
-    return <StatePanel status="error" error={catalog.error} />;
+    return <AdminReadFailure error={catalog.error} retry={catalog.retry} />;
   }
   if (catalog.isLoading || !catalog.data) {
     return <StatePanel status="loading" />;
@@ -37,6 +41,7 @@ export function CreationCatalogPanel({
           type="button"
           variant="secondary"
           size="sm"
+          disabled={save.isPending}
           onClick={() => {
             setForm(BLANK);
             setEditing(true);
@@ -45,16 +50,41 @@ export function CreationCatalogPanel({
           New option
         </Button>
       </div>
-      <p className="type-caption">
-        Retired or unavailable rows drop out of this list on refresh (same limitation as
-        legacy).
-      </p>
+      <p className="type-caption">Includes retired and unavailable options.</p>
+      <div className="row" data-wrap="1">
+        <label className="stack">
+          <span className="type-label">Kind filter</span>
+          <input
+            className="field-input"
+            value={view.filterKind}
+            onChange={(e) => view.setFilterKind(e.target.value)}
+          />
+        </label>
+        <label className="stack">
+          <span className="type-label">Region filter</span>
+          <select
+            className="field-input"
+            value={view.filterRegion}
+            onChange={(e) => view.setFilterRegion(e.target.value)}
+          >
+            <option value="">All regions</option>
+            {(regions.data ?? []).map((region) => (
+              <option key={region.id} value={region.id}>
+                {region.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+      {regions.isError ? <StatePanel status="error" error={regions.error} /> : null}
+      <AdminPagination page={view.pagination} />
       {editing ? (
         <div className="stack">
           <label className="stack">
             <span className="type-label">Kind</span>
             <input
-              className="field"
+              disabled={save.isPending}
+              className="field-input"
               value={form.kind}
               onChange={(e) => setForm((f) => ({ ...f, kind: e.target.value }))}
             />
@@ -62,7 +92,8 @@ export function CreationCatalogPanel({
           <label className="stack">
             <span className="type-label">Name</span>
             <input
-              className="field"
+              disabled={save.isPending}
+              className="field-input"
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
             />
@@ -70,7 +101,8 @@ export function CreationCatalogPanel({
           <label className="stack">
             <span className="type-label">Description</span>
             <textarea
-              className="field"
+              disabled={save.isPending}
+              className="field-input"
               rows={2}
               value={form.description}
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
@@ -79,7 +111,8 @@ export function CreationCatalogPanel({
           <label className="stack">
             <span className="type-label">Introduced by region</span>
             <select
-              className="field"
+              disabled={save.isPending}
+              className="field-input"
               value={form.introducedByRegionId}
               onChange={(e) =>
                 setForm((f) => ({ ...f, introducedByRegionId: e.target.value }))
@@ -93,22 +126,18 @@ export function CreationCatalogPanel({
               ))}
             </select>
           </label>
-          <label className="row">
-            <input
-              type="checkbox"
-              checked={form.available}
-              onChange={(e) => setForm((f) => ({ ...f, available: e.target.checked }))}
-            />
-            <span className="type-body">Available</span>
-          </label>
-          <label className="row">
-            <input
-              type="checkbox"
-              checked={form.retired}
-              onChange={(e) => setForm((f) => ({ ...f, retired: e.target.checked }))}
-            />
-            <span className="type-body">Retired</span>
-          </label>
+          <Checkbox
+            label="Available"
+            disabled={save.isPending}
+            checked={form.available}
+            onCheckedChange={(available) => setForm((f) => ({ ...f, available }))}
+          />
+          <Checkbox
+            label="Retired"
+            disabled={save.isPending}
+            checked={form.retired}
+            onCheckedChange={(retired) => setForm((f) => ({ ...f, retired }))}
+          />
           <div className="row">
             <Button
               type="button"
@@ -120,6 +149,7 @@ export function CreationCatalogPanel({
             <Button
               type="button"
               variant="ghost"
+              disabled={save.isPending}
               onClick={() => {
                 setEditing(false);
                 setForm(BLANK);
@@ -139,11 +169,16 @@ export function CreationCatalogPanel({
           {catalog.data.map((entry) => (
             <li key={entry.id} className="card stack">
               <p className="type-title">{entry.name}</p>
-              <p className="type-caption">{entry.kind}</p>
+              <p className="type-caption">
+                {humanizeKey(entry.kind)} ·{' '}
+                {entry.available ? 'Available' : 'Unavailable'}
+                {entry.retired ? ' · Retired' : ''}
+              </p>
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
+                disabled={save.isPending}
                 onClick={() => startEdit(entry)}
               >
                 Edit

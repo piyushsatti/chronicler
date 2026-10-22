@@ -19,6 +19,8 @@ export type DmTableView = {
   status: string;
   authorHandle: string | null;
   isPublished: boolean;
+  authorId: string;
+  canEdit: boolean;
 };
 
 export type DmTableSessionView = {
@@ -32,7 +34,12 @@ export type DmTableSessionView = {
 };
 
 const dmTableDocSchema = z.object({
-  id: z.string(),
+  id: z.string().uuid(),
+  authorId: z.string().uuid(),
+  canEditBody: z.boolean().optional().default(false),
+  canEditMetadata: z.boolean().optional().default(false),
+  kind: z.string(),
+  category: z.string().nullable(),
   slug: z.string(),
   title: z.string(),
   status: z.string(),
@@ -83,6 +90,8 @@ export function parseDmTableDocument(wire: unknown): AdapterResult<DmTableView |
     return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
   }
   const d = parsed.data;
+  if (d.kind !== 'community' || d.category !== 'dm_table')
+    return { ok: true, data: null };
   const fm = d.frontmatter ?? {};
   return {
     ok: true,
@@ -95,6 +104,8 @@ export function parseDmTableDocument(wire: unknown): AdapterResult<DmTableView |
       body: d.effectiveBody ?? null,
       status: d.status,
       authorHandle: d.author?.handle ?? null,
+      authorId: d.authorId,
+      canEdit: d.canEditBody || d.canEditMetadata,
       isPublished: d.status === 'published',
     },
   };
@@ -115,30 +126,28 @@ export async function loadDmTableBySlug(slug: string): Promise<DmTableView | nul
   }
 }
 
-/**
- * Upcoming sessions for a DM handle — filtered from the public quest board.
- * No dedicated dm-table schedule query exists; board filter is the contract-safe path.
- */
-export async function loadDmTableSchedule(handle: string): Promise<DmTableSessionView[]> {
-  const needle = handle.replace(/^@/, '').toLowerCase();
-  if (!needle) return [];
+const schedulePageSchema = z.object({
+  items: z.array(scheduleItemSchema),
+  total: z.number().int().nonnegative(),
+});
+export type DmSchedulePage = { items: DmTableSessionView[]; total: number };
+export const DM_SCHEDULE_PAGE_SIZE = 20;
+export async function loadDmTableSchedule(
+  memberId: string,
+  offset = 0,
+): Promise<DmSchedulePage> {
   try {
     const data = await graphqlRequest<DmTableScheduleQuery>(SCHEDULE_QUERY, {
-      limit: 50,
+      memberId,
+      limit: DM_SCHEDULE_PAGE_SIZE,
+      offset,
     });
-    const items = z.array(scheduleItemSchema).safeParse(data.questBoard?.items ?? []);
-    if (!items.success) {
-      throw toAppError({ failure: 'InvalidWire' }, 'profile:dm-table:schedule');
-    }
-    const now = Date.now();
-    return items.data
-      .filter((q) => (q.dm?.handle ?? '').toLowerCase() === needle)
-      .filter((q) => {
-        const t = Date.parse(q.scheduledAt);
-        return Number.isFinite(t) ? t >= now - 86400000 : true;
-      })
-      .sort((a, b) => Date.parse(a.scheduledAt) - Date.parse(b.scheduledAt))
-      .map((q) => ({
+    const parsed = schedulePageSchema.safeParse(data.quests);
+    if (!parsed.success)
+      throw toAppError({ failure: 'InvalidWire' }, 'profile:schedule');
+    return {
+      total: parsed.data.total,
+      items: parsed.data.items.map((q) => ({
         id: q.id,
         shortCode: q.shortCode,
         title: q.briefDocument?.title ?? q.shortCode,
@@ -146,8 +155,9 @@ export async function loadDmTableSchedule(handle: string): Promise<DmTableSessio
         status: q.displayStatus ?? q.status,
         slotsMax: q.slotsMax,
         filledCount: q.filledCount,
-      }));
-  } catch (err) {
-    throw toAppError(err, 'profile:dm-table:schedule');
+      })),
+    };
+  } catch (error) {
+    throw toAppError(error, 'profile:schedule');
   }
 }

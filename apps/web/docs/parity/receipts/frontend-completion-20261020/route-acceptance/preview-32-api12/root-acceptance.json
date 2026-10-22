@@ -1,0 +1,26 @@
+{
+  "at": "2026-10-20T19:08:11.518756+00:00",
+  "nativeSession": 28547,
+  "exit": 0,
+  "statistics": {
+    "startTime": "2026-10-20T19:01:27.015Z",
+    "duration": 169301.819,
+    "expected": 138,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "routes": 46,
+  "widths": [
+    390,
+    900,
+    1920
+  ],
+  "frontend": "Immutable Build32 sourcef012675c dist329032b0 origin4199",
+  "api": "API12 d103a48f unchanged336production inputs",
+  "reportSha256": "646791081830849182d7cc22d5c0ba2ba4f254296f6d26e2d538a471cfb0536d",
+  "sourceManifestSha256": "f012675c4d58e18b2c7ab0e6a004cb6df1e085add1ba47fc6959a69712505756",
+  "limits": [
+    "Guest readonly and recovery/aliases; authenticated consequential actions/provider/owner pixel approval remain separate."
+  ]
+}

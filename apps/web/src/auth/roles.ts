@@ -20,6 +20,3 @@ export function canAccessVerify(roles: readonly MemberRole[] | undefined): boole
 export function isDm(roles: readonly MemberRole[] | undefined): boolean {
   return hasRole(roles, 'dm') || isAdmin(roles);
 }
-
-export const canAccessAdmin = isAdmin;
-export const canVerify = canAccessVerify;

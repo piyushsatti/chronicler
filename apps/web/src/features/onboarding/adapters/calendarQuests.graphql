@@ -1,0 +1,21 @@
+query RetainedCalendarQuests($filters: QuestFiltersInput!, $offset: Int!) {
+  quests(filters: $filters, limit: 50, offset: $offset) {
+    total
+    items {
+      id
+      shortCode
+      status
+      displayStatus
+      scheduledAt
+      slotsMax
+      filledCount
+      dm {
+        handle
+        displayName
+      }
+      briefDocument {
+        title
+      }
+    }
+  }
+}

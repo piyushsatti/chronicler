@@ -14,7 +14,7 @@ test.describe('component contracts', () => {
     await expect(dialog).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(dialog).toBeHidden();
-    assertRequests();
+    expect(assertRequests()).toContain('CurrentAdminAccess');
   });
 
   test('toast demo dispatches live toast', async ({ page }) => {
@@ -22,17 +22,32 @@ test.describe('component contracts', () => {
     await page.goto('/gallery');
     await expect(page.getByRole('heading', { name: 'Gallery', exact: true })).toBeVisible();
     await page.locator('#gallery-toast').getByRole('button', { name: 'Success', exact: true }).click();
-    await expect(page.getByText('Success toast', { exact: true })).toBeVisible();
-    assertRequests();
+    const host = page.locator('[data-el="toast.host"]');
+    await expect(host).toHaveCount(1);
+    await expect(
+      host.getByRole('status').getByText('Success toast', { exact: true }),
+    ).toBeVisible();
+    expect(assertRequests()).toContain('CurrentAdminAccess');
   });
 
   for (const role of ['anonymous', 'player', 'forged-admin'] as const) {
     test(`gallery denies ${role}`, async ({ page }) => {
       const assertRequests = await installGallerySession(page, role);
       await page.goto('/gallery');
-      await expect(page).toHaveURL(role === 'anonymous' ? /\/login$/ : /\/$/);
+      if (role === 'anonymous') {
+        await expect(page).toHaveURL(/\/login$/);
+        await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible();
+      } else {
+        await expect(page).toHaveURL(/\/gallery$/);
+        await expect(page.getByRole('alert')).toHaveText(
+          'This design surface requires staff access.',
+        );
+      }
       await expect(page.getByRole('heading', { name: 'Gallery', exact: true })).toHaveCount(0);
-      assertRequests();
+      await expect(page.locator('[data-el^="gallery.demo."]')).toHaveCount(0);
+      if (role === 'anonymous')
+        expect(assertRequests()).not.toContain('CurrentAdminAccess');
+      else expect(assertRequests()).toContain('CurrentAdminAccess');
     });
   }
 });

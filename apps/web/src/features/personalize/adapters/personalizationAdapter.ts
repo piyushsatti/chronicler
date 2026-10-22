@@ -10,12 +10,13 @@ import {
   type MemberSettingsPatch,
 } from '../../../api/graphql.schema.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
-import { safeAppError, toAppError } from '../../../errors/toAppError.js';
+import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
-import type {
-  BgEffectId,
-  ColorMode,
-  ColorTheme,
+import {
+  RULED_THEMES,
+  type BgEffectId,
+  type ColorMode,
+  type ColorTheme,
 } from '../../../context/theme.utils.js';
 import MY_PERSONALIZATION_QUERY from './myPersonalization.graphql?raw';
 import UPDATE_MY_SETTINGS_MUTATION from './updateMySettings.graphql?raw';
@@ -45,18 +46,9 @@ const personalizationSchema = z.object({
   settings: settingsSchema.nullable().optional(),
 });
 
-const LOCAL_THEMES = new Set<string>([
-  'parchment',
-  'midnight',
-  'ember',
-  'dracula',
-  'vegan',
-]);
-
 function wireThemeToLocal(theme: WireTheme): ColorTheme {
   const local = theme.toLowerCase();
-  if (LOCAL_THEMES.has(local)) return local as ColorTheme;
-  return 'parchment';
+  return RULED_THEMES.find((ruled) => ruled === local) ?? 'parchment';
 }
 
 function localThemeToWire(theme: ColorTheme): WireTheme | null {
@@ -89,7 +81,7 @@ function localModeToWire(mode: ColorMode): WireColorMode {
   }
 }
 
-export type PersonalizationView = {
+type PersonalizationView = {
   memberId: string | null;
   theme: ColorTheme | null;
   mode: ColorMode | null;
@@ -98,9 +90,14 @@ export type PersonalizationView = {
   reducedMotion: boolean | null;
   density: 'comfortable' | 'compact' | null;
   timezone: string | null;
+  notifyCharacterVerification: boolean | null;
+  notifyQuestSignup: boolean | null;
+  notifyDocumentActivity: boolean | null;
+  notifyQuestScheduled: boolean | null;
+  notifyDmMentioned: boolean | null;
 };
 
-export type SettingsPatch = {
+type SettingsPatch = {
   theme?: ColorTheme;
   mode?: ColorMode;
   effectsEnabled?: boolean;
@@ -117,9 +114,7 @@ export type SettingsPatch = {
   bgEffect?: BgEffectId;
 };
 
-function mapDensity(
-  density: WireDensity,
-): 'comfortable' | 'compact' {
+function mapDensity(density: WireDensity): 'comfortable' | 'compact' {
   return density === WireDensity.Compact ? 'compact' : 'comfortable';
 }
 
@@ -143,6 +138,11 @@ export function parsePersonalization(
         reducedMotion: null,
         density: null,
         timezone: null,
+        notifyCharacterVerification: null,
+        notifyQuestSignup: null,
+        notifyDocumentActivity: null,
+        notifyQuestScheduled: null,
+        notifyDmMentioned: null,
       },
     };
   }
@@ -157,6 +157,11 @@ export function parsePersonalization(
       reducedMotion: settings.reducedMotion,
       density: mapDensity(settings.density),
       timezone: settings.timezone ?? null,
+      notifyCharacterVerification: settings.notifyCharacterVerification,
+      notifyQuestSignup: settings.notifyQuestSignup,
+      notifyDocumentActivity: settings.notifyDocumentActivity,
+      notifyQuestScheduled: settings.notifyQuestScheduled,
+      notifyDmMentioned: settings.notifyDmMentioned,
     },
   };
 }
@@ -181,9 +186,7 @@ function toWirePatch(patch: SettingsPatch): MemberSettingsPatch {
   }
   if (patch.density !== undefined) {
     input.density =
-      patch.density === 'compact'
-        ? WireDensity.Compact
-        : WireDensity.Comfortable;
+      patch.density === 'compact' ? WireDensity.Compact : WireDensity.Comfortable;
   }
   if (patch.timezone !== undefined) input.timezone = patch.timezone;
   if (patch.notifyCharacterVerification !== undefined) {
@@ -207,9 +210,7 @@ function toWirePatch(patch: SettingsPatch): MemberSettingsPatch {
 /** field-routing: myPersonalization → Query.myPersonalization (settings-only). */
 export async function loadPersonalization(): Promise<PersonalizationView> {
   try {
-    const data = await graphqlRequest<MyPersonalizationQuery>(
-      MY_PERSONALIZATION_QUERY,
-    );
+    const data = await graphqlRequest<MyPersonalizationQuery>(MY_PERSONALIZATION_QUERY);
     const result = parsePersonalization(data.myPersonalization ?? {});
     if (!result.ok) {
       throw toAppError({ failure: result.failure }, 'personalize:load');
@@ -220,39 +221,21 @@ export async function loadPersonalization(): Promise<PersonalizationView> {
   }
 }
 
-/**
- * Retired (field-routing OP-055). Product surface is settings-only; do not revive REST.
- */
-export async function reconcilePersonalization(): Promise<never> {
-  throw safeAppError(
-    'Personalization reconcile is unavailable.',
-    'personalize:reconcile',
-  );
-}
-
-/**
- * Retired (field-routing OP-136). Product surface is settings-only; do not revive REST.
- */
-export async function equipCosmetic(_input: {
-  unlockableId: string;
-  slot: string;
-}): Promise<never> {
-  throw safeAppError('Cosmetic equip is unavailable.', 'personalize:equip');
-}
-
 /** field-routing: updateMySettings → Mutation.updateMySettings */
-export async function updateMySettings(patch: SettingsPatch): Promise<void> {
+export async function updateMySettings(
+  patch: SettingsPatch,
+): Promise<PersonalizationView> {
   try {
     const input = toWirePatch(patch);
-    if (Object.keys(input).length === 0) return;
     const data = await graphqlRequest<UpdateMySettingsMutation>(
       UPDATE_MY_SETTINGS_MUTATION,
       { input, meta: commandMeta() },
     );
-    const parsed = settingsSchema.safeParse(data.updateMySettings);
-    if (!parsed.success) {
+    const parsed = parsePersonalization({ settings: data.updateMySettings });
+    if (!parsed.ok) {
       throw toAppError({ failure: 'InvalidWire' }, 'personalize:settings');
     }
+    return parsed.data;
   } catch (err) {
     throw toAppError(err, 'personalize:settings');
   }

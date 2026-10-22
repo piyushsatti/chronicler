@@ -55,13 +55,23 @@ func TestTruncateCodepoints(t *testing.T) {
 }
 
 func TestDocumentDiscoveryKinds(t *testing.T) {
-	if got := documentDiscoveryKinds(nil); len(got) != 0 {
-		t.Fatalf("nil kinds=%v", got)
-	}
-	if got := documentDiscoveryKinds([]string{"member", "codex_entry"}); len(got) != 1 || got[0] != "codex_entry" {
-		t.Fatalf("filtered=%v", got)
-	}
-	if got := documentDiscoveryKinds([]string{"member"}); len(got) != 1 || got[0] != "__none__" {
-		t.Fatalf("member-only=%v", got)
+	for _, tc := range []struct {
+		name    string
+		kinds   []string
+		want    int
+		invalid bool
+	}{
+		{name: "nil all", kinds: nil, want: 5},
+		{name: "empty none", kinds: []string{}, want: 0},
+		{name: "selected", kinds: []string{"member", "codex_entry"}, want: 1},
+		{name: "member only", kinds: []string{"member"}, want: 0},
+		{name: "unknown", kinds: []string{"hex"}, invalid: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := documentDiscoveryKinds(tc.kinds)
+			if (err != nil) != tc.invalid || len(got) != tc.want {
+				t.Fatalf("kinds=%v error=%v, want count %d invalid %t", got, err, tc.want, tc.invalid)
+			}
+		})
 	}
 }

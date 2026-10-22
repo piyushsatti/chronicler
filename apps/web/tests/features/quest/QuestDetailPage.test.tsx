@@ -1,6 +1,7 @@
 import { graphql, http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
 import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
@@ -25,21 +26,22 @@ describe('QuestDetailPage', () => {
     localStorage.clear();
   });
 
-  it('renders summary, roster, and terminal Discord status without gating the page', async () => {
+  it('renders summary and roster for a guest without operator delivery status', async () => {
     renderWithProviders(
       <Routes>
         <Route path="/quests/:code" element={<QuestDetailPage />} />
       </Routes>,
       { route: '/quests/Q-101' },
     );
-    expect(await screen.findByRole('heading', { level: 1, name: 'Siege of Kraghold' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Siege of Kraghold' }),
+    ).toBeInTheDocument();
     expect(screen.getByText('Q-101')).toBeInTheDocument();
-    expect(screen.getByText('Discord · applied')).toBeInTheDocument();
-    expect(document.querySelector('[data-el="quest.discordDelivery"]')).toHaveAttribute(
-      'data-terminal',
-      '1',
-    );
-    expect(screen.getByText('Sign in to claim a seat at this table.')).toBeInTheDocument();
+    // Discord delivery sync is an operator signal, hidden from guests and players.
+    expect(screen.queryByText(/Discord/)).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Sign in to claim a seat at this table.'),
+    ).toBeInTheDocument();
     expect(document.querySelector('[data-page-region="summary"]')).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Roster' })).toBeInTheDocument();
     expect(screen.getByText('Lyra Storm')).toBeInTheDocument();
@@ -74,7 +76,12 @@ describe('QuestDetailPage', () => {
     const delivery = document.querySelector('[data-el="quest.discordDelivery"]');
     expect(delivery).toHaveAttribute('data-terminal', '0');
     expect(delivery).toHaveAttribute('role', 'status');
-    expect(await screen.findByRole('button', { name: 'Sign up' })).toBeEnabled();
+    expect(await screen.findByRole('button', { name: 'Sign up' })).toBeDisabled();
+    await userEvent.selectOptions(
+      screen.getByLabelText('Your character'),
+      'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+    );
+    expect(screen.getByRole('button', { name: 'Sign up' })).toBeEnabled();
   });
 
   it('shows signup empty-state when authenticated with no characters', async () => {
@@ -91,7 +98,7 @@ describe('QuestDetailPage', () => {
       { route: '/quests/Q-101' },
     );
     expect(
-      await screen.findByText('Create a character before you can sign up.'),
+      await screen.findByText(/No eligible active characters to add/),
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Your characters' })).toHaveAttribute(
       'href',
@@ -100,7 +107,36 @@ describe('QuestDetailPage', () => {
     expect(screen.queryByRole('button', { name: 'Sign up' })).not.toBeInTheDocument();
   });
 
-  it('shows transition empty-state when the table cannot change status', async () => {
+  it('offers a retry instead of loading forever when the member lookup fails', async () => {
+    seedToken();
+    let failMe = true;
+    server.use(
+      // Falls through to the default handler once the lookup recovers.
+      graphql.query('MemberMe', () =>
+        failMe
+          ? HttpResponse.json({ errors: [{ message: 'boom' }] }, { status: 500 })
+          : undefined,
+      ),
+      graphql.query('MyCharacters', () =>
+        HttpResponse.json({ data: { myCharacters: { items: [], total: 0 } } }),
+      ),
+    );
+    renderWithProviders(
+      <Routes>
+        <Route path="/quests/:code" element={<QuestDetailPage />} />
+      </Routes>,
+      { route: '/quests/Q-101' },
+    );
+    const retry = await screen.findByRole('button', { name: 'Retry characters' });
+    expect(screen.queryByText('Loading your characters…')).not.toBeInTheDocument();
+    failMe = false;
+    await userEvent.click(retry);
+    expect(
+      await screen.findByText(/No eligible active characters to add/),
+    ).toBeInTheDocument();
+  });
+
+  it('makes attendance and closure available only after the session is played', async () => {
     seedToken();
     server.use(
       graphql.query('Quest', () =>
@@ -121,9 +157,14 @@ describe('QuestDetailPage', () => {
       </Routes>,
       { route: '/quests/Q-101' },
     );
-    expect(await screen.findByText('No status changes on this table.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Mark played' })).not.toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: 'Save attendance' }),
+    ).toBeDisabled();
+    expect(
+      screen.queryByRole('button', { name: 'Mark played' }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Close' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Review closure' })).toBeDisabled();
   });
 
   it('keeps an empty roster as a controlled empty panel', async () => {
@@ -147,7 +188,9 @@ describe('QuestDetailPage', () => {
       { route: '/quests/Q-101' },
     );
     await screen.findByRole('heading', { level: 1, name: 'Siege of Kraghold' });
-    expect(within(screen.getByRole('tabpanel')).getByText('No participants yet.')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('tabpanel')).getByText('No participants yet.'),
+    ).toBeInTheDocument();
   });
 
   it('shows controlled error', async () => {

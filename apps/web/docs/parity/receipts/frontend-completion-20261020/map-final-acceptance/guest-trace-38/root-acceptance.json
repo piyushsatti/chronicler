@@ -1,0 +1,17 @@
+{
+  "at": "2026-10-20T23:01:44.932741+00:00",
+  "nativeSession": 68104,
+  "exit": 0,
+  "test": "guest reads /map; exact grep end anchor; desktop1920 only",
+  "frontendEpoch": 38,
+  "afterTimingOnly": true,
+  "authentication": "Guest only; no OAuth/token/authenticated trace/HAR",
+  "requestsChecked": 14,
+  "credentialHeadersOrCookies": 0,
+  "traceSha256": "32a7297e15d113dc3a5fdaf755e105c57e68980d849482b056645f20e897872b",
+  "reportSha256": "07325fba20d60ca570834e24b58256da8db23106e7dc4c017298edbbd38dd85b",
+  "limits": [
+    "Functional guest trace recorded after all40timing samples; no trace/profiler overhead included in samples.",
+    "Trace is not owner visual approval or authenticated/provider evidence."
+  ]
+}

@@ -2,17 +2,16 @@ import { z } from 'zod';
 import type {
   CreateDocumentMutation,
   CreateQuestMutation,
-  DiscordDeliveryModeQuery,
   EditPublishedDocumentMutation,
   PreviewBodyQuery,
   PublishDocumentMutation,
-  SyncQuestDiscordMutation,
   UpdateDocumentMutation,
   UpdateQuestMutation,
 } from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
+import { documentHref } from '../../../utils/documentHref.js';
 import CREATE_QUEST from './createQuest.graphql?raw';
 import UPDATE_QUEST from './updateQuest.graphql?raw';
 import CREATE_DOCUMENT from './createDocument.graphql?raw';
@@ -20,11 +19,9 @@ import UPDATE_DOCUMENT from './updateDocument.graphql?raw';
 import PUBLISH_DOCUMENT from './publishDocument.graphql?raw';
 import EDIT_PUBLISHED from './editPublishedDocument.graphql?raw';
 import PREVIEW_BODY from './previewBody.graphql?raw';
-import DISCORD_DELIVERY_MODE from './discordDeliveryMode.graphql?raw';
-import SYNC_QUEST_DISCORD from './syncQuestDiscord.graphql?raw';
 
-function commandMeta(): { idempotencyKey: string } {
-  return { idempotencyKey: crypto.randomUUID() };
+function commandMeta(idempotencyKey?: string): { idempotencyKey: string } {
+  return { idempotencyKey: idempotencyKey ?? crypto.randomUUID() };
 }
 
 const questResultSchema = z.object({
@@ -44,6 +41,7 @@ export type EditorPublishResult = {
   redirectPath: string;
   warning?: string;
   version?: number;
+  slug?: string;
 };
 
 export type QuestEditorInput = {
@@ -58,6 +56,7 @@ export type QuestEditorInput = {
   tags: string[];
   apl: number | null;
   signupType: string | null;
+  additionalInfo: string | null;
 };
 
 export type DocumentEditorInput = {
@@ -101,6 +100,7 @@ export function parseDocumentMutationResult(
 /** field-routing: createQuest → GraphQL Mutation.createQuest */
 export async function createQuest(
   input: QuestEditorInput,
+  idempotencyKey?: string,
 ): Promise<EditorPublishResult> {
   try {
     const data = await graphqlRequest<CreateQuestMutation>(CREATE_QUEST, {
@@ -116,8 +116,9 @@ export async function createQuest(
         tags: input.tags,
         apl: input.apl,
         signupType: input.signupType,
+        additionalInfo: input.additionalInfo,
       },
-      meta: commandMeta(),
+      meta: commandMeta(idempotencyKey),
     });
     const result = parseQuestMutationResult(data.createQuest);
     if (!result.ok) {
@@ -135,6 +136,7 @@ export async function updateQuest(
   questId: string,
   input: Partial<QuestEditorInput> & { title?: string; briefBody?: string },
   expectedUpdatedAt: string,
+  idempotencyKey?: string,
 ): Promise<EditorPublishResult> {
   try {
     const data = await graphqlRequest<UpdateQuestMutation>(UPDATE_QUEST, {
@@ -152,8 +154,9 @@ export async function updateQuest(
         tags: input.tags,
         apl: input.apl,
         signupType: input.signupType,
+        additionalInfo: input.additionalInfo,
       },
-      meta: commandMeta(),
+      meta: commandMeta(idempotencyKey),
     });
     const result = parseQuestMutationResult(data.updateQuest);
     if (!result.ok) {
@@ -169,6 +172,7 @@ export async function updateQuest(
 /** field-routing: createDocument → GraphQL Mutation.createDocument */
 export async function createDocument(
   input: DocumentEditorInput,
+  idempotencyKey?: string,
 ): Promise<EditorPublishResult> {
   try {
     const data = await graphqlRequest<CreateDocumentMutation>(CREATE_DOCUMENT, {
@@ -180,7 +184,7 @@ export async function createDocument(
         frontmatter: {},
         visibility: input.visibility ?? 'public',
       },
-      meta: commandMeta(),
+      meta: commandMeta(idempotencyKey),
     });
     const result = parseDocumentMutationResult(data.createDocument);
     if (!result.ok) {
@@ -188,7 +192,13 @@ export async function createDocument(
     }
     return {
       id: result.data.id,
-      redirectPath: result.data.slug ? `/summaries/${result.data.slug}` : '/',
+      redirectPath:
+        documentHref({
+          kind: input.kind,
+          category: input.category,
+          slug: result.data.slug ?? '',
+        }) ?? '/',
+      slug: result.data.slug ?? undefined,
       version: result.data.version,
     };
   } catch (err) {
@@ -200,6 +210,7 @@ export async function createDocument(
 export async function updateDocument(
   documentId: string,
   input: Partial<DocumentEditorInput> & { expectedRevision: number },
+  idempotencyKey?: string,
 ): Promise<EditorPublishResult> {
   try {
     const data = await graphqlRequest<UpdateDocumentMutation>(UPDATE_DOCUMENT, {
@@ -208,9 +219,9 @@ export async function updateDocument(
         expectedRevision: input.expectedRevision,
         title: input.title,
         body: input.body,
-        category: input.category ?? null,
+        ...(input.category !== undefined ? { category: input.category } : {}),
       },
-      meta: commandMeta(),
+      meta: commandMeta(idempotencyKey),
     });
     const result = parseDocumentMutationResult(data.updateDocument);
     if (!result.ok) {
@@ -218,7 +229,13 @@ export async function updateDocument(
     }
     return {
       id: result.data.id,
-      redirectPath: result.data.slug ? `/summaries/${result.data.slug}` : '/',
+      redirectPath:
+        documentHref({
+          kind: input.kind ?? '',
+          category: input.category,
+          slug: result.data.slug ?? '',
+        }) ?? '/',
+      slug: result.data.slug ?? undefined,
       version: result.data.version,
     };
   } catch (err) {
@@ -230,13 +247,23 @@ export async function updateDocument(
 export async function publishDocument(
   documentId: string,
   expectedRevision: number,
-): Promise<void> {
+  idempotencyKey?: string,
+): Promise<EditorPublishResult> {
   try {
-    await graphqlRequest<PublishDocumentMutation>(PUBLISH_DOCUMENT, {
+    const data = await graphqlRequest<PublishDocumentMutation>(PUBLISH_DOCUMENT, {
       id: documentId,
       expectedRevision,
-      meta: commandMeta(),
+      meta: commandMeta(idempotencyKey),
     });
+    const result = parseDocumentMutationResult(data.publishDocument);
+    if (!result.ok)
+      throw toAppError({ failure: result.failure }, 'editor:document:publish');
+    return {
+      id: result.data.id,
+      slug: result.data.slug ?? undefined,
+      version: result.data.version,
+      redirectPath: '/',
+    };
   } catch (err) {
     throw toAppError(err, 'editor:document:publish');
   }
@@ -288,12 +315,17 @@ export async function previewBodyAs(input: {
  * field-routing: editPublishedDocument → GraphQL Mutation.editPublishedDocument
  * Atomic title/body edit for already-published briefs (legacy #280).
  */
-export async function editPublishedDocument(input: {
-  documentId: string;
-  title: string;
-  body: string;
-  expectedRevision: number;
-}): Promise<EditorPublishResult> {
+export async function editPublishedDocument(
+  input: {
+    documentId: string;
+    title?: string;
+    body?: string;
+    kind?: string;
+    category?: string | null;
+    expectedRevision: number;
+  },
+  idempotencyKey?: string,
+): Promise<EditorPublishResult> {
   try {
     const data = await graphqlRequest<EditPublishedDocumentMutation>(EDIT_PUBLISHED, {
       id: input.documentId,
@@ -301,8 +333,9 @@ export async function editPublishedDocument(input: {
         expectedRevision: input.expectedRevision,
         title: input.title,
         body: input.body,
+        ...(input.category !== undefined ? { category: input.category } : {}),
       },
-      meta: commandMeta(),
+      meta: commandMeta(idempotencyKey),
     });
     const result = parseDocumentMutationResult(data.editPublishedDocument);
     if (!result.ok) {
@@ -310,48 +343,16 @@ export async function editPublishedDocument(input: {
     }
     return {
       id: result.data.id,
-      redirectPath: result.data.slug ? `/summaries/${result.data.slug}` : '/',
+      redirectPath:
+        documentHref({
+          kind: input.kind ?? '',
+          category: input.category,
+          slug: result.data.slug ?? '',
+        }) ?? '/',
+      slug: result.data.slug ?? undefined,
       version: result.data.version,
     };
   } catch (err) {
     throw toAppError(err, 'editor:document:edit-published');
   }
-}
-
-/** field-routing: discordDeliveryMode → GraphQL Query.discordDeliveryMode */
-export async function usesDurableDiscordDelivery(): Promise<boolean> {
-  try {
-    const data = await graphqlRequest<DiscordDeliveryModeQuery>(DISCORD_DELIVERY_MODE);
-    return data.discordDeliveryMode === 'queue';
-  } catch {
-    return false;
-  }
-}
-
-/**
- * field-routing: syncQuestDiscord → GraphQL Mutation.syncQuestDiscord
- * Direct-mode bridge after quest save; skipped when delivery mode is `queue`.
- */
-export async function syncQuestDiscord(questId: string): Promise<string | undefined> {
-  try {
-    const data = await graphqlRequest<SyncQuestDiscordMutation>(SYNC_QUEST_DISCORD, {
-      questId,
-      meta: commandMeta(),
-    });
-    const status = data.syncQuestDiscord.deliveryStatus;
-    if (status && status !== 'ok' && status !== 'applied' && status !== 'queued') {
-      return data.syncQuestDiscord.deliveryStatus;
-    }
-    return undefined;
-  } catch {
-    return 'Quest saved; Discord synchronization could not be checked. Retry from the quest page.';
-  }
-}
-
-/** Sync after save only when not on durable queue delivery. */
-export async function maybeSyncQuestDiscord(
-  questId: string,
-): Promise<string | undefined> {
-  if (await usesDurableDiscordDelivery()) return undefined;
-  return syncQuestDiscord(questId);
 }

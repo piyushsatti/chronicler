@@ -1,0 +1,11 @@
+mutation ProfileSetMyAvailability(
+  $slots: [AvailabilitySlotInput!]!
+  $meta: CommandMeta!
+) {
+  setMyAvailability(slots: $slots, meta: $meta) {
+    day
+    startTime
+    endTime
+    note
+  }
+}

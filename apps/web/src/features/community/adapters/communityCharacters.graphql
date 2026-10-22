@@ -1,0 +1,12 @@
+query CommunityCharacters($limit: Int!) {
+  characters(limit: $limit, offset: 0) {
+    items {
+      id
+      shortCode
+      name
+      status
+      displayIcon
+    }
+    total
+  }
+}

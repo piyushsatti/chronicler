@@ -4,6 +4,7 @@ mutation CreateRegion($input: RegionInput!, $meta: CommandMeta!) {
     name
     kind
     charterDeadline
+    documentId
     createdAt
   }
 }

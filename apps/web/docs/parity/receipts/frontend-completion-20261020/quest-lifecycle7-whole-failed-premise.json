@@ -1,0 +1,15 @@
+{
+  "at": "2026-10-20T22:36:33.571870Z",
+  "premise": "Executednine-journeydriveremitsthesameper-operationphase/per-checktimestampmetadataasthelatercompositiondriver.",
+  "verdict": false,
+  "actualBrowserCompleted": true,
+  "actualNineCallbacks": 9,
+  "operations": 383,
+  "mutations": 31,
+  "explicitPhaseFields": 0,
+  "checkCompletedAtFields": 0,
+  "browserReceiptSha256": "130d764d42ed33bd8f039ad67dc4a5d5b5cb3a74b59353a87db2834be7c4a4a3",
+  "wholeNativeAccepted": false,
+  "failure": "Newnative14test-onlylifecyclePhasesguardrequiresunsupportedmetadata; exact9callbackcontract/zerocompositioncommands/realSQLchecksremainthenecessarysupportedcontract.",
+  "nextStep": "Originalauthorremoveredundantunsupportedphasevalidator; preservedefault13compositionphasechecks/allnativeSQL/realactionreceiptvalidation; reviewthencompile15andrerunfresh8."
+}

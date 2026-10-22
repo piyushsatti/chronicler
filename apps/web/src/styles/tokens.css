@@ -6,6 +6,10 @@
   --font-heading:   'Fraunces Variable', serif;
   --font-narrative: 'Fraunces Variable', serif;
   --font-mono:      'Geist Mono', monospace;
+  /* Title tiers (.type-display/.type-heading/.type-title), D7. Fraunces
+     stays on --font-display/--font-narrative for narrative prose. */
+  --font-title:        'Lexend Variable', 'Geist', sans-serif;
+  --font-title-weight: 700;
 }
 
 /* === SECTION 2: COLOUR THEMES === */
@@ -182,6 +186,17 @@
   --p-region-viceroc:     #f08080;
   --p-region-dunnshore:   #87ceeb;
   --p-region-pelsand:     #deb887;
+}
+
+/* ---- Parchment primary-button primitives (D8) ----
+ * Mode-invariant, so they sit outside the [data-theme][data-mode] blocks
+ * (the A6 theme-schema gate requires every ruled theme to carry the same
+ * per-mode --p-* set; only Parchment has this fill). Dark ink is 9.0:1 on
+ * the fill and 7.5:1 on the hover; white text would fail AA. */
+[data-theme="parchment"] {
+  --p-btn-primary:       #eeac4c;
+  --p-btn-primary-hover: #e09a35;
+  --p-btn-primary-ink:   #1b1712;
 }
 
 /* ---- Theme-invariant brand-identity primitives (#452, A2, fork 9) ----
@@ -578,6 +593,12 @@
   --color-hero-on-brand-ink: var(--p-ground-0);
   --focus-ring: 0 0 0 2px var(--p-ground-0), 0 0 0 4px var(--p-brand);
 
+  /* Primary button (D8). Other themes leave these unset and fall back to
+     --color-accent / --color-accent-hover / --color-hero-on-brand-ink. */
+  --btn-primary-bg:       var(--p-btn-primary);
+  --btn-primary-bg-hover: var(--p-btn-primary-hover);
+  --btn-primary-ink:      var(--p-btn-primary-ink);
+
   /* status / confidence — Parchment reads primitives too */
   --color-status-alive:    var(--p-green);
   --color-status-dead:     var(--p-red);
@@ -935,19 +956,17 @@
   --sp-7: calc(48px * var(--density-mult));
   --sp-8: calc(64px * var(--density-mult));
 
-  /* Radii / shadows — theme-independent */
+  /* Radii — theme-independent */
   --rad:      14px;
   --rad-sm:   9px;
   --rad-xs:   4px;   /* NEW (#452, fork 2): absorbs off-scale 2/3/4/6 */
   --rad-pill: 999px;
-  --shadow:      0 1px 2px rgba(33, 28, 22, 0.04), 0 4px 16px rgba(33, 28, 22, 0.05);
-  --shadow-lift: 0 2px 6px rgba(33, 28, 22, 0.06), 0 12px 32px rgba(33, 28, 22, 0.10);
+  --rad-btn:  8px;   /* D9: buttons are rounded rectangles; chips/pills keep --rad-pill */
 
   /* Elevation scale — NEW (#452, fork 6): 3-step drop-shadow scale,
-   * replacing --shadow/--shadow-lift as the language going forward.
-   * The old pair stays defined above (still consumed, migration task
-   * per design-language.md section 8) but no new call site should
-   * reach for it. */
+   * replacing --shadow/--shadow-lift. Migration done 2026-10-21 (owner
+   * mapping: --shadow -> --shadow-2, --shadow-lift -> --shadow-3); the
+   * old pair is deleted. */
   /* #452 (A2) review fix: no raw rgba(0,0,0,x) literals — derive from the
    * scrim-based semantic token (--color-backdrop, itself --p-scrim on the
    * parchment tier) via color-mix, no literal color operand. Ratios are the

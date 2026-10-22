@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbgen"
@@ -71,12 +72,46 @@ func (p PoolPolicyProviders) DiscordIdentity(ctx context.Context, memberID strin
 	return DiscordIdentity{MemberID: memberID, DiscordID: row.DiscordID}, nil
 }
 
-func (p PoolPolicyProviders) SummaryRelations(_ context.Context, questIDs []string, _ *string) (SummaryEvidence, error) {
-	relations := make([]SummaryRelation, len(questIDs))
+func (p PoolPolicyProviders) SummaryRelations(ctx context.Context, questIDs []string, characterID *string) (SummaryEvidence, error) {
+	ids := make([]pgtype.UUID, len(questIDs))
 	for i, questID := range questIDs {
-		relations[i] = SummaryRelation{QuestID: questID}
+		id, err := db.ParseUUID(questID)
+		if err != nil {
+			return SummaryEvidence{}, err
+		}
+		ids[i] = id
 	}
-	return SummaryEvidence{Relations: relations}, nil
+	var character pgtype.UUID
+	if characterID != nil {
+		var err error
+		character, err = db.ParseUUID(*characterID)
+		if err != nil {
+			return SummaryEvidence{}, err
+		}
+	}
+	rows, err := dbgen.New(p.DB).ProductQuestSummaryRelations(ctx, dbgen.ProductQuestSummaryRelationsParams{QuestIds: ids, CharacterID: character})
+	if err != nil {
+		return SummaryEvidence{}, err
+	}
+	evidence := SummaryEvidence{Relations: make([]SummaryRelation, 0, len(rows))}
+	for _, row := range rows {
+		if !row.QuestDmID.Valid {
+			return SummaryEvidence{}, apierr.New(apierr.NotFound, "quest not found")
+		}
+		relation := SummaryRelation{QuestID: db.UUIDString(row.QuestID), QuestDMID: db.UUIDString(row.QuestDmID)}
+		if row.ParticipantOwnerID.Valid && row.ParticipantStatus.Valid {
+			owner, status := db.UUIDString(row.ParticipantOwnerID), row.ParticipantStatus.String
+			relation.ParticipantOwnerID, relation.ParticipantStatus = &owner, &status
+		}
+		if characterID != nil {
+			if !row.CharacterID.Valid || !row.CharacterOwnerID.Valid {
+				return SummaryEvidence{}, apierr.New(apierr.NotFound, "character not found")
+			}
+			evidence.Character = &CharacterFacts{ID: db.UUIDString(row.CharacterID), OwnerID: db.UUIDString(row.CharacterOwnerID)}
+		}
+		evidence.Relations = append(evidence.Relations, relation)
+	}
+	return evidence, nil
 }
 
 func NewPoolPolicy(db dbgen.DBTX) (*Policy, error) {

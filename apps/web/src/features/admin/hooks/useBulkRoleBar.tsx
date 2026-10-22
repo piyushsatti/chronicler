@@ -4,7 +4,8 @@ import {
   panelState,
 } from './useAdminAuthority.js';
 import { useEffect, useMemo, useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../../../api/queryKeys.js';
 import { setMemberRolesBatch } from '../adapters/adminAdapter.js';
 import {
   roleFormFromRoles,
@@ -35,6 +36,7 @@ const BLANK_FORM: MemberRoleForm = {
 
 export function useBulkRoleBar({ selected, onApplied }: BulkRoleBarProps) {
   const authority = useAdminAuthority();
+  const queryClient = useQueryClient();
   const [submittedMembers, setSubmittedMembers] = useState<BulkRoleMember[]>([]);
   const [report, setReport] = useState<{ id: string; ok: boolean; error?: string }[]>(
     [],
@@ -61,15 +63,26 @@ export function useBulkRoleBar({ selected, onApplied }: BulkRoleBarProps) {
     setTouched(false);
   }, [selectedKey, homogeneousForm]);
 
-  const batch = useMutation({
-    mutationFn: authority.guardMutation(() =>
-      setMemberRolesBatch({
-        memberIds: selected.map((m) => m.id),
-        roles: rolesFromForm(form),
-      }),
-    ),
-    onSuccess: (results) => {
+  const batch = useMutation<
+    Awaited<ReturnType<typeof setMemberRolesBatch>>,
+    unknown,
+    void
+  >({
+    mutationKey: ['adminCommand', authority.commandKey, 'useBulkRoleBar'],
+    networkMode: 'always',
+    retry: false,
+    mutationFn: authority.guardMutation(async (command) => {
       setSubmittedMembers(selected);
+      return setMemberRolesBatch(
+        {
+          memberIds: selected.map((m) => m.id),
+          roles: rolesFromForm(form),
+        },
+        command,
+      );
+    }),
+    onSuccess: (results) => {
+      if (!authority.isCurrent()) return;
       setReport(
         results.map((r) => ({
           id: r.memberId,
@@ -78,6 +91,8 @@ export function useBulkRoleBar({ selected, onApplied }: BulkRoleBarProps) {
         })),
       );
       onApplied(results.filter((r) => r.ok).map((r) => r.memberId));
+      if (results.some((r) => r.ok && r.memberId === authority.actorId))
+        void queryClient.invalidateQueries({ queryKey: queryKeys.me });
     },
   });
   useAuthorityFailures(batch.error);

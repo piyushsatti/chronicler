@@ -13,9 +13,16 @@ import ACK_MUTATION from './acknowledgeSuppressedNotifications.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 
-function commandMeta(): { idempotencyKey: string } {
-  return { idempotencyKey: crypto.randomUUID() };
-}
+import {
+  loadDocumentDestinations,
+  subjectDestination,
+  type NotificationDestination,
+  type NotificationRequestSession,
+} from './notificationDestinations.js';
+
+type NotificationWriteSession = NotificationRequestSession & {
+  idempotencyKey: string;
+};
 
 const notificationSchema = z.object({
   id: z.string(),
@@ -24,16 +31,21 @@ const notificationSchema = z.object({
   summary: z.string().nullable().optional(),
   label: z.string(),
   readAt: z.string().nullable().optional(),
+  subjectId: z.string().uuid().nullable().optional(),
   subjectType: z.string().optional().default(''),
   subjectCode: z.string().nullable().optional(),
   createdAt: z.string().optional(),
 });
 
-const connectionSchema = z.object({
-  items: z.array(notificationSchema),
-  hasMore: z.boolean(),
-  nextBefore: z.string().nullable().optional(),
-});
+const connectionSchema = z
+  .object({
+    items: z.array(notificationSchema).max(100),
+    hasMore: z.boolean(),
+    nextBefore: z.string().min(1).nullable().optional(),
+  })
+  .refine((page) => !page.hasMore || Boolean(page.nextBefore), {
+    message: 'More notifications require a cursor',
+  });
 
 const unreadSchema = z.number().int().nonnegative();
 
@@ -50,12 +62,14 @@ export type NotificationView = {
   summary: string | null;
   unread: boolean;
   readAt: string | null;
+  subjectId: string | null;
+  destination: NotificationDestination;
   subjectType: string;
   subjectCode: string | null;
   createdAt: string | null;
 };
 
-export type NotificationPage = {
+type NotificationPage = {
   items: NotificationView[];
   hasMore: boolean;
   nextBefore: string | null;
@@ -70,6 +84,12 @@ function mapItem(n: z.infer<typeof notificationSchema>): NotificationView {
     summary: n.summary ?? null,
     unread: n.readAt == null,
     readAt: n.readAt ?? null,
+    subjectId: n.subjectId ?? null,
+    destination: subjectDestination({
+      subjectId: n.subjectId ?? null,
+      subjectType: n.subjectType,
+      subjectCode: n.subjectCode ?? null,
+    }),
     subjectType: n.subjectType,
     subjectCode: n.subjectCode ?? null,
     createdAt: n.createdAt ?? null,
@@ -107,29 +127,55 @@ export function parseUnreadCount(wire: unknown): AdapterResult<number> {
   return { ok: true, data: parsed.data };
 }
 
-export async function loadNotifications(opts?: {
+export async function loadNotifications(opts: {
   limit?: number;
   before?: string | null;
+  session: NotificationRequestSession;
 }): Promise<NotificationPage> {
   try {
+    opts.session.signal.throwIfAborted();
     const data = await graphqlRequest<MyNotificationsQuery>(
       NOTIFICATIONS_QUERY,
-      { limit: opts?.limit ?? 20, before: opts?.before ?? null },
+      { limit: opts.limit ?? 20, before: opts.before ?? null },
+      {
+        signal: opts.session.signal,
+        headers: { Authorization: `Bearer ${opts.session.token}` },
+      },
     );
     const result = parseNotificationPage(data.myNotifications);
     if (!result.ok) {
       throw toAppError({ failure: result.failure }, 'notifications:list');
     }
-    return result.data;
+    if (result.data.hasMore && result.data.nextBefore === opts.before)
+      throw toAppError({ failure: 'InvalidWire' }, 'notifications:cursor');
+    const destinations = await loadDocumentDestinations(
+      result.data.items,
+      opts.session,
+    );
+    return {
+      ...result.data,
+      items: result.data.items.map((item) => ({
+        ...item,
+        destination:
+          item.subjectType === 'document' && item.subjectId
+            ? (destinations.get(item.subjectId) ?? item.destination)
+            : item.destination,
+      })),
+    };
   } catch (err) {
     throw toAppError(err, 'notifications:list');
   }
 }
 
-export async function loadUnreadCount(): Promise<number> {
+export async function loadUnreadCount(
+  session: NotificationRequestSession,
+): Promise<number> {
   try {
+    session.signal.throwIfAborted();
     const data = await graphqlRequest<MyUnreadNotificationCountQuery>(
       UNREAD_COUNT_QUERY,
+      undefined,
+      { signal: session.signal, headers: { Authorization: `Bearer ${session.token}` } },
     );
     const result = parseUnreadCount(data.myUnreadNotificationCount);
     if (!result.ok) {
@@ -141,11 +187,15 @@ export async function loadUnreadCount(): Promise<number> {
   }
 }
 
-export async function acknowledgeSuppressedNotifications(): Promise<void> {
+export async function acknowledgeSuppressedNotifications(
+  session: NotificationWriteSession,
+): Promise<z.infer<typeof writeReceiptSchema>> {
   try {
+    session.signal.throwIfAborted();
     const data = await graphqlRequest<AcknowledgeSuppressedNotificationsMutation>(
       ACK_MUTATION,
-      { limit: 100, meta: commandMeta() },
+      { limit: 100, meta: { idempotencyKey: session.idempotencyKey } },
+      { signal: session.signal, headers: { Authorization: `Bearer ${session.token}` } },
     );
     const parsed = writeReceiptSchema.safeParse(
       data.acknowledgeSuppressedNotifications,
@@ -153,6 +203,7 @@ export async function acknowledgeSuppressedNotifications(): Promise<void> {
     if (!parsed.success) {
       throw toAppError({ failure: 'InvalidWire' }, 'notifications:ack');
     }
+    return parsed.data;
   } catch (err) {
     throw toAppError(err, 'notifications:ack');
   }
@@ -167,7 +218,7 @@ const markReadBatchSchema = z
 /** field-routing: markNotificationsRead → Mutation.markNotificationsRead */
 export async function markNotificationsRead(
   ids: readonly string[],
-  session: { token: string; signal: AbortSignal },
+  session: NotificationWriteSession,
 ): Promise<void> {
   try {
     const parsed = markReadBatchSchema.safeParse(ids);
@@ -175,16 +226,15 @@ export async function markNotificationsRead(
       throw toAppError({ failure: 'InvalidWire' }, 'notifications:mark-read');
     }
     if (parsed.data.length === 0) return;
-    const normalized = Array.from(
-      new Set(parsed.data.map((id) => id.toLowerCase())),
-    );
+    const normalized = Array.from(new Set(parsed.data.map((id) => id.toLowerCase())));
     // Validated UUIDs are ASCII: even 100 distinct IDs occupy only 3,909 bytes.
     if (JSON.stringify({ ids: normalized }).length > 8192) {
       throw toAppError({ failure: 'InvalidWire' }, 'notifications:mark-read');
     }
+    session.signal.throwIfAborted();
     const data = await graphqlRequest<MarkNotificationsReadMutation>(
       MARK_READ_MUTATION,
-      { ids: normalized, meta: commandMeta() },
+      { ids: normalized, meta: { idempotencyKey: session.idempotencyKey } },
       {
         signal: session.signal,
         headers: { Authorization: `Bearer ${session.token}` },

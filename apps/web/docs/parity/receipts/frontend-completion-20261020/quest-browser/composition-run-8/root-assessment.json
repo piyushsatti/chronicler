@@ -1,0 +1,28 @@
+{
+  "at": "2026-10-20T16:30:12.796171+00:00",
+  "nativeSession": 52079,
+  "nativeExit": 1,
+  "status": "failed eighth Calendar stage; seven completed stages retained",
+  "frontendEpoch": 28,
+  "sourceInputsStable": true,
+  "seriesActualAcceptance": {
+    "ownerCreateRenameReload": true,
+    "plainUnrelatedApprovedDmCreateVisible": true,
+    "unrelatedRenameAbsent": true,
+    "knownReceiptLabelCollision": "Series detail.name overwrote the stage label in checks; successful assertions and composition phase census remain explicit."
+  },
+  "failure": "Expected values to be strictly equal:\n\n0 !== 1\n",
+  "calendarEvidence": "Month projection,51 total,50+1 pages,reader/back/reload passed. Exact narrow filter for persisted composition Document title returned0; diagnosis pending. No later lifecycle completion claimed.",
+  "cleanup": {
+    "apiClosed": true,
+    "at": "2026-10-20T16:28:10.374660394Z",
+    "database": "product_case_1",
+    "databaseDropped": true
+  },
+  "artifacts": {
+    "browser-receipt.json": "19a109d790804b54e6a1dd97146912a45683254c581727452eb92629ca480199",
+    "native-cleanup.json": "201583126901a1210c38d8160f53bb347ccacc65c54d182ec8d96710f628aec2",
+    "failure-1.aria.txt": "e68c1896583cf01a1c4565439af35c97d7ae8a0c9c0694b8217dc0da4f37fd38",
+    "failure-1.png": "90cee181cb7d27e098fbc61f4ce4023ca1e1ac54991ed532ef02a7f3483c8622"
+  }
+}

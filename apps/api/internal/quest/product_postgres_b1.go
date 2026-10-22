@@ -3,6 +3,7 @@ package quest
 import (
 	"context"
 	"errors"
+	"math"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -94,7 +95,11 @@ func (p *ProductPostgres) ReadDmSessionHistory(ctx context.Context, _ auth.Autho
 		}
 		items = append(items, item)
 	}
-	return DmSessionHistoryResult{Items: items, Total: total}, nil
+	views := make([]*QuestView, len(items))
+	for i := range items {
+		views[i] = &items[i].Quest
+	}
+	return DmSessionHistoryResult{Items: items, Total: total}, p.fillQuestRegionIDs(ctx, views...)
 }
 
 func (p *ProductPostgres) ReadQuestSummaries(ctx context.Context, actor auth.Authority, spec QuestSummariesSpec) (QuestSummariesResult, error) {
@@ -168,11 +173,13 @@ func (p *ProductPostgres) questSummaryTotals(ctx context.Context, questID pgtype
 	}
 	switch row.Status {
 	case "closed":
-		if row.HasQuestRewardRows {
+		if row.HasCompleteRewardCoverage.Bool {
+			if row.TotalPcxp < math.MinInt32 || row.TotalPcxp > math.MaxInt32 {
+				return QuestSummaryTotalsView{}, apierr.New(apierr.Internal, "quest reward total exceeds GraphQL Int range")
+			}
 			total := int32(row.TotalPcxp)
 			return QuestSummaryTotalsView{Coverage: RewardCoverageComplete, TotalPcxpAwarded: &total}, nil
 		}
-		// Closed without quest_reward ledger rows: honest legacy gap until close writes a coverage marker.
 		return QuestSummaryTotalsView{Coverage: RewardCoverageLegacyUnknown}, nil
 	default:
 		zero := int32(0)
@@ -228,13 +235,13 @@ func (p *ProductPostgres) ReadBatchParticipants(ctx context.Context, _ auth.Auth
 			continue
 		}
 		slot := positions[position]
-		if row.QuestPublicID == "" || row.CharacterPublicID == "" {
+		if !row.QuestPublicID.Valid || !row.CharacterPublicID.Valid || !row.MemberPublicID.Valid {
 			continue
 		}
 		grouped[slot] = append(grouped[slot], QuestParticipantView{
-			QuestId:           row.QuestPublicID,
-			MemberId:          row.MemberPublicID,
-			CharacterId:       row.CharacterPublicID,
+			QuestId:           db.UUIDString(row.QuestPublicID),
+			MemberId:          db.UUIDString(row.MemberPublicID),
+			CharacterId:       db.UUIDString(row.CharacterPublicID),
 			CharacterName:     row.CharacterName.String,
 			MemberHandle:      row.MemberHandle.String,
 			MemberDisplayName: row.MemberDisplayName.String,

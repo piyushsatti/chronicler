@@ -1,8 +1,9 @@
 import type { EditorMeta, FieldSchema } from './types.js';
+import { GATED_CODEX_CATEGORY } from '../../utils/codexCategories.js';
+import { CODEX_AUTHORING_CATEGORIES, QUEST_KINDS } from './editorConstants.js';
+import { isEditorInstant } from './editorDateTime.js';
 
-const QUEST_KINDS = ['standard', 'oneshot', 'series', 'social', 'beginner'];
-
-export const QUEST_SCHEMA: FieldSchema[] = [
+const QUEST_SCHEMA: FieldSchema[] = [
   {
     key: 'title',
     label: 'Title',
@@ -15,7 +16,7 @@ export const QUEST_SCHEMA: FieldSchema[] = [
     key: 'shortCode',
     label: 'Code',
     type: 'code',
-    placeholder: 'Assigned on publish',
+    placeholder: 'Assigned when created',
     readOnly: true,
   },
   {
@@ -25,14 +26,17 @@ export const QUEST_SCHEMA: FieldSchema[] = [
     required: true,
     options: QUEST_KINDS,
     validate: (v) =>
-      !Array.isArray(v) || v.length === 0 ? 'Pick at least one kind' : null,
+      !Array.isArray(v) || v.length === 0
+        ? 'Pick at least one kind'
+        : v.some((kind) => !QUEST_KINDS.some(([key]) => key === kind))
+          ? 'Choose a supported kind'
+          : null,
   },
   {
     key: 'regions',
     label: 'Regions',
     type: 'regionmulti',
     required: true,
-    hint: 'region ids',
     validate: (v) =>
       !Array.isArray(v) || v.length === 0 ? 'Pick at least one region' : null,
   },
@@ -43,8 +47,9 @@ export const QUEST_SCHEMA: FieldSchema[] = [
     placeholder: 'e.g. 7',
     hint: 'average party level, optional',
     validate: (v) => {
-      if (!v || typeof v !== 'string') return null;
-      return /^\d+$/.test(v.trim()) ? null : 'Whole number only';
+      if (v == null || v === '') return null;
+      const n = Number(v);
+      return Number.isInteger(n) && n > 0 ? null : 'Positive whole number only';
     },
   },
   {
@@ -65,13 +70,20 @@ export const QUEST_SCHEMA: FieldSchema[] = [
     type: 'text',
     required: true,
     placeholder: '4',
+    validate: (v) =>
+      Number.isInteger(Number(v)) && Number(v) > 0
+        ? null
+        : 'Must be a positive whole number',
   },
   {
     key: 'scheduledAt',
-    label: 'Session (ISO)',
-    type: 'text',
+    label: 'Session',
+    type: 'datetime',
     required: true,
-    hint: 'UTC instant',
+    validate: (v) =>
+      isEditorInstant(v)
+        ? null
+        : 'Choose a valid session time and resolve any timezone choice',
   },
   {
     key: 'signupType',
@@ -79,15 +91,19 @@ export const QUEST_SCHEMA: FieldSchema[] = [
     type: 'select',
     required: true,
     options: [
-      ['dm_pick', 'DM Pick'],
-      ['last_played', 'Last Played'],
+      ['open', 'Open signup'],
+      ['application', 'Application'],
+      ['invite', 'Invitation'],
     ],
+    validate: (v) =>
+      v === 'open' || v === 'application' || v === 'invite'
+        ? null
+        : 'Choose a supported signup type',
   },
   {
     key: 'genres',
     label: 'Genres',
     type: 'genretags',
-    hint: 'chip tags; free type + suggestions',
   },
   {
     key: 'tags',
@@ -104,64 +120,90 @@ export const QUEST_SCHEMA: FieldSchema[] = [
   },
 ];
 
-export const CODEX_SCHEMA: FieldSchema[] = [
+const CODEX_SCHEMA: FieldSchema[] = [
   {
     key: 'title',
     label: 'Title',
     type: 'text',
     required: true,
+    placeholder: 'Name the entry',
   },
   {
     key: 'slug',
     label: 'Slug',
     type: 'code',
     readOnly: true,
+    placeholder: 'Made from the title when saved',
   },
   {
     key: 'category',
     label: 'Category',
-    type: 'text',
-    readOnly: true,
+    type: 'select',
+    required: true,
+    options: [...CODEX_AUTHORING_CATEGORIES],
+    validate: (v) =>
+      CODEX_AUTHORING_CATEGORIES.some((category) => category === v)
+        ? null
+        : 'Choose a supported category',
   },
 ];
 
-export const GUIDE_SCHEMA: FieldSchema[] = [
-  { key: 'title', label: 'Title', type: 'text', required: true },
-  { key: 'slug', label: 'Slug', type: 'code', readOnly: true },
+/** Guides, rulings, summaries and DM tables share the title and read-only slug fields. */
+const TITLED_DOCUMENT_SCHEMA: FieldSchema[] = [
+  { key: 'title', label: 'Title', type: 'text', required: true, placeholder: 'Give it a title' },
+  {
+    key: 'slug',
+    label: 'Slug',
+    type: 'code',
+    readOnly: true,
+    placeholder: 'Made from the title when saved',
+  },
 ];
 
-export const RULING_SCHEMA: FieldSchema[] = [
-  { key: 'title', label: 'Title', type: 'text', required: true },
-  { key: 'slug', label: 'Slug', type: 'code', readOnly: true },
-];
-
-export const SUMMARY_SCHEMA: FieldSchema[] = [
-  { key: 'title', label: 'Title', type: 'text', required: true },
-  { key: 'slug', label: 'Slug', type: 'code', readOnly: true },
-];
-
-export const DM_TABLE_SCHEMA: FieldSchema[] = [
-  { key: 'title', label: 'Title', type: 'text', required: true },
-  { key: 'slug', label: 'Slug', type: 'code', readOnly: true },
-];
+export interface SchemaAccess {
+  /** Archons and admins may author Locations entries (the API also checks region assignment). */
+  canAuthorLocations?: boolean;
+}
 
 export function schemaForType(
   typeKey: string,
   meta: EditorMeta,
+  access: SchemaAccess = {},
 ): FieldSchema[] {
   switch (typeKey) {
     case 'quest':
       return QUEST_SCHEMA;
     case 'codex':
-      return CODEX_SCHEMA;
+      return CODEX_SCHEMA.map((field) => {
+        if (field.key !== 'category') return field;
+        // Saved entries keep their category. A Locations draft opened from its scoped
+        // route stays Locations for viewers who are not offered it in the select.
+        if (
+          typeof meta.slug === 'string' ||
+          (meta.category === GATED_CODEX_CATEGORY && !access.canAuthorLocations)
+        )
+          return {
+            ...field,
+            type: 'text',
+            readOnly: true,
+            required: false,
+            validate: undefined,
+          };
+        // Validation keeps the full allow-list; only the offered options are trimmed.
+        return access.canAuthorLocations
+          ? field
+          : {
+              ...field,
+              options: CODEX_AUTHORING_CATEGORIES.filter(
+                (category) => category !== GATED_CODEX_CATEGORY,
+              ),
+            };
+      });
     case 'guide':
-      return GUIDE_SCHEMA;
     case 'ruling':
-      return RULING_SCHEMA;
     case 'summary':
-      return SUMMARY_SCHEMA;
     case 'dm-table':
-      return DM_TABLE_SCHEMA;
+      return TITLED_DOCUMENT_SCHEMA;
     default:
       return [
         {
@@ -169,7 +211,7 @@ export function schemaForType(
           label: 'Title',
           type: 'text',
           required: true,
-          placeholder: String(meta.title ?? ''),
+          placeholder: String(meta.title ?? '') || 'Give it a title',
         },
       ];
   }

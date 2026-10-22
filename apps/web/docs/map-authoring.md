@@ -1,26 +1,33 @@
 # Map activation and authoring guidance
 
-This page owns the dormant web map’s activation gate and retains the earlier authoring proposal as explicitly unapproved exploration.
+This page records the retained pointcrawl workflows and their acceptance gates. The owner authorized Map browsing and editing in the complete frontend implementation request on 2026-10-20. That request supersedes the earlier Coming Soon hold. Production deployment still requires separate authorization through Actions.
 
-Standalone interaction prototype and adversarial design review were removed from the repo (optional local copy under `.local/docs-quarry/archive/`).
+## Current pointcrawl implementation
 
-## Current state and deferred activation
+`src/features/map/feature.ts` routes `/map` and `/map/:atlasCode` to `MapPage`. Region directory and detail routes use `RegionHubPage`. The implementation uses NEW GraphQL operations, adapters, composition hooks and `PageHost`.
 
-**Activation remains deferred.** The authoritative route registry is `features/map/feature.ts`: both `/map` and `/map/:atlasCode` render `MapComingSoonPage`; region hubs remain available separately. This consolidation neither activates routes nor authorizes data creation/import.
+A Region groups Maps. Maps contain pointcrawl nodes and edges, with typed references to location Documents and submaps. The SVG viewport and equivalent location list support keyboard selection. Authorized forms create Maps, edit nodes and edges, and link or unlink entries. Unlinking preserves the Document. Quest associations use the current expected and visited pointcrawl junctions.
 
-The rebuild has an unwired `MapPage` → `useMapPage` → Zod adapter path and Go `spatial.Queries.MapView`/GraphQL reads. It is not the legacy DRK viewport/package implementation: the current hook uses a client exploration mock, defaults to one atlas, and the `MapView` resolver emits empty `hexcode` values for places. Restore and verify the accepted read-only surface and eligible package registry before assuming a route-only activation is ready. These are source observations, not production-data or performance measurements.
+The [accepted API behavior](/apps/api/docs/design/graphql-product/behavior.md) governs permissions, ordering and persistence. C3 removed hex grids and POIs. N2 removed aggregate change histories. N5 replaced Quest hex associations with pointcrawl associations. Hexes, fog, discovery storage and the old package-registry requirement do not apply to this implementation. Linked Document audience controls visibility without another Map policy engine.
 
-### Resume and launch checklist
+## Resume and launch checklist
 
-The September 13 closeout accepted the following gate. Its then-empty anonymous production map result explains historical dormancy; current production eligibility remains unverified.
+Implementation is authorized. Completion and activation require the following evidence:
 
-1. Confirm an eligible canonical production hexgrid map intersects the build-time package registry. Creating/importing data requires separate owner authorization; fixture fallback must not disguise absent canonical data.
-2. Repeat a read-only eligibility preflight and verify permission-safe `mapView` projection using the existing [live authority](/docs/interfaces/live-authority.md) and [document scope](/docs/interfaces/scoped-body.md). Names, linked-document metadata, enumeration counts and selection state must not disclose hidden places. No second map fog/discovery authority is introduced.
-3. Verify anonymous/member/DM hidden-selection cases, viewer-transition cache clearing, canonical `/codex/location/:slug` navigation, theme switching, compressed responses, keyboard/focus behavior, accessible directory/selection announcements, and the named browser interaction/accessibility checks. Verify exact current route/contract/package support before execution; historical merge tests are not current proof.
-4. Retain cold-cache timings and capture conditions. Historical admission required at least 20 cold-cache desktop and constrained-mobile profiles, first-usable p75 <1s and selection p95 ≤100ms; failure blocked launch. Current migration comparison is **1920×1080 only**, which supersedes the old mobile comparison scope but supplies no new mobile performance evidence or changed threshold approval. Revalidate the performance protocol/remaining profile obligation with the owner before activation.
-5. After these prerequisites pass, make activation a separate small route-wiring change replacing the two Coming Soon routes. Retain a route-only rollback that restores Coming Soon while preserving canonical persistence, audience corrections, projections and inert assets/components. Execute any production promotion/rollback through the accepted Actions release process, with separate authorization.
+1. Verify current real-API reads and persisted command readback against the final source and generated bindings. Preserve existing data and Document ownership.
+2. Exercise assigned and unassigned Archons, ordinary members, guests, administrators and current authority changes. Reject cross-map endpoints and invalid submaps. Suppress hidden nodes, edges and Document references.
+3. Check keyboard operation, focus, the equivalent list, selection feedback and layouts at phone, intermediate and desktop widths. Compare current workflows using Legacy styling and current product semantics.
+4. Run at least 20 cold-cache trials per profile using pinned Chromium at desktop 1920×1080 and phone 390×844, with fourfold CPU slowdown. Record hardware, network and cache conditions. Require first-usable p75 below one second and selection p95 at most 100 milliseconds. Changed final artifacts require current receipts.
+5. Pass the required design, web, browser and relevant native PostgreSQL gates. Keep source-bound screenshots, traces where permitted, and receipts in the existing QA record. Obtain explicit final visual approval.
+6. Use only the approved Actions release path for an authorized production promotion or rollback.
 
-Advertising/navigation promotion, authoring, quest markers, city/pointcrawl extensions, and removal of the old spike remain separate decisions. The launch gate does not accept the proposed authoring schema or permissions below.
+The [QA route registry](/apps/web/docs/parity/qa-route-registry.json) records applicable actors, actions and remaining evidence. Route registration, fixtures and older performance receipts do not establish completion. The owner resolved override auditing in favor of safe facts stored atomically in existing command receipts. That implementation and current-authority replay checks have native acceptance evidence; remaining Map activation gates still apply.
+
+The final Build38/API12 local performance cohort passed all 40 retained trials on 2026-10-20: twenty desktop and twenty phone trials using Playwright 1.62.1, Chromium 151.0.7922.34 and fourfold CPU slowdown. First-usable p75 was 751.8 ms desktop and 749.7 ms phone; selection-feedback p95 was 70.0 ms and 60.3 ms, with zero failures. Host Triton used an AMD Ryzen 5 3600, ten exposed logical CPUs and 34,568,044,544 bytes of memory. The workload was the actual public 18-node, 17-edge, 24-link pointcrawl over unshaped loopback, with cold browser HTTP caches and retained warm server/database caches. All 40 rows remain retained. Source, built bytes, API, services and map content were unchanged before and after.
+
+The graph and selected marker intersected the viewport in every trial; the equivalent list and buttons were rendered below the fold. Selection status text was below the phone viewport and intersected only the desktop bottom edge. Timing measures rendered matching marker feedback, excluding preceding scrolling and full Document loading; it does not establish fully visible status text or hardware presentation latency. These local, emulated-phone conditions do not establish production or large-world performance. Earlier Build32 measurements retain their dated identity.
+
+Map12 retains its dated Build35 real-API editing/authority/integrity acceptance and six responsive theme/motion profiles through the accepted source bridge. A separate Build38 guest-only Map trace was recorded after timing; all fourteen requests were checked for absent authentication headers and cookies. The [canonical frontend phase](/apps/api/docs/endpoint-review.md#frontend-dependency-implementation-phase-2026-10-20) and versioned snapshot bind these receipts. Final owner visual approval and overall frontend completion remain open; no production deployment is authorized.
 
 ## Historical authoring proposal
 

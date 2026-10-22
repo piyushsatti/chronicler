@@ -76,10 +76,16 @@ describe('shared foundation CSS ownership', () => {
       expect(rules(base, `.type-${tier}`)).toHaveLength(0);
     }
     expect(declarations(rules(typography, '.type-display')[0])).toMatchObject({
+      'font-family': 'var(--font-title)',
       'font-size': 'var(--type-display-size, clamp(1.75rem, 4vw, 3rem))',
-      'font-weight': '600', 'line-height': '1.08',
-      'font-variation-settings': "'SOFT' 50, 'opsz' 60",
+      'font-weight': 'var(--font-title-weight)', 'line-height': '1.08',
     });
+    // D7: every title tier is Lexend Bold; Fraunces stays for narrative.
+    for (const tier of ['heading', 'title']) {
+      expect(declarations(rules(typography, `.type-${tier}`)[0])).toMatchObject({
+        'font-family': 'var(--font-title)', 'font-weight': 'var(--font-title-weight)',
+      });
+    }
     expect(declarations(rules(typography, '.type-caption')[0])).toMatchObject({
       'font-size': 'var(--type-caption-size, 0.8125rem)',
       color: 'var(--color-text-muted)',
@@ -93,9 +99,14 @@ describe('shared foundation CSS ownership', () => {
       expect(rules(atlas, selector)).toHaveLength(1);
     }
     expect(declarations(rules(atlas, '.card')[0])).toMatchObject({
-      'border-radius': 'var(--rad)', 'box-shadow': 'var(--shadow)',
+      'border-radius': 'var(--rad)', 'box-shadow': 'var(--shadow-2)',
     });
-    expect(declarations(rules(atlas, '.btn.primary')[0]).color).toBe('var(--color-hero-on-brand-ink)');
+    // D8: Parchment sets --btn-primary-*; other themes fall back to accent + hero ink.
+    expect(declarations(rules(atlas, '.btn.primary')[0]).color).toBe(
+      'var(--btn-primary-ink, var(--color-hero-on-brand-ink))',
+    );
+    // D9: buttons are 8px rounded rectangles, not pills.
+    expect(declarations(rules(atlas, '.btn')[0])['border-radius']).toBe('var(--rad-btn)');
     expect(imports.indexOf('primitives.css')).toBeGreaterThan(imports.indexOf('atlas.css'));
     expect(imports.indexOf('primitives.css')).toBeGreaterThan(imports.indexOf('base.css'));
     expect(rules(base, '.field input')).toHaveLength(0);
@@ -118,7 +129,7 @@ describe('shared foundation CSS ownership', () => {
 });
 
 describe('self-hosted font assets', () => {
-  it('declares all three token families against intact local WOFF2 files and carries the licenses', () => {
+  it('declares all four token families against intact local WOFF2 files and carries the licenses', () => {
     const fonts = postcss.parse(css('fonts.css'));
     const families = new Set<string>();
     const files: string[] = [];
@@ -134,9 +145,11 @@ describe('self-hosted font assets', () => {
       expect(binary.readUInt32BE(8)).toBe(binary.length);
       files.push(path);
     });
-    expect([...families].sort()).toEqual(["'Fraunces Variable'", "'Geist Mono'", "'Geist'"]);
-    expect(files).toHaveLength(5);
-    for (const name of ['Fraunces-OFL.txt', 'Geist-OFL.txt']) {
+    expect([...families].sort()).toEqual([
+      "'Fraunces Variable'", "'Geist Mono'", "'Geist'", "'Lexend Variable'",
+    ]);
+    expect(files).toHaveLength(6);
+    for (const name of ['Fraunces-OFL.txt', 'Geist-OFL.txt', 'Lexend-OFL.txt']) {
       expect(readFileSync(join(__dirname, '../../public/fonts', name), 'utf8')).toContain('SIL OPEN FONT LICENSE Version 1.1');
     }
     expect(imports.indexOf('fonts.css')).toBeLessThan(imports.indexOf('typography.css'));

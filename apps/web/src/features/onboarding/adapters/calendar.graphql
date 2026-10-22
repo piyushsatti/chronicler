@@ -1,0 +1,25 @@
+query RetainedCalendar($realFrom: Date!, $realTo: Date!, $selectedDate: Date!) {
+  gameCalendar(realFrom: $realFrom, realTo: $realTo) {
+    currentGameDay
+    currentGameDate {
+      eraAbbrev
+      year
+      periodName
+      periodIndex
+      periodType
+      day
+    }
+    monthGrid {
+      realDate
+      gameDay
+    }
+  }
+  gameDate(realDate: $selectedDate) {
+    eraAbbrev
+    year
+    periodName
+    periodIndex
+    periodType
+    day
+  }
+}

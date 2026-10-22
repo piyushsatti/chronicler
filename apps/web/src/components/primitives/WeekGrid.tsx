@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { dayLabel, formatInstant } from '../../utils/format.js';
 
 export type HeatBucket = 0 | 1 | 2 | 3 | 4;
 
@@ -35,10 +36,15 @@ export function bucketFor(count: number): HeatBucket {
 function DefaultCell({ cell, selected }: { cell: DayCell; selected: boolean }) {
   return (
     <div className="stack" data-gap="0" data-tone={selected ? 'accent' : 'neutral'}>
-      <span className="type-caption">{cell.date}</span>
+      <span className="type-caption">{dayLabel(cell.date)}</span>
       <span className="type-value">{cell.count}</span>
     </div>
   );
+}
+
+/** Full date for civil dates ("22 Oct 2026"); other keys (e.g. "Sun") as given. */
+function cellName(date: string): string {
+  return dayLabel(date) === date ? date : formatInstant(date, null, 'date');
 }
 
 /** Headless 7-column day-cell grid. */
@@ -66,7 +72,12 @@ export function WeekGrid({
 
   if (!days?.length) {
     return (
-      <div className={className} data-component="WeekGrid" role="list" aria-label={ariaLabel}>
+      <div
+        className={className}
+        data-component="WeekGrid"
+        role="list"
+        aria-label={ariaLabel}
+      >
         {children}
       </div>
     );
@@ -98,14 +109,17 @@ export function WeekGrid({
         ) : (
           <DefaultCell cell={cell} selected={selected} />
         );
+        // Cell hooks match primitives.css's WeekGrid section: chrome and heat
+        // shading apply only to the built-in skin; renderCell owns its box.
+        const cellHooks = {
+          'data-el': 'week-grid.cell',
+          'data-skin': renderCell ? 'custom' : 'default',
+          'data-heat': heat ? cell.bucket : undefined,
+          'data-selected': selected ? '1' : undefined,
+        };
         if (!interactive) {
           return (
-            <div
-              key={cell.date}
-              role="listitem"
-              data-bucket={cell.bucket}
-              data-selected={selected ? '1' : undefined}
-            >
+            <div key={cell.date} role="listitem" {...cellHooks}>
               {content}
             </div>
           );
@@ -115,10 +129,9 @@ export function WeekGrid({
             key={cell.date}
             type="button"
             role="listitem"
-            data-bucket={cell.bucket}
-            data-selected={selected ? '1' : undefined}
+            {...cellHooks}
             onClick={() => selectDate(cell.date)}
-            aria-label={`${cell.date}: ${cell.count}`}
+            aria-label={`${cellName(cell.date)}: ${cell.count}`}
           >
             {content}
           </button>

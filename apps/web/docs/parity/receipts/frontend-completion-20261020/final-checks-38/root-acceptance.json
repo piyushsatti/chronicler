@@ -1,0 +1,36 @@
+{
+  "at": "2026-10-20T22:49:58.706340+00:00",
+  "frontendEpoch": 38,
+  "sourceInputs": 625,
+  "sourceManifestSha256": "5158792f05a29af96d1611f135978a16b1dc3dcad9e834e4a833f696effc9e2b",
+  "verify": {
+    "nativeSession": 4499,
+    "exit": 0,
+    "webTests": 1115,
+    "webFiles": 151,
+    "discordTests": 118,
+    "existingDiscordProviderSkips": 3,
+    "agentTests": 363,
+    "designGates": 15,
+    "formatTypesPrecommitDocs": "passed",
+    "logSha256": "ef1589ad71b05845942a8a740e000b0d34943f736dc2ffcbe175e70b83d89006"
+  },
+  "priorFailedVerify": {
+    "nativeSession": 59227,
+    "exit": 1,
+    "cause": "Two archival copied report file-line citations; byte-identical .md.txt copies repair docs formatting scope without changing checks.",
+    "logSha256": "d38517312e56f385a4a76504bf0b921a5b91414ca6e60b350509da4f417f4791"
+  },
+  "mockPlaywright": {
+    "nativeSession": 65463,
+    "exit": 0,
+    "passed": 62,
+    "seconds": 32.3,
+    "logSha256": "ac6e798f3c09892210442ad2a745574b49582ab8307a7b2810386785fc2f66ff"
+  },
+  "limits": [
+    "Verification uses current product source; later canonical documentation/route bookkeeping requires targeted rechecks.",
+    "Three existing Discord provider tests skipped; no real OAuth/Discord delivery/owner visual approval claim.",
+    "API tests remain separately dated native PostgreSQL/Go receipts."
+  ]
+}

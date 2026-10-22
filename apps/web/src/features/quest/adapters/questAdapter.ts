@@ -1,14 +1,11 @@
 import type {
-  CloseQuestMutation,
   MyCharactersQuery,
   QuestBoardChromeQuery,
   QuestBoardQuery,
   QuestListQuery,
   QuestQuery,
   QuestRegionsQuery,
-  SignupForQuestMutation,
-  TransitionQuestStatusMutation,
-  WithdrawFromQuestMutation,
+  QuestParticipantsQuery,
 } from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import MY_CHARACTERS_QUERY from './myCharacters.graphql?raw';
@@ -17,10 +14,8 @@ import CHROME_QUERY from './questBoardChrome.graphql?raw';
 import DETAIL_QUERY from './questDetail.graphql?raw';
 import LIST_QUERY from './questList.graphql?raw';
 import REGIONS_QUERY from './questRegions.graphql?raw';
-import SIGNUP_MUTATION from './questSignup.graphql?raw';
-import WITHDRAW_MUTATION from './questWithdraw.graphql?raw';
-import TRANSITION_MUTATION from './questTransition.graphql?raw';
-import CLOSE_MUTATION from './questClose.graphql?raw';
+import PARTICIPANTS_QUERY from './questParticipants.graphql?raw';
+import { z } from 'zod';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import { toCardStatus, type QuestCardStatus } from '../../../view-models/questCard.js';
@@ -30,11 +25,8 @@ import {
   questBoardWireSchema,
   questDetailWireSchema,
   questRegionCatalogWireSchema,
+  questParticipantWireSchema,
 } from './quest.wire.schema.js';
-
-function commandMeta(): { idempotencyKey: string } {
-  return { idempotencyKey: crypto.randomUUID() };
-}
 
 const TERMINAL_DELIVERY = new Set(['applied', 'failed', 'cancelled', 'skipped']);
 const SEATED = new Set(['signed_up', 'played', 'selected']);
@@ -64,15 +56,12 @@ export type QuestBoardItemView = {
   machineStatus: string;
   cardStatus: QuestCardStatus;
   scheduledAt: string;
-  when: string | null;
   slotsMax: number;
   filledCount: number;
   tags: string[];
-  regionIds: string[];
   regionName: string | null;
   dmHandle: string | null;
   dmName: string | null;
-  dmAvatarUrl: string | null;
   participants: QuestBoardParticipantView[];
   waitlistCount: number;
   discordDelivery: DiscordDeliveryView;
@@ -106,6 +95,10 @@ export type QuestDetailView = Omit<QuestBoardItemView, 'participants'> & {
   participants: QuestParticipantView[];
   durationHours: number;
   genres: string[];
+  dmId: string;
+  updatedAt: string;
+  arc: { id: string; name: string } | null;
+  pointcrawlLinks: Array<{ pointcrawlNodeId: string; role: 'expected' | 'visited' }>;
 };
 
 export type QuestBoardCardPropsView = {
@@ -116,8 +109,7 @@ export type QuestBoardCardPropsView = {
   region: string | null;
   dmUsername: string | null;
   totalSlots: number;
-  filledCount: number;
-  when: string | null;
+  when: string;
   party: Array<{
     characterName: string | null;
     characterId: string | null;
@@ -129,6 +121,8 @@ export type QuestBoardCardPropsView = {
 export type MyCharacterRef = {
   id: string;
   status: string;
+  name: string;
+  shortCode: string;
 };
 
 export type QuestBoardChromeView = {
@@ -171,15 +165,12 @@ function mapBoardItem(
     machineStatus: item.status,
     cardStatus: toCardStatus(item.displayStatus ?? null, item.status),
     scheduledAt: item.scheduledAt,
-    when: formatScheduled(item.scheduledAt),
     slotsMax: item.slotsMax,
     filledCount: item.filledCount,
     tags: item.tags,
-    regionIds: item.regions,
     regionName: item.regions.map((id) => regionNameById.get(id)).find(Boolean) ?? null,
     dmHandle: item.dm?.handle ?? null,
     dmName: item.dm?.displayName ?? item.dm?.handle ?? null,
-    dmAvatarUrl: item.dm?.avatarUrl ?? null,
     participants,
     waitlistCount: participants.filter((p) => p.status === 'waitlisted').length,
     discordDelivery: mapDelivery(item.discordDelivery),
@@ -187,7 +178,10 @@ function mapBoardItem(
 }
 
 /** Map a board list item into QBoardCard presentation props. */
-export function mapToBoardCardProps(quest: QuestBoardItemView): QuestBoardCardPropsView {
+export function mapToBoardCardProps(
+  quest: QuestBoardItemView,
+  timeZone: string | null = null,
+): QuestBoardCardPropsView {
   const seated = quest.participants.filter((p) => SEATED.has(p.status));
   return {
     code: quest.shortCode,
@@ -197,8 +191,7 @@ export function mapToBoardCardProps(quest: QuestBoardItemView): QuestBoardCardPr
     region: quest.regionName,
     dmUsername: quest.dmHandle ?? quest.dmName,
     totalSlots: quest.slotsMax,
-    filledCount: quest.filledCount,
-    when: quest.when,
+    when: formatScheduled(quest.scheduledAt, timeZone),
     party: seated.map((p) => ({
       characterName: p.characterName,
       characterId: p.characterId,
@@ -259,7 +252,10 @@ export function parseQuestDetail(wire: unknown): AdapterResult<QuestDetailView> 
       })),
       durationHours: parsed.data.durationHours,
       genres: parsed.data.genres,
-      tags: parsed.data.tags,
+      dmId: parsed.data.dmId,
+      updatedAt: parsed.data.updatedAt,
+      arc: parsed.data.arc,
+      pointcrawlLinks: parsed.data.pointcrawlLinks,
     },
   };
 }
@@ -275,18 +271,7 @@ export function parseQuestRegions(wire: unknown): AdapterResult<Map<string, stri
   };
 }
 
-export function parseQuestBoardChrome(wire: unknown): AdapterResult<QuestBoardChromeView> {
-  const parsed = questBoardChromeWireSchema.safeParse(wire);
-  if (!parsed.success) {
-    return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
-  }
-  const dmsAcceptingCount = parsed.data.entries.filter(
-    (e) => e.isDm && e.acceptingPlayers === true,
-  ).length;
-  return { ok: true, data: { dmsAcceptingCount } };
-}
-
-export async function loadQuestRegions(): Promise<Map<string, string>> {
+async function loadQuestRegions(): Promise<Map<string, string>> {
   try {
     const data = await graphqlRequest<QuestRegionsQuery>(REGIONS_QUERY, { limit: 200 });
     const result = parseQuestRegions(data.regions);
@@ -299,10 +284,21 @@ export async function loadQuestRegions(): Promise<Map<string, string>> {
 
 export async function loadQuestBoardChrome(): Promise<QuestBoardChromeView> {
   try {
-    const data = await graphqlRequest<QuestBoardChromeQuery>(CHROME_QUERY);
-    const result = parseQuestBoardChrome(data.communityDirectory);
-    if (!result.ok) throw toAppError({ failure: result.failure }, 'quest:board-chrome');
-    return result.data;
+    let offset = 0;
+    let dmsAcceptingCount = 0;
+    for (;;) {
+      const data = await graphqlRequest<QuestBoardChromeQuery>(CHROME_QUERY, {
+        offset,
+      });
+      const page = questBoardChromeWireSchema.parse(data.communityDirectory);
+      dmsAcceptingCount += page.entries.filter(
+        (entry) => entry.isDm && entry.acceptingPlayers,
+      ).length;
+      offset += page.entries.length;
+      if (offset >= page.total) return { dmsAcceptingCount };
+      if (page.entries.length === 0)
+        throw toAppError({ failure: 'InvalidWire' }, 'quest:board-chrome');
+    }
   } catch (err) {
     throw toAppError(err, 'quest:board-chrome');
   }
@@ -316,7 +312,7 @@ export async function loadQuestBoard(): Promise<QuestBoardItemView[]> {
     ]);
     const result = parseQuestBoard(data.questBoard, regions);
     if (!result.ok) throw toAppError({ failure: result.failure }, 'quest:board');
-    return result.data;
+    return completeRosterPages(result.data);
   } catch (err) {
     throw toAppError(err, 'quest:board');
   }
@@ -333,12 +329,14 @@ export async function loadQuestList(request: QuestListRequest): Promise<QuestLis
     // A nonempty population cannot yield an empty first page with a positive limit.
     // Count-only and exhausted offset reads are valid generic list responses.
     if (
-      request.offset === 0 && request.limit > 0 &&
-      result.data.items.length === 0 && result.data.total > 0
+      request.offset === 0 &&
+      request.limit > 0 &&
+      result.data.items.length === 0 &&
+      result.data.total > 0
     ) {
       throw toAppError({ failure: 'InvalidWire' }, 'quest:list');
     }
-    return result.data;
+    return { ...result.data, items: await completeRosterPages(result.data.items) };
   } catch (err) {
     throw toAppError(err, 'quest:list');
   }
@@ -358,98 +356,84 @@ export async function loadQuest(opts: {
     }
     const result = parseQuestDetail(data.quest);
     if (!result.ok) throw toAppError({ failure: result.failure }, 'quest:detail');
-    return result.data;
+    return {
+      ...result.data,
+      participants: await loadAllQuestParticipants(
+        result.data.id,
+        result.data.participants,
+      ),
+    };
   } catch (err) {
     throw toAppError(err, 'quest:detail');
   }
 }
 
-/** First owned character id for signup (quest-owned read; avoids cross-feature import). */
-export async function loadSignupCharacterId(): Promise<string | null> {
-  try {
-    const chars = await loadMyCharacters();
-    const active = chars.filter((c) => c.status.toLowerCase() === 'active');
-    return active[0]?.id ?? chars[0]?.id ?? null;
-  } catch (err) {
-    throw toAppError(err, 'quest:signup-character');
-  }
-}
-
-export async function signupForQuest(
-  questId: string,
-  characterId: string,
-): Promise<void> {
-  try {
-    await graphqlRequest<SignupForQuestMutation>(SIGNUP_MUTATION, {
-      questId,
-      characterId,
-      meta: commandMeta(),
-    });
-  } catch (err) {
-    throw toAppError(err, 'quest:signup');
-  }
-}
-
 /** Character ids owned by the current member (for mine/withdraw detection). */
-export async function loadMyCharacterIds(): Promise<string[]> {
-  try {
-    const chars = await loadMyCharacters();
-    return chars.map((item) => item.id);
-  } catch (err) {
-    throw toAppError(err, 'quest:my-characters');
-  }
-}
-
 export async function loadMyCharacters(): Promise<MyCharacterRef[]> {
   try {
-    const data = await graphqlRequest<MyCharactersQuery>(MY_CHARACTERS_QUERY);
-    return data.myCharacters.items.map((item) => ({
-      id: item.id,
-      status: item.status,
-    }));
+    const items: MyCharacterRef[] = [];
+    const schema = z.object({
+      items: z.array(
+        z.object({
+          id: z.string().uuid(),
+          status: z.string(),
+          name: z.string(),
+          shortCode: z.string(),
+        }),
+      ),
+      total: z.number().int().nonnegative(),
+    });
+    for (;;) {
+      const data = await graphqlRequest<MyCharactersQuery>(MY_CHARACTERS_QUERY, {
+        limit: 50,
+        offset: items.length,
+      });
+      const page = schema.parse(data.myCharacters);
+      items.push(...page.items);
+      if (items.length >= page.total) return items;
+      if (page.items.length === 0)
+        throw toAppError({ failure: 'InvalidWire' }, 'quest:my-characters');
+    }
   } catch (err) {
     throw toAppError(err, 'quest:my-characters');
   }
 }
 
-export async function withdrawFromQuest(
+async function loadAllQuestParticipants(
   questId: string,
-  characterId: string,
-): Promise<void> {
-  try {
-    await graphqlRequest<WithdrawFromQuestMutation>(WITHDRAW_MUTATION, {
+  initial: QuestParticipantView[],
+): Promise<QuestParticipantView[]> {
+  const participants = [...initial];
+  if (initial.length < 100) return participants;
+  for (;;) {
+    const data = await graphqlRequest<QuestParticipantsQuery>(PARTICIPANTS_QUERY, {
       questId,
-      characterId,
-      meta: commandMeta(),
+      offset: participants.length,
     });
-  } catch (err) {
-    throw toAppError(err, 'quest:withdraw');
+    if (!data.quest) throw toAppError({ failure: 'NotFound' }, 'quest:participants');
+    const page = z.array(questParticipantWireSchema).parse(data.quest.participants);
+    participants.push(...page);
+    if (page.length < 100) return participants;
   }
 }
 
-export async function transitionQuest(
-  questId: string,
-  to: 'open' | 'full' | 'played' | 'cancelled',
-): Promise<void> {
-  try {
-    await graphqlRequest<TransitionQuestStatusMutation>(TRANSITION_MUTATION, {
-      id: questId,
-      to,
-      meta: commandMeta(),
-    });
-  } catch (err) {
-    throw toAppError(err, 'quest:transition');
-  }
-}
-
-export async function closeQuest(questId: string): Promise<void> {
-  try {
-    await graphqlRequest<CloseQuestMutation>(CLOSE_MUTATION, {
-      id: questId,
-      input: { attendance: [], rewards: [] },
-      meta: commandMeta(),
-    });
-  } catch (err) {
-    throw toAppError(err, 'quest:close');
-  }
+async function completeRosterPages(
+  items: QuestBoardItemView[],
+): Promise<QuestBoardItemView[]> {
+  return Promise.all(
+    items.map(async (item) => {
+      if (item.participants.length < 100) return item;
+      const participants = await loadAllQuestParticipants(item.id, item.participants);
+      return {
+        ...item,
+        participants: participants.map((participant) => ({
+          ...participant,
+          memberAvatarUrl: null,
+        })),
+        waitlistCount: participants.filter(
+          (participant) => participant.status === 'waitlisted',
+        ).length,
+      };
+    }),
+  );
 }

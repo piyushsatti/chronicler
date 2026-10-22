@@ -1,9 +1,17 @@
-import type { CommunityDirectoryQuery } from '../../../api/graphql.operations.gen.js';
+import type { z } from 'zod';
+import type {
+  CommunityCharactersQuery,
+  CommunityDirectoryQuery,
+} from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import DIRECTORY_QUERY from './communityDirectory.graphql?raw';
+import CHARACTERS_QUERY from './communityCharacters.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
-import { communityDirectoryWireSchema } from './community.wire.schema.js';
+import {
+  communityCharactersWireSchema,
+  communityDirectoryWireSchema,
+} from './community.wire.schema.js';
 
 export type CommunityMemberView = {
   memberId: string;
@@ -12,6 +20,9 @@ export type CommunityMemberView = {
   tagline: string | null;
   acceptingPlayers: boolean;
   isDm: boolean;
+  avatarUrl: string | null;
+  availableDays: string[];
+  roles: string[];
 };
 
 export type CommunityHubView = {
@@ -30,6 +41,9 @@ function mapEntry(
     tagline: entry.tagline ?? null,
     acceptingPlayers: entry.acceptingPlayers === true,
     isDm: entry.isDm,
+    avatarUrl: entry.avatarUrl ?? null,
+    availableDays: entry.availableDays,
+    roles: entry.roles,
   };
 }
 
@@ -40,29 +54,109 @@ export function parseCommunityDirectory(
   if (!parsed.success) {
     return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
   }
-  const entries = parsed.data.entries.map(mapEntry);
-  const dms = entries.filter((entry) => entry.isDm);
-  const players = entries.filter((entry) => !entry.isDm);
-  const memberCount = new Set(entries.map((entry) => entry.memberId)).size;
-  return { ok: true, data: { dms, players, memberCount } };
+  return {
+    ok: true,
+    data: hubFromEntries(parsed.data.entries.map(mapEntry), parsed.data.total),
+  };
 }
 
-export async function loadCommunityHub(): Promise<CommunityHubView> {
+function hubFromEntries(
+  entries: CommunityMemberView[],
+  memberCount: number,
+): CommunityHubView {
+  return {
+    dms: entries.filter((entry) => entry.isDm),
+    players: entries.filter((entry) => !entry.isDm || entry.roles.includes('player')),
+    memberCount,
+  };
+}
+
+export async function loadCommunityHub(
+  signal?: AbortSignal,
+): Promise<CommunityHubView> {
   try {
-    const data = await graphqlRequest<CommunityDirectoryQuery>(DIRECTORY_QUERY, {
-      limit: 100,
-    });
-    const result = parseCommunityDirectory(data.communityDirectory);
-    if (!result.ok) {
-      throw toAppError({ failure: result.failure }, 'community:hub');
-    }
-    return result.data;
+    const entries: CommunityMemberView[] = [];
+    const ids = new Set<string>();
+    let total: number | undefined;
+    do {
+      signal?.throwIfAborted();
+      const data = await graphqlRequest<CommunityDirectoryQuery>(
+        DIRECTORY_QUERY,
+        { limit: 100, offset: entries.length },
+        { signal },
+      );
+      signal?.throwIfAborted();
+      const parsed = communityDirectoryWireSchema.safeParse(data.communityDirectory);
+      if (!parsed.success)
+        throw toAppError({ failure: 'InvalidWire' }, 'community:hub');
+      const page = parsed.data;
+      if (
+        page.total > 2_147_483_647 ||
+        (total !== undefined && page.total !== total) ||
+        page.entries.length > 100 ||
+        entries.length + page.entries.length > page.total ||
+        (page.entries.length < 100 && entries.length + page.entries.length < page.total)
+      )
+        throw toAppError({ failure: 'InvalidWire' }, 'community:hub-pages');
+      for (const entry of page.entries) {
+        const id = entry.memberId.toLowerCase();
+        if (ids.has(id))
+          throw toAppError({ failure: 'InvalidWire' }, 'community:hub-pages');
+        ids.add(id);
+        entries.push(mapEntry(entry));
+      }
+      total = page.total;
+    } while (entries.length < total);
+    return hubFromEntries(entries, total);
   } catch (err) {
     throw toAppError(err, 'community:hub');
   }
 }
 
-export async function loadCommunityMembers(role: 'dm' | 'player'): Promise<CommunityMemberView[]> {
-  const hub = await loadCommunityHub();
-  return role === 'dm' ? hub.dms : hub.players;
+export async function loadCommunityMembers(
+  role: 'dm' | 'player',
+  search = '',
+  acceptingOnly = false,
+  offset = 0,
+): Promise<{ items: CommunityMemberView[]; total: number }> {
+  try {
+    const data = await graphqlRequest<CommunityDirectoryQuery>(DIRECTORY_QUERY, {
+      filters: {
+        role,
+        search: search.trim() || null,
+        ...(role === 'dm'
+          ? {
+              dmProfileStatus: 'approved',
+              acceptingPlayers: acceptingOnly ? true : null,
+            }
+          : {}),
+      },
+      limit: 24,
+      offset,
+    });
+    const parsed = communityDirectoryWireSchema.safeParse(data.communityDirectory);
+    if (!parsed.success)
+      throw toAppError({ failure: 'InvalidWire' }, 'community:directory');
+    return { items: parsed.data.entries.map(mapEntry), total: parsed.data.total };
+  } catch (error) {
+    throw toAppError(error, 'community:directory');
+  }
+}
+
+type CommunityCharactersView = z.infer<typeof communityCharactersWireSchema>;
+
+export async function loadCommunityCharacters(
+  limit: number,
+): Promise<CommunityCharactersView> {
+  try {
+    const data = await graphqlRequest<CommunityCharactersQuery>(CHARACTERS_QUERY, {
+      limit,
+    });
+    const parsed = communityCharactersWireSchema.safeParse(data.characters);
+    if (!parsed.success)
+      throw toAppError({ failure: 'InvalidWire' }, 'community:characters');
+    return parsed.data;
+  } catch (err) {
+    throw toAppError(err, 'community:characters');
+  }
 }

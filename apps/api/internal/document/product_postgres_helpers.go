@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
@@ -105,13 +106,20 @@ func policyTokens(raw []byte) ([]string, error) {
 	}
 	var tokens []string
 	if err := json.Unmarshal(raw, &tokens); err != nil {
-		return nil, err
+		if !json.Valid(raw) {
+			return nil, err
+		}
+		// The canonical Specification denies malformed policies, including legacy objects.
+		return []string{}, nil
+	}
+	if !Specify(Document{Policy: raw}).valid {
+		return []string{}, nil
 	}
 	return tokens, nil
 }
 
 func policyBytes(tokens []string) ([]byte, error) {
-	if len(tokens) == 0 {
+	if tokens == nil {
 		return nil, nil
 	}
 	return json.Marshal(tokens)
@@ -121,12 +129,16 @@ func frontmatterJSON(raw pgtype.Text) (json.RawMessage, error) {
 	if !raw.Valid || strings.TrimSpace(raw.String) == "" {
 		return json.RawMessage(`{}`), nil
 	}
-	var decoded any
-	if err := yaml.Unmarshal([]byte(raw.String), &decoded); err != nil {
+	var node yaml.Node
+	if err := yaml.Unmarshal([]byte(raw.String), &node); err != nil {
 		return nil, apierr.New(apierr.Internal, "invalid stored document frontmatter")
 	}
-	if decoded == nil {
+	if len(node.Content) == 0 || node.Content[0].Tag == "!!null" {
 		return json.RawMessage(`{}`), nil
+	}
+	decoded, err := frontmatterNodeValue(node.Content[0])
+	if err != nil {
+		return nil, err
 	}
 	encoded, err := json.Marshal(decoded)
 	if err != nil {
@@ -139,18 +151,64 @@ func frontmatterYAML(raw json.RawMessage) (pgtype.Text, error) {
 	if len(raw) == 0 || bytesEqualJSONNull(raw) {
 		return pgtype.Text{}, nil
 	}
-	var decoded any
-	if err := json.Unmarshal(raw, &decoded); err != nil {
+	if !json.Valid(raw) {
 		return pgtype.Text{}, apierr.New(apierr.Invalid, "invalid document frontmatter")
 	}
-	if decoded == nil {
-		return pgtype.Text{}, nil
+	var node yaml.Node
+	if err := yaml.Unmarshal(raw, &node); err != nil {
+		return pgtype.Text{}, err
 	}
-	out, err := yaml.Marshal(decoded)
+	out, err := yaml.Marshal(&node)
 	if err != nil {
 		return pgtype.Text{}, err
 	}
 	return pgtype.Text{String: string(out), Valid: true}, nil
+}
+
+func frontmatterNodeValue(node *yaml.Node) (any, error) {
+	switch node.Kind {
+	case yaml.MappingNode:
+		value := make(map[string]any, len(node.Content)/2)
+		for i := 0; i < len(node.Content); i += 2 {
+			key := node.Content[i]
+			if key.Tag != "!!str" {
+				return nil, apierr.New(apierr.Internal, "invalid stored frontmatter key")
+			}
+			if _, exists := value[key.Value]; exists {
+				return nil, apierr.New(apierr.Internal, "duplicate stored frontmatter key")
+			}
+			item, err := frontmatterNodeValue(node.Content[i+1])
+			if err != nil {
+				return nil, err
+			}
+			value[key.Value] = item
+		}
+		return value, nil
+	case yaml.SequenceNode:
+		value := make([]any, len(node.Content))
+		for i := range node.Content {
+			item, err := frontmatterNodeValue(node.Content[i])
+			if err != nil {
+				return nil, err
+			}
+			value[i] = item
+		}
+		return value, nil
+	case yaml.ScalarNode:
+		switch node.Tag {
+		case "!!str":
+			return node.Value, nil
+		case "!!null":
+			return nil, nil
+		case "!!bool":
+			return strings.EqualFold(node.Value, "true"), nil
+		case "!!int", "!!float":
+			if json.Valid([]byte(node.Value)) {
+				return json.Number(node.Value), nil
+			}
+		}
+	}
+	return nil, apierr.New(apierr.Internal, "unsupported stored document frontmatter")
 }
 
 func bytesEqualJSONNull(raw json.RawMessage) bool {
@@ -229,7 +287,7 @@ func projectDocumentView(ctx context.Context, scope ViewerScope, view DocumentVi
 	if err != nil {
 		return DocumentView{}, err
 	}
-	if len(view.Policy) == 0 {
+	if view.Policy == nil {
 		policyJSON = nil
 	}
 	doc := Document{
@@ -249,6 +307,7 @@ func projectDocumentView(ctx context.Context, scope ViewerScope, view DocumentVi
 	}
 	body := projected.Body
 	view.EffectiveBody = &body
+	view.BodyComplete = projected.BodyComplete
 	return view, nil
 }
 
@@ -269,8 +328,8 @@ func mapReadableDocumentRow(
 	ctx context.Context,
 	surface string,
 ) (DocumentView, error) {
-	if !readable && !scope.Privileged() {
-		return DocumentView{}, apierr.New(apierr.NotFound, "document not found")
+	if !readable {
+		return DocumentView{}, apierr.New(apierr.Forbidden, "document read forbidden")
 	}
 	view, err := documentFromParts(rowID, kind, slug, title, status, visibility, body, category, policy, frontmatter, authorID, publishedAt, deletedAt, deletedBy, updatedAt, version)
 	if err != nil {
@@ -302,7 +361,12 @@ func mapListProductDocumentRow(row dbgen.ListProductDocumentsRow, scope ViewerSc
 }
 
 func mapLockRow(row dbgen.LockProductDocumentByIDRow) (DocumentView, error) {
-	return documentFromParts(row.ID, row.Kind, row.Slug, row.Title, row.Status, row.Visibility, row.Body, row.Category, row.Policy, row.FrontmatterYaml, row.AuthorID, row.PublishedAt, row.DeletedAt, row.DeletedBy, row.UpdatedAt, row.Version)
+	view, err := documentFromParts(row.ID, row.Kind, row.Slug, row.Title, row.Status, row.Visibility, row.Body, row.Category, row.Policy, row.FrontmatterYaml, row.AuthorID, row.PublishedAt, row.DeletedAt, row.DeletedBy, row.UpdatedAt, row.Version)
+	if err != nil {
+		return DocumentView{}, err
+	}
+	view.ReaderIDs, err = uuidStringsFromAny(row.ReaderIds)
+	return view, err
 }
 
 func baseCommandState(view DocumentView, exists bool) (string, string, int64, *time.Time, *DocumentView, []string, []string) {
@@ -386,6 +450,18 @@ func mapNotFound(err error) error {
 func mapStaleUpdate(err error) error {
 	if errors.Is(err, pgx.ErrNoRows) {
 		return apierr.New(apierr.Conflict, "document revision mismatch")
+	}
+	return err
+}
+
+func mapDocumentWriteError(err error) error {
+	if violation, ok := errors.AsType[*pgconn.PgError](err); ok && violation.Code == "23505" {
+		if violation.ConstraintName == "uq_documents_dm_table_per_member" {
+			return apierr.New(apierr.Conflict, "DUPLICATE_DM_TABLE")
+		}
+		if violation.ConstraintName == "documents_slug_key" {
+			return apierr.New(apierr.Conflict, "document slug already allocated")
+		}
 	}
 	return err
 }

@@ -1,3 +1,4 @@
 {
-  "totalMembers": "many"
+  "totalQuests": "many",
+  "activeCharacters": 200
 }

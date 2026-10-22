@@ -1,0 +1,134 @@
+{
+  "reviewedAt": "2026-10-20T17:39:02.556170+00:00",
+  "reviewer": "/root",
+  "nativeSession": 4900,
+  "nativeExit": 0,
+  "elapsedNativeSeconds": 77.88,
+  "completedStages": 13,
+  "actualBrowserRequests": 557,
+  "productionInputs": 926,
+  "productionInputsUnchanged": true,
+  "ownedInputs": 10,
+  "ownedCurrentAndExecutedCopiesMatch": true,
+  "profiles": [
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "parchment",
+      "mode": "light",
+      "motion": "no-preference"
+    },
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "theme": "midnight",
+      "mode": "dark",
+      "motion": "reduce"
+    },
+    {
+      "viewport": {
+        "width": 900,
+        "height": 1000
+      },
+      "theme": "parchment",
+      "mode": "light",
+      "motion": "no-preference"
+    },
+    {
+      "viewport": {
+        "width": 900,
+        "height": 1000
+      },
+      "theme": "midnight",
+      "mode": "dark",
+      "motion": "reduce"
+    },
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "theme": "parchment",
+      "mode": "light",
+      "motion": "no-preference"
+    },
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "theme": "midnight",
+      "mode": "dark",
+      "motion": "reduce"
+    }
+  ],
+  "paintedImagesInspectedByRoot": [
+    "map-supplement-parchment-390.png",
+    "map-supplement-midnight-390.png",
+    "map-supplement-modal-390.png",
+    "region-supplement-parchment-1920.png"
+  ],
+  "nativeCounts": {
+    "maps": 4,
+    "edges": 2,
+    "links": 2,
+    "nodes": 5,
+    "members": 4,
+    "receipts": 15,
+    "documents": 2,
+    "assignments": 4
+  },
+  "nativeBinary": "final-acceptance-9/frontend-acceptance.test",
+  "nativeBinarySha256": "9a742dd62ba0d5f41d63f7683584a460d52c5f2f828eacbbc2e0dc5aaedb8ad1",
+  "frontendSourceManifestSha256": "fe1319173ab0789c395d1a2b6e1bacdd7bc2fb56dd18794e6c8fc29dde550ec5",
+  "cleanup": {
+    "at": "2026-10-20T17:35:54.994035858Z",
+    "database": "product_case_1",
+    "databaseDropped": true,
+    "listenersClosed": true
+  },
+  "artifacts": {
+    "attempt-input-graphql_product_fixture_test.go": "23f8f275b96219ebe4f07d670c6364850f7d41bb0534fafb556a4a6d0934e332",
+    "map-supplement-parchment-1920.png": "04d3963e76e2b22efac714cff7fccac41071d51ee90512c14a247cede632192c",
+    "region-supplement-midnight-1920.png": "906e768463d8d8819b7d3ffb4ea1549f77928253e59e51b38e5e404638354ac9",
+    "map-supplement-modal-390.png": "6a3f0424c149e70f0d9f47ee5ea54accda8c7c1b330615603c951801785d43e1",
+    "map-supplement-parchment-390.png": "2a14dce99d47b473c77952692a59b88511ee441d22bfcf5d4c1cbb80e461a3d3",
+    "native-private-denials.json": "c6bf62c250582dfa9cf1194c7ba421ce47ccab2ed4536bdec2b33e18cb7993e3",
+    "map-supplement-midnight-1920.png": "c0d662c838474c89604d0de089865bfb10bc107cfea095828e069d96d5fe9990",
+    "native-inventory.json": "68e3b4af06f963f6d18c3fb55c74f70cf18ae6229123796681012a70e7b62d46",
+    "attempt-input-authority_integration_test.go": "e45ea96c4728f506467307fc4a518e630c473b6ebbe67c64e7e51a3f534d8d2b",
+    "http-observer.json": "c1e89fa49749c846c7f435360bc7f787a9939cfb629c1c79c84439111e1ae824",
+    "map-supplement-parchment-900.png": "46917d5bd0e0c88a26927f9f60cd19816a016e49e5cd05c00e9951a670c5aee9",
+    "attempt-input-quest_browser_integration_test.go": "c77bffe772b614a92209782ee3dfe31c585b0f85dcdec83a3837d88421ea66c6",
+    "browser-receipt.json": "494714925c616176631d8758d27b2ee603f2960258d5245cf8f6d4d3340793b3",
+    "region-supplement-parchment-900.png": "b645da2df9d43f518da9511941028dba79ddf5ee0d8697c9d9656ce9214e1168",
+    "map-supplement-midnight-900.png": "14f38ba420f822799a233a72db1eec070415df70bd658b8a7c54e65fe52d6502",
+    "native-persisted-readback.json": "5c2973441729dd87e9ff1bd8d5761a04d69c4d01a01249b369f4c7180e3e5404",
+    "native-cleanup.json": "2aa4113863341868bbd120a6b6092c4012eb8f7ee30fe0df3b2cffe20dfc57c9",
+    "attempt-input-map_session_browser_integration_test.go": "92cd505b38f4b9900594e87e10e6498bea6e6a23e4dd23b56c48590d9c617066",
+    "region-supplement-parchment-390.png": "2a042218aa398ec040090ddac20d0cd90448e2ba4b2bf47ae4da2c3fcb505fba",
+    "region-supplement-midnight-900.png": "ab1a1982c3f2616bbbc377f14a7ed971878ddbaa1c7db81651af8c145e92f734",
+    "production-inputs-after.json": "ec8828670e7978b98230169dd74d35e54504d36695809b25d5b34aca74f061ae",
+    "map-session-final.png": "69fc799c7fe2949880c15b4aedca88a261687c5e1c70b8f8c0a59f00a6fb337e",
+    "attempt-input-map-session-browser.mjs": "3c2973e654996ba9d634b587487747410deec4bef3a0791d1a8d7ee7ac29645e",
+    "map-supplement-midnight-390.png": "8776935b31a31c16a27460221d1204f9e5c98a226d6a465264a7ce7adb93ca89",
+    "region-supplement-midnight-390.png": "0d2b479deb0427a7a8c1885d174f63d5f55471d6a8543d18e92210f290bcf564",
+    "region-supplement-parchment-1920.png": "92324e73cdb1a242dddab51cfda01194f6266c88e150e728af523bc4d34f2068",
+    "production-inputs-before.json": "ec8828670e7978b98230169dd74d35e54504d36695809b25d5b34aca74f061ae",
+    "map-supplement-modal-1920.png": "0c0eb1fc77b920a4768f9a2b623c9eb06e4d5f9168d45b39dfff2810859d7edc",
+    "owned-inputs.json": "11d1f5b70188c9c5e9ac49ac296f11d1287a61f77715d0f93cc6a51865c9d64b",
+    "map-supplement-modal-900.png": "98bdec6c3c54070f0ff42579e4827377d074cf587bd07e549e19bd7e86768be1"
+  },
+  "noMocks": true,
+  "oauth": false,
+  "performanceAcceptance": false,
+  "visualApproval": false,
+  "limits": [
+    "Real fixture API and current-source Vite; separate immutable Build29 target retained.",
+    "Six profile geometry/keyboard/mouse/readback acceptance does not substitute for final cold-cache40-trial budget or explicit owner visual approval."
+  ]
+}

@@ -1,0 +1,1424 @@
+{
+  "inputSha256": "fa46e145397b53fbbc1cacbd6badb120aa4bb56fdbe98584b43c39e5709d02ed",
+  "rootOnlyQaWriter": true,
+  "rows": [
+    {
+      "route": "/admin",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-bounded",
+      "reason": "Actual recorded state/widths; preserve actor and original epoch.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/admin-browser/run-21-current34/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "today",
+      "actorsActuallyProven": [
+        "admin"
+      ],
+      "canonicalComponent": "AdminPage"
+    },
+    {
+      "route": "/admin/world",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-bounded",
+      "reason": "Actual recorded state/widths; preserve actor and original epoch.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/admin-browser/continuation/run-17-current36/browser-receipt.json",
+        ".local/workspace-setup/frontend-completion-20261020/admin-browser/run-21-current34/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        768,
+        840,
+        900,
+        1920
+      ],
+      "actualInputAction": "calendar-form, region-advance-confirmation, region-assignments-form, time-anchor-edit",
+      "actorsActuallyProven": [
+        "admin"
+      ],
+      "canonicalComponent": "AdminWorldPage / RegionsPanel / time-anchor and Calendar forms"
+    },
+    {
+      "route": "/admin/content",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-bounded",
+      "reason": "Actual recorded state/widths; preserve actor and original epoch.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/admin-browser/continuation/run-17-current36/browser-receipt.json",
+        ".local/workspace-setup/frontend-completion-20261020/admin-browser/run-21-current34/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        768,
+        840,
+        900,
+        1920
+      ],
+      "actualInputAction": "backstory-form, banner-form, creation-catalog-form",
+      "actorsActuallyProven": [
+        "admin"
+      ],
+      "canonicalComponent": "AdminContentPage / banner and catalog forms"
+    },
+    {
+      "route": "/admin/delivery",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-bounded",
+      "reason": "Actual recorded state/widths; preserve actor and original epoch.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/admin-browser/run-21-current34/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "delivery",
+      "actorsActuallyProven": [
+        "admin"
+      ],
+      "canonicalComponent": "AdminDeliveryPage"
+    },
+    {
+      "route": "/admin/data-health",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-bounded",
+      "reason": "Actual recorded state/widths; preserve actor and original epoch.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/admin-browser/run-21-current34/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "data-health",
+      "actorsActuallyProven": [
+        "admin"
+      ],
+      "canonicalComponent": "AdminDataHealthPage"
+    },
+    {
+      "route": "/dm",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-bounded",
+      "reason": "Actual recorded state/widths; preserve actor and original epoch.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/admin-browser/run-21-current34/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "dm-dashboard",
+      "actorsActuallyProven": [
+        "dm"
+      ],
+      "canonicalComponent": "DMDashboardPage"
+    },
+    {
+      "route": "/admin/characters",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-bounded",
+      "reason": "Actual recorded state/widths; preserve actor and original epoch.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/admin-browser/continuation/run-17-current36/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        768,
+        840,
+        900,
+        1920
+      ],
+      "actualInputAction": "character-directory",
+      "actorsActuallyProven": [
+        "admin"
+      ],
+      "canonicalComponent": "AdminCharactersPage"
+    },
+    {
+      "route": "/admin/review",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-bounded",
+      "reason": "Actual recorded state/widths; preserve actor and original epoch.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/admin-browser/continuation/run-17-current36/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        768,
+        840,
+        900,
+        1920
+      ],
+      "actualInputAction": "character-review-form, dm-review-form",
+      "actorsActuallyProven": [
+        "admin"
+      ],
+      "canonicalComponent": "AdminReviewPage"
+    },
+    {
+      "route": "/admin/overview",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-composed",
+      "reason": "Pure redirect/destination composition; retain direct alias width separately from canonical layout widths.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/admin-browser/run-21-current34/browser-receipt.json",
+        ".local/workspace-setup/frontend-completion-20261020/admin-browser/continuation/run-17-current36/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "Navigate unchanged redirect; inspect canonical destination controls",
+      "actorsActuallyProven": [
+        "admin geometry; configured-owner/verifier/etc admission separately in existing canonical receipts"
+      ],
+      "canonicalComponent": "AdminPage"
+    },
+    {
+      "route": "/admin/home-banner",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-composed",
+      "reason": "Pure redirect/destination composition; retain direct alias width separately from canonical layout widths.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/admin-browser/run-21-current34/browser-receipt.json",
+        ".local/workspace-setup/frontend-completion-20261020/admin-browser/continuation/run-17-current36/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "Navigate unchanged redirect; inspect canonical destination controls",
+      "actorsActuallyProven": [
+        "admin geometry; configured-owner/verifier/etc admission separately in existing canonical receipts"
+      ],
+      "canonicalComponent": "AdminContentPage / banner and catalog forms"
+    },
+    {
+      "route": "/admin/regions",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-composed",
+      "reason": "Pure redirect/destination composition; retain direct alias width separately from canonical layout widths.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/admin-browser/run-21-current34/browser-receipt.json",
+        ".local/workspace-setup/frontend-completion-20261020/admin-browser/continuation/run-17-current36/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "Navigate unchanged redirect; inspect canonical destination controls",
+      "actorsActuallyProven": [
+        "admin geometry; configured-owner/verifier/etc admission separately in existing canonical receipts"
+      ],
+      "canonicalComponent": "AdminWorldPage / RegionsPanel / time-anchor and Calendar forms"
+    },
+    {
+      "route": "/admin/world-clock",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-composed",
+      "reason": "Pure redirect/destination composition; retain direct alias width separately from canonical layout widths.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/admin-browser/run-21-current34/browser-receipt.json",
+        ".local/workspace-setup/frontend-completion-20261020/admin-browser/continuation/run-17-current36/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "Navigate unchanged redirect; inspect canonical destination controls",
+      "actorsActuallyProven": [
+        "admin geometry; configured-owner/verifier/etc admission separately in existing canonical receipts"
+      ],
+      "canonicalComponent": "AdminWorldPage / RegionsPanel / time-anchor and Calendar forms"
+    },
+    {
+      "route": "/admin/catalogs",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-composed",
+      "reason": "Pure redirect/destination composition; retain direct alias width separately from canonical layout widths.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/admin-browser/run-21-current34/browser-receipt.json",
+        ".local/workspace-setup/frontend-completion-20261020/admin-browser/continuation/run-17-current36/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "Navigate unchanged redirect; inspect canonical destination controls",
+      "actorsActuallyProven": [
+        "admin geometry; configured-owner/verifier/etc admission separately in existing canonical receipts"
+      ],
+      "canonicalComponent": "AdminContentPage / banner and catalog forms"
+    },
+    {
+      "route": "/admin/ingestion",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-composed",
+      "reason": "Pure redirect/destination composition; retain direct alias width separately from canonical layout widths.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/admin-browser/run-21-current34/browser-receipt.json",
+        ".local/workspace-setup/frontend-completion-20261020/admin-browser/continuation/run-17-current36/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "Navigate unchanged redirect; inspect canonical destination controls",
+      "actorsActuallyProven": [
+        "admin geometry; configured-owner/verifier/etc admission separately in existing canonical receipts"
+      ],
+      "canonicalComponent": "AdminDataHealthPage"
+    },
+    {
+      "route": "/verify",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-composed",
+      "reason": "Pure redirect/destination composition; retain direct alias width separately from canonical layout widths.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/admin-browser/run-21-current34/browser-receipt.json",
+        ".local/workspace-setup/frontend-completion-20261020/admin-browser/continuation/run-17-current36/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "Navigate unchanged redirect; inspect canonical destination controls",
+      "actorsActuallyProven": [
+        "admin geometry; configured-owner/verifier/etc admission separately in existing canonical receipts"
+      ],
+      "canonicalComponent": "AdminReviewPage"
+    },
+    {
+      "route": "/codex/:id/edit",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-bounded",
+      "reason": "Actual recorded state/widths; preserve actor and original epoch.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "editor; metadata form",
+      "actorsActuallyProven": [
+        "admin",
+        "archon"
+      ],
+      "canonicalComponent": "DocumentEditorRoute / shared EditorShell"
+    },
+    {
+      "route": "/codex/:slug",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-bounded",
+      "reason": "Actual recorded state/widths; preserve actor and original epoch.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "reader",
+      "actorsActuallyProven": [
+        "admin",
+        "owner"
+      ],
+      "canonicalComponent": "Canonical Document reader"
+    },
+    {
+      "route": "/rules/rulings/:id/edit",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-bounded",
+      "reason": "Actual recorded state/widths; preserve actor and original epoch.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "editor",
+      "actorsActuallyProven": [
+        "admin"
+      ],
+      "canonicalComponent": "DocumentEditorRoute / shared EditorShell"
+    },
+    {
+      "route": "/rules/rulings/:id",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-bounded",
+      "reason": "Actual recorded state/widths; preserve actor and original epoch.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "reader",
+      "actorsActuallyProven": [
+        "admin"
+      ],
+      "canonicalComponent": "Canonical Document reader"
+    },
+    {
+      "route": "/editor/dm-table/:id/edit",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-bounded",
+      "reason": "Actual recorded state/widths; preserve actor and original epoch.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "editor",
+      "actorsActuallyProven": [
+        "owner"
+      ],
+      "canonicalComponent": "DocumentEditorRoute / shared EditorShell"
+    },
+    {
+      "route": "/codex/:category/:id/edit",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-bounded",
+      "reason": "Actual recorded state/widths; preserve actor and original epoch.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "editor",
+      "actorsActuallyProven": [
+        "owner"
+      ],
+      "canonicalComponent": "DocumentEditorRoute / shared EditorShell"
+    },
+    {
+      "route": "/summaries/:id/edit",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-bounded",
+      "reason": "Actual recorded state/widths; preserve actor and original epoch.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "editor; incomplete relationships preserved; body permission unchanged",
+      "actorsActuallyProven": [
+        "owner",
+        "player"
+      ],
+      "canonicalComponent": "DocumentEditorRoute / shared EditorShell"
+    },
+    {
+      "route": "/chronicles/:id",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-bounded",
+      "reason": "Actual recorded state/widths; preserve actor and original epoch.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "reader",
+      "actorsActuallyProven": [
+        "owner"
+      ],
+      "canonicalComponent": "Canonical Document reader"
+    },
+    {
+      "route": "/codex/new",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "pending-distinct-form",
+      "reason": "Actual three-width measurement root is Category menu only; full new Codex form/select state is not measured. Assigned Editor supplement closes it.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "new category menu; no selection or save",
+      "actorsActuallyProven": [
+        "admin"
+      ],
+      "canonicalComponent": "DocumentEditorRoute / shared EditorShell"
+    },
+    {
+      "route": "/rules/guides/:id/edit",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-composed",
+      "reason": "Own phone lifecycle/history + three-width modal; full Guide/Ruling edit schemas and shell identical. Do not call modal-only900/1920 whole-Guide photos.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "local unsaved-leave guard; no navigation submitted; read-only history and existing lifecycle/audience controls; no action submitted",
+      "actorsActuallyProven": [
+        "verifier"
+      ],
+      "canonicalComponent": "DocumentEditorRoute / shared EditorShell"
+    },
+    {
+      "route": "/summaries/new",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-bounded",
+      "reason": "Actual new linked two-Quest form at390/900/1920, no save; bare same new shell needs explicit source composition, never persistence credit.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "local two-Quest selection only; no save or persisted association claim",
+      "actorsActuallyProven": [
+        "owner"
+      ],
+      "canonicalComponent": "DocumentEditorRoute / shared EditorShell"
+    },
+    {
+      "route": "/quests/new",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-composed",
+      "reason": "Actual create/reload plus same QUEST_SCHEMA/EditorShell measured at390/768/1920 in edit; Code remains read-only in both.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/quest-browser/run-6/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        768,
+        1920
+      ],
+      "actualInputAction": "Actual Quest editor create/update; explicit participant choices; closed DM detail as applicable",
+      "actorsActuallyProven": [
+        "current quest DM",
+        "owning players",
+        "outsider denial separately"
+      ],
+      "canonicalComponent": "QuestEditorRoute / QuestDetailPage"
+    },
+    {
+      "route": "/quests/:code/edit",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-bounded",
+      "reason": "Actual recorded state/widths; preserve actor and original epoch.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/quest-browser/run-6/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        768,
+        1920
+      ],
+      "actualInputAction": "Actual Quest editor create/update; explicit participant choices; closed DM detail as applicable",
+      "actorsActuallyProven": [
+        "current quest DM",
+        "owning players",
+        "outsider denial separately"
+      ],
+      "canonicalComponent": "QuestEditorRoute / QuestDetailPage"
+    },
+    {
+      "route": "/quests/:code",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-bounded",
+      "reason": "Actual recorded state/widths; preserve actor and original epoch.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/quest-browser/run-6/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        768,
+        1920
+      ],
+      "actualInputAction": "Actual Quest editor create/update; explicit participant choices; closed DM detail as applicable",
+      "actorsActuallyProven": [
+        "current quest DM",
+        "owning players",
+        "outsider denial separately"
+      ],
+      "canonicalComponent": "QuestEditorRoute / QuestDetailPage"
+    },
+    {
+      "route": "/codex/npc/:slug",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-composed",
+      "reason": "Actual acknowledged alias identity/reload plus canonical Codex reader tuples; labels add no category policy.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "Resolve actual acknowledged slug/UUID then render and reload canonical reader",
+      "actorsActuallyProven": [
+        "guest alias reader",
+        "owner/admin canonical reader"
+      ],
+      "canonicalComponent": "CodexSlugAliasPage / CodexIdAliasPage -> CodexEntryPage"
+    },
+    {
+      "route": "/codex/faction/:slug",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-composed",
+      "reason": "Actual acknowledged alias identity/reload plus canonical Codex reader tuples; labels add no category policy.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "Resolve actual acknowledged slug/UUID then render and reload canonical reader",
+      "actorsActuallyProven": [
+        "guest alias reader",
+        "owner/admin canonical reader"
+      ],
+      "canonicalComponent": "CodexSlugAliasPage / CodexIdAliasPage -> CodexEntryPage"
+    },
+    {
+      "route": "/codex/region/:slug",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-composed",
+      "reason": "Actual acknowledged alias identity/reload plus canonical Codex reader tuples; labels add no category policy.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "Resolve actual acknowledged slug/UUID then render and reload canonical reader",
+      "actorsActuallyProven": [
+        "guest alias reader",
+        "owner/admin canonical reader"
+      ],
+      "canonicalComponent": "CodexSlugAliasPage / CodexIdAliasPage -> CodexEntryPage"
+    },
+    {
+      "route": "/codex/location/:slug",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-composed",
+      "reason": "Actual acknowledged alias identity/reload plus canonical Codex reader tuples; labels add no category policy.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "Resolve actual acknowledged slug/UUID then render and reload canonical reader",
+      "actorsActuallyProven": [
+        "guest alias reader",
+        "owner/admin canonical reader"
+      ],
+      "canonicalComponent": "CodexSlugAliasPage / CodexIdAliasPage -> CodexEntryPage"
+    },
+    {
+      "route": "/codex/artifact/:id",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-composed",
+      "reason": "Actual acknowledged alias identity/reload plus canonical Codex reader tuples; labels add no category policy.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "Resolve actual acknowledged slug/UUID then render and reload canonical reader",
+      "actorsActuallyProven": [
+        "guest alias reader",
+        "owner/admin canonical reader"
+      ],
+      "canonicalComponent": "CodexSlugAliasPage / CodexIdAliasPage -> CodexEntryPage"
+    },
+    {
+      "route": "/codex/event/:id",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-composed",
+      "reason": "Actual acknowledged alias identity/reload plus canonical Codex reader tuples; labels add no category policy.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "Resolve actual acknowledged slug/UUID then render and reload canonical reader",
+      "actorsActuallyProven": [
+        "guest alias reader",
+        "owner/admin canonical reader"
+      ],
+      "canonicalComponent": "CodexSlugAliasPage / CodexIdAliasPage -> CodexEntryPage"
+    },
+    {
+      "route": "/codex/lore/:id",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-composed",
+      "reason": "Actual acknowledged alias identity/reload plus canonical Codex reader tuples; labels add no category policy.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "Resolve actual acknowledged slug/UUID then render and reload canonical reader",
+      "actorsActuallyProven": [
+        "guest alias reader",
+        "owner/admin canonical reader"
+      ],
+      "canonicalComponent": "CodexSlugAliasPage / CodexIdAliasPage -> CodexEntryPage"
+    },
+    {
+      "route": "/factions/:slug",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-composed",
+      "reason": "Actual acknowledged alias identity/reload plus canonical Codex reader tuples; labels add no category policy.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "Resolve actual acknowledged slug/UUID then render and reload canonical reader",
+      "actorsActuallyProven": [
+        "guest alias reader",
+        "owner/admin canonical reader"
+      ],
+      "canonicalComponent": "CodexSlugAliasPage / CodexIdAliasPage -> CodexEntryPage"
+    },
+    {
+      "route": "/npcs/:slug",
+      "facet": "responsive",
+      "category": "proposed38",
+      "decision": "add-composed",
+      "reason": "Actual acknowledged alias identity/reload plus canonical Codex reader tuples; labels add no category policy.",
+      "evidence": [
+        ".local/workspace-setup/frontend-completion-20261020/editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ],
+      "actualInputAction": "Resolve actual acknowledged slug/UUID then render and reload canonical reader",
+      "actorsActuallyProven": [
+        "guest alias reader",
+        "owner/admin canonical reader"
+      ],
+      "canonicalComponent": "CodexSlugAliasPage / CodexIdAliasPage -> CodexEntryPage"
+    },
+    {
+      "route": "/quests/open",
+      "facet": "authority",
+      "category": "candidates17",
+      "decision": "add-composed",
+      "reason": "Actual compatibility navigation + unchanged pure redirect + canonical Quest/Chronicle readable/private actions.",
+      "evidence": [
+        "editor-live/run-14-current35/browser-receipt.json",
+        "quest-browser/run-6/browser-receipt.json",
+        "public-collections/run-13-current36/browser-receipt.json"
+      ],
+      "widths": "Actual direct-read widths only; no actor×width Cartesian"
+    },
+    {
+      "route": "/timeline",
+      "facet": "authority",
+      "category": "candidates17",
+      "decision": "add-composed",
+      "reason": "Actual compatibility navigation + unchanged pure redirect + canonical Quest/Chronicle readable/private actions.",
+      "evidence": [
+        "editor-live/run-14-current35/browser-receipt.json",
+        "quest-browser/run-6/browser-receipt.json",
+        "public-collections/run-13-current36/browser-receipt.json"
+      ],
+      "widths": "Actual direct-read widths only; no actor×width Cartesian"
+    },
+    {
+      "route": "/guilds",
+      "facet": "authority",
+      "category": "candidates17",
+      "decision": "add-composed",
+      "reason": "Identifierless alias goes to Codex; historical identity/no-guess actions belong to identifier variants. Compose actual Codex readable-directory authority.",
+      "evidence": [
+        "editor-live/run-14-current35/browser-receipt.json",
+        "public-collections/run-13-current36/browser-receipt.json"
+      ],
+      "widths": "Actual direct-read widths only; no actor×width Cartesian"
+    },
+    {
+      "route": "/guilds/:shortCode",
+      "facet": "authority",
+      "category": "candidates17",
+      "decision": "add-composed",
+      "reason": "Actual UUID/slug resolution, reload, unmapped and private denial; canonical Codex policy, no guessed identity.",
+      "evidence": [
+        "editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": "Actual direct-read widths only; no actor×width Cartesian"
+    },
+    {
+      "route": "/guilds/:shortCode/redirect",
+      "facet": "authority",
+      "category": "candidates17",
+      "decision": "add-composed",
+      "reason": "Actual UUID/slug resolution, reload, unmapped and private denial; canonical Codex policy, no guessed identity.",
+      "evidence": [
+        "editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": "Actual direct-read widths only; no actor×width Cartesian"
+    },
+    {
+      "route": "/factions/:slug",
+      "facet": "authority",
+      "category": "candidates17",
+      "decision": "add-composed",
+      "reason": "P13 check5 wrongKindAliases acknowledges public Guide then both actual CodexEntry:null; combine actual D14 private/missing/canonical identity.",
+      "evidence": [
+        "public-collections/run-13-current36/browser-receipt.json",
+        "editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": "Actual direct-read widths only; no actor×width Cartesian"
+    },
+    {
+      "route": "/npcs/:slug",
+      "facet": "authority",
+      "category": "candidates17",
+      "decision": "add-composed",
+      "reason": "P13 check5 wrongKindAliases acknowledges public Guide then both actual CodexEntry:null; combine actual D14 private/missing/canonical identity.",
+      "evidence": [
+        "public-collections/run-13-current36/browser-receipt.json",
+        "editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": "Actual direct-read widths only; no actor×width Cartesian"
+    },
+    {
+      "route": "/quests/:shortCode/redirect",
+      "facet": "authority",
+      "category": "candidates17",
+      "decision": "add-composed",
+      "reason": "Actual known-identity alias/reload + canonical current admission; pure redirect adds no authority.",
+      "evidence": [
+        "editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": "Actual direct-read widths only; no actor×width Cartesian"
+    },
+    {
+      "route": "/characters/:shortCode/redirect",
+      "facet": "authority",
+      "category": "candidates17",
+      "decision": "add-composed",
+      "reason": "Actual known-identity alias/reload + canonical current admission; pure redirect adds no authority.",
+      "evidence": [
+        "editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": "Actual direct-read widths only; no actor×width Cartesian"
+    },
+    {
+      "route": "/players/:shortCode/redirect",
+      "facet": "authority",
+      "category": "candidates17",
+      "decision": "add-composed",
+      "reason": "Actual known-identity alias/reload + canonical current admission; pure redirect adds no authority.",
+      "evidence": [
+        "editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": "Actual direct-read widths only; no actor×width Cartesian"
+    },
+    {
+      "route": "/factions/:shortCode/redirect",
+      "facet": "authority",
+      "category": "candidates17",
+      "decision": "add-composed",
+      "reason": "Actual known-identity alias/reload + canonical current admission; pure redirect adds no authority.",
+      "evidence": [
+        "editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": "Actual direct-read widths only; no actor×width Cartesian"
+    },
+    {
+      "route": "/npcs/:shortCode/redirect",
+      "facet": "authority",
+      "category": "candidates17",
+      "decision": "add-composed",
+      "reason": "Actual known-identity alias/reload + canonical current admission; pure redirect adds no authority.",
+      "evidence": [
+        "editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": "Actual direct-read widths only; no actor×width Cartesian"
+    },
+    {
+      "route": "/series/:shortCode/redirect",
+      "facet": "authority",
+      "category": "candidates17",
+      "decision": "add-composed",
+      "reason": "Actual Arc UUID/reload and unmapped case; current owner/foreign/revoked Series actions remain on canonical route.",
+      "evidence": [
+        "editor-live/run-14-current35/browser-receipt.json",
+        "quest-browser/composition-run-10-current36/browser-receipt.json"
+      ],
+      "widths": "Actual direct-read widths only; no actor×width Cartesian"
+    },
+    {
+      "route": "/players",
+      "facet": "authority",
+      "category": "candidates17",
+      "decision": "add-composed",
+      "reason": "P13 public server pagination/search/accepting, complete roster/availability and canonical profile navigation; no private-field or all-role claim.",
+      "evidence": [
+        "public-collections/run-13-current36/browser-receipt.json",
+        "account-browser/run-18-current36/browser-receipt.json"
+      ],
+      "widths": "Actual direct-read widths only; no actor×width Cartesian"
+    },
+    {
+      "route": "/dms",
+      "facet": "authority",
+      "category": "candidates17",
+      "decision": "add-composed",
+      "reason": "P13 public server pagination/search/accepting, complete roster/availability and canonical profile navigation; no private-field or all-role claim.",
+      "evidence": [
+        "public-collections/run-13-current36/browser-receipt.json",
+        "account-browser/run-18-current36/browser-receipt.json"
+      ],
+      "widths": "Actual direct-read widths only; no actor×width Cartesian"
+    },
+    {
+      "route": "/community",
+      "facet": "authority",
+      "category": "candidates17",
+      "decision": "add-composed",
+      "reason": "P13 public server pagination/search/accepting, complete roster/availability and canonical profile navigation; no private-field or all-role claim.",
+      "evidence": [
+        "public-collections/run-13-current36/browser-receipt.json",
+        "account-browser/run-18-current36/browser-receipt.json"
+      ],
+      "widths": "Actual direct-read widths only; no actor×width Cartesian"
+    },
+    {
+      "route": "/codex",
+      "facet": "authority",
+      "category": "candidates17",
+      "decision": "add-composed",
+      "reason": "P13 full category/search/pages and same CodexDirectory NPC/Faction private/deny-all suppression; canonical reader admission stays server-owned.",
+      "evidence": [
+        "public-collections/run-13-current36/browser-receipt.json",
+        "editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": "Actual direct-read widths only; no actor×width Cartesian"
+    },
+    {
+      "route": "/auth/callback",
+      "facet": "responsive",
+      "category": "conditional26",
+      "decision": "hold",
+      "reason": "Valid OAuth establishment/persistence unresolved; minted tokens/error callback are not substitutes.",
+      "evidence": [],
+      "widths": "Preserve exact dated source tuples; no invented alias-specific capture"
+    },
+    {
+      "route": "/calendar",
+      "facet": "responsive",
+      "category": "conditional26",
+      "decision": "hold",
+      "reason": "Whole Series10 composition still fails unchanged title filter; no Calendar policy/full-flow waiver.",
+      "evidence": [
+        "quest-browser/composition-run-10-current36/browser-receipt.json"
+      ],
+      "widths": "Preserve exact dated source tuples; no invented alias-specific capture"
+    },
+    {
+      "route": "/login",
+      "facet": "responsive",
+      "category": "conditional26",
+      "decision": "hold",
+      "reason": "Valid OAuth journey remains unresolved; guest login paint alone does not complete that workflow.",
+      "evidence": [],
+      "widths": "Preserve exact dated source tuples; no invented alias-specific capture"
+    },
+    {
+      "route": "/characters/:shortCode/redirect",
+      "facet": "responsive",
+      "category": "conditional26",
+      "decision": "add-composed",
+      "reason": "Actual D14 guest alias identity/reload + A18 same canonical Character component/public subset and owner forms; preserve actor scopes.",
+      "evidence": [
+        "editor-live/run-14-current35/browser-receipt.json",
+        "account-browser/run-18-current36/browser-receipt.json"
+      ],
+      "widths": "Preserve exact dated source tuples; no invented alias-specific capture"
+    },
+    {
+      "route": "/chronicles",
+      "facet": "responsive",
+      "category": "conditional26",
+      "decision": "pending-refresh",
+      "reason": "Distinct public collection page; retain conditional until final37 guest three-width refresh.",
+      "evidence": [
+        "public-collections/run-13-current36/browser-receipt.json",
+        "editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": "Preserve exact dated source tuples; no invented alias-specific capture"
+    },
+    {
+      "route": "/codex",
+      "facet": "responsive",
+      "category": "conditional26",
+      "decision": "pending-refresh",
+      "reason": "Distinct directory/current filters; existing public data proof does not become current37 three-width paint.",
+      "evidence": [
+        "public-collections/run-13-current36/browser-receipt.json"
+      ],
+      "widths": "Preserve exact dated source tuples; no invented alias-specific capture"
+    },
+    {
+      "route": "/codex/:category/new",
+      "facet": "responsive",
+      "category": "conditional26",
+      "decision": "pending-distinct-form",
+      "reason": "Qualified new Category SELECT differs from persisted edit read-only Category; menu-only proof does not measure whole new form. Editor supplement assigned.",
+      "evidence": [
+        "editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": "Preserve exact dated source tuples; no invented alias-specific capture"
+    },
+    {
+      "route": "/community/entries/:slug",
+      "facet": "responsive",
+      "category": "conditional26",
+      "decision": "pending-refresh",
+      "reason": "Separate generic CommunityEntryPage, not DM-table reader component. Need real known body/title in final guest refresh or one existing-fixture readonly tour.",
+      "evidence": [
+        "public-collections/run-13-current36/browser-receipt.json",
+        "account-browser/run-18-current36/browser-receipt.json"
+      ],
+      "widths": "Preserve exact dated source tuples; no invented alias-specific capture"
+    },
+    {
+      "route": "/dms",
+      "facet": "responsive",
+      "category": "conditional26",
+      "decision": "pending-refresh",
+      "reason": "Distinct public directory/filter controls; final37 guest three-width refresh remains pending.",
+      "evidence": [
+        "public-collections/run-13-current36/browser-receipt.json"
+      ],
+      "widths": "Preserve exact dated source tuples; no invented alias-specific capture"
+    },
+    {
+      "route": "/editor/dm-table",
+      "facet": "responsive",
+      "category": "conditional26",
+      "decision": "add-composed",
+      "reason": "Same new draft Title/Slug schema, blank body, Save draft/Publish and no persisted lifecycle as measured new Summary shell; own actual D14 DM-table creation.",
+      "evidence": [
+        "editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": "Preserve exact dated source tuples; no invented alias-specific capture"
+    },
+    {
+      "route": "/factions/:shortCode/redirect",
+      "facet": "responsive",
+      "category": "conditional26",
+      "decision": "add-composed",
+      "reason": "D14 exact NPC identity/reload/private alias + actual same canonical NPC reader tuples. No Faction category reinterpretation.",
+      "evidence": [
+        "editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": "Preserve exact dated source tuples; no invented alias-specific capture"
+    },
+    {
+      "route": "/guilds/:shortCode",
+      "facet": "responsive",
+      "category": "conditional26",
+      "decision": "add-composed",
+      "reason": "D14 actual UUID+slug → same NPC canonical reader, unmapped/private checks; same measured reader layout.",
+      "evidence": [
+        "editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": "Preserve exact dated source tuples; no invented alias-specific capture"
+    },
+    {
+      "route": "/guilds/:shortCode/redirect",
+      "facet": "responsive",
+      "category": "conditional26",
+      "decision": "add-composed",
+      "reason": "D14 actual UUID+slug redirect → same NPC canonical reader plus unmapped/private checks; no new Guild form.",
+      "evidence": [
+        "editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": "Preserve exact dated source tuples; no invented alias-specific capture"
+    },
+    {
+      "route": "/npcs/:shortCode/redirect",
+      "facet": "responsive",
+      "category": "conditional26",
+      "decision": "add-composed",
+      "reason": "D14 exact same NPC canonical identity/reload/private checks plus actual canonical NPC reader tuples.",
+      "evidence": [
+        "editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": "Preserve exact dated source tuples; no invented alias-specific capture"
+    },
+    {
+      "route": "/players",
+      "facet": "responsive",
+      "category": "conditional26",
+      "decision": "pending-refresh",
+      "reason": "Distinct player directory controls; final37 guest three-width refresh remains pending.",
+      "evidence": [
+        "public-collections/run-13-current36/browser-receipt.json"
+      ],
+      "widths": "Preserve exact dated source tuples; no invented alias-specific capture"
+    },
+    {
+      "route": "/players/:shortCode/redirect",
+      "facet": "responsive",
+      "category": "conditional26",
+      "decision": "add-composed",
+      "reason": "D14 actual player alias/reload + A18 canonical profile public subtree/owner forms; do not invent guest alias-width screenshots.",
+      "evidence": [
+        "editor-live/run-14-current35/browser-receipt.json",
+        "account-browser/run-18-current36/browser-receipt.json"
+      ],
+      "widths": "Preserve exact dated source tuples; no invented alias-specific capture"
+    },
+    {
+      "route": "/quests/:code/summary",
+      "facet": "responsive",
+      "category": "conditional26",
+      "decision": "pending-distinct-form",
+      "reason": "QuestSummaryPage has Summary character/write-link/totals/linked-summary UI. Q6 Your character screenshot is QuestDetail, not this page. Add readonly three-width case.",
+      "evidence": [
+        "quest-browser/run-6/browser-receipt.json"
+      ],
+      "widths": "Preserve exact dated source tuples; no invented alias-specific capture"
+    },
+    {
+      "route": "/quests/:shortCode/redirect",
+      "facet": "responsive",
+      "category": "conditional26",
+      "decision": "add-composed",
+      "reason": "D14 public Quest1 exact alias/reload + Q6 canonical detail selectors/DM/closed geometry390/768/1920 and separate authority.",
+      "evidence": [
+        "editor-live/run-14-current35/browser-receipt.json",
+        "quest-browser/run-6/browser-receipt.json"
+      ],
+      "widths": "Preserve exact dated source tuples; no invented alias-specific capture"
+    },
+    {
+      "route": "/rules/guides/:id",
+      "facet": "responsive",
+      "category": "conditional26",
+      "decision": "add-composed",
+      "reason": "Guide/Ruling both literal RuleDetailPage; actual Guide reader/API proof + D14 Ruling reader three widths, category caption only.",
+      "evidence": [
+        "editor-live/run-14-current35/browser-receipt.json",
+        "public-collections/run-13-current36/browser-receipt.json"
+      ],
+      "widths": "Preserve exact dated source tuples; no invented alias-specific capture"
+    },
+    {
+      "route": "/rules/guides/new",
+      "facet": "responsive",
+      "category": "conditional26",
+      "decision": "add-composed",
+      "reason": "GUIDE/RULING/SUMMARY/DM_TABLE new schemas equal Title/Slug; same new shell/actions/blank body/no lifecycle. Own D14 Guide create/publish/read proof.",
+      "evidence": [
+        "editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": "Preserve exact dated source tuples; no invented alias-specific capture"
+    },
+    {
+      "route": "/rules/rulings/new",
+      "facet": "responsive",
+      "category": "conditional26",
+      "decision": "add-composed",
+      "reason": "Same new two-field draft shell/actions as actual measured new Summary, plus own D14 Ruling create/publish/read proof; no new route-specific photo.",
+      "evidence": [
+        "editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": "Preserve exact dated source tuples; no invented alias-specific capture"
+    },
+    {
+      "route": "/search",
+      "facet": "responsive",
+      "category": "conditional26",
+      "decision": "pending-refresh",
+      "reason": "Actual private/public search and session/revocation facts stay; distinct Search page layout needs final37 guest three widths.",
+      "evidence": [
+        "editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": "Preserve exact dated source tuples; no invented alias-specific capture"
+    },
+    {
+      "route": "/series/:shortCode",
+      "facet": "responsive",
+      "category": "conditional26",
+      "decision": "add-bounded",
+      "reason": "Actual completed Series10 owner creation/rename controls390/768/1920; only scoped profiles, whole Calendar composition still failed.",
+      "evidence": [
+        "quest-browser/composition-run-10-current36/browser-receipt.json"
+      ],
+      "widths": "Preserve exact dated source tuples; no invented alias-specific capture"
+    },
+    {
+      "route": "/series/:shortCode/redirect",
+      "facet": "responsive",
+      "category": "conditional26",
+      "decision": "add-composed",
+      "reason": "D14 exact Arc UUID/unmapped alias + Series10 canonical owner/common reader layout; preserve each actor/epoch; whole composition still failed.",
+      "evidence": [
+        "editor-live/run-14-current35/browser-receipt.json",
+        "quest-browser/composition-run-10-current36/browser-receipt.json"
+      ],
+      "widths": "Preserve exact dated source tuples; no invented alias-specific capture"
+    },
+    {
+      "route": "/summaries/:slug",
+      "facet": "responsive",
+      "category": "conditional26",
+      "decision": "add-composed",
+      "reason": "SummaryDetailPage is exact ChronicleDetailPage re-export; actual D14 same Summary content/reader three widths and real audience actions.",
+      "evidence": [
+        "editor-live/run-14-current35/browser-receipt.json"
+      ],
+      "widths": "Preserve exact dated source tuples; no invented alias-specific capture"
+    },
+    {
+      "route": "/welcome",
+      "facet": "responsive",
+      "category": "conditional26",
+      "decision": "pending-refresh",
+      "reason": "Distinct guest Welcome Login/Home navigation page; real P13 clicks exist, final37 three-width presentation remains pending.",
+      "evidence": [
+        "public-collections/run-13-current36/browser-receipt.json"
+      ],
+      "widths": "Preserve exact dated source tuples; no invented alias-specific capture"
+    },
+    {
+      "route": "/settings",
+      "facet": "existing-refresh",
+      "category": "refresh9",
+      "decision": "keep-refresh-bounded",
+      "reason": "A18 actual36 exact36 state/route/width tuples, settings failure/retry/session/OS facts; do not relabel new37 pixels.",
+      "evidence": [
+        "account-browser/run-18-current36/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ]
+    },
+    {
+      "route": "/me/personalize",
+      "facet": "existing-refresh",
+      "category": "refresh9",
+      "decision": "keep-refresh-bounded",
+      "reason": "A18 actual36 exact36 state/route/width tuples, settings failure/retry/session/OS facts; do not relabel new37 pixels.",
+      "evidence": [
+        "account-browser/run-18-current36/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ]
+    },
+    {
+      "route": "/me",
+      "facet": "existing-refresh",
+      "category": "refresh9",
+      "decision": "keep-refresh-bounded",
+      "reason": "A18 actual36 exact36 state/route/width tuples, settings failure/retry/session/OS facts; do not relabel new37 pixels.",
+      "evidence": [
+        "account-browser/run-18-current36/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ]
+    },
+    {
+      "route": "/characters",
+      "facet": "existing-refresh",
+      "category": "refresh9",
+      "decision": "keep-refresh-bounded",
+      "reason": "A18 actual36 exact36 state/route/width tuples, settings failure/retry/session/OS facts; do not relabel new37 pixels.",
+      "evidence": [
+        "account-browser/run-18-current36/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ]
+    },
+    {
+      "route": "/notifications",
+      "facet": "existing-refresh",
+      "category": "refresh9",
+      "decision": "keep-refresh-bounded",
+      "reason": "A18 actual36 exact36 state/route/width tuples, settings failure/retry/session/OS facts; do not relabel new37 pixels.",
+      "evidence": [
+        "account-browser/run-18-current36/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ]
+    },
+    {
+      "route": "/characters/:code",
+      "facet": "existing-refresh",
+      "category": "refresh9",
+      "decision": "keep-refresh-bounded",
+      "reason": "A18 actual36 exact36 state/route/width tuples, settings failure/retry/session/OS facts; do not relabel new37 pixels.",
+      "evidence": [
+        "account-browser/run-18-current36/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ]
+    },
+    {
+      "route": "/players/:shortCode",
+      "facet": "existing-refresh",
+      "category": "refresh9",
+      "decision": "keep-refresh-bounded",
+      "reason": "A18 actual36 exact36 state/route/width tuples, settings failure/retry/session/OS facts; do not relabel new37 pixels.",
+      "evidence": [
+        "account-browser/run-18-current36/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ]
+    },
+    {
+      "route": "/dms/:shortCode",
+      "facet": "existing-refresh",
+      "category": "refresh9",
+      "decision": "keep-refresh-bounded",
+      "reason": "A18 actual36 exact36 state/route/width tuples, settings failure/retry/session/OS facts; do not relabel new37 pixels.",
+      "evidence": [
+        "account-browser/run-18-current36/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ]
+    },
+    {
+      "route": "/community/dm-table/:slug",
+      "facet": "existing-refresh",
+      "category": "refresh9",
+      "decision": "keep-refresh-bounded",
+      "reason": "A18 actual36 exact36 state/route/width tuples, settings failure/retry/session/OS facts; do not relabel new37 pixels.",
+      "evidence": [
+        "account-browser/run-18-current36/browser-receipt.json"
+      ],
+      "widths": [
+        390,
+        900,
+        1920
+      ]
+    }
+  ]
+}

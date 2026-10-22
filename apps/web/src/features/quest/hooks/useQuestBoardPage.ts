@@ -1,207 +1,161 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSizeClasses } from '@pi/react-imposition/react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { queryKeys } from '../../../api/queryKeys.js';
 import { useAuth } from '../../../auth/AuthContext.js';
-import { isDm } from '../../../auth/roles.js';
 import { useMe } from '../../../hooks/useMe.js';
-import { useToast } from '../../../components/primitives/Toast.js';
+import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
+import { useToast } from '../../../hooks/useToast.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AppError } from '../../../errors/types.js';
 import {
   loadMyCharacters,
   loadQuestBoardChrome,
   loadQuestList,
-  signupForQuest,
-  withdrawFromQuest,
+  mapToBoardCardProps,
   type QuestBoardItemView,
+  type QuestBoardCardPropsView,
   type QuestListFilters,
 } from '../adapters/questAdapter.js';
+import { loadQuestAuthoringAuthority } from '../adapters/questOptionsAdapter.js';
+import { useQuestMutations } from './useQuestMutations.js';
 
 export type BoardSegment = 'Open' | 'Scheduled' | 'Live' | 'All';
-
-export type PageData<T> =
+type CardRow = QuestBoardItemView & { card: QuestBoardCardPropsView };
+type PageData =
   | { status: 'loading' }
   | { status: 'error'; error: AppError }
   | { status: 'empty' }
-  | { status: 'ready'; view: T };
-
+  | { status: 'ready'; view: CardRow[] };
 const PAGE_SIZE = 50;
-const SEGMENT_FILTERS: Record<BoardSegment, QuestListFilters> = {
+const FILTERS: Record<BoardSegment, QuestListFilters> = {
   Open: { status: 'open' },
   Scheduled: { displayStatus: 'scheduled' },
   Live: { displayStatus: 'live' },
   All: {},
 };
-
-const SEATED = new Set(['signed_up', 'played', 'selected']);
-
-export function useQuestBoardPage(): PageData<QuestBoardItemView[]> & {
-  segment: BoardSegment;
-  setSegment: (segment: BoardSegment) => void;
-  columns: 1 | 2;
-  total: number | null;
-  openCount: number;
-  liveCount: number;
-  dmsAcceptingCount: number;
-  liveStrip: Array<{
-    id: string;
-    shortCode: string;
-    title: string;
-    dmHandle: string | null;
-  }>;
-  canCreate: boolean;
-  retry: () => void;
-  hasMore: boolean;
-  isFetching: boolean;
-  isBoardMutating: boolean;
-  loadMore: () => void;
-  onOpenQuest: (shortCode: string) => void;
-  onSignUp: (quest: QuestBoardItemView) => void;
-  onWithdraw: (quest: QuestBoardItemView) => void;
-  isMine: (quest: QuestBoardItemView) => boolean;
-  onJoinVoice: () => void;
-} {
+export function useQuestBoardPage() {
+  const { timeZone } = useDateFormatter();
   const navigate = useNavigate();
   const { addToast } = useToast();
   const { isAuthenticated } = useAuth();
   const me = useMe();
-  const queryClient = useQueryClient();
-  const [{ segment, limit }, setSelection] = useState({
-    segment: 'Open' as BoardSegment,
-    limit: PAGE_SIZE,
-  });
+  const [segment, setSegment] = useState<BoardSegment>('Open');
   const { widthClass } = useSizeClasses();
-  const filters = SEGMENT_FILTERS[segment];
-
-  const q = useQuery({
-    queryKey: queryKeys.questList(filters, limit, 0),
-    queryFn: () => loadQuestList({ filters, limit, offset: 0 }),
+  const filters = FILTERS[segment];
+  const query = useInfiniteQuery({
+    queryKey: ['quests', 'pages', filters],
+    initialPageParam: 0,
+    queryFn: ({ pageParam }) =>
+      loadQuestList({ filters, limit: PAGE_SIZE, offset: pageParam }),
+    getNextPageParam: (last, pages) => {
+      const loaded = pages.reduce((total, page) => total + page.items.length, 0);
+      return last.items.length && loaded < last.total ? loaded : undefined;
+    },
   });
-
-  const openQ = useQuery({
-    queryKey: queryKeys.questList(SEGMENT_FILTERS.Open, PAGE_SIZE, 0),
-    queryFn: () => loadQuestList({ filters: SEGMENT_FILTERS.Open, limit: PAGE_SIZE, offset: 0 }),
+  const open = useQuery({
+    queryKey: queryKeys.questList(FILTERS.Open, 1, 0),
+    queryFn: () => loadQuestList({ filters: FILTERS.Open, limit: 1, offset: 0 }),
   });
-
-  const liveQ = useQuery({
-    queryKey: queryKeys.questList(SEGMENT_FILTERS.Live, PAGE_SIZE, 0),
-    queryFn: () => loadQuestList({ filters: SEGMENT_FILTERS.Live, limit: PAGE_SIZE, offset: 0 }),
+  const live = useQuery({
+    queryKey: queryKeys.questList(FILTERS.Live, PAGE_SIZE, 0),
+    queryFn: () =>
+      loadQuestList({ filters: FILTERS.Live, limit: PAGE_SIZE, offset: 0 }),
   });
-
-  const chromeQ = useQuery({
-    queryKey: ['questBoardChrome'] as const,
+  const chrome = useQuery({
+    queryKey: ['questBoardChrome'],
     queryFn: loadQuestBoardChrome,
   });
-
-  const myCharsQ = useQuery({
-    queryKey: queryKeys.characters('board-mine'),
+  const characters = useQuery({
+    queryKey: ['questCharacters', me.data?.id],
     queryFn: loadMyCharacters,
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && Boolean(me.data),
+    retry: false,
   });
-
-  const myCharacterIds = new Set((myCharsQ.data ?? []).map((c) => c.id));
-  const activeCharacterIds = (myCharsQ.data ?? [])
-    .filter((c) => c.status.toLowerCase() === 'active')
-    .map((c) => c.id);
-
-  const signup = useMutation({
-    mutationFn: ({ questId, characterId }: { questId: string; characterId: string }) =>
-      signupForQuest(questId, characterId),
-    onSuccess: async () => {
-      addToast("You're in! Signed up.", 'success');
-      await queryClient.invalidateQueries({ queryKey: queryKeys.questLists });
-    },
-    onError: (err) => {
-      const app = toAppError(err, 'quest:board:signup');
-      addToast(app.userMessage || 'Could not sign up for this quest. Please try again.', 'error');
-    },
+  const authority = useQuery({
+    queryKey: ['questAuthority', me.data?.id, me.data?.handle],
+    queryFn: () => loadQuestAuthoringAuthority(me.data?.handle ?? ''),
+    enabled: isAuthenticated && Boolean(me.data),
   });
-
-  const withdraw = useMutation({
-    mutationFn: ({ questId, characterId }: { questId: string; characterId: string }) =>
-      withdrawFromQuest(questId, characterId),
-    onSuccess: async () => {
-      addToast('Withdrawn — your slot is now open.', 'success');
-      await queryClient.invalidateQueries({ queryKey: queryKeys.questLists });
-    },
-    onError: (err) => {
-      const app = toAppError(err, 'quest:board:withdraw');
-      addToast(app.userMessage || 'Could not withdraw. Please try again.', 'error');
-    },
-  });
-
-  const hasMore = q.data !== undefined && q.data.items.length < q.data.total;
-  const liveItems = liveQ.data?.items ?? [];
-
-  function myParticipantFor(quest: QuestBoardItemView) {
-    return quest.participants.find(
-      (p) => myCharacterIds.has(p.characterId) && SEATED.has(p.status),
+  const commands = useQuestMutations('', '');
+  const ids = new Set(characters.data?.map((character) => character.id) ?? []);
+  const mine = (quest: QuestBoardItemView) =>
+    quest.participants.filter(
+      (participant) =>
+        ids.has(participant.characterId) &&
+        (participant.status === 'signed_up' || participant.status === 'waitlisted'),
     );
-  }
-
+  const items = query.data?.pages.flatMap((page) => page.items) ?? [];
+  const columns: 1 | 2 = widthClass === 'expanded' ? 2 : 1;
   const shared = {
     segment,
-    setSegment: (next: BoardSegment) => {
-      if (next !== segment) setSelection({ segment: next, limit: PAGE_SIZE });
+    setSegment,
+    columns,
+    total: query.data?.pages[0]?.total ?? null,
+    openCount: open.isError ? null : (open.data?.total ?? null),
+    liveCount: live.isError ? null : (live.data?.total ?? null),
+    dmsAcceptingCount: chrome.isError ? null : (chrome.data?.dmsAcceptingCount ?? null),
+    metadataError: open.error ?? live.error ?? chrome.error ?? characters.error,
+    retryMetadata: () => {
+      void open.refetch();
+      void live.refetch();
+      void chrome.refetch();
+      if (isAuthenticated && me.data) void characters.refetch();
     },
-    columns: (widthClass === 'expanded' ? 2 : 1) as 1 | 2,
-    total: q.data?.total ?? null,
-    openCount: openQ.data?.total ?? 0,
-    liveCount: liveQ.data?.total ?? liveItems.length,
-    dmsAcceptingCount: chromeQ.data?.dmsAcceptingCount ?? 0,
-    liveStrip: liveItems.map((item) => ({
-      id: item.id,
-      shortCode: item.shortCode,
-      title: item.title,
-      dmHandle: item.dmHandle,
+    liveStrip: (live.data?.items ?? []).slice(0, 6).map((quest) => ({
+      id: quest.id,
+      shortCode: quest.shortCode,
+      title: quest.title,
+      dmHandle: quest.dmHandle,
     })),
-    canCreate: isDm(me.data?.roles),
+    canCreate:
+      !authority.isError &&
+      authority.data?.memberId === me.data?.id &&
+      authority.data?.canCreate === true,
     retry: () => {
-      if (!q.isFetching) void q.refetch();
+      void query.refetch();
     },
-    hasMore,
-    isFetching: q.isFetching,
-    isBoardMutating: signup.isPending || withdraw.isPending,
+    hasMore: query.hasNextPage,
+    isFetching: query.isFetching,
+    isBoardMutating: commands.pending,
     loadMore: () => {
-      if (hasMore && !q.isFetching) {
-        setSelection((current) => ({ ...current, limit: current.limit + PAGE_SIZE }));
-      }
+      if (!query.isFetching) void query.fetchNextPage();
     },
-    onOpenQuest: (shortCode: string) => {
-      navigate(`/quests/${shortCode}`);
-    },
-    onSignUp: (quest: QuestBoardItemView) => {
-      if (activeCharacterIds.length !== 1) {
-        navigate(`/quests/${quest.shortCode}`);
-        return;
-      }
-      signup.mutate({ questId: quest.id, characterId: activeCharacterIds[0] });
-    },
+    onOpenQuest: (shortCode: string) =>
+      navigate(`/quests/${encodeURIComponent(shortCode)}`),
+    onSignUp: (quest: QuestBoardItemView) =>
+      navigate(`/quests/${encodeURIComponent(quest.shortCode)}#participation`),
     onWithdraw: (quest: QuestBoardItemView) => {
-      const participant = myParticipantFor(quest);
-      if (!participant) return;
-      withdraw.mutate({ questId: quest.id, characterId: participant.characterId });
+      const participants = mine(quest);
+      if (participants.length !== 1)
+        navigate(`/quests/${encodeURIComponent(quest.shortCode)}#participation`);
+      else
+        void commands
+          .execute({
+            kind: 'withdraw',
+            questId: quest.id,
+            characterId: participants[0].characterId,
+          })
+          .then((success) => {
+            if (success) addToast('Your character has withdrawn.', 'success');
+          });
     },
-    isMine: (quest: QuestBoardItemView) => myParticipantFor(quest) !== undefined,
-    onJoinVoice: () => {
-      addToast('Opening voice channel in Discord…', 'info');
-    },
+    isMine: (quest: QuestBoardItemView) => mine(quest).length > 0,
+    actionError: commands.error,
   };
-
-  if (q.isError) {
-    return {
-      status: 'error',
-      error: toAppError(q.error, 'quest:board-page'),
-      ...shared,
+  let page: PageData;
+  if (query.isError)
+    page = { status: 'error', error: toAppError(query.error, 'quest:board') };
+  else if (!query.data) page = { status: 'loading' };
+  else if (!items.length) page = { status: 'empty' };
+  else
+    page = {
+      status: 'ready',
+      view: items.map((quest) => ({
+        ...quest,
+        card: mapToBoardCardProps(quest, timeZone),
+      })),
     };
-  }
-  if (q.isLoading || q.data === undefined) {
-    return { status: 'loading', ...shared };
-  }
-  if (q.data.items.length === 0) {
-    return { status: 'empty', ...shared };
-  }
-  return { status: 'ready', view: q.data.items, ...shared };
+  return { ...page, ...shared };
 }

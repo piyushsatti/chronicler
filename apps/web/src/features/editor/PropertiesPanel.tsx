@@ -27,6 +27,7 @@ export function PropertiesPanel({
   showErrors,
   slugLocked = false,
   options,
+  timeZone,
 }: {
   schema: FieldSchema[];
   values: EditorMeta;
@@ -34,6 +35,7 @@ export function PropertiesPanel({
   showErrors: boolean;
   slugLocked?: boolean;
   options: EditorFieldOptions;
+  timeZone: string;
 }): React.JSX.Element {
   const [touched, setTouched] = useState<Record<string, boolean>>({});
   const touch = (k: string): void =>
@@ -86,7 +88,9 @@ export function PropertiesPanel({
       case 'datetime':
         return (
           <DateTimeField
-            value={(val as { dt: string; tz: string }) ?? { dt: '', tz: 'CET/CEST' }}
+            value={String(val ?? '')}
+            timeZone={timeZone}
+            label={field.label}
             onChange={setT}
           />
         );

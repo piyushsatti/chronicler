@@ -19,7 +19,7 @@ export function AvatarGroup({
   const overflow = max != null ? Math.max(0, items.length - max) : 0;
   return (
     <div
-      className={['av-group', className].filter(Boolean).join(' ')}
+      className={['pr-avatar-group', className].filter(Boolean).join(' ')}
       data-component="AvatarGroup"
       data-el="avatar-group.root"
       role="group"
@@ -27,7 +27,7 @@ export function AvatarGroup({
     >
       {visible}
       {overflow > 0 ? (
-        <span className="av av-group__more type-caption" data-el="avatar-group.more">
+        <span className="av pr-avatar-group__more type-caption" data-el="avatar-group.more">
           +{overflow}
         </span>
       ) : null}

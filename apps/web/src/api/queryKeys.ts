@@ -5,14 +5,18 @@ export const queryKeys = featureQueryKeys as {
   homeLanes: readonly ['homeLanes'];
   siteStats: readonly ['siteStats'];
   me: readonly ['me'];
+  myPrivateNotes: (memberId: string) => readonly ['myPrivateNotes', string];
   character: (id: string) => readonly ['character', string];
   characters: (filters: string) => readonly ['characters', string];
   characterProgression: (id: string) => readonly ['characterProgression', string];
+  characterBackstory: (
+    id: string,
+    regionId: string,
+  ) => readonly ['characterBackstory', string, string];
   document: (slug: string) => readonly ['document', string];
   codexDirectory: (prefix: string) => readonly ['codexDirectory', string];
   codexEntry: (slug: string) => readonly ['codexEntry', string];
   map: (atlasCode: string) => readonly ['map', string];
-  hexFeatures: (hexcode: string) => readonly ['hexFeatures', string];
   questBoard: readonly ['questBoard'];
   questLists: readonly ['quests'];
   questList: (
@@ -25,7 +29,10 @@ export const queryKeys = featureQueryKeys as {
   chronicleList: readonly ['chronicleList'];
   chronicleDetail: (slug: string) => readonly ['chronicleDetail', string];
   rulesHub: readonly ['rulesHub'];
-  ruleDetail: (slug: string) => readonly ['ruleDetail', string];
+  ruleDetail: (
+    slug: string,
+    family: 'guides' | 'rulings',
+  ) => readonly ['ruleDetail', string, 'guides' | 'rulings'];
   communityHub: readonly ['communityHub'];
   communityMembers: (role: string) => readonly ['communityMembers', string];
   search: (q: string, kinds: string) => readonly ['search', string, string];

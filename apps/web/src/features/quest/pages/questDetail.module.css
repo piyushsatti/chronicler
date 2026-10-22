@@ -25,30 +25,23 @@
   gap: var(--sp-2);
 }
 
-.actions {
+.roster {
+  margin: 0;
+  padding: 0;
+  list-style: none;
   display: flex;
   flex-direction: column;
-  gap: var(--sp-3);
-  margin-top: var(--sp-2);
 }
 
-.actionRow {
-  display: flex;
-  flex-wrap: wrap;
+.rosterRow {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
   gap: var(--sp-3);
+  padding-block: var(--sp-2);
+  border-top: 1px solid var(--color-border);
 }
 
-.deliveryShelf {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--sp-2);
-  margin: 0;
-}
-
-.emptyNote {
-  margin: 0;
-  color: var(--color-text-3);
-  font-size: 0.84375rem;
+.rosterRow:first-child {
+  border-top: 0;
 }

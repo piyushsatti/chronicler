@@ -192,13 +192,13 @@ func TestCharacterProductNamedSQLReadsAndPCXPEffect(t *testing.T) {
 		"row_offset":       int32(0),
 	})
 	var adminCharacterID, adminName, adminOwnerID, adminOwnerHandle, adminOwnerDisplayName, adminShortCode, adminStatus, adminVerificationStatus string
-	var adminOwnerAvatar, adminRegionID, adminRegionName, adminGuildID sql.NullString
+	var adminOwnerAvatar, adminRegionID, adminRegionName, adminGuildID, adminDdbURL sql.NullString
 	var adminSubmittedAt sql.NullTime
 	var adminUpdatedAt time.Time
 	if err := fixture.Pool.QueryRow(ctx, query, args...).Scan(
 		&adminCharacterID, &adminName, &adminOwnerID, &adminOwnerHandle, &adminOwnerDisplayName,
 		&adminOwnerAvatar, &adminShortCode, &adminStatus, &adminRegionID, &adminRegionName,
-		&adminGuildID, &adminVerificationStatus, &adminSubmittedAt, &adminUpdatedAt,
+		&adminGuildID, &adminVerificationStatus, &adminSubmittedAt, &adminDdbURL, &adminUpdatedAt,
 	); err != nil {
 		t.Fatal(err)
 	}

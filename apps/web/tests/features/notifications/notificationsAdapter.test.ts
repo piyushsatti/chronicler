@@ -54,6 +54,7 @@ describe('bounded mark-read adapter', () => {
   const id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
   const session = () => ({
     token: 'captured-session',
+    idempotencyKey: 'captured-write-key',
     signal: new AbortController().signal,
   });
 

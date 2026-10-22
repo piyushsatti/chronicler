@@ -1,1 +1,1 @@
-export type { ProfileMemberView } from './adapters/profileCommunityAdapter.js';
+export type { DmTableSessionView } from './adapters/dmTableAdapter.js';

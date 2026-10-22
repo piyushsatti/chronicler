@@ -1,3 +1,5 @@
+import { cx } from '../primitives/cx.js';
+
 interface RegionLabelProps {
   region: string;
   className?: string;
@@ -17,12 +19,9 @@ export function RegionLabel({
 }: RegionLabelProps) {
   return (
     <span
-      className={`chip ${className ?? ''}`.trim()}
+      className={cx('chip', compact && 'region-label-compact', className)}
       data-tone={selected ? undefined : 'line'}
-      style={{
-        ['--region-color' as string]: regionToVar(region),
-        ...(compact ? { minWidth: '56px' } : {}),
-      }}
+      style={{ ['--region-color' as string]: regionToVar(region) }}
     >
       <span data-testid="region-dot" className="dot" />
       {region}

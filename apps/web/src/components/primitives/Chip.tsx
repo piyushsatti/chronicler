@@ -9,6 +9,11 @@ export type ChipProps = {
   className?: string;
   tone?: ChipTone;
   size?: ChipSize;
+  /**
+   * Marks the chip as one option of a filter or choice. A clickable chip that
+   * receives `selected` (true or false) is a toggle button and reports
+   * `aria-pressed`, so the current choice is not visual only.
+   */
   selected?: boolean;
   onClick?: () => void;
   dot?: boolean;
@@ -21,22 +26,18 @@ export function Chip({
   className,
   tone = 'neutral',
   size = 'md',
-  selected = false,
+  selected,
   onClick,
   dot,
   tabIndex,
   onKeyDown,
 }: ChipProps): React.JSX.Element {
-  const classNames = cx(
-    'chip',
-    `chip--${tone}`,
-    `chip--${size}`,
-    selected && 'chip--selected',
-    className,
-  );
+  // Hooks match primitives.css / atlas.css: data-tone, data-size,
+  // data-selected='1', and atlas's `.chip .dot` marker.
+  const classNames = cx('chip', className);
   const body = (
     <>
-      {dot ? <span className="chip__dot" aria-hidden="true" /> : null}
+      {dot ? <span className="dot" aria-hidden="true" /> : null}
       {children}
     </>
   );
@@ -48,7 +49,9 @@ export function Chip({
         className={classNames}
         data-component="Chip"
         data-tone={tone}
-        data-selected={selected ? 'true' : 'false'}
+        data-size={size}
+        data-selected={selected ? '1' : undefined}
+        aria-pressed={selected}
         onClick={onClick}
         tabIndex={tabIndex}
         onKeyDown={onKeyDown}
@@ -63,7 +66,8 @@ export function Chip({
       className={classNames}
       data-component="Chip"
       data-tone={tone}
-      data-selected={selected ? 'true' : 'false'}
+      data-size={size}
+      data-selected={selected ? '1' : undefined}
       tabIndex={tabIndex}
       onKeyDown={onKeyDown}
     >

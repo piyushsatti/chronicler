@@ -1,3 +1,5 @@
+import { AdminReadFailure } from './AdminReadFailure.js';
+import { AdminPagination } from './AdminPagination.js';
 import { Link } from 'react-router-dom';
 import { Button } from '../../../components/primitives/Button.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
@@ -23,7 +25,7 @@ export function CharacterVerifyTab({
   } = view;
 
   if (queue.isError) {
-    return <StatePanel status="error" error={queue.error} />;
+    return <AdminReadFailure error={queue.error} retry={queue.retry} />;
   }
   if (queue.isLoading || !queue.data) {
     return <StatePanel status="loading" />;
@@ -43,6 +45,7 @@ export function CharacterVerifyTab({
   if (queue.data.length === 0) {
     return (
       <div className="stack">
+        <AdminPagination page={view.pagination} />
         {feedbackNode}
         <EmptyState
           kind="no-characters"
@@ -55,6 +58,7 @@ export function CharacterVerifyTab({
   return (
     <div className="stack" data-testid="character-verify-rows">
       {feedbackNode}
+      <AdminPagination page={view.pagination} />
       <ul className="stack">
         {queue.data.map((row) => {
           const ddbUrl = isSafeDdbUrl(row.ddbUrl) ? row.ddbUrl : null;
@@ -84,7 +88,7 @@ export function CharacterVerifyTab({
                   type="button"
                   variant="ghost"
                   size="sm"
-                  disabled={decide.isPending}
+                  disabled={decide.isPending || row.verificationSubmittedAt === null}
                   onClick={() => {
                     setChangeRequestId((current) =>
                       current === row.id ? null : row.id,
@@ -98,7 +102,7 @@ export function CharacterVerifyTab({
                 <Button
                   type="button"
                   size="sm"
-                  disabled={decide.isPending}
+                  disabled={decide.isPending || row.verificationSubmittedAt === null}
                   onClick={() =>
                     decide.mutate({
                       characterId: row.id,
@@ -136,7 +140,10 @@ export function CharacterVerifyTab({
                   <label className="stack">
                     <span className="type-label">Change request note (required)</span>
                     <textarea
-                      className="field"
+                      disabled={
+                        decide.isPending || row.verificationSubmittedAt === null
+                      }
+                      className="field-input"
                       rows={2}
                       value={changeRequestNote}
                       onChange={(event) => setChangeRequestNote(event.target.value)}
@@ -147,7 +154,11 @@ export function CharacterVerifyTab({
                       {noteError}
                     </p>
                   ) : null}
-                  <Button type="submit" variant="secondary" disabled={decide.isPending}>
+                  <Button
+                    type="submit"
+                    variant="secondary"
+                    disabled={decide.isPending || row.verificationSubmittedAt === null}
+                  >
                     Send change request
                   </Button>
                 </form>

@@ -7,6 +7,7 @@ import { Provider as ReduxProvider } from 'react-redux';
 import { MemoryRouter } from 'react-router-dom';
 import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
 import { AuthProvider } from '../../../src/auth/AuthContext.js';
+import { ThemeProvider } from '../../../src/context/ThemeContext.js';
 import { useHomePage } from '../../../src/features/home/hooks/useHomePage.js';
 import { createTestQueryClient } from '../../../src/providers.js';
 import { createAppStore } from '../../../src/store/store.js';
@@ -20,7 +21,9 @@ function wrapper({ children }: { children: ReactNode }) {
     <ReduxProvider store={store}>
       <QueryClientProvider client={queryClient}>
         <MemoryRouter>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            <ThemeProvider>{children}</ThemeProvider>
+          </AuthProvider>
         </MemoryRouter>
       </QueryClientProvider>
     </ReduxProvider>
@@ -58,13 +61,12 @@ describe('useHomePage', () => {
       expect(result.current.status).toBe('ready');
     });
     if (result.current.status === 'ready') {
-      expect(result.current.view.buckets.headingTitle).toBe('Siege of Kraghold');
       expect(result.current.view.lanes.recruiting[0]?.title).toBe('Siege of Kraghold');
       expect(result.current.view.lanes.dmsAccepting[0]?.handle).toBe('mira');
     }
   });
 
-  it('stays ready when only buckets have content', async () => {
+  it('is empty when only retired archive data has content', async () => {
     server.use(
       http.post(GRAPHQL_PATH, () =>
         HttpResponse.json({
@@ -94,11 +96,7 @@ describe('useHomePage', () => {
     );
     const { result } = renderHook(() => useHomePage(), { wrapper });
     await waitFor(() => {
-      expect(result.current.status).toBe('ready');
+      expect(result.current.status).toBe('empty');
     });
-    if (result.current.status === 'ready') {
-      expect(result.current.view.buckets.headingTitle).toBe('Siege of Kraghold');
-      expect(result.current.view.lanes.recruiting).toHaveLength(0);
-    }
   });
 });

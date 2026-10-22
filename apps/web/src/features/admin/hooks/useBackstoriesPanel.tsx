@@ -1,3 +1,4 @@
+import { useAdminPage } from './useAdminPage.js';
 import {
   useAdminAuthority,
   useAuthorityFailures,
@@ -8,7 +9,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   createBackstory,
   loadAdminBackstories,
-  loadAdminRegions,
+  loadAllAdminRegions,
   updateBackstory,
   type AdminBackstoryRow,
 } from '../adapters/adminAdapter.js';
@@ -36,41 +37,61 @@ const BLANK: FormState = {
 export function useBackstoriesPanel() {
   const authority = useAdminAuthority();
   const queryClient = useQueryClient();
-  const backstories = useQuery({
-    enabled: authority.allowed,
-    queryKey: KEY,
-    queryFn: loadAdminBackstories,
-  });
+  const [cohort, setCohort] = useState('');
+  const [regionId, setRegionId] = useState('');
+  const { query: backstories, pagination } = useAdminPage(
+    KEY,
+    authority,
+    { cohort, regionId },
+    (page, request) =>
+      loadAdminBackstories(
+        {
+          ...page,
+          ...{ cohort: cohort || undefined, regionId: regionId || undefined },
+        },
+        request,
+      ),
+  );
   const regions = useQuery({
     enabled: authority.allowed,
-    queryKey: ['adminRegions'],
-    queryFn: loadAdminRegions,
+    queryKey: ['adminRegionOptions', authority.cacheKey],
+    queryFn: ({ signal }) => authority.read(loadAllAdminRegions, signal),
   });
   const [form, setForm] = useState<FormState>(BLANK);
   const [editing, setEditing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   const save = useMutation({
-    mutationFn: authority.guardMutation(async () => {
+    mutationKey: ['adminCommand', authority.commandKey, 'useBackstoriesPanel'],
+    networkMode: 'always',
+    retry: false,
+    mutationFn: authority.guardMutation(async (command) => {
       if (form.backstoryId) {
-        await updateBackstory({
-          backstoryId: form.backstoryId,
+        await updateBackstory(
+          {
+            backstoryId: form.backstoryId,
+            name: form.name.trim(),
+            lore: form.lore.trim(),
+            cohort: form.cohort.trim(),
+            sourceRegionId: form.sourceRegionId,
+            retired: form.retired,
+          },
+          command,
+        );
+        return;
+      }
+      await createBackstory(
+        {
           name: form.name.trim(),
           lore: form.lore.trim(),
           cohort: form.cohort.trim(),
           sourceRegionId: form.sourceRegionId,
-          retired: form.retired,
-        });
-        return;
-      }
-      await createBackstory({
-        name: form.name.trim(),
-        lore: form.lore.trim(),
-        cohort: form.cohort.trim(),
-        sourceRegionId: form.sourceRegionId,
-      });
+        },
+        command,
+      );
     }),
     onSuccess: async () => {
+      if (!authority.isCurrent()) return;
       setMessage(`Backstory "${form.name.trim()}" saved.`);
       setEditing(false);
       setForm(BLANK);
@@ -91,6 +112,11 @@ export function useBackstoriesPanel() {
   }
   useAuthorityFailures(backstories.error, regions.error, save.error);
   return {
+    pagination,
+    cohort,
+    setCohort,
+    regionId,
+    setRegionId,
     BLANK,
     backstories: panelState(backstories, 'admin:BackstoriesPanel'),
     regions: panelState(regions, 'admin:BackstoriesPanel'),

@@ -3,6 +3,7 @@
 package integration_test
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"os"
@@ -26,7 +27,7 @@ func TestMemberUpsertAndLoad(t *testing.T) {
 	store := member.NewPostgresStore(pool.Pool)
 	discordID := "integration-" + uuid.NewString()
 	cleanupMember(t, pool, discordID)
-	id, roles, _, _, err := store.EnsureFromDiscord(ctx, discordID, "Integration", "")
+	id, roles, _, _, err := store.EnsureFromDiscord(ctx, discordID, "Integration", "https://fixture.invalid/initial.png")
 	if err != nil {
 		t.Fatalf("ensure: %v", err)
 	}
@@ -39,6 +40,10 @@ func TestMemberUpsertAndLoad(t *testing.T) {
 	}
 	if !reflect.DeepEqual(roles, []auth.Role{auth.Player}) {
 		t.Fatalf("new member roles=%v", roles)
+	}
+	var initialized bool
+	if err := pool.QueryRow(ctx, `SELECT display_name='Integration' AND avatar_url='https://fixture.invalid/initial.png' AND handle=$2 AND status='active' AND roles=ARRAY['player']::text[] FROM members WHERE public_id=$1`, id, discordID[:32]).Scan(&initialized); err != nil || !initialized {
+		t.Fatalf("first-login initialization=%v err=%v", initialized, err)
 	}
 }
 
@@ -73,38 +78,41 @@ func TestMemberRepeatLoginPreservesUUIDStatusHandleAndFlatRoles(t *testing.T) {
 			}
 			custom := "custom-" + uuid.NewString()
 			wantRoles := []string{"dm", "archon", "admin"}
-			if _, err := pool.Exec(ctx, `UPDATE members SET handle=$2,roles=$3,status=$4 WHERE public_id=$1::uuid`, id, custom, wantRoles, status); err != nil {
-				t.Fatal(err)
+			for _, localAvatar := range []any{"https://fixture.invalid/local.png", nil} {
+				if _, err := pool.Exec(ctx, `UPDATE members SET handle=$2,roles=$3,status=$4,display_name='Locally edited name',avatar_url=$5,updated_at=now()-interval '1 day' WHERE public_id=$1::uuid`, id, custom, wantRoles, status, localAvatar); err != nil {
+					t.Fatal(err)
+				}
+				var before []byte
+				if err := pool.QueryRow(ctx, `SELECT to_jsonb(m) FROM members m WHERE public_id=$1::uuid`, id).Scan(&before); err != nil {
+					t.Fatal(err)
+				}
+				for _, discord := range [][2]string{{"Fresh Discord Display", "https://fixture.invalid/fresh.png"}, {"", ""}} {
+					again, roles, _, _, err := store.EnsureFromDiscord(ctx, discordID, discord[0], discord[1])
+					if err != nil || again != id || !reflect.DeepEqual(roles, []auth.Role{auth.DM, auth.Role("archon"), auth.Admin}) {
+						t.Fatalf("repeat id=%q roles=%v err=%v", again, roles, err)
+					}
+					got, err := store.GetByID(ctx, id)
+					if err != nil {
+						t.Fatal(err)
+					}
+					var after []byte
+					if err := pool.QueryRow(ctx, `SELECT to_jsonb(m) FROM members m WHERE public_id=$1::uuid`, id).Scan(&after); err != nil {
+						t.Fatal(err)
+					}
+					if !bytes.Equal(before, after) || got.ID != id || got.DiscordID != discordID || got.Handle != custom || string(got.Status) != status || !reflect.DeepEqual(got.Roles, wantRoles) || got.DisplayName != "Locally edited name" {
+						t.Fatalf("repeat login changed stored local profile/authority: before=%s after=%s member=%+v", before, after, got)
+					}
+				}
 			}
-			again, roles, _, _, err := store.EnsureFromDiscord(ctx, discordID, "Fresh Display", "https://fixture.invalid/fresh.png")
-			if err != nil || again != id || !reflect.DeepEqual(roles, []auth.Role{auth.DM, auth.Role("archon"), auth.Admin}) {
-				t.Fatalf("repeat id=%q roles=%v err=%v", again, roles, err)
-			}
-			got, err := store.GetByID(ctx, id)
-			if err != nil {
-				t.Fatal(err)
-			}
-			var avatar string
 			var count, ledger int
-			if err := pool.QueryRow(ctx, `SELECT avatar_url FROM members WHERE public_id=$1::uuid`, id).Scan(&avatar); err != nil {
-				t.Fatal(err)
-			}
 			if err := pool.QueryRow(ctx, `SELECT count(*) FROM members WHERE discord_id=$1`, discordID).Scan(&count); err != nil {
 				t.Fatal(err)
 			}
 			if err := pool.QueryRow(ctx, `SELECT count(*) FROM role_changes WHERE member_id=(SELECT id FROM members WHERE public_id=$1::uuid)`, id).Scan(&ledger); err != nil {
 				t.Fatal(err)
 			}
-			if got.ID != id || got.DiscordID != discordID || got.Handle != custom || string(got.Status) != status || !reflect.DeepEqual(got.Roles, wantRoles) || got.DisplayName != "Fresh Display" || avatar != "https://fixture.invalid/fresh.png" || count != 1 || ledger != 0 {
-				t.Fatalf("preservation=%+v avatar=%s rows=%d rolechanges=%d", got, avatar, count, ledger)
-			}
-			// Missing custom avatar is a real profile refresh, not an old URL fallback.
-			if _, _, _, _, err := store.EnsureFromDiscord(ctx, discordID, "No Avatar", ""); err != nil {
-				t.Fatal(err)
-			}
-			var missing bool
-			if err := pool.QueryRow(ctx, `SELECT avatar_url IS NULL FROM members WHERE public_id=$1::uuid`, id).Scan(&missing); err != nil || !missing {
-				t.Fatalf("avatar clear=%v err=%v", missing, err)
+			if count != 1 || ledger != 0 {
+				t.Fatalf("repeat rows=%d rolechanges=%d", count, ledger)
 			}
 		})
 	}
@@ -121,6 +129,7 @@ func TestMemberConcurrentLoginsConvergeWithoutAuthorityReset(t *testing.T) {
 			id, custom := "", ""
 			wantRoles := []auth.Role{auth.Player}
 			wantStatus := "active"
+			var before []byte
 			if existing {
 				var err error
 				id, _, _, _, err = store.EnsureFromDiscord(ctx, discordID, "First", "")
@@ -130,7 +139,10 @@ func TestMemberConcurrentLoginsConvergeWithoutAuthorityReset(t *testing.T) {
 				custom = "custom-" + uuid.NewString()
 				wantRoles = []auth.Role{auth.DM, auth.Admin}
 				wantStatus = "inactive"
-				if _, err := pool.Exec(ctx, `UPDATE members SET handle=$2,roles=ARRAY['dm','admin'],status='inactive' WHERE public_id=$1::uuid`, id, custom); err != nil {
+				if _, err := pool.Exec(ctx, `UPDATE members SET handle=$2,roles=ARRAY['dm','admin'],status='inactive',display_name='Local concurrent profile',avatar_url=NULL,updated_at=now()-interval '1 day' WHERE public_id=$1::uuid`, id, custom); err != nil {
+					t.Fatal(err)
+				}
+				if err := pool.QueryRow(ctx, `SELECT to_jsonb(m) FROM members m WHERE public_id=$1::uuid`, id).Scan(&before); err != nil {
 					t.Fatal(err)
 				}
 			}
@@ -174,17 +186,24 @@ func TestMemberConcurrentLoginsConvergeWithoutAuthorityReset(t *testing.T) {
 			}
 			var avatar string
 			var count int
-			if err := pool.QueryRow(ctx, `SELECT avatar_url FROM members WHERE public_id=$1::uuid`, id).Scan(&avatar); err != nil {
+			if err := pool.QueryRow(ctx, `SELECT COALESCE(avatar_url,'') FROM members WHERE public_id=$1::uuid`, id).Scan(&avatar); err != nil {
 				t.Fatal(err)
 			}
 			if err := pool.QueryRow(ctx, `SELECT count(*) FROM members WHERE discord_id=$1`, discordID).Scan(&count); err != nil {
 				t.Fatal(err)
 			}
-			var writer int
-			if _, err := fmt.Sscanf(got.DisplayName, "Display %d", &writer); err != nil || writer < 0 || writer >= 8 {
-				t.Fatalf("display=%s err=%v", got.DisplayName, err)
+			if existing {
+				var after []byte
+				if err := pool.QueryRow(ctx, `SELECT to_jsonb(m) FROM members m WHERE public_id=$1::uuid`, id).Scan(&after); err != nil || !bytes.Equal(before, after) {
+					t.Fatalf("concurrent login changed stored local row: before=%s after=%s err=%v", before, after, err)
+				}
+			} else {
+				var writer int
+				if _, err := fmt.Sscanf(got.DisplayName, "Display %d", &writer); err != nil || writer < 0 || writer >= 8 || avatar != fmt.Sprintf("https://fixture.invalid/%d.png", writer) {
+					t.Fatalf("first-login profile pair=%+v avatar=%s err=%v", got, avatar, err)
+				}
 			}
-			if string(got.Status) != wantStatus || avatar != fmt.Sprintf("https://fixture.invalid/%d.png", writer) || count != 1 {
+			if string(got.Status) != wantStatus || count != 1 {
 				t.Fatalf("concurrent preservation=%+v avatar=%s count=%d", got, avatar, count)
 			}
 			if existing && got.Handle != custom {
@@ -192,6 +211,17 @@ func TestMemberConcurrentLoginsConvergeWithoutAuthorityReset(t *testing.T) {
 			}
 			if !existing && got.Handle != discordID[:32] {
 				t.Fatal("new member handle convention changed")
+			}
+			var settled, repeated []byte
+			if err := pool.QueryRow(ctx, `SELECT to_jsonb(m) FROM members m WHERE public_id=$1::uuid`, id).Scan(&settled); err != nil {
+				t.Fatal(err)
+			}
+			again, roles, _, _, err := store.EnsureFromDiscord(ctx, discordID, "After concurrent login", "")
+			if err != nil || again != id || !reflect.DeepEqual(roles, wantRoles) {
+				t.Fatalf("after concurrency id=%s roles=%v err=%v", again, roles, err)
+			}
+			if err := pool.QueryRow(ctx, `SELECT to_jsonb(m) FROM members m WHERE public_id=$1::uuid`, id).Scan(&repeated); err != nil || !bytes.Equal(settled, repeated) {
+				t.Fatalf("repeat changed settled concurrent profile: before=%s after=%s err=%v", settled, repeated, err)
 			}
 			if strings.Contains(avatar, "discord.com") {
 				t.Fatal("synthetic persistence proof must not require provider transport")

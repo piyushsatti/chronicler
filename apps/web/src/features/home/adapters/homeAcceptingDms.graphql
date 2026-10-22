@@ -1,0 +1,17 @@
+query HomeAcceptingDms($offset: Int!) {
+  communityDirectory(
+    filters: { acceptingPlayers: true, role: "dm" }
+    limit: 100
+    offset: $offset
+  ) {
+    total
+    entries {
+      memberId
+      handle
+      displayName
+      tagline
+      acceptingPlayers
+      isDm
+    }
+  }
+}

@@ -23,7 +23,8 @@ import (
 // ProductPostgres binds the Character product repositories to one caller-owned
 // pgx executor. Transaction ownership remains with the caller's unit of work.
 type ProductPostgres struct {
-	DB dbgen.DBTX
+	DB  dbgen.DBTX
+	Ddb DdbClient
 }
 
 func NewProductPostgres(executor dbgen.DBTX) (*ProductPostgres, error) {
@@ -219,7 +220,7 @@ func storedDDBString(raw json.RawMessage, nullable bool) (*string, error) {
 	return &value, nil
 }
 
-func mapProductCharacter(id pgtype.UUID, shortCode, name string, ownerID, backstoryID, guildID, regionID pgtype.UUID, status string, description, ddbURL pgtype.Text, pcxp int32, createdAt, updatedAt, submittedAt pgtype.Timestamptz, verificationStatus any, ddbPayload []byte, ddbSyncedAt pgtype.Timestamptz) (CharacterView, error) {
+func mapProductCharacter(id pgtype.UUID, shortCode, name string, ownerID, backstoryID, guildID, regionID pgtype.UUID, status string, description, background, ddbURL, imageURL pgtype.Text, pcxp int32, createdAt, updatedAt, submittedAt pgtype.Timestamptz, verificationStatus any, ddbPayload []byte, ddbSyncedAt pgtype.Timestamptz) (CharacterView, error) {
 	verification, err := characterVerificationStatus(verificationStatus)
 	if err != nil {
 		return CharacterView{}, err
@@ -230,7 +231,9 @@ func mapProductCharacter(id pgtype.UUID, shortCode, name string, ownerID, backst
 	}
 	return CharacterView{
 		Description:             characterTextPointer(description),
+		BackgroundText:          characterTextPointer(background),
 		DdbUrl:                  characterTextPointer(ddbURL),
+		ImageUrl:                characterTextPointer(imageURL),
 		BackstoryId:             characterUUIDPointer(backstoryID),
 		GuildId:                 characterUUIDPointer(guildID),
 		Id:                      db.UUIDString(id),
@@ -310,7 +313,7 @@ func (p *ProductPostgres) ReadCharacter(ctx context.Context, _ auth.Authority, s
 		var short dbgen.CharacterProductByShortCodeRow
 		short, err = p.queries().CharacterProductByShortCode(ctx, *spec.ShortCode)
 		if err == nil {
-			view, mapErr := mapProductCharacter(short.ID, short.ShortCode, short.Name, short.OwnerID, short.BackstoryID, short.GuildID, short.RegionID, short.Status, short.Description, short.DdbUrl, short.Pcxp, short.CreatedAt, short.UpdatedAt, short.VerificationSubmittedAt, short.VerificationStatus, short.DdbPayload, short.DdbSyncedAt)
+			view, mapErr := mapProductCharacter(short.ID, short.ShortCode, short.Name, short.OwnerID, short.BackstoryID, short.GuildID, short.RegionID, short.Status, short.Description, short.BackgroundText, short.DdbUrl, short.ImageUrl, short.Pcxp, short.CreatedAt, short.UpdatedAt, short.VerificationSubmittedAt, short.VerificationStatus, short.DdbPayload, short.DdbSyncedAt)
 			if mapErr != nil {
 				return nil, mapErr
 			}
@@ -325,7 +328,7 @@ func (p *ProductPostgres) ReadCharacter(ctx context.Context, _ auth.Authority, s
 	if err != nil {
 		return nil, err
 	}
-	view, err := mapProductCharacter(row.ID, row.ShortCode, row.Name, row.OwnerID, row.BackstoryID, row.GuildID, row.RegionID, row.Status, row.Description, row.DdbUrl, row.Pcxp, row.CreatedAt, row.UpdatedAt, row.VerificationSubmittedAt, row.VerificationStatus, row.DdbPayload, row.DdbSyncedAt)
+	view, err := mapProductCharacter(row.ID, row.ShortCode, row.Name, row.OwnerID, row.BackstoryID, row.GuildID, row.RegionID, row.Status, row.Description, row.BackgroundText, row.DdbUrl, row.ImageUrl, row.Pcxp, row.CreatedAt, row.UpdatedAt, row.VerificationSubmittedAt, row.VerificationStatus, row.DdbPayload, row.DdbSyncedAt)
 	if err != nil {
 		return nil, err
 	}
@@ -359,7 +362,7 @@ func (p *ProductPostgres) ReadCharacters(ctx context.Context, _ auth.Authority, 
 	}
 	out := CharacterListResult{Items: make([]CharacterView, 0, len(rows)), Total: total}
 	for _, row := range rows {
-		view, mapErr := mapProductCharacter(row.ID, row.ShortCode, row.Name, row.OwnerID, row.BackstoryID, row.GuildID, row.RegionID, row.Status, row.Description, row.DdbUrl, row.Pcxp, row.CreatedAt, row.UpdatedAt, row.VerificationSubmittedAt, row.VerificationStatus, row.DdbPayload, row.DdbSyncedAt)
+		view, mapErr := mapProductCharacter(row.ID, row.ShortCode, row.Name, row.OwnerID, row.BackstoryID, row.GuildID, row.RegionID, row.Status, row.Description, row.BackgroundText, row.DdbUrl, row.ImageUrl, row.Pcxp, row.CreatedAt, row.UpdatedAt, row.VerificationSubmittedAt, row.VerificationStatus, row.DdbPayload, row.DdbSyncedAt)
 		if mapErr != nil {
 			return CharacterListResult{}, mapErr
 		}
@@ -383,7 +386,7 @@ func (p *ProductPostgres) ReadMyCharacters(ctx context.Context, actor auth.Autho
 	}
 	out := CharacterListResult{Items: make([]CharacterView, 0, len(rows)), Total: total}
 	for _, row := range rows {
-		view, mapErr := mapProductCharacter(row.ID, row.ShortCode, row.Name, row.OwnerID, row.BackstoryID, row.GuildID, row.RegionID, row.Status, row.Description, row.DdbUrl, row.Pcxp, row.CreatedAt, row.UpdatedAt, row.VerificationSubmittedAt, row.VerificationStatus, row.DdbPayload, row.DdbSyncedAt)
+		view, mapErr := mapProductCharacter(row.ID, row.ShortCode, row.Name, row.OwnerID, row.BackstoryID, row.GuildID, row.RegionID, row.Status, row.Description, row.BackgroundText, row.DdbUrl, row.ImageUrl, row.Pcxp, row.CreatedAt, row.UpdatedAt, row.VerificationSubmittedAt, row.VerificationStatus, row.DdbPayload, row.DdbSyncedAt)
 		if mapErr != nil {
 			return CharacterListResult{}, mapErr
 		}
@@ -511,7 +514,7 @@ func (p *ProductPostgres) ReadBatchCharacters(ctx context.Context, _ auth.Author
 		if rowIndex == len(positions) {
 			break
 		}
-		view, mapErr := mapProductCharacter(row.ID, row.ShortCode, row.Name, row.OwnerID, row.BackstoryID, row.GuildID, row.RegionID, row.Status, row.Description, row.DdbUrl, row.Pcxp, row.CreatedAt, row.UpdatedAt, row.VerificationSubmittedAt, row.VerificationStatus, row.DdbPayload, row.DdbSyncedAt)
+		view, mapErr := mapProductCharacter(row.ID, row.ShortCode, row.Name, row.OwnerID, row.BackstoryID, row.GuildID, row.RegionID, row.Status, row.Description, row.BackgroundText, row.DdbUrl, row.ImageUrl, row.Pcxp, row.CreatedAt, row.UpdatedAt, row.VerificationSubmittedAt, row.VerificationStatus, row.DdbPayload, row.DdbSyncedAt)
 		if mapErr != nil {
 			return nil, mapErr
 		}

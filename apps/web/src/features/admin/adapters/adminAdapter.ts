@@ -1,3 +1,4 @@
+import { parseCalendarForm, type CalendarForm } from './adminForms.js';
 import { z } from 'zod';
 import type {
   AdminBackstoriesQuery,
@@ -21,6 +22,7 @@ import type {
   RevokeArchonMutation,
   SetMemberRolesBatchMutation,
   SetMemberRolesMutation,
+  TransitionRegionMutation,
   UpdateBackstoryMutation,
   UpdateGameCalendarMutation,
   UpdateHomeBannerMutation,
@@ -28,7 +30,13 @@ import type {
   UpdateTimeAnchorMutation,
   UpsertCreationCatalogEntryMutation,
 } from '../../../api/graphql.operations.gen.js';
-import { graphqlRequest } from '../../../api/graphql.js';
+import {
+  adminCommand,
+  adminRead,
+  type AdminCommand,
+  type AdminReadRequest,
+} from './adminRequest.js';
+import { adminPage, type AdminPage, type AdminPageRequest } from './adminPage.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import PENDING_DM_PROFILES from './pendingDmProfiles.graphql?raw';
@@ -45,6 +53,7 @@ import DECIDE_DM_PROFILE from './decideDmProfileVerification.graphql?raw';
 import ADMIN_REGIONS from './adminRegions.graphql?raw';
 import CREATE_REGION from './createRegion.graphql?raw';
 import UPDATE_REGION from './updateRegion.graphql?raw';
+import TRANSITION_REGION from './transitionRegion.graphql?raw';
 import ARCHON_ASSIGNMENTS from './archonAssignments.graphql?raw';
 import ASSIGN_ARCHON from './assignArchon.graphql?raw';
 import REVOKE_ARCHON from './revokeArchon.graphql?raw';
@@ -59,8 +68,9 @@ import UPDATE_TIME_ANCHOR from './updateTimeAnchor.graphql?raw';
 import ADMIN_GAME_CALENDAR from './adminGameCalendar.graphql?raw';
 import UPDATE_GAME_CALENDAR from './updateGameCalendar.graphql?raw';
 
-function commandMeta(): { idempotencyKey: string } {
-  return { idempotencyKey: crypto.randomUUID() };
+function requireAcknowledgement(schema: z.ZodTypeAny, value: unknown): void {
+  if (!schema.safeParse(value).success)
+    throw toAppError({ failure: 'InvalidWire' }, 'admin:command-readback');
 }
 
 function optionalId(value: string | null | undefined): string | null {
@@ -119,21 +129,50 @@ const adminAlertSchema = z.object({
 });
 
 const adminOpsSchema = z.object({
-  activeAlertCount: z.number().int(),
-  pendingDeliveryCount: z.number().int(),
-  deliveryTotal: z.number().int(),
-  deliveries: z
-    .array(
-      z.object({
-        id: z.string().optional(),
-        jobId: z.union([z.string(), z.number()]).optional(),
-        status: z.string().optional(),
-        deliveryStatus: z.string().optional(),
-      }),
-    )
-    .optional()
-    .default([]),
-  activeAlerts: z.array(adminAlertSchema).optional().default([]),
+  activeAlertCount: z.number().int().nonnegative(),
+  pendingDeliveryCount: z.number().int().nonnegative(),
+  deliveryTotal: z.number().int().nonnegative(),
+  config: z.object({
+    publicOrigin: z.string(),
+    publicOriginHealthy: z.boolean().nullable(),
+    deliveryMode: z.string(),
+    announcementRoleId: z.string().nullable(),
+    announcementRoleSource: z.string(),
+    announcementRoleHealthy: z.boolean().nullable(),
+  }),
+  scheduledWork: z.array(
+    z.object({
+      kind: z.string(),
+      expectedSlot: z.string().nullable(),
+      outcome: z.string().nullable(),
+      lastStartedAt: z.string().nullable(),
+      lastFinishedAt: z.string().nullable(),
+      jobId: z.string().nullable(),
+      safeErrorCode: z.string().nullable(),
+    }),
+  ),
+  deliveries: z.array(
+    z.object({
+      id: z.string(),
+      questId: z.string().nullable(),
+      questShortCode: z.string().nullable(),
+      questTitle: z.string().nullable(),
+      questLink: z.string().nullable(),
+      eventLink: z.string().nullable(),
+      messageId: z.string().nullable(),
+      state: z.string(),
+      desiredRevision: z.number().int().nullable(),
+      appliedRevision: z.number().int().nullable(),
+      failureStreak: z.number().int(),
+      maxAttempts: z.number().int(),
+      nextAttemptAt: z.string().nullable(),
+      safeError: z.string().nullable(),
+      redriveCount: z.number().int(),
+      createdAt: z.string(),
+      updatedAt: z.string(),
+    }),
+  ),
+  activeAlerts: z.array(adminAlertSchema),
 });
 
 const adminCharsSchema = z.object({
@@ -176,12 +215,7 @@ export type AdminHealthAlert = {
   lastSeenAt: string | null;
 };
 
-export type AdminOpsView = {
-  activeAlertCount: number;
-  pendingDeliveryCount: number;
-  deliveryTotal: number;
-  activeAlerts: AdminHealthAlert[];
-};
+export type AdminOpsView = z.infer<typeof adminOpsSchema>;
 
 export type AdminCharRow = {
   id: string;
@@ -232,22 +266,7 @@ export function parseAdminOps(wire: unknown): AdapterResult<AdminOpsView> {
   if (!parsed.success) {
     return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
   }
-  return {
-    ok: true,
-    data: {
-      activeAlertCount: parsed.data.activeAlertCount,
-      pendingDeliveryCount: parsed.data.pendingDeliveryCount,
-      deliveryTotal: parsed.data.deliveryTotal,
-      activeAlerts: parsed.data.activeAlerts.map((a) => ({
-        key: a.key,
-        label: a.label,
-        severity: a.severity,
-        remediationHref: a.remediationHref,
-        firstSeenAt: a.firstSeenAt ?? null,
-        lastSeenAt: a.lastSeenAt ?? null,
-      })),
-    },
-  };
+  return { ok: true, data: parsed.data };
 }
 
 export function parseAdminChars(wire: unknown): AdapterResult<AdminCharRow[]> {
@@ -258,59 +277,70 @@ export function parseAdminChars(wire: unknown): AdapterResult<AdminCharRow[]> {
   return { ok: true, data: parsed.data.items };
 }
 
-export async function loadDmVerifyQueue(): Promise<DmVerifyRow[]> {
+export async function loadDmVerifyQueue(
+  options: AdminPageRequest,
+  request: AdminReadRequest,
+): Promise<AdminPage<DmVerifyRow>> {
   try {
-    const data = await graphqlRequest<PendingDmProfilesQuery>(PENDING_DM_PROFILES, {
-      limit: 50,
-      offset: 0,
-    });
+    const data = await adminRead<PendingDmProfilesQuery>(
+      PENDING_DM_PROFILES,
+      options,
+      request,
+    );
     const result = parseDmQueue(data.pendingDmProfileVerifications);
-    if (!result.ok) throw toAppError({ failure: result.failure }, 'verify:dm');
-    return result.data;
-  } catch (err) {
-    throw toAppError(err, 'verify:dm');
+    if (!result.ok)
+      throw toAppError({ failure: result.failure }, 'admin:loadDmVerifyQueue');
+    return adminPage(result.data, data.pendingDmProfileVerifications.total);
+  } catch (error) {
+    throw toAppError(error, 'admin:loadDmVerifyQueue');
   }
 }
 
-export async function loadCharVerifyQueue(): Promise<CharVerifyRow[]> {
+export async function loadCharVerifyQueue(
+  options: AdminPageRequest,
+  request: AdminReadRequest,
+): Promise<AdminPage<CharVerifyRow>> {
   try {
-    const data = await graphqlRequest<PendingCharacterVerificationsQuery>(
+    const data = await adminRead<PendingCharacterVerificationsQuery>(
       PENDING_CHAR_VERIFICATIONS,
-      { limit: 50, offset: 0 },
+      options,
+      request,
     );
     const result = parseCharPending(data.pendingCharacterVerifications);
-    if (!result.ok) throw toAppError({ failure: result.failure }, 'verify:char');
-    return result.data;
-  } catch (err) {
-    throw toAppError(err, 'verify:char');
+    if (!result.ok)
+      throw toAppError({ failure: result.failure }, 'admin:loadCharVerifyQueue');
+    return adminPage(result.data, data.pendingCharacterVerifications.total);
+  } catch (error) {
+    throw toAppError(error, 'admin:loadCharVerifyQueue');
   }
 }
 
-export async function loadAdminOperations(): Promise<AdminOpsView> {
-  try {
-    const data = await graphqlRequest<AdminOperationsQuery>(ADMIN_OPS, {
-      limit: 25,
-      offset: 0,
-    });
-    const result = parseAdminOps(data.adminOperations);
-    if (!result.ok) throw toAppError({ failure: result.failure }, 'admin:ops');
-    return result.data;
-  } catch (err) {
-    throw toAppError(err, 'admin:ops');
-  }
+export async function loadAdminOperations(
+  options: { limit: number; offset: number; alertsLimit: number; alertsOffset: number },
+  request: AdminReadRequest,
+): Promise<AdminOpsView> {
+  const data = await adminRead<AdminOperationsQuery>(ADMIN_OPS, options, request);
+  const result = parseAdminOps(data.adminOperations);
+  if (!result.ok) throw toAppError({ failure: result.failure }, 'admin:ops');
+  return result.data;
 }
 
-export async function loadAdminCharacters(): Promise<AdminCharRow[]> {
+export async function loadAdminCharacters(
+  options: AdminPageRequest & {
+    namePrefix?: string;
+    status?: string;
+    regionId?: string;
+  },
+  request: AdminReadRequest,
+): Promise<AdminPage<AdminCharRow>> {
   try {
-    const data = await graphqlRequest<AdminCharactersQuery>(ADMIN_CHARS, {
-      limit: 50,
-      offset: 0,
-    });
+    const data = await adminRead<AdminCharactersQuery>(ADMIN_CHARS, options, request);
     const result = parseAdminChars(data.adminCharacterDirectory);
-    if (!result.ok) throw toAppError({ failure: result.failure }, 'admin:chars');
-    return result.data;
-  } catch (err) {
-    throw toAppError(err, 'admin:chars');
+    if (!result.ok)
+      throw toAppError({ failure: result.failure }, 'admin:loadAdminCharacters');
+    return adminPage(result.data, data.adminCharacterDirectory.total);
+  } catch (error) {
+    throw toAppError(error, 'admin:loadAdminCharacters');
   }
 }
 
@@ -353,17 +383,18 @@ export function parseAdminMembers(wire: unknown): AdapterResult<AdminMemberRow[]
   };
 }
 
-export async function loadAdminMembers(search = ''): Promise<AdminMemberRow[]> {
+export async function loadAdminMembers(
+  options: AdminPageRequest & { search?: string; role?: string; status?: string },
+  request: AdminReadRequest,
+): Promise<AdminPage<AdminMemberRow>> {
   try {
-    const data = await graphqlRequest<AdminMembersQuery>(ADMIN_MEMBERS, {
-      limit: 50,
-      search: search.trim() || null,
-    });
+    const data = await adminRead<AdminMembersQuery>(ADMIN_MEMBERS, options, request);
     const result = parseAdminMembers(data.members);
-    if (!result.ok) throw toAppError({ failure: result.failure }, 'admin:members');
-    return result.data;
-  } catch (err) {
-    throw toAppError(err, 'admin:members');
+    if (!result.ok)
+      throw toAppError({ failure: result.failure }, 'admin:loadAdminMembers');
+    return adminPage(result.data, data.members.total);
+  } catch (error) {
+    throw toAppError(error, 'admin:loadAdminMembers');
   }
 }
 
@@ -371,14 +402,22 @@ export async function loadAdminMembers(search = ''): Promise<AdminMemberRow[]> {
 export async function setMemberRoles(
   memberId: string,
   roles: string[],
+  command: AdminCommand,
 ): Promise<void> {
   try {
-    await graphqlRequest<SetMemberRolesMutation>(SET_MEMBER_ROLES, {
-      memberId,
-      roles,
-      note: null,
-      meta: commandMeta(),
-    });
+    const data = await adminCommand<SetMemberRolesMutation>(
+      SET_MEMBER_ROLES,
+      {
+        memberId,
+        roles,
+        note: null,
+      },
+      command,
+    );
+    requireAcknowledgement(
+      z.object({ id: z.literal(memberId), roles: z.array(z.string()) }),
+      data.setMemberRoles,
+    );
   } catch (err) {
     throw toAppError(err, 'admin:set-roles');
   }
@@ -426,9 +465,15 @@ export function parseHomeBanner(wire: unknown): AdapterResult<HomeBannerView> {
   };
 }
 
-export async function loadHomeBanner(): Promise<HomeBannerView> {
+export async function loadHomeBanner(
+  request: AdminReadRequest,
+): Promise<HomeBannerView> {
   try {
-    const data = await graphqlRequest<AdminHomeBannerQuery>(ADMIN_HOME_BANNER);
+    const data = await adminRead<AdminHomeBannerQuery>(
+      ADMIN_HOME_BANNER,
+      undefined,
+      request,
+    );
     const result = parseHomeBanner(data.homeBanner);
     if (!result.ok) throw toAppError({ failure: result.failure }, 'admin:home-banner');
     return result.data;
@@ -438,21 +483,28 @@ export async function loadHomeBanner(): Promise<HomeBannerView> {
 }
 
 /** field-routing: updateHomeBanner */
-export async function upsertHomeBanner(banner: HomeBannerView): Promise<void> {
+export async function upsertHomeBanner(
+  banner: HomeBannerView,
+  command: AdminCommand,
+): Promise<void> {
   try {
-    await graphqlRequest<UpdateHomeBannerMutation>(UPDATE_HOME_BANNER, {
-      input: {
-        enabled: banner.enabled,
-        title: banner.title,
-        body: banner.body,
-        ctaLabel: banner.ctaLabel,
-        ctaHref: banner.ctaHref,
-        mediaKind: banner.mediaKind,
-        mediaUrl: banner.mediaUrl,
-        mediaLabel: banner.mediaLabel,
+    const data = await adminCommand<UpdateHomeBannerMutation>(
+      UPDATE_HOME_BANNER,
+      {
+        input: {
+          enabled: banner.enabled,
+          title: banner.title,
+          body: banner.body,
+          ctaLabel: banner.ctaLabel,
+          ctaHref: banner.ctaHref,
+          mediaKind: banner.mediaKind,
+          mediaUrl: banner.mediaUrl,
+          mediaLabel: banner.mediaLabel,
+        },
       },
-      meta: commandMeta(),
-    });
+      command,
+    );
+    requireAcknowledgement(homeBannerSchema, data.updateHomeBanner);
   } catch (err) {
     throw toAppError(err, 'admin:home-banner:save');
   }
@@ -462,12 +514,15 @@ export async function upsertHomeBanner(banner: HomeBannerView): Promise<void> {
  * field-routing: decideVerification.
  * Schema requires expectedSubmittedAt + VerificationVerdict (not REST approve boolean).
  */
-export async function decideCharacterVerification(input: {
-  characterId: string;
-  approve: boolean;
-  note?: string | null;
-  expectedSubmissionAt?: string | null;
-}): Promise<void> {
+export async function decideCharacterVerification(
+  input: {
+    characterId: string;
+    approve: boolean;
+    note?: string | null;
+    expectedSubmissionAt?: string | null;
+  },
+  command: AdminCommand,
+): Promise<void> {
   if (!input.expectedSubmissionAt) {
     throw toAppError(
       {
@@ -478,13 +533,24 @@ export async function decideCharacterVerification(input: {
     );
   }
   try {
-    await graphqlRequest<DecideVerificationMutation>(DECIDE_VERIFICATION, {
-      characterId: input.characterId,
-      expectedSubmittedAt: input.expectedSubmissionAt,
-      verdict: input.approve ? 'APPROVED' : 'REJECTED',
-      note: input.note ?? null,
-      meta: commandMeta(),
-    });
+    const data = await adminCommand<DecideVerificationMutation>(
+      DECIDE_VERIFICATION,
+      {
+        characterId: input.characterId,
+        expectedSubmittedAt: input.expectedSubmissionAt,
+        verdict: input.approve ? 'APPROVED' : 'REJECTED',
+        note: input.note ?? null,
+      },
+      command,
+    );
+    requireAcknowledgement(
+      z.object({
+        id: z.string().min(1),
+        verdict: z.literal(input.approve ? 'approved' : 'rejected'),
+        note: z.string().nullable(),
+      }),
+      data.decideVerification,
+    );
   } catch (err) {
     throw toAppError(err, 'verify:decide-character');
   }
@@ -494,20 +560,34 @@ export async function decideCharacterVerification(input: {
  * field-routing: decideDmProfileVerification.
  * Schema requires expectedRevision + VerificationVerdict.
  */
-export async function decideDmProfileVerification(input: {
-  memberId: string;
-  approve: boolean;
-  note?: string | null;
-  expectedRevision: number;
-}): Promise<void> {
+export async function decideDmProfileVerification(
+  input: {
+    memberId: string;
+    approve: boolean;
+    note?: string | null;
+    expectedRevision: number;
+  },
+  command: AdminCommand,
+): Promise<void> {
   try {
-    await graphqlRequest<DecideDmProfileVerificationMutation>(DECIDE_DM_PROFILE, {
-      memberId: input.memberId,
-      expectedRevision: input.expectedRevision,
-      verdict: input.approve ? 'APPROVED' : 'REJECTED',
-      note: input.note ?? null,
-      meta: commandMeta(),
-    });
+    const data = await adminCommand<DecideDmProfileVerificationMutation>(
+      DECIDE_DM_PROFILE,
+      {
+        memberId: input.memberId,
+        expectedRevision: input.expectedRevision,
+        verdict: input.approve ? 'APPROVED' : 'REJECTED',
+        note: input.note ?? null,
+      },
+      command,
+    );
+    requireAcknowledgement(
+      z.object({
+        memberId: z.literal(input.memberId),
+        status: z.string(),
+        reviewRevision: z.number().int().positive(),
+      }),
+      data.decideDmProfileVerification,
+    );
   } catch (err) {
     throw toAppError(err, 'verify:decide-dm');
   }
@@ -517,7 +597,8 @@ const regionSchema = z.object({
   id: z.string(),
   name: z.string(),
   kind: z.string(),
-  charterDeadline: z.string().nullable().optional(),
+  charterDeadline: z.string().nullable(),
+  documentId: z.string().uuid().nullable(),
   createdAt: z.string().optional(),
 });
 
@@ -526,6 +607,7 @@ export type AdminRegionRow = {
   name: string;
   kind: string;
   charterDeadline: string | null;
+  documentId: string | null;
 };
 
 export function parseAdminRegions(wire: unknown): AdapterResult<AdminRegionRow[]> {
@@ -539,36 +621,55 @@ export function parseAdminRegions(wire: unknown): AdapterResult<AdminRegionRow[]
       id: r.id,
       name: r.name,
       kind: r.kind,
-      charterDeadline: r.charterDeadline ?? null,
+      charterDeadline: r.charterDeadline,
+      documentId: r.documentId,
     })),
   };
 }
 
-export async function loadAdminRegions(): Promise<AdminRegionRow[]> {
-  try {
-    const data = await graphqlRequest<AdminRegionsQuery>(ADMIN_REGIONS, {
-      kind: null,
-      limit: 50,
-      offset: 0,
-    });
-    const result = parseAdminRegions(data.regions);
-    if (!result.ok) throw toAppError({ failure: result.failure }, 'admin:regions');
-    return result.data;
-  } catch (err) {
-    throw toAppError(err, 'admin:regions');
+export async function loadAdminRegions(
+  options: AdminPageRequest & { kind?: string },
+  request: AdminReadRequest,
+): Promise<AdminRegionRow[]> {
+  const data = await adminRead<AdminRegionsQuery>(ADMIN_REGIONS, options, request);
+  const result = parseAdminRegions(data.regions);
+  if (!result.ok) throw toAppError({ failure: result.failure }, 'admin:regions');
+  return result.data;
+}
+
+export async function loadAllAdminRegions(
+  request: AdminReadRequest,
+): Promise<AdminRegionRow[]> {
+  const regions: AdminRegionRow[] = [];
+  const seen = new Set<string>();
+  for (let offset = 0; ; offset += 100) {
+    const page = await loadAdminRegions({ offset, limit: 100 }, request);
+    for (const region of page) {
+      if (seen.has(region.id))
+        throw toAppError({ failure: 'InvalidWire' }, 'admin:region-pagination');
+      seen.add(region.id);
+      regions.push(region);
+    }
+    if (page.length < 100) return regions;
   }
 }
 
 /** field-routing: createRegion */
-export async function createRegion(input: {
-  name: string;
-  kind: string;
-}): Promise<AdminRegionRow> {
+export async function createRegion(
+  input: {
+    name: string;
+    kind: string;
+  },
+  command: AdminCommand,
+): Promise<AdminRegionRow> {
   try {
-    const data = await graphqlRequest<CreateRegionMutation>(CREATE_REGION, {
-      input: { name: input.name, kind: input.kind },
-      meta: commandMeta(),
-    });
+    const data = await adminCommand<CreateRegionMutation>(
+      CREATE_REGION,
+      {
+        input: { name: input.name, kind: input.kind },
+      },
+      command,
+    );
     const parsed = regionSchema.safeParse(data.createRegion);
     if (!parsed.success) {
       throw toAppError({ failure: 'InvalidWire' }, 'admin:region:create');
@@ -577,20 +678,49 @@ export async function createRegion(input: {
       id: parsed.data.id,
       name: parsed.data.name,
       kind: parsed.data.kind,
-      charterDeadline: parsed.data.charterDeadline ?? null,
+      charterDeadline: parsed.data.charterDeadline,
+      documentId: parsed.data.documentId,
     };
   } catch (err) {
     throw toAppError(err, 'admin:region:create');
   }
 }
 
+export async function transitionRegion(
+  input: { regionId: string; to: 'archon' | 'server' },
+  command: AdminCommand,
+): Promise<AdminRegionRow> {
+  try {
+    const data = await adminCommand<TransitionRegionMutation>(
+      TRANSITION_REGION,
+      { id: input.regionId, to: input.to, note: '' },
+      command,
+    );
+    const parsed = regionSchema
+      .extend({
+        id: z
+          .string()
+          .uuid()
+          .refine((id) => id === input.regionId),
+        kind: z.literal(input.to),
+        createdAt: z.string().datetime({ offset: true }),
+      })
+      .safeParse(data.transitionRegion);
+    if (!parsed.success)
+      throw toAppError({ failure: 'InvalidWire' }, 'admin:region-transition');
+    return parsed.data;
+  } catch (error) {
+    throw toAppError(error, 'admin:region-transition');
+  }
+}
+
 const backstorySchema = z.object({
   id: z.string(),
   name: z.string(),
-  lore: z.string().optional().default(''),
-  cohort: z.string().optional().default(''),
-  sourceRegionId: z.string().nullable().optional().default(null),
-  retired: z.boolean().optional().default(false),
+  lore: z.string(),
+  cohort: z.string(),
+  sourceRegionId: z.string().uuid().nullable(),
+  retired: z.boolean(),
 });
 
 export type AdminBackstoryRow = {
@@ -602,7 +732,9 @@ export type AdminBackstoryRow = {
   retired: boolean;
 };
 
-export function parseAdminBackstories(wire: unknown): AdapterResult<AdminBackstoryRow[]> {
+export function parseAdminBackstories(
+  wire: unknown,
+): AdapterResult<AdminBackstoryRow[]> {
   const list = Array.isArray(wire)
     ? wire
     : z.object({ items: z.array(backstorySchema) }).safeParse(wire).success
@@ -626,65 +758,97 @@ export function parseAdminBackstories(wire: unknown): AdapterResult<AdminBacksto
   };
 }
 
-export async function loadAdminBackstories(): Promise<AdminBackstoryRow[]> {
+export async function loadAdminBackstories(
+  options: AdminPageRequest & {
+    cohort?: string;
+    regionId?: string;
+    includeRetired?: boolean;
+  },
+  request: AdminReadRequest,
+): Promise<AdminPage<AdminBackstoryRow>> {
   try {
-    const data = await graphqlRequest<AdminBackstoriesQuery>(ADMIN_BACKSTORIES, {
-      limit: 50,
-      offset: 0,
-      includeRetired: true,
-    });
+    const data = await adminRead<AdminBackstoriesQuery>(
+      ADMIN_BACKSTORIES,
+      { includeRetired: true, ...options },
+      request,
+    );
     const result = parseAdminBackstories(data.backstories);
-    if (!result.ok) throw toAppError({ failure: result.failure }, 'admin:backstories');
-    return result.data;
-  } catch (err) {
-    throw toAppError(err, 'admin:backstories');
+    if (!result.ok)
+      throw toAppError({ failure: result.failure }, 'admin:loadAdminBackstories');
+    return adminPage(result.data, data.backstories.total);
+  } catch (error) {
+    throw toAppError(error, 'admin:loadAdminBackstories');
   }
 }
 
 /** field-routing: createBackstory */
-export async function createBackstory(input: {
-  name: string;
-  lore: string;
-  cohort: string;
-  sourceRegionId: string;
-}): Promise<void> {
+export async function createBackstory(
+  input: {
+    name: string;
+    lore: string;
+    cohort: string;
+    sourceRegionId: string;
+  },
+  command: AdminCommand,
+): Promise<void> {
   try {
-    await graphqlRequest<CreateBackstoryMutation>(CREATE_BACKSTORY, {
-      input: {
-        name: input.name,
-        lore: input.lore,
-        cohort: input.cohort,
-        sourceRegionId: optionalId(input.sourceRegionId),
-        retired: false,
+    const data = await adminCommand<CreateBackstoryMutation>(
+      CREATE_BACKSTORY,
+      {
+        input: {
+          name: input.name,
+          lore: input.lore,
+          cohort: input.cohort,
+          sourceRegionId: optionalId(input.sourceRegionId),
+          retired: false,
+        },
       },
-      meta: commandMeta(),
-    });
+      command,
+    );
+    requireAcknowledgement(
+      z.object({ id: z.string().min(1), name: z.string() }),
+      data.createBackstory,
+    );
   } catch (err) {
     throw toAppError(err, 'admin:backstory:create');
   }
 }
 
 /** field-routing: updateBackstory */
-export async function updateBackstory(input: {
-  backstoryId: string;
-  name: string;
-  lore: string;
-  cohort: string;
-  sourceRegionId: string;
-  retired: boolean;
-}): Promise<void> {
+export async function updateBackstory(
+  input: {
+    backstoryId: string;
+    name: string;
+    lore: string;
+    cohort: string;
+    sourceRegionId: string;
+    retired: boolean;
+  },
+  command: AdminCommand,
+): Promise<void> {
   try {
-    await graphqlRequest<UpdateBackstoryMutation>(UPDATE_BACKSTORY, {
-      id: input.backstoryId,
-      input: {
-        name: input.name,
-        lore: input.lore,
-        cohort: input.cohort,
-        sourceRegionId: optionalId(input.sourceRegionId),
-        retired: input.retired,
+    const data = await adminCommand<UpdateBackstoryMutation>(
+      UPDATE_BACKSTORY,
+      {
+        id: input.backstoryId,
+        input: {
+          name: input.name,
+          lore: input.lore,
+          cohort: input.cohort,
+          sourceRegionId: optionalId(input.sourceRegionId),
+          retired: input.retired,
+        },
       },
-      meta: commandMeta(),
-    });
+      command,
+    );
+    requireAcknowledgement(
+      z.object({
+        id: z.literal(input.backstoryId),
+        name: z.string(),
+        retired: z.boolean(),
+      }),
+      data.updateBackstory,
+    );
   } catch (err) {
     throw toAppError(err, 'admin:backstory:update');
   }
@@ -694,10 +858,10 @@ const catalogEntrySchema = z.object({
   id: z.string(),
   kind: z.string(),
   name: z.string(),
-  description: z.string().nullable().optional(),
-  available: z.boolean().optional().default(true),
-  retired: z.boolean().optional().default(false),
-  introducedByRegionId: z.string().nullable().optional(),
+  description: z.string().nullable(),
+  available: z.boolean(),
+  retired: z.boolean(),
+  introducedByRegionId: z.string().uuid().nullable(),
 });
 
 export type AdminCatalogEntry = {
@@ -710,7 +874,9 @@ export type AdminCatalogEntry = {
   introducedByRegionId: string | null;
 };
 
-export function parseCreationCatalog(wire: unknown): AdapterResult<AdminCatalogEntry[]> {
+export function parseCreationCatalog(
+  wire: unknown,
+): AdapterResult<AdminCatalogEntry[]> {
   const list = Array.isArray(wire)
     ? wire
     : z.object({ items: z.array(catalogEntrySchema) }).safeParse(wire).success
@@ -735,126 +901,173 @@ export function parseCreationCatalog(wire: unknown): AdapterResult<AdminCatalogE
   };
 }
 
-export async function loadCreationCatalog(): Promise<AdminCatalogEntry[]> {
+export async function loadCreationCatalog(
+  options: AdminPageRequest & { kind?: string; regionId?: string },
+  request: AdminReadRequest,
+): Promise<AdminPage<AdminCatalogEntry>> {
   try {
-    const data = await graphqlRequest<AdminCreationCatalogQuery>(ADMIN_CREATION_CATALOG, {
-      limit: 50,
-      offset: 0,
-    });
+    const data = await adminRead<AdminCreationCatalogQuery>(
+      ADMIN_CREATION_CATALOG,
+      options,
+      request,
+    );
     const result = parseCreationCatalog(data.creationCatalog);
-    if (!result.ok) throw toAppError({ failure: result.failure }, 'admin:catalog');
-    return result.data;
-  } catch (err) {
-    throw toAppError(err, 'admin:catalog');
+    if (!result.ok)
+      throw toAppError({ failure: result.failure }, 'admin:loadCreationCatalog');
+    return adminPage(result.data, data.creationCatalog.total);
+  } catch (error) {
+    throw toAppError(error, 'admin:loadCreationCatalog');
   }
 }
 
 /** field-routing: upsertCreationCatalogEntry */
-export async function upsertCreationCatalogEntry(input: {
-  optionId: string | null;
-  kind: string;
-  name: string;
-  description: string | null;
-  available: boolean;
-  retired: boolean;
-  introducedByRegionId: string | null;
-}): Promise<void> {
+export async function upsertCreationCatalogEntry(
+  input: {
+    optionId: string | null;
+    kind: string;
+    name: string;
+    description: string | null;
+    available: boolean;
+    retired: boolean;
+    introducedByRegionId: string | null;
+  },
+  command: AdminCommand,
+): Promise<void> {
   try {
-    await graphqlRequest<UpsertCreationCatalogEntryMutation>(UPSERT_CREATION_CATALOG, {
-      input: {
-        optionId: optionalId(input.optionId),
-        kind: input.kind,
-        name: input.name,
-        description: input.description,
-        available: input.available,
-        retired: input.retired,
-        introducedByRegionId: optionalId(input.introducedByRegionId),
+    const data = await adminCommand<UpsertCreationCatalogEntryMutation>(
+      UPSERT_CREATION_CATALOG,
+      {
+        input: {
+          optionId: optionalId(input.optionId),
+          kind: input.kind,
+          name: input.name,
+          description: input.description,
+          available: input.available,
+          retired: input.retired,
+          introducedByRegionId: optionalId(input.introducedByRegionId),
+        },
       },
-      meta: commandMeta(),
-    });
+      command,
+    );
+    requireAcknowledgement(
+      z.object({ id: z.string().min(1), name: z.string(), kind: z.string() }),
+      data.upsertCreationCatalogEntry,
+    );
   } catch (err) {
     throw toAppError(err, 'admin:catalog:upsert');
   }
 }
 
-export type AdminRegionDetail = AdminRegionRow & {
-  archonMemberId: string | null;
-};
+export type AdminRegionDetail = AdminRegionRow & { archonMemberIds: string[] };
+export type RegionSaveResult =
+  | { outcome: 'saved'; region: AdminRegionDetail }
+  | { outcome: 'partial'; region: AdminRegionDetail; message: string };
 
-/**
- * field-routing: archonAssignments(regionId) — RegionType has no archon field;
- * assignments live on Query.archonAssignments. Single-field admin UX uses the
- * first assignment when multiple exist.
- */
-export async function loadRegionArchonMemberId(
+export async function loadRegionArchonMemberIds(
   regionId: string,
-): Promise<string | null> {
-  try {
-    const data = await graphqlRequest<ArchonAssignmentsQuery>(ARCHON_ASSIGNMENTS, {
-      regionId,
-      memberId: null,
-      limit: 50,
-      offset: 0,
-    });
-    return data.archonAssignments.items[0]?.memberId ?? null;
-  } catch (err) {
-    throw toAppError(err, 'admin:region:archon');
+  request: AdminReadRequest,
+): Promise<string[]> {
+  const ids: string[] = [];
+  for (let offset = 0; ; offset += 100) {
+    const data = await adminRead<ArchonAssignmentsQuery>(
+      ARCHON_ASSIGNMENTS,
+      { regionId, memberId: null, limit: 100, offset },
+      request,
+    );
+    const page = z
+      .object({
+        total: z.number().int().nonnegative(),
+        items: z.array(
+          z.object({ memberId: z.string().uuid(), regionId: z.literal(regionId) }),
+        ),
+      })
+      .safeParse(data.archonAssignments);
+    if (!page.success)
+      throw toAppError({ failure: 'InvalidWire' }, 'admin:assignments');
+    for (const row of page.data.items) {
+      if (ids.includes(row.memberId))
+        throw toAppError({ failure: 'InvalidWire' }, 'admin:assignment-pagination');
+      ids.push(row.memberId);
+    }
+    if (ids.length >= page.data.total) return ids;
+    if (page.data.items.length === 0)
+      throw toAppError({ failure: 'InvalidWire' }, 'admin:assignment-pagination');
   }
 }
 
-/**
- * field-routing: updateRegion (+ assignArchon / revokeArchon).
- * Clear: empty archonMemberId + previousArchonMemberId → revokeArchon.
- * Replace: revoke previous (when set and different) then assignArchon.
- */
-export async function updateRegion(input: {
-  regionId: string;
-  name?: string;
-  kind?: string;
-  archonMemberId?: string | null;
-  previousArchonMemberId?: string | null;
-  charterDeadline?: string | null;
-}): Promise<AdminRegionDetail> {
-  try {
-    const data = await graphqlRequest<UpdateRegionMutation>(UPDATE_REGION, {
+export async function updateRegion(
+  input: {
+    regionId: string;
+    name: string;
+    kind: string;
+    documentId: string | null;
+    charterDeadline: string | null;
+    archonMemberIds: string[];
+    previousArchonMemberIds: string[];
+  },
+  command: AdminCommand,
+): Promise<RegionSaveResult> {
+  const data = await adminCommand<UpdateRegionMutation>(
+    UPDATE_REGION,
+    {
       id: input.regionId,
       input: {
-        name: input.name ?? '',
-        kind: input.kind ?? '',
-        charterDeadline: input.charterDeadline ?? null,
+        name: input.name,
+        kind: input.kind,
+        documentId: input.documentId,
+        charterDeadline: input.charterDeadline,
       },
-      meta: commandMeta(),
-    });
-    const parsed = regionSchema.safeParse(data.updateRegion);
-    if (!parsed.success) {
-      throw toAppError({ failure: 'InvalidWire' }, 'admin:region:update');
+    },
+    command,
+  );
+  const parsed = regionSchema.safeParse(data.updateRegion);
+  if (!parsed.success)
+    throw toAppError({ failure: 'InvalidWire' }, 'admin:region-readback');
+  const current = new Set(input.previousArchonMemberIds);
+  const desired = new Set(input.archonMemberIds);
+  const region = (): AdminRegionDetail => ({
+    id: parsed.data.id,
+    name: parsed.data.name,
+    kind: parsed.data.kind,
+    documentId: parsed.data.documentId,
+    charterDeadline: parsed.data.charterDeadline,
+    archonMemberIds: [...current],
+  });
+  try {
+    for (const memberId of desired) {
+      if (current.has(memberId)) continue;
+      const acknowledged = await adminCommand<AssignArchonMutation>(
+        ASSIGN_ARCHON,
+        { memberId, regionId: input.regionId },
+        command,
+      );
+      requireAcknowledgement(
+        z.object({
+          memberId: z.literal(memberId),
+          regionId: z.literal(input.regionId),
+        }),
+        acknowledged.assignArchon,
+      );
+      current.add(memberId);
     }
-    const next = optionalId(input.archonMemberId);
-    const previous = optionalId(input.previousArchonMemberId);
-    if (previous && previous !== next) {
-      await graphqlRequest<RevokeArchonMutation>(REVOKE_ARCHON, {
-        memberId: previous,
-        regionId: input.regionId,
-        meta: commandMeta(),
-      });
+    for (const memberId of current) {
+      if (desired.has(memberId)) continue;
+      await adminCommand<RevokeArchonMutation>(
+        REVOKE_ARCHON,
+        { memberId, regionId: input.regionId },
+        command,
+      );
+      current.delete(memberId);
     }
-    if (next && next !== previous) {
-      await graphqlRequest<AssignArchonMutation>(ASSIGN_ARCHON, {
-        memberId: next,
-        regionId: input.regionId,
-        meta: commandMeta(),
-      });
-    }
+  } catch (error) {
+    command.assertCurrent();
     return {
-      id: parsed.data.id,
-      name: parsed.data.name,
-      kind: parsed.data.kind,
-      charterDeadline: parsed.data.charterDeadline ?? null,
-      archonMemberId: next,
+      outcome: 'partial',
+      region: region(),
+      message: `Region details saved. Assignment changes stopped: ${toAppError(error, 'admin:assignment').userMessage} Reload the region before continuing.`,
     };
-  } catch (err) {
-    throw toAppError(err, 'admin:region:update');
   }
+  return { outcome: 'saved', region: region() };
 }
 
 const timeAnchorSchema = z.object({
@@ -896,102 +1109,117 @@ export function parseTimeAnchors(wire: unknown): AdapterResult<AdminTimeAnchorVi
   };
 }
 
-export async function loadTimeAnchors(): Promise<AdminTimeAnchorView[]> {
+export async function loadTimeAnchors(
+  options: AdminPageRequest,
+  request: AdminReadRequest,
+): Promise<AdminPage<AdminTimeAnchorView>> {
   try {
-    const data = await graphqlRequest<AdminTimeAnchorsQuery>(ADMIN_TIME_ANCHORS, {
-      limit: 50,
-      offset: 0,
-    });
+    const data = await adminRead<AdminTimeAnchorsQuery>(
+      ADMIN_TIME_ANCHORS,
+      options,
+      request,
+    );
     const result = parseTimeAnchors(data.timeAnchors);
-    if (!result.ok) throw toAppError({ failure: result.failure }, 'admin:time-anchors');
-    return result.data;
-  } catch (err) {
-    throw toAppError(err, 'admin:time-anchors');
+    if (!result.ok)
+      throw toAppError({ failure: result.failure }, 'admin:loadTimeAnchors');
+    return adminPage(result.data, data.timeAnchors.total);
+  } catch (error) {
+    throw toAppError(error, 'admin:loadTimeAnchors');
   }
 }
 
 /** field-routing: createTimeAnchor */
-export async function createTimeAnchor(input: {
-  realUtc: string;
-  epochDay: number;
-  rate: number;
-  note: string | null;
-}): Promise<void> {
+export async function createTimeAnchor(
+  input: {
+    realUtc: string;
+    epochDay: number;
+    rate: number;
+    note: string | null;
+  },
+  command: AdminCommand,
+): Promise<void> {
   try {
-    await graphqlRequest<CreateTimeAnchorMutation>(CREATE_TIME_ANCHOR, {
-      input: {
-        realUtc: input.realUtc,
-        epochDay: input.epochDay,
-        rate: input.rate,
-        note: input.note,
+    const data = await adminCommand<CreateTimeAnchorMutation>(
+      CREATE_TIME_ANCHOR,
+      {
+        input: {
+          realUtc: input.realUtc,
+          epochDay: input.epochDay,
+          rate: input.rate,
+          note: input.note,
+        },
       },
-      meta: commandMeta(),
-    });
+      command,
+    );
+    requireAcknowledgement(timeAnchorSchema, data.createTimeAnchor);
   } catch (err) {
     throw toAppError(err, 'admin:time-anchor:create');
   }
 }
 
 /** field-routing: updateTimeAnchor */
-export async function updateTimeAnchor(input: {
-  anchorId: string;
-  realUtc: string;
-  epochDay: number;
-  rate: number;
-  note: string | null;
-}): Promise<void> {
+export async function updateTimeAnchor(
+  input: {
+    anchorId: string;
+    realUtc: string;
+    epochDay: number;
+    rate: number;
+    note: string | null;
+  },
+  command: AdminCommand,
+): Promise<void> {
   try {
-    await graphqlRequest<UpdateTimeAnchorMutation>(UPDATE_TIME_ANCHOR, {
-      id: input.anchorId,
-      input: {
-        realUtc: input.realUtc,
-        epochDay: input.epochDay,
-        rate: input.rate,
-        note: input.note,
+    const data = await adminCommand<UpdateTimeAnchorMutation>(
+      UPDATE_TIME_ANCHOR,
+      {
+        id: input.anchorId,
+        input: {
+          realUtc: input.realUtc,
+          epochDay: input.epochDay,
+          rate: input.rate,
+          note: input.note,
+        },
       },
-      meta: commandMeta(),
-    });
+      command,
+    );
+    requireAcknowledgement(
+      timeAnchorSchema.extend({ id: z.literal(input.anchorId) }),
+      data.updateTimeAnchor,
+    );
   } catch (err) {
     throw toAppError(err, 'admin:time-anchor:update');
   }
 }
 
-const calendarSchema = z.object({
-  definition: z.record(z.string(), z.unknown()).nullable().optional().default({}),
-});
-
-export type GameCalendarView = {
-  definition: Record<string, unknown>;
-};
-
-export async function loadGameCalendar(): Promise<GameCalendarView> {
-  try {
-    const window = calendarWindow();
-    const data = await graphqlRequest<AdminGameCalendarQuery>(ADMIN_GAME_CALENDAR, window);
-    const raw = data.gameCalendar;
-    const definition =
-      raw.definition && typeof raw.definition === 'object' && !Array.isArray(raw.definition)
-        ? (raw.definition as Record<string, unknown>)
-        : {};
-    const parsed = calendarSchema.safeParse({ definition });
-    if (!parsed.success) {
-      throw toAppError({ failure: 'InvalidWire' }, 'admin:calendar');
-    }
-    return { definition: parsed.data.definition ?? {} };
-  } catch (err) {
-    throw toAppError(err, 'admin:calendar');
-  }
+const calendarSchema = z.object({ definition: z.record(z.string(), z.unknown()) });
+export type GameCalendarView = z.infer<typeof calendarSchema> & { form: CalendarForm };
+export async function loadGameCalendar(
+  request: AdminReadRequest,
+): Promise<GameCalendarView> {
+  const data = await adminRead<AdminGameCalendarQuery>(
+    ADMIN_GAME_CALENDAR,
+    calendarWindow(),
+    request,
+  );
+  const parsed = calendarSchema.safeParse(data.gameCalendar);
+  if (!parsed.success) throw toAppError({ failure: 'InvalidWire' }, 'admin:calendar');
+  return { ...parsed.data, form: parseCalendarForm(parsed.data.definition) };
 }
 
 /** field-routing: updateGameCalendar */
 export async function updateGameCalendar(
   definition: Record<string, unknown>,
+  command: AdminCommand,
 ): Promise<void> {
   try {
-    await graphqlRequest<UpdateGameCalendarMutation>(UPDATE_GAME_CALENDAR, {
-      definition,
-      meta: commandMeta(),
-    });
+    const data = await adminCommand<UpdateGameCalendarMutation>(
+      UPDATE_GAME_CALENDAR,
+      {
+        definition,
+      },
+      command,
+    );
+    requireAcknowledgement(calendarSchema, data.updateGameCalendar);
   } catch (err) {
     throw toAppError(err, 'admin:calendar:update');
   }
@@ -1004,18 +1232,40 @@ export type BatchRoleResult = {
 };
 
 /** field-routing: setMemberRolesBatch */
-export async function setMemberRolesBatch(input: {
-  memberIds: string[];
-  roles: string[];
-}): Promise<BatchRoleResult[]> {
+export async function setMemberRolesBatch(
+  input: {
+    memberIds: string[];
+    roles: string[];
+  },
+  command: AdminCommand,
+): Promise<BatchRoleResult[]> {
   try {
-    const data = await graphqlRequest<SetMemberRolesBatchMutation>(SET_MEMBER_ROLES_BATCH, {
-      changes: input.memberIds.map((memberId) => ({
-        memberId,
-        roles: input.roles,
-      })),
-      meta: commandMeta(),
-    });
+    const data = await adminCommand<SetMemberRolesBatchMutation>(
+      SET_MEMBER_ROLES_BATCH,
+      {
+        changes: input.memberIds.map((memberId) => ({
+          memberId,
+          roles: input.roles,
+        })),
+      },
+      command,
+    );
+    requireAcknowledgement(
+      z.array(
+        z.object({
+          memberId: z.string(),
+          ok: z.boolean(),
+          error: z.string().nullable(),
+        }),
+      ),
+      data.setMemberRolesBatch,
+    );
+    const expected = new Set(input.memberIds);
+    if (
+      data.setMemberRolesBatch.length !== expected.size ||
+      data.setMemberRolesBatch.some((row) => !expected.delete(row.memberId))
+    )
+      throw toAppError({ failure: 'InvalidWire' }, 'admin:roles-batch-readback');
     return data.setMemberRolesBatch.map((row) => ({
       memberId: row.memberId,
       ok: row.ok,

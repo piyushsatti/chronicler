@@ -132,22 +132,27 @@ func classifyMarkers(lines []string) ([]string, bool) {
 // bypass blocks; author and administrator grants still do.
 // Callers must return these bytes, never discard them and recover raw Body.
 func (d Document) EffectiveBody(scope ViewerScope) (string, error) {
-	body, _, err := d.projectBody(scope)
-	return body, err
+	projection, err := d.projectBody(scope)
+	return projection.Body, err
 }
 
-// projectBody also reports whether an otherwise-denied audience needed the
-// shared administrator bypass, without putting protected bytes in audit logs.
-func (d Document) projectBody(scope ViewerScope) (string, bool, error) {
+type bodyProjection struct {
+	Body       string
+	Complete   bool
+	Overridden bool
+}
+
+func (d Document) projectBody(scope ViewerScope) (bodyProjection, error) {
 	if !d.Readable(scope) {
-		return "", false, ErrForbidden
+		return bodyProjection{}, ErrForbidden
 	}
 	ordinary := scope
 	ordinary.IsAdmin = false
 	overridden := scope.Privileged() && !d.Readable(ordinary)
 	if scope.IsAuthor(d.AuthorID) {
-		return d.Body, false, nil
+		return bodyProjection{Body: d.Body, Complete: true}, nil
 	}
+	complete := true
 	spans := parseBody(d.Body)
 	parts := make([]string, 0, len(spans))
 	for _, span := range spans {
@@ -163,8 +168,9 @@ func (d Document) projectBody(scope ViewerScope) (string, bool, error) {
 		if block.Allows(scope) {
 			parts = append(parts, span.Text)
 		} else {
+			complete = false
 			parts = append(parts, redactedBlock)
 		}
 	}
-	return strings.Join(parts, "\n"), overridden, nil
+	return bodyProjection{Body: strings.Join(parts, "\n"), Complete: complete, Overridden: overridden}, nil
 }

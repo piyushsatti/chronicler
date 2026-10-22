@@ -47,6 +47,7 @@
             ],
         },
       'Int': { 'model': ['github.com/99designs/gqlgen/graphql.Int'] },
+      'CharacterType': { 'fields': { 'guildId': { 'resolver': true } } },
       'AdminOperationsType': { 'fields': { 'activeAlerts': { 'resolver': true } } },
       'CodexEntryCardType': { 'fields': { 'subjects': { 'resolver': true } } },
       'DocumentType':
@@ -88,6 +89,7 @@
               'arc': { 'resolver': true },
               'briefDocument': { 'resolver': true },
               'discordDelivery': { 'resolver': true },
+              'documentId': { 'resolver': true },
               'dm': { 'resolver': true },
               'dmTable': { 'resolver': true },
               'participants': { 'resolver': true },
@@ -95,6 +97,8 @@
             },
         },
       'MemberType': { 'fields': { 'discordId': { 'resolver': true } } },
+      'RegionType': { 'fields': { 'documentId': { 'resolver': true } } },
+      'DocumentAudienceInput': { 'fields': { 'policy': { 'omittable': true } } },
       'DocumentEditInput':
         {
           'fields':
@@ -150,6 +154,7 @@
             {
               'backgroundText': { 'omittable': true },
               'description': { 'omittable': true },
+              'imageUrl': { 'omittable': true },
             },
         },
       'UpdateMyProfileInput': { 'fields': { 'avatarUrl': { 'omittable': true } } },

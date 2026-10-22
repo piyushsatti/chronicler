@@ -1,15 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import { DateTimePicker } from '../../../components/interactive/DateTimePicker.js';
-import { Popover } from '../../../components/primitives/Popover.js';
-import {
-  QUEST_STATUSES,
-  TAG_SUGGESTIONS,
-  TZ_OPTIONS,
-  WORLD_SEASONS,
-} from '../editorConstants.js';
+import { Menu } from '../../../components/primitives/Menu.js';
+import { Skeleton } from '../../../components/primitives/Skeleton.js';
+import { QUEST_STATUSES, TAG_SUGGESTIONS, WORLD_SEASONS } from '../editorConstants.js';
 import type { EditorOptions, FieldSchema } from '../types.js';
 import type { EditorRegionRow } from '../adapters/editorRegionsAdapter.js';
 import { StubNotice } from '../../../components/foundation/StubNotice.js';
+import styles from '../editor.module.css';
+import {
+  isEditorInstant,
+  resolveSessionTime,
+  sessionLocalValue,
+} from '../editorDateTime.js';
 
 interface PickerProps<T extends string> {
   value: T;
@@ -30,8 +32,7 @@ function Picker<T extends string>({
 }: PickerProps<T>): React.JSX.Element {
   const [open, setOpen] = useState(false);
   return (
-    <Popover
-      variant="menu"
+    <Menu
       ariaLabel={placeholder ?? 'Choose an option'}
       open={open}
       onOpenChange={setOpen}
@@ -45,30 +46,19 @@ function Picker<T extends string>({
           <span className="pf-caret">▾</span>
         </span>
       }
-    >
-      <div
-        className="hf2 pf-menu-list"
-        style={{ minWidth: 150, maxHeight: 240, overflowY: 'auto' }}
-      >
-        {options.map((o) => {
-          const key = Array.isArray(o) ? o[0] : o;
-          return (
-            <button
-              key={key}
-              type="button"
-              role="menuitem"
-              className="pf-opt"
-              onClick={() => {
-                onChange(key as T);
-                setOpen(false);
-              }}
-            >
-              {renderOption(o)}
-            </button>
-          );
-        })}
-      </div>
-    </Popover>
+      className="hf2"
+      listClassName={`pf-menu-list ${styles.pickerMenu}`}
+      itemClassName="pf-opt"
+      items={options.map((o) => {
+        const key = Array.isArray(o) ? o[0] : o;
+        return {
+          key,
+          label: renderOption(o),
+          textValue: Array.isArray(o) ? o[1] || o[0] : undefined,
+          onSelect: () => onChange(key as T),
+        };
+      })}
+    />
   );
 }
 
@@ -110,6 +100,9 @@ export function TextField({
 }): React.JSX.Element {
   return (
     <input
+      aria-label={field.label}
+      aria-required={field.required || undefined}
+      aria-invalid={bad || undefined}
       className={`pf-input field${field.mono || field.type === 'code' ? ' pf-mono' : ''}${bad ? ' pf-bad' : ''}`}
       value={value ?? ''}
       readOnly={field.readOnly}
@@ -146,7 +139,7 @@ export function StatusField({
             background: `color-mix(in srgb, ${col} 11%, transparent)`,
           }}
         >
-          <span style={{ width: 7, height: 7, borderRadius: '50%', background: col }} />
+          <span className={styles.statusDot} style={{ background: col }} />
           {v}
         </span>
       )}
@@ -183,9 +176,7 @@ function OptionState<T>({
     );
   if (options.status === 'loading')
     return (
-      <div className="pf-input field" aria-busy="true">
-        Loading {label.toLowerCase()}…
-      </div>
+      <Skeleton width="100%" height="2.25rem" aria-label={`Loading ${label.toLowerCase()}`} />
     );
   if (options.status === 'empty')
     return (
@@ -327,8 +318,7 @@ export function WorldDateField({
   return (
     <div className="row" data-gap="2">
       <input
-        className="pf-input field pf-mono"
-        style={{ maxWidth: 72, fontFamily: 'var(--font-mono)' }}
+        className={`pf-input field pf-mono ${styles.monoInputCy}`}
         placeholder="CY"
         value={v.cy}
         onChange={(e) => onChange({ ...v, cy: e.target.value })}
@@ -341,8 +331,7 @@ export function WorldDateField({
         onChange={(season) => onChange({ ...v, season })}
       />
       <input
-        className="pf-input field pf-mono"
-        style={{ maxWidth: 56, fontFamily: 'var(--font-mono)' }}
+        className={`pf-input field pf-mono ${styles.monoInputDay}`}
         placeholder="Day"
         value={v.day}
         onChange={(e) => onChange({ ...v, day: e.target.value })}
@@ -354,25 +343,57 @@ export function WorldDateField({
 export function DateTimeField({
   value,
   onChange,
+  timeZone,
+  label,
 }: {
-  value: { dt: string; tz: string };
-  onChange: (v: { dt: string; tz: string }) => void;
+  value: string;
+  onChange: (v: string) => void;
+  timeZone: string;
+  label: string;
 }): React.JSX.Element {
-  const v = value ?? { dt: '', tz: TZ_OPTIONS[0] };
+  const local = sessionLocalValue(value, timeZone);
+  const unresolved = isEditorInstant(value)
+    ? null
+    : resolveSessionTime(value, timeZone);
   return (
-    <div className="row" data-gap="2" data-wrap="1">
+    <div className="stack">
       <DateTimePicker
-        value={v.dt}
-        onChange={(dt) => onChange({ ...v, dt })}
-        ariaLabel="Field datetime"
+        value={local}
+        onChange={(next) => {
+          if (next === local) return;
+          const resolved = resolveSessionTime(next, timeZone);
+          onChange(resolved.status === 'unique' ? resolved.candidate.instant : next);
+        }}
+        ariaLabel={label}
       />
-      <Picker
-        value={v.tz || TZ_OPTIONS[0]}
-        options={[...TZ_OPTIONS]}
-        renderValue={(tz) => tz}
-        renderOption={(o) => o as string}
-        onChange={(tz) => onChange({ ...v, tz })}
-      />
+      <span className="type-caption">Timezone: {timeZone}</span>
+      {unresolved?.status === 'gap' ? (
+        <p role="alert">This time does not exist in {timeZone}. Choose another time.</p>
+      ) : unresolved?.status === 'invalid' ? (
+        <p role="alert">Choose a valid date and time.</p>
+      ) : unresolved?.status === 'ambiguous' ? (
+        <div className="stack" role="group" aria-label="Choose session occurrence">
+          <p>This time occurs twice in {timeZone}. Choose which occurrence.</p>
+          {unresolved.candidates.map((candidate, index) => (
+            <button
+              key={candidate.instant}
+              type="button"
+              className="btn btn--secondary"
+              onClick={() => onChange(candidate.instant)}
+            >
+              {index === 0 ? 'First' : 'Second'} occurrence (UTC{candidate.offset})
+            </button>
+          ))}
+        </div>
+      ) : unresolved?.status === 'unique' ? (
+        <button
+          type="button"
+          className="btn btn--secondary"
+          onClick={() => onChange(unresolved.candidate.instant)}
+        >
+          Confirm time in {timeZone} (UTC{unresolved.candidate.offset})
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -453,6 +474,9 @@ export function TextAreaField({
   return (
     <textarea
       ref={ref}
+      aria-label={field.label}
+      aria-required={field.required || undefined}
+      aria-invalid={bad || undefined}
       className={`pf-input field pf-area${bad ? ' pf-bad' : ''}`}
       rows={2}
       value={value ?? ''}
@@ -484,8 +508,7 @@ export function PairsField({
       {rows.map((r, i) => (
         <div key={i} className="pf-pair row">
           <input
-            className="pf-input field pf-mono"
-            style={{ maxWidth: 130, fontFamily: 'var(--font-mono)' }}
+            className={`pf-input field pf-mono ${styles.monoInputKey}`}
             value={r[0]}
             placeholder="key"
             onChange={(e) => set(i, 0, e.target.value)}
@@ -571,7 +594,7 @@ export function RegionMultiField({
       <div className="pf-tags row" data-wrap="1">
         {selected.map((id) => (
           <span key={id} className="pf-tag chip" data-tone="line">
-            {byId.get(id) ?? id}
+            <span className="pf-tag-label">{byId.get(id) ?? id}</span>
             <button
               type="button"
               aria-label={`Remove region ${byId.get(id) ?? id}`}
@@ -585,33 +608,21 @@ export function RegionMultiField({
           <OptionState options={options} label="Regions" />
         ) : null}
         {options.status === 'ready' ? (
-          <Popover
-            variant="menu"
+          <Menu
             open={open}
             onOpenChange={setOpen}
             ariaLabel="Add region"
             trigger={<span className="pf-pick pf-ph">+ Add region…</span>}
-          >
-            <div className="pf-menu-list">
-              {available.length === 0 ? (
-                <div className="pf-opt type-caption">No more regions</div>
-              ) : null}
-              {available.map((r) => (
-                <button
-                  key={r.id}
-                  type="button"
-                  className="pf-opt"
-                  role="menuitem"
-                  onClick={() => {
-                    onChange([...selected, r.id]);
-                    setOpen(false);
-                  }}
-                >
-                  {r.name}
-                </button>
-              ))}
-            </div>
-          </Popover>
+            className="hf2"
+            listClassName="pf-menu-list"
+            itemClassName="pf-opt"
+            emptyLabel={<div className="pf-opt type-caption">No more regions</div>}
+            items={available.map((r) => ({
+              key: r.id,
+              label: r.name,
+              onSelect: () => onChange([...selected, r.id]),
+            }))}
+          />
         ) : null}
       </div>
     </div>

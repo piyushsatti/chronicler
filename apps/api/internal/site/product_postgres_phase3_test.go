@@ -20,6 +20,22 @@ func TestNewProductPostgresRejectsNilExecutors(t *testing.T) {
 	}
 }
 
+func TestMapDeliveryUsesCanonicalInternalQuestDestination(t *testing.T) {
+	for _, test := range []struct {
+		code string
+		want string
+	}{{"fixture-quest", "/quests/fixture-quest"}, {"quest/with space", "/quests/quest%2Fwith%20space"}} {
+		job := mapAdminDeliveryJob(dbgen.SiteAdminDeliveryJobsRow{QuestShortCode: pgtype.Text{String: test.code, Valid: true}})
+		if job.QuestLink == nil || *job.QuestLink != test.want {
+			t.Fatalf("code=%q link=%v, want %q", test.code, job.QuestLink, test.want)
+		}
+	}
+	missing := mapAdminDeliveryJob(dbgen.SiteAdminDeliveryJobsRow{})
+	if missing.QuestLink != nil || missing.QuestTitle != nil || missing.QuestId != nil {
+		t.Fatalf("missing association fabricated metadata: %+v", missing)
+	}
+}
+
 func TestMapCommunitySnapshotMapsStoredTotalsRolesAndActivity(t *testing.T) {
 	rows := []dbgen.SiteCommunitySnapshotRow{
 		{TotalMembers: 8, ActiveCharacters: 3, TotalMaps: 2, TotalPointcrawlNodes: 9, TotalRegions: 4, TotalQuests: 5, TotalDms: 1,

@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"slices"
 	"testing"
@@ -78,23 +79,36 @@ func TestProductionChainAudienceDirectDenialIsDistinctFromMissing(t *testing.T) 
 	f.exec(t, `UPDATE documents SET policy='[]'::jsonb WHERE id=$1`, d.rowID)
 	for _, tc := range []struct{ name, query, id, code string }{
 		{"denied ID", `query($value:ID!){ documentById(id:$value){id slug title effectiveBody}}`, d.publicID, "FORBIDDEN"},
-		{"missing ID", `query($value:ID!){ documentById(id:$value){id slug title effectiveBody}}`, uuid.NewString(), "NOT_FOUND"},
+		{"missing ID", `query($value:ID!){ documentById(id:$value){id slug title effectiveBody}}`, uuid.NewString(), ""},
 		{"denied slug", `query($value:String!){ document(slug:$value){id slug title effectiveBody}}`, "authority-" + d.publicID, "FORBIDDEN"},
-		{"missing slug", `query($value:String!){ document(slug:$value){id slug title effectiveBody}}`, "missing-" + uuid.NewString(), "NOT_FOUND"},
+		{"missing slug", `query($value:String!){ document(slug:$value){id slug title effectiveBody}}`, "missing-" + uuid.NewString(), ""},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			body, _ := json.Marshal(map[string]any{"query": tc.query, "variables": map[string]string{"value": tc.id}})
 			w := authorityDBRequest(f.handler, http.MethodPost, "/v1/graphql", "", body)
 			assertAuthorityDBCORS(t, w)
 			var result struct {
+				Data   map[string]json.RawMessage `json:"data"`
 				Errors []struct {
 					Extensions struct {
 						Code string `json:"code"`
 					} `json:"extensions"`
 				} `json:"errors"`
 			}
-			if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil || w.Code != 200 || len(result.Errors) != 1 || result.Errors[0].Extensions.Code != tc.code {
+			if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil || w.Code != 200 {
 				t.Fatalf("response=%s err=%v", w.Body, err)
+			}
+			if tc.code == "" {
+				if len(result.Errors) != 0 || len(result.Data) != 1 {
+					t.Fatalf("missing identity response=%s", w.Body)
+				}
+				for _, value := range result.Data {
+					if string(value) != "null" {
+						t.Fatalf("missing identity must be null: %s", w.Body)
+					}
+				}
+			} else if len(result.Errors) != 1 || result.Errors[0].Extensions.Code != tc.code {
+				t.Fatalf("denied identity response=%s", w.Body)
 			}
 			for _, secret := range []string{d.body, d.publicID, "authority-" + d.publicID, d.title} {
 				if bytes.Contains(w.Body.Bytes(), []byte(secret)) {
@@ -122,8 +136,14 @@ func TestProductionChainAudienceFullPagesReadableTotalsBacklinksAndMap(t *testin
 	token := f.token(t, reader.publicID, auth.Admin, auth.DM)
 	prefix := "audience-page-" + uuid.NewString()
 	docs := make([]authorityDBDocument, 0, 8)
+	fixtureIDs := []string{
+		"90000000-0000-4000-8000-000000000003", "90000000-0000-4000-8000-000000000001",
+		"90000000-0000-4000-8000-000000000002", "90000000-0000-4000-8000-000000000004",
+		"90000000-0000-4000-8000-000000000005", "90000000-0000-4000-8000-000000000006",
+		"90000000-0000-4000-8000-000000000007", "90000000-0000-4000-8000-000000000008",
+	}
 	for i := 0; i < 8; i++ {
-		d := f.doc(t, "", &author, document.StatusPublished, document.VisibilityPublic)
+		d := f.doc(t, fixtureIDs[i], &author, document.StatusPublished, document.VisibilityPublic)
 		title := prefix + " " + string(rune('A'+i))
 		d.title = title
 		f.exec(t, `UPDATE documents SET kind='codex_entry',category='location/fixture',title=$2,updated_at='2020-01-01T00:00:00Z' WHERE id=$1`, d.rowID, title)
@@ -137,7 +157,9 @@ func TestProductionChainAudienceFullPagesReadableTotalsBacklinksAndMap(t *testin
 	f.exec(t, `UPDATE documents SET visibility='restricted',updated_at='2030-01-01T00:00:00Z' WHERE id=$1`, docs[5].rowID)
 	f.exec(t, `UPDATE documents SET policy='{}'::jsonb,updated_at='2030-01-01T00:00:00Z' WHERE id=$1`, docs[6].rowID)
 	f.exec(t, `UPDATE documents SET deleted_at=now(),updated_at='2030-01-01T00:00:00Z' WHERE id=$1`, docs[7].rowID)
-	expected := []string{docs[2].publicID, docs[1].publicID, docs[0].publicID}
+	// Equal matching title terms and update timestamps leave the public UUID
+	// descending tie-break; insertion order deliberately differs.
+	expected := []string{"90000000-0000-4000-8000-000000000003", "90000000-0000-4000-8000-000000000002", "90000000-0000-4000-8000-000000000001"}
 	for _, tc := range []struct {
 		offset int
 		want   []string
@@ -212,7 +234,7 @@ func TestProductionChainAudienceFullPagesReadableTotalsBacklinksAndMap(t *testin
 
 	target := f.doc(t, "", nil, document.StatusPublished, document.VisibilityPublic)
 	for _, source := range docs {
-		f.exec(t, `INSERT INTO document_links(source_id,target_id,relation) VALUES($1,$2,'fixture')`, source.rowID, target.rowID)
+		f.exec(t, `INSERT INTO document_links(source_id,document_target_id,relation) VALUES($1,$2,'fixture')`, source.rowID, target.rowID)
 	}
 	data, raw = audienceGraph(t, f, token, `query($slug:String!){documentBacklinks(slug:$slug){documentId targetId relation}}`, map[string]any{"slug": "authority-" + target.publicID})
 	var links []struct {
@@ -231,96 +253,95 @@ func TestProductionChainAudienceFullPagesReadableTotalsBacklinksAndMap(t *testin
 	assertNoHiddenAudienceDocuments(t, raw, docs[3:])
 	assertAudienceBacklinkCount(t, f, reader, "authority-"+target.publicID, 3)
 
-	var regionID, mapID, hexID int64
+	var mapID int64
 	atlas := "AUDIENCE-" + uuid.NewString()
-	if err := f.pool.QueryRow(context.Background(), `INSERT INTO regions(name,kind) VALUES($1,'uncharted') RETURNING id`, atlas).Scan(&regionID); err != nil {
+	if err := f.pool.QueryRow(context.Background(), `INSERT INTO maps(name,atlas_code,map_kind) VALUES($1,$1,'pointcrawl') RETURNING id`, atlas).Scan(&mapID); err != nil {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
+		f.exec(t, `DELETE FROM pointcrawl_edges WHERE map_id=$1`, mapID)
+		f.exec(t, `DELETE FROM pointcrawl_entry_links WHERE map_id=$1`, mapID)
+		f.exec(t, `DELETE FROM pointcrawl_nodes WHERE map_id=$1`, mapID)
 		f.exec(t, `DELETE FROM maps WHERE id=$1`, mapID)
-		f.exec(t, `DELETE FROM regions WHERE id=$1`, regionID)
 	})
-	if err := f.pool.QueryRow(context.Background(), `INSERT INTO maps(name,atlas_code,map_kind,region_id,cols,rows) VALUES($1,$1,'hexgrid',$2,1,1) RETURNING id`, atlas, regionID).Scan(&mapID); err != nil {
-		t.Fatal(err)
+	for i, d := range docs {
+		nodeID := fmt.Sprintf("80000000-0000-4000-8000-%012d", i+1)
+		var rowID int64
+		if err := f.pool.QueryRow(context.Background(), `INSERT INTO pointcrawl_nodes(public_id,map_id,name,x,y,created_at) VALUES($1,$2,'audience-node',0,0,now()) RETURNING id`, nodeID, mapID).Scan(&rowID); err != nil {
+			t.Fatal(err)
+		}
+		f.exec(t, `INSERT INTO pointcrawl_entry_links(map_id,node_id,document_id,relation,created_at,created_by) VALUES($1,$2,$3,'location',now(),$4)`, mapID, rowID, d.rowID, author.rowID)
 	}
-	if err := f.pool.QueryRow(context.Background(), `INSERT INTO hexes(map_id,col,row) VALUES($1,0,0) RETURNING id`, mapID).Scan(&hexID); err != nil {
-		t.Fatal(err)
-	}
-	for _, d := range docs {
-		f.exec(t, `INSERT INTO hex_entry_links(hex_id,document_id,relation) VALUES($1,$2,'fixture')`, hexID, d.rowID)
+	type pointcrawlPage struct {
+		Nodes []struct {
+			ID    string `json:"id"`
+			Links []struct {
+				ID string `json:"documentId"`
+			} `json:"linkedEntries"`
+		} `json:"pointcrawlNodes"`
 	}
 	for _, tc := range []struct {
 		offset int
 		want   []string
 	}{{0, []string{docs[0].publicID, docs[1].publicID}}, {2, []string{docs[2].publicID}}, {3, []string{}}} {
-		data, raw := audienceGraph(t, f, token, `query($atlas:String!,$offset:Int!){mapView(atlasCode:$atlas,limit:2,offset:$offset){totalPlaces places{documentId slug title category}}}`, map[string]any{"atlas": atlas, "offset": tc.offset})
-		var page struct {
-			Total int `json:"totalPlaces"`
-			Items []struct {
-				ID string `json:"documentId"`
-			} `json:"places"`
-		}
-		if err := json.Unmarshal(data["mapView"], &page); err != nil {
+		data, raw := audienceGraph(t, f, token, `query($atlas:String!,$offset:Int!){map(atlasCode:$atlas){pointcrawlNodes(limit:2,offset:$offset){id linkedEntries{documentId}}}}`, map[string]any{"atlas": atlas, "offset": tc.offset})
+		var page pointcrawlPage
+		if err := json.Unmarshal(data["map"], &page); err != nil {
 			t.Fatal(err)
 		}
 		ids := []string{}
-		for _, item := range page.Items {
-			ids = append(ids, item.ID)
+		for _, node := range page.Nodes {
+			if len(node.Links) != 1 {
+				t.Fatalf("expected one visible location per node: %s", raw)
+			}
+			ids = append(ids, node.Links[0].ID)
 		}
-		if page.Total != 3 || !slices.Equal(ids, tc.want) {
-			t.Fatalf("map offset=%d ids=%v total=%d want=%v response=%s", tc.offset, ids, page.Total, tc.want, raw)
+		if !slices.Equal(ids, tc.want) {
+			t.Fatalf("pointcrawl offset=%d ids=%v want=%v response=%s", tc.offset, ids, tc.want, raw)
 		}
 		assertNoHiddenAudienceDocuments(t, raw, docs[3:])
 	}
-	// Map eligibility is narrower than ordinary readable document metadata.
-	// An entitled reader still sees only published codex locations on maps.
-	for _, change := range []struct {
-		sql   string
-		value string
-	}{
+	// Pointcrawl locations use canonical readability, without the retired
+	// MapView category/kind classifier.
+	for _, change := range []struct{ sql, value string }{
 		{"UPDATE documents SET category=$2 WHERE id=$1", "event/fixture"},
 		{"UPDATE documents SET kind=$2 WHERE id=$1", "rule"},
 	} {
 		f.exec(t, change.sql, docs[0].rowID, change.value)
-		data, raw := audienceGraph(t, f, token, `query($atlas:String!){mapView(atlasCode:$atlas){totalPlaces places{documentId}}}`, map[string]any{"atlas": atlas})
-		var eligible struct {
-			Total int `json:"totalPlaces"`
-		}
-		if err := json.Unmarshal(data["mapView"], &eligible); err != nil {
+		data, raw := audienceGraph(t, f, token, `query($atlas:String!){map(atlasCode:$atlas){pointcrawlNodes{ id linkedEntries{documentId}}}}`, map[string]any{"atlas": atlas})
+		var page pointcrawlPage
+		if err := json.Unmarshal(data["map"], &page); err != nil {
 			t.Fatal(err)
 		}
-		if eligible.Total != 2 || bytes.Contains(raw, []byte(docs[0].publicID)) {
-			t.Fatalf("ineligible map document exposed: %s", raw)
+		if len(page.Nodes) != 3 || !bytes.Contains(raw, []byte(docs[0].publicID)) {
+			t.Fatalf("readable location lost after metadata-only change: %s", raw)
 		}
 		f.exec(t, `UPDATE documents SET category='location/fixture',kind='codex_entry' WHERE id=$1`, docs[0].rowID)
 	}
 	admin := f.member(t, auth.Admin)
-	data, raw = audienceGraph(t, f, f.token(t, admin.publicID), `query($atlas:String!){mapView(atlasCode:$atlas){totalPlaces places{documentId}}}`, map[string]any{"atlas": atlas})
-	var privilegedMap struct {
-		Total int `json:"totalPlaces"`
-	}
-	if err := json.Unmarshal(data["mapView"], &privilegedMap); err != nil {
+	data, raw = audienceGraph(t, f, f.token(t, admin.publicID), `query($atlas:String!){map(atlasCode:$atlas){pointcrawlNodes{id linkedEntries{documentId}}}}`, map[string]any{"atlas": atlas})
+	var privilegedMap pointcrawlPage
+	if err := json.Unmarshal(data["map"], &privilegedMap); err != nil {
 		t.Fatal(err)
 	}
-	if privilegedMap.Total != 6 || bytes.Contains(raw, []byte(docs[4].publicID)) || bytes.Contains(raw, []byte(docs[7].publicID)) {
-		t.Fatalf("map published/deleted eligibility bypassed by admin: %s", raw)
+	if len(privilegedMap.Nodes) != 7 || !bytes.Contains(raw, []byte(docs[4].publicID)) || bytes.Contains(raw, []byte(docs[7].publicID)) {
+		t.Fatalf("pointcrawl admin admission/deleted boundary differs: %s", raw)
 	}
-	// Policy changes alter source-link and map counts on the next request.
+	// Policy changes alter retained node/link membership on the next request.
 	f.exec(t, `UPDATE documents SET policy='[]'::jsonb WHERE id=$1`, docs[0].rowID)
-	data, raw = audienceGraph(t, f, token, `query($atlas:String!,$slug:String!){mapView(atlasCode:$atlas){totalPlaces places{documentId}} documentBacklinks(slug:$slug){documentId}}`, map[string]any{"atlas": atlas, "slug": "authority-" + target.publicID})
-	var page struct {
-		Total int `json:"totalPlaces"`
-	}
-	if err := json.Unmarshal(data["mapView"], &page); err != nil {
+	data, raw = audienceGraph(t, f, token, `query($atlas:String!,$slug:String!){map(atlasCode:$atlas){pointcrawlNodes{id linkedEntries{documentId}}} documentBacklinks(slug:$slug){documentId}}`, map[string]any{"atlas": atlas, "slug": "authority-" + target.publicID})
+	var page pointcrawlPage
+	if err := json.Unmarshal(data["map"], &page); err != nil {
 		t.Fatal(err)
 	}
 	if err := json.Unmarshal(data["documentBacklinks"], &links); err != nil {
 		t.Fatal(err)
 	}
 	assertAudienceBacklinkCount(t, f, reader, "authority-"+target.publicID, 2)
-	if page.Total != 2 || len(links) != 2 || bytes.Contains(raw, []byte(docs[0].publicID)) {
-		t.Fatalf("policy change did not change scoped link/map count: %s", raw)
+	if len(page.Nodes) != 2 || len(links) != 2 || bytes.Contains(raw, []byte(docs[0].publicID)) {
+		t.Fatalf("policy change did not change scoped link/node membership: %s", raw)
 	}
+
 }
 
 func assertNoHiddenAudienceDocuments(t *testing.T, raw []byte, docs []authorityDBDocument) {
@@ -342,7 +363,7 @@ func TestProductionChainRevisionsAndTrashUsePrivilegedQueryBoundary(t *testing.T
 	verifier := f.member(t, auth.Role("verifier"))
 	admin := f.member(t, auth.Admin)
 	d := f.doc(t, "", &author, document.StatusPublished, document.VisibilityPublic)
-	f.exec(t, `INSERT INTO document_revisions(document_id,reason,title,body) VALUES($1,'private-reason','private-revision-title','private-revision-body')`, d.rowID)
+	f.exec(t, `INSERT INTO document_revisions(document_id,rev,reason,title,body) VALUES($1,1,'private-reason','private-revision-title','private-revision-body')`, d.rowID)
 	for _, tc := range []struct {
 		name, token string
 		status      int

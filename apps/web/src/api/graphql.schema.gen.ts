@@ -237,6 +237,8 @@ export type CharacterType = {
   displayIcon?: Maybe<Scalars['String']['output']>;
   guildId?: Maybe<Scalars['ID']['output']>;
   id: Scalars['ID']['output'];
+  /** Owner-supplied https portrait URL (D5); null shows the initials token. */
+  imageUrl?: Maybe<Scalars['String']['output']>;
   name: Scalars['String']['output'];
   ownerId: Scalars['ID']['output'];
   pcxp: Scalars['Int']['output'];
@@ -317,9 +319,12 @@ export type CreateCharacterInput = {
   backgroundText?: InputMaybe<Scalars['String']['input']>;
   backstoryId?: InputMaybe<Scalars['ID']['input']>;
   catalogPickIds?: Array<Scalars['ID']['input']>;
+  /** Required on create (D4): a https://www.dndbeyond.com/characters/<id> sheet URL. */
   ddbUrl?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
   guildId?: InputMaybe<Scalars['ID']['input']>;
+  /** Optional https URL, at most 2048 characters. */
+  imageUrl?: InputMaybe<Scalars['String']['input']>;
   name: Scalars['String']['input'];
   regionId?: InputMaybe<Scalars['ID']['input']>;
   shortCode?: InputMaybe<Scalars['String']['input']>;
@@ -526,6 +531,8 @@ export type DocumentSearchHitType = {
 export type DocumentType = {
   author?: Maybe<DocumentAuthorType>;
   authorId: Scalars['ID']['output'];
+  canEditBody: Scalars['Boolean']['output'];
+  canEditMetadata: Scalars['Boolean']['output'];
   category?: Maybe<Scalars['String']['output']>;
   deletedAt?: Maybe<Scalars['DateTime']['output']>;
   deletedBy?: Maybe<Scalars['ID']['output']>;
@@ -655,6 +662,7 @@ export type MapCreateInput = {
 export type MapType = {
   assetPath?: Maybe<Scalars['String']['output']>;
   atlasCode: Scalars['String']['output'];
+  canEdit: Scalars['Boolean']['output'];
   createdAt: Scalars['DateTime']['output'];
   createdBy?: Maybe<Scalars['ID']['output']>;
   family: Scalars['String']['output'];
@@ -858,6 +866,7 @@ export type Mutation = {
   setMemberRoles: MemberType;
   setMemberRolesBatch: Array<MemberRoleBatchResultType>;
   setMyAvailability: Array<AvailabilitySlotType>;
+  setMyPrivateNotes: MyPrivateNotesType;
   setPointcrawlEdge: PointcrawlEdgeType;
   setQuestPointcrawlLinks: Array<QuestPointcrawlLinkType>;
   setUnlockableActive: UnlockableType;
@@ -1171,6 +1180,12 @@ export type MutationSetMyAvailabilityArgs = {
 };
 
 
+export type MutationSetMyPrivateNotesArgs = {
+  body: Scalars['String']['input'];
+  meta: CommandMeta;
+};
+
+
 export type MutationSetPointcrawlEdgeArgs = {
   input: PointcrawlEdgeInput;
   mapId: Scalars['ID']['input'];
@@ -1384,6 +1399,16 @@ export type MyPersonalizationType = {
   settings?: Maybe<MemberSettingsType>;
 };
 
+/**
+ * The caller's own private notes (D6): Markdown, at most 10,000 characters.
+ * Readable and writable only by the member who owns them; never exposed on
+ * any member, profile or admin read.
+ */
+export type MyPrivateNotesType = {
+  body: Scalars['String']['output'];
+  updatedAt?: Maybe<Scalars['DateTime']['output']>;
+};
+
 export type NotificationConnection = {
   hasMore: Scalars['Boolean']['output'];
   items: Array<NotificationType>;
@@ -1563,6 +1588,7 @@ export type Query = {
   myCharacters: CharacterListResult;
   myNotifications: NotificationConnection;
   myPersonalization?: Maybe<MyPersonalizationType>;
+  myPrivateNotes: MyPrivateNotesType;
   myQuestSignups: ParticipationPage;
   myUnlocks: MemberUnlockPage;
   myUnreadNotificationCount: Scalars['Int']['output'];
@@ -2122,6 +2148,7 @@ export type QuestSummaryInput = {
   body: Scalars['String']['input'];
   characterId?: InputMaybe<Scalars['ID']['input']>;
   documentId?: InputMaybe<Scalars['ID']['input']>;
+  expectedRevision?: InputMaybe<Scalars['Int']['input']>;
   frontmatter: Scalars['JSON']['input'];
   questIds: Array<Scalars['ID']['input']>;
   title: Scalars['String']['input'];
@@ -2219,6 +2246,7 @@ export type RegionInput = {
 };
 
 export type RegionType = {
+  canCreateMap: Scalars['Boolean']['output'];
   charterDeadline?: Maybe<Scalars['DateTime']['output']>;
   createdAt: Scalars['DateTime']['output'];
   documentId?: Maybe<Scalars['ID']['output']>;
@@ -2287,14 +2315,22 @@ export type SiteStatsType = {
   totalRegions: Scalars['Int']['output'];
 };
 
+export type SummaryAuthoringType = {
+  characterId?: Maybe<Scalars['ID']['output']>;
+  complete: Scalars['Boolean']['output'];
+  questIds: Array<Scalars['ID']['output']>;
+};
+
 export type SummaryDerivedType = {
   arc?: Maybe<Scalars['String']['output']>;
+  authoring?: Maybe<SummaryAuthoringType>;
   dms: Array<SummaryDmType>;
   gameDate?: Maybe<GameDateType>;
   gameDay?: Maybe<Scalars['Int']['output']>;
   occurredAt?: Maybe<Scalars['DateTime']['output']>;
   players: Array<SummaryPlayerType>;
   pointcrawlNodes: Array<SummaryPointcrawlNodeType>;
+  quests: Array<SummaryQuestRefType>;
   regions: Array<SummaryRegionType>;
 };
 
@@ -2315,6 +2351,12 @@ export type SummaryPointcrawlNodeType = {
   id: Scalars['ID']['output'];
   mapId: Scalars['ID']['output'];
   name?: Maybe<Scalars['String']['output']>;
+};
+
+export type SummaryQuestRefType = {
+  id: Scalars['ID']['output'];
+  shortCode: Scalars['String']['output'];
+  title?: Maybe<Scalars['String']['output']>;
 };
 
 export type SummaryRegionType = {
@@ -2373,6 +2415,8 @@ export type UnlockableType = {
 export type UpdateCharacterProfileInput = {
   backgroundText?: InputMaybe<Scalars['String']['input']>;
   description?: InputMaybe<Scalars['String']['input']>;
+  /** Omit to keep, null to clear, or an https URL of at most 2048 characters. */
+  imageUrl?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type UpdateDmProfileInput = {

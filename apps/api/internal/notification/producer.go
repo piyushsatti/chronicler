@@ -72,17 +72,10 @@ func (p *Producer) Record(ctx context.Context, repos ProducerRepos, event Event)
 		}
 		// Channel preferences cannot discard the required durable in-app rows.
 	}
-	eventID, err := repos.Writer.InsertEvent(ctx, event)
-	if err != nil {
-		return err
-	}
-	if !canonicalNotificationID(eventID) {
-		return errors.New("notification writer returned invalid event identity")
-	}
 	if len(ids) == 0 {
 		return nil
 	}
-	return repos.Writer.InsertRecipients(ctx, eventID, ids, event.OccurredAt)
+	return repos.Writer.InsertInbox(ctx, event, ids)
 }
 
 func eventRecipients(ctx context.Context, readers RecipientComposition, event Event) ([]string, bool, error) {
@@ -108,17 +101,7 @@ func eventRecipients(ctx context.Context, readers RecipientComposition, event Ev
 	case DMMentioned:
 		return append([]string(nil), event.Facts.NewMentionMemberIDs...), true, nil
 	case QuestScheduled:
-		if readers.Quest == nil {
-			return nil, false, errors.New("quest recipient reader unavailable")
-		}
-		ids, err := readers.Quest.QuestRecipientIDs(ctx, event.SubjectID, *event.Facts.QuestChangeID)
-		return ids, true, err
-	case DMRequestDecided:
-		if readers.Social == nil {
-			return nil, false, errors.New("request recipient reader unavailable")
-		}
-		parties, err := readers.Social.RequestParties(ctx, *event.Facts.RequestID)
-		return []string{parties.RequesterID, parties.TargetDMID}, true, err
+		return append([]string(nil), event.Facts.RecipientMemberIDs...), true, nil
 	default:
 		return nil, false, errors.New("unknown notification event kind")
 	}
@@ -151,11 +134,10 @@ func validateEvent(event Event) error {
 		}
 	case QuestSignupConfirmed:
 		expectedSubject = "quest"
-		allowed["questChange"] = true
 		allowed["character"] = true
 		allowed["from"] = true
 		allowed["to"] = true
-		if !validID(f.QuestChangeID) || !validID(f.CharacterID) || f.ToStatus == nil || (*f.ToStatus != "signed_up" && *f.ToStatus != "waitlisted") {
+		if !validID(f.CharacterID) || f.ToStatus == nil || (*f.ToStatus != "signed_up" && *f.ToStatus != "waitlisted") {
 			return errors.New("invalid signup notification facts")
 		}
 		if f.FromStatus != nil {
@@ -171,11 +153,10 @@ func validateEvent(event Event) error {
 		}
 	case QuestWaitlistPromoted:
 		expectedSubject = "quest"
-		allowed["questChange"] = true
 		allowed["character"] = true
 		allowed["from"] = true
 		allowed["to"] = true
-		if !validID(f.QuestChangeID) || !validID(f.CharacterID) || f.FromStatus == nil || *f.FromStatus != "waitlisted" || f.ToStatus == nil || *f.ToStatus != "signed_up" {
+		if !validID(f.CharacterID) || f.FromStatus == nil || *f.FromStatus != "waitlisted" || f.ToStatus == nil || *f.ToStatus != "signed_up" {
 			return errors.New("invalid promotion notification facts")
 		}
 	case DocumentEdited, DocumentPublished:
@@ -193,20 +174,17 @@ func validateEvent(event Event) error {
 		}
 	case QuestScheduled:
 		expectedSubject = "quest"
-		allowed["questChange"] = true
 		allowed["oldSchedule"] = true
 		allowed["changedFields"] = true
 		allowed["newSchedule"] = true
-		if !validID(f.QuestChangeID) || len(f.ChangedFields) == 0 {
+		allowed["recipients"] = true
+		if len(f.ChangedFields) == 0 || f.RecipientMemberIDs == nil {
 			return errors.New("invalid scheduled notification facts")
 		}
-	case DMRequestDecided:
-		expectedSubject = "request"
-		allowed["decision"] = true
-		allowed["requestDecision"] = true
-		allowed["request"] = true
-		if !validID(f.DecisionID) || !validID(f.RequestID) || *f.RequestID != event.SubjectID || f.Decision == nil || (*f.Decision != "approved" && *f.Decision != "declined") {
-			return errors.New("invalid request notification facts")
+		for _, id := range f.RecipientMemberIDs {
+			if !canonicalNotificationID(id) {
+				return errors.New("invalid scheduled recipient snapshot")
+			}
 		}
 	default:
 		return errors.New("unknown notification event kind")
@@ -214,7 +192,7 @@ func validateEvent(event Event) error {
 	if event.SubjectType != expectedSubject {
 		return errors.New("notification subject kind mismatch")
 	}
-	for name, present := range map[string]bool{"requestDecision": f.Decision != nil, "changedFields": len(f.ChangedFields) > 0, "verification": f.VerificationID != nil, "verdict": f.Verdict != nil, "questChange": f.QuestChangeID != nil, "oldSchedule": f.OldScheduledAt != nil, "newSchedule": f.NewScheduledAt != nil, "revision": f.RevisionID != nil, "character": f.CharacterID != nil, "from": f.FromStatus != nil, "to": f.ToStatus != nil, "decision": f.DecisionID != nil, "mentions": len(f.NewMentionMemberIDs) > 0, "request": f.RequestID != nil} {
+	for name, present := range map[string]bool{"recipients": f.RecipientMemberIDs != nil, "requestDecision": f.Decision != nil, "changedFields": len(f.ChangedFields) > 0, "verification": f.VerificationID != nil, "verdict": f.Verdict != nil, "questChange": f.QuestChangeID != nil, "oldSchedule": f.OldScheduledAt != nil, "newSchedule": f.NewScheduledAt != nil, "revision": f.RevisionID != nil, "character": f.CharacterID != nil, "from": f.FromStatus != nil, "to": f.ToStatus != nil, "decision": f.DecisionID != nil, "mentions": len(f.NewMentionMemberIDs) > 0, "request": f.RequestID != nil} {
 		if present && !allowed[name] {
 			return fmt.Errorf("unexpected %s fact for notification kind", name)
 		}

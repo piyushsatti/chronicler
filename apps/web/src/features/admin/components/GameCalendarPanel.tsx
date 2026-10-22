@@ -1,3 +1,4 @@
+import { AdminReadFailure } from './AdminReadFailure.js';
 import { Button } from '../../../components/primitives/Button.js';
 import { Card } from '../../../components/primitives/Card.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
@@ -10,7 +11,7 @@ export function GameCalendarPanel({
 }): React.JSX.Element {
   const {
     GREYHAWK_PRESET,
-    formFromDefinition,
+    presetForm,
     calendar,
     form,
     setForm,
@@ -22,7 +23,7 @@ export function GameCalendarPanel({
   } = view;
 
   if (calendar.isError) {
-    return <StatePanel status="error" error={calendar.error} />;
+    return <AdminReadFailure error={calendar.error} retry={calendar.retry} />;
   }
   if (calendar.isLoading || !calendar.data) return <StatePanel status="loading" />;
 
@@ -38,9 +39,10 @@ export function GameCalendarPanel({
           type="button"
           size="sm"
           variant="secondary"
+          disabled={save.isPending}
           onClick={() => {
             setDefinition(GREYHAWK_PRESET);
-            setForm(formFromDefinition(GREYHAWK_PRESET));
+            setForm(presetForm);
             setMessage('Greyhawk preset loaded (not saved yet).');
           }}
         >
@@ -48,7 +50,7 @@ export function GameCalendarPanel({
         </Button>
       </div>
       <p className="type-caption">
-        Typed fields only — definition is assembled for PUT /v1/calendar.
+        Edit calendar fields. Other definition settings are preserved.
       </p>
       {message ? (
         <p className="type-caption" role="status">
@@ -59,7 +61,8 @@ export function GameCalendarPanel({
         <label className="stack">
           <span className="type-label">Era name</span>
           <input
-            className="field"
+            disabled={save.isPending}
+            className="field-input"
             value={form.eraName}
             onChange={(e) => setForm((f) => ({ ...f, eraName: e.target.value }))}
           />
@@ -67,7 +70,8 @@ export function GameCalendarPanel({
         <label className="stack">
           <span className="type-label">Abbrev</span>
           <input
-            className="field"
+            disabled={save.isPending}
+            className="field-input"
             value={form.eraAbbrev}
             onChange={(e) => setForm((f) => ({ ...f, eraAbbrev: e.target.value }))}
           />
@@ -75,7 +79,8 @@ export function GameCalendarPanel({
         <label className="stack">
           <span className="type-label">Days / week</span>
           <input
-            className="field"
+            disabled={save.isPending}
+            className="field-input"
             value={form.daysPerWeek}
             onChange={(e) => setForm((f) => ({ ...f, daysPerWeek: e.target.value }))}
           />
@@ -83,7 +88,8 @@ export function GameCalendarPanel({
         <label className="stack">
           <span className="type-label">Rate (real/game day)</span>
           <input
-            className="field"
+            disabled={save.isPending}
+            className="field-input"
             value={form.rate}
             onChange={(e) => setForm((f) => ({ ...f, rate: e.target.value }))}
           />
@@ -92,7 +98,8 @@ export function GameCalendarPanel({
       <label className="stack">
         <span className="type-label">Weekdays (comma-separated)</span>
         <input
-          className="field"
+          disabled={save.isPending}
+          className="field-input"
           value={form.weekdays}
           onChange={(e) => setForm((f) => ({ ...f, weekdays: e.target.value }))}
         />

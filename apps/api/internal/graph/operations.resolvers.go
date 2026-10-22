@@ -14,6 +14,7 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/member"
 	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 	"github.com/piyushsatti/chronicler/apps/api/internal/quest"
 	"github.com/piyushsatti/chronicler/apps/api/internal/site"
@@ -723,6 +724,30 @@ func (r *mutationResolver) UpdateMySettings(ctx context.Context, input MemberSet
 	}
 	clearMutationLoaders(ctx)
 	return toMemberSettingsType(view), nil
+}
+
+// SetMyPrivateNotes is the resolver for the setMyPrivateNotes field.
+func (r *mutationResolver) SetMyPrivateNotes(ctx context.Context, body string, meta CommandMeta) (*MyPrivateNotesType, error) {
+	if r.Services.MemberCommands == nil {
+		return nil, memberCommandsUnavailable()
+	}
+	if r.Services.MemberQueries == nil {
+		return nil, fmt.Errorf("member queries unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := r.Services.MemberCommands.SetMyPrivateNotes(ctx, actor, member.SetMyPrivateNotesSpec{Body: body}, commandMeta); err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	// The command result is body-less (it doubles as the idempotency receipt), so re-read the notes.
+	view, err := r.Services.MemberQueries.MyPrivateNotes(ctx, actor, member.MyPrivateNotesSpec{})
+	if err != nil {
+		return nil, err
+	}
+	return toMyPrivateNotesType(view), nil
 }
 
 // UpsertUnlockable is the resolver for the upsertUnlockable field.
@@ -2097,6 +2122,22 @@ func (r *queryResolver) MyPersonalization(ctx context.Context) (*MyPersonalizati
 	return toMyPersonalizationType(*view), nil
 }
 
+// MyPrivateNotes is the resolver for the myPrivateNotes field.
+func (r *queryResolver) MyPrivateNotes(ctx context.Context) (*MyPrivateNotesType, error) {
+	if r.Services.MemberQueries == nil {
+		return nil, fmt.Errorf("member queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.MemberQueries.MyPrivateNotes(ctx, actor, member.MyPrivateNotesSpec{})
+	if err != nil {
+		return nil, err
+	}
+	return toMyPrivateNotesType(view), nil
+}
+
 // MemberMe is the resolver for the memberMe field.
 func (r *queryResolver) MemberMe(ctx context.Context) (*MemberType, error) {
 	if r.Services.MemberQueries == nil {
@@ -2500,31 +2541,31 @@ func (r *queryResolver) DmSummaries(ctx context.Context, filters *DmSummaryFilte
 }
 
 // Search is the resolver for the search field.
-// Search=A (documents-only): kinds is ignored; Members stays empty. Do not invent a member hybrid.
 func (r *queryResolver) Search(ctx context.Context, query string, kinds []string, limit int, offset int) (*SearchResultType, error) {
-	_ = kinds // Search=A: kinds filter not applied
-	if r.Services.DocumentQueries == nil {
-		return nil, fmt.Errorf("document queries unavailable")
+	if r.Services.SiteQueries == nil {
+		return nil, fmt.Errorf("site queries unavailable")
+	}
+	if limit <= 0 || int64(limit) > 2147483647 || offset < 0 || int64(offset) > 2147483647 {
+		return nil, apierr.New(apierr.Invalid, "invalid search page")
 	}
 	actor, err := LiveAuthority(ctx)
 	if err != nil {
 		return nil, err
 	}
-	search := query
-	result, err := r.Services.DocumentQueries.Documents(ctx, actor, document.DocumentsSpec{
-		Filters: &document.DocumentFiltersFields{Search: &search},
-		Limit:   int32(limit),
-		Offset:  int32(offset),
+	result, err := r.Services.SiteQueries.Search(ctx, actor, site.SearchSpec{
+		Query: query, Kinds: kinds, Limit: int32(limit), Offset: int32(offset),
 	})
 	if err != nil {
 		return nil, err
 	}
+	members := make([]*MemberSearchHitType, 0, len(result.Members))
+	for _, member := range result.Members {
+		members = append(members, &MemberSearchHitType{MemberID: member.MemberId, Handle: member.Handle, DisplayName: member.DisplayName, AvatarURL: member.AvatarUrl})
+	}
 	return &SearchResultType{
-		Query:         query,
-		Documents:     toDocumentSearchHitTypes(result.Items),
-		DocumentTotal: int(result.Total),
-		DocumentOrder: documentListOrder,
-		Members:       []*MemberSearchHitType{}, // Search=A: members intentionally empty
+		Query: result.Query, Documents: toDocumentSearchHitTypes(result.Documents),
+		DocumentTotal: int(result.DocumentTotal), DocumentOrder: result.DocumentOrder,
+		Members: members, MemberTotal: int(result.MemberTotal), MemberOrder: result.MemberOrder,
 	}, nil
 }
 

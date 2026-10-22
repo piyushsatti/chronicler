@@ -113,6 +113,7 @@ type MapPlaceView struct {
 }
 
 type MapView struct {
+	CanEdit   bool
 	AssetPath *string
 	AtlasCode string
 	Cols      *int32
@@ -244,6 +245,7 @@ type RegionFields struct {
 }
 
 type RegionView struct {
+	CanCreateMap    bool
 	CharterDeadline *time.Time
 	CreatedAt       time.Time
 	DocumentId      *string
@@ -383,6 +385,7 @@ type ArchonAssignmentsSpec struct {
 type GameCalendarSpec struct {
 	RealFrom product.Date
 	RealTo   product.Date
+	AsOf     time.Time
 }
 
 type GameDateSpec struct {
@@ -962,9 +965,10 @@ type UpsertPointcrawlNodeWrite struct {
 	EventKey       *string
 }
 
-type HexAdmission struct {
-	ID       string
-	MapID    string
-	RegionID *string
-	Role     string
+type PointcrawlAdmission struct {
+	ID            string
+	MapID         string
+	RegionID      *string
+	Role          string
+	AdminOverride bool
 }

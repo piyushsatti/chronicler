@@ -1,0 +1,79 @@
+{
+  "at": "2026-10-20T21:50:55.782543Z",
+  "nativeSession": 17709,
+  "exit": 0,
+  "durationSeconds": 79.23,
+  "originalStages": 11,
+  "responsiveCases": 36,
+  "widths": [
+    390,
+    900,
+    1920
+  ],
+  "responsiveStates": [
+    "approved-dm-profile-tables",
+    "character-new-activity",
+    "character-pending-owner",
+    "character-retired-progression",
+    "character-saved-downtime-edit",
+    "create-character",
+    "inbox-read",
+    "me-navigation",
+    "member-availability-dm-draft",
+    "owned-dm-table-reader",
+    "personalize",
+    "settings"
+  ],
+  "operationAttempts": 624,
+  "operationOutcomes": {
+    "complete": 609,
+    "aborted": 13,
+    "superseded_tab_query": 2
+  },
+  "nativeReceipts": 55,
+  "exactReplays": 8,
+  "settingsRetryPersisted": true,
+  "mirrorPreserved": true,
+  "sourceUnchanged": {
+    "production-inputs": true,
+    "owned-inputs": true
+  },
+  "cleanup": {
+    "apiClosed": true,
+    "apiStarted": true,
+    "at": "2026-10-20T21:48:01.870219066Z",
+    "database": "product_case_1",
+    "databaseAbsenceQueryFailed": false,
+    "databaseDropFailed": false,
+    "databaseDropped": true,
+    "databaseRemaining": 0,
+    "listenersClosed": {
+      "api": true,
+      "reservedPort": true
+    },
+    "nodeStarted": true,
+    "runtimePoolClosed": true,
+    "runtimePoolStarted": true
+  },
+  "actualRootImagesViewed": [
+    "responsive-settings-390.png",
+    "responsive-personalize-900.png"
+  ],
+  "artifacts": {
+    "root-preflight.json": "121dd1f63b26912693f6456de7a74b8190daf6fd632f40830626514424e3d369",
+    "browser-receipt.json": "4d833aa0581597754ed2bdc8be232569a4086d918b23e3e706a73c2c575adef8",
+    "native-readback.json": "14785e88d9635ac141e48ed081af01a1d1972cdf6338d07668e179d255492eb8",
+    "native-settings-retry.json": "db964edc1943a91806d6229ceb4e2f4f9ed368a16ce748b89784435172d3c26b",
+    "native-cleanup.json": "f510a12f65f6cdbef545441d876d1226925ac5c1aa9a993938b24bc7609cb250",
+    "native.log": "04fe25e40fae5ba97c00dc7c6d04193f8c755c4ef602c423ee97812e4e04f20d",
+    "responsive-settings-390.png": "e8137a1a76f2a84c590d40dd31b3bf83a7b86ee10bb6bca8c45867e9209e584a",
+    "responsive-personalize-900.png": "fe886a8c93c204b3d7e2f7dcb0d4b35fe008d195b67c602dfb3987979ef50198"
+  },
+  "runtime": "Current36source fixtureVite/native13realAPI; immutable36separatelyfrozen",
+  "limits": [
+    "Thirteen causalnavigation/teardown aborts andtwo sameidentitysupersededtabqueries remainclassified, nevercountedsuccess; nozero-network-failureclaim.",
+    "Actual55durablereceipts/original11actions/settingsrollbackandnewkeyRetry/36threewidthformstates; noallrole/theme/actionCartesian.",
+    "ExternalDDBdisabledhere; actualdefaultclient success remainsdatedAccount13. No validOAuth/appliedDiscord/provider/ownerLegacyvisualapproval.",
+    "Fullpagescreens retainactualsticky/fixedchrome at capturescrollposition; controls separatelypassrealviewport/clip/focus/paint guards."
+  ]
+}

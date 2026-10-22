@@ -1,15 +1,58 @@
-query ChronicleDetail($slug: String!) {
-  document(slug: $slug) {
-    id
-    slug
-    kind
-    category
-    status
-    visibility
-    title
-    effectiveBody
-    author {
-      handle
+query ChronicleDetail($slug: String!, $id: ID!, $byId: Boolean!) {
+  bySlug: document(slug: $slug) @skip(if: $byId) {
+    ...ChronicleReaderDocument
+  }
+  byId: documentById(id: $id) @include(if: $byId) {
+    ...ChronicleReaderDocument
+  }
+}
+
+fragment ChronicleReaderDocument on DocumentType {
+  id
+  slug
+  kind
+  category
+  status
+  visibility
+  title
+  effectiveBody
+  canEditBody
+  canEditMetadata
+  updatedAt
+  author {
+    handle
+  }
+  summaryDerived {
+    quests {
+      id
+      shortCode
+      title
+    }
+    regions {
+      id
+      name
+    }
+    dms {
+      id
+      displayName
+    }
+    players {
+      characterId
+      characterShortCode
+      characterName
+      memberId
+      manual
+    }
+    occurredAt
+    arc
+    gameDay
+    gameDate {
+      eraAbbrev
+      year
+      periodName
+      periodIndex
+      periodType
+      day
     }
   }
 }

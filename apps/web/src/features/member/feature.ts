@@ -1,5 +1,9 @@
 import { http, HttpResponse } from 'msw';
-import type { FeatureGraphql, FeatureHandlers, FeatureRoute } from '../../chrome/featureModule.js';
+import type {
+  FeatureGraphql,
+  FeatureHandlers,
+  FeatureRoute,
+} from '../../chrome/featureModule.js';
 import { lazyElement } from '../../chrome/lazyElement.js';
 import goodMe from '../../../tests/fixtures/wire/me/good.json';
 
@@ -17,10 +21,22 @@ export const endpoints = {
 
 export const queryKeys = {
   me: ['me'] as const,
+  myPrivateNotes: (memberId: string) => ['myPrivateNotes', memberId] as const,
 };
 
 export const graphql: FeatureGraphql = {
   MemberMe: () => HttpResponse.json({ data: { memberMe: goodMe } }),
+  MemberMyPrivateNotes: () =>
+    HttpResponse.json({ data: { myPrivateNotes: { body: '', updatedAt: null } } }),
+  MemberSetMyPrivateNotes: (body) =>
+    HttpResponse.json({
+      data: {
+        setMyPrivateNotes: {
+          body: typeof body.variables?.body === 'string' ? body.variables.body : '',
+          updatedAt: new Date().toISOString(),
+        },
+      },
+    }),
 };
 
 export const handlers: FeatureHandlers = [
@@ -36,7 +52,7 @@ export const handlers: FeatureHandlers = [
     const header = btoa(JSON.stringify({ alg: 'none', typ: 'JWT' }));
     const payload = btoa(
       JSON.stringify({
-        sub: 'discord-dev',
+        member_id: goodMe.id,
         exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24,
       }),
     );

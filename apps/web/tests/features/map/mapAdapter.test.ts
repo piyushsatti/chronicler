@@ -1,53 +1,99 @@
 import { describe, expect, it } from 'vitest';
+import { graphql, HttpResponse } from 'msw';
+import { server } from '../../../src/mocks/server.js';
 import {
-  parseHexFeatures,
+  loadMap,
+  loadMapDirectory,
   parseMap,
 } from '../../../src/features/map/adapters/mapAdapter.js';
+import { graphBounds } from '../../../src/features/map/components/PointcrawlViewport.js';
 import bad from '../../fixtures/wire/map/bad-missing-field.json';
 import good from '../../fixtures/wire/map/good.json';
 
-describe('parseMap', () => {
-  it('accepts pointcrawl map atlas wire', () => {
-    const result = parseMap(good);
-    expect(result.ok).toBe(true);
-    if (result.ok) {
-      expect(result.data.atlasCode).toBe('LFC');
-      expect(result.data.mapKind).toBe('pointcrawl');
-      expect(result.data.family).toBe('lightfall');
-    }
-  });
-
-  it('rejects bad map wire', () => {
-    expect(parseMap(bad).ok).toBe(false);
-  });
-});
-
-describe('parseHexFeatures', () => {
-  it('accepts the selected feature wire shape', () => {
-    const result = parseHexFeatures([
-      {
-        id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
-        title: 'Tree of Light',
-        summary: 'A luminous tree.',
-        slug: 'tree-of-light',
-      },
-    ]);
-    expect(result.ok).toBe(true);
-    if (result.ok) expect(result.data[0]?.title).toBe('Tree of Light');
-  });
-
-  it('rejects malformed feature fields and the per-hex limit', () => {
-    expect(parseHexFeatures([{ id: 'bad' }]).ok).toBe(false);
-    const tooMany = Array.from({ length: 5 }, (_, index) => ({
-      id: `eeeeeeee-eeee-4eee-8eee-${String(index).padStart(12, '0')}`,
-      title: `Feature ${index}`,
-      summary: '',
-      slug: `feature-${index}`,
-    }));
-    expect(parseHexFeatures(tooMany)).toMatchObject({
-      ok: false,
-      failure: 'InvalidWire',
-      detail: 'max-4-features',
+describe('pointcrawl reads', () => {
+  it('validates current atlas metadata and server capability', () => {
+    expect(parseMap(good)).toMatchObject({
+      ok: true,
+      data: { atlasCode: 'LFC', canEdit: false },
     });
+    expect(parseMap(bad).ok).toBe(false);
+    expect(parseMap({ ...good, canEdit: 'yes' }).ok).toBe(false);
+  });
+  it('reads later node, edge and linked-entry pages without imposing a feature limit', async () => {
+    const node = good.pointcrawlNodes[0]!;
+    const entry = {
+      mapId: good.id,
+      nodeId: node.id,
+      documentId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      relation: 'location',
+      createdAt: good.createdAt,
+      createdBy: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+    };
+    const nodeOffsets: number[] = [];
+    const linkOffsets: number[] = [];
+    server.use(
+      graphql.query('MapAtlas', ({ variables }) => {
+        nodeOffsets.push(variables.offset);
+        return HttpResponse.json({
+          data: {
+            map: {
+              ...good,
+              pointcrawlNodes:
+                variables.offset === 0
+                  ? Array.from({ length: 200 }, (_, index) => ({
+                      ...node,
+                      id: `bbbbbbbb-bbbb-4bbb-8bbb-${String(index).padStart(12, '0')}`,
+                      linkedEntries:
+                        index === 0 ? Array.from({ length: 50 }, () => entry) : [],
+                    }))
+                  : [{ ...node, linkedEntries: [] }],
+              pointcrawlEdges:
+                variables.offset === 0
+                  ? Array.from({ length: 200 }, () => good.pointcrawlEdges[0])
+                  : [],
+            },
+          },
+        });
+      }),
+      graphql.query('MapNodeLinks', ({ variables }) => {
+        linkOffsets.push(variables.offset);
+        return HttpResponse.json({
+          data: {
+            map: {
+              pointcrawlNodes: [
+                { id: 'bbbbbbbb-bbbb-4bbb-8bbb-000000000000', linkedEntries: [entry] },
+              ],
+            },
+          },
+        });
+      }),
+    );
+    const map = await loadMap('opaque atlas');
+    expect(map.nodes).toHaveLength(201);
+    expect(map.edges).toHaveLength(200);
+    expect(map.nodes[0]?.linkedEntries).toHaveLength(51);
+    expect(nodeOffsets).toEqual([0, 200]);
+    expect(linkOffsets).toEqual([50]);
+  });
+  it('reads the complete map and region directory', async () => {
+    server.use(
+      graphql.query('MapDirectory', ({ variables }) =>
+        HttpResponse.json({
+          data: {
+            maps:
+              variables.offset === 0 ? Array.from({ length: 50 }, () => good) : [good],
+            regions: [],
+          },
+        }),
+      ),
+    );
+    expect((await loadMapDirectory()).maps).toHaveLength(51);
+  });
+  it('rejects an inaccessible map and fits empty or coincident coordinates', async () => {
+    await expect(loadMap('not-visible')).rejects.toMatchObject({ kind: 'not_found' });
+    const bounds = graphBounds([]);
+    expect(bounds.width).toBeGreaterThan(0);
+    expect(bounds.height).toBeGreaterThan(0);
+    expect(graphBounds(good.pointcrawlNodes).width).toBeGreaterThan(300);
   });
 });

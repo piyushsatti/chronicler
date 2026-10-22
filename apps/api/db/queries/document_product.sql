@@ -11,10 +11,10 @@ SELECT d.id AS internal_id, d.public_id AS id, d.kind, d.slug, d.title, d.catego
                       WHERE dr.document_id=d.id ORDER BY reader.public_id), ARRAY[]::uuid[]) AS reader_ids,
        document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,sqlc.narg(viewer_id)::uuid,
          sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,sqlc.arg(viewer_admin)::boolean,
-         sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id),ARRAY[]::uuid[])) AS readable,
+         sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[])) AS readable,
        COALESCE(sqlc.arg(viewer_admin)::boolean AND NOT document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,sqlc.narg(viewer_id)::uuid,
          sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,FALSE,
-         sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id),ARRAY[]::uuid[])),FALSE) AS admin_override,
+         sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[])),FALSE) AS admin_override,
        COALESCE(ARRAY(SELECT member.public_id FROM lieutenant_assignments la JOIN members member ON member.id=la.member_id
                       WHERE la.npc_document_id=d.id ORDER BY member.public_id), ARRAY[]::uuid[]) AS lieutenant_ids,
        COALESCE(ARRAY(SELECT q.public_id FROM document_links l JOIN quests q ON q.id=l.quest_target_id
@@ -25,6 +25,29 @@ LEFT JOIN members publisher ON publisher.id=d.published_by
 LEFT JOIN members deleter ON deleter.id=d.deleted_by
 WHERE d.public_id=sqlc.arg(document_id)::uuid AND d.deleted_at IS NULL;
 
+-- name: GetProductDocumentRevisionParent :one
+SELECT d.id AS internal_id, d.public_id AS id, d.kind, d.slug, d.title, d.category,
+       d.status, d.visibility, d.policy, d.body, d.frontmatter_yaml, d.author_id AS author_internal_id,
+       author.public_id AS author_id, d.published_at, publisher.public_id AS published_by,
+       d.deleted_at, deleter.public_id AS deleted_by, d.created_at, d.updated_at, d.version,
+       COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id
+                      WHERE dr.document_id=d.id ORDER BY reader.public_id), ARRAY[]::uuid[]) AS reader_ids,
+       document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,sqlc.narg(viewer_id)::uuid,
+         sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,sqlc.arg(viewer_admin)::boolean,
+         sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[])) AS readable,
+       COALESCE(sqlc.arg(viewer_admin)::boolean AND NOT document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,sqlc.narg(viewer_id)::uuid,
+         sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,FALSE,
+         sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[])),FALSE) AS admin_override,
+       COALESCE(ARRAY(SELECT member.public_id FROM lieutenant_assignments la JOIN members member ON member.id=la.member_id
+                      WHERE la.npc_document_id=d.id ORDER BY member.public_id), ARRAY[]::uuid[]) AS lieutenant_ids,
+       COALESCE(ARRAY(SELECT q.public_id FROM document_links l JOIN quests q ON q.id=l.quest_target_id
+                      WHERE l.source_id=d.id AND l.target_type='quest' ORDER BY q.public_id), ARRAY[]::uuid[]) AS linked_quest_ids
+FROM documents d
+LEFT JOIN members author ON author.id=d.author_id
+LEFT JOIN members publisher ON publisher.id=d.published_by
+LEFT JOIN members deleter ON deleter.id=d.deleted_by
+WHERE d.public_id=sqlc.arg(document_id)::uuid;
+
 -- name: GetProductDocumentBySlug :one
 SELECT d.id AS internal_id, d.public_id AS id, d.kind, d.slug, d.title, d.category,
        d.status, d.visibility, d.policy, d.body, d.frontmatter_yaml, d.author_id AS author_internal_id,
@@ -34,10 +57,10 @@ SELECT d.id AS internal_id, d.public_id AS id, d.kind, d.slug, d.title, d.catego
                       WHERE dr.document_id=d.id ORDER BY reader.public_id), ARRAY[]::uuid[]) AS reader_ids,
        document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,sqlc.narg(viewer_id)::uuid,
          sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,sqlc.arg(viewer_admin)::boolean,
-         sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id),ARRAY[]::uuid[])) AS readable,
+         sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[])) AS readable,
        COALESCE(sqlc.arg(viewer_admin)::boolean AND NOT document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,sqlc.narg(viewer_id)::uuid,
          sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,FALSE,
-         sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id),ARRAY[]::uuid[])),FALSE) AS admin_override,
+         sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[])),FALSE) AS admin_override,
        COALESCE(ARRAY(SELECT member.public_id FROM lieutenant_assignments la JOIN members member ON member.id=la.member_id
                       WHERE la.npc_document_id=d.id ORDER BY member.public_id), ARRAY[]::uuid[]) AS lieutenant_ids,
        COALESCE(ARRAY(SELECT q.public_id FROM document_links l JOIN quests q ON q.id=l.quest_target_id
@@ -69,8 +92,8 @@ FOR UPDATE OF d;
 -- name: ListProductDocuments :many
 WITH population AS (
  SELECT d.*, author.public_id AS author_public_id,
-        COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id
-                       WHERE dr.document_id=d.id ORDER BY reader.public_id), ARRAY[]::uuid[]) AS reader_ids
+        COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id
+                       WHERE dr.document_id=d.id AND reader.public_id=sqlc.narg(viewer_id)::uuid), ARRAY[]::uuid[]) AS readable_document_ids
  FROM documents d LEFT JOIN members author ON author.id=d.author_id
  WHERE d.deleted_at IS NULL
    AND (sqlc.narg(kind)::text IS NULL OR d.kind=sqlc.narg(kind)::text)
@@ -89,19 +112,19 @@ SELECT d.public_id AS id, d.kind, d.slug, d.title, d.category, d.status, d.visib
        COALESCE(sqlc.arg(viewer_admin)::boolean AND NOT document_readable(
          d.public_id,d.author_public_id,d.status,d.visibility,d.policy,sqlc.narg(viewer_id)::uuid,
          sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,FALSE,
-         sqlc.arg(viewer_live_dm)::boolean,d.reader_ids),FALSE) AS admin_override
+         sqlc.arg(viewer_live_dm)::boolean,d.readable_document_ids),FALSE) AS admin_override
 FROM population d
 WHERE document_readable(d.public_id,d.author_public_id,d.status,d.visibility,d.policy,
       sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,
-      sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,d.reader_ids)
+      sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,d.readable_document_ids)
 ORDER BY d.updated_at DESC,d.public_id DESC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
 
 -- name: CountProductDocuments :one
 WITH population AS (
  SELECT d.*, author.public_id AS author_public_id,
-        COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id
-                       WHERE dr.document_id=d.id ORDER BY reader.public_id), ARRAY[]::uuid[]) AS reader_ids
+        COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id
+                       WHERE dr.document_id=d.id AND reader.public_id=sqlc.narg(viewer_id)::uuid), ARRAY[]::uuid[]) AS readable_document_ids
  FROM documents d LEFT JOIN members author ON author.id=d.author_id
  WHERE d.deleted_at IS NULL
    AND (sqlc.narg(kind)::text IS NULL OR d.kind=sqlc.narg(kind)::text)
@@ -118,11 +141,11 @@ SELECT count(*)::bigint AS total,
        COALESCE(bool_or(sqlc.arg(viewer_admin)::boolean AND NOT document_readable(
          d.public_id,d.author_public_id,d.status,d.visibility,d.policy,sqlc.narg(viewer_id)::uuid,
          sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,FALSE,
-         sqlc.arg(viewer_live_dm)::boolean,d.reader_ids)),FALSE) AS admin_override
+         sqlc.arg(viewer_live_dm)::boolean,d.readable_document_ids)),FALSE) AS admin_override
 FROM population d
 WHERE document_readable(d.public_id,d.author_public_id,d.status,d.visibility,d.policy,
       sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,
-      sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,d.reader_ids);
+      sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,d.readable_document_ids);
 
 -- name: ListProductDocumentsTrash :many
 SELECT d.public_id AS id,d.kind,d.slug,d.title,d.category,d.status,d.visibility,d.body,
@@ -157,7 +180,7 @@ WHERE d.kind='codex_entry' AND d.status='published' AND d.deleted_at IS NULL AND
   AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
       sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,
       sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,
-      COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id),ARRAY[]::uuid[]))
+      COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[]))
 GROUP BY d.category ORDER BY d.category;
 
 -- name: GetProductCodexEntryBySlug :one
@@ -165,10 +188,10 @@ SELECT d.public_id AS id,d.kind,d.slug,d.title,d.category,d.status,d.visibility,
        d.frontmatter_yaml,d.policy,author.public_id AS author_id,d.updated_at,d.version,
        document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,sqlc.narg(viewer_id)::uuid,
          sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,sqlc.arg(viewer_admin)::boolean,
-         sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id),ARRAY[]::uuid[])) AS readable,
+         sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[])) AS readable,
        COALESCE(sqlc.arg(viewer_admin)::boolean AND NOT document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,sqlc.narg(viewer_id)::uuid,
          sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,FALSE,
-         sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id),ARRAY[]::uuid[])),FALSE) AS admin_override
+         sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[])),FALSE) AS admin_override
 FROM documents d LEFT JOIN members author ON author.id=d.author_id
 WHERE d.slug=sqlc.arg(slug)::text AND d.kind='codex_entry' AND d.deleted_at IS NULL;
 
@@ -182,7 +205,7 @@ WHERE d.kind='codex_entry' AND d.deleted_at IS NULL
   AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
       sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,
       sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,
-      COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id),ARRAY[]::uuid[]))
+      COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[]))
 ORDER BY d.updated_at DESC,d.public_id DESC LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
 
 -- name: CountProductCodexDirectory :one
@@ -193,33 +216,33 @@ WHERE d.kind='codex_entry' AND d.deleted_at IS NULL
   AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
       sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,
       sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,
-      COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id),ARRAY[]::uuid[]));
+      COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[]));
 
 -- name: CountProductDocumentBacklinks :one
 SELECT count(*)::bigint AS total,
        COALESCE(bool_or(sqlc.arg(viewer_admin)::boolean AND (
-        NOT document_readable(src.public_id,sa.public_id,src.status,src.visibility,src.policy,sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,FALSE,sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT m.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=src.id),ARRAY[]::uuid[]))
-        OR NOT document_readable(tgt.public_id,ta.public_id,tgt.status,tgt.visibility,tgt.policy,sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,FALSE,sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT m.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=tgt.id),ARRAY[]::uuid[])))),FALSE) AS admin_override
+        NOT document_readable(src.public_id,sa.public_id,src.status,src.visibility,src.policy,sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,FALSE,sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT src.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=src.id AND m.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[]))
+        OR NOT document_readable(tgt.public_id,ta.public_id,tgt.status,tgt.visibility,tgt.policy,sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,FALSE,sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT tgt.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=tgt.id AND m.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[])))),FALSE) AS admin_override
 FROM document_links l JOIN documents src ON src.id=l.source_id AND src.deleted_at IS NULL
 LEFT JOIN members sa ON sa.id=src.author_id
 JOIN documents tgt ON l.target_type='document' AND tgt.id=l.document_target_id AND tgt.deleted_at IS NULL
 LEFT JOIN members ta ON ta.id=tgt.author_id
 WHERE tgt.slug=sqlc.arg(slug)::text
-AND document_readable(src.public_id,sa.public_id,src.status,src.visibility,src.policy,sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT m.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=src.id),ARRAY[]::uuid[]))
-AND document_readable(tgt.public_id,ta.public_id,tgt.status,tgt.visibility,tgt.policy,sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT m.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=tgt.id),ARRAY[]::uuid[]));
+AND document_readable(src.public_id,sa.public_id,src.status,src.visibility,src.policy,sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT src.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=src.id AND m.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[]))
+AND document_readable(tgt.public_id,ta.public_id,tgt.status,tgt.visibility,tgt.policy,sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT tgt.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=tgt.id AND m.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[]));
 
 -- name: ListProductDocumentBacklinks :many
 SELECT src.public_id AS source_id,tgt.public_id AS target_id,l.relation,src.kind,src.slug,
        COALESCE(sqlc.arg(viewer_admin)::boolean AND (
-        NOT document_readable(src.public_id,sa.public_id,src.status,src.visibility,src.policy,sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,FALSE,sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT m.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=src.id),ARRAY[]::uuid[]))
-        OR NOT document_readable(tgt.public_id,ta.public_id,tgt.status,tgt.visibility,tgt.policy,sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,FALSE,sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT m.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=tgt.id),ARRAY[]::uuid[]))),FALSE) AS admin_override
+        NOT document_readable(src.public_id,sa.public_id,src.status,src.visibility,src.policy,sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,FALSE,sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT src.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=src.id AND m.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[]))
+        OR NOT document_readable(tgt.public_id,ta.public_id,tgt.status,tgt.visibility,tgt.policy,sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,FALSE,sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT tgt.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=tgt.id AND m.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[]))),FALSE) AS admin_override
 FROM document_links l JOIN documents src ON src.id=l.source_id AND src.deleted_at IS NULL
 LEFT JOIN members sa ON sa.id=src.author_id
 JOIN documents tgt ON l.target_type='document' AND tgt.id=l.document_target_id AND tgt.deleted_at IS NULL
 LEFT JOIN members ta ON ta.id=tgt.author_id
 WHERE tgt.slug=sqlc.arg(slug)::text
-AND document_readable(src.public_id,sa.public_id,src.status,src.visibility,src.policy,sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT m.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=src.id),ARRAY[]::uuid[]))
-AND document_readable(tgt.public_id,ta.public_id,tgt.status,tgt.visibility,tgt.policy,sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT m.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=tgt.id),ARRAY[]::uuid[]))
+AND document_readable(src.public_id,sa.public_id,src.status,src.visibility,src.policy,sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT src.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=src.id AND m.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[]))
+AND document_readable(tgt.public_id,ta.public_id,tgt.status,tgt.visibility,tgt.policy,sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT tgt.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=tgt.id AND m.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[]))
 ORDER BY src.updated_at DESC,src.public_id DESC,l.relation LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
 
 -- name: ListProductLieutenantAssignments :many
@@ -251,9 +274,9 @@ LEFT JOIN regions r ON l.target_type='region' AND r.id=l.region_target_id
 WHERE document_readable(src.public_id,source_author.public_id,src.status,src.visibility,src.policy,
       sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,
       sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,
-      COALESCE(ARRAY(SELECT m.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=src.id),ARRAY[]::uuid[]))
+      COALESCE(ARRAY(SELECT src.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=src.id AND m.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[]))
   AND CASE l.target_type
-    WHEN 'document' THEN td.id IS NOT NULL AND document_readable(td.public_id,target_author.public_id,td.status,td.visibility,td.policy,sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT m.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=td.id),ARRAY[]::uuid[]))
+    WHEN 'document' THEN td.id IS NOT NULL AND document_readable(td.public_id,target_author.public_id,td.status,td.visibility,td.policy,sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT td.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=td.id AND m.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[]))
     -- Quest identity is public; the separate held protected-relation admission clause is not inferred here.
     WHEN 'quest' THEN q.id IS NOT NULL
     WHEN 'character' THEN c.id IS NOT NULL
@@ -271,6 +294,39 @@ SELECT c.candidate FROM candidates c WHERE NOT EXISTS(SELECT 1 FROM documents d 
 ORDER BY c.n LIMIT 1;
 
 -- Aggregate writes are separate named statements and run in the caller's UOW.
+-- name: LoadProductDocumentWriteFacts :many
+SELECT d.public_id AS document_id, r.public_id AS region_id,
+       EXISTS (SELECT 1 FROM archon_assignments aa JOIN members m ON m.id=aa.member_id
+               WHERE aa.region_id=r.id AND m.public_id=sqlc.narg(actor_id)::uuid) AS assigned_archon,
+       dm.public_id AS quest_dm_id, q.public_id AS quest_id
+FROM documents d
+LEFT JOIN LATERAL (
+ SELECT region.id,region.public_id FROM regions region JOIN (
+   SELECT l.region_target_id AS id FROM document_links l
+   WHERE l.source_id=d.id AND l.region_target_id IS NOT NULL
+   UNION
+   SELECT m.region_id FROM pointcrawl_entry_links pel JOIN maps m ON m.id=pel.map_id
+   WHERE pel.document_id=d.id AND pel.relation='location' AND m.region_id IS NOT NULL
+ ) linked ON linked.id=region.id
+) r ON TRUE
+LEFT JOIN quests q ON q.document_id=d.id AND q.deleted_at IS NULL
+LEFT JOIN members dm ON dm.id=q.dm_id
+WHERE d.public_id=ANY(sqlc.arg(document_ids)::uuid[])
+ORDER BY d.public_id,r.public_id;
+
+-- name: NextProductDocumentRevision :one
+SELECT (COALESCE(max(r.rev),0)+1)::integer AS rev FROM document_revisions r
+JOIN documents d ON d.id=r.document_id WHERE d.public_id=sqlc.arg(document_id)::uuid;
+
+-- name: LockProductSummaryQuests :many
+SELECT q.public_id AS id FROM quests q
+WHERE q.deleted_at IS NULL AND (
+ q.public_id=ANY(sqlc.arg(quest_ids)::uuid[]) OR EXISTS (
+   SELECT 1 FROM document_links l JOIN documents d ON d.id=l.source_id
+   WHERE l.quest_target_id=q.id AND l.relation='summarizes'
+     AND d.public_id=sqlc.narg(document_id)::uuid))
+ORDER BY q.public_id FOR UPDATE OF q;
+
 -- name: InsertProductDocument :one
 INSERT INTO documents(public_id,kind,slug,title,category,status,visibility,policy,body,frontmatter_yaml,author_id,version,created_at,updated_at)
 VALUES(sqlc.arg(id)::uuid,sqlc.arg(kind)::text,sqlc.arg(slug)::text,sqlc.arg(title)::text,sqlc.narg(category)::text,'draft',sqlc.arg(visibility)::text,sqlc.narg(policy)::jsonb,sqlc.arg(body)::text,sqlc.narg(frontmatter_yaml)::text,(SELECT id FROM members WHERE public_id=sqlc.arg(author_id)::uuid),1,sqlc.arg(at)::timestamptz,sqlc.arg(at)::timestamptz)
@@ -321,7 +377,7 @@ WITH source_document AS MATERIALIZED (
  ORDER BY q.public_id FOR UPDATE OF q
 ), removed_quests AS (
  DELETE FROM document_links l USING source_document d
- WHERE l.source_id=d.id AND l.target_type='quest'
+ WHERE l.source_id=d.id AND l.target_type='quest' AND l.relation='summarizes'
    AND NOT EXISTS (SELECT 1 FROM requested_quests wanted WHERE wanted.id=l.quest_target_id)
    AND EXISTS (SELECT 1 FROM locked_quests locked WHERE locked.id=l.quest_target_id)
  RETURNING l.quest_target_id
@@ -333,7 +389,7 @@ WITH source_document AS MATERIALIZED (
  RETURNING quest_target_id
 ), removed_characters AS (
  DELETE FROM document_links l USING source_document d
- WHERE l.source_id=d.id AND l.target_type='character'
+ WHERE l.source_id=d.id AND l.target_type='character' AND l.relation='subject'
    AND (sqlc.narg(character_id)::uuid IS NULL OR NOT EXISTS (
      SELECT 1 FROM characters c WHERE c.id=l.character_target_id
        AND c.public_id=sqlc.narg(character_id)::uuid))
@@ -394,10 +450,10 @@ SELECT input.ordinality::integer AS input_index,
        d.published_at, d.deleted_at, deleter.public_id AS deleted_by, d.updated_at, d.version,
        document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,sqlc.narg(viewer_id)::uuid,
          sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,sqlc.arg(viewer_admin)::boolean,
-         sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id),ARRAY[]::uuid[])) AS readable,
+         sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[])) AS readable,
        COALESCE(sqlc.arg(viewer_admin)::boolean AND NOT document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,sqlc.narg(viewer_id)::uuid,
          sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,FALSE,
-         sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id),ARRAY[]::uuid[])),FALSE) AS admin_override
+         sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[])),FALSE) AS admin_override
 FROM unnest(sqlc.arg(member_ids)::uuid[]) WITH ORDINALITY AS input(public_id, ordinality)
 LEFT JOIN members m ON m.public_id = input.public_id
 LEFT JOIN documents d ON d.author_id = m.id AND d.kind = 'community' AND d.category = 'dm_table' AND d.deleted_at IS NULL
@@ -424,38 +480,78 @@ WITH requested AS (
            input.public_id AS document_id
     FROM unnest(sqlc.arg(document_ids)::uuid[]) WITH ORDINALITY AS input(public_id, ordinality)
 ), summaries AS (
-    SELECT r.input_index, r.document_id, d.id AS document_internal_id
+    SELECT r.input_index, r.document_id, d.id AS document_internal_id,
+           author.public_id AS summary_author_id,
+           COALESCE(document_readable(
+               d.public_id, author.public_id, d.status, d.visibility, d.policy,
+               sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
+               sqlc.arg(viewer_admin)::boolean, sqlc.arg(viewer_live_dm)::boolean,
+               COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr
+                 JOIN members reader ON reader.id=dr.member_id
+                 WHERE dr.document_id=d.id AND reader.public_id=sqlc.narg(viewer_id)::uuid), ARRAY[]::uuid[])
+           ), FALSE)::boolean AS summary_readable
     FROM requested r
     JOIN documents d ON d.public_id = r.document_id AND d.deleted_at IS NULL AND d.kind = 'summary'
-), admitted AS (
+    LEFT JOIN members author ON author.id=d.author_id
+), linked AS (
     SELECT s.input_index, s.document_id,
-           q.public_id AS quest_id, q.scheduled_at, l.summary_append_order,
+           q.public_id AS quest_id, q.short_code, q.scheduled_at, l.summary_append_order,
            dm.public_id AS dm_id, dm.display_name AS dm_display_name,
-           arc.name AS arc_name, gtm.game_day
+           arc.name AS arc_name, gtm.game_day, brief.title,
+           COALESCE(brief.id IS NOT NULL AND document_readable(
+               brief.public_id, brief_author.public_id, brief.status, brief.visibility, brief.policy,
+               sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
+               sqlc.arg(viewer_admin)::boolean, sqlc.arg(viewer_live_dm)::boolean,
+               COALESCE(ARRAY(
+                   SELECT brief.public_id FROM document_readers dr
+                   JOIN members reader ON reader.id = dr.member_id
+                   WHERE dr.document_id = brief.id AND reader.public_id = sqlc.narg(viewer_id)::uuid
+               ), ARRAY[]::uuid[])
+           ), FALSE) AS brief_readable
     FROM summaries s
     JOIN document_links l ON l.source_id = s.document_internal_id
       AND l.relation = 'summarizes' AND l.quest_target_id IS NOT NULL
     JOIN quests q ON q.id = l.quest_target_id AND q.deleted_at IS NULL
-    JOIN documents brief ON brief.id = q.document_id AND brief.deleted_at IS NULL
-    JOIN members brief_author ON brief_author.id = brief.author_id
+    LEFT JOIN documents brief ON brief.id = q.document_id AND brief.deleted_at IS NULL
+    LEFT JOIN members brief_author ON brief_author.id = brief.author_id
     JOIN members dm ON dm.id = q.dm_id
     LEFT JOIN quest_arcs arc ON arc.id = q.arc_id
     LEFT JOIN game_time_map gtm ON gtm.real_date = ((q.scheduled_at AT TIME ZONE 'UTC')::date)
-    WHERE document_readable(
-        brief.public_id, brief_author.public_id, brief.status, brief.visibility, brief.policy,
-        sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
-        sqlc.arg(viewer_admin)::boolean, sqlc.arg(viewer_live_dm)::boolean,
-        COALESCE(ARRAY(
-            SELECT reader.public_id FROM document_readers dr
-            JOIN members reader ON reader.id = dr.member_id
-            WHERE dr.document_id = brief.id
-        ), ARRAY[]::uuid[])
-    )
 )
-SELECT input_index, document_id, quest_id, scheduled_at, summary_append_order,
-       dm_id, dm_display_name, arc_name, game_day
-FROM admitted
-ORDER BY input_index, summary_append_order, quest_id;
+SELECT s.input_index, s.document_id, linked.quest_id, COALESCE(linked.short_code,'')::text AS short_code,
+       readable_brief.title AS quest_title,
+       readable_quest.scheduled_at, COALESCE(linked.summary_append_order,0)::bigint AS summary_append_order,
+       readable_dm.public_id AS dm_id,
+       COALESCE(readable_dm.display_name,'')::text AS dm_display_name,
+       readable_arc.name AS arc_name, readable_game.game_day,
+       s.summary_author_id, s.summary_readable,
+       ARRAY(SELECT q.public_id FROM document_links l JOIN quests q ON q.id=l.quest_target_id
+         WHERE l.source_id=s.document_internal_id AND l.relation='summarizes' AND q.deleted_at IS NULL
+         ORDER BY l.summary_append_order,q.public_id)::uuid[] AS authoring_quest_ids,
+       ARRAY(SELECT c.public_id FROM document_links l JOIN characters c ON c.id=l.character_target_id
+         WHERE l.source_id=s.document_internal_id AND l.relation='subject' AND c.deleted_at IS NULL
+         ORDER BY l.summary_append_order,c.public_id)::uuid[] AS authoring_character_ids,
+       (EXISTS(SELECT 1 FROM linked linked_quest WHERE linked_quest.input_index=s.input_index)
+        AND NOT EXISTS(SELECT 1 FROM document_links l
+          LEFT JOIN quests q ON q.id=l.quest_target_id
+          WHERE l.source_id=s.document_internal_id AND l.target_type='quest' AND l.relation='summarizes'
+          AND (q.id IS NULL OR q.deleted_at IS NOT NULL))
+        AND NOT EXISTS(SELECT 1 FROM linked hidden WHERE hidden.input_index=s.input_index AND NOT hidden.brief_readable)
+        AND NOT EXISTS(SELECT 1 FROM document_links l
+          LEFT JOIN characters c ON c.id=l.character_target_id
+          WHERE l.source_id=s.document_internal_id AND l.target_type='character' AND l.relation='subject'
+          AND (c.id IS NULL OR c.deleted_at IS NOT NULL))
+        AND (SELECT count(*) FROM document_links l WHERE l.source_id=s.document_internal_id
+             AND l.character_target_id IS NOT NULL AND l.relation='subject')<=1
+       )::boolean AS authoring_complete
+FROM summaries s
+LEFT JOIN linked ON linked.input_index=s.input_index
+LEFT JOIN quests readable_quest ON readable_quest.public_id=linked.quest_id AND linked.brief_readable
+LEFT JOIN documents readable_brief ON readable_brief.id=readable_quest.document_id AND readable_brief.deleted_at IS NULL
+LEFT JOIN members readable_dm ON readable_dm.id=readable_quest.dm_id
+LEFT JOIN quest_arcs readable_arc ON readable_arc.id=readable_quest.arc_id
+LEFT JOIN game_time_map readable_game ON readable_game.real_date=((readable_quest.scheduled_at AT TIME ZONE 'UTC')::date)
+ORDER BY s.input_index, linked.summary_append_order, linked.quest_id;
 
 -- name: ProductSummaryDerivedPlayers :many
 WITH requested AS (
@@ -480,9 +576,9 @@ WITH requested AS (
         sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
         sqlc.arg(viewer_admin)::boolean, sqlc.arg(viewer_live_dm)::boolean,
         COALESCE(ARRAY(
-            SELECT reader.public_id FROM document_readers dr
+            SELECT brief.public_id FROM document_readers dr
             JOIN members reader ON reader.id = dr.member_id
-            WHERE dr.document_id = brief.id
+            WHERE dr.document_id = brief.id AND reader.public_id = sqlc.narg(viewer_id)::uuid
         ), ARRAY[]::uuid[])
     )
 ), quest_players AS (
@@ -539,9 +635,9 @@ WITH requested AS (
         sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
         sqlc.arg(viewer_admin)::boolean, sqlc.arg(viewer_live_dm)::boolean,
         COALESCE(ARRAY(
-            SELECT reader.public_id FROM document_readers dr
+            SELECT brief.public_id FROM document_readers dr
             JOIN members reader ON reader.id = dr.member_id
-            WHERE dr.document_id = brief.id
+            WHERE dr.document_id = brief.id AND reader.public_id = sqlc.narg(viewer_id)::uuid
         ), ARRAY[]::uuid[])
     )
 ), regions AS (
@@ -566,3 +662,12 @@ UNION ALL
 SELECT input_index, document_id, place_kind, place_id, place_name, map_id, summary_append_order, sort_id
 FROM nodes
 ORDER BY input_index, place_kind, summary_append_order, sort_id;
+
+-- name: ResolveProductMentionHandles :many
+SELECT public_id AS id, handle FROM members
+WHERE handle=ANY(sqlc.arg(handles)::text[]) ORDER BY public_id;
+
+-- name: ReadProductDocumentAuthor :one
+SELECT author.public_id AS id FROM documents d
+JOIN members author ON author.id=d.author_id
+WHERE d.public_id=sqlc.arg(document_id)::uuid;

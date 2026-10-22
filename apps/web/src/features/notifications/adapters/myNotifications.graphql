@@ -9,6 +9,7 @@ query MyNotifications($limit: Int!, $before: String) {
       summary
       label
       readAt
+      subjectId
       subjectType
       subjectCode
       createdAt

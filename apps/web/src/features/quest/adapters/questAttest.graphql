@@ -1,0 +1,10 @@
+mutation QuestAttestParticipation(
+  $questId: ID!
+  $entries: [ParticipationAttestationInput!]!
+  $meta: CommandMeta!
+) {
+  attestQuestParticipation(questId: $questId, entries: $entries, meta: $meta) {
+    characterId
+    status
+  }
+}

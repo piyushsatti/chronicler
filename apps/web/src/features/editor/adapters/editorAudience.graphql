@@ -1,0 +1,17 @@
+mutation EditorAudience(
+  $id: ID!
+  $expectedRevision: Int!
+  $input: DocumentAudienceInput!
+  $meta: CommandMeta!
+) {
+  setDocumentVisibility(
+    id: $id
+    expectedRevision: $expectedRevision
+    input: $input
+    meta: $meta
+  ) {
+    id
+    slug
+    version
+  }
+}

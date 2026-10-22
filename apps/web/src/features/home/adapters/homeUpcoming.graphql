@@ -1,0 +1,13 @@
+query HomeUpcoming($upcomingFrom: DateTime!, $upcomingTo: DateTime!, $offset: Int!) {
+  quests(
+    filters: { scheduledFrom: $upcomingFrom, scheduledTo: $upcomingTo }
+    limit: 100
+    offset: $offset
+  ) {
+    items {
+      id
+      scheduledAt
+    }
+    total
+  }
+}

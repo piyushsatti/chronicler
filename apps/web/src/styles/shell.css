@@ -19,6 +19,7 @@
 
 .app-shell {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
   /* dvh, not vh: mobile Safari's collapsing toolbar makes 100vh wrong
      by roughly the height of the toolbar. */
   min-height: 100dvh;
@@ -36,12 +37,22 @@
   min-width: 0;
 }
 
-/* The bottom bar is sticky, so page content scrolls UNDER it and the last
+/* The bottom bar stays in the viewport, so content scrolls UNDER it and the last
    screenful is obscured. Reserve its height plus the safe-area inset. Only
    in the modes that actually show the bar — shell.css owns that fact, so it
    owns the reservation too. */
 .app-shell__main {
   padding-bottom: calc(var(--bottomnav-height) + env(safe-area-inset-bottom, 0px));
+}
+
+:root:has(.site-chrome) {
+  scroll-padding-top: var(--site-header-height, var(--sp-8));
+}
+
+:root:has(.site-chrome[data-site-pattern='bottom-bar']) {
+  scroll-padding-bottom: calc(
+    var(--bottomnav-height) + env(safe-area-inset-bottom, 0px)
+  );
 }
 
 .site-chrome:not([data-site-pattern='bottom-bar']) .app-shell__main {
@@ -75,6 +86,34 @@
 
 [data-site-pattern='inline-row'] .nav-links-row {
   display: flex;
+  flex-wrap: wrap;
+}
+
+.site-chrome__top {
+  container-name: site-header;
+  container-type: inline-size;
+}
+
+[data-site-pattern='inline-row'] .site-chrome__top {
+  padding-block: var(--sp-2);
+}
+
+@container site-header (max-width: 68rem) {
+  .site-chrome__search {
+    width: 2.5rem;
+    min-width: 0;
+    justify-content: center;
+    padding: 0;
+  }
+
+  .site-chrome__search-label,
+  .site-chrome__search-kbd {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
 }
 
 /* ── Bottom navigation: reachability, not fit ───────────────── */
@@ -82,12 +121,14 @@
 /* A top-anchored nav on a large phone puts every destination in the
    least reachable part of the screen. This bar is about thumbs. */
 .app-shell__bottomnav {
-  position: sticky;
+  position: fixed;
+  inset-inline: 0;
   bottom: 0;
   z-index: 20;
   align-items: stretch;
   justify-content: space-around;
   gap: var(--sp-1);
+  overflow-x: auto;
   border-top: 1px solid var(--color-border);
   background: color-mix(in srgb, var(--color-bg-deep) 92%, transparent);
   backdrop-filter: blur(14px);
@@ -134,17 +175,20 @@
    44px touch-width floor while the bar remains a single row. */
 /* viewport queries removed — use Imposition navPatternFor / declarations */
 
-
 /* ── Page gutters scale with the space available ────────────── */
 
 /* `.page` (atlas.css) hard-codes --sp-6 side padding at every width,
    which spends 32px of a 375px screen on empty margin. */
-.page {
+.page,
+.page-shell,
+[data-width-class='compact'] .hf2 .page {
   padding-inline: var(--sp-4);
 }
 
 [data-width-class='medium'] .page,
-[data-width-class='expanded'] .page {
+[data-width-class='expanded'] .page,
+[data-width-class='medium'] .page-shell,
+[data-width-class='expanded'] .page-shell {
   padding-inline: var(--sp-6);
 }
 
@@ -168,4 +212,3 @@
     background: none;
   }
 }
-

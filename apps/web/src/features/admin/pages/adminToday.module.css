@@ -1,34 +1,62 @@
 .summary {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(8.5rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
   gap: var(--sp-3);
 }
 
 .stat {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-1);
-  padding: var(--sp-3) 0;
+  display: block;
+  min-width: 0;
+  border-radius: var(--rad-sm);
   text-decoration: none;
   color: inherit;
-  border-bottom: 1px solid var(--color-border);
-  min-width: 0;
 }
 
-.stat:hover {
-  color: var(--color-accent);
+.stat > * {
+  height: 100%;
 }
 
-.stat .type-value,
-.stat .type-caption {
+.stat:hover > * {
+  border-color: var(--color-border-2);
+  background: var(--color-bg-surface);
+}
+
+.stat:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.panels {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+  gap: var(--sp-4);
+  align-items: start;
+}
+
+/* UA paragraph and heading margins would stack on top of the card's gap. */
+.panel :is(p, h2) {
   margin: 0;
 }
 
-.alerts {
+.list {
   margin: 0;
   padding: 0;
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: var(--sp-2);
+}
+
+.item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2) var(--sp-3);
+  padding-block: var(--sp-3);
+  border-top: 1px solid var(--color-border);
+}
+
+.item:first-child {
+  border-top: 0;
+  padding-block-start: 0;
 }

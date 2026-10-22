@@ -15,27 +15,44 @@ function captureRoot() {
     theme: root.getAttribute('data-theme'),
     colorblind: root.getAttribute('data-colorblind'),
     effect: root.getAttribute('data-bg-effect'),
+    density: root.getAttribute('data-density'),
+    motion: root.getAttribute('data-motion-collapse'),
     colorScheme: root.style.colorScheme,
   };
 }
 
 function resetRoot() {
-  for (const name of ['data-mode', 'data-mode-pref', 'data-theme', 'data-colorblind', 'data-bg-effect']) {
+  for (const name of [
+    'data-mode',
+    'data-mode-pref',
+    'data-theme',
+    'data-colorblind',
+    'data-bg-effect',
+    'data-density',
+    'data-motion-collapse',
+  ]) {
     document.documentElement.removeAttribute(name);
   }
   document.documentElement.style.colorScheme = '';
 }
 
 function compareWithRuntime(raw: string | null, dark: boolean, blocked = false) {
-  const storage = { getItem: vi.fn(() => {
-    if (blocked) throw new Error('Storage unavailable');
-    return raw;
-  }) };
+  const storage = {
+    getItem: vi.fn(() => {
+      if (blocked) throw new Error('Storage unavailable');
+      return raw;
+    }),
+  };
   const browser = { matchMedia: vi.fn(() => ({ matches: dark })) };
   vi.stubGlobal('localStorage', storage);
   vi.stubGlobal('window', browser);
   resetRoot();
-  runInNewContext(bootstrap, { document, window: browser, localStorage: storage });
+  runInNewContext(bootstrap, {
+    document,
+    window: browser,
+    localStorage: storage,
+    atob,
+  });
   const beforePaint = captureRoot();
   expect(storage.getItem).toHaveBeenCalledWith(STORAGE_KEY);
   resetRoot();
@@ -44,7 +61,10 @@ function compareWithRuntime(raw: string | null, dark: boolean, blocked = false) 
   return beforePaint;
 }
 
-afterEach(() => { vi.unstubAllGlobals(); resetRoot(); });
+afterEach(() => {
+  vi.unstubAllGlobals();
+  resetRoot();
+});
 
 describe('head prepaint preference bootstrap', () => {
   it('runs in the head before application modules or font preloads', () => {
@@ -53,52 +73,128 @@ describe('head prepaint preference bootstrap', () => {
     expect(bootstrap).not.toMatch(/(?:setItem|removeItem|document\.write)/);
   });
 
-  it.each([true, false])('uses Parchment and the OS mode for a new member (dark OS: %s)', (dark) => {
-    expect(compareWithRuntime(null, dark)).toMatchObject({
-      theme: 'parchment', modePref: 'system', mode: dark ? 'dark' : 'light',
-      colorblind: 'off', effect: 'none',
-    });
-  });
+  it.each([true, false])(
+    'uses Parchment and the OS mode for a new member (dark OS: %s)',
+    (dark) => {
+      expect(compareWithRuntime(null, dark)).toMatchObject({
+        theme: 'parchment',
+        modePref: 'system',
+        mode: dark ? 'dark' : 'light',
+        colorblind: 'off',
+        effect: 'none',
+      });
+    },
+  );
 
-  it.each(RULED_THEMES)('preserves the independent mode/theme fields for %s', (theme) => {
-    for (const mode of ['dark', 'light', 'system']) {
-      for (const dark of [true, false]) {
-        expect(compareWithRuntime(JSON.stringify({ theme, mode, modeExplicit: true, colorblindSafe: true, bgEffect: 'glow-pulse' }), dark)).toMatchObject({
-          theme, modePref: mode, mode: mode === 'system' ? dark ? 'dark' : 'light' : mode,
-          colorblind: 'safe', effect: 'glow-pulse',
-        });
+  it.each(RULED_THEMES)(
+    'preserves the independent mode/theme fields for %s',
+    (theme) => {
+      for (const mode of ['dark', 'light', 'system']) {
+        for (const dark of [true, false]) {
+          expect(
+            compareWithRuntime(
+              JSON.stringify({
+                theme,
+                mode,
+                modeExplicit: true,
+                colorblindSafe: true,
+                bgEffect: 'glow-pulse',
+              }),
+              dark,
+            ),
+          ).toMatchObject({
+            theme,
+            modePref: mode,
+            mode: mode === 'system' ? (dark ? 'dark' : 'light') : mode,
+            colorblind: 'safe',
+            effect: 'glow-pulse',
+          });
+        }
       }
-    }
-  });
+    },
+  );
 
-  it.each(['atlas', 'default'])('matches current runtime compatibility for a stored %s theme', (theme) => {
-    expect(compareWithRuntime(JSON.stringify({ theme, mode: 'light' }), true).theme).toBe(theme);
-  });
+  it.each(['atlas', 'default'])(
+    'matches current runtime compatibility for a stored %s theme',
+    (theme) => {
+      expect(
+        compareWithRuntime(JSON.stringify({ theme, mode: 'light' }), true).theme,
+      ).toBe(theme);
+    },
+  );
 
-  it.each(['none', 'starfield-twinkle', 'glow-pulse', 'gradient-sweep'])('applies the current %s effect before mount', (bgEffect) => {
-    expect(compareWithRuntime(JSON.stringify({ bgEffect }), true).effect).toBe(bgEffect);
-  });
+  it.each(['none', 'starfield-twinkle', 'glow-pulse', 'gradient-sweep'])(
+    'applies the current %s effect before mount',
+    (bgEffect) => {
+      expect(compareWithRuntime(JSON.stringify({ bgEffect }), true).effect).toBe(
+        bgEffect,
+      );
+    },
+  );
 
   it.each([
-    '{', 'null', 'true', '[]', '{}',
+    '{',
+    'null',
+    'true',
+    '[]',
+    '{}',
     '{"mode":"invalid","theme":"pixel","bgEffect":"unknown"}',
     '{"mode":"light","theme":{"toString":null}}',
     '{"mode":"dark","theme":"ember","bgEffect":{"toString":null}}',
     '{"colorblindSafe":"false","font":"retro","density":"compact","reducedMotion":true}',
-  ])('matches runtime sanitization for %s', (raw) => { compareWithRuntime(raw, false); });
+  ])('matches runtime sanitization for %s', (raw) => {
+    compareWithRuntime(raw, false);
+  });
 
   it('survives unavailable storage and preserves runtime defaults', () => {
-    expect(compareWithRuntime(null, true, true)).toMatchObject({ theme: 'parchment', modePref: 'system', mode: 'dark' });
+    expect(compareWithRuntime(null, true, true)).toMatchObject({
+      theme: 'parchment',
+      modePref: 'system',
+      mode: 'dark',
+    });
   });
 
   it('matches the runtime dark fallback when matchMedia is unavailable', () => {
     vi.stubGlobal('window', {});
     resetRoot();
-    runInNewContext(bootstrap, { document, window: {}, localStorage });
+    runInNewContext(bootstrap, { document, window: {}, localStorage, atob });
     const beforePaint = captureRoot();
     resetRoot();
     initPrefs();
     expect(captureRoot()).toEqual(beforePaint);
     expect(beforePaint.mode).toBe('dark');
+  });
+
+  it.each([
+    [{ member_id: 'member-a', sub: 'other-member' }, 'ember'],
+    [{ sub: 'member-a' }, 'vegan'],
+    [{ member_id: '' }, 'vegan'],
+    [{ member_id: 'member-a', exp: Date.now() / 1000 - 1 }, 'vegan'],
+  ])('matches the runtime cache identity before paint: %j', (claims, theme) => {
+    const token = `e30.${btoa(JSON.stringify({ exp: Date.now() / 1000 + 3600, ...claims }))}.sig`;
+    const storage = {
+      getItem: (key: string) =>
+        key === 'chronicler_auth_token'
+          ? token
+          : key === `${STORAGE_KEY}:member-a`
+            ? JSON.stringify({
+                theme: 'ember',
+                density: 'compact',
+                reducedMotion: true,
+              })
+            : JSON.stringify({ theme: 'vegan' }),
+    };
+    vi.stubGlobal('localStorage', storage);
+    vi.stubGlobal('window', { matchMedia: () => ({ matches: false }) });
+    resetRoot();
+    runInNewContext(bootstrap, { document, window, localStorage: storage, atob });
+    const beforePaint = captureRoot();
+    resetRoot();
+    initPrefs();
+    expect(captureRoot()).toEqual(beforePaint);
+    expect(beforePaint.theme).toBe(theme);
+    if (theme === 'ember') {
+      expect(beforePaint).toMatchObject({ density: 'compact', motion: 'on' });
+    }
   });
 });

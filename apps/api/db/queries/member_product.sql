@@ -259,3 +259,15 @@ SELECT c.public_id,m.discord_id,m.handle,m.display_name,m.avatar_url,c.roles,m.s
 FROM changed c JOIN members m ON m.id=c.id JOIN history h ON h.member_id=c.id ORDER BY c.public_id;
 -- name: ProductCompleteUnlockCatalog :many
 SELECT public_id,name,description,kind,active,payload,unlock_rule FROM unlockables ORDER BY name,public_id;
+-- name: ProductMemberPrivateNotes :one
+SELECT coalesce(s.payload->'private_notes'->>'body','')::text AS body,
+ (s.payload->'private_notes'->>'updated_at')::timestamptz AS updated_at
+FROM members m LEFT JOIN member_settings s ON s.member_id=m.id WHERE m.public_id=sqlc.arg(member_id)::uuid;
+-- name: ProductStorePrivateNotes :one
+INSERT INTO member_settings(member_id,payload,updated_at)
+VALUES((SELECT id FROM members WHERE public_id=sqlc.arg(actor_id)::uuid),
+ jsonb_build_object('private_notes',jsonb_build_object('body',sqlc.arg(body)::text,'updated_at',sqlc.arg(at)::timestamptz)),
+ sqlc.arg(at)::timestamptz)
+ON CONFLICT(member_id) DO UPDATE SET
+payload=jsonb_set(member_settings.payload,'{private_notes}',jsonb_build_object('body',sqlc.arg(body)::text,'updated_at',sqlc.arg(at)::timestamptz))
+RETURNING (payload->'private_notes'->>'body')::text AS body,(payload->'private_notes'->>'updated_at')::timestamptz AS updated_at;

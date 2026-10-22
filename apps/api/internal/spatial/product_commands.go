@@ -3,9 +3,11 @@ package spatial
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"reflect"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
@@ -71,6 +73,22 @@ func runSpatialCommand[T any](
 	subjectID string,
 	mutate func(ProductCommandRepos, auth.Authority, time.Time) (T, error),
 ) (T, error) {
+	return runSpatialAdmittedCommand(ctx, s, actor, operation, func(ProductCommandRepos, auth.Authority) (spatialAdmission, error) {
+		return spatialAdmission{Request: request}, nil
+	}, spec, meta, subjectID, mutate)
+}
+
+func runSpatialAdmittedCommand[T any](
+	ctx context.Context,
+	s ProductCommands,
+	actor auth.Authority,
+	operation string,
+	admit func(ProductCommandRepos, auth.Authority) (spatialAdmission, error),
+	spec any,
+	meta product.CommandMeta,
+	subjectID string,
+	mutate func(ProductCommandRepos, auth.Authority, time.Time) (T, error),
+) (T, error) {
 	var result T
 	fingerprint, err := product.Fingerprint(spec)
 	if err != nil {
@@ -89,12 +107,23 @@ func runSpatialCommand[T any](
 		if fresh.Claims().MemberID == "" || fresh.Claims().MemberID != actor.Claims().MemberID {
 			return apierr.New(apierr.Forbidden, "member authority changed")
 		}
+		admission, err := admit(repos, fresh)
+		if err != nil {
+			return err
+		}
+		request := admission.Request
 		decision, err := repos.Policy.Decide(ctx, fresh, request)
 		if err != nil {
 			return err
 		}
 		if !decision.Allowed {
 			return apierr.New(apierr.Forbidden, "spatial command forbidden")
+		}
+		if admission.UsedOverride {
+			decision.UsedOverride = true
+			if decision.RuleCode == "" {
+				decision.RuleCode = "OWNERSHIP"
+			}
 		}
 		claim, err := repos.Replay.Claim(ctx, fresh.Claims().MemberID, operation, meta.IdempotencyKey, fingerprint)
 		if err != nil {
@@ -104,7 +133,7 @@ func runSpatialCommand[T any](
 			if err := json.Unmarshal(claim.Receipt, &result); err != nil {
 				return err
 			}
-			return nil
+			return projectSpatialCommandResult(ctx, repos, fresh, &result)
 		}
 		at, err := product.UTCNow(s.Clock)
 		if err != nil {
@@ -114,11 +143,22 @@ func runSpatialCommand[T any](
 		if err != nil {
 			return err
 		}
+		if err := projectSpatialCommandResult(ctx, repos, fresh, &result); err != nil {
+			return err
+		}
 		if decision.UsedOverride {
 			if commandDependencyMissing(repos.Audit) {
 				return apierr.New(apierr.Internal, "override recorder required")
 			}
-			if err := repos.Audit.Record(ctx, auth.OverrideFact{
+			switch view := any(result).(type) {
+			case MapView:
+				subjectID = view.Id
+			case RegionView:
+				subjectID = view.Id
+			case TimeAnchorView:
+				subjectID = view.Id
+			}
+			if err := repos.Audit.Record(ctx, claim, auth.OverrideFact{
 				ActorID:     fresh.Claims().MemberID,
 				Operation:   request.Operation(),
 				SubjectType: "spatial",
@@ -143,8 +183,8 @@ func runSpatialCommand[T any](
 }
 
 func (s ProductCommands) CreateMap(ctx context.Context, actor auth.Authority, spec CreateMapSpec, meta product.CommandMeta) (MapView, error) {
-	if strings.TrimSpace(spec.Input.AtlasCode) == "" || strings.TrimSpace(spec.Input.Name) == "" {
-		return MapView{}, apierr.New(apierr.Invalid, "invalid map input")
+	if err := validateMapCreate(spec.Input); err != nil {
+		return MapView{}, err
 	}
 	if spec.Input.RegionId != nil {
 		if err := commandPublicID(spec.Input.RegionId); err != nil {
@@ -171,7 +211,7 @@ func (s ProductCommands) CreateMap(ctx context.Context, actor auth.Authority, sp
 }
 
 func (s ProductCommands) CreateRegion(ctx context.Context, actor auth.Authority, spec CreateRegionSpec, meta product.CommandMeta) (RegionView, error) {
-	if strings.TrimSpace(spec.Input.Name) == "" || strings.TrimSpace(spec.Input.Kind) == "" {
+	if strings.TrimSpace(spec.Input.Name) == "" || utf8.RuneCountInString(spec.Input.Name) > 200 || (spec.Input.Kind != "uncharted" && spec.Input.Kind != "archon" && spec.Input.Kind != "server") {
 		return RegionView{}, apierr.New(apierr.Invalid, "invalid region input")
 	}
 	if spec.Input.DocumentId != nil {
@@ -184,6 +224,9 @@ func (s ProductCommands) CreateRegion(ctx context.Context, actor auth.Authority,
 		return RegionView{}, err
 	}
 	return runSpatialCommand(ctx, s, actor, "createRegion", request, spec, meta, spec.Input.Name, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (RegionView, error) {
+		if _, err := pointcrawlDocument(ctx, repos, fresh, spec.Input.DocumentId); err != nil {
+			return RegionView{}, err
+		}
 		locked, err := repos.Region.LockCreateRegion(ctx, spec)
 		if err != nil {
 			return RegionView{}, err
@@ -199,6 +242,9 @@ func (s ProductCommands) CreateRegion(ctx context.Context, actor auth.Authority,
 }
 
 func (s ProductCommands) UpdateRegion(ctx context.Context, actor auth.Authority, spec UpdateRegionSpec, meta product.CommandMeta) (RegionView, error) {
+	if strings.TrimSpace(spec.Input.Name) == "" || utf8.RuneCountInString(spec.Input.Name) > 200 {
+		return RegionView{}, apierr.New(apierr.Invalid, "region name required")
+	}
 	if err := commandPublicID(&spec.Id); err != nil {
 		return RegionView{}, err
 	}
@@ -212,6 +258,9 @@ func (s ProductCommands) UpdateRegion(ctx context.Context, actor auth.Authority,
 		return RegionView{}, err
 	}
 	return runSpatialCommand(ctx, s, actor, "updateRegion", request, spec, meta, spec.Id, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (RegionView, error) {
+		if _, err := pointcrawlDocument(ctx, repos, fresh, spec.Input.DocumentId); err != nil {
+			return RegionView{}, err
+		}
 		locked, err := repos.Region.LockUpdateRegion(ctx, spec)
 		if err != nil {
 			return RegionView{}, err
@@ -348,6 +397,9 @@ func (s ProductCommands) RevokeArchon(ctx context.Context, actor auth.Authority,
 }
 
 func (s ProductCommands) CreateTimeAnchor(ctx context.Context, actor auth.Authority, spec CreateTimeAnchorSpec, meta product.CommandMeta) (TimeAnchorView, error) {
+	if err := validateTimeAnchor(spec.Input); err != nil {
+		return TimeAnchorView{}, err
+	}
 	request, err := auth.ForOperation("Mutation.createTimeAnchor")
 	if err != nil {
 		return TimeAnchorView{}, err
@@ -357,17 +409,30 @@ func (s ProductCommands) CreateTimeAnchor(ctx context.Context, actor auth.Author
 		if err != nil {
 			return TimeAnchorView{}, err
 		}
-		return repos.Time.StoreCreateTimeAnchor(ctx, CreateTimeAnchorWrite{
+		if err := admitLockedTimeCommand(ctx, repos, fresh, "Mutation.createTimeAnchor"); err != nil {
+			return TimeAnchorView{}, err
+		}
+		view, err := repos.Time.StoreCreateTimeAnchor(ctx, CreateTimeAnchorWrite{
 			ActorID:        fresh.Claims().MemberID,
 			At:             at,
 			Input:          spec,
 			ValidatedInput: spec,
 			Locked:         locked,
 		})
+		if err != nil {
+			return TimeAnchorView{}, err
+		}
+		if _, err := materializeTime(ctx, repos.Time, at); err != nil {
+			return TimeAnchorView{}, err
+		}
+		return view, nil
 	})
 }
 
 func (s ProductCommands) UpdateTimeAnchor(ctx context.Context, actor auth.Authority, spec UpdateTimeAnchorSpec, meta product.CommandMeta) (TimeAnchorView, error) {
+	if err := validateTimeAnchor(spec.Input); err != nil {
+		return TimeAnchorView{}, err
+	}
 	if err := commandPublicID(&spec.Id); err != nil {
 		return TimeAnchorView{}, err
 	}
@@ -380,19 +445,29 @@ func (s ProductCommands) UpdateTimeAnchor(ctx context.Context, actor auth.Author
 		if err != nil {
 			return TimeAnchorView{}, err
 		}
-		return repos.Time.StoreUpdateTimeAnchor(ctx, UpdateTimeAnchorWrite{
+		if err := admitLockedTimeCommand(ctx, repos, fresh, "Mutation.updateTimeAnchor"); err != nil {
+			return TimeAnchorView{}, err
+		}
+		view, err := repos.Time.StoreUpdateTimeAnchor(ctx, UpdateTimeAnchorWrite{
 			ActorID:        fresh.Claims().MemberID,
 			At:             at,
 			Input:          spec,
 			ValidatedInput: spec,
 			Locked:         locked,
 		})
+		if err != nil {
+			return TimeAnchorView{}, err
+		}
+		if _, err := materializeTime(ctx, repos.Time, at); err != nil {
+			return TimeAnchorView{}, err
+		}
+		return view, nil
 	})
 }
 
 func (s ProductCommands) UpdateGameCalendar(ctx context.Context, actor auth.Authority, spec UpdateGameCalendarSpec, meta product.CommandMeta) (GameCalendarView, error) {
-	if len(spec.Definition) == 0 || !json.Valid(spec.Definition) {
-		return GameCalendarView{}, apierr.New(apierr.Invalid, "invalid calendar definition")
+	if _, err := parseCalendarDefinition(spec.Definition); err != nil {
+		return GameCalendarView{}, err
 	}
 	request, err := auth.ForOperation("Mutation.updateGameCalendar")
 	if err != nil {
@@ -401,6 +476,9 @@ func (s ProductCommands) UpdateGameCalendar(ctx context.Context, actor auth.Auth
 	return runSpatialCommand(ctx, s, actor, "updateGameCalendar", request, spec, meta, "game-calendar", func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (GameCalendarView, error) {
 		locked, err := repos.Time.LockUpdateGameCalendar(ctx, spec)
 		if err != nil {
+			return GameCalendarView{}, err
+		}
+		if err := admitLockedTimeCommand(ctx, repos, fresh, "Mutation.updateGameCalendar"); err != nil {
 			return GameCalendarView{}, err
 		}
 		return repos.Time.StoreUpdateGameCalendar(ctx, UpdateGameCalendarWrite{
@@ -414,133 +492,146 @@ func (s ProductCommands) UpdateGameCalendar(ctx context.Context, actor auth.Auth
 }
 
 func (s ProductCommands) UpsertPointcrawlNode(ctx context.Context, actor auth.Authority, spec UpsertPointcrawlNodeSpec, meta product.CommandMeta) (PointcrawlNodeView, error) {
-	if err := commandPublicID(&spec.MapId); err != nil {
+	if err := validatePointcrawlNode(spec.Input); err != nil {
 		return PointcrawlNodeView{}, err
 	}
-	if spec.Input.Id != nil {
-		if err := commandPublicID(spec.Input.Id); err != nil {
+	for _, id := range []*string{&spec.MapId, spec.Input.Id, spec.Input.SubmapId} {
+		if err := commandPublicID(id); err != nil {
 			return PointcrawlNodeView{}, err
 		}
 	}
-	if spec.Input.SubmapId != nil {
-		if err := commandPublicID(spec.Input.SubmapId); err != nil {
-			return PointcrawlNodeView{}, err
+	var locked UpsertPointcrawlNodeState
+	return runSpatialAdmittedCommand(ctx, s, actor, "upsertPointcrawlNode", func(repos ProductCommandRepos, fresh auth.Authority) (spatialAdmission, error) {
+		if commandDependencyMissing(repos.Containment) {
+			return spatialAdmission{}, apierr.New(apierr.Internal, "containment writer required")
 		}
-	}
-	mapID := spec.MapId
-	request, err := auth.ForMap("Mutation.upsertPointcrawlNode", auth.MapFacts{ID: &mapID})
-	if err != nil {
-		return PointcrawlNodeView{}, err
-	}
-	return runSpatialCommand(ctx, s, actor, "upsertPointcrawlNode", request, spec, meta, spec.MapId, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (PointcrawlNodeView, error) {
 		if err := repos.Containment.LockContainment(ctx); err != nil {
-			return PointcrawlNodeView{}, err
+			return spatialAdmission{}, err
 		}
-		locked, err := repos.Map.LockUpsertPointcrawlNode(ctx, spec)
+		ids := []string{spec.MapId}
+		if spec.Input.SubmapId != nil {
+			ids = append(ids, *spec.Input.SubmapId)
+		}
+		states, err := lockPointcrawlMaps(ctx, repos.Map, ids...)
 		if err != nil {
-			return PointcrawlNodeView{}, err
+			return spatialAdmission{}, err
 		}
-		return repos.Map.StoreUpsertPointcrawlNode(ctx, UpsertPointcrawlNodeWrite{
-			ActorID:        fresh.Claims().MemberID,
-			At:             at,
-			Input:          spec,
-			ValidatedInput: spec,
-			Locked:         locked,
-		})
+		locked, err = repos.Map.LockUpsertPointcrawlNode(ctx, spec)
+		if err != nil {
+			return spatialAdmission{}, err
+		}
+		if !locked.Exists {
+			return spatialAdmission{}, apierr.New(apierr.NotFound, "pointcrawl node not found")
+		}
+		facts := auth.MapFacts{ID: &spec.MapId, RegionID: locked.RegionID}
+		if spec.Input.SubmapId != nil {
+			submapID := *spec.Input.SubmapId
+			edges, err := repos.Containment.ReadContainmentEdges(ctx)
+			if err != nil {
+				return spatialAdmission{}, err
+			}
+			if containmentCycle(edges, spec.MapId, submapID) {
+				return spatialAdmission{}, apierr.New(apierr.Invalid, "submap containment cycle")
+			}
+			facts.Submap = &auth.MapRef{ID: submapID, RegionID: states[submapID].RegionID}
+		}
+		return mapAdmission("Mutation.upsertPointcrawlNode", facts)
+	}, spec, meta, spec.MapId, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (PointcrawlNodeView, error) {
+		return repos.Map.StoreUpsertPointcrawlNode(ctx, UpsertPointcrawlNodeWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked})
 	})
 }
 
 func (s ProductCommands) SetPointcrawlEdge(ctx context.Context, actor auth.Authority, spec SetPointcrawlEdgeSpec, meta product.CommandMeta) (PointcrawlEdgeView, error) {
-	if err := commandPublicID(&spec.MapId); err != nil {
-		return PointcrawlEdgeView{}, err
+	spec.Input.Kind = strings.TrimSpace(spec.Input.Kind)
+	if spec.Input.Kind == "" || utf8.RuneCountInString(spec.Input.Kind) > 64 || (spec.Input.Label != nil && utf8.RuneCountInString(*spec.Input.Label) > 200) || spec.Input.NodeA == spec.Input.NodeB {
+		return PointcrawlEdgeView{}, apierr.New(apierr.Invalid, "invalid pointcrawl edge")
 	}
-	if err := commandPublicID(&spec.Input.NodeA); err != nil {
-		return PointcrawlEdgeView{}, err
-	}
-	if err := commandPublicID(&spec.Input.NodeB); err != nil {
-		return PointcrawlEdgeView{}, err
-	}
-	if spec.Input.Id != nil {
-		if err := commandPublicID(spec.Input.Id); err != nil {
+	for _, id := range []*string{&spec.MapId, &spec.Input.NodeA, &spec.Input.NodeB, spec.Input.Id, spec.Input.DocumentId} {
+		if err := commandPublicID(id); err != nil {
 			return PointcrawlEdgeView{}, err
 		}
 	}
-	mapID := spec.MapId
-	request, err := auth.ForMap("Mutation.setPointcrawlEdge", auth.MapFacts{ID: &mapID})
-	if err != nil {
-		return PointcrawlEdgeView{}, err
-	}
-	return runSpatialCommand(ctx, s, actor, "setPointcrawlEdge", request, spec, meta, spec.MapId, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (PointcrawlEdgeView, error) {
-		locked, err := repos.Map.LockSetPointcrawlEdge(ctx, spec)
+	var locked SetPointcrawlEdgeState
+	return runSpatialAdmittedCommand(ctx, s, actor, "setPointcrawlEdge", func(repos ProductCommandRepos, fresh auth.Authority) (spatialAdmission, error) {
+		if _, err := pointcrawlDocument(ctx, repos, fresh, spec.Input.DocumentId); err != nil {
+			return spatialAdmission{}, err
+		}
+		var err error
+		locked, err = repos.Map.LockSetPointcrawlEdge(ctx, spec)
 		if err != nil {
-			return PointcrawlEdgeView{}, err
+			return spatialAdmission{}, err
 		}
-		return repos.Map.StoreSetPointcrawlEdge(ctx, SetPointcrawlEdgeWrite{
-			ActorID:        fresh.Claims().MemberID,
-			At:             at,
-			Input:          spec,
-			ValidatedInput: spec,
-			Locked:         locked,
-		})
+		if !locked.Exists {
+			return spatialAdmission{}, apierr.New(apierr.NotFound, "map not found")
+		}
+		return mapAdmission("Mutation.setPointcrawlEdge", auth.MapFacts{ID: &spec.MapId, RegionID: locked.RegionID})
+	}, spec, meta, spec.MapId, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (PointcrawlEdgeView, error) {
+		return repos.Map.StoreSetPointcrawlEdge(ctx, SetPointcrawlEdgeWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked})
 	})
 }
 
 func (s ProductCommands) LinkPointcrawlEntry(ctx context.Context, actor auth.Authority, spec LinkPointcrawlEntrySpec, meta product.CommandMeta) (PointcrawlEntryLinkView, error) {
-	if err := commandPublicID(&spec.MapId); err != nil {
+	if err := validatePointcrawlRelation(spec.Relation); err != nil {
 		return PointcrawlEntryLinkView{}, err
 	}
-	if err := commandPublicID(&spec.NodeId); err != nil {
-		return PointcrawlEntryLinkView{}, err
-	}
-	if err := commandPublicID(&spec.DocumentId); err != nil {
-		return PointcrawlEntryLinkView{}, err
-	}
-	mapID := spec.MapId
-	request, err := auth.ForMap("Mutation.linkPointcrawlEntry", auth.MapFacts{ID: &mapID})
-	if err != nil {
-		return PointcrawlEntryLinkView{}, err
-	}
-	return runSpatialCommand(ctx, s, actor, "linkPointcrawlEntry", request, spec, meta, spec.MapId, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (PointcrawlEntryLinkView, error) {
-		locked, err := repos.Map.LockLinkPointcrawlEntry(ctx, spec)
-		if err != nil {
+	for _, id := range []*string{&spec.MapId, &spec.NodeId, &spec.DocumentId} {
+		if err := commandPublicID(id); err != nil {
 			return PointcrawlEntryLinkView{}, err
 		}
-		return repos.Map.StoreLinkPointcrawlEntry(ctx, LinkPointcrawlEntryWrite{
-			ActorID:        fresh.Claims().MemberID,
-			At:             at,
-			Input:          spec,
-			ValidatedInput: spec,
-			Locked:         locked,
-		})
+	}
+	var locked LinkPointcrawlEntryState
+	return runSpatialAdmittedCommand(ctx, s, actor, "linkPointcrawlEntry", func(repos ProductCommandRepos, fresh auth.Authority) (spatialAdmission, error) {
+		admission, err := pointcrawlLinkAdmission(ctx, repos, fresh, "Mutation.linkPointcrawlEntry", spec.MapId, spec.DocumentId, spec.Relation)
+		if err != nil {
+			return spatialAdmission{}, err
+		}
+		locked, err = repos.Map.LockLinkPointcrawlEntry(ctx, spec)
+		if err != nil {
+			return spatialAdmission{}, err
+		}
+		if !locked.Exists {
+			return spatialAdmission{}, apierr.New(apierr.NotFound, "map not found")
+		}
+		return admission, nil
+	}, spec, meta, spec.MapId, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (PointcrawlEntryLinkView, error) {
+		return repos.Map.StoreLinkPointcrawlEntry(ctx, LinkPointcrawlEntryWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked})
 	})
 }
 
 func (s ProductCommands) UnlinkPointcrawlEntry(ctx context.Context, actor auth.Authority, spec UnlinkPointcrawlEntrySpec, meta product.CommandMeta) (product.CommandReceipt, error) {
-	if err := commandPublicID(&spec.MapId); err != nil {
+	if err := validatePointcrawlRelation(spec.Relation); err != nil {
 		return product.CommandReceipt{}, err
 	}
-	if err := commandPublicID(&spec.NodeId); err != nil {
-		return product.CommandReceipt{}, err
-	}
-	if err := commandPublicID(&spec.DocumentId); err != nil {
-		return product.CommandReceipt{}, err
-	}
-	mapID := spec.MapId
-	request, err := auth.ForMap("Mutation.unlinkPointcrawlEntry", auth.MapFacts{ID: &mapID})
-	if err != nil {
-		return product.CommandReceipt{}, err
-	}
-	return runSpatialCommand(ctx, s, actor, "unlinkPointcrawlEntry", request, spec, meta, spec.MapId, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (product.CommandReceipt, error) {
-		locked, err := repos.Map.LockUnlinkPointcrawlEntry(ctx, spec)
-		if err != nil {
+	for _, id := range []*string{&spec.MapId, &spec.NodeId, &spec.DocumentId} {
+		if err := commandPublicID(id); err != nil {
 			return product.CommandReceipt{}, err
 		}
-		return repos.Map.StoreUnlinkPointcrawlEntry(ctx, UnlinkPointcrawlEntryWrite{
-			ActorID:        fresh.Claims().MemberID,
-			At:             at,
-			Input:          spec,
-			ValidatedInput: spec,
-			Locked:         locked,
-		})
+	}
+	var locked UnlinkPointcrawlEntryState
+	return runSpatialAdmittedCommand(ctx, s, actor, "unlinkPointcrawlEntry", func(repos ProductCommandRepos, fresh auth.Authority) (spatialAdmission, error) {
+		admission, admissionErr := pointcrawlLinkAdmission(ctx, repos, fresh, "Mutation.unlinkPointcrawlEntry", spec.MapId, spec.DocumentId, spec.Relation)
+		if admissionErr != nil {
+			expected, ok := errors.AsType[*apierr.Error](admissionErr)
+			if !ok || (expected.Code != apierr.NotFound && expected.Code != apierr.Forbidden && expected.Code != apierr.Invalid) {
+				return spatialAdmission{}, admissionErr
+			}
+		}
+		var err error
+		locked, err = repos.Map.LockUnlinkPointcrawlEntry(ctx, spec)
+		if err != nil {
+			return spatialAdmission{}, err
+		}
+		if !locked.Exists {
+			return spatialAdmission{}, apierr.New(apierr.NotFound, "map not found")
+		}
+		if len(locked.Links) == 0 {
+			return mapAdmission("Mutation.unlinkPointcrawlEntry", auth.MapFacts{ID: &spec.MapId, RegionID: locked.RegionID})
+		}
+		if admissionErr != nil {
+			return spatialAdmission{}, admissionErr
+		}
+		return admission, nil
+	}, spec, meta, spec.MapId, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (product.CommandReceipt, error) {
+		return repos.Map.StoreUnlinkPointcrawlEntry(ctx, UnlinkPointcrawlEntryWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked})
 	})
 }

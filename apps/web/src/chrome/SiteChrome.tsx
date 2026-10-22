@@ -1,14 +1,12 @@
 import { navPatternFor } from '@pi/react-imposition';
 import { useSizeClasses } from '@pi/react-imposition/react';
 import type { ReactNode } from 'react';
-import { useEffect } from 'react';
+import { useEffect, useLayoutEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { canAccessVerify, isAdmin } from '../auth/roles.js';
+import { useCurrentAccess } from '../auth/useCurrentAccess.js';
 import { useAuth } from '../auth/AuthContext.js';
 import { useSearchDialog } from '../features/search/components/SearchCommandRoot.js';
 import { useMe } from '../hooks/useMe.js';
-import { useAppDispatch } from '../store/hooks.js';
-import { dialogClosed, dialogOpened } from '../store/searchSlice.js';
 import {
   destinationsForAuth,
   siteLinksPlacement,
@@ -58,7 +56,13 @@ function SearchIcon(): React.JSX.Element {
 
 function DiscordMark(): React.JSX.Element {
   return (
-    <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <svg
+      width="17"
+      height="17"
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden="true"
+    >
       <path d="M20 4.4A19 19 0 0 0 15.3 3l-.2.5a14 14 0 0 1 4.2 2.1A13 13 0 0 0 4.7 5.6 14 14 0 0 1 9 3.5L8.7 3A19 19 0 0 0 4 4.4 19.7 19.7 0 0 0 .5 18a19 19 0 0 0 5.8 3l.8-1.2a12 12 0 0 1-1.9-.9l.5-.4a13.6 13.6 0 0 0 11.6 0l.5.4a12 12 0 0 1-1.9.9l.8 1.2a19 19 0 0 0 5.8-3A19.6 19.6 0 0 0 20 4.4zM8.3 14.7c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2zm7.4 0c-1 0-1.8-.9-1.8-2s.8-2 1.8-2 1.8.9 1.8 2-.8 2-1.8 2z" />
     </svg>
   );
@@ -121,6 +125,17 @@ function NavIcon({ id }: { id: string }): React.JSX.Element {
       </svg>
     );
   }
+  if (id === 'admin') {
+    return (
+      <svg {...common}>
+        <path d="M4 7h10M18 7h2M4 17h2M10 17h10" />
+        <circle cx="16" cy="7" r="2" />
+        <circle cx="8" cy="17" r="2" />
+        <path d="M4 12h4M12 12h8" />
+        <circle cx="10" cy="12" r="2" />
+      </svg>
+    );
+  }
   if (id === 'verification') {
     return (
       <svg {...common}>
@@ -171,6 +186,15 @@ function DestinationLinks({
             data-nav-item
             aria-current={active ? 'page' : undefined}
             aria-label={destination.label}
+            onFocus={
+              placement === 'top'
+                ? (event) =>
+                    event.currentTarget.scrollIntoView({
+                      block: 'nearest',
+                      inline: 'nearest',
+                    })
+                : undefined
+            }
           >
             <NavIcon id={destination.id} />
             <span className="site-chrome__link-label">{visible}</span>
@@ -211,16 +235,40 @@ function AccountSlot({
  * every other pattern joins links to the top.
  */
 export function SiteChrome({ children }: { children: ReactNode }): React.JSX.Element {
+  const headerRef = useRef<HTMLElement>(null);
+  useLayoutEffect(() => {
+    const header = headerRef.current;
+    if (!header) return;
+    const root = document.documentElement;
+    let active = true;
+    let publishedHeight: string | undefined;
+    const publishHeight = (): void => {
+      if (!active) return;
+      const height = header.getBoundingClientRect().height;
+      if (!Number.isFinite(height) || height <= 0) return;
+      publishedHeight = `${height}px`;
+      root.style.setProperty('--site-header-height', publishedHeight);
+    };
+    publishHeight();
+    const observer = new ResizeObserver(publishHeight);
+    observer.observe(header, { box: 'border-box' });
+    return () => {
+      active = false;
+      observer.disconnect();
+      if (root.style.getPropertyValue('--site-header-height') === publishedHeight) {
+        root.style.removeProperty('--site-header-height');
+      }
+    };
+  }, []);
+
   const searchDialog = useSearchDialog();
-  const dispatch = useAppDispatch();
-  const { widthClass, heightClass } = useSizeClasses();
+  const { widthClass, heightClass, twoPaneCapable } = useSizeClasses();
   const pattern = navPatternFor(widthClass, heightClass);
   const placement = siteLinksPlacement(pattern);
   const location = useLocation();
   const { isAuthenticated, logout } = useAuth();
   const me = useMe();
-  const confirmedNoMember =
-    !me.isLoading && !me.isError && me.data === null;
+  const confirmedNoMember = !me.isLoading && !me.isError && me.data === null;
   const isSignedIn = isAuthenticated && !confirmedNoMember;
 
   useEffect(() => {
@@ -229,19 +277,12 @@ export function SiteChrome({ children }: { children: ReactNode }): React.JSX.Ele
     }
   }, [isAuthenticated, confirmedNoMember, logout]);
 
-  useEffect(() => {
-    if (searchDialog.open) {
-      dispatch(dialogOpened());
-    } else {
-      dispatch(dialogClosed());
-    }
-  }, [dispatch, searchDialog.open]);
-
-  const roles = me.data?.roles ?? [];
+  const adminAccess = useCurrentAccess('admin');
+  const reviewAccess = useCurrentAccess('review');
   const destinations = destinationsForAuth({
     isAuthenticated,
-    isAdmin: isAdmin(roles),
-    canVerify: canAccessVerify(roles),
+    isAdmin: adminAccess.allowed,
+    canVerify: reviewAccess.allowed,
   });
   const showDrawer = pattern === 'drawer';
   const showTopLinks = placement === 'top' && !showDrawer;
@@ -253,19 +294,20 @@ export function SiteChrome({ children }: { children: ReactNode }): React.JSX.Ele
     />
   );
 
-  const openSearch = (): void => {
-    dispatch(dialogOpened());
-    searchDialog.openSearch();
-  };
-
   return (
     <div
+      id="app"
       className="site-chrome app-shell"
+      data-app-root
+      data-width-class={widthClass}
+      data-height-class={heightClass}
+      data-two-pane={twoPaneCapable ? 'true' : 'false'}
+      data-nav-pattern={pattern}
       data-site-chrome
       data-site-pattern={pattern}
       data-el="shell.root"
     >
-      <header className="site-chrome__top">
+      <header ref={headerRef} className="site-chrome__top">
         <Link className="site-chrome__brand" to="/" aria-label="Chronicler">
           <span className="site-chrome__brand-mark" aria-hidden="true">
             <BrandGlyph />
@@ -280,19 +322,36 @@ export function SiteChrome({ children }: { children: ReactNode }): React.JSX.Ele
           aria-label="Search the chronicle"
           aria-haspopup="dialog"
           aria-expanded={searchDialog.open}
-          onClick={openSearch}
+          onClick={searchDialog.openSearch}
         >
           <SearchIcon />
           <span className="site-chrome__search-label">Search the chronicle</span>
           <kbd className="site-chrome__search-kbd">⌘K</kbd>
         </button>
+        {adminAccess.status === 'error' || reviewAccess.status === 'error' ? (
+          <button
+            type="button"
+            className="type-link"
+            onClick={() => {
+              adminAccess.reload();
+              reviewAccess.reload();
+            }}
+          >
+            Retry staff access
+          </button>
+        ) : null}
         <NotificationBell />
         <AccountSlot
           isAuthenticated={isSignedIn}
           name={me.data?.displayName ?? me.data?.handle}
         />
       </header>
-      <main id="main" tabIndex={-1} className="site-chrome__main app-shell__main">
+      <main
+        id="main"
+        tabIndex={-1}
+        className="site-chrome__main app-shell__main"
+        data-shell-main
+      >
         {children}
       </main>
       {placement === 'bottom' ? links : null}

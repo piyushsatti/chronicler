@@ -10,9 +10,17 @@ import { Party } from '../../../components/data/Party.js';
 import { AtlasDmChip } from '../../../components/domain/AtlasDmChip.js';
 import { RevealConfirmDialog } from '../../../components/domain/RevealConfirmDialog.js';
 import { ContentRenderer } from '../../../components/foundation/ContentRenderer.js';
+import { motionEntry } from '../../../motion/catalog.js';
+import { useFirstLoadStagger } from '../../../motion/useFirstLoadStagger.js';
 import type { OpenQuestCardProps } from './openQuestCard.types.js';
+import styles from './openQuestCard.module.css';
 
-export type { OpenQuestCardProps, OpenQuestPartyMember } from './openQuestCard.types.js';
+export type {
+  OpenQuestCardProps,
+  OpenQuestPartyMember,
+} from './openQuestCard.types.js';
+
+const QUEST_CARD_STAGGER = motionEntry('quest-card-stagger-in');
 
 export function OpenQuestCard({
   code,
@@ -29,6 +37,7 @@ export function OpenQuestCard({
   level,
   when,
   mine = false,
+  waitlisted = false,
   animIndex,
   onClick,
   isMutating = false,
@@ -40,10 +49,7 @@ export function OpenQuestCard({
   const isFull = !isCancelled && party.length >= totalSlots;
   const linkTo = code && code !== '—' ? `/quests/${code}` : '/quests';
 
-  const entranceStyle: React.CSSProperties =
-    animIndex !== undefined
-      ? { animationDelay: `${animIndex * 55}ms`, animationFillMode: 'both' }
-      : {};
+  const stagger = useFirstLoadStagger(code, animIndex !== undefined, QUEST_CARD_STAGGER);
 
   const badgeStatus = status as Status;
   const openQuest = () => {
@@ -59,11 +65,18 @@ export function OpenQuestCard({
   return (
     <>
       <Card
-        className={`qc ${animIndex !== undefined ? 'animate-card-enter' : ''}`.trim()}
+        className={[
+          'qc',
+          // The keyframes fill opacity to 1, which would undo the cancelled dimming.
+          stagger.staggered && !isCancelled ? 'motion-quest-card-stagger-in' : '',
+          isCancelled ? styles.cancelled : '',
+        ]
+          .filter(Boolean)
+          .join(' ')}
         data-el="questCard.root"
         data-interactive={isCancelled ? undefined : '1'}
         data-testid="open-quest-card"
-        style={{ ...entranceStyle, opacity: isCancelled ? 0.55 : undefined }}
+        style={stagger.styleForIndex(animIndex ?? 0)}
         onClickCapture={handleCardClick}
       >
         <Card.ActionOverlay
@@ -73,7 +86,7 @@ export function OpenQuestCard({
         />
         {mine ? (
           <div className="qc__ribbon" data-testid="mine-ribbon">
-            YOU&rsquo;RE IN
+            {waitlisted ? 'YOU’RE WAITLISTED' : 'YOU’RE IN'}
           </div>
         ) : null}
 
@@ -103,7 +116,7 @@ export function OpenQuestCard({
             data-el="questCard.hook"
             data-testid="quest-hook"
           >
-            <ContentRenderer body={description} />
+            <ContentRenderer body={description} className="cr-preview" />
           </div>
         ) : null}
 
@@ -119,8 +132,15 @@ export function OpenQuestCard({
           </span>
         </div>
 
-        <div className="row card__interactive-layer" data-el="questCard.partyRow" data-justify="between">
-          <Party members={party.map((p) => ({ name: p.name, avatarUrl: p.avatarUrl }))} total={totalSlots} />
+        <div
+          className="row card__interactive-layer"
+          data-el="questCard.partyRow"
+          data-justify="between"
+        >
+          <Party
+            members={party.map((p) => ({ name: p.name, avatarUrl: p.avatarUrl }))}
+            total={totalSlots}
+          />
           <span>
             <AtlasDmChip name={dm.name} fam={dmFam != null ? `${dmFam}×` : undefined} />
           </span>
@@ -128,14 +148,18 @@ export function OpenQuestCard({
 
         <div className="qc__foot card__interactive-layer" data-el="questCard.footer">
           {isCancelled ? (
-            <Button size="sm" disabled style={{ flex: 1, opacity: 0.5 }}>
+            <Button
+              size="sm"
+              disabled
+              className={`${styles.footButton} ${styles.footButtonCancelled}`}
+            >
               Cancelled
             </Button>
           ) : mine ? (
             <Button
               size="sm"
               data-el="questCard.withdrawBtn"
-              style={{ flex: 1 }}
+              className={styles.footButton}
               disabled={isMutating}
               pending={isMutating}
               onClick={(e) => {
@@ -146,7 +170,12 @@ export function OpenQuestCard({
               {isMutating ? 'Withdrawing…' : 'Withdraw'}
             </Button>
           ) : isFull ? (
-            <Button size="sm" data-el="questCard.signupBtn" style={{ flex: 1 }} onClick={openQuest}>
+            <Button
+              size="sm"
+              data-el="questCard.signupBtn"
+              className={styles.footButton}
+              onClick={openQuest}
+            >
               Sign up
             </Button>
           ) : (
@@ -154,7 +183,7 @@ export function OpenQuestCard({
               variant="primary"
               size="sm"
               data-el="questCard.signupBtn"
-              style={{ flex: 1 }}
+              className={styles.footButton}
               onClick={openQuest}
             >
               Sign up →
@@ -166,7 +195,11 @@ export function OpenQuestCard({
       <RevealConfirmDialog
         isOpen={confirmWithdrawOpen}
         title="Withdraw from this quest?"
-        description="This frees your slot and may automatically promote the next waitlisted signup. If you rejoin later, you'll land at the back of the waitlist queue."
+        description={
+          waitlisted
+            ? 'This removes your character from the waitlist. If you rejoin later, you will return to the back of the queue.'
+            : "This frees your slot and may automatically promote the next waitlisted signup. If you rejoin later, you'll land at the back of the waitlist queue."
+        }
         preview={<span>You will be withdrawn from {code}.</span>}
         confirmLabel="Withdraw"
         cancelLabel="Stay signed up"

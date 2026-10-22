@@ -9,6 +9,9 @@ export const ruleDocumentWireSchema = z.object({
   visibility: z.string().min(1),
   title: z.string().min(1),
   effectiveBody: z.string().nullable().optional(),
+  updatedAt: z.string().nullable().optional(),
+  canEditBody: z.boolean().optional(),
+  canEditMetadata: z.boolean().optional(),
   author: z
     .object({
       handle: z.string(),
@@ -18,6 +21,16 @@ export const ruleDocumentWireSchema = z.object({
 });
 
 export const rulesListWireSchema = z.object({
-  items: z.array(ruleDocumentWireSchema),
+  items: z.array(
+    ruleDocumentWireSchema.pick({
+      id: true,
+      slug: true,
+      kind: true,
+      category: true,
+      title: true,
+      effectiveBody: true,
+      author: true,
+    }),
+  ),
   total: z.number().int().nonnegative(),
 });

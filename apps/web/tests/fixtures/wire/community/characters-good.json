@@ -1,0 +1,12 @@
+{
+  "items": [
+    {
+      "id": "33333333-3333-4333-8333-333333333333",
+      "shortCode": "C-101",
+      "name": "Rook",
+      "status": "active",
+      "displayIcon": null
+    }
+  ],
+  "total": 1
+}

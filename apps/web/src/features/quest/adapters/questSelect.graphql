@@ -1,0 +1,10 @@
+mutation QuestSelectParticipants(
+  $questId: ID!
+  $characterIds: [ID!]!
+  $meta: CommandMeta!
+) {
+  selectQuestParticipants(questId: $questId, characterIds: $characterIds, meta: $meta) {
+    characterId
+    status
+  }
+}

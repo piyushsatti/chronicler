@@ -1,0 +1,15 @@
+query MapAssignments($memberId: ID, $regionId: ID, $offset: Int! = 0) {
+  archonAssignments(
+    memberId: $memberId
+    regionId: $regionId
+    limit: 50
+    offset: $offset
+  ) {
+    total
+    items {
+      memberId
+      regionId
+      grantedAt
+    }
+  }
+}

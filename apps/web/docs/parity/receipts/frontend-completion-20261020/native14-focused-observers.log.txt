@@ -1,0 +1,51 @@
+=== RUN   TestDocumentBrowserHiddenRuleDenial
+=== RUN   TestDocumentBrowserHiddenRuleDenial/wrong_operation
+=== RUN   TestDocumentBrowserHiddenRuleDenial/wrong_kind
+=== RUN   TestDocumentBrowserHiddenRuleDenial/wrong_actor
+=== RUN   TestDocumentBrowserHiddenRuleDenial/wrong_Guide
+=== RUN   TestDocumentBrowserHiddenRuleDenial/missing_identity
+=== RUN   TestDocumentBrowserHiddenRuleDenial/wrong_status
+=== RUN   TestDocumentBrowserHiddenRuleDenial/no_code
+=== RUN   TestDocumentBrowserHiddenRuleDenial/wrong_code
+=== RUN   TestDocumentBrowserHiddenRuleDenial/multiple_codes
+=== RUN   TestDocumentBrowserHiddenRuleDenial/command_key
+=== RUN   TestDocumentBrowserHiddenRuleDenial/one_actual_denial_per_expected_actor
+=== RUN   TestDocumentBrowserHiddenRuleDenial/invalid_expectations_cannot_admit_denial
+--- PASS: TestDocumentBrowserHiddenRuleDenial (0.00s)
+    --- PASS: TestDocumentBrowserHiddenRuleDenial/wrong_operation (0.00s)
+    --- PASS: TestDocumentBrowserHiddenRuleDenial/wrong_kind (0.00s)
+    --- PASS: TestDocumentBrowserHiddenRuleDenial/wrong_actor (0.00s)
+    --- PASS: TestDocumentBrowserHiddenRuleDenial/wrong_Guide (0.00s)
+    --- PASS: TestDocumentBrowserHiddenRuleDenial/missing_identity (0.00s)
+    --- PASS: TestDocumentBrowserHiddenRuleDenial/wrong_status (0.00s)
+    --- PASS: TestDocumentBrowserHiddenRuleDenial/no_code (0.00s)
+    --- PASS: TestDocumentBrowserHiddenRuleDenial/wrong_code (0.00s)
+    --- PASS: TestDocumentBrowserHiddenRuleDenial/multiple_codes (0.00s)
+    --- PASS: TestDocumentBrowserHiddenRuleDenial/command_key (0.00s)
+    --- PASS: TestDocumentBrowserHiddenRuleDenial/one_actual_denial_per_expected_actor (0.00s)
+    --- PASS: TestDocumentBrowserHiddenRuleDenial/invalid_expectations_cannot_admit_denial (0.00s)
+=== RUN   TestQuestBrowserHTTPObserverTransport
+=== RUN   TestQuestBrowserHTTPObserverTransport/preserves_status_headers_and_exact_bytes
+=== RUN   TestQuestBrowserHTTPObserverTransport/RuleDetail_query_identity_is_hashed_without_changing_transport
+=== RUN   TestQuestBrowserHTTPObserverTransport/RuleDetail_query_identity_is_hashed_without_changing_transport/query
+=== RUN   TestQuestBrowserHTTPObserverTransport/RuleDetail_query_identity_is_hashed_without_changing_transport/other_operation
+=== RUN   TestQuestBrowserHTTPObserverTransport/RuleDetail_query_identity_is_hashed_without_changing_transport/mutation
+=== RUN   TestQuestBrowserHTTPObserverTransport/RuleDetail_query_identity_is_hashed_without_changing_transport/missing_slug
+=== RUN   TestQuestBrowserHTTPObserverTransport/RuleDetail_query_identity_is_hashed_without_changing_transport/empty_slug
+=== RUN   TestQuestBrowserHTTPObserverTransport/RuleDetail_query_identity_is_hashed_without_changing_transport/non-string_slug
+=== RUN   TestQuestBrowserHTTPObserverTransport/RuleDetail_query_identity_is_hashed_without_changing_transport/unrelated_variable_remains_ignored
+=== RUN   TestQuestBrowserHTTPObserverTransport/retains_code_after_client_cancellation
+=== RUN   TestQuestBrowserHTTPObserverTransport/malformed_JSON_remains_an_observation_failure
+--- PASS: TestQuestBrowserHTTPObserverTransport (0.00s)
+    --- PASS: TestQuestBrowserHTTPObserverTransport/preserves_status_headers_and_exact_bytes (0.00s)
+    --- PASS: TestQuestBrowserHTTPObserverTransport/RuleDetail_query_identity_is_hashed_without_changing_transport (0.00s)
+        --- PASS: TestQuestBrowserHTTPObserverTransport/RuleDetail_query_identity_is_hashed_without_changing_transport/query (0.00s)
+        --- PASS: TestQuestBrowserHTTPObserverTransport/RuleDetail_query_identity_is_hashed_without_changing_transport/other_operation (0.00s)
+        --- PASS: TestQuestBrowserHTTPObserverTransport/RuleDetail_query_identity_is_hashed_without_changing_transport/mutation (0.00s)
+        --- PASS: TestQuestBrowserHTTPObserverTransport/RuleDetail_query_identity_is_hashed_without_changing_transport/missing_slug (0.00s)
+        --- PASS: TestQuestBrowserHTTPObserverTransport/RuleDetail_query_identity_is_hashed_without_changing_transport/empty_slug (0.00s)
+        --- PASS: TestQuestBrowserHTTPObserverTransport/RuleDetail_query_identity_is_hashed_without_changing_transport/non-string_slug (0.00s)
+        --- PASS: TestQuestBrowserHTTPObserverTransport/RuleDetail_query_identity_is_hashed_without_changing_transport/unrelated_variable_remains_ignored (0.00s)
+    --- PASS: TestQuestBrowserHTTPObserverTransport/retains_code_after_client_cancellation (0.00s)
+    --- PASS: TestQuestBrowserHTTPObserverTransport/malformed_JSON_remains_an_observation_failure (0.00s)
+PASS

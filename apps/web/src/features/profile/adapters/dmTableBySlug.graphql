@@ -8,6 +8,9 @@ query DmTableBySlug($slug: String!) {
     category
     effectiveBody
     frontmatter
+    authorId
+    canEditBody
+    canEditMetadata
     author {
       handle
     }

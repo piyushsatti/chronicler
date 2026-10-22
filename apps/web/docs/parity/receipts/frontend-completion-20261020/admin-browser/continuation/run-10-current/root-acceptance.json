@@ -1,0 +1,95 @@
+{
+  "at": "2026-10-20T18:29:45.132372+00:00",
+  "nativeSession": 86088,
+  "exit": 0,
+  "frontendEpoch": 31,
+  "scope": "Real isolated PostgreSQL/API, immutable Build31: all14 retained administration continuation checkpoints; no provider/owner visual claim.",
+  "checkpointCount": 14,
+  "checkpoints": [
+    "AdminCharacters actual completed 50+1",
+    "PendingCharacterVerifications actual completed 50+1",
+    "PC required note, rejection/resubmission/stale CONFLICT/current approval and reload",
+    "PendingDmProfiles actual completed 50+1",
+    "DM 50+1, required note and real revisions2\u21923\u21924\u21925\u21926 with stale conflict/reload",
+    "AdminCreationCatalog actual completed 50+1",
+    "actual Content Region options100+1/current kind",
+    "AdminBackstories actual completed 50+1",
+    "51+51 Content page-two edits, filter resets and exact persistence",
+    "one batch/two successful targets, exact replay and reload",
+    "actual Content Region options100+1/current kind",
+    "actual Content Region options100+1/current kind",
+    "101 Regions/50+50+1, readonly kind, both confirmed forwards and exact Doc/deadline/current options",
+    "Admin/Verifier/DM/Player/guest actual permissions; original Verifier JWT loses queue authority"
+  ],
+  "operationCount": 297,
+  "operationOutcomes": {
+    "complete": 290,
+    "superseded_filter_query": 7
+  },
+  "nativeReadback": {
+    "at": "2026-10-20T18:29:10.808866699Z",
+    "backstories": 51,
+    "bootstrapCommands": 204,
+    "bulkOneUOWReplay": true,
+    "catalog": 51,
+    "characters": 51,
+    "completedReceipts": 217,
+    "dmProfiles": 51,
+    "dmTarget": "c0cecdea-070f-4a10-8233-2fc1719c0b8c",
+    "lifecycleBothForwards": true,
+    "pcTarget": "a4a52dfc-3a8b-4513-8e3f-753e0d0c713f",
+    "providers": false,
+    "referenceBytesPreserved": true,
+    "regions": 101,
+    "staleReceiptsAbsent": true,
+    "verifierCurrentRoleRevoked": true
+  },
+  "nativeCleanup": {
+    "at": "2026-10-20T18:29:10.821192451Z",
+    "childStarted": true,
+    "childWaited": true,
+    "database": "product_case_1",
+    "databaseDropped": true,
+    "listenersClosed": {
+      "api": true,
+      "vite": true
+    }
+  },
+  "productionInputsBeforeAfterEqual": true,
+  "ownedInputsBeforeAfterEqual": true,
+  "frontendChecks": [
+    {
+      "stage": "before",
+      "receipt": ".local/workspace-setup/frontend-completion-20261020/production-preview-31/build-receipt.json",
+      "receiptSha256": "691b546a9acd9ee9345ba44ffbf6a854d6c0d61aa288e92bd057f529c2a8ad5e",
+      "sourceManifestSha256": "4017d327d2d8739c95aba95dfe9f8d2a2188c5297ee8b479614050f45cbb0460",
+      "sourceInputs": 625,
+      "distManifestSha256": "8535c5ed4733a18c722ea4f974baeb97509de598b6a12ef3e30b505c4f154420",
+      "distFiles": 181,
+      "at": "2026-10-20T18:28:33.878Z"
+    },
+    {
+      "stage": "after",
+      "receipt": ".local/workspace-setup/frontend-completion-20261020/production-preview-31/build-receipt.json",
+      "receiptSha256": "691b546a9acd9ee9345ba44ffbf6a854d6c0d61aa288e92bd057f529c2a8ad5e",
+      "sourceManifestSha256": "4017d327d2d8739c95aba95dfe9f8d2a2188c5297ee8b479614050f45cbb0460",
+      "sourceInputs": 625,
+      "distManifestSha256": "8535c5ed4733a18c722ea4f974baeb97509de598b6a12ef3e30b505c4f154420",
+      "distFiles": 181,
+      "at": "2026-10-20T18:29:10.725Z"
+    }
+  ],
+  "artifacts": {
+    "browser-receipt.json": "c561830f3eb4246358c4633909db6c048d4d99a5c6f4624c89c663de3617b6a5",
+    "native-readback.json": "4940b440d8783356363b5e2678a7688c60823ab88c81c7b83ef81a750408de3d",
+    "native-cleanup.json": "2403e09a03a8c186e3d447d2e46e863d9ad4f71d9a78a022ade32660d3a4630a",
+    "production-inputs-before.json": "91f532d1ba27695b1019ed89fb152b2cad6212591b932bd100cfaa514e3c876c",
+    "production-inputs-after.json": "91f532d1ba27695b1019ed89fb152b2cad6212591b932bd100cfaa514e3c876c",
+    "native.log": "745af5f483eb1455204cca30a60c8faf35f034fdc1b33e4fae11986040084d95"
+  },
+  "limits": [
+    "No provider evidence or production deployment",
+    "No final owner visual approval",
+    "Representative roles and actions, not every role/action combination"
+  ]
+}

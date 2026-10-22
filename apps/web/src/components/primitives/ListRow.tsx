@@ -43,6 +43,7 @@ export function ListRow({
         role="option"
         aria-selected={selected}
         className={cls}
+        data-selected={selected ? '1' : undefined}
         data-component="ListRow"
         data-variant={variant}
         disabled={disabled}

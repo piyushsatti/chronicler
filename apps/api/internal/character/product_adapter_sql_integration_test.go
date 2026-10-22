@@ -75,9 +75,6 @@ func TestCharacterProductPostgresReadAdapters(t *testing.T) {
 	if _, err := fixture.Pool.Exec(ctx, `INSERT INTO character_ddb_mirrors (character_id, payload, synced_at) SELECT id, $2::jsonb, $3 FROM characters WHERE public_id = $1::uuid`, pendingID, mirrorPayload, syncedAt); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := fixture.Pool.Exec(ctx, `INSERT INTO character_ddb_attempts (character_id, started_at, url, succeeded, finished_at, safe_error) SELECT id, $2, 'https://www.dndbeyond.com/characters/123', false, $2, 'PAYLOAD_DRIFT' FROM characters WHERE public_id = $1::uuid`, pendingID, syncedAt.Add(time.Minute)); err != nil {
-		t.Fatal(err)
-	}
 	actor, err := auth.NewAuthority(ownerID, []auth.Role{auth.Player}, "active", "")
 	if err != nil {
 		t.Fatal(err)

@@ -7,10 +7,8 @@ import LIST_QUERY from './rulesList.graphql?raw';
 import DETAIL_QUERY from './ruleDetail.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
-import {
-  ruleDocumentWireSchema,
-  rulesListWireSchema,
-} from './rules.wire.schema.js';
+import { isRulingCategory } from '../../../utils/documentHref.js';
+import { ruleDocumentWireSchema, rulesListWireSchema } from './rules.wire.schema.js';
 
 export type RuleListItemView = {
   id: string;
@@ -29,12 +27,67 @@ export type RuleDetailView = {
   isRuling: boolean;
   body: string | null;
   authorHandle: string | null;
+  updatedAt: string | null;
+  canEdit: boolean;
 };
 
 export type RulesHubView = {
   guides: RuleListItemView[];
   rulings: RuleListItemView[];
+  total: number;
 };
+
+const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
+
+/** A leading YAML block's `summary:` line, unquoted. */
+function frontmatterSummary(body: string): string | null {
+  const block = FRONTMATTER.exec(body)?.[1];
+  const line = block?.split(/\r?\n/).find((entry) => /^summary\s*:/.test(entry));
+  if (!line) return null;
+  const value = line
+    .replace(/^summary\s*:\s*/, '')
+    .trim()
+    .replace(/^(['"])(.*)\1$/, '$2');
+  return value || null;
+}
+
+/** Reduces Markdown to the words a reader would see, for one-line previews. */
+export function markdownToPlainText(body: string): string {
+  return body
+    .replace(FRONTMATTER, '')
+    .replace(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?^\1[ \t]*$/gm, ' ')
+    .replace(/<[^>\n]+>/g, ' ')
+    .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
+    .replace(
+      /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g,
+      (_m, target: string, label?: string) => (label ?? target).trim(),
+    )
+    .replace(/\[([^\]]+)\]\([^)]*\)/g, '$1')
+    .replace(/\[([^\]]+)\]\[[^\]]*\]/g, '$1')
+    .replace(/^\s{0,3}#{1,6}\s+/gm, '')
+    .replace(/^\s{0,3}>\s?/gm, '')
+    .replace(/^\s*(?:[-*+]|\d+[.)])\s+(?:\[[ xX]\]\s+)?/gm, '')
+    .replace(/^\s*(?:[-*_]\s*){3,}$/gm, ' ')
+    .replace(/^\s*\|?(?:\s*:?-{3,}:?\s*\|)+\s*:?-*:?\s*$/gm, ' ')
+    .replace(/\|/g, ' ')
+    .replace(/(\*\*|__)(.+?)\1/g, '$2')
+    .replace(/(^|[^\w*])[*_]([^*_\n]+)[*_](?=[^\w*]|$)/g, '$1$2')
+    .replace(/~~(.+?)~~/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+const EXCERPT_LENGTH = 180;
+
+function excerptOf(body: string | null | undefined): string | null {
+  if (!body) return null;
+  const text = frontmatterSummary(body) ?? markdownToPlainText(body);
+  if (text.length <= EXCERPT_LENGTH) return text || null;
+  const cut = text.slice(0, EXCERPT_LENGTH);
+  const lastSpace = cut.lastIndexOf(' ');
+  return `${(lastSpace > EXCERPT_LENGTH / 2 ? cut.slice(0, lastSpace) : cut).trimEnd()}…`;
+}
 
 function mapListItem(
   item: (typeof rulesListWireSchema)['_output']['items'][number],
@@ -45,8 +98,8 @@ function mapListItem(
     slug: item.slug,
     title: item.title,
     category,
-    isRuling: category === 'ruling',
-    excerpt: item.effectiveBody ?? null,
+    isRuling: isRulingCategory(category),
+    excerpt: excerptOf(item.effectiveBody),
   };
 }
 
@@ -61,6 +114,7 @@ export function parseRulesList(wire: unknown): AdapterResult<RulesHubView> {
     data: {
       guides: items.filter((item) => !item.isRuling),
       rulings: items.filter((item) => item.isRuling),
+      total: parsed.data.total,
     },
   };
 }
@@ -78,27 +132,75 @@ export function parseRuleDetail(wire: unknown): AdapterResult<RuleDetailView> {
       slug: parsed.data.slug,
       title: parsed.data.title,
       category,
-      isRuling: category === 'ruling',
-      body: parsed.data.effectiveBody ?? null,
+      isRuling: isRulingCategory(category),
+      body: parsed.data.effectiveBody?.replace(FRONTMATTER, '') || null,
       authorHandle: parsed.data.author?.handle ?? null,
+      updatedAt: parsed.data.updatedAt ?? null,
+      canEdit: parsed.data.canEditBody === true || parsed.data.canEditMetadata === true,
     },
   };
 }
 
-export async function loadRulesHub(): Promise<RulesHubView> {
+type RulesReadSession = {
+  token: string | null;
+  signal: AbortSignal;
+  assertCurrent: () => void;
+};
+
+export async function loadRulesHub(session: RulesReadSession): Promise<RulesHubView> {
   try {
-    const data = await graphqlRequest<RulesListQuery>(LIST_QUERY, {
-      limit: 100,
-    });
-    const result = parseRulesList(data.documents);
-    if (!result.ok) throw toAppError({ failure: result.failure }, 'rules:list');
-    return result.data;
+    const guides: RuleListItemView[] = [];
+    const rulings: RuleListItemView[] = [];
+    const ids = new Set<string>();
+    let total: number | undefined;
+    do {
+      session.signal.throwIfAborted();
+      session.assertCurrent();
+      const data = await graphqlRequest<RulesListQuery>(
+        LIST_QUERY,
+        { limit: 100, offset: ids.size },
+        {
+          headers: { Authorization: session.token ? `Bearer ${session.token}` : '' },
+          signal: session.signal,
+        },
+      );
+      session.signal.throwIfAborted();
+      session.assertCurrent();
+      const result = parseRulesList(data.documents);
+      if (!result.ok) throw toAppError({ failure: result.failure }, 'rules:list');
+      const page = result.data;
+      const items = [...page.guides, ...page.rulings];
+      if (
+        page.total > 2_147_483_647 ||
+        (total !== undefined && page.total !== total) ||
+        items.length > 100 ||
+        ids.size + items.length > page.total ||
+        (items.length < 100 && ids.size + items.length < page.total)
+      )
+        throw toAppError({ failure: 'InvalidWire' }, 'rules:list-pages');
+      for (const item of items) {
+        const id = item.id.toLowerCase();
+        if (ids.has(id))
+          throw toAppError({ failure: 'InvalidWire' }, 'rules:list-pages');
+        ids.add(id);
+      }
+      guides.push(...page.guides);
+      rulings.push(...page.rulings);
+      total = page.total;
+    } while (ids.size < total);
+    return { guides, rulings, total };
   } catch (err) {
     throw toAppError(err, 'rules:list');
   }
 }
 
-export async function loadRuleDetail(slug: string): Promise<RuleDetailView> {
+/** The URL family a rule lives under: /rules/guides/:id or /rules/rulings/:id. */
+export type RuleFamily = 'guides' | 'rulings';
+
+export async function loadRuleDetail(
+  slug: string,
+  family: RuleFamily,
+): Promise<RuleDetailView> {
   try {
     const data = await graphqlRequest<RuleDetailQuery>(DETAIL_QUERY, {
       slug,
@@ -108,6 +210,10 @@ export async function loadRuleDetail(slug: string): Promise<RuleDetailView> {
     }
     const result = parseRuleDetail(data.document);
     if (!result.ok) throw toAppError({ failure: result.failure }, 'rules:detail');
+    // A slug shared across families must not leak a guide onto a ruling URL.
+    if (result.data.isRuling !== (family === 'rulings')) {
+      throw toAppError({ failure: 'NotFound' }, 'rules:detail-family');
+    }
     return result.data;
   } catch (err) {
     throw toAppError(err, 'rules:detail');

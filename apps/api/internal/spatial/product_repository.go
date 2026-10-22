@@ -42,6 +42,7 @@ type MapWriteRepository interface {
 	StoreUpsertPoi(ctx context.Context, write UpsertPoiWrite) (PoiView, error)
 	LockUpsertPointcrawlNode(ctx context.Context, spec UpsertPointcrawlNodeSpec) (UpsertPointcrawlNodeState, error)
 	StoreUpsertPointcrawlNode(ctx context.Context, write UpsertPointcrawlNodeWrite) (PointcrawlNodeView, error)
+	ReadMapReference(ctx context.Context, mapID string) (auth.MapRef, error)
 }
 
 type ProductBatchRepository interface {
@@ -62,7 +63,11 @@ type RegionReadRepository interface {
 }
 
 type PlaceReader interface {
-	ResolveQuestHexIDs(ctx context.Context, actor auth.Authority, hexes []QuestHexCandidate) ([]HexAdmission, error)
+	ResolveQuestPointcrawlNodes(ctx context.Context, actor auth.Authority, nodes []QuestPointcrawlCandidate) ([]PointcrawlAdmission, error)
+}
+
+type DocumentReferenceReader interface {
+	ReadCommandDocument(ctx context.Context, actor auth.Authority, documentID string) (document.DocumentView, error)
 }
 
 type RegionWriteRepository interface {
@@ -90,6 +95,8 @@ type TimeReadRepository interface {
 }
 
 type TimeWriteRepository interface {
+	LockTimeProjection(ctx context.Context, from product.Date, to product.Date) ([]TimeAnchorView, error)
+	StoreTimeProjection(ctx context.Context, from product.Date, to product.Date, cells []GameDayCellView) (int32, error)
 	LockCreateTimeAnchor(ctx context.Context, spec CreateTimeAnchorSpec) (CreateTimeAnchorState, error)
 	StoreCreateTimeAnchor(ctx context.Context, write CreateTimeAnchorWrite) (TimeAnchorView, error)
 	LockUpdateGameCalendar(ctx context.Context, spec UpdateGameCalendarSpec) (UpdateGameCalendarState, error)
@@ -102,7 +109,7 @@ type TimeBatchReadRepository interface {
 	ReadGameDates(ctx context.Context, dates []product.Date) ([]product.BatchResult[TimeDateSnapshot], error)
 }
 
-type QuestHexCandidate struct {
+type QuestPointcrawlCandidate struct {
 	ID   string
 	Role string
 }
@@ -219,4 +226,5 @@ type ProductCommandRepos struct {
 	Audit       auth.OverrideRecorder
 	Locations   document.LocationAdmissionReader
 	Containment ContainmentWriter
+	Documents   DocumentReferenceReader
 }

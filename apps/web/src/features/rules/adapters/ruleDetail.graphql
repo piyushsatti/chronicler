@@ -8,6 +8,9 @@ query RuleDetail($slug: String!) {
     visibility
     title
     effectiveBody
+    updatedAt
+    canEditBody
+    canEditMetadata
     author {
       handle
     }

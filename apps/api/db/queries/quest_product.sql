@@ -102,7 +102,7 @@ JOIN quests q ON q.id = qp.quest_id
 JOIN members m ON m.id = qp.member_id
 JOIN characters c ON c.id = qp.character_id
 WHERE q.public_id = @quest_id::uuid
-  AND (@status::text IS NULL OR qp.status = @status::text)
+  AND (@status::text IS NULL OR @status::text = '' OR qp.status = @status::text)
 ORDER BY qp.created_at, c.public_id;
 -- name: ProductQuestCountParticipants :one
 SELECT count(*)::bigint AS total
@@ -132,11 +132,11 @@ WITH filtered AS (
     LEFT JOIN quest_arcs arc ON arc.id = q.arc_id
     LEFT JOIN members deleted_by ON deleted_by.id = q.deleted_by
     WHERE q.deleted_at IS NULL
-      AND (@status::text IS NULL OR q.status = @status::text)
-      AND (@display_status::text IS NULL OR quest_display_status_at(q.status, q.filled_count, q.scheduled_at, q.duration_hours, @as_of::timestamptz) = @display_status::text)
+      AND (sqlc.narg(status)::text IS NULL OR q.status = sqlc.narg(status)::text)
+      AND (sqlc.narg(display_status)::text IS NULL OR quest_display_status_at(q.status, q.filled_count, q.scheduled_at, q.duration_hours, @as_of::timestamptz) = sqlc.narg(display_status)::text)
       AND (@dm_id::uuid IS NULL OR dm.public_id = @dm_id::uuid)
       AND (@arc_id::uuid IS NULL OR arc.public_id = @arc_id::uuid)
-      AND (@kind::text IS NULL OR q.kinds @> ARRAY[@kind::text]::text[])
+      AND (sqlc.narg(kind)::text IS NULL OR q.kinds @> ARRAY[sqlc.narg(kind)::text]::text[])
       AND (@region_id::uuid IS NULL OR EXISTS (
           SELECT 1 FROM quest_regions qr JOIN regions r ON r.id = qr.region_id
           WHERE qr.quest_id = q.id AND r.public_id = @region_id::uuid
@@ -146,7 +146,7 @@ WITH filtered AS (
       AND (cardinality(@short_codes::text[]) = 0 OR q.short_code = ANY(@short_codes::text[]))
       AND (@scheduled_from::timestamptz IS NULL OR q.scheduled_at >= @scheduled_from::timestamptz)
       AND (@scheduled_to::timestamptz IS NULL OR q.scheduled_at < @scheduled_to::timestamptz)
-      AND (@search::text IS NULL OR q.short_code ILIKE '%' || replace(replace(replace(@search::text, E'\\', E'\\\\'), '%', E'\\%'), '_', E'\\_') || '%' ESCAPE E'\\')
+      AND (sqlc.narg(search)::text IS NULL OR q.short_code ILIKE '%' || replace(replace(replace(sqlc.narg(search)::text, E'\\', E'\\\\'), '%', E'\\%'), '_', E'\\_') || '%' ESCAPE E'\\')
 ), counted AS (
     SELECT count(*)::bigint AS total FROM filtered
 ), page AS (
@@ -345,7 +345,7 @@ ORDER BY page.created_at DESC NULLS LAST, page.public_id DESC NULLS LAST;
 -- name: ProductQuestBatchRead :many
 SELECT input.ordinality::integer AS input_index, input.public_id::uuid AS requested_id,
        q.id, q.public_id, q.short_code, q.kinds, q.status,
-       quest_display_status_at(q.status, q.filled_count, q.scheduled_at, q.duration_hours, @as_of::timestamptz) AS display_status,
+       coalesce(quest_display_status_at(q.status, q.filled_count, q.scheduled_at, q.duration_hours, @as_of::timestamptz), '')::text AS display_status,
        dm.public_id AS dm_public_id, arc.public_id AS arc_public_id,
        q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
        doc.public_id AS document_public_id, q.tags, q.genres, q.avg_party_level AS apl,
@@ -360,10 +360,10 @@ LEFT JOIN documents doc ON doc.id = q.document_id
 LEFT JOIN members creator ON creator.id = q.created_by
 ORDER BY input.ordinality;
 -- name: ProductQuestBatchParticipants :many
-SELECT input.ordinality::integer AS input_index, input.quest_id,
+SELECT input.ordinality::integer AS input_index, input.quest_id::uuid AS quest_id,
        qp.status AS filter_status, qp.character_id,
-       q.public_id::text AS quest_public_id, m.public_id::text AS member_public_id,
-       c.public_id::text AS character_public_id, c.name AS character_name,
+       q.public_id AS quest_public_id, m.public_id AS member_public_id,
+       c.public_id AS character_public_id, c.name AS character_name,
        m.handle AS member_handle, m.display_name AS member_display_name,
        m.avatar_url AS member_avatar_url, qp.status, qp.manual,
        qp.created_at, qp.updated_at
@@ -402,11 +402,11 @@ RETURNING id, public_id, short_code, status, scheduled_at, duration_hours,
           slots_max, filled_count, created_at, updated_at, discord_desired_revision;
 -- name: ProductQuestUpdateMetadata :one
 UPDATE quests q SET
-    kinds = @kinds::text[], dm_id = @dm_id::bigint, arc_id = @arc_id::bigint,
+    kinds = @kinds::text[], dm_id = @dm_id::bigint, arc_id = sqlc.narg(arc_id)::bigint,
     scheduled_at = @scheduled_at::timestamptz,
     duration_hours = @duration_hours::double precision,
     slots_max = @slots_max::integer, tags = @tags::text[], genres = @genres::text[],
-    avg_party_level = @apl::integer, signup_type = @signup_type::text,
+    avg_party_level = sqlc.narg(apl)::integer, signup_type = sqlc.narg(signup_type)::text,
     updated_at = @at::timestamptz
 WHERE q.public_id = @quest_id::uuid AND q.updated_at = @expected_updated_at::timestamptz
 RETURNING q.id, q.public_id, q.short_code, q.status, q.scheduled_at,
@@ -454,6 +454,24 @@ UPDATE quest_participants SET status = @status::text, manual = @manual::boolean,
        updated_at = @at::timestamptz
 WHERE quest_id = @quest_id::bigint AND character_id = @character_id::bigint
 RETURNING quest_id, member_id, character_id, status, manual, created_at, updated_at;
+
+-- name: ProductQuestRejoinParticipant :one
+UPDATE quest_participants SET status = @status::text, manual = false,
+       created_at = @at::timestamptz, updated_at = @at::timestamptz
+WHERE quest_id = @quest_id::bigint AND character_id = @character_id::bigint AND status = 'withdrawn'
+RETURNING quest_id, member_id, character_id, status, manual, created_at, updated_at;
+
+-- name: ProductQuestPromoteParticipants :many
+UPDATE quest_participants participant
+SET status = 'signed_up', manual = false, updated_at = @at::timestamptz
+FROM quests q, characters c, members owner
+WHERE participant.quest_id = q.id AND participant.character_id = c.id AND participant.member_id = owner.id
+  AND q.public_id = @quest_id::uuid AND c.public_id = ANY(@character_ids::uuid[])
+  AND participant.status = 'waitlisted'
+RETURNING q.public_id AS quest_id, c.public_id AS character_id, owner.public_id AS member_id,
+          c.name AS character_name, owner.handle AS member_handle, owner.display_name AS member_display_name,
+          owner.avatar_url AS member_avatar_url, participant.status, participant.manual,
+          participant.created_at, participant.updated_at;
 -- name: ProductQuestDeleteParticipant :execrows
 DELETE FROM quest_participants
 WHERE quest_id = @quest_id::bigint AND character_id = @character_id::bigint;
@@ -493,7 +511,7 @@ DELETE FROM quest_pointcrawl_nodes WHERE quest_id = @quest_id::bigint;
 
 -- name: ProductQuestInsertPointcrawlLinks :many
 INSERT INTO quest_pointcrawl_nodes(quest_id, node_id, role)
-SELECT @quest_id::bigint, n.id, input.role
+SELECT @quest_id::bigint, n.id, roles.role
 FROM unnest(@node_ids::bigint[]) WITH ORDINALITY AS input(node_id, ordinality)
 JOIN unnest(@roles::text[]) WITH ORDINALITY AS roles(role, ordinality)
   ON roles.ordinality = input.ordinality
@@ -605,9 +623,52 @@ SELECT q.status,
        EXISTS(
            SELECT 1 FROM character_progression_ledger ledger
            WHERE ledger.quest_id = q.id AND ledger.reason = 'quest_reward'
-       ) AS has_quest_reward_rows
+       ) OR EXISTS(
+           SELECT 1 FROM idempotency_keys receipt
+           WHERE receipt.endpoint = 'graphql:closeQuest' AND receipt.completed_at IS NOT NULL
+             AND receipt.receipt ->> 'Id' = q.public_id::text
+             AND receipt.receipt ->> 'rewardCoverage' = 'COMPLETE'
+       ) AS has_complete_reward_coverage
 FROM quests q
 WHERE q.public_id = @quest_id::uuid AND q.deleted_at IS NULL;
+
+-- name: ProductQuestClosureRoster :many
+SELECT c.public_id::text AS character_id, participant.status
+FROM quest_participants participant
+JOIN quests q ON q.id = participant.quest_id
+JOIN characters c ON c.id = participant.character_id
+WHERE q.public_id = @quest_id::uuid
+ORDER BY c.public_id
+FOR UPDATE OF participant;
+
+-- name: ProductQuestSummaryRelations :many
+SELECT input.quest_id::uuid AS quest_id, dm.public_id AS quest_dm_id,
+       participant_owner.public_id AS participant_owner_id, participant.status AS participant_status,
+       c.public_id AS character_id, character_owner.public_id AS character_owner_id
+FROM unnest(@quest_ids::uuid[]) WITH ORDINALITY AS input(quest_id, position)
+LEFT JOIN quests q ON q.public_id = input.quest_id AND q.deleted_at IS NULL
+LEFT JOIN members dm ON dm.id = q.dm_id
+LEFT JOIN characters c ON c.public_id = sqlc.narg(character_id)::uuid AND c.deleted_at IS NULL
+LEFT JOIN members character_owner ON character_owner.id = c.owner_id
+LEFT JOIN quest_participants participant ON participant.quest_id = q.id AND participant.character_id = c.id
+LEFT JOIN members participant_owner ON participant_owner.id = participant.member_id
+ORDER BY input.position;
+
+-- name: ProductQuestRewardCoverage :many
+SELECT input.quest_id::uuid AS quest_id, q.public_id AS live_quest_id,
+       COALESCE(q.status = 'closed', false)::boolean AS closed,
+       (EXISTS (
+           SELECT 1 FROM character_progression_ledger ledger
+           WHERE ledger.quest_id = q.id AND ledger.reason = 'quest_reward'
+       ) OR EXISTS (
+           SELECT 1 FROM idempotency_keys receipt
+           WHERE receipt.endpoint = 'graphql:closeQuest' AND receipt.completed_at IS NOT NULL
+             AND receipt.receipt ->> 'Id' = q.public_id::text
+             AND receipt.receipt ->> 'rewardCoverage' = 'COMPLETE'
+       ))::boolean AS complete
+FROM unnest(@quest_ids::uuid[]) WITH ORDINALITY AS input(quest_id, position)
+LEFT JOIN quests q ON q.public_id = input.quest_id AND q.deleted_at IS NULL
+ORDER BY input.position;
 
 -- name: ProductQuestClearDeleted :one
 UPDATE quests q SET deleted_at = NULL, deleted_by = NULL, updated_at = @at::timestamptz
@@ -620,6 +681,9 @@ SET discord_desired_revision = q.discord_desired_revision + 1, updated_at = @at:
 WHERE q.public_id = @quest_id::uuid AND q.deleted_at IS NULL
 RETURNING q.id, q.public_id, q.discord_desired_revision, q.discord_applied_revision;
 
+-- name: ProductQuestQueuedJobID :one
+SELECT public_id FROM background_jobs WHERE job_key = sqlc.arg(job_key)::text;
+
 -- name: ProductQuestDocumentInternalID :one
 SELECT d.id FROM documents d WHERE d.public_id = @document_id::uuid AND d.deleted_at IS NULL;
 
@@ -629,6 +693,14 @@ FROM regions r
 JOIN unnest(@region_ids::uuid[]) WITH ORDINALITY AS input(region_id, ordinality)
   ON r.public_id = input.region_id
 ORDER BY input.ordinality;
+
+-- name: ProductQuestReadRegionIDs :many
+SELECT q.public_id AS quest_id, r.public_id AS region_id
+FROM quests q
+JOIN quest_regions qr ON qr.quest_id=q.id
+JOIN regions r ON r.id=qr.region_id
+WHERE q.public_id=ANY(@quest_ids::uuid[])
+ORDER BY q.public_id, r.public_id;
 
 -- name: ProductQuestNodeInternalIDs :many
 SELECT n.id, n.public_id
@@ -642,6 +714,9 @@ SELECT c.id, c.public_id, owner.public_id AS owner_public_id, c.status
 FROM characters c
 JOIN members owner ON owner.id = c.owner_id
 WHERE c.public_id = @character_id::uuid AND c.deleted_at IS NULL;
+
+-- name: ProductQuestMemberPublicID :one
+SELECT public_id FROM members WHERE id = @member_id::bigint;
 
 -- name: ProductQuestArcInternalID :one
 SELECT arc.id FROM quest_arcs arc WHERE arc.public_id = @arc_id::uuid;
@@ -780,8 +855,8 @@ LEFT JOIN quests q ON q.public_id = input.public_id AND q.deleted_at IS NULL
 LEFT JOIN LATERAL (
     SELECT b.public_id, b.state, b.next_run_at, b.safe_error_code, b.error_message
     FROM background_jobs b
-    WHERE b.kind = 'quest_discord_delivery'
-      AND b.payload->>'questId' = q.public_id::text
+    WHERE b.kind IN ('quest_discord_delivery','quest_discord')
+      AND b.payload->>'public_id' = q.public_id::text
     ORDER BY b.updated_at DESC, b.public_id DESC
     LIMIT 1
 ) job ON TRUE

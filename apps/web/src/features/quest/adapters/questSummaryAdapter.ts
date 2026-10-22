@@ -4,85 +4,71 @@ import { graphqlRequest } from '../../../api/graphql.js';
 import SUMMARY_PAGE_QUERY from './questSummary.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
-import {
-  parseQuestDetail,
-  type QuestDetailView,
-} from './questAdapter.js';
+import { loadQuest, parseQuestDetail, type QuestDetailView } from './questAdapter.js';
 
 const summaryDocSchema = z.object({
   id: z.string().uuid(),
   slug: z.string().min(1),
   title: z.string().min(1),
-  category: z.string().nullable().optional(),
-  effectiveBody: z.string().nullable().optional(),
+  category: z.string().nullable(),
+  status: z.string(),
+  authorId: z.string().uuid(),
+  canEditBody: z.boolean(),
+  canEditMetadata: z.boolean(),
+  effectiveBody: z.string().nullable(),
 });
-
-const summaryDocsWireSchema = z.object({
-  items: z.array(summaryDocSchema),
-  total: z.number().int().nonnegative(),
+const summaryPageSchema = z.object({
+  summaries: z.array(summaryDocSchema),
+  totals: z.object({
+    totalPcxpAwarded: z.number().int().nullable(),
+    coverage: z.enum(['COMPLETE', 'LEGACY_UNKNOWN']),
+  }),
 });
-
-export type QuestSummaryDocumentView = {
-  id: string;
-  slug: string;
-  title: string;
-  category: string | null;
-  body: string | null;
-};
-
+export type QuestSummaryDocumentView = z.infer<typeof summaryDocSchema>;
 export type QuestSummaryPageView = {
   quest: QuestDetailView;
   documents: QuestSummaryDocumentView[];
+  totals: z.infer<typeof summaryPageSchema>['totals'];
 };
-
-function parseSummaryDocuments(wire: unknown): AdapterResult<QuestSummaryDocumentView[]> {
-  const parsed = summaryDocsWireSchema.safeParse(wire);
-  if (!parsed.success) {
-    return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
-  }
-  return {
-    ok: true,
-    data: parsed.data.items.map((item) => ({
-      id: item.id,
-      slug: item.slug,
-      title: item.title,
-      category: item.category ?? null,
-      body: item.effectiveBody ?? null,
-    })),
-  };
-}
 
 export function parseQuestSummaryPage(wire: {
   quest: unknown;
-  documents: unknown;
+  summaries: unknown;
 }): AdapterResult<QuestSummaryPageView> {
   const quest = parseQuestDetail(wire.quest);
   if (!quest.ok) return quest;
-  const docs = parseSummaryDocuments(wire.documents);
-  if (!docs.ok) return docs;
-  return { ok: true, data: { quest: quest.data, documents: docs.data } };
+  const result = summaryPageSchema.safeParse(wire.summaries);
+  if (!result.success)
+    return { ok: false, failure: 'InvalidWire', detail: result.error.message };
+  return {
+    ok: true,
+    data: {
+      quest: quest.data,
+      documents: result.data.summaries,
+      totals: result.data.totals,
+    },
+  };
 }
 
 export async function loadQuestSummaryPage(
   shortCode: string,
 ): Promise<QuestSummaryPageView> {
   try {
-    const data = await graphqlRequest<QuestSummaryPageQuery>(SUMMARY_PAGE_QUERY, {
-      shortCode,
-      search: shortCode,
-    });
-    if (data.quest == null) {
-      throw toAppError({ failure: 'NotFound' }, 'quest:summary');
+    const quest = await loadQuest({ shortCode });
+    const documents: QuestSummaryDocumentView[] = [];
+    for (;;) {
+      const wire = await graphqlRequest<QuestSummaryPageQuery>(SUMMARY_PAGE_QUERY, {
+        questId: quest.id,
+        offset: documents.length,
+      });
+      const page = summaryPageSchema.parse(wire.questSummaries);
+      documents.push(...page.summaries);
+      if (page.summaries.length < 50) return { quest, documents, totals: page.totals };
     }
-    const result = parseQuestSummaryPage({
-      quest: data.quest,
-      documents: data.documents,
-    });
-    if (!result.ok) {
-      throw toAppError({ failure: result.failure }, 'quest:summary');
-    }
-    return result.data;
-  } catch (err) {
-    throw toAppError(err, 'quest:summary');
+  } catch (error) {
+    throw toAppError(
+      error instanceof z.ZodError ? { failure: 'InvalidWire' } : error,
+      'quest:summary',
+    );
   }
 }

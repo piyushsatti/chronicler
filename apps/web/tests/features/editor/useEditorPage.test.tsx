@@ -6,6 +6,9 @@ import { server } from '../../../src/mocks/server.js';
 import { useEditorPage } from '../../../src/features/editor/hooks/useEditorPage.js';
 import { draftStorageKey } from '../../../src/features/editor/hooks/useEditorDraft.js';
 import { editorHarness, seedEditorSession } from './editor-test-utils.js';
+import { useTheme } from '../../../src/context/ThemeContext.js';
+import { DEFAULT_PREFERENCES, savePrefs } from '../../../src/context/theme.utils.js';
+import { TOKEN_KEY } from '../../../src/auth/storage.js';
 
 function questWire(overrides: Record<string, unknown> = {}) {
   return {
@@ -20,6 +23,8 @@ function questWire(overrides: Record<string, unknown> = {}) {
       title: 'Loaded quest',
       version: 1,
       effectiveBody: 'Loaded body',
+      canEditMetadata: true,
+      canEditBody: true,
     },
     ...overrides,
   };
@@ -27,6 +32,89 @@ function questWire(overrides: Record<string, unknown> = {}) {
 
 describe('useEditorPage (controlled MSW record and option reads)', () => {
   beforeEach(seedEditorSession);
+
+  it('isolates private crash recovery when a canonical member session changes', async () => {
+    const { result } = renderHook(
+      () => useEditorPage({ typeKey: 'codex', mode: 'new' }),
+      editorHarness('/codex/new', '/codex/new'),
+    );
+    await waitFor(() => expect(result.current.status).toBe('ready'));
+    act(() => {
+      if (result.current.status === 'ready')
+        result.current.view.setBody('PRIVATE FIRST MEMBER DRAFT');
+    });
+    expect(
+      localStorage.getItem(draftStorageKey('codex', 'new', 'discord-editor', null)),
+    ).toContain('PRIVATE FIRST MEMBER DRAFT');
+    const oldValue = localStorage.getItem(TOKEN_KEY);
+    const newValue = `e30.${btoa(JSON.stringify({ member_id: 'member-b', exp: Date.now() / 1000 + 3600 }))}.sig`;
+    act(() => {
+      localStorage.setItem(TOKEN_KEY, newValue);
+      window.dispatchEvent(
+        new StorageEvent('storage', { key: TOKEN_KEY, oldValue, newValue }),
+      );
+    });
+    await waitFor(() => {
+      if (result.current.status !== 'ready') throw new Error('Expected ready');
+      expect(result.current.view.body).toBe('');
+      expect(result.current.view.isDirty).toBe(false);
+    });
+    act(() => {
+      if (result.current.status === 'ready')
+        result.current.view.setBody('SECOND MEMBER DRAFT');
+    });
+    expect(
+      localStorage.getItem(draftStorageKey('codex', 'new', 'member-b', null)),
+    ).toContain('SECOND MEMBER DRAFT');
+    expect(
+      localStorage.getItem(draftStorageKey('codex', 'new', 'discord-editor', null)),
+    ).toContain('PRIVATE FIRST MEMBER DRAFT');
+  });
+
+  it('uses saved timezone without rewriting loaded precision and blocks unresolved session saves', async () => {
+    const source = '2026-11-01T01:30:19.123456-05:00';
+    savePrefs(
+      { ...DEFAULT_PREFERENCES, timezone: 'America/New_York' },
+      'discord-editor',
+    );
+    server.use(
+      graphql.query('EditorQuestLoad', () =>
+        HttpResponse.json({ data: { quest: questWire({ scheduledAt: source }) } }),
+      ),
+    );
+    const { result } = renderHook(
+      () => ({
+        page: useEditorPage({ typeKey: 'quest', mode: 'edit' }),
+        preferences: useTheme(),
+      }),
+      editorHarness(),
+    );
+    await waitFor(() => expect(result.current.page.status).toBe('ready'));
+    if (result.current.page.status !== 'ready') throw new Error('Expected ready');
+    expect(result.current.page.view.timeZone).toBe('America/New_York');
+    expect(result.current.page.view.meta.scheduledAt).toBe(source);
+    expect(result.current.page.view.saveLabel).toBe('Save quest');
+    act(() => result.current.preferences.setPreferences({ timezone: 'Asia/Kolkata' }));
+    if (result.current.page.status !== 'ready') throw new Error('Expected ready');
+    expect(result.current.page.view.timeZone).toBe('Asia/Kolkata');
+    expect(result.current.page.view.meta.scheduledAt).toBe(source);
+    act(() => result.current.preferences.setPreferences({ timezone: null }));
+    if (result.current.page.status !== 'ready') throw new Error('Expected ready');
+    expect(result.current.page.view.timeZone).toBe(
+      Intl.DateTimeFormat().resolvedOptions().timeZone,
+    );
+    act(() => {
+      if (result.current.page.status === 'ready')
+        result.current.page.view.setMeta((meta) => ({
+          ...meta,
+          scheduledAt: '2026-11-01T01:30',
+        }));
+    });
+    if (result.current.page.status !== 'ready') throw new Error('Expected ready');
+    expect(result.current.page.view.saveDisabled).toBe(true);
+    expect(result.current.page.view.publishDisabled).toBe(true);
+    expect(result.current.page.view.isDirty).toBe(true);
+  });
 
   it('owns loading then ready record state and route-specific cancel', async () => {
     let release!: () => void;
@@ -73,6 +161,8 @@ describe('useEditorPage (controlled MSW record and option reads)', () => {
                 title: code,
                 version: 1,
                 effectiveBody: `${code} body`,
+                canEditMetadata: true,
+                canEditBody: true,
               },
             }),
           },
@@ -88,7 +178,9 @@ describe('useEditorPage (controlled MSW record and option reads)', () => {
       harness,
     );
     expect(result.current.page.status).toBe('loading');
-    act(() => result.current.navigate('/quests/Q-2/edit'));
+    await act(async () => {
+      await result.current.navigate('/quests/Q-2/edit');
+    });
     await waitFor(() => {
       if (result.current.page.status !== 'ready') throw new Error('Expected ready');
       expect(result.current.page.view.body).toBe('Q-2 body');
@@ -160,7 +252,7 @@ describe('useEditorPage (controlled MSW record and option reads)', () => {
     if (result.current.status !== 'ready') throw new Error('Expected ready');
     expect(result.current.view.meta.title).toBe('');
     expect(result.current.view.body).toBe('');
-    expect(result.current.view.publishDisabled).toBe(true);
+    expect(result.current.view.publishDisabled).toBe(false);
     expect(optionRequests).toBe(0);
   });
 
@@ -179,9 +271,6 @@ describe('useEditorPage (controlled MSW record and option reads)', () => {
       if (result.current.status === 'ready')
         result.current.view.setMeta((meta) => ({ ...meta, title: 'Edited title' }));
     });
-    act(() => {
-      if (result.current.status === 'ready') result.current.view.onSaveDraft();
-    });
     await harness.queryClient.invalidateQueries({ queryKey: ['editor', 'record'] });
     await waitFor(() => {
       if (result.current.status !== 'ready') throw new Error('Expected ready');
@@ -191,7 +280,12 @@ describe('useEditorPage (controlled MSW record and option reads)', () => {
     });
     const draft = JSON.parse(
       localStorage.getItem(
-        draftStorageKey('quest', 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'),
+        draftStorageKey(
+          'quest',
+          'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+          'discord-editor',
+          '2026-10-15T17:00:00Z',
+        ),
       ) ?? '{}',
     ) as { body?: string };
     expect(draft.body).toBe('Edited draft body');
@@ -305,5 +399,35 @@ describe('useEditorPage (controlled MSW record and option reads)', () => {
     expect(result.current.status).toBe('loading');
     await new Promise((resolve) => setTimeout(resolve, 10));
     expect(requests).toBe(0);
+  });
+});
+
+it('locks dirty Quest edits when its operational update token advances independently of the brief version', async () => {
+  seedEditorSession();
+  let updatedAt = '2026-10-15T17:00:00Z';
+  server.use(
+    graphql.query('EditorQuestLoad', () =>
+      HttpResponse.json({ data: { quest: questWire({ updatedAt }) } }),
+    ),
+  );
+  const harness = editorHarness();
+  const { result } = renderHook(
+    () => useEditorPage({ typeKey: 'quest', mode: 'edit' }),
+    harness,
+  );
+  await waitFor(() => expect(result.current.status).toBe('ready'));
+  act(() => {
+    if (result.current.status === 'ready')
+      result.current.view.setBody('Local Quest edits');
+  });
+  updatedAt = '2026-10-15T18:00:00Z';
+  await act(async () => {
+    await harness.queryClient.invalidateQueries({ queryKey: ['editor', 'record'] });
+  });
+  await waitFor(() => {
+    if (result.current.status !== 'ready') throw new Error('Expected ready');
+    expect(result.current.view.stale).toBe(true);
+    expect(result.current.view.body).toBe('Local Quest edits');
+    expect(result.current.view.publishDisabled).toBe(true);
   });
 });

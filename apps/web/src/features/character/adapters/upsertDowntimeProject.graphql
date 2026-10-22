@@ -1,0 +1,12 @@
+mutation UpsertDowntimeProject(
+  $characterId: ID!
+  $input: DowntimeInput!
+  $meta: CommandMeta!
+) {
+  upsertDowntimeProject(characterId: $characterId, input: $input, meta: $meta) {
+    id
+    name
+    progress
+    status
+  }
+}

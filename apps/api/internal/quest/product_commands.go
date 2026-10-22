@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/google/uuid"
+	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
@@ -74,6 +75,20 @@ func runQuestCommand[T any](
 	subjectID string,
 	mutate func(ProductCommandRepos, auth.Authority, time.Time) (T, error),
 ) (T, error) {
+	return runQuestCommandWithRequest(ctx, s, actor, operation, func(ProductCommandRepos, auth.Authority) (auth.Request, error) { return request, nil }, spec, meta, subjectID, mutate)
+}
+
+func runQuestCommandWithRequest[T any](
+	ctx context.Context,
+	s ProductCommands,
+	actor auth.Authority,
+	operation string,
+	requestFor func(ProductCommandRepos, auth.Authority) (auth.Request, error),
+	spec any,
+	meta product.CommandMeta,
+	subjectID string,
+	mutate func(ProductCommandRepos, auth.Authority, time.Time) (T, error),
+) (T, error) {
 	var result T
 	fingerprint, err := product.Fingerprint(spec)
 	if err != nil {
@@ -92,6 +107,10 @@ func runQuestCommand[T any](
 		if fresh.Claims().MemberID == "" || fresh.Claims().MemberID != actor.Claims().MemberID {
 			return apierr.New(apierr.Forbidden, "member authority changed")
 		}
+		request, err := requestFor(repos, fresh)
+		if err != nil {
+			return err
+		}
 		decision, err := repos.Policy.Decide(ctx, fresh, request)
 		if err != nil {
 			return err
@@ -104,14 +123,95 @@ func runQuestCommand[T any](
 			return err
 		}
 		if claim.Replay {
+			current, err := repos.Authority(ctx, actor.Claims().MemberID)
+			if err != nil {
+				return err
+			}
+			currentRequest, err := requestFor(repos, current)
+			if err != nil {
+				return err
+			}
+			currentDecision, err := repos.Policy.Decide(ctx, current, currentRequest)
+			if err != nil {
+				return err
+			}
+			if !currentDecision.Allowed {
+				return apierr.New(apierr.Forbidden, "quest command forbidden")
+			}
+			if !sameQuestAuthority(fresh, current) || currentDecision.UsedOverride && !decision.UsedOverride {
+				return apierr.New(apierr.Conflict, "quest admission changed; retry with current authority")
+			}
+			switch currentRequest.Operation() {
+			case "Mutation.updateQuest", "Mutation.transitionQuestStatus", "Mutation.closeQuest", "Mutation.deleteQuest", "Mutation.restoreQuest", "Mutation.selectQuestParticipants", "Mutation.attestQuestParticipation", "Mutation.setQuestPointcrawlLinks", "Mutation.syncQuestDiscord", "Mutation.removeQuestFromArc":
+				locked, err := repos.Quest.LockRestoreQuest(ctx, RestoreQuestSpec{QuestId: subjectID})
+				if err != nil {
+					return err
+				}
+				if locked.OwnerID == "" {
+					return apierr.New(apierr.NotFound, "quest not found")
+				}
+				lockedRequest, err := auth.ForQuest(currentRequest.Operation(), auth.QuestFacts{ID: subjectID, DMID: locked.OwnerID})
+				if err != nil {
+					return err
+				}
+				lockedDecision, err := repos.Policy.Decide(ctx, current, lockedRequest)
+				if err != nil {
+					return err
+				}
+				if !lockedDecision.Allowed {
+					return apierr.New(apierr.Forbidden, "quest command forbidden")
+				}
+				if lockedDecision.UsedOverride && !decision.UsedOverride {
+					return apierr.New(apierr.Conflict, "quest admission changed; retry with current authority")
+				}
+				if err := admitLockedQuest(ctx, repos, current, currentRequest.Operation(), subjectID, locked.OwnerID, locked.OwnerID); err != nil {
+					return err
+				}
+			}
+			fresh = current
 			if err := json.Unmarshal(claim.Receipt, &result); err != nil {
 				return err
+			}
+			if operation == "upsertQuestSummary" {
+				stored, ok := any(result).(document.DocumentView)
+				if !ok || commandDependencyMissing(repos.SummaryDocuments) {
+					return apierr.New(apierr.Internal, "summary replay reader required")
+				}
+				current, err := repos.SummaryDocuments.ReadDocumentById(ctx, fresh, document.DocumentByIdSpec{Id: stored.Id})
+				if err != nil {
+					return err
+				}
+				if current == nil {
+					return apierr.New(apierr.NotFound, "summary document not found")
+				}
+				result = any(*current).(T)
 			}
 			return nil
 		}
 		at, err := product.UTCNow(s.Clock)
 		if err != nil {
 			return err
+		}
+		if operation == "setQuestPointcrawlLinks" {
+			current, err := repos.Authority(ctx, actor.Claims().MemberID)
+			if err != nil {
+				return err
+			}
+			currentRequest, err := requestFor(repos, current)
+			if err != nil {
+				return err
+			}
+			currentDecision, err := repos.Policy.Decide(ctx, current, currentRequest)
+			if err != nil {
+				return err
+			}
+			if !currentDecision.Allowed {
+				return apierr.New(apierr.Forbidden, "quest command forbidden")
+			}
+			if !sameQuestAuthority(fresh, current) || currentDecision.UsedOverride && !decision.UsedOverride {
+				return apierr.New(apierr.Conflict, "quest admission changed; retry with current authority")
+			}
+			fresh, request, decision = current, currentRequest, currentDecision
 		}
 		result, err = mutate(repos, fresh, at)
 		if err != nil {
@@ -121,7 +221,27 @@ func runQuestCommand[T any](
 			if commandDependencyMissing(repos.Audit) {
 				return apierr.New(apierr.Internal, "override recorder required")
 			}
-			if err := repos.Audit.Record(ctx, auth.OverrideFact{
+			switch operation {
+			case "createQuest":
+				view, ok := any(result).(QuestView)
+				if !ok {
+					return apierr.New(apierr.Internal, "quest audit subject required")
+				}
+				subjectID = view.Id
+			case "upsertQuestArc":
+				view, ok := any(result).(QuestArcView)
+				if !ok {
+					return apierr.New(apierr.Internal, "arc audit subject required")
+				}
+				subjectID = view.Id
+			case "upsertQuestSummary":
+				view, ok := any(result).(document.DocumentView)
+				if !ok {
+					return apierr.New(apierr.Internal, "summary audit subject required")
+				}
+				subjectID = view.Id
+			}
+			if err := repos.Audit.Record(ctx, claim, auth.OverrideFact{
 				ActorID:     fresh.Claims().MemberID,
 				Operation:   request.Operation(),
 				SubjectType: "quest",
@@ -135,6 +255,17 @@ func runQuestCommand[T any](
 		receipt, err := json.Marshal(result)
 		if err != nil {
 			return err
+		}
+		if operation == "closeQuest" {
+			var closed map[string]json.RawMessage
+			if err := json.Unmarshal(receipt, &closed); err != nil {
+				return err
+			}
+			closed["rewardCoverage"] = json.RawMessage(`"COMPLETE"`)
+			receipt, err = json.Marshal(closed)
+			if err != nil {
+				return err
+			}
 		}
 		return repos.Replay.Complete(ctx, claim, receipt)
 	})
@@ -229,6 +360,9 @@ func (s ProductCommands) RemoveQuestFromArc(ctx context.Context, actor auth.Auth
 		}
 		if !locked.Exists {
 			return QuestView{}, apierr.New(apierr.NotFound, "quest not found")
+		}
+		if err := admitLockedQuest(ctx, repos, fresh, request.Operation(), questID, preview.DmId, locked.OwnerID); err != nil {
+			return QuestView{}, err
 		}
 		return repos.Quest.StoreRemoveQuestFromArc(ctx, RemoveQuestFromArcWrite{
 			ActorID:        fresh.Claims().MemberID,

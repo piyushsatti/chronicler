@@ -1,0 +1,35 @@
+{
+  "at": "2026-10-20T22:58:17.573807+00:00",
+  "nativeSession": 81081,
+  "exit": 0,
+  "test": "TestPublicCollectionsBrowser",
+  "nativeSeconds": 79.88,
+  "originalCheckpoints": 15,
+  "completedOperations": 471,
+  "unchangedProductTables": 42,
+  "browserProductWrites": 0,
+  "communityReaderWidths": [
+    390,
+    900,
+    1920
+  ],
+  "communityFixtureCategory": "dm_table; same actual acknowledged public Document rendered through distinct generic CommunityEntryPage",
+  "rootViewedImages": [
+    "community-entry-responsive-390.png",
+    "community-entry-responsive-900.png"
+  ],
+  "sourceDrift": false,
+  "databaseDropped": true,
+  "frontend": "Immutable Build38 625source5158792f/181dist7fe52f1e; isolated native15 realAPI",
+  "bindings": {
+    "browser-receipt.json": "4c8d415e3b9cdf2d98f71163a2eb2e43c0a509f2e5285a66a925e61064b0ccc5",
+    "native-all-tables-before.json": "28521ce9688626792493cc81524f61ad9aa11f609c8470e15d07ed754d5e3889",
+    "native-all-tables-after.json": "28521ce9688626792493cc81524f61ad9aa11f609c8470e15d07ed754d5e3889",
+    "native-cleanup.json": "6ba1694bb3e6d89f6e8fc57dff302ce08a5606972f27456d2d66215780d67c4b",
+    "native.log": "3919bb395690593efcf82f23fbfae60029355da6b1cb3888a052ee11fe997e57"
+  },
+  "limits": [
+    "No invented generic-category fixture or all-theme/role Cartesian.",
+    "No actual provider login, Discord application or owner visual approval."
+  ]
+}

@@ -1,5 +1,6 @@
 import {
   forwardRef,
+  useState,
   type CSSProperties,
   type KeyboardEvent,
   type ReactNode,
@@ -29,7 +30,7 @@ export type AvatarProps = {
   role?: string;
 };
 
-export const AVATAR_SIZE_PX: Record<AvatarSize, number> = {
+const AVATAR_SIZE_PX: Record<AvatarSize, number> = {
   xs: 22,
   sm: 28,
   md: 40,
@@ -44,6 +45,41 @@ const DATA_SIZE: Record<AvatarSize, string | undefined> = {
   lg: 'lg',
   token: 'token',
 };
+
+function AvatarImage({
+  src,
+  label,
+  initials,
+}: {
+  src: string;
+  label: string;
+  initials: string;
+}) {
+  const [state, setState] = useState<'loading' | 'loaded' | 'failed'>('loading');
+  if (state === 'failed') {
+    return (
+      <span role="img" aria-label={label}>
+        {initials}
+      </span>
+    );
+  }
+  // Initials paint at once; the image covers them only after it loads, so a
+  // slow or unreachable host never leaves an empty circle.
+  return (
+    <>
+      {state === 'loading' && <span aria-hidden="true">{initials}</span>}
+      <img
+        src={src}
+        alt={label}
+        onLoad={() => setState('loaded')}
+        onError={() => setState('failed')}
+        referrerPolicy="no-referrer"
+        className="pr-avatar-img"
+        data-loaded={state === 'loaded' ? 1 : 0}
+      />
+    </>
+  );
+}
 
 /** Atlas `.av` avatar — initials or image. */
 export const Avatar = forwardRef<HTMLElement, AvatarProps>(function Avatar(
@@ -80,18 +116,7 @@ export const Avatar = forwardRef<HTMLElement, AvatarProps>(function Avatar(
   const content =
     children ??
     (!empty && src ? (
-      <img
-        src={src}
-        alt={name || 'Avatar'}
-        referrerPolicy="no-referrer"
-        style={{
-          width: '100%',
-          height: '100%',
-          objectFit: 'cover',
-          borderRadius: '50%',
-          display: 'block',
-        }}
-      />
+      <AvatarImage key={src} src={src} label={name || 'Avatar'} initials={initials} />
     ) : (
       initials
     ));
@@ -105,6 +130,7 @@ export const Avatar = forwardRef<HTMLElement, AvatarProps>(function Avatar(
       .join(' '),
     'data-online': online ? 1 : 0,
     'data-you': you ? 1 : 0,
+    'data-empty': empty ? 1 : 0,
     'data-ring': ring === 'none' ? undefined : ring,
     'data-size': DATA_SIZE[size],
     style: {

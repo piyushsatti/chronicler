@@ -91,6 +91,10 @@ type RewardDecisionCoverageReader interface {
 	ReadRewardDecisionCoverage(ctx context.Context, questIDs []string) ([]RewardDecisionCoverage, error)
 }
 
+type SummaryDocumentReader interface {
+	ReadDocumentById(ctx context.Context, actor auth.Authority, spec document.DocumentByIdSpec) (*document.DocumentView, error)
+}
+
 type TagNormalizer interface {
 	NormalizeVocabulary(ctx context.Context, tags, genres []string) (NormalizedVocabulary, error)
 	MatchVariants(ctx context.Context, value string, kind TagKind) ([]string, error)
@@ -106,19 +110,21 @@ type ProductReadRepos struct {
 }
 
 type ProductCommandRepos struct {
-	Arc         ArcWriteRepository
-	Quest       QuestWriteRepository
-	Policy      *auth.Policy
-	Authority   auth.AuthorityResolver
-	Replay      idempotency.Repository
-	Producer    notification.EventProducer
-	Notice      notification.ProducerRepos
-	Audit       auth.OverrideRecorder
-	Characters  character.AdmissionReader
-	Brief       document.BriefWriter
-	Summaries   document.SummaryWriter
-	Places      spatial.PlaceReader
-	Jobs        jobs.Writer
-	Tags        TagNormalizer
-	Withdrawals character.QuestWithdrawalWriter
+	Arc              ArcWriteRepository
+	Quest            QuestWriteRepository
+	Policy           *auth.Policy
+	Authority        auth.AuthorityResolver
+	Replay           idempotency.Repository
+	Producer         notification.EventProducer
+	Notice           notification.ProducerRepos
+	Audit            auth.OverrideRecorder
+	Characters       character.AdmissionReader
+	Brief            document.BriefWriter
+	Summaries        document.SummaryWriter
+	Places           spatial.PlaceReader
+	Jobs             jobs.Writer
+	Tags             TagNormalizer
+	Withdrawals      character.QuestWithdrawalWriter
+	Rewards          character.QuestRewardWriter
+	SummaryDocuments SummaryDocumentReader
 }

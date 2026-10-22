@@ -109,6 +109,8 @@ type CharacterType {
   ddbMirror: CharacterDDBMirrorType
   proficiencies: [DDBProficiencyType!]!
   displayIcon: String
+  "Owner-supplied https portrait URL (D5); null shows the initials token."
+  imageUrl: String
   daysActive: Int!
 }
 
@@ -126,7 +128,10 @@ input CreateCharacterInput {
   guildId: ID = null
   description: String = null
   backgroundText: String = null
+  "Required on create (D4): a https://www.dndbeyond.com/characters/<id> sheet URL."
   ddbUrl: String = null
+  "Optional https URL, at most 2048 characters."
+  imageUrl: String = null
   shortCode: String = null
 }
 
@@ -187,6 +192,8 @@ type ProgressionListResult {
 input UpdateCharacterProfileInput {
   description: String
   backgroundText: String
+  "Omit to keep, null to clear, or an https URL of at most 2048 characters."
+  imageUrl: String
 }
 
 input UpsertCreationCatalogEntryInput {

@@ -111,11 +111,14 @@ func (s ProductQueries) Document(ctx context.Context, actor auth.Authority, spec
 }
 
 func (s ProductQueries) DocumentById(ctx context.Context, actor auth.Authority, spec DocumentByIdSpec) (*DocumentView, error) {
-	observe, err := s.audienceRead(ctx, actor, "Query.documentById", []auth.DocumentRef{{ID: spec.Id}}, spec.Id)
+	value, err := s.Reads.Document.ReadDocumentById(ctx, actor, spec)
 	if err != nil {
 		return nil, err
 	}
-	value, err := s.Reads.Document.ReadDocumentById(ctx, actor, spec)
+	if value == nil {
+		return nil, nil
+	}
+	observe, err := s.audienceRead(ctx, actor, "Query.documentById", []auth.DocumentRef{{ID: value.Id}}, value.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -159,12 +162,12 @@ func (s ProductQueries) DocumentRevisions(ctx context.Context, actor auth.Author
 	if err := s.documentPage(spec.Limit, spec.Offset); err != nil {
 		return DocumentRevisionPage{}, err
 	}
-	parent, err := s.Reads.Document.ReadDocumentById(ctx, actor, DocumentByIdSpec{Id: spec.DocumentId})
+	parent, err := s.Reads.Document.ReadDocumentRevisionParent(ctx, actor, spec.DocumentId)
 	if err != nil {
 		return DocumentRevisionPage{}, err
 	}
 	request, err := auth.ForDocumentWrite("Query.documentRevisions", auth.DocumentWriteFacts{
-		ID: parent.Id, AuthorID: parent.AuthorId, Kind: parent.Kind, Category: parent.Category,
+		ID: parent.Id, AuthorID: parent.AuthorId, Kind: parent.Kind, Category: parent.Category, LinkedRegionIDs: parent.LinkedRegionIDs,
 	})
 	if err != nil {
 		return DocumentRevisionPage{}, err
@@ -213,6 +216,9 @@ func (s ProductQueries) PreviewBody(ctx context.Context, actor auth.Authority, s
 	if err != nil {
 		return "", err
 	}
+	if err := validateDocumentBody(spec.Body); err != nil {
+		return "", err
+	}
 	value, err := s.Reads.Document.ReadPreviewBody(ctx, actor, spec)
 	if err != nil {
 		return "", err
@@ -230,6 +236,9 @@ func (s ProductQueries) LieutenantAssignments(ctx context.Context, actor auth.Au
 		doc, err := s.Reads.Document.ReadDocumentById(ctx, actor, DocumentByIdSpec{Id: *spec.NpcDocumentId})
 		if err != nil {
 			return LieutenantPage{}, err
+		}
+		if doc == nil {
+			return LieutenantPage{}, apierr.New(apierr.NotFound, "document not found")
 		}
 		facts.Documents = []auth.DocumentWriteFacts{{
 			ID: doc.Id, AuthorID: doc.AuthorId, Kind: doc.Kind, Category: doc.Category,

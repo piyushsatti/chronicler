@@ -3,18 +3,24 @@
   "documents": [
     {
       "id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
-      "kind": "codex",
+      "kind": "codex_entry",
       "slug": "tree-of-light",
       "title": "Tree of Light",
-      "snippet": "The Tree stands…",
-      "questShortCode": null
+      "snippet": "The Tree stands\u2026",
+      "questShortCode": null,
+      "category": "Lore"
     }
   ],
   "members": [
     {
       "memberId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
       "handle": "ashwin",
-      "displayName": "Ashwin"
+      "displayName": "Ashwin",
+      "avatarUrl": null
     }
-  ]
+  ],
+  "documentTotal": 1,
+  "documentOrder": "rank_desc_updated_at_desc_id_desc",
+  "memberTotal": 1,
+  "memberOrder": "handle_asc_id_asc"
 }

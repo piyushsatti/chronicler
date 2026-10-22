@@ -1,0 +1,12 @@
+query RetainedSeriesAuthority($handle: String!) {
+  memberProfile(handle: $handle) {
+    member {
+      id
+      roles
+      status
+    }
+    dmProfile {
+      status
+    }
+  }
+}

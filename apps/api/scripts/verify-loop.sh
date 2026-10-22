@@ -14,6 +14,9 @@ git -C "$repo" diff --exit-code -- apps/api/internal/platform/dbgen
 ( cd "$repo" && scripts/merge-graphql-schema )
 git -C "$repo" diff --exit-code -- packages/contracts/schema.graphql
 
+# Frontend documents are outside the Go module and its test cache inputs.
+go test -count=1 ./internal/graph -run '^TestFrontendOperationsMatchServerGraphQLValidator$'
+
 go test ./...
 # -tags=integration: Postgres via testcontainers (needs Docker daemon)
 go test -tags=integration ./test/integration/... ./internal/quest/... ./internal/document/...

@@ -226,4 +226,3 @@ CardCompound.Eyebrow = CardEyebrow;
 CardCompound.ActionOverlay = CardActionOverlay;
 
 export const Card = CardCompound;
-export default CardCompound;

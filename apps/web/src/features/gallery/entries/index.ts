@@ -1,15 +1,17 @@
+import { Motion } from '../sections/Motion.js';
+import { Effects } from '../sections/Effects.js';
+import { Cosmetics } from '../sections/Cosmetics.js';
 import type { ReactNode } from 'react';
 import { createElement, useState } from 'react';
 import { Field } from '../../../components/foundation/Field.js';
-import {
-  StatusBadge,
-} from '../../../components/foundation/StatusBadge.js';
+import { StatusBadge } from '../../../components/foundation/StatusBadge.js';
 import { StubNotice } from '../../../components/foundation/StubNotice.js';
 import { Avatar } from '../../../components/primitives/Avatar.js';
 import { AvatarGroup } from '../../../components/primitives/AvatarGroup.js';
 import { Button } from '../../../components/primitives/Button.js';
 import { Calendar } from '../../../components/primitives/Calendar.js';
 import { Card } from '../../../components/primitives/Card.js';
+import { Checkbox } from '../../../components/primitives/Checkbox.js';
 import { Chip } from '../../../components/primitives/Chip.js';
 import { ColorSwatch } from '../../../components/primitives/ColorSwatch.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
@@ -19,6 +21,7 @@ import { Legend } from '../../../components/primitives/Legend.js';
 import { Listbox } from '../../../components/primitives/Listbox.js';
 import { ListRow } from '../../../components/primitives/ListRow.js';
 import { MasterDetail } from '../../../components/primitives/MasterDetail.js';
+import { Menu } from '../../../components/primitives/Menu.js';
 import { Modal } from '../../../components/primitives/Modal.js';
 import { Popover } from '../../../components/primitives/Popover.js';
 import { SegmentedControl } from '../../../components/primitives/SegmentedControl.js';
@@ -27,12 +30,13 @@ import { SplitPane } from '../../../components/primitives/SplitPane.js';
 import { StatTile } from '../../../components/primitives/StatTile.js';
 import { Table } from '../../../components/primitives/Table.js';
 import { Tabs } from '../../../components/primitives/Tabs.js';
-import { Toast, useToast } from '../../../components/primitives/Toast.js';
+import { Toast } from '../../../components/primitives/Toast.js';
+import { useToast } from '../../../hooks/useToast.js';
 import { WeekGrid } from '../../../components/primitives/WeekGrid.js';
 import { DateTimePicker } from '../../../components/interactive/DateTimePicker.js';
 import { useAppSelector } from '../../../store/hooks.js';
 
-export type GalleryEntry = {
+type GalleryEntry = {
   id: string;
   title: string;
   section: 'primitives' | 'identity' | 'motion' | 'effects';
@@ -169,22 +173,6 @@ function TokenSheetDemo(): React.JSX.Element {
   );
 }
 
-function MotionDemo(): React.JSX.Element {
-  return createElement(
-    'p',
-    { className: 'type-body', 'data-motion': 'fade-in' },
-    'Motion token surface — fade-in presence cue.',
-  );
-}
-
-function EffectsDemo(): React.JSX.Element {
-  return createElement(
-    'p',
-    { className: 'type-body', 'data-effect': 'ambient' },
-    'Effects surface — ambient layer hook for gallery QA.',
-  );
-}
-
 function ToastDemo(): React.JSX.Element {
   const { addToast } = useToast();
   const items = useAppSelector((s) => s.toasts.items);
@@ -213,11 +201,7 @@ function ToastDemo(): React.JSX.Element {
         'Error',
       ),
     ),
-    createElement(
-      Toast,
-      { tone: 'info' },
-      'Static Toast chip (presentational)',
-    ),
+    createElement(Toast, { tone: 'info' }, 'Static Toast chip (presentational)'),
     items.length
       ? createElement(
           'ul',
@@ -255,6 +239,30 @@ function PopoverDemo(): React.JSX.Element {
     trigger: createElement('span', null, open ? 'Hide popover' : 'Show popover'),
     children: createElement('p', { className: 'type-body' }, 'Popover surface demo.'),
   });
+}
+
+function MenuDemo(): React.JSX.Element {
+  const [picked, setPicked] = useState('Nothing picked yet');
+  return createElement(
+    'div',
+    { className: 'row', 'data-wrap': '1' },
+    createElement(Menu, {
+      ariaLabel: 'Gallery menu',
+      trigger: createElement('span', { className: 'btn' }, 'Open menu'),
+      items: ['Ember', 'Midnight', 'Parchment'].map((name) => ({
+        key: name,
+        label: name,
+        onSelect: () => setPicked(`Picked ${name}`),
+      })),
+    }),
+    createElement(Menu, {
+      ariaLabel: 'Empty gallery menu',
+      trigger: createElement('span', { className: 'btn' }, 'Empty menu'),
+      items: [],
+      emptyLabel: createElement('p', { className: 'type-caption' }, 'No more options'),
+    }),
+    createElement('span', { className: 'type-caption' }, picked),
+  );
 }
 
 function SkeletonDemo(): React.JSX.Element {
@@ -374,6 +382,21 @@ function LegendDemo(): React.JSX.Element {
   });
 }
 
+function CheckboxDemo(): React.JSX.Element {
+  const [checked, setChecked] = useState(true);
+  return createElement(
+    'div',
+    { className: 'stack', 'data-gap': '2' },
+    createElement(Checkbox, {
+      label: 'Quest signups',
+      checked,
+      onCheckedChange: setChecked,
+    }),
+    createElement(Checkbox, { label: 'Unchecked', defaultChecked: false }),
+    createElement(Checkbox, { label: 'Disabled', defaultChecked: true, disabled: true }),
+  );
+}
+
 function StubNoticeDemo(): React.JSX.Element {
   return createElement(StubNotice, {
     title: 'Stub',
@@ -389,9 +412,19 @@ function CalendarDemo(): React.JSX.Element {
 }
 
 function WeekGridDemo(): React.JSX.Element {
-  const days = ['2026-10-05', '2026-10-06', '2026-10-07', '2026-10-08', '2026-10-09', '2026-10-10', '2026-10-11'].map(
-    (date, i) => ({ date, count: i * 3, bucket: Math.min(4, i) as 0 | 1 | 2 | 3 | 4 }),
-  );
+  const days = [
+    '2026-10-05',
+    '2026-10-06',
+    '2026-10-07',
+    '2026-10-08',
+    '2026-10-09',
+    '2026-10-10',
+    '2026-10-11',
+  ].map((date, i) => ({
+    date,
+    count: i * 3,
+    bucket: Math.min(4, i) as 0 | 1 | 2 | 3 | 4,
+  }));
   return createElement(WeekGrid, { days, ariaLabel: 'Gallery week' });
 }
 
@@ -451,10 +484,30 @@ function FieldDateTimeDemo(): React.JSX.Element {
 
 /** Gallery entry registry with meaningful legacy-parity demos. */
 export const GALLERY_ENTRIES: readonly GalleryEntry[] = [
-  { id: 'button', title: 'Button', section: 'primitives', render: () => createElement(ButtonDemo) },
-  { id: 'card', title: 'Card', section: 'primitives', render: () => createElement(CardDemo) },
-  { id: 'chip', title: 'Chip', section: 'primitives', render: () => createElement(ChipDemo) },
-  { id: 'tabs', title: 'Tabs', section: 'primitives', render: () => createElement(TabsDemo) },
+  {
+    id: 'button',
+    title: 'Button',
+    section: 'primitives',
+    render: () => createElement(ButtonDemo),
+  },
+  {
+    id: 'card',
+    title: 'Card',
+    section: 'primitives',
+    render: () => createElement(CardDemo),
+  },
+  {
+    id: 'chip',
+    title: 'Chip',
+    section: 'primitives',
+    render: () => createElement(ChipDemo),
+  },
+  {
+    id: 'tabs',
+    title: 'Tabs',
+    section: 'primitives',
+    render: () => createElement(TabsDemo),
+  },
   {
     id: 'empty-state',
     title: 'EmptyState',
@@ -467,7 +520,12 @@ export const GALLERY_ENTRIES: readonly GalleryEntry[] = [
     section: 'primitives',
     render: () => createElement(ErrorDemo),
   },
-  { id: 'field', title: 'Field', section: 'primitives', render: () => createElement(FieldDemo) },
+  {
+    id: 'field',
+    title: 'Field',
+    section: 'primitives',
+    render: () => createElement(FieldDemo),
+  },
   {
     id: 'modal',
     title: 'Modal',
@@ -493,19 +551,35 @@ export const GALLERY_ENTRIES: readonly GalleryEntry[] = [
     render: () => createElement(PopoverDemo),
   },
   {
+    id: 'menu',
+    title: 'Menu',
+    section: 'primitives',
+    render: () => createElement(MenuDemo),
+  },
+  {
     id: 'skeleton',
     title: 'Skeleton',
     section: 'primitives',
     render: () => createElement(SkeletonDemo),
   },
-  { id: 'avatar', title: 'Avatar', section: 'primitives', render: () => createElement(AvatarDemo) },
+  {
+    id: 'avatar',
+    title: 'Avatar',
+    section: 'primitives',
+    render: () => createElement(AvatarDemo),
+  },
   {
     id: 'avatar-group',
     title: 'AvatarGroup',
     section: 'primitives',
     render: () => createElement(AvatarGroupDemo),
   },
-  { id: 'table', title: 'Table', section: 'primitives', render: () => createElement(TableDemo) },
+  {
+    id: 'table',
+    title: 'Table',
+    section: 'primitives',
+    render: () => createElement(TableDemo),
+  },
   {
     id: 'list-row',
     title: 'ListRow',
@@ -525,12 +599,23 @@ export const GALLERY_ENTRIES: readonly GalleryEntry[] = [
     render: () => createElement(SegmentedDemo),
   },
   {
+    id: 'checkbox',
+    title: 'Checkbox',
+    section: 'primitives',
+    render: () => createElement(CheckboxDemo),
+  },
+  {
     id: 'color-swatch',
     title: 'ColorSwatch',
     section: 'primitives',
     render: () => createElement(ColorSwatchDemo),
   },
-  { id: 'legend', title: 'Legend', section: 'primitives', render: () => createElement(LegendDemo) },
+  {
+    id: 'legend',
+    title: 'Legend',
+    section: 'primitives',
+    render: () => createElement(LegendDemo),
+  },
   {
     id: 'stub-notice',
     title: 'StubNotice',
@@ -585,18 +670,35 @@ export const GALLERY_ENTRIES: readonly GalleryEntry[] = [
     section: 'identity',
     render: () => createElement(TokenSheetDemo),
   },
-  { id: 'motion', title: 'Motion', section: 'motion', render: () => createElement(MotionDemo) },
+  {
+    id: 'identity-effects',
+    title: 'Identity presentation',
+    section: 'identity',
+    render: () => createElement(Cosmetics),
+  },
+  {
+    id: 'motion',
+    title: 'Motion',
+    section: 'motion',
+    render: () => createElement(Motion),
+  },
   {
     id: 'effects',
     title: 'Effects',
     section: 'effects',
-    render: () => createElement(EffectsDemo),
+    render: () => createElement(Effects),
   },
 ];
 
 export const GALLERY_SECTIONS = [
   { id: 'primitives', title: 'Primitives' },
   { id: 'identity', title: 'Identity' },
+  {
+    id: 'identity-effects',
+    title: 'Identity presentation',
+    section: 'identity',
+    render: () => createElement(Cosmetics),
+  },
   { id: 'motion', title: 'Motion' },
   { id: 'effects', title: 'Effects' },
 ] as const;

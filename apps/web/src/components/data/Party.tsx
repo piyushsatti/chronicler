@@ -1,4 +1,5 @@
 import { Avatar } from '../primitives/Avatar.js';
+import styles from './Party.module.css';
 
 export interface PartyMember {
   name: string;
@@ -15,7 +16,11 @@ export interface PartyProps {
 
 const DEFAULT_MAX_VISIBLE = 8;
 
-export function Party({ members = [], total, maxVisible = DEFAULT_MAX_VISIBLE }: PartyProps) {
+export function Party({
+  members = [],
+  total,
+  maxVisible = DEFAULT_MAX_VISIBLE,
+}: PartyProps) {
   const overflow = Math.max(0, members.length - maxVisible);
   const visibleMembers = overflow > 0 ? members.slice(0, maxVisible) : members;
   const emptySlots = overflow > 0 ? 0 : Math.max(0, total - members.length);
@@ -37,19 +42,9 @@ export function Party({ members = [], total, maxVisible = DEFAULT_MAX_VISIBLE }:
       {overflow > 0 ? (
         <span
           data-testid="party-overflow"
-          className="type-caption"
-          style={{
-            width: '22px',
-            height: '22px',
-            borderRadius: '50%',
-            marginLeft: '-8px',
-            display: 'inline-flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: 'var(--color-text-2)',
-            backgroundColor: 'var(--color-bg-surface)',
-            border: '2px solid var(--color-border)',
-          }}
+          className={`type-caption row ${styles.overflow}`}
+          data-align="center"
+          data-justify="center"
         >
           +{overflow}
         </span>

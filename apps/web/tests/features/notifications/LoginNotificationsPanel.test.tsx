@@ -7,6 +7,7 @@ import { TOKEN_KEY } from '../../../src/auth/storage.js';
 import { LoginNotificationsPanel } from '../../../src/features/notifications/components/LoginNotificationsPanel.js';
 import { server } from '../../../src/mocks/server.js';
 import { renderWithProviders } from '../../test-utils.js';
+import { dispatchFeatureGraphql } from './graphql-test-utils.js';
 
 const emptyNotificationList = {
   data: {
@@ -44,14 +45,15 @@ describe('LoginNotificationsPanel', () => {
         if (name === 'MyUnreadNotificationCount') {
           return HttpResponse.json({ data: { myUnreadNotificationCount: 2 } });
         }
-        return HttpResponse.json(emptyNotificationList);
+        if (name === 'MyNotifications') return HttpResponse.json(emptyNotificationList);
+        return dispatchFeatureGraphql(body);
       }),
     );
 
     renderPanel();
 
-    expect(await screen.findByText('Unread: 2')).toBeInTheDocument();
-    expect(screen.getByText('No notifications.')).toBeInTheDocument();
+    expect(await screen.findByText('You have 2 unread notifications.')).toBeInTheDocument();
+    expect(screen.getByText('No notifications yet.')).toBeInTheDocument();
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });
 
@@ -71,7 +73,8 @@ describe('LoginNotificationsPanel', () => {
           }
           return HttpResponse.json({ data: { myUnreadNotificationCount: 2 } });
         }
-        return HttpResponse.json(emptyNotificationList);
+        if (name === 'MyNotifications') return HttpResponse.json(emptyNotificationList);
+        return dispatchFeatureGraphql(body);
       }),
     );
 
@@ -87,8 +90,8 @@ describe('LoginNotificationsPanel', () => {
       });
     });
 
-    expect(await screen.findByText('Unread: 2')).toBeInTheDocument();
-    expect(screen.getByText('No notifications.')).toBeInTheDocument();
+    expect(await screen.findByText('You have 2 unread notifications.')).toBeInTheDocument();
+    expect(screen.getByText('No notifications yet.')).toBeInTheDocument();
     expect(countRequests).toBeGreaterThanOrEqual(2);
   });
 });

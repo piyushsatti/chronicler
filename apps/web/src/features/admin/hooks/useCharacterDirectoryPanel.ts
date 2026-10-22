@@ -1,32 +1,49 @@
-import { useAdminAuthority, useAuthorityFailures } from './useAdminAuthority.js';
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { queryKeys } from '../../../api/queryKeys.js';
-import { toAppError } from '../../../errors/toAppError.js';
-import type { AppError } from '../../../errors/types.js';
-import { loadAdminCharacters } from '../adapters/adminAdapter.js';
-import type { AdminCharRow } from '../types.js';
+import { loadAdminCharacters, loadAllAdminRegions } from '../adapters/adminAdapter.js';
+import { useAdminAuthority } from './useAdminAuthority.js';
+import { useAdminPage } from './useAdminPage.js';
 
-export type CharacterDirectoryPanelView =
-  | { status: 'loading' }
-  | { status: 'error'; error: AppError }
-  | { status: 'empty' }
-  | { status: 'ready'; characters: AdminCharRow[] };
-
-export function useCharacterDirectoryPanel(): CharacterDirectoryPanelView {
+export function useCharacterDirectoryPanel({
+  withRegionOptions = true,
+}: { withRegionOptions?: boolean } = {}) {
   const authority = useAdminAuthority();
-  const charsQ = useQuery({
-    enabled: authority.allowed,
-    queryKey: queryKeys.adminCharacters,
-    queryFn: loadAdminCharacters,
+  const [namePrefix, setNamePrefix] = useState('');
+  const [status, setStatus] = useState('');
+  const [regionId, setRegionId] = useState('');
+  const page = useAdminPage(
+    ['adminCharacters'],
+    authority,
+    { namePrefix, status, regionId },
+    (pagination, request) =>
+      loadAdminCharacters(
+        {
+          ...pagination,
+          namePrefix: namePrefix || undefined,
+          status: status || undefined,
+          regionId: regionId || undefined,
+        },
+        request,
+      ),
+  );
+  // Same cache entry the Content tab's region filters read.
+  const regions = useQuery({
+    enabled: authority.allowed && withRegionOptions,
+    queryKey: ['adminRegionOptions', authority.cacheKey],
+    queryFn: ({ signal }) => authority.read(loadAllAdminRegions, signal),
   });
-  useAuthorityFailures(charsQ.error);
-  if (charsQ.isError) {
-    return {
-      status: 'error',
-      error: toAppError(charsQ.error, 'admin:characters'),
-    };
-  }
-  if (charsQ.isLoading || !charsQ.data) return { status: 'loading' };
-  if (charsQ.data.length === 0) return { status: 'empty' };
-  return { status: 'ready', characters: charsQ.data };
+  return {
+    ...page,
+    regions,
+    retryRegions: () => {
+      void regions.refetch();
+    },
+    namePrefix,
+    setNamePrefix,
+    status,
+    setStatus,
+    regionId,
+    setRegionId,
+  };
 }
+export type CharacterDirectoryPanelView = ReturnType<typeof useCharacterDirectoryPanel>;

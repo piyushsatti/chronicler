@@ -1,0 +1,29 @@
+.jump {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.jump a {
+  text-decoration: none;
+}
+
+/* Anchored entries land below the sticky top bar instead of under it. */
+.entry {
+  scroll-margin-top: var(--sp-8);
+  min-width: 0;
+}
+
+.entry h2 {
+  margin: 0;
+}
+
+/* Wide demos (WeekGrid, Table) scroll inside their card rather than the page. */
+.demo {
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: auto;
+}

@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -18,7 +19,17 @@ import (
 
 type Repository interface {
 	Claim(ctx context.Context, actorID, operation, key, fingerprint string) (Claim, error)
+	RecordOverride(ctx context.Context, claim Claim, fact CommandOverrideFact) error
 	Complete(ctx context.Context, claim Claim, receipt json.RawMessage) error
+}
+
+type CommandOverrideFact struct {
+	ActorID     string    `json:"actorId"`
+	Operation   string    `json:"operation"`
+	SubjectType string    `json:"subjectType"`
+	SubjectID   string    `json:"subjectId"`
+	RuleCode    string    `json:"ruleCode"`
+	At          time.Time `json:"at"`
 }
 
 type CompletedReceiptReader interface {
@@ -42,7 +53,7 @@ type claimIdentity struct {
 // aggregate ownership must be checked by the command before receipt admission.
 type receiptStore struct {
 	db     dbgen.DBTX
-	claims map[claimIdentity]struct{}
+	claims map[claimIdentity][]CommandOverrideFact
 }
 
 type CompletedReceiptStore struct {
@@ -56,7 +67,7 @@ func NewRepository(tx pgx.Tx) (Repository, error) {
 	if nilDB(tx) {
 		return nil, errors.New("idempotency transaction is required")
 	}
-	return &receiptStore{db: tx, claims: make(map[claimIdentity]struct{})}, nil
+	return &receiptStore{db: tx, claims: make(map[claimIdentity][]CommandOverrideFact)}, nil
 }
 
 func NewCompletedReceiptReader(db dbgen.DBTX) (*CompletedReceiptStore, error) {
@@ -140,7 +151,7 @@ func (s *receiptStore) Claim(ctx context.Context, actorID, operation, key, finge
 		if inserted != i.fingerprint {
 			return Claim{}, errors.New("inserted receipt fingerprint differs")
 		}
-		s.claims[i] = struct{}{}
+		s.claims[i] = nil
 		return claim, nil
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
@@ -157,16 +168,55 @@ func (s *receiptStore) Claim(ctx context.Context, actorID, operation, key, finge
 	return claim, nil
 }
 
+func (s *receiptStore) RecordOverride(ctx context.Context, claim Claim, fact CommandOverrideFact) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if s == nil || nilDB(s.db) || claim.Replay {
+		return errors.New("override requires this transaction's new claim")
+	}
+	i := claimIdentity{claim.ActorID, claim.Operation, claim.Key, claim.Fingerprint}
+	facts, ok := s.claims[i]
+	if !ok {
+		return errors.New("override requires this transaction's unmodified claim")
+	}
+	if err := validateOverrideFact(fact, i); err != nil {
+		return err
+	}
+	s.claims[i] = append(facts, fact)
+	return nil
+}
+
 func (s *receiptStore) Complete(ctx context.Context, claim Claim, receipt json.RawMessage) error {
 	if s == nil || nilDB(s.db) || claim.Replay {
 		return errors.New("completion requires this transaction's new claim")
 	}
 	i := claimIdentity{claim.ActorID, claim.Operation, claim.Key, claim.Fingerprint}
-	if _, ok := s.claims[i]; !ok {
+	facts, ok := s.claims[i]
+	if !ok {
 		return errors.New("completion requires this transaction's unmodified claim")
 	}
 	if !validReceipt(receipt) {
 		return errors.New("completed command receipt must be nonnull JSON")
+	}
+	if bytes.TrimSpace(receipt)[0] == '{' {
+		var supplied map[string]json.RawMessage
+		if err := json.Unmarshal(receipt, &supplied); err != nil {
+			return err
+		}
+		if _, reserved := supplied[authorizationOverridesKey]; reserved {
+			return invalidReceiptMetadata()
+		}
+	}
+	if len(facts) != 0 {
+		encoded, err := json.Marshal(facts)
+		if err != nil {
+			return err
+		}
+		receipt, err = appendReceiptMetadata(receipt, authorizationOverridesKey, encoded)
+		if err != nil {
+			return err
+		}
 	}
 	args := append(i.args(), []byte(receipt))
 	result, err := s.db.Exec(ctx, completeReceipt, args...)
@@ -215,7 +265,11 @@ func lookupReceipt(ctx context.Context, db dbgen.DBTX, i claimIdentity, lock boo
 	if fingerprint == nil || !completed || !validReceipt(receipt) {
 		return nil, false, errors.New("incomplete or invalid stored command receipt")
 	}
-	return bytes.Clone(receipt), true, nil
+	decoded, err := decodeAuthorizationReceipt(receipt, i)
+	if err != nil {
+		return nil, false, err
+	}
+	return decoded, true, nil
 }
 
 func validReceipt(receipt []byte) bool {

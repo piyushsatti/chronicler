@@ -15,9 +15,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/idempotency"
 )
 
 type phase3AssignmentLookup struct {
@@ -35,25 +34,18 @@ func (a *phase3AssignmentLookup) HasLieutenant(_ context.Context, memberID, docu
 	return a.lieutenant, a.err
 }
 
-type phase3OverrideExecutor struct {
-	sql   string
-	args  []any
+type phase3OverrideRepository struct {
+	idempotency.Repository
+	claim idempotency.Claim
+	fact  idempotency.CommandOverrideFact
 	calls int
-	tag   pgconn.CommandTag
 	err   error
 }
 
-func (e *phase3OverrideExecutor) Exec(_ context.Context, sql string, args ...any) (pgconn.CommandTag, error) {
-	e.sql = sql
-	e.args = args
-	e.calls++
-	return e.tag, e.err
-}
-func (*phase3OverrideExecutor) Query(context.Context, string, ...any) (pgx.Rows, error) {
-	panic("unexpected connection/query acquisition")
-}
-func (*phase3OverrideExecutor) QueryRow(context.Context, string, ...any) pgx.Row {
-	panic("unexpected query acquisition")
+func (r *phase3OverrideRepository) RecordOverride(_ context.Context, claim idempotency.Claim, fact idempotency.CommandOverrideFact) error {
+	r.claim, r.fact = claim, fact
+	r.calls++
+	return r.err
 }
 
 func TestPhase3TaskP02Acceptance(t *testing.T) {
@@ -83,7 +75,7 @@ func TestPhase3TaskP02Acceptance(t *testing.T) {
 		if _, err := NewOverrideRecorder(nil); err == nil {
 			t.Fatal("nil executor admitted")
 		}
-		var missingDB *phase3OverrideExecutor
+		var missingDB *phase3OverrideRepository
 		if _, err := NewOverrideRecorder(missingDB); err == nil {
 			t.Fatal("typed nil executor admitted")
 		}
@@ -143,46 +135,32 @@ func TestPhase3TaskP02Acceptance(t *testing.T) {
 			t.Fatal("unrecognized rule leaked into log")
 		}
 	})
-	t.Run("transaction bound audit fact and write failure", func(t *testing.T) {
-		executor := &phase3OverrideExecutor{tag: pgconn.NewCommandTag("INSERT 0 1")}
-		recorder, err := NewOverrideRecorder(executor)
+	t.Run("actual claim bound safe audit fact and failure", func(t *testing.T) {
+		repository := &phase3OverrideRepository{}
+		recorder, err := NewOverrideRecorder(repository)
 		if err != nil {
 			t.Fatal(err)
 		}
 		fact := phase3OverrideFact("Mutation.editPublishedDocument", "OWNERSHIP")
-		if err := recorder.Record(t.Context(), fact); err != nil {
+		claim := idempotency.Claim{ActorID: fact.ActorID, Operation: "editPublishedDocument", Key: "exact-key", Fingerprint: strings.Repeat("a", 64)}
+		if err := recorder.Record(t.Context(), claim, fact); err != nil {
 			t.Fatal(err)
 		}
-		want := []any{fact.ActorID, string(fact.Operation), fact.SubjectType, fact.SubjectID, fact.RuleCode, fact.At}
-		if !reflect.DeepEqual(executor.args, want) {
-			t.Fatalf("audit fact changed %v", executor.args)
+		want := idempotency.CommandOverrideFact{ActorID: fact.ActorID, Operation: string(fact.Operation), SubjectType: fact.SubjectType, SubjectID: fact.SubjectID, RuleCode: fact.RuleCode, At: fact.At}
+		if !reflect.DeepEqual(repository.claim, claim) || !reflect.DeepEqual(repository.fact, want) || recorder.Replay != repository {
+			t.Fatalf("claim/fact binding changed: %+v %+v", repository.claim, repository.fact)
 		}
-		for _, required := range []string{"INSERT INTO auth_override_audit", "SELECT id FROM members WHERE public_id = $1::uuid", "$4::uuid"} {
-			if !strings.Contains(executor.sql, required) {
-				t.Fatalf("missing stored identity %s", required)
-			}
-		}
-		for _, forbidden := range []string{"COMMIT", "BEGIN", "body", "policy", "token"} {
-			if strings.Contains(executor.sql, forbidden) {
-				t.Fatalf("unexpected write %s", forbidden)
-			}
-		}
-		outage := errors.New("audit insert unavailable")
-		executor.err = outage
-		if err := recorder.Record(t.Context(), fact); !errors.Is(err, outage) {
-			t.Fatalf("write failure changed %v", err)
-		}
-		executor.err = nil
-		executor.tag = pgconn.NewCommandTag("INSERT 0 0")
-		if err := recorder.Record(t.Context(), fact); err == nil {
-			t.Fatal("zero audit rows accepted")
+		failure := errors.New("receipt staging unavailable")
+		repository.err = failure
+		if err := recorder.Record(t.Context(), claim, fact); !errors.Is(err, failure) {
+			t.Fatalf("staging failure changed: %v", err)
 		}
 		fact.RuleCode = "HIDDEN_BODY_SENTINEL"
-		before := executor.calls
-		err = recorder.Record(t.Context(), fact)
+		before := repository.calls
+		err = recorder.Record(t.Context(), claim, fact)
 		var expected *apierr.Error
-		if !errors.As(err, &expected) || expected.Code != apierr.Invalid || executor.calls != before {
-			t.Fatalf("invalid rule reached storage %v", err)
+		if !errors.As(err, &expected) || expected.Code != apierr.Invalid || repository.calls != before {
+			t.Fatalf("invalid rule reached receipt: %v", err)
 		}
 	})
 }
@@ -536,10 +514,10 @@ func testPolicyOwningProviderContrasts(t *testing.T) {
 	})
 	t.Run("expected and visited hex role distinction", func(t *testing.T) {
 		dm := policyAuthority(t, policyActor, []Role{DM}, true, false)
-		req, e := ForQuest("Mutation.setQuestPointcrawlLinks", QuestFacts{policySubject, policyActor, []QuestHexFacts{{policyOther, "expected", policyPointer(policyRegion)}}})
+		req, e := ForQuest("Mutation.setQuestPointcrawlLinks", QuestFacts{policySubject, policyActor, []QuestHexFacts{{ID: policyOther, Role: "expected", RegionID: policyPointer(policyRegion)}}})
 		req = policyMustRequest(t, req, e)
 		policyExpect(t, p, dm, req, Decision{Allowed: true})
-		req, e = ForQuest("Mutation.setQuestPointcrawlLinks", QuestFacts{policySubject, policyActor, []QuestHexFacts{{policyOther, "visited", policyPointer(policyRegion)}}})
+		req, e = ForQuest("Mutation.setQuestPointcrawlLinks", QuestFacts{policySubject, policyActor, []QuestHexFacts{{ID: policyOther, Role: "visited", RegionID: policyPointer(policyRegion)}}})
 		req = policyMustRequest(t, req, e)
 		policyExpect(t, p, dm, req, Decision{RuleCode: "ROLE"})
 		steward := policyAuthority(t, policyActor, []Role{DM, Role("archon")}, true, false)
@@ -657,7 +635,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 		"Mutation.setMemberRoles":                     "ADMIN",
 		"Mutation.setMemberRolesBatch":                "ADMIN",
 		"Mutation.setMyAvailability":                  "PLAYER_SELF",
-		"Mutation.setQuestPointcrawlLinks":             "QUEST_DM",
+		"Mutation.setQuestPointcrawlLinks":            "QUEST_DM",
 		"Mutation.setPointcrawlEdge":                  "MAP_STEWARD",
 		"Mutation.setUnlockableActive":                "ADMIN",
 		"Mutation.signupForQuest":                     "CHAR_SIGNUP",
@@ -677,6 +655,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 		"Mutation.updateMyDmProfile":                  "DM_SELF",
 		"Mutation.updateMyProfile":                    "SELF",
 		"Mutation.updateMySettings":                   "SELF",
+		"Mutation.setMyPrivateNotes":                  "SELF",
 		"Mutation.updateQuest":                        "QUEST_DM",
 		"Mutation.updateQuestAnnouncementRoleSetting": "ADMIN",
 		"Mutation.updateRegion":                       "REGION_STEWARD",
@@ -734,6 +713,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 		"Query.myCharacters":                          "SELF",
 		"Query.myNotifications":                       "SELF",
 		"Query.myPersonalization":                     "SELF",
+		"Query.myPrivateNotes":                        "SELF",
 		"Query.myQuestSignups":                        "SELF",
 		"Query.myUnlocks":                             "SELF",
 		"Query.myUnreadNotificationCount":             "SELF",
@@ -778,7 +758,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 			}
 		}
 	}
-	if len(expected) != 145 || len(actual) != len(expected) || len(operationRules) != len(expected) {
+	if len(expected) != 147 || len(actual) != len(expected) || len(operationRules) != len(expected) {
 		t.Fatalf("coverage expected%d SDL%d registry%d", len(expected), len(actual), len(operationRules))
 	}
 	p, _, facts := policyTestProvider(t)

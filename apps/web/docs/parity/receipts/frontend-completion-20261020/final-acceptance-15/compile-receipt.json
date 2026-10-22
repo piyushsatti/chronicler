@@ -1,0 +1,15 @@
+{
+  "at": "2026-10-20T22:44:40.196020+00:00",
+  "nativeSession": 70589,
+  "exit": 0,
+  "tags": [
+    "integration",
+    "frontend_acceptance"
+  ],
+  "sourceCount": 527,
+  "sourceManifestSha256": "2f9854409bb2e7ae3d3dc10b3711d54816f9f1db0184277292147b9619db3f41",
+  "sourceDrift": [],
+  "binarySha256": "351486feb833fc56362d96682ae8fd70f95a1b5efd84b71d52b96574ff5d3a1a",
+  "scope": "Only nine unsupported phase-assumption test lines removed; all SQL/default13/lifecycle9 preserved",
+  "independentReviewSha256": "3b55f93ad9e218843e9d2231bcb07c10aaa1871c11c465261cf50f9981a1ff90"
+}

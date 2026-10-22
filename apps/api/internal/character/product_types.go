@@ -132,6 +132,7 @@ type CharacterView struct {
 	DisplayIcon             *string
 	GuildId                 *string
 	Id                      string
+	ImageUrl                *string
 	Name                    string
 	OwnerId                 string
 	Pcxp                    int32
@@ -162,6 +163,7 @@ type CreateCharacterFields struct {
 	DdbUrl         *string
 	Description    *string
 	GuildId        *string
+	ImageUrl       *string
 	Name           string
 	RegionId       *string
 	ShortCode      *string
@@ -286,6 +288,7 @@ type RewardEntitlementPage struct {
 type UpdateCharacterProfileFields struct {
 	BackgroundText product.Optional[string]
 	Description    product.Optional[string]
+	ImageUrl       product.Optional[string]
 }
 
 type UpsertCreationCatalogEntryFields struct {

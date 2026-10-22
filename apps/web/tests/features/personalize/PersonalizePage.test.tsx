@@ -13,7 +13,7 @@ function seedToken(): void {
   const header = btoa(JSON.stringify({ alg: 'none', typ: 'JWT' }));
   const payload = btoa(
     JSON.stringify({
-      sub: 'discord-dev',
+      member_id: 'discord-dev',
       exp: Math.floor(Date.now() / 1000) + 60 * 60,
     }),
   );
@@ -31,13 +31,25 @@ describe('PersonalizePage', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Personalize' }),
     ).toBeInTheDocument();
+    expect(await screen.findByRole('combobox', { name: 'Theme' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Color mode' })).toBeInTheDocument();
     expect(
-      await screen.findByRole('heading', { name: 'Theme' }),
+      await screen.findByText('Saved: Parchment theme, system mode.'),
     ).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Color mode' })).toBeInTheDocument();
-    expect(
-      await screen.findByText(/Saved settings · parchment/),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Parchment' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Starfield' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'starfield-twinkle' })).toBeNull();
+  });
+
+  it('groups settings without a browser fieldset and uses checkbox primitives', async () => {
+    renderWithProviders(<PersonalizePage />, { route: '/me/personalize' });
+    await screen.findByText('Saved: Parchment theme, system mode.');
+    for (const group of screen.getAllByRole('group')) {
+      expect(group).toHaveClass('field-group');
+    }
+    const box = screen.getByRole('checkbox', { name: 'Quest signups' });
+    expect(box).toHaveClass('checkbox__box');
+    expect(document.querySelector('input[type="checkbox"]:not([aria-hidden="true"])')).toBeNull();
   });
 
   it('shows controlled error on GraphQL failure', async () => {

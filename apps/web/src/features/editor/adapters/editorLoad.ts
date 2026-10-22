@@ -11,6 +11,13 @@ import type { EditorTypeKey } from '../types.js';
 import QUEST_LOAD from './editorQuestLoad.graphql?raw';
 import DOCUMENT_BY_ID from './editorDocumentById.graphql?raw';
 import DOCUMENT_BY_SLUG from './editorDocumentBySlug.graphql?raw';
+import { loadSummaryQuest } from './editorSummary.js';
+import { findCodexCategory } from '../../../utils/codexCategories.js';
+
+const summaryContextSchema = z.object({
+  questId: z.string().uuid(),
+  characterId: z.string().uuid().optional(),
+});
 
 export type EditorMeta = {
   title: string;
@@ -24,7 +31,15 @@ export type EditorMeta = {
 
 export type EditorLoadResult = {
   meta: EditorMeta;
-  body: string;
+  body: string | null;
+  canEditBody: boolean;
+  canEditMetadata: boolean;
+  status: string;
+  visibility: string;
+  policy: string[] | null;
+  readerIds: string[];
+  authorId: string | null;
+  frontmatter: Record<string, unknown>;
   recordId: string;
   documentId: string | null;
   redirectHint: string | null;
@@ -34,6 +49,16 @@ export type EditorLoadResult = {
   updatedAt: string | null;
   /** Document optimistic concurrency token (`DocumentEditInput.expectedRevision`). */
   documentVersion: number | null;
+  /** Quest loads only: the quest has no brief document the viewer can load, so there is nothing to edit. */
+  briefMissing?: boolean;
+  summary?: {
+    authoring: {
+      questIds: string[];
+      characterId: string | null;
+      complete: boolean;
+    } | null;
+    quests: { id: string; shortCode: string; title: string | null }[];
+  };
 };
 
 const questLoadSchema = z.object({
@@ -57,6 +82,9 @@ const questLoadSchema = z.object({
       status: z.string().optional(),
       version: z.number().int(),
       effectiveBody: z.string().nullable().optional(),
+      canEditBody: z.boolean().nullable().optional(),
+      canEditMetadata: z.boolean().nullable().optional(),
+      frontmatter: z.record(z.unknown()).optional().default({}),
     })
     .nullable()
     .optional(),
@@ -71,6 +99,32 @@ const documentLoadSchema = z.object({
   status: z.string().optional(),
   version: z.number().int(),
   effectiveBody: z.string().nullable().optional(),
+  canEditBody: z.boolean().nullable().optional(),
+  canEditMetadata: z.boolean().nullable().optional(),
+  visibility: z.string().optional().default('public'),
+  policy: z.array(z.string()).nullable().optional(),
+  readerIds: z.array(z.string()).nullable().optional(),
+  authorId: z.string().optional(),
+  frontmatter: z.record(z.unknown()).optional().default({}),
+  summaryDerived: z
+    .object({
+      authoring: z
+        .object({
+          questIds: z.array(z.string().uuid()),
+          characterId: z.string().uuid().nullable(),
+          complete: z.boolean(),
+        })
+        .nullable(),
+      quests: z.array(
+        z.object({
+          id: z.string().uuid(),
+          shortCode: z.string(),
+          title: z.string().nullable(),
+        }),
+      ),
+    })
+    .nullable()
+    .optional(),
 });
 
 export function parseQuestLoad(wire: unknown): AdapterResult<EditorLoadResult> {
@@ -85,8 +139,9 @@ export function parseQuestLoad(wire: unknown): AdapterResult<EditorLoadResult> {
     data: {
       meta: {
         title: brief?.title ?? q.shortCode,
-        durationHours: String(q.durationHours ?? 3),
-        slotsMax: String(q.slotsMax ?? 4),
+        shortCode: q.shortCode,
+        durationHours: String(q.durationHours),
+        slotsMax: String(q.slotsMax),
         scheduledAt: q.scheduledAt,
         kinds: q.kinds,
         genres: q.genres,
@@ -94,14 +149,25 @@ export function parseQuestLoad(wire: unknown): AdapterResult<EditorLoadResult> {
         apl: q.apl ?? null,
         signupType: q.signupType ?? null,
         regions: q.regions,
+        additionalInfo: brief?.frontmatter.additional_info ?? '',
       },
-      body: brief?.effectiveBody ?? '',
+      body: brief?.effectiveBody ?? null,
+      canEditMetadata: brief?.canEditMetadata === true,
+      canEditBody:
+        brief?.canEditBody === true && typeof brief.effectiveBody === 'string',
+      status: brief?.status ?? 'draft',
+      visibility: 'public',
+      policy: [],
+      readerIds: [],
+      authorId: null,
+      frontmatter: brief?.frontmatter ?? {},
       recordId: q.id,
       documentId: brief?.id ?? null,
       redirectHint: q.shortCode,
       briefPublished: (brief?.status ?? '').toLowerCase() === 'published',
       updatedAt: q.updatedAt,
       documentVersion: brief?.version ?? null,
+      briefMissing: !brief,
     },
   };
 }
@@ -120,14 +186,31 @@ export function parseDocumentLoad(wire: unknown): AdapterResult<EditorLoadResult
         category: d.category ?? null,
         kind: d.kind,
         slug: d.slug,
+        ...(d.kind === 'summary' && d.summaryDerived?.authoring
+          ? {
+              questIds: d.summaryDerived.authoring.questIds,
+              characterId: d.summaryDerived.authoring.characterId,
+            }
+          : {}),
       },
-      body: d.effectiveBody ?? '',
+      body: d.effectiveBody ?? null,
+      canEditMetadata: d.canEditMetadata === true,
+      canEditBody: d.canEditBody === true && typeof d.effectiveBody === 'string',
+      status: d.status ?? 'draft',
+      visibility: d.visibility,
+      policy: d.policy ?? null,
+      readerIds: d.readerIds ?? [],
+      authorId: d.authorId ?? null,
+      frontmatter: d.frontmatter,
       recordId: d.id,
       documentId: d.id,
       redirectHint: d.slug,
       briefPublished: (d.status ?? '').toLowerCase() === 'published',
       updatedAt: null,
       documentVersion: d.version,
+      ...(d.kind === 'summary' && d.summaryDerived
+        ? { summary: d.summaryDerived }
+        : {}),
     },
   };
 }
@@ -136,16 +219,44 @@ function emptyDraft(
   typeKey: EditorTypeKey,
   category?: string | null,
 ): EditorLoadResult {
+  const initialCategory =
+    typeKey === 'codex' ? (findCodexCategory(category) ?? category) : category;
   return {
     meta: {
       title: '',
       durationHours: '3',
       slotsMax: '4',
       scheduledAt: new Date().toISOString(),
-      category: category ?? null,
-      kind: typeKey === 'dm-table' ? 'dm_table' : typeKey,
+      category:
+        initialCategory ??
+        (typeKey === 'guide' || typeKey === 'ruling'
+          ? typeKey
+          : typeKey === 'dm-table'
+            ? 'dm_table'
+            : null),
+      kind:
+        typeKey === 'codex'
+          ? 'codex_entry'
+          : typeKey === 'guide' || typeKey === 'ruling'
+            ? 'rule'
+            : typeKey === 'dm-table'
+              ? 'community'
+              : typeKey,
+      kinds: ['standard'],
+      regions: [],
+      genres: [],
+      tags: [],
+      signupType: 'open',
     },
     body: '',
+    canEditBody: true,
+    canEditMetadata: true,
+    status: 'draft',
+    visibility: 'public',
+    policy: [],
+    readerIds: [],
+    authorId: null,
+    frontmatter: {},
     recordId: 'new',
     documentId: null,
     redirectHint: null,
@@ -162,16 +273,44 @@ export async function loadEditorRecord(input: {
   id?: string;
   slug?: string;
   category?: string;
+  questId?: string;
+  characterId?: string;
 }): Promise<EditorLoadResult> {
   if (input.mode === 'new' || input.typeKey === 'demo') {
-    return emptyDraft(input.typeKey, input.category ?? null);
+    const draft = emptyDraft(input.typeKey, input.category ?? null);
+    if (input.typeKey === 'summary' && input.questId !== undefined) {
+      const context = summaryContextSchema.safeParse(input);
+      if (!context.success)
+        throw toAppError({ failure: 'Invalid' }, 'editor:summary-context');
+      const quest = await loadSummaryQuest(context.data.questId);
+      return {
+        ...draft,
+        recordId: `new-summary:${quest.id}:${context.data.characterId ?? 'dm'}`,
+        meta: {
+          ...draft.meta,
+          questIds: [quest.id],
+          characterId: context.data.characterId ?? null,
+        },
+        summary: {
+          authoring: {
+            questIds: [quest.id],
+            characterId: context.data.characterId ?? null,
+            complete: true,
+          },
+          quests: [quest],
+        },
+      };
+    }
+    if (input.typeKey === 'summary' && input.characterId !== undefined)
+      throw toAppError({ failure: 'Invalid' }, 'editor:summary-context');
+    return draft;
   }
 
   try {
     if (input.typeKey === 'quest') {
       const key = input.code ?? input.id;
       if (!key) throw toAppError({ failure: 'NotFound' }, 'editor:load');
-      const looksUuid = key.includes('-') && key.length > 20;
+      const looksUuid = z.string().uuid().safeParse(key).success;
       const data = await graphqlRequest<EditorQuestLoadQuery>(QUEST_LOAD, {
         id: looksUuid ? key : null,
         shortCode: looksUuid ? null : key,
@@ -185,19 +324,39 @@ export async function loadEditorRecord(input: {
     const key = input.id ?? input.slug ?? input.code;
     if (!key) throw toAppError({ failure: 'NotFound' }, 'editor:load');
     const looksUuid = /^[0-9a-f-]{36}$/i.test(key);
-    const data = looksUuid
-      ? await graphqlRequest<EditorDocumentByIdQuery>(DOCUMENT_BY_ID, {
-          id: key,
-        })
-      : await graphqlRequest<EditorDocumentBySlugQuery>(DOCUMENT_BY_SLUG, {
-          slug: key,
-        });
     const wire = looksUuid
-      ? (data as EditorDocumentByIdQuery).documentById
-      : (data as EditorDocumentBySlugQuery).document;
+      ? (
+          await graphqlRequest<EditorDocumentByIdQuery>(DOCUMENT_BY_ID, {
+            id: key,
+          })
+        ).documentById
+      : (
+          await graphqlRequest<EditorDocumentBySlugQuery>(DOCUMENT_BY_SLUG, {
+            slug: key,
+          })
+        ).document;
     if (wire == null) throw toAppError({ failure: 'NotFound' }, 'editor:load');
     const result = parseDocumentLoad(wire);
     if (!result.ok) throw toAppError({ failure: result.failure }, 'editor:load');
+    const expectedKind =
+      input.typeKey === 'codex'
+        ? 'codex_entry'
+        : input.typeKey === 'guide' || input.typeKey === 'ruling'
+          ? 'rule'
+          : input.typeKey === 'dm-table'
+            ? 'community'
+            : 'summary';
+    const category =
+      typeof result.data.meta.category === 'string'
+        ? result.data.meta.category.toLowerCase()
+        : '';
+    if (
+      result.data.meta.kind !== expectedKind ||
+      (input.typeKey === 'dm-table' && category !== 'dm_table') ||
+      (input.typeKey === 'ruling' && category !== 'ruling') ||
+      (input.typeKey === 'guide' && category === 'ruling')
+    )
+      throw toAppError({ failure: 'NotFound' }, 'editor:kind');
     return result.data;
   } catch (err) {
     throw toAppError(err, 'editor:load');

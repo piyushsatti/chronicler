@@ -1,0 +1,196 @@
+{
+  "at": "2026-10-20T19:19:59.875641+00:00",
+  "nativeSession": 35441,
+  "exit": 0,
+  "durationSeconds": 71.01,
+  "checks": [
+    {
+      "name": "rules-complete-independent-pages-title-excerpt-reader-reload",
+      "proof": "Exact enumerations/readback retained in browser-receipt.json"
+    },
+    {
+      "name": "community-complete-late-member-availability-both-rosters-reload",
+      "proof": "Exact enumerations/readback retained in browser-receipt.json"
+    },
+    {
+      "name": "public-player-dm-pages-search-accepting",
+      "proof": "Exact enumerations/readback retained in browser-receipt.json"
+    },
+    {
+      "name": "character-pages-name-all-mine-same-context-account-switch",
+      "proof": "Exact enumerations/readback retained in browser-receipt.json"
+    },
+    {
+      "name": "codex-page-two-category-search-canonical-reader-reload",
+      "proof": "Exact enumerations/readback retained in browser-receipt.json"
+    },
+    {
+      "name": "profile-table-session-continuation-current-owner-links",
+      "proof": "Exact enumerations/readback retained in browser-receipt.json"
+    },
+    {
+      "name": "me-composition-current-profile-and-sign-out",
+      "proof": "Exact enumerations/readback retained in browser-receipt.json"
+    },
+    {
+      "name": "phone-rules-complete-pages-search-reader-reload",
+      "proof": "Exact enumerations/readback retained in browser-receipt.json"
+    },
+    {
+      "name": "phone-community-complete-availability-rosters-reload",
+      "proof": "Exact enumerations/readback retained in browser-receipt.json"
+    },
+    {
+      "name": "npc-fixed-prefix-complete-pages-private-suppression-reader-reload",
+      "proof": "Exact enumerations/readback retained in browser-receipt.json"
+    },
+    {
+      "name": "faction-fixed-prefix-complete-pages-private-suppression-reader-reload",
+      "proof": "Exact enumerations/readback retained in browser-receipt.json"
+    },
+    {
+      "name": "region-complete-current-activity-document-map-quest-navigation",
+      "proof": {
+        "projection": "complete current Quest activity; no pagination exists",
+        "proof": [
+          {
+            "width": 1920,
+            "directoryOrdinal": 216,
+            "countsOrdinal": 223,
+            "activityOrdinal": 221,
+            "documentId": "8e92c12a-ed1d-46bf-b053-ed4a651a296a",
+            "reloadActivityOrdinal": 232,
+            "mapOrdinal": 248,
+            "questId": "d00f5214-0b60-406a-b337-e3b6f54ec9ed",
+            "questReloadOrdinal": 267
+          },
+          {
+            "width": 900,
+            "directoryOrdinal": 280,
+            "countsOrdinal": 287,
+            "activityOrdinal": 285,
+            "documentId": "8e92c12a-ed1d-46bf-b053-ed4a651a296a",
+            "reloadActivityOrdinal": 296,
+            "mapOrdinal": 312,
+            "questId": "d00f5214-0b60-406a-b337-e3b6f54ec9ed",
+            "questReloadOrdinal": 331
+          },
+          {
+            "width": 390,
+            "directoryOrdinal": 344,
+            "countsOrdinal": 351,
+            "activityOrdinal": 349,
+            "documentId": "8e92c12a-ed1d-46bf-b053-ed4a651a296a",
+            "reloadActivityOrdinal": 360,
+            "mapOrdinal": 376,
+            "questId": "d00f5214-0b60-406a-b337-e3b6f54ec9ed",
+            "questReloadOrdinal": 395
+          }
+        ],
+        "suppressed": [
+          {
+            "actor": "guest",
+            "directoryOrdinal": 406,
+            "activityOrdinal": 407
+          },
+          {
+            "actor": "player",
+            "directoryOrdinal": 411,
+            "activityOrdinal": 415
+          }
+        ]
+      }
+    },
+    {
+      "name": "rules-current-verifier-create-links-editor-destinations-no-persistence",
+      "proof": {
+        "proof": [
+          {
+            "route": "/rules/guides/new",
+            "heading": "Create guide",
+            "admissionOrdinal": 422,
+            "memberId": "c9d6f595-1268-414d-abe7-7036ac60695e"
+          },
+          {
+            "route": "/rules/rulings/new",
+            "heading": "Create ruling",
+            "admissionOrdinal": 432,
+            "memberId": "c9d6f595-1268-414d-abe7-7036ac60695e"
+          }
+        ],
+        "deniedActors": [
+          "guest",
+          "host"
+        ],
+        "browserProductWrites": false,
+        "persistedDraft": false
+      }
+    },
+    {
+      "name": "chronicle-authorized-create-link-server-preview-no-persistence",
+      "proof": {
+        "listOrdinal": 451,
+        "previewOrdinal": 457,
+        "destination": "/summaries/new",
+        "browserProductWrites": false,
+        "persistedDraft": false
+      }
+    },
+    {
+      "name": "welcome-login-and-guest-home-navigation-no-oauth",
+      "proof": {
+        "login": "/login",
+        "guest": "/",
+        "homeOrdinal": 460,
+        "providerInitiated": false,
+        "authenticatedSession": false
+      }
+    }
+  ],
+  "operations": 462,
+  "frontend": {
+    "sourceManifestSha256": "f012675c4d58e18b2c7ab0e6a004cb6df1e085add1ba47fc6959a69712505756",
+    "distManifestSha256": "329032b06f250850eacdd40f2b575f56b6c23a6d9eb57675607f0ebf01becfda",
+    "sourceInputs": 625,
+    "distFiles": 181
+  },
+  "fixtureApi": "binary12 a89f40a00f4376b1172d716564abf1f5978db68ecfe347c56f68b2b4fe286f31; isolated real PostgreSQL; production preview Build32",
+  "allProductTablesBeforeAfterEqual": true,
+  "productTables": 42,
+  "productionOwnedAndBuildInputsBeforeAfterEqual": true,
+  "cleanup": {
+    "at": "2026-10-20T19:19:36.331907224Z",
+    "database": "product_case_1",
+    "databaseDropped": true,
+    "listenersClosed": {
+      "api": true,
+      "preview": true
+    },
+    "nodeStarted": true,
+    "nodeWaited": true
+  },
+  "noMocks": true,
+  "providerCalls": false,
+  "visualApproval": false,
+  "artifacts": {
+    "browser-receipt.json": "ccc97983202eafe4340d443ee9acabc27308dbcec52b577a219e073a19109e00",
+    "native-readback.json": "115ebf83a320b1d9e7b5698d5f0b911f18b9a5e1e14cfb4d24c79912d02a0a4c",
+    "native-cleanup.json": "de74551d4ad4c7c12a87e507152e61945b310d34b65fce9f1f7c44e718b52a81",
+    "native-inventory.json": "05eaa06efb471af7e57c6688817b42b258bd3a406b3a3cf4999a2b6d42e56d68",
+    "native-child-ended.json": "9d5207ad90410b6cfe76be0ecd3784b6b6bcc65a18013149be08438854d08f89",
+    "production-inputs-before.json": "64000609c6339dcf450e09c483c1d961a8034cd71b1d503263345d4a5e1c66d8",
+    "production-inputs-after.json": "64000609c6339dcf450e09c483c1d961a8034cd71b1d503263345d4a5e1c66d8",
+    "owned-inputs-before.json": "61efe68861680e2c6ad043bae7d6775bd53e0801fdda6fa46619a7389cdc25ea",
+    "owned-inputs-after.json": "61efe68861680e2c6ad043bae7d6775bd53e0801fdda6fa46619a7389cdc25ea",
+    "build-inputs-before.json": "bc12b6ec52590db84ab22f7e39d397e0b81363ea3e921179dfa01256c992e625",
+    "build-inputs-after.json": "bc12b6ec52590db84ab22f7e39d397e0b81363ea3e921179dfa01256c992e625",
+    "native-all-tables-before.json": "ac83ef976367b42d20f35dfa372913ce687fffacba36df1d7b09be6a3505c1c3",
+    "native-all-tables-after.json": "ac83ef976367b42d20f35dfa372913ce687fffacba36df1d7b09be6a3505c1c3"
+  },
+  "limits": [
+    "All15 stages completed, including51-item NPC/Faction pagination, host/guest hidden-Document suppression, complete current Region Quest status projection and map/document/quest destinations at three widths. Region has no pagination API or removed event history.",
+    "Actual authorized Rules creation destinations and Chronicle server preview were navigated; no draft saved and no product writes. Editor persistence has separate Document10 evidence.",
+    "Welcome Login/Home link navigation does not prove valid provider OAuth. No authenticated trace/HAR or provider request.",
+    "Earlier failed P8 fixture timestamp and P9/P10 preview-harness assumptions remain failed and retained."
+  ]
+}

@@ -10,9 +10,16 @@ query CodexEntry($slug: String!) {
       visibility
       title
       effectiveBody
+      updatedAt
+      canEditBody
+      canEditMetadata
       author {
         handle
       }
     }
+  }
+  documentBacklinks(slug: $slug, limit: 12) {
+    documentId
+    relation
   }
 }

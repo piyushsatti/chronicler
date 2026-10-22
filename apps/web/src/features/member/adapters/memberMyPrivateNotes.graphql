@@ -1,0 +1,6 @@
+query MemberMyPrivateNotes {
+  myPrivateNotes {
+    body
+    updatedAt
+  }
+}

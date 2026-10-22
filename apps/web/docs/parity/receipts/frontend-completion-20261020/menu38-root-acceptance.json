@@ -1,0 +1,22 @@
+{
+  "at": "2026-10-20T22:32:07.613638Z",
+  "nativeSession": 51527,
+  "exit": 0,
+  "frontend": 38,
+  "viewport": {
+    "width": 768,
+    "height": 1080
+  },
+  "nativeMenuPanelAndKeyboardAccepted": true,
+  "completeQueries": 1,
+  "cleanup": {
+    "contextClosed": true,
+    "browserClosed": true
+  },
+  "scope": "Fixedthemedpanel/fullbox/clip/hiddenheading/six44pxverticalrows/stablemeasuredheader/nativeTabEnterwrap/Escapeexactconnectedopener",
+  "bindings": {
+    "receipt.json": "030fb433d5e0d7b0a2f1db5ea0648a0305ab28e71386b4b98917983def90fe9b",
+    "frontendBuildReceipt": "a7cd56a792264008e068ace59b608999da60f27ed128b360509944a8fbfe522b"
+  },
+  "ownerVisualApproval": false
+}

@@ -62,15 +62,15 @@ func (p *ProductPostgres) ReadBatchDmTables(ctx context.Context, actor auth.Auth
 	defer rows.Close()
 	for rows.Next() {
 		var (
-			inputIndex                                int32
-			memberPublicID, docID, authorID, deletedBy pgtype.UUID
+			inputIndex                                  int32
+			memberPublicID, docID, authorID, deletedBy  pgtype.UUID
 			kind, slug, title, status, visibility, body string
-			category, frontmatter                     pgtype.Text
-			policy                                    []byte
-			publishedAt, deletedAt, updatedAt         pgtype.Timestamptz
-			version                                   int32
-			readable                                  bool
-			adminOverride                             any
+			category, frontmatter                       pgtype.Text
+			policy                                      []byte
+			publishedAt, deletedAt, updatedAt           pgtype.Timestamptz
+			version                                     int32
+			readable                                    bool
+			adminOverride                               any
 		)
 		if err := rows.Scan(
 			&inputIndex, &memberPublicID,
@@ -102,5 +102,16 @@ func (p *ProductPostgres) ReadBatchDmTables(ctx context.Context, actor auth.Auth
 		}
 		out[slot] = product.BatchResult[DocumentView]{Value: &view}
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	rows.Close()
+	views := make([]*DocumentView, len(out))
+	for i := range out {
+		views[i] = out[i].Value
+	}
+	if err := p.setDocumentCapabilities(ctx, actor, views); err != nil {
+		return nil, err
+	}
+	return out, nil
 }

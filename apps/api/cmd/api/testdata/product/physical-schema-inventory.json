@@ -471,6 +471,11 @@
           "declaration": "TEXT",
           "source": "apps/api/db/migrations/0001_init.sql",
           "stage": "squash_a1"
+        },
+        "image_url": {
+          "declaration": "TEXT CHECK (image_url IS NULL OR (image_url LIKE 'https://%' AND char_length(image_url) <= 2048))",
+          "source": "apps/api/db/migrations/0002_character_image_url.sql",
+          "stage": "d5_character_image_url"
         }
       },
       "baseline_ddl": "\n\n    id bigint NOT NULL,\n    public_id uuid DEFAULT gen_random_uuid() NOT NULL,\n    short_code text NOT NULL,\n    name text NOT NULL,\n    owner_id bigint NOT NULL,\n    status text DEFAULT 'pending_approval'::text NOT NULL,\n    backstory_id bigint,\n    guild_document_id bigint,\n    region_id bigint,\n    verification_submitted_at timestamp with time zone,\n    player_xp integer DEFAULT 0 NOT NULL,\n    created_at timestamp with time zone DEFAULT now() NOT NULL,\n    updated_at timestamp with time zone DEFAULT now() NOT NULL,\n    background_text text,\n    ddb_url text,\n    deleted_at timestamp with time zone,\n    deleted_by bigint,\n    description text,\n    CONSTRAINT characters_player_xp_nonneg CHECK ((player_xp >= 0)),\n    CONSTRAINT characters_status_check CHECK ((status = ANY (ARRAY['active'::text, 'retired'::text, 'dead'::text, 'pending_approval'::text])))\n"

@@ -5,8 +5,9 @@
  * NEVER set font-family, font-size, or text-color inline in a component.
  *
  * Refined-modern stack:
- *   Display / heading / narrative  — Fraunces Variable (serif, expressive)
- *   Title / label / body / caption — Geist (clean humanist sans)
+ *   Display / heading / title      — Lexend Variable 700 (--font-title, D7)
+ *   Narrative                      — Fraunces Variable (serif, expressive)
+ *   Label / body / caption         — Geist (clean humanist sans)
  *   Code / value                   — Geist Mono / Geist tabular-nums
  *
  * Sizes use clamp() for fluid response; contexts.css overrides
@@ -16,10 +17,9 @@
 /* ---- Display — page hero titles ----------------------------------------- */
 
 .type-display {
-  font-family: var(--font-display);
+  font-family: var(--font-title);
   font-size: var(--type-display-size, clamp(1.75rem, 4vw, 3rem));
-  font-weight: 600;
-  font-variation-settings: 'SOFT' 50, 'opsz' 60;
+  font-weight: var(--font-title-weight);
   line-height: 1.08;
   letter-spacing: -0.02em;
   color: var(--color-text);
@@ -28,10 +28,9 @@
 /* ---- Heading — section titles -------------------------------------------- */
 
 .type-heading {
-  font-family: var(--font-display);
+  font-family: var(--font-title);
   font-size: var(--type-heading-size, clamp(0.875rem, 1.5vw, 1.25rem));
-  font-weight: 500;
-  font-variation-settings: 'SOFT' 20, 'opsz' 30;
+  font-weight: var(--font-title-weight);
   line-height: 1.3;
   letter-spacing: 0.04em;
   color: var(--color-text);
@@ -41,9 +40,9 @@
 /* ---- Title — entity / card names ----------------------------------------- */
 
 .type-title {
-  font-family: var(--font-body);
+  font-family: var(--font-title);
   font-size: var(--type-title-size, 1rem);
-  font-weight: 600;
+  font-weight: var(--font-title-weight);
   line-height: 1.45;
   letter-spacing: -0.01em;
   color: var(--color-text);
@@ -77,7 +76,8 @@
   font-family: var(--font-narrative);
   font-size: var(--type-narrative-size, 1.0625rem);
   font-weight: 400;
-  font-variation-settings: 'SOFT' 0, 'opsz' 144;
+  font-variation-settings: 'SOFT' 0;
+  font-optical-sizing: auto;
   line-height: 1.75;
   color: var(--color-text);
 }
@@ -125,4 +125,35 @@
   letter-spacing: 0.04em;
   color: var(--color-text-muted);
   text-transform: uppercase;
+}
+
+/* ---- Link — inline text links and link-styled buttons -------------------- */
+
+/* Unlayered like the rest of this file, so it beats base.css `a { color:
+   inherit }`. On a <button> it also clears the UA button chrome. */
+.type-link {
+  color: var(--color-accent);
+  text-decoration: none;
+  text-underline-offset: 0.18em;
+  cursor: pointer;
+}
+
+.type-link:hover {
+  text-decoration: underline;
+}
+
+.type-link:focus-visible {
+  outline: none;
+  border-radius: var(--rad-xs);
+  box-shadow: var(--focus-ring);
+}
+
+button.type-link {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  line-height: inherit;
 }

@@ -1,0 +1,17 @@
+query MapLocationDocuments($search: String, $offset: Int! = 0) {
+  documents(
+    filters: { kind: "codex_entry", category: "Locations", search: $search }
+    limit: 50
+    offset: $offset
+  ) {
+    total
+    items {
+      id
+      slug
+      kind
+      category
+      title
+      effectiveBody
+    }
+  }
+}

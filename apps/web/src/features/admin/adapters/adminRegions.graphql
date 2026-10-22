@@ -4,6 +4,7 @@ query AdminRegions($kind: String, $limit: Int! = 50, $offset: Int! = 0) {
     name
     kind
     charterDeadline
+    documentId
     createdAt
   }
 }

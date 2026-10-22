@@ -1,16 +1,68 @@
 package document
 
 import (
+	"context"
+
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbgen"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 )
+
+func (p *ProductPostgres) applySummaryAuthoring(ctx context.Context, actor auth.Authority, keys []IDKey, out []product.BatchResult[SummaryDerivedView], positions []int, rows []dbgen.ProductSummaryDerivedQuestFactsRow) error {
+	sources := make(map[int]*DocumentView)
+	views := make([]*DocumentView, 0, len(keys))
+	for _, row := range rows {
+		slot := summaryDerivedSlotIndex(positions, row.InputIndex)
+		if slot < 0 || !row.SummaryReadable || sources[slot] != nil {
+			continue
+		}
+		view := &DocumentView{Id: keys[slot].ID, Kind: "summary", AuthorId: db.UUIDString(row.SummaryAuthorID)}
+		sources[slot] = view
+		views = append(views, view)
+	}
+	if err := p.setDocumentCapabilities(ctx, actor, views); err != nil {
+		return err
+	}
+	for _, row := range rows {
+		slot := summaryDerivedSlotIndex(positions, row.InputIndex)
+		if slot < 0 || sources[slot] == nil || !sources[slot].CanEditMetadata {
+			continue
+		}
+		view := summaryDerivedSlot(out, positions, row.InputIndex)
+		if view == nil || view.Authoring != nil {
+			continue
+		}
+		quests, err := uuidStringsFromAny(row.AuthoringQuestIds)
+		if err != nil {
+			return err
+		}
+		if quests == nil {
+			quests = []string{}
+		}
+		characters, err := uuidStringsFromAny(row.AuthoringCharacterIds)
+		if err != nil {
+			return err
+		}
+		authoring := &SummaryAuthoringView{Complete: row.AuthoringComplete, QuestIds: quests}
+		if len(characters) == 1 {
+			authoring.CharacterId = &characters[0]
+		} else if len(characters) > 1 {
+			authoring.Complete = false
+		}
+		view.Authoring = authoring
+	}
+	return nil
+}
 
 func applySummaryDerivedQuestFacts(out []product.BatchResult[SummaryDerivedView], positions []int, rows []dbgen.ProductSummaryDerivedQuestFactsRow) {
 	for _, row := range rows {
 		view := summaryDerivedSlot(out, positions, row.InputIndex)
 		if view == nil {
 			continue
+		}
+		if row.QuestID.Valid {
+			view.Quests = append(view.Quests, SummaryQuestRefView{Id: db.UUIDString(row.QuestID), ShortCode: row.ShortCode, Title: productTextPointer(row.QuestTitle)})
 		}
 		if row.DmID.Valid {
 			dmID := db.UUIDString(row.DmID)

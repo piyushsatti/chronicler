@@ -13,6 +13,7 @@ import { LoginRoute } from '../../../src/chrome/LoginRoute.js';
 import { NotificationsPage } from '../../../src/features/notifications/pages/NotificationsPage.js';
 import { server } from '../../../src/mocks/server.js';
 import { renderWithProviders } from '../../test-utils.js';
+import goodMe from '../../fixtures/wire/me/good.json';
 import {
   dispatchFeatureGraphql,
   graphqlOperationName,
@@ -194,10 +195,10 @@ describe('notification cache across account and inbox navigation', () => {
       act(() => onlineManager.setOnline(false));
       await user.click(screen.getByRole('link', { name: 'Account route' }));
       expectHealthyRoute();
-      expect(screen.getByRole('heading', { name: 'Account' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { level: 1, name: 'Your account' })).toBeInTheDocument();
       expect(screen.getByText('Latest notice')).toBeInTheDocument();
       expect(screen.queryByText('Older notice')).not.toBeInTheDocument();
-      expect(screen.getByText('Unread: 0')).toBeInTheDocument();
+      expect(screen.getByText('You’re all caught up.')).toBeInTheDocument();
       expect(wire.requests).toHaveLength(3);
     } finally {
       dispose();
@@ -251,8 +252,10 @@ describe('notification cache across account and inbox navigation', () => {
       expect(await screen.findByText('Latest notice')).toBeInTheDocument();
       await waitFor(() => expect(queryClient.isFetching()).toBe(0));
 
+      const authority = JSON.stringify([goodMe.id, [...new Set(goodMe.roles)].sort()]);
       const retained = queryClient.getQueryCache().findAll({
         queryKey: queryKeys.notifications,
+        predicate: (query) => query.queryKey.at(-1) === authority,
       });
       expect(retained).toHaveLength(2);
       const invalidated = new Set<string>();
@@ -262,7 +265,7 @@ describe('notification cache across account and inbox navigation', () => {
         }
       });
       wire.updateLatest();
-      await user.click(screen.getByRole('button', { name: 'Acknowledge suppressed' }));
+      await user.click(screen.getByRole('button', { name: 'Clear alerts for removed pages' }));
 
       expect(await screen.findByText('Updated latest notice')).toBeInTheDocument();
       expect(wire.acknowledgementCount()).toBe(1);

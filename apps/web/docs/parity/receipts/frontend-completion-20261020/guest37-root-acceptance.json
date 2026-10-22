@@ -1,0 +1,26 @@
+{
+  "at": "2026-10-20T22:16:16.471392Z",
+  "nativeSession": 99404,
+  "exit": 0,
+  "expected": 138,
+  "skipped": 0,
+  "unexpected": 0,
+  "flaky": 0,
+  "durationMilliseconds": 171974.315,
+  "widths": [
+    390,
+    900,
+    1920
+  ],
+  "fixturesPerWidth": 46,
+  "runtime": "Immutable37ba00181f@4204/API12realqueries; guestreadonly, trace/HARoff",
+  "bindings": {
+    "playwright-report.json": "5fd7126921c256218393cf66447c28cef88622ac7e9b85172ad62a6712a97125",
+    "suiteSource": "7a372eca543bf5024728a16b89f68bc0bf683cc1ff013211c6df4b4cc366d569",
+    "frontendBuildReceipt": "ba00181f67dba1f495bba60b2dcc46d72c28fb07bfd8014832994d9a4703eb3b"
+  },
+  "limits": [
+    "46sampledfixtures\u00d73widths; not92routes\u00d7roles\u00d7actions.",
+    "Photos/headingbounds andquerysettlement supplement datedauthenticated/permission/actionevidence, notproviderloginorownerLegacyapproval."
+  ]
+}

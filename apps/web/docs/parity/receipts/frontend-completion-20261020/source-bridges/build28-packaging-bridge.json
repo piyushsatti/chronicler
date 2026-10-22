@@ -1,0 +1,11 @@
+{
+  "at": "2026-10-20T16:33:09.131196+00:00",
+  "sameSourceInputs": 625,
+  "sameBuiltAssetBytes": 181,
+  "sourceManifestSha256": "bf6124b8411617aab3ebf372de3cfdaff3d6afe04e8409d60a36d859afdfb838",
+  "build27OriginalReceiptSha256": "60f6ebe05874bacb62b4caea836ff376de96dd7825a334839d847e6873552c23",
+  "build28CorrectedReceiptSha256": "131ef5c575eada5cfb5308befb82623dfe6f67b5c8565c02c215484b2cb73925",
+  "build28DistManifestSha256": "a5fb6cec628cdca23abbb42902748435783fc2cbb57c7ec56537331f15d4d742",
+  "basis": "Both625-input source manifests identical, all181 relative asset paths enumerated and bytes compared. Only canonical package manifest path base and runtime origin differ. Preserve original Build27 packaging gate failure and guest27 execution identity.",
+  "boundedIndependentSourceBridgeSha256": "cd6f35e133384d0f7b76835e8ccb05923be10a04264d68705a208777914bfa21"
+}

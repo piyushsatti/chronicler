@@ -1,0 +1,122 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  min-width: 0;
+}
+
+.body h1,
+.body h2,
+.body h3,
+.body p {
+  margin: 0;
+}
+
+.hero {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+
+.heroBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+/* About and Availability sit side by side when there is room. */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
+  gap: var(--sp-4);
+  align-items: start;
+}
+
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+}
+
+.cardHead > h2 {
+  margin-inline-end: auto;
+}
+
+.slots {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.slots li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.sessions {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.session {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2) var(--sp-3);
+  padding: var(--sp-3) 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.session:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.sessionBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.titleLink {
+  text-decoration: none;
+}
+
+.titleLink:hover {
+  color: var(--color-accent);
+}
+
+/* Owner forms: buttons size to their label instead of stretching. */
+.owner :global(.btn) {
+  align-self: flex-start;
+}
+
+.back {
+  align-self: flex-start;
+  margin-top: var(--sp-4);
+}
+
+.backLink {
+  align-self: flex-start;
+  margin-inline-start: calc(-1 * var(--sp-3));
+}

@@ -1,75 +1,190 @@
 .root {
+  --imposition-page-host-gap: var(--sp-5);
   display: flex;
   flex-direction: column;
   gap: var(--sp-6);
   min-width: 0;
 }
 
-.hero {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
-  padding-bottom: var(--sp-2);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.hero h1,
-.hero p {
+.root h2 {
   margin: 0;
 }
 
-.heroActions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--sp-3);
-  margin-top: var(--sp-2);
+.root [data-el='questCard.hook'] [data-el='content.body'] {
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
 }
 
-.stats {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--sp-2);
+.root :global(.shelf) {
+  margin-bottom: var(--sp-5);
 }
 
-.stats .type-value {
-  margin: 0;
+.root :global(.lane) {
+  margin-bottom: var(--sp-4);
 }
 
-.bannerBody {
+.root [data-el='home.weekStrip'] > [data-el='week-grid.root'] {
+  overflow-x: auto;
+}
+
+.root [data-el='home.weekStrip'] > :global(.cols)[data-n='1'] {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.root [data-el='home.weekStrip'] > :global(.cols)[data-n='3'] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.root [data-el='schedCard.root'] {
   min-width: 0;
+  max-width: 100%;
 }
 
-.bannerBody h2,
-.bannerBody p {
-  margin: 0;
-}
-
-.bannerBody p {
-  margin-top: var(--sp-2);
-  color: var(--color-text-2);
-}
-
-.laneEmpty {
-  margin: 0;
-  color: var(--color-text-3);
-  font-size: 0.84375rem;
-}
-
-.bucketList {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
+.root [data-el='schedCard.topRow']:global(.row),
+.root [data-el='schedCard.bottomRow']:global(.row),
+.root [data-el='schedCard.bottomRow'] > :global(.row) {
+  min-width: 0;
+  flex-wrap: wrap;
   gap: var(--sp-2);
 }
 
-.bucketList a {
-  text-decoration: none;
+.root [data-el='schedCard.when'],
+.root [data-el='schedCard.title'] {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
-.bucketList a:hover {
-  color: var(--color-accent);
+.root [data-el='schedCard.bottomRow'] :global(.chip) {
+  min-width: 0;
+  max-width: 100%;
+  min-height: var(--sp-5);
+  height: auto;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.root [data-el='schedCard.bottomRow'] :global(.chip) :global(.dot) {
+  flex-shrink: 0;
+}
+
+.heading h1 {
+  margin: 0;
+}
+
+.banner[data-media='true'] {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) min(38%, 360px);
+  gap: var(--sp-5);
+  padding-right: var(--sp-5);
+}
+
+.banner[data-media='true'] :global(.home-banner-media) {
+  position: relative;
+  inset: auto;
+  width: auto;
+  margin: var(--sp-5) 0;
+}
+
+.banner[data-media='true'][data-compact='true'] {
+  grid-template-columns: minmax(0, 1fr);
+  gap: 0;
+  padding-right: 0;
+}
+
+.banner[data-media='true'][data-compact='true'] :global(.home-banner-media),
+.banner[data-compact='true'] :global(.home-banner-media-fallback) {
+  position: relative;
+  inset: auto;
+  width: auto;
+  margin: 0 var(--sp-6) var(--sp-6);
+}
+
+.root[data-compact='true'] :global(.shelf) {
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+:global([data-width-class='compact']) :global(.hf2) > :global(.page):has(> .root) {
+  padding: var(--sp-4) var(--sp-3) var(--sp-6);
+}
+
+:global([data-width-class='compact']) .root[data-compact='true'] :global(.shelf) {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.root[data-compact='true'] [data-el='newHere.ctaRow'] {
+  grid-column: 1 / -1;
+}
+
+.root[data-compact='true'] :global(.shelf) :global(.row) {
+  flex-wrap: wrap;
+}
+
+/* Moved from inline styles (2026-10-21) */
+.banner {
+  position: relative;
+  overflow: hidden;
+  min-height: 196px;
+  border-radius: var(--rad);
+  border: 1px solid var(--color-border);
+  background: var(--color-hero-bg);
+}
+
+.bannerPattern {
+  position: absolute;
+  inset: 0;
+  opacity: 0.6;
+  background-image: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 11px,
+    color-mix(in srgb, var(--color-hero-ink) 2%, transparent) 11px,
+    color-mix(in srgb, var(--color-hero-ink) 2%, transparent) 22px
+  );
+}
+
+.bannerGlow {
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(
+    circle at 20% 0%,
+    var(--color-hero-glow),
+    transparent 70%
+  );
+}
+
+.banner .bannerContent {
+  position: relative;
+  padding: var(--sp-6);
+  max-width: calc(var(--sp-4) * 36);
+  min-height: calc(var(--sp-3) * 16);
+}
+
+.banner .bannerTitle {
+  color: var(--color-hero-ink);
+  margin-bottom: 8px;
+}
+
+.banner .bannerText {
+  color: var(--color-hero-ink-2);
+  margin-bottom: 16px;
+  max-width: 440px;
+}
+
+.heading .statsRow {
+  margin-top: 10px;
+}
+
+.weekStripCols {
+  margin-top: var(--sp-4);
+}
+
+.recentHeader {
+  margin-bottom: var(--sp-3);
+}
+
+.dmRow {
+  padding: var(--sp-3) 0;
+  border-bottom: 1px solid var(--color-border);
 }

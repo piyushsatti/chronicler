@@ -1,0 +1,21 @@
+query MapRegionActivity($atlasCode: String!) {
+  regionActivity(atlasCode: $atlasCode) {
+    regionId
+    regionName
+    fillingCount
+    scheduledCount
+    liveCount
+    openQuests {
+      shortCode
+      scheduledAt
+      slotsMax
+      filledCount
+    }
+    liveQuests {
+      shortCode
+      scheduledAt
+      slotsMax
+      filledCount
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "calendar": {
+    "currentGameDay": 113,
+    "currentGameDate": {
+      "eraAbbrev": "PI",
+      "year": 4,
+      "periodName": "River",
+      "periodIndex": 0,
+      "periodType": "month",
+      "day": 24
+    },
+    "monthGrid": [
+      { "realDate": "2026-10-14", "gameDay": 113 },
+      { "realDate": "2026-10-15", "gameDay": null }
+    ]
+  },
+  "arc": {
+    "id": "00000000-0000-4000-8000-000000000031",
+    "name": "The Salt Road",
+    "createdBy": "00000000-0000-4000-8000-000000000032",
+    "createdAt": "2026-10-14T00:00:00Z",
+    "questCount": 0,
+    "quests": []
+  },
+  "document": {
+    "id": "00000000-0000-4000-8000-000000000033",
+    "slug": "salt-road-guild",
+    "kind": "codex_entry",
+    "category": "Guilds",
+    "title": "The Salt Road Guild"
+  }
+}

@@ -7,5 +7,7 @@
   "duplication": [],
   "orphan": [],
   "stateTrio": [],
-  "architectureLadder": []
+  "architectureLadder": [],
+  "classCoverage": [],
+  "customProperties": []
 }

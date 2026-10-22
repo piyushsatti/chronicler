@@ -1,9 +1,14 @@
 import { HttpResponse } from 'msw';
-import type { FeatureGraphql, FeatureHandlers, FeatureRoute } from '../../chrome/featureModule.js';
+import type {
+  FeatureGraphql,
+  FeatureHandlers,
+  FeatureRoute,
+} from '../../chrome/featureModule.js';
 import { lazyElement } from '../../chrome/lazyElement.js';
 import { redirectRoute } from '../../chrome/routeBuilders.js';
 import goodChronicleList from '../../../tests/fixtures/wire/chronicle/list-good.json';
-import goodDocument from '../../../tests/fixtures/wire/document/good.json';
+import goodDetail from '../../../tests/fixtures/wire/chronicle/detail-good.json';
+import goodCalendar from '../../../tests/fixtures/wire/chronicle/calendar-good.json';
 
 export const endpoints = {} as const;
 
@@ -14,8 +19,13 @@ export const queryKeys = {
 
 export const graphql: FeatureGraphql = {
   ChronicleList: () =>
-    HttpResponse.json({ data: { documents: goodChronicleList } }),
-  ChronicleDetail: () => HttpResponse.json({ data: { document: goodDocument } }),
+    HttpResponse.json({
+      data: { documents: goodChronicleList, gameCalendar: goodCalendar },
+    }),
+  ChronicleDetail: (body) =>
+    HttpResponse.json({
+      data: { [body.variables?.byId ? 'byId' : 'bySlug']: goodDetail },
+    }),
 };
 
 export const handlers: FeatureHandlers = [];

@@ -1,49 +1,67 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useRef } from 'react';
 import { queryKeys } from '../../../api/queryKeys.js';
+import { useAuth } from '../../../auth/AuthContext.js';
 import { toAppError } from '../../../errors/toAppError.js';
-import {
-  closeQuest,
-  signupForQuest,
-  transitionQuest,
-} from '../adapters/questAdapter.js';
+import { executeQuestCommand, type QuestCommand } from '../adapters/questCommands.js';
 
 export function useQuestMutations(shortCode: string, questId: string) {
   const client = useQueryClient();
-  const invalidated403 = useRef(false);
-
-  const invalidate = async (): Promise<void> => {
-    await client.invalidateQueries({ queryKey: queryKeys.quest(shortCode) });
-    await client.invalidateQueries({ queryKey: queryKeys.questBoard });
-    await client.invalidateQueries({ queryKey: queryKeys.questLists });
-  };
-
-  const onError = (err: unknown): void => {
-    const app = toAppError(err, 'quest:mutation');
-    if (app.kind === 'forbidden' && !invalidated403.current) {
-      invalidated403.current = true;
-      void client.invalidateQueries({ queryKey: queryKeys.me });
+  const { token, isCurrentSession } = useAuth();
+  const pending = useRef(false);
+  const keys = useRef(new Map<string, string>());
+  const mutation = useMutation({
+    mutationFn: async ({ command, key }: { command: QuestCommand; key: string }) => {
+      if (!isCurrentSession(token))
+        throw toAppError({ failure: 'Unauthorized' }, 'quest:session');
+      return executeQuestCommand(command, key);
+    },
+    retry: false,
+    onSuccess: async () => {
+      await Promise.all([
+        client.invalidateQueries({
+          queryKey: shortCode ? queryKeys.quest(shortCode) : ['quest'],
+        }),
+        client.invalidateQueries({
+          queryKey: shortCode ? queryKeys.questSummary(shortCode) : ['questSummary'],
+        }),
+        client.invalidateQueries({ queryKey: queryKeys.questBoard }),
+        client.invalidateQueries({ queryKey: queryKeys.questLists }),
+        client.invalidateQueries({ queryKey: queryKeys.home }),
+        client.invalidateQueries({ queryKey: queryKeys.homeLanes }),
+        client.invalidateQueries({ queryKey: queryKeys.notifications }),
+        client.invalidateQueries({ queryKey: queryKeys.notificationsUnread }),
+        client.invalidateQueries({ queryKey: ['questOptions'] }),
+      ]);
+    },
+    onError: (error) => {
+      const app = toAppError(error, 'quest:command');
+      if (app.kind === 'forbidden' || app.kind === 'unauthorized') {
+        void client.invalidateQueries({ queryKey: queryKeys.me });
+        void client.invalidateQueries({ queryKey: ['questAuthority'] });
+      }
+    },
+  });
+  const execute = async (command: QuestCommand): Promise<boolean> => {
+    if (pending.current || (questId && command.questId !== questId)) return false;
+    pending.current = true;
+    const signature = JSON.stringify(command);
+    const key = keys.current.get(signature) ?? crypto.randomUUID();
+    keys.current.set(signature, key);
+    try {
+      await mutation.mutateAsync({ command, key });
+      keys.current.delete(signature);
+      return true;
+    } catch {
+      return false;
+    } finally {
+      pending.current = false;
     }
   };
-
-  const signup = useMutation({
-    mutationFn: (characterId: string) => signupForQuest(questId, characterId),
-    onSuccess: invalidate,
-    onError,
-  });
-
-  const transition = useMutation({
-    mutationFn: (to: 'open' | 'full' | 'played' | 'cancelled') =>
-      transitionQuest(questId, to),
-    onSuccess: invalidate,
-    onError,
-  });
-
-  const close = useMutation({
-    mutationFn: () => closeQuest(questId),
-    onSuccess: invalidate,
-    onError,
-  });
-
-  return { signup, transition, close };
+  return {
+    execute,
+    pending: mutation.isPending,
+    error: mutation.error ? toAppError(mutation.error, 'quest:command') : null,
+    message: mutation.data ?? null,
+  };
 }

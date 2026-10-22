@@ -1,0 +1,77 @@
+{
+  "at": "2026-10-20T19:11:52.468082+00:00",
+  "nativeSession": 80483,
+  "exit": 0,
+  "frontendEpoch": 32,
+  "frontendRuntime": "Current32 source via isolated fixture Vite, not immutable preview capture",
+  "journeyCount": 10,
+  "operationCount": 498,
+  "operationOutcomes": {
+    "complete": 441,
+    "aborted": 57
+  },
+  "authenticatedAliasCases": {
+    "total": 21,
+    "allowed": 7,
+    "denied": 14,
+    "originalRevokedJwtIncluded": true
+  },
+  "galleryCases": {
+    "actorWidthCases": 9,
+    "allowed": 4,
+    "denied": 5,
+    "adminOsModeAllocations": 6,
+    "widths": [
+      390,
+      900,
+      1920
+    ],
+    "height": 1000,
+    "effectsControlTouched": false,
+    "extraMutations": 0
+  },
+  "nativeReadback": {
+    "at": "2026-10-20T19:08:18.09331056Z",
+    "calendarExtrasPreserved": true,
+    "futureProjectionCells": 30,
+    "mutationsReadBack": true,
+    "ownerExactReplay": true,
+    "ownerOverrideFact": {
+      "actorId": "a1451ed6-51f2-4379-9013-eb78368a71d5",
+      "operation": "Mutation.updateHomeBanner",
+      "subjectType": "site",
+      "subjectId": "home_banner",
+      "ruleCode": "ROLE",
+      "at": "2026-10-20T19:07:28.615412Z"
+    },
+    "ownerOverrideFactCount": 1,
+    "ownerWritePersisted": true,
+    "selfRoleRevoked": true,
+    "separateAuditTableAbsent": true
+  },
+  "nativeCleanup": {
+    "apiClosed": true,
+    "apiStarted": true,
+    "at": "2026-10-20T19:08:18.2064627Z",
+    "database": "product_case_1",
+    "databaseDropped": true,
+    "listenersClosed": {
+      "api": true,
+      "vite": true
+    }
+  },
+  "productionInputsBeforeAfterEqual": true,
+  "ownedInputsBeforeAfterEqual": true,
+  "artifacts": {
+    "browser-receipt.json": "748400e3c3be03e70974e6d10f73ca4af128253340c953d1e600656f7722b58e",
+    "native-readback.json": "a2d13cecc74f9ac7cb6ebf17715e0937abbb50e6a8f21511b02ab3ea2d3386a5",
+    "native-cleanup.json": "321b518a2bb8e975185cc6404bb6ad12f31939e9843c755e2eea181e8a6f4675",
+    "production-inputs-before.json": "64000609c6339dcf450e09c483c1d961a8034cd71b1d503263345d4a5e1c66d8",
+    "production-inputs-after.json": "64000609c6339dcf450e09c483c1d961a8034cd71b1d503263345d4a5e1c66d8"
+  },
+  "limits": [
+    "No provider exchange/applied delivery or production deployment",
+    "No final owner visual approval",
+    "Representative actors/actions; no full route\u00d7role Cartesian claim"
+  ]
+}

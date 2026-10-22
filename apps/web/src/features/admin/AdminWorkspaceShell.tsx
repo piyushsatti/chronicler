@@ -3,8 +3,10 @@ import { PageHost, type PageRegionRenderers } from '@pi/react-imposition/react';
 import { Link, useLocation } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { ProtectedRoute } from '../../auth/ProtectedRoute.js';
-import { canAccessVerify, isAdmin } from '../../auth/roles.js';
 import { StatePanel } from '../../components/foundation/StatePanel.js';
+import { PageShell } from '../../components/foundation/PageShell.js';
+import { Button } from '../../components/primitives/Button.js';
+import './AdminWorkspaceShell.css';
 import {
   AuthorityFailureContext,
   useAdminAuthority,
@@ -51,7 +53,7 @@ const SECTIONS = [
   },
 ] as const;
 
-export function adminDeclaration(page: string): PageDeclaration {
+function adminDeclaration(page: string): PageDeclaration {
   return {
     page,
     regions: [
@@ -62,31 +64,43 @@ export function adminDeclaration(page: string): PageDeclaration {
   };
 }
 
-export function AdminNavRegion({
-  roles,
+function AdminNavRegion({
+  canAdmin,
+  canReview,
 }: {
-  roles: readonly string[] | undefined;
+  canAdmin: boolean;
+  canReview: boolean;
 }): React.JSX.Element {
   const location = useLocation();
+  const sections = SECTIONS.filter((section) =>
+    section.href === '/admin/review' ? canReview : canAdmin,
+  );
+  if (sections.length === 0) return <div hidden />;
   return (
-    <nav className="admin-workspace__nav" aria-label="Admin sections">
-      {SECTIONS.filter((section) =>
-        section.href === '/admin/review' ? canAccessVerify(roles) : isAdmin(roles),
-      ).map((section) => (
-        <Link
-          key={section.href}
-          to={section.href}
-          className="admin-workspace__nav-link"
-          aria-current={section.match(location.pathname) ? 'page' : undefined}
-        >
-          {section.label}
-        </Link>
-      ))}
-    </nav>
+    <div className="admin-workspace__nav-scroll">
+      <nav className="admin-workspace__nav" aria-label="Admin sections">
+        {sections.map((section) => (
+          <Link
+            key={section.href}
+            to={section.href}
+            className="admin-workspace__nav-link"
+            aria-current={section.match(location.pathname) ? 'page' : undefined}
+            onFocus={(event) =>
+              event.currentTarget.scrollIntoView({
+                block: 'nearest',
+                inline: 'nearest',
+              })
+            }
+          >
+            {section.label}
+          </Link>
+        ))}
+      </nav>
+    </div>
   );
 }
 
-export function AdminSummaryRegion({
+function AdminSummaryRegion({
   title,
   authority = 'admin',
 }: {
@@ -101,15 +115,23 @@ export function AdminSummaryRegion({
   );
 }
 
-function AuthorityRecovery({ reload }: { reload: () => void }): React.JSX.Element {
+function AuthorityRecovery({
+  reload,
+  signIn = true,
+}: {
+  reload: () => void;
+  signIn?: boolean;
+}): React.JSX.Element {
   return (
-    <div className="row">
-      <button type="button" className="type-link" onClick={reload}>
+    <div className="row" data-wrap="1" data-gap="3">
+      <Button variant="secondary" size="sm" onClick={reload}>
         Reload account
-      </button>
-      <Link to="/login" className="type-link">
-        Sign in again
-      </Link>
+      </Button>
+      {signIn ? (
+        <Link to="/login" className="btn btn--ghost btn--sm">
+          Sign in again
+        </Link>
+      ) : null}
     </div>
   );
 }
@@ -133,15 +155,21 @@ export function AdminWorkspaceShell({
 }): React.JSX.Element {
   return (
     <ProtectedRoute>
-      <AuthorizedWorkspace
-        key={page}
-        page={page}
-        title={title}
-        summary={summary}
-        authority={authority}
+      <PageShell
+        context="war-room"
+        max={authority === 'dm' ? 'default' : 'wide'}
+        className="admin-workspace-page"
       >
-        {children}
-      </AuthorizedWorkspace>
+        <AuthorizedWorkspace
+          key={page}
+          page={page}
+          title={title}
+          summary={summary}
+          authority={authority}
+        >
+          {children}
+        </AuthorizedWorkspace>
+      </PageShell>
     </ProtectedRoute>
   );
 }
@@ -162,7 +190,9 @@ function AuthorizedWorkspace({
   const account = useAdminAuthority(authority);
   const failures = usePageAuthorityFailures(account.error);
   const regions: PageRegionRenderers = {
-    nav: () => <AdminNavRegion roles={account.roles} />,
+    nav: () => (
+      <AdminNavRegion canAdmin={account.canAdmin} canReview={account.canReview} />
+    ),
     summary: () => (
       <div className="stack">
         {summary != null ? (
@@ -171,17 +201,24 @@ function AuthorizedWorkspace({
           <AdminSummaryRegion title={title} authority={authority} />
         )}
         {failures.permissionsChanged ? (
-          <AuthorityRecovery reload={account.reload} />
+          // The denied panel below already offers sign-in; this adds the reload.
+          <AuthorityRecovery reload={account.reload} signIn={false} />
         ) : null}
       </div>
     ),
     body: () => <div className="admin-workspace__body">{children}</div>,
   };
   if (account.status === 'error') {
+    const denied =
+      account.error?.kind === 'forbidden' || account.error?.kind === 'unauthorized';
     return (
       <section className="stack" aria-label={`${title} access`}>
-        <StatePanel status="error" error={account.error ?? undefined} />
-        <AuthorityRecovery reload={account.reload} />
+        <StatePanel
+          status="error"
+          error={account.error ?? undefined}
+          onRetry={account.reload}
+        />
+        {denied ? null : <AuthorityRecovery reload={account.reload} />}
       </section>
     );
   }
@@ -189,7 +226,11 @@ function AuthorizedWorkspace({
   return (
     <AuthorityFailureContext.Provider value={failures.report}>
       <div className="admin-workspace" data-layout="admin-workspace">
-        <PageHost declaration={adminDeclaration(page)} regions={regions} />
+        <PageHost
+          key={account.commandKey}
+          declaration={adminDeclaration(page)}
+          regions={regions}
+        />
       </div>
     </AuthorityFailureContext.Provider>
   );

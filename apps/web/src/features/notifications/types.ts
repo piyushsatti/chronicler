@@ -1,4 +1,1 @@
-export type {
-  NotificationView,
-  NotificationPage,
-} from './adapters/notificationsAdapter.js';
+export type { NotificationView } from './adapters/notificationsAdapter.js';

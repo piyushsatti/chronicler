@@ -1,0 +1,44 @@
+# Calendar title-filter diagnosis
+
+2026-10-20. Read-only diagnosis of Quest composition-run-8, actual Build28/binary8. **Established cause: Quest list search currently matches only short_code; the harness requests the distinct Document title.** The fixture is not missing its authored title. No product or harness correction is authorized by this report. Root requested an owner decision about the intended searched fields; the existing failed title assertion remains failed and unchanged.
+
+## Actual evidence and first mismatch
+
+The retained browser receipt has seven completed checks, completed=false, failure `0 !== 1`, and browserClosed/viteClosed=true. Its last same-request completed200 RetainedCalendarQuests read carries:
+
+```json
+{"filters":{"scheduledFrom":"2026-10-22T00:00:00Z","scheduledTo":"2026-10-23T00:00:00Z","status":"open","search":"Quest composition 000","dmId":"37e9d2c0-5a31-4974-a8e3-c6ad5195e1ef","regionId":"5216bb4a-c043-4252-a10e-a6b8460fdf7e"},"offset":0}
+```
+
+`failure-1.aria.txt` shows those actual day/title/status controls, the linked DM/region indicator and0 quests/Page1. Earlier month reads and50+1 pagination succeeded. CalendarAdapter.ts:78–88 passes q directly as filters.search; Quest query/store parameter mapping passes it unchanged. No client-side title/code substitution or date offset explains the result.
+
+The actual run's `native-inventory.json` and retained `native-persisted-readback.json` were compared with assertions, exit0: target02b9a99f-012f-45e9-a252-c6bf3ed7933e points to the exact retained Documente13df388-7692-4e83-9584-ba6819b6a51e; that quest_brief is published/public with title `Quest composition 000`; Quest short_code is `quest-composition-000`, statusopen and scheduled_at inside the requested UTC interval. The Go fixture at quest_browser_integration_test.go:517–530 explicitly persists this title in Document, uses its bigint relationship on Quest and retains the actual IDs. Thus this is neither a missing required fixture title nor prose still stored on the Quest aggregate. The saved native state supports the fixture declaration independently of the inventory label.
+
+The first divergent field interpretation is `apps/api/db/queries/quest_product.sql:149`, ProductQuestListPage:
+
+```sql
+AND (sqlc.narg(search)::text IS NULL OR q.short_code ILIKE '%' || replace(replace(replace(sqlc.narg(search)::text, E'\\', E'\\\\'), '%', E'\\%'), '_', E'\\_') || '%' ESCAPE E'\\')
+```
+
+The requested string contains no wildcard characters and its spaces do not match the stored hyphens. This predicate therefore excludes the target before the shared counted/page CTE, explaining both total0 and no returned item. This review did not rerun SQL or the API; it traced the actual retained failure and current source. The saved native cleanup receipt says APIclosed/databaseDropped=true, and no runtime was started here.
+
+## Accepted-contract boundary and minimal next change
+
+Current behavior.md:27 requires escaped case-insensitive substring search and AND-combined supplied filters. Line31 lists Quest search among supported filters, but does not name its searched fields. QuestFiltersInput.search at packages/contracts/graphql/quest/types.graphql:125 has no field description resolving this. Existing ProductQuestListOptionalFilters native tests exercise code matching/case/literal percent/underscore/backslash; they do not establish a title-search promise. The global Query.search Document full-text contract at behavior.md:33 is a separate operation and cannot silently define QuestFilters.search. The source inspected does not establish permission to expand Quest search targets on this diagnosis alone.
+
+Root has requested the consequential owner choice: readable titles plus quest codes, or retained code-only search with explicit Quest-code UI. Both are reversible product policies, but a careless title expansion can irreversibly disclose hidden Document existence through matches/counts. Do not change the fixture to duplicate its title into short_code, normalize away the spaces, or silently replace the failing title assertion with code input to force acceptance.
+
+If readable-title search is selected, the smallest complete repair belongs at the shared Quest list filter before count/pagination, retaining existing literal escaping, all other predicates and stable schedule/UUID ordering. It must use the canonical Document-readable predicate/current authority for the title branch: Quest public readability does not grant its brief. A bare `OR doc.title ILIKE ...` would leak hidden titles through matches/totals and is not an acceptable minimal fix. No redundant Quest prose field or new Calendar-only search interpreter is needed. Focused native contrasts should cover title-only and code-only matches, hidden-title no-match/count safety, ordinary author/grant admission, escaped literals and combined date/status/DM/region filters. Root will assign exact source/generated ownership after the ruling.
+
+If code-only search is selected, the UI must communicate that scope and future acceptance should deliberately prove code search while retaining the current failed title assertion as historical evidence. This report does not enact that option or claim a product decision.
+
+## Frozen inputs and execution limits
+
+- Actual Go fixture and saved native-input.go.txt: c77bffe772b614a92209782ee3dfe31c585b0f85dcdec83a3837d88421ea66c6.
+- Actual MJS and saved browser-input.mjs:38504f4db680e11e49f2836914e3c4834388dc912d325e29138bb1d61b3fc93e.
+- Quest SQL:cb688914039f0c88137e7d29f82706b2084a6a107fc401e66806883149fa8172.
+- Calendar adapter:fea99e808447d62b16ab9ed81402d7bbdc757841b4c74d25a0418fa13c3925ca.
+- Accepted behavior:d6898683e61454914681508820acfb6264a1b2e0a743e9dec73ace1dfd20e529; Quest SDL:c1ddf706232c2212d5f9ac9d459195f6cec18269a41bc6364e68e3eeda28f450.
+- Actual browser receipt:19a109d790804b54e6a1dd97146912a45683254c581727452eb92629ca480199; inventory2393be45c9394a9aa153c8683ee71493e26f34709020221b8a97cbb23ad8d240; failure ARIAe68c1896583cf01a1c4565439af35c97d7ae8a0c9c0694b8217dc0da4f37fd38.
+
+Only this task-local report was written. Source/readback/hash inspection and one local retained-JSON assertion command ran; no product/test/harness/generated edit, compiler, native fixture, browser, API/database/service, build or provider request occurred. All owned processes ended. Product behavior and the failed oracle remain unchanged pending the owner decision.

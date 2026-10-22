@@ -428,6 +428,10 @@ func toMemberActivityStatsType(v member.MemberActivityStatsView) *MemberActivity
 	}
 }
 
+func toMyPrivateNotesType(v member.PrivateNotesView) *MyPrivateNotesType {
+	return &MyPrivateNotesType{Body: v.Body, UpdatedAt: v.UpdatedAt}
+}
+
 func toMyPersonalizationType(v member.MyPersonalizationView) *MyPersonalizationType {
 	out := &MyPersonalizationType{}
 	if v.Settings != nil {
@@ -635,6 +639,20 @@ func toCharacterFilters(filters *CharacterFiltersInput) *character.CharacterFilt
 }
 
 func toCharacterView(v character.CharacterView) *CharacterType {
+	var mirror *CharacterDDBMirrorType
+	if v.DdbMirror != nil {
+		mirror = &CharacterDDBMirrorType{
+			CharacterID: v.DdbMirror.CharacterId,
+			Level:       intPtrFromInt32(v.DdbMirror.Level), Xp: intPtrFromInt32(v.DdbMirror.Xp),
+			ArmorClass: intPtrFromInt32(v.DdbMirror.ArmorClass), MaxHp: intPtrFromInt32(v.DdbMirror.MaxHp),
+			Species: v.DdbMirror.Species, Classes: v.DdbMirror.Classes,
+			Background: v.DdbMirror.Background, SyncedAt: v.DdbMirror.SyncedAt,
+		}
+	}
+	proficiencies := make([]*DDBProficiencyType, len(v.Proficiencies))
+	for i, proficiency := range v.Proficiencies {
+		proficiencies[i] = &DDBProficiencyType{Kind: proficiency.Kind, Name: proficiency.Name}
+	}
 	return &CharacterType{
 		ID:                      v.Id,
 		OwnerID:                 v.OwnerId,
@@ -648,11 +666,14 @@ func toCharacterView(v character.CharacterView) *CharacterType {
 		Description:             v.Description,
 		BackgroundText:          v.BackgroundText,
 		DdbURL:                  v.DdbUrl,
+		DdbMirror:               mirror,
+		Proficiencies:           proficiencies,
 		CreatedAt:               v.CreatedAt,
 		UpdatedAt:               v.UpdatedAt,
 		VerificationSubmittedAt: v.VerificationSubmittedAt,
 		VerificationStatus:      CharacterReviewStatus(v.VerificationStatus),
 		DisplayIcon:             v.DisplayIcon,
+		ImageURL:                v.ImageUrl,
 		DaysActive:              int(v.DaysActive),
 	}
 }
@@ -864,22 +885,24 @@ func toDocumentViewType(v document.DocumentView) *DocumentType {
 		fm = json.RawMessage("{}")
 	}
 	return &DocumentType{
-		ID:            v.Id,
-		Version:       int(v.Version),
-		Slug:          v.Slug,
-		Kind:          v.Kind,
-		Category:      v.Category,
-		Status:        v.Status,
-		Visibility:    v.Visibility,
-		Policy:        v.Policy,
-		Title:         v.Title,
-		Frontmatter:   fm,
-		AuthorID:      v.AuthorId,
-		UpdatedAt:     v.UpdatedAt,
-		DeletedAt:     v.DeletedAt,
-		DeletedBy:     v.DeletedBy,
-		EffectiveBody: v.EffectiveBody,
-		PublishedAt:   v.PublishedAt,
+		CanEditBody:     v.CanEditBody,
+		CanEditMetadata: v.CanEditMetadata,
+		ID:              v.Id,
+		Version:         int(v.Version),
+		Slug:            v.Slug,
+		Kind:            v.Kind,
+		Category:        v.Category,
+		Status:          v.Status,
+		Visibility:      v.Visibility,
+		Policy:          v.Policy,
+		Title:           v.Title,
+		Frontmatter:     fm,
+		AuthorID:        v.AuthorId,
+		UpdatedAt:       v.UpdatedAt,
+		DeletedAt:       v.DeletedAt,
+		DeletedBy:       v.DeletedBy,
+		EffectiveBody:   v.EffectiveBody,
+		PublishedAt:     v.PublishedAt,
 	}
 }
 
@@ -1106,12 +1129,7 @@ func toHomeView(v site.HomeView) *HomeType {
 	for i, bucket := range v.RecentByCategory {
 		docs := make([]*DocumentType, len(bucket.Documents))
 		for j, doc := range bucket.Documents {
-			docs[j] = &DocumentType{
-				ID:    doc.Id,
-				Slug:  doc.Slug,
-				Kind:  doc.Kind,
-				Title: doc.Title,
-			}
+			docs[j] = toDocumentViewType(doc)
 		}
 		buckets[i] = &HomeBucketType{Category: bucket.Category, Documents: docs}
 	}
@@ -1203,6 +1221,7 @@ func toCreateCharacterFields(in CreateCharacterInput) character.CreateCharacterF
 		Description:    in.Description,
 		BackgroundText: in.BackgroundText,
 		DdbUrl:         in.DdbURL,
+		ImageUrl:       in.ImageURL,
 		ShortCode:      in.ShortCode,
 	}
 }
@@ -1216,6 +1235,10 @@ func toUpdateCharacterProfileFields(in UpdateCharacterProfileInput) character.Up
 	if in.BackgroundText.IsSet() {
 		out.BackgroundText.Set = true
 		out.BackgroundText.Value = in.BackgroundText.Value()
+	}
+	if in.ImageURL.IsSet() {
+		out.ImageUrl.Set = true
+		out.ImageUrl.Value = in.ImageURL.Value()
 	}
 	return out
 }
@@ -1275,6 +1298,9 @@ func optionalRawMessage(o gql.Omittable[json.RawMessage]) product.Optional[json.
 		return product.Optional[json.RawMessage]{}
 	}
 	v := o.Value()
+	if len(v) == 0 || string(v) == "null" {
+		return product.Optional[json.RawMessage]{Set: true}
+	}
 	return product.Optional[json.RawMessage]{Set: true, Value: &v}
 }
 
@@ -1307,7 +1333,7 @@ func toDocumentEditFields(in DocumentEditInput) document.DocumentEditFields {
 func toDocumentAudienceFields(in DocumentAudienceInput) document.DocumentAudienceFields {
 	return document.DocumentAudienceFields{
 		Visibility: in.Visibility,
-		Policy:     in.Policy,
+		Policy:     optionalStringSlice(in.Policy),
 		ReaderIds:  in.ReaderIds,
 	}
 }
@@ -1365,6 +1391,7 @@ func toPreviewAudience(v PreviewAudience) document.PreviewAudience {
 func toMapViewType(v spatial.MapView) *MapType {
 	return &MapType{
 		ID:        v.Id,
+		CanEdit:   v.CanEdit,
 		Name:      v.Name,
 		AtlasCode: v.AtlasCode,
 		Family:    v.Family,
@@ -1378,6 +1405,7 @@ func toMapViewType(v spatial.MapView) *MapType {
 
 func toRegionViewType(v spatial.RegionView) *RegionType {
 	return &RegionType{
+		CanCreateMap:    v.CanCreateMap,
 		ID:              v.Id,
 		Name:            v.Name,
 		Kind:            v.Kind,
@@ -1620,16 +1648,17 @@ func toHomeBannerType(v site.HomeBannerView) *HomeBannerType {
 
 const documentListOrder = "updated_at_desc_id_desc"
 
-func toDocumentSearchHitTypes(items []document.DocumentView) []*DocumentSearchHitType {
+func toDocumentSearchHitTypes(items []document.DocumentSearchHitView) []*DocumentSearchHitType {
 	hits := make([]*DocumentSearchHitType, 0, len(items))
 	for _, d := range items {
 		hits = append(hits, &DocumentSearchHitType{
-			ID:       d.Id,
-			Kind:     d.Kind,
-			Category: d.Category,
-			Slug:     d.Slug,
-			Title:    d.Title,
-			Snippet:  d.Title,
+			ID:             d.Id,
+			Kind:           d.Kind,
+			Category:       d.Category,
+			Slug:           d.Slug,
+			Title:          d.Title,
+			Snippet:        d.Snippet,
+			QuestShortCode: d.QuestShortCode,
 		})
 	}
 	return hits
@@ -1672,18 +1701,16 @@ func toDeliveryReceipt(v quest.DeliveryReceipt) *DeliveryReceipt {
 }
 
 func toUpdateDmProfileFields(in UpdateDmProfileInput) member.UpdateDmProfileFields {
-	var tableInfo *json.RawMessage
-	if len(in.TableInfo) > 0 {
-		fm := in.TableInfo
-		tableInfo = &fm
-	}
-	return member.UpdateDmProfileFields{
+	fields := member.UpdateDmProfileFields{
 		Tagline:          in.Tagline,
 		Philosophy:       in.Philosophy,
 		HouseRules:       in.HouseRules,
-		TableInfo:        tableInfo,
 		AcceptingPlayers: in.AcceptingPlayers,
 	}
+	if in.TableInfo != nil && string(in.TableInfo) != "null" {
+		fields.TableInfo = &in.TableInfo
+	}
+	return fields
 }
 
 func toDmProfileView(v member.DmProfileView) *DmProfileType {
@@ -1721,6 +1748,9 @@ func optionalStringSlice(o gql.Omittable[[]string]) product.Optional[[]string] {
 		return product.Optional[[]string]{}
 	}
 	v := o.Value()
+	if v == nil {
+		return product.Optional[[]string]{Set: true}
+	}
 	return product.Optional[[]string]{Set: true, Value: &v}
 }
 
@@ -1809,14 +1839,20 @@ func toQuestSummaryFields(in QuestSummaryInput) quest.QuestSummaryFields {
 	if len(fm) == 0 {
 		fm = json.RawMessage("{}")
 	}
+	var expectedRevision *int32
+	if in.ExpectedRevision != nil {
+		value := int32(*in.ExpectedRevision)
+		expectedRevision = &value
+	}
 	return quest.QuestSummaryFields{
-		DocumentId:  in.DocumentID,
-		QuestIds:    in.QuestIds,
-		CharacterId: in.CharacterID,
-		Title:       in.Title,
-		Body:        in.Body,
-		Visibility:  in.Visibility,
-		Frontmatter: fm,
+		DocumentId:       in.DocumentID,
+		ExpectedRevision: expectedRevision,
+		QuestIds:         in.QuestIds,
+		CharacterId:      in.CharacterID,
+		Title:            in.Title,
+		Body:             in.Body,
+		Visibility:       in.Visibility,
+		Frontmatter:      fm,
 	}
 }
 
@@ -1923,6 +1959,14 @@ func toQuestDiscordDeliveryType(v quest.QuestDiscordDeliveryView) *QuestDiscordD
 }
 
 func toSummaryDerivedType(v document.SummaryDerivedView) *SummaryDerivedType {
+	var authoring *SummaryAuthoringType
+	if v.Authoring != nil {
+		authoring = &SummaryAuthoringType{CharacterID: v.Authoring.CharacterId, Complete: v.Authoring.Complete, QuestIds: v.Authoring.QuestIds}
+	}
+	quests := make([]*SummaryQuestRefType, len(v.Quests))
+	for i, item := range v.Quests {
+		quests[i] = &SummaryQuestRefType{ID: item.Id, ShortCode: item.ShortCode, Title: item.Title}
+	}
 	regions := make([]*SummaryRegionType, len(v.Regions))
 	for i, item := range v.Regions {
 		regions[i] = &SummaryRegionType{ID: item.Id, Name: item.Name}
@@ -1951,6 +1995,8 @@ func toSummaryDerivedType(v document.SummaryDerivedView) *SummaryDerivedType {
 		gameDay = &d
 	}
 	return &SummaryDerivedType{
+		Authoring:       authoring,
+		Quests:          quests,
 		Regions:         regions,
 		PointcrawlNodes: nodes,
 		Dms:             dms,

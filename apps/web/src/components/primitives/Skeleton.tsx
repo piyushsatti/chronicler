@@ -15,7 +15,7 @@ export function Skeleton({
 }: SkeletonProps): React.JSX.Element {
   return (
     <span
-      className={cx('skeleton', className)}
+      className={cx('skeleton', 'skeleton-shimmer', className)}
       data-component="Skeleton"
       role="status"
       aria-label={ariaLabel}

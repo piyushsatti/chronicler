@@ -5,6 +5,7 @@ package document
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"regexp"
@@ -14,9 +15,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbtest"
-	"github.com/pressly/goose/v3"
 )
 
 func TestMain(m *testing.M) {
@@ -1423,86 +1423,69 @@ func TestPhase3TaskDOC03ProductMutationAndLookupPostgresAcceptance(t *testing.T)
 	}
 }
 
-func TestPhase3TaskDOC03SummaryAppendOrderMigrationGuardPostgresAcceptance(t *testing.T) {
+func TestPhase3TaskDOC03SummaryAppendOrderSquashedSchemaPostgresAcceptance(t *testing.T) {
+	fixture := dbtest.NewProductFixture(t)
 	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 	defer cancel()
-	if err := goose.SetDialect("postgres"); err != nil {
+	var memberID, summaryID, questID int64
+	if err := fixture.Pool.QueryRow(ctx, `INSERT INTO members(discord_id,handle,display_name,roles,status) VALUES('doc03-order-owner','doc03-order-owner','Owner',ARRAY['dm'],'active') RETURNING id`).Scan(&memberID); err != nil {
 		t.Fatal(err)
 	}
-	openMigrationDB := func(t *testing.T) (*dbtest.ProductFixture, *sql.DB) {
-		t.Helper()
-		fixture := dbtest.NewProductFixture(t)
-		migrationDB, err := sql.Open("pgx", fixture.DatabaseURL)
+	if err := fixture.Pool.QueryRow(ctx, `INSERT INTO documents(kind,slug,title,status,visibility,author_id) VALUES('summary','doc03-order','Summary','published','public',$1) RETURNING id`, memberID).Scan(&summaryID); err != nil {
+		t.Fatal(err)
+	}
+	if err := fixture.Pool.QueryRow(ctx, `INSERT INTO quests(short_code,kinds,status,dm_id,scheduled_at,document_id,created_by) VALUES('DOC03G',ARRAY['standard'],'open',$1,now()+interval '1 day',$2,$1) RETURNING id`, memberID, summaryID).Scan(&questID); err != nil {
+		t.Fatal(err)
+	}
+	var order int64
+	if err := fixture.Pool.QueryRow(ctx, `INSERT INTO document_links(source_id,quest_target_id,relation) VALUES($1,$2,'summarizes') RETURNING summary_append_order`, summaryID, questID).Scan(&order); err != nil {
+		t.Fatal(err)
+	}
+	if order <= 0 {
+		t.Fatalf("append ordinal=%d, want positive identity", order)
+	}
+	t.Run("fresh schema owns immutable allocation", func(t *testing.T) {
+		var identity, generation string
+		if err := fixture.Pool.QueryRow(ctx, `SELECT is_identity,identity_generation FROM information_schema.columns WHERE table_schema='public' AND table_name='document_links' AND column_name='summary_append_order'`).Scan(&identity, &generation); err != nil {
+			t.Fatal(err)
+		}
+		if identity != "YES" || generation != "ALWAYS" {
+			t.Fatalf("identity=%s generation=%s", identity, generation)
+		}
+		if _, err := fixture.Pool.Exec(ctx, `INSERT INTO document_links(source_id,quest_target_id,relation,summary_append_order) VALUES($1,$2,'another',$3)`, summaryID, questID, order+1); err == nil {
+			t.Fatal("caller-authored ordinal admitted without explicit identity override")
+		}
+	})
+	t.Run("duplicate recorded order rolls back complete new append", func(t *testing.T) {
+		tx, err := fixture.Pool.Begin(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
-		t.Cleanup(func() { _ = migrationDB.Close() })
-		return fixture, migrationDB
-	}
-	seedSummaryQuest := func(t *testing.T, fixture *dbtest.ProductFixture) (int64, int64) {
-		t.Helper()
-		var memberID, summaryID, questID int64
-		if err := fixture.Pool.QueryRow(ctx, `INSERT INTO members(discord_id,handle,display_name,roles,status) VALUES('doc03-summary-order-owner','doc03-summary-order-owner','Owner',ARRAY['dm'],'active') RETURNING id`).Scan(&memberID); err != nil {
+		defer tx.Rollback(ctx)
+		var tentativeID int64
+		if err := tx.QueryRow(ctx, `INSERT INTO documents(kind,slug,title,status,visibility,author_id) VALUES('summary','doc03-tentative-order','Tentative','published','public',$1) RETURNING id`, memberID).Scan(&tentativeID); err != nil {
 			t.Fatal(err)
 		}
-		if err := fixture.Pool.QueryRow(ctx, `INSERT INTO documents(kind,slug,title,status,visibility,author_id) VALUES('summary','doc03-summary-order-guard','Summary','published','public',$1) RETURNING id`, memberID).Scan(&summaryID); err != nil {
+		_, err = tx.Exec(ctx, `INSERT INTO document_links(source_id,quest_target_id,relation,summary_append_order) OVERRIDING SYSTEM VALUE VALUES($1,$2,'summarizes',$3)`, tentativeID, questID, order)
+		if violation, ok := errors.AsType[*pgconn.PgError](err); !ok || violation.Code != "23505" {
+			t.Fatalf("duplicate order error=%v, want unique constraint rejection", err)
+		}
+		if err := tx.Rollback(ctx); err != nil {
 			t.Fatal(err)
 		}
-		if err := fixture.Pool.QueryRow(ctx, `INSERT INTO quests(short_code,kinds,status,dm_id,scheduled_at,document_id,created_by) VALUES('DOC03G',ARRAY['standard'],'open',$1,now()+interval '1 day',$2,$1) RETURNING id`, memberID, summaryID).Scan(&questID); err != nil {
+		var residual int
+		if err := fixture.Pool.QueryRow(ctx, `SELECT count(*) FROM documents WHERE slug='doc03-tentative-order'`).Scan(&residual); err != nil {
 			t.Fatal(err)
 		}
-		return summaryID, questID
-	}
-
-	t.Run("up-refuses-unknown-legacy-order-without-changing-rows", func(t *testing.T) {
-		fixture, migrationDB := openMigrationDB(t)
-		if err := goose.DownContext(ctx, migrationDB, "../../db/migrations"); err != nil {
-			t.Fatalf("remove only new migration from clean fixture: %v", err)
-		}
-		summaryID, questID := seedSummaryQuest(t, fixture)
-		if _, err := fixture.Pool.Exec(ctx, `INSERT INTO document_links(source_id,quest_target_id,relation) VALUES($1,$2,'summarizes')`, summaryID, questID); err != nil {
-			t.Fatal(err)
-		}
-		err := goose.UpContext(ctx, migrationDB, "../../db/migrations")
-		if err == nil || !strings.Contains(err.Error(), "existing summary links have no recorded append sequence") {
-			t.Fatalf("migration error=%v, want fail-closed legacy-order diagnostic", err)
-		}
-		var count int
-		if err := fixture.Pool.QueryRow(ctx, `SELECT count(*) FROM document_links WHERE source_id=$1 AND quest_target_id=$2 AND relation='summarizes'`, summaryID, questID).Scan(&count); err != nil {
-			t.Fatal(err)
-		}
-		if count != 1 {
-			t.Fatalf("failed migration retained %d legacy summary links, want 1", count)
-		}
-		var columnExists bool
-		if err := fixture.Pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema=current_schema() AND table_name='document_links' AND column_name='summary_append_order')`).Scan(&columnExists); err != nil {
-			t.Fatal(err)
-		}
-		if columnExists {
-			t.Fatal("failed migration left a partial append-order column")
-		}
-	})
-
-	t.Run("down-refuses-to-discard-recorded-order", func(t *testing.T) {
-		fixture, migrationDB := openMigrationDB(t)
-		summaryID, questID := seedSummaryQuest(t, fixture)
-		if _, err := fixture.Pool.Exec(ctx, `INSERT INTO document_links(source_id,quest_target_id,relation) VALUES($1,$2,'summarizes')`, summaryID, questID); err != nil {
-			t.Fatal(err)
-		}
-		var order int64
-		if err := fixture.Pool.QueryRow(ctx, `SELECT summary_append_order FROM document_links WHERE source_id=$1 AND quest_target_id=$2 AND relation='summarizes'`, summaryID, questID).Scan(&order); err != nil {
-			t.Fatal(err)
-		}
-		err := goose.DownContext(ctx, migrationDB, "../../db/migrations")
-		if err == nil || !strings.Contains(err.Error(), "Down would discard recorded Quest summary append order") {
-			t.Fatalf("migration error=%v, want fail-closed down diagnostic", err)
+		if residual != 0 {
+			t.Fatal("failed append retained tentative document")
 		}
 		var retainedOrder int64
 		if err := fixture.Pool.QueryRow(ctx, `SELECT summary_append_order FROM document_links WHERE source_id=$1 AND quest_target_id=$2 AND relation='summarizes'`, summaryID, questID).Scan(&retainedOrder); err != nil {
 			t.Fatal(err)
 		}
 		if retainedOrder != order {
-			t.Fatalf("failed down changed append order from %d to %d", order, retainedOrder)
+			t.Fatalf("failed append changed ordinal %d to %d", order, retainedOrder)
 		}
 	})
 }

@@ -8,7 +8,7 @@ import { safeAppError, toAppError } from '../../../errors/toAppError.js';
 import type { AppError } from '../../../errors/types.js';
 import { exchangeAuthCallback } from '../adapters/memberAdapter.js';
 
-export type AuthCallbackView = {
+type AuthCallbackView = {
   error: AppError | null;
 };
 
@@ -47,7 +47,7 @@ export function useAuthCallback(): AuthCallbackView {
       let validationError: AppError | null = null;
       if (!verified || ambiguous) {
         validationError = safeAppError(
-          'Sign-in could not be verified. Start again from Sign in.',
+          'We couldn’t verify this sign-in. The link may be old or opened in another tab.',
           'auth:callback',
         );
       } else if (providerError) {

@@ -1,3 +1,4 @@
+import { useAmbientVisibility } from '../effects/useAmbientVisibility.js';
 import { useAmbientEffect } from '../effects/useAmbientEffect.js';
 import { useMotionCollapse } from '../motion/useMotionCollapse.js';
 import type { EffectDef } from '../effects/catalog.js';
@@ -10,8 +11,9 @@ export type AmbientLayerProps = {
 
 export function AmbientLayer(props?: AmbientLayerProps): React.JSX.Element | null {
   const resolved = useAmbientEffect();
-  const collapsed = useMotionCollapse({ forced: props?.forcedCollapse });
   const def = props?.forcedDef ?? resolved;
+  const { ref, visible } = useAmbientVisibility(Boolean(def), props?.scope ?? 'page');
+  const collapsed = useMotionCollapse({ forced: props?.forcedCollapse || !visible });
   if (!def) return null;
 
   const dots =
@@ -23,6 +25,7 @@ export function AmbientLayer(props?: AmbientLayerProps): React.JSX.Element | nul
 
   return (
     <div
+      ref={ref}
       className={`ambient-layer effect-${def.id}`}
       data-effect={def.id}
       data-scope={props?.scope ?? 'page'}

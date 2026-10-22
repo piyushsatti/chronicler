@@ -1,123 +1,159 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import type { EditorMeta } from '../adapters/editorLoad.js';
 import type { EditorTypeKey } from '../types.js';
 
-export function draftStorageKey(typeKey: EditorTypeKey, recordId: string): string {
-  return `cr_draft_${typeKey}_${recordId || 'new'}`;
+import { restoreEditorDraft, type Snapshot } from '../editorValidation.js';
+type DraftScope = {
+  actorId: string | null;
+  version: string | number | null;
+  canEditBody: boolean;
+};
+
+export function draftStorageKey(
+  typeKey: EditorTypeKey,
+  recordId: string,
+  actorId = 'demo',
+  version: string | number | null = 'new',
+): string {
+  return `cr_draft_v2_${encodeURIComponent(actorId)}_${typeKey}_${encodeURIComponent(recordId)}_${encodeURIComponent(String(version ?? 'new'))}`;
 }
 
-type StoredDraft = { meta: EditorMeta; body: string; savedAt: string };
-
-function loadDraft(key: string): StoredDraft | null {
+function loadDraft(key: string | null): Snapshot | null {
+  if (!key) return null;
   try {
-    const raw = localStorage.getItem(key);
-    return raw ? (JSON.parse(raw) as StoredDraft) : null;
+    return restoreEditorDraft(localStorage.getItem(key));
   } catch {
     return null;
   }
 }
-
-function saveDraftToStorage(key: string, meta: EditorMeta, body: string): void {
+function persist(key: string | null, value: Snapshot): void {
+  if (!key) return;
   try {
     localStorage.setItem(
       key,
-      JSON.stringify({
-        meta,
-        body,
-        savedAt: new Date().toISOString(),
-      } satisfies StoredDraft),
+      JSON.stringify({ ...value, savedAt: new Date().toISOString() }),
     );
   } catch {
-    /* ignore quota */
+    /* Crash recovery is best effort. */
+  }
+}
+function removeDraft(key: string | null): void {
+  if (!key) return;
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    /* Storage may be unavailable. */
   }
 }
 
 export function useEditorDraft(
   typeKey: EditorTypeKey,
   recordId: string,
-  initial: { meta: EditorMeta; body: string },
-): {
-  meta: EditorMeta;
-  body: string;
-  setMeta: React.Dispatch<React.SetStateAction<EditorMeta>>;
-  setBody: (v: string) => void;
-  isDirty: boolean;
-  saveDraft: () => void;
-  clearDraft: () => void;
-} {
-  const key = draftStorageKey(typeKey, recordId);
-  const initialSignature = JSON.stringify(initial);
-  const baseline = useRef(initialSignature);
-
-  const [meta, setMetaState] = useState<EditorMeta>(
-    () => loadDraft(key)?.meta ?? initial.meta,
-  );
-  const [body, setBodyState] = useState(() => loadDraft(key)?.body ?? initial.body);
-  const [isDirty, setIsDirty] = useState(
-    () => JSON.stringify({ meta, body }) !== baseline.current,
-  );
-
-  const currentKey = useRef(key);
-  const dirty = useRef(isDirty);
-  const markDirty = useCallback((m: EditorMeta, b: string) => {
-    dirty.current = JSON.stringify({ meta: m, body: b }) !== baseline.current;
-    setIsDirty(dirty.current);
-  }, []);
-
+  initial: { meta: EditorMeta; body: string | null },
+  scope: DraftScope = { actorId: 'demo', version: 'new', canEditBody: true },
+) {
+  const identity = JSON.stringify([scope.actorId, typeKey, recordId]);
+  const key = scope.actorId
+    ? draftStorageKey(typeKey, recordId, scope.actorId, scope.version)
+    : null;
+  const server: Snapshot = { meta: initial.meta, body: initial.body ?? '' };
+  const signature = JSON.stringify(server);
+  const makeState = () => {
+    const saved = loadDraft(key);
+    const value = saved
+      ? { meta: saved.meta, body: scope.canEditBody ? saved.body : server.body }
+      : server;
+    return {
+      identity,
+      key,
+      baseline: signature,
+      values: value,
+      history: [value],
+      cursor: 0,
+      editableBody: scope.canEditBody,
+    };
+  };
+  const [state, setState] = useState(makeState);
+  // Never render a previous account/record's state while waiting for an effect.
+  const current = state.identity === identity ? state : makeState();
+  const dirty = JSON.stringify(current.values) !== current.baseline;
+  const stale = current.key !== key && dirty;
+  const values = scope.canEditBody
+    ? current.values
+    : { ...current.values, body: server.body };
   useEffect(() => {
-    // A record refetch must not replace active edits, including when storage is unavailable.
-    if (currentKey.current === key && dirty.current) return;
-    currentKey.current = key;
-    baseline.current = JSON.stringify({ meta: initial.meta, body: initial.body });
-    const d = loadDraft(key);
-    const nextMeta = d?.meta ?? initial.meta;
-    const nextBody = d?.body ?? initial.body;
-    setMetaState(nextMeta);
-    setBodyState(nextBody);
-    markDirty(nextMeta, nextBody);
-  }, [key, initialSignature, markDirty]);
-
-  const persist = useCallback(
-    (m: EditorMeta, b: string) => {
-      saveDraftToStorage(key, m, b);
-    },
-    [key],
-  );
-
-  const setMeta: React.Dispatch<React.SetStateAction<EditorMeta>> = useCallback(
-    (action) => {
-      setMetaState((prev) => {
-        const next = typeof action === 'function' ? action(prev) : action;
-        persist(next, body);
-        markDirty(next, body);
+    setState((old) => {
+      if (old.identity !== identity) return makeState();
+      if (old.editableBody && !scope.canEditBody) {
+        removeDraft(old.key);
+        return { ...makeState(), values: { meta: old.values.meta, body: server.body } };
+      }
+      if (old.baseline === signature && old.key === key) return old;
+      if (JSON.stringify(old.values) !== old.baseline) return old;
+      return makeState();
+    });
+  }, [identity, key, signature, scope.canEditBody]);
+  const change = useCallback(
+    (update: (old: Snapshot) => Snapshot) => {
+      setState((old) => {
+        const base = old.identity === identity ? old : makeState();
+        const value = update(base.values);
+        const next = {
+          ...base,
+          values: value,
+          history: [...base.history.slice(0, base.cursor + 1), value],
+          cursor: base.cursor + 1,
+        };
+        persist(base.key, value);
         return next;
       });
     },
-    [body, persist, markDirty],
+    [identity, key, signature, scope.canEditBody],
   );
-
-  const setBody = useCallback(
-    (v: string) => {
-      setBodyState(v);
-      persist(meta, v);
-      markDirty(meta, v);
+  const setMeta: React.Dispatch<React.SetStateAction<EditorMeta>> = useCallback(
+    (action) => {
+      change((old) => ({
+        ...old,
+        meta: typeof action === 'function' ? action(old.meta) : action,
+      }));
     },
-    [meta, persist, markDirty],
+    [change],
   );
-
-  const saveDraft = useCallback(() => {
-    persist(meta, body);
-  }, [persist, meta, body]);
-
+  const setBody = useCallback(
+    (body: string) => {
+      if (scope.canEditBody) change((old) => ({ ...old, body }));
+    },
+    [change, scope.canEditBody],
+  );
+  const travel = (delta: number) => {
+    setState((old) => {
+      if (old.identity !== identity) return old;
+      const cursor = Math.max(0, Math.min(old.history.length - 1, old.cursor + delta));
+      const value = old.history[cursor];
+      persist(old.key, value);
+      return { ...old, cursor, values: value };
+    });
+  };
   const clearDraft = useCallback(() => {
-    try {
-      localStorage.removeItem(key);
-    } catch {
-      /* ignore */
-    }
-    dirty.current = false;
-    setIsDirty(false);
-  }, [key]);
-
-  return { meta, body, setMeta, setBody, isDirty, saveDraft, clearDraft };
+    removeDraft(current.key);
+    setState((old) => ({ ...old, baseline: JSON.stringify(old.values) }));
+  }, [current.key]);
+  const resetDraft = () => {
+    removeDraft(current.key);
+    setState({ ...makeState(), values: server, history: [server], cursor: 0 });
+  };
+  return {
+    ...values,
+    setMeta,
+    setBody,
+    isDirty: dirty,
+    stale,
+    saveDraft: () => persist(current.key, values),
+    clearDraft,
+    resetDraft,
+    undo: () => travel(-1),
+    redo: () => travel(1),
+    canUndo: current.cursor > 0,
+    canRedo: current.cursor < current.history.length - 1,
+  };
 }

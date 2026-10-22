@@ -6,6 +6,9 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"time"
+
+	"github.com/piyushsatti/chronicler/apps/api/internal/spatial"
 )
 
 // generateQA builds a deterministic world for the UI: codex, people, map, quests.
@@ -25,17 +28,17 @@ func generateQA() []line {
 }
 
 type world struct {
-	lines     []line
-	n         map[int]int
-	members   []memberRow
-	dms       []string
-	docs      map[string]string // slug -> public id
-	byCat     map[string][]string
+	lines      []line
+	n          map[int]int
+	members    []memberRow
+	dms        []string
+	docs       map[string]string // slug -> public id
+	byCat      map[string][]string
 	crawlNodes []string
-	region    map[string]string
-	lfc       string
-	chars     []charRow
-	questRows []questRow
+	region     map[string]string
+	lfc        string
+	chars      []charRow
+	questRows  []questRow
 }
 
 type memberRow struct {
@@ -413,7 +416,7 @@ func (w *world) spatial() {
 	}, map[string]any{})
 
 	w.put("time_anchors", []string{"public_id"}, nil, map[string]any{
-		"public_id": w.id(23), "real_utc": "2026-01-01T00:00:00Z", "epoch_day": 0, "rate": 1.5,
+		"public_id": w.id(23), "real_utc": qaAnchor.RealUtc.Format(time.RFC3339), "epoch_day": int(qaAnchor.EpochDay), "rate": qaAnchor.Rate,
 		"note": "Campaign clock starts on the first real Thursday of the year. One session is a day and a half on the coast.",
 	})
 	w.put("game_calendar", []string{"id"}, nil, map[string]any{
@@ -428,11 +431,34 @@ func (w *world) spatial() {
 			},
 		},
 	})
-	for d := 1; d <= 14; d++ {
+	// Every real date from the anchor through qaMappedDays is mapped, so the QA
+	// calendar has no gaps across the months the seed schedules quests in. Each
+	// game day comes from spatial.GameDayAt, the formula the API projects with.
+	for d := 0; d < qaMappedDays; d++ {
+		day := qaAnchor.RealUtc.AddDate(0, 0, d)
 		w.put("game_time_map", []string{"real_date"}, nil, map[string]any{
-			"real_date": fmt.Sprintf("2026-10-%02dT00:00:00Z", d), "game_day": 200 + d,
+			"real_date": day.Format(time.RFC3339), "game_day": qaGameDay(day),
 		})
 	}
+}
+
+// qaAnchor is the single seeded time anchor; game_time_map rows derive from it.
+var qaAnchor = spatial.TimeAnchorView{
+	RealUtc:  time.Date(2026, time.January, 1, 0, 0, 0, 0, time.UTC),
+	EpochDay: 0,
+	Rate:     1.5,
+}
+
+// qaMappedDays is how many real days from the anchor get a game day: one year,
+// which covers every date the seed uses.
+const qaMappedDays = 365
+
+func qaGameDay(midnight time.Time) int {
+	day, err := spatial.GameDayAt(midnight, qaAnchor)
+	if err != nil {
+		panic(fmt.Sprintf("seedqa: game day for %s: %v", midnight.Format(time.DateOnly), err))
+	}
+	return int(day)
 }
 
 func (w *world) cast() {

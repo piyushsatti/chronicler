@@ -1,0 +1,58 @@
+{
+  "at": "2026-10-20T21:53:32.305529Z",
+  "wholeNativeAccepted": false,
+  "acceptedScope": "OnlycompletedSeriesownercreate/rename/reload/current-authorityandreadonlyresponsive supplement",
+  "wholeFailure": "UnresolvedCalendarpersistedtitlefilterreturned0instead1; laterchecksnotrun",
+  "profiles": [
+    {
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "route": "/series/b6ee0e0c-2755-4a10-a86c-12542daf4cce",
+      "image": "series-owner-390.png",
+      "captured": true,
+      "completed": true
+    },
+    {
+      "viewport": {
+        "width": 768,
+        "height": 1080
+      },
+      "route": "/series/b6ee0e0c-2755-4a10-a86c-12542daf4cce",
+      "image": "series-owner-768.png",
+      "captured": true,
+      "completed": true
+    },
+    {
+      "viewport": {
+        "width": 1920,
+        "height": 1080
+      },
+      "route": "/series/b6ee0e0c-2755-4a10-a86c-12542daf4cce",
+      "image": "series-owner-1920.png",
+      "captured": true,
+      "completed": true
+    }
+  ],
+  "controlsPerProfile": [
+    4,
+    4,
+    4
+  ],
+  "mutationsBefore": 15,
+  "mutationsAfter": 15,
+  "restoredViewport": {
+    "width": 1440,
+    "height": 1000
+  },
+  "actualRootImagesViewed": [
+    "series-owner-390.png",
+    "series-owner-768.png"
+  ],
+  "rootAssessmentSha256": "30f77d7f2edc42b6e3a4887d90d225fa1acb1038e83f677a91d00eda50837c20",
+  "limits": [
+    "No Calendarpolicychange/waiver/fullcompositionpass/ownerLegacyapproval.",
+    "NewMenuclosedskinactualoncurrent36; separateopen/traphelperexecutionisdistinct."
+  ]
+}

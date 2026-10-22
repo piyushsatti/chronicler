@@ -94,7 +94,7 @@ func wireProductServices(pgxPool dbgen.DBTX, pool *db.Pool, memberPool *member.P
 		return graph.Services{}, err
 	}
 	questQueries, err := quest.NewProductQueries(
-		quest.ProductReadRepos{Quest: questPG, Batch: questPG, DocumentAudience: docPG, RewardCoverage: questPG},
+		quest.ProductReadRepos{Quest: questPG, Arc: questPG, Batch: questPG, DocumentAudience: docPG, RewardCoverage: questPG},
 		policy, clock, observer,
 	)
 	if err != nil {
@@ -136,7 +136,7 @@ func wireProductServices(pgxPool dbgen.DBTX, pool *db.Pool, memberPool *member.P
 	}
 
 	characterRunner := db.NewRunner(pool, func(tx pgx.Tx) character.ProductCommandRepos {
-		return bindCharacterCommandRepos(tx, policy, authority)
+		return bindCharacterCommandRepos(tx, policy, memberPool)
 	})
 	characterCommands, err := character.NewProductCommands(characterRunner, clock, ids)
 	if err != nil {
@@ -204,10 +204,13 @@ func wireProductServices(pgxPool dbgen.DBTX, pool *db.Pool, memberPool *member.P
 func bindMemberCommandRepos(tx pgx.Tx, policy *auth.Policy, memberPool *member.PostgresStore, producer *notification.Producer) member.ProductCommandRepos {
 	pg, _ := member.NewProductPostgres(tx)
 	replay, _ := idempotency.NewRepository(tx)
-	audit, _ := auth.NewOverrideRecorder(tx)
 	txStore, err := member.NewFromDBTX(tx, memberPool.ConfiguredOwnerID())
 	if err != nil {
 		panic("member command authority store: " + err.Error())
+	}
+	audit, err := auth.NewOverrideRecorder(replay)
+	if err != nil {
+		panic("member command override binding: " + err.Error())
 	}
 	return member.ProductCommandRepos{
 		Member:    pg,
@@ -222,50 +225,90 @@ func bindMemberCommandRepos(tx pgx.Tx, policy *auth.Policy, memberPool *member.P
 	}
 }
 
-func bindCharacterCommandRepos(tx pgx.Tx, policy *auth.Policy, authority auth.AuthorityResolver) character.ProductCommandRepos {
+func bindCharacterCommandRepos(tx pgx.Tx, policy *auth.Policy, memberPool *member.PostgresStore) character.ProductCommandRepos {
 	pg, _ := character.NewProductPostgres(tx)
 	memPG, _ := member.NewProductPostgres(tx)
+	docPG, _ := document.NewProductPostgres(tx)
+	questPG, _ := quest.NewProductPostgres(tx)
+	txStore, err := member.NewFromDBTX(tx, memberPool.ConfiguredOwnerID())
+	if err != nil {
+		panic("character command authority store: " + err.Error())
+	}
 	replay, _ := idempotency.NewRepository(tx)
-	audit, _ := auth.NewOverrideRecorder(tx)
+	notice, replay, err := notification.NewCommandProducer(tx, replay, notification.RecipientComposition{Character: pg, Document: docPG})
+	if err != nil {
+		panic("character command notification binding: " + err.Error())
+	}
+	audit, err := auth.NewOverrideRecorder(replay)
+	if err != nil {
+		panic("character command override binding: " + err.Error())
+	}
 	return character.ProductCommandRepos{
 		Character:   pg,
 		Reference:   pg,
 		Assessments: memPG,
 		Policy:      policy,
-		Authority:   authority,
+		Authority:   txStore.ResolveAuthority,
 		Replay:      replay,
+		Producer:    notification.NewProducer(),
+		Notice:      notice,
 		Audit:       audit,
+		Admissions:  pg,
+		Guilds:      docPG,
+		Withdrawals: questPG,
 	}
 }
 
 func bindDocumentCommandRepos(tx pgx.Tx, policy *auth.Policy, authority auth.AuthorityResolver, producer *notification.Producer) document.ProductCommandRepos {
 	pg, _ := document.NewProductPostgres(tx)
 	replay, _ := idempotency.NewRepository(tx)
-	audit, _ := auth.NewOverrideRecorder(tx)
+	notice, replay, _ := notification.NewCommandProducer(tx, replay, notification.RecipientComposition{Document: pg})
+	audit, err := auth.NewOverrideRecorder(replay)
+	if err != nil {
+		panic("document command override binding: " + err.Error())
+	}
 	return document.ProductCommandRepos{
 		Document:  pg,
 		Policy:    policy,
 		Authority: authority,
 		Replay:    replay,
 		Producer:  producer,
-		Notice:    notificationProducerRepos(tx),
+		Notice:    notice,
 		Audit:     audit,
+		Mentions:  pg,
 	}
 }
 
 func bindQuestCommandRepos(tx pgx.Tx, policy *auth.Policy, authority auth.AuthorityResolver, producer *notification.Producer) quest.ProductCommandRepos {
 	pg, _ := quest.NewProductPostgres(tx)
+	docPG, _ := document.NewProductPostgres(tx)
+	charPG, _ := character.NewProductPostgres(tx)
+	spatialPG, _ := spatial.NewProductPostgres(tx)
 	replay, _ := idempotency.NewRepository(tx)
-	audit, _ := auth.NewOverrideRecorder(tx)
+	notice, replay, err := notification.NewCommandProducer(tx, replay, notification.RecipientComposition{Character: charPG, Document: docPG})
+	if err != nil {
+		panic("quest command notification binding: " + err.Error())
+	}
+	audit, err := auth.NewOverrideRecorder(replay)
+	if err != nil {
+		panic("quest command override binding: " + err.Error())
+	}
 	return quest.ProductCommandRepos{
-		Arc:       pg,
-		Quest:     pg,
-		Policy:    policy,
-		Authority: authority,
-		Replay:    replay,
-		Producer:  producer,
-		Notice:    notificationProducerRepos(tx),
-		Audit:     audit,
+		Arc:              pg,
+		Quest:            pg,
+		Brief:            docPG,
+		Summaries:        docPG,
+		SummaryDocuments: docPG,
+		Rewards:          charPG,
+		Characters:       charPG,
+		Places:           spatialPG,
+		Withdrawals:      pg,
+		Policy:           policy,
+		Authority:        authority,
+		Replay:           replay,
+		Producer:         producer,
+		Notice:           notice,
+		Audit:            audit,
 	}
 }
 
@@ -273,7 +316,10 @@ func bindSpatialCommandRepos(tx pgx.Tx, policy *auth.Policy, authority auth.Auth
 	pg, _ := spatial.NewProductPostgres(tx)
 	docPG, _ := document.NewProductPostgres(tx)
 	replay, _ := idempotency.NewRepository(tx)
-	audit, _ := auth.NewOverrideRecorder(tx)
+	audit, err := auth.NewOverrideRecorder(replay)
+	if err != nil {
+		panic("spatial command override binding: " + err.Error())
+	}
 	return spatial.ProductCommandRepos{
 		Map:         pg,
 		Region:      pg,
@@ -285,6 +331,7 @@ func bindSpatialCommandRepos(tx pgx.Tx, policy *auth.Policy, authority auth.Auth
 		Notice:      notificationProducerRepos(tx),
 		Audit:       audit,
 		Locations:   docPG,
+		Documents:   docPG,
 		Containment: pg,
 	}
 }
@@ -292,16 +339,19 @@ func bindSpatialCommandRepos(tx pgx.Tx, policy *auth.Policy, authority auth.Auth
 func bindSiteCommandRepos(tx pgx.Tx, policy *auth.Policy, authority auth.AuthorityResolver, producer *notification.Producer) site.ProductCommandRepos {
 	pg, _ := site.NewProductPostgres(tx)
 	replay, _ := idempotency.NewRepository(tx)
-	audit, _ := auth.NewOverrideRecorder(tx)
+	audit, err := auth.NewOverrideRecorder(replay)
+	if err != nil {
+		panic("site command override binding: " + err.Error())
+	}
 	return site.ProductCommandRepos{
 		Operations: pg,
 		Site:       pg,
 		Policy:     policy,
-		Authority: authority,
-		Replay:    replay,
-		Producer:  producer,
-		Notice:    notificationProducerRepos(tx),
-		Audit:     audit,
+		Authority:  authority,
+		Replay:     replay,
+		Producer:   producer,
+		Notice:     notificationProducerRepos(tx),
+		Audit:      audit,
 	}
 }
 
@@ -309,10 +359,13 @@ func bindNotificationCommandRepos(tx pgx.Tx, policy *auth.Policy, memberPool *me
 	pg, _ := notification.NewProductPostgres(tx)
 	docPG, _ := document.NewProductPostgres(tx)
 	replay, _ := idempotency.NewRepository(tx)
-	audit, _ := auth.NewOverrideRecorder(tx)
 	txStore, err := member.NewFromDBTX(tx, memberPool.ConfiguredOwnerID())
 	if err != nil {
 		panic("notification command authority store: " + err.Error())
+	}
+	audit, err := auth.NewOverrideRecorder(replay)
+	if err != nil {
+		panic("notification command override binding: " + err.Error())
 	}
 	return notification.ProductCommandRepos{
 		Notification:     pg,

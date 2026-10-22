@@ -1,0 +1,33 @@
+# Independent Rules creation and fixed-directory heading review
+
+**ACCEPTED; no must-fix finding.** Read-only review completed2026-10-20 against the exact frozen source. Only this report is written. No browser, build, compiler/Go, API/DB/native fixture/provider, product/generated/canonical or harness action ran. All reviewer processes ended.
+
+## Exact inputs
+
+Rules manifest **22b139aad17da23220fde2cd8055d9daeba9a4cc2392078f18da57fe01395ae7** and author report **f05a1364a02dcee0a9e6b2a93ebae725de6f838cfc7c7fe7f234e6a503b25ca8** verify. Source hashes: useRulesPage0604c9f785ebee0a9a0da60f63f240fcd32624ac570a8c314ed81ab60cf6094f; RulesPagefe16f2ff81a28c7e7467ead396c5c01022fffc13232cb6e5d06638331358ced2; RulesPage.test978043a0aa1d6c070da263ccda3e22e1fe37533e7f983ff08b3cf6ebda6a5ae1.
+
+Directory manifest **0bb46913ff5a035764fe8508a01b63fc78b0f3a550b22f302a218f211ad0e83e** and report **4ee16998a410b906424b97a2a521a645ca55199d3553e947d2d68f23092aa42f** verify. CodexLinkedDirectoryPage remains **e5b6d664627d936c8b751295f150314eb816628336ba4058244f1ecc34b6ba22**.
+
+## Rules capability and reachability
+
+The governing policy is P-RULE-MANAGE, apps/api/docs/design/graphql-product/decisions.md:43. Current auth/policy.go:769 gives ruleStaff to Admin/Verifier and the existing configured-owner bypass; Query.pendingDmProfileVerifications selects that rule at475. CurrentReviewAccess queries that exact protected count, and member/product_queries.go:322 performs policy admission before its read. Rule creation uses ruleDocumentCreate at auth/policy.go:843, with the same Admin/Verifier role condition for kind rule. Document/product_commands.go:238 supplies current actor as AuthorID and refreshes authority before admission/replay. Thus reusing Review access presents an existing creation capability rather than guessing a role or broadening policy. Later rule ownership/management admission remains unchanged.
+
+useRulesPage.ts:22 introduces only the existing useCurrentAccess('review');74–76 expose its allowed result on ready/empty variants. RulesPage.tsx:98 renders the two existing house-styled editor links only for those variants and true capability. Loading/error states cannot carry canCreate. The public Rules query and its current actor/token/authority/signal/assertCurrent guards are byte-identical. A pending, denied or failed review proof hides creation controls while readable public Rules remain present. useCurrentAccess.ts:19–39 checks current token, successful current Me identity and postawait identity; its failed/pending/forbidden state cannot return allowed. Account change, logout and Me role change therefore do not reuse another actor's presentation grant.
+
+Existing access proofs use their current60-second cache and existing refresh triggers. This change adds no polling or instantaneous external-revocation push guarantee; the server remains authoritative for every actual command, including old-token role loss and replay. It does not claim that a navigation link itself authorizes a write.
+
+features/editor/feature.ts:263–266 already registers both new routes before their edit counterparts. The guide/ruling type keys render real Create guide/Create ruling workspaces and map to the current rule Document kind in useEditorPublish.ts:30–31, retaining their existing categories and lifecycle. No reader, route contract, field/API or role interpreter was introduced.
+
+## Meaningful tests and small delta
+
+Connected tests exercise real AuthProvider/current-access hook and adapter, actual editor routes and the existing editor data-router harness. Cases cover both destinations from an empty hub, Verifier/Admin/Player-shaped server-allowed response, pending→allowed proof, same-token proof refresh to FORBIDDEN, INTERNAL/FORBIDDEN without breaking public reads, account change, and logout. The Player-shaped case correctly proves reliance on the server response, not a new native configured-owner authorization. The preserved original audience/pagination/late-account tests remain. Review of author final-focused.log confirms41/41 across Rules adapter/page and adjacent Codex page; I did not rerun the test runner under this read-only grant. Author red and harness-correction failures remain honestly reported.
+
+I independently verified both source manifests and exact before/current deltas using byte comparisons. Removing only the capability import/call/result fields restores the entire original Rules hook. Removing only the ten-line link block restores the original Rules page. Existing filters, paging, reader links, errors, CSS/frame and data-loading logic are unchanged. No extra abstraction or local policy classifier is added.
+
+## Fixed directories
+
+The entire CodexLinkedDirectoryPage difference is exactly `<PageShell title={title}>`→`<PageShell>`. PageShell.tsx renders an h1 only when supplied title; the existing component-owned h1 at CodexLinkedDirectoryPage.tsx:50 remains. Both NPC/Faction wrappers retain their original title/category inputs. Data, count/load-more, identity/audience guards, canonical reader links, classes and page allocation are byte-identical. The change removes the duplicate heading without replacing the visual title or introducing another heading surface. The adjacent seven Codex tests do not establish direct fixed-directory paint; root's strict single-h1 native check remains required.
+
+## Acceptance limits
+
+This accepts the bounded source/test changes for root integration. Whole integrated type/verify/build, actual Rules create/publish/readback and current fixed-directory browser/paint remain separate root acceptance work. No existing receipt or screenshot was relabeled current; no provider, full visual/role Cartesian, owner approval, deployment or final frontend-completion claim is made.

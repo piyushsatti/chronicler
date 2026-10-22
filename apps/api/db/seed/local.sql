@@ -47,7 +47,7 @@ WHERE r.public_id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'
 ON CONFLICT (atlas_code) DO NOTHING;
 
 INSERT INTO game_calendar (id, definition)
-VALUES (1, '{"months":[{"name":"First","days":30}]}')
+VALUES (1, '{"epoch":"CE","months":[{"name":"First","days":30}]}')
 ON CONFLICT (id) DO NOTHING;
 
 -- home_banner is owned by apps/api/scripts/load-qa.sh (qa.jsonl). Do not

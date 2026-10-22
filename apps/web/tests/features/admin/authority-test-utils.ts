@@ -13,15 +13,38 @@ export function graphqlOperationName(query: string | undefined): string | null {
 
 type MePayload = typeof goodMe & { roles: string[] };
 
+function accessProbe(name: string | null, account: unknown): Response | null {
+  if (name !== 'CurrentAdminAccess' && name !== 'CurrentReviewAccess') return null;
+  const roles =
+    account &&
+    typeof account === 'object' &&
+    'roles' in account &&
+    Array.isArray(account.roles)
+      ? account.roles
+      : [];
+  const allowed =
+    name === 'CurrentAdminAccess'
+      ? roles.includes('admin')
+      : roles.includes('admin') || roles.includes('verifier');
+  return allowed
+    ? HttpResponse.json({
+        data:
+          name === 'CurrentAdminAccess'
+            ? { adminOperations: { activeAlertCount: 0 } }
+            : { pendingDmProfileVerifications: { total: 0 } },
+      })
+    : HttpResponse.json({
+        errors: [{ message: 'Not permitted', extensions: { code: 'FORBIDDEN' } }],
+      });
+}
+
 function dispatchFeatureGraphql(body: GraphqlRequestBody) {
   const name = graphqlOperationName(body.query);
   if (name && featureGraphql[name]) {
     return featureGraphql[name](body);
   }
   return HttpResponse.json({
-    errors: [
-      { message: 'Unhandled operation', extensions: { code: 'UNHANDLED' } },
-    ],
+    errors: [{ message: 'Unhandled operation', extensions: { code: 'UNHANDLED' } }],
   });
 }
 
@@ -64,6 +87,14 @@ export function mockMemberMe(
         const payload = await restResponse.json();
         return HttpResponse.json({ data: { memberMe: payload } });
       }
+      const probeName = graphqlOperationName(body.query);
+      if (probeName === 'CurrentAdminAccess' || probeName === 'CurrentReviewAccess') {
+        const account = graphqlData
+          ? await graphqlData()
+          : await (await respond()).json();
+        const probe = accessProbe(probeName, account);
+        if (probe) return probe;
+      }
       return dispatchFeatureGraphql(body);
     }),
   );
@@ -89,7 +120,8 @@ export function mockGraphqlOps(
       if (name && overrides[name]) {
         return overrides[name](body);
       }
-      return dispatchFeatureGraphql(body);
+      const probe = accessProbe(name, account);
+      return probe ?? dispatchFeatureGraphql(body);
     }),
   );
 }
@@ -119,7 +151,19 @@ export function trackPrivilegedRequests() {
       try {
         const clone = request.clone();
         const body = (await clone.json()) as { query?: string };
-        if (graphqlOperationName(body.query) === 'MemberMe') return;
+        if (
+          // Authority reads, not privileged data: the member, the server proofs,
+          // and the DM-profile read behind LiveDM create gates.
+          [
+            'MemberMe',
+            'CurrentAdminAccess',
+            'CurrentReviewAccess',
+            'QuestAuthoringAuthority',
+          ].includes(
+            graphqlOperationName(body.query) ?? '',
+          )
+        )
+          return;
       } catch {
         // ignore unreadable bodies
       }

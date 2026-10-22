@@ -2,6 +2,9 @@ package document
 
 import (
 	"context"
+	"errors"
+
+	"github.com/jackc/pgx/v5"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
@@ -21,11 +24,17 @@ func (p *ProductPostgres) ReadDocument(ctx context.Context, actor auth.Authority
 		ViewerID: viewerID, ViewerRoles: roles, ViewerHandle: handle, ViewerAdmin: admin, ViewerLiveDm: liveDM,
 		Slug: spec.Slug,
 	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
 	if err != nil {
-		return nil, mapNotFound(err)
+		return nil, err
 	}
 	view, err := mapGetProductDocumentSlugRow(row, scope, ctx)
 	if err != nil {
+		return nil, err
+	}
+	if err := p.setDocumentCapabilities(ctx, actor, []*DocumentView{&view}); err != nil {
 		return nil, err
 	}
 	return &view, nil
@@ -45,11 +54,17 @@ func (p *ProductPostgres) ReadDocumentById(ctx context.Context, actor auth.Autho
 		ViewerID: viewerID, ViewerRoles: roles, ViewerHandle: handle, ViewerAdmin: admin, ViewerLiveDm: liveDM,
 		DocumentID: docID,
 	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
+	}
 	if err != nil {
-		return nil, mapNotFound(err)
+		return nil, err
 	}
 	view, err := mapGetProductDocumentRow(row, scope, ctx)
 	if err != nil {
+		return nil, err
+	}
+	if err := p.setDocumentCapabilities(ctx, actor, []*DocumentView{&view}); err != nil {
 		return nil, err
 	}
 	return &view, nil
@@ -109,6 +124,9 @@ func (p *ProductPostgres) ReadDocuments(ctx context.Context, actor auth.Authorit
 		}
 		items = append(items, view)
 	}
+	if err := p.setDocumentCapabilities(ctx, actor, documentViewPointers(items)); err != nil {
+		return DocumentListResult{}, err
+	}
 	return DocumentListResult{Items: items, Total: int32(countRow.Total)}, nil
 }
 
@@ -134,8 +152,42 @@ func (p *ProductPostgres) ReadDocumentsTrash(ctx context.Context, _ auth.Authori
 	return DocumentListResult{Items: items, Total: int32(total)}, nil
 }
 
-func (p *ProductPostgres) ReadDocumentRevisions(ctx context.Context, _ auth.Authority, spec DocumentRevisionsSpec) (DocumentRevisionPage, error) {
+func (p *ProductPostgres) ReadDocumentRevisionParent(ctx context.Context, actor auth.Authority, documentID string) (*DocumentView, error) {
+	id, err := productDocumentID(documentID)
+	if err != nil {
+		return nil, err
+	}
+	scope, err := p.viewerScope(ctx, actor)
+	if err != nil {
+		return nil, err
+	}
+	viewerID, roles, handle, admin, liveDM := viewerParams(scope)
+	row, err := p.queries().GetProductDocumentRevisionParent(ctx, dbgen.GetProductDocumentRevisionParentParams{
+		DocumentID: id, ViewerID: viewerID, ViewerRoles: roles, ViewerHandle: handle, ViewerAdmin: admin, ViewerLiveDm: liveDM,
+	})
+	if err != nil {
+		return nil, mapNotFound(err)
+	}
+	view, err := mapReadableDocumentRow(row.Readable, row.AdminOverride, row.ID, row.Kind, row.Slug, row.Title, row.Status, row.Visibility, row.Body, row.Category, row.Policy, row.FrontmatterYaml, row.AuthorID, row.PublishedAt, row.DeletedAt, row.DeletedBy, row.UpdatedAt, row.Version, scope, ctx, "document_revisions")
+	if err != nil {
+		return nil, err
+	}
+	if err := p.setDocumentCapabilities(ctx, actor, []*DocumentView{&view}); err != nil {
+		return nil, err
+	}
+	return &view, nil
+}
+
+func (p *ProductPostgres) ReadDocumentRevisions(ctx context.Context, actor auth.Authority, spec DocumentRevisionsSpec) (DocumentRevisionPage, error) {
 	docID, err := productDocumentID(spec.DocumentId)
+	if err != nil {
+		return DocumentRevisionPage{}, err
+	}
+	parent, err := p.ReadDocumentRevisionParent(ctx, actor, spec.DocumentId)
+	if err != nil {
+		return DocumentRevisionPage{}, err
+	}
+	scope, err := p.viewerScope(ctx, actor)
 	if err != nil {
 		return DocumentRevisionPage{}, err
 	}
@@ -155,6 +207,11 @@ func (p *ProductPostgres) ReadDocumentRevisions(ctx context.Context, _ auth.Auth
 		if err != nil {
 			return DocumentRevisionPage{}, err
 		}
+		projected, err := projectDocumentView(ctx, scope, *parent, row.Body)
+		if err != nil {
+			return DocumentRevisionPage{}, err
+		}
+		item.Body = *projected.EffectiveBody
 		items = append(items, item)
 	}
 	return DocumentRevisionPage{Items: items, Total: int32(total)}, nil
@@ -245,6 +302,9 @@ func (p *ProductPostgres) ReadCodexDirectory(ctx context.Context, actor auth.Aut
 		}
 		items = append(items, projected)
 	}
+	if err := p.setDocumentCapabilities(ctx, actor, documentViewPointers(items)); err != nil {
+		return CodexDirectoryResult{}, err
+	}
 	return CodexDirectoryResult{Items: items, Total: int32(total)}, nil
 }
 
@@ -258,11 +318,14 @@ func (p *ProductPostgres) ReadCodexEntry(ctx context.Context, actor auth.Authori
 		ViewerID: viewerID, ViewerRoles: roles, ViewerHandle: handle, ViewerAdmin: admin, ViewerLiveDm: liveDM,
 		Slug: spec.Slug,
 	})
-	if err != nil {
-		return nil, mapNotFound(err)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil
 	}
-	if !row.Readable && !scope.Privileged() {
-		return nil, apierr.New(apierr.NotFound, "document not found")
+	if err != nil {
+		return nil, err
+	}
+	if !row.Readable {
+		return nil, apierr.New(apierr.Forbidden, "document read forbidden")
 	}
 	view, err := documentFromParts(row.ID, row.Kind, row.Slug, row.Title, row.Status, row.Visibility, row.Body, row.Category, row.Policy, row.FrontmatterYaml, row.AuthorID, pgtype.Timestamptz{}, pgtype.Timestamptz{}, pgtype.UUID{}, row.UpdatedAt, row.Version)
 	if err != nil {
@@ -270,6 +333,9 @@ func (p *ProductPostgres) ReadCodexEntry(ctx context.Context, actor auth.Authori
 	}
 	projected, err := projectDocumentView(ctx, scope, view, row.Body)
 	if err != nil {
+		return nil, err
+	}
+	if err := p.setDocumentCapabilities(ctx, actor, []*DocumentView{&projected}); err != nil {
 		return nil, err
 	}
 	count, err := p.queries().CountProductDocumentBacklinks(ctx, dbgen.CountProductDocumentBacklinksParams{
@@ -325,6 +391,9 @@ func (p *ProductPostgres) ReadLieutenantAssignments(ctx context.Context, _ auth.
 
 func (p *ProductPostgres) ReadPreviewBody(ctx context.Context, actor auth.Authority, spec PreviewBodySpec) (string, error) {
 	scope := ScopeFromAuthority(actor)
+	scope.IsAdmin = false
+	scope.IsDM = false
+	scope.Roles = []auth.Role{auth.Player}
 	if spec.AuthorId != nil {
 		scope.MemberID = *spec.AuthorId
 	}
@@ -336,7 +405,7 @@ func (p *ProductPostgres) ReadPreviewBody(ctx context.Context, actor auth.Author
 	default:
 		return "", apierr.New(apierr.Invalid, "invalid preview audience")
 	}
-	doc := Document{Status: StatusDraft, Visibility: VisibilityPublic, Body: spec.Body, Policy: nil}
+	doc := Document{Status: StatusPublished, Visibility: VisibilityPublic, Body: spec.Body, Policy: nil}
 	body, err := doc.EffectiveBody(scope)
 	if err != nil {
 		return "", err
@@ -361,9 +430,12 @@ func (p *ProductPostgres) ReadableDocumentIDs(ctx context.Context, actor auth.Au
 			ViewerID: viewerID, ViewerRoles: roles, ViewerHandle: handle, ViewerAdmin: admin, ViewerLiveDm: liveDM,
 			DocumentID: docID,
 		})
-		if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
 			out[id] = false
 			continue
+		}
+		if err != nil {
+			return nil, err
 		}
 		out[id] = row.Readable || scope.Privileged()
 	}
@@ -372,26 +444,34 @@ func (p *ProductPostgres) ReadableDocumentIDs(ctx context.Context, actor auth.Au
 
 func (p *ProductPostgres) ReadBatchDocuments(ctx context.Context, actor auth.Authority, keys []DocumentKey) ([]product.BatchResult[DocumentView], error) {
 	out := make([]product.BatchResult[DocumentView], len(keys))
+	readCtx := context.WithValue(ctx, deferDocumentCapabilities{}, true)
 	for i, key := range keys {
+		var view *DocumentView
+		var err error
 		if key.BySlug {
-			view, err := p.ReadDocument(ctx, actor, DocumentSpec{Slug: key.Slug})
-			if err != nil {
-				out[i] = product.BatchResult[DocumentView]{Err: err}
+			view, err = p.ReadDocument(readCtx, actor, DocumentSpec{Slug: key.Slug})
+		} else {
+			id := key.ID
+			if id == "" {
+				id = key.Slug
+			}
+			view, err = p.ReadDocumentById(readCtx, actor, DocumentByIdSpec{Id: id})
+		}
+		if err != nil {
+			if expected, ok := errors.AsType[*apierr.Error](err); ok && expected.Code == apierr.Forbidden {
 				continue
 			}
-			out[i] = product.BatchResult[DocumentView]{Value: view}
-			continue
-		}
-		id := key.ID
-		if id == "" {
-			id = key.Slug
-		}
-		view, err := p.ReadDocumentById(ctx, actor, DocumentByIdSpec{Id: id})
-		if err != nil {
 			out[i] = product.BatchResult[DocumentView]{Err: err}
 			continue
 		}
 		out[i] = product.BatchResult[DocumentView]{Value: view}
+	}
+	views := make([]*DocumentView, len(out))
+	for i := range out {
+		views[i] = out[i].Value
+	}
+	if err := p.setDocumentCapabilities(ctx, actor, views); err != nil {
+		return nil, err
 	}
 	return out, nil
 }
@@ -447,6 +527,7 @@ func (p *ProductPostgres) ReadBatchSummaryDerived(ctx context.Context, actor aut
 	out := make([]product.BatchResult[SummaryDerivedView], len(keys))
 	for i := range keys {
 		out[i] = product.BatchResult[SummaryDerivedView]{Value: &SummaryDerivedView{
+			Quests:  []SummaryQuestRefView{},
 			Dms:     []SummaryDmView{},
 			Hexes:   []SummaryHexView{},
 			Players: []SummaryPlayerView{},
@@ -497,6 +578,9 @@ func (p *ProductPostgres) ReadBatchSummaryDerived(ctx context.Context, actor aut
 	applySummaryDerivedQuestFacts(out, positions, questRows)
 	applySummaryDerivedPlayers(out, positions, playerRows)
 	applySummaryDerivedPlaces(out, positions, placeRows)
+	if err := p.applySummaryAuthoring(ctx, actor, keys, out, positions, questRows); err != nil {
+		return nil, err
+	}
 	return out, nil
 }
 

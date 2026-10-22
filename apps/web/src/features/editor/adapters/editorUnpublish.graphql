@@ -1,0 +1,7 @@
+mutation EditorUnpublish($id: ID!, $expectedRevision: Int!, $meta: CommandMeta!) {
+  unpublishDocument(id: $id, expectedRevision: $expectedRevision, meta: $meta) {
+    id
+    slug
+    version
+  }
+}

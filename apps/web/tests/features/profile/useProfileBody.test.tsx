@@ -35,7 +35,7 @@ describe('useProfileBody', () => {
         }),
       ),
     );
-    const { result } = renderHook(() => useProfileBody('dm', 'mira'), {
+    const { result } = renderHook(() => useProfileBody('mira'), {
       wrapper,
     });
     await waitFor(() => {
@@ -49,7 +49,7 @@ describe('useProfileBody', () => {
   });
 
   it('reaches ready for a known dm handle', async () => {
-    const { result } = renderHook(() => useProfileBody('dm', '@mira'), {
+    const { result } = renderHook(() => useProfileBody('@mira'), {
       wrapper,
     });
     await waitFor(() => {

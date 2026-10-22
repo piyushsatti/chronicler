@@ -139,8 +139,16 @@ func TestProductionChainBodyRedactionEveryDocumentProjection(t *testing.T) {
 	payload, _ := json.Marshal(map[string]any{"query": `query($quest:ID!){quest(id:$quest){briefDocument{effectiveBody}}}`, "variables": map[string]string{"quest": questID}})
 	w := authorityDBRequest(f.handler, http.MethodPost, "/v1/graphql", token, payload)
 	assertAuthorityDBCORS(t, w)
-	if !bytes.Contains(w.Body.Bytes(), []byte(`"code":"FORBIDDEN"`)) {
-		t.Fatalf("nested outer denial not explicit: %s", w.Body)
+	var nested struct {
+		Data struct {
+			Quest struct {
+				Brief *json.RawMessage `json:"briefDocument"`
+			} `json:"quest"`
+		} `json:"data"`
+		Errors []json.RawMessage `json:"errors"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &nested); err != nil || w.Code != http.StatusOK || len(nested.Errors) != 0 || nested.Data.Quest.Brief != nil {
+		t.Fatalf("hidden nested reference must be nullable: %s err=%v", w.Body, err)
 	}
 	for _, secret := range []string{"PUBLIC-INTRO", "DM-SECRET", "HANDLE-SECRET", "MIXED-SECRET"} {
 		if bytes.Contains(w.Body.Bytes(), []byte(secret)) {
@@ -333,16 +341,23 @@ func assertBodyProjectionDenied(t *testing.T, f *authorityDBFixture, token, quer
 	var result struct {
 		Data   map[string]json.RawMessage `json:"data"`
 		Errors []struct {
+			Path       []string              `json:"path"`
 			Extensions struct{ Code string } `json:"extensions"`
 		} `json:"errors"`
 	}
-	if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil || w.Code != http.StatusOK || len(result.Errors) != 3 {
+	if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil || w.Code != http.StatusOK || len(result.Errors) != 2 {
 		t.Fatalf("denial response=%s err=%v", w.Body, err)
 	}
 	for _, e := range result.Errors {
-		if e.Extensions.Code != "FORBIDDEN" {
+		if e.Extensions.Code != "FORBIDDEN" || len(e.Path) != 1 || e.Path[0] != "document" && e.Path[0] != "documentById" {
 			t.Fatalf("denial code=%q response=%s", e.Extensions.Code, w.Body)
 		}
+	}
+	var nested struct {
+		Brief *json.RawMessage `json:"briefDocument"`
+	}
+	if err := json.Unmarshal(result.Data["quest"], &nested); err != nil || nested.Brief != nil {
+		t.Fatalf("hidden nested reference=%s err=%v", result.Data["quest"], err)
 	}
 	if bodies := bodyProjectionStrings(t, result.Data); len(bodies) != 0 {
 		t.Fatalf("outer-denied body projection=%q", bodies)

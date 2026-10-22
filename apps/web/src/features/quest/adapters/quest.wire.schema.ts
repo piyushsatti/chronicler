@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const discordDeliveryWireSchema = z.object({
+const discordDeliveryWireSchema = z.object({
   desiredRevision: z.number().int(),
   appliedRevision: z.number().int(),
   overallStatus: z.string().min(1),
@@ -17,7 +17,7 @@ export const questParticipantWireSchema = z.object({
   status: z.string(),
 });
 
-export const questBoardItemWireSchema = z.object({
+const questBoardItemWireSchema = z.object({
   id: z.string().uuid(),
   shortCode: z.string().min(1),
   status: z.string().min(1),
@@ -54,10 +54,18 @@ export const questBoardWireSchema = z.object({
 });
 
 export const questDetailWireSchema = questBoardItemWireSchema.extend({
-  participants: z.array(questParticipantWireSchema).optional().default([]),
+  dmId: z.string().uuid(),
+  updatedAt: z.string().min(1),
+  arcId: z.string().uuid().nullable(),
+  arc: z.object({ id: z.string().uuid(), name: z.string() }).nullable(),
+  pointcrawlLinks: z.array(
+    z.object({
+      pointcrawlNodeId: z.string().uuid(),
+      role: z.enum(['expected', 'visited']),
+    }),
+  ),
   durationHours: z.number(),
   genres: z.array(z.string()).optional().default([]),
-  tags: z.array(z.string()).optional().default([]),
 });
 
 export const questRegionCatalogWireSchema = z.array(

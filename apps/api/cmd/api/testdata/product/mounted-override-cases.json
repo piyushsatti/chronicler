@@ -25,7 +25,7 @@
       "002 author ordinary allowed, no override log",
       "demoted004 following request FORBIDDEN, no successful override log"
     ],
-    "db": "No rows changed, no auth_override_audit insert",
+    "db": "No rows changed, no command receipt or durable override fact; auth_override_audit remains absent",
     "forbidden_log_bytes": [
       "HIDDEN_BODY_SENTINEL",
       "HIDDEN_TITLE_SENTINEL",
@@ -47,22 +47,27 @@
       },
       "updatedAt": "2026-10-14T12:00:00Z"
     },
-    "audit": [
-      {
-        "publicId": "$auditId",
-        "actorId": "10000000-0000-4000-8000-000000000004",
-        "operation": "Mutation.editPublishedDocument",
-        "subjectType": "document",
-        "subjectId": "10000000-0000-4000-8000-000000000010",
-        "ruleCode": "OWNERSHIP",
-        "at": "2026-10-14T12:00:00Z"
-      }
-    ],
+    "receipt_metadata": {
+      "_authorizationOverrides": [
+        {
+          "actorId": "10000000-0000-4000-8000-000000000004",
+          "operation": "Mutation.editPublishedDocument",
+          "subjectType": "document",
+          "subjectId": "10000000-0000-4000-8000-000000000010",
+          "ruleCode": "OWNERSHIP",
+          "at": "2026-10-14T12:00:00Z"
+        }
+      ]
+    },
     "history": "exactly one immutable revision with captured UUID matching PATCH old/new snapshots, recordedBy004; published identity/time retained",
-    "notifications": "exactly one DOCUMENT_EDITED event linked same revisionID; recipient001 only, actor004 excluded; no DM_MENTIONED event because old mention removed; no jobs/progression/grants",
-    "receipt": "one complete receipt; same actor/input/key replay returns original revision/result with no extra revision/audit/event/card/receipt",
-    "rollback": "force audit insert error: INTERNAL, exact original version2 fields, no new revision/audit/event/card/job/receipt; do not log success"
+    "notifications": "exactly one DOCUMENT_EDITED inbox row linked through the existing notification proof to the same revisionID; recipient001 only, actor004 excluded; no DM_MENTIONED notification because old mention removed; no new event ledger, jobs, progression, or grants",
+    "receipt": "one existing command receipt row; stage the ordered receipt_metadata._authorizationOverrides array on the actual new Claim with the exact actor/operation/key/fingerprint; the existing Complete writes result and metadata once in the business UOW; no audit table or independent audit UUID",
+    "replay": "fresh current authority and disclosure checks precede replay; admitted same actor/input/key returns the existing command result with both metadata sidecars removed and its original object/array shape; no extra Record, Complete, fact, revision, inbox, job, or receipt; demoted or revoked caller is denied without an extra effect",
+    "ordinary": "ordinary allowed writes omit _authorizationOverrides; role membership alone is not an override",
+    "subjects": "creation facts use explicit typed actual returned aggregate IDs; summary facts use the returned Document ID; SetMemberRolesBatch records successful nonnull matching MemberId/Member.Id targets in validated input order, not failed rows or the actor fallback; repeated admission checks do not duplicate facts",
+    "rollback": "force existing receipt completion error: INTERNAL, exact original version2 fields, no new revision, override fact, inbox, job, or receipt claim; related junction, ledger/cache, and notification effects roll back in the same UOW; do not log success"
   },
-  "exceptions": "staff/owner cannot mutate/claim another player Character or decide a request addressed to003: FORBIDDEN/no override fact, including successful-otheractor replay key",
-  "status": "NOT IMPLEMENTED"
+  "exceptions": "staff/admin/configured owner cannot mutate, sync, or claim another player's Character: FORBIDDEN/no override fact, including a successful other-actor replay key; the retired addressed-request scenario is a dated reference preserving exclusive003 decisions and admin004/owner017 denial, not authorization to restore that workflow",
+  "excluded_historical_scope": "terminal-job redrive and its historical V27 reason requirement, retired addressed requests, and D-AGENT remain excluded; no new route or mutation is introduced",
+  "status": "ACCEPTED RECEIPT STORAGE CONTRACT; fresh mounted persistence/replay/rollback acceptance pending; prior missing-table failures remain historical failures"
 }

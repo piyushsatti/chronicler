@@ -1,0 +1,93 @@
+{
+  "acceptedAt": "2026-10-20T10:10:01.690Z",
+  "session": 83526,
+  "actualExitCode": 0,
+  "nativeSeconds": 27.697,
+  "checks": [
+    {
+      "check": "other-Region Archon has no Admin World/assignment admission before target assignment",
+      "passed": true
+    },
+    {
+      "check": "name-only save, successful swap, partial102 and exact Document/microsecond deadline/off-page identity preservation",
+      "passed": true
+    },
+    {
+      "actor": "admin",
+      "check": "actual Gallery authority, mounted content and modal/Escape",
+      "allowed": true
+    },
+    {
+      "actor": "owner",
+      "check": "actual Gallery authority, mounted content and modal/Escape",
+      "allowed": true
+    },
+    {
+      "actor": "verifier",
+      "check": "actual Gallery authority, mounted content and modal/Escape",
+      "allowed": false
+    },
+    {
+      "actor": "player",
+      "check": "actual Gallery authority, mounted content and modal/Escape",
+      "allowed": false
+    },
+    {
+      "actor": "a",
+      "check": "actual Gallery authority, mounted content and modal/Escape",
+      "allowed": false
+    },
+    {
+      "actor": "unrelated",
+      "check": "actual Gallery authority, mounted content and modal/Escape",
+      "allowed": false
+    },
+    {
+      "actor": "forged",
+      "check": "actual Gallery authority, mounted content and modal/Escape",
+      "allowed": false
+    },
+    {
+      "check": "guest login; Verifier/Player/Archon/forged-current-Player World and Gallery refusal",
+      "passed": true
+    },
+    {
+      "check": "real Admin self-role loss last; unchanged JWT denied by current authority after reload",
+      "passed": true
+    }
+  ],
+  "operationAttempts": 177,
+  "sourceInputsStable": true,
+  "productionInputs": 920,
+  "assignmentCount": 102,
+  "documentAndMicrosecondDeadlinePreserved": true,
+  "partialFailureHonest": true,
+  "failedAssignmentReceiptAbsent": true,
+  "noLaterRevoke": true,
+  "currentAdminRoleRevocation": true,
+  "configuredOwnerWrites": 0,
+  "allNativeAssertionsPassed": true,
+  "cleanup": {
+    "at": "2026-10-20T10:08:24.702266573Z",
+    "childStarted": true,
+    "childWaited": true,
+    "database": "product_case_1",
+    "databaseDropped": true,
+    "listenersClosed": {
+      "api": true,
+      "vite": true
+    }
+  },
+  "readAbortCategory": "Separate first-initial-query supersession; each exact same-identity immediate completed replacement proved, no aborted response credited success",
+  "bindings": {
+    "browser-receipt.json": "050f27f31e6cea08d3de75be50c21a963fc302acb702b4ba4f4b15f4fd7a4780",
+    "native-readback.json": "dcc70dc1c753c091b67500e0a2a5845b23e195c8d6566e95eccd5379c0b2dbff",
+    "native-cleanup.json": "99a819b72600925d4f8e2e7ad383a251963fad122d52b024080402397b695c48",
+    "production-inputs-before.json": "d11124b585d8e928498c1f68805c450d05d1199d5448dd5bcc3ab0c2d6039390",
+    "owned-inputs-before.json": "63b9357e68bbfa232e37f766a53b9b73636638e69b1e120413781d0853f40e4d"
+  },
+  "visualApproval": false,
+  "regionLifecycle": false,
+  "allAdminComplete": false,
+  "providers": false
+}

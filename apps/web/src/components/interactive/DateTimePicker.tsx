@@ -21,7 +21,7 @@ export function DateTimePicker({
   return (
     <input
       type="datetime-local"
-      className={className ?? 'field'}
+      className={className ?? 'field-input'}
       value={local}
       disabled={disabled}
       aria-label={ariaLabel}

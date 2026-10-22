@@ -1,0 +1,6 @@
+mutation LogCharacterEvent($characterId: ID!, $body: String!, $meta: CommandMeta!) {
+  logCharacterEvent(characterId: $characterId, body: $body, meta: $meta) {
+    id
+    body
+  }
+}

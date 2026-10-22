@@ -1,0 +1,6 @@
+query RetainedRealDates($gameDay: Int!, $offset: Int!) {
+  realDates(gameDay: $gameDay, limit: 50, offset: $offset) {
+    items
+    total
+  }
+}

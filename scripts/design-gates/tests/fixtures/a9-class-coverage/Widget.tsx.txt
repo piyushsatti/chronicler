@@ -1,0 +1,25 @@
+import { cx } from './cx.js';
+
+type WidgetTone = 'calm' | 'loud';
+
+export function Widget({
+  tone = 'calm',
+  selected = false,
+  slot,
+  className,
+}: {
+  tone?: WidgetTone;
+  selected?: boolean;
+  slot: string;
+  className?: string;
+}) {
+  const classes = cx('widget', `widget--${tone}`, selected && 'widget--selected', className);
+  return (
+    <div className={classes} data-selected={selected ? 'true' : 'false'} data-gap="2">
+      <span className={tone === 'loud' ? 'widget__icon' : 'widget__ghost'} />
+      <span className={['widget__body', 'type-body'].filter(Boolean).join(' ')} />
+      <span className={`slot__${slot}`} />
+      <span className={`unstyled__${slot}`} />
+    </div>
+  );
+}

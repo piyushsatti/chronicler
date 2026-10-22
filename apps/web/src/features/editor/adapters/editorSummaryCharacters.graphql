@@ -1,0 +1,10 @@
+query EditorSummaryCharacters($offset: Int!) {
+  myCharacters(limit: 20, offset: $offset) {
+    total
+    items {
+      id
+      shortCode
+      name
+    }
+  }
+}

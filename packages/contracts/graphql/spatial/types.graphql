@@ -23,6 +23,7 @@ type GameDateType {
 
 type MapType {
   id: ID!
+  canEdit: Boolean!
   name: String!
   atlasCode: String!
   family: String!
@@ -75,6 +76,7 @@ type RegionCountsType {
 }
 
 type RegionType {
+  canCreateMap: Boolean!
   id: ID!
   name: String!
   kind: String!

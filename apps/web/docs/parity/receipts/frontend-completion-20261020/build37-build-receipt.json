@@ -1,0 +1,33 @@
+{
+  "at": "2026-10-20T22:03:58.805613Z",
+  "buildExit": 0,
+  "buildNativeSession": 68756,
+  "sourceInputs": 625,
+  "sourceManifestSha256": "825c2fb8e8c4c029beb76341628ba090548b27f1f6aa0da0a05ba9d966dc763d",
+  "distFiles": 181,
+  "distManifestSha256": "917fe4a4053ffb7854d387099eb2aeb91fc712a6e1db7320dbd9f46794438e89",
+  "sourceDrift": [],
+  "buildScope": "Drawerbodyportal andmissingexistingbaseCSSpanelstyles, semantic hiddenheading, retainedkeyboard/refs/currentdestinations; no Go/contract/API/headerauthoritychange",
+  "separateTestBindings": {
+    "apps/web/tests/components/SiteNav.test.tsx": "65f0102eee4f3b474f1b0242e57511f7bf65c03f7cd26540483c3aa0b4a9aa6a",
+    "apps/web/tests/adminCompletionPersistence.test.tsx": "ef1f26004b2d322bc6a4ef56180e16705804666f49b85d037128eb35df6eeae5"
+  },
+  "independentReviewSha256": "a9d5605a8ac6fc5c0a85e3f78d104bad71119ae90958b12c429fe1db99cc22fe",
+  "manifestPathBases": {
+    "source": "repository root",
+    "dist": "this package dist directory"
+  },
+  "previewMounted": true,
+  "viteBuildTiming": "\u2713 built in 9.63s",
+  "apiEpoch": "API12 d103a48f",
+  "previewNativeSession": 26662,
+  "previewUrl": "http://127.0.0.1:4204",
+  "mountedObservedAt": "2026-10-20T22:04:38.522814Z",
+  "mountedSourceInputsMatch": true,
+  "spaHttp": 200,
+  "spaBytesEqualImmutableIndex": true,
+  "apiHealth": 204,
+  "apiHealthUrl": "http://127.0.0.1:8080/health",
+  "sameOriginGraphqlStatus": 200,
+  "runtimeServicesSha256": "98b00c05cd9415be5d18b26a30acc3468e640b6f44ebccd9199b9e685f77b994"
+}

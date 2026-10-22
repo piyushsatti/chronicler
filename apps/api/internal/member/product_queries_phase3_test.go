@@ -83,6 +83,10 @@ func (r *queryRepository) ReadMyPersonalization(_ context.Context, actor auth.Au
 	r.called("MyPersonalization", actor, spec)
 	return &MyPersonalizationView{}, r.err
 }
+func (r *queryRepository) ReadMyPrivateNotes(_ context.Context, actor auth.Authority, spec MyPrivateNotesSpec) (PrivateNotesView, error) {
+	r.called("MyPrivateNotes", actor, spec)
+	return PrivateNotesView{}, r.err
+}
 func (r *queryRepository) ReadMyRequests(_ context.Context, actor auth.Authority, spec MyRequestsSpec) (RequestPage, error) {
 	r.called("MyRequests", actor, spec)
 	return RequestPage{Total: 7}, r.err
@@ -271,6 +275,7 @@ func TestProductQueriesReadMethodsDelegateExactAuthorityAndSpecs(t *testing.T) {
 		{"Members", MembersSpec{Limit: 10, Offset: 3}, func() (any, error) { return s.Members(t.Context(), actor, MembersSpec{Limit: 10, Offset: 3}) }},
 		{"MyAvailability", MyAvailabilitySpec{}, func() (any, error) { return s.MyAvailability(t.Context(), actor, MyAvailabilitySpec{}) }},
 		{"MyPersonalization", MyPersonalizationSpec{}, func() (any, error) { return s.MyPersonalization(t.Context(), actor, MyPersonalizationSpec{}) }},
+		{"MyPrivateNotes", MyPrivateNotesSpec{}, func() (any, error) { return s.MyPrivateNotes(t.Context(), actor, MyPrivateNotesSpec{}) }},
 		{"MyUnlocks", MyUnlocksSpec{Limit: 10, Offset: 3}, func() (any, error) { return s.MyUnlocks(t.Context(), actor, MyUnlocksSpec{Limit: 10, Offset: 3}) }},
 		{"PendingDmProfileVerifications", PendingDmProfileVerificationsSpec{Limit: 10, Offset: 3}, func() (any, error) {
 			return s.PendingDmProfileVerifications(t.Context(), actor, PendingDmProfileVerificationsSpec{Limit: 10, Offset: 3})
@@ -358,6 +363,10 @@ func TestProductQueriesCanonicalPolicyDeniesBeforeDataAndObservesOwnerOverride(t
 		func() error { _, err := s.MyAvailability(t.Context(), anonymous, MyAvailabilitySpec{}); return err },
 		func() error {
 			_, err := s.MyPersonalization(t.Context(), anonymous, MyPersonalizationSpec{})
+			return err
+		},
+		func() error {
+			_, err := s.MyPrivateNotes(t.Context(), anonymous, MyPrivateNotesSpec{})
 			return err
 		},
 		func() error { _, err := s.MyUnlocks(t.Context(), anonymous, MyUnlocksSpec{Limit: 1}); return err },

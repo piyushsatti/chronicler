@@ -1,7 +1,10 @@
 import { HttpResponse } from 'msw';
-import type { FeatureGraphql, FeatureHandlers, FeatureRoute } from '../../chrome/featureModule.js';
+import type {
+  FeatureGraphql,
+  FeatureHandlers,
+  FeatureRoute,
+} from '../../chrome/featureModule.js';
 import { lazyElement } from '../../chrome/lazyElement.js';
-import goodHome from '../../../tests/fixtures/wire/home/good.json';
 import goodLanes from '../../../tests/fixtures/wire/home/lanes-good.json';
 import goodStats from '../../../tests/fixtures/wire/stats/good.json';
 import goodHomeBanner from '../../../tests/fixtures/wire/admin/home-banner-good.json';
@@ -15,7 +18,6 @@ export const queryKeys = {
 };
 
 export const graphql: FeatureGraphql = {
-  HomeBuckets: () => HttpResponse.json({ data: { home: goodHome } }),
   HomeWarRoom: () =>
     HttpResponse.json({
       data: {

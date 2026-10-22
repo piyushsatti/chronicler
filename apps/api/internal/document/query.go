@@ -98,11 +98,11 @@ func (q Queries) checkDocument(ctx context.Context, d Document) (Document, error
 // projectDocument is the sole returned-body boundary for direct, enumerated and
 // batch reads. Repository bodies stay raw; returned values are request-scoped.
 func projectDocument(ctx context.Context, d Document, scope ViewerScope) (Document, error) {
-	body, overridden, err := d.projectBody(scope)
+	projection, err := d.projectBody(scope)
 	if err != nil {
 		return Document{}, err
 	}
-	if overridden {
+	if projection.Overridden {
 		ordinary := scope
 		ordinary.IsAdmin = false
 		auditScope := "block"
@@ -111,7 +111,8 @@ func projectDocument(ctx context.Context, d Document, scope ViewerScope) (Docume
 		}
 		slog.InfoContext(ctx, "audience.admin_override", "document_id", d.ID, "member_id", scope.MemberID, "scope", auditScope)
 	}
-	d.Body = body
+	d.Body = projection.Body
+	d.BodyComplete = projection.Complete
 	return d, nil
 }
 

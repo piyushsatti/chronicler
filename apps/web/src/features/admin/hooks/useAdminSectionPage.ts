@@ -1,35 +1,23 @@
+import { queryKeys } from '../../../api/queryKeys.js';
+import { loadCharVerifyQueue } from '../adapters/adminAdapter.js';
+import { useAdminAuthority } from './useAdminAuthority.js';
+import { useAdminPage } from './useAdminPage.js';
+import { useAdminOperations } from './useAdminOperations.js';
 import { useBackstoriesPanel } from './useBackstoriesPanel.js';
 import { useCharacterDirectoryPanel } from './useCharacterDirectoryPanel.js';
 import { useCreationCatalogPanel } from './useCreationCatalogPanel.js';
-import { useDataHealthPanel } from './useDataHealthPanel.js';
-import { useDeliveryPanel } from './useDeliveryPanel.js';
 import { useGameCalendarPanel } from './useGameCalendarPanel.js';
 import { useHomeBannerPanel } from './useHomeBannerPanel.js';
 import { useMembersPanel } from './useMembersPanel.js';
 import { useRegionsPanel } from './useRegionsPanel.js';
 import { useTimeAnchorPanel } from './useTimeAnchorPanel.js';
-import { safeAppError, toAppError } from '../../../errors/toAppError.js';
-import type { AppError } from '../../../errors/types.js';
-import type { AdminPageData } from '../types.js';
-
 export const useAdminCharactersPage = useCharacterDirectoryPanel;
-export const useAdminDeliveryPage = useDeliveryPanel;
-export const useAdminDataHealthPage = useDataHealthPanel;
-
-function pageData<T>(
-  data: T,
-  queries: { isError: boolean; data: unknown; error?: AppError }[],
-): AdminPageData<T> {
-  const failed = queries.find((query) => query.isError);
-  if (failed)
-    return { status: 'error', error: failed.error ?? toAppError(null, 'admin:page') };
-  if (queries.some((query) => query.data === undefined)) return { status: 'loading' };
-  return { status: 'ready', data };
-}
+export const useAdminDeliveryPage = useAdminOperations;
+export const useAdminDataHealthPage = useAdminOperations;
 
 export function useAdminPeoplePage() {
   const panel = useMembersPanel();
-  return pageData(panel, [panel.directory]);
+  return { status: 'ready' as const, data: panel };
 }
 
 export function useAdminWorldPage() {
@@ -38,11 +26,7 @@ export function useAdminWorldPage() {
     anchors: useTimeAnchorPanel(),
     calendar: useGameCalendarPanel(),
   };
-  return pageData(data, [
-    data.regions.regions,
-    data.anchors.anchors,
-    data.calendar.calendar,
-  ]);
+  return { status: 'ready' as const, data };
 }
 
 export function useAdminContentPage() {
@@ -51,34 +35,42 @@ export function useAdminContentPage() {
     backstories: useBackstoriesPanel(),
     catalog: useCreationCatalogPanel(),
   };
-  return pageData(data, [
-    data.home.bannerQ,
-    data.backstories.backstories,
-    data.backstories.regions,
-    data.catalog.catalog,
-    data.catalog.regions,
-  ]);
+  return { status: 'ready' as const, data };
+}
+
+/** Pending character verifications, read only for the overview's count. */
+function useReviewQueueCount(): number | null {
+  const authority = useAdminAuthority('review');
+  const { query, pagination } = useAdminPage(
+    queryKeys.pendingCharacters,
+    authority,
+    {},
+    (page, request) => loadCharVerifyQueue(page, request),
+  );
+  if (query.isError || !query.data) return null;
+  return pagination.total ?? query.data.length;
 }
 
 export function useAdminTodayPage() {
-  const delivery = useDeliveryPanel();
-  const characters = useCharacterDirectoryPanel();
-  if (delivery.status === 'error')
-    return { status: 'error' as const, error: delivery.error };
-  if (characters.status === 'error')
-    return { status: 'error' as const, error: characters.error };
-  if (delivery.status === 'loading' || characters.status === 'loading')
-    return { status: 'loading' as const };
+  const delivery = useAdminOperations();
+  const characters = useCharacterDirectoryPanel({ withRegionOptions: false });
+  const reviewTotal = useReviewQueueCount();
+  if (delivery.query.isError)
+    return {
+      status: 'error' as const,
+      error: delivery.query.error,
+      retry: delivery.retry,
+    };
+  if (!delivery.query.data) return { status: 'loading' as const };
   return {
     status: 'ready' as const,
-    data: { delivery, characters },
+    data: {
+      ops: delivery.query.data,
+      // The directory count is a convenience; a failed read shows a dash, not an error page.
+      characterTotal: characters.query.data ? characters.pagination.total : null,
+      reviewTotal,
+    },
   };
 }
 
-/** DM data has no selected adapter yet. Do not substitute administrator operations. */
-export function useDmDashboardPage() {
-  return {
-    status: 'error' as const,
-    error: safeAppError('The DM dashboard is temporarily unavailable.', 'dm:dashboard'),
-  };
-}
+export { useDmDashboard as useDmDashboardPage } from './useDmDashboard.js';

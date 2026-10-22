@@ -1,6 +1,8 @@
 import { Link } from 'react-router-dom';
 import { Card } from '../../../components/primitives/Card.js';
 import type { NotificationView } from '../types.js';
+import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
+import { humanizeKey } from '../../../utils/format.js';
 
 const KIND_LABELS: Record<string, string> = {
   character_verification_decided: 'Character review',
@@ -11,31 +13,10 @@ const KIND_LABELS: Record<string, string> = {
   document_published: 'Document published',
   dm_mentioned: 'You were mentioned',
   quest_scheduled: 'Quest scheduled',
-  dm_request_decided: 'DM request updated',
 };
 
 function notificationLabel(kind: string): string {
   return KIND_LABELS[kind.toLowerCase()] ?? 'Notification update';
-}
-
-function notificationHref(notification: NotificationView): string | null {
-  const code = notification.subjectCode?.trim();
-  if (!code) return null;
-  switch (notification.subjectType.toLowerCase()) {
-    case 'character':
-      return `/characters/${code}`;
-    case 'quest':
-      return `/quests/${code}`;
-    default:
-      return null;
-  }
-}
-
-function formatCreatedAt(value: string | null): string | null {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return date.toLocaleString();
 }
 
 export function NotificationRow({
@@ -44,11 +25,19 @@ export function NotificationRow({
   notification: NotificationView;
 }): React.JSX.Element {
   const isUnread = notification.unread;
+  const { formatDateTime } = useDateFormatter();
   const displayTitle = notification.title ?? 'Notification update';
   const displaySummary = notification.summary ?? '';
-  const displayKind = notification.label || notificationLabel(notification.kind);
-  const href = notificationHref(notification);
-  const created = formatCreatedAt(notification.createdAt);
+  const displayKind = notification.label
+    ? humanizeKey(notification.label)
+    : notificationLabel(notification.kind);
+  const href =
+    notification.destination.status === 'available'
+      ? notification.destination.href
+      : null;
+  const created = notification.createdAt
+    ? formatDateTime(notification.createdAt)
+    : null;
   const title = href ? (
     <Link to={href} data-el="notifications.row.title" className="type-body">
       {displayTitle}
@@ -79,6 +68,11 @@ export function NotificationRow({
           </span>
         </div>
         {title}
+        {notification.destination.status === 'unavailable' ? (
+          <span className="type-caption" data-el="notifications.row.destination">
+            {notification.destination.reason}
+          </span>
+        ) : null}
         {displaySummary ? (
           <span className="type-caption" data-el="notifications.row.summary">
             {displaySummary}

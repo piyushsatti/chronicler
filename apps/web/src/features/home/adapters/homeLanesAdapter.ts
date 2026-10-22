@@ -1,12 +1,25 @@
-import type { HomeWarRoomQuery } from '../../../api/graphql.operations.gen.js';
+import { z } from 'zod';
+import type {
+  HomeQuestParticipantsQuery,
+  HomeAcceptingDmsQuery,
+  HomeUpcomingQuery,
+  HomeWarRoomQuery,
+} from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
+import { bearerHeaders } from '../../../api/authHeader.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import LANES_QUERY from './homeWarRoom.graphql?raw';
+import PARTICIPANTS_QUERY from './homeQuestParticipants.graphql?raw';
+import UPCOMING_QUERY from './homeUpcoming.graphql?raw';
+import ACCEPTING_DMS_QUERY from './homeAcceptingDms.graphql?raw';
 import type { AdapterResult } from '../../../errors/types.js';
 import {
   communityDirectoryWireSchema,
+  participantWireSchema,
   questListWireSchema,
   regionCatalogWireSchema,
+  upcomingPageWireSchema,
+  upcomingQuestWireSchema,
 } from './homeLanes.wire.schema.js';
 import type { QuestCardStatus } from '../../../view-models/questCard.js';
 import { toCardStatus } from '../../../view-models/questCard.js';
@@ -62,6 +75,13 @@ export type HomeLanesViewModel = {
   upcoming: HomeQuestView[];
   recentlyClosed: HomeQuestView[];
   dmsAccepting: DmAcceptingView[];
+  upcomingSchedule: z.infer<typeof upcomingQuestWireSchema>[];
+  totals: {
+    questBoard: number;
+    upcoming: number;
+    recentlyClosed: number;
+    dmsAccepting: number;
+  };
 };
 
 const TERMINAL_DELIVERY = new Set(['applied', 'failed', 'cancelled', 'skipped']);
@@ -121,32 +141,43 @@ function mapQuestItem(
 function parseQuestList(
   wire: unknown,
   regionNameById: Map<string, string>,
-): AdapterResult<HomeQuestView[]> {
+): AdapterResult<{ items: HomeQuestView[]; total: number }> {
   const parsed = questListWireSchema.safeParse(wire);
   if (!parsed.success) {
     return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
   }
   return {
     ok: true,
-    data: parsed.data.items.map((item) => mapQuestItem(item, regionNameById)),
+    data: {
+      items: parsed.data.items.map((item) => mapQuestItem(item, regionNameById)),
+      total: parsed.data.total,
+    },
   };
 }
 
-function parseCommunity(wire: unknown): AdapterResult<DmAcceptingView[]> {
+function parseCommunity(wire: unknown): AdapterResult<{
+  items: DmAcceptingView[];
+  candidateIds: string[];
+  candidateTotal: number;
+}> {
   const parsed = communityDirectoryWireSchema.safeParse(wire);
   if (!parsed.success) {
     return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
   }
   return {
     ok: true,
-    data: parsed.data.entries
-      .filter((e) => e.isDm && e.acceptingPlayers === true)
-      .map((e) => ({
-        memberId: e.memberId,
-        handle: e.handle,
-        displayName: e.displayName,
-        tagline: e.tagline ?? null,
-      })),
+    data: {
+      items: parsed.data.entries
+        .filter((e) => e.isDm)
+        .map((e) => ({
+          memberId: e.memberId,
+          handle: e.handle,
+          displayName: e.displayName,
+          tagline: e.tagline ?? null,
+        })),
+      candidateIds: parsed.data.entries.map((entry) => entry.memberId),
+      candidateTotal: parsed.data.total,
+    },
   };
 }
 
@@ -195,13 +226,24 @@ export function parseHomeLanesWire(wire: {
   if (!recentlyClosed.ok) return recentlyClosed;
   const dmsAccepting = parseCommunity(wire.communityDirectory);
   if (!dmsAccepting.ok) return dmsAccepting;
+  const schedule = upcomingPageWireSchema.safeParse(wire.quests);
+  if (!schedule.success) {
+    return { ok: false, failure: 'InvalidWire', detail: schedule.error.message };
+  }
   return {
     ok: true,
     data: {
-      recruiting: recruiting.data.filter((q) => q.machineStatus === 'open'),
-      upcoming: upcoming.data,
-      recentlyClosed: recentlyClosed.data,
-      dmsAccepting: dmsAccepting.data,
+      recruiting: recruiting.data.items.filter((q) => q.machineStatus === 'open'),
+      upcoming: upcoming.data.items,
+      recentlyClosed: recentlyClosed.data.items,
+      dmsAccepting: dmsAccepting.data.items,
+      upcomingSchedule: schedule.data.items,
+      totals: {
+        questBoard: recruiting.data.total,
+        upcoming: upcoming.data.total,
+        recentlyClosed: recentlyClosed.data.total,
+        dmsAccepting: dmsAccepting.data.items.length,
+      },
     },
   };
 }
@@ -211,14 +253,21 @@ export function mapToOpenQuestCardProps(
   quest: HomeQuestView,
   opts: {
     animIndex?: number;
-    myCharacterIds?: ReadonlySet<string>;
+    memberId?: string;
     isMutating?: boolean;
-    onWithdrawConfirm?: () => void;
+    onWithdrawConfirm?: (characterId: string) => void;
+    timeZone?: string | null;
   } = {},
 ): OpenQuestCardProps {
-  const myCharacterIds = opts.myCharacterIds ?? new Set<string>();
   const seated = quest.participants.filter((p) => SEATED.has(p.status));
-  const mine = seated.some((p) => myCharacterIds.has(p.characterId));
+  const own =
+    quest.participants.find(
+      (p) => p.memberId === opts.memberId && p.status === 'signed_up',
+    ) ??
+    quest.participants.find(
+      (p) => p.memberId === opts.memberId && p.status === 'waitlisted',
+    );
+  const mine = own !== undefined;
   const isGw =
     quest.tags.some((t) => t.toLowerCase().includes('guild-quest')) ||
     quest.title.startsWith(':gw:');
@@ -232,8 +281,12 @@ export function mapToOpenQuestCardProps(
     gw: isGw,
     cancelled: quest.cardStatus === 'cancelled',
     mine,
+    waitlisted: own?.status === 'waitlisted',
     isMutating: opts.isMutating,
-    onWithdrawConfirm: opts.onWithdrawConfirm,
+    onWithdrawConfirm:
+      own && opts.onWithdrawConfirm
+        ? () => opts.onWithdrawConfirm?.(own.characterId)
+        : undefined,
     animIndex: opts.animIndex,
     dm: {
       name: quest.dmDisplayName ?? quest.dmHandle ?? '—',
@@ -245,18 +298,167 @@ export function mapToOpenQuestCardProps(
       state: 'confirmed' as const,
     })),
     totalSlots: quest.slotsMax,
-    when: formatScheduled(quest.scheduledAt),
+    when: formatScheduled(quest.scheduledAt, opts.timeZone),
   };
 }
 
-export async function loadHomeLanes(): Promise<HomeLanesViewModel> {
+async function completeParticipantPages(
+  quest: HomeQuestView,
+  request: RequestInit,
+): Promise<HomeQuestParticipantView[]> {
+  const participants = [...quest.participants];
+  let pageLength = participants.length;
+  while (pageLength >= 100) {
+    const data = await readHome<HomeQuestParticipantsQuery>(
+      PARTICIPANTS_QUERY,
+      { questId: quest.id, offset: participants.length },
+      request,
+    );
+    if (!data.quest) throw toAppError({ failure: 'NotFound' }, 'home:participants');
+    const page = z.array(participantWireSchema).parse(data.quest.participants);
+    participants.push(
+      ...page.map((item) => ({
+        ...item,
+        memberAvatarUrl: item.memberAvatarUrl ?? null,
+      })),
+    );
+    pageLength = page.length;
+  }
+  return participants;
+}
+
+async function readHome<T>(
+  query: string,
+  variables: Record<string, unknown>,
+  request: RequestInit,
+): Promise<T> {
+  request.signal?.throwIfAborted();
+  const data = await graphqlRequest<T>(query, variables, request);
+  request.signal?.throwIfAborted();
+  return data;
+}
+
+async function completeUpcomingWindow(
+  lanes: HomeLanesViewModel,
+  window: ReturnType<typeof defaultWindow>,
+  request: RequestInit,
+): Promise<HomeLanesViewModel['upcomingSchedule']> {
+  const schedule = [...lanes.upcomingSchedule];
+  const total = lanes.totals.upcoming;
+  const seen = new Set(schedule.map((quest) => quest.id));
+  if (
+    seen.size !== schedule.length ||
+    schedule.length > total ||
+    (total > 0 && schedule.length === 0)
+  ) {
+    throw toAppError({ failure: 'InvalidWire' }, 'home:upcoming');
+  }
+  while (schedule.length < total) {
+    const data = await readHome<HomeUpcomingQuery>(
+      UPCOMING_QUERY,
+      {
+        upcomingFrom: window.upcomingFrom,
+        upcomingTo: window.upcomingTo,
+        offset: schedule.length,
+      },
+      request,
+    );
+    const page = upcomingPageWireSchema.safeParse(data.quests);
+    if (
+      !page.success ||
+      page.data.total !== total ||
+      page.data.items.length === 0 ||
+      page.data.items.length > 100 ||
+      schedule.length + page.data.items.length > total
+    ) {
+      throw toAppError({ failure: 'InvalidWire' }, 'home:upcoming');
+    }
+    for (const quest of page.data.items) {
+      if (seen.has(quest.id))
+        throw toAppError({ failure: 'InvalidWire' }, 'home:upcoming');
+      seen.add(quest.id);
+      schedule.push(quest);
+    }
+  }
+  return schedule;
+}
+
+async function completeAcceptingDms(
+  wire: unknown,
+  request: RequestInit,
+): Promise<{ items: DmAcceptingView[]; total: number }> {
+  const initial = parseCommunity(wire);
+  if (!initial.ok) throw toAppError({ failure: initial.failure }, 'home:dms');
+  let page = initial.data;
+  const candidateTotal = page.candidateTotal;
+  const seen = new Set<string>();
+  const items: DmAcceptingView[] = [];
+  let total = 0;
+  let offset = 0;
+  for (;;) {
+    if (
+      page.candidateTotal !== candidateTotal ||
+      page.candidateIds.length > 100 ||
+      offset + page.candidateIds.length > candidateTotal ||
+      (page.candidateIds.length === 0 && offset < candidateTotal)
+    ) {
+      throw toAppError({ failure: 'InvalidWire' }, 'home:dms');
+    }
+    for (const id of page.candidateIds) {
+      if (seen.has(id)) throw toAppError({ failure: 'InvalidWire' }, 'home:dms');
+      seen.add(id);
+    }
+    total += page.items.length;
+    items.push(...page.items.slice(0, 12 - items.length));
+    offset += page.candidateIds.length;
+    if (offset === candidateTotal) return { items, total };
+    const data = await readHome<HomeAcceptingDmsQuery>(
+      ACCEPTING_DMS_QUERY,
+      { offset },
+      request,
+    );
+    const next = parseCommunity(data.communityDirectory);
+    if (!next.ok) throw toAppError({ failure: next.failure }, 'home:dms');
+    page = next.data;
+  }
+}
+
+export async function loadHomeLanes(signal?: AbortSignal): Promise<HomeLanesViewModel> {
   const window = defaultWindow();
+  const request: RequestInit = {
+    signal,
+    headers: { Authorization: bearerHeaders()['Authorization'] ?? '' },
+  };
   try {
-    const data = await graphqlRequest<HomeWarRoomQuery>(LANES_QUERY, window);
+    const data = await readHome<HomeWarRoomQuery>(LANES_QUERY, window, request);
 
     const result = parseHomeLanesWire(data);
     if (!result.ok) {
       throw toAppError({ failure: result.failure }, 'home:lanes');
+    }
+    result.data.upcomingSchedule = await completeUpcomingWindow(
+      result.data,
+      window,
+      request,
+    );
+    const dms = await completeAcceptingDms(data.communityDirectory, request);
+    result.data.dmsAccepting = dms.items;
+    result.data.totals.dmsAccepting = dms.total;
+    const rosters = new Map<string, HomeQuestParticipantView[]>();
+    for (const lane of [
+      result.data.recruiting,
+      result.data.upcoming,
+      result.data.recentlyClosed,
+    ]) {
+      for (const quest of lane) {
+        const roster =
+          rosters.get(quest.id) ?? (await completeParticipantPages(quest, request));
+        rosters.set(quest.id, roster);
+        quest.participants = roster;
+        quest.waitlistCount = roster.filter(
+          (participant) => participant.status === 'waitlisted',
+        ).length;
+      }
     }
     return result.data;
   } catch (err) {

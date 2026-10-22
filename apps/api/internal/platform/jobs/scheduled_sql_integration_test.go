@@ -5,12 +5,14 @@ package jobs_test
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"os"
 	"os/exec"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgconn"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/pressly/goose/v3"
 	"github.com/testcontainers/testcontainers-go"
@@ -133,7 +135,7 @@ func TestScheduledSQLAdmission(t *testing.T) {
 		t.Fatal(err)
 	}
 	var version int64
-	if err := db.QueryRowContext(ctx, `SELECT max(version_id) FROM goose_db_version WHERE is_applied`).Scan(&version); err != nil || version != 4 {
+	if err := db.QueryRowContext(ctx, `SELECT max(version_id) FROM goose_db_version WHERE is_applied`).Scan(&version); err != nil || version != 2 {
 		t.Fatalf("migrated version=%d error=%v", version, err)
 	}
 	enqueue := scheduledNamedSQL(t, "EnqueueScheduledJob")
@@ -244,8 +246,10 @@ func TestScheduledSQLAdmission(t *testing.T) {
 		if n := scheduledExec(t, ctx, tx, enqueue, key, "gametime_fill", "maintenance", payload); n != 1 {
 			t.Fatalf("insert rows=%d", n)
 		}
-		if _, err := tx.ExecContext(ctx, `INSERT INTO operational_observations(observed_at,payload,state) VALUES(clock_timestamp(),'{}','QUEUED')`); err == nil {
-			t.Fatal("required observation accepted missing key")
+		_, err = tx.ExecContext(ctx, `UPDATE background_jobs SET completion_operation='invalid.partial',completion_payload=NULL WHERE job_key=$1`, key)
+		failure, ok := errors.AsType[*pgconn.PgError](err)
+		if !ok || failure.Code != "23514" || failure.ConstraintName != "job_completion_pair" {
+			t.Fatalf("required completion pair failure=%v, want SQLSTATE23514/job_completion_pair", err)
 		}
 		if err := tx.Commit(); err == nil {
 			t.Fatal("aborted admission committed")

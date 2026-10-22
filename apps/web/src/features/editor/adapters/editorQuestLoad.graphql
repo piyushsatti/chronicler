@@ -18,6 +18,9 @@ query EditorQuestLoad($id: ID, $shortCode: String) {
       title
       status
       version
+      canEditMetadata
+      canEditBody
+      frontmatter
       effectiveBody
     }
   }

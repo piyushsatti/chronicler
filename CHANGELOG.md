@@ -18,6 +18,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Port Legacy Home, Tavern Board, Chronicles, Codex, Community, and Rules presentation onto current GraphQL adapters and PageHost. Home drops archive buckets and unsupported beginner counts; media controls remain usable on compact and wide layouts. Codex uses server filters and bounded paging; rule cards open the current document reader. Community uses public availability and character-roster reads, and unavailable avatar images fall back to initials.
+- Make `/codex/:slug` the canonical Codex reader. Typed slug aliases share that reader; typed UUID aliases resolve readable `codex_entry` document metadata first. Existing editor routes retain precedence; new Codex titles normalizing to `new` allocate from `new-entry` so their reader URLs remain reachable.
 - Docs refactor: links flow map → interfaces → app docs; boundary decisions shortened; long-form essays quarantined to gitignored `.local/docs-quarry/`. See [docs/start-here.md](docs/start-here.md).
 - Project license set to GNU GPL version 2 (same as the Linux kernel).
 

@@ -76,4 +76,22 @@
      without pulling in .stack/.row's other defaults ─────────── */
   [data-row="1"]    { display: flex; flex-direction: row; }
   [data-row="0"]    { display: flex; flex-direction: column; }
+
+  /* ── layout lists: a ul/ol used as a .stack is structure, not prose,
+     so it drops bullets and indent. Markdown lists (.cr-prose) keep
+     theirs. ─────────────────────────────────────────────────── */
+  ul.stack,
+  ol.stack {
+    list-style: none;
+    margin-block: 0;
+    padding-inline-start: 0;
+  }
+
+  /* ── stack-row: an inline cluster of actions or links that wraps ── */
+  .stack-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--sp-3);
+  }
 }

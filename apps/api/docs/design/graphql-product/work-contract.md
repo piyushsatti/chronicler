@@ -1,5 +1,13 @@
 # Work, observations and operator alerts — exact provider contract
 
+## Current cutover refinement (N8, 2026-10-20)
+
+Owner decision N8 and the squashed migration inventory supersede the observation/redrive storage and observer dependencies below. `background_jobs` remains the sole durable work lifecycle; do not restore `operational_observations`, `job_redrives`, or a no-op observer. The older version3 schema examples do not override the current squashed migration.
+
+For the frontend Time dependency, Jobs owns `NewEffectGuard(tx pgx.Tx)`, `Admit(ctx,receipt)` and `Recheck(ctx,permit)`. The opaque permit is bound to its guard and exposes only its actual `Kind()` for Time admission. Both checks reuse D44's current row/token/state/deadlines and actual post-lock database clock in the same transaction. Recheck immediately precedes callback return/commit; it records no invented observation and does not finish the job. A foreign work kind cannot authorize a Time write.
+
+Spatial owns `NewTimeFillWriter(clock,connectionRunner)` and the existing borrowed-scope `FillFuture` port. It uses the same Time projection as foreground commands, then rechecks the receipt. Maintenance receives store, by-kind gate, Time writer and clock. Both retained maintenance kinds use the borrowed connection; reconciliation keeps its existing count check. Full consistency-checker and scheduler redesign are outside this frontend dependency. Existing retry/backoff and terminal disposition remain in force, with safe failure codes. These changes converge Time math, D44 receipt validity and work lifecycle on their existing owners.
+
 **Status:** accepted design. Published schema/config and comment scaffolds do not implement these contracts. Runtime enforcement remains pending the owning implementation tasks and their tests.
 
 Pattern: durable work table with receipt fencing, scheduled-slot idempotency, transactional observation projection, independent watchdog and transactional outbox. background_jobs is the sole work lifecycle. Observations and alerts describe facts/conditions; neither has a competing claim/retry/lease lifecycle. Discord operator webhook is independent of the sensor bot and quest broadcaster. No live provider, deployment, backup workflow or production secret claim.

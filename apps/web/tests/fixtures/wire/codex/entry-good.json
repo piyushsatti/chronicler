@@ -3,7 +3,7 @@
   "document": {
     "id": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
     "slug": "tree-of-light",
-    "kind": "codex",
+    "kind": "codex_entry",
     "category": "Feature",
     "status": "published",
     "visibility": "public",

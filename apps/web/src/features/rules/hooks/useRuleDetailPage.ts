@@ -2,17 +2,24 @@ import { useQuery } from '@tanstack/react-query';
 import { queryKeys } from '../../../api/queryKeys.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AppError } from '../../../errors/types.js';
-import { loadRuleDetail, type RuleDetailView } from '../adapters/rulesAdapter.js';
+import {
+  loadRuleDetail,
+  type RuleDetailView,
+  type RuleFamily,
+} from '../adapters/rulesAdapter.js';
 
-export type PageData<T> =
+type PageData<T> =
   | { status: 'loading' }
   | { status: 'error'; error: AppError }
   | { status: 'ready'; view: T };
 
-export function useRuleDetailPage(slug: string): PageData<RuleDetailView> {
+export function useRuleDetailPage(
+  slug: string,
+  family: RuleFamily,
+): PageData<RuleDetailView> {
   const q = useQuery({
-    queryKey: queryKeys.ruleDetail(slug),
-    queryFn: () => loadRuleDetail(slug),
+    queryKey: queryKeys.ruleDetail(slug, family),
+    queryFn: () => loadRuleDetail(slug, family),
     enabled: Boolean(slug),
   });
   if (q.isError) {

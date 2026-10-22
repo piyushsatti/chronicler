@@ -1,4 +1,8 @@
-query HomeWarRoom($upcomingFrom: DateTime!, $upcomingTo: DateTime!, $closedSince: DateTime!) {
+query HomeWarRoom(
+  $upcomingFrom: DateTime!
+  $upcomingTo: DateTime!
+  $closedSince: DateTime!
+) {
   questBoard(limit: 12) {
     items {
       id
@@ -37,7 +41,10 @@ query HomeWarRoom($upcomingFrom: DateTime!, $upcomingTo: DateTime!, $closedSince
     }
     total
   }
-  quests(filters: { scheduledFrom: $upcomingFrom, scheduledTo: $upcomingTo }, limit: 12) {
+  quests(
+    filters: { scheduledFrom: $upcomingFrom, scheduledTo: $upcomingTo }
+    limit: 12
+  ) {
     items {
       id
       shortCode

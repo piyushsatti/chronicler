@@ -10,7 +10,18 @@ query Character($id: ID, $shortCode: String) {
     regionId
     description
     ddbUrl
+    imageUrl
     displayIcon
     updatedAt
+    pcxp
+    verificationSubmittedAt
+    ddbMirror {
+      level
+      xp
+      classes
+      species
+      background
+      syncedAt
+    }
   }
 }

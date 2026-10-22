@@ -1,0 +1,6 @@
+mutation MemberSetMyPrivateNotes($body: String!, $meta: CommandMeta!) {
+  setMyPrivateNotes(body: $body, meta: $meta) {
+    body
+    updatedAt
+  }
+}

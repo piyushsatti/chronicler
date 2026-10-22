@@ -1,0 +1,12 @@
+query QuestNodeOptions($atlasCode: String!, $offset: Int! = 0) {
+  map(atlasCode: $atlasCode) {
+    id
+    atlasCode
+    name
+    canEdit
+    pointcrawlNodes(limit: 100, offset: $offset) {
+      id
+      name
+    }
+  }
+}

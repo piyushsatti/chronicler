@@ -1,6 +1,5 @@
 /**
  * Stale-chunk crash recovery for lazy routes (#307).
- * Shell-owned copy for Wave 1; T221 may relocate under utils/.
  */
 import { lazy, type ComponentType, type LazyExoticComponent } from 'react';
 

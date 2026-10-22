@@ -14,6 +14,7 @@ query MemberProfile($handle: String!) {
       tagline
       philosophy
       houseRules
+      tableInfo
       acceptingPlayers
       status
       reviewRevision

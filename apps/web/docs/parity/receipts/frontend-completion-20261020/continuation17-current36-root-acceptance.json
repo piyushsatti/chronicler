@@ -1,0 +1,195 @@
+{
+  "at": "2026-10-20T21:46:24.950457+00:00",
+  "nativeSession": 33583,
+  "exit": 0,
+  "durationSeconds": 73.34,
+  "originalCheckpoints": 14,
+  "responsiveStates": 35,
+  "widths": [
+    390,
+    768,
+    840,
+    900,
+    1920
+  ],
+  "nativeNextKeyboard": [
+    {
+      "width": 390,
+      "completed": true,
+      "box": {
+        "left": 229.359375,
+        "right": 280.359375,
+        "top": 63.625,
+        "bottom": 95.625,
+        "width": 51,
+        "height": 32
+      },
+      "header": {
+        "left": 0,
+        "right": 390,
+        "top": 0,
+        "bottom": 64,
+        "width": 390,
+        "height": 64
+      },
+      "centerExposed": true,
+      "focusVisible": true,
+      "focusPaint": true
+    },
+    {
+      "width": 768,
+      "completed": true,
+      "box": {
+        "left": 245.359375,
+        "right": 296.359375,
+        "top": 63.890625,
+        "bottom": 95.890625,
+        "width": 51,
+        "height": 32
+      },
+      "header": {
+        "left": 0,
+        "right": 768,
+        "top": 0,
+        "bottom": 64,
+        "width": 768,
+        "height": 64
+      },
+      "centerExposed": true,
+      "focusVisible": true,
+      "focusPaint": true
+    },
+    {
+      "width": 840,
+      "completed": true,
+      "box": {
+        "left": 245.359375,
+        "right": 296.359375,
+        "top": 95.640625,
+        "bottom": 127.640625,
+        "width": 51,
+        "height": 32
+      },
+      "header": {
+        "left": 0,
+        "right": 840,
+        "top": 0,
+        "bottom": 95.25,
+        "width": 840,
+        "height": 95.25
+      },
+      "centerExposed": true,
+      "focusVisible": true,
+      "focusPaint": true
+    },
+    {
+      "width": 900,
+      "completed": true,
+      "box": {
+        "left": 245.359375,
+        "right": 296.359375,
+        "top": 95.5625,
+        "bottom": 127.5625,
+        "width": 51,
+        "height": 32
+      },
+      "header": {
+        "left": 0,
+        "right": 900,
+        "top": 0,
+        "bottom": 95.25,
+        "width": 900,
+        "height": 95.25
+      },
+      "centerExposed": true,
+      "focusVisible": true,
+      "focusPaint": true
+    },
+    {
+      "width": 1920,
+      "completed": true,
+      "box": {
+        "left": 515.359375,
+        "right": 566.359375,
+        "top": 63.546875,
+        "bottom": 95.546875,
+        "width": 51,
+        "height": 32
+      },
+      "header": {
+        "left": 0,
+        "right": 1920,
+        "top": 0,
+        "bottom": 64,
+        "width": 1920,
+        "height": 64
+      },
+      "centerExposed": true,
+      "focusVisible": true,
+      "focusPaint": true
+    }
+  ],
+  "regionFocusRestoredWidths": [
+    390,
+    768,
+    840,
+    900,
+    1920
+  ],
+  "operationAttempts": 484,
+  "operationOutcomes": {
+    "complete": 477,
+    "superseded_filter_query": 7
+  },
+  "nativeReadback": {
+    "at": "2026-10-20T21:45:38.984179589Z",
+    "backstories": 51,
+    "bootstrapCommands": 204,
+    "bulkOneUOWReplay": true,
+    "catalog": 51,
+    "characters": 51,
+    "completedReceipts": 217,
+    "dmProfiles": 51,
+    "dmTarget": "e15edab6-b92c-4fe6-9b7f-2f63e247c9d8",
+    "lifecycleBothForwards": true,
+    "pcTarget": "68b3bf96-87b3-4fa6-b41a-53fd7d11d262",
+    "providers": false,
+    "referenceBytesPreserved": true,
+    "regions": 101,
+    "staleReceiptsAbsent": true,
+    "verifierCurrentRoleRevoked": true
+  },
+  "sourceUnchanged": {
+    "production-inputs": true,
+    "owned-inputs": true
+  },
+  "cleanup": {
+    "at": "2026-10-20T21:45:38.995804985Z",
+    "childStarted": true,
+    "childWaited": true,
+    "database": "product_case_1",
+    "databaseDropped": true,
+    "listenersClosed": {
+      "api": true,
+      "vite": true
+    }
+  },
+  "actualRootImagesViewed": [
+    "review-next-keyboard-768.png",
+    "responsive-admin-390-region-advance-confirmation.png"
+  ],
+  "artifacts": {
+    "root-preflight.json": "eac03c87068136bb0492e05db0dee104e2df9ccd350a4f3ec4464c3d11c05960",
+    "browser-receipt.json": "077b480ab8075404cabd7b9fcef28b297760de5a211ac03979b1b625f2d15351",
+    "native-readback.json": "6fa104480578babb19cc383c5e0c17d61a18133cef79396c678964a3d094a0d2",
+    "native-cleanup.json": "92a4c3232319f854f44db6649a0db2d4f51cb6bc0d0b42bc64d5a4db6e7fa7df",
+    "native.log": "bac4c0ada84a22b22e59a8774a4a093713d24af749177e465903f79c27a5caf3",
+    "review-next-keyboard-768.png": "e3c144b5cd1397cd03111a989b0531ad5f9b040b11f94980a33116f9c9e110e9",
+    "responsive-admin-390-region-advance-confirmation.png": "6e5562533b890e9c96b00870ef11e9c01fbd07440e66779dd4affd4fc2c0861a"
+  },
+  "limits": [
+    "Current36sourcefixtureVite/native13realAPI; notimmutabletiming.",
+    "Causalfilterquerysupersessionsnevercountedsuccess; nozero-network-failureclaim.",
+    "ActualMenuclosedstyling/headerat768inspected; Menuopen/nativefocus trap hasitsownpendingguestproof. NoownerLegacyapproval/allroleCartesian."
+  ]
+}

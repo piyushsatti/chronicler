@@ -19,6 +19,7 @@ extend type Query {
     offset: Int! = 0
   ): CommunityDirectoryResult!
   myPersonalization: MyPersonalizationType
+  myPrivateNotes: MyPrivateNotesType!
   memberMe: MemberType!
   memberByDiscordId(discordId: String!): MemberType
   memberRoleHistory(memberId: ID!, limit: Int! = 50, offset: Int! = 0): RoleChangePage!
@@ -65,6 +66,7 @@ extend type Mutation {
     meta: CommandMeta!
   ): MemberUnlockType!
   updateMySettings(input: MemberSettingsPatch!, meta: CommandMeta!): MemberSettingsType!
+  setMyPrivateNotes(body: String!, meta: CommandMeta!): MyPrivateNotesType!
   upsertUnlockable(
     id: ID
     input: UpsertUnlockableInput!

@@ -18,7 +18,7 @@ function seedToken(): void {
   const header = btoa(JSON.stringify({ alg: 'none', typ: 'JWT' }));
   const payload = btoa(
     JSON.stringify({
-      sub: 'discord-dev',
+      member_id: 'discord-dev',
       exp: Math.floor(Date.now() / 1000) + 60 * 60,
     }),
   );
@@ -58,8 +58,7 @@ describe('usePersonalizePage', () => {
       expect(result.current.personalization.isError).toBe(true);
     });
     expect(
-      toAppError(result.current.personalization.error, 'personalize:page')
-        .userMessage,
+      toAppError(result.current.personalization.error, 'personalize:page').userMessage,
     ).toBe('Something went wrong. Please try again.');
   });
 });

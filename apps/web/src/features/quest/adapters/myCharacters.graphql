@@ -1,8 +1,10 @@
-query MyCharacters {
-  myCharacters {
+query MyCharacters($limit: Int! = 50, $offset: Int! = 0) {
+  myCharacters(limit: $limit, offset: $offset) {
     items {
       id
       status
+      name
+      shortCode
     }
     total
   }

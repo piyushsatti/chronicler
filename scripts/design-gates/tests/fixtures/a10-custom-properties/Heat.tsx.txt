@@ -1,0 +1,21 @@
+// var(--comment-only) in a comment is not a reference
+export function Heat({ region, cat, el }: { region: string; cat: string; el: HTMLElement }) {
+  el.style.setProperty('--header-height', '4rem');
+  el.style.setProperty(`--cat-${cat}`, 'red');
+  return (
+    <div
+      style={{
+        ['--swatch-color' as string]: 'red',
+        '--inline-knob': 1,
+        color: 'var(--color-text)',
+        background: `var(--color-region-${region})`,
+        borderColor: `var(--nowhere-${region})`,
+        outlineColor: `var(--soft-${region}, currentColor)`,
+        top: 'var(--header-height)',
+        left: 'var(--knob, 0)',
+        right: `var(${region})`,
+      }}
+      data-css={`--from-text: 2px; margin: var(--from-text)`}
+    />
+  );
+}

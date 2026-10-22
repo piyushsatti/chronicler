@@ -49,6 +49,7 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 		reflect.TypeFor[AssignArchonWrite](),
 		reflect.TypeFor[ContainmentEdge](),
 		reflect.TypeFor[ContainmentWriter](),
+		reflect.TypeFor[DocumentReferenceReader](),
 		reflect.TypeFor[CreateMapSpec](),
 		reflect.TypeFor[CreateMapState](),
 		reflect.TypeFor[CreateMapWrite](),
@@ -75,8 +76,8 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 		reflect.TypeFor[HexList](),
 		reflect.TypeFor[HexSpec](),
 		reflect.TypeFor[HexView](),
-		reflect.TypeFor[HexAdmission](),
-		reflect.TypeFor[QuestHexCandidate](),
+		reflect.TypeFor[PointcrawlAdmission](),
+		reflect.TypeFor[QuestPointcrawlCandidate](),
 		reflect.TypeFor[LinkHexEntrySpec](),
 		reflect.TypeFor[LinkHexEntryState](),
 		reflect.TypeFor[LinkHexEntryWrite](),
@@ -176,6 +177,7 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 		"error":                                         reflect.TypeFor[error](),
 		"context.Context":                               reflect.TypeFor[context.Context](),
 		"json.RawMessage":                               reflect.TypeFor[json.RawMessage](),
+		"auth.MapRef":                                   reflect.TypeFor[auth.MapRef](),
 		"auth.Authority":                                reflect.TypeFor[auth.Authority](),
 		"auth.Policy":                                   reflect.TypeFor[auth.Policy](),
 		"auth.AuthorityResolver":                        reflect.TypeFor[auth.AuthorityResolver](),
@@ -185,6 +187,7 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 		"notification.ProducerRepos":                    reflect.TypeFor[notification.ProducerRepos](),
 		"product.CommandReceipt":                        reflect.TypeFor[product.CommandReceipt](),
 		"product.Date":                                  reflect.TypeFor[product.Date](),
+		"document.DocumentView":                         reflect.TypeFor[document.DocumentView](),
 		"document.ReferenceAudienceReader":              reflect.TypeFor[document.ReferenceAudienceReader](),
 		"document.LocationAdmissionReader":              reflect.TypeFor[document.LocationAdmissionReader](),
 		"product.BatchResult[spatial.EdgeList]":         reflect.TypeFor[product.BatchResult[EdgeList]](),
@@ -252,14 +255,15 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 			methodCount int
 		}{
 			{"MapReadRepository", []int{28}, false, 7},
-			{"MapWriteRepository", []int{29}, false, 20},
+			{"MapWriteRepository", []int{29}, false, 21},
 			{"ProductBatchRepository", []int{30}, false, 7},
 			{"RegionReadRepository", []int{31}, false, 4},
 			{"RegionWriteRepository", []int{32}, false, 14},
 			{"TimeReadRepository", []int{33}, false, 4},
-			{"TimeWriteRepository", []int{34}, false, 6},
+			{"TimeWriteRepository", []int{34}, false, 8},
 			{"TimeBatchReadRepository", []int{259}, true, 1},
 			{"ContainmentWriter", []int{409, 410}, true, 2},
+			{"DocumentReferenceReader", nil, true, 1},
 			{"PlaceReader", []int{273}, true, 1},
 		}
 		total := 0
@@ -268,11 +272,10 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 				canonicalName := "spatial." + port.name
 				var signatures []string
 				if port.cross {
-					for _, index := range port.indices {
-						if index >= len(contract.Seams) || contract.Seams[index].Interface != canonicalName {
-							t.Fatalf("provider_caller_seams/%d does not identify %s", index, canonicalName)
+					for _, seam := range contract.Seams {
+						if seam.Interface == canonicalName {
+							signatures = append(signatures, seam.Signature)
 						}
-						signatures = append(signatures, contract.Seams[index].Signature)
 					}
 				} else {
 					index := port.indices[0]
@@ -317,8 +320,8 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 				total += typ.NumMethod()
 			})
 		}
-		if total != 66 {
-			t.Errorf("compiled methods=%d, want 66", total)
+		if total != 70 {
+			t.Errorf("compiled methods=%d, want 70", total)
 		}
 	})
 
@@ -342,8 +345,8 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 			"TimeDateSnapshot",
 			"TimeCalendarSnapshot",
 			"ContainmentEdge",
-			"HexAdmission",
-			"QuestHexCandidate",
+			"PointcrawlAdmission",
+			"QuestPointcrawlCandidate",
 			"ProductReadRepos",
 			"ProductCommandRepos",
 		} {
@@ -390,8 +393,8 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 				}
 			})
 		}
-		if totalFields != 58 {
-			t.Errorf("compiled fields=%d, want 58", totalFields)
+		if totalFields != 60 {
+			t.Errorf("compiled fields=%d, want 60", totalFields)
 		}
 	})
 
@@ -401,36 +404,37 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 			t.Fatal(err)
 		}
 		want := map[string]bool{
-			"MapReadRepository":       true,
-			"MapWriteRepository":      true,
-			"ProductBatchRepository":  true,
-			"RegionReadRepository":    true,
-			"RegionWriteRepository":   true,
-			"TimeReadRepository":      true,
-			"TimeWriteRepository":     true,
-			"TimeBatchReadRepository": true,
-			"ContainmentWriter":       true,
-			"PlaceReader":             true,
-			"MapHexesKey":             true,
-			"MapEdgesKey":             true,
-			"MapNodesKey":             true,
-			"MapNodeEdgesKey":         true,
-			"HexLinksKey":             true,
-			"NodeLinksKey":            true,
-			"POIsKey":                 true,
-			"HexList":                 true,
-			"EdgeList":                true,
-			"NodeList":                true,
-			"NodeEdgeList":            true,
-			"HexLinkList":             true,
-			"NodeLinkList":            true,
-			"PoiList":                 true,
-			"TimeDateSnapshot":        true,
-			"TimeCalendarSnapshot":    true,
-			"ContainmentEdge":         true,
-			"QuestHexCandidate":       true,
-			"ProductReadRepos":        true,
-			"ProductCommandRepos":     true,
+			"MapReadRepository":        true,
+			"MapWriteRepository":       true,
+			"ProductBatchRepository":   true,
+			"RegionReadRepository":     true,
+			"RegionWriteRepository":    true,
+			"TimeReadRepository":       true,
+			"TimeWriteRepository":      true,
+			"TimeBatchReadRepository":  true,
+			"ContainmentWriter":        true,
+			"DocumentReferenceReader":  true,
+			"PlaceReader":              true,
+			"MapHexesKey":              true,
+			"MapEdgesKey":              true,
+			"MapNodesKey":              true,
+			"MapNodeEdgesKey":          true,
+			"HexLinksKey":              true,
+			"NodeLinksKey":             true,
+			"POIsKey":                  true,
+			"HexList":                  true,
+			"EdgeList":                 true,
+			"NodeList":                 true,
+			"NodeEdgeList":             true,
+			"HexLinkList":              true,
+			"NodeLinkList":             true,
+			"PoiList":                  true,
+			"TimeDateSnapshot":         true,
+			"TimeCalendarSnapshot":     true,
+			"ContainmentEdge":          true,
+			"QuestPointcrawlCandidate": true,
+			"ProductReadRepos":         true,
+			"ProductCommandRepos":      true,
 		}
 		count := 0
 		for _, decl := range source.Decls {
@@ -451,7 +455,7 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 				}
 			}
 		}
-		if count != 30 || len(want) != 0 {
+		if count != 31 || len(want) != 0 {
 			t.Fatalf("source declares %d allocated types, missing %v", count, want)
 		}
 	})

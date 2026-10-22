@@ -5,7 +5,6 @@ import * as codex from '../features/codex/feature.js';
 import * as community from '../features/community/feature.js';
 import * as document from '../features/document/feature.js';
 import * as editor from '../features/editor/feature.js';
-import * as errors from '../features/errors/feature.js';
 import * as gallery from '../features/gallery/feature.js';
 import * as home from '../features/home/feature.js';
 import * as map from '../features/map/feature.js';
@@ -68,10 +67,7 @@ function orderRoutesByManifest(routes: readonly FeatureRoute[]): FeatureRoute[] 
 
 const flatRoutes = SLICES.flatMap((slice) => slice.routes);
 
-/** Alias used by routes.tsx (frozen after Wave 0). */
 export const routes = orderRoutesByManifest(flatRoutes);
-
-export const featureRoutes = routes;
 
 export const featureHandlers = SLICES.flatMap((slice) => slice.handlers);
 
@@ -91,5 +87,3 @@ export const featureGraphql = SLICES.reduce<Record<string, FeatureSlice['graphql
 export const featureQueryKeys = mergeQueryKeySlices(SLICES);
 
 export const featureEndpoints = mergeEndpointSlices(SLICES);
-
-export { errors };

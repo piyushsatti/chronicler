@@ -4,8 +4,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"strings"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
@@ -15,7 +13,9 @@ import (
 )
 
 type ProductPostgres struct {
-	DB dbgen.DBTX
+	DB     dbgen.DBTX
+	origin *commandOrigin
+	proofs []inboxProof
 }
 
 func NewProductPostgres(db dbgen.DBTX) (*ProductPostgres, error) {
@@ -48,7 +48,7 @@ func (p *ProductPostgres) ReadMyNotifications(ctx context.Context, actor auth.Au
 	arg := dbgen.ProductNotificationInboxParams{
 		MemberID:   memberID,
 		UnreadOnly: spec.UnreadOnly,
-		PageSize:   limit,
+		PageSize:   limit + 1,
 	}
 	if spec.BeforeCreatedAt != nil && spec.BeforeNotificationID != nil {
 		beforeID, err := db.ParseUUID(*spec.BeforeNotificationID)
@@ -62,28 +62,28 @@ func (p *ProductPostgres) ReadMyNotifications(ctx context.Context, actor auth.Au
 	if err != nil {
 		return NotificationConnection{}, err
 	}
-	items := make([]NotificationView, 0, len(rows))
-	for _, row := range rows {
-		items = append(items, mapNotificationRow(row))
+	hasMore := len(rows) > int(limit)
+	if hasMore {
+		rows = rows[:limit]
 	}
-	return NotificationConnection{Items: items, HasMore: len(items) == int(limit)}, nil
-}
-
-func mapNotificationRow(row dbgen.ProductNotificationInboxRow) NotificationView {
-	view := NotificationView{
-		Id:        db.UUIDString(row.PublicID),
-		Kind:      row.Kind,
-		CreatedAt: row.CreatedAt.Time,
-		Title:     &row.Body,
+	candidates := make([]storedNotification, len(rows))
+	for i, row := range rows {
+		candidates[i] = storedNotification{ID: db.UUIDString(row.PublicID), Kind: EventKind(row.Kind), SubjectType: row.SubjectType.String, SubjectID: db.UUIDString(row.SubjectPublicID), Body: row.Body, CreatedAt: row.CreatedAt.Time, ReadAt: row.ReadAt}
 	}
-	if row.SubjectType.Valid {
-		view.SubjectType = row.SubjectType.String
+	projections, err := p.proveNotifications(ctx, actor.Claims().MemberID, candidates)
+	if err != nil {
+		return NotificationConnection{}, opaqueNotificationProofError()
 	}
-	if row.ReadAt.Valid {
-		t := row.ReadAt.Time
-		view.ReadAt = &t
+	items := make([]NotificationView, len(rows))
+	for i, row := range candidates {
+		projection := projections[i]
+		items[i] = NotificationView{Id: row.ID, Kind: string(row.Kind), CreatedAt: row.CreatedAt, Label: projection.Label, Title: projection.Title, Summary: projection.Summary, SubjectId: projection.SubjectID, SubjectType: projection.SubjectType, SubjectCode: projection.Code}
+		if row.ReadAt.Valid {
+			at := row.ReadAt.Time
+			items[i].ReadAt = &at
+		}
 	}
-	return view
+	return NotificationConnection{Items: items, HasMore: hasMore}, nil
 }
 
 func (p *ProductPostgres) ReadMyUnreadNotificationCount(ctx context.Context, actor auth.Authority, _ MyUnreadNotificationCountSpec) (int32, error) {
@@ -98,107 +98,49 @@ func (p *ProductPostgres) ReadMyUnreadNotificationCount(ctx context.Context, act
 	return int32(count), nil
 }
 
-func (p *ProductPostgres) ReadBatchNotificationSubjects(ctx context.Context, _ auth.Authority, keys []SubjectKey) ([]product.BatchResult[SubjectProjection], error) {
+func (p *ProductPostgres) ReadBatchNotificationSubjects(ctx context.Context, actor auth.Authority, keys []SubjectKey) ([]product.BatchResult[SubjectProjection], error) {
 	out := make([]product.BatchResult[SubjectProjection], len(keys))
 	if len(keys) == 0 {
 		return out, nil
 	}
-
-	docIDs, charIDs, questIDs := partitionSubjectIDs(keys)
-	existingDocs, err := p.existingSubjectIDs(ctx, subjectTypeDocument, docIDs)
-	if err != nil {
-		return nil, err
+	if len(keys) > maxAckLimit {
+		return nil, opaqueNotificationProofError()
 	}
-	existingChars, err := p.existingSubjectIDs(ctx, subjectTypeCharacter, charIDs)
+	memberID, err := memberUUID(actor)
 	if err != nil {
-		return nil, err
+		return nil, opaqueNotificationProofError()
 	}
-	existingQuests, err := p.existingSubjectIDs(ctx, subjectTypeQuest, questIDs)
-	if err != nil {
-		return nil, err
-	}
-
+	ids := make([]pgtype.UUID, len(keys))
 	for i, key := range keys {
-		subjectType := strings.TrimSpace(key.SubjectType)
-		subjectID := strings.TrimSpace(key.SubjectID)
-		proj := SubjectProjection{
-			SubjectType: subjectType,
-			SubjectID:   subjectID,
-			Label:       "",
+		if !canonicalNotificationID(key.NotificationID) {
+			return nil, opaqueNotificationProofError()
 		}
-		switch subjectType {
-		case subjectTypeDocument:
-			if subjectID == "" {
-				proj.Visible = false
-				proj.Malformed = false
-			} else {
-				proj.Visible = existingDocs[subjectID]
-				proj.Malformed = false
-			}
-		case subjectTypeCharacter:
-			if subjectID == "" || !existingChars[subjectID] {
-				proj.Malformed = true
-			} else {
-				proj.Visible = true
-			}
-		case subjectTypeQuest:
-			if subjectID == "" || !existingQuests[subjectID] {
-				proj.Malformed = true
-			} else {
-				proj.Visible = true
-			}
-		default:
-			proj.Malformed = true
-		}
-		out[i] = product.BatchResult[SubjectProjection]{Value: &proj}
+		ids[i], _ = db.ParseUUID(key.NotificationID)
 	}
-	return out, nil
-}
-
-func partitionSubjectIDs(keys []SubjectKey) (docs, chars, quests []pgtype.UUID) {
-	for _, key := range keys {
-		id := strings.TrimSpace(key.SubjectID)
-		if id == "" {
-			continue
-		}
-		parsed, err := db.ParseUUID(id)
-		if err != nil {
-			continue
-		}
-		switch strings.TrimSpace(key.SubjectType) {
-		case subjectTypeDocument:
-			docs = append(docs, parsed)
-		case subjectTypeCharacter:
-			chars = append(chars, parsed)
-		case subjectTypeQuest:
-			quests = append(quests, parsed)
-		}
-	}
-	return docs, chars, quests
-}
-
-func (p *ProductPostgres) existingSubjectIDs(ctx context.Context, subjectType string, ids []pgtype.UUID) (map[string]bool, error) {
-	out := make(map[string]bool, len(ids))
-	if len(ids) == 0 {
-		return out, nil
-	}
-	var found []pgtype.UUID
-	var err error
-	switch subjectType {
-	case subjectTypeDocument:
-		found, err = p.queries().ProductNotificationSubjectDocuments(ctx, ids)
-	case subjectTypeCharacter:
-		found, err = p.queries().ProductNotificationSubjectCharacters(ctx, ids)
-	case subjectTypeQuest:
-		found, err = p.queries().ProductNotificationSubjectQuests(ctx, ids)
-	default:
-		return out, nil
-	}
+	rows, err := p.queries().ProductNotificationRowsForProof(ctx, dbgen.ProductNotificationRowsForProofParams{MemberID: memberID, NotificationIds: ids})
 	if err != nil {
-		return nil, err
+		return nil, opaqueNotificationProofError()
 	}
-	for _, id := range found {
-		out[db.UUIDString(id)] = true
+	stored := make(map[string]storedNotification, len(rows))
+	for _, row := range rows {
+		id := db.UUIDString(row.PublicID)
+		stored[id] = storedNotification{ID: id, Kind: EventKind(row.Kind), SubjectType: row.SubjectType.String, SubjectID: db.UUIDString(row.SubjectPublicID), Body: row.Body, CreatedAt: row.CreatedAt.Time, ReadAt: row.ReadAt}
+	}
+	candidates := make([]storedNotification, len(keys))
+	for i, key := range keys {
+		row, ok := stored[key.NotificationID]
+		if !ok || key.SubjectType != row.SubjectType || (key.SubjectID != row.SubjectID && row.SubjectID != "") {
+			return nil, opaqueNotificationProofError()
+		}
+		candidates[i] = row
+	}
+	projections, err := p.proveNotifications(ctx, actor.Claims().MemberID, candidates)
+	if err != nil {
+		return nil, opaqueNotificationProofError()
+	}
+	for i := range keys {
+		projection := projections[i]
+		out[i] = product.BatchResult[SubjectProjection]{Value: &projection}
 	}
 	return out, nil
 }
@@ -263,18 +205,6 @@ func (p *ProductPostgres) StoreAcknowledgeSuppressedNotifications(ctx context.Co
 		At:      write.At,
 		Input:   MarkNotificationsReadSpec{Ids: write.SelectedIDs},
 	})
-}
-
-func (p *ProductPostgres) ReadPreferences(context.Context, []string) ([]Preferences, error) {
-	return nil, fmt.Errorf("notification preferences pending wiring")
-}
-
-func (p *ProductPostgres) InsertEvent(context.Context, Event) (string, error) {
-	return "", fmt.Errorf("notification event insert pending wiring")
-}
-
-func (p *ProductPostgres) InsertRecipients(context.Context, string, []string, time.Time) error {
-	return fmt.Errorf("notification recipients insert pending wiring")
 }
 
 func (p *ProductPostgres) StoreMarkNotificationsRead(ctx context.Context, write MarkNotificationsReadWrite) (NotificationWriteReceipt, error) {

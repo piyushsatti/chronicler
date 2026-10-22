@@ -40,6 +40,9 @@ func (r documentErrorRepo) ReadDocumentBacklinks(context.Context, auth.Authority
 func (r documentErrorRepo) ReadDocumentById(context.Context, auth.Authority, document.DocumentByIdSpec) (*document.DocumentView, error) {
 	return r.view, r.err
 }
+func (r documentErrorRepo) ReadDocumentRevisionParent(context.Context, auth.Authority, string) (*document.DocumentView, error) {
+	return r.view, r.err
+}
 func (r documentErrorRepo) ReadDocumentRevisions(context.Context, auth.Authority, document.DocumentRevisionsSpec) (document.DocumentRevisionPage, error) {
 	return document.DocumentRevisionPage{}, r.err
 }

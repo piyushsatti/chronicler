@@ -22,17 +22,14 @@ type SearchKind struct {
 
 func SearchableKinds() []SearchKind {
 	return []SearchKind{
-		{Key: "document", Label: "Documents", Searchable: true},
+		{Key: "codex_entry", Label: "Codex entries", Searchable: true},
+		{Key: "rule", Label: "Rules", Searchable: true},
+		{Key: "summary", Label: "Summaries", Searchable: true},
+		{Key: "quest_brief", Label: "Quest briefs", Searchable: true},
+		{Key: "community", Label: "Community", Searchable: true},
 		{Key: "member", Label: "Members", Searchable: true},
-		{Key: "quest", Label: "Quests", Searchable: false, ExclusionReason: strPtr("use quest board")},
-		{Key: "character", Label: "Characters", Searchable: false, ExclusionReason: strPtr("use character directory")},
-		{Key: "hex", Label: "Hexes", Searchable: false, ExclusionReason: strPtr("use map view")},
-		{Key: "region", Label: "Regions", Searchable: false, ExclusionReason: strPtr("use region list")},
-		{Key: "map", Label: "Maps", Searchable: false, ExclusionReason: strPtr("use map list")},
 	}
 }
-
-func strPtr(s string) *string { return &s }
 
 func Routes(mux httpserver.Router, stats func() Stats) {
 	mux.HandleFunc("GET /v1/stats", func(w http.ResponseWriter, _ *http.Request) {

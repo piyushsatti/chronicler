@@ -1,4 +1,4 @@
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -50,6 +50,55 @@ const adminSections = [
 ] as const;
 
 describe('validated workspace authority', () => {
+  it('reveals each Admin section on keyboard focus in both directions', async () => {
+    signIn();
+    renderWithProviders(
+      <AdminWorkspaceShell page="test-navigation" title="Navigation">
+        <p>Workspace ready</p>
+      </AdminWorkspaceShell>,
+      { route: '/admin/people' },
+    );
+    await screen.findByText('Workspace ready');
+    const links = within(
+      screen.getByRole('navigation', { name: 'Admin sections' }),
+    ).getAllByRole('link');
+    expect(links.map((link) => link.textContent)).toEqual([
+      'Today',
+      'People',
+      'Characters',
+      'Review',
+      'World',
+      'Content',
+      'Delivery',
+      'Data health',
+    ]);
+    expect(links[1]).toHaveAttribute('aria-current', 'page');
+    const reveals = links.map((link) => {
+      const reveal = vi.fn();
+      Object.defineProperty(link, 'scrollIntoView', { value: reveal });
+      return reveal;
+    });
+    const user = userEvent.setup();
+    for (const [index, link] of links.entries()) {
+      await user.tab();
+      expect(link).toHaveFocus();
+      expect(reveals[index]).toHaveBeenCalledTimes(1);
+      expect(reveals[index]).toHaveBeenCalledWith({
+        block: 'nearest',
+        inline: 'nearest',
+      });
+    }
+    for (let index = links.length - 2; index >= 0; index--) {
+      await user.tab({ shift: true });
+      expect(links[index]).toHaveFocus();
+      expect(reveals[index]).toHaveBeenCalledTimes(2);
+      expect(reveals[index]).toHaveBeenLastCalledWith({
+        block: 'nearest',
+        inline: 'nearest',
+      });
+    }
+  });
+
   it.each(adminSections)(
     'denies verifier at %s before any section or privileged query mounts',
     async (route, Page) => {
@@ -57,7 +106,7 @@ describe('validated workspace authority', () => {
       const requested = track();
       renderWithProviders(<Page />, { route });
       expect(await screen.findByRole('alert')).toHaveTextContent(
-        'Permissions may have changed. Reload or sign in again.',
+        'You don’t have access to this',
       );
       expect(
         screen.queryByRole('navigation', { name: 'Admin sections' }),
@@ -113,7 +162,7 @@ describe('validated workspace authority', () => {
   it('allows the DM route without redirecting a DM or requesting administrator operations', async () => {
     signIn(['dm']);
     const requested = track();
-    renderWithProviders(
+    const { queryClient } = renderWithProviders(
       <Routes>
         <Route path="/dm" element={<DMDashboardPage />} />
         <Route path="/" element={<p>Redirected home</p>} />
@@ -124,11 +173,16 @@ describe('validated workspace authority', () => {
     expect(
       await screen.findByRole('heading', { name: 'DM dashboard' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('alert')).toHaveTextContent(
-      'The DM dashboard is temporarily unavailable.',
-    );
+    expect(
+      await screen.findByRole('heading', { name: 'Your quests' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     expect(screen.queryByText('Redirected home')).not.toBeInTheDocument();
-    expect(requested).toEqual([]);
+    expect(requested).toEqual([GRAPHQL_PATH]);
+    const operations = queryClient.getQueryCache().getAll();
+    expect(operations.some((query) => query.queryKey[0] === 'adminOperations')).toBe(
+      false,
+    );
   });
 
   it('denies a player at the DM route before the body mounts', async () => {
@@ -149,13 +203,16 @@ describe('validated workspace authority', () => {
       release = resolve;
     });
     const me = { ...goodMe, roles: ['admin'] };
-    mockMemberMe(async () => {
-      await pending;
-      return HttpResponse.json(me);
-    }, async () => {
-      await pending;
-      return me;
-    });
+    mockMemberMe(
+      async () => {
+        await pending;
+        return HttpResponse.json(me);
+      },
+      async () => {
+        await pending;
+        return me;
+      },
+    );
     const requested = track();
     renderWithProviders(<AdminPeoplePage />, { route: '/admin/people' });
     expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
@@ -187,7 +244,7 @@ describe('validated workspace authority', () => {
       'forbidden',
       () => HttpResponse.json({ title: 'private server detail' }, { status: 403 }),
       null,
-      'Permissions may have changed. Reload or sign in again.',
+      'You don’t have access to this',
     ],
   ] as const)(
     'shows controlled %s account failure without querying privileged data',
@@ -234,7 +291,7 @@ describe('validated workspace authority', () => {
       invalidate.mock.calls.filter(([filter]) => filter?.queryKey?.[0] === 'me'),
     ).toHaveLength(1);
     expect(screen.getAllByRole('alert')[0]).toHaveTextContent(
-      'Permissions may have changed. Reload or sign in again.',
+      'You don’t have access to this',
     );
     expect(screen.getByRole('button', { name: 'Reload account' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Sign in again' })).toHaveAttribute(
@@ -260,13 +317,22 @@ describe('validated workspace authority', () => {
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
     await screen.findByRole('alert');
     await userEvent.click(screen.getByRole('tab', { name: 'DM Profiles' }));
-    await waitFor(() =>
-      expect(queryClient.getQueryState(queryKeys.pendingDmProfiles)?.status).toBe(
-        'error',
-      ),
+    const scope = JSON.stringify([goodMe.id, ['verifier']]);
+    queryClient.setQueryData(
+      [...queryKeys.pendingDmProfiles, 'foreign-account', {}, 0],
+      { marker: 'foreign' },
     );
+    await waitFor(() => {
+      const queue = queryClient
+        .getQueryCache()
+        .findAll({ queryKey: queryKeys.pendingDmProfiles })
+        .find((query) => query.queryKey[1] === scope && query.getObserversCount() > 0);
+      expect(queue?.state.status).toBe('error');
+      expect(queue?.queryKey[1]).toBe(scope);
+      expect(queue?.queryKey[1]).not.toBe('foreign-account');
+    });
     expect(screen.getByRole('alert')).toHaveTextContent(
-      'Permissions may have changed. Reload or sign in again.',
+      'You don’t have access to this',
     );
     expect(
       invalidate.mock.calls.filter(([filter]) => filter?.queryKey?.[0] === 'me'),
@@ -287,9 +353,7 @@ describe('validated workspace authority', () => {
     mockGraphqlOps({
       SetMemberRoles: () =>
         HttpResponse.json({
-          errors: [
-            { message: 'private detail', extensions: { code: 'FORBIDDEN' } },
-          ],
+          errors: [{ message: 'private detail', extensions: { code: 'FORBIDDEN' } }],
         }),
     });
     const { queryClient } = renderWithProviders(<AdminPeoplePage />, {
@@ -299,7 +363,7 @@ describe('validated workspace authority', () => {
     await userEvent.click(await screen.findByRole('button', { name: /Mira/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Save roles' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Permissions may have changed. Reload or sign in again.',
+      'You don’t have access to this',
     );
     expect(
       invalidate.mock.calls.filter(([filter]) => filter?.queryKey?.[0] === 'me'),

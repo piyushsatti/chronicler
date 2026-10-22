@@ -1,0 +1,73 @@
+{
+  "at": "2026-10-20T21:52:42.633015Z",
+  "nativeSession": 39780,
+  "exit": 0,
+  "durationSeconds": 73.91,
+  "originalStages": 15,
+  "completedQueries": 465,
+  "allProductTablesUnchanged": true,
+  "productTables": 42,
+  "wrongKindAliases": [
+    {
+      "actor": "guest",
+      "alias": "/npcs/collections-rule-001",
+      "canonical": "/codex/collections-rule-001",
+      "documentId": "1f14d50d-564f-4a03-b1c8-b53e0f1b8c6c",
+      "documentKind": "rule",
+      "category": "guide",
+      "guideReaderOrdinal": 46,
+      "readerOrdinal": 47,
+      "codexEntry": null,
+      "publicBodyHash": "3286657340f1278c05f597ea2a92600d9368b33781b09d91594efdb865938cbb",
+      "canonicalError": "not_found",
+      "guideBodyRendered": false,
+      "editorRendered": false
+    },
+    {
+      "actor": "guest",
+      "alias": "/factions/collections-rule-001",
+      "canonical": "/codex/collections-rule-001",
+      "documentId": "1f14d50d-564f-4a03-b1c8-b53e0f1b8c6c",
+      "documentKind": "rule",
+      "category": "guide",
+      "guideReaderOrdinal": 46,
+      "readerOrdinal": 48,
+      "codexEntry": null,
+      "publicBodyHash": "3286657340f1278c05f597ea2a92600d9368b33781b09d91594efdb865938cbb",
+      "canonicalError": "not_found",
+      "guideBodyRendered": false,
+      "editorRendered": false
+    }
+  ],
+  "sourceUnchanged": {
+    "production": true,
+    "owned": true,
+    "build": true
+  },
+  "cleanup": {
+    "at": "2026-10-20T21:51:36.475937016Z",
+    "database": "product_case_1",
+    "databaseDropped": true,
+    "listenersClosed": {
+      "api": true,
+      "preview": true
+    },
+    "nodeStarted": true,
+    "nodeWaited": true
+  },
+  "runtime": "Frozen immutable Build36/current API production source in serial native13 PostgreSQL fixture; no mocked responses",
+  "bindings": {
+    "browser-receipt.json": "808aec6af6b88a64fb6e8df43dad08f518672023ed0df74ffb60b943927fb5ab",
+    "native-readback.json": "d9d7d7a2329842c94670a72720a54449d06e2177dad6976e397454d857219d7e",
+    "native-cleanup.json": "0dedcecf6938e008a5039254578413096b60f9885fbcd2eb3c34ef67291953e8",
+    "native.log": "1967f443b4adb19a5f5e5785d0da9b7d693d52272a37158dba664eb1a5f72dd0",
+    "public-collections/browser.mjs": "9fc8d0fb140d2ecf31ed1f1d6d6724a7446e0ced27b69580aae54a10ae49561e",
+    "production-preview-36/build-receipt.json": "42efb962609ec753b8cc3a6f93f0cce4e855fd2b9a2c6899fdb76a9c9a001829",
+    "route-acceptance/public-wrong-kind-acceptance/null-boundary-repair/review-2.md": "f19aa4f3f397c7ee4ab91beef37c1290e879119bbe846bd32ec1ba8f003fed39"
+  },
+  "limits": [
+    "Guest wrong-Document-kind suppression at shared canonicalCodexreader, not NPC-vs-Faction category authorization.",
+    "Same15originalstages; no extra mutation or new providerOAuth; no owner visual approval.",
+    "Initialrun12stoppedbefore runtime due root build-directory argument error, not acceptance."
+  ]
+}

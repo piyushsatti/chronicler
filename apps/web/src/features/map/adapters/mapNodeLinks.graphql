@@ -1,0 +1,15 @@
+query MapNodeLinks($atlasCode: String!, $nodeOffset: Int!, $offset: Int!) {
+  map(atlasCode: $atlasCode) {
+    pointcrawlNodes(limit: 1, offset: $nodeOffset) {
+      id
+      linkedEntries(limit: 50, offset: $offset) {
+        mapId
+        nodeId
+        documentId
+        relation
+        createdAt
+        createdBy
+      }
+    }
+  }
+}

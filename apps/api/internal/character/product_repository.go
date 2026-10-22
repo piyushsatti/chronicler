@@ -9,6 +9,7 @@ package character
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
@@ -100,6 +101,8 @@ type QuestWithdrawalWriter interface {
 	PlanOwnedCharacterWithdrawal(ctx context.Context, characterID string, questIDs []string) (WithdrawalPlan, error)
 	WithdrawOwnedCharacter(ctx context.Context, actorID string, plan WithdrawalPlan, reason string, at time.Time) (WithdrawalEffects, error)
 }
+
+var ErrWithdrawalPlanChanged = errors.New("character withdrawal plan changed before locks")
 
 type IDKey struct{ ID string }
 

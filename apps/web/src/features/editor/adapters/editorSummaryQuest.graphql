@@ -1,0 +1,9 @@
+query EditorSummaryQuest($id: ID!) {
+  quest(id: $id) {
+    id
+    shortCode
+    briefDocument {
+      title
+    }
+  }
+}

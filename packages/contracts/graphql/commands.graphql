@@ -107,6 +107,7 @@ input QuestEditInput {
 }
 input QuestSummaryInput {
   documentId: ID
+  expectedRevision: Int
   questIds: [ID!]!
   characterId: ID
   title: String!

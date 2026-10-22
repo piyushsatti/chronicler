@@ -1,5 +1,9 @@
 import { HttpResponse } from 'msw';
-import type { FeatureGraphql, FeatureHandlers, FeatureRoute } from '../../chrome/featureModule.js';
+import type {
+  FeatureGraphql,
+  FeatureHandlers,
+  FeatureRoute,
+} from '../../chrome/featureModule.js';
 import { lazyElement } from '../../chrome/lazyElement.js';
 import goodSearch from '../../../tests/fixtures/wire/search/good.json';
 import goodSearchKinds from '../../../tests/fixtures/wire/search/kinds-good.json';
@@ -23,7 +27,9 @@ export const routes: readonly FeatureRoute[] = [
   {
     path: '/search',
     element: lazyElement(() =>
-      import('./pages/SearchPage.js').then((module) => ({ default: module.SearchPage })),
+      import('./pages/SearchPage.js').then((module) => ({
+        default: module.SearchPage,
+      })),
     ),
   },
 ];

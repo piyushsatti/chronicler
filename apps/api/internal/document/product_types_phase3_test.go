@@ -25,6 +25,8 @@ func TestPhase3TaskDOC01Acceptance(t *testing.T) {
 		WireType string `json:"wire_type"`
 		SDLType  string `json:"sdl_type"`
 		Default  string `json:"default"`
+		Kind     string `json:"kind"`
+		JSONTag  string `json:"json_tag"`
 	}
 	type declaration struct {
 		Name        string   `json:"name"`
@@ -76,10 +78,12 @@ func TestPhase3TaskDOC01Acceptance(t *testing.T) {
 		reflect.TypeFor[LieutenantAssignmentView](),
 		reflect.TypeFor[LieutenantPage](),
 		reflect.TypeFor[PreviewAudience](),
+		reflect.TypeFor[SummaryAuthoringView](),
 		reflect.TypeFor[SummaryDerivedView](),
 		reflect.TypeFor[SummaryDmView](),
 		reflect.TypeFor[SummaryHexView](),
 		reflect.TypeFor[SummaryPlayerView](),
+		reflect.TypeFor[SummaryQuestRefView](),
 		reflect.TypeFor[SummaryRegionView](),
 		reflect.TypeFor[AssignLieutenantSpec](),
 		reflect.TypeFor[CreateDocumentSpec](),
@@ -139,6 +143,7 @@ func TestPhase3TaskDOC01Acceptance(t *testing.T) {
 		"json.RawMessage":                   reflect.TypeFor[json.RawMessage](),
 		"product.GameDateView":              reflect.TypeFor[product.GameDateView](),
 		"product.Optional[string]":          reflect.TypeFor[product.Optional[string]](),
+		"product.Optional[[]string]":        reflect.TypeFor[product.Optional[[]string]](),
 		"product.Optional[json.RawMessage]": reflect.TypeFor[product.Optional[json.RawMessage]](),
 	}
 	var resolve func(string) reflect.Type
@@ -167,7 +172,7 @@ func TestPhase3TaskDOC01Acceptance(t *testing.T) {
 			declarations []declaration
 			indices      []int
 		}{
-			{"dto_registry", contract.DTOs, []int{18, 30, 31, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 83, 84, 118, 158, 159, 160, 161, 162}},
+			{"dto_registry", contract.DTOs, []int{18, 30, 31, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 83, 84, 118, 158, 159, 160, 161, 162, 163, 180}},
 			{"specs", contract.Specs, []int{3, 9, 20, 23, 30, 34, 39, 42, 60, 63, 93, 94, 95, 103, 104, 105, 106, 107, 108, 117, 143}},
 			{"command_states", contract.States, []int{3, 9, 20, 23, 30, 34, 39, 42, 60, 63}},
 			{"command_writes", contract.Writes, []int{3, 9, 20, 23, 30, 34, 39, 42, 60, 63}},
@@ -215,14 +220,23 @@ func TestPhase3TaskDOC01Acceptance(t *testing.T) {
 				}
 				for i, f := range d.Fields {
 					actual := typ.Field(i)
-					if actual.Name != f.Name || actual.Type != resolve(f.GoType) || actual.Anonymous || !actual.IsExported() || actual.Tag != "" {
-						t.Errorf("%s field %d is %s %s %q, want %s %s without tags", d.Name, i, actual.Name, actual.Type, actual.Tag, f.Name, f.GoType)
+					var tag reflect.StructTag
+					if f.Kind == "INTERNAL_PARENT_KEY" {
+						if f.WireName != "" || f.WireType != "" || f.JSONTag != "-" {
+							t.Errorf("%s.%s internal metadata must omit wire fields and require json exclusion", d.Name, f.Name)
+						}
+						tag = reflect.StructTag(`json:"-"`)
+					} else if f.JSONTag != "" {
+						t.Errorf("%s.%s public metadata unexpectedly declares JSON tag %q", d.Name, f.Name, f.JSONTag)
+					}
+					if actual.Name != f.Name || actual.Type != resolve(f.GoType) || actual.Anonymous || !actual.IsExported() || actual.Tag != tag {
+						t.Errorf("%s field %d is %s %s %q, want %s %s %q", d.Name, i, actual.Name, actual.Type, actual.Tag, f.Name, f.GoType, tag)
 					}
 				}
 			}
 		}
-		if len(selected) != 63 || len(compiled) != 63 {
-			t.Fatalf("canonical=%d compiled=%d, want 63 each", len(selected), len(compiled))
+		if len(selected) != 65 || len(compiled) != 65 {
+			t.Fatalf("canonical=%d compiled=%d, want 65 each", len(selected), len(compiled))
 		}
 		for name := range compiled {
 			if _, ok := selected[name]; !ok {
@@ -258,8 +272,8 @@ func TestPhase3TaskDOC01Acceptance(t *testing.T) {
 				}
 			}
 		}
-		if len(declared) != 63 {
-			t.Errorf("source contains %d types, want 63", len(declared))
+		if len(declared) != 65 {
+			t.Errorf("source contains %d types, want 65", len(declared))
 		}
 		for name := range declared {
 			if _, ok := compiled[name]; !ok {
@@ -270,7 +284,7 @@ func TestPhase3TaskDOC01Acceptance(t *testing.T) {
 			t.Errorf("unexpected constants %v", constants)
 		}
 	})
-	if len(selected) != 63 {
+	if len(selected) != 65 {
 		t.Fatal("canonical declaration inventory incomplete")
 	}
 
@@ -310,11 +324,11 @@ func TestPhase3TaskDOC01Acceptance(t *testing.T) {
 		}
 		// go-seams.json still names summary hex DTOs; contracts SDL uses C3 pointcrawl names without V2.
 		sdlTypeAlias := map[string]string{
-			"SummaryHexV2Type":        "SummaryPointcrawlNodeType",
-			"SummaryDerivedV2Type":    "SummaryDerivedType",
-			"SummaryDmV2Type":         "SummaryDmType",
-			"SummaryPlayerV2Type":     "SummaryPlayerType",
-			"SummaryRegionV2Type":     "SummaryRegionType",
+			"SummaryHexV2Type":            "SummaryPointcrawlNodeType",
+			"SummaryDerivedV2Type":        "SummaryDerivedType",
+			"SummaryDmV2Type":             "SummaryDmType",
+			"SummaryPlayerV2Type":         "SummaryPlayerType",
+			"SummaryRegionV2Type":         "SummaryRegionType",
 			"SummaryPointcrawlNodeV2Type": "SummaryPointcrawlNodeType",
 		}
 		contractFieldToSDL := map[string]map[string]string{
@@ -368,6 +382,9 @@ func TestPhase3TaskDOC01Acceptance(t *testing.T) {
 			}
 			expected := make(map[string]field)
 			for _, f := range d.Fields {
+				if f.Kind == "INTERNAL_PARENT_KEY" && f.WireName == "" {
+					continue
+				}
 				if contractFieldSDLAbsent[d.WireName][f.WireName] {
 					continue
 				}
@@ -415,8 +432,8 @@ func TestPhase3TaskDOC01Acceptance(t *testing.T) {
 		}
 		wantLazy := map[string]bool{
 			"CodexEntryCardType.subjects": true,
-			"DocumentType.author":        true,
-			"DocumentType.readerIds":     true,
+			"DocumentType.author":         true,
+			"DocumentType.readerIds":      true,
 			"DocumentType.summaryDerived": true,
 		}
 		if !reflect.DeepEqual(matchedLazy, wantLazy) {

@@ -7,6 +7,25 @@ query EditorDocumentBySlug($slug: String!) {
     title
     status
     version
+    canEditMetadata
+    canEditBody
+    visibility
+    policy
+    readerIds
+    authorId
+    frontmatter
     effectiveBody
+    summaryDerived {
+      authoring {
+        questIds
+        characterId
+        complete
+      }
+      quests {
+        id
+        shortCode
+        title
+      }
+    }
   }
 }

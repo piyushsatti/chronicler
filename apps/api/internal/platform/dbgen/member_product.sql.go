@@ -976,6 +976,24 @@ func (q *Queries) ProductMemberIdentity(ctx context.Context, arg ProductMemberId
 	return i, err
 }
 
+const productMemberPrivateNotes = `-- name: ProductMemberPrivateNotes :one
+SELECT coalesce(s.payload->'private_notes'->>'body','')::text AS body,
+ (s.payload->'private_notes'->>'updated_at')::timestamptz AS updated_at
+FROM members m LEFT JOIN member_settings s ON s.member_id=m.id WHERE m.public_id=$1::uuid
+`
+
+type ProductMemberPrivateNotesRow struct {
+	Body      string             `json:"body"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) ProductMemberPrivateNotes(ctx context.Context, memberID pgtype.UUID) (ProductMemberPrivateNotesRow, error) {
+	row := q.db.QueryRow(ctx, productMemberPrivateNotes, memberID)
+	var i ProductMemberPrivateNotesRow
+	err := row.Scan(&i.Body, &i.UpdatedAt)
+	return i, err
+}
+
 const productMemberProfile = `-- name: ProductMemberProfile :one
 SELECT m.public_id,p.member_id, p.tagline, p.philosophy, p.house_rules, p.table_info, p.accepting_players, p.status, p.review_revision, p.updated_at FROM members m JOIN dm_profiles p ON p.member_id=m.id WHERE m.public_id=$1::uuid
 `
@@ -1418,6 +1436,34 @@ func (q *Queries) ProductStoreDmProfile(ctx context.Context, arg ProductStoreDmP
 		&i.ReviewRevision,
 		&i.UpdatedAt,
 	)
+	return i, err
+}
+
+const productStorePrivateNotes = `-- name: ProductStorePrivateNotes :one
+INSERT INTO member_settings(member_id,payload,updated_at)
+VALUES((SELECT id FROM members WHERE public_id=$1::uuid),
+ jsonb_build_object('private_notes',jsonb_build_object('body',$2::text,'updated_at',$3::timestamptz)),
+ $3::timestamptz)
+ON CONFLICT(member_id) DO UPDATE SET
+payload=jsonb_set(member_settings.payload,'{private_notes}',jsonb_build_object('body',$2::text,'updated_at',$3::timestamptz))
+RETURNING (payload->'private_notes'->>'body')::text AS body,(payload->'private_notes'->>'updated_at')::timestamptz AS updated_at
+`
+
+type ProductStorePrivateNotesParams struct {
+	ActorID pgtype.UUID        `json:"actor_id"`
+	Body    string             `json:"body"`
+	At      pgtype.Timestamptz `json:"at"`
+}
+
+type ProductStorePrivateNotesRow struct {
+	Body      string             `json:"body"`
+	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) ProductStorePrivateNotes(ctx context.Context, arg ProductStorePrivateNotesParams) (ProductStorePrivateNotesRow, error) {
+	row := q.db.QueryRow(ctx, productStorePrivateNotes, arg.ActorID, arg.Body, arg.At)
+	var i ProductStorePrivateNotesRow
+	err := row.Scan(&i.Body, &i.UpdatedAt)
 	return i, err
 }
 

@@ -78,6 +78,28 @@ func (s ProductQueries) MyNotifications(ctx context.Context, actor auth.Authorit
 		}
 		conn.NextBefore = &token
 	}
+	documentIDs := make([]string, 0, len(conn.Items))
+	for _, item := range conn.Items {
+		if item.SubjectType == subjectTypeDocument {
+			documentIDs = append(documentIDs, item.SubjectId)
+		}
+	}
+	if len(documentIDs) > 0 {
+		if s.Reads.DocumentAudience == nil {
+			return NotificationConnection{}, opaqueNotificationProofError()
+		}
+		readable, err := s.Reads.DocumentAudience.ReadableDocumentIDs(ctx, actor, documentIDs)
+		if err != nil {
+			return NotificationConnection{}, opaqueNotificationProofError()
+		}
+		visible := make([]NotificationView, 0, len(conn.Items))
+		for _, item := range conn.Items {
+			if item.SubjectType != subjectTypeDocument || readable[item.SubjectId] {
+				visible = append(visible, item)
+			}
+		}
+		conn.Items = visible
+	}
 	return conn, nil
 }
 

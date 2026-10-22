@@ -1,0 +1,271 @@
+.workspace {
+  container: editor / inline-size;
+  inline-size: 100%;
+  min-inline-size: 0;
+}
+
+.header {
+  gap: var(--sp-2);
+  margin-block-end: var(--sp-3);
+}
+
+.header > :where(h1, p) {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+/* Save, Publish and Cancel wrap as one group to the end of the action bar. */
+.actions {
+  margin-inline-start: auto;
+}
+
+/* Cancel is a text action, so the save buttons and it share one row. */
+.cancel {
+  display: inline-flex;
+  align-items: center;
+  min-block-size: 36px;
+  padding-inline: var(--sp-2);
+}
+
+/* The stack gap alone spaces the denial card; heading margins doubled it. */
+.denied > :where(h2, p) {
+  margin: 0;
+}
+
+.workspace :global(.editor-shell),
+.workspace :global(.pf),
+.workspace :global(.pf-row),
+.workspace :global(.pf-val),
+.workspace :global(.live-editor) {
+  min-inline-size: 0;
+}
+
+.workspace :global(.editor-shell__properties) {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.workspace :global(.pf-row) {
+  grid-template-columns: 22px minmax(0, 1fr);
+}
+
+.workspace :global(.pf-label) {
+  min-inline-size: 0;
+  flex-wrap: wrap;
+}
+
+.workspace :global(.pf-val) {
+  grid-column: 1 / -1;
+}
+
+.workspace :global(.pf-val) :where(input, textarea, select),
+.workspace :global(.pf-tags),
+.workspace :global(.pf-pick),
+.workspace :global(.pf-tag) {
+  box-sizing: border-box;
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+/* editor.css draws text inputs with a transparent border, so an empty Title or
+   Slug read as a bare label. Give every inline input a visible field box. */
+.workspace :global(.pf-val .pf-input) {
+  min-block-size: 2.25rem;
+  padding: var(--sp-1) var(--sp-2);
+  border-color: var(--color-border);
+  background: var(--color-bg-panel);
+}
+
+.workspace :global(.pf-val .pf-input:hover) {
+  border-color: var(--color-border-2);
+}
+
+.workspace :global(.pf-val .pf-input:focus) {
+  border-color: var(--color-border-2);
+}
+
+.workspace :global(.pf-val .pf-input.pf-bad) {
+  border-color: color-mix(in srgb, var(--color-status-dead) 40%, transparent);
+}
+
+/* Read-only values (the slug) sit on the surface so they read as set, not editable. */
+.workspace :global(.pf-val .pf-input[readonly]) {
+  border-style: dashed;
+  background: var(--color-bg-surface);
+  color: var(--color-text-3);
+}
+
+.workspace :global(.pf-tag) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.workspace :global(.pf-tag-label) {
+  min-inline-size: 0;
+  overflow-wrap: anywhere;
+}
+
+.workspace :global(.pf-tag) > button {
+  flex-shrink: 0;
+}
+
+.workspace :global(.le-doc) {
+  box-sizing: border-box;
+  inline-size: 100%;
+  min-inline-size: 0;
+  max-inline-size: 45rem;
+  min-block-size: 12rem;
+  padding: var(--sp-2) var(--sp-1) var(--sp-5);
+}
+
+.workspace :global(.le-read),
+.workspace :global(.le-raw) {
+  overflow-wrap: anywhere;
+}
+
+.workspace :global(.le-input) {
+  inline-size: 100%;
+  max-inline-size: 100%;
+  min-inline-size: 0;
+  min-block-size: 6rem;
+  font-family: inherit;
+  border: 1px solid var(--color-border-2);
+  resize: none;
+}
+
+.workspace :global(.le-input):focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* The formatting buttons scroll in one row instead of wrapping into a
+   multi-row block above the text when the editor is narrow. */
+.workspace :global(.le-toolbar[role='toolbar']) {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: thin;
+}
+
+.workspace :global(.le-toolbar[role='toolbar']) > * {
+  flex-shrink: 0;
+}
+
+/* On a phone the save actions keep to one line under the mode buttons. */
+@container editor (max-width: 30rem) {
+  .actions {
+    column-gap: var(--sp-2);
+  }
+
+  .actions > :global(.btn) {
+    padding-inline: var(--sp-3);
+  }
+
+  .actions > .cancel {
+    padding-inline: var(--sp-1);
+  }
+}
+
+@container editor (min-width: 44rem) {
+  .workspace :global(.pf-row) {
+    grid-template-columns: 22px 138px minmax(0, 1fr);
+  }
+
+  .workspace :global(.pf-val) {
+    grid-column: auto;
+  }
+}
+
+.panel {
+  min-inline-size: 0;
+  gap: var(--sp-4);
+}
+
+.panel > :where(h2, p),
+.fields > p {
+  margin: 0;
+}
+
+.fields {
+  inline-size: 100%;
+  max-inline-size: 45rem;
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  gap: var(--sp-4);
+}
+
+.fields > legend {
+  padding: 0;
+  margin-block-end: var(--sp-3);
+}
+
+.fields :global(.field),
+.fields :global(.field-input) {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.fields :global(.field-input) {
+  inline-size: 100%;
+  font: inherit;
+}
+
+.items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.items > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  min-inline-size: 0;
+  gap: var(--sp-2);
+  overflow-wrap: anywhere;
+}
+
+/* Moved from inline styles (2026-10-21) */
+.widgetSource {
+  white-space: pre-wrap;
+  margin: 0;
+}
+
+.pickerMenu {
+  min-width: 150px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.statusDot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+/* Compound selector: outranks editor.css's `.hf2 .pf-input { all: unset }`
+   and `.hf2 .pf-input.pf-mono`, as the inline style it replaces did. */
+.monoInputCy:global(.pf-input.pf-mono.field),
+.monoInputDay:global(.pf-input.pf-mono.field),
+.monoInputKey:global(.pf-input.pf-mono.field) {
+  font-family: var(--font-mono);
+}
+
+.monoInputCy:global(.pf-input.pf-mono.field) {
+  max-width: 72px;
+}
+
+.monoInputDay:global(.pf-input.pf-mono.field) {
+  max-width: 56px;
+}
+
+.monoInputKey:global(.pf-input.pf-mono.field) {
+  max-width: 130px;
+}

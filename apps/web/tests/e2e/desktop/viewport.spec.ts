@@ -9,7 +9,7 @@ test('desktop project uses a 1920 by 1080 viewport and loads the mocked home pag
   await expect(
     page.getByRole('heading', {
       level: 1,
-      name: /Good (morning|afternoon|evening|night), Mortal\./,
+      name: 'Welcome to Chronicler.',
     }),
   ).toBeVisible();
   await expect(page.getByText('Siege of Kraghold').first()).toBeVisible();

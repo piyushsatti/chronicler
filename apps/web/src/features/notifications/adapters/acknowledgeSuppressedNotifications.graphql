@@ -1,4 +1,4 @@
-mutation AcknowledgeSuppressedNotifications($limit: Int, $meta: CommandMeta!) {
+mutation AcknowledgeSuppressedNotifications($limit: Int!, $meta: CommandMeta!) {
   acknowledgeSuppressedNotifications(limit: $limit, meta: $meta) {
     replayed
     affectedCount

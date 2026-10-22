@@ -1,0 +1,23 @@
+query CharacterActivity($characterId: ID!, $limit: Int!, $offset: Int!) {
+  characterLogs(characterId: $characterId, limit: $limit, offset: $offset) {
+    items {
+      id
+      body
+      createdAt
+    }
+    total
+  }
+  downtimeProjects(characterId: $characterId, limit: $limit, offset: $offset) {
+    items {
+      id
+      name
+      goal
+      progress
+      target
+      status
+      notes
+      updatedAt
+    }
+    total
+  }
+}

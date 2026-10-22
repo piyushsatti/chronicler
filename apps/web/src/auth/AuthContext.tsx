@@ -17,6 +17,11 @@ import { TransportError } from '../errors/types.js';
 import type { MemberViewModel } from '../features/member/adapters/memberAdapter.js';
 import { EXPIRES_KEY, TOKEN_KEY } from './storage.js';
 import { beginOAuthState, discardOAuthState } from './oauthState.js';
+import { storeIntendedPath } from './intendedPath.js';
+import {
+  ViewerAudienceContext,
+  type ViewerAudienceValue,
+} from '../components/foundation/viewerAudience.js';
 
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
   try {
@@ -46,7 +51,11 @@ function isTokenExpired(token: string): boolean {
 /** Adapters retain the typed transport cause when building an AppError. */
 function isSessionRejection(error: unknown): boolean {
   if (error instanceof TransportError) {
-    return error.status === 401 || error.code === 'UNAUTHORIZED';
+    return (
+      error.status === 401 ||
+      error.code === 'UNAUTHORIZED' ||
+      error.code === 'UNAUTHENTICATED'
+    );
   }
   return Boolean(
     error &&
@@ -91,7 +100,7 @@ export type AuthState = {
   /** Checks retained callbacks against the current session, including expiry. */
   isCurrentSession: (candidate: string | null) => boolean;
   /** Identity hint only — never use for roles. */
-  discordId: string | null;
+  memberId: string | null;
   login: () => void;
   loginError: AppError | null;
   logout: () => void;
@@ -297,11 +306,11 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
 
   const value = useMemo((): AuthState => {
     const isAuthenticated = token !== null && !isTokenExpired(token);
-    let discordId: string | null = null;
+    let memberId: string | null = null;
     if (token) {
       const payload = decodeJwtPayload(token);
-      if (payload && typeof payload['sub'] === 'string') {
-        discordId = payload['sub'];
+      if (payload && typeof payload['member_id'] === 'string' && payload['member_id']) {
+        memberId = payload['member_id'];
       }
     }
     return {
@@ -309,7 +318,7 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
       isAuthenticated,
       sessionReady,
       isCurrentSession,
-      discordId,
+      memberId,
       login,
       loginError,
       logout,
@@ -317,8 +326,25 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
     };
   }, [isCurrentSession, login, loginError, logout, sessionReady, storeToken, token]);
 
+  const audience = useMemo(
+    (): ViewerAudienceValue => ({
+      audience: value.isAuthenticated ? 'member' : 'guest',
+      rememberReturn: () =>
+        storeIntendedPath(`${window.location.pathname}${window.location.search}`),
+    }),
+    [value.isAuthenticated],
+  );
+
   // No query observer mounts until the initial cache boundary has completed.
-  return createElement(AuthContext.Provider, { value }, sessionReady ? children : null);
+  return createElement(
+    AuthContext.Provider,
+    { value },
+    createElement(
+      ViewerAudienceContext.Provider,
+      { value: audience },
+      sessionReady ? children : null,
+    ),
+  );
 }
 
 export function useAuth(): AuthState {

@@ -1,0 +1,6 @@
+mutation MapCreate($input: MapCreateInput!, $meta: CommandMeta!) {
+  createMap(input: $input, meta: $meta) {
+    id
+    atlasCode
+  }
+}

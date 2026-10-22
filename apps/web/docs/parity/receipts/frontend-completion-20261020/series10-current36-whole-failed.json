@@ -1,0 +1,46 @@
+{
+  "at": "2026-10-20T21:53:32.305529Z",
+  "nativeSession": 81428,
+  "wholeNativeExit": 1,
+  "durationSeconds": 20.71,
+  "runtime": "Immutable36/native13isolatedrealAPI",
+  "sourceUnchanged": {
+    "production-inputs": true,
+    "owned-inputs": true
+  },
+  "cleanup": {
+    "apiClosed": true,
+    "at": "2026-10-20T21:52:34.467533127Z",
+    "database": "product_case_1",
+    "databaseDropped": true
+  },
+  "artifacts": {
+    "browser-receipt.json": "51348c5f3d2fea833e0639096cd231cc30ff48e918c041cdd1ada625babd4277",
+    "native-cleanup.json": "48995c9c812a9b24cd7ea2de5cafe672062758fd03896d32692cd1ec1a6dc088",
+    "native.log": "9e7791a11b95bf7cc0a9e251a93b16bd01d7d48a21c06608664f8ddbcc6c7543",
+    "series-owner-390.png": "7ba282ad7e02aa74b70bbe65a17546b578a5f4893cff3ab4a7e3045dde1d4924",
+    "series-owner-768.png": "2c9b6d358608249d183e852dd62fc8133951ec13b15235e9921fa85b45c09137",
+    "series-owner-1920.png": "be8e9f4e222ae5545b7779b8099de83c7c7e942af9ea7dcbddb1bfd1dcbcc257"
+  },
+  "accepted": false,
+  "completedOriginalCheckpoints": 7,
+  "plannedOriginalCheckpoints": 13,
+  "failure": "Expected values to be strictly equal:\n\n0 !== 1\n",
+  "failureStage": "Calendar projections, filters,50+1pagesandreverseURLstate",
+  "failedSourceAssertion": "assert.equal(narrow.quests.total,1) afteractual persisted-title filters; returned0",
+  "lastCalendarReadVariables": {
+    "filters": {
+      "scheduledFrom": "2026-10-22T00:00:00Z",
+      "scheduledTo": "2026-10-23T00:00:00Z",
+      "status": "open",
+      "search": "Quest composition 000",
+      "dmId": "9d31f222-32f9-4f73-837a-9bfc3585d634",
+      "regionId": "6b90e0bb-a375-4832-a499-b7ec9ecadc84"
+    },
+    "offset": 0
+  },
+  "limits": [
+    "WholecompositionremainsFAILED; laterCalendar/lifecyclechecksnotrun. ExistingQuest6successful9lifecycleproof remainsdated.",
+    "OnlycompletedSeries supplementcanreceivescopedcredit; no provider/ownervisualclaim."
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "at": "2026-10-20T19:08:11.516820+00:00",
+  "nativeSession": 39355,
+  "exit": 0,
+  "frontendEpoch": 32,
+  "sourceManifestSha256": "f012675c4d58e18b2c7ab0e6a004cb6df1e085add1ba47fc6959a69712505756",
+  "webTests": 1111,
+  "webFiles": 151,
+  "discordTests": 118,
+  "existingDiscordSkips": 3,
+  "agentTests": 363,
+  "designGates": 15,
+  "formatTypesPrecommitDocs": true,
+  "logSha256": "39ec3a350191886efad4539eb6aa4af506488b8144d2fc9b0d3f344bd6d71e8c",
+  "priorFailedRun": "verify-current-32-failed-assessment.json",
+  "scope": "Current required command after owning QA generator refreshed stale invalidation metadata. No test/gate weakened."
+}

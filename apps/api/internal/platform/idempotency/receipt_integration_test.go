@@ -264,6 +264,10 @@ func TestPhase3TaskP03PostgresAcceptance(t *testing.T) {
 				actor, key := newActor(t), "concurrent"
 				winner, winnerRepo := begin(t)
 				original := claimNew(t, winnerRepo, actor, op, key)
+				fact := CommandOverrideFact{ActorID: actor, Operation: "Mutation." + op, SubjectType: "member", SubjectID: actor, RuleCode: "ROLE", At: time.Date(2026, 10, 20, 12, 0, 0, 123000, time.UTC)}
+				if err := winnerRepo.RecordOverride(ctx, original, fact); err != nil {
+					t.Fatal(err)
+				}
 				effect(t, winner, actor, "Europe/London")
 				waiter, waiterRepo := begin(t)
 				winnerPID, waiterPID := winner.Conn().PgConn().PID(), waiter.Conn().PgConn().PID()
@@ -325,8 +329,9 @@ func TestPhase3TaskP03PostgresAcceptance(t *testing.T) {
 					if err := pool.QueryRow(ctx, `SELECT receipt FROM idempotency_keys WHERE endpoint=$1 AND actor_id=(SELECT id FROM members WHERE public_id=$2::uuid) AND key=$3`, "graphql:"+op, actor, key).Scan(&stored); err != nil {
 						t.Fatal(err)
 					}
-					if string(got.claim.Receipt) != string(stored) {
-						t.Fatalf("replay differs from stored receipt: %s != %s", got.claim.Receipt, stored)
+					decoded, err := decodeAuthorizationReceipt(stored, claimIdentity{actor, op, key, fingerprint})
+					if err != nil || string(got.claim.Receipt) != string(decoded) {
+						t.Fatalf("replay did not peel actual stored override: %s %v", got.claim.Receipt, err)
 					}
 					if err := waiterRepo.Complete(ctx, got.claim, receiptFor(actor)); err == nil {
 						t.Fatal("replay overwrote receipt")
@@ -335,6 +340,9 @@ func TestPhase3TaskP03PostgresAcceptance(t *testing.T) {
 					if got.claim.Receipt != nil {
 						t.Fatal("rolled-back winner exposed receipt")
 					}
+					if err := waiterRepo.RecordOverride(ctx, got.claim, fact); err != nil {
+						t.Fatal(err)
+					}
 					effect(t, waiter, actor, "America/New_York")
 					complete(t, waiterRepo, got.claim)
 				}
@@ -342,6 +350,14 @@ func TestPhase3TaskP03PostgresAcceptance(t *testing.T) {
 					t.Fatal(err)
 				}
 				lookup(t, actor, key, true)
+				var rawFacts json.RawMessage
+				if err := pool.QueryRow(ctx, `SELECT receipt->'_authorizationOverrides' FROM idempotency_keys r JOIN members m ON m.id=r.actor_id WHERE m.public_id=$1 AND r.endpoint=$2 AND r.key=$3`, actor, "graphql:"+op, key).Scan(&rawFacts); err != nil {
+					t.Fatal(err)
+				}
+				var storedFacts []CommandOverrideFact
+				if err := StrictJSON(rawFacts, &storedFacts); err != nil || !reflect.DeepEqual(storedFacts, []CommandOverrideFact{fact}) {
+					t.Fatalf("concurrent durable facts=%s err=%v", rawFacts, err)
+				}
 				want := "Europe/London"
 				if !commitWinner {
 					want = "America/New_York"

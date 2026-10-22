@@ -1,10 +1,14 @@
 import { HttpResponse } from 'msw';
-import type { FeatureGraphql, FeatureHandlers, FeatureRoute } from '../../chrome/featureModule.js';
+import type {
+  FeatureGraphql,
+  FeatureHandlers,
+  FeatureRoute,
+} from '../../chrome/featureModule.js';
 import { lazyElement } from '../../chrome/lazyElement.js';
 import { shortCodeRedirectRoute } from '../../chrome/routeBuilders.js';
 import goodCodex from '../../../tests/fixtures/wire/codex/good.json';
+import goodCategories from '../../../tests/fixtures/wire/codex/categories-good.json';
 import goodCodexEntry from '../../../tests/fixtures/wire/codex/entry-good.json';
-import type { CodexKind } from './pages/CodexTypedDetailPage.js';
 
 export const endpoints = {} as const;
 
@@ -14,18 +18,60 @@ export const queryKeys = {
 };
 
 export const graphql: FeatureGraphql = {
-  CodexDirectory: () => HttpResponse.json({ data: { codexDirectory: goodCodex } }),
-  CodexEntry: () => HttpResponse.json({ data: { codexEntry: goodCodexEntry } }),
+  CodexDirectory: ({ variables }) => {
+    const prefix =
+      typeof variables?.categoryPrefix === 'string' ? variables.categoryPrefix : '';
+    const search =
+      typeof variables?.search === 'string' ? variables.search.toLocaleLowerCase() : '';
+    const limit = typeof variables?.limit === 'number' ? variables.limit : 50;
+    const offset = typeof variables?.offset === 'number' ? variables.offset : 0;
+    const matching = goodCodex.items.filter(
+      (entry) =>
+        (!prefix ||
+          entry.category === prefix ||
+          entry.category.startsWith(`${prefix}/`)) &&
+        (!search || entry.title.toLocaleLowerCase().includes(search)),
+    );
+    return HttpResponse.json({
+      data: {
+        codexDirectory: {
+          items: matching.slice(offset, offset + limit),
+          total: matching.length,
+        },
+        codexCategories: goodCategories,
+      },
+    });
+  },
+  CodexEntry: ({ variables }) =>
+    HttpResponse.json({
+      data: {
+        codexEntry:
+          variables?.slug === goodCodexEntry.document.slug ? goodCodexEntry : null,
+      },
+    }),
+  CodexEntryById: ({ variables }) =>
+    HttpResponse.json({
+      data: {
+        documentById:
+          variables?.id === goodCodexEntry.document.id
+            ? {
+                id: goodCodexEntry.document.id,
+                slug: goodCodexEntry.document.slug,
+                kind: goodCodexEntry.document.kind,
+              }
+            : null,
+      },
+    }),
 };
 
 export const handlers: FeatureHandlers = [];
 
-function typed(path: string, kind: CodexKind): FeatureRoute {
+function alias(path: string, by: 'slug' | 'id'): FeatureRoute {
   return {
     path,
     element: lazyElement(() =>
-      import('./pages/CodexTypedDetailPage.js').then((module) => ({
-        default: () => module.CodexTypedDetailPage({ kind }),
+      import('./pages/CodexAliasPage.js').then((module) => ({
+        default: by === 'id' ? module.CodexIdAliasPage : module.CodexSlugAliasPage,
       })),
     ),
   };
@@ -38,13 +84,21 @@ export const routes: readonly FeatureRoute[] = [
       import('./pages/CodexPage.js').then((module) => ({ default: module.CodexPage })),
     ),
   },
-  typed('/codex/npc/:slug', 'npc'),
-  typed('/codex/faction/:slug', 'faction'),
-  typed('/codex/region/:slug', 'region'),
-  typed('/codex/location/:slug', 'location'),
-  typed('/codex/artifact/:id', 'artifact'),
-  typed('/codex/event/:id', 'event'),
-  typed('/codex/lore/:id', 'lore'),
+  {
+    path: '/codex/:slug',
+    element: lazyElement(() =>
+      import('./pages/CodexEntryPage.js').then((module) => ({
+        default: module.CodexEntryPage,
+      })),
+    ),
+  },
+  alias('/codex/npc/:slug', 'slug'),
+  alias('/codex/faction/:slug', 'slug'),
+  alias('/codex/region/:slug', 'slug'),
+  alias('/codex/location/:slug', 'slug'),
+  alias('/codex/artifact/:id', 'id'),
+  alias('/codex/event/:id', 'id'),
+  alias('/codex/lore/:id', 'id'),
   {
     path: '/npcs',
     element: lazyElement(() =>
@@ -53,7 +107,7 @@ export const routes: readonly FeatureRoute[] = [
       })),
     ),
   },
-  typed('/npcs/:slug', 'npc'),
+  alias('/npcs/:slug', 'slug'),
   {
     path: '/factions',
     element: lazyElement(() =>
@@ -62,15 +116,8 @@ export const routes: readonly FeatureRoute[] = [
       })),
     ),
   },
-  typed('/factions/:slug', 'faction'),
-  {
-    path: '/regions',
-    element: lazyElement(() =>
-      import('./pages/RegionsDirectoryPage.js').then((module) => ({
-        default: module.RegionsDirectoryPage,
-      })),
-    ),
-  },
-  shortCodeRedirectRoute('/factions/:shortCode/redirect', '/factions'),
-  shortCodeRedirectRoute('/npcs/:shortCode/redirect', '/npcs'),
+  alias('/factions/:slug', 'slug'),
+  // Straight to the Codex entry; /npcs/:slug and /factions/:slug are aliases of it.
+  shortCodeRedirectRoute('/factions/:shortCode/redirect', '/codex'),
+  shortCodeRedirectRoute('/npcs/:shortCode/redirect', '/codex'),
 ];

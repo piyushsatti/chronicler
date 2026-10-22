@@ -234,7 +234,9 @@ type CharacterType struct {
 	DdbMirror               *CharacterDDBMirrorType `json:"ddbMirror,omitempty"`
 	Proficiencies           []*DDBProficiencyType   `json:"proficiencies"`
 	DisplayIcon             *string                 `json:"displayIcon,omitempty"`
-	DaysActive              int                     `json:"daysActive"`
+	// Owner-supplied https portrait URL (D5); null shows the initials token.
+	ImageURL   *string `json:"imageUrl,omitempty"`
+	DaysActive int     `json:"daysActive"`
 }
 
 type CloseQuestInput struct {
@@ -297,8 +299,11 @@ type CreateCharacterInput struct {
 	GuildID        *string  `json:"guildId,omitempty"`
 	Description    *string  `json:"description,omitempty"`
 	BackgroundText *string  `json:"backgroundText,omitempty"`
-	DdbURL         *string  `json:"ddbUrl,omitempty"`
-	ShortCode      *string  `json:"shortCode,omitempty"`
+	// Required on create (D4): a https://www.dndbeyond.com/characters/<id> sheet URL.
+	DdbURL *string `json:"ddbUrl,omitempty"`
+	// Optional https URL, at most 2048 characters.
+	ImageURL  *string `json:"imageUrl,omitempty"`
+	ShortCode *string `json:"shortCode,omitempty"`
 }
 
 type CreateQuestInput struct {
@@ -415,9 +420,9 @@ type DmSummaryFiltersInput struct {
 }
 
 type DocumentAudienceInput struct {
-	Visibility string   `json:"visibility"`
-	Policy     []string `json:"policy,omitempty"`
-	ReaderIds  []string `json:"readerIds"`
+	Visibility string                      `json:"visibility"`
+	Policy     graphql.Omittable[[]string] `json:"policy,omitempty"`
+	ReaderIds  []string                    `json:"readerIds"`
 }
 
 type DocumentAuthorType struct {
@@ -495,25 +500,27 @@ type DocumentSearchHitType struct {
 }
 
 type DocumentType struct {
-	ID             string              `json:"id"`
-	Version        int                 `json:"version"`
-	Slug           string              `json:"slug"`
-	Kind           string              `json:"kind"`
-	Category       *string             `json:"category,omitempty"`
-	Status         string              `json:"status"`
-	Visibility     string              `json:"visibility"`
-	Policy         []string            `json:"policy,omitempty"`
-	ReaderIds      []string            `json:"readerIds,omitempty"`
-	Title          string              `json:"title"`
-	Frontmatter    json.RawMessage     `json:"frontmatter"`
-	AuthorID       string              `json:"authorId"`
-	UpdatedAt      time.Time           `json:"updatedAt"`
-	DeletedAt      *time.Time          `json:"deletedAt,omitempty"`
-	DeletedBy      *string             `json:"deletedBy,omitempty"`
-	EffectiveBody  *string             `json:"effectiveBody,omitempty"`
-	Author         *DocumentAuthorType `json:"author,omitempty"`
-	PublishedAt    *time.Time          `json:"publishedAt,omitempty"`
-	SummaryDerived *SummaryDerivedType `json:"summaryDerived,omitempty"`
+	ID              string              `json:"id"`
+	Version         int                 `json:"version"`
+	Slug            string              `json:"slug"`
+	Kind            string              `json:"kind"`
+	Category        *string             `json:"category,omitempty"`
+	Status          string              `json:"status"`
+	Visibility      string              `json:"visibility"`
+	Policy          []string            `json:"policy,omitempty"`
+	ReaderIds       []string            `json:"readerIds,omitempty"`
+	Title           string              `json:"title"`
+	Frontmatter     json.RawMessage     `json:"frontmatter"`
+	AuthorID        string              `json:"authorId"`
+	UpdatedAt       time.Time           `json:"updatedAt"`
+	DeletedAt       *time.Time          `json:"deletedAt,omitempty"`
+	DeletedBy       *string             `json:"deletedBy,omitempty"`
+	EffectiveBody   *string             `json:"effectiveBody,omitempty"`
+	CanEditBody     bool                `json:"canEditBody"`
+	CanEditMetadata bool                `json:"canEditMetadata"`
+	Author          *DocumentAuthorType `json:"author,omitempty"`
+	PublishedAt     *time.Time          `json:"publishedAt,omitempty"`
+	SummaryDerived  *SummaryDerivedType `json:"summaryDerived,omitempty"`
 }
 
 type DowntimeInput struct {
@@ -625,6 +632,7 @@ type MapCreateInput struct {
 
 type MapType struct {
 	ID              string                `json:"id"`
+	CanEdit         bool                  `json:"canEdit"`
 	Name            string                `json:"name"`
 	AtlasCode       string                `json:"atlasCode"`
 	Family          string                `json:"family"`
@@ -752,6 +760,14 @@ type Mutation struct {
 
 type MyPersonalizationType struct {
 	Settings *MemberSettingsType `json:"settings,omitempty"`
+}
+
+// The caller's own private notes (D6): Markdown, at most 10,000 characters.
+// Readable and writable only by the member who owns them; never exposed on
+// any member, profile or admin read.
+type MyPrivateNotesType struct {
+	Body      string     `json:"body"`
+	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
 }
 
 type NotificationConnection struct {
@@ -999,13 +1015,14 @@ type QuestSummariesResult struct {
 }
 
 type QuestSummaryInput struct {
-	DocumentID  *string         `json:"documentId,omitempty"`
-	QuestIds    []string        `json:"questIds"`
-	CharacterID *string         `json:"characterId,omitempty"`
-	Title       string          `json:"title"`
-	Body        string          `json:"body"`
-	Visibility  string          `json:"visibility"`
-	Frontmatter json.RawMessage `json:"frontmatter"`
+	DocumentID       *string         `json:"documentId,omitempty"`
+	ExpectedRevision *int            `json:"expectedRevision,omitempty"`
+	QuestIds         []string        `json:"questIds"`
+	CharacterID      *string         `json:"characterId,omitempty"`
+	Title            string          `json:"title"`
+	Body             string          `json:"body"`
+	Visibility       string          `json:"visibility"`
+	Frontmatter      json.RawMessage `json:"frontmatter"`
 }
 
 type QuestSummaryTotalsType struct {
@@ -1085,6 +1102,7 @@ type RegionInput struct {
 }
 
 type RegionType struct {
+	CanCreateMap    bool       `json:"canCreateMap"`
 	ID              string     `json:"id"`
 	Name            string     `json:"name"`
 	Kind            string     `json:"kind"`
@@ -1148,7 +1166,15 @@ type SiteStatsType struct {
 	Activity                     *ActivitySummaryType `json:"activity"`
 }
 
+type SummaryAuthoringType struct {
+	CharacterID *string  `json:"characterId,omitempty"`
+	Complete    bool     `json:"complete"`
+	QuestIds    []string `json:"questIds"`
+}
+
 type SummaryDerivedType struct {
+	Authoring       *SummaryAuthoringType        `json:"authoring,omitempty"`
+	Quests          []*SummaryQuestRefType       `json:"quests"`
 	Regions         []*SummaryRegionType         `json:"regions"`
 	PointcrawlNodes []*SummaryPointcrawlNodeType `json:"pointcrawlNodes"`
 	Dms             []*SummaryDmType             `json:"dms"`
@@ -1176,6 +1202,12 @@ type SummaryPointcrawlNodeType struct {
 	ID    string  `json:"id"`
 	MapID string  `json:"mapId"`
 	Name  *string `json:"name,omitempty"`
+}
+
+type SummaryQuestRefType struct {
+	ID        string  `json:"id"`
+	ShortCode string  `json:"shortCode"`
+	Title     *string `json:"title,omitempty"`
 }
 
 type SummaryRegionType struct {
@@ -1221,6 +1253,8 @@ type UnlockableType struct {
 type UpdateCharacterProfileInput struct {
 	Description    graphql.Omittable[*string] `json:"description,omitempty"`
 	BackgroundText graphql.Omittable[*string] `json:"backgroundText,omitempty"`
+	// Omit to keep, null to clear, or an https URL of at most 2048 characters.
+	ImageURL graphql.Omittable[*string] `json:"imageUrl,omitempty"`
 }
 
 type UpdateDmProfileInput struct {

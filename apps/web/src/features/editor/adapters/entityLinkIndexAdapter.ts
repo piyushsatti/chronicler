@@ -7,6 +7,7 @@ import type {
 import { graphqlRequest } from '../../../api/graphql.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
+import { findCodexCategory } from '../../../utils/codexCategories.js';
 import type { EntityLinkEntry, EntityLinkIndex } from '../types.js';
 import BOARD_QUERY from './entityLinkQuestBoard.graphql?raw';
 import CODEX_QUERY from './entityLinkCodexDirectory.graphql?raw';
@@ -44,17 +45,6 @@ const searchMemberSchema = z.object({
   displayName: z.string(),
 });
 
-const SUPPORTED_CODEX = new Set([
-  'artifact',
-  'world_event',
-  'lore',
-  'npc',
-  'faction',
-  'Entities',
-  'Locations',
-  'Lore',
-]);
-
 export function parseEntityLinkIndex(wire: {
   quests?: unknown;
   codex?: unknown;
@@ -79,7 +69,7 @@ export function parseEntityLinkIndex(wire: {
   }
   const seenTitles = new Set<string>();
   for (const c of codex.data) {
-    if (c.category && !SUPPORTED_CODEX.has(c.category)) continue;
+    if (c.category && !findCodexCategory(c.category)) continue;
     if (seenTitles.has(c.title)) continue;
     seenTitles.add(c.title);
     entries.push({

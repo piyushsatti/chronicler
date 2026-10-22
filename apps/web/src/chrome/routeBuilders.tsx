@@ -1,18 +1,10 @@
 import { Navigate, useParams } from 'react-router-dom';
 import type { FeatureRoute } from './featureModule.js';
-import { PlaceholderPage } from './placeholderPage.js';
 
 export function redirectRoute(path: string, to: string): FeatureRoute {
   return {
     path,
     element: <Navigate to={to} replace />,
-  };
-}
-
-export function stubRoute(path: string, title: string): FeatureRoute {
-  return {
-    path,
-    element: <PlaceholderPage page={path} title={title} />,
   };
 }
 

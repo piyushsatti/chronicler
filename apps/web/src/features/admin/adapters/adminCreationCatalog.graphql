@@ -1,5 +1,14 @@
-query AdminCreationCatalog($limit: Int! = 50, $offset: Int! = 0) {
-  creationCatalog(filters: { includeAll: true }, limit: $limit, offset: $offset) {
+query AdminCreationCatalog(
+  $limit: Int! = 50
+  $offset: Int! = 0
+  $kind: String
+  $regionId: ID
+) {
+  creationCatalog(
+    filters: { includeAll: true, kind: $kind, regionId: $regionId }
+    limit: $limit
+    offset: $offset
+  ) {
     total
     items {
       id

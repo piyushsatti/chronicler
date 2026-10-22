@@ -93,7 +93,7 @@ func runNotificationCommand[T any](ctx context.Context, s ProductCommands, actor
 			if commandDependencyMissing(repos.Audit) {
 				return apierr.New(apierr.Internal, "override recorder required")
 			}
-			if err := repos.Audit.Record(ctx, auth.OverrideFact{ActorID: fresh.Claims().MemberID, Operation: request.Operation(), SubjectType: "notification", SubjectID: subjectID, RuleCode: decision.RuleCode, At: at}); err != nil {
+			if err := repos.Audit.Record(ctx, claim, auth.OverrideFact{ActorID: fresh.Claims().MemberID, Operation: request.Operation(), SubjectType: "notification", SubjectID: subjectID, RuleCode: decision.RuleCode, At: at}); err != nil {
 				return err
 			}
 		}

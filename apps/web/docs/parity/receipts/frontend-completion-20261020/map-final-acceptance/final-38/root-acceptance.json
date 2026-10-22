@@ -1,0 +1,83 @@
+{
+  "at": "2026-10-20T23:00:01.311954+00:00",
+  "nativeSession": 26436,
+  "exit": 0,
+  "quietCohortComplete": true,
+  "source625Dist181Api336Unchanged": true,
+  "portableApiScope": 333,
+  "servicesUnchanged": true,
+  "datasetUnchanged": true,
+  "retainedSamples": 40,
+  "summaries": [
+    {
+      "viewport": {
+        "name": "desktop",
+        "width": 1920,
+        "height": 1080
+      },
+      "trials": 20,
+      "failures": 0,
+      "firstUsableP75": 751.7999999970198,
+      "selectionP95": 70,
+      "firstUsableRange": [
+        729.2000000029802,
+        768.3999999910593
+      ],
+      "selectionRange": [
+        54.900000005960464,
+        70.59999999403954
+      ],
+      "pass": true
+    },
+    {
+      "viewport": {
+        "name": "phone",
+        "width": 390,
+        "height": 844
+      },
+      "trials": 20,
+      "failures": 0,
+      "firstUsableP75": 749.6999999880791,
+      "selectionP95": 60.29999999701977,
+      "firstUsableRange": [
+        722.6000000089407,
+        772.2999999970198
+      ],
+      "selectionRange": [
+        50.8999999910593,
+        65.5
+      ],
+      "pass": true
+    }
+  ],
+  "hardware": {
+    "host": "triton",
+    "cpu": "AMD Ryzen 5 3600 6-Core Processor",
+    "cpus": 10,
+    "memoryBytes": 34568044544,
+    "loadAverage": [
+      0.36,
+      0.94,
+      1.28
+    ],
+    "node": "v24.21.0",
+    "playwright": "1.62.1",
+    "browser": "151.0.7922.34",
+    "cpuSlowdown": 4
+  },
+  "bindings": {
+    "measure-map.mjs": "26bb020dee741b9a4597a61a2bad2d695a444e8457e48d0265ad9d48e3d5b935",
+    "runtime-receipt.json": "1912c3db5e4e511f0e1155dd418a10fb35c2c93729ea7d7d3fadc2dd3ddb66c4",
+    "performance.json": "6c1088fc60511c099db817dd4d84aa7bf96c27ff8eee563cec1b24333f413524",
+    "dataset-before.json": "d9c964f13d181b4b39a1e36be88f283935e6d07cd80747d95b17d6cc4fb023cc",
+    "dataset-after.json": "125dc1b233d7df36411638e760a2fa28b419c9b219696664c6ce75a530ee1645",
+    "services-before.txt": "98b00c05cd9415be5d18b26a30acc3468e640b6f44ebccd9199b9e685f77b994",
+    "services-after.txt": "98b00c05cd9415be5d18b26a30acc3468e640b6f44ebccd9199b9e685f77b994"
+  },
+  "limits": [
+    "Local18node/17edge/24link map; coldHTTP/warmserver/loopback/4xCPU/emulatedphone.",
+    "All40samples retained; no speedup/large-world/physical-phone/production claim.",
+    "Firstusable requires renderedgraph/list/matchingmarkers; list may be belowfold. Selection excludes preceding scrolling/fullDocument load.",
+    "Independent percentile review pending; no owner visual approval."
+  ]
+}

@@ -2,16 +2,31 @@ package spatial
 
 import (
 	"context"
+	"slices"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
+
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbgen"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 )
 
 func (p *ProductPostgres) LockCreateMap(ctx context.Context, spec CreateMapSpec) (CreateMapState, error) {
+	if spec.Input.RegionId != nil {
+		regionID, err := spatialPublicID(*spec.Input.RegionId)
+		if err != nil {
+			return CreateMapState{}, err
+		}
+		region, err := p.queries().LockProductRegion(ctx, regionID)
+		if isNotFound(err) || err == nil && region.DeletedAt.Valid {
+			return CreateMapState{}, apierr.New(apierr.Invalid, "live region required")
+		}
+		if err != nil {
+			return CreateMapState{}, err
+		}
+	}
 	_, err := p.queries().LockProductMapByAtlasCode(ctx, spec.Input.AtlasCode)
 	if err == nil {
 		return CreateMapState{Exists: true, SubjectID: spec.Input.AtlasCode, MapKind: spec.Input.MapKind}, nil
@@ -92,6 +107,15 @@ func (p *ProductPostgres) StoreUpdateRegion(ctx context.Context, write UpdateReg
 		return RegionView{}, apierr.New(apierr.NotFound, "region not found")
 	}
 	spec := write.ValidatedInput
+	if spec.Input.Kind != write.Locked.Before.Kind {
+		return RegionView{}, apierr.New(apierr.Invalid, "use transitionRegion to change region kind")
+	}
+	if spec.Input.DocumentId == nil {
+		spec.Input.DocumentId = write.Locked.Before.DocumentId
+	}
+	if spec.Input.CharterDeadline == nil {
+		spec.Input.CharterDeadline = write.Locked.Before.CharterDeadline
+	}
 	docID, err := optionalSpatialUUID(spec.Input.DocumentId)
 	if err != nil {
 		return RegionView{}, err
@@ -133,6 +157,9 @@ func (p *ProductPostgres) StoreTransitionRegion(ctx context.Context, write Trans
 		return RegionView{}, apierr.New(apierr.NotFound, "region not found")
 	}
 	spec := write.ValidatedInput
+	if !((write.Locked.Before.Kind == "uncharted" && spec.To == "archon") || (write.Locked.Before.Kind == "archon" && spec.To == "server")) {
+		return RegionView{}, apierr.New(apierr.Conflict, "invalid region transition")
+	}
 	regionID, err := spatialPublicID(spec.Id)
 	if err != nil {
 		return RegionView{}, err
@@ -160,7 +187,8 @@ func (p *ProductPostgres) LockDeleteRegion(ctx context.Context, spec DeleteRegio
 		return DeleteRegionState{}, err
 	}
 	if row.DeletedAt.Valid {
-		return DeleteRegionState{}, nil
+		before, _ := mapLockRegionState(row)
+		return DeleteRegionState{SubjectID: spec.RegionId, Before: &before}, nil
 	}
 	before, _ := mapLockRegionState(row)
 	return DeleteRegionState{Exists: true, SubjectID: spec.RegionId, Before: &before}, nil
@@ -168,6 +196,9 @@ func (p *ProductPostgres) LockDeleteRegion(ctx context.Context, spec DeleteRegio
 
 func (p *ProductPostgres) StoreDeleteRegion(ctx context.Context, write DeleteRegionWrite) (product.CommandReceipt, error) {
 	if !write.Locked.Exists {
+		if write.Locked.Before != nil {
+			return product.CommandReceipt{}, nil
+		}
 		return product.CommandReceipt{}, apierr.New(apierr.NotFound, "region not found")
 	}
 	regionID, err := spatialPublicID(write.ValidatedInput.RegionId)
@@ -187,7 +218,7 @@ func (p *ProductPostgres) StoreDeleteRegion(ctx context.Context, write DeleteReg
 		return product.CommandReceipt{}, err
 	}
 	if affected == 0 {
-		return product.CommandReceipt{}, apierr.New(apierr.NotFound, "region not found")
+		return product.CommandReceipt{}, apierr.New(apierr.Conflict, "region has active references")
 	}
 	return product.CommandReceipt{}, nil
 }
@@ -228,12 +259,19 @@ func (p *ProductPostgres) LockAssignArchon(ctx context.Context, spec AssignArcho
 	if err != nil {
 		return AssignArchonState{}, err
 	}
+	member, err := p.queries().GetMemberAuthority(ctx, memberID)
+	if isNotFound(err) || err == nil && (member.Status != "active" || !slices.Contains(member.Roles, "archon")) {
+		return AssignArchonState{}, apierr.New(apierr.Invalid, "active archon required")
+	}
+	if err != nil {
+		return AssignArchonState{}, err
+	}
 	regionID, err := spatialPublicID(spec.RegionId)
 	if err != nil {
 		return AssignArchonState{}, err
 	}
-	if _, err := p.queries().LockProductRegion(ctx, regionID); isNotFound(err) {
-		return AssignArchonState{}, nil
+	if region, err := p.queries().LockProductRegion(ctx, regionID); isNotFound(err) || err == nil && region.DeletedAt.Valid {
+		return AssignArchonState{}, apierr.New(apierr.Invalid, "live region required")
 	} else if err != nil {
 		return AssignArchonState{}, err
 	}
@@ -300,7 +338,7 @@ func (p *ProductPostgres) LockRevokeArchon(ctx context.Context, spec RevokeArcho
 
 func (p *ProductPostgres) StoreRevokeArchon(ctx context.Context, write RevokeArchonWrite) (product.CommandReceipt, error) {
 	if !write.Locked.Exists {
-		return product.CommandReceipt{}, apierr.New(apierr.NotFound, "archon assignment not found")
+		return product.CommandReceipt{}, nil
 	}
 	spec := write.ValidatedInput
 	memberID, err := spatialPublicID(spec.MemberId)
@@ -324,7 +362,17 @@ func (p *ProductPostgres) StoreRevokeArchon(ctx context.Context, write RevokeArc
 	return product.CommandReceipt{}, nil
 }
 
-func (p *ProductPostgres) LockCreateTimeAnchor(_ context.Context, _ CreateTimeAnchorSpec) (CreateTimeAnchorState, error) {
+func (p *ProductPostgres) LockCreateTimeAnchor(ctx context.Context, spec CreateTimeAnchorSpec) (CreateTimeAnchorState, error) {
+	if err := p.queries().LockProductTimeAggregate(ctx); err != nil {
+		return CreateTimeAnchorState{}, err
+	}
+	collisions, err := p.queries().ListProductTimeAnchorCollisions(ctx, dbgen.ListProductTimeAnchorCollisionsParams{RealUtc: pgTimestamptz(spec.Input.RealUtc)})
+	if err != nil {
+		return CreateTimeAnchorState{}, err
+	}
+	if len(collisions) > 0 {
+		return CreateTimeAnchorState{}, apierr.New(apierr.Conflict, "time anchor already exists at this instant")
+	}
 	return CreateTimeAnchorState{}, nil
 }
 
@@ -363,6 +411,13 @@ func (p *ProductPostgres) LockUpdateTimeAnchor(ctx context.Context, spec UpdateT
 	}
 	if err != nil {
 		return UpdateTimeAnchorState{}, err
+	}
+	collisions, err := p.queries().ListProductTimeAnchorCollisions(ctx, dbgen.ListProductTimeAnchorCollisionsParams{RealUtc: pgTimestamptz(spec.Input.RealUtc), ExcludeAnchorID: anchorID})
+	if err != nil {
+		return UpdateTimeAnchorState{}, err
+	}
+	if len(collisions) > 0 {
+		return UpdateTimeAnchorState{}, apierr.New(apierr.Conflict, "time anchor already exists at this instant")
 	}
 	before := mapTimeAnchorRow(row.PublicID, row.RealUtc, row.EpochDay, row.Rate, row.Note)
 	return UpdateTimeAnchorState{Exists: true, SubjectID: spec.Id, Before: &before}, nil
@@ -412,39 +467,45 @@ func (p *ProductPostgres) StoreUpdateGameCalendar(ctx context.Context, write Upd
 		return GameCalendarView{}, err
 	}
 	def := rawJSON(row.Definition)
-	var current *int32
-	today, _ := pgDateFromProduct(product.Date(write.At.Format("2006-01-02")))
-	cal, err := p.queries().ReadProductCalendar(ctx, today)
-	if err == nil {
-		current = int32Ptr(cal.CurrentGameDay)
+	from, to := timeProjectionRange(write.At)
+	today, err := pgDateFromProduct(from)
+	if err != nil {
+		return GameCalendarView{}, err
 	}
-	return GameCalendarView{Definition: def, CurrentGameDay: current}, nil
+	cal, err := p.queries().ReadProductCalendar(ctx, today)
+	if err != nil {
+		return GameCalendarView{}, err
+	}
+	end, err := pgDateFromProduct(to)
+	if err != nil {
+		return GameCalendarView{}, err
+	}
+	rows, err := p.queries().ListProductCalendarCells(ctx, dbgen.ListProductCalendarCellsParams{RealFrom: today, RealTo: end})
+	if err != nil {
+		return GameCalendarView{}, err
+	}
+	cells := make([]GameDayCellView, 0, len(rows))
+	for _, cell := range rows {
+		realDate, err := productDateFromAny(cell.RealDate)
+		if err != nil {
+			return GameCalendarView{}, err
+		}
+		cells = append(cells, GameDayCellView{RealDate: realDate, GameDay: int32Ptr(cell.GameDay)})
+	}
+	return GameCalendarView{Definition: def, CurrentGameDay: int32Ptr(cal.CurrentGameDay), MonthGrid: cells}, nil
 }
 
 func (p *ProductPostgres) LockUpsertPointcrawlNode(ctx context.Context, spec UpsertPointcrawlNodeSpec) (UpsertPointcrawlNodeState, error) {
-	mapID, err := spatialPublicID(spec.MapId)
+	view, err := p.lockPointcrawlMap(ctx, spec.MapId)
 	if err != nil {
 		return UpsertPointcrawlNodeState{}, err
 	}
-	if _, err := p.queries().LockProductMap(ctx, mapID); isNotFound(err) {
-		return UpsertPointcrawlNodeState{}, nil
-	} else if err != nil {
-		return UpsertPointcrawlNodeState{}, err
-	}
-	state := UpsertPointcrawlNodeState{Exists: true, SubjectID: spec.MapId, MapKind: "pointcrawl"}
+	state := UpsertPointcrawlNodeState{Exists: true, SubjectID: spec.MapId, MapKind: view.MapKind, RegionID: view.RegionId, Before: view}
 	if spec.Input.Id != nil {
-		nodeID, err := spatialPublicID(*spec.Input.Id)
+		node, err := p.lockPointcrawlNode(ctx, *spec.Input.Id, spec.MapId)
 		if err != nil {
 			return UpsertPointcrawlNodeState{}, err
 		}
-		row, err := p.queries().LockProductPointcrawlNode(ctx, nodeID)
-		if isNotFound(err) {
-			return UpsertPointcrawlNodeState{}, nil
-		}
-		if err != nil {
-			return UpsertPointcrawlNodeState{}, err
-		}
-		node := mapPointcrawlNodeRow(row.PublicID, row.MapPublicID, row.Name, row.X, row.Y, pgtype.UUID{}, row.CreatedAt)
 		state.Node = &node
 	}
 	return state, nil
@@ -457,18 +518,18 @@ func (p *ProductPostgres) StoreUpsertPointcrawlNode(ctx context.Context, write U
 	spec := write.ValidatedInput
 	mapID, err := spatialPublicID(spec.MapId)
 	if err != nil {
-		return PointcrawlNodeView{}, err
+		return PointcrawlNodeView{}, spatialWriteError(err)
 	}
 	var nodeID pgtype.UUID
 	if spec.Input.Id != nil {
 		nodeID, err = spatialPublicID(*spec.Input.Id)
 		if err != nil {
-			return PointcrawlNodeView{}, err
+			return PointcrawlNodeView{}, spatialWriteError(err)
 		}
 	}
 	submapID, err := optionalSpatialUUID(spec.Input.SubmapId)
 	if err != nil {
-		return PointcrawlNodeView{}, err
+		return PointcrawlNodeView{}, spatialWriteError(err)
 	}
 	row, err := p.queries().UpsertProductPointcrawlNode(ctx, dbgen.UpsertProductPointcrawlNodeParams{
 		NodeID:     nodeID,
@@ -480,22 +541,40 @@ func (p *ProductPostgres) StoreUpsertPointcrawlNode(ctx context.Context, write U
 		RecordedAt: pgTimestamptz(write.At),
 	})
 	if err != nil {
-		return PointcrawlNodeView{}, err
+		return PointcrawlNodeView{}, spatialWriteError(err)
 	}
 	return mapPointcrawlNodeRow(row.ID, row.MapID, row.Name, row.X, row.Y, row.SubmapID, row.CreatedAt), nil
 }
 
 func (p *ProductPostgres) LockSetPointcrawlEdge(ctx context.Context, spec SetPointcrawlEdgeSpec) (SetPointcrawlEdgeState, error) {
-	mapID, err := spatialPublicID(spec.MapId)
+	view, err := p.lockPointcrawlMap(ctx, spec.MapId)
 	if err != nil {
 		return SetPointcrawlEdgeState{}, err
 	}
-	if _, err := p.queries().LockProductMap(ctx, mapID); isNotFound(err) {
-		return SetPointcrawlEdgeState{}, nil
-	} else if err != nil {
-		return SetPointcrawlEdgeState{}, err
+	state := SetPointcrawlEdgeState{Exists: true, SubjectID: spec.MapId, MapKind: view.MapKind, RegionID: view.RegionId, Before: view}
+	ids := []string{spec.Input.NodeA, spec.Input.NodeB}
+	slices.Sort(ids)
+	for _, id := range ids {
+		node, err := p.lockPointcrawlNode(ctx, id, spec.MapId)
+		if err != nil {
+			return SetPointcrawlEdgeState{}, err
+		}
+		state.Endpoints = append(state.Endpoints, node)
 	}
-	return SetPointcrawlEdgeState{Exists: true, SubjectID: spec.MapId, MapKind: "pointcrawl"}, nil
+	if spec.Input.Id != nil {
+		id, err := spatialPublicID(*spec.Input.Id)
+		if err != nil {
+			return SetPointcrawlEdgeState{}, err
+		}
+		edge, err := p.queries().LockProductPointcrawlEdge(ctx, id)
+		if err != nil {
+			return SetPointcrawlEdgeState{}, spatialWriteError(err)
+		}
+		if db.UUIDString(edge.MapID) != spec.MapId {
+			return SetPointcrawlEdgeState{}, apierr.New(apierr.Invalid, "edge belongs to another map")
+		}
+	}
+	return state, nil
 }
 
 func (p *ProductPostgres) StoreSetPointcrawlEdge(ctx context.Context, write SetPointcrawlEdgeWrite) (PointcrawlEdgeView, error) {
@@ -505,26 +584,26 @@ func (p *ProductPostgres) StoreSetPointcrawlEdge(ctx context.Context, write SetP
 	spec := write.ValidatedInput
 	mapID, err := spatialPublicID(spec.MapId)
 	if err != nil {
-		return PointcrawlEdgeView{}, err
+		return PointcrawlEdgeView{}, spatialWriteError(err)
 	}
 	nodeA, err := spatialPublicID(spec.Input.NodeA)
 	if err != nil {
-		return PointcrawlEdgeView{}, err
+		return PointcrawlEdgeView{}, spatialWriteError(err)
 	}
 	nodeB, err := spatialPublicID(spec.Input.NodeB)
 	if err != nil {
-		return PointcrawlEdgeView{}, err
+		return PointcrawlEdgeView{}, spatialWriteError(err)
 	}
 	var edgeID pgtype.UUID
 	if spec.Input.Id != nil {
 		edgeID, err = spatialPublicID(*spec.Input.Id)
 		if err != nil {
-			return PointcrawlEdgeView{}, err
+			return PointcrawlEdgeView{}, spatialWriteError(err)
 		}
 	}
 	docID, err := optionalSpatialUUID(spec.Input.DocumentId)
 	if err != nil {
-		return PointcrawlEdgeView{}, err
+		return PointcrawlEdgeView{}, spatialWriteError(err)
 	}
 	row, err := p.queries().SetProductPointcrawlEdge(ctx, dbgen.SetProductPointcrawlEdgeParams{
 		EdgeID:     edgeID,
@@ -537,22 +616,20 @@ func (p *ProductPostgres) StoreSetPointcrawlEdge(ctx context.Context, write SetP
 		DocumentID: docID,
 	})
 	if err != nil {
-		return PointcrawlEdgeView{}, err
+		return PointcrawlEdgeView{}, spatialWriteError(err)
 	}
 	return mapPointcrawlEdgeRow(row.ID, row.MapID, row.NodeA, row.NodeB, row.Directed, row.Kind, row.Label, row.DocumentID), nil
 }
 
 func (p *ProductPostgres) LockLinkPointcrawlEntry(ctx context.Context, spec LinkPointcrawlEntrySpec) (LinkPointcrawlEntryState, error) {
-	mapID, err := spatialPublicID(spec.MapId)
+	view, err := p.lockPointcrawlMap(ctx, spec.MapId)
 	if err != nil {
 		return LinkPointcrawlEntryState{}, err
 	}
-	if _, err := p.queries().LockProductMap(ctx, mapID); isNotFound(err) {
-		return LinkPointcrawlEntryState{}, nil
-	} else if err != nil {
+	if _, err := p.lockPointcrawlNode(ctx, spec.NodeId, spec.MapId); err != nil {
 		return LinkPointcrawlEntryState{}, err
 	}
-	return LinkPointcrawlEntryState{Exists: true, SubjectID: spec.MapId, MapKind: "pointcrawl"}, nil
+	return LinkPointcrawlEntryState{Exists: true, SubjectID: spec.MapId, MapKind: view.MapKind, RegionID: view.RegionId, Before: view}, nil
 }
 
 func (p *ProductPostgres) StoreLinkPointcrawlEntry(ctx context.Context, write LinkPointcrawlEntryWrite) (PointcrawlEntryLinkView, error) {
@@ -562,19 +639,19 @@ func (p *ProductPostgres) StoreLinkPointcrawlEntry(ctx context.Context, write Li
 	spec := write.ValidatedInput
 	mapID, err := spatialPublicID(spec.MapId)
 	if err != nil {
-		return PointcrawlEntryLinkView{}, err
+		return PointcrawlEntryLinkView{}, spatialWriteError(err)
 	}
 	nodeID, err := spatialPublicID(spec.NodeId)
 	if err != nil {
-		return PointcrawlEntryLinkView{}, err
+		return PointcrawlEntryLinkView{}, spatialWriteError(err)
 	}
 	docID, err := spatialPublicID(spec.DocumentId)
 	if err != nil {
-		return PointcrawlEntryLinkView{}, err
+		return PointcrawlEntryLinkView{}, spatialWriteError(err)
 	}
 	actorID, err := spatialPublicID(write.ActorID)
 	if err != nil {
-		return PointcrawlEntryLinkView{}, err
+		return PointcrawlEntryLinkView{}, spatialWriteError(err)
 	}
 	row, err := p.queries().LinkProductPointcrawlEntry(ctx, dbgen.LinkProductPointcrawlEntryParams{
 		Relation:   spec.Relation,
@@ -585,7 +662,7 @@ func (p *ProductPostgres) StoreLinkPointcrawlEntry(ctx context.Context, write Li
 		NodeID:     nodeID,
 	})
 	if err != nil {
-		return PointcrawlEntryLinkView{}, err
+		return PointcrawlEntryLinkView{}, spatialWriteError(err)
 	}
 	return PointcrawlEntryLinkView{
 		MapId:      db.UUIDString(row.MapID),
@@ -598,16 +675,31 @@ func (p *ProductPostgres) StoreLinkPointcrawlEntry(ctx context.Context, write Li
 }
 
 func (p *ProductPostgres) LockUnlinkPointcrawlEntry(ctx context.Context, spec UnlinkPointcrawlEntrySpec) (UnlinkPointcrawlEntryState, error) {
+	state, err := p.LockLinkPointcrawlEntry(ctx, LinkPointcrawlEntrySpec{MapId: spec.MapId, NodeId: spec.NodeId, DocumentId: spec.DocumentId, Relation: spec.Relation})
+	if err != nil {
+		return UnlinkPointcrawlEntryState{}, err
+	}
 	mapID, err := spatialPublicID(spec.MapId)
 	if err != nil {
 		return UnlinkPointcrawlEntryState{}, err
 	}
-	if _, err := p.queries().LockProductMap(ctx, mapID); isNotFound(err) {
-		return UnlinkPointcrawlEntryState{}, nil
-	} else if err != nil {
+	nodeID, err := spatialPublicID(spec.NodeId)
+	if err != nil {
 		return UnlinkPointcrawlEntryState{}, err
 	}
-	return UnlinkPointcrawlEntryState{Exists: true, SubjectID: spec.MapId, MapKind: "pointcrawl"}, nil
+	documentID, err := spatialPublicID(spec.DocumentId)
+	if err != nil {
+		return UnlinkPointcrawlEntryState{}, err
+	}
+	row, err := p.queries().LockProductPointcrawlEntryIdentity(ctx, dbgen.LockProductPointcrawlEntryIdentityParams{MapID: mapID, NodeID: nodeID, DocumentID: documentID, Relation: spec.Relation})
+	if isNotFound(err) {
+		return UnlinkPointcrawlEntryState(state), nil
+	}
+	if err != nil {
+		return UnlinkPointcrawlEntryState{}, err
+	}
+	state.Links = []PointcrawlEntryLinkView{{MapId: db.UUIDString(row.MapID), NodeId: db.UUIDString(row.NodeID), DocumentId: db.UUIDString(row.DocumentID), Relation: row.Relation, CreatedAt: row.CreatedAt.Time, CreatedBy: db.UUIDString(row.CreatedBy)}}
+	return UnlinkPointcrawlEntryState(state), nil
 }
 
 func (p *ProductPostgres) StoreUnlinkPointcrawlEntry(ctx context.Context, write UnlinkPointcrawlEntryWrite) (product.CommandReceipt, error) {
@@ -627,7 +719,7 @@ func (p *ProductPostgres) StoreUnlinkPointcrawlEntry(ctx context.Context, write 
 	if err != nil {
 		return product.CommandReceipt{}, err
 	}
-	count, err := p.queries().UnlinkProductPointcrawlEntry(ctx, dbgen.UnlinkProductPointcrawlEntryParams{
+	_, err = p.queries().UnlinkProductPointcrawlEntry(ctx, dbgen.UnlinkProductPointcrawlEntryParams{
 		MapID:      mapID,
 		NodeID:     nodeID,
 		DocumentID: docID,
@@ -635,9 +727,6 @@ func (p *ProductPostgres) StoreUnlinkPointcrawlEntry(ctx context.Context, write 
 	})
 	if err != nil {
 		return product.CommandReceipt{}, err
-	}
-	if count == 0 {
-		return product.CommandReceipt{}, apierr.New(apierr.NotFound, "pointcrawl entry link not found")
 	}
 	return product.CommandReceipt{}, nil
 }

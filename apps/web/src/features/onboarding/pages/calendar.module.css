@@ -1,0 +1,173 @@
+/* Month grid beside its side panels once there is room; one column on phones. */
+.wrap {
+  container-type: inline-size;
+  container-name: calendar;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sp-5);
+  align-items: start;
+}
+
+@container calendar (min-width: 56rem) {
+  .layout {
+    grid-template-columns: minmax(0, 1.6fr) minmax(18rem, 1fr);
+  }
+}
+
+/* UA paragraph and heading margins would stack on top of the card's gap. */
+.panel :is(p, h2, h3) {
+  margin: 0;
+}
+
+/* Phones get a tighter month card so seven columns keep three-digit game days. */
+.layout > .monthCard {
+  padding: var(--sp-3);
+}
+
+@container calendar (min-width: 40rem) {
+  .layout > .monthCard {
+    padding: var(--sp-5);
+  }
+}
+
+.monthHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+}
+
+.weekdays,
+.days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: calc(var(--sp-1) / 2);
+}
+
+@container calendar (min-width: 40rem) {
+  .weekdays,
+  .days {
+    gap: var(--sp-1);
+  }
+}
+
+.weekdays {
+  text-align: center;
+  color: var(--color-text-muted);
+  padding-block-end: var(--sp-1);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.day {
+  appearance: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-1);
+  width: 100%;
+  height: 100%;
+  min-height: 3.25rem;
+  min-width: 0;
+  padding: var(--sp-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--rad-xs);
+  background: var(--color-bg-panel);
+  color: var(--color-text);
+  text-align: left;
+  cursor: pointer;
+}
+
+@container calendar (min-width: 40rem) {
+  .day {
+    min-height: 4.5rem;
+    padding: var(--sp-2);
+  }
+}
+
+.day:hover {
+  border-color: var(--color-border-2);
+  background: var(--color-bg-surface);
+}
+
+.day:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.day[aria-pressed='true'] {
+  border-color: var(--color-accent);
+  background: var(--color-selected-wash);
+}
+
+.day[data-today='1'] .dayNumber {
+  color: var(--color-accent);
+}
+
+.day[data-unmapped='1'] {
+  background: transparent;
+  border-style: dashed;
+}
+
+.dayNumber {
+  font-variant-numeric: tabular-nums;
+}
+
+/* A long campaign reaches five-digit game days. Narrow cells step the number
+   down and, as a last resort, wrap it rather than cut it to "207…". */
+.gameDay {
+  color: var(--color-text-muted);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+  max-width: 100%;
+}
+
+.gameDay[data-long='1'] {
+  font-size: 0.6875rem;
+  letter-spacing: -0.01em;
+}
+
+@container calendar (min-width: 40rem) {
+  .gameDay[data-long='1'] {
+    font-size: inherit;
+    letter-spacing: normal;
+  }
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-3);
+  color: var(--color-text-muted);
+}
+
+.questList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--sp-2);
+}
+
+.questRow {
+  display: grid;
+  gap: var(--sp-1);
+  padding: var(--sp-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--rad-sm);
+  background: var(--color-bg-panel);
+}
+
+.dateList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}

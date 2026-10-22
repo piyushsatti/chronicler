@@ -1,0 +1,30 @@
+{
+  "at": "2026-10-20T22:50:45.830336+00:00",
+  "nativeSession": 28897,
+  "exit": 0,
+  "startTime": "2026-10-20T22:47:05.947Z",
+  "duration": 182696.916,
+  "expected": 138,
+  "skipped": 0,
+  "unexpected": 0,
+  "flaky": 0,
+  "widths": [
+    390,
+    900,
+    1920
+  ],
+  "fixturesPerWidth": 46,
+  "settledReadOnlyAudits": 138,
+  "auditFailures": 0,
+  "runtime": "Immutable38a7cd56a7@4205/API12realqueries; guestreadonly, trace/HARoff",
+  "bindings": {
+    "playwright-report.json": "412d141053b16a579e420799600e6c5d3b17297113c6c41384b9068525229efc",
+    "suiteSource": "7a372eca543bf5024728a16b89f68bc0bf683cc1ff013211c6df4b4cc366d569",
+    "frontendBuildReceipt": "a7cd56a792264008e068ace59b608999da60f27ed128b360509944a8fbfe522b"
+  },
+  "limits": [
+    "46sampledfixtures\u00d73widths; not92routes\u00d7roles\u00d7actions.",
+    "Hub suite does not visit genericCommunityEntry; separate actual fixture acceptance remains required.",
+    "Headingbounds/overflow andsettledqueries do not prove providerlogin or ownerLegacyapproval."
+  ]
+}

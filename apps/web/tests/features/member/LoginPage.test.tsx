@@ -98,8 +98,9 @@ describe('LoginRoute', () => {
       await screen.findByRole('link', { name: 'Admin' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Verification' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Search' })).toBeInTheDocument();
-    expect(await screen.findByText(/Unread: 2/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Your page' })).toHaveAttribute('href', '/me');
+    expect(screen.queryByRole('link', { name: 'Search' })).toBeNull();
+    expect(await screen.findByText(/You have 2 unread notifications/)).toBeInTheDocument();
     expect(await screen.findByText('Quest signup')).toBeInTheDocument();
   });
 });

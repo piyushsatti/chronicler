@@ -183,7 +183,7 @@
     gap: var(--sp-2);
     height: 40px;
     padding: 0 var(--sp-4);
-    border-radius: var(--rad-pill);
+    border-radius: var(--rad-btn);
     border: 1px solid var(--color-border-2);
     background: var(--color-bg-panel);
     color: var(--color-text);
@@ -198,12 +198,16 @@
   .btn:hover  { background: var(--color-bg-surface); border-color: var(--color-text-4); }
   .btn:active { transform: translateY(1px); }
   .btn:disabled { cursor: default; }
-  .btn.primary { background: var(--color-accent); border-color: var(--color-accent); color: var(--color-hero-on-brand-ink); }
-  .btn.primary:hover { background: var(--color-accent-hover); border-color: var(--color-accent-hover); }
-  .btn.ghost { border-color: transparent; background: transparent; color: var(--color-text-2); }
-  .btn.ghost:hover { background: var(--color-bg-surface); color: var(--color-text); }
-  .btn.sm { height: 32px; padding: 0 var(--sp-3); font-size: 12.5px; }
-  .btn.lg { height: 44px; padding: 0 var(--sp-5); font-size: 14.5px; }
+  /* Variant/size hooks: `.btn--{variant}` / `.btn--{size}` is the canonical
+     vocabulary (Button primitive and link-buttons both emit it). The bare
+     legacy classes stay as aliases in the same selector list because the
+     vendored .hf2 sheet and older call sites still key on them. */
+  .btn.primary, .btn.btn--primary { background: var(--btn-primary-bg, var(--color-accent)); border-color: var(--btn-primary-bg, var(--color-accent)); color: var(--btn-primary-ink, var(--color-hero-on-brand-ink)); }
+  .btn.primary:hover, .btn.btn--primary:hover { background: var(--btn-primary-bg-hover, var(--color-accent-hover)); border-color: var(--btn-primary-bg-hover, var(--color-accent-hover)); }
+  .btn.ghost, .btn.btn--ghost { border-color: transparent; background: transparent; color: var(--color-text-2); }
+  .btn.ghost:hover, .btn.btn--ghost:hover { background: var(--color-bg-surface); color: var(--color-text); }
+  .btn.sm, .btn.btn--sm { height: 32px; padding: 0 var(--sp-3); font-size: 12.5px; }
+  .btn.lg, .btn.btn--lg { height: 44px; padding: 0 var(--sp-5); font-size: 14.5px; }
 
   /* ── Search ──────────────────────────────────────────────── */
   .search {
@@ -239,7 +243,7 @@
     border: 1px solid var(--color-border);
     border-radius: var(--rad);
     padding: var(--sp-5);
-    box-shadow: var(--shadow);
+    box-shadow: var(--shadow-2);
   }
   .card[data-pad="4"]     { padding: var(--sp-4); }
   .card[data-pad="6"]     { padding: var(--sp-6); }
@@ -250,7 +254,7 @@
     transition: box-shadow 180ms, transform 180ms, border-color 180ms;
   }
   .card[data-interactive="1"]:hover {
-    box-shadow: var(--shadow-lift);
+    box-shadow: var(--shadow-3);
     transform: translateY(-3px);
     border-color: var(--color-border-2);
   }
@@ -450,7 +454,7 @@
     display: grid;
     place-items: center;
     color: var(--color-accent);
-    box-shadow: var(--shadow);
+    box-shadow: var(--shadow-2);
   }
   /* viewport queries removed — use Imposition navPatternFor / declarations */
 
@@ -542,9 +546,11 @@
 
   /* ── Tabs ────────────────────────────────────────────────── */
   .tabs { display: flex; gap: var(--sp-1); border-bottom: 1px solid var(--color-border); margin-bottom: var(--sp-5); }
-  .tabs a, .tabs button { padding: 10px 14px; font-size: 13.5px; font-weight: 550; color: var(--color-text-3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; user-select: none; background: none; border-top: none; border-left: none; border-right: none; font-family: inherit; }
-  .tabs a:hover, .tabs button:hover  { color: var(--color-text); }
-  .tabs a.active, .tabs button.active { color: var(--color-text); border-bottom-color: var(--color-accent); }
+  /* Tab items only: scoped to the tab list so links and buttons inside a
+     tab panel keep their own styling. */
+  :is(.tabs__list, .tabs:not([data-component='Tabs'])) > :is(a, button) { padding: 10px 14px; font-size: 13.5px; font-weight: 550; color: var(--color-text-3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; user-select: none; background: none; border-top: none; border-left: none; border-right: none; font-family: inherit; }
+  :is(.tabs__list, .tabs:not([data-component='Tabs'])) > :is(a, button):hover { color: var(--color-text); }
+  :is(.tabs__list, .tabs:not([data-component='Tabs'])) > :is(a, button).active { color: var(--color-text); border-bottom-color: var(--color-accent); }
 
   /* ── Timeline ────────────────────────────────────────────── */
   .tl { position: relative; padding-left: var(--sp-5); }
@@ -557,7 +563,7 @@
   .filters { display: flex; align-items: center; gap: var(--sp-2); flex-wrap: wrap; padding: var(--sp-3) var(--sp-4); background: var(--color-bg-panel); border: 1px solid var(--color-border); border-radius: var(--rad); margin-bottom: var(--sp-5); }
   .seg { display: inline-flex; background: var(--color-bg-surface); border-radius: var(--rad-pill); padding: 3px; }
   .seg span, .seg button { padding: 5px 12px; font-size: 12px; font-weight: 550; border-radius: var(--rad-pill); color: var(--color-text-2); cursor: pointer; user-select: none; background: none; border: none; font-family: inherit; }
-  .seg span.on, .seg button.on { background: var(--color-bg-panel); color: var(--color-text); box-shadow: var(--shadow); }
+  .seg span.on, .seg button.on { background: var(--color-bg-panel); color: var(--color-text); box-shadow: var(--shadow-2); }
 
   /* ── Prose (adventure summaries) ─────────────────────────── */
   .prose { font-family: var(--font-display); font-weight: 400; font-size: 18px; line-height: 1.6; color: var(--color-text); max-width: 64ch; }
@@ -618,7 +624,7 @@ textarea:focus-visible,
 .skip-link:focus,
 .skip-link:focus-visible {
   top: var(--sp-2);
-  box-shadow: var(--shadow-lift);
+  box-shadow: var(--shadow-3);
 }
 
 @media (prefers-reduced-motion: reduce) {

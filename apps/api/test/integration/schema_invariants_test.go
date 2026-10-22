@@ -80,9 +80,10 @@ func TestSchemaInvariants(t *testing.T) {
 		WHERE m.public_id = $2 AND d.public_id = $3`,
 		"overfill-"+short, seedDM, seedDoc)
 
-	rejectCheck(t, pool, `
-		INSERT INTO member_follows (follower_id, followed_id)
-		SELECT id, id FROM members WHERE public_id = $1`, seedAdmin)
+	var retiredFollowTable *string
+	if err := pool.QueryRow(ctx, `SELECT to_regclass('public.member_follows')::text`).Scan(&retiredFollowTable); err != nil || retiredFollowTable != nil {
+		t.Fatalf("N3 retired member_follows table=%v err=%v", retiredFollowTable, err)
+	}
 }
 
 func rejectCheck(t *testing.T, pool *db.Pool, sql string, args ...any) {

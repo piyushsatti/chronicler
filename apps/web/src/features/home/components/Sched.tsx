@@ -4,6 +4,7 @@ import { RegionLabel } from '../../../components/foundation/RegionLabel.js';
 import { Party } from '../../../components/data/Party.js';
 import { Card } from '../../../components/primitives/Card.js';
 import type { Status } from '../../../components/foundation/StatusBadge.js';
+import styles from './sched.module.css';
 
 export interface SchedPartyMember {
   characterName?: string | null;
@@ -11,7 +12,6 @@ export interface SchedPartyMember {
 }
 
 export interface SchedProps {
-  code: string;
   title: string;
   status?: QuestCardStatus;
   region?: string | null;
@@ -52,10 +52,9 @@ export function Sched({
       </div>
 
       <div
-        className="type-title"
+        className={`type-title ${styles.title}`}
         data-el="schedCard.title"
         data-testid="sched-title"
-        style={{ margin: '10px 0' }}
       >
         {title}
       </div>
@@ -70,7 +69,9 @@ export function Sched({
           ) : null}
         </div>
         <Party
-          members={party.map((p) => ({ name: p.characterName ?? p.characterId ?? 'Unknown' }))}
+          members={party.map((p) => ({
+            name: p.characterName ?? p.characterId ?? 'Unknown',
+          }))}
           total={slots}
         />
       </div>

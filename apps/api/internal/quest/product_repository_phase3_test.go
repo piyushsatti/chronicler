@@ -36,6 +36,7 @@ func TestPhase3TaskQUE02RepositoryPortsMatchGoSeams(t *testing.T) {
 			Owner   string   `json:"owner"`
 		} `json:"repository_interfaces"`
 		Seams []struct {
+			ID        string `json:"id"`
 			Interface string `json:"interface"`
 			Signature string `json:"signature"`
 		} `json:"provider_caller_seams"`
@@ -102,19 +103,32 @@ func TestPhase3TaskQUE02RepositoryPortsMatchGoSeams(t *testing.T) {
 			}
 		})
 	}
-	crossPorts := map[string][]int{"TagNormalizer": {283, 284, 286}, "RewardDecisionCoverageReader": {407}}
-	for name, indexes := range crossPorts {
+	crossPorts := map[string][]string{
+		"TagNormalizer":                {"CROSS-quest.TagNormalizer-NormalizeVocabulary", "CROSS-quest.TagNormalizer-MatchVariants", "CROSS-quest.TagNormalizer-FoldKey"},
+		"RewardDecisionCoverageReader": {"QUEST-REWARD-COVERAGE"},
+		"SummaryDocumentReader":        {"CROSS-quest.SummaryDocumentReader-ReadDocumentById"},
+	}
+	for name, seamIDs := range crossPorts {
 		t.Run(name, func(t *testing.T) {
 			iface := declared[name]
 			if iface == nil {
 				t.Fatalf("missing %s", name)
 			}
-			if len(iface.Methods.List) != len(indexes) {
-				t.Fatalf("%s has %d methods, want %d", name, len(iface.Methods.List), len(indexes))
+			if len(iface.Methods.List) != len(seamIDs) {
+				t.Fatalf("%s has %d methods, want %d", name, len(iface.Methods.List), len(seamIDs))
 			}
-			for i, index := range indexes {
-				if index >= len(contract.Seams) || contract.Seams[index].Interface != "quest."+name {
-					t.Fatalf("provider_caller_seams/%d is not quest.%s", index, name)
+			for i, id := range seamIDs {
+				index := -1
+				for j, seam := range contract.Seams {
+					if seam.ID == id {
+						if index != -1 {
+							t.Fatalf("duplicate seam %s", id)
+						}
+						index = j
+					}
+				}
+				if index < 0 || contract.Seams[index].Interface != "quest."+name {
+					t.Fatalf("seam %s is not quest.%s", id, name)
 				}
 				want, err := parser.ParseExpr("interface { " + contract.Seams[index].Signature + " }")
 				if err != nil {
@@ -158,7 +172,9 @@ func TestPhase3TaskQUE02RepositoryPortsMatchGoSeams(t *testing.T) {
 			"Characters": reflect.TypeFor[character.AdmissionReader](), "Brief": reflect.TypeFor[document.BriefWriter](),
 			"Summaries": reflect.TypeFor[document.SummaryWriter](), "Places": reflect.TypeFor[spatial.PlaceReader](),
 			"Jobs": reflect.TypeFor[jobs.Writer](), "Tags": reflect.TypeFor[TagNormalizer](),
-			"Withdrawals": reflect.TypeFor[character.QuestWithdrawalWriter](),
+			"Withdrawals":      reflect.TypeFor[character.QuestWithdrawalWriter](),
+			"Rewards":          reflect.TypeFor[character.QuestRewardWriter](),
+			"SummaryDocuments": reflect.TypeFor[SummaryDocumentReader](),
 		})
 		checkFields(NormalizedVocabulary{}, map[string]reflect.Type{"Tags": reflect.TypeFor[[]string](), "Genres": reflect.TypeFor[[]string]()})
 		checkFields(RewardDecisionCoverage{}, map[string]reflect.Type{"QuestID": reflect.TypeFor[string](), "Closed": reflect.TypeFor[bool](), "HasFullClosureDecision": reflect.TypeFor[bool]()})

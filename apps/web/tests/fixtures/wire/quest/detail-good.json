@@ -9,11 +9,16 @@
   "displayStatus": "open",
   "genres": ["exploration"],
   "tags": ["lightfall"],
-  "dm": { "handle": "mira", "displayName": "Mira" },
+  "dm": {
+    "handle": "mira",
+    "displayName": "Mira"
+  },
   "briefDocument": {
     "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
     "slug": "siege-brief",
-    "title": "Siege of Kraghold"
+    "title": "Siege of Kraghold",
+    "effectiveBody": "A real projected quest brief.",
+    "frontmatter": {}
   },
   "discordDelivery": {
     "desiredRevision": 2,
@@ -28,7 +33,12 @@
       "characterId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
       "characterName": "Lyra Storm",
       "memberHandle": "player1",
-      "status": "confirmed"
+      "status": "signed_up"
     }
-  ]
+  ],
+  "dmId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  "updatedAt": "2026-10-20T19:00:00Z",
+  "arcId": null,
+  "arc": null,
+  "pointcrawlLinks": []
 }

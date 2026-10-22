@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbgen"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbtest"
 )
 
@@ -110,12 +111,12 @@ func TestPhase3TaskSIT03CommunitySnapshotUsesStoredCountsAndRoleMembership(t *te
 		t.Fatal(err)
 	}
 	if err := fixture.Pool.QueryRow(ctx,
-		`INSERT INTO maps(name,atlas_code,map_kind,region_id,cols,rows)
-		 VALUES('SIT03 map','SIT03-MAP','hexgrid',$1,2,2) RETURNING id`, regionID).Scan(&mapID); err != nil {
+		`INSERT INTO maps(name,atlas_code,map_kind,region_id)
+		 VALUES('SIT03 map','SIT03-MAP','pointcrawl',$1) RETURNING id`, regionID).Scan(&mapID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := fixture.Pool.Exec(ctx,
-		`INSERT INTO hexes(map_id,col,row) VALUES($1,0,0)`, mapID); err != nil {
+		`INSERT INTO pointcrawl_nodes(map_id,name,x,y,created_at) VALUES($1,'SIT03 node',0,0,'2026-10-17T00:00:00Z')`, mapID); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := fixture.Pool.Exec(ctx,
@@ -148,7 +149,7 @@ func TestPhase3TaskSIT03CommunitySnapshotUsesStoredCountsAndRoleMembership(t *te
 	defer rows.Close()
 	roles := map[string]int32{}
 	var totals struct {
-		members, characters, maps, hexes, regions, quests, dms int32
+		members, characters, maps, nodes, regions, quests, dms int32
 		voice, messages, reactions                             float64
 	}
 	rowCount := 0
@@ -156,7 +157,7 @@ func TestPhase3TaskSIT03CommunitySnapshotUsesStoredCountsAndRoleMembership(t *te
 		var role *string
 		var membersByRole *int32
 		if err := rows.Scan(&totals.members, &totals.characters, &totals.maps,
-			&totals.hexes, &totals.regions, &totals.quests, &totals.dms,
+			&totals.nodes, &totals.regions, &totals.quests, &totals.dms,
 			&totals.voice, &totals.messages, &totals.reactions, &role, &membersByRole); err != nil {
 			t.Fatal(err)
 		}
@@ -169,7 +170,7 @@ func TestPhase3TaskSIT03CommunitySnapshotUsesStoredCountsAndRoleMembership(t *te
 		t.Fatal(err)
 	}
 	if rowCount != 2 || totals.members != 3 || totals.characters != 1 || totals.maps != 1 ||
-		totals.hexes != 1 || totals.regions != 1 || totals.quests != 1 || totals.dms != 1 {
+		totals.nodes != 1 || totals.regions != 1 || totals.quests != 1 || totals.dms != 1 {
 		t.Fatalf("snapshot totals rows=%d got=%+v, want stored counts for fixture", rowCount, totals)
 	}
 	if roles["player"] != 3 || roles["dm"] != 2 {
@@ -238,15 +239,9 @@ func TestPhase3TaskSIT03MemberDiscoveryCountsLiteralUnicodePrefixesAndPagesInOrd
 	}
 }
 
-func TestPhase3TaskSIT03SettingReplacementReturnsHistoryAndRollsBackWithCaller(t *testing.T) {
+func TestPhase3TaskSIT03SettingReplacementPersistsAndRollsBackWithCaller(t *testing.T) {
 	fixture := dbtest.NewProductFixture(t)
 	ctx := context.Background()
-	var actorPublicID uuid.UUID
-	if err := fixture.Pool.QueryRow(ctx,
-		`INSERT INTO members(discord_id,handle,display_name,roles)
-		 VALUES('sit03-actor','sit03-actor','Site editor',ARRAY['admin']) RETURNING public_id`).Scan(&actorPublicID); err != nil {
-		t.Fatal(err)
-	}
 	testSetting := func(settingKey, initial, replacement string, at time.Time) {
 		t.Helper()
 		ensure := siteProductSQL(t, "SiteEnsureSetting", ":execrows")
@@ -262,7 +257,6 @@ func TestPhase3TaskSIT03SettingReplacementReturnsHistoryAndRollsBackWithCaller(t
 		}
 		lock := siteProductSQL(t, "SiteLockSetting", ":one")
 		replace := siteProductSQL(t, "SiteReplaceSetting", ":one")
-		appendHistory := siteProductSQL(t, "SiteAppendSettingChange", ":one")
 		tx, err := fixture.Pool.Begin(ctx)
 		if err != nil {
 			t.Fatal(err)
@@ -291,37 +285,8 @@ func TestPhase3TaskSIT03SettingReplacementReturnsHistoryAndRollsBackWithCaller(t
 		if afterKey != settingKey || !updatedAt.Equal(at) || !equalJSON(afterPayload, []byte(replacement)) {
 			t.Fatalf("replacement key/payload/time=%q/%s/%s", afterKey, afterPayload, updatedAt)
 		}
-		historyID := uuid.New()
-		var returnedID uuid.UUID
-		var returnedKey string
-		var returnedOld, returnedNew []byte
-		var returnedActor uuid.UUID
-		var returnedAt time.Time
-		if err := tx.QueryRow(ctx, appendHistory, siteProductArgs(t, appendHistory, pgx.StrictNamedArgs{
-			"change_id": historyID, "setting_key": settingKey, "actor_id": actorPublicID,
-			"old_value": string(beforePayload), "new_value": replacement, "at": at,
-		})).Scan(&returnedID, &returnedKey, &returnedOld, &returnedNew, &returnedActor, &returnedAt); err != nil {
-			t.Fatalf("append %s setting history: %v", settingKey, err)
-		}
-		if returnedID != historyID || returnedKey != settingKey || returnedActor != actorPublicID || !returnedAt.Equal(at) {
-			t.Fatalf("history provenance=%s/%s/%s/%s, want supplied id/key/actor/time", returnedID, returnedKey, returnedActor, returnedAt)
-		}
-		if !equalJSON(returnedOld, beforePayload) || !equalJSON(returnedNew, []byte(replacement)) {
-			t.Fatalf("history values old=%s new=%s, want old=%s new=%s", returnedOld, returnedNew, beforePayload, replacement)
-		}
 		if err := tx.Commit(ctx); err != nil {
 			t.Fatalf("commit caller-owned setting transaction: %v", err)
-		}
-		var storedID uuid.UUID
-		var storedActor uuid.UUID
-		var storedAt time.Time
-		if err := fixture.Pool.QueryRow(ctx,
-			`SELECT h.public_id,m.public_id,h.created_at
-			 FROM site_setting_changes h JOIN members m ON m.id=h.actor_id WHERE h.public_id=$1`, historyID).Scan(&storedID, &storedActor, &storedAt); err != nil {
-			t.Fatalf("read committed history row: %v", err)
-		}
-		if storedID != historyID || storedActor != actorPublicID || !storedAt.Equal(at) {
-			t.Fatalf("stored history provenance=%s/%s/%s", storedID, storedActor, storedAt)
 		}
 		read := siteProductSQL(t, "SiteReadSetting", ":one")
 		var readKey string
@@ -344,7 +309,6 @@ func TestPhase3TaskSIT03SettingReplacementReturnsHistoryAndRollsBackWithCaller(t
 		time.Date(2026, 10, 17, 13, 0, 0, 0, time.UTC))
 
 	rollbackKey := "home_banner"
-	appendHistory := siteProductSQL(t, "SiteAppendSettingChange", ":one")
 	replace := siteProductSQL(t, "SiteReplaceSetting", ":one")
 	tx, err := fixture.Pool.Begin(ctx)
 	if err != nil {
@@ -360,20 +324,6 @@ func TestPhase3TaskSIT03SettingReplacementReturnsHistoryAndRollsBackWithCaller(t
 	})); err != nil {
 		t.Fatal(err)
 	}
-	var ignoredID uuid.UUID
-	var ignoredKey string
-	var ignoredOld, ignoredNew []byte
-	var ignoredActor uuid.UUID
-	var ignoredAt time.Time
-	rollbackID := uuid.New()
-	rollbackAt := time.Date(2026, 10, 17, 14, 0, 0, 0, time.UTC)
-	if err := tx.QueryRow(ctx, appendHistory, siteProductArgs(t, appendHistory, pgx.StrictNamedArgs{
-		"change_id": rollbackID, "setting_key": rollbackKey, "actor_id": actorPublicID,
-		"old_value": string(before), "new_value": `{"enabled":true,"title":"rolled back"}`,
-		"at": rollbackAt,
-	})).Scan(&ignoredID, &ignoredKey, &ignoredOld, &ignoredNew, &ignoredActor, &ignoredAt); err != nil {
-		t.Fatal(err)
-	}
 	if err := tx.Rollback(ctx); err != nil {
 		t.Fatalf("rollback caller-owned transaction: %v", err)
 	}
@@ -384,13 +334,78 @@ func TestPhase3TaskSIT03SettingReplacementReturnsHistoryAndRollsBackWithCaller(t
 	if !equalJSON(stored, before) {
 		t.Fatalf("caller rollback left payload %s, want %s", stored, before)
 	}
-	var historyCount int
-	if err := fixture.Pool.QueryRow(ctx, `SELECT count(*) FROM site_setting_changes WHERE public_id=$1`, rollbackID).Scan(&historyCount); err != nil {
+
+}
+
+func TestSiteActiveAlertsUseRetainedDiagnosticsDestination(t *testing.T) {
+	fixture := dbtest.NewProductFixture(t)
+	ctx := context.Background()
+	var jobID string
+	if err := fixture.Pool.QueryRow(ctx, `
+		INSERT INTO background_jobs(job_key,kind,lane,state,attempts,payload)
+		VALUES('site-diagnostics-fixture','gametime_fill','maintenance','dead',5,
+		       jsonb_build_object('slot',to_char(CURRENT_TIMESTAMP AT TIME ZONE 'UTC','YYYY-MM-DD"T"HH24:MI')))
+		RETURNING public_id::text`).Scan(&jobID); err != nil {
 		t.Fatal(err)
 	}
-	if historyCount != 0 {
-		t.Fatalf("caller rollback retained %d setting history rows", historyCount)
+	if _, err := fixture.Pool.Exec(ctx, `INSERT INTO bot_heartbeats(received_at) VALUES(clock_timestamp()-interval '10 minutes')`); err != nil {
+		t.Fatal(err)
 	}
+	query := siteProductSQL(t, "SiteActiveAlerts", ":many")
+	readPage := func(limit, offset int32) []dbgen.SiteActiveAlertsRow {
+		t.Helper()
+		rows, err := fixture.Pool.Query(ctx, query, siteProductArgs(t, query, pgx.StrictNamedArgs{"page_limit": limit, "page_offset": offset}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer rows.Close()
+		var result []dbgen.SiteActiveAlertsRow
+		for rows.Next() {
+			var row dbgen.SiteActiveAlertsRow
+			if err := rows.Scan(&row.Total, &row.Key, &row.Label, &row.Severity, &row.RemediationHref, &row.FirstSeenAt, &row.LastSeenAt); err != nil {
+				t.Fatal(err)
+			}
+			result = append(result, row)
+		}
+		if err := rows.Err(); err != nil {
+			t.Fatal(err)
+		}
+		return result
+	}
+	assertCount := func(want int32) {
+		t.Helper()
+		var count int32
+		if err := fixture.Pool.QueryRow(ctx, siteProductSQL(t, "SiteActiveAlertCount", ":one")).Scan(&count); err != nil || count != want {
+			t.Fatalf("active alert count=%d, want %d: %v", count, want, err)
+		}
+	}
+	wantKeys := []string{"job:" + jobID + ":state:dead", "bot:heartbeat:stale"}
+	rows := readPage(10, 0)
+	if len(rows) != 2 {
+		t.Fatalf("alert rows=%+v, want both job and heartbeat producers", rows)
+	}
+	for index, row := range rows {
+		if row.Total != 2 || !row.Key.Valid || row.Key.String != wantKeys[index] || !row.RemediationHref.Valid || row.RemediationHref.String != "/admin/data-health" {
+			t.Fatalf("alert row=%+v, want retained diagnostics destination", row)
+		}
+	}
+	assertCount(2)
+	second := readPage(1, 1)
+	if len(second) != 1 || second[0].Total != 2 || second[0].Key.String != wantKeys[1] || second[0].RemediationHref.String != "/admin/data-health" {
+		t.Fatalf("second page=%+v", second)
+	}
+	past := readPage(1, 2)
+	if len(past) != 1 || past[0].Total != 2 || past[0].Key.Valid {
+		t.Fatalf("past-end page=%+v, want retained total and no phantom alert", past)
+	}
+	if _, err := fixture.Pool.Exec(ctx, `UPDATE bot_heartbeats SET received_at=clock_timestamp()`); err != nil {
+		t.Fatal(err)
+	}
+	fresh := readPage(10, 0)
+	if len(fresh) != 1 || fresh[0].Total != 1 || fresh[0].Key.String != wantKeys[0] || fresh[0].RemediationHref.String != "/admin/data-health" {
+		t.Fatalf("fresh heartbeat page=%+v, want only the job alert", fresh)
+	}
+	assertCount(1)
 }
 
 func equalJSON(left, right []byte) bool {

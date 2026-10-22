@@ -52,12 +52,15 @@ func TestPhase3TaskCHA01Acceptance(t *testing.T) {
 		cleared := UpdateCharacterProfileFields{
 			Description:    product.Optional[string]{Set: true},
 			BackgroundText: product.Optional[string]{Set: true},
+			ImageUrl:       product.Optional[string]{Set: true},
 		}
 		description := "updated description"
 		background := "updated background"
+		image := "https://images.example/portrait.png"
 		set := UpdateCharacterProfileFields{
 			Description:    product.Optional[string]{Set: true, Value: &description},
 			BackgroundText: product.Optional[string]{Set: true, Value: &background},
+			ImageUrl:       product.Optional[string]{Set: true, Value: &image},
 		}
 
 		assertOptional := func(field string, got product.Optional[string], wantSet bool, wantValue *string) {
@@ -85,6 +88,7 @@ func TestPhase3TaskCHA01Acceptance(t *testing.T) {
 		}{
 			{"description", omitted.Description, cleared.Description, set.Description, &description},
 			{"backgroundText", omitted.BackgroundText, cleared.BackgroundText, set.BackgroundText, &background},
+			{"imageUrl", omitted.ImageUrl, cleared.ImageUrl, set.ImageUrl, &image},
 		} {
 			assertOptional(field.name+" omitted", field.omitted, false, nil)
 			assertOptional(field.name+" explicit null", field.cleared, true, nil)
@@ -98,7 +102,7 @@ func TestPhase3TaskCHA01Acceptance(t *testing.T) {
 		if definition == nil || definition.Kind != ast.InputObject {
 			t.Fatal("UpdateCharacterProfileInput is missing or has the wrong kind")
 		}
-		wantFields := map[string]bool{"description": false, "backgroundText": false}
+		wantFields := map[string]bool{"description": false, "backgroundText": false, "imageUrl": false}
 		for _, field := range definition.Fields {
 			_, ok := wantFields[field.Name]
 			if !ok {

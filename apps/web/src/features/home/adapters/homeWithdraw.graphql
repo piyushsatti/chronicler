@@ -1,0 +1,7 @@
+mutation HomeWithdrawFromQuest($questId: ID!, $characterId: ID!, $meta: CommandMeta!) {
+  withdrawFromQuest(questId: $questId, characterId: $characterId, meta: $meta) {
+    questId
+    characterId
+    status
+  }
+}

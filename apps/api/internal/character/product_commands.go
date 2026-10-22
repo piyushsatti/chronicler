@@ -3,12 +3,17 @@ package character
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"net/url"
 	"reflect"
 	"strings"
 	"time"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/piyushsatti/chronicler/apps/api/internal/member"
+	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
@@ -119,6 +124,18 @@ func runOperationCommand[T any](
 		if err != nil {
 			return err
 		}
+		current, err := repos.Authority(ctx, fresh.Claims().MemberID)
+		if err != nil {
+			return err
+		}
+		currentDecision, err := repos.Policy.Decide(ctx, current, request)
+		if err != nil {
+			return err
+		}
+		if current.Claims().MemberID != fresh.Claims().MemberID || !currentDecision.Allowed || currentDecision.UsedOverride && !decision.UsedOverride {
+			return apierr.New(apierr.Forbidden, "character authority changed")
+		}
+		fresh = current
 		if claim.Replay {
 			if err := json.Unmarshal(claim.Receipt, &result); err != nil {
 				return err
@@ -136,11 +153,36 @@ func runOperationCommand[T any](
 		if err != nil {
 			return err
 		}
+		current, err = repos.Authority(ctx, fresh.Claims().MemberID)
+		if err != nil {
+			return err
+		}
+		currentDecision, err = repos.Policy.Decide(ctx, current, request)
+		if err != nil {
+			return err
+		}
+		if current.Claims().MemberID != fresh.Claims().MemberID || !currentDecision.Allowed || currentDecision.UsedOverride && !decision.UsedOverride {
+			return apierr.New(apierr.Forbidden, "character authority changed")
+		}
 		if decision.UsedOverride {
 			if commandDependencyMissing(repos.Audit) {
 				return apierr.New(apierr.Internal, "override recorder required")
 			}
-			if err := repos.Audit.Record(ctx, auth.OverrideFact{
+			switch opName {
+			case "upsertCreationCatalogEntry":
+				view, ok := any(result).(CreationCatalogEntryView)
+				if !ok {
+					return apierr.New(apierr.Internal, "catalog audit subject required")
+				}
+				subjectID = view.Id
+			case "createBackstory", "updateBackstory":
+				view, ok := any(result).(BackstoryView)
+				if !ok {
+					return apierr.New(apierr.Internal, "backstory audit subject required")
+				}
+				subjectID = view.Id
+			}
+			if err := repos.Audit.Record(ctx, claim, auth.OverrideFact{
 				ActorID: fresh.Claims().MemberID, Operation: request.Operation(), SubjectType: "character",
 				SubjectID: subjectID, RuleCode: decision.RuleCode, At: at,
 			}); err != nil {
@@ -192,6 +234,9 @@ func runOwnedCharacterCommand[T any](
 		if err != nil {
 			return err
 		}
+		if ownerID != fresh.Claims().MemberID {
+			return apierr.New(apierr.Forbidden, "character owner required")
+		}
 		request, err := auth.ForCharacter(auth.Operation("Mutation."+opName), auth.CharacterFacts{ID: characterID, OwnerID: ownerID})
 		if err != nil {
 			return err
@@ -207,6 +252,18 @@ func runOwnedCharacterCommand[T any](
 		if err != nil {
 			return err
 		}
+		current, err := repos.Authority(ctx, fresh.Claims().MemberID)
+		if err != nil {
+			return err
+		}
+		currentDecision, err := repos.Policy.Decide(ctx, current, request)
+		if err != nil {
+			return err
+		}
+		if current.Claims().MemberID != fresh.Claims().MemberID || !currentDecision.Allowed || currentDecision.UsedOverride && !decision.UsedOverride {
+			return apierr.New(apierr.Forbidden, "character authority changed")
+		}
+		fresh = current
 		if claim.Replay {
 			if err := json.Unmarshal(claim.Receipt, &result); err != nil {
 				return err
@@ -224,11 +281,14 @@ func runOwnedCharacterCommand[T any](
 		if err != nil {
 			return err
 		}
+		if err := admitCharacterWrite(ctx, repos, fresh, request.Operation(), characterID, ownerID); err != nil {
+			return err
+		}
 		if decision.UsedOverride {
 			if commandDependencyMissing(repos.Audit) {
 				return apierr.New(apierr.Internal, "override recorder required")
 			}
-			if err := repos.Audit.Record(ctx, auth.OverrideFact{
+			if err := repos.Audit.Record(ctx, claim, auth.OverrideFact{
 				ActorID: fresh.Claims().MemberID, Operation: request.Operation(), SubjectType: "character",
 				SubjectID: characterID, RuleCode: decision.RuleCode, At: at,
 			}); err != nil {
@@ -248,6 +308,39 @@ func runOwnedCharacterCommand[T any](
 	return result, nil
 }
 
+func admitCharacterWrite(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, operation auth.Operation, characterID, ownerID string) error {
+	fresh, err := repos.Authority(ctx, actor.Claims().MemberID)
+	if err != nil {
+		return err
+	}
+	if fresh.Claims().MemberID != actor.Claims().MemberID || fresh.Claims().MemberID != ownerID {
+		return apierr.New(apierr.Forbidden, "character owner required")
+	}
+	request, err := auth.ForCharacter(operation, auth.CharacterFacts{ID: characterID, OwnerID: ownerID})
+	if err != nil {
+		return err
+	}
+	decision, err := repos.Policy.Decide(ctx, fresh, request)
+	if err != nil {
+		return err
+	}
+	if !decision.Allowed {
+		return apierr.New(apierr.Forbidden, "character command forbidden")
+	}
+	return nil
+}
+
+func validateCharacterGuild(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, guildID *string) error {
+	if guildID == nil {
+		return nil
+	}
+	if commandDependencyMissing(repos.Guilds) {
+		return apierr.New(apierr.Internal, "guild reader required")
+	}
+	_, err := repos.Guilds.ValidateGuild(ctx, actor, *guildID)
+	return err
+}
+
 func validateCreateCharacterInput(spec *CreateCharacterSpec) error {
 	if err := characterQueryText(spec.Input.Name, 200); err != nil {
 		return err
@@ -262,15 +355,68 @@ func validateCreateCharacterInput(spec *CreateCharacterSpec) error {
 			return err
 		}
 	}
+	// New characters need a region and a backstory, as both were required
+	// selects in the original create form. Legacy rows without them are untouched
+	// because only the create path checks this.
+	if spec.Input.RegionId == nil {
+		return apierr.New(apierr.Invalid, "region required")
+	}
+	if spec.Input.BackstoryId == nil {
+		return apierr.New(apierr.Invalid, "backstory required")
+	}
 	for i := range spec.Input.CatalogPickIds {
 		if err := commandPublicID(&spec.Input.CatalogPickIds[i]); err != nil {
 			return err
 		}
 	}
-	if spec.Input.DdbUrl != nil {
-		if _, err := canonicalDdbCharacterID(*spec.Input.DdbUrl); err != nil {
-			return apierr.New(apierr.Invalid, "invalid DDB character URL")
+	seen := make(map[string]bool, len(spec.Input.CatalogPickIds))
+	for _, id := range spec.Input.CatalogPickIds {
+		if seen[id] {
+			return apierr.New(apierr.Invalid, "duplicate creation catalog pick")
 		}
+		seen[id] = true
+	}
+	for _, value := range []struct {
+		text  *string
+		limit int
+	}{{spec.Input.Description, 4000}, {spec.Input.BackgroundText, 8000}} {
+		if value.text != nil {
+			if err := characterQueryText(*value.text, value.limit); err != nil {
+				return err
+			}
+		}
+	}
+	// D4: new characters need a D&D Beyond sheet; legacy rows without one are
+	// untouched because only the create path checks this.
+	if spec.Input.DdbUrl == nil || strings.TrimSpace(*spec.Input.DdbUrl) == "" {
+		return apierr.New(apierr.Invalid, "D&D Beyond character URL required")
+	}
+	if _, err := canonicalDdbCharacterID(*spec.Input.DdbUrl); err != nil {
+		return apierr.New(apierr.Invalid, "invalid DDB character URL")
+	}
+	if spec.Input.ImageUrl != nil {
+		if err := validateCharacterImageURL(*spec.Input.ImageUrl); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// validateCharacterImageURL mirrors characters_image_url_check (D5): an absolute
+// https URL of at most 2048 characters, with a host and no credentials.
+func validateCharacterImageURL(raw string) error {
+	invalid := apierr.New(apierr.Invalid, "invalid character image URL")
+	if !utf8.ValidString(raw) || !strings.HasPrefix(raw, "https://") || utf8.RuneCountInString(raw) > 2048 {
+		return invalid
+	}
+	for _, r := range raw {
+		if unicode.IsSpace(r) || unicode.IsControl(r) {
+			return invalid
+		}
+	}
+	parsed, err := url.Parse(raw)
+	if err != nil || parsed.Scheme != "https" || parsed.Hostname() == "" || parsed.User != nil || parsed.Opaque != "" {
+		return invalid
 	}
 	return nil
 }
@@ -295,6 +441,9 @@ func validateDowntimeInput(input *DowntimeFields) error {
 	if err := characterQueryText(input.Status, 64); err != nil {
 		return err
 	}
+	if input.Status != "active" && input.Status != "completed" && input.Status != "abandoned" || input.Progress < 0 || input.Target != nil && *input.Target <= 0 {
+		return apierr.New(apierr.Invalid, "invalid downtime project")
+	}
 	if input.Goal != nil {
 		if err := characterQueryText(*input.Goal, 2000); err != nil {
 			return err
@@ -314,6 +463,9 @@ func (s ProductCommands) CreateCharacter(ctx context.Context, actor auth.Authori
 	}
 	return runOperationCommand(ctx, s, actor, "Mutation.createCharacter", "createCharacter", spec, meta, actor.Claims().MemberID,
 		func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (CharacterView, error) {
+			if err := validateCharacterGuild(ctx, repos, fresh, spec.Input.GuildId); err != nil {
+				return CharacterView{}, err
+			}
 			locked, err := repos.Character.LockCreateCharacter(ctx, spec)
 			if err != nil {
 				return CharacterView{}, err
@@ -344,6 +496,9 @@ func (s ProductCommands) AdjustPcxp(ctx context.Context, actor auth.Authority, s
 			if !locked.Exists {
 				return ProgressionEntryView{}, apierr.New(apierr.NotFound, "character not found")
 			}
+			if err := admitCharacterWrite(ctx, repos, fresh, "Mutation.adjustPcxp", spec.CharacterId, locked.OwnerID); err != nil {
+				return ProgressionEntryView{}, err
+			}
 			return repos.Character.StoreAdjustPcxp(ctx, AdjustPcxpWrite{
 				ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked,
 			})
@@ -366,6 +521,9 @@ func (s ProductCommands) SubmitForVerification(ctx context.Context, actor auth.A
 			if !locked.Exists {
 				return CharacterView{}, apierr.New(apierr.NotFound, "character not found")
 			}
+			if err := admitCharacterWrite(ctx, repos, fresh, "Mutation.submitForVerification", spec.CharacterId, locked.OwnerID); err != nil {
+				return CharacterView{}, err
+			}
 			return repos.Character.StoreSubmitForVerification(ctx, SubmitForVerificationWrite{
 				ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked,
 			})
@@ -379,19 +537,61 @@ func (s ProductCommands) RetireCharacter(ctx context.Context, actor auth.Authori
 	if err := commandExpectedUpdatedAt(spec.ExpectedUpdatedAt); err != nil {
 		return CharacterView{}, err
 	}
-	return runOwnedCharacterCommand(ctx, s, actor, "retireCharacter", spec.CharacterId, spec, meta,
-		func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (CharacterView, error) {
-			locked, err := repos.Character.LockRetireCharacter(ctx, spec)
-			if err != nil {
-				return CharacterView{}, err
-			}
-			if !locked.Exists {
-				return CharacterView{}, apierr.New(apierr.NotFound, "character not found")
-			}
-			return repos.Character.StoreRetireCharacter(ctx, RetireCharacterWrite{
-				ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked,
+	for range 3 {
+		result, err := runOwnedCharacterCommand(ctx, s, actor, "retireCharacter", spec.CharacterId, spec, meta,
+			func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (CharacterView, error) {
+				if commandDependencyMissing(repos.Withdrawals) || commandDependencyMissing(repos.Producer) {
+					return CharacterView{}, apierr.New(apierr.Internal, "character withdrawal dependencies required")
+				}
+				plan, err := repos.Withdrawals.PlanOwnedCharacterWithdrawal(ctx, spec.CharacterId, nil)
+				if err != nil {
+					return CharacterView{}, err
+				}
+				admissions, err := repos.Admissions.LockAdmissions(ctx, plan.CharacterIDs)
+				if err != nil {
+					return CharacterView{}, err
+				}
+				if len(admissions) != len(plan.CharacterIDs) {
+					return CharacterView{}, ErrWithdrawalPlanChanged
+				}
+				currentPlan, err := repos.Withdrawals.PlanOwnedCharacterWithdrawal(ctx, spec.CharacterId, nil)
+				if err != nil {
+					return CharacterView{}, err
+				}
+				if !reflect.DeepEqual(plan, currentPlan) {
+					return CharacterView{}, ErrWithdrawalPlanChanged
+				}
+				locked, err := repos.Character.LockRetireCharacter(ctx, spec)
+				if err != nil {
+					return CharacterView{}, err
+				}
+				if !locked.Exists {
+					return CharacterView{}, apierr.New(apierr.NotFound, "character not found")
+				}
+				if err := admitCharacterWrite(ctx, repos, fresh, "Mutation.retireCharacter", spec.CharacterId, locked.OwnerID); err != nil {
+					return CharacterView{}, err
+				}
+				if locked.UpdatedAt == nil || !locked.UpdatedAt.Equal(spec.ExpectedUpdatedAt) || locked.Before.Status == "dead" || locked.Before.Status == "retired" {
+					return CharacterView{}, apierr.New(apierr.Conflict, "character retire rejected")
+				}
+				effects, err := repos.Withdrawals.WithdrawOwnedCharacter(ctx, fresh.Claims().MemberID, plan, "retired", at)
+				if err != nil {
+					return CharacterView{}, err
+				}
+				for _, event := range effects.Events {
+					if err := repos.Producer.Record(ctx, repos.Notice, event); err != nil {
+						return CharacterView{}, err
+					}
+				}
+				return repos.Character.StoreRetireCharacter(ctx, RetireCharacterWrite{
+					ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked,
+				})
 			})
-		})
+		if !errors.Is(err, ErrWithdrawalPlanChanged) {
+			return result, err
+		}
+	}
+	return CharacterView{}, apierr.New(apierr.Conflict, "quest roster kept changing during retirement")
 }
 
 func (s ProductCommands) DecideVerification(ctx context.Context, actor auth.Authority, spec DecideVerificationSpec, meta product.CommandMeta) (member.VerificationView, error) {
@@ -419,6 +619,21 @@ func (s ProductCommands) DecideVerification(ctx context.Context, actor auth.Auth
 			if !locked.Exists {
 				return member.VerificationView{}, apierr.New(apierr.NotFound, "character not found")
 			}
+			current, err := repos.Authority(ctx, fresh.Claims().MemberID)
+			if err != nil {
+				return member.VerificationView{}, err
+			}
+			request, err := auth.ForOperation("Mutation.decideVerification")
+			if err != nil {
+				return member.VerificationView{}, err
+			}
+			decision, err := repos.Policy.Decide(ctx, current, request)
+			if err != nil {
+				return member.VerificationView{}, err
+			}
+			if current.Claims().MemberID != fresh.Claims().MemberID || !decision.Allowed {
+				return member.VerificationView{}, apierr.New(apierr.Forbidden, "character verification forbidden")
+			}
 			id := s.IDs()
 			if err := commandPublicID(&id); err != nil {
 				return member.VerificationView{}, err
@@ -436,10 +651,24 @@ func (s ProductCommands) DecideVerification(ctx context.Context, actor auth.Auth
 			if err != nil {
 				return member.VerificationView{}, err
 			}
-			return repos.Character.StoreDecideVerification(ctx, DecideVerificationWrite{
+			result, err := repos.Character.StoreDecideVerification(ctx, DecideVerificationWrite{
 				ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked,
 				DecisionID: &id, Assessment: assessment,
 			})
+			if err != nil {
+				return member.VerificationView{}, err
+			}
+			if commandDependencyMissing(repos.Producer) {
+				return member.VerificationView{}, apierr.New(apierr.Internal, "character notification producer required")
+			}
+			if err := repos.Producer.Record(ctx, repos.Notice, notification.Event{
+				Key: "character-verification:" + assessment.Id, Kind: notification.CharacterVerificationDecided,
+				SubjectType: "character", SubjectID: spec.CharacterId, ActorID: fresh.Claims().MemberID, OccurredAt: at,
+				Facts: notification.Facts{Version: 1, EventKind: notification.CharacterVerificationDecided, CharacterID: &spec.CharacterId, VerificationID: &assessment.Id, Verdict: &assessment.Verdict},
+			}); err != nil {
+				return member.VerificationView{}, err
+			}
+			return result, nil
 		})
 }
 
@@ -458,6 +687,12 @@ func (s ProductCommands) SetCharacterGuild(ctx context.Context, actor auth.Autho
 			}
 			if !locked.Exists {
 				return CharacterView{}, apierr.New(apierr.NotFound, "character not found")
+			}
+			if err := admitCharacterWrite(ctx, repos, fresh, "Mutation.setCharacterGuild", spec.CharacterId, locked.OwnerID); err != nil {
+				return CharacterView{}, err
+			}
+			if err := validateCharacterGuild(ctx, repos, fresh, spec.GuildId); err != nil {
+				return CharacterView{}, err
 			}
 			return repos.Character.StoreSetCharacterGuild(ctx, SetCharacterGuildWrite{
 				ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked,
@@ -479,6 +714,11 @@ func (s ProductCommands) UpdateCharacterProfile(ctx context.Context, actor auth.
 			return CharacterView{}, err
 		}
 	}
+	if spec.Input.ImageUrl.Set && spec.Input.ImageUrl.Value != nil {
+		if err := validateCharacterImageURL(*spec.Input.ImageUrl.Value); err != nil {
+			return CharacterView{}, err
+		}
+	}
 	return runOwnedCharacterCommand(ctx, s, actor, "updateCharacterProfile", spec.CharacterId, spec, meta,
 		func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (CharacterView, error) {
 			locked, err := repos.Character.LockUpdateCharacterProfile(ctx, spec)
@@ -487,6 +727,9 @@ func (s ProductCommands) UpdateCharacterProfile(ctx context.Context, actor auth.
 			}
 			if !locked.Exists {
 				return CharacterView{}, apierr.New(apierr.NotFound, "character not found")
+			}
+			if err := admitCharacterWrite(ctx, repos, fresh, "Mutation.updateCharacterProfile", spec.CharacterId, locked.OwnerID); err != nil {
+				return CharacterView{}, err
 			}
 			return repos.Character.StoreUpdateCharacterProfile(ctx, UpdateCharacterProfileWrite{
 				ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked,
@@ -511,6 +754,9 @@ func (s ProductCommands) SyncCharacterDdb(ctx context.Context, actor auth.Author
 			}
 			if !locked.Exists {
 				return DdbSyncReceipt{}, apierr.New(apierr.NotFound, "character not found")
+			}
+			if err := admitCharacterWrite(ctx, repos, fresh, "Mutation.syncCharacterDdb", spec.CharacterId, locked.OwnerID); err != nil {
+				return DdbSyncReceipt{}, err
 			}
 			return repos.Character.StoreSyncCharacterDdb(ctx, SyncCharacterDdbWrite{
 				ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked,
@@ -537,6 +783,9 @@ func (s ProductCommands) LogCharacterEvent(ctx context.Context, actor auth.Autho
 			if !locked.Exists {
 				return CharacterLogView{}, apierr.New(apierr.NotFound, "character not found")
 			}
+			if err := admitCharacterWrite(ctx, repos, fresh, "Mutation.logCharacterEvent", spec.CharacterId, locked.OwnerID); err != nil {
+				return CharacterLogView{}, err
+			}
 			id := s.IDs()
 			if err := commandPublicID(&id); err != nil {
 				return CharacterLogView{}, err
@@ -562,6 +811,9 @@ func (s ProductCommands) UpsertDowntimeProject(ctx context.Context, actor auth.A
 			}
 			if !locked.Exists {
 				return DowntimeProjectView{}, apierr.New(apierr.NotFound, "character not found")
+			}
+			if err := admitCharacterWrite(ctx, repos, fresh, "Mutation.upsertDowntimeProject", spec.CharacterId, locked.OwnerID); err != nil {
+				return DowntimeProjectView{}, err
 			}
 			return repos.Character.StoreUpsertDowntimeProject(ctx, UpsertDowntimeProjectWrite{
 				ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked,
@@ -662,6 +914,9 @@ func (s ProductCommands) DeleteCharacterLog(ctx context.Context, actor auth.Auth
 			if !locked.Exists {
 				return product.CommandReceipt{}, apierr.New(apierr.NotFound, "character not found")
 			}
+			if err := admitCharacterWrite(ctx, repos, fresh, "Mutation.deleteCharacterLog", spec.CharacterId, locked.OwnerID); err != nil {
+				return product.CommandReceipt{}, err
+			}
 			return repos.Character.StoreDeleteCharacterLog(ctx, DeleteCharacterLogWrite{
 				ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked,
 			})
@@ -680,6 +935,9 @@ func (s ProductCommands) DeleteCharacter(ctx context.Context, actor auth.Authori
 			}
 			if !locked.Exists {
 				return product.CommandReceipt{}, apierr.New(apierr.NotFound, "character not found")
+			}
+			if err := admitCharacterWrite(ctx, repos, fresh, "Mutation.deleteCharacter", spec.CharacterId, locked.OwnerID); err != nil {
+				return product.CommandReceipt{}, err
 			}
 			return repos.Character.StoreDeleteCharacter(ctx, DeleteCharacterWrite{
 				ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked,

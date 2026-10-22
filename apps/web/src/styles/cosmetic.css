@@ -48,7 +48,7 @@
   }
 }
 
-[data-motion-collapse='off'] .cosmetic-verifier-glow:not([data-motion-collapse='on'] *):not([data-cosmetic-density='dense'] *) {
+[data-motion-collapse='off'] .cosmetic-verifier-glow:not([data-motion-collapse='on']):not([data-motion-collapse='on'] *):not([data-cosmetic-density='dense'] *) {
   animation: cosmetic-verifier-glow var(--motion-loop-status-pulse) var(--motion-ease-in-out) infinite;
 }
 
@@ -99,6 +99,6 @@
  * guard. Restating it in cosmetic.css would be a second implementation of one
  * rule (convergence ruling), and scoping it to the bare Atlas `.card` /
  * `.list-row` classes would silently lift every static card and row in the
- * app. `CosmeticDriver` stays 4-member; the launch set the resolver serves is
- * 5 rows. Consumers that want a lift add `.motion-card-hover-lift-tilt`.
+ * app. `CosmeticDriver` contains retained role/selection presentation only; the
+ * resolver serves five rows. Consumers that want a lift add `.motion-card-hover-lift-tilt`.
  * --------------------------------------------------------------------------- */

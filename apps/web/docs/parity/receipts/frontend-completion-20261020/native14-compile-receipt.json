@@ -1,0 +1,15 @@
+{
+  "at": "2026-10-20T22:29:37.460538Z",
+  "nativeSession": 69944,
+  "exit": 0,
+  "tags": [
+    "integration",
+    "frontend_acceptance"
+  ],
+  "sourceCount": 527,
+  "sourceManifestSha256": "03ae3dae6be89229ec5786c4c62a18d76dcc2517df6e62ae1bfb46d1f752b335",
+  "sourceDrift": [],
+  "binarySha256": "8d894127ffcfa30b75b718c30aac83804dcfdd1fd5813875b63f58d4cca43314",
+  "scope": "OneGoTESTfile;named9lifecyclewrapper sharedrunner/default13compositionunchanged; noAPIproductionchange",
+  "independentReviewSha256": "2cd7ac464bc81e2b8a622bd9384d68d0c4e9661e589d26ecc57a0e665c06d271"
+}

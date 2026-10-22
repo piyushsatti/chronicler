@@ -1,5 +1,9 @@
 import { HttpResponse } from 'msw';
-import type { FeatureGraphql, FeatureHandlers, FeatureRoute } from '../../chrome/featureModule.js';
+import type {
+  FeatureGraphql,
+  FeatureHandlers,
+  FeatureRoute,
+} from '../../chrome/featureModule.js';
 import { lazyElement } from '../../chrome/lazyElement.js';
 import { redirectRoute } from '../../chrome/routeBuilders.js';
 import goodAdminChars from '../../../tests/fixtures/wire/admin/chars-good.json';
@@ -19,7 +23,8 @@ export const queryKeys = {
 };
 
 const goodRegion = {
-  id: 'rrrrrrrr-rrrr-4rrr-8rrr-rrrrrrrrrrrr',
+  id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab',
+  documentId: null,
   name: 'Lightfall',
   kind: 'server',
   charterDeadline: null,
@@ -74,9 +79,34 @@ const goodCalendar = {
 };
 
 export const graphql: FeatureGraphql = {
+  DmDashboard: () =>
+    HttpResponse.json({
+      data: {
+        dmStats: { sessionCount: 0 },
+        quests: { total: 0, items: [] },
+        documents: { total: 0, items: [] },
+      },
+    }),
   PendingDmProfiles: () =>
     HttpResponse.json({ data: { pendingDmProfileVerifications: goodDmQueue } }),
-  AdminOperations: () => HttpResponse.json({ data: { adminOperations: goodAdminOps } }),
+  AdminOperations: () =>
+    HttpResponse.json({
+      data: {
+        adminOperations: {
+          ...goodAdminOps,
+          config: {
+            publicOrigin: '',
+            publicOriginHealthy: false,
+            deliveryMode: 'inbox',
+            announcementRoleId: null,
+            announcementRoleSource: 'unconfigured',
+            announcementRoleHealthy: false,
+          },
+          scheduledWork: [],
+          deliveries: [],
+        },
+      },
+    }),
   AdminCharacters: () =>
     HttpResponse.json({ data: { adminCharacterDirectory: goodAdminChars } }),
   AdminMembers: () => HttpResponse.json({ data: { members: goodMembers } }),
@@ -117,14 +147,15 @@ export const graphql: FeatureGraphql = {
         ],
       },
     }),
-  UpdateHomeBanner: () => HttpResponse.json({ data: { updateHomeBanner: goodHomeBanner } }),
-  DecideVerification: () =>
+  UpdateHomeBanner: () =>
+    HttpResponse.json({ data: { updateHomeBanner: goodHomeBanner } }),
+  DecideVerification: ({ variables }) =>
     HttpResponse.json({
       data: {
         decideVerification: {
           id: 'vvvvvvvv-vvvv-4vvv-8vvv-vvvvvvvvvvvv',
-          verdict: 'APPROVED',
-          note: null,
+          verdict: variables?.verdict === 'REJECTED' ? 'rejected' : 'approved',
+          note: typeof variables?.note === 'string' ? variables.note : null,
         },
       },
     }),
@@ -142,7 +173,8 @@ export const graphql: FeatureGraphql = {
     HttpResponse.json({
       data: {
         createRegion: {
-          id: 'rrrrrrrr-rrrr-4rrr-8rrr-rrrrrrrrrr01',
+          id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaac',
+          documentId: null,
           name: 'New Region',
           kind: 'uncharted',
           charterDeadline: null,

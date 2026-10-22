@@ -174,6 +174,80 @@ func (q *Queries) CharacterProductAdminDirectory(ctx context.Context, arg Charac
 	return items, nil
 }
 
+const characterProductApplyVerification = `-- name: CharacterProductApplyVerification :one
+UPDATE characters
+SET status = CASE WHEN $1::boolean THEN 'active' ELSE 'pending_approval' END,
+    updated_at = $2::timestamptz
+WHERE public_id = $3::uuid AND deleted_at IS NULL
+  AND status = 'pending_approval' AND verification_submitted_at = $4::timestamptz
+RETURNING public_id
+`
+
+type CharacterProductApplyVerificationParams struct {
+	Approved    bool               `json:"approved"`
+	At          pgtype.Timestamptz `json:"at"`
+	CharacterID pgtype.UUID        `json:"character_id"`
+	SubmittedAt pgtype.Timestamptz `json:"submitted_at"`
+}
+
+func (q *Queries) CharacterProductApplyVerification(ctx context.Context, arg CharacterProductApplyVerificationParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, characterProductApplyVerification,
+		arg.Approved,
+		arg.At,
+		arg.CharacterID,
+		arg.SubmittedAt,
+	)
+	var public_id pgtype.UUID
+	err := row.Scan(&public_id)
+	return public_id, err
+}
+
+const characterProductAwardQuestPCXP = `-- name: CharacterProductAwardQuestPCXP :one
+WITH updated AS (
+    UPDATE characters c
+    SET player_xp = c.player_xp + $1::integer, updated_at = $3::timestamptz
+    WHERE c.public_id = $6::uuid
+      AND c.player_xp::bigint + $1::integer <= 2147483647::bigint
+      AND (SELECT COALESCE(sum(ledger.delta), 0) + $1::integer
+           FROM character_progression_ledger ledger WHERE ledger.character_id = c.id)
+          BETWEEN -2147483648::bigint AND 2147483647::bigint
+      AND EXISTS (
+          SELECT 1 FROM quest_participants participant JOIN quests q ON q.id = participant.quest_id
+          WHERE participant.character_id = c.id AND q.public_id = $4::uuid
+            AND q.status = 'closed' AND participant.status = 'played'
+      )
+    RETURNING c.id
+)
+INSERT INTO character_progression_ledger(character_id, delta, reason, kind, note, quest_id, recorded_by, created_at)
+SELECT updated.id, $1::integer, 'quest_reward', 'pcxp', $2::text, q.id, actor.id, $3::timestamptz
+FROM updated CROSS JOIN quests q CROSS JOIN members actor
+WHERE q.public_id = $4::uuid AND actor.public_id = $5::uuid
+RETURNING public_id
+`
+
+type CharacterProductAwardQuestPCXPParams struct {
+	Amount      int32              `json:"amount"`
+	Note        pgtype.Text        `json:"note"`
+	At          pgtype.Timestamptz `json:"at"`
+	QuestID     pgtype.UUID        `json:"quest_id"`
+	ActorID     pgtype.UUID        `json:"actor_id"`
+	CharacterID pgtype.UUID        `json:"character_id"`
+}
+
+func (q *Queries) CharacterProductAwardQuestPCXP(ctx context.Context, arg CharacterProductAwardQuestPCXPParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, characterProductAwardQuestPCXP,
+		arg.Amount,
+		arg.Note,
+		arg.At,
+		arg.QuestID,
+		arg.ActorID,
+		arg.CharacterID,
+	)
+	var public_id pgtype.UUID
+	err := row.Scan(&public_id)
+	return public_id, err
+}
+
 const characterProductBatchByIDs = `-- name: CharacterProductBatchByIDs :many
 WITH requested AS (
     SELECT requested.public_id, requested.ordinality
@@ -181,7 +255,7 @@ WITH requested AS (
 )
 SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
        c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id, region.public_id AS region_id,
-       c.description, c.ddb_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
+       c.description, c.background_text, c.ddb_url, c.image_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
        ddb.payload AS ddb_payload, ddb.synced_at AS ddb_synced_at,
        c.verification_submitted_at,
        CASE WHEN c.verification_submitted_at IS NOT NULL
@@ -215,7 +289,9 @@ type CharacterProductBatchByIDsRow struct {
 	GuildID                 pgtype.UUID        `json:"guild_id"`
 	RegionID                pgtype.UUID        `json:"region_id"`
 	Description             pgtype.Text        `json:"description"`
+	BackgroundText          pgtype.Text        `json:"background_text"`
 	DdbUrl                  pgtype.Text        `json:"ddb_url"`
+	ImageUrl                pgtype.Text        `json:"image_url"`
 	Pcxp                    int32              `json:"pcxp"`
 	CreatedAt               pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
@@ -244,7 +320,9 @@ func (q *Queries) CharacterProductBatchByIDs(ctx context.Context, characterIds [
 			&i.GuildID,
 			&i.RegionID,
 			&i.Description,
+			&i.BackgroundText,
 			&i.DdbUrl,
+			&i.ImageUrl,
 			&i.Pcxp,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -266,8 +344,8 @@ func (q *Queries) CharacterProductBatchByIDs(ctx context.Context, characterIds [
 const characterProductByID = `-- name: CharacterProductByID :one
 SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
        c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id,
-       region.public_id AS region_id, c.description,
-       c.ddb_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
+       region.public_id AS region_id, c.description, c.background_text,
+       c.ddb_url, c.image_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
        ddb.payload AS ddb_payload, ddb.synced_at AS ddb_synced_at,
        c.verification_submitted_at,
        CASE WHEN c.verification_submitted_at IS NOT NULL
@@ -300,7 +378,9 @@ type CharacterProductByIDRow struct {
 	GuildID                 pgtype.UUID        `json:"guild_id"`
 	RegionID                pgtype.UUID        `json:"region_id"`
 	Description             pgtype.Text        `json:"description"`
+	BackgroundText          pgtype.Text        `json:"background_text"`
 	DdbUrl                  pgtype.Text        `json:"ddb_url"`
+	ImageUrl                pgtype.Text        `json:"image_url"`
 	Pcxp                    int32              `json:"pcxp"`
 	CreatedAt               pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
@@ -323,7 +403,9 @@ func (q *Queries) CharacterProductByID(ctx context.Context, characterID pgtype.U
 		&i.GuildID,
 		&i.RegionID,
 		&i.Description,
+		&i.BackgroundText,
 		&i.DdbUrl,
+		&i.ImageUrl,
 		&i.Pcxp,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -338,8 +420,8 @@ func (q *Queries) CharacterProductByID(ctx context.Context, characterID pgtype.U
 const characterProductByShortCode = `-- name: CharacterProductByShortCode :one
 SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
        c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id,
-       region.public_id AS region_id, c.description,
-       c.ddb_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
+       region.public_id AS region_id, c.description, c.background_text,
+       c.ddb_url, c.image_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
        ddb.payload AS ddb_payload, ddb.synced_at AS ddb_synced_at,
        c.verification_submitted_at,
        CASE WHEN c.verification_submitted_at IS NOT NULL
@@ -372,7 +454,9 @@ type CharacterProductByShortCodeRow struct {
 	GuildID                 pgtype.UUID        `json:"guild_id"`
 	RegionID                pgtype.UUID        `json:"region_id"`
 	Description             pgtype.Text        `json:"description"`
+	BackgroundText          pgtype.Text        `json:"background_text"`
 	DdbUrl                  pgtype.Text        `json:"ddb_url"`
+	ImageUrl                pgtype.Text        `json:"image_url"`
 	Pcxp                    int32              `json:"pcxp"`
 	CreatedAt               pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
@@ -395,7 +479,9 @@ func (q *Queries) CharacterProductByShortCode(ctx context.Context, shortCode str
 		&i.GuildID,
 		&i.RegionID,
 		&i.Description,
+		&i.BackgroundText,
 		&i.DdbUrl,
+		&i.ImageUrl,
 		&i.Pcxp,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -821,6 +907,18 @@ func (q *Queries) CharacterProductDeleteCharacterLog(ctx context.Context, arg Ch
 	return id, err
 }
 
+const characterProductImmutableOwner = `-- name: CharacterProductImmutableOwner :one
+SELECT owner.public_id FROM characters c JOIN members owner ON owner.id = c.owner_id
+WHERE c.public_id = $1::uuid AND c.deleted_at IS NULL
+`
+
+func (q *Queries) CharacterProductImmutableOwner(ctx context.Context, characterID pgtype.UUID) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, characterProductImmutableOwner, characterID)
+	var public_id pgtype.UUID
+	err := row.Scan(&public_id)
+	return public_id, err
+}
+
 const characterProductInsertBackstory = `-- name: CharacterProductInsertBackstory :one
 INSERT INTO backstories (public_id, name, lore, cohort, source_region_id, retired)
 SELECT $1::uuid, $2::text, $3::text,
@@ -874,21 +972,22 @@ func (q *Queries) CharacterProductInsertBackstory(ctx context.Context, arg Chara
 const characterProductInsertCharacter = `-- name: CharacterProductInsertCharacter :one
 INSERT INTO characters (
     public_id, short_code, name, owner_id, status, backstory_id, guild_document_id,
-    region_id, description, background_text, ddb_url, created_at, updated_at
+    region_id, description, background_text, ddb_url, image_url, created_at, updated_at
 )
 SELECT $1::uuid, $2::text, $3::text,
        owner.id, 'pending_approval', backstory.id, guild.id, region.id,
        $4::text, $5::text, $6::text,
-       $7::timestamptz, $7::timestamptz
+       $7::text,
+       $8::timestamptz, $8::timestamptz
 FROM members owner
-LEFT JOIN backstories backstory ON backstory.public_id = $8::uuid
-LEFT JOIN documents guild ON guild.public_id = $9::uuid
+LEFT JOIN backstories backstory ON backstory.public_id = $9::uuid
+LEFT JOIN documents guild ON guild.public_id = $10::uuid
     AND guild.kind = 'codex_entry' AND guild.deleted_at IS NULL
-LEFT JOIN regions region ON region.public_id = $10::uuid
-WHERE owner.public_id = $11::uuid
-  AND ($8::uuid IS NULL OR backstory.id IS NOT NULL)
-  AND ($9::uuid IS NULL OR guild.id IS NOT NULL)
-  AND ($10::uuid IS NULL OR region.id IS NOT NULL)
+LEFT JOIN regions region ON region.public_id = $11::uuid
+WHERE owner.public_id = $12::uuid
+  AND ($9::uuid IS NULL OR backstory.id IS NOT NULL)
+  AND ($10::uuid IS NULL OR guild.id IS NOT NULL)
+  AND ($11::uuid IS NULL OR region.id IS NOT NULL)
 RETURNING public_id AS id
 `
 
@@ -899,6 +998,7 @@ type CharacterProductInsertCharacterParams struct {
 	Description    pgtype.Text        `json:"description"`
 	BackgroundText pgtype.Text        `json:"background_text"`
 	DdbUrl         pgtype.Text        `json:"ddb_url"`
+	ImageUrl       pgtype.Text        `json:"image_url"`
 	At             pgtype.Timestamptz `json:"at"`
 	BackstoryID    pgtype.UUID        `json:"backstory_id"`
 	GuildID        pgtype.UUID        `json:"guild_id"`
@@ -914,6 +1014,7 @@ func (q *Queries) CharacterProductInsertCharacter(ctx context.Context, arg Chara
 		arg.Description,
 		arg.BackgroundText,
 		arg.DdbUrl,
+		arg.ImageUrl,
 		arg.At,
 		arg.BackstoryID,
 		arg.GuildID,
@@ -1034,8 +1135,8 @@ func (q *Queries) CharacterProductInsertDowntimeProject(ctx context.Context, arg
 const characterProductList = `-- name: CharacterProductList :many
 SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
        c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id,
-       region.public_id AS region_id, c.description,
-       c.ddb_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
+       region.public_id AS region_id, c.description, c.background_text,
+       c.ddb_url, c.image_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
        ddb.payload AS ddb_payload, ddb.synced_at AS ddb_synced_at,
        c.verification_submitted_at,
        CASE WHEN c.verification_submitted_at IS NOT NULL
@@ -1085,7 +1186,9 @@ type CharacterProductListRow struct {
 	GuildID                 pgtype.UUID        `json:"guild_id"`
 	RegionID                pgtype.UUID        `json:"region_id"`
 	Description             pgtype.Text        `json:"description"`
+	BackgroundText          pgtype.Text        `json:"background_text"`
 	DdbUrl                  pgtype.Text        `json:"ddb_url"`
+	ImageUrl                pgtype.Text        `json:"image_url"`
 	Pcxp                    int32              `json:"pcxp"`
 	CreatedAt               pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
@@ -1122,7 +1225,9 @@ func (q *Queries) CharacterProductList(ctx context.Context, arg CharacterProduct
 			&i.GuildID,
 			&i.RegionID,
 			&i.Description,
+			&i.BackgroundText,
 			&i.DdbUrl,
+			&i.ImageUrl,
 			&i.Pcxp,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -1661,6 +1766,48 @@ func (q *Queries) CharacterProductListVerificationHistory(ctx context.Context, a
 	return items, nil
 }
 
+const characterProductLockAdmissions = `-- name: CharacterProductLockAdmissions :many
+SELECT c.public_id, owner.public_id AS owner_id, c.status, owner.status AS owner_status, c.updated_at
+FROM characters c JOIN members owner ON owner.id = c.owner_id
+WHERE c.public_id = ANY($1::uuid[]) AND c.deleted_at IS NULL
+ORDER BY c.public_id
+FOR UPDATE OF c
+`
+
+type CharacterProductLockAdmissionsRow struct {
+	PublicID    pgtype.UUID        `json:"public_id"`
+	OwnerID     pgtype.UUID        `json:"owner_id"`
+	Status      string             `json:"status"`
+	OwnerStatus string             `json:"owner_status"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) CharacterProductLockAdmissions(ctx context.Context, characterIds []pgtype.UUID) ([]CharacterProductLockAdmissionsRow, error) {
+	rows, err := q.db.Query(ctx, characterProductLockAdmissions, characterIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []CharacterProductLockAdmissionsRow{}
+	for rows.Next() {
+		var i CharacterProductLockAdmissionsRow
+		if err := rows.Scan(
+			&i.PublicID,
+			&i.OwnerID,
+			&i.Status,
+			&i.OwnerStatus,
+			&i.UpdatedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const characterProductLockBackstory = `-- name: CharacterProductLockBackstory :one
 SELECT backstory.id, backstory.public_id, backstory.name, backstory.lore, backstory.cohort,
        backstory.source_region_id, backstory.retired
@@ -1851,10 +1998,40 @@ func (q *Queries) CharacterProductLockDowntimeProject(ctx context.Context, arg C
 	return i, err
 }
 
+const characterProductLockQuestRoster = `-- name: CharacterProductLockQuestRoster :many
+SELECT c.public_id
+FROM characters c
+JOIN quest_participants participant ON participant.character_id = c.id
+JOIN quests q ON q.id = participant.quest_id
+WHERE q.public_id = $1::uuid
+ORDER BY c.public_id
+FOR UPDATE OF c
+`
+
+func (q *Queries) CharacterProductLockQuestRoster(ctx context.Context, questID pgtype.UUID) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, characterProductLockQuestRoster, questID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.UUID{}
+	for rows.Next() {
+		var public_id pgtype.UUID
+		if err := rows.Scan(&public_id); err != nil {
+			return nil, err
+		}
+		items = append(items, public_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const characterProductMyCharacters = `-- name: CharacterProductMyCharacters :many
 SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
        c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id, region.public_id AS region_id,
-       c.description, c.ddb_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
+       c.description, c.background_text, c.ddb_url, c.image_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
        ddb.payload AS ddb_payload, ddb.synced_at AS ddb_synced_at,
        c.verification_submitted_at,
        CASE WHEN c.verification_submitted_at IS NOT NULL
@@ -1895,7 +2072,9 @@ type CharacterProductMyCharactersRow struct {
 	GuildID                 pgtype.UUID        `json:"guild_id"`
 	RegionID                pgtype.UUID        `json:"region_id"`
 	Description             pgtype.Text        `json:"description"`
+	BackgroundText          pgtype.Text        `json:"background_text"`
 	DdbUrl                  pgtype.Text        `json:"ddb_url"`
+	ImageUrl                pgtype.Text        `json:"image_url"`
 	Pcxp                    int32              `json:"pcxp"`
 	CreatedAt               pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
@@ -1924,7 +2103,9 @@ func (q *Queries) CharacterProductMyCharacters(ctx context.Context, arg Characte
 			&i.GuildID,
 			&i.RegionID,
 			&i.Description,
+			&i.BackgroundText,
 			&i.DdbUrl,
+			&i.ImageUrl,
 			&i.Pcxp,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -2029,12 +2210,25 @@ func (q *Queries) CharacterProductPendingVerificationDirectory(ctx context.Conte
 }
 
 const characterProductReplaceCatalogPicks = `-- name: CharacterProductReplaceCatalogPicks :exec
-DELETE FROM character_catalog_picks
-WHERE character_id = (SELECT id FROM characters WHERE public_id = $1::uuid)
+WITH removed AS (
+    DELETE FROM character_catalog_picks
+    WHERE character_id = (SELECT id FROM characters WHERE public_id = $2::uuid)
+)
+INSERT INTO character_catalog_picks (character_id, catalog_id)
+SELECT character.id, catalog.id
+FROM characters character
+JOIN unnest($1::uuid[]) AS requested(catalog_id) ON true
+JOIN creation_catalog catalog ON catalog.public_id = requested.catalog_id
+WHERE character.public_id = $2::uuid
 `
 
-func (q *Queries) CharacterProductReplaceCatalogPicks(ctx context.Context, characterID pgtype.UUID) error {
-	_, err := q.db.Exec(ctx, characterProductReplaceCatalogPicks, characterID)
+type CharacterProductReplaceCatalogPicksParams struct {
+	CatalogIds  []pgtype.UUID `json:"catalog_ids"`
+	CharacterID pgtype.UUID   `json:"character_id"`
+}
+
+func (q *Queries) CharacterProductReplaceCatalogPicks(ctx context.Context, arg CharacterProductReplaceCatalogPicksParams) error {
+	_, err := q.db.Exec(ctx, characterProductReplaceCatalogPicks, arg.CatalogIds, arg.CharacterID)
 	return err
 }
 
@@ -2067,7 +2261,7 @@ UPDATE characters
 SET status = 'retired', updated_at = $1::timestamptz
 WHERE public_id = $2::uuid
   AND deleted_at IS NULL
-  AND status <> 'dead'
+  AND status NOT IN ('dead', 'retired')
   AND updated_at = $3::timestamptz
 RETURNING public_id AS id, status, updated_at
 `
@@ -2276,8 +2470,9 @@ const characterProductUpdateCharacterProfile = `-- name: CharacterProductUpdateC
 UPDATE characters
 SET description = CASE WHEN $1::bool THEN $2::text ELSE description END,
     background_text = CASE WHEN $3::bool THEN $4::text ELSE background_text END,
-    updated_at = $5::timestamptz
-WHERE public_id = $6::uuid
+    image_url = CASE WHEN $5::bool THEN $6::text ELSE image_url END,
+    updated_at = $7::timestamptz
+WHERE public_id = $8::uuid
   AND deleted_at IS NULL
 RETURNING public_id AS id, updated_at
 `
@@ -2287,6 +2482,8 @@ type CharacterProductUpdateCharacterProfileParams struct {
 	Description    pgtype.Text        `json:"description"`
 	BackgroundSet  bool               `json:"background_set"`
 	BackgroundText pgtype.Text        `json:"background_text"`
+	ImageUrlSet    bool               `json:"image_url_set"`
+	ImageUrl       pgtype.Text        `json:"image_url"`
 	At             pgtype.Timestamptz `json:"at"`
 	CharacterID    pgtype.UUID        `json:"character_id"`
 }
@@ -2302,6 +2499,8 @@ func (q *Queries) CharacterProductUpdateCharacterProfile(ctx context.Context, ar
 		arg.Description,
 		arg.BackgroundSet,
 		arg.BackgroundText,
+		arg.ImageUrlSet,
+		arg.ImageUrl,
 		arg.At,
 		arg.CharacterID,
 	)
@@ -2485,4 +2684,36 @@ type CharacterProductUpsertDdbMirrorParams struct {
 func (q *Queries) CharacterProductUpsertDdbMirror(ctx context.Context, arg CharacterProductUpsertDdbMirrorParams) error {
 	_, err := q.db.Exec(ctx, characterProductUpsertDdbMirror, arg.Payload, arg.At, arg.CharacterID)
 	return err
+}
+
+const characterProductValidateCreationReferences = `-- name: CharacterProductValidateCreationReferences :one
+SELECT
+    ($1::uuid IS NULL OR EXISTS (
+        SELECT 1 FROM backstories WHERE public_id = $1::uuid AND NOT retired
+    ))
+    AND ($2::uuid IS NULL OR EXISTS (
+        SELECT 1 FROM regions WHERE public_id = $2::uuid
+    ))
+    AND NOT EXISTS (
+        SELECT 1 FROM unnest($3::uuid[]) AS requested(public_id)
+        WHERE NOT EXISTS (
+            SELECT 1 FROM creation_catalog catalog
+            LEFT JOIN regions region ON region.id = catalog.introduced_by_region_id
+            WHERE catalog.public_id = requested.public_id AND catalog.available AND NOT catalog.retired
+              AND (catalog.introduced_by_region_id IS NULL OR region.public_id = $2::uuid)
+        )
+    ) AS valid
+`
+
+type CharacterProductValidateCreationReferencesParams struct {
+	BackstoryID pgtype.UUID   `json:"backstory_id"`
+	RegionID    pgtype.UUID   `json:"region_id"`
+	CatalogIds  []pgtype.UUID `json:"catalog_ids"`
+}
+
+func (q *Queries) CharacterProductValidateCreationReferences(ctx context.Context, arg CharacterProductValidateCreationReferencesParams) (pgtype.Bool, error) {
+	row := q.db.QueryRow(ctx, characterProductValidateCreationReferences, arg.BackstoryID, arg.RegionID, arg.CatalogIds)
+	var valid pgtype.Bool
+	err := row.Scan(&valid)
+	return valid, err
 }

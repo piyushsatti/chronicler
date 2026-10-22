@@ -1,0 +1,7 @@
+mutation ProfileUpdateMyProfile($input: UpdateMyProfileInput!, $meta: CommandMeta!) {
+  updateMyProfile(input: $input, meta: $meta) {
+    id
+    displayName
+    avatarUrl
+  }
+}

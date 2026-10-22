@@ -17,11 +17,11 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 5173,
-      // Same-origin /v1 and /auth in the browser (matches vercel.json). MSW
+      // Same-origin API and backend Discord auth (matches vercel.json). MSW
       // intercepts first when VITE_API_MODE=mock, so this proxy is unused then.
       proxy: {
         '/v1': { target: apiOrigin, changeOrigin: true },
-        '/auth': { target: apiOrigin, changeOrigin: true },
+        '/auth/discord': { target: apiOrigin, changeOrigin: true },
       },
     },
   };

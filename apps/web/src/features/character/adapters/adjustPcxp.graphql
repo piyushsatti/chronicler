@@ -1,0 +1,11 @@
+mutation AdjustPcxp(
+  $characterId: ID!
+  $amount: Int!
+  $note: String!
+  $meta: CommandMeta!
+) {
+  adjustPcxp(characterId: $characterId, amount: $amount, note: $note, meta: $meta) {
+    id
+    amount
+  }
+}

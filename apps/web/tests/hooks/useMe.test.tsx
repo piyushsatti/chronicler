@@ -5,7 +5,7 @@ import type { ReactNode } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { GRAPHQL_PATH } from '../../src/api/endpoints.js';
 import { queryKeys } from '../../src/api/queryKeys.js';
-import { AuthProvider, useAuth } from '../../src/context/AuthContext.js';
+import { AuthProvider, useAuth } from '../../src/auth/AuthContext.js';
 import { TOKEN_KEY } from '../../src/auth/storage.js';
 import { useAdminAuthority } from '../../src/features/admin/hooks/useAdminAuthority.js';
 import { useMe } from '../../src/hooks/useMe.js';

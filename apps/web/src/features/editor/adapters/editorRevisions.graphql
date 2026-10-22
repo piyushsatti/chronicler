@@ -1,0 +1,13 @@
+query EditorRevisions($documentId: ID!, $limit: Int!, $offset: Int!) {
+  documentRevisions(documentId: $documentId, limit: $limit, offset: $offset) {
+    total
+    items {
+      id
+      rev
+      title
+      body
+      reason
+      recordedAt
+    }
+  }
+}

@@ -1837,7 +1837,8 @@
           "wire_type": "ID",
           "resolver_args": [],
           "kind": "OBJECT",
-          "owner": "CHA01"
+          "owner": "CHA01",
+          "meaning": "Nullable Document reference. Final GraphQL serialization resolves it through the existing request-scoped DOC04 Document batch reader; hidden or missing targets serialize as null and dependency errors propagate."
         },
         {
           "name": "Id",
@@ -3156,7 +3157,7 @@
         {
           "name": "Policy",
           "wire_name": "policy",
-          "go_type": "[]string",
+          "go_type": "product.Optional[[]string]",
           "wire_type": "[String!]",
           "resolver_args": [],
           "kind": "INPUT_OBJECT",
@@ -3713,6 +3714,51 @@
       "package": "document",
       "kind": "OBJECT",
       "fields": [
+        {
+          "name": "CanEditBody",
+          "wire_name": "canEditBody",
+          "go_type": "bool",
+          "wire_type": "Boolean!",
+          "resolver_args": [],
+          "kind": "OBJECT",
+          "owner": "DOC01"
+        },
+        {
+          "name": "CanEditMetadata",
+          "wire_name": "canEditMetadata",
+          "go_type": "bool",
+          "wire_type": "Boolean!",
+          "resolver_args": [],
+          "kind": "OBJECT",
+          "owner": "DOC01"
+        },
+        {
+          "name": "BodyComplete",
+          "wire_name": null,
+          "go_type": "bool",
+          "kind": "INTERNAL_PARENT_KEY",
+          "owner": "DOC01",
+          "json_tag": "-",
+          "meaning": "Request-scoped body projection completeness; never serialized."
+        },
+        {
+          "name": "LinkedRegionIDs",
+          "wire_name": null,
+          "go_type": "[]string",
+          "kind": "INTERNAL_PARENT_KEY",
+          "owner": "DOC01",
+          "json_tag": "-",
+          "meaning": "Canonical linked-region admission facts; never serialized."
+        },
+        {
+          "name": "ReaderIDs",
+          "wire_name": null,
+          "go_type": "[]string",
+          "kind": "INTERNAL_PARENT_KEY",
+          "owner": "DOC01",
+          "json_tag": "-",
+          "meaning": "Locked explicit-reader admission facts; never serialized."
+        },
         {
           "name": "AuthorId",
           "wire_name": "authorId",
@@ -5127,6 +5173,15 @@
       "package": "spatial",
       "kind": "OBJECT",
       "fields": [
+        {
+          "name": "CanEdit",
+          "wire_name": "canEdit",
+          "go_type": "bool",
+          "wire_type": "Boolean!",
+          "resolver_args": [],
+          "kind": "OBJECT",
+          "owner": "SPA01"
+        },
         {
           "name": "AssetPath",
           "wire_name": "assetPath",
@@ -7948,6 +8003,15 @@
           "owner": "QUE01"
         },
         {
+          "name": "ExpectedRevision",
+          "wire_name": "expectedRevision",
+          "go_type": "*int32",
+          "wire_type": "Int",
+          "resolver_args": [],
+          "kind": "INPUT_OBJECT",
+          "owner": "QUE01"
+        },
+        {
           "name": "Frontmatter",
           "wire_name": "frontmatter",
           "go_type": "json.RawMessage",
@@ -8259,7 +8323,8 @@
           "wire_type": "ID",
           "resolver_args": [],
           "kind": "OBJECT",
-          "owner": "QUE01"
+          "owner": "QUE01",
+          "meaning": "Nullable Document reference. Final GraphQL serialization resolves it through the existing request-scoped DOC04 Document batch reader; hidden or missing targets serialize as null and dependency errors propagate."
         },
         {
           "name": "DurationHours",
@@ -8652,6 +8717,15 @@
       "kind": "OBJECT",
       "fields": [
         {
+          "name": "CanCreateMap",
+          "wire_name": "canCreateMap",
+          "go_type": "bool",
+          "wire_type": "Boolean!",
+          "resolver_args": [],
+          "kind": "OBJECT",
+          "owner": "SPA01"
+        },
+        {
           "name": "CharterDeadline",
           "wire_name": "charterDeadline",
           "go_type": "*time.Time",
@@ -8676,7 +8750,8 @@
           "wire_type": "ID",
           "resolver_args": [],
           "kind": "OBJECT",
-          "owner": "SPA01"
+          "owner": "SPA01",
+          "meaning": "Nullable Document reference. Final GraphQL serialization resolves it through the existing request-scoped DOC04 Document batch reader; hidden or missing targets serialize as null and dependency errors propagate."
         },
         {
           "name": "Id",
@@ -9315,6 +9390,15 @@
           "owner": "DOC01"
         },
         {
+          "name": "Authoring",
+          "wire_name": "authoring",
+          "go_type": "*document.SummaryAuthoringView",
+          "wire_type": "SummaryAuthoringType",
+          "resolver_args": [],
+          "kind": "OBJECT",
+          "owner": "DOC01"
+        },
+        {
           "name": "Dms",
           "wire_name": "dms",
           "go_type": "[]document.SummaryDmView",
@@ -9364,6 +9448,15 @@
           "wire_name": "players",
           "go_type": "[]document.SummaryPlayerView",
           "wire_type": "[SummaryPlayerV2Type!]!",
+          "resolver_args": [],
+          "kind": "OBJECT",
+          "owner": "DOC01"
+        },
+        {
+          "name": "Quests",
+          "wire_name": "quests",
+          "go_type": "[]document.SummaryQuestRefView",
+          "wire_type": "[SummaryQuestRefType!]!",
           "resolver_args": [],
           "kind": "OBJECT",
           "owner": "DOC01"
@@ -9505,6 +9598,44 @@
       "primary_task": "DOC01",
       "meaning": "immutable query/command DTO; repository inner rows never cross aggregate; nested fields resolved by mapped loader when selected",
       "wire_name": "SummaryPlayerV2Type"
+    },
+    {
+      "name": "SummaryQuestRefView",
+      "package": "document",
+      "kind": "OBJECT",
+      "fields": [
+        {
+          "name": "Id",
+          "wire_name": "id",
+          "go_type": "string",
+          "wire_type": "ID!",
+          "resolver_args": [],
+          "kind": "OBJECT",
+          "owner": "DOC01"
+        },
+        {
+          "name": "ShortCode",
+          "wire_name": "shortCode",
+          "go_type": "string",
+          "wire_type": "String!",
+          "resolver_args": [],
+          "kind": "OBJECT",
+          "owner": "DOC01"
+        },
+        {
+          "name": "Title",
+          "wire_name": "title",
+          "go_type": "*string",
+          "wire_type": "String",
+          "resolver_args": [],
+          "kind": "OBJECT",
+          "owner": "DOC01"
+        }
+      ],
+      "enum_values": [],
+      "primary_task": "DOC01",
+      "meaning": "authoritative linked Quest identity with title admitted through its current brief projection",
+      "wire_name": "SummaryQuestRefType"
     },
     {
       "name": "SummaryRegionView",
@@ -10202,20 +10333,58 @@
       "primary_task": "MEM01",
       "meaning": "immutable query/command DTO; repository inner rows never cross aggregate; nested fields resolved by mapped loader when selected",
       "wire_name": "WeekActivityType"
+    },
+    {
+      "name": "SummaryAuthoringView",
+      "package": "document",
+      "kind": "OBJECT",
+      "fields": [
+        {
+          "name": "CharacterId",
+          "wire_name": "characterId",
+          "go_type": "*string",
+          "wire_type": "ID",
+          "resolver_args": [],
+          "kind": "OBJECT",
+          "owner": "DOC01"
+        },
+        {
+          "name": "Complete",
+          "wire_name": "complete",
+          "go_type": "bool",
+          "wire_type": "Boolean!",
+          "resolver_args": [],
+          "kind": "OBJECT",
+          "owner": "DOC01"
+        },
+        {
+          "name": "QuestIds",
+          "wire_name": "questIds",
+          "go_type": "[]string",
+          "wire_type": "[ID!]!",
+          "resolver_args": [],
+          "kind": "OBJECT",
+          "owner": "DOC01"
+        }
+      ],
+      "enum_values": [],
+      "primary_task": "DOC01",
+      "meaning": "current canonical Summary relationship projection for permitted metadata writers; explicit completeness prevents lossy replacement",
+      "wire_name": "SummaryAuthoringType"
     }
   ],
   "history_id_flow": {
-    "decideRequest": "DecisionID\u2192request_decisions.public_id\u2192DM_REQUEST_DECIDED Facts.DecisionID",
-    "decideVerification": "AssessmentSpec.ID\u2192verifications.public_id\u2192CHARACTER_VERIFICATION_DECIDED Facts.VerificationID",
-    "publishDocument": "RevisionID\u2192document_revisions.public_id\u2192DOCUMENT_PUBLISHED Facts.RevisionID",
-    "editPublishedDocument": "RevisionID\u2192document_revisions.public_id\u2192DOCUMENT_EDITED+DM_MENTIONED Facts.RevisionID",
-    "updateDocument": "RevisionID\u2192immutable CREATE/UPDATE_DRAFT history snapshot only; no author notification or DM mentions while draft",
-    "updateQuest": "HistoryID\u2192quest_changes.public_id\u2192QUEST_SCHEDULED Facts.QuestChangeID",
-    "signupForQuest": "HistoryID\u2192quest_changes signupfact\u2192QUEST_SIGNUP_CONFIRMED Facts.QuestChangeID",
-    "withdrawFromQuest": "HistoryID\u2192quest_changes promotionfact\u2192QUEST_WAITLIST_PROMOTED Facts.QuestChangeID",
-    "selectQuestParticipants": "HistoryID\u2192quest_changes selectionfact\u2192QUEST_SIGNUP_CONFIRMED Facts.QuestChangeID",
-    "closeQuest": "HistoryID\u2192quest_changes closurefact, existingrecipientrules only",
-    "transitionQuestStatus": "HistoryID\u2192quest_changes lifecyclefact\u2192existing QUEST_SCHEDULED recipients"
+    "decideRequest": "DecisionID→request_decisions.public_id→DM_REQUEST_DECIDED Facts.DecisionID",
+    "decideVerification": "AssessmentSpec.ID→verifications.public_id→CHARACTER_VERIFICATION_DECIDED Facts.VerificationID",
+    "publishDocument": "RevisionID→document_revisions.public_id→DOCUMENT_PUBLISHED Facts.RevisionID",
+    "editPublishedDocument": "RevisionID→document_revisions.public_id→DOCUMENT_EDITED+DM_MENTIONED Facts.RevisionID",
+    "updateDocument": "RevisionID→immutable CREATE/UPDATE_DRAFT history snapshot only; no author notification or DM mentions while draft",
+    "updateQuest": "HistoryID→quest_changes.public_id→QUEST_SCHEDULED Facts.QuestChangeID",
+    "signupForQuest": "HistoryID→quest_changes signupfact→QUEST_SIGNUP_CONFIRMED Facts.QuestChangeID",
+    "withdrawFromQuest": "HistoryID→quest_changes promotionfact→QUEST_WAITLIST_PROMOTED Facts.QuestChangeID",
+    "selectQuestParticipants": "HistoryID→quest_changes selectionfact→QUEST_SIGNUP_CONFIRMED Facts.QuestChangeID",
+    "closeQuest": "HistoryID→quest_changes closurefact, existingrecipientrules only",
+    "transitionQuestStatus": "HistoryID→quest_changes lifecyclefact→existing QUEST_SCHEDULED recipients"
   },
   "specs": [
     {
@@ -12873,6 +13042,12 @@
           "sdl_type": "Date!",
           "default": "",
           "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
+        },
+        {
+          "name": "AsOf",
+          "go_type": "time.Time",
+          "internal": true,
+          "meaning": "one injected UTC clock sample for the factual current game day and calendar projection"
         }
       ],
       "owner": "SPA01"
@@ -14377,7 +14552,7 @@
         },
         {
           "name": "AllowedHexes",
-          "go_type": "[]spatial.HexAdmission"
+          "go_type": "[]spatial.PointcrawlAdmission"
         }
       ],
       "owner": "QUE01",
@@ -14479,7 +14654,7 @@
         },
         {
           "name": "AllowedHexes",
-          "go_type": "[]spatial.HexAdmission"
+          "go_type": "[]spatial.PointcrawlAdmission"
         },
         {
           "name": "ExistingEntitlements",
@@ -14712,7 +14887,7 @@
         },
         {
           "name": "AllowedHexes",
-          "go_type": "[]spatial.HexAdmission"
+          "go_type": "[]spatial.PointcrawlAdmission"
         }
       ],
       "owner": "QUE01",
@@ -15174,7 +15349,7 @@
         },
         {
           "name": "AllowedHexes",
-          "go_type": "[]spatial.HexAdmission"
+          "go_type": "[]spatial.PointcrawlAdmission"
         }
       ],
       "owner": "QUE01",
@@ -15558,7 +15733,7 @@
         },
         {
           "name": "AllowedHexes",
-          "go_type": "[]spatial.HexAdmission"
+          "go_type": "[]spatial.PointcrawlAdmission"
         }
       ],
       "owner": "QUE01",
@@ -15693,7 +15868,7 @@
         },
         {
           "name": "AllowedHexes",
-          "go_type": "[]spatial.HexAdmission"
+          "go_type": "[]spatial.PointcrawlAdmission"
         }
       ],
       "owner": "QUE01",
@@ -15828,7 +16003,7 @@
         },
         {
           "name": "AllowedHexes",
-          "go_type": "[]spatial.HexAdmission"
+          "go_type": "[]spatial.PointcrawlAdmission"
         }
       ],
       "owner": "QUE01",
@@ -16061,7 +16236,7 @@
         },
         {
           "name": "AllowedHexes",
-          "go_type": "[]spatial.HexAdmission"
+          "go_type": "[]spatial.PointcrawlAdmission"
         },
         {
           "name": "Candidates",
@@ -16413,7 +16588,7 @@
         },
         {
           "name": "AllowedHexes",
-          "go_type": "[]spatial.HexAdmission"
+          "go_type": "[]spatial.PointcrawlAdmission"
         }
       ],
       "owner": "QUE01",
@@ -16503,7 +16678,7 @@
         },
         {
           "name": "AllowedHexes",
-          "go_type": "[]spatial.HexAdmission"
+          "go_type": "[]spatial.PointcrawlAdmission"
         }
       ],
       "owner": "QUE01",
@@ -16691,7 +16866,7 @@
         },
         {
           "name": "AllowedHexes",
-          "go_type": "[]spatial.HexAdmission"
+          "go_type": "[]spatial.PointcrawlAdmission"
         }
       ],
       "owner": "QUE01",
@@ -16740,7 +16915,7 @@
         },
         {
           "name": "AllowedHexes",
-          "go_type": "[]spatial.HexAdmission"
+          "go_type": "[]spatial.PointcrawlAdmission"
         }
       ],
       "owner": "QUE01",
@@ -17435,7 +17610,7 @@
         },
         {
           "name": "AllowedHexes",
-          "go_type": "[]spatial.HexAdmission"
+          "go_type": "[]spatial.PointcrawlAdmission"
         }
       ],
       "owner": "QUE01",
@@ -17811,7 +17986,7 @@
         },
         {
           "name": "AllowedHexes",
-          "go_type": "[]spatial.HexAdmission"
+          "go_type": "[]spatial.PointcrawlAdmission"
         }
       ],
       "owner": "QUE01",
@@ -17860,7 +18035,7 @@
         },
         {
           "name": "AllowedHexes",
-          "go_type": "[]spatial.HexAdmission"
+          "go_type": "[]spatial.PointcrawlAdmission"
         }
       ],
       "owner": "QUE01",
@@ -21600,11 +21775,12 @@
       "PromotedMemberIDs": "[]string",
       "Events": "[]notification.Event"
     },
-    "spatial.HexAdmission": {
+    "spatial.PointcrawlAdmission": {
       "ID": "string",
       "MapID": "string",
       "RegionID": "*string",
-      "Role": "string"
+      "Role": "string",
+      "AdminOverride": "bool"
     },
     "document.BriefCreate": {
       "QuestID": "string",
@@ -21625,6 +21801,7 @@
     },
     "document.SummaryWrite": {
       "DocumentID": "*string",
+      "ExpectedRevision": "*int32",
       "QuestIDs": "[]string",
       "CharacterID": "*string",
       "Title": "string",
@@ -21692,7 +21869,8 @@
       "NewMentionMemberIDs": "[]string",
       "RequestID": "*string",
       "ChangedFields": "[]string",
-      "Decision": "*string"
+      "Decision": "*string",
+      "RecipientMemberIDs": "[]string"
     },
     "jobs.StoreOptions": {
       "Gate": "jobs.CompatibilityGate",
@@ -21828,9 +22006,6 @@
     },
     "auth.SafeOverrideObserver": {
       "Logger": "*slog.Logger"
-    },
-    "auth.PostgresOverrideRecorder": {
-      "DB": "jobs.SQLExecutor"
     },
     "auth.Operation": {
       "underlying": "string",
@@ -22300,7 +22475,8 @@
       "Notice": "notification.ProducerRepos",
       "Audit": "auth.OverrideRecorder",
       "Locations": "document.LocationAdmissionReader",
-      "Containment": "spatial.ContainmentWriter"
+      "Containment": "spatial.ContainmentWriter",
+      "Documents": "spatial.DocumentReferenceReader"
     },
     "spatial.ProductQueries": {
       "Reads": "spatial.ProductReadRepos",
@@ -22313,10 +22489,7 @@
     "spatial.ProductCommands": {
       "Runner": "uow.Runner[spatial.ProductCommandRepos]",
       "Clock": "product.Clock",
-      "IDs": "product.IDGenerator",
-      "Calendar": "spatial.CalendarSpecification",
-      "ConnectionRunner": "db.ConnectionRunnerFactory",
-      "LifecycleObserver": "jobs.LifecycleObserver"
+      "IDs": "product.IDGenerator"
     },
     "character.ProductPostgres": {
       "DB": "dbgen.DBTX"
@@ -22383,7 +22556,9 @@
       "Places": "spatial.PlaceReader",
       "Jobs": "jobs.Writer",
       "Tags": "quest.TagNormalizer",
-      "Withdrawals": "character.QuestWithdrawalWriter"
+      "Withdrawals": "character.QuestWithdrawalWriter",
+      "Rewards": "character.QuestRewardWriter",
+      "SummaryDocuments": "quest.SummaryDocumentReader"
     },
     "quest.ProductQueries": {
       "Reads": "quest.ProductReadRepos",
@@ -22507,13 +22682,6 @@
     "worker.SchemaGate": {
       "Min": "int64",
       "Max": "int64"
-    },
-    "worker.Maintenance": {
-      "Store": "jobs.Store",
-      "Gate": "worker.ExecutionGate",
-      "Time": "worker.TimeFillWriter",
-      "Consistency": "worker.ConsistencyChecker",
-      "Clock": "product.Clock"
     },
     "observations.Postgres": {
       "DB": "dbgen.DBTX"
@@ -22645,15 +22813,12 @@
       "Runner": "uow.Runner[observations.TransitionRepos]"
     },
     "jobs.EffectPermit": {
+      "owner": "*jobs.PostgresEffectGuard",
       "receipt": "jobs.Receipt",
-      "jobPublicID": "string",
-      "kind": "string",
-      "attempt": "int32",
-      "startedAt": "time.Time"
+      "kind": "string"
     },
     "jobs.PostgresEffectGuard": {
-      "DB": "jobs.SQLExecutor",
-      "Observer": "jobs.LifecycleObserver"
+      "DB": "pgx.Tx"
     },
     "db.ConnectionRunner": {},
     "notification.RecipientComposition": {
@@ -22707,6 +22872,11 @@
       "Closed": "bool",
       "HasFullClosureDecision": "bool"
     },
+    "character.QuestPCXPAward": {
+      "CharacterID": "string",
+      "Amount": "int32",
+      "Note": "*string"
+    },
     "member.DmProfileReviewEvent": {
       "ID": "string",
       "MemberID": "string",
@@ -22727,7 +22897,7 @@
       "ParentMapID": "string",
       "ChildMapID": "string"
     },
-    "spatial.QuestHexCandidate": {
+    "spatial.QuestPointcrawlCandidate": {
       "ID": "string",
       "Role": "string"
     },
@@ -22763,7 +22933,8 @@
     "auth.QuestHexFacts": {
       "ID": "string",
       "Role": "string",
-      "RegionID": "*string"
+      "RegionID": "*string",
+      "AdminOverride": "bool"
     },
     "auth.RegionFacts": {
       "ID": "string"
@@ -22887,6 +23058,27 @@
       "Facts": "notification.Facts",
       "EventActorID": "string",
       "EventOccurredAt": "time.Time"
+    },
+    "spatial.TimeFillWriter": {
+      "Clock": "product.Clock",
+      "ConnectionRunner": "db.ConnectionRunnerFactory"
+    },
+    "worker.MaintenanceHandler": {
+      "store": "jobs.Store",
+      "gate": "worker.ExecutionGate",
+      "timeWriter": "worker.TimeFillWriter",
+      "clock": "product.Clock"
+    },
+    "auth.ReceiptOverrideRecorder": {
+      "Replay": "idempotency.Repository"
+    },
+    "idempotency.CommandOverrideFact": {
+      "ActorID": "string",
+      "Operation": "string",
+      "SubjectType": "string",
+      "SubjectID": "string",
+      "RuleCode": "string",
+      "At": "time.Time"
     }
   },
   "repository_interfaces": [
@@ -22988,7 +23180,8 @@
         "ReadDocuments(ctx context.Context, actor auth.Authority, spec document.DocumentsSpec) (document.DocumentListResult, error)",
         "ReadDocumentsTrash(ctx context.Context, actor auth.Authority, spec document.DocumentsTrashSpec) (document.DocumentListResult, error)",
         "ReadLieutenantAssignments(ctx context.Context, actor auth.Authority, spec document.LieutenantAssignmentsSpec) (document.LieutenantPage, error)",
-        "ReadPreviewBody(ctx context.Context, actor auth.Authority, spec document.PreviewBodySpec) (string, error)"
+        "ReadPreviewBody(ctx context.Context, actor auth.Authority, spec document.PreviewBodySpec) (string, error)",
+        "ReadDocumentRevisionParent(ctx context.Context, actor auth.Authority, documentID string) (*document.DocumentView, error)"
       ],
       "owner": "DOC02",
       "provider": "DOC04"
@@ -23017,7 +23210,8 @@
         "LockUpdateDocument(ctx context.Context, spec document.UpdateDocumentSpec) (document.UpdateDocumentState, error)",
         "StoreUpdateDocument(ctx context.Context, write document.UpdateDocumentWrite) (document.DocumentView, error)",
         "StoreSummary(ctx context.Context, actor auth.Authority, spec document.SummaryWrite) (document.WriteResult,error)",
-        "FindAvailableSlug(ctx context.Context, base string) (string,error)"
+        "FindAvailableSlug(ctx context.Context, base string) (string,error)",
+        "ReadCommandDocument(ctx context.Context, actor auth.Authority, documentID string) (document.DocumentView, error)"
       ],
       "owner": "DOC02",
       "provider": "DOC04"
@@ -23334,7 +23528,8 @@
         "LockUpsertPoi(ctx context.Context, spec spatial.UpsertPoiSpec) (spatial.UpsertPoiState, error)",
         "StoreUpsertPoi(ctx context.Context, write spatial.UpsertPoiWrite) (spatial.PoiView, error)",
         "LockUpsertPointcrawlNode(ctx context.Context, spec spatial.UpsertPointcrawlNodeSpec) (spatial.UpsertPointcrawlNodeState, error)",
-        "StoreUpsertPointcrawlNode(ctx context.Context, write spatial.UpsertPointcrawlNodeWrite) (spatial.PointcrawlNodeView, error)"
+        "StoreUpsertPointcrawlNode(ctx context.Context, write spatial.UpsertPointcrawlNodeWrite) (spatial.PointcrawlNodeView, error)",
+        "ReadMapReference(ctx context.Context, mapID string) (auth.MapRef, error)"
       ],
       "owner": "SPA02",
       "provider": "SPA04"
@@ -23404,7 +23599,9 @@
         "LockUpdateGameCalendar(ctx context.Context, spec spatial.UpdateGameCalendarSpec) (spatial.UpdateGameCalendarState, error)",
         "StoreUpdateGameCalendar(ctx context.Context, write spatial.UpdateGameCalendarWrite) (spatial.GameCalendarView, error)",
         "LockUpdateTimeAnchor(ctx context.Context, spec spatial.UpdateTimeAnchorSpec) (spatial.UpdateTimeAnchorState, error)",
-        "StoreUpdateTimeAnchor(ctx context.Context, write spatial.UpdateTimeAnchorWrite) (spatial.TimeAnchorView, error)"
+        "StoreUpdateTimeAnchor(ctx context.Context, write spatial.UpdateTimeAnchorWrite) (spatial.TimeAnchorView, error)",
+        "LockTimeProjection(ctx context.Context, from product.Date, to product.Date) ([]spatial.TimeAnchorView,error)",
+        "StoreTimeProjection(ctx context.Context, from product.Date, to product.Date, cells []spatial.GameDayCellView) (int32,error)"
       ],
       "owner": "SPA02",
       "provider": "SPA04"
@@ -23518,7 +23715,7 @@
     {
       "package": "spatial",
       "name": "NewProductCommands",
-      "signature": "NewProductCommands(runner uow.Runner[spatial.ProductCommandRepos], clock product.Clock, ids product.IDGenerator, calendar spatial.CalendarSpecification, connectionRunner db.ConnectionRunnerFactory, observer jobs.LifecycleObserver) (*spatial.ProductCommands,error)",
+      "signature": "NewProductCommands(runner uow.Runner[spatial.ProductCommandRepos], clock product.Clock, ids product.IDGenerator) (*spatial.ProductCommands,error)",
       "provider": "SPA06",
       "callers": ["W02"],
       "nil_rule": "return configuration error on any required nil dependency; never fake empty successful implementation"
@@ -23757,11 +23954,11 @@
     },
     {
       "package": "worker",
-      "name": "NewMaintenance",
-      "signature": "NewMaintenance(store jobs.Store, gate worker.ExecutionGate, timeWriter worker.TimeFillWriter, consistency worker.ConsistencyChecker, clock product.Clock) (*worker.Maintenance,error)",
+      "name": "NewMaintenanceHandler",
+      "signature": "NewMaintenanceHandler(store jobs.Store, gate worker.ExecutionGate, timeWriter worker.TimeFillWriter, clock product.Clock) (*worker.MaintenanceHandler,error)",
       "provider": "WK02",
       "callers": ["WK04"],
-      "nil_rule": "Required nil dependency rejects construction; empty webhook URL creates explicit unconfigured sender whose Send returns configuration failure; no silent no-op"
+      "nil_rule": "All four dependencies required; existing reconcile runs on the borrowed gate connection without another pool acquisition"
     },
     {
       "package": "worker",
@@ -23838,10 +24035,10 @@
     {
       "package": "auth",
       "name": "NewOverrideRecorder",
-      "signature": "NewOverrideRecorder(db jobs.SQLExecutor) (*auth.PostgresOverrideRecorder,error)",
+      "signature": "NewOverrideRecorder(replay idempotency.Repository) (*auth.ReceiptOverrideRecorder,error)",
       "provider": "P02",
       "callers": ["W01"],
-      "nil_rule": "nil executor rejects; W01 supplies current pgx.Tx; Record inserts safe fact without commit, no connection acquisition"
+      "nil_rule": "nil receipt repository rejects; W01 supplies the same transaction-bound replay repository used by the command, after any paired notification producer binding; Record stages safe facts against its actual new Claim; Complete performs the sole conditional receipt write in the same business transaction, no connection acquisition or commit"
     },
     {
       "package": "jobs",
@@ -23902,10 +24099,10 @@
     {
       "package": "jobs",
       "name": "NewEffectGuard",
-      "signature": "NewEffectGuard(db jobs.SQLExecutor, observer jobs.LifecycleObserver) (*jobs.PostgresEffectGuard,error)",
+      "signature": "NewEffectGuard(tx pgx.Tx) (*jobs.PostgresEffectGuard,error)",
       "provider": "J01",
       "callers": ["SPA06", "WK02"],
-      "nil_rule": "both dependencies required; constructed inside same borrowed-connection effect transaction, never acquires connection/commits"
+      "nil_rule": "Non-nil owning transaction required; never a pool or standalone connection; no acquire, commit, observer or finish"
     },
     {
       "package": "notification",
@@ -23922,6 +24119,22 @@
       "provider": "P03",
       "callers": ["W01"],
       "nil_rule": "nil transaction rejects; require the current business pgx.Tx; return a private concrete store through idempotency.Repository; never acquire a pool connection, open a transaction or commit/rollback. CompletedReceiptReader remains the separate unchanged pool-backed read-only surface."
+    },
+    {
+      "package": "notification",
+      "name": "NewCommandProducer",
+      "signature": "NewCommandProducer(tx pgx.Tx, replay idempotency.Repository, recipients notification.RecipientComposition) (notification.ProducerRepos, idempotency.Repository, error)",
+      "provider": "NOT08",
+      "callers": ["W01"],
+      "nil_rule": "nil transaction or replay rejects; bind one transaction-local inbox proof buffer to both returned repositories; no shared mutable producer state, connection acquisition or commit"
+    },
+    {
+      "package": "spatial",
+      "name": "NewTimeFillWriter",
+      "signature": "NewTimeFillWriter(clock product.Clock, connectionRunner db.ConnectionRunnerFactory) (*spatial.TimeFillWriter,error)",
+      "provider": "SPA06",
+      "callers": ["WK04"],
+      "nil_rule": "Both dependencies required; FillFuture uses only the borrowed execution connection and shared Time projection"
     }
   ],
   "command_repos": {
@@ -23957,7 +24170,8 @@
       "Notice": "notification.ProducerRepos",
       "Audit": "auth.OverrideRecorder",
       "Locations": "document.LocationAdmissionReader",
-      "Containment": "spatial.ContainmentWriter"
+      "Containment": "spatial.ContainmentWriter",
+      "Documents": "spatial.DocumentReferenceReader"
     },
     "character": {
       "Character": "CharacterWriteRepository",
@@ -23989,7 +24203,9 @@
       "Places": "spatial.PlaceReader",
       "Jobs": "jobs.Writer",
       "Tags": "quest.TagNormalizer",
-      "Withdrawals": "character.QuestWithdrawalWriter"
+      "Withdrawals": "character.QuestWithdrawalWriter",
+      "Rewards": "character.QuestRewardWriter",
+      "SummaryDocuments": "quest.SummaryDocumentReader"
     },
     "site": {
       "Operations": "OperationsWriteRepository",
@@ -26496,15 +26712,17 @@
       "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
     },
     {
-      "id": "CROSS-spatial.PlaceReader-ResolveQuestHexIDs",
+      "id": "CROSS-spatial.PlaceReader-ResolveQuestPointcrawlNodes",
       "interface": "spatial.PlaceReader",
-      "signature": "ResolveQuestHexIDs(ctx context.Context, actor auth.Authority, hexes []spatial.QuestHexCandidate) ([]spatial.HexAdmission,error)",
+      "signature": "ResolveQuestPointcrawlNodes(ctx context.Context, actor auth.Authority, nodes []spatial.QuestPointcrawlCandidate) ([]spatial.PointcrawlAdmission,error)",
       "provider": "SPA04",
       "callers": ["QUE06"],
       "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
     },
     {
       "id": "CROSS-notification.EventWriter-InsertEvent",
+      "retired": true,
+      "superseded_by": "CROSS-notification.EventWriter-InsertInbox",
       "interface": "notification.EventWriter",
       "signature": "InsertEvent(ctx context.Context, event notification.Event) (string,error)",
       "provider": "NOT04",
@@ -26513,6 +26731,8 @@
     },
     {
       "id": "CROSS-notification.EventWriter-InsertRecipients",
+      "retired": true,
+      "superseded_by": "CROSS-notification.EventWriter-InsertInbox",
       "interface": "notification.EventWriter",
       "signature": "InsertRecipients(ctx context.Context, eventID string, memberIDs []string, at time.Time) error",
       "provider": "NOT04",
@@ -26889,10 +27109,10 @@
     {
       "id": "CROSS-auth.OverrideRecorder-Record",
       "interface": "auth.OverrideRecorder",
-      "signature": "Record(ctx context.Context, fact auth.OverrideFact) error",
+      "signature": "Record(ctx context.Context, claim idempotency.Claim, fact auth.OverrideFact) error",
       "provider": "P02",
-      "callers": ["MEM06", "DOC06", "CHA06", "QUE06", "SPA06", "SIT06"],
-      "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
+      "callers": ["MEM06", "DOC06", "CHA06", "QUE06", "SPA06", "SIT06", "NOT06"],
+      "transaction": "same command transaction; stage only safe ordered facts on the exact new claim; the existing receipt Complete persists result and audit metadata atomically; current authority is checked before replay"
     },
     {
       "id": "CROSS-auth.AssignmentReader-HasArchon",
@@ -27601,15 +27821,15 @@
       "signature": "Admit(ctx context.Context, receipt jobs.Receipt) (jobs.EffectPermit,error)",
       "provider": "J01",
       "callers": ["SPA06", "WK02"],
-      "transaction": "owning effect tx; lock actual job row, sample real post-lock DB JobClock, use canonical D44 validation; returns opaque permit with actual public UUID/claim metadata; no Time-owned receipt interpreter"
+      "transaction": "Owning pgx.Tx only; lock actual receipt row, sample real post-lock DB JobClock, use canonical D44 validation; return opaque guard-bound receipt/kind permit; no Time-owned receipt interpreter."
     },
     {
       "id": "JOBS-RECHECK-EFFECT",
       "interface": "jobs.EffectGuard",
-      "signature": "RecordAdmitted(ctx context.Context, permit jobs.EffectPermit, changedCount int32) error",
+      "signature": "Recheck(ctx context.Context, permit jobs.EffectPermit) error",
       "provider": "J01",
       "callers": ["SPA06", "WK02"],
-      "transaction": "same tx before commit; retain receipt row lock, recheck real DB JobClock/token/state/deadlines with canonical D44, emit actual EFFECT_ADMITTED count via same-tx Observer; error rolls back owned effects; no finish state change"
+      "transaction": "Same owning pgx.Tx immediately before callback return; guard-bound permit, retained job row lock, real DB JobClock and canonical D44 token/state/deadline check; error rolls back owned effects. N8 removes observation persistence; no finish state change."
     },
     {
       "id": "DOCUMENT-MENTION-IDENTITIES",
@@ -27657,7 +27877,7 @@
       "signature": "ReadRewardDecisionCoverage(ctx context.Context, questIDs []string) ([]quest.RewardDecisionCoverage,error)",
       "provider": "QUE04",
       "callers": ["QUE05"],
-      "transaction": "one set query, input-order correspondence incl duplicates; full-closure decision existence only, never infer from entitlement absence/legacy reason/timestamp"
+      "transaction": "one ordered set query with input-order correspondence including duplicate IDs; coverage requires reliable quest_reward ledger provenance or an explicit COMPLETE close receipt, never an absent entitlement, inferred attribution or retired decision table"
     },
     {
       "id": "DOCUMENT-LOCATION-ADMISSION",
@@ -27794,6 +28014,105 @@
       "provider": "MEM04",
       "callers": ["P02"],
       "transaction": "one owning read task snapshot or current business transaction; no cross-task mutable providers or extra connection acquisition"
+    },
+    {
+      "id": "READ-document-DocumentRevisionParent",
+      "signature": "ReadDocumentRevisionParent(ctx context.Context, actor auth.Authority, documentID string) (*document.DocumentView, error)",
+      "interface": "document.DocumentReadRepository",
+      "provider": "DOC04",
+      "callers": ["DOC05"],
+      "transaction": "pool task connection; readonly; current audience and history admission; ordinary identity reads stay tombstone-filtered",
+      "spec_owner": "DOC01"
+    },
+    {
+      "id": "CROSS-character.QuestRewardWriter-LockQuestRoster",
+      "interface": "character.QuestRewardWriter",
+      "signature": "LockQuestRoster(context.Context, string) ([]string, error)",
+      "provider": "CHA04",
+      "callers": ["QUE06"],
+      "transaction": "owning Quest close transaction; lock existing roster Characters in ID order before the Quest row, then reject roster drift after the Quest lock"
+    },
+    {
+      "id": "CROSS-character.QuestRewardWriter-AwardQuestPCXP",
+      "interface": "character.QuestRewardWriter",
+      "signature": "AwardQuestPCXP(context.Context, string, string, []character.QuestPCXPAward, time.Time) error",
+      "provider": "CHA04",
+      "callers": ["QUE06"],
+      "transaction": "same owning Quest close transaction and locked roster; persist positive award ledger provenance and Character cache atomically with attendance, capacity, closure receipt and delivery intent"
+    },
+    {
+      "id": "CROSS-quest.SummaryDocumentReader-ReadDocumentById",
+      "interface": "quest.SummaryDocumentReader",
+      "signature": "ReadDocumentById(ctx context.Context, actor auth.Authority, spec document.DocumentByIdSpec) (*document.DocumentView, error)",
+      "provider": "DOC04",
+      "callers": ["QUE06"],
+      "transaction": "owning summary command transaction; Document-owned current audience projection and retained author/kind facts before summary relationship admission"
+    },
+    {
+      "id": "READ-document-CommandDocument",
+      "interface": "document.DocumentWriteRepository",
+      "signature": "ReadCommandDocument(ctx context.Context, actor auth.Authority, documentID string) (document.DocumentView, error)",
+      "provider": "DOC04",
+      "callers": ["DOC06"],
+      "transaction": "same owning command transaction after fresh replay admission; read and project current Document body/capabilities under current authority without repeating immutable recorded effects"
+    },
+    {
+      "id": "CROSS-notification.EventWriter-InsertInbox",
+      "interface": "notification.EventWriter",
+      "signature": "InsertInbox(context.Context, notification.Event, []string) error",
+      "provider": "NOT04",
+      "callers": ["NOT08"],
+      "transaction": "one originating business UOW; insert recipient inbox rows and collect exact immutable proof for the same completed command receipt; no event identity, event ledger or channel delivery table"
+    },
+    {
+      "id": "CROSS-spatial.DocumentReferenceReader-ReadCommandDocument",
+      "interface": "spatial.DocumentReferenceReader",
+      "signature": "ReadCommandDocument(ctx context.Context, actor auth.Authority, documentID string) (document.DocumentView, error)",
+      "provider": "DOC04",
+      "callers": ["SPA06"],
+      "transaction": "owning spatial command UOW; canonical current Document projection and Document lock before Map locks; caller rejects tombstones for new references"
+    },
+    {
+      "id": "READ-spatial-MapReference",
+      "interface": "spatial.MapWriteRepository",
+      "signature": "ReadMapReference(ctx context.Context, mapID string) (auth.MapRef, error)",
+      "provider": "SPA04",
+      "callers": ["SPA06"],
+      "transaction": "nonlocking owning command read before Document admission; locked Map facts are rechecked before effects and replay disclosure"
+    },
+    {
+      "id": "LOCK-spatial-TimeProjection",
+      "signature": "LockTimeProjection(ctx context.Context, from product.Date, to product.Date) ([]spatial.TimeAnchorView,error)",
+      "interface": "spatial.TimeWriteRepository",
+      "provider": "SPA04",
+      "callers": ["SPA06"],
+      "transaction": "same command pgx.Tx; repository never commits; same aggregate lock and authored Time command receipt",
+      "spec_owner": "SPA01"
+    },
+    {
+      "id": "STORE-spatial-TimeProjection",
+      "signature": "StoreTimeProjection(ctx context.Context, from product.Date, to product.Date, cells []spatial.GameDayCellView) (int32,error)",
+      "interface": "spatial.TimeWriteRepository",
+      "provider": "SPA04",
+      "callers": ["SPA06"],
+      "transaction": "same command pgx.Tx; repository never commits; same aggregate lock and authored Time command receipt",
+      "spec_owner": "SPA01"
+    },
+    {
+      "id": "JOBS-PERMIT-KIND",
+      "interface": "jobs.EffectPermit",
+      "signature": "Kind() string",
+      "provider": "J01",
+      "callers": ["SPA06"],
+      "transaction": "Opaque admitted metadata; Time accepts only gametime_fill, never a valid receipt from another work kind."
+    },
+    {
+      "id": "CROSS-idempotency.Repository-RecordOverride",
+      "interface": "idempotency.Repository",
+      "signature": "RecordOverride(ctx context.Context, claim idempotency.Claim, fact idempotency.CommandOverrideFact) error",
+      "provider": "P03",
+      "callers": ["P02"],
+      "transaction": "transaction-local exact claim map; no SQL during staging; Complete writes the ordered _authorizationOverrides metadata beside the command result in its existing single conditional UPDATE; no separate audit table or transaction"
     }
   ],
   "loaders": [
@@ -28201,7 +28520,7 @@
       "path": "apps/api/internal/notification/product_repository.go",
       "companion": "apps/api/internal/notification/product_repository_phase3_test.go",
       "kind": "interface",
-      "source_pointer": "/provider_caller_seams/274"
+      "source_pointer": "/provider_caller_seams/431"
     },
     "notification.Event": {
       "owner": "NOT01",

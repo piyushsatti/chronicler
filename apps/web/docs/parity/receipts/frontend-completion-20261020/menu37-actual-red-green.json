@@ -1,0 +1,46 @@
+{
+  "at": "2026-10-20T22:05:58.603321Z",
+  "actualRed": {
+    "nativeExit": 1,
+    "build": 36,
+    "cause": "fixed-overlayassertionrejectedactualstaticpanel",
+    "evidence": "run-2-red36"
+  },
+  "actualGreen": {
+    "nativeSession": 20669,
+    "nativeExit": 0,
+    "build": 37,
+    "viewport": {
+      "width": 768,
+      "height": 1080
+    },
+    "evidence": "run-3-green37",
+    "completeQueries": 1,
+    "ownedContextAndBrowserClosed": true
+  },
+  "actualRootImagesViewed": [
+    "run-3-green37/menu-open.png",
+    "run-3-green37/menu-focused.png"
+  ],
+  "findings": [
+    "Actualfixedthemeddrop-downshowssixseparate44pxexposedrowswithnativefocuspaintandhiddenaccessibleheading.",
+    "Measuredheaderheightunchangedwhileopen; fullpanelinsideviewport/clip; keyboardforward/reversewrapandEscapeexactconnectedopenerrestorationpassed."
+  ],
+  "bindings": {
+    "check-menu.mjs": "dc504e191d183e1c81fff3acacf86a4231eef8081969e4a407466ae281e7bc67",
+    "run-2-red36/receipt.json": "94ca7318ae74cbe733553d084fa154a6cfde0604dbf46df24e0aaecbbc6096e9",
+    "run-2-red36.log": "e46cb7e4a275c19baf0001fbe3b8422d8595e74e5a1f22eb56c708f3b61e0922",
+    "run-3-green37/receipt.json": "030fb433d5e0d7b0a2f1db5ea0648a0305ab28e71386b4b98917983def90fe9b",
+    "run-3-green37.log": "2c63e564f83ddb68214e7d86dbff1478dec8e4bcabe1dd4362d0f263cb650fc5",
+    "run-3-green37/menu-open.png": "98cd7598bbc52af480916d654794623a6ef49b5aa1bfda79723af003803f9e19",
+    "run-3-green37/menu-focused.png": "ef90c18e9dc6f4e04842553df0ccb930d4aa39fd6dcfc3dfcea977e21d4f7a79",
+    "panel-presentation-fix/independent-review.md": "a9d5605a8ac6fc5c0a85e3f78d104bad71119ae90958b12c429fe1db99cc22fe",
+    "panel-guard-preparation/heading-selector-fix/independent-review.md": "bde4ec282deaebf1382b68e0d11a02c005b4ed70f413009437ebdb4731553b96"
+  },
+  "frontend37BuildReceiptSha256": "ba00181f67dba1f495bba60b2dcc46d72c28fb07bfd8014832994d9a4703eb3b",
+  "ownerVisualApproval": false,
+  "limits": [
+    "Guest768x1080observed; no all-role/viewportCartesianorproviderclaim.",
+    "Original815helperselectorfindingandpriorityrepair retained; neither purechecks nor initialkeyboard-onlypassreplacedactualRED/GREEN."
+  ]
+}

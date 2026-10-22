@@ -1,5 +1,15 @@
-query AdminMembers($limit: Int!, $search: String) {
-  members(limit: $limit, filters: { search: $search }) {
+query AdminMembers(
+  $limit: Int! = 50
+  $offset: Int! = 0
+  $search: String
+  $role: String
+  $status: String
+) {
+  members(
+    limit: $limit
+    offset: $offset
+    filters: { search: $search, role: $role, status: $status }
+  ) {
     total
     items {
       id

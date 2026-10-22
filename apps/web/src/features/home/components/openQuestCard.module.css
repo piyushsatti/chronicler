@@ -1,0 +1,12 @@
+/* Moved from inline styles (2026-10-21) */
+.cancelled {
+  opacity: 0.55;
+}
+
+.footButton {
+  flex: 1;
+}
+
+.footButtonCancelled {
+  opacity: 0.5;
+}

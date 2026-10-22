@@ -1,6 +1,7 @@
-query MapAtlas($atlasCode: String!) {
+query MapAtlas($atlasCode: String!, $limit: Int! = 200, $offset: Int! = 0) {
   map(atlasCode: $atlasCode) {
     id
+    canEdit
     name
     atlasCode
     family
@@ -8,5 +9,32 @@ query MapAtlas($atlasCode: String!) {
     assetPath
     regionId
     createdAt
+    pointcrawlNodes(limit: $limit, offset: $offset) {
+      id
+      mapId
+      x
+      y
+      name
+      submapId
+      createdAt
+      linkedEntries(limit: 50, offset: 0) {
+        mapId
+        nodeId
+        documentId
+        relation
+        createdAt
+        createdBy
+      }
+    }
+    pointcrawlEdges(limit: $limit, offset: $offset) {
+      id
+      mapId
+      nodeA
+      nodeB
+      directed
+      kind
+      label
+      documentId
+    }
   }
 }

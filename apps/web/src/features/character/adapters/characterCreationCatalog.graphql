@@ -1,0 +1,16 @@
+query CharacterCreationCatalog(
+  $filters: CreationCatalogFiltersInput
+  $limit: Int!
+  $offset: Int!
+) {
+  creationCatalog(filters: $filters, limit: $limit, offset: $offset) {
+    items {
+      id
+      kind
+      name
+      available
+      retired
+    }
+    total
+  }
+}

@@ -1,8 +1,8 @@
 -- name: CharacterProductByID :one
 SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
        c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id,
-       region.public_id AS region_id, c.description,
-       c.ddb_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
+       region.public_id AS region_id, c.description, c.background_text,
+       c.ddb_url, c.image_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
        ddb.payload AS ddb_payload, ddb.synced_at AS ddb_synced_at,
        c.verification_submitted_at,
        CASE WHEN c.verification_submitted_at IS NOT NULL
@@ -26,8 +26,8 @@ WHERE c.public_id = sqlc.arg(character_id)::uuid AND c.deleted_at IS NULL;
 -- name: CharacterProductByShortCode :one
 SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
        c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id,
-       region.public_id AS region_id, c.description,
-       c.ddb_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
+       region.public_id AS region_id, c.description, c.background_text,
+       c.ddb_url, c.image_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
        ddb.payload AS ddb_payload, ddb.synced_at AS ddb_synced_at,
        c.verification_submitted_at,
        CASE WHEN c.verification_submitted_at IS NOT NULL
@@ -51,8 +51,8 @@ WHERE c.short_code = sqlc.arg(short_code)::text AND c.deleted_at IS NULL;
 -- name: CharacterProductList :many
 SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
        c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id,
-       region.public_id AS region_id, c.description,
-       c.ddb_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
+       region.public_id AS region_id, c.description, c.background_text,
+       c.ddb_url, c.image_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
        ddb.payload AS ddb_payload, ddb.synced_at AS ddb_synced_at,
        c.verification_submitted_at,
        CASE WHEN c.verification_submitted_at IS NOT NULL
@@ -93,7 +93,7 @@ WHERE c.deleted_at IS NULL
 -- name: CharacterProductMyCharacters :many
 SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
        c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id, region.public_id AS region_id,
-       c.description, c.ddb_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
+       c.description, c.background_text, c.ddb_url, c.image_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
        ddb.payload AS ddb_payload, ddb.synced_at AS ddb_synced_at,
        c.verification_submitted_at,
        CASE WHEN c.verification_submitted_at IS NOT NULL
@@ -128,7 +128,7 @@ WITH requested AS (
 )
 SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
        c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id, region.public_id AS region_id,
-       c.description, c.ddb_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
+       c.description, c.background_text, c.ddb_url, c.image_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
        ddb.payload AS ddb_payload, ddb.synced_at AS ddb_synced_at,
        c.verification_submitted_at,
        CASE WHEN c.verification_submitted_at IS NOT NULL
@@ -223,6 +223,48 @@ FROM inserted
 JOIN characters character ON character.id = inserted.character_id
 LEFT JOIN quests quest ON quest.id = inserted.quest_id
 LEFT JOIN members actor ON actor.id = inserted.recorded_by;
+-- name: CharacterProductLockQuestRoster :many
+SELECT c.public_id
+FROM characters c
+JOIN quest_participants participant ON participant.character_id = c.id
+JOIN quests q ON q.id = participant.quest_id
+WHERE q.public_id = @quest_id::uuid
+ORDER BY c.public_id
+FOR UPDATE OF c;
+
+-- name: CharacterProductImmutableOwner :one
+SELECT owner.public_id FROM characters c JOIN members owner ON owner.id = c.owner_id
+WHERE c.public_id = @character_id::uuid AND c.deleted_at IS NULL;
+
+-- name: CharacterProductLockAdmissions :many
+SELECT c.public_id, owner.public_id AS owner_id, c.status, owner.status AS owner_status, c.updated_at
+FROM characters c JOIN members owner ON owner.id = c.owner_id
+WHERE c.public_id = ANY(@character_ids::uuid[]) AND c.deleted_at IS NULL
+ORDER BY c.public_id
+FOR UPDATE OF c;
+
+-- name: CharacterProductAwardQuestPCXP :one
+WITH updated AS (
+    UPDATE characters c
+    SET player_xp = c.player_xp + @amount::integer, updated_at = @at::timestamptz
+    WHERE c.public_id = @character_id::uuid
+      AND c.player_xp::bigint + @amount::integer <= 2147483647::bigint
+      AND (SELECT COALESCE(sum(ledger.delta), 0) + @amount::integer
+           FROM character_progression_ledger ledger WHERE ledger.character_id = c.id)
+          BETWEEN -2147483648::bigint AND 2147483647::bigint
+      AND EXISTS (
+          SELECT 1 FROM quest_participants participant JOIN quests q ON q.id = participant.quest_id
+          WHERE participant.character_id = c.id AND q.public_id = @quest_id::uuid
+            AND q.status = 'closed' AND participant.status = 'played'
+      )
+    RETURNING c.id
+)
+INSERT INTO character_progression_ledger(character_id, delta, reason, kind, note, quest_id, recorded_by, created_at)
+SELECT updated.id, @amount::integer, 'quest_reward', 'pcxp', sqlc.narg(note)::text, q.id, actor.id, @at::timestamptz
+FROM updated CROSS JOIN quests q CROSS JOIN members actor
+WHERE q.public_id = @quest_id::uuid AND actor.public_id = @actor_id::uuid
+RETURNING public_id;
+
 -- name: CharacterProductListVerificationHistory :many
 SELECT verification.public_id AS id, verification.subject_type,
        character.public_id AS subject_id, verification.verdict AS decision,
@@ -493,7 +535,7 @@ UPDATE characters
 SET status = 'retired', updated_at = sqlc.arg(at)::timestamptz
 WHERE public_id = sqlc.arg(character_id)::uuid
   AND deleted_at IS NULL
-  AND status <> 'dead'
+  AND status NOT IN ('dead', 'retired')
   AND updated_at = sqlc.arg(expected_updated_at)::timestamptz
 RETURNING public_id AS id, status, updated_at;
 -- name: CharacterProductSubmitForVerification :one
@@ -575,11 +617,12 @@ RETURNING backstory.public_id AS id, backstory.name, backstory.lore, backstory.c
 -- name: CharacterProductInsertCharacter :one
 INSERT INTO characters (
     public_id, short_code, name, owner_id, status, backstory_id, guild_document_id,
-    region_id, description, background_text, ddb_url, created_at, updated_at
+    region_id, description, background_text, ddb_url, image_url, created_at, updated_at
 )
 SELECT sqlc.arg(character_id)::uuid, sqlc.arg(short_code)::text, sqlc.arg(name)::text,
        owner.id, 'pending_approval', backstory.id, guild.id, region.id,
        sqlc.narg(description)::text, sqlc.narg(background_text)::text, sqlc.narg(ddb_url)::text,
+       sqlc.narg(image_url)::text,
        sqlc.arg(at)::timestamptz, sqlc.arg(at)::timestamptz
 FROM members owner
 LEFT JOIN backstories backstory ON backstory.public_id = sqlc.narg(backstory_id)::uuid
@@ -592,8 +635,10 @@ WHERE owner.public_id = sqlc.arg(owner_id)::uuid
   AND (sqlc.narg(region_id)::uuid IS NULL OR region.id IS NOT NULL)
 RETURNING public_id AS id;
 -- name: CharacterProductReplaceCatalogPicks :exec
-DELETE FROM character_catalog_picks
-WHERE character_id = (SELECT id FROM characters WHERE public_id = sqlc.arg(character_id)::uuid);
+WITH removed AS (
+    DELETE FROM character_catalog_picks
+    WHERE character_id = (SELECT id FROM characters WHERE public_id = sqlc.arg(character_id)::uuid)
+)
 INSERT INTO character_catalog_picks (character_id, catalog_id)
 SELECT character.id, catalog.id
 FROM characters character
@@ -604,6 +649,7 @@ WHERE character.public_id = sqlc.arg(character_id)::uuid;
 UPDATE characters
 SET description = CASE WHEN sqlc.arg(description_set)::bool THEN sqlc.narg(description)::text ELSE description END,
     background_text = CASE WHEN sqlc.arg(background_set)::bool THEN sqlc.narg(background_text)::text ELSE background_text END,
+    image_url = CASE WHEN sqlc.arg(image_url_set)::bool THEN sqlc.narg(image_url)::text ELSE image_url END,
     updated_at = sqlc.arg(at)::timestamptz
 WHERE public_id = sqlc.arg(character_id)::uuid
   AND deleted_at IS NULL
@@ -683,3 +729,29 @@ JOIN characters character ON character.id = pick.character_id
 JOIN creation_catalog catalog ON catalog.id = pick.catalog_id
 WHERE character.public_id = sqlc.arg(character_id)::uuid
 ORDER BY catalog.public_id ASC;
+
+-- name: CharacterProductValidateCreationReferences :one
+SELECT
+    (sqlc.narg(backstory_id)::uuid IS NULL OR EXISTS (
+        SELECT 1 FROM backstories WHERE public_id = sqlc.narg(backstory_id)::uuid AND NOT retired
+    ))
+    AND (sqlc.narg(region_id)::uuid IS NULL OR EXISTS (
+        SELECT 1 FROM regions WHERE public_id = sqlc.narg(region_id)::uuid
+    ))
+    AND NOT EXISTS (
+        SELECT 1 FROM unnest(sqlc.arg(catalog_ids)::uuid[]) AS requested(public_id)
+        WHERE NOT EXISTS (
+            SELECT 1 FROM creation_catalog catalog
+            LEFT JOIN regions region ON region.id = catalog.introduced_by_region_id
+            WHERE catalog.public_id = requested.public_id AND catalog.available AND NOT catalog.retired
+              AND (catalog.introduced_by_region_id IS NULL OR region.public_id = sqlc.narg(region_id)::uuid)
+        )
+    ) AS valid;
+
+-- name: CharacterProductApplyVerification :one
+UPDATE characters
+SET status = CASE WHEN @approved::boolean THEN 'active' ELSE 'pending_approval' END,
+    updated_at = @at::timestamptz
+WHERE public_id = @character_id::uuid AND deleted_at IS NULL
+  AND status = 'pending_approval' AND verification_submitted_at = @submitted_at::timestamptz
+RETURNING public_id;

@@ -85,6 +85,7 @@ type Character struct {
 	DeletedAt               pgtype.Timestamptz `json:"deleted_at"`
 	DeletedBy               pgtype.Int8        `json:"deleted_by"`
 	Description             pgtype.Text        `json:"description"`
+	ImageUrl                pgtype.Text        `json:"image_url"`
 }
 
 type CharacterCatalogPick struct {

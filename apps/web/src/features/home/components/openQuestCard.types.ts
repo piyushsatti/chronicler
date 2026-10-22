@@ -24,6 +24,7 @@ export interface OpenQuestCardProps {
   level?: string | null;
   when?: string | null;
   mine?: boolean;
+  waitlisted?: boolean;
   animIndex?: number;
   onClick?: () => void;
   isMutating?: boolean;

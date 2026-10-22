@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
@@ -53,18 +54,27 @@ func (p *ProductPostgres) ReadArchonAssignments(ctx context.Context, _ auth.Auth
 	return ArchonPage{Items: items, Total: total}, nil
 }
 
-func (p *ProductPostgres) ReadRegionCounts(ctx context.Context, _ auth.Authority, spec RegionCountsSpec) (*RegionCountsView, error) {
+func (p *ProductPostgres) ReadRegionCounts(ctx context.Context, actor auth.Authority, spec RegionCountsSpec) (*RegionCountsView, error) {
 	regionID, err := spatialPublicID(spec.RegionId)
 	if err != nil {
 		return nil, err
 	}
-	row, err := p.queries().GetProductRegionCounts(ctx, regionID)
+	viewer, err := p.documentSQLViewer(ctx, actor)
+	if err != nil {
+		return nil, err
+	}
+	row, err := p.queries().GetProductRegionCounts(ctx, dbgen.GetProductRegionCountsParams{
+		RegionID: regionID, ViewerID: viewer.ID, ViewerRoles: viewer.Roles,
+		ViewerHandle: viewer.Handle, ViewerAdmin: viewer.Admin,
+		ViewerLiveDm: viewer.LiveDM, ReaderIds: viewer.Readers,
+	})
 	if isNotFound(err) {
 		return nil, apierr.New(apierr.NotFound, "region not found")
 	}
 	if err != nil {
 		return nil, err
 	}
+	document.AuditSQLOverride(ctx, document.ScopeFromAuthority(actor), row.AdminOverride, "region_counts", "count")
 	return &RegionCountsView{
 		RegionId:     db.UUIDString(row.RegionID),
 		FeatureCount: row.PointcrawlNodeCount,
@@ -152,7 +162,11 @@ func (p *ProductPostgres) ReadGameCalendar(ctx context.Context, _ auth.Authority
 	if err != nil {
 		return TimeCalendarSnapshot{}, err
 	}
-	today, _ := pgDateFromProduct(product.Date(time.Now().UTC().Format("2006-01-02")))
+	asOf := spec.AsOf
+	if asOf.IsZero() {
+		asOf = time.Now().UTC()
+	}
+	today, _ := pgDateFromProduct(product.Date(asOf.UTC().Format("2006-01-02")))
 	cal, err := p.queries().ReadProductCalendar(ctx, today)
 	if err != nil {
 		return TimeCalendarSnapshot{}, err
@@ -360,6 +374,7 @@ func (p *ProductPostgres) ReadBatchMapNodeEdges(ctx context.Context, actor auth.
 	}
 	lists := make([][]PointcrawlEdgeView, len(keys))
 	parentExists := make([]bool, len(keys))
+	overridden := false
 	for _, row := range rows {
 		idx := int(row.KeyOrdinal) - 1
 		if idx < 0 || idx >= len(keys) {
@@ -369,7 +384,8 @@ func (p *ProductPostgres) ReadBatchMapNodeEdges(ctx context.Context, actor auth.
 		if !row.ID.Valid {
 			continue
 		}
-		lists[idx] = append(lists[idx], mapPointcrawlEdgeRow(row.ID, row.MapID, row.NodeA, row.NodeB, row.Directed, row.Kind, row.Label, pgUUIDFromInterface(row.DocumentID)))
+		overridden = overridden || row.AdminOverride
+		lists[idx] = append(lists[idx], mapPointcrawlEdgeRow(row.ID, row.MapID, row.NodeA, row.NodeB, row.Directed, row.Kind, row.Label, row.DocumentID))
 	}
 	for i := range out {
 		if !parentExists[i] {
@@ -378,6 +394,7 @@ func (p *ProductPostgres) ReadBatchMapNodeEdges(ctx context.Context, actor auth.
 		}
 		out[i].Value = &NodeEdgeList{Items: lists[i]}
 	}
+	document.AuditSQLOverride(ctx, document.ScopeFromAuthority(actor), overridden, "pointcrawl_edges", "list")
 	return out, nil
 }
 
@@ -410,6 +427,7 @@ func (p *ProductPostgres) ReadBatchNodeLinks(ctx context.Context, actor auth.Aut
 	}
 	lists := make([][]PointcrawlEntryLinkView, len(keys))
 	parentExists := make([]bool, len(keys))
+	overridden := false
 	for _, row := range rows {
 		idx := int(row.KeyOrdinal) - 1
 		if idx < 0 || idx >= len(keys) {
@@ -419,6 +437,7 @@ func (p *ProductPostgres) ReadBatchNodeLinks(ctx context.Context, actor auth.Aut
 		if !row.DocumentID.Valid {
 			continue
 		}
+		overridden = overridden || row.AdminOverride
 		lists[idx] = append(lists[idx], PointcrawlEntryLinkView{
 			MapId:      db.UUIDString(row.MapID),
 			NodeId:     db.UUIDString(row.NodeID),
@@ -435,6 +454,7 @@ func (p *ProductPostgres) ReadBatchNodeLinks(ctx context.Context, actor auth.Aut
 		}
 		out[i].Value = &NodeLinkList{Items: lists[i]}
 	}
+	document.AuditSQLOverride(ctx, document.ScopeFromAuthority(actor), overridden, "pointcrawl_links", "list")
 	return out, nil
 }
 
@@ -467,6 +487,7 @@ func (p *ProductPostgres) readBatchPointcrawlNodes(ctx context.Context, actor au
 	}
 	lists := make([][]PointcrawlNodeView, len(keys))
 	parentExists := make([]bool, len(keys))
+	overridden := false
 	for _, row := range rows {
 		idx := int(row.KeyOrdinal) - 1
 		if idx < 0 || idx >= len(keys) {
@@ -476,6 +497,7 @@ func (p *ProductPostgres) readBatchPointcrawlNodes(ctx context.Context, actor au
 		if !row.ID.Valid {
 			continue
 		}
+		overridden = overridden || row.AdminOverride
 		lists[idx] = append(lists[idx], mapPointcrawlNodeRow(row.ID, row.MapID, row.Name, row.X, row.Y, row.SubmapID, row.CreatedAt))
 	}
 	for i := range out {
@@ -485,6 +507,7 @@ func (p *ProductPostgres) readBatchPointcrawlNodes(ctx context.Context, actor au
 		}
 		out[i].Value = &NodeList{Items: lists[i]}
 	}
+	document.AuditSQLOverride(ctx, document.ScopeFromAuthority(actor), overridden, "pointcrawl_nodes", "list")
 	return out, nil
 }
 

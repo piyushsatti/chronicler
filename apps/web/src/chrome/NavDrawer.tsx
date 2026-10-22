@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
 import type { SiteDestination } from './destinations.js';
 
@@ -87,49 +88,52 @@ export function NavDrawer({ destinations }: NavDrawerProps): React.JSX.Element {
         aria-expanded={open}
         aria-controls="nav-drawer"
         onClick={() => setOpen((prev) => !prev)}
-        className="nav-drawer-toggle"
+        className="btn ghost nav-drawer-toggle"
       >
         <HamburgerIcon />
       </button>
 
-      {open ? (
-        <>
-          <div
-            data-testid="nav-drawer-backdrop"
-            onClick={close}
-            className="nav-drawer-backdrop"
-            aria-hidden="true"
-          />
-          <div
-            ref={panelRef}
-            id="nav-drawer"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby={headingId}
-            className="nav-drawer-panel"
-          >
-            <h2 id={headingId} className="sr-only">
-              Main navigation
-            </h2>
-            <nav aria-label="Mobile navigation" className="nav-drawer-nav">
-              {destinations.map((destination) => {
-                const active = destination.matches(location.pathname);
-                return (
-                  <Link
-                    key={destination.id}
-                    to={destination.href}
-                    onClick={close}
-                    aria-current={active ? 'page' : undefined}
-                    className={`nav-drawer-link${active ? ' active' : ''}`}
-                  >
-                    {destination.label}
-                  </Link>
-                );
-              })}
-            </nav>
-          </div>
-        </>
-      ) : null}
+      {open
+        ? createPortal(
+            <>
+              <div
+                data-testid="nav-drawer-backdrop"
+                onClick={close}
+                className="nav-drawer-backdrop"
+                aria-hidden="true"
+              />
+              <div
+                ref={panelRef}
+                id="nav-drawer"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby={headingId}
+                className="nav-drawer-panel"
+              >
+                <h2 id={headingId} className="nav-drawer-title">
+                  Main navigation
+                </h2>
+                <nav aria-label="Mobile navigation" className="nav-drawer-nav">
+                  {destinations.map((destination) => {
+                    const active = destination.matches(location.pathname);
+                    return (
+                      <Link
+                        key={destination.id}
+                        to={destination.href}
+                        onClick={close}
+                        aria-current={active ? 'page' : undefined}
+                        className={`nav-drawer-link${active ? ' active' : ''}`}
+                      >
+                        {destination.label}
+                      </Link>
+                    );
+                  })}
+                </nav>
+              </div>
+            </>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }

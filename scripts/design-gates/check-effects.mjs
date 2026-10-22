@@ -16,7 +16,7 @@ const effectsCssPath = join(appRoot, 'styles', 'effects.css');
 const motionCssPath = join(appRoot, 'styles', 'motion.css');
 const motionCatalogPath = join(appRoot, 'motion', 'catalog.ts');
 const tokensCssPath = join(appRoot, 'styles', 'tokens.css');
-const ambientLayerPath = join(effectsDir, 'AmbientLayer.tsx');
+const ambientLayerPath = join(appRoot, 'chrome', 'AmbientLayer.tsx');
 
 function walk(dir, exts) {
   const out = [];
@@ -172,7 +172,7 @@ export function runChecks() {
   // data-theme / theme-name literal.
   // ---------------------------------------------------------------------
   if (!existsSync(ambientLayerPath)) {
-    fail('E5', 'src/effects/AmbientLayer.tsx not found — renamed/moved?');
+    fail('E5', 'src/chrome/AmbientLayer.tsx not found — renamed/moved?');
   } else {
     const src = readFileSync(ambientLayerPath, 'utf8');
     for (const e of entries) {

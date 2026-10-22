@@ -11,13 +11,17 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/piyushsatti/chronicler/apps/api/internal/character"
+	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/member"
+	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbtest"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/idempotency"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
+	"github.com/piyushsatti/chronicler/apps/api/internal/spatial"
 )
 
 func seedQuestArcDM(t *testing.T, ctx context.Context, fixture *dbtest.ProductFixture) string {
@@ -25,7 +29,7 @@ func seedQuestArcDM(t *testing.T, ctx context.Context, fixture *dbtest.ProductFi
 	dmID := uuid.NewString()
 	if _, err := fixture.Pool.Exec(ctx, `
 		INSERT INTO members(public_id,discord_id,handle,display_name,roles)
-		VALUES ($1,$2,$3,$3,ARRAY['dm'])`, dmID, "arc-dm-"+dmID[:8], "arc-dm"); err != nil {
+		VALUES ($1,$2,$3,$3,ARRAY['dm'])`, dmID, "arc-dm-"+dmID[:8], "arc-dm-"+dmID[:8]); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := fixture.Pool.Exec(ctx, `
@@ -56,21 +60,37 @@ func newQuestCommandHarness(t *testing.T, fixture *dbtest.ProductFixture) (*Prod
 		if err != nil {
 			t.Fatal(err)
 		}
-		audit, err := auth.NewOverrideRecorder(tx)
-		if err != nil {
-			t.Fatal(err)
-		}
 		txStore, err := member.NewFromDBTX(tx, "")
 		if err != nil {
 			t.Fatal(err)
 		}
+		charPG, _ := character.NewProductPostgres(tx)
+		docPG, _ := document.NewProductPostgres(tx)
+		spatialPG, _ := spatial.NewProductPostgres(tx)
+		notice, replay, err := notification.NewCommandProducer(tx, replay, notification.RecipientComposition{Character: charPG, Document: docPG})
+		if err != nil {
+			t.Fatal(err)
+		}
+		audit, err := auth.NewOverrideRecorder(replay)
+		if err != nil {
+			t.Fatal(err)
+		}
 		return ProductCommandRepos{
-			Arc:       pg,
-			Quest:     pg,
-			Policy:    policy,
-			Authority: txStore.ResolveAuthority,
-			Replay:    replay,
-			Audit:     audit,
+			Arc:              pg,
+			Quest:            pg,
+			Policy:           policy,
+			Authority:        txStore.ResolveAuthority,
+			Replay:           replay,
+			Audit:            audit,
+			Rewards:          charPG,
+			SummaryDocuments: docPG,
+			Summaries:        docPG,
+			Brief:            docPG,
+			Characters:       charPG,
+			Places:           spatialPG,
+			Withdrawals:      pg,
+			Producer:         notification.NewProducer(),
+			Notice:           notice,
 		}
 	})
 	commands, err := NewProductCommands(runner, time.Now, func() string { return uuid.NewString() })
@@ -123,6 +143,38 @@ func TestProductQuestArcListUsesSQLTotal(t *testing.T) {
 	}
 	if len(page.Items) != 1 {
 		t.Fatalf("items len = %d, want 1", len(page.Items))
+	}
+}
+
+func TestProductQuestArcListKeepsEmptyAndExhaustedPageCounts(t *testing.T) {
+	ctx := context.Background()
+	fixture := dbtest.NewProductFixture(t)
+	dmID := seedQuestArcDM(t, ctx, fixture)
+	commands, _ := newQuestCommandHarness(t, fixture)
+	for _, spec := range []QuestArcsSpec{{Limit: 50}, {Limit: 1, Offset: 100}} {
+		page, err := commands.Queries.QuestArcs(ctx, auth.Authority{}, spec)
+		if err != nil || page.Total != 0 || len(page.Items) != 0 {
+			t.Fatalf("empty page=%+v err=%v", page, err)
+		}
+	}
+	for _, name := range []string{"First arc", "Second arc"} {
+		if _, err := fixture.Pool.Exec(ctx, `INSERT INTO quest_arcs(name,created_by) SELECT $1,id FROM members WHERE public_id=$2`, name, dmID); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, spec := range []QuestArcsSpec{{Limit: 1, Offset: 100}} {
+		page, err := commands.Queries.QuestArcs(ctx, auth.Authority{}, spec)
+		if err != nil || page.Total != 2 || len(page.Items) != 0 {
+			t.Fatalf("exhausted page=%+v err=%v", page, err)
+		}
+	}
+	first, err := commands.Queries.QuestArcs(ctx, auth.Authority{}, QuestArcsSpec{Limit: 1})
+	if err != nil || first.Total != 2 || len(first.Items) != 1 {
+		t.Fatalf("first page=%+v err=%v", first, err)
+	}
+	second, err := commands.Queries.QuestArcs(ctx, auth.Authority{}, QuestArcsSpec{Limit: 1, Offset: 1})
+	if err != nil || second.Total != 2 || len(second.Items) != 1 || second.Items[0].Id == first.Items[0].Id {
+		t.Fatalf("second page=%+v err=%v", second, err)
 	}
 }
 

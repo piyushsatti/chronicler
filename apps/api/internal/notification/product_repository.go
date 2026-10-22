@@ -2,7 +2,6 @@ package notification
 
 import (
 	"context"
-	"time"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/idempotency"
@@ -60,8 +59,7 @@ type PreferenceReader interface {
 	ReadPreferences(context.Context, []string) ([]Preferences, error)
 }
 type EventWriter interface {
-	InsertEvent(context.Context, Event) (string, error)
-	InsertRecipients(context.Context, string, []string, time.Time) error
+	InsertInbox(context.Context, Event, []string) error
 }
 type EventProducer interface {
 	Record(context.Context, ProducerRepos, Event) error

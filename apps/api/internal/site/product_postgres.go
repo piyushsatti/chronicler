@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/url"
 	"reflect"
 	"strings"
 	"time"
@@ -11,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/member"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
@@ -116,7 +118,20 @@ func (p *ProductPostgres) ReadDiscordDeliveryMode(ctx context.Context, _ auth.Au
 	return parseDiscordDeliveryMode(row.Payload), nil
 }
 
-func (p *ProductPostgres) ReadAdminOperations(ctx context.Context, _ auth.Authority, spec AdminOperationsSpec) (AdminOperationsView, error) {
+func (p *ProductPostgres) ReadAdminOperations(ctx context.Context, actor auth.Authority, spec AdminOperationsSpec) (AdminOperationsView, error) {
+	scope := document.ScopeFromAuthority(actor)
+	viewer := document.SQLScope(scope)
+	if viewer.ID.Valid {
+		readers, err := p.queries().ListDocumentReaders(ctx, viewer.ID)
+		if err != nil {
+			return AdminOperationsView{}, err
+		}
+		scope.ReaderOf = make(map[string]struct{}, len(readers))
+		for _, id := range readers {
+			scope.ReaderOf[db.UUIDString(id)] = struct{}{}
+		}
+		viewer = document.SQLScope(scope)
+	}
 	deliveryState := pgtype.Text{}
 	if spec.DeliveryState != nil {
 		deliveryState = pgtype.Text{String: strings.ToLower(*spec.DeliveryState), Valid: true}
@@ -129,6 +144,12 @@ func (p *ProductPostgres) ReadAdminOperations(ctx context.Context, _ auth.Author
 		DeliveryState: deliveryState,
 		PageOffset:    spec.Offset,
 		PageLimit:     spec.Limit,
+		ViewerID:      viewer.ID,
+		ViewerRoles:   viewer.Roles,
+		ViewerHandle:  viewer.Handle,
+		ViewerAdmin:   viewer.Admin,
+		ViewerLiveDm:  viewer.LiveDM,
+		ReaderIds:     viewer.Readers,
 	})
 	if err != nil {
 		return AdminOperationsView{}, err
@@ -149,11 +170,13 @@ func (p *ProductPostgres) ReadAdminOperations(ctx context.Context, _ auth.Author
 		config.AnnouncementRoleSource = "site_settings"
 	}
 	deliveries := make([]AdminDeliveryJobView, 0)
+	overridden := false
 	for _, row := range rows {
 		if !row.PublicID.Valid {
 			continue
 		}
-		deliveries = append(deliveries, mapAdminDeliveryJob(row, publicOrigin))
+		deliveries = append(deliveries, mapAdminDeliveryJob(row))
+		overridden = overridden || (row.QuestTitle.Valid && row.AdminOverride)
 	}
 	total := counts.TotalCount
 	if len(rows) > 0 {
@@ -163,6 +186,7 @@ func (p *ProductPostgres) ReadAdminOperations(ctx context.Context, _ auth.Author
 	if err != nil {
 		return AdminOperationsView{}, err
 	}
+	document.AuditSQLOverride(ctx, scope, overridden, "site_delivery_titles", "list")
 	return AdminOperationsView{
 		ActiveAlertCount:      alertCount,
 		Config:                config,
@@ -342,7 +366,7 @@ func (p *ProductPostgres) lockSiteSetting(ctx context.Context, key string, initi
 	}, nil
 }
 
-func mapAdminDeliveryJob(row dbgen.SiteAdminDeliveryJobsRow, publicOrigin string) AdminDeliveryJobView {
+func mapAdminDeliveryJob(row dbgen.SiteAdminDeliveryJobsRow) AdminDeliveryJobView {
 	state := ""
 	if row.State.Valid {
 		state = row.State.String
@@ -369,10 +393,8 @@ func mapAdminDeliveryJob(row dbgen.SiteAdminDeliveryJobsRow, publicOrigin string
 	}
 	if row.QuestShortCode.Valid {
 		job.QuestShortCode = &row.QuestShortCode.String
-		if publicOrigin != "" {
-			link := publicOrigin + "/quests/" + row.QuestShortCode.String
-			job.QuestLink = &link
-		}
+		link := "/quests/" + url.PathEscape(row.QuestShortCode.String)
+		job.QuestLink = &link
 	}
 	if row.QuestTitle.Valid {
 		job.QuestTitle = &row.QuestTitle.String
@@ -421,7 +443,7 @@ func mapCommunitySnapshot(rows []dbgen.SiteCommunitySnapshotRow) (CommunityStats
 	first := rows[0]
 	snapshot := CommunityStatsSnapshot{
 		TotalMembers: first.TotalMembers, ActiveCharacters: first.ActiveCharacters,
-		TotalMaps: first.TotalMaps,
+		TotalMaps:    first.TotalMaps,
 		TotalRegions: first.TotalRegions, TotalQuests: first.TotalQuests,
 		TotalDMs: first.TotalDms,
 		Activity: member.ActivitySummaryView{

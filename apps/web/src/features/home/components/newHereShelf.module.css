@@ -1,0 +1,10 @@
+/* Moved from inline styles (2026-10-21) */
+.shelf {
+  position: relative;
+}
+
+.dismiss {
+  position: absolute;
+  top: var(--sp-3);
+  right: var(--sp-3);
+}

@@ -7,6 +7,8 @@ import { TOKEN_KEY } from '../../src/auth/storage.js';
 import { NotificationBell } from '../../src/chrome/NotificationBell.js';
 import { server } from '../../src/mocks/server.js';
 import { renderWithProviders } from '../test-utils.js';
+import goodMe from '../fixtures/wire/me/good.json';
+import { dispatchFeatureGraphql } from '../features/notifications/graphql-test-utils.js';
 
 function seedToken(): void {
   const header = btoa(JSON.stringify({ alg: 'none', typ: 'JWT' }));
@@ -27,16 +29,17 @@ async function renderBellWithCount(count: number) {
       if (name === 'MyUnreadNotificationCount') {
         return HttpResponse.json({ data: { myUnreadNotificationCount: count } });
       }
-      return HttpResponse.json({
-        errors: [{ message: 'Unhandled', extensions: { code: 'UNHANDLED' } }],
-      });
+      return dispatchFeatureGraphql(body);
     }),
   );
   const rendered = renderWithProviders(<NotificationBell />);
   await waitFor(() => {
-    expect(rendered.queryClient.getQueryData(queryKeys.notificationsUnread)).toBe(
-      count,
-    );
+    expect(
+      rendered.queryClient.getQueryData([
+        ...queryKeys.notificationsUnread,
+        JSON.stringify([goodMe.id, [...new Set(goodMe.roles)].sort()]),
+      ]),
+    ).toBe(count);
   });
   return rendered;
 }

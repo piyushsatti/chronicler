@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
 	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
@@ -72,6 +73,34 @@ func commandNote(note *string) error {
 	return queryText(*note, 2000)
 }
 
+func isProfileCommand(operation string) bool {
+	switch operation {
+	case "updateMyProfile", "setMyAvailability", "updateMyDmProfile", "submitDmProfileForVerification", "decideDmProfileVerification":
+		return true
+	default:
+		return false
+	}
+}
+
+func recheckProfileAuthority(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, operation string) error {
+	current, err := repos.Authority(ctx, actor.Claims().MemberID)
+	if err != nil {
+		return err
+	}
+	request, err := auth.ForOperation(auth.Operation("Mutation." + operation))
+	if err != nil {
+		return err
+	}
+	decision, err := repos.Policy.Decide(ctx, current, request)
+	if err != nil {
+		return err
+	}
+	if current.Claims().MemberID != actor.Claims().MemberID || !decision.Allowed {
+		return apierr.New(apierr.Forbidden, "member profile authority changed")
+	}
+	return nil
+}
+
 // Fresh authority precedes policy and receipt admission, including replay.
 func runMemberCommand[T any](ctx context.Context, s ProductCommands, actor auth.Authority, operation string, spec any, meta product.CommandMeta, subjectID string, mutate func(ProductCommandRepos, auth.Authority, time.Time) (T, error)) (T, error) {
 	var result T
@@ -107,6 +136,11 @@ func runMemberCommand[T any](ctx context.Context, s ProductCommands, actor auth.
 		if err != nil {
 			return err
 		}
+		if isProfileCommand(operation) {
+			if err := recheckProfileAuthority(ctx, repos, fresh, operation); err != nil {
+				return err
+			}
+		}
 		if claim.Replay {
 			if err := json.Unmarshal(claim.Receipt, &result); err != nil {
 				return err
@@ -128,8 +162,32 @@ func runMemberCommand[T any](ctx context.Context, s ProductCommands, actor auth.
 			if commandDependencyMissing(repos.Audit) {
 				return apierr.New(apierr.Internal, "override recorder required")
 			}
-			if err := repos.Audit.Record(ctx, auth.OverrideFact{ActorID: fresh.Claims().MemberID, Operation: request.Operation(), SubjectType: "member", SubjectID: subjectID, RuleCode: decision.RuleCode, At: at}); err != nil {
-				return err
+			subjects := []string{subjectID}
+			switch operation {
+			case "upsertUnlockable":
+				view, ok := any(result).(UnlockableView)
+				if !ok {
+					return apierr.New(apierr.Internal, "unlockable audit subject required")
+				}
+				subjects[0] = view.Id
+			case "setMemberRolesBatch":
+				rows, ok := any(result).([]MemberRoleBatchResultView)
+				input, inputOK := spec.(SetMemberRolesBatchSpec)
+				if !ok || !inputOK || len(rows) != len(input.Changes) {
+					return apierr.New(apierr.Internal, "role batch audit subjects required")
+				}
+				subjects = make([]string, len(rows))
+				for i, row := range rows {
+					if !row.Ok || row.Member == nil || row.Error != nil || row.MemberId != row.Member.Id || row.MemberId != input.Changes[i].MemberId {
+						return apierr.New(apierr.Internal, "role batch audit subject differs")
+					}
+					subjects[i] = row.MemberId
+				}
+			}
+			for _, subject := range subjects {
+				if err := repos.Audit.Record(ctx, claim, auth.OverrideFact{ActorID: fresh.Claims().MemberID, Operation: request.Operation(), SubjectType: "member", SubjectID: subject, RuleCode: decision.RuleCode, At: at}); err != nil {
+					return err
+				}
 			}
 		}
 		receipt, err := json.Marshal(result)
@@ -233,6 +291,9 @@ func (s ProductCommands) UpdateMyProfile(ctx context.Context, actor auth.Authori
 	return runMemberCommand(ctx, s, actor, "updateMyProfile", spec, meta, actor.Claims().MemberID, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (MemberView, error) {
 		locked, err := repos.Member.LockUpdateMyProfile(ctx, fresh.Claims().MemberID, spec)
 		if err != nil {
+			return MemberView{}, err
+		}
+		if err := recheckProfileAuthority(ctx, repos, fresh, "updateMyProfile"); err != nil {
 			return MemberView{}, err
 		}
 		if !locked.Exists {
@@ -394,8 +455,8 @@ func (s ProductCommands) SetMyAvailability(ctx context.Context, actor auth.Autho
 		spec.Slots[i].Day = weekdayName(day)
 		spec.Slots[i].StartTime = minuteTime(start)
 		spec.Slots[i].EndTime = minuteTime(end)
-		if err := commandNote(slot.Note); err != nil {
-			return nil, err
+		if slot.Note != nil && (!utf8.ValidString(*slot.Note) || utf8.RuneCountInString(*slot.Note) > 2000) {
+			return nil, apierr.New(apierr.Invalid, "invalid availability note")
 		}
 		for _, prior := range spec.Slots[:i] {
 			pd, _ := parseWeekday(prior.Day)
@@ -409,6 +470,9 @@ func (s ProductCommands) SetMyAvailability(ctx context.Context, actor auth.Autho
 	return runMemberCommand(ctx, s, actor, "setMyAvailability", spec, meta, actor.Claims().MemberID, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) ([]AvailabilitySlotView, error) {
 		locked, err := repos.Member.LockSetMyAvailability(ctx, fresh.Claims().MemberID, spec)
 		if err != nil {
+			return nil, err
+		}
+		if err := recheckProfileAuthority(ctx, repos, fresh, "setMyAvailability"); err != nil {
 			return nil, err
 		}
 		if !locked.Exists {
@@ -582,19 +646,14 @@ func dmProfileTableInfo(value *json.RawMessage) error {
 }
 
 func (s ProductCommands) UpdateMyDmProfile(ctx context.Context, actor auth.Authority, spec UpdateMyDmProfileSpec, meta product.CommandMeta) (DmProfileView, error) {
-	if spec.Input.Tagline != nil {
-		if err := queryText(*spec.Input.Tagline, 200); err != nil {
-			return DmProfileView{}, err
-		}
-	}
-	if spec.Input.Philosophy != nil {
-		if err := queryText(*spec.Input.Philosophy, 4000); err != nil {
-			return DmProfileView{}, err
-		}
-	}
-	if spec.Input.HouseRules != nil {
-		if err := queryText(*spec.Input.HouseRules, 4000); err != nil {
-			return DmProfileView{}, err
+	for _, field := range []struct {
+		value   *string
+		maximum int
+	}{{spec.Input.Tagline, 200}, {spec.Input.Philosophy, 4000}, {spec.Input.HouseRules, 4000}} {
+		if field.value != nil {
+			if err := queryText(*field.value, field.maximum); err != nil {
+				return DmProfileView{}, err
+			}
 		}
 	}
 	if err := dmProfileTableInfo(spec.Input.TableInfo); err != nil {
@@ -603,6 +662,9 @@ func (s ProductCommands) UpdateMyDmProfile(ctx context.Context, actor auth.Autho
 	return runMemberCommand(ctx, s, actor, "updateMyDmProfile", spec, meta, actor.Claims().MemberID, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (DmProfileView, error) {
 		locked, err := repos.Member.LockUpdateMyDmProfile(ctx, fresh.Claims().MemberID, spec)
 		if err != nil {
+			return DmProfileView{}, err
+		}
+		if err := recheckProfileAuthority(ctx, repos, fresh, "updateMyDmProfile"); err != nil {
 			return DmProfileView{}, err
 		}
 		if !locked.Exists {
@@ -619,6 +681,9 @@ func (s ProductCommands) SubmitDmProfileForVerification(ctx context.Context, act
 	return runMemberCommand(ctx, s, actor, "submitDmProfileForVerification", spec, meta, actor.Claims().MemberID, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (DmProfileView, error) {
 		locked, err := repos.Member.LockSubmitDmProfileForVerification(ctx, fresh.Claims().MemberID, spec)
 		if err != nil {
+			return DmProfileView{}, err
+		}
+		if err := recheckProfileAuthority(ctx, repos, fresh, "submitDmProfileForVerification"); err != nil {
 			return DmProfileView{}, err
 		}
 		if !locked.Exists {
@@ -644,6 +709,9 @@ func (s ProductCommands) DecideDmProfileVerification(ctx context.Context, actor 
 	return runMemberCommand(ctx, s, actor, "decideDmProfileVerification", spec, meta, spec.MemberId, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (DmProfileView, error) {
 		locked, err := repos.Member.LockDecideDmProfileVerification(ctx, spec)
 		if err != nil {
+			return DmProfileView{}, err
+		}
+		if err := recheckProfileAuthority(ctx, repos, fresh, "decideDmProfileVerification"); err != nil {
 			return DmProfileView{}, err
 		}
 		if !locked.Exists {

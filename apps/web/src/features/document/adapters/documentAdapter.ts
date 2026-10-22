@@ -5,7 +5,7 @@ import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import { documentWireSchema } from './document.wire.schema.js';
 
-export type DocumentView = {
+type DocumentView = {
   id: string;
   slug: string;
   kind: string;

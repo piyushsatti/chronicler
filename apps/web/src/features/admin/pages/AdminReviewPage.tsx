@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react';
 import { Tabs } from '../../../components/primitives/Tabs.js';
 import { AdminWorkspaceShell } from '../AdminWorkspaceShell.js';
+import { StatePanel } from '../../../components/foundation/StatePanel.js';
 
 const CharacterVerifyConnected = lazy(async () => {
   const { useCharacterVerifyTab } = await import('../hooks/useCharacterVerifyTab.js');
@@ -41,9 +42,7 @@ export function AdminReviewPage(): React.JSX.Element {
               id: 'character',
               label: 'Characters',
               panel: (
-                <Suspense
-                  fallback={<p className="type-caption">Loading review queue…</p>}
-                >
+                <Suspense fallback={<StatePanel status="loading" />}>
                   <CharacterVerifyConnected />
                 </Suspense>
               ),
@@ -52,9 +51,7 @@ export function AdminReviewPage(): React.JSX.Element {
               id: 'dm-profile',
               label: 'DM Profiles',
               panel: (
-                <Suspense
-                  fallback={<p className="type-caption">Loading review queue…</p>}
-                >
+                <Suspense fallback={<StatePanel status="loading" />}>
                   <DmProfileVerifyConnected />
                 </Suspense>
               ),

@@ -1,0 +1,177 @@
+{
+  "at": "2026-10-20T19:24:38.572949+00:00",
+  "nativeSession": 15074,
+  "exit": 0,
+  "frontendEpoch": 32,
+  "apiEpoch": 12,
+  "cohort": {
+    "allTrialsRetained": 40,
+    "trialsPerProfile": 20,
+    "failures": 0,
+    "profiles": [
+      {
+        "viewport": {
+          "name": "desktop",
+          "width": 1920,
+          "height": 1080
+        },
+        "trials": 20,
+        "failures": 0,
+        "firstUsableP75": 746.7000000029802,
+        "selectionP95": 68.8999999910593,
+        "firstUsableRange": [
+          727.3000000119209,
+          781.5999999940395
+        ],
+        "selectionRange": [
+          50.5,
+          69.1000000089407
+        ],
+        "pass": true
+      },
+      {
+        "viewport": {
+          "name": "phone",
+          "width": 390,
+          "height": 844
+        },
+        "trials": 20,
+        "failures": 0,
+        "firstUsableP75": 747,
+        "selectionP95": 63.80000001192093,
+        "firstUsableRange": [
+          727.2999999970198,
+          772
+        ],
+        "selectionRange": [
+          54.20000000298023,
+          65
+        ],
+        "pass": true
+      }
+    ]
+  },
+  "hardwareAndConditions": {
+    "epoch": {
+      "at": "2026-10-20T19:21:53.249375+00:00",
+      "quietWindowReleased": true,
+      "baseURL": "http://127.0.0.1:4199",
+      "frontendEpoch": 32,
+      "frontendSourceManifestSha256": "f012675c4d58e18b2c7ab0e6a004cb6df1e085add1ba47fc6959a69712505756",
+      "frontendDistManifestSha256": "329032b06f250850eacdd40f2b575f56b6c23a6d9eb57675607f0ebf01becfda",
+      "frontendBuildReceiptSha256": "f96bd96da61a06d8d9c54e7f36148e235d1eca15fe9d3f783b49f3e41ec29b6f",
+      "frontendSourceInputs": 625,
+      "frontendDistFiles": 181,
+      "apiProductionInputs": 336,
+      "apiProductionManifestSha256": "d01500fe67d5a85958469122ea982c80f61bc7524c7a4e60a4cff1faeff248c3",
+      "services": [
+        {
+          "id": "4da9cfd0ff09b469945756b12009eb262d0642601ab18481287ba6c0674eaed4",
+          "name": "/chronicler-dev-api-1",
+          "image": "sha256:d103a48fe802797f35351051395c4255db1e64111762f2f1033db90cbe58be12",
+          "running": true
+        },
+        {
+          "id": "f5e50769b2c0b8cef30f879a48ace16cdccaf868f135a50dd1d3bad23563c0c4",
+          "name": "/chronicler-dev-worker-1",
+          "image": "sha256:c41b8754eece6b61714fa80c3e5794e001bcd0c7f462788987c50925a9d247ae",
+          "running": true
+        },
+        {
+          "id": "2621aae95d00cbdcf1671cdf48484f8792af2fa3aaabd76160e7a9a5374fd364",
+          "name": "/chronicler-dev-postgres-1",
+          "image": "sha256:721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea",
+          "running": true
+        }
+      ],
+      "authorsAndIndependentReviewers": "Actual native collaboration.list_agents shows allthree completed after Public11 and visual artifact review. No active author/reviewer source/browser/compiler/fixture/capture. Native process inspection found no Go/compiler/Chromium process.",
+      "endedNativeSessions": [
+        11702,
+        51969,
+        39355,
+        47980,
+        28547,
+        80483,
+        12520,
+        98113,
+        66545,
+        35441,
+        1301,
+        81150
+      ],
+      "retainedBackgroundServices": "Original API12/PostgreSQL/dry-run worker and user Vite5173/Legacy5174 retained. Root32 preview69035 target4199; earlier root31preview7207 idle4198 and root29preview92921 idle4196 retained.",
+      "datasetBeforeSha256": "4396138d486e6405253e39b076af1c81bb370e1c31beb900d5d086f918a7db13",
+      "conditions": "Local production preview and local real API; fresh guest contexts; HTTP cache disabled; server/database caches retained; unshaped loopback;4xCDPCPU; default guest preferences; no trace/profiler during samples.",
+      "claim": "Exact Build32/API12 local18-node pointcrawl meets specified first-usable p75<1s and click-to-feedback p95<=100ms for20trials per emulated desktop/phone profile; no speedup or production latency comparison.",
+      "quietWindowReleasedAt": "2026-10-20T19:23:14.199203+00:00"
+    },
+    "at": "2026-10-20T19:23:14.552Z",
+    "host": "triton",
+    "cpu": "AMD Ryzen 5 3600 6-Core Processor",
+    "cpus": 10,
+    "memoryBytes": 34568044544,
+    "loadAverage": [
+      0.2,
+      0.52,
+      0.76
+    ],
+    "node": "v24.21.0",
+    "playwright": "1.62.1",
+    "browser": "151.0.7922.34",
+    "executable": ".local/workspace/browsers/chromium-1234/chrome-linux64/chrome",
+    "base": "http://127.0.0.1:4199",
+    "route": "/map/LFC",
+    "cpuSlowdown": 4,
+    "reducedMotion": "no-preference",
+    "preferences": "Fresh guest context, unchanged application defaults; actual OS preference and document root theme/motion attributes recorded at each timed boundary.",
+    "network": "Host loopback to local production Vite preview and real local API. No network shaping.",
+    "cache": "Fresh browser context per trial. CDP HTTP cache disabled. Server/database caches retained.",
+    "server": "Production Vite build with repository-native preview proxy. No MSW.",
+    "firstUsable": "Navigation start through two consecutive animation-frame readiness probes: nonzero rendered graph, list, usable SVG marker and equivalent list button; rechecked at timestamp. Viewport intersection is recorded separately: the list may be below the fold.",
+    "selection": "Trusted list-button click capture through two consecutive animation-frame readiness probes of rendered matching SVG aria-pressed marker, list aria-pressed button and selected-name feedback. Viewport intersection recorded separately; no hardware presentation-time claim.",
+    "entranceAnimation": "No entrance animation is attached by the current Map or its App/SiteChrome/PageShell layout; no unrelated animation completion gate.",
+    "diagnostics": "No trace or CPU profiler runs during acceptance samples. A separate unreported CDP CPU/resource-timing run is allowed only if needed after sampling."
+  },
+  "postchecks": {
+    "at": "2026-10-20T19:24:38.572734+00:00",
+    "frontendSourceInputs": 625,
+    "frontendDistFiles": 181,
+    "apiProductionInputs": 336,
+    "allInputBytesBeforeAfterMatch": true,
+    "servicesMatch": true,
+    "datasetSha256": "ea94710f95408c52a756c6d3c0e88518d6847ecfe8c2a4d8697ee4edab240b72",
+    "all40TrialCensusAndNearestRankMetricsRecomputed": true
+  },
+  "viewportIntersectionAtFirstUsable": {
+    "graph": 40,
+    "list": 0,
+    "marker": 40,
+    "button": 0
+  },
+  "viewportIntersectionAtSelection": {
+    "graph": 40,
+    "list": 0,
+    "marker": 40,
+    "button": 0,
+    "feedback": 20
+  },
+  "artifacts": {
+    "dataset-after.json": "0f97476a92103174de51cc1471e164834024ae9dee7f71eb8b4b293607b30293",
+    "dataset-before.json": "4396138d486e6405253e39b076af1c81bb370e1c31beb900d5d086f918a7db13",
+    "measure-map.mjs": "26bb020dee741b9a4597a61a2bad2d695a444e8457e48d0265ad9d48e3d5b935",
+    "measurement.log": "7ce079751d2dbec4f142261ddeb530de0c23d0d81e1ca655fd16390e92438ab3",
+    "performance-desktop.png": "ad517a08017e3f92f7b707b0d70694202c02001b596383bf7235dc9c19dcaccf",
+    "performance-phone.png": "7c9284e60baa67a477af82ec5bfdcc5e7457cc4a9410fc5da11534d5a72fb435",
+    "performance.json": "5647d6e2eae8cad69e6ddb500d3a60222b9d130b960ced835ab94e70f7120be2",
+    "postchecks.json": "bce6c270099e618c2445135f1f9f2f857b9a3c4630e32457ec61f4857b3388e0",
+    "quiet-processes-before.txt": "b17ed911c42d4fe22e0706f6a793814dbe4a5dede584f9b0b4400b706db1f40b",
+    "runtime-receipt.json": "d373442afd9975e256264907c6c6ade6bbc863a737f69e72857f19bcfd297537"
+  },
+  "visualApproval": false,
+  "productionDeployment": false,
+  "limits": [
+    "Fresh guest HTTP-cache-cold contexts, warmed server/DB, unshaped host loopback, desktop Chrome viewport profiles; no physical phone or production latency claim.",
+    "First usable requires rendered graph/list/usable marker/button; list/button belowfold40/40. Selection begins with trusted list click after any scrolling; matching SVG/list/name feedback must be rendered for two consecutive frames. Full Document loading excluded.",
+    "Actual public world18nodes17edges24links only; no large-world extrapolation or comparative speedup claim."
+  ]
+}

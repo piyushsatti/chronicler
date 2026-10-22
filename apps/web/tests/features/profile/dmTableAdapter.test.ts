@@ -6,6 +6,9 @@ describe('parseDmTableDocument', () => {
     const result = parseDmTableDocument({
       id: '11111111-1111-1111-1111-111111111111',
       slug: 'harbor-table',
+      kind: 'community',
+      category: 'dm_table',
+      authorId: '22222222-2222-4222-8222-222222222222',
       title: 'Harbor table',
       status: 'published',
       effectiveBody: 'Body',

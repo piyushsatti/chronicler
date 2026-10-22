@@ -245,9 +245,7 @@ const upsertMemberFromDiscord = `-- name: UpsertMemberFromDiscord :one
 INSERT INTO members (discord_id, handle, display_name, avatar_url, roles)
 VALUES ($1, $2, $3, $4, $5)
 ON CONFLICT (discord_id) DO UPDATE
-SET display_name = EXCLUDED.display_name,
-    avatar_url = EXCLUDED.avatar_url,
-    updated_at = now()
+SET discord_id = members.discord_id
 RETURNING public_id AS id, discord_id, handle, display_name, avatar_url, roles, status
 `
 

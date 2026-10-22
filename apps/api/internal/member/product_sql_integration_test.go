@@ -280,14 +280,14 @@ func TestPhase3TaskMEM04PostgresAcceptance(t *testing.T) {
 	}
 	emptyAvatar := ""
 	profileInput := UpdateMyProfileSpec{Input: UpdateMyProfileFields{DisplayName: "Updated Requester", AvatarUrl: product.Optional[string]{Set: true, Value: &emptyAvatar}}}
-	profile, err := adapter.StoreUpdateMyProfile(ctx, UpdateMyProfileWrite{ActorID: requester, At: time.Now().UTC(), Input: profileInput, ValidatedInput: profileInput, Locked: profileState})
-	if err != nil || profile.DisplayName != "Updated Requester" || profile.AvatarUrl == nil || *profile.AvatarUrl != "" {
-		t.Fatalf("profile update preserving empty avatar=%+v err=%v", profile, err)
+	updatedProfile, err := adapter.StoreUpdateMyProfile(ctx, UpdateMyProfileWrite{ActorID: requester, At: time.Now().UTC(), Input: profileInput, ValidatedInput: profileInput, Locked: profileState})
+	if err != nil || updatedProfile.DisplayName != "Updated Requester" || updatedProfile.AvatarUrl == nil || *updatedProfile.AvatarUrl != "" {
+		t.Fatalf("profile update preserving empty avatar=%+v err=%v", updatedProfile, err)
 	}
 	clearProfile := UpdateMyProfileSpec{Input: UpdateMyProfileFields{DisplayName: "Updated Requester", AvatarUrl: product.Optional[string]{Set: true}}}
-	profile, err = adapter.StoreUpdateMyProfile(ctx, UpdateMyProfileWrite{ActorID: requester, At: time.Now().UTC(), Input: clearProfile, ValidatedInput: clearProfile})
-	if err != nil || profile.AvatarUrl != nil {
-		t.Fatalf("profile update clearing avatar=%+v err=%v", profile, err)
+	updatedProfile, err = adapter.StoreUpdateMyProfile(ctx, UpdateMyProfileWrite{ActorID: requester, At: time.Now().UTC(), Input: clearProfile, ValidatedInput: clearProfile})
+	if err != nil || updatedProfile.AvatarUrl != nil {
+		t.Fatalf("profile update clearing avatar=%+v err=%v", updatedProfile, err)
 	}
 
 	const roleHistoryID = "50000000-0000-4000-8000-000000000001"

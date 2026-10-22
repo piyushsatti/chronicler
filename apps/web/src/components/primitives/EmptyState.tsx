@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react';
 import { Button } from './Button.js';
-import { cx } from './cx.js';
 
 export type EmptyStateKind =
   | 'no-quests'
@@ -60,9 +59,9 @@ export function EmptyState({
 }: EmptyStateProps): React.JSX.Element {
   const text = message ?? KIND_MESSAGES[kind];
   return (
-    <div className={cx('empty-state', className)} data-component="EmptyState" data-kind={kind}>
+    <div className={className} data-component="EmptyState" data-kind={kind}>
       {illustration}
-      <p className="empty-state__message">{text}</p>
+      <p>{text}</p>
       {children}
       {actionLabel && onAction ? (
         <Button variant="secondary" onClick={onAction}>

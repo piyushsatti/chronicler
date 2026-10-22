@@ -1,4 +1,5 @@
 import { HttpResponse } from 'msw';
+import { createElement } from 'react';
 import type {
   FeatureGraphql,
   FeatureHandlers,
@@ -17,6 +18,8 @@ export const queryKeys = {
       id?: string;
       slug?: string;
       category?: string;
+      questId?: string;
+      characterId?: string;
     },
   ) => ['editor', 'record', input] as const,
   regions: ['editor', 'regions'] as const,
@@ -34,7 +37,7 @@ const editorQuestWire = {
   genres: ['exploration'],
   tags: [],
   apl: 3,
-  signupType: 'dm_pick',
+  signupType: 'open',
   regions: [],
   updatedAt: '2026-10-15T17:00:00Z',
   briefDocument: {
@@ -44,18 +47,28 @@ const editorQuestWire = {
     status: 'published',
     version: 1,
     effectiveBody: 'Descend the salt stair.',
+    canEditMetadata: true,
+    canEditBody: true,
+    frontmatter: {},
   },
 };
 
 const editorDocumentWire = {
   id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
   slug: 'guide-smoke',
-  kind: 'guide',
-  category: null,
+  kind: 'rule',
+  category: 'guide',
   title: 'Guide smoke',
   status: 'published',
   version: 1,
   effectiveBody: 'Guide body for edit.',
+  canEditMetadata: true,
+  canEditBody: true,
+  visibility: 'public',
+  policy: [],
+  readerIds: [],
+  authorId: 'editor-author',
+  frontmatter: {},
 };
 
 export const graphql: FeatureGraphql = {
@@ -133,8 +146,6 @@ export const graphql: FeatureGraphql = {
       typeof body.variables?.['body'] === 'string' ? body.variables['body'] : '';
     return HttpResponse.json({ data: { previewBody: text } });
   },
-  DiscordDeliveryMode: () =>
-    HttpResponse.json({ data: { discordDeliveryMode: 'queue' } }),
   CreateQuest: () =>
     HttpResponse.json({
       data: {
@@ -215,17 +226,6 @@ export const graphql: FeatureGraphql = {
       },
     });
   },
-  SyncQuestDiscord: () =>
-    HttpResponse.json({
-      data: {
-        syncQuestDiscord: {
-          jobId: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
-          desiredRevision: 1,
-          appliedRevision: 1,
-          deliveryStatus: 'applied',
-        },
-      },
-    }),
 };
 
 export const handlers: FeatureHandlers = [];
@@ -239,7 +239,7 @@ function editorRoute(
     path,
     element: lazyElement(() =>
       import('./EditorRoute.js').then((module) => ({
-        default: () => module.EditorRoute({ typeKey, mode }),
+        default: () => createElement(module.EditorRoute, { typeKey, mode }),
       })),
     ),
   };

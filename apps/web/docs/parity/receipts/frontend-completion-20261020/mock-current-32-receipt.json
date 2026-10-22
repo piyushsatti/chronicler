@@ -1,0 +1,19 @@
+{
+  "at": "2026-10-20T19:03:44.138061+00:00",
+  "nativeSession": 47980,
+  "exit": 0,
+  "statistics": {
+    "startTime": "2026-10-20T19:01:28.535Z",
+    "duration": 32374.717,
+    "expected": 62,
+    "skipped": 0,
+    "unexpected": 0,
+    "flaky": 0
+  },
+  "frontend": "Current32 source f012675c configured mockmode build",
+  "sourceManifestSha256": "f012675c4d58e18b2c7ab0e6a004cb6df1e085add1ba47fc6959a69712505756",
+  "reportSha256": "2bfe34f337b42f261cc4f2a9b9eff66ff996b4b856575d9b4b9a4f4193e99829",
+  "limits": [
+    "Mock responses; realAPI/provider/visual approval separate."
+  ]
+}

@@ -21,9 +21,9 @@ WHERE d.deleted_at IS NULL
         d.public_id, author.public_id, d.status, d.visibility, d.policy,
         $1::uuid, $2::text[], $3::text,
         $4::boolean, $5::boolean,
-        COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr
+        COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr
                        JOIN members reader ON reader.id = dr.member_id
-                       WHERE dr.document_id = d.id), ARRAY[]::uuid[]))
+                       WHERE dr.document_id = d.id AND reader.public_id = $1::uuid), ARRAY[]::uuid[]))
 GROUP BY d.category
 ORDER BY d.category ASC NULLS LAST
 `
@@ -77,9 +77,9 @@ WHERE d.deleted_at IS NULL
         d.public_id, author.public_id, d.status, d.visibility, d.policy,
         $1::uuid, $2::text[], $3::text,
         $4::boolean, $5::boolean,
-        COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr
+        COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr
                        JOIN members reader ON reader.id = dr.member_id
-                       WHERE dr.document_id = d.id), ARRAY[]::uuid[]))
+                       WHERE dr.document_id = d.id AND reader.public_id = $1::uuid), ARRAY[]::uuid[]))
 GROUP BY d.kind
 ORDER BY d.kind
 `
@@ -133,9 +133,9 @@ WITH readable AS (
              d.public_id, author.public_id, d.status, d.visibility, d.policy, $2::uuid,
              $3::text[], $4::text, FALSE,
              $5::boolean,
-             COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr
+             COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr
                             JOIN members reader ON reader.id = dr.member_id
-                            WHERE dr.document_id = d.id), ARRAY[]::uuid[])), FALSE) AS admin_override
+                            WHERE dr.document_id = d.id AND reader.public_id = $2::uuid), ARRAY[]::uuid[])), FALSE) AS admin_override
     FROM documents d
     LEFT JOIN members author ON author.id = d.author_id
     WHERE d.deleted_at IS NULL
@@ -144,9 +144,9 @@ WITH readable AS (
             d.public_id, author.public_id, d.status, d.visibility, d.policy,
             $2::uuid, $3::text[], $4::text,
             $1::boolean, $5::boolean,
-            COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr
+            COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr
                            JOIN members reader ON reader.id = dr.member_id
-                           WHERE dr.document_id = d.id), ARRAY[]::uuid[]))
+                           WHERE dr.document_id = d.id AND reader.public_id = $2::uuid), ARRAY[]::uuid[]))
 ),
 ranked AS (
     SELECT readable.id, readable.kind, readable.slug, readable.title, readable.category, readable.status, readable.visibility, readable.body, readable.frontmatter_yaml, readable.policy, readable.author_id, readable.published_at, readable.deleted_at, readable.updated_at, readable.version, readable.admin_override,
@@ -252,101 +252,75 @@ func (q *Queries) DocumentRecentDiscovery(ctx context.Context, arg DocumentRecen
 	return items, nil
 }
 
-const documentSearchDiscovery = `-- name: DocumentSearchDiscovery :many
-WITH population AS (
-    SELECT d.public_id AS id, d.kind, d.slug, d.title, d.category, d.status, d.visibility,
-           d.body, d.frontmatter_yaml, d.policy, author.public_id AS author_id,
-           d.published_at, d.deleted_at, d.updated_at, d.version,
-           ts_rank(
-             to_tsvector('english', coalesce(d.title, '')),
-             plainto_tsquery('english', $1::text)
-           ) AS rank
-    FROM documents d
-    LEFT JOIN members author ON author.id = d.author_id
-    WHERE d.deleted_at IS NULL
-      AND d.status = 'published'
-      AND (cardinality($2::text[]) = 0 OR d.kind = ANY($2::text[]))
-      AND document_readable(
-            d.public_id, author.public_id, d.status, d.visibility, d.policy,
-            $3::uuid, $4::text[], $5::text,
-            $6::boolean, $7::boolean,
-            COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr
-                           JOIN members reader ON reader.id = dr.member_id
-                           WHERE dr.document_id = d.id), ARRAY[]::uuid[]))
-      AND (
-            $1::text = ''
-            OR to_tsvector('english', coalesce(d.title, ''))
-               @@ plainto_tsquery('english', $1::text)
-          )
-),
-page AS (
-    SELECT id, kind, slug, title, category, status, visibility, body, frontmatter_yaml, policy, author_id, published_at, deleted_at, updated_at, version, rank FROM population
-    ORDER BY rank DESC, updated_at DESC, id DESC
-    LIMIT $9::integer OFFSET $8::integer
-)
-SELECT (SELECT count(*)::integer FROM population) AS total,
-       page.id, page.kind, page.slug, page.title, page.category, page.status, page.visibility,
-       page.body, page.frontmatter_yaml, page.policy, page.author_id, page.published_at,
-       page.deleted_at, page.updated_at, page.version, page.rank
-FROM (SELECT 1) marker
-LEFT JOIN page ON true
-ORDER BY page.rank DESC NULLS LAST, page.updated_at DESC NULLS LAST, page.id DESC NULLS LAST
+const documentSearchCandidates = `-- name: DocumentSearchCandidates :many
+SELECT d.public_id AS id, d.kind, d.slug, d.title, d.category, d.status, d.visibility,
+       d.body, d.frontmatter_yaml, d.policy, author.public_id AS author_id,
+       d.published_at, d.deleted_at, d.updated_at, d.version,
+       EXISTS(SELECT 1 FROM document_readers dr JOIN members reader ON reader.id = dr.member_id
+              WHERE dr.document_id = d.id AND reader.public_id = $1::uuid) AS reader_granted,
+       COALESCE((SELECT q.short_code FROM quests q WHERE q.document_id = d.id AND q.deleted_at IS NULL
+                 ORDER BY q.public_id LIMIT 1), '')::text AS quest_short_code
+FROM documents d
+LEFT JOIN members author ON author.id = d.author_id
+WHERE d.deleted_at IS NULL
+  AND d.status = 'published'
+  AND d.kind = ANY($2::text[])
+  AND document_readable(
+        d.public_id, author.public_id, d.status, d.visibility, d.policy,
+        $1::uuid, $3::text[], $4::text,
+        $5::boolean, $6::boolean,
+        COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr
+                       JOIN members reader ON reader.id = dr.member_id
+                       WHERE dr.document_id = d.id AND reader.public_id = $1::uuid), ARRAY[]::uuid[]))
+ORDER BY d.public_id
 `
 
-type DocumentSearchDiscoveryParams struct {
-	Query        string      `json:"query"`
-	Kinds        []string    `json:"kinds"`
+type DocumentSearchCandidatesParams struct {
 	ViewerID     pgtype.UUID `json:"viewer_id"`
+	Kinds        []string    `json:"kinds"`
 	ViewerRoles  []string    `json:"viewer_roles"`
 	ViewerHandle string      `json:"viewer_handle"`
 	ViewerAdmin  bool        `json:"viewer_admin"`
 	ViewerLiveDm bool        `json:"viewer_live_dm"`
-	PageOffset   int32       `json:"page_offset"`
-	PageLimit    int32       `json:"page_limit"`
 }
 
-type DocumentSearchDiscoveryRow struct {
-	Total           int32              `json:"total"`
+type DocumentSearchCandidatesRow struct {
 	ID              pgtype.UUID        `json:"id"`
-	Kind            pgtype.Text        `json:"kind"`
-	Slug            pgtype.Text        `json:"slug"`
-	Title           pgtype.Text        `json:"title"`
+	Kind            string             `json:"kind"`
+	Slug            string             `json:"slug"`
+	Title           string             `json:"title"`
 	Category        pgtype.Text        `json:"category"`
-	Status          pgtype.Text        `json:"status"`
-	Visibility      pgtype.Text        `json:"visibility"`
-	Body            pgtype.Text        `json:"body"`
+	Status          string             `json:"status"`
+	Visibility      string             `json:"visibility"`
+	Body            string             `json:"body"`
 	FrontmatterYaml pgtype.Text        `json:"frontmatter_yaml"`
 	Policy          []byte             `json:"policy"`
 	AuthorID        pgtype.UUID        `json:"author_id"`
 	PublishedAt     pgtype.Timestamptz `json:"published_at"`
 	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
-	Version         pgtype.Int4        `json:"version"`
-	Rank            pgtype.Float4      `json:"rank"`
+	Version         int32              `json:"version"`
+	ReaderGranted   bool               `json:"reader_granted"`
+	QuestShortCode  string             `json:"quest_short_code"`
 }
 
-// Title-only ranking/matching: raw body must not influence hits before scoped projection.
-func (q *Queries) DocumentSearchDiscovery(ctx context.Context, arg DocumentSearchDiscoveryParams) ([]DocumentSearchDiscoveryRow, error) {
-	rows, err := q.db.Query(ctx, documentSearchDiscovery,
-		arg.Query,
-		arg.Kinds,
+func (q *Queries) DocumentSearchCandidates(ctx context.Context, arg DocumentSearchCandidatesParams) ([]DocumentSearchCandidatesRow, error) {
+	rows, err := q.db.Query(ctx, documentSearchCandidates,
 		arg.ViewerID,
+		arg.Kinds,
 		arg.ViewerRoles,
 		arg.ViewerHandle,
 		arg.ViewerAdmin,
 		arg.ViewerLiveDm,
-		arg.PageOffset,
-		arg.PageLimit,
 	)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []DocumentSearchDiscoveryRow{}
+	items := []DocumentSearchCandidatesRow{}
 	for rows.Next() {
-		var i DocumentSearchDiscoveryRow
+		var i DocumentSearchCandidatesRow
 		if err := rows.Scan(
-			&i.Total,
 			&i.ID,
 			&i.Kind,
 			&i.Slug,
@@ -362,8 +336,67 @@ func (q *Queries) DocumentSearchDiscovery(ctx context.Context, arg DocumentSearc
 			&i.DeletedAt,
 			&i.UpdatedAt,
 			&i.Version,
-			&i.Rank,
+			&i.ReaderGranted,
+			&i.QuestShortCode,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const documentSearchDiscovery = `-- name: DocumentSearchDiscovery :many
+WITH projected AS (
+    SELECT (entry->>'id')::uuid AS id, (entry->>'updated_at')::timestamptz AS updated_at,
+           to_tsvector('english', (entry->>'title') || ' ' || (entry->>'body')) AS tokens
+    FROM jsonb_array_elements($1::jsonb) AS input(entry)
+), population AS MATERIALIZED (
+    SELECT id, updated_at, ts_rank(tokens, plainto_tsquery('english', $2::text)) AS rank
+    FROM projected
+    WHERE $2::text = '' OR tokens @@ plainto_tsquery('english', $2::text)
+), page AS (
+    SELECT id, updated_at, rank FROM population
+    ORDER BY rank DESC, updated_at DESC, id DESC
+    LIMIT $4::integer OFFSET $3::integer
+)
+SELECT (SELECT count(*)::integer FROM population) AS total, page.id, page.rank
+FROM (SELECT 1) marker LEFT JOIN page ON true
+ORDER BY page.rank DESC NULLS LAST, page.updated_at DESC NULLS LAST, page.id DESC NULLS LAST
+`
+
+type DocumentSearchDiscoveryParams struct {
+	ProjectedDocuments []byte `json:"projected_documents"`
+	Query              string `json:"query"`
+	PageOffset         int32  `json:"page_offset"`
+	PageLimit          int32  `json:"page_limit"`
+}
+
+type DocumentSearchDiscoveryRow struct {
+	Total int32         `json:"total"`
+	ID    pgtype.UUID   `json:"id"`
+	Rank  pgtype.Float4 `json:"rank"`
+}
+
+// Input records contain only the caller's already-authorized projection.
+func (q *Queries) DocumentSearchDiscovery(ctx context.Context, arg DocumentSearchDiscoveryParams) ([]DocumentSearchDiscoveryRow, error) {
+	rows, err := q.db.Query(ctx, documentSearchDiscovery,
+		arg.ProjectedDocuments,
+		arg.Query,
+		arg.PageOffset,
+		arg.PageLimit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []DocumentSearchDiscoveryRow{}
+	for rows.Next() {
+		var i DocumentSearchDiscoveryRow
+		if err := rows.Scan(&i.Total, &i.ID, &i.Rank); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

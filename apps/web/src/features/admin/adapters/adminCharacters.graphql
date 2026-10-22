@@ -1,5 +1,15 @@
-query AdminCharacters($limit: Int! = 50, $offset: Int! = 0) {
-  adminCharacterDirectory(limit: $limit, offset: $offset) {
+query AdminCharacters(
+  $limit: Int! = 50
+  $offset: Int! = 0
+  $namePrefix: String
+  $status: String
+  $regionId: ID
+) {
+  adminCharacterDirectory(
+    filters: { namePrefix: $namePrefix, status: $status, regionId: $regionId }
+    limit: $limit
+    offset: $offset
+  ) {
     total
     items {
       id

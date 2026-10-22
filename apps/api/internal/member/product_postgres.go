@@ -1476,31 +1476,17 @@ func (p *ProductPostgres) StoreUpdateMyDmProfile(ctx context.Context, write Upda
 	status := "draft"
 	revision := int32(1)
 	if write.Locked.Profile != nil {
-		status = write.Locked.Profile.Status
-		revision = write.Locked.Profile.ReviewRevision
-		if write.Locked.Profile.Status == "approved" {
-			status = "draft"
-			revision++
+		if write.Locked.Profile.ReviewRevision == 2147483647 {
+			return DmProfileView{}, apierr.New(apierr.Conflict, "dm profile revision exhausted")
 		}
+		revision = write.Locked.Profile.ReviewRevision + 1
 	}
+	tagline, philosophy, houseRules := input.Tagline, input.Philosophy, input.HouseRules
 	var tableInfo []byte
 	if input.TableInfo != nil {
 		tableInfo = append([]byte(nil), (*input.TableInfo)...)
-	} else if write.Locked.Profile != nil {
-		tableInfo = dmProfileTableBytes(write.Locked.Profile)
 	}
-	tagline, philosophy, houseRules := input.Tagline, input.Philosophy, input.HouseRules
-	if write.Locked.Profile != nil {
-		if tagline == nil {
-			tagline = write.Locked.Profile.Tagline
-		}
-		if philosophy == nil {
-			philosophy = write.Locked.Profile.Philosophy
-		}
-		if houseRules == nil {
-			houseRules = write.Locked.Profile.HouseRules
-		}
-	}
+
 	stored, err := p.queries().ProductStoreDmProfile(ctx, dbgen.ProductStoreDmProfileParams{
 		MemberID: memberID, Tagline: optionalText(tagline), Philosophy: optionalText(philosophy), HouseRules: optionalText(houseRules),
 		TableInfo: tableInfo, AcceptingPlayers: input.AcceptingPlayers, Status: status, Revision: revision, At: pgtype.Timestamptz{Time: write.At, Valid: true},
@@ -1538,9 +1524,12 @@ func (p *ProductPostgres) StoreSubmitDmProfileForVerification(ctx context.Contex
 		return DmProfileView{}, err
 	}
 	profile := write.Locked.Profile
+	if profile.ReviewRevision == 2147483647 {
+		return DmProfileView{}, apierr.New(apierr.Conflict, "dm profile revision exhausted")
+	}
 	stored, err := p.queries().ProductStoreDmProfile(ctx, dbgen.ProductStoreDmProfileParams{
 		MemberID: memberID, Tagline: optionalText(profile.Tagline), Philosophy: optionalText(profile.Philosophy), HouseRules: optionalText(profile.HouseRules),
-		TableInfo: dmProfileTableBytes(&profile), AcceptingPlayers: profile.AcceptingPlayers, Status: "pending", Revision: profile.ReviewRevision,
+		TableInfo: dmProfileTableBytes(&profile), AcceptingPlayers: profile.AcceptingPlayers, Status: "pending", Revision: profile.ReviewRevision + 1,
 		At: pgtype.Timestamptz{Time: write.At, Valid: true},
 	})
 	if err != nil {
@@ -1597,9 +1586,12 @@ func (p *ProductPostgres) StoreDecideDmProfileVerification(ctx context.Context, 
 		status = "approved"
 	}
 	profile := write.Locked.Profile
+	if profile.ReviewRevision == 2147483647 {
+		return DmProfileView{}, apierr.New(apierr.Conflict, "dm profile revision exhausted")
+	}
 	stored, err := p.queries().ProductStoreDmProfile(ctx, dbgen.ProductStoreDmProfileParams{
 		MemberID: memberID, Tagline: optionalText(profile.Tagline), Philosophy: optionalText(profile.Philosophy), HouseRules: optionalText(profile.HouseRules),
-		TableInfo: dmProfileTableBytes(&profile), AcceptingPlayers: profile.AcceptingPlayers, Status: status, Revision: profile.ReviewRevision,
+		TableInfo: dmProfileTableBytes(&profile), AcceptingPlayers: profile.AcceptingPlayers, Status: status, Revision: profile.ReviewRevision + 1,
 		At: pgtype.Timestamptz{Time: write.At, Valid: true},
 	})
 	if err != nil {

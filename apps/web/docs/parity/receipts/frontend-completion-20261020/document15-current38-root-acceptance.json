@@ -1,0 +1,96 @@
+{
+  "at": "2026-10-20T22:37:49.395207Z",
+  "nativeSession": 96518,
+  "exit": 0,
+  "durationSeconds": 175.08,
+  "test": "TestDocumentBrowserCurrentBoundaries",
+  "originalStages": 18,
+  "responsiveCases": 45,
+  "widths": [
+    390,
+    900,
+    1920
+  ],
+  "hiddenRuleDenialActors": [
+    "guest",
+    "other"
+  ],
+  "operationAttempts": 901,
+  "operationOutcomes": {
+    "complete": 901
+  },
+  "directReads": 116,
+  "persistedCounts": {
+    "links": 5,
+    "notices": 1,
+    "receipts": 72,
+    "documents": 13
+  },
+  "extraResponsiveMutations": 0,
+  "sourceUnchanged": {
+    "production-inputs": true,
+    "owned-inputs": true
+  },
+  "compatibilityArcUnchanged": true,
+  "frontendChecks": [
+    {
+      "stage": "before",
+      "receipt": ".local/workspace-setup/frontend-completion-20261020/production-preview-38/build-receipt.json",
+      "receiptSha256": "a7cd56a792264008e068ace59b608999da60f27ed128b360509944a8fbfe522b",
+      "sourceManifestSha256": "5158792f05a29af96d1611f135978a16b1dc3dcad9e834e4a833f696effc9e2b",
+      "sourceInputs": 625,
+      "distManifestSha256": "7fe52f1ed475a83931beb6ef00232b20461a04565218a0c6bc1a54e4437dfa2a",
+      "distFiles": 181,
+      "at": "2026-10-20T22:30:02.616Z"
+    },
+    {
+      "stage": "after",
+      "receipt": ".local/workspace-setup/frontend-completion-20261020/production-preview-38/build-receipt.json",
+      "receiptSha256": "a7cd56a792264008e068ace59b608999da60f27ed128b360509944a8fbfe522b",
+      "sourceManifestSha256": "5158792f05a29af96d1611f135978a16b1dc3dcad9e834e4a833f696effc9e2b",
+      "sourceInputs": 625,
+      "distManifestSha256": "7fe52f1ed475a83931beb6ef00232b20461a04565218a0c6bc1a54e4437dfa2a",
+      "distFiles": 181,
+      "at": "2026-10-20T22:32:54.934Z"
+    }
+  ],
+  "cleanup": {
+    "apiStarted": true,
+    "at": "2026-10-20T22:32:55.075609702Z",
+    "database": "product_case_1",
+    "databaseDropped": true,
+    "listenersClosed": {
+      "api": true,
+      "vite": true
+    },
+    "nodeStarted": true,
+    "runtimeStarted": true
+  },
+  "actualRootImagesViewed": [
+    "responsive-new-qualified-codex-form-390.png",
+    "responsive-new-qualified-codex-form-900.png"
+  ],
+  "artifacts": {
+    "browser-receipt.json": "4af6f13b46e255ff31d3d851791c56928a498b6cc167e2e142457cb8da196723",
+    "native-persisted-readback.json": "79dbaa4220755998e39eee655f836062d93fd82817b962ffce44e8c3362c60a1",
+    "native-compatibility-readback.json": "22508eddc9ee525713f38479f8a3a7e6e1863efbb44e08ac679b940884282d88",
+    "native-cleanup.json": "318a05b8ae3be4cdc30c521bddb0e98e410c10ad2e96e9492dc863e1d25470d0",
+    "http-observer.json": "f0895818872306594ee8ed23e240f8c52e73c212fd7739cbacda194e46b2f282",
+    "native.log": "08ee4d8b5ce1a1e0001d7b784146e8eaa720e110bbab8e38a12f0a823fd4b149",
+    "responsive-new-qualified-codex-form-390.png": "e6341f105acba841400e46a49b207714f2a2544b6bdea839b14bb5217e78dc44",
+    "responsive-new-qualified-codex-form-900.png": "3294ee030ee7f2ecd5f4bb1ce9f1ba10c346ea125187352701a6c2b662fd8139"
+  },
+  "limits": [
+    "Actual Build38assets/native14isolatedrealAPI; all18originalpersistence/privacy/lifecycle andtwoexactprivateRuleDenial oraclepassed.",
+    "42originalresponsivecases+3realinitializedqualifiednewCodexformstates/native5categorymenuitems/Factionselectionat3909001920; localtitle/body only, no extra save or product mutation.",
+    "Rootviewednewform390/900; fullviewportcontrol/focus/clipguards passed. No ownerLegacyvisualapproval orallroleCartesian.",
+    "LocaltwoQuestselection remains responsiveevidence; authoritative multiquest persistence comesseparateQuestlifecycleproof. EarlierD11/C18/etcfailedrecordsretainedwithoutpromotion."
+  ],
+  "nativeBinary": 14,
+  "frontendBuild": 38,
+  "bindings": {
+    "production-preview-38/build-receipt.json": "a7cd56a792264008e068ace59b608999da60f27ed128b360509944a8fbfe522b",
+    "final-acceptance-14/compile-receipt.json": "11c16f3c3b59e4416a8823d0fdfc61281d0c70667389e7e00ed0a5ba249074a1",
+    "editor-live/create-form-responsive-preparation/independent-review.md": "15ddf7c8ba5703ef6f91c8768ee49608ae4812cf896b85e4f7bae98f06687c98"
+  }
+}

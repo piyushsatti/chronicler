@@ -1,0 +1,79 @@
+{
+  "at": "2026-10-20T20:54:23.937891+00:00",
+  "nativeSession": 75880,
+  "exit": 0,
+  "durationSeconds": 96.69,
+  "originalJourneys": 10,
+  "responsiveStates": 21,
+  "keyboardProfiles": [
+    {
+      "width": 390,
+      "completed": true,
+      "centerExposed": true,
+      "focusVisible": true,
+      "focusPaint": true
+    },
+    {
+      "width": 900,
+      "completed": true,
+      "centerExposed": true,
+      "focusVisible": true,
+      "focusPaint": true
+    },
+    {
+      "width": 1920,
+      "completed": true,
+      "centerExposed": true,
+      "focusVisible": true,
+      "focusPaint": true
+    }
+  ],
+  "operationAttempts": 678,
+  "operationOutcomes": {
+    "complete": 585,
+    "aborted": 93
+  },
+  "nativeReadback": {
+    "at": "2026-10-20T20:53:00.951630812Z",
+    "calendarExtrasPreserved": true,
+    "futureProjectionCells": 30,
+    "mutationsReadBack": true,
+    "ownerExactReplay": true,
+    "ownerOverrideFactCount": 1,
+    "ownerWritePersisted": true,
+    "selfRoleRevoked": true,
+    "separateAuditTableAbsent": true
+  },
+  "sourceUnchanged": {
+    "production-inputs": true,
+    "owned-inputs": true
+  },
+  "cleanup": {
+    "apiClosed": true,
+    "apiStarted": true,
+    "at": "2026-10-20T20:53:00.966259341Z",
+    "database": "product_case_1",
+    "databaseDropped": true,
+    "listenersClosed": {
+      "api": true,
+      "vite": true
+    }
+  },
+  "rootActualImagesViewed": [
+    "anchor-keyboard-390.png",
+    "responsive-dm-900-dm-dashboard.png"
+  ],
+  "artifacts": {
+    "root-preflight.json": "60b5c5ec4e2a6a6c20c04780a8e03498827038a7bb26ca1d02d78fb660f8539c",
+    "browser-receipt.json": "e571b61abf548a65c7cd2acee1fa0c82ce981efd255914a5efce6489c5f46202",
+    "native-readback.json": "b9130ece0c3e974fb76dfc0b9b665bf2e0c3370af3421969c7ff37e4ef73e0ab",
+    "native-cleanup.json": "554c7c4cdd9b6712db80e06cf9785108c1eacf77ac5332164f767177bff13ce3",
+    "anchor-keyboard-390.png": "f7a646edbc2e36d46e102269cfc5ca80aa8902cb0cbbf78e68fd11ad125bcb09",
+    "responsive-dm-900-dm-dashboard.png": "a6dc5554e3dfd249a02ee265288c8d7ee8f787448470adbeac22f2703c331eed"
+  },
+  "limits": [
+    "Current34 source via isolated native13 fixture Vite/realAPI; not immutable timing.",
+    "Aborted queries remain under unchanged causal navigation/teardown guards and are never counted successful. No zero-network-failure claim.",
+    "Twenty-one actual responsive states and three nativeRate keyboard profiles; no allrole/theme/action Cartesian orownerLegacyapproval."
+  ]
+}

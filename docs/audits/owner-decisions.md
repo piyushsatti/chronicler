@@ -121,3 +121,13 @@ Re-run or extend dated audit siblings when evidence drifts; this file records **
 | [interface-contract-audit-summary.md](interface-contract-audit-summary.md) | Contract vs implementation map |
 | [hobby-db-simplification-memo.md](hobby-db-simplification-memo.md)         | Research backing for **A–J**   |
 | [bulk-crud-performance-memo.md](bulk-crud-performance-memo.md)             | Research backing for **K1**    |
+
+---
+
+## Frontend completion follow-ups (2026-10-20)
+
+Source: explicit owner answers in the complete-frontend implementation chat on 2026-10-20. These decisions supersede conflicting storage and repeat-login descriptions for this scope; historical records remain dated evidence.
+
+- **Override audit storage:** retain safe override facts beside each command result in the existing durable command receipt, within the same business transaction. Do not add `auth_override_audit`. Preserve current authority checks, exact replay and rollback of business effects when audit/receipt persistence fails. This converges on one command receipt surface. The storage policy is a **two-way door**; moving retained facts later requires migration, and deleting facts is irreversible.
+- **Member display name and avatar:** Discord supplies initial values at first login. Later logins preserve locally edited profile values and the existing stable member identity, handle, status and roles. This converges on the member record as profile authority. This is a **two-way policy change**; any future overwrite policy must address existing local edits before applying it.
+- **Local QA Calendar:** the owner delegated a recommended repair of the missing epoch/era label. Add a neutral `CE` epoch label to the existing legacy definition, retaining its `First` month, length, other definition values, time anchors and stored dates. Align the local seed so fresh development databases do not repeat the invalid definition. This is a **two-way data/configuration edit**; changing the label later must not rewrite date origins or history. Production deployment is not authorized.

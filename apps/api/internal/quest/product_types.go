@@ -204,13 +204,14 @@ const (
 )
 
 type QuestSummaryFields struct {
-	Body        string
-	CharacterId *string
-	DocumentId  *string
-	Frontmatter json.RawMessage
-	QuestIds    []string
-	Title       string
-	Visibility  string
+	Body             string
+	CharacterId      *string
+	DocumentId       *string
+	ExpectedRevision *int32
+	Frontmatter      json.RawMessage
+	QuestIds         []string
+	Title            string
+	Visibility       string
 }
 
 type QuestSummaryTotalsView struct {
@@ -462,7 +463,7 @@ type AttestQuestParticipationState struct {
 	Character    *character.Admission
 	Roster       []QuestParticipantView
 	BriefVersion int64
-	AllowedHexes []spatial.HexAdmission
+	AllowedHexes []spatial.PointcrawlAdmission
 }
 
 type CloseQuestState struct {
@@ -475,7 +476,7 @@ type CloseQuestState struct {
 	Character            *character.Admission
 	Roster               []QuestParticipantView
 	BriefVersion         int64
-	AllowedHexes         []spatial.HexAdmission
+	AllowedHexes         []spatial.PointcrawlAdmission
 	ExistingEntitlements []character.QuestRewardEntitlementView
 }
 
@@ -489,7 +490,7 @@ type CreateQuestState struct {
 	Character    *character.Admission
 	Roster       []QuestParticipantView
 	BriefVersion int64
-	AllowedHexes []spatial.HexAdmission
+	AllowedHexes []spatial.PointcrawlAdmission
 }
 
 type DeleteQuestState struct {
@@ -502,7 +503,7 @@ type DeleteQuestState struct {
 	Character    *character.Admission
 	Roster       []QuestParticipantView
 	BriefVersion int64
-	AllowedHexes []spatial.HexAdmission
+	AllowedHexes []spatial.PointcrawlAdmission
 }
 
 type WithdrawFromQuestState struct {
@@ -515,7 +516,7 @@ type WithdrawFromQuestState struct {
 	Character    *character.Admission
 	Roster       []QuestParticipantView
 	BriefVersion int64
-	AllowedHexes []spatial.HexAdmission
+	AllowedHexes []spatial.PointcrawlAdmission
 }
 
 type RemoveQuestFromArcState struct {
@@ -528,7 +529,7 @@ type RemoveQuestFromArcState struct {
 	Character    *character.Admission
 	Roster       []QuestParticipantView
 	BriefVersion int64
-	AllowedHexes []spatial.HexAdmission
+	AllowedHexes []spatial.PointcrawlAdmission
 }
 
 type RestoreQuestState struct {
@@ -541,7 +542,7 @@ type RestoreQuestState struct {
 	Character    *character.Admission
 	Roster       []QuestParticipantView
 	BriefVersion int64
-	AllowedHexes []spatial.HexAdmission
+	AllowedHexes []spatial.PointcrawlAdmission
 }
 
 type SelectQuestParticipantsState struct {
@@ -554,7 +555,7 @@ type SelectQuestParticipantsState struct {
 	Character    *character.Admission
 	Roster       []QuestParticipantView
 	BriefVersion int64
-	AllowedHexes []spatial.HexAdmission
+	AllowedHexes []spatial.PointcrawlAdmission
 	Candidates   []character.Admission
 }
 
@@ -568,7 +569,7 @@ type SetQuestHexesState struct {
 	Character    *character.Admission
 	Roster       []QuestParticipantView
 	BriefVersion int64
-	AllowedHexes []spatial.HexAdmission
+	AllowedHexes []spatial.PointcrawlAdmission
 }
 
 type SignupForQuestState struct {
@@ -581,7 +582,7 @@ type SignupForQuestState struct {
 	Character    *character.Admission
 	Roster       []QuestParticipantView
 	BriefVersion int64
-	AllowedHexes []spatial.HexAdmission
+	AllowedHexes []spatial.PointcrawlAdmission
 }
 
 type SyncQuestDiscordState struct {
@@ -594,7 +595,7 @@ type SyncQuestDiscordState struct {
 	Character    *character.Admission
 	Roster       []QuestParticipantView
 	BriefVersion int64
-	AllowedHexes []spatial.HexAdmission
+	AllowedHexes []spatial.PointcrawlAdmission
 }
 
 type TransitionQuestStatusState struct {
@@ -607,7 +608,7 @@ type TransitionQuestStatusState struct {
 	Character    *character.Admission
 	Roster       []QuestParticipantView
 	BriefVersion int64
-	AllowedHexes []spatial.HexAdmission
+	AllowedHexes []spatial.PointcrawlAdmission
 }
 
 type UpdateQuestState struct {
@@ -620,7 +621,7 @@ type UpdateQuestState struct {
 	Character    *character.Admission
 	Roster       []QuestParticipantView
 	BriefVersion int64
-	AllowedHexes []spatial.HexAdmission
+	AllowedHexes []spatial.PointcrawlAdmission
 }
 
 type UpsertQuestArcState struct {
@@ -633,7 +634,7 @@ type UpsertQuestArcState struct {
 	Character    *character.Admission
 	Roster       []QuestParticipantView
 	BriefVersion int64
-	AllowedHexes []spatial.HexAdmission
+	AllowedHexes []spatial.PointcrawlAdmission
 }
 
 type UpsertQuestSummaryState struct {
@@ -646,7 +647,7 @@ type UpsertQuestSummaryState struct {
 	Character    *character.Admission
 	Roster       []QuestParticipantView
 	BriefVersion int64
-	AllowedHexes []spatial.HexAdmission
+	AllowedHexes []spatial.PointcrawlAdmission
 }
 
 type AttestQuestParticipationWrite struct {

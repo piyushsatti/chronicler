@@ -1,0 +1,50 @@
+.root h1,
+.root p {
+  margin: 0;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--sp-6);
+  align-items: start;
+}
+
+.layout[data-sidebar='true'] {
+  grid-template-columns: 210px minmax(0, 1fr);
+}
+
+.header {
+  margin-bottom: var(--sp-8);
+}
+
+.period {
+  margin-bottom: var(--sp-8);
+}
+
+.periodHeader {
+  margin-bottom: var(--sp-4);
+}
+
+.periodHeader > span {
+  white-space: nowrap;
+}
+
+.periodRule {
+  flex: 1;
+  border-top: 1px solid var(--color-border-2);
+}
+
+.periodEntries {
+  position: relative;
+  padding-left: 2px;
+}
+
+.spine {
+  position: absolute;
+  left: 4px;
+  top: 20px;
+  bottom: 0;
+  width: 1px;
+  background: var(--color-border);
+}

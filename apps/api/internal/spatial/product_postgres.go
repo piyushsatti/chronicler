@@ -88,10 +88,6 @@ func (p *ProductPostgres) StoreUpsertPoi(context.Context, UpsertPoiWrite) (PoiVi
 	return PoiView{}, p.pending()
 }
 
-func (p *ProductPostgres) ResolveQuestHexIDs(context.Context, auth.Authority, []QuestHexCandidate) ([]HexAdmission, error) {
-	return nil, p.pending()
-}
-
 func (p *ProductPostgres) AdmitLocationLink(context.Context, auth.Authority, string, string) (document.LocationAdmission, error) {
 	return document.LocationAdmission{}, p.pending()
 }

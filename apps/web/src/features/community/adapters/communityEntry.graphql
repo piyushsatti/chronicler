@@ -1,0 +1,15 @@
+query CommunityEntry($slug: String!) {
+  document(slug: $slug) {
+    id
+    slug
+    kind
+    category
+    title
+    effectiveBody
+    publishedAt
+    updatedAt
+    author {
+      handle
+    }
+  }
+}

@@ -1,23 +1,35 @@
+import { Button } from '../../../components/primitives/Button.js';
+import { isSafeInternalPath } from '../../../utils/url.js';
+import { AdminPagination } from './AdminPagination.js';
 import { Link } from 'react-router-dom';
 import { Card } from '../../../components/primitives/Card.js';
 import { Chip } from '../../../components/primitives/Chip.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
-import type { DataHealthPanelView } from '../hooks/useDataHealthPanel.js';
+import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
+import { humanizeKey } from '../../../utils/format.js';
+import type { AdminOperationsView } from '../hooks/useAdminOperations.js';
 
 export function DataHealthPanel({
   view,
 }: {
-  view: DataHealthPanelView;
+  view: AdminOperationsView;
 }): React.JSX.Element {
-  if (view.status === 'error') {
-    return <StatePanel status="error" error={view.error} />;
+  const { query, alertPage } = view;
+  const { formatDateTime } = useDateFormatter();
+  if (query.isError) {
+    return (
+      <div className="stack">
+        <StatePanel status="error" error={query.error} />
+        <Button onClick={view.retry}>Retry diagnostics</Button>
+      </div>
+    );
   }
-  if (view.status === 'loading') {
+  if (query.isLoading || !query.data) {
     return <StatePanel status="loading" />;
   }
 
-  const { ops } = view;
+  const ops = query.data;
   return (
     <div className="stack" data-el="admin.dataHealthPanel">
       <Card className="stack">
@@ -28,8 +40,7 @@ export function DataHealthPanel({
           </Chip>
         </div>
         <p className="type-caption">
-          Watchdog observations from adminOperations (legacy /admin/data-health +
-          /admin/ingestion).
+          Background job failures and bot heartbeat alerts.
         </p>
         <p className="type-caption">
           Pending deliveries: {ops.pendingDeliveryCount} · Total tracked:{' '}
@@ -38,8 +49,9 @@ export function DataHealthPanel({
       </Card>
       <Card className="stack">
         <h3 className="type-heading">Active exceptions</h3>
+        <AdminPagination page={alertPage} />
         {ops.activeAlerts.length === 0 ? (
-          <EmptyState kind="no-events" message="All monitored systems are healthy." />
+          <EmptyState kind="no-events" message="No active exceptions on this page." />
         ) : (
           <ul className="stack">
             {ops.activeAlerts.map((alert) => (
@@ -47,16 +59,20 @@ export function DataHealthPanel({
                 <div className="row" data-justify="between">
                   <strong className="type-title">{alert.label}</strong>
                   <Chip tone="status" size="sm">
-                    {alert.severity}
+                    {humanizeKey(alert.severity)}
                   </Chip>
                 </div>
                 <p className="type-caption">
-                  First seen {alert.firstSeenAt ?? '—'} · Last seen{' '}
-                  {alert.lastSeenAt ?? '—'}
+                  First seen {formatDateTime(alert.firstSeenAt)} · Last seen{' '}
+                  {formatDateTime(alert.lastSeenAt)}
                 </p>
-                <Link className="btn btn--ghost btn--sm" to={alert.remediationHref}>
-                  Open remediation surface
-                </Link>
+                {isSafeInternalPath(alert.remediationHref) ? (
+                  <div className="row">
+                    <Link className="btn btn--ghost btn--sm" to={alert.remediationHref}>
+                      View diagnostics
+                    </Link>
+                  </div>
+                ) : null}
               </li>
             ))}
           </ul>

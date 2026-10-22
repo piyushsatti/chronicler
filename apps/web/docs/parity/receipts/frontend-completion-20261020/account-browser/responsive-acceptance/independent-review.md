@@ -1,0 +1,29 @@
+# Independent Account responsive harness review
+
+2026-10-20. **ACCEPTED for root-controlled runtime execution; no must-fix established.** This is source/preparation acceptance, not responsive browser success.
+
+Reviewed frozen/current MJS `b6d5e2f15008803479e294fb88fecb01db9bc58e4b2178966a3c8eaa7245afd9`, unchanged Go `629bc891a73b7c192ff5849d56e3d6354b1cf30eef7ef49f1e51979e7b18fe8c`, author report `85c6dc3e58081e71bcd470b3f610be047e4d6eda73fffb7681ccf64a95fc5746`, and exact diff `f4cd024427d0f0e7261ab9d0741a38000a2066f6a5f087b25d8df96d1eaa976a`. Before-source SHA is `7f90d5857466e48781eb112acd12a5bb1915961f6dcf6e043a9269000894ef98`; current source equals the frozen snapshot.
+
+## Preservation and causality
+
+An independent whole-file inverse removes only the new helpers/receipt field/page variable, the one post-action check call and final responsive-completion assertions, and recovers every original byte. All twelve original check-call expressions (eleven core and optional DDB) remain byte identical. All 25 prior named functions remain identical except the explicitly scoped one-line check-wrapper append. Thus original observation/actor/body guards, settings-failure injection/classifier, DM-tab supersession classifier, command/replay helpers, eight replay actions, optional live DDB branch, source identity and cleanup have not been relaxed. Go is byte unchanged, including its 300-second browser-child timeout and native final effects.
+
+The post-action wrapper runs only after the old action returns successfully. The new ordinary-owner context does not replace the original contexts or move any mutation into a layout helper. The extra tours never call command/replay/gql, never click Save/Submit/Retire/Sync, and require unchanged global mutation/replay counts before returning. The new final guard requires all 36 unique captured/passed tuples before overall completion. A responsive failure can occur after an old check is recorded passed, but still fails the overall attempt through existing error/cleanup; separate responsive receipt fields make that distinction visible.
+
+## Source-grounded states and controls
+
+I compared the new selectors and sequencing with SettingsForm, MePage, CreateCharacterForm, OwnerActions, CharacterActivityPanel, CharacterPage, ProfileOwnerActions, ProfilePages and NotificationRow, plus the actual original stage bodies.
+
+The twelve states at 390/900/1920 use actual existing owner identity and record IDs: both settings routes; Me navigation; local Character creation form with existing Region/catalog options; read inbox; newly created pending Character owner form and activity panel; retired Character progression and saved downtime editor; saved member availability with draft DM controls; approved DM profile/table ownership; and persisted DM-table reader. Labels and native Tab order are source-grounded. CharacterPage defaults to Progression, so the retired +7/-2 assertions are reached before the separate Logs & downtime tab tour. Description→Background, Project name→Project goal, Display name→Avatar URL, Tagline→Philosophy and hosted-by→Edit table are actual adjacent controls. Local Edit/Cancel does not submit a downtime command.
+
+The inbox sample follows the completed original cursor/read/ack/account-switch workflow, when native/API unread count is zero and the actual 19 retained rows are read. NotificationRow has one destination link and no per-row action control; first→second link Tab is realistic. The tour does not open those links or acknowledge notifications. Draft DM inspection precedes the original DM review stage; approved disabled submission follows it; authority revocation remains later. Thus no authority or status is fabricated to obtain the pictures. Actual completed MemberMe request/body UUID, roles and in-memory token equality are checked for each captured state without recording token values.
+
+## Geometry and checks actually run
+
+The geometry/focus oracle measures real controls and text ranges, rejects viewport overflow and permanent hidden/clip ancestor truncation, and requires painted positive control dimensions. Ordinary below-fold controls remain permitted, while the native Tab destination must be within the current viewport, exposed at its center, focus-visible and have an indicator. No injected dimensions/CSS, forced action, repeated scrolling or timeout change is introduced. Vertical font-em range extents are intentionally not treated as painted-text clipping. Native scroll containers are not advertised as fully inspected by this oracle.
+
+Independent checks all exited zero: Node syntax; explicit installed Prettier check; whole-file exact inverse/current-frozen equality; and source-extracted pure suite (2 valid layout cases, 19 invalid cases, twelve state names/36 tuples, original call/function preservation, unchanged Go/300-second lifetime). I executed the pure suite in memory with only its evidence-output line suppressed and a rejecting filesystem-write guard, so the author's existing pure-check JSON was not rewritten. The original settings and DM classifiers are included in the proven unchanged function bytes; I did not rerun runtime lanes.
+
+## Remaining limits
+
+All 36 actual responsive observations/screenshots, real duration under 300 seconds and absence of new automatic effects must be established by root's serial fixture run. This authoring unit uses fixture Vite, not a newly built immutable preview; do not label it otherwise. Default execution must keep the optional live DDB branch off; it is preserved but not exercised by these tours. No provider/OAuth, all-role/theme Cartesian coverage, rejected-state three-width layout, pixel signoff or new persistence success follows from this source review. No browser, API, database, Go compiler, native fixture, build, provider or service was started; no reviewed source/helper or canonical artifact was modified. All review commands ended.

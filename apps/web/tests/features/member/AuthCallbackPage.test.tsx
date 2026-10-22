@@ -126,7 +126,7 @@ describe('AuthCallbackPage', () => {
       if (scenario === 'ambiguous') route += '&state=duplicate';
       renderWithProviders(<AuthCallbackPage />, { route });
       expect(await screen.findByRole('alert')).toHaveTextContent(
-        'Sign-in could not be verified. Start again from Sign in.',
+        'We couldn’t verify this sign-in. The link may be old or opened in another tab.',
       );
       expect(requests).toBe(0);
       expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
@@ -150,7 +150,7 @@ describe('AuthCallbackPage', () => {
     unmount();
     renderWithProviders(<AuthCallbackPage />, { route });
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Sign-in could not be verified. Start again from Sign in.',
+      'We couldn’t verify this sign-in. The link may be old or opened in another tab.',
     );
     expect(exchange).toHaveBeenCalledTimes(1);
     expect(localStorage.getItem(TOKEN_KEY)).toBe(acceptedToken);
@@ -239,7 +239,7 @@ describe('AuthCallbackPage', () => {
     await waitFor(() => expect(exchange).toHaveBeenCalledTimes(1));
     fireEvent.click(screen.getByRole('button', { name: 'Change callback' }));
     expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Sign-in could not be verified.',
+      'We couldn’t verify this sign-in.',
     );
     await act(async () => {
       finish(token());

@@ -5,27 +5,43 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"reflect"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgtype"
-	"github.com/jackc/pgx/v5/pgxpool"
-
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbgen"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/jobs"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 )
 
 const LaneMaintenance = "maintenance"
 
 var errUnknownMaintenanceKind = errors.New("UNKNOWN_MAINTENANCE_KIND")
+var errMaintenanceBusy = errors.New("JOB_BUSY")
+
+type TimeFillWriter interface {
+	FillFuture(context.Context, jobs.ExecutionScope, product.Date, int32) (int32, error)
+}
 
 // MaintenanceHandler runs scheduled background jobs from the work table.
 type MaintenanceHandler struct {
-	store jobs.Store
-	pool  *pgxpool.Pool
+	store      jobs.Store
+	gate       ExecutionGate
+	timeWriter TimeFillWriter
+	clock      product.Clock
 }
 
-func NewMaintenanceHandler(store jobs.Store, pool *pgxpool.Pool) *MaintenanceHandler {
-	return &MaintenanceHandler{store: store, pool: pool}
+func NewMaintenanceHandler(store jobs.Store, gate ExecutionGate, timeWriter TimeFillWriter, clock product.Clock) (*MaintenanceHandler, error) {
+	for _, dependency := range []any{store, gate, timeWriter, clock} {
+		if dependency == nil {
+			return nil, errors.New("maintenance dependencies required")
+		}
+		value := reflect.ValueOf(dependency)
+		if (value.Kind() == reflect.Pointer || value.Kind() == reflect.Func || value.Kind() == reflect.Interface) && value.IsNil() {
+			return nil, errors.New("maintenance dependencies required")
+		}
+	}
+	return &MaintenanceHandler{store: store, gate: gate, timeWriter: timeWriter, clock: clock}, nil
 }
 
 func (h *MaintenanceHandler) ProcessOne(ctx context.Context) (bool, error) {
@@ -37,25 +53,37 @@ func (h *MaintenanceHandler) ProcessOne(ctx context.Context) (bool, error) {
 		return false, nil
 	}
 	errRun := jobs.RunLeased(ctx, h.store, job, func(ctx context.Context) error {
-		var errRun error
-		switch job.Kind {
-		case "gametime_fill":
-			errRun = h.gametimeFill(ctx)
-		case "reconcile_dry_run":
-			errRun = h.reconcileDryRun(ctx)
-		default:
+		if job.Kind != "gametime_fill" && job.Kind != "reconcile_dry_run" {
 			return errUnknownMaintenanceKind
 		}
-		return errRun
+		acquired, err := h.gate.Do(ctx, job.Kind, job.Receipt(), func(ctx context.Context, scope jobs.ExecutionScope) error {
+			if job.Kind == "reconcile_dry_run" {
+				return h.reconcileDryRun(ctx, scope)
+			}
+			at, err := product.UTCNow(h.clock)
+			if err != nil {
+				return err
+			}
+			_, err = h.timeWriter.FillFuture(ctx, scope, product.Date(at.Format("2006-01-02")), 30)
+			return err
+		})
+		if err == nil && !acquired {
+			return errMaintenanceBusy
+		}
+		return err
 	})
 	if errRun != nil {
 		if errors.Is(errRun, errUnknownMaintenanceKind) {
 			return true, h.store.Fail(ctx, job.Receipt(), jobs.RepairRequired, errRun.Error())
 		}
-		if job.Attempts >= jobs.MaxAttempts {
-			return true, h.store.Fail(ctx, job.Receipt(), jobs.Dead, errRun.Error())
+		if errors.Is(errRun, errMaintenanceBusy) {
+			return true, h.store.Retry(ctx, job.Receipt(), time.Second, "JOB_BUSY")
 		}
-		return true, h.store.Retry(ctx, job.Receipt(), jobs.Backoff(job.Attempts), errRun.Error())
+		code := maintenanceFailureCode(errRun)
+		if job.Attempts >= jobs.MaxAttempts {
+			return true, h.store.Fail(ctx, job.Receipt(), jobs.Dead, code)
+		}
+		return true, h.store.Retry(ctx, job.Receipt(), jobs.Backoff(job.Attempts), code)
 	}
 	if err := h.store.Succeed(ctx, job.Receipt()); err != nil {
 		return true, err
@@ -64,25 +92,24 @@ func (h *MaintenanceHandler) ProcessOne(ctx context.Context) (bool, error) {
 	return true, nil
 }
 
-func (h *MaintenanceHandler) gametimeFill(ctx context.Context) error {
-	q := dbgen.New(h.pool)
-	today := time.Now().UTC().Truncate(24 * time.Hour)
-	var d pgtype.Date
-	_ = d.Scan(today.Format("2006-01-02"))
-	day, err := q.GetGameDayForRealDate(ctx, d)
-	if err == nil && day > 0 {
-		return nil
+func maintenanceFailureCode(err error) string {
+	if failure, ok := errors.AsType[*apierr.Error](err); ok && failure.Code == apierr.Invalid {
+		return "JOB_INVARIANT_FAILED"
 	}
-	// Seed a monotonic day when missing (preview/staging helper).
-	next := int32(time.Now().UTC().Unix() / 86400)
-	return q.UpsertGameTimeMapDay(ctx, dbgen.UpsertGameTimeMapDayParams{
-		RealDate: d,
-		GameDay:  next,
-	})
+	if errors.Is(err, jobs.ErrLease) {
+		return "JOB_LEASE_LOST"
+	}
+	if errors.Is(err, context.DeadlineExceeded) {
+		return "JOB_TIMEOUT"
+	}
+	return "JOB_EXECUTION_FAILED"
 }
 
-func (h *MaintenanceHandler) reconcileDryRun(ctx context.Context) error {
-	q := dbgen.New(h.pool)
+func (h *MaintenanceHandler) reconcileDryRun(ctx context.Context, scope jobs.ExecutionScope) error {
+	if scope.Connection == nil {
+		return errors.New("reconciliation requires the borrowed connection")
+	}
+	q := dbgen.New(scope.Connection)
 	members, err := q.CountMembers(ctx)
 	if err != nil {
 		return err

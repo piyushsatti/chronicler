@@ -1,7 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AppError } from '../../../errors/types.js';
-import { loadMemberProfile } from '../adapters/memberProfileAdapter.js';
+import {
+  loadMemberProfile,
+  type MemberProfileView,
+} from '../adapters/memberProfileAdapter.js';
 
 function normalizeHandle(raw: string | undefined): string {
   if (!raw) return '';
@@ -20,12 +23,9 @@ export type ProfileBodyView =
   | { status: 'loading' }
   | { status: 'error'; error: AppError }
   | { status: 'empty' }
-  | { status: 'ready'; member: ProfileMemberView };
+  | { status: 'ready'; member: ProfileMemberView; profile: MemberProfileView };
 
-export function useProfileBody(
-  _role: 'dm' | 'player',
-  shortCode: string,
-): ProfileBodyView {
+export function useProfileBody(shortCode: string): ProfileBodyView {
   const handle = normalizeHandle(shortCode);
   const profile = useQuery({
     queryKey: ['memberProfile', handle],
@@ -33,20 +33,22 @@ export function useProfileBody(
     enabled: handle.length > 0,
   });
 
-  if (!handle) return { status: 'empty' };
   if (profile.isError) {
     return { status: 'error', error: toAppError(profile.error, 'profile:page') };
   }
-  if (profile.isLoading || profile.data === undefined) {
+  if (handle && (profile.isLoading || profile.data === undefined)) {
     return { status: 'loading' };
   }
-  if (profile.data == null) return { status: 'empty' };
+  if (!handle || profile.data == null) return { status: 'empty' };
 
   const view = profile.data;
   const isDm =
-    view.dmProfile != null || view.member.roles.includes('dm');
+    view.member.status === 'active' &&
+    view.member.roles.includes('dm') &&
+    view.dmProfile?.status === 'approved';
   return {
     status: 'ready',
+    profile: view,
     member: {
       handle: view.member.handle,
       displayName: view.member.displayName,
@@ -56,5 +58,3 @@ export function useProfileBody(
     },
   };
 }
-
-export { normalizeHandle };

@@ -1,0 +1,346 @@
+{
+  "at": "2026-10-20T20:07:52.777370+00:00",
+  "acceptanceSha256": "4b5398bfeb846a9759f301f4e915e272fe291d223eed762818a50c3721452885",
+  "browserReceiptSha256": "cdb2044f43113fc7a7189aa4080e8909d443489228cdd2b6e133fe3b6ddc27ec",
+  "independentReviewSha256": "0b9c65fbec6370a5ce8be2a7ed74a5538a3d9233f9597304d79d96f9c935188f",
+  "rootVisualReviewSha256": "265f1c865d4da1c1307bf23b4d63011bfe188dbceac7dd7307293a06068f60e0",
+  "cases": [
+    {
+      "routePattern": "/settings",
+      "actualRoute": "/settings",
+      "state": "settings",
+      "width": 390,
+      "passed": true,
+      "screenshot": "responsive-settings-390.png",
+      "sha256": "3efa3a9a31c26da6199df2080841e0753243812722acc30cb1b515996c9762d7"
+    },
+    {
+      "routePattern": "/settings",
+      "actualRoute": "/settings",
+      "state": "settings",
+      "width": 900,
+      "passed": true,
+      "screenshot": "responsive-settings-900.png",
+      "sha256": "cde35f0fed514208c32032f9c8ff90ebc728dbdd9d795e2857b243472c4474bc"
+    },
+    {
+      "routePattern": "/settings",
+      "actualRoute": "/settings",
+      "state": "settings",
+      "width": 1920,
+      "passed": true,
+      "screenshot": "responsive-settings-1920.png",
+      "sha256": "e4b78eb9dec1f005c731ee4247334795737a7986b38d4f3fd328af905a9bdc1a"
+    },
+    {
+      "routePattern": "/me/personalize",
+      "actualRoute": "/me/personalize",
+      "state": "personalize",
+      "width": 390,
+      "passed": true,
+      "screenshot": "responsive-personalize-390.png",
+      "sha256": "416f7276c0adcf9a9ea9c511fd94c73c1f575bc2f455c8d005d607edb2442427"
+    },
+    {
+      "routePattern": "/me/personalize",
+      "actualRoute": "/me/personalize",
+      "state": "personalize",
+      "width": 900,
+      "passed": true,
+      "screenshot": "responsive-personalize-900.png",
+      "sha256": "6e24eb399a2a44cc633508155c46279d9b8782b6ba53c58b696c62effb52ad0b"
+    },
+    {
+      "routePattern": "/me/personalize",
+      "actualRoute": "/me/personalize",
+      "state": "personalize",
+      "width": 1920,
+      "passed": true,
+      "screenshot": "responsive-personalize-1920.png",
+      "sha256": "145f90b4bb3d12f4849c118cb97168a11dee707f3ee78224b071602313011f1f"
+    },
+    {
+      "routePattern": "/me",
+      "actualRoute": "/me",
+      "state": "me-navigation",
+      "width": 390,
+      "passed": true,
+      "screenshot": "responsive-me-navigation-390.png",
+      "sha256": "68a770ce850a1eb98af7450222e36fe4c6282ea1b6382c4e3e483058e982652c"
+    },
+    {
+      "routePattern": "/me",
+      "actualRoute": "/me",
+      "state": "me-navigation",
+      "width": 900,
+      "passed": true,
+      "screenshot": "responsive-me-navigation-900.png",
+      "sha256": "efadd58c59ee6a51f54f5bba1ecee495e7d8d1eac306a09f7b3e2724abbde403"
+    },
+    {
+      "routePattern": "/me",
+      "actualRoute": "/me",
+      "state": "me-navigation",
+      "width": 1920,
+      "passed": true,
+      "screenshot": "responsive-me-navigation-1920.png",
+      "sha256": "851f8eccff01d06af63f1614f89297952e265b00e41082fb9227d64f24953124"
+    },
+    {
+      "routePattern": "/characters",
+      "actualRoute": "/characters",
+      "state": "create-character",
+      "width": 390,
+      "passed": true,
+      "screenshot": "responsive-create-character-390.png",
+      "sha256": "b47edcb3035c656070197d8ba8cf3655ad137fe261b9ba3e89c5f2968c52dfc5"
+    },
+    {
+      "routePattern": "/characters",
+      "actualRoute": "/characters",
+      "state": "create-character",
+      "width": 900,
+      "passed": true,
+      "screenshot": "responsive-create-character-900.png",
+      "sha256": "cc2be456b5752a2b4cf51db57d88f4f75662dba0eee9f30bd961d0d426b8bbbc"
+    },
+    {
+      "routePattern": "/characters",
+      "actualRoute": "/characters",
+      "state": "create-character",
+      "width": 1920,
+      "passed": true,
+      "screenshot": "responsive-create-character-1920.png",
+      "sha256": "5dd59df99a633035629dc7f79971f3a2555868a1bb3e8bc5e29df66172768cd1"
+    },
+    {
+      "routePattern": "/notifications",
+      "actualRoute": "/notifications",
+      "state": "inbox-read",
+      "width": 390,
+      "passed": true,
+      "screenshot": "responsive-inbox-read-390.png",
+      "sha256": "b1be9b3060ddaade26d5daf0d659f072c3653176f67547a1992def770465f27a"
+    },
+    {
+      "routePattern": "/notifications",
+      "actualRoute": "/notifications",
+      "state": "inbox-read",
+      "width": 900,
+      "passed": true,
+      "screenshot": "responsive-inbox-read-900.png",
+      "sha256": "3b70a3a4964be6f4f457b6dc6d7d984b469004d8b8eddf1d2046d4037524a950"
+    },
+    {
+      "routePattern": "/notifications",
+      "actualRoute": "/notifications",
+      "state": "inbox-read",
+      "width": 1920,
+      "passed": true,
+      "screenshot": "responsive-inbox-read-1920.png",
+      "sha256": "cf7d662be6f2f23d7dffcfc8f4f2d9ae5422b25dba9859c2db8254f8fd8c0ba8"
+    },
+    {
+      "routePattern": "/characters/:code",
+      "actualRoute": "/characters/Cb7004b65",
+      "state": "character-pending-owner",
+      "width": 390,
+      "passed": true,
+      "screenshot": "responsive-character-pending-owner-390.png",
+      "sha256": "597ea0531e168c1c5935c0253f3fbb97b088c6e9de9c5080bae0318a54162e2b"
+    },
+    {
+      "routePattern": "/characters/:code",
+      "actualRoute": "/characters/Cb7004b65",
+      "state": "character-pending-owner",
+      "width": 900,
+      "passed": true,
+      "screenshot": "responsive-character-pending-owner-900.png",
+      "sha256": "722705475e46cac06bf06f5f2636e14326a568b2d5bdbb85a603f928b2e6707c"
+    },
+    {
+      "routePattern": "/characters/:code",
+      "actualRoute": "/characters/Cb7004b65",
+      "state": "character-pending-owner",
+      "width": 1920,
+      "passed": true,
+      "screenshot": "responsive-character-pending-owner-1920.png",
+      "sha256": "a0a328a28fa0dc9edab7439bfc83aca0342b60f1b162398bc9120c8888b76821"
+    },
+    {
+      "routePattern": "/characters/:code",
+      "actualRoute": "/characters/Cb7004b65",
+      "state": "character-new-activity",
+      "width": 390,
+      "passed": true,
+      "screenshot": "responsive-character-new-activity-390.png",
+      "sha256": "e93edfd69446ecabb5b6a241a9d9121fa454e01755b43d8e38624e5cdb624a7f"
+    },
+    {
+      "routePattern": "/characters/:code",
+      "actualRoute": "/characters/Cb7004b65",
+      "state": "character-new-activity",
+      "width": 900,
+      "passed": true,
+      "screenshot": "responsive-character-new-activity-900.png",
+      "sha256": "d0a1d72ac46c257fdc69d3cc2e0b109f6c9277ae5029d70f9cd4defa8ea2e237"
+    },
+    {
+      "routePattern": "/characters/:code",
+      "actualRoute": "/characters/Cb7004b65",
+      "state": "character-new-activity",
+      "width": 1920,
+      "passed": true,
+      "screenshot": "responsive-character-new-activity-1920.png",
+      "sha256": "7bd87dd689d98f855f52eebfe1efd5c9a4c623d38ef405673aeb620b09b0e005"
+    },
+    {
+      "routePattern": "/characters/:code",
+      "actualRoute": "/characters/Cb7004b65",
+      "state": "character-retired-progression",
+      "width": 390,
+      "passed": true,
+      "screenshot": "responsive-character-retired-progression-390.png",
+      "sha256": "490269b5ac0d6ca41162ac8c086498065fa29f8b697ecd93f7f501dc75f87444"
+    },
+    {
+      "routePattern": "/characters/:code",
+      "actualRoute": "/characters/Cb7004b65",
+      "state": "character-retired-progression",
+      "width": 900,
+      "passed": true,
+      "screenshot": "responsive-character-retired-progression-900.png",
+      "sha256": "dc3e2da466ac9ecafc155d78ec7dcd760d4ec3bb0946bbef00acbe8348707ef7"
+    },
+    {
+      "routePattern": "/characters/:code",
+      "actualRoute": "/characters/Cb7004b65",
+      "state": "character-retired-progression",
+      "width": 1920,
+      "passed": true,
+      "screenshot": "responsive-character-retired-progression-1920.png",
+      "sha256": "d8c1c049c34fb0f84db6c7dc24dbf50bfa251b4699c851189caffb7c4c43b0ac"
+    },
+    {
+      "routePattern": "/characters/:code",
+      "actualRoute": "/characters/Cb7004b65",
+      "state": "character-saved-downtime-edit",
+      "width": 390,
+      "passed": true,
+      "screenshot": "responsive-character-saved-downtime-edit-390.png",
+      "sha256": "c9d195f9644caa4238fd5eae624ebb796dee9e9b41b4f5d93d17c36b4d41759a"
+    },
+    {
+      "routePattern": "/characters/:code",
+      "actualRoute": "/characters/Cb7004b65",
+      "state": "character-saved-downtime-edit",
+      "width": 900,
+      "passed": true,
+      "screenshot": "responsive-character-saved-downtime-edit-900.png",
+      "sha256": "6db905daf20947f54dbbe86322dda219eddfb46651738fd37b5f71801e4fa473"
+    },
+    {
+      "routePattern": "/characters/:code",
+      "actualRoute": "/characters/Cb7004b65",
+      "state": "character-saved-downtime-edit",
+      "width": 1920,
+      "passed": true,
+      "screenshot": "responsive-character-saved-downtime-edit-1920.png",
+      "sha256": "86fbc6c323308d767d2d257605a0ae0492cf34e9faa103a978633ef656604a86"
+    },
+    {
+      "routePattern": "/players/:shortCode",
+      "actualRoute": "/players/@account-fixture-owner",
+      "state": "member-availability-dm-draft",
+      "width": 390,
+      "passed": true,
+      "screenshot": "responsive-member-availability-dm-draft-390.png",
+      "sha256": "69eeaf04c85f73840466a2cb28beeabb62199b7e007a89cb3c8b4e8a2a0eef88"
+    },
+    {
+      "routePattern": "/players/:shortCode",
+      "actualRoute": "/players/@account-fixture-owner",
+      "state": "member-availability-dm-draft",
+      "width": 900,
+      "passed": true,
+      "screenshot": "responsive-member-availability-dm-draft-900.png",
+      "sha256": "fd7075549d9b4db5b9e7139f063808e85b4a97b116c7fba0fb1abed4dd06419a"
+    },
+    {
+      "routePattern": "/players/:shortCode",
+      "actualRoute": "/players/@account-fixture-owner",
+      "state": "member-availability-dm-draft",
+      "width": 1920,
+      "passed": true,
+      "screenshot": "responsive-member-availability-dm-draft-1920.png",
+      "sha256": "89d65d4c261d78e42571217ee0c37682deb7faed2a2ab78b317bde613f47c9bf"
+    },
+    {
+      "routePattern": "/dms/:shortCode",
+      "actualRoute": "/dms/@account-fixture-owner",
+      "state": "approved-dm-profile-tables",
+      "width": 390,
+      "passed": true,
+      "screenshot": "responsive-approved-dm-profile-tables-390.png",
+      "sha256": "e07e9f7dddc1abdbe7883fd7f0e311d4521b3cd7aa09c95c51173a38b61d649c"
+    },
+    {
+      "routePattern": "/dms/:shortCode",
+      "actualRoute": "/dms/@account-fixture-owner",
+      "state": "approved-dm-profile-tables",
+      "width": 900,
+      "passed": true,
+      "screenshot": "responsive-approved-dm-profile-tables-900.png",
+      "sha256": "d0cb00eef1456ec4a13235f827b091c360e1458dc6b4c9b5b1f2a05499787eff"
+    },
+    {
+      "routePattern": "/dms/:shortCode",
+      "actualRoute": "/dms/@account-fixture-owner",
+      "state": "approved-dm-profile-tables",
+      "width": 1920,
+      "passed": true,
+      "screenshot": "responsive-approved-dm-profile-tables-1920.png",
+      "sha256": "ed8d40b597e51dcb2b1d49a0e8a8e01e150f7bdec41bec492e881086e7127469"
+    },
+    {
+      "routePattern": "/community/dm-table/:slug",
+      "actualRoute": "/community/dm-table/account-fixture-table",
+      "state": "owned-dm-table-reader",
+      "width": 390,
+      "passed": true,
+      "screenshot": "responsive-owned-dm-table-reader-390.png",
+      "sha256": "fc8521cbf00aad07396af2a86c7f282b6e5eef3086a6490d8941678a394f0581"
+    },
+    {
+      "routePattern": "/community/dm-table/:slug",
+      "actualRoute": "/community/dm-table/account-fixture-table",
+      "state": "owned-dm-table-reader",
+      "width": 900,
+      "passed": true,
+      "screenshot": "responsive-owned-dm-table-reader-900.png",
+      "sha256": "2f60f2181a91c56974d055f6248db58999337068acd3f01c27d7819a6543d8c9"
+    },
+    {
+      "routePattern": "/community/dm-table/:slug",
+      "actualRoute": "/community/dm-table/account-fixture-table",
+      "state": "owned-dm-table-reader",
+      "width": 1920,
+      "passed": true,
+      "screenshot": "responsive-owned-dm-table-reader-1920.png",
+      "sha256": "ff66410ef8ddcd24b1661df28019573e5fa83a706ae89fc236ccb7f5b75d513d"
+    }
+  ],
+  "actualImagesViewed": [
+    "responsive-settings-390.png",
+    "responsive-create-character-390.png",
+    "responsive-character-new-activity-390.png",
+    "responsive-member-availability-dm-draft-900.png",
+    "responsive-approved-dm-profile-tables-390.png"
+  ],
+  "ownerVisualApproval": false,
+  "limits": [
+    "Representative root visual inspection; not all36images orallrole/themecombinations.",
+    "Legacy owner approval remains pending.",
+    "Geometry/keyboard evidence covers these36 owner states; no all-role/theme/route-action Cartesian claim. Original artifacts and native readback remain at their dated paths; portable summary retains their hashes."
+  ]
+}

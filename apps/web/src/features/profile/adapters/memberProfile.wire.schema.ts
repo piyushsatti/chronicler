@@ -16,6 +16,7 @@ export const memberProfileWireSchema = z.object({
       tagline: z.string().nullable().optional(),
       philosophy: z.string().nullable().optional(),
       houseRules: z.string().nullable().optional(),
+      tableInfo: z.unknown(),
       acceptingPlayers: z.boolean(),
       status: z.string().min(1),
       reviewRevision: z.number().int(),

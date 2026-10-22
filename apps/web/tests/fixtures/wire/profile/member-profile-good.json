@@ -4,7 +4,10 @@
     "handle": "mira",
     "displayName": "Mira",
     "avatarUrl": null,
-    "roles": ["dm"],
+    "roles": [
+      "dm",
+      "player"
+    ],
     "status": "active",
     "joinedAt": "2026-01-01T00:00:00Z"
   },
@@ -14,12 +17,20 @@
     "philosophy": null,
     "houseRules": null,
     "acceptingPlayers": true,
-    "status": "active",
-    "reviewRevision": 1
+    "status": "approved",
+    "reviewRevision": 1,
+    "tableInfo": {
+      "unmodeled": {
+        "retained": [
+          "opaque",
+          true
+        ]
+      }
+    }
   },
   "availability": [
     {
-      "day": "fri",
+      "day": "FRIDAY",
       "startTime": "18:00:00",
       "endTime": "22:00:00",
       "note": null

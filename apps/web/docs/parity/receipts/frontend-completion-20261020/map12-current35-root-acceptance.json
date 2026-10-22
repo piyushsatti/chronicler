@@ -1,0 +1,156 @@
+{
+  "at": "2026-10-20T21:31:23.599403+00:00",
+  "nativeSession": 41681,
+  "exit": 0,
+  "durationSeconds": 78.14,
+  "originalStages": 13,
+  "operationAttempts": 556,
+  "operationOutcomes": {
+    "complete": 556
+  },
+  "directReads": 27,
+  "profiles": [
+    {
+      "profile": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "theme": "parchment",
+        "mode": "light",
+        "motion": "no-preference"
+      },
+      "theme": {
+        "theme": "parchment",
+        "mode": "light",
+        "motion": "off"
+      }
+    },
+    {
+      "profile": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "theme": "midnight",
+        "mode": "dark",
+        "motion": "reduce"
+      },
+      "theme": {
+        "theme": "midnight",
+        "mode": "dark",
+        "motion": "on"
+      }
+    },
+    {
+      "profile": {
+        "viewport": {
+          "width": 900,
+          "height": 1000
+        },
+        "theme": "parchment",
+        "mode": "light",
+        "motion": "no-preference"
+      },
+      "theme": {
+        "theme": "parchment",
+        "mode": "light",
+        "motion": "off"
+      }
+    },
+    {
+      "profile": {
+        "viewport": {
+          "width": 900,
+          "height": 1000
+        },
+        "theme": "midnight",
+        "mode": "dark",
+        "motion": "reduce"
+      },
+      "theme": {
+        "theme": "midnight",
+        "mode": "dark",
+        "motion": "on"
+      }
+    },
+    {
+      "profile": {
+        "viewport": {
+          "width": 1920,
+          "height": 1080
+        },
+        "theme": "parchment",
+        "mode": "light",
+        "motion": "no-preference"
+      },
+      "theme": {
+        "theme": "parchment",
+        "mode": "light",
+        "motion": "off"
+      }
+    },
+    {
+      "profile": {
+        "viewport": {
+          "width": 1920,
+          "height": 1080
+        },
+        "theme": "midnight",
+        "mode": "dark",
+        "motion": "reduce"
+      },
+      "theme": {
+        "theme": "midnight",
+        "mode": "dark",
+        "motion": "on"
+      }
+    }
+  ],
+  "modalWidths": [
+    390,
+    900,
+    1920
+  ],
+  "presentationMeasurements": 24,
+  "panInputs": 6,
+  "persistedCounts": {
+    "maps": 4,
+    "edges": 2,
+    "links": 2,
+    "nodes": 5,
+    "members": 4,
+    "receipts": 15,
+    "documents": 2,
+    "assignments": 4
+  },
+  "productionInputsUnchanged": true,
+  "ownedCurrentAndExecutedCopiesMatch": true,
+  "cleanup": {
+    "at": "2026-10-20T21:29:31.266082528Z",
+    "database": "product_case_1",
+    "databaseDropped": true,
+    "listenersClosed": true
+  },
+  "actualRootImagesViewed": [
+    "map-supplement-modal-390.png",
+    "map-supplement-midnight-900.png"
+  ],
+  "artifacts": {
+    "root-preflight.json": "b15ef055d23ff730f1f556a0399bcdf5ea0324775ae97d488306c6104e5e3f0e",
+    "browser-receipt.json": "47e3758f8b06dd227d2db20427970c438e118913460a546e7514cbb12bacfd32",
+    "native-persisted-readback.json": "a2b5fa0cb3f6e49d3c95645580d8c31f1ed9b74b4a29fb8af3632cf9dc339cd0",
+    "native-private-denials.json": "3b24a9856ffceba15d8c9b9ec0d9d00d8d5bbdc8a967f3304534c310621bad93",
+    "native-cleanup.json": "74c051ffcdffc169799b0eff6510f93ffd44ac0ac4374cb216369923fd346d88",
+    "native.log": "01a5172edd4cb7c1a82938a788a32300c25a3871909d4bf58bc5dfa3c3c625a4",
+    "map-supplement-modal-390.png": "1b5391e4d5453880a208e57f47a001fdad98e67c25c772a1ffbca9fa36d888f3",
+    "map-supplement-midnight-900.png": "d7f8bc69bfaa698f83179c760da369d7f85e5b5ee2a973f23cd3a2018db928af"
+  },
+  "runtime": "Current35source fixtureVite/native13realAPI; notimmutabletiming",
+  "limits": [
+    "Pointcrawl/currentauthority/topology/privacy/edit/link/unlink persistedproof; nohex/fog orretiredsocialscope.",
+    "Sixactualguestwidth-themeallocations andthreeauthorizedmodalwidths,24fit/zoom/panmeasurementstates; no allrole/theme Cartesian,physicalphone orownerLegacyapproval.",
+    "Fullpagescreensretain sticky/fixedchrome at actualcapturescrollposition; controlbounds/focus/paint separatelytested.",
+    "Mapactivationbudget requires separate40cold-cacheimmutable35trials, not thesefunctionaljourney durations."
+  ]
+}

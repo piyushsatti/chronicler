@@ -87,3 +87,13 @@ Web uses one notifications feature owner: composition/query/mutation hooks call 
 ## Reopen
 
 An event/recipient change, new delivery channel, or a durability ruling changes this contract. Current implementation defects do not silently redefine it.
+
+## Current inbox repair (2026-10-20)
+
+The command-bound producer now writes one inbox row per addressed member through `EventWriter.InsertInbox`. It keeps typed immutable facts in a private versioned envelope in the existing `body` column and independent notification/recipient proof in the originating completed command receipt. There is no event or delivery ledger. See the [producer contract](/apps/api/docs/design/graphql-product/notification-producer-contract.md#current-repair-implementation-2026-10-20) for the exact representation and replay bounds.
+
+Historical inbox reads compare each envelope with its completed command proof and native source evidence. They never infer the earlier verdict or participation transition from current status. Unsupported legacy plaintext and missing or corrupt proof fail visibly with opaque `INTERNAL`; rows and unread timestamps remain intact. Public cards contain closed-fact labels and subject IDs, never the private envelope or frozen Document text.
+
+Current Document authority suppresses hidden cards after proof validation. Cursors use the raw validated page, so an entirely hidden page still advances. Reads have no acknowledgement side effect. Explicit suppression acknowledgement validates the entire transaction-bound locked batch and changes only current hidden Document rows. A malformed non-Document notice or an audience-provider failure rolls back the command.
+
+Native PostgreSQL tests prove recipient confinement, original quest transitions after roster changes, original verification verdicts, independent revision mention evidence, command replay, insertion rollback, hidden-page pagination, and atomic suppression acknowledgement. Notification data and proof use two set queries at raw page sizes 1, 10, and 50; Document audience resolution is separate. Quest signup and promotion are wired. The remaining Document and Character generation write sites, live browser notification journey, and external delivery remain unverified or pending their owning work.

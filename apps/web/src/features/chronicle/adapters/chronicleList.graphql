@@ -1,15 +1,24 @@
-query ChronicleList($limit: Int!) {
-  documents(filters: { kind: "summary", status: "published" }, limit: $limit) {
+query ChronicleList($limit: Int!, $offset: Int!, $realFrom: Date!, $realTo: Date!) {
+  gameCalendar(realFrom: $realFrom, realTo: $realTo) {
+    definition
+  }
+  documents(
+    filters: { kind: "summary", status: "published" }
+    limit: $limit
+    offset: $offset
+  ) {
     items {
       id
       slug
       category
       title
+      effectiveBody
       frontmatter
       author {
         handle
       }
       updatedAt
+      publishedAt
       summaryDerived {
         regions {
           id

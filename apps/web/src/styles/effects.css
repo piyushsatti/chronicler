@@ -12,8 +12,8 @@
    above the body background and `body::before`. Deliberately NOT done by
    raising `#main`: giving `#main` a z-index makes it a stacking context and
    clamps every non-portaled fixed overlay rendered inside it (`.pz-cel`
-   z=10002, `.pr-toast__stack` z=100, `.pop-content` z=40, the editor menus)
-   below the sticky `.topbar` at z=20. */
+   z=10002, `.pr-toast__stack` z=100) below the sticky `.topbar` at z=20.
+   Modal, Popover and Menu portal to <body>, outside `#root`. */
 .ambient-layer {
   position: fixed;
   inset: 0;
@@ -51,7 +51,7 @@
   50%      { opacity: 0.6; }
 }
 
-[data-motion-collapse='off'] .effect-starfield-twinkle .ambient-dot:not([data-motion-collapse='on'] *) {
+[data-motion-collapse='off'] .effect-starfield-twinkle .ambient-dot:not([data-motion-collapse='on']):not([data-motion-collapse='on'] *) {
   animation: effect-starfield-twinkle var(--motion-loop-starfield) var(--motion-ease-in-out) infinite;
   animation-delay: calc(var(--motion-loop-starfield) * var(--i, 0) * -0.01);
 }
@@ -71,7 +71,7 @@
   50%      { opacity: 0.4; transform: scale(1.35); }
 }
 
-[data-motion-collapse='off'] .effect-glow-pulse:not([data-motion-collapse='on'] *) {
+[data-motion-collapse='off'] .effect-glow-pulse:not([data-motion-collapse='on']):not([data-motion-collapse='on'] *) {
   animation: effect-glow-pulse var(--motion-loop-status-pulse) var(--motion-ease-in-out) infinite;
 }
 
@@ -95,6 +95,17 @@
   100% { background-position: 200% 0; }
 }
 
-[data-motion-collapse='off'] .effect-gradient-sweep:not([data-motion-collapse='on'] *) {
+[data-motion-collapse='off'] .effect-gradient-sweep:not([data-motion-collapse='on']):not([data-motion-collapse='on'] *) {
   animation: effect-gradient-sweep var(--motion-loop-shimmer) var(--motion-ease-in-out) infinite;
+}
+
+.gallery-demo-stage {
+  position: relative;
+  isolation: isolate;
+  width: min(100%, 18rem);
+  min-height: 9rem;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  background: var(--color-bg-panel);
 }

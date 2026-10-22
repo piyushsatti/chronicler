@@ -1,7 +1,7 @@
 import { Button } from '../../../components/primitives/Button.js';
 import { Card } from '../../../components/primitives/Card.js';
-import type { MemberRoleForm } from '../personRoles.js';
 import type { useBulkRoleBar } from '../hooks/useBulkRoleBar.js';
+import { Checkbox } from '../../../components/primitives/Checkbox.js';
 
 export function BulkRoleBar({
   view,
@@ -33,7 +33,7 @@ export function BulkRoleBar({
 
   return (
     <Card className="stack" data-component="BulkRoleBar" data-el="admin.bulkRoleBar">
-      <h4 className="type-heading">Bulk roles · {selected.length} selected</h4>
+      <h3 className="type-heading">Bulk roles · {selected.length} selected</h3>
       {requiresExplicitChoice ? (
         <p className="type-caption">
           Selection has mixed roles — touch a control before applying (prevents mass
@@ -44,13 +44,14 @@ export function BulkRoleBar({
         <label className="stack">
           <span className="type-label">Base</span>
           <select
-            className="field"
+            disabled={batch.isPending}
+            className="field-input"
             value={form.baseTier}
             onChange={(e) => {
               setTouched(true);
               setForm((f) => ({
                 ...f,
-                baseTier: e.target.value as MemberRoleForm['baseTier'],
+                baseTier: e.target.value === 'Spectator' ? 'Spectator' : 'Player',
               }));
             }}
           >
@@ -67,17 +68,16 @@ export function BulkRoleBar({
             ['grantAdmin', 'Admin'],
           ] as const
         ).map(([key, label]) => (
-          <label key={key} className="row">
-            <input
-              type="checkbox"
-              checked={form[key]}
-              onChange={(e) => {
-                setTouched(true);
-                setForm((f) => ({ ...f, [key]: e.target.checked }));
-              }}
-            />
-            <span className="type-caption">{label}</span>
-          </label>
+          <Checkbox
+            key={key}
+            label={label}
+            disabled={batch.isPending}
+            checked={form[key]}
+            onCheckedChange={(checked) => {
+              setTouched(true);
+              setForm((f) => ({ ...f, [key]: checked }));
+            }}
+          />
         ))}
       </div>
       <Button type="button" disabled={!canSubmit} onClick={() => batch.mutate()}>
@@ -85,7 +85,7 @@ export function BulkRoleBar({
       </Button>
       {batch.isError ? (
         <p className="type-caption" role="alert">
-          {batch.error.userMessage}
+          {batch.error?.userMessage ?? 'Role changes could not be saved.'}
         </p>
       ) : null}
       {report.length > 0 ? (

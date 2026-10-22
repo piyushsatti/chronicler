@@ -5,8 +5,12 @@
       "destination": "https://api.chronicler.smokebombstudios.com/v1/:path*"
     },
     {
-      "source": "/auth/:path*",
-      "destination": "https://api.chronicler.smokebombstudios.com/auth/:path*"
+      "source": "/auth/discord",
+      "destination": "https://api.chronicler.smokebombstudios.com/auth/discord"
+    },
+    {
+      "source": "/auth/discord/:path*",
+      "destination": "https://api.chronicler.smokebombstudios.com/auth/discord/:path*"
     },
     {
       "source": "/health",

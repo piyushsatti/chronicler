@@ -1,3 +1,4 @@
+import { useAdminPage } from './useAdminPage.js';
 import {
   useAdminAuthority,
   useAuthorityFailures,
@@ -6,7 +7,7 @@ import {
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
-  loadAdminRegions,
+  loadAllAdminRegions,
   loadCreationCatalog,
   upsertCreationCatalogEntry,
   type AdminCatalogEntry,
@@ -37,33 +38,50 @@ const BLANK: FormState = {
 export function useCreationCatalogPanel() {
   const authority = useAdminAuthority();
   const queryClient = useQueryClient();
-  const catalog = useQuery({
-    enabled: authority.allowed,
-    queryKey: KEY,
-    queryFn: loadCreationCatalog,
-  });
+  const [filterKind, setFilterKind] = useState('');
+  const [filterRegion, setFilterRegion] = useState('');
+  const { query: catalog, pagination } = useAdminPage(
+    KEY,
+    authority,
+    { filterKind, filterRegion },
+    (page, request) =>
+      loadCreationCatalog(
+        {
+          ...page,
+          ...{ kind: filterKind || undefined, regionId: filterRegion || undefined },
+        },
+        request,
+      ),
+  );
   const regions = useQuery({
     enabled: authority.allowed,
-    queryKey: ['adminRegions'],
-    queryFn: loadAdminRegions,
+    queryKey: ['adminRegionOptions', authority.cacheKey],
+    queryFn: ({ signal }) => authority.read(loadAllAdminRegions, signal),
   });
   const [form, setForm] = useState<FormState>(BLANK);
   const [editing, setEditing] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
   const save = useMutation({
-    mutationFn: authority.guardMutation(() =>
-      upsertCreationCatalogEntry({
-        optionId: form.optionId,
-        kind: form.kind.trim(),
-        name: form.name.trim(),
-        description: form.description.trim() || null,
-        available: form.available,
-        retired: form.retired,
-        introducedByRegionId: form.introducedByRegionId || null,
-      }),
+    mutationKey: ['adminCommand', authority.commandKey, 'useCreationCatalogPanel'],
+    networkMode: 'always',
+    retry: false,
+    mutationFn: authority.guardMutation((command) =>
+      upsertCreationCatalogEntry(
+        {
+          optionId: form.optionId,
+          kind: form.kind.trim(),
+          name: form.name.trim(),
+          description: form.description.trim() || null,
+          available: form.available,
+          retired: form.retired,
+          introducedByRegionId: form.introducedByRegionId || null,
+        },
+        command,
+      ),
     ),
     onSuccess: async () => {
+      if (!authority.isCurrent()) return;
       setMessage(`Catalog entry "${form.name.trim()}" saved.`);
       setEditing(false);
       setForm(BLANK);
@@ -85,6 +103,11 @@ export function useCreationCatalogPanel() {
   }
   useAuthorityFailures(catalog.error, regions.error, save.error);
   return {
+    pagination,
+    filterKind,
+    setFilterKind,
+    filterRegion,
+    setFilterRegion,
     BLANK,
     catalog: panelState(catalog, 'admin:CreationCatalogPanel'),
     regions: panelState(regions, 'admin:CreationCatalogPanel'),

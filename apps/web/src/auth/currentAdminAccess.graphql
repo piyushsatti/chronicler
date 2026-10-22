@@ -1,0 +1,5 @@
+query CurrentAdminAccess {
+  adminOperations(limit: 1, offset: 0) {
+    activeAlertCount
+  }
+}

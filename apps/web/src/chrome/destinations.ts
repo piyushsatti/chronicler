@@ -40,7 +40,8 @@ export const PRIMARY_DESTINATIONS: readonly SiteDestination[] = [
     label: 'Chronicles',
     shortLabel: 'Chron',
     href: '/chronicles',
-    matches: (pathname) => matchesPath(pathname, ['/chronicles', '/timeline']),
+    matches: (pathname) =>
+      matchesPath(pathname, ['/chronicles', '/summaries', '/timeline']),
   },
   {
     id: 'codex',
@@ -58,14 +59,13 @@ export const PRIMARY_DESTINATIONS: readonly SiteDestination[] = [
   {
     id: 'community',
     label: 'Community',
-    shortLabel: 'Guild',
     href: '/community',
     matches: (pathname) =>
       matchesPath(pathname, ['/community', '/players', '/dms', '/characters']),
   },
 ];
 
-export const VERIFY_DESTINATION: SiteDestination = {
+const VERIFY_DESTINATION: SiteDestination = {
   id: 'verification',
   label: 'Verification',
   shortLabel: 'Verify',
@@ -73,10 +73,22 @@ export const VERIFY_DESTINATION: SiteDestination = {
   matches: (pathname) => matchesPath(pathname, ['/admin/review']),
 };
 
-/** Verification joins the same link list when the member may review. */
+/** The admin workspace, minus Verification, which keeps its own link. */
+const ADMIN_DESTINATION: SiteDestination = {
+  id: 'admin',
+  label: 'Admin',
+  href: '/admin',
+  matches: (pathname) =>
+    matchesPath(pathname, ['/admin']) && !VERIFY_DESTINATION.matches(pathname),
+};
+
+/** Verification and Admin join the same link list when the member holds the right. */
 export function destinationsForAuth(auth?: NavAuth): readonly SiteDestination[] {
-  if (auth?.canVerify) return [...PRIMARY_DESTINATIONS, VERIFY_DESTINATION];
-  return PRIMARY_DESTINATIONS;
+  const extras = [
+    ...(auth?.canVerify ? [VERIFY_DESTINATION] : []),
+    ...(auth?.isAdmin ? [ADMIN_DESTINATION] : []),
+  ];
+  return [...PRIMARY_DESTINATIONS, ...extras];
 }
 
 /**

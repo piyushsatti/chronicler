@@ -1,6 +1,12 @@
-query AdminBackstories($limit: Int! = 50, $offset: Int! = 0, $includeRetired: Boolean! = true) {
+query AdminBackstories(
+  $limit: Int! = 50
+  $offset: Int! = 0
+  $includeRetired: Boolean! = true
+  $cohort: String
+  $regionId: ID
+) {
   backstories(
-    filters: { includeRetired: $includeRetired }
+    filters: { includeRetired: $includeRetired, cohort: $cohort, regionId: $regionId }
     limit: $limit
     offset: $offset
   ) {

@@ -1,28 +1,20 @@
-import { ListRow, Popover, RegionLabel } from '@pi/chronicler-ds';
+import { Popover } from '@pi/chronicler-ds';
 
 const noop = () => undefined;
 
-export function RegionMenu() {
+export function SeatRules() {
   return (
     <Popover
       open
       onOpenChange={noop}
-      variant="menu"
-      ariaLabel="Add region"
-      trigger={<span>+ Add region…</span>}
+      ariaLabel="Seat rules"
+      trigger={<span className="type-caption">Why is this seat locked?</span>}
     >
-      <ListRow variant="clickable" onClick={noop}>
-        <RegionLabel region="Dunnshore" />
-      </ListRow>
-      <ListRow variant="clickable" onClick={noop}>
-        <RegionLabel region="Hollow Highlands" />
-      </ListRow>
-      <ListRow variant="clickable" onClick={noop}>
-        <RegionLabel region="Esparithen" />
-      </ListRow>
-      <ListRow variant="clickable" onClick={noop}>
-        <RegionLabel region="Viceroc" />
-      </ListRow>
+      <p className="type-label">Waitlist priority</p>
+      <p className="type-body">
+        Seats open to the waitlist in join order. Players with a character below level 3 wait
+        for the next beginner table.
+      </p>
     </Popover>
   );
 }

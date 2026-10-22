@@ -1,0 +1,23 @@
+{
+  "at": "2026-10-20T21:50:55.782543Z",
+  "build": 36,
+  "runtime": "Current36source fixtureVite/native13realAPI; immutable36separatelyfrozen",
+  "passed": true,
+  "inspected": [
+    "responsive-settings-390.png",
+    "responsive-personalize-900.png"
+  ],
+  "findings": [
+    "Saved Midnight/dark/compact/colorblind settings render corrected shared field-label/field-check hooks; actual390checkboxes align inline with labels; personalize900uses same implementation.",
+    "Fullpage snapshots retain actual sticky/fixed chrome at captured scroll position; separate36states passed realviewport clipping/focus/paint guards."
+  ],
+  "rootAcceptanceSha256": "0a9f1744e3945d3eafa008769578c2a1ae74ae9d9d758d2370c7b0d7958341cf",
+  "screenshots": {
+    "responsive-settings-390.png": "e8137a1a76f2a84c590d40dd31b3bf83a7b86ee10bb6bca8c45867e9209e584a",
+    "responsive-personalize-900.png": "fe886a8c93c204b3d7e2f7dcb0d4b35fe008d195b67c602dfb3987979ef50198"
+  },
+  "limits": [
+    "Current account form layout review only; owner Legacy visual approval remains pending.",
+    "No fresh external DDB/OAuth/Discord claim."
+  ]
+}

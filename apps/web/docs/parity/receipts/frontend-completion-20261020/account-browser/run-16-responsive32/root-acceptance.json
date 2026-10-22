@@ -1,0 +1,77 @@
+{
+  "at": "2026-10-20T19:48:35.152029+00:00",
+  "nativeSession": 3010,
+  "exit": 0,
+  "durationSeconds": 78.85,
+  "originalStages": 11,
+  "operationsAttempted": 624,
+  "operationOutcomes": {
+    "complete": 609,
+    "aborted": 13,
+    "superseded_tab_query": 2
+  },
+  "responsiveCases": 36,
+  "responsiveStates": [
+    "approved-dm-profile-tables",
+    "character-new-activity",
+    "character-pending-owner",
+    "character-retired-progression",
+    "character-saved-downtime-edit",
+    "create-character",
+    "inbox-read",
+    "me-navigation",
+    "member-availability-dm-draft",
+    "owned-dm-table-reader",
+    "personalize",
+    "settings"
+  ],
+  "widths": [
+    390,
+    900,
+    1920
+  ],
+  "nativeReceipts": 55,
+  "settingsRetryPreserved": true,
+  "allProductAndOwnedInputsBeforeAfterEqual": true,
+  "cleanup": {
+    "apiClosed": true,
+    "apiStarted": true,
+    "at": "2026-10-20T19:47:13.973900594Z",
+    "database": "product_case_1",
+    "databaseAbsenceQueryFailed": false,
+    "databaseDropFailed": false,
+    "databaseDropped": true,
+    "databaseRemaining": 0,
+    "listenersClosed": {
+      "api": true,
+      "reservedPort": true
+    },
+    "nodeStarted": true,
+    "runtimePoolClosed": true,
+    "runtimePoolStarted": true
+  },
+  "runtime": "Current32 product source with native fixture Vite and binary12 realAPI; actualsource retained, no immutable asset/timing claim",
+  "noApiMocks": true,
+  "externalProviderCalls": 0,
+  "oauth": false,
+  "visualApproval": false,
+  "artifacts": {
+    "native-readback.json": "2979f28d4f2bb0704e9ae82061c1f8831be860dd1d38c830c4d1f1c4f91f214e",
+    "native-inventory.json": "4dd8419e8f3804f8808fe8ac3791bd38ee991e9c500142c4b3db566bcc934cda",
+    "browser-receipt.json": "cdb2044f43113fc7a7189aa4080e8909d443489228cdd2b6e133fe3b6ddc27ec",
+    "owned-inputs-after.json": "8af48281819bd6d58e3246eb33a65480d5db3c99b573c70bcb8240a0bdd9ab70",
+    "native-cleanup.json": "d8e27ca4b630127f0e6e9680fb219af8bad6235d7b419c9994c0410030caf024",
+    "native-browser-process.json": "661b9f66e991105a717774ca3b5b9f7643340316827730cd0d54a0c7a66efaf7",
+    "native-browser-process-ended.json": "fc845d907172547dc5caed4d6e63c2716c3c92afb1f83a895c05b46788b1ec18",
+    "production-inputs-after.json": "64000609c6339dcf450e09c483c1d961a8034cd71b1d503263345d4a5e1c66d8",
+    "production-inputs-before.json": "64000609c6339dcf450e09c483c1d961a8034cd71b1d503263345d4a5e1c66d8",
+    "native-settings-retry.json": "f0a60df094dd057a10e51abf5a35a5006af34c3c50d6eb1685d9a2cdd53bf25a",
+    "owned-inputs.json": "8af48281819bd6d58e3246eb33a65480d5db3c99b573c70bcb8240a0bdd9ab70"
+  },
+  "limits": [
+    "All36 actualowner-formstates passed geometry/focus/overflow at3widths; screenshots retained. Not allactor\u00d7action\u00d7theme combinations.",
+    "Network aborts retain exact same-identity replacement/navigation evidence and are never counted successful. No zero-network-failure claim.",
+    "Original11actions/55durable receipts/settingsfailureRetry and8replays retained. ActualexternalDDBsuccess remains separatelydatedAccount13.",
+    "NativefixtureVitecurrent32; not a new productionasset/performance/provider/ownerLegacyapproval."
+  ]
+}

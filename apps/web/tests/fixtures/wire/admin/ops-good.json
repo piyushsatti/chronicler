@@ -2,7 +2,7 @@
   "activeAlertCount": 1,
   "pendingDeliveryCount": 2,
   "deliveryTotal": 5,
-  "deliveries": [{ "id": "job-1" }],
+  "deliveries": [],
   "activeAlerts": [
     {
       "key": "delivery-lag",
@@ -12,5 +12,14 @@
       "firstSeenAt": "2026-10-01T12:00:00Z",
       "lastSeenAt": "2026-10-10T12:00:00Z"
     }
-  ]
+  ],
+  "config": {
+    "publicOrigin": "",
+    "publicOriginHealthy": false,
+    "deliveryMode": "inbox",
+    "announcementRoleId": null,
+    "announcementRoleSource": "unconfigured",
+    "announcementRoleHealthy": false
+  },
+  "scheduledWork": []
 }

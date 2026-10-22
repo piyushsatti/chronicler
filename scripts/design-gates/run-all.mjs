@@ -11,6 +11,8 @@ export const GATES = [
   ['A4b architecture-ladder', 'check-architecture-ladder.mjs'],
   ['A5 tokens', 'check-tokens.mjs'],
   ['A8 layout', 'check-layout.mjs'],
+  ['A9 class-coverage', 'check-class-coverage.mjs'],
+  ['A10 custom-properties', 'check-custom-properties.mjs'],
   ['A6 duplication', 'check-duplication.mjs'],
   ['A6 orphan', 'check-orphan.mjs'],
   ['A6 theme-schema', 'check-theme-schema.mjs'],

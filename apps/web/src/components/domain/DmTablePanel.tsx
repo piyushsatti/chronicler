@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Card } from '../primitives/Card.js';
+import { ContentRenderer } from '../foundation/ContentRenderer.js';
 import { Chip } from '../primitives/Chip.js';
+import styles from './DmTablePanel.module.css';
 
 export type DmTablePanelModel = {
   title: string;
@@ -40,10 +42,14 @@ export function DmTablePanel({
       ) : null;
     }
     return (
-      <Card className={className} data-component="DmTablePanel" data-el="dmTable.createCta">
+      <Card
+        className={className}
+        data-component="DmTablePanel"
+        data-el="dmTable.createCta"
+      >
         <p className="type-body">
-          You haven&apos;t written a table page yet — a short blurb + write-up players see
-          before requesting a seat.
+          You haven&apos;t written a table page yet — a short blurb + write-up players
+          see before requesting a seat.
         </p>
         <Link className="btn btn--primary btn--sm" to="/editor/dm-table">
           Create your table page
@@ -64,20 +70,21 @@ export function DmTablePanel({
     >
       <div className="row" data-justify="between" data-align="start">
         <div className="stack">
-          <h3 className={compact ? 'type-title' : 'type-heading'} style={{ margin: 0 }}>
+          <h3 className={`${compact ? 'type-title' : 'type-heading'} ${styles.title}`}>
             {table.title}
           </h3>
           {table.blurb ? (
-            <p className="type-body" style={{ fontStyle: 'italic' }}>
-              {table.blurb}
-            </p>
+            <p className={`type-body ${styles.blurb}`}>{table.blurb}</p>
           ) : null}
         </div>
         {owner ? (
           <div className="row">
             <Chip tone="line">{isDraft ? 'Draft' : 'Published'}</Chip>
             {table.slug ? (
-              <Link className="btn btn--secondary btn--sm" to={`/editor/dm-table/${table.slug}/edit`}>
+              <Link
+                className="btn btn--secondary btn--sm"
+                to={`/editor/dm-table/${table.slug}/edit`}
+              >
                 Edit
               </Link>
             ) : null}
@@ -93,7 +100,7 @@ export function DmTablePanel({
           ))}
         </Chip.Row>
       ) : null}
-      {table.body ? <div className="type-body">{table.body}</div> : null}
+      {table.body ? <ContentRenderer body={table.body} /> : null}
       {children}
       {table.slug ? (
         <Link className="type-link" to={`/community/dm-table/${table.slug}`}>

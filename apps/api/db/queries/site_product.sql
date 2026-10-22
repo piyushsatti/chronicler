@@ -80,23 +80,40 @@ WHERE kind = 'quest_discord_delivery'
 -- name: SiteAdminDeliveryJobs :many
 WITH matching AS (
     SELECT b.public_id, b.state, b.attempts, b.redrive_count, b.safe_error_code, b.next_run_at,
-           b.created_at, b.updated_at, b.payload,
-           q.public_id AS quest_public_id, q.short_code AS quest_short_code, d.title AS quest_title,
-           q.discord_desired_revision, q.discord_applied_revision, q.discord_message_id, q.event_url
+           b.created_at, b.updated_at, b.payload
     FROM background_jobs b
-    LEFT JOIN quests q ON q.public_id::text = b.payload ->> 'questId'
-    LEFT JOIN documents d ON d.id = q.document_id
     WHERE b.kind = 'quest_discord_delivery'
       AND (sqlc.narg(delivery_state)::text IS NULL OR b.state = sqlc.narg(delivery_state))
 ), page AS (
     SELECT * FROM matching ORDER BY updated_at DESC, public_id LIMIT sqlc.arg(page_limit)::integer OFFSET sqlc.arg(page_offset)::integer
+), projected AS (
+    SELECT page.*,
+           q.public_id AS quest_public_id, q.short_code AS quest_short_code,
+           (CASE WHEN d.id IS NOT NULL AND d.deleted_at IS NULL AND document_readable(
+             d.public_id, author.public_id, d.status, d.visibility, d.policy,
+             sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
+             sqlc.arg(viewer_admin)::boolean, sqlc.arg(viewer_live_dm)::boolean, sqlc.arg(reader_ids)::uuid[])
+             THEN d.title END)::text AS quest_title,
+           COALESCE(sqlc.arg(viewer_admin)::boolean AND d.id IS NOT NULL AND d.deleted_at IS NULL
+             AND document_readable(d.public_id, author.public_id, d.status, d.visibility, d.policy,
+               sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
+               sqlc.arg(viewer_admin)::boolean, sqlc.arg(viewer_live_dm)::boolean, sqlc.arg(reader_ids)::uuid[])
+             AND NOT document_readable(d.public_id, author.public_id, d.status, d.visibility, d.policy,
+               sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
+               false, sqlc.arg(viewer_live_dm)::boolean, sqlc.arg(reader_ids)::uuid[]), false)::boolean AS admin_override,
+           q.discord_desired_revision, q.discord_applied_revision, q.discord_message_id, q.event_url
+    FROM page
+    LEFT JOIN quests q ON q.public_id::text = page.payload ->> 'public_id' AND q.deleted_at IS NULL
+    LEFT JOIN documents d ON d.id = q.document_id AND d.kind = 'quest_brief'
+    LEFT JOIN members author ON author.id = d.author_id
 )
 SELECT (SELECT count(*) FROM matching)::bigint AS total,
-       page.public_id, page.state, page.attempts, page.redrive_count, page.safe_error_code,
-       page.next_run_at, page.created_at, page.updated_at, page.quest_public_id, page.quest_short_code,
-       page.quest_title, page.discord_desired_revision, page.discord_applied_revision, page.discord_message_id,
-       page.event_url
-FROM (SELECT 1) marker LEFT JOIN page ON true;
+       projected.public_id, projected.state, projected.attempts, projected.redrive_count, projected.safe_error_code,
+       projected.next_run_at, projected.created_at, projected.updated_at, projected.quest_public_id, projected.quest_short_code,
+       projected.quest_title, projected.discord_desired_revision, projected.discord_applied_revision, projected.discord_message_id,
+       projected.event_url, COALESCE(projected.admin_override, false)::boolean AS admin_override
+FROM (SELECT 1) marker LEFT JOIN projected ON true
+ORDER BY projected.updated_at DESC, projected.public_id;
 -- name: SiteLockDiscordDeliveryJob :one
 SELECT b.public_id, b.state, b.attempts, b.redrive_count, b.lease_token, b.next_run_at, b.created_at, b.updated_at,
        b.completion_operation, b.completion_payload, b.error_message, b.safe_error_code,
@@ -133,7 +150,7 @@ WITH job_alerts AS (
             ELSE 'Background job needs attention'
         END::text AS label,
         'warning'::text AS severity,
-        '/admin/operations'::text AS remediation_href,
+        '/admin/data-health'::text AS remediation_href,
         created_at AS first_seen_at,
         updated_at AS last_seen_at
     FROM background_jobs
@@ -144,7 +161,7 @@ heartbeat_alerts AS (
         'bot:heartbeat:stale'::text AS key,
         'Bot heartbeat is stale'::text AS label,
         'warning'::text AS severity,
-        '/admin/operations'::text AS remediation_href,
+        '/admin/data-health'::text AS remediation_href,
         latest.received_at AS first_seen_at,
         latest.received_at AS last_seen_at
     FROM (SELECT max(received_at) AS received_at FROM bot_heartbeats) latest

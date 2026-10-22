@@ -23,7 +23,7 @@ type CodexEntryCardView struct {
 }
 
 type DocumentAudienceFields struct {
-	Policy     []string
+	Policy     product.Optional[[]string]
 	ReaderIds  []string
 	Visibility string
 }
@@ -103,22 +103,27 @@ type DocumentSearchHitView struct {
 }
 
 type DocumentView struct {
-	AuthorId      string
-	Category      *string
-	DeletedAt     *time.Time
-	DeletedBy     *string
-	EffectiveBody *string
-	Frontmatter   json.RawMessage
-	Id            string
-	Kind          string
-	Policy        []string
-	PublishedAt   *time.Time
-	Slug          string
-	Status        string
-	Title         string
-	UpdatedAt     time.Time
-	Version       int32
-	Visibility    string
+	CanEditBody     bool
+	CanEditMetadata bool
+	BodyComplete    bool     `json:"-"`
+	LinkedRegionIDs []string `json:"-"`
+	ReaderIDs       []string `json:"-"`
+	AuthorId        string
+	Category        *string
+	DeletedAt       *time.Time
+	DeletedBy       *string
+	EffectiveBody   *string
+	Frontmatter     json.RawMessage
+	Id              string
+	Kind            string
+	Policy          []string
+	PublishedAt     *time.Time
+	Slug            string
+	Status          string
+	Title           string
+	UpdatedAt       time.Time
+	Version         int32
+	Visibility      string
 }
 
 type LieutenantAssignmentView struct {
@@ -142,13 +147,27 @@ const (
 
 type SummaryDerivedView struct {
 	Arc        *string
+	Authoring  *SummaryAuthoringView
 	Dms        []SummaryDmView
 	GameDate   *product.GameDateView
 	GameDay    *int32
 	Hexes      []SummaryHexView
 	OccurredAt *time.Time
 	Players    []SummaryPlayerView
+	Quests     []SummaryQuestRefView
 	Regions    []SummaryRegionView
+}
+
+type SummaryAuthoringView struct {
+	CharacterId *string
+	Complete    bool
+	QuestIds    []string
+}
+
+type SummaryQuestRefView struct {
+	Id        string
+	ShortCode string
+	Title     *string
 }
 
 type SummaryDmView struct {

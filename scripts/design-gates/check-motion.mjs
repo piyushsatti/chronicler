@@ -16,7 +16,13 @@ const feRoot = join(repoRoot, 'apps', 'web');
 const appRoot = join(feRoot, 'src');
 const motionDir = join(appRoot, 'motion');
 const motionCssPath = join(appRoot, 'styles', 'motion.css');
-const galleryMotionPath = join(appRoot, 'pages', 'gallery', 'sections', 'Motion.tsx');
+const galleryMotionPath = join(
+  appRoot,
+  'features',
+  'gallery',
+  'sections',
+  'Motion.tsx',
+);
 const effectsCssPath = join(appRoot, 'styles', 'effects.css');
 
 let failures = [];
@@ -337,10 +343,10 @@ for (const e of entries) {
 // ---------------------------------------------------------------------------
 // Rule 3: catalog completeness.
 // ---------------------------------------------------------------------------
-if (entries.length !== 25) {
+if (entries.length !== 24) {
   fail(
     '3-catalog-completeness',
-    `expected exactly 25 catalog entries, found ${entries.length}`,
+    `expected exactly 24 retained catalog entries, found ${entries.length}`,
   );
 }
 const ids = entries.map((e) => e.id);
@@ -348,11 +354,14 @@ if (new Set(ids).size !== ids.length) {
   fail('3-catalog-completeness', 'catalog ids are not unique');
 }
 const ns = entries.map((e) => e.n).sort((a, b) => a - b);
-const expectedNs = Array.from({ length: 25 }, (_, i) => i + 1);
+const expectedNs = Array.from({ length: 25 }, (_, i) => i + 1).filter((n) => n !== 21);
+if (entries.some((entry) => entry.n === 21 || entry.id === 'map-hex-select-ripple')) {
+  fail('3-retired-feature', 'retired hex motion row must not be restored');
+}
 if (JSON.stringify(ns) !== JSON.stringify(expectedNs)) {
   fail(
     '3-catalog-completeness',
-    `catalog "n" values are not exactly 1..25: got [${ns.join(',')}]`,
+    `retained catalog "n" values are not 1..25 except 21: got [${ns.join(',')}]`,
   );
 }
 const launchIds = entries.filter((e) => e.launch).map((e) => e.id);
@@ -384,7 +393,7 @@ const launchSetMismatch =
 if (launchSetMismatch) {
   fail(
     '3-catalog-completeness',
-    `launch:true id set does not match the plan's fixed 13`,
+    `launch:true id set does not match the plan's fixed 14`,
   );
 }
 
@@ -451,7 +460,7 @@ if (!existsSync(galleryMotionPath)) {
   if (JSON.stringify(demoIdSet) !== JSON.stringify(expectedSet)) {
     fail(
       '5-css-demo-coverage',
-      `gallery demo id set != 13 launch ids + quest-publish-burst.\n  got:      ${demoIdSet.join(',')}\n  expected: ${expectedSet.join(',')}`,
+      `gallery demo id set != 14 launch ids + quest-publish-burst.\n  got:      ${demoIdSet.join(',')}\n  expected: ${expectedSet.join(',')}`,
     );
   }
 
@@ -550,7 +559,7 @@ for (const file of allAppFiles) {
 const nonGalleryNonTestFiles = allAppFiles.filter((f) => {
   const rel = relative(feRoot, f);
   return (
-    !rel.includes('src/pages/gallery/') &&
+    !rel.includes('src/features/gallery/') &&
     !rel.includes('.test.') &&
     !rel.startsWith('src/motion/')
   );

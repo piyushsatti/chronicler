@@ -1,0 +1,16 @@
+/* --ghost: red; is commented out and must not define --ghost */
+:root {
+  --color-text: #111;
+  --color-region-north: #222;
+}
+@property --angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+.heat {
+  /* var(--commented-ref) never counts as a reference */
+  color: var(--color-bg);
+  background: var(--color-text);
+  border-color: var(--ghost);
+  padding: var(--pad, var(--missing-inner));
+  rotate: var(--angle);
+  outline-color: var(--swatch-color);
+  inset: var(--cat-alpha);
+}

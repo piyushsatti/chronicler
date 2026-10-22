@@ -20,7 +20,17 @@ LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 -- name: ListProductPointcrawlNodesForMaps :many
 WITH ranked AS (
 SELECT k.ordinality::int AS key_ordinal,(k.value->>'parent_id')::uuid AS parent_id,m.public_id AS map_id,n.public_id AS id,n.name,n.x,n.y,
-       n.created_at,submap.public_id AS submap_id,(k.value->>'offset')::int AS row_offset,
+       n.created_at,submap.public_id AS submap_id,
+       COALESCE(sqlc.arg(viewer_admin)::boolean
+         AND EXISTS (SELECT 1 FROM pointcrawl_entry_links loc WHERE loc.node_id=n.id AND loc.relation='location')
+         AND NOT EXISTS (
+           SELECT 1 FROM pointcrawl_entry_links loc JOIN documents ld ON ld.id=loc.document_id
+           LEFT JOIN members la ON la.id=ld.author_id
+           WHERE loc.node_id=n.id AND loc.relation='location' AND ld.deleted_at IS NULL
+             AND document_readable(ld.public_id,la.public_id,ld.status,ld.visibility,ld.policy,
+               sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,
+               false,sqlc.arg(viewer_live_dm)::boolean,sqlc.arg(reader_ids)::uuid[])
+         ),false)::boolean AS admin_override,(k.value->>'offset')::int AS row_offset,
        (k.value->>'limit')::int AS row_limit,
        row_number() OVER (PARTITION BY k.ordinality ORDER BY n.public_id) AS rn
 FROM jsonb_array_elements(sqlc.arg(keys)::jsonb) WITH ORDINALITY k(value,ordinality)
@@ -37,20 +47,58 @@ WHERE NOT EXISTS (SELECT 1 FROM pointcrawl_entry_links loc
          sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,sqlc.arg(reader_ids)::uuid[])
    )
 )
-SELECT key_ordinal,parent_id,map_id,true AS parent_exists,id,name,x,y,created_at,submap_id
+SELECT key_ordinal,parent_id,map_id,true AS parent_exists,id,name,x,y,created_at,submap_id,admin_override
 FROM ranked WHERE rn>row_offset AND rn<=row_offset+row_limit
 UNION ALL
 SELECT k.ordinality::int,(k.value->>'parent_id')::uuid,m.public_id,(m.id IS NOT NULL),
-       NULL::uuid,NULL::text,NULL::double precision,NULL::double precision,NULL::timestamptz,NULL::uuid
+       NULL::uuid,''::text,0::double precision,0::double precision,NULL::timestamptz,NULL::uuid,false::boolean
 FROM jsonb_array_elements(sqlc.arg(keys)::jsonb) WITH ORDINALITY k(value,ordinality)
 LEFT JOIN maps m ON m.public_id=(k.value->>'parent_id')::uuid
 WHERE NOT EXISTS (SELECT 1 FROM ranked r WHERE r.key_ordinal=k.ordinality AND r.rn>(k.value->>'offset')::int AND r.rn<=((k.value->>'offset')::int+(k.value->>'limit')::int))
 ORDER BY key_ordinal,id;
+-- name: ResolveProductQuestPointcrawlNodes :many
+SELECT n.public_id AS node_id, m.public_id AS map_id, r.public_id AS region_id,
+       COALESCE(sqlc.arg(viewer_admin)::boolean
+         AND EXISTS (SELECT 1 FROM pointcrawl_entry_links loc WHERE loc.node_id=n.id AND loc.relation='location')
+         AND NOT EXISTS (
+           SELECT 1 FROM pointcrawl_entry_links loc JOIN documents d ON d.id=loc.document_id
+           LEFT JOIN members author ON author.id=d.author_id
+           WHERE loc.node_id=n.id AND loc.relation='location' AND d.deleted_at IS NULL
+             AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
+               sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,
+               false,sqlc.arg(viewer_live_dm)::boolean,sqlc.arg(reader_ids)::uuid[])
+         ),false)::boolean AS admin_override
+FROM pointcrawl_nodes n
+JOIN maps m ON m.id=n.map_id
+LEFT JOIN regions r ON r.id=m.region_id
+WHERE n.public_id=ANY(sqlc.arg(node_ids)::uuid[]) AND m.map_kind='pointcrawl'
+  AND (m.region_id IS NULL OR r.deleted_at IS NULL)
+  AND (NOT EXISTS (SELECT 1 FROM pointcrawl_entry_links loc
+                   WHERE loc.node_id=n.id AND loc.relation='location')
+    OR EXISTS (
+      SELECT 1 FROM pointcrawl_entry_links loc JOIN documents d ON d.id=loc.document_id
+      LEFT JOIN members author ON author.id=d.author_id
+      WHERE loc.node_id=n.id AND loc.relation='location' AND d.deleted_at IS NULL
+        AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
+          sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,
+          sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,sqlc.arg(reader_ids)::uuid[])
+    ))
+ORDER BY n.public_id;
 -- name: ListProductPointcrawlEdgesForMaps :many
 WITH requested AS (
  SELECT value,ordinality FROM jsonb_array_elements(sqlc.arg(keys)::jsonb) WITH ORDINALITY AS e(value,ordinality)
 ), visible_nodes AS (
- SELECT k.ordinality,n.id,n.map_id
+ SELECT k.ordinality,n.id,n.map_id,
+        COALESCE(sqlc.arg(viewer_admin)::boolean
+         AND EXISTS (SELECT 1 FROM pointcrawl_entry_links loc WHERE loc.node_id=n.id AND loc.relation='location')
+         AND NOT EXISTS (
+           SELECT 1 FROM pointcrawl_entry_links loc JOIN documents ld ON ld.id=loc.document_id
+           LEFT JOIN members la ON la.id=ld.author_id
+           WHERE loc.node_id=n.id AND loc.relation='location' AND ld.deleted_at IS NULL
+             AND document_readable(ld.public_id,la.public_id,ld.status,ld.visibility,ld.policy,
+               sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,
+               false,sqlc.arg(viewer_live_dm)::boolean,sqlc.arg(reader_ids)::uuid[])
+         ),false)::boolean AS admin_override
  FROM requested k JOIN maps m ON m.public_id=(k.value->>'parent_id')::uuid
  JOIN pointcrawl_nodes n ON n.map_id=m.id
  WHERE NOT EXISTS (SELECT 1 FROM pointcrawl_entry_links loc
@@ -66,10 +114,19 @@ WITH requested AS (
 ), ranked AS (
 SELECT k.ordinality::int AS key_ordinal,(k.value->>'parent_id')::uuid AS parent_id,m.public_id AS map_id,e.public_id AS id,
        a.public_id AS node_a,b.public_id AS node_b,e.directed,e.kind,e.label,
-       CASE WHEN d.id IS NULL THEN NULL WHEN d.deleted_at IS NULL AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
+       (CASE WHEN d.id IS NULL THEN NULL WHEN d.deleted_at IS NULL AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
          sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,
          sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,sqlc.arg(reader_ids)::uuid[])
-         THEN d.public_id END AS document_id,
+         THEN d.public_id END)::uuid AS document_id,
+       COALESCE(va.admin_override OR vb.admin_override OR (
+         sqlc.arg(viewer_admin)::boolean AND d.id IS NOT NULL AND d.deleted_at IS NULL
+         AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
+           sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,
+           sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,sqlc.arg(reader_ids)::uuid[])
+         AND NOT document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
+           sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,
+           false,sqlc.arg(viewer_live_dm)::boolean,sqlc.arg(reader_ids)::uuid[])
+       ),false)::boolean AS admin_override,
        (k.value->>'offset')::int AS row_offset,(k.value->>'limit')::int AS row_limit,
        row_number() OVER (PARTITION BY k.ordinality ORDER BY e.public_id) AS rn
 FROM requested k
@@ -80,11 +137,11 @@ JOIN visible_nodes vb ON vb.ordinality=k.ordinality AND vb.id=e.node_b
 JOIN pointcrawl_nodes a ON a.id=va.id JOIN pointcrawl_nodes b ON b.id=vb.id
 LEFT JOIN documents d ON d.id=e.document_id LEFT JOIN members author ON author.id=d.author_id
 )
-SELECT key_ordinal,parent_id,map_id,true AS parent_exists,id,node_a,node_b,directed,kind,label,document_id
+SELECT key_ordinal,parent_id,map_id,true AS parent_exists,id,node_a,node_b,directed,kind,label,document_id,admin_override
 FROM ranked WHERE rn>row_offset AND rn<=row_offset+row_limit
 UNION ALL
 SELECT k.ordinality::int,(k.value->>'parent_id')::uuid,m.public_id,(m.id IS NOT NULL),
-       NULL::uuid,NULL::uuid,NULL::uuid,NULL::boolean,NULL::text,NULL::text,NULL::uuid
+       NULL::uuid,NULL::uuid,NULL::uuid,false,''::text,NULL::text,NULL::uuid,false::boolean
 FROM requested k LEFT JOIN maps m ON m.public_id=(k.value->>'parent_id')::uuid
 WHERE NOT EXISTS (SELECT 1 FROM ranked r WHERE r.key_ordinal=k.ordinality AND r.rn> (k.value->>'offset')::int AND r.rn<=((k.value->>'offset')::int+(k.value->>'limit')::int))
 ORDER BY key_ordinal,id;
@@ -92,6 +149,21 @@ ORDER BY key_ordinal,id;
 WITH ranked AS (
  SELECT k.ordinality::int AS key_ordinal,(k.value->>'parent_id')::uuid AS parent_id,m.public_id AS map_id,n.public_id AS node_id,d.public_id AS document_id,
         l.relation,l.created_at,creator.public_id AS created_by,
+        COALESCE(sqlc.arg(viewer_admin)::boolean AND (
+          NOT document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
+            sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,
+            false,sqlc.arg(viewer_live_dm)::boolean,sqlc.arg(reader_ids)::uuid[])
+          OR (COALESCE(sqlc.arg(viewer_admin)::boolean
+         AND EXISTS (SELECT 1 FROM pointcrawl_entry_links loc WHERE loc.node_id=n.id AND loc.relation='location')
+         AND NOT EXISTS (
+           SELECT 1 FROM pointcrawl_entry_links loc JOIN documents ld ON ld.id=loc.document_id
+           LEFT JOIN members la ON la.id=ld.author_id
+           WHERE loc.node_id=n.id AND loc.relation='location' AND ld.deleted_at IS NULL
+             AND document_readable(ld.public_id,la.public_id,ld.status,ld.visibility,ld.policy,
+               sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,
+               false,sqlc.arg(viewer_live_dm)::boolean,sqlc.arg(reader_ids)::uuid[])
+         ),false)::boolean)
+        ),false)::boolean AS admin_override,
         (k.value->>'offset')::int AS row_offset,(k.value->>'limit')::int AS row_limit,
         row_number() OVER (PARTITION BY k.ordinality ORDER BY l.relation,d.public_id) AS rn
  FROM jsonb_array_elements(sqlc.arg(keys)::jsonb) WITH ORDINALITY k(value,ordinality)
@@ -113,7 +185,7 @@ WITH ranked AS (
                     sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,
                     sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,sqlc.arg(reader_ids)::uuid[])))
 )
-SELECT key_ordinal,parent_id,map_id,true AS parent_exists,node_id,document_id,relation,created_at,created_by FROM ranked
+SELECT key_ordinal,parent_id,map_id,true AS parent_exists,node_id,document_id,relation,created_at,created_by,admin_override FROM ranked
 WHERE rn>row_offset AND rn<=row_offset+row_limit
 UNION ALL
 SELECT k.ordinality::int,(k.value->>'parent_id')::uuid,m.public_id,(n.id IS NOT NULL AND (
@@ -124,19 +196,45 @@ SELECT k.ordinality::int,(k.value->>'parent_id')::uuid,m.public_id,(n.id IS NOT 
                AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
                  sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,
                  sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,sqlc.arg(reader_ids)::uuid[])))),
-       n.public_id,NULL::uuid,NULL::text,NULL::timestamptz,NULL::uuid
+       n.public_id,NULL::uuid,''::text,NULL::timestamptz,NULL::uuid,false::boolean
 FROM jsonb_array_elements(sqlc.arg(keys)::jsonb) WITH ORDINALITY k(value,ordinality)
 LEFT JOIN pointcrawl_nodes n ON n.public_id=(k.value->>'parent_id')::uuid
 LEFT JOIN maps m ON m.id=n.map_id
 WHERE NOT EXISTS (SELECT 1 FROM ranked r WHERE r.key_ordinal=k.ordinality AND r.rn>(k.value->>'offset')::int AND r.rn<=((k.value->>'offset')::int+(k.value->>'limit')::int))
 ORDER BY key_ordinal,relation,document_id;
 -- name: GetProductRegionCounts :one
+WITH target AS (
+ SELECT r.id,r.public_id FROM regions r
+ WHERE r.public_id=sqlc.arg(region_id) AND r.deleted_at IS NULL
+), admitted_nodes AS (
+ SELECT pn.id,
+        COALESCE(sqlc.arg(viewer_admin)::boolean
+          AND EXISTS (SELECT 1 FROM pointcrawl_entry_links loc WHERE loc.node_id=pn.id AND loc.relation='location')
+          AND NOT EXISTS (
+            SELECT 1 FROM pointcrawl_entry_links loc JOIN documents d ON d.id=loc.document_id
+            LEFT JOIN members author ON author.id=d.author_id
+            WHERE loc.node_id=pn.id AND loc.relation='location' AND d.deleted_at IS NULL
+              AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
+                sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,
+                false,sqlc.arg(viewer_live_dm)::boolean,sqlc.arg(reader_ids)::uuid[])
+          ),false)::boolean AS admin_override
+ FROM target r JOIN maps m ON m.region_id=r.id
+ JOIN pointcrawl_nodes pn ON pn.map_id=m.id
+ WHERE NOT EXISTS (SELECT 1 FROM pointcrawl_entry_links loc
+                   WHERE loc.node_id=pn.id AND loc.relation='location')
+    OR EXISTS (SELECT 1 FROM pointcrawl_entry_links loc JOIN documents d ON d.id=loc.document_id
+               LEFT JOIN members author ON author.id=d.author_id
+               WHERE loc.node_id=pn.id AND loc.relation='location' AND d.deleted_at IS NULL
+                 AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
+                   sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,
+                   sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,sqlc.arg(reader_ids)::uuid[]))
+)
 SELECT r.public_id AS region_id,
-       (SELECT count(*)::int FROM maps m JOIN pointcrawl_nodes pn ON pn.map_id=m.id
-        WHERE m.region_id=r.id) AS pointcrawl_node_count,
+       (SELECT count(*)::int FROM admitted_nodes) AS pointcrawl_node_count,
        (SELECT count(*)::int FROM quest_regions qr JOIN quests q ON q.id=qr.quest_id
-        WHERE qr.region_id=r.id AND q.deleted_at IS NULL) AS quest_count
-FROM regions r WHERE r.public_id=sqlc.arg(region_id) AND r.deleted_at IS NULL;
+        WHERE qr.region_id=r.id AND q.deleted_at IS NULL) AS quest_count,
+       COALESCE((SELECT bool_or(admin_override) FROM admitted_nodes),false)::boolean AS admin_override
+FROM target r;
 -- name: ReadProductRegionActivity :many
 WITH target AS (
  SELECT r.id,r.public_id,r.name
@@ -161,10 +259,10 @@ FROM target t CROSS JOIN counts c LEFT JOIN visible_quests v ON true
 ORDER BY t.public_id,v.public_id;
 -- name: ListProductRegions :many
 SELECT r.public_id AS id, r.name, r.kind, r.charter_deadline, r.created_at,
-       CASE WHEN d.id IS NULL THEN NULL WHEN d.deleted_at IS NULL AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
+       (CASE WHEN d.id IS NULL THEN NULL WHEN d.deleted_at IS NULL AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
          sqlc.narg(viewer_id)::uuid,sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,
          sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,sqlc.arg(reader_ids)::uuid[])
-         THEN d.public_id END AS document_id
+         THEN d.public_id END)::uuid AS document_id
 FROM regions r LEFT JOIN documents d ON d.id=r.document_id
 LEFT JOIN members author ON author.id=d.author_id
 WHERE r.deleted_at IS NULL
@@ -226,10 +324,28 @@ ORDER BY real_utc DESC,public_id DESC LIMIT 1;
 SELECT public_id AS id,real_utc FROM time_anchors
 WHERE real_utc=sqlc.arg(real_utc)
   AND (sqlc.narg(exclude_anchor_id)::uuid IS NULL OR public_id<>sqlc.narg(exclude_anchor_id));
+-- name: ReadProductTimeProjectionAnchors :many
+WITH predecessor AS (
+ SELECT public_id AS id,real_utc,epoch_day,rate,note
+ FROM time_anchors WHERE real_utc<=(sqlc.arg(real_from)::date::timestamp AT TIME ZONE 'UTC')
+ ORDER BY real_utc DESC,public_id DESC LIMIT 1
+), future AS (
+ SELECT public_id AS id,real_utc,epoch_day,rate,note
+ FROM time_anchors
+ WHERE real_utc>(sqlc.arg(real_from)::date::timestamp AT TIME ZONE 'UTC')
+   AND real_utc<(sqlc.arg(real_to)::date::timestamp AT TIME ZONE 'UTC')
+)
+SELECT * FROM predecessor UNION ALL SELECT * FROM future
+ORDER BY real_utc,id;
 -- name: LockProductMapByAtlasCode :one
 SELECT m.id, m.public_id, m.name, m.atlas_code, m.map_kind, m.family,
        m.region_id, m.asset_path, m.created_at, m.created_by
 FROM maps m WHERE m.atlas_code=sqlc.arg(atlas_code) FOR UPDATE;
+-- name: ReadProductMapReference :one
+SELECT m.public_id AS map_id,r.public_id AS region_id
+FROM maps m LEFT JOIN regions r ON r.id=m.region_id
+WHERE m.public_id=sqlc.arg(map_id)::uuid
+  AND (m.region_id IS NULL OR r.deleted_at IS NULL);
 -- name: LockProductMap :one
 SELECT m.id,m.public_id AS map_id,m.name,m.atlas_code,m.map_kind,m.family,
        r.public_id AS region_id,m.asset_path,m.created_at,
@@ -239,12 +355,14 @@ LEFT JOIN members creator ON creator.id=m.created_by
 WHERE m.public_id=sqlc.arg(map_id) FOR UPDATE OF m;
 -- name: LockProductRegion :one
 SELECT r.id, r.public_id, r.name, r.kind, r.charter_deadline, r.document_id,
-       r.deleted_at, r.created_at
-FROM regions r WHERE r.public_id=sqlc.arg(region_id) FOR UPDATE;
+	   r.deleted_at, r.created_at,d.public_id AS document_public_id
+FROM regions r LEFT JOIN documents d ON d.id=r.document_id
+WHERE r.public_id=sqlc.arg(region_id) FOR UPDATE OF r;
 -- name: LockProductPointcrawlNode :one
 SELECT n.id, n.public_id, n.map_id, n.name, n.x, n.y, n.submap_id, n.created_at,
-       m.public_id AS map_public_id
+       m.public_id AS map_public_id,submap.public_id AS submap_public_id
 FROM pointcrawl_nodes n JOIN maps m ON m.id=n.map_id
+LEFT JOIN maps submap ON submap.id=n.submap_id
 WHERE n.public_id=sqlc.arg(node_id) FOR UPDATE OF n;
 -- name: LockProductPointcrawlEdge :one
 SELECT e.id,e.public_id AS edge_id,m.public_id AS map_id,a.public_id AS node_a,
@@ -364,6 +482,15 @@ WITH removed AS (
  RETURNING l.*
 )
 SELECT count(*)::int FROM removed;
+-- name: LockProductPointcrawlEntryIdentity :one
+SELECT m.public_id AS map_id,n.public_id AS node_id,d.public_id AS document_id,
+       l.relation,l.created_at,creator.public_id AS created_by
+FROM pointcrawl_entry_links l JOIN maps m ON m.id=l.map_id
+JOIN pointcrawl_nodes n ON n.id=l.node_id JOIN documents d ON d.id=l.document_id
+JOIN members creator ON creator.id=l.created_by
+WHERE m.public_id=sqlc.arg(map_id)::uuid AND n.public_id=sqlc.arg(node_id)::uuid
+  AND d.public_id=sqlc.arg(document_id)::uuid AND l.relation=sqlc.arg(relation)
+FOR UPDATE OF l;
 -- name: AssignProductArchon :one
 WITH inserted AS (
  INSERT INTO archon_assignments(member_id,region_id,granted_by,created_at)
@@ -486,4 +613,9 @@ ORDER BY parent_map_id,child_map_id;
 -- name: SoftDeleteProductRegion :execrows
 UPDATE regions r SET deleted_at=sqlc.arg(recorded_at),
   deleted_by=(SELECT id FROM members WHERE public_id=sqlc.arg(actor_id)::uuid)
-WHERE r.public_id=sqlc.arg(region_id)::uuid AND r.deleted_at IS NULL;
+WHERE r.public_id=sqlc.arg(region_id)::uuid AND r.deleted_at IS NULL
+  AND NOT EXISTS (SELECT 1 FROM maps m WHERE m.region_id=r.id)
+  AND NOT EXISTS (SELECT 1 FROM characters c WHERE c.region_id=r.id
+                  AND c.deleted_at IS NULL AND c.status='active')
+  AND NOT EXISTS (SELECT 1 FROM quest_regions qr JOIN quests q ON q.id=qr.quest_id
+                  WHERE qr.region_id=r.id AND q.deleted_at IS NULL AND q.status IN ('open','full'));

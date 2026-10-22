@@ -6,7 +6,6 @@ import (
 	"errors"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
@@ -76,30 +75,6 @@ func optionalText(value *string) pgtype.Text {
 	return pgtype.Text{String: *value, Valid: true}
 }
 
-func pgUUIDFromInterface(value any) pgtype.UUID {
-	if value == nil {
-		return pgtype.UUID{}
-	}
-	switch v := value.(type) {
-	case pgtype.UUID:
-		return v
-	case uuid.UUID:
-		var out pgtype.UUID
-		_ = out.Scan(v.String())
-		return out
-	case [16]byte:
-		var out pgtype.UUID
-		_ = out.Scan(v[:])
-		return out
-	case string:
-		var out pgtype.UUID
-		_ = out.Scan(v)
-		return out
-	default:
-		return pgtype.UUID{}
-	}
-}
-
 func uuidPtr(id pgtype.UUID) *string {
 	if !id.Valid {
 		return nil
@@ -165,39 +140,17 @@ func mapProductMapRow(id pgtype.UUID, name, atlasCode, mapKind, family string, r
 	return view
 }
 
-func mapProductRegionRow(id pgtype.UUID, name, kind string, charterDeadline pgtype.Timestamptz, documentID any, createdAt pgtype.Timestamptz) RegionView {
+func mapProductRegionRow(id pgtype.UUID, name, kind string, charterDeadline pgtype.Timestamptz, documentID pgtype.UUID, createdAt pgtype.Timestamptz) RegionView {
 	view := RegionView{
-		Id:        db.UUIDString(id),
-		Name:      name,
-		Kind:      kind,
-		CreatedAt: createdAt.Time,
+		Id:         db.UUIDString(id),
+		Name:       name,
+		Kind:       kind,
+		CreatedAt:  createdAt.Time,
+		DocumentId: uuidPtr(documentID),
 	}
 	if charterDeadline.Valid {
 		t := charterDeadline.Time
 		view.CharterDeadline = &t
-	}
-	switch doc := documentID.(type) {
-	case pgtype.UUID:
-		if doc.Valid {
-			view.DocumentId = uuidPtr(doc)
-		}
-	case [16]byte:
-		var u pgtype.UUID
-		_ = u.Scan(doc[:])
-		if u.Valid {
-			view.DocumentId = uuidPtr(u)
-		}
-	case uuid.UUID:
-		var u pgtype.UUID
-		_ = u.Scan(doc.String())
-		if u.Valid {
-			view.DocumentId = uuidPtr(u)
-		}
-	case nil:
-	default:
-		if s, ok := doc.(string); ok && s != "" {
-			view.DocumentId = &s
-		}
 	}
 	return view
 }
@@ -281,16 +234,7 @@ func isNotFound(err error) bool {
 }
 
 func mapLockRegionState(row dbgen.LockProductRegionRow) (RegionView, error) {
-	docID := pgtype.Int8{}
-	if row.DocumentID.Valid {
-		docID = row.DocumentID
-	}
-	_ = docID
-	var docAny any
-	if row.DocumentID.Valid {
-		docAny = row.DocumentID
-	}
-	view := mapProductRegionRow(row.PublicID, row.Name, row.Kind, row.CharterDeadline, docAny, row.CreatedAt)
+	view := mapProductRegionRow(row.PublicID, row.Name, row.Kind, row.CharterDeadline, row.DocumentPublicID, row.CreatedAt)
 	return view, nil
 }
 

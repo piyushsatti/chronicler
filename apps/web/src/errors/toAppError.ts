@@ -4,14 +4,15 @@ import { TransportError } from './types.js';
 const FIXED: Record<Exclude<AppErrorKind, 'safe'>, string> = {
   network: 'Could not reach the server. Check your connection and try again.',
   unauthorized: 'Your session ended. Sign in again.',
-  forbidden: 'Permissions may have changed. Reload or sign in again.',
+  forbidden:
+    'You don’t have access to this. If your role changed recently, sign in again.',
   not_found: 'That item could not be found.',
   invalid: 'The server returned data this screen cannot use.',
   upstream: 'Something went wrong. Please try again.',
   unknown: 'Something went wrong. Please try again.',
 };
 
-export function adapterFailureToKind(failure: AdapterFailure): AppErrorKind {
+function adapterFailureToKind(failure: AdapterFailure): AppErrorKind {
   switch (failure) {
     case 'NotFound':
       return 'not_found';

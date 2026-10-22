@@ -1,44 +1,22 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { queryKeys } from '../../../api/queryKeys.js';
 import {
-  loadProfileHub,
-} from '../adapters/profileCommunityAdapter.js';
-import {
+  DM_SCHEDULE_PAGE_SIZE,
   loadDmTableBySlug,
   loadDmTableSchedule,
 } from '../adapters/dmTableAdapter.js';
-
 export function useDmTableDetailPage(slug: string) {
-  const hub = useQuery({
-    queryKey: queryKeys.communityHub,
-    queryFn: loadProfileHub,
-  });
+  const [page, setPage] = useState(1);
   const doc = useQuery({
-    queryKey: [...queryKeys.document(slug), 'dm-table'] as const,
+    queryKey: ['dm-table', slug],
     queryFn: () => loadDmTableBySlug(slug),
-    enabled: slug.length > 0,
+    enabled: Boolean(slug),
   });
-
-  const host = hub.data?.dms.find(
-    (dm) =>
-      dm.handle.toLowerCase() === slug.toLowerCase() ||
-      dm.displayName.toLowerCase().replace(/\s+/g, '-') === slug.toLowerCase() ||
-      (doc.data?.authorHandle ?? '').toLowerCase() === dm.handle.toLowerCase(),
-  );
-  const scheduleHandle = doc.data?.authorHandle ?? host?.handle ?? '';
+  const memberId = doc.data?.authorId ?? '';
   const schedule = useQuery({
-    queryKey: ['dm-table', 'schedule', scheduleHandle] as const,
-    queryFn: () => loadDmTableSchedule(scheduleHandle),
-    enabled: scheduleHandle.length > 0,
+    queryKey: ['dm-table', 'schedule', memberId, page],
+    queryFn: () => loadDmTableSchedule(memberId, (page - 1) * DM_SCHEDULE_PAGE_SIZE),
+    enabled: Boolean(memberId),
   });
-
-  return {
-    hub,
-    doc,
-    host,
-    schedule,
-    title: doc.data?.title ?? host?.displayName ?? slug,
-    loading: hub.isLoading || doc.isLoading,
-    error: hub.isError || doc.isError,
-  };
+  return { doc, schedule, page, setPage, pageSize: DM_SCHEDULE_PAGE_SIZE };
 }

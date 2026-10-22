@@ -1,0 +1,6 @@
+mutation CreateCharacter($input: CreateCharacterInput!, $meta: CommandMeta!) {
+  createCharacter(input: $input, meta: $meta) {
+    id
+    shortCode
+  }
+}

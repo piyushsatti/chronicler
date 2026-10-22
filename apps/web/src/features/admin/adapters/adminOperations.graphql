@@ -1,12 +1,51 @@
-query AdminOperations($limit: Int! = 25, $offset: Int! = 0) {
+query AdminOperations(
+  $limit: Int! = 25
+  $offset: Int! = 0
+  $alertsLimit: Int! = 25
+  $alertsOffset: Int! = 0
+) {
   adminOperations(limit: $limit, offset: $offset) {
     activeAlertCount
     pendingDeliveryCount
+    terminalDeliveryCount
     deliveryTotal
+    config {
+      publicOrigin
+      publicOriginHealthy
+      deliveryMode
+      announcementRoleId
+      announcementRoleSource
+      announcementRoleHealthy
+    }
+    scheduledWork {
+      kind
+      expectedSlot
+      outcome
+      lastStartedAt
+      lastFinishedAt
+      jobId
+      safeErrorCode
+    }
     deliveries {
       id
+      questId
+      questShortCode
+      questTitle
+      questLink
+      eventLink
+      messageId
+      state
+      desiredRevision
+      appliedRevision
+      failureStreak
+      maxAttempts
+      nextAttemptAt
+      safeError
+      redriveCount
+      createdAt
+      updatedAt
     }
-    activeAlerts {
+    activeAlerts(limit: $alertsLimit, offset: $alertsOffset) {
       key
       label
       severity

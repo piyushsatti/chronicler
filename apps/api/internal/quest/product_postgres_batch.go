@@ -170,14 +170,14 @@ func (p *ProductPostgres) readBatchArcQuests(ctx context.Context, _ auth.Authori
 	parentExists := make([]bool, len(keys))
 	for rows.Next() {
 		var (
-			keyOrdinal, slotsMax, filledCount                                           pgtype.Int4
+			keyOrdinal, slotsMax, filledCount                                          pgtype.Int4
 			parentID, publicID, dmPublicID, arcPublicID, documentPublicID, createdByID pgtype.UUID
-			parentExistsFlag                                                            bool
-			shortCode, status, displayStatus, signupType                                pgtype.Text
-			kinds, tags, genres                                                         []string
-			scheduledAt, createdAt, updatedAt                                           pgtype.Timestamptz
-			durationHours                                                               pgtype.Float8
-			apl                                                                         pgtype.Int4
+			parentExistsFlag                                                           bool
+			shortCode, status, displayStatus, signupType                               pgtype.Text
+			kinds, tags, genres                                                        []string
+			scheduledAt, createdAt, updatedAt                                          pgtype.Timestamptz
+			durationHours                                                              pgtype.Float8
+			apl                                                                        pgtype.Int4
 		)
 		if err := rows.Scan(
 			&keyOrdinal, &parentID, &parentExistsFlag,
@@ -230,6 +230,14 @@ func (p *ProductPostgres) readBatchArcQuests(ctx context.Context, _ auth.Authori
 		lists[idx] = append(lists[idx], view)
 	}
 	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	rows.Close()
+	views := make([]*QuestView, 0)
+	for _, items := range lists {
+		views = append(views, questViewPointers(items)...)
+	}
+	if err := p.fillQuestRegionIDs(ctx, views...); err != nil {
 		return nil, err
 	}
 	for i := range out {
@@ -296,10 +304,10 @@ func (p *ProductPostgres) readBatchQuestRegions(ctx context.Context, _ auth.Auth
 	parentExists := make([]bool, len(keys))
 	for rows.Next() {
 		var (
-			keyOrdinal     int32
-			parentID       pgtype.UUID
+			keyOrdinal       int32
+			parentID         pgtype.UUID
 			parentExistsFlag bool
-			regionID       pgtype.Text
+			regionID         pgtype.Text
 		)
 		if err := rows.Scan(&keyOrdinal, &parentID, &parentExistsFlag, &regionID); err != nil {
 			return nil, err
@@ -387,9 +395,9 @@ func (p *ProductPostgres) readBatchPointcrawlLinks(ctx context.Context, _ auth.A
 	parentExists := make([]bool, len(keys))
 	for rows.Next() {
 		var (
-			keyOrdinal       int32
-			parentID         pgtype.UUID
-			parentExistsFlag bool
+			keyOrdinal            int32
+			parentID              pgtype.UUID
+			parentExistsFlag      bool
 			questID, nodeID, role pgtype.Text
 		)
 		if err := rows.Scan(&keyOrdinal, &parentID, &parentExistsFlag, &questID, &nodeID, &role); err != nil {
@@ -437,8 +445,8 @@ LEFT JOIN quests q ON q.public_id = input.public_id AND q.deleted_at IS NULL
 LEFT JOIN LATERAL (
     SELECT b.public_id, b.state, b.next_run_at, b.safe_error_code, b.error_message
     FROM background_jobs b
-    WHERE b.kind = 'quest_discord_delivery'
-      AND b.payload->>'questId' = q.public_id::text
+    WHERE b.kind IN ('quest_discord_delivery','quest_discord')
+      AND b.payload->>'public_id' = q.public_id::text
     ORDER BY b.updated_at DESC, b.public_id DESC
     LIMIT 1
 ) job ON TRUE
@@ -489,11 +497,11 @@ func (p *ProductPostgres) readBatchDelivery(ctx context.Context, _ auth.Authorit
 	defer rows.Close()
 	for rows.Next() {
 		var (
-			inputIndex                                 int32
-			questPublicID, jobPublicID                 pgtype.UUID
-			desired, applied                           pgtype.Int4
-			jobState, safeError, errorMessage          pgtype.Text
-			nextRetryAt                                pgtype.Timestamptz
+			inputIndex                        int32
+			questPublicID, jobPublicID        pgtype.UUID
+			desired, applied                  pgtype.Int4
+			jobState, safeError, errorMessage pgtype.Text
+			nextRetryAt                       pgtype.Timestamptz
 		)
 		if err := rows.Scan(&inputIndex, &questPublicID, &desired, &applied, &jobPublicID, &jobState, &nextRetryAt, &safeError, &errorMessage); err != nil {
 			return nil, err

@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+export const calendarEraWireSchema = z.object({
+  era: z.object({ abbrev: z.string().trim().min(1) }),
+});
+
 const chronicleGameDateWireSchema = z.object({
   eraAbbrev: z.string(),
   year: z.number().int(),
@@ -9,10 +13,30 @@ const chronicleGameDateWireSchema = z.object({
   day: z.number().int(),
 });
 
-const chronicleSummaryDerivedWireSchema = z
+export const chronicleSummaryDerivedWireSchema = z
   .object({
+    quests: z
+      .array(
+        z.object({
+          id: z.string().uuid(),
+          shortCode: z.string().trim().min(1),
+          title: z.string().nullable(),
+        }),
+      )
+      .optional(),
     regions: z.array(z.object({ id: z.string(), name: z.string() })),
     dms: z.array(z.object({ id: z.string(), displayName: z.string() })).optional(),
+    players: z
+      .array(
+        z.object({
+          characterId: z.string(),
+          characterShortCode: z.string(),
+          characterName: z.string(),
+          memberId: z.string(),
+          manual: z.boolean(),
+        }),
+      )
+      .optional(),
     occurredAt: z.string().nullable().optional(),
     arc: z.string().nullable().optional(),
     gameDay: z.number().int().nullable().optional(),
@@ -21,7 +45,7 @@ const chronicleSummaryDerivedWireSchema = z
   .nullable()
   .optional();
 
-export const chronicleDocumentWireSchema = z.object({
+const chronicleDocumentWireSchema = z.object({
   id: z.string().uuid(),
   slug: z.string().min(1),
   kind: z.string().min(1).optional(),
@@ -32,6 +56,7 @@ export const chronicleDocumentWireSchema = z.object({
   effectiveBody: z.string().nullable().optional(),
   frontmatter: z.unknown().optional(),
   updatedAt: z.string().optional(),
+  publishedAt: z.string().nullable().optional(),
   author: z
     .object({
       handle: z.string(),
@@ -48,11 +73,19 @@ export const chronicleListWireSchema = z.object({
       slug: true,
       category: true,
       title: true,
+      effectiveBody: true,
       frontmatter: true,
       author: true,
       updatedAt: true,
+      publishedAt: true,
       summaryDerived: true,
     }),
   ),
   total: z.number().int().nonnegative(),
+});
+
+export const chronicleDetailWireSchema = chronicleDocumentWireSchema.extend({
+  kind: z.literal('summary'),
+  canEditBody: z.boolean(),
+  canEditMetadata: z.boolean(),
 });

@@ -6,6 +6,7 @@ mutation UpdateCharacterProfile(
   updateCharacterProfile(characterId: $characterId, input: $input, meta: $meta) {
     id
     description
+    imageUrl
     updatedAt
   }
 }

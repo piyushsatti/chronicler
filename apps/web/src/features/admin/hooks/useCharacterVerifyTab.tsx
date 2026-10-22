@@ -1,10 +1,12 @@
+import { TransportError } from '../../../errors/types.js';
+import { useAdminPage } from './useAdminPage.js';
 import {
   useAdminAuthority,
   useAuthorityFailures,
   panelState,
 } from './useAdminAuthority.js';
 import { useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../../api/queryKeys.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import {
@@ -15,11 +17,12 @@ import {
 export function useCharacterVerifyTab() {
   const authority = useAdminAuthority('review');
   const queryClient = useQueryClient();
-  const queue = useQuery({
-    enabled: authority.allowed,
-    queryKey: queryKeys.pendingCharacters,
-    queryFn: loadCharVerifyQueue,
-  });
+  const { query: queue, pagination } = useAdminPage(
+    queryKeys.pendingCharacters,
+    authority,
+    {},
+    (page, request) => loadCharVerifyQueue({ ...page, ...{} }, request),
+  );
   const [changeRequestId, setChangeRequestId] = useState<string | null>(null);
   const [changeRequestNote, setChangeRequestNote] = useState('');
   const [noteError, setNoteError] = useState<string | null>(null);
@@ -28,9 +31,20 @@ export function useCharacterVerifyTab() {
     message: string;
   } | null>(null);
 
-  const decide = useMutation({
-    mutationFn: authority.guardMutation(decideCharacterVerification),
+  const decide = useMutation<
+    void,
+    unknown,
+    Parameters<typeof decideCharacterVerification>[0]
+  >({
+    mutationKey: ['adminCommand', authority.commandKey, 'useCharacterVerifyTab'],
+    networkMode: 'always',
+    retry: false,
+    mutationFn: authority.guardMutation(
+      (command, input: Parameters<typeof decideCharacterVerification>[0]) =>
+        decideCharacterVerification(input, command),
+    ),
     onSuccess: async (_data, vars) => {
+      if (!authority.isCurrent()) return;
       setFeedback({
         type: 'success',
         message: vars.approve
@@ -42,11 +56,10 @@ export function useCharacterVerifyTab() {
       await queryClient.invalidateQueries({ queryKey: queryKeys.pendingCharacters });
     },
     onError: (error, vars) => {
+      if (!authority.isCurrent()) return;
       const appError = toAppError(error, 'review:character-decision');
-      const message = error instanceof Error ? error.message : String(error ?? '');
-      const isStale = /changed since|stale|refresh the verification queue/i.test(
-        message,
-      );
+      const isStale =
+        appError.cause instanceof TransportError && appError.cause.code === 'CONFLICT';
       setFeedback({
         type: 'error',
         message:
@@ -62,6 +75,7 @@ export function useCharacterVerifyTab() {
   });
   useAuthorityFailures(queue.error, decide.error);
   return {
+    pagination,
     queue: panelState(queue, 'admin:CharacterVerifyTab'),
     changeRequestId,
     setChangeRequestId,

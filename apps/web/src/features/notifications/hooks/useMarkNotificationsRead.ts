@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { onlineManager, useMutation, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../../api/queryKeys.js';
 import { useAuth } from '../../../auth/AuthContext.js';
+import { currentAccessIdentity } from '../../../auth/useCurrentAccess.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import { useMe } from '../../../hooks/useMe.js';
 import { markNotificationsRead } from '../adapters/notificationsAdapter.js';
@@ -15,19 +16,14 @@ type ReadOwner = {
   generation: number;
   controller: AbortController | null;
   ids: Map<string, ReadState>;
+  attempts: Map<string, string>;
 };
-
-function authorityKey(
-  member: { id: string; roles: string[] } | undefined,
-): string | null {
-  return member ? JSON.stringify([member.id, [...new Set(member.roles)].sort()]) : null;
-}
 
 export function useMarkNotificationsRead() {
   const queryClient = useQueryClient();
   const { token, isCurrentSession } = useAuth();
   const me = useMe();
-  const authority = me.isSuccess ? authorityKey(me.data) : null;
+  const authority = me.isSuccess ? currentAccessIdentity(me.data) : null;
   const owner = useMemo<ReadOwner>(
     () => ({
       token,
@@ -37,10 +33,12 @@ export function useMarkNotificationsRead() {
       generation: 0,
       controller: null,
       ids: new Map(),
+      attempts: new Map(),
     }),
     [token, authority],
   );
   const current = useRef(owner);
+  current.current = owner;
   const [, refresh] = useState(0);
   const isCurrentOwner = useCallback(
     (candidate: ReadOwner): boolean => {
@@ -53,7 +51,8 @@ export function useMarkNotificationsRead() {
         isCurrentSession(candidate.token) &&
         candidate.authority !== null &&
         account?.status === 'success' &&
-        authorityKey(account.data) === candidate.authority
+        account.data !== undefined &&
+        currentAccessIdentity(account.data) === candidate.authority
       );
     },
     [isCurrentSession, queryClient],
@@ -76,7 +75,6 @@ export function useMarkNotificationsRead() {
   );
 
   useEffect(() => {
-    current.current = owner;
     owner.active = true;
     const unsubscribe = onlineManager.subscribe((online) => {
       if (!online) stop(owner);
@@ -86,6 +84,7 @@ export function useMarkNotificationsRead() {
       owner.generation += 1;
       owner.controller?.abort();
       owner.ids.clear();
+      owner.attempts.clear();
       unsubscribe();
     };
   }, [owner, stop]);
@@ -99,6 +98,7 @@ export function useMarkNotificationsRead() {
       generation: number;
       ids: string[];
       signal: AbortSignal;
+      idempotencyKey: string;
     }) => {
       if (
         !isCurrentOwner(request.owner) ||
@@ -111,6 +111,7 @@ export function useMarkNotificationsRead() {
       await markNotificationsRead(request.ids, {
         token: request.owner.token,
         signal: request.signal,
+        idempotencyKey: request.idempotencyKey,
       });
     },
   });
@@ -134,12 +135,17 @@ export function useMarkNotificationsRead() {
           ids.forEach((id) => candidate.ids.set(id, 'in-flight'));
           const controller = new AbortController();
           candidate.controller = controller;
+          const identity = JSON.stringify(ids);
+          const idempotencyKey =
+            candidate.attempts.get(identity) ?? crypto.randomUUID();
+          candidate.attempts.set(identity, idempotencyKey);
           try {
             await mutateAsync({
               owner: candidate,
               generation,
               ids,
               signal: controller.signal,
+              idempotencyKey,
             });
           } catch {
             if (!isCurrentOwner(candidate) || candidate.generation !== generation)
@@ -200,6 +206,9 @@ export function useMarkNotificationsRead() {
   return {
     enqueue,
     retry,
+    succeededIds: Array.from(owner.ids)
+      .filter(([, state]) => state === 'succeeded')
+      .map(([id]) => id),
     failedIds: Array.from(owner.ids)
       .filter(([, state]) => state === 'failed' || state === 'unsent')
       .map(([id]) => id),

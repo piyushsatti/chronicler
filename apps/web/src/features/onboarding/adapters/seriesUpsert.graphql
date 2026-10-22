@@ -1,0 +1,9 @@
+mutation RetainedUpsertArc($id: ID, $name: String!, $meta: CommandMeta!) {
+  upsertQuestArc(id: $id, name: $name, meta: $meta) {
+    id
+    name
+    createdBy
+    createdAt
+    questCount
+  }
+}

@@ -4,7 +4,7 @@ import { toAppError } from '../../../errors/toAppError.js';
 import type { AppError } from '../../../errors/types.js';
 import { loadDocument } from '../adapters/documentAdapter.js';
 
-export type DocumentPageView =
+type DocumentPageView =
   | { status: 'loading' }
   | { status: 'error'; error: AppError }
   | {

@@ -1,0 +1,310 @@
+import { useState } from 'react';
+import { Button } from '../../../components/primitives/Button.js';
+import { Modal } from '../../../components/primitives/Modal.js';
+import { StatePanel } from '../../../components/foundation/StatePanel.js';
+import type { AppError } from '../../../errors/types.js';
+import type { QuestDetailView } from '../adapters/questAdapter.js';
+import type { Attendance, QuestCommand, Reward } from '../adapters/questCommands.js';
+import { Checkbox } from '../../../components/primitives/Checkbox.js';
+
+export type AttendanceRow = {
+  characterId: string;
+  status: '' | 'played' | 'no_show';
+  pcxp: string;
+  note: string;
+};
+export function closeInput(
+  rows: AttendanceRow[],
+): { attendance: Attendance[]; rewards: Reward[] } | null {
+  const attendance: Attendance[] = [],
+    rewards: Reward[] = [];
+  for (const row of rows) {
+    if (row.status === '') return null;
+    attendance.push({ characterId: row.characterId, status: row.status });
+    const value = Number(row.pcxp);
+    if (
+      !Number.isInteger(value) ||
+      value < 0 ||
+      value > 2147483647 ||
+      (row.status !== 'played' && value !== 0)
+    )
+      return null;
+    if (value > 0)
+      rewards.push({
+        characterId: row.characterId,
+        pcxp: value,
+        ...(row.note.trim() ? { note: row.note.trim() } : {}),
+      });
+  }
+  if (rewards.reduce((total, reward) => total + reward.pcxp, 0) > 2147483647)
+    return null;
+  return { attendance, rewards };
+}
+
+export function QuestDmActions({
+  quest,
+  pending,
+  execute,
+  error,
+}: {
+  quest: QuestDetailView;
+  pending: boolean;
+  execute: (command: QuestCommand) => Promise<boolean>;
+  error: AppError | null;
+}): React.JSX.Element {
+  const [selected, setSelected] = useState<string[]>([]);
+  const roster = quest.participants.filter(
+    (participant) => participant.status !== 'withdrawn',
+  );
+  const [rows, setRows] = useState<AttendanceRow[]>(() =>
+    roster.map((participant) => ({
+      characterId: participant.characterId,
+      status:
+        participant.status === 'played' || participant.status === 'no_show'
+          ? participant.status
+          : '',
+      pcxp: '0',
+      note: '',
+    })),
+  );
+  const [confirm, setConfirm] = useState<'played' | 'cancelled' | 'close' | null>(null);
+  const preplay = quest.machineStatus === 'open' || quest.machineStatus === 'full';
+  const input = closeInput(rows);
+  const validRows =
+    rows.length === roster.length &&
+    roster.every((participant) =>
+      rows.some((row) => row.characterId === participant.characterId),
+    );
+  const change = (id: string, patch: Partial<Omit<AttendanceRow, 'characterId'>>) =>
+    setRows((current) =>
+      current.map((row) => (row.characterId === id ? { ...row, ...patch } : row)),
+    );
+  return (
+    <section className="stack" aria-label="DM controls">
+      <h2 className="type-title">DM controls</h2>
+      {preplay ? (
+        <>
+          <div className="row" data-gap="2">
+            <Button
+              variant="secondary"
+              disabled={pending}
+              onClick={() => setConfirm('played')}
+            >
+              Mark played
+            </Button>
+            <Button
+              variant="ghost"
+              disabled={pending}
+              onClick={() => setConfirm('cancelled')}
+            >
+              Cancel quest
+            </Button>
+          </div>
+          {quest.participants.some(
+            (participant) => participant.status === 'waitlisted',
+          ) ? (
+            <form
+              className="stack"
+              onSubmit={(event) => {
+                event.preventDefault();
+                void execute({
+                  kind: 'select',
+                  questId: quest.id,
+                  characterIds: selected,
+                }).then((success) => {
+                  if (success) setSelected([]);
+                });
+              }}
+            >
+              <h3 className="type-title">Select waitlisted characters</h3>
+              <p className="type-caption">
+                {Math.max(0, quest.slotsMax - quest.filledCount)} seats available.
+                Current character eligibility is checked when you save.
+              </p>
+              {quest.participants
+                .filter((participant) => participant.status === 'waitlisted')
+                .map((participant) => (
+                  <Checkbox
+                    key={participant.characterId}
+                    label={`${participant.characterName} · @${participant.memberHandle}`}
+                    checked={selected.includes(participant.characterId)}
+                    disabled={pending}
+                    onCheckedChange={(checked) =>
+                      setSelected((current) =>
+                        checked
+                          ? [...current, participant.characterId]
+                          : current.filter((id) => id !== participant.characterId),
+                      )
+                    }
+                  />
+                ))}
+              <div className="stack-row">
+                <Button
+                  type="submit"
+                  disabled={
+                    pending ||
+                    selected.length === 0 ||
+                    selected.length > 100 ||
+                    selected.length > quest.slotsMax - quest.filledCount
+                  }
+                >
+                  Confirm selection
+                </Button>
+              </div>
+            </form>
+          ) : null}
+        </>
+      ) : quest.machineStatus === 'played' ? (
+        <form
+          className="stack"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (input && validRows) setConfirm('close');
+          }}
+        >
+          <p>
+            Record final attendance for each character. PCXP is awarded only when the
+            quest closes. Zero records no award.
+          </p>
+          {roster.map((participant) => {
+            const row = rows.find(
+              (item) => item.characterId === participant.characterId,
+            );
+            return (
+              <fieldset
+                className="card stack"
+                key={participant.characterId}
+                disabled={pending}
+              >
+                <legend>
+                  {participant.characterName} · @{participant.memberHandle}
+                </legend>
+                <label className="stack">
+                  Attendance
+                  <select
+                    aria-label="Attendance"
+                    required
+                    value={row?.status ?? ''}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      if (value === 'played' || value === 'no_show' || value === '')
+                        change(participant.characterId, {
+                          status: value,
+                          ...(value !== 'played' ? { pcxp: '0' } : {}),
+                        });
+                    }}
+                  >
+                    <option value="">Choose attendance</option>
+                    <option value="played">Played</option>
+                    <option value="no_show">No show</option>
+                  </select>
+                </label>
+                <label className="stack">
+                  PCXP award
+                  <input
+                    aria-label="PCXP award"
+                    type="number"
+                    min="0"
+                    max="2147483647"
+                    step="1"
+                    value={row?.pcxp ?? '0'}
+                    disabled={row?.status !== 'played'}
+                    onChange={(event) =>
+                      change(participant.characterId, { pcxp: event.target.value })
+                    }
+                  />
+                </label>
+                <label className="stack">
+                  Award note (optional)
+                  <input
+                    aria-label="Award note (optional)"
+                    value={row?.note ?? ''}
+                    disabled={row?.status !== 'played'}
+                    onChange={(event) =>
+                      change(participant.characterId, { note: event.target.value })
+                    }
+                  />
+                </label>
+              </fieldset>
+            );
+          })}
+          <div className="row" data-gap="2">
+            <Button
+              variant="secondary"
+              disabled={pending || !input || !validRows}
+              onClick={() => {
+                if (input)
+                  void execute({
+                    kind: 'attest',
+                    questId: quest.id,
+                    entries: input.attendance,
+                  });
+              }}
+            >
+              Save attendance
+            </Button>
+            <Button type="submit" disabled={pending || !input || !validRows}>
+              Review closure
+            </Button>
+          </div>
+        </form>
+      ) : (
+        <p className="type-caption">
+          This quest is {quest.machineStatus}. Attendance and rewards are final.
+        </p>
+      )}
+      <Modal
+        open={confirm !== null}
+        title={
+          confirm === 'close'
+            ? 'Close quest'
+            : confirm === 'played'
+              ? 'Mark session played'
+              : 'Cancel quest'
+        }
+        onClose={() => {
+          if (!pending) setConfirm(null);
+        }}
+      >
+        {error ? <StatePanel status="error" error={error} /> : null}
+        {confirm === 'close' ? (
+          <p>
+            Close with {input?.attendance.length ?? 0} final attendance records and{' '}
+            {input?.rewards.reduce((total, award) => total + award.pcxp, 0) ?? 0} PCXP
+            awarded. Closure is final.
+          </p>
+        ) : (
+          <p>
+            {confirm === 'played'
+              ? 'End signups and move this session to attendance and reward recording?'
+              : 'Cancel this quest and close signups? This action is final.'}
+          </p>
+        )}
+        <Button
+          pending={pending}
+          disabled={pending || (confirm === 'close' && (!input || !validRows))}
+          onClick={() => {
+            if (confirm === 'close' && input && validRows)
+              void execute({ kind: 'close', questId: quest.id, ...input }).then(
+                (success) => {
+                  if (success) setConfirm(null);
+                },
+              );
+            else if (confirm === 'played' || confirm === 'cancelled')
+              void execute({ kind: 'transition', questId: quest.id, to: confirm }).then(
+                (success) => {
+                  if (success) setConfirm(null);
+                },
+              );
+          }}
+        >
+          {confirm === 'close'
+            ? input?.rewards.length
+              ? 'Close and award PCXP'
+              : 'Close with zero PCXP'
+            : 'Confirm'}
+        </Button>
+      </Modal>
+    </section>
+  );
+}

@@ -1,0 +1,8 @@
+query QuestMapOptions($offset: Int! = 0) {
+  maps(mapKind: "pointcrawl", limit: 50, offset: $offset) {
+    id
+    atlasCode
+    name
+    canEdit
+  }
+}

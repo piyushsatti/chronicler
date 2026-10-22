@@ -1,8 +1,7 @@
 /** Ownership helpers; role affordances share the validated-account authority. */
 import { isAdmin, type MemberRole } from '../auth/roles.js';
 
-export { hasRole, isAdmin, canVerify, canAccessAdmin, isDm } from '../auth/roles.js';
-export type { MemberRole } from '../auth/roles.js';
+export { hasRole } from '../auth/roles.js';
 
 /** Owner check against v2 member id (not Discord id). */
 export function isCharacterOwner(

@@ -1,0 +1,26 @@
+$ vitest run --config vitest.config.ts tests/features/notifications tests/chrome/NotificationBell.test.tsx
+
+ RUN  v2.1.9 apps/web
+
+ ✓ tests/features/notifications/notificationsAdapter.test.ts (17 tests) 53ms
+ ✓ tests/features/notifications/notificationDestinations.test.ts (9 tests) 144ms
+ ✓ tests/features/notifications/LoginNotificationsPanel.test.tsx (2 tests) 259ms
+ ✓ tests/features/notifications/useNotificationsPage.test.tsx (3 tests) 337ms
+ ✓ tests/chrome/NotificationBell.test.tsx (3 tests) 418ms
+ ✓ tests/features/notifications/notificationFeedback.test.tsx (5 tests) 682ms
+   ✓ notification retry and completion feedback > advances a fully suppressed page, preserves its cursor on load-more failure, and retries visibly 401ms
+ ✓ tests/features/notifications/NotificationsNavigation.test.tsx (3 tests) 720ms
+   ✓ notification cache across account and inbox navigation > opens and paginates the inbox after a cached account preview, then retains the preview while offline 373ms
+ ✓ tests/features/notifications/NotificationsLoadMoreSentinel.test.tsx (1 test) 18ms
+ ✓ tests/features/notifications/NotificationsPage.test.tsx (3 tests) 186ms
+ ✓ tests/features/notifications/notificationSessions.test.tsx (7 tests) 1308ms
+   ✓ notification current-session reads > removes already cached private destinations before fetching a same-token role scope and never queues old rows in it 360ms
+ ✓ tests/features/notifications/NotificationRow.test.tsx (1 test) 96ms
+ ✓ tests/features/notifications/useMarkNotificationsRead.test.tsx (8 tests) 1703ms
+   ✓ mark-read accumulated inbox pages > loads six 20-row pages, retains 120 failures, retries as 100 and 20, and converges the unread count 376ms
+
+ Test Files  12 passed (12)
+      Tests  62 passed (62)
+   Start at  04:58:43
+   Duration  3.22s (transform 978ms, setup 5.82s, collect 2.84s, tests 5.92s, environment 5.37s, prepare 918ms)
+

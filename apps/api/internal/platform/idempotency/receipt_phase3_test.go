@@ -1,12 +1,15 @@
 package idempotency
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -18,6 +21,310 @@ import (
 type receiptCall struct {
 	query string
 	args  []any
+}
+
+func TestCompleteRejectsUnstagedAuthorizationSidecar(t *testing.T) {
+	actor := "10000000-0000-4000-8000-000000000004"
+	fingerprint := strings.Repeat("a", 64)
+	fact := CommandOverrideFact{ActorID: actor, Operation: "Mutation.editPublishedDocument", SubjectType: "document", SubjectID: "10000000-0000-4000-8000-000000000010", RuleCode: "OWNERSHIP", At: time.Date(2026, 10, 20, 12, 0, 0, 0, time.UTC)}
+	matching, err := json.Marshal([]CommandOverrideFact{fact})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, sidecar := range []string{string(matching), `null`, `[]`, `[null]`, `{}`, `"malformed"`} {
+		t.Run(sidecar, func(t *testing.T) {
+			tx := &receiptTestTx{rows: []receiptTestRow{insertedReceiptRow(fingerprint)}, affected: 1}
+			repo, err := NewRepository(tx)
+			if err != nil {
+				t.Fatal(err)
+			}
+			claim, err := repo.Claim(t.Context(), actor, "editPublishedDocument", "boundary-key", fingerprint)
+			if err != nil || claim.Replay {
+				t.Fatalf("new claim=%+v err=%v", claim, err)
+			}
+			// No RecordOverride call admitted these supplied metadata bytes.
+			result := json.RawMessage(`{"Id":"result","_authorizationOverrides":` + sidecar + `}`)
+			if err := repo.Complete(t.Context(), claim, result); err == nil || len(tx.writes) != 0 {
+				t.Fatalf("unstaged authorization accepted: err=%v SQL writes=%d", err, len(tx.writes))
+			}
+			if err := repo.Complete(t.Context(), claim, json.RawMessage(`{"Id":"result"}`)); err != nil || len(tx.writes) != 1 {
+				t.Fatalf("rejected collision consumed the live claim: %v writes=%d", err, len(tx.writes))
+			}
+		})
+	}
+}
+
+func TestCompletePreservesLegacyNotificationAndStagedMetadataPaths(t *testing.T) {
+	actor := "10000000-0000-4000-8000-000000000004"
+	fingerprint := strings.Repeat("a", 64)
+	// The existing DOCUMENT_EDITED proof shape is opaque to idempotency; its
+	// owning notification decoder still validates the typed event and source.
+	proofs := json.RawMessage(`[{"notificationId":"10000000-0000-4000-8000-000000000011","recipientId":"10000000-0000-4000-8000-000000000002","payload":{"version":1,"origin":{"actorId":"10000000-0000-4000-8000-000000000004","operation":"editPublishedDocument","key":"boundary-key","fingerprint":"` + fingerprint + `"},"event":{"key":"document-revision","kind":"DOCUMENT_EDITED","subjectType":"document","subjectId":"10000000-0000-4000-8000-000000000010","actorId":"10000000-0000-4000-8000-000000000004","facts":{"version":1,"eventKind":"DOCUMENT_EDITED","revisionId":"10000000-0000-4000-8000-000000000012"},"occurredAt":"2026-10-20T12:00:00Z"},"recipients":["10000000-0000-4000-8000-000000000002"]}}]`)
+	for _, result := range []json.RawMessage{[]byte(` {"Id":"result"} `), []byte(` [1,2] `), []byte(`"scalar"`), []byte(`42`), []byte(`true`)} {
+		for _, withProof := range []bool{false, true} {
+			for _, staged := range []bool{false, true} {
+				if (withProof || staged) && bytes.TrimSpace(result)[0] != '{' && bytes.TrimSpace(result)[0] != '[' {
+					continue
+				}
+				t.Run(string(result)+"/proof="+strconv.FormatBool(withProof)+"/staged="+strconv.FormatBool(staged), func(t *testing.T) {
+					input := result
+					if withProof {
+						var err error
+						input, err = AppendNotificationProofs(input, proofs)
+						if err != nil {
+							t.Fatal(err)
+						}
+					}
+					tx := &receiptTestTx{rows: []receiptTestRow{insertedReceiptRow(fingerprint)}, affected: 1}
+					repo, err := NewRepository(tx)
+					if err != nil {
+						t.Fatal(err)
+					}
+					claim, err := repo.Claim(t.Context(), actor, "editPublishedDocument", "boundary-key", fingerprint)
+					if err != nil {
+						t.Fatal(err)
+					}
+					if staged {
+						fact := CommandOverrideFact{ActorID: actor, Operation: "Mutation.editPublishedDocument", SubjectType: "document", SubjectID: "10000000-0000-4000-8000-000000000010", RuleCode: "OWNERSHIP", At: time.Date(2026, 10, 20, 12, 0, 0, 0, time.UTC)}
+						if err := repo.RecordOverride(t.Context(), claim, fact); err != nil {
+							t.Fatal(err)
+						}
+					}
+					if err := repo.Complete(t.Context(), claim, input); err != nil || len(tx.writes) != 1 {
+						t.Fatalf("valid completion=%v writes=%d", err, len(tx.writes))
+					}
+					stored := tx.writes[0].args[4].([]byte)
+					if !staged && !bytes.Equal(stored, input) {
+						t.Fatal("no-fact legacy/proof bytes changed")
+					}
+					reader, _ := NewCompletedReceiptReader(&receiptTestTx{rows: []receiptTestRow{storedReceiptRow(&fingerprint, stored, true)}})
+					decoded, found, err := reader.LookupCompleted(t.Context(), actor, claim.Operation, claim.Key, fingerprint)
+					var got, want any
+					if err != nil || !found || json.Unmarshal(decoded, &got) != nil || json.Unmarshal(input, &want) != nil || !reflect.DeepEqual(got, want) {
+						t.Fatalf("result/notification replay changed: %s err=%v", decoded, err)
+					}
+				})
+			}
+		}
+	}
+}
+
+func TestReceiptOverrideClaimOwnershipAndOrderedFacts(t *testing.T) {
+	ctx := t.Context()
+	actor := "10000000-0000-4000-8000-000000000004"
+	fingerprint := strings.Repeat("a", 64)
+	tx := &receiptTestTx{rows: []receiptTestRow{insertedReceiptRow(fingerprint)}, affected: 1}
+	repo, _ := NewRepository(tx)
+	claim, err := repo.Claim(ctx, actor, "setMemberRolesBatch", "exact-key", fingerprint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	fact := CommandOverrideFact{ActorID: actor, Operation: "Mutation.setMemberRolesBatch", SubjectType: "member", SubjectID: "10000000-0000-4000-8000-000000000002", RuleCode: "ROLE", At: time.Date(2026, 10, 20, 12, 0, 0, 123000, time.UTC)}
+	other, _ := NewRepository(&receiptTestTx{})
+	if err := other.RecordOverride(ctx, claim, fact); err == nil {
+		t.Fatal("another repository accepted the claim")
+	}
+	for _, field := range []string{"actor", "operation", "key", "fingerprint", "replay"} {
+		changed := claim
+		switch field {
+		case "actor":
+			changed.ActorID = fact.SubjectID
+		case "operation":
+			changed.Operation += "Other"
+		case "key":
+			changed.Key += "Other"
+		case "fingerprint":
+			changed.Fingerprint = strings.Repeat("b", 64)
+		case "replay":
+			changed.Replay = true
+		}
+		if err := repo.RecordOverride(ctx, changed, fact); err == nil {
+			t.Fatalf("changed %s accepted", field)
+		}
+	}
+	for _, field := range []string{"actor", "operation", "subject-type", "subject-id", "uppercase-id", "nil-id", "rule", "time", "zone", "precision"} {
+		changed := fact
+		switch field {
+		case "actor":
+			changed.ActorID = fact.SubjectID
+		case "operation":
+			changed.Operation = "Mutation.setMemberRoles"
+		case "subject-type":
+			changed.SubjectType = "HIDDEN_BODY_SENTINEL"
+		case "subject-id":
+			changed.SubjectID = "HIDDEN_BODY_SENTINEL"
+		case "uppercase-id":
+			changed.SubjectID = "AAAAAAAA-0000-4000-8000-000000000002"
+		case "nil-id":
+			changed.SubjectID = "00000000-0000-0000-0000-000000000000"
+		case "rule":
+			changed.RuleCode = "HIDDEN_BODY_SENTINEL"
+		case "time":
+			changed.At = time.Time{}
+		case "zone":
+			changed.At = changed.At.In(time.FixedZone("other", 3600))
+		case "precision":
+			changed.At = changed.At.Add(time.Nanosecond)
+		}
+		if err := repo.RecordOverride(ctx, claim, changed); err == nil {
+			t.Fatalf("invalid %s accepted", field)
+		}
+	}
+	canceled, cancel := context.WithCancel(ctx)
+	cancel()
+	if err := repo.RecordOverride(canceled, claim, fact); !errors.Is(err, context.Canceled) {
+		t.Fatalf("canceled staging=%v", err)
+	}
+	if err := repo.RecordOverride(ctx, claim, fact); err != nil {
+		t.Fatal(err)
+	}
+	second := fact
+	second.SubjectID = "10000000-0000-4000-8000-000000000003"
+	if err := repo.RecordOverride(ctx, claim, second); err != nil {
+		t.Fatal(err)
+	}
+	if len(tx.writes) != 0 {
+		t.Fatal("fact staging wrote SQL")
+	}
+	result := json.RawMessage(`[{"memberId":"one"},{"memberId":"two"}]`)
+	if err := repo.Complete(ctx, claim, result); err != nil {
+		t.Fatal(err)
+	}
+	if len(tx.writes) != 1 {
+		t.Fatalf("completion writes=%d", len(tx.writes))
+	}
+	stored := tx.writes[0].args[4].([]byte)
+	var envelope map[string]json.RawMessage
+	if err := json.Unmarshal(stored, &envelope); err != nil {
+		t.Fatal(err)
+	}
+	var facts []CommandOverrideFact
+	if err := StrictJSON(envelope[authorizationOverridesKey], &facts); err != nil || !reflect.DeepEqual(facts, []CommandOverrideFact{fact, second}) {
+		t.Fatalf("ordered facts=%+v err=%v", facts, err)
+	}
+	decoded, err := decodeAuthorizationReceipt(stored, claimIdentity{actor, claim.Operation, claim.Key, fingerprint})
+	if err != nil || string(decoded) != string(result) {
+		t.Fatalf("array replay=%s err=%v", decoded, err)
+	}
+	if err := repo.RecordOverride(ctx, claim, fact); err == nil {
+		t.Fatal("consumed claim accepted another fact")
+	}
+}
+
+func TestReceiptMetadataComposesAndPeelsOnlyOwnedSidecar(t *testing.T) {
+	actor := "10000000-0000-4000-8000-000000000004"
+	identity := claimIdentity{actor, "editPublishedDocument", "key", strings.Repeat("a", 64)}
+	fact := CommandOverrideFact{ActorID: actor, Operation: "Mutation.editPublishedDocument", SubjectType: "document", SubjectID: "10000000-0000-4000-8000-000000000010", RuleCode: "OWNERSHIP", At: time.Date(2026, 10, 20, 12, 0, 0, 0, time.UTC)}
+	encoded, _ := json.Marshal([]CommandOverrideFact{fact})
+	proofs := json.RawMessage(`[{"proof":"typed-validation-belongs-to-notification"}]`)
+	for _, result := range []json.RawMessage{[]byte(`{"Id":"result"}`), []byte(`[{"Id":"result"}]`)} {
+		for _, notificationFirst := range []bool{true, false} {
+			var stored json.RawMessage
+			var err error
+			if notificationFirst {
+				stored, err = AppendNotificationProofs(result, proofs)
+				if err == nil {
+					stored, err = appendReceiptMetadata(stored, authorizationOverridesKey, encoded)
+				}
+			} else {
+				stored, err = appendReceiptMetadata(result, authorizationOverridesKey, encoded)
+				if err == nil {
+					stored, err = AppendNotificationProofs(stored, proofs)
+				}
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			intermediate, err := decodeAuthorizationReceipt(stored, identity)
+			if err != nil || !bytes.Contains(intermediate, []byte(notificationProofsKey)) || bytes.Contains(intermediate, []byte(authorizationOverridesKey)) {
+				t.Fatalf("base discarded proof or exposed override: %s %v", intermediate, err)
+			}
+			if result[0] == '[' && !bytes.Contains(intermediate, []byte(notificationResultKey)) {
+				t.Fatal("base unwrapped array before proof validation")
+			}
+			final, gotProofs, err := PeelNotificationProofs(intermediate)
+			var got, want any
+			_ = json.Unmarshal(final, &got)
+			_ = json.Unmarshal(result, &want)
+			if err != nil || !reflect.DeepEqual(got, want) || string(gotProofs) != string(proofs) {
+				t.Fatalf("composed replay=%s proofs=%s err=%v", final, gotProofs, err)
+			}
+			notificationPeeled, _, err := PeelNotificationProofs(stored)
+			if err != nil || !bytes.Contains(notificationPeeled, []byte(authorizationOverridesKey)) {
+				t.Fatal("notification discarded authorization metadata")
+			}
+			final, err = decodeAuthorizationReceipt(notificationPeeled, identity)
+			_ = json.Unmarshal(final, &got)
+			if err != nil || !reflect.DeepEqual(got, want) {
+				t.Fatalf("opposite peel order=%s %v", final, err)
+			}
+		}
+	}
+	for _, legacy := range []json.RawMessage{[]byte(` {"old":true} `), []byte(` [1,2] `), []byte(`"scalar"`), []byte(`42`), []byte(`true`)} {
+		got, err := decodeAuthorizationReceipt(legacy, identity)
+		if err != nil || string(got) != string(legacy) {
+			t.Fatalf("legacy result changed: %s %v", got, err)
+		}
+	}
+	for _, result := range []json.RawMessage{[]byte(`{"_authorizationOverrides":null}`), []byte(`{"_notificationResult":[]}`), []byte(`{"_notificationProofs":null}`), []byte(`{"Id":1,"Id":2}`), []byte(`42`)} {
+		if _, err := appendReceiptMetadata(result, authorizationOverridesKey, encoded); err == nil {
+			t.Fatalf("invalid/colliding result accepted: %s", result)
+		}
+	}
+	for _, pair := range [][2]string{{"site", "home_banner"}, {"site", "quest_announcement_role"}, {"spatial", "game-calendar"}} {
+		changed := fact
+		changed.SubjectType, changed.SubjectID = pair[0], pair[1]
+		if err := validateOverrideFact(changed, identity); err != nil {
+			t.Fatalf("canonical singleton=%v %v", pair, err)
+		}
+		changed.SubjectType = "document"
+		if err := validateOverrideFact(changed, identity); err == nil {
+			t.Fatal("singleton accepted for wrong subject type")
+		}
+	}
+}
+
+func TestStoredOverrideMetadataIsStrictAndBoundToActualReceiptRow(t *testing.T) {
+	actor := "10000000-0000-4000-8000-000000000004"
+	fingerprint := strings.Repeat("a", 64)
+	fact := CommandOverrideFact{ActorID: actor, Operation: "Mutation.editPublishedDocument", SubjectType: "document", SubjectID: "10000000-0000-4000-8000-000000000010", RuleCode: "OWNERSHIP", At: time.Date(2026, 10, 20, 12, 0, 0, 0, time.UTC)}
+	facts, _ := json.Marshal([]CommandOverrideFact{fact})
+	for _, corrupted := range []string{
+		`null`, `[]`, `[null]`, `[{}]`,
+		strings.Replace(string(facts), `"actorId":"`+actor+`"`, `"actorId":"10000000-0000-4000-8000-000000000003"`, 1),
+		strings.Replace(string(facts), `Mutation.editPublishedDocument`, `Mutation.publishDocument`, 1),
+		strings.Replace(string(facts), `"ruleCode":"OWNERSHIP"`, `"ruleCode":"AUDIENCE","ruleCode":"OWNERSHIP"`, 1),
+		strings.Replace(string(facts), `"ruleCode":`, `"secret":"HIDDEN_BODY_SENTINEL","ruleCode":`, 1),
+		strings.Replace(string(facts), `"actorId":`, `"ActorId":`, 1),
+		strings.Replace(string(facts), `"at":"2026-10-20T12:00:00Z"`, `"at":null`, 1),
+		strings.Replace(string(facts), `"at":"2026-10-20T12:00:00Z"`, `"at":"not-an-instant"`, 1),
+		strings.Replace(string(facts), `"at":"2026-10-20T12:00:00Z"`, `"at":"2026-10-20T13:00:00+01:00"`, 1),
+	} {
+		stored := []byte(`{"Id":"result","_authorizationOverrides":` + corrupted + `}`)
+		for _, replay := range []bool{false, true} {
+			tx := &receiptTestTx{}
+			if replay {
+				tx.rows = append(tx.rows, noReceiptRow(pgx.ErrNoRows))
+			}
+			tx.rows = append(tx.rows, storedReceiptRow(&fingerprint, stored, true))
+			if replay {
+				repo, _ := NewRepository(tx)
+				claim, err := repo.Claim(t.Context(), actor, "editPublishedDocument", "key", fingerprint)
+				if err == nil || claim.Replay || claim.Receipt != nil {
+					t.Fatalf("corrupt replay exposed result: %s %+v %v", corrupted, claim, err)
+				}
+			} else {
+				reader, _ := NewCompletedReceiptReader(tx)
+				got, found, err := reader.LookupCompleted(t.Context(), actor, "editPublishedDocument", "key", fingerprint)
+				if err == nil || found || got != nil {
+					t.Fatalf("corrupt lookup exposed result: %s %s %v %v", corrupted, got, found, err)
+				}
+			}
+			if len(tx.writes) != 0 {
+				t.Fatal("corrupt replay wrote SQL")
+			}
+		}
+	}
 }
 
 type receiptTestRow func(...any) error

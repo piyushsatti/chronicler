@@ -1,13 +1,20 @@
 {
-  "items": [
+  "summaries": [
     {
       "id": "11111111-1111-4111-8111-111111111111",
       "slug": "q101-session-one",
       "kind": "summary",
       "category": "session",
-      "title": "Session 1 — The breach",
-      "effectiveBody": "The party reached the outer wall."
+      "title": "Session 1 \u2014 The breach",
+      "effectiveBody": "The party reached the outer wall.",
+      "status": "published",
+      "authorId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+      "canEditBody": true,
+      "canEditMetadata": true
     }
   ],
-  "total": 1
+  "totals": {
+    "totalPcxpAwarded": 0,
+    "coverage": "COMPLETE"
+  }
 }

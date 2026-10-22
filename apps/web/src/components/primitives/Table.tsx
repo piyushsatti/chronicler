@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { Button } from './Button.js';
 
 export type Column<T> = {
   key: string;
@@ -71,7 +72,7 @@ export function Table<T extends object = Record<string, unknown>>({
       {loading ? <p className="type-caption">Loading…</p> : null}
       {!loading && rows.length === 0 ? empty ?? <p className="type-caption">No rows</p> : null}
       {!loading && rows.length > 0 ? (
-        <table className="table">
+        <table>
           <thead>
             <tr>
               {columns.map((col) => (
@@ -81,10 +82,10 @@ export function Table<T extends object = Record<string, unknown>>({
                   style={{ width: col.width, textAlign: col.align }}
                 >
                   {col.sortable ? (
-                    <button type="button" className="btn btn--ghost" onClick={() => handleSort(col.key)}>
+                    <Button variant="ghost" onClick={() => handleSort(col.key)}>
                       {col.label}
                       {activeKey === col.key ? (activeDir === 'asc' ? ' ↑' : ' ↓') : ''}
-                    </button>
+                    </Button>
                   ) : (
                     col.label
                   )}

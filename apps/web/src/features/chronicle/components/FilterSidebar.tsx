@@ -1,6 +1,8 @@
-import type { CSSProperties } from 'react';
+import { useId, useState } from 'react';
 import { Button } from '../../../components/primitives/Button.js';
 import { Card } from '../../../components/primitives/Card.js';
+import { Chip } from '../../../components/primitives/Chip.js';
+import styles from './filterSidebar.module.css';
 
 type FilterSidebarProps = {
   searchQuery: string;
@@ -14,7 +16,44 @@ type FilterSidebarProps = {
   regionOptions: string[];
   arcOptions: string[];
   authorOptions: string[];
+  /** Narrow layouts fold the option groups behind a toggle under the search. */
+  collapsible?: boolean;
 };
+
+function OptionGroup({
+  label,
+  options,
+  active,
+  onChange,
+  formatOption = (option) => option,
+}: {
+  label: string;
+  options: string[];
+  active: string;
+  onChange: (option: string) => void;
+  formatOption?: (option: string) => string;
+}): React.JSX.Element | null {
+  // Only "All": there is nothing to choose between.
+  if (options.length <= 1) return null;
+  return (
+    <div className="stack" data-gap="2" role="group" aria-label={label}>
+      <span className="type-label">{label}</span>
+      <div className={styles.options}>
+        {options.map((option) => (
+          <Chip
+            key={option}
+            size="sm"
+            tone="line"
+            selected={active === option}
+            onClick={() => onChange(option)}
+          >
+            {option === 'All' ? 'All' : formatOption(option)}
+          </Chip>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export function FilterSidebar({
   searchQuery,
@@ -28,122 +67,83 @@ export function FilterSidebar({
   regionOptions,
   arcOptions,
   authorOptions,
+  collapsible = false,
 }: FilterSidebarProps): React.JSX.Element {
-  const hasFilters =
-    activeRegion !== 'All' || activeArc !== 'All' || activeAuthor !== 'All';
-
-  const filterBtnStyle = (isActive: boolean): CSSProperties => ({
-    textAlign: 'left',
-    padding: `var(--sp-1) var(--sp-2)`,
-    borderRadius: 4,
-    cursor: 'pointer',
-    background: isActive ? 'var(--color-bg-surface)' : 'transparent',
-    color: isActive ? 'var(--color-text)' : 'var(--color-text-3)',
-    border: 'none',
-    width: '100%',
-  });
-
-  const divider = (
-    <div style={{ borderTop: '1px solid var(--color-border-2)', margin: `var(--sp-1) 0` }} />
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  const activeCount = [activeRegion, activeArc, activeAuthor].filter(
+    (value) => value !== 'All',
+  ).length;
+  const hasGroups = [regionOptions, arcOptions, authorOptions].some(
+    (options) => options.length > 1,
   );
+  const showGroups = !collapsible || open;
 
   return (
-    <div style={{ position: 'sticky', top: 80 }}>
+    <div className={styles.sidebar} data-collapsible={collapsible || undefined}>
       <Card className="stack" data-gap="4" pad={4}>
-        <input
-          type="text"
-          className="type-code"
-          style={{
-            width: '100%',
-            padding: `6px var(--sp-3)`,
-            border: '1px solid var(--color-border)',
-            background: 'var(--color-bg-surface)',
-            color: 'var(--color-text-3)',
-            borderRadius: 4,
-            boxSizing: 'border-box',
-          }}
-          placeholder="Search entries…"
-          value={searchQuery}
-          onChange={(event) => onSearchQueryChange(event.target.value)}
-          aria-label="Search entries"
-        />
-
-        {divider}
-
-        <div>
-          <span className="type-label">ARC</span>
-          <div className="stack" style={{ gap: 2 }}>
-            {arcOptions.map((arc) => (
-              <Button
-                className="type-ui"
-                size="sm"
-                key={arc}
-                onClick={() => onArcChange(arc)}
-                aria-pressed={activeArc === arc}
-                style={filterBtnStyle(activeArc === arc)}
-              >
-                {arc === 'All' ? 'ALL' : arc}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        {divider}
-
-        <div>
-          <span className="type-label">REGION</span>
-          <div className="stack" style={{ gap: 2 }}>
-            {regionOptions.map((region) => (
-              <Button
-                className="type-ui"
-                size="sm"
-                key={region}
-                onClick={() => onRegionChange(region)}
-                aria-pressed={activeRegion === region}
-                style={filterBtnStyle(activeRegion === region)}
-              >
-                {region === 'All' ? 'ALL' : region}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        {divider}
-
-        <div>
-          <span className="type-label">AUTHOR</span>
-          <div className="stack" style={{ gap: 2 }}>
-            {authorOptions.map((author) => (
-              <Button
-                className="type-ui"
-                size="sm"
-                key={author}
-                onClick={() => onAuthorChange(author)}
-                aria-pressed={activeAuthor === author}
-                style={filterBtnStyle(activeAuthor === author)}
-              >
-                {author === 'All' ? 'ALL' : author}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        {hasFilters ? (
-          <>
-            {divider}
+        <div className={styles.searchRow}>
+          <input
+            type="search"
+            className={styles.search}
+            placeholder="Search entries…"
+            value={searchQuery}
+            onChange={(event) => onSearchQueryChange(event.target.value)}
+            aria-label="Search entries"
+          />
+          {collapsible && hasGroups ? (
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
-              style={{ width: '100%' }}
-              onClick={() => {
-                onRegionChange('All');
-                onArcChange('All');
-                onAuthorChange('All');
-              }}
+              aria-expanded={open}
+              aria-controls={panelId}
+              onClick={() => setOpen((value) => !value)}
             >
-              Reset filters
+              {activeCount ? `Filters · ${activeCount}` : 'Filters'}
             </Button>
-          </>
+          ) : null}
+        </div>
+
+        {hasGroups ? (
+          <div
+            id={panelId}
+            className={`stack ${styles.groups}`}
+            data-gap="4"
+            hidden={!showGroups}
+          >
+            <OptionGroup
+              label="Arc"
+              options={arcOptions}
+              active={activeArc}
+              onChange={onArcChange}
+            />
+            <OptionGroup
+              label="Region"
+              options={regionOptions}
+              active={activeRegion}
+              onChange={onRegionChange}
+            />
+            <OptionGroup
+              label="Author"
+              options={authorOptions}
+              active={activeAuthor}
+              onChange={onAuthorChange}
+              formatOption={(handle) => `@${handle}`}
+            />
+            {activeCount ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => {
+                  onRegionChange('All');
+                  onArcChange('All');
+                  onAuthorChange('All');
+                }}
+              >
+                Reset filters
+              </Button>
+            ) : null}
+          </div>
         ) : null}
       </Card>
     </div>

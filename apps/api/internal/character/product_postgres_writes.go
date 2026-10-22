@@ -2,11 +2,12 @@ package character
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/piyushsatti/chronicler/apps/api/internal/member"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
@@ -70,8 +71,23 @@ func (p *ProductPostgres) StoreAdjustPcxp(ctx context.Context, write AdjustPcxpW
 	}, nil
 }
 
-func (p *ProductPostgres) LockCreateCharacter(_ context.Context, _ CreateCharacterSpec) (CreateCharacterState, error) {
-	return CreateCharacterState{}, nil
+func (p *ProductPostgres) LockCreateCharacter(ctx context.Context, spec CreateCharacterSpec) (CreateCharacterState, error) {
+	ids := make([]pgtype.UUID, 0, len(spec.Input.CatalogPickIds))
+	for _, id := range spec.Input.CatalogPickIds {
+		parsed, err := characterProductID(id)
+		if err != nil {
+			return CreateCharacterState{}, err
+		}
+		ids = append(ids, parsed)
+	}
+	valid, err := p.queries().CharacterProductValidateCreationReferences(ctx, dbgen.CharacterProductValidateCreationReferencesParams{BackstoryID: optionalUUIDArg(spec.Input.BackstoryId), RegionID: optionalUUIDArg(spec.Input.RegionId), CatalogIds: ids})
+	if err != nil {
+		return CreateCharacterState{}, err
+	}
+	if !valid.Valid || !valid.Bool {
+		return CreateCharacterState{}, apierr.New(apierr.Invalid, "invalid character creation references")
+	}
+	return CreateCharacterState{CatalogIDs: spec.Input.CatalogPickIds}, nil
 }
 
 func (p *ProductPostgres) StoreCreateCharacter(ctx context.Context, write CreateCharacterWrite) (CharacterView, error) {
@@ -87,20 +103,23 @@ func (p *ProductPostgres) StoreCreateCharacter(ctx context.Context, write Create
 	if err != nil {
 		return CharacterView{}, err
 	}
-	shortCode := in.Name
+	shortCode := "C" + strings.ReplaceAll(*write.HistoryID, "-", "")[:8]
 	if in.ShortCode != nil && *in.ShortCode != "" {
 		shortCode = *in.ShortCode
 	}
-	var id pgtype.UUID
-	err = p.DB.QueryRow(ctx, characterProductInsertCharacter,
-		characterID, shortCode, in.Name,
-		optionalCharacterText(in.Description), optionalCharacterText(in.BackgroundText), optionalCharacterText(in.DdbUrl),
-		pgTime(write.At), pgTime(write.At),
-		optionalUUIDArg(in.BackstoryId), optionalUUIDArg(in.GuildId), optionalUUIDArg(in.RegionId),
-		ownerID,
-		optionalUUIDArg(in.BackstoryId), optionalUUIDArg(in.GuildId), optionalUUIDArg(in.RegionId),
-	).Scan(&id)
+	id, err := p.queries().CharacterProductInsertCharacter(ctx, dbgen.CharacterProductInsertCharacterParams{
+		CharacterID: characterID, ShortCode: shortCode, Name: in.Name, OwnerID: ownerID,
+		Description: optionalCharacterText(in.Description), BackgroundText: optionalCharacterText(in.BackgroundText), DdbUrl: optionalCharacterText(in.DdbUrl), ImageUrl: optionalCharacterText(in.ImageUrl), At: pgTime(write.At),
+		BackstoryID: optionalUUIDArg(in.BackstoryId), GuildID: optionalUUIDArg(in.GuildId), RegionID: optionalUUIDArg(in.RegionId),
+	})
 	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return CharacterView{}, apierr.New(apierr.Invalid, "invalid character creation references")
+		}
+		var postgresError *pgconn.PgError
+		if errors.As(err, &postgresError) && postgresError.Code == "23505" {
+			return CharacterView{}, apierr.New(apierr.Conflict, "character short code already exists")
+		}
 		return CharacterView{}, err
 	}
 	if len(in.CatalogPickIds) > 0 {
@@ -112,7 +131,7 @@ func (p *ProductPostgres) StoreCreateCharacter(ctx context.Context, write Create
 			}
 			picks = append(picks, parsed)
 		}
-		if _, err := p.DB.Exec(ctx, characterProductReplaceCatalogPicks, id, picks, id); err != nil {
+		if err := p.queries().CharacterProductReplaceCatalogPicks(ctx, dbgen.CharacterProductReplaceCatalogPicksParams{CharacterID: id, CatalogIds: picks}); err != nil {
 			return CharacterView{}, err
 		}
 	}
@@ -129,36 +148,6 @@ func optionalUUIDArg(value *string) pgtype.UUID {
 	}
 	return id
 }
-
-const characterProductInsertCharacter = `-- name: CharacterProductInsertCharacter :one
-INSERT INTO characters (
-    public_id, short_code, name, owner_id, status, backstory_id, guild_document_id,
-    region_id, description, background_text, ddb_url, created_at, updated_at
-)
-SELECT $1::uuid, $2::text, $3::text,
-       owner.id, 'pending_approval', backstory.id, guild.id, region.id,
-       $4::text, $5::text, $6::text,
-       $7::timestamptz, $8::timestamptz
-FROM members owner
-LEFT JOIN backstories backstory ON backstory.public_id = $9::uuid
-LEFT JOIN documents guild ON guild.public_id = $10::uuid
-    AND guild.kind = 'codex_entry' AND guild.deleted_at IS NULL
-LEFT JOIN regions region ON region.public_id = $11::uuid
-WHERE owner.public_id = $12::uuid
-  AND ($13::uuid IS NULL OR backstory.id IS NOT NULL)
-  AND ($14::uuid IS NULL OR guild.id IS NOT NULL)
-  AND ($15::uuid IS NULL OR region.id IS NOT NULL)
-RETURNING public_id AS id`
-
-const characterProductReplaceCatalogPicks = `-- name: CharacterProductReplaceCatalogPicks :exec
-DELETE FROM character_catalog_picks
-WHERE character_id = (SELECT id FROM characters WHERE public_id = $1::uuid);
-INSERT INTO character_catalog_picks (character_id, catalog_id)
-SELECT character.id, catalog.id
-FROM characters character
-JOIN unnest($2::uuid[]) AS requested(catalog_id) ON true
-JOIN creation_catalog catalog ON catalog.public_id = requested.catalog_id
-WHERE character.public_id = $3::uuid`
 
 func (p *ProductPostgres) lockCharacterMutation(ctx context.Context, characterID string, dest any) error {
 	exists, subjectID, ownerID, updatedAt, before, err := p.baseCharacterLockState(ctx, characterID)
@@ -364,22 +353,19 @@ func (p *ProductPostgres) StoreUpdateCharacterProfile(ctx context.Context, write
 	if in.BackgroundText.Set {
 		background = optionalCharacterText(in.BackgroundText.Value)
 	}
-	_, err = p.DB.Exec(ctx, characterProductUpdateCharacterProfile,
-		in.Description.Set, description, in.BackgroundText.Set, background, pgTime(write.At), characterID,
-	)
+	var image pgtype.Text
+	if in.ImageUrl.Set {
+		image = optionalCharacterText(in.ImageUrl.Value)
+	}
+	_, err = p.queries().CharacterProductUpdateCharacterProfile(ctx, dbgen.CharacterProductUpdateCharacterProfileParams{
+		DescriptionSet: in.Description.Set, Description: description, BackgroundSet: in.BackgroundText.Set, BackgroundText: background,
+		ImageUrlSet: in.ImageUrl.Set, ImageUrl: image, At: pgTime(write.At), CharacterID: characterID,
+	})
 	if err != nil {
 		return CharacterView{}, err
 	}
 	return p.reloadCharacter(ctx, write.Input.CharacterId)
 }
-
-const characterProductUpdateCharacterProfile = `-- name: CharacterProductUpdateCharacterProfile :one
-UPDATE characters
-SET description = CASE WHEN $1::bool THEN $2::text ELSE description END,
-    background_text = CASE WHEN $3::bool THEN $4::text ELSE background_text END,
-    updated_at = $5::timestamptz
-WHERE public_id = $6::uuid
-  AND deleted_at IS NULL`
 
 func (p *ProductPostgres) LockSyncCharacterDdb(ctx context.Context, spec SyncCharacterDdbSpec) (SyncCharacterDdbState, error) {
 	var state SyncCharacterDdbState
@@ -390,14 +376,16 @@ func (p *ProductPostgres) StoreSyncCharacterDdb(ctx context.Context, write SyncC
 	if !write.Locked.Exists || write.Locked.Before == nil {
 		return DdbSyncReceipt{}, apierr.New(apierr.NotFound, "character not found")
 	}
-	httpClient, err := NewProductionDdbHTTPClient()
-	if err != nil {
-		return DdbSyncReceipt{}, err
-	}
-	clock := product.Clock(func() time.Time { return write.At })
-	client, err := NewDdbClient(httpClient, clock)
-	if err != nil {
-		return DdbSyncReceipt{}, err
+	client := p.Ddb
+	if client == nil {
+		httpClient, err := NewProductionDdbHTTPClient()
+		if err != nil {
+			return DdbSyncReceipt{}, err
+		}
+		client, err = NewDdbClient(httpClient, func() time.Time { return write.At })
+		if err != nil {
+			return DdbSyncReceipt{}, err
+		}
 	}
 	snapshot, _, fetchErr := client.Fetch(ctx, write.ValidatedInput.DdbUrl)
 	receipt := DdbSyncReceipt{AttemptedAt: write.At, Character: *write.Locked.Before}
@@ -410,22 +398,20 @@ func (p *ProductPostgres) StoreSyncCharacterDdb(ctx context.Context, write SyncC
 		receipt.Succeeded = false
 		return receipt, nil
 	}
-	payload, err := json.Marshal(map[string]any{
-		"level": snapshot.Level, "xp": snapshot.XP, "armorClass": snapshot.ArmorClass, "maxHp": snapshot.MaxHP,
-		"species": snapshot.Species, "classes": snapshot.Classes, "background": snapshot.Background,
-		"proficiencies": snapshot.Proficiencies,
-	})
-	if err != nil {
-		return DdbSyncReceipt{}, err
+	payload := snapshot.Payload
+	if _, _, err := decodeStoredCharacterDDBMirror(write.Input.CharacterId, payload, pgTime(write.At)); err != nil {
+		code := string(DdbErrorPayloadDrift)
+		receipt.SafeError = &code
+		return receipt, nil
 	}
 	characterID, err := characterProductID(write.Input.CharacterId)
 	if err != nil {
 		return DdbSyncReceipt{}, err
 	}
-	if _, err := p.DB.Exec(ctx, characterProductUpsertDdbMirror, payload, pgTime(write.At), characterID); err != nil {
+	if err := p.queries().CharacterProductUpsertDdbMirror(ctx, dbgen.CharacterProductUpsertDdbMirrorParams{Payload: payload, At: pgTime(write.At), CharacterID: characterID}); err != nil {
 		return DdbSyncReceipt{}, err
 	}
-	if _, err := p.DB.Exec(ctx, characterProductUpdateCharacterDdbUrl, write.ValidatedInput.DdbUrl, pgTime(write.At), characterID); err != nil {
+	if _, err := p.queries().CharacterProductUpdateCharacterDdbUrl(ctx, dbgen.CharacterProductUpdateCharacterDdbUrlParams{DdbUrl: write.ValidatedInput.DdbUrl, At: pgTime(write.At), CharacterID: characterID}); err != nil {
 		return DdbSyncReceipt{}, err
 	}
 	view, err := p.reloadCharacter(ctx, write.Input.CharacterId)
@@ -436,19 +422,6 @@ func (p *ProductPostgres) StoreSyncCharacterDdb(ctx context.Context, write SyncC
 	receipt.Succeeded = true
 	return receipt, nil
 }
-
-const characterProductUpsertDdbMirror = `-- name: CharacterProductUpsertDdbMirror :exec
-INSERT INTO character_ddb_mirrors (character_id, payload, synced_at)
-SELECT character.id, $1::jsonb, $2::timestamptz
-FROM characters character
-WHERE character.public_id = $3::uuid
-ON CONFLICT (character_id) DO UPDATE
-SET payload = EXCLUDED.payload, synced_at = EXCLUDED.synced_at`
-
-const characterProductUpdateCharacterDdbUrl = `-- name: CharacterProductUpdateCharacterDdbUrl :one
-UPDATE characters
-SET ddb_url = $1::text, updated_at = $2::timestamptz
-WHERE public_id = $3::uuid AND deleted_at IS NULL`
 
 func (p *ProductPostgres) LockLogCharacterEvent(ctx context.Context, spec LogCharacterEventSpec) (LogCharacterEventState, error) {
 	var state LogCharacterEventState
@@ -546,7 +519,7 @@ func (p *ProductPostgres) LockDecideVerification(ctx context.Context, spec Decid
 	if err := p.lockCharacterMutation(ctx, spec.CharacterId, &state); err != nil {
 		return state, err
 	}
-	if state.Before != nil && state.Before.VerificationSubmittedAt != nil && !state.Before.VerificationSubmittedAt.Equal(spec.ExpectedSubmittedAt) {
+	if state.Before != nil && (state.Before.VerificationSubmittedAt == nil || !state.Before.VerificationSubmittedAt.Equal(spec.ExpectedSubmittedAt) || state.Before.Status != "pending_approval" || state.Before.VerificationStatus != CharacterReviewStatusPending) {
 		return DecideVerificationState{}, apierr.New(apierr.Conflict, "verification submission token mismatch")
 	}
 	return state, nil
@@ -555,6 +528,13 @@ func (p *ProductPostgres) LockDecideVerification(ctx context.Context, spec Decid
 func (p *ProductPostgres) StoreDecideVerification(ctx context.Context, write DecideVerificationWrite) (member.VerificationView, error) {
 	if !write.Locked.Exists {
 		return member.VerificationView{}, apierr.New(apierr.NotFound, "character not found")
+	}
+	_, err := p.queries().CharacterProductApplyVerification(ctx, dbgen.CharacterProductApplyVerificationParams{Approved: write.Input.Verdict == member.VerificationVerdictApproved, At: pgTime(write.At), CharacterID: mustUUID(write.Input.CharacterId), SubmittedAt: pgTime(write.Input.ExpectedSubmittedAt)})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return member.VerificationView{}, apierr.New(apierr.Conflict, "verification submission changed")
+	}
+	if err != nil {
+		return member.VerificationView{}, err
 	}
 	return write.Assessment, nil
 }

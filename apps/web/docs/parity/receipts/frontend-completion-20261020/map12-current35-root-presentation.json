@@ -1,0 +1,134 @@
+{
+  "at": "2026-10-20T21:31:23.599403+00:00",
+  "profiles": [
+    {
+      "profile": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "theme": "parchment",
+        "mode": "light",
+        "motion": "no-preference"
+      },
+      "theme": {
+        "theme": "parchment",
+        "mode": "light",
+        "motion": "off"
+      }
+    },
+    {
+      "profile": {
+        "viewport": {
+          "width": 390,
+          "height": 844
+        },
+        "theme": "midnight",
+        "mode": "dark",
+        "motion": "reduce"
+      },
+      "theme": {
+        "theme": "midnight",
+        "mode": "dark",
+        "motion": "on"
+      }
+    },
+    {
+      "profile": {
+        "viewport": {
+          "width": 900,
+          "height": 1000
+        },
+        "theme": "parchment",
+        "mode": "light",
+        "motion": "no-preference"
+      },
+      "theme": {
+        "theme": "parchment",
+        "mode": "light",
+        "motion": "off"
+      }
+    },
+    {
+      "profile": {
+        "viewport": {
+          "width": 900,
+          "height": 1000
+        },
+        "theme": "midnight",
+        "mode": "dark",
+        "motion": "reduce"
+      },
+      "theme": {
+        "theme": "midnight",
+        "mode": "dark",
+        "motion": "on"
+      }
+    },
+    {
+      "profile": {
+        "viewport": {
+          "width": 1920,
+          "height": 1080
+        },
+        "theme": "parchment",
+        "mode": "light",
+        "motion": "no-preference"
+      },
+      "theme": {
+        "theme": "parchment",
+        "mode": "light",
+        "motion": "off"
+      }
+    },
+    {
+      "profile": {
+        "viewport": {
+          "width": 1920,
+          "height": 1080
+        },
+        "theme": "midnight",
+        "mode": "dark",
+        "motion": "reduce"
+      },
+      "theme": {
+        "theme": "midnight",
+        "mode": "dark",
+        "motion": "on"
+      }
+    }
+  ],
+  "modalWidths": [
+    390,
+    900,
+    1920
+  ],
+  "images": {
+    "map-session-final.png": "f21e9314d7d4d34cc848e51bce473aba87f0a5b7be7ed11023ce3aa4a0a214f5",
+    "map-supplement-midnight-1920.png": "1a2a95c99f7ae9830273c9cd6f18ff74b00093b07318781235545f56adbbe5b1",
+    "map-supplement-midnight-390.png": "bb739a252d32c5b9c8bdffb1459305256c8c8657e7af9098e752efd09329d100",
+    "map-supplement-midnight-900.png": "d7f8bc69bfaa698f83179c760da369d7f85e5b5ee2a973f23cd3a2018db928af",
+    "map-supplement-modal-1920.png": "6387c0e75ad229f7dd7cdea80e9d065b716d9cbaac75735adbd83efbd3e9b6d6",
+    "map-supplement-modal-390.png": "1b5391e4d5453880a208e57f47a001fdad98e67c25c772a1ffbca9fa36d888f3",
+    "map-supplement-modal-900.png": "061694c0c02eee2855d71ec3be5612849dcdbf3a3e37977d6cb7fd528f9e0986",
+    "map-supplement-parchment-1920.png": "41d644ed98563b948de94e126aff41f11da227c16e88c15401bf891ef997be8e",
+    "map-supplement-parchment-390.png": "4b251f6f8413d30b860f93ebd2c6f47b0f9af8b90d8606f91143dc803df48ae8",
+    "map-supplement-parchment-900.png": "c96577a61dd93c65fb9287c8821cc2ebe90b45f3ec7e09730a75e44aed9c519c",
+    "region-supplement-midnight-1920.png": "906e768463d8d8819b7d3ffb4ea1549f77928253e59e51b38e5e404638354ac9",
+    "region-supplement-midnight-390.png": "13bae16f8cac3e6ca6c8b8569316dab170d7979a24a67ae40def5e0f201ae6d8",
+    "region-supplement-midnight-900.png": "ab1a1982c3f2616bbbc377f14a7ed971878ddbaa1c7db81651af8c145e92f734",
+    "region-supplement-parchment-1920.png": "92324e73cdb1a242dddab51cfda01194f6266c88e150e728af523bc4d34f2068",
+    "region-supplement-parchment-390.png": "0ecf3e952026d481ab6b6024d7595e8dc7250259c4623ed742aa9d78f0b1d5a9",
+    "region-supplement-parchment-900.png": "b645da2df9d43f518da9511941028dba79ddf5ee0d8697c9d9656ce9214e1168"
+  },
+  "actualRootImagesViewed": [
+    "map-supplement-modal-390.png",
+    "map-supplement-midnight-900.png"
+  ],
+  "ownerVisualApproval": false,
+  "limits": [
+    "Sixactualguestwidth-themeallocations andthreeauthorizedmodalwidths,24fit/zoom/panmeasurementstates; no allrole/theme Cartesian,physicalphone orownerLegacyapproval.",
+    "Fullpagescreensretain sticky/fixedchrome at actualcapturescrollposition; controlbounds/focus/paint separatelytested.",
+    "Mapactivationbudget requires separate40cold-cacheimmutable35trials, not thesefunctionaljourney durations."
+  ]
+}

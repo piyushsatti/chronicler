@@ -1,3 +1,5 @@
+import { AdminReadFailure } from './AdminReadFailure.js';
+import { AdminPagination } from './AdminPagination.js';
 import { Button } from '../../../components/primitives/Button.js';
 import { Card } from '../../../components/primitives/Card.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
@@ -23,7 +25,7 @@ export function TimeAnchorPanel({
   } = view;
 
   if (anchors.isError) {
-    return <StatePanel status="error" error={anchors.error} />;
+    return <AdminReadFailure error={anchors.error} retry={anchors.retry} />;
   }
   if (anchors.isLoading || !anchors.data) return <StatePanel status="loading" />;
 
@@ -48,6 +50,7 @@ export function TimeAnchorPanel({
         <Button
           type="button"
           size="sm"
+          disabled={save.isPending}
           onClick={() => {
             setEditingId('new');
             setForm(BLANK);
@@ -59,6 +62,7 @@ export function TimeAnchorPanel({
       <p className="type-caption">
         Anchors regenerate future game_time_map days server-side on write.
       </p>
+      <AdminPagination page={view.pagination} />
       {message ? (
         <p className="type-caption" role="status">
           {message}
@@ -69,8 +73,10 @@ export function TimeAnchorPanel({
           <label className="stack">
             <span className="type-label">Real UTC</span>
             <input
-              className="field"
-              type="datetime-local"
+              disabled={save.isPending}
+              className="field-input"
+              type="text"
+              placeholder="2026-01-01T00:00:00Z"
               value={form.realUtc}
               onChange={(e) => setForm((f) => ({ ...f, realUtc: e.target.value }))}
             />
@@ -79,7 +85,8 @@ export function TimeAnchorPanel({
             <label className="stack">
               <span className="type-label">Epoch day</span>
               <input
-                className="field"
+                disabled={save.isPending}
+                className="field-input"
                 value={form.epochDay}
                 onChange={(e) => setForm((f) => ({ ...f, epochDay: e.target.value }))}
               />
@@ -87,7 +94,8 @@ export function TimeAnchorPanel({
             <label className="stack">
               <span className="type-label">Rate</span>
               <input
-                className="field"
+                disabled={save.isPending}
+                className="field-input"
                 value={form.rate}
                 onChange={(e) => setForm((f) => ({ ...f, rate: e.target.value }))}
               />
@@ -96,7 +104,8 @@ export function TimeAnchorPanel({
           <label className="stack">
             <span className="type-label">Note</span>
             <input
-              className="field"
+              disabled={save.isPending}
+              className="field-input"
               value={form.note}
               onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
             />
@@ -112,6 +121,7 @@ export function TimeAnchorPanel({
             <Button
               type="button"
               variant="ghost"
+              disabled={save.isPending}
               onClick={() => {
                 setEditingId(null);
                 setForm(BLANK);
@@ -140,6 +150,7 @@ export function TimeAnchorPanel({
                 type="button"
                 size="sm"
                 variant="ghost"
+                disabled={save.isPending}
                 onClick={() => startEdit(a)}
               >
                 Edit

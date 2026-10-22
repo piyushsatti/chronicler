@@ -1,0 +1,12 @@
+query HomeQuestParticipants($questId: ID!, $offset: Int!) {
+  quest(id: $questId) {
+    participants(limit: 100, offset: $offset) {
+      memberId
+      characterId
+      characterName
+      memberHandle
+      memberAvatarUrl
+      status
+    }
+  }
+}

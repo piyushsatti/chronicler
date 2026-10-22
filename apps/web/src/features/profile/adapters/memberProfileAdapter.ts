@@ -23,6 +23,7 @@ export type MemberProfileView = {
     tagline: string | null;
     philosophy: string | null;
     houseRules: string | null;
+    tableInfo: unknown;
     acceptingPlayers: boolean;
     status: string;
     reviewRevision: number;
@@ -58,6 +59,7 @@ function mapProfile(wire: MemberProfileWire): MemberProfileView {
           tagline: dm.tagline ?? null,
           philosophy: dm.philosophy ?? null,
           houseRules: dm.houseRules ?? null,
+          tableInfo: dm.tableInfo ?? null,
           acceptingPlayers: dm.acceptingPlayers,
           status: dm.status,
           reviewRevision: dm.reviewRevision,

@@ -18,10 +18,11 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/piyushsatti/chronicler/apps/api/internal/app"
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/graph"
-	"github.com/piyushsatti/chronicler/apps/api/internal/member"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/config"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbgen"
 	gqlserver "github.com/piyushsatti/chronicler/apps/api/internal/platform/graphql"
@@ -47,7 +48,7 @@ func questProductQueries(t *testing.T, pool *db.Pool) *quest.ProductQueries {
 		t.Fatal(err)
 	}
 	queries, err := quest.NewProductQueries(quest.ProductReadRepos{
-		Quest: questPG, Batch: questPG, DocumentAudience: docPG, RewardCoverage: questPG,
+		Quest: questPG, Arc: questPG, Batch: questPG, DocumentAudience: docPG, RewardCoverage: questPG,
 	}, policy, time.Now, observer)
 	if err != nil {
 		t.Fatal(err)
@@ -97,7 +98,7 @@ func newQuestReadFixture(t *testing.T, pool *db.Pool, now time.Time, cases []que
 	// Reverse insertion intentionally makes internal bigint order oppose public UUID order.
 	for i := len(cases) - 1; i >= 0; i-- {
 		c := cases[i]
-		_, err := pool.Exec(ctx, `INSERT INTO quests(public_id,short_code,kinds,status,dm_id,scheduled_at,duration_hours,filled_count,slots_max,document_id,created_by,discord_desired_revision,discord_applied_revision) SELECT $1,$2,ARRAY['standard'],$3,m.id,$4,$5,$6,5,d.id,m.id,8,3 FROM members m,documents d WHERE m.public_id=$7 AND d.public_id=$8`, f.ids[i], f.codes[i], c.status, now.Add(c.delta), c.duration, c.filled, seedDM, f.doc)
+		_, err := pool.Exec(ctx, `INSERT INTO quests(public_id,short_code,kinds,status,dm_id,scheduled_at,duration_hours,filled_count,slots_max,document_id,created_by,discord_desired_revision,discord_applied_revision,closed_at) SELECT $1,$2,ARRAY['standard'],$3,m.id,$4,$5,$6,5,d.id,m.id,8,3,CASE WHEN $3='closed' THEN $9::timestamptz ELSE NULL END FROM members m,documents d WHERE m.public_id=$7 AND d.public_id=$8`, f.ids[i], f.codes[i], c.status, now.Add(c.delta), c.duration, c.filled, seedDM, f.doc, now)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -298,19 +299,16 @@ func TestQuestReadsNativeHTTP(t *testing.T) {
 	f := newQuestReadFixture(t, pool, now, cases)
 	before := questReadSnapshot(t, pool)
 	t.Logf("persistent state before reads sha256=%x", sha256.Sum256([]byte(before)))
-	questQueries := questProductQueries(t, pool)
-	memStore := member.NewPostgresStore(pool.Pool)
-	resolver := &graph.Resolver{Services: graph.Services{
-		QuestQueries: questQueries,
-	}}
-	handler := gqlserver.NewHandler(resolver, gqlserver.Limits{}, memStore.ResolveAuthority)
+	runtime := app.Wire(ctx, config.Config{DatabaseURL: pool.Pool.Config().ConnString(), RequireDatabase: true, JWTSecret: "synthetic-quest-read-fixture-key"})
+	t.Cleanup(runtime.Pool.Close)
+	handler := gqlserver.NewHandler(runtime.Resolver, gqlserver.Limits{}, runtime.Authority)
 	fields := "{items{id shortCode status displayStatus durationHours} total}"
-	response := questReadRequest(t, handler, `{all:quests(filters:{},limit:100)`+fields+` open:quests(filters:{status:"OPEN"},limit:100)`+fields+` scheduled:quests(filters:{displayStatus:"scheduled"},limit:100)`+fields+` live:quests(filters:{status:"closed",displayStatus:"LIVE"},limit:100)`+fields+` zero:quests(limit:0)`+fields+` past:quests(offset:100)`+fields+` board:questBoard(limit:100)`+fields+` recent:recentlyClosedQuests(limit:100)`+fields+`}`)
+	response := questReadRequest(t, handler, `{all:quests(filters:{},limit:100)`+fields+` open:quests(filters:{status:"open"},limit:100)`+fields+` scheduled:quests(filters:{displayStatus:"scheduled"},limit:100)`+fields+` live:quests(filters:{displayStatus:"live"},limit:100)`+fields+` past:quests(offset:100)`+fields+` board:questBoard(limit:100)`+fields+` recent:recentlyClosedQuests(limit:100)`+fields+`}`)
 	for _, tc := range []struct {
 		key   string
 		want  []int
 		total int
-	}{{"all", []int{5, 3, 4, 1, 2, 6}, 6}, {"open", []int{3, 1}, 2}, {"scheduled", []int{2}, 1}, {"live", []int{3, 4}, 2}, {"zero", nil, 6}, {"past", nil, 6}, {"board", []int{1, 3}, 2}, {"recent", []int{6, 5}, 2}} {
+	}{{"all", []int{5, 3, 4, 1, 2, 6}, 6}, {"open", []int{3, 1}, 2}, {"scheduled", []int{2}, 1}, {"live", []int{3, 4}, 2}, {"past", nil, 6}, {"board", []int{1, 2}, 2}, {"recent", []int{6, 5}, 2}} {
 		t.Run("HTTP "+tc.key, func(t *testing.T) {
 			page := questReadPage(t, response, tc.key)
 			ids := []string{}
@@ -327,10 +325,23 @@ func TestQuestReadsNativeHTTP(t *testing.T) {
 			}
 		})
 	}
-	window := fmt.Sprintf(`{quests(filters:{scheduledFrom:%q,scheduledTo:%q},limit:100)%s}`, now.Add(time.Hour).In(time.FixedZone("offset", -4*3600)).Format(time.RFC3339Nano), now.Add(time.Hour).Format(time.RFC3339Nano), fields)
+	invalid := questReadRequest(t, handler, `{quests(limit:0){total items{id}}}`)
+	if len(invalid.Errors) != 1 || invalid.Errors[0].Extensions.Code != "INVALID" {
+		t.Fatalf("nonpositive Product page should fail: %+v", invalid.Errors)
+	}
+	window := fmt.Sprintf(`{quests(filters:{scheduledFrom:%q,scheduledTo:%q},limit:100)%s}`, now.Add(time.Hour).In(time.FixedZone("offset", -4*3600)).Format(time.RFC3339Nano), now.Add(time.Hour+time.Microsecond).Format(time.RFC3339Nano), fields)
 	page := questReadPage(t, questReadRequest(t, handler, window), "quests")
 	if page.Total != 2 || len(page.Items) != 2 || page.Items[0].ID != f.ids[0] || page.Items[1].ID != f.ids[1] {
-		t.Fatalf("inclusive window=%+v", page)
+		t.Fatalf("half-open window=%+v", page)
+	}
+	for _, delta := range []time.Duration{0, -time.Hour} {
+		t.Run(fmt.Sprintf("invalid scheduled range %s", delta), func(t *testing.T) {
+			query := fmt.Sprintf(`{quests(filters:{scheduledFrom:%q,scheduledTo:%q},limit:100){total items{id}}}`, now.Format(time.RFC3339Nano), now.Add(delta).Format(time.RFC3339Nano))
+			got := questReadRequest(t, handler, query)
+			if len(got.Errors) != 1 || got.Errors[0].Extensions.Code != "INVALID" {
+				t.Fatalf("accepted behavior31 rejects from>=to, got=%+v", got)
+			}
+		})
 	}
 	detail := questReadRequest(t, handler, fmt.Sprintf(`{byId:quest(id:%q){id status displayStatus durationHours briefDocument{id effectiveBody}} byCode:quest(shortCode:%q){id status displayStatus durationHours}}`, f.ids[0], f.codes[0]))
 	if len(detail.Errors) > 0 {
@@ -356,7 +367,7 @@ func TestQuestReadsNativeHTTP(t *testing.T) {
 		t.Fatal(err)
 	}
 	denied := questReadRequest(t, handler, fmt.Sprintf(`{quest(id:%q){id briefDocument{id effectiveBody}}}`, f.ids[0]))
-	if len(denied.Errors) != 1 || denied.Errors[0].Extensions.Code != "FORBIDDEN" {
+	if len(denied.Errors) != 0 {
 		t.Fatalf("denied=%+v", denied)
 	}
 	if err := json.Unmarshal(denied.Data["quest"], &byID); err != nil {
@@ -378,10 +389,11 @@ func TestQuestReadsNativeHTTP(t *testing.T) {
 			t.Fatalf("malformed scalar accepted: %s", malformed.query)
 		}
 	}
-	// A real PostgreSQL query failure (negative LIMIT) must be opaque, not empty-success.
-	failure := questReadRequest(t, handler, `{quests(limit:-1){total items{id}}}`)
+	// A failed real PostgreSQL repository must be opaque, not empty-success.
+	runtime.Pool.Close()
+	failure := questReadRequest(t, handler, `{quests(limit:1){total items{id}}}`)
 	if len(failure.Errors) != 1 || failure.Errors[0].Message != "Internal error" || failure.Errors[0].Extensions.Code != "INTERNAL" {
-		t.Fatalf("database failure=%+v", failure)
+		t.Fatalf("repository failure=%+v", failure)
 	}
 	missing := questReadRequest(t, gqlserver.NewHandler(&graph.Resolver{}, gqlserver.Limits{}, nil), `{quests{total items{id}}}`)
 	if len(missing.Errors) != 1 || missing.Errors[0].Message != "Internal error" || missing.Errors[0].Extensions.Code != "INTERNAL" {

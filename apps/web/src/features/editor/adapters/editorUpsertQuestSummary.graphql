@@ -1,0 +1,7 @@
+mutation EditorUpsertQuestSummary($input: QuestSummaryInput!, $meta: CommandMeta!) {
+  upsertQuestSummary(input: $input, meta: $meta) {
+    id
+    slug
+    version
+  }
+}

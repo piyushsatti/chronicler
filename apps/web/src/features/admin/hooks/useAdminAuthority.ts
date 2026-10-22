@@ -1,10 +1,13 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../../api/queryKeys.js';
 import { canAccessVerify, isAdmin, isDm } from '../../../auth/roles.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import { TransportError, type AppError } from '../../../errors/types.js';
 import { useMe } from '../../../hooks/useMe.js';
+import { useAuth } from '../../../auth/AuthContext.js';
+import { useCurrentAccess } from '../../../auth/useCurrentAccess.js';
+import type { AdminCommand, AdminReadRequest } from '../adapters/adminRequest.js';
 
 export type WorkspaceAuthority = 'admin' | 'review' | 'dm';
 
@@ -66,53 +69,171 @@ export function useAdminAuthority(required: WorkspaceAuthority = 'admin') {
   const queryClient = useQueryClient();
   const me = useMe();
   const roles = me.isSuccess ? me.data.roles : undefined;
-  const allowed = permits(roles, required);
+  const adminAccess = useCurrentAccess('admin');
+  const reviewAccess = useCurrentAccess('review');
+  const proof = required === 'review' ? reviewAccess : adminAccess;
+  const allowed =
+    required === 'dm' ? permits(roles, required) || adminAccess.allowed : proof.allowed;
   const error: AppError | null = me.isError
     ? toAppError(me.error, 'workspace:account')
-    : me.isSuccess && !allowed
-      ? toAppError(
-          new TransportError('FORBIDDEN', { status: 403 }),
-          'workspace:account',
-        )
-      : null;
+    : required !== 'dm' && proof.status === 'error'
+      ? proof.error
+      : me.isSuccess && !allowed && proof.status === 'forbidden'
+        ? toAppError(
+            new TransportError('FORBIDDEN', { status: 403 }),
+            'workspace:account',
+          )
+        : null;
 
-  function guardMutation<TAction extends (...args: never[]) => unknown>(
-    action: TAction,
-  ): TAction {
-    return ((...args: never[]) => {
-      // Read the validated useMe cache at invocation too: a retained event handler
-      // must not keep authority after a refetch has changed the member's roles.
-      const current = queryClient.getQueryState<NonNullable<typeof me.data>>(
-        queryKeys.me,
+  const auth = useAuth();
+  const identity = me.isSuccess
+    ? JSON.stringify([me.data.id, [...me.data.roles].sort()])
+    : null;
+  const owner = useMemo(
+    () => ({
+      id: crypto.randomUUID(),
+      token: auth.token,
+      identity,
+      active: false,
+      busy: false,
+      keys: new Map<string, string>(),
+    }),
+    [auth.token, identity],
+  );
+  const current = useRef(owner);
+  useEffect(() => {
+    current.current = owner;
+    owner.active = true;
+    return () => {
+      owner.active = false;
+    };
+  }, [owner]);
+
+  function assertCurrent(): void {
+    const account = queryClient.getQueryState<NonNullable<typeof me.data>>(
+      queryKeys.me,
+    );
+    if (
+      !auth.sessionReady ||
+      !auth.isCurrentSession(owner.token) ||
+      !owner.identity ||
+      account?.status !== 'success' ||
+      !account.data
+    ) {
+      throw toAppError({ failure: 'Unauthorized' }, 'workspace:session');
+    }
+    if (
+      !owner.active ||
+      current.current !== owner ||
+      JSON.stringify([account.data.id, [...account.data.roles].sort()]) !==
+        owner.identity
+    ) {
+      throw toAppError(
+        new TransportError('FORBIDDEN', { status: 403 }),
+        'workspace:authority',
       );
-      if (current?.status !== 'success') {
-        throw toAppError(
-          current?.error ?? { failure: 'Unauthorized' },
-          'workspace:mutation',
-        );
-      }
-      if (!permits(current.data?.roles, required)) {
-        throw toAppError(
-          new TransportError('FORBIDDEN', { status: 403 }),
-          'workspace:mutation',
-        );
-      }
-      return action(...args);
-    }) as TAction;
+    }
+    if (
+      required === 'dm'
+        ? !permits(account.data.roles, required) && !adminAccess.isCurrentProof()
+        : !proof.isCurrentProof()
+    ) {
+      throw toAppError(
+        new TransportError('FORBIDDEN', { status: 403 }),
+        'workspace:mutation',
+      );
+    }
+  }
+
+  function request(signal?: AbortSignal): AdminCommand {
+    assertCurrent();
+    if (!owner.token)
+      throw toAppError({ failure: 'Unauthorized' }, 'workspace:session');
+    return {
+      token: owner.token,
+      signal,
+      assertCurrent,
+      keyFor: (payload) => {
+        assertCurrent();
+        const existing = owner.keys.get(payload);
+        if (existing) return existing;
+        const key = crypto.randomUUID();
+        owner.keys.set(payload, key);
+        return key;
+      },
+    };
+  }
+
+  function guardMutation<TArgs extends unknown[], TResult>(
+    action: (command: AdminCommand, ...args: TArgs) => TResult | Promise<TResult>,
+  ): (...args: TArgs) => Promise<TResult> {
+    return (...args) => {
+      const captured = request();
+      const payloads = new Set<string>();
+      const command = {
+        ...captured,
+        keyFor: (payload: string) => {
+          payloads.add(payload);
+          return captured.keyFor(payload);
+        },
+      };
+      if (owner.busy)
+        throw toAppError(new TransportError('CONFLICT'), 'workspace:busy');
+      owner.busy = true;
+      return Promise.resolve()
+        .then(() => {
+          command.assertCurrent();
+          return action(command, ...args);
+        })
+        .then((result) => {
+          command.assertCurrent();
+          for (const payload of payloads) owner.keys.delete(payload);
+          return result;
+        })
+        .finally(() => {
+          owner.busy = false;
+        });
+    };
+  }
+
+  async function read<TResult>(
+    action: (request: AdminReadRequest) => Promise<TResult>,
+    signal?: AbortSignal,
+  ): Promise<TResult> {
+    const captured = request(signal);
+    const result = await action(captured);
+    captured.assertCurrent();
+    return result;
   }
 
   return {
     allowed,
-    status: error
-      ? ('error' as const)
-      : allowed
-        ? ('ready' as const)
-        : ('loading' as const),
+    status:
+      me.isError || proof.status === 'error' || error
+        ? ('error' as const)
+        : allowed
+          ? ('ready' as const)
+          : ('loading' as const),
     error,
     roles,
+    canAdmin: adminAccess.allowed,
+    canReview: reviewAccess.allowed,
+    isCurrent: () => {
+      try {
+        assertCurrent();
+        return true;
+      } catch {
+        return false;
+      }
+    },
     guardMutation,
+    read,
+    actorId: me.isSuccess ? me.data.id : null,
+    cacheKey: identity,
+    commandKey: owner.id,
     reload: () => {
       void me.refetch();
+      if (required !== 'dm') proof.reload();
     },
   };
 }

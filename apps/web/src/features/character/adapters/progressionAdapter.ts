@@ -20,11 +20,10 @@ const progressionWireSchema = z.object({
 export type ProgressionEntryView = {
   amount: number;
   note: string | null;
+  recordedAt: string | null;
 };
 
-export function parseProgression(
-  wire: unknown,
-): AdapterResult<ProgressionEntryView[]> {
+export function parseProgression(wire: unknown): AdapterResult<ProgressionEntryView[]> {
   const parsed = progressionWireSchema.safeParse(wire);
   if (!parsed.success) {
     return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
@@ -36,6 +35,7 @@ export function parseProgression(
       .map((e) => ({
         amount: e.amount,
         note: e.note ?? null,
+        recordedAt: e.recordedAt ?? null,
       })),
   };
 }

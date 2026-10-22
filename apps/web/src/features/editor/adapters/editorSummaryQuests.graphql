@@ -1,0 +1,12 @@
+query EditorSummaryQuests($search: String, $offset: Int!) {
+  quests(filters: { search: $search }, limit: 20, offset: $offset) {
+    total
+    items {
+      id
+      shortCode
+      briefDocument {
+        title
+      }
+    }
+  }
+}

@@ -5,43 +5,56 @@ import type {
   UpdateCharacterProfileMutation,
 } from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
-import { toAppError } from '../../../errors/toAppError.js';
+import { safeAppError, toAppError } from '../../../errors/toAppError.js';
+import { TransportError } from '../../../errors/types.js';
+import { z } from 'zod';
 import UPDATE_PROFILE from './updateCharacterProfile.graphql?raw';
 import SYNC_DDB from './syncCharacterDdb.graphql?raw';
 import SUBMIT_VERIFICATION from './submitForVerification.graphql?raw';
 import RETIRE from './retireCharacter.graphql?raw';
 
-function commandMeta(): { idempotencyKey: string } {
-  return { idempotencyKey: crypto.randomUUID() };
-}
-
-/**
- * field-routing: updateCharacterProfile (+ optional syncCharacterDdb for ddbUrl).
- * Schema UpdateCharacterProfileInput is description/backgroundText only.
- */
 export async function updateCharacterProfile(
   characterId: string,
-  input: {
-    description?: string | null;
-    ddbUrl?: string | null;
-  },
+  input: { description?: string | null; imageUrl?: string | null },
+  idempotencyKey: string,
 ): Promise<void> {
   try {
     await graphqlRequest<UpdateCharacterProfileMutation>(UPDATE_PROFILE, {
       characterId,
-      input: { description: input.description ?? null },
-      meta: commandMeta(),
+      input,
+      meta: { idempotencyKey },
     });
-    const ddbUrl = input.ddbUrl?.trim();
-    if (ddbUrl) {
-      await graphqlRequest<SyncCharacterDdbMutation>(SYNC_DDB, {
-        characterId,
-        ddbUrl,
-        meta: commandMeta(),
-      });
-    }
   } catch (err) {
     throw toAppError(err, 'character:profile:update');
+  }
+}
+
+export async function syncCharacterDdb(
+  characterId: string,
+  ddbUrl: string,
+  idempotencyKey: string,
+) {
+  try {
+    const data = await graphqlRequest<SyncCharacterDdbMutation>(SYNC_DDB, {
+      characterId,
+      ddbUrl,
+      meta: { idempotencyKey },
+    });
+    return z
+      .object({
+        succeeded: z.boolean(),
+        safeError: z.string().nullable(),
+        attemptedAt: z.string(),
+      })
+      .parse(data.syncCharacterDdb);
+  } catch (err) {
+    if (err instanceof TransportError && err.code === 'INVALID') {
+      throw safeAppError(
+        'Enter a D&D Beyond character URL, such as https://www.dndbeyond.com/characters/123.',
+        'character:ddb:sync',
+      );
+    }
+    throw toAppError(err, 'character:ddb:sync');
   }
 }
 
@@ -49,14 +62,21 @@ export async function updateCharacterProfile(
 export async function submitCharacterForVerification(
   characterId: string,
   expectedUpdatedAt: string,
+  idempotencyKey: string,
 ): Promise<void> {
   try {
     await graphqlRequest<SubmitForVerificationMutation>(SUBMIT_VERIFICATION, {
       characterId,
       expectedUpdatedAt,
-      meta: commandMeta(),
+      meta: { idempotencyKey },
     });
   } catch (err) {
+    if (err instanceof TransportError && err.code === 'CONFLICT') {
+      throw safeAppError(
+        'This character changed. Reload and try again.',
+        'character:submit-verification',
+      );
+    }
     throw toAppError(err, 'character:submit-verification');
   }
 }
@@ -65,14 +85,21 @@ export async function submitCharacterForVerification(
 export async function retireCharacter(
   characterId: string,
   expectedUpdatedAt: string,
+  idempotencyKey: string,
 ): Promise<void> {
   try {
     await graphqlRequest<RetireCharacterMutation>(RETIRE, {
       characterId,
       expectedUpdatedAt,
-      meta: commandMeta(),
+      meta: { idempotencyKey },
     });
   } catch (err) {
+    if (err instanceof TransportError && err.code === 'CONFLICT') {
+      throw safeAppError(
+        'This character changed. Reload and try again.',
+        'character:retire',
+      );
+    }
     throw toAppError(err, 'character:retire');
   }
 }

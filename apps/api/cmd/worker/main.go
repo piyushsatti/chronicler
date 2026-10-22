@@ -13,6 +13,8 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/config"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/jobs"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
+	"github.com/piyushsatti/chronicler/apps/api/internal/spatial"
 	"github.com/piyushsatti/chronicler/apps/api/internal/worker"
 )
 
@@ -49,7 +51,22 @@ func main() {
 
 	var maintenance *worker.MaintenanceHandler
 	if pool != nil {
-		maintenance = worker.NewMaintenanceHandler(store, pool.Pool)
+		clock := product.Clock(time.Now)
+		gate, err := worker.NewExecutionGate(pool.Pool, clock)
+		if err != nil {
+			slog.Error("maintenance configuration failed", "error", err)
+			return
+		}
+		timeWriter, err := spatial.NewTimeFillWriter(clock, db.NewConnectionRunner())
+		if err != nil {
+			slog.Error("maintenance configuration failed", "error", err)
+			return
+		}
+		maintenance, err = worker.NewMaintenanceHandler(store, gate, timeWriter, clock)
+		if err != nil {
+			slog.Error("maintenance configuration failed", "error", err)
+			return
+		}
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

@@ -1,0 +1,101 @@
+{
+  "at": "2026-10-20T22:11:05.678499Z",
+  "nativeSession": 75203,
+  "exit": 0,
+  "durationSeconds": 73.52,
+  "originalCheckpoints": 14,
+  "responsiveStates": 35,
+  "widths": [
+    390,
+    768,
+    840,
+    900,
+    1920
+  ],
+  "nativeNextKeyboard": [
+    {
+      "width": 390,
+      "completed": true
+    },
+    {
+      "width": 768,
+      "completed": true
+    },
+    {
+      "width": 840,
+      "completed": true
+    },
+    {
+      "width": 900,
+      "completed": true
+    },
+    {
+      "width": 1920,
+      "completed": true
+    }
+  ],
+  "regionFocusRestoredWidths": [
+    390,
+    768,
+    840,
+    900,
+    1920
+  ],
+  "operationAttempts": 482,
+  "operationOutcomes": {
+    "complete": 475,
+    "superseded_filter_query": 7
+  },
+  "nativeReadback": {
+    "at": "2026-10-20T22:08:32.139719159Z",
+    "backstories": 51,
+    "bootstrapCommands": 204,
+    "bulkOneUOWReplay": true,
+    "catalog": 51,
+    "characters": 51,
+    "completedReceipts": 217,
+    "dmProfiles": 51,
+    "dmTarget": "bad5833e-f028-4354-8b1f-aa536b347799",
+    "lifecycleBothForwards": true,
+    "pcTarget": "13b98d74-1534-439a-adbd-6fd87d635d83",
+    "providers": false,
+    "referenceBytesPreserved": true,
+    "regions": 101,
+    "staleReceiptsAbsent": true,
+    "verifierCurrentRoleRevoked": true
+  },
+  "sourceUnchanged": {
+    "production-inputs": true,
+    "owned-inputs": true
+  },
+  "cleanup": {
+    "at": "2026-10-20T22:08:32.151926974Z",
+    "childStarted": true,
+    "childWaited": true,
+    "database": "product_case_1",
+    "databaseDropped": true,
+    "listenersClosed": {
+      "api": true,
+      "vite": true
+    }
+  },
+  "actualRootImagesViewed": [
+    "review-next-keyboard-768.png",
+    "responsive-admin-390-region-advance-confirmation.png"
+  ],
+  "artifacts": {
+    "browser-receipt.json": "c01c53be15eb67090bc2fa83022518908f0661031f0b9bf354cb7eda0b6002ac",
+    "native-readback.json": "063daa9070e683561a938589cd5d74f0fd9509b7294db571ee80887eaab15810",
+    "native-cleanup.json": "ce989448ff18efd3f95a215344e220a82e79d53a680c64b4bd83b7899e8425b7",
+    "native.log": "b1f65161ade00d634eb5a0eb91f21907d31a5ce05e6caaae1e43780d4cf81f69",
+    "review-next-keyboard-768.png": "97b471bca146b90f6a30610f7e4f97f18be04998381692eb7fcdd9485cf56eac",
+    "responsive-admin-390-region-advance-confirmation.png": "63a00f8481b1f78b23564dddf3517e1124f5a871865f51aa5180cd2786d01ae3"
+  },
+  "runtime": "Current37sourcefixtureVite/native13realAPI, immutable37separatelyfrozen",
+  "frontendBuildReceiptSha256": "ba00181f67dba1f495bba60b2dcc46d72c28fb07bfd8014832994d9a4703eb3b",
+  "limits": [
+    "Seven causalfilterquery supersessions are not successfulqueries; nozero-networkclaim.",
+    "35readonlyresponsivecases/original14persistenceauthoritycheckpoints/5nativeNextand5RegionCancel paths, notallroleCartesian.",
+    "No appliedDiscord/OAuth/provider or ownerLegacyvisualapproval."
+  ]
+}

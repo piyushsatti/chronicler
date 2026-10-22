@@ -1,0 +1,113 @@
+{
+  "at": "2026-10-20T17:36:57.958160+00:00",
+  "nativeSession": 72529,
+  "exit": 0,
+  "durationSeconds": 149.46,
+  "scope": "All18 current Document/editor/reader/privacy stages; includes ten remaining registered compatibility/demo route cases. Real native API/PostgreSQL with immutable Build29.",
+  "stages": [
+    "Current Guide draft save, preview, publication and actual reader reload",
+    "Presence-aware audience changes and real named-reader access",
+    "Audience stale version preserves source, then history page two and trash/restore",
+    "Delegated incomplete Location metadata omits body and replay remains scoped",
+    "Current Region assignment and Verifier role revocation deny loaded edits",
+    "Incomplete Summary retains actual links while metadata is saved and replayed",
+    "Private editor account switch and same-account token change reject late real responses",
+    "A genuinely live short token expires while other stages run",
+    "Create Codex entry: real draft identity, exact replay, metadata omission, publication and guest reload",
+    "Create guide: real draft identity, exact replay, metadata omission, publication and guest reload",
+    "Create ruling: real draft identity, exact replay, metadata omission, publication and guest reload",
+    "Create DM table: real draft identity, exact replay, metadata omission, publication and guest reload",
+    "npc: qualified or bare create, persisted identity, edit, publication and reader reload",
+    "genericSummary: qualified or bare create, persisted identity, edit, publication and reader reload",
+    "Imported Entities preserves exact opaque frontmatter and category through misleading UUID/slug qualified edits",
+    "All nine retained Codex reader aliases preserve acknowledged identity, canonical navigation and reader reload",
+    "Private Summary collections: current audiences, account/logout, actual late Search response and audience withdrawal",
+    "Remaining compatibility readers and public editor demonstration preserve identity and leave no product writes"
+  ],
+  "operationCount": 765,
+  "directReadCount": 115,
+  "persistedCounts": {
+    "links": 5,
+    "notices": 1,
+    "receipts": 72,
+    "documents": 13
+  },
+  "frontendChecks": [
+    {
+      "stage": "before",
+      "receipt": ".local/workspace-setup/frontend-completion-20261020/production-preview-29/build-receipt.json",
+      "receiptSha256": "0c15652d1275198ab9d3480d286fd6a1d37c9baa74edaac8fd6b8b00cb6e8548",
+      "sourceManifestSha256": "fe1319173ab0789c395d1a2b6e1bacdd7bc2fb56dd18794e6c8fc29dde550ec5",
+      "sourceInputs": 625,
+      "distManifestSha256": "2a842153d0c9987bff7904c04600ad1bf13cd431a54729ce7a2f720c9e797db4",
+      "distFiles": 181,
+      "at": "2026-10-20T17:31:43.745Z"
+    },
+    {
+      "stage": "after",
+      "receipt": ".local/workspace-setup/frontend-completion-20261020/production-preview-29/build-receipt.json",
+      "receiptSha256": "0c15652d1275198ab9d3480d286fd6a1d37c9baa74edaac8fd6b8b00cb6e8548",
+      "sourceManifestSha256": "fe1319173ab0789c395d1a2b6e1bacdd7bc2fb56dd18794e6c8fc29dde550ec5",
+      "sourceInputs": 625,
+      "distManifestSha256": "2a842153d0c9987bff7904c04600ad1bf13cd431a54729ce7a2f720c9e797db4",
+      "distFiles": 181,
+      "at": "2026-10-20T17:34:08.664Z"
+    }
+  ],
+  "compatibilityArcUnchanged": true,
+  "remainingRouteExtraMutations": 0,
+  "nativeCleanup": {
+    "apiStarted": true,
+    "at": "2026-10-20T17:34:08.771311547Z",
+    "database": "product_case_1",
+    "databaseDropped": true,
+    "listenersClosed": {
+      "api": true,
+      "vite": true
+    },
+    "nodeStarted": true,
+    "runtimeStarted": true
+  },
+  "productionInputsBeforeAfterEqual": true,
+  "ownedInputsBeforeAfterEqual": true,
+  "compiledBinarySha256": "9a742dd62ba0d5f41d63f7683584a460d52c5f2f828eacbbc2e0dc5aaedb8ad1",
+  "extensionIndependentReviewSha256": "1240bc3a8678ad1d4b2f8c9ab7832cf20773e450befac84fae8997e12c655133",
+  "artifacts": {
+    "attempt-input-graphql_product_fixture_test.go": "23f8f275b96219ebe4f07d670c6364850f7d41bb0534fafb556a4a6d0934e332",
+    "location-editor-900.png": "c55678cad8fad285912a69003b112c903b7b53085c5bc6ec152fc0fa7eb59d06",
+    "attempt-started": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "native-inventory.json": "04a0fa05600cd4cb74ef933086c6eecb0faf30dce58ac2c098ace7e789ae12bb",
+    "location-editor-390.png": "4dc0e17d24c02a271799cb167342cee11107671d14ea340576e85c16dd86f7ec",
+    "owned-inputs-before.json": "36eea34e72665b05fd7155c9a9aa0c5752fba56db5e3b1b11292d0d79a15db18",
+    "attempt-input-authority_integration_test.go": "e45ea96c4728f506467307fc4a518e630c473b6ebbe67c64e7e51a3f534d8d2b",
+    "http-observer.json": "4989b627c5d0a31c97d6e159b74fea5571cede21835f311f964b5cdd3e6f9729",
+    "attempt-input-document_browser_integration_test.go": "6a8bb7ff48830dfbfad80757b0451abaf47c31810c8a74f0923d3958e29b10a5",
+    "attempt-input-quest_browser_integration_test.go": "c77bffe772b614a92209782ee3dfe31c585b0f85dcdec83a3837d88421ea66c6",
+    "browser-receipt.json": "96d642d4d9b383786a2eea4a516fa395f82d845dbbaca39d7873ddae28a051b3",
+    "owned-inputs-after.json": "36eea34e72665b05fd7155c9a9aa0c5752fba56db5e3b1b11292d0d79a15db18",
+    "native-persisted-readback.json": "b655e42a9d70b443b12299404767e92ca1fb29395190b6fae923062192cb1a73",
+    "public-editor-demo-1920.png": "8fc628edb88c33dc5a850fb99840f010a6f9e7c868880a6ad713bd0210a66215",
+    "imported-entities-baseline.json": "9ce25a89261a45d5ee985e5e6179a4b30ed1eb723d1ee398f66e6c583e1cf09c",
+    "native-cleanup.json": "fa278220a299a13ae726679cf26a03bf4f671ab065677620d7b9e9e0acdd00e7",
+    "guide-editor-1920.png": "c1edc0754c76d8622bf775bf58acedc440f430e903f3b223b78be6d9cac74d89",
+    "public-editor-demo-900.png": "a5f7ad37f80cb8f2a526c1fec4d3b853617f7ca7a53fc92563c4939fce67c2a0",
+    "public-editor-demo-390.png": "3031b982201d27021bfc1bfd2803f54656160e139a437369e6805cbd96d21b34",
+    "attempt-input-document-browser.mjs": "8a89550febcb7908889e9f8b3a9697375d6460059d01e79e89f412ce410e1eeb",
+    "planned-compatibility-inventory.json": "3a05dfa3c75a2975b22232c2dd63aab87644ef5d870fa1125b804dc91a16bb26",
+    "production-inputs-after.json": "ec8828670e7978b98230169dd74d35e54504d36695809b25d5b34aca74f061ae",
+    "guide-editor-900.png": "b1090b87fb500ff876a6fca90af973fd4ccc8107cabb3022f0836d3e9c3f6166",
+    "native-compatibility-readback.json": "1d1aa04c1421eebb789949b5c7ab504f6a7adc56ff885e27c9bbfdb137cfdc8c",
+    "canonical-setup-receipt-keys.json": "e78afc1242c2f2f2590a997b8de724e75814ebbd6a71e8cf82e358608693440f",
+    "production-inputs-before.json": "ec8828670e7978b98230169dd74d35e54504d36695809b25d5b34aca74f061ae",
+    "location-editor-1920.png": "e2618472820392b3d71412b0e4f489955ac03cd3903e3cc2a0ae6073f6ab8519",
+    "planned-inventory.json": "0714f33c2603ed89fa10a1874f824d280ea7603eb235b236790fd7057c5596c1",
+    "guide-editor-390.png": "89fd518274278142b161d24b84588bfc20ccb872c5779199fc9499acd86556ed"
+  },
+  "noMocks": true,
+  "oauth": false,
+  "visualApproval": false,
+  "limits": [
+    "Demo editor local draft/authorized preview is intentionally not server persistence.",
+    "Registration/reader navigation does not establish every route role/action or final visual approval."
+  ]
+}

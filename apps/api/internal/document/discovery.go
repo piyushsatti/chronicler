@@ -38,8 +38,8 @@ type DiscoveryPage struct {
 }
 
 const (
-	discoverySearchOrder           = "rank_desc_updated_at_desc_id_desc"
-	recentDiscoveryBucketLimit     = 6
-	recentDiscoveryDocsPerBucket   = 5
-	discoverySnippetMaxCodepoints  = 240
+	discoverySearchOrder          = "rank_desc_updated_at_desc_id_desc"
+	recentDiscoveryBucketLimit    = 6
+	recentDiscoveryDocsPerBucket  = 5
+	discoverySnippetMaxCodepoints = 240
 )

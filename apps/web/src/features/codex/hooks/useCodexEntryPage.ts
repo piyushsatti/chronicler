@@ -4,7 +4,7 @@ import { toAppError } from '../../../errors/toAppError.js';
 import type { AppError } from '../../../errors/types.js';
 import { loadCodexEntry } from '../adapters/codexAdapter.js';
 
-export type CodexEntryPageView =
+type CodexEntryPageView =
   | { status: 'loading' }
   | { status: 'error'; error: AppError }
   | {

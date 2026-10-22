@@ -1,0 +1,10 @@
+query EditorAudienceMembers($search: String, $offset: Int!) {
+  communityDirectory(filters: { search: $search }, limit: 20, offset: $offset) {
+    total
+    entries {
+      memberId
+      handle
+      displayName
+    }
+  }
+}

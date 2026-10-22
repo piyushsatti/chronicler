@@ -1,22 +1,39 @@
-import { QueryClientProvider, useQuery } from '@tanstack/react-query';
-import { act, fireEvent, renderHook, screen, waitFor } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
-import { useState, type ReactNode } from 'react';
+import {
+  QueryClientProvider,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from '@tanstack/react-query';
+import {
+  act,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
+import { graphql, http, HttpResponse } from 'msw';
+import { StrictMode, useState, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { AuthProvider, useAuth } from '../../src/context/AuthContext.js';
+import { AuthProvider, useAuth } from '../../src/auth/AuthContext.js';
 import { EXPIRES_KEY, TOKEN_KEY } from '../../src/auth/storage.js';
 import { consumeOAuthState, OAUTH_STATE_KEY } from '../../src/auth/oauthState.js';
 import { toAppError } from '../../src/errors/toAppError.js';
 import { TransportError } from '../../src/errors/types.js';
-import { createTestQueryClient } from '../../src/providers.js';
+import { AppProviders, createTestQueryClient } from '../../src/providers.js';
 import { GRAPHQL_PATH } from '../../src/api/endpoints.js';
+import { graphqlRequest } from '../../src/api/graphql.js';
 import { HomePage } from '../../src/features/home/pages/HomePage.js';
 import { server } from '../../src/mocks/server.js';
 import { renderWithProviders } from '../test-utils.js';
 import lanesBad from '../fixtures/wire/home/lanes-bad-board.json';
+import { App } from '../../src/App.js';
+import goodSettings from '../fixtures/wire/personalize/good.json';
+import { DEFAULT_PREFERENCES, savePrefs } from '../../src/context/theme.utils.js';
 
 function token(exp = Date.now() / 1000 + 3600): string {
-  return `${btoa('{}')}.${btoa(JSON.stringify({ sub: 'discord-one', exp, roles: ['admin'] }))}.test`;
+  return `${btoa('{}')}.${btoa(JSON.stringify({ member_id: 'member-one', exp, roles: ['admin'] }))}.test`;
 }
 
 function setup() {
@@ -34,11 +51,194 @@ function setup() {
 afterEach(() => {
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
+  window.history.replaceState({}, '', '/');
   vi.useRealTimers();
   sessionStorage.clear();
 });
 
 describe('AuthProvider session lifecycle', () => {
+  it('places the site header outside the page main landmark', async () => {
+    vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+    renderWithProviders(<App />, { route: '/settings' });
+    const header = await screen.findByRole('banner');
+    expect(header.closest('main')).toBeNull();
+    expect(document.querySelectorAll('main')).toHaveLength(1);
+  });
+
+  it.each([0, 10])(
+    'updates the real header with multiple mounted member observers after a storage account switch (response delay %i)',
+    async (responseDelay) => {
+      vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
+      window.history.replaceState({}, '', '/me/personalize');
+      const firstId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+      const secondId = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb';
+      const session = (memberId: string) =>
+        `e30.${btoa(JSON.stringify({ member_id: memberId, exp: Date.now() / 1000 + 3600 }))}.sig`;
+      const firstToken = session(firstId);
+      const secondToken = session(secondId);
+      localStorage.setItem(TOKEN_KEY, firstToken);
+      savePrefs(
+        {
+          ...DEFAULT_PREFERENCES,
+          theme: 'midnight',
+          mode: 'dark',
+          modeExplicit: true,
+          density: 'compact',
+          timezone: 'America/New_York',
+          colorblindSafe: true,
+        },
+        firstId,
+      );
+      const responses: string[] = [];
+      server.use(
+        graphql.query('MyPersonalization', ({ request }) => {
+          const first = request.headers.get('authorization') === `Bearer ${firstToken}`;
+          return HttpResponse.json({
+            data: {
+              myPersonalization: {
+                settings: {
+                  ...goodSettings.settings,
+                  memberId: first ? firstId : secondId,
+                  theme: first ? 'MIDNIGHT' : 'PARCHMENT',
+                  mode: first ? 'DARK' : 'SYSTEM',
+                  density: first ? 'COMPACT' : 'COMFORTABLE',
+                  timezone: first ? 'America/New_York' : null,
+                  colorblindSafe: first,
+                },
+              },
+            },
+          });
+        }),
+        graphql.query('MemberMe', async ({ request }) => {
+          const first = request.headers.get('authorization') === `Bearer ${firstToken}`;
+          if (responseDelay)
+            await new Promise((resolve) => setTimeout(resolve, responseDelay));
+          const member = {
+            id: first ? firstId : secondId,
+            handle: first ? 'account-fixture-owner' : 'account-fixture-other',
+            displayName: first ? 'account-fixture-owner' : 'account-fixture-other',
+            roles: ['player'],
+          };
+          responses.push(member.id);
+          return HttpResponse.json({ data: { memberMe: member } });
+        }),
+      );
+      let queryClient: QueryClient | undefined;
+      function ActualApp() {
+        queryClient = useQueryClient();
+        return <App />;
+      }
+      render(
+        <StrictMode>
+          <AppProviders>
+            <ActualApp />
+          </AppProviders>
+        </StrictMode>,
+      );
+      await within(await screen.findByRole('banner')).findByRole('link', {
+        name: 'account-fixture-owner',
+      });
+      await screen.findByRole('heading', { name: 'Personalize' });
+      await waitFor(() =>
+        expect(screen.getByRole('combobox', { name: 'Theme' })).toHaveValue('midnight'),
+      );
+      expect(
+        queryClient
+          ?.getQueryCache()
+          .find({ queryKey: ['me'] })
+          ?.getObserversCount(),
+      ).toBeGreaterThan(2);
+      act(() => {
+        localStorage.setItem(TOKEN_KEY, secondToken);
+        window.dispatchEvent(
+          new StorageEvent('storage', {
+            key: TOKEN_KEY,
+            oldValue: firstToken,
+            newValue: secondToken,
+          }),
+        );
+      });
+      await waitFor(() =>
+        expect(queryClient?.getQueryData(['me'])).toMatchObject({ id: secondId }),
+      );
+      expect(responses).toContain(secondId);
+      await waitFor(() =>
+        expect(screen.getByRole('combobox', { name: 'Theme' })).toHaveValue(
+          'parchment',
+        ),
+      );
+      expect(
+        await within(screen.getByRole('banner')).findByRole('link', {
+          name: 'account-fixture-other',
+        }),
+      ).toHaveAttribute('href', '/me');
+      expect(
+        within(screen.getByRole('banner')).queryByRole('link', {
+          name: 'account-fixture-owner',
+        }),
+      ).not.toBeInTheDocument();
+    },
+  );
+
+  it('clears a mounted protected reader and prior caches for an HTTP 200 GraphQL UNAUTHENTICATED response', async () => {
+    localStorage.setItem(TOKEN_KEY, token());
+    let rejected = false;
+    server.use(
+      http.post(GRAPHQL_PATH, () =>
+        HttpResponse.json(
+          rejected
+            ? {
+                errors: [
+                  {
+                    message: 'sign in required',
+                    extensions: { code: 'UNAUTHENTICATED' },
+                  },
+                ],
+              }
+            : { data: { document: { effectiveBody: 'Private session notes' } } },
+        ),
+      ),
+    );
+    function ProtectedReader() {
+      const auth = useAuth();
+      const document = useQuery({
+        queryKey: ['protected-reader'],
+        enabled: auth.isAuthenticated,
+        queryFn: async () => {
+          try {
+            return await graphqlRequest<{ document: { effectiveBody: string } }>(
+              'query ProtectedReader { document(slug: "private") { effectiveBody } }',
+            );
+          } catch (error) {
+            throw toAppError(error, 'protected-reader');
+          }
+        },
+      });
+      return (
+        <>
+          <p>{auth.isAuthenticated ? 'Signed in' : 'Signed out'}</p>
+          <p>{document.data?.document.effectiveBody}</p>
+        </>
+      );
+    }
+    const { queryClient } = renderWithProviders(<ProtectedReader />);
+    expect(await screen.findByText('Private session notes')).toBeVisible();
+    queryClient.setQueryData(['other-private-reader'], 'another secret');
+    queryClient
+      .getMutationCache()
+      .build(queryClient, { mutationKey: ['private-write'] });
+    rejected = true;
+    await act(async () => {
+      await queryClient.refetchQueries({ queryKey: ['protected-reader'] });
+    });
+    expect(await screen.findByText('Signed out')).toBeVisible();
+    expect(screen.queryByText('Private session notes')).not.toBeInTheDocument();
+    expect(queryClient.getQueryData(['protected-reader'])).toBeUndefined();
+    expect(queryClient.getQueryData(['other-private-reader'])).toBeUndefined();
+    expect(queryClient.getMutationCache().getAll()).toHaveLength(0);
+    expect(localStorage.getItem(TOKEN_KEY)).toBeNull();
+  });
+
   it('starts sign-in with a retained nonce in the existing authorize query and clears prior authority', () => {
     sessionStorage.clear();
     localStorage.setItem(TOKEN_KEY, token());
@@ -92,10 +292,12 @@ describe('AuthProvider session lifecycle', () => {
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: /Good (morning|afternoon|evening|night), Mortal\./,
+        name: 'Welcome to Chronicler.',
       }),
     ).toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: 'Siege of Kraghold' }).length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByRole('link', { name: 'Siege of Kraghold' }).length,
+    ).toBeGreaterThan(0);
   });
 
   it('lets a whole anonymous public page surface a controlled query error', async () => {
@@ -118,9 +320,7 @@ describe('AuthProvider session lifecycle', () => {
   });
 
   it('shows an anonymous public 401 once without repeatedly resetting its query', async () => {
-    // HomePage fans out Home + HomeLanes + HomeBanner + SiteStats; each must fail once
-    // without React Query retry storms (retry: false in the test client).
-    const HOME_PUBLIC_OPS = 4;
+    const HOME_PUBLIC_OPS = 3;
     let requested = 0;
     server.use(
       http.post(GRAPHQL_PATH, () => {
@@ -129,17 +329,14 @@ describe('AuthProvider session lifecycle', () => {
       }),
     );
     renderWithProviders(<HomePage />);
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Your session ended. Sign in again.',
-    );
+    // A signed-out visitor is asked to sign in, not told a session ended.
+    expect(await screen.findByRole('alert')).toHaveTextContent('Sign in to see this');
     expect(requested).toBe(HOME_PUBLIC_OPS);
   });
 
   it('recovers an observed public query on logout without remounting an unrelated draft', async () => {
     localStorage.setItem(TOKEN_KEY, token());
-    // HomePage fans out four public GraphQL reads plus authenticated me/characters.
-    // Logout clears cache; the public ops refetch once without remounting draft state.
-    const HOME_PUBLIC_OPS = 4;
+    const HOME_PUBLIC_OPS = 3;
     let requested = 0;
     const record = ({ request }: { request: Request }) => {
       if (new URL(request.url).pathname === GRAPHQL_PATH) requested++;
@@ -179,11 +376,13 @@ describe('AuthProvider session lifecycle', () => {
         target: { value: 'Keep this draft' },
       });
       fireEvent.click(screen.getByRole('button', { name: 'End session' }));
-      await waitFor(() => expect(requested).toBeGreaterThanOrEqual(initialRequested + HOME_PUBLIC_OPS));
+      await waitFor(() =>
+        expect(requested).toBeGreaterThanOrEqual(initialRequested + HOME_PUBLIC_OPS),
+      );
       expect(
         await screen.findByRole('heading', {
           level: 1,
-          name: /Good (morning|afternoon|evening|night), Mortal\./,
+          name: 'Welcome to Chronicler.',
         }),
       ).toBeInTheDocument();
       expect(screen.getByRole('textbox', { name: 'Unrelated draft' })).toHaveValue(
@@ -252,8 +451,18 @@ describe('AuthProvider session lifecycle', () => {
     localStorage.setItem(TOKEN_KEY, token());
     const { result } = setup();
     expect(result.current.isAuthenticated).toBe(true);
-    expect(result.current.discordId).toBe('discord-one');
+    expect(result.current.memberId).toBe('member-one');
+    expect(result.current).not.toHaveProperty('discordId');
     expect(result.current).not.toHaveProperty('roles');
+  });
+
+  it('does not use an unrelated sub claim as the member cache identity', () => {
+    localStorage.setItem(
+      TOKEN_KEY,
+      `e30.${btoa(JSON.stringify({ sub: 'legacy-sub', exp: Date.now() / 1000 + 3600 }))}.sig`,
+    );
+    const { result } = setup();
+    expect(result.current.memberId).toBeNull();
   });
 
   it('expires a mounted session at the NumericDate boundary and clears all caches', () => {

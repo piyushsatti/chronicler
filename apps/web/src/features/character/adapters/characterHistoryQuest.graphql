@@ -1,0 +1,10 @@
+query CharacterHistoryQuest($id: ID!) {
+  quest(id: $id) {
+    id
+    shortCode
+    scheduledAt
+    briefDocument {
+      title
+    }
+  }
+}

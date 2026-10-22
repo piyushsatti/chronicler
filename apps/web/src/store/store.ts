@@ -1,7 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { initPrefs, resolveMode } from '../context/theme.utils.js';
 import { createPreferencesState, preferencesReducer } from './preferencesSlice.js';
-import { searchReducer } from './searchSlice.js';
 import { toastsReducer } from './toastsSlice.js';
 
 export function createAppStore() {
@@ -10,7 +9,6 @@ export function createAppStore() {
     reducer: {
       toasts: toastsReducer,
       preferences: preferencesReducer,
-      search: searchReducer,
     },
     preloadedState: {
       preferences: createPreferencesState(prefs, resolveMode(prefs.mode)),

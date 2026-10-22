@@ -14,6 +14,7 @@ import goodStats from '../../fixtures/wire/stats/good.json' with { type: 'json' 
 import goodBackstories from '../../fixtures/wire/backstories/good.json' with { type: 'json' };
 import goodProgression from '../../fixtures/wire/character/progression-good.json' with { type: 'json' };
 import goodUnread from '../../fixtures/wire/notifications/unread-good.json' with { type: 'json' };
+import goodPersonalization from '../../fixtures/wire/personalize/good.json' with { type: 'json' };
 
 const envelope = z.object({
   table: z.string(),
@@ -107,11 +108,34 @@ const characters = rows
       backstoryId: seedReference(record.refs, 'backstory_id', 'backstories'),
     });
   });
-const board = { items: quests, total: quests.length };
+const regions = rows
+  .filter((record) => record.table === 'regions')
+  .map((record) => {
+    const region = z
+      .object({ public_id: z.string().uuid(), name: z.string() })
+      .parse(record.row);
+    return { id: region.public_id, name: region.name };
+  });
+const openQuests = quests.filter((quest) => quest.status === 'open');
+const board = {
+  items: openQuests,
+  total: openQuests.length,
+};
 const graphqlBody = z.object({
   query: z.string(),
   variables: z
-    .object({ shortCode: z.string().nullable().optional() })
+    .object({
+      shortCode: z.string().nullable().optional(),
+      characterId: z.string().uuid().optional(),
+      limit: z.number().int().nonnegative().optional(),
+      offset: z.number().int().nonnegative().optional(),
+      filters: z
+        .object({
+          status: z.string().optional(),
+          displayStatus: z.string().optional(),
+        })
+        .optional(),
+    })
     .passthrough()
     .optional(),
 });
@@ -122,47 +146,123 @@ async function installRoutes(
   qa: boolean,
 ) {
   const unexpected: string[] = [];
+  const operations: string[] = [];
   await page.route('**/v1/**', async (route) => {
     const request = route.request();
     const pathname = new URL(request.url()).pathname;
-    if (request.method() === 'GET') {
-      if (pathname === '/v1/members/me') {
+    if (pathname === '/v1/graphql' && request.method() === 'POST') {
+      const body = graphqlBody.parse(request.postDataJSON());
+      const operation = body.query.match(/\bquery\s+(\w+)/)?.[1];
+      if (operation) operations.push(operation);
+      const accessProof =
+        operation === 'CurrentAdminAccess' || operation === 'CurrentReviewAccess';
+      if (
+        operation === 'MemberMe' ||
+        operation === 'MyUnreadNotificationCount' ||
+        operation === 'MyCharacters' ||
+        operation === 'MyPersonalization' ||
+        accessProof
+      ) {
         if (
           !session ||
           request.headers()['authorization'] !== `Bearer ${session.token}`
         ) {
           await route.fulfill({
             status: 401,
-            json: { title: 'Unauthorized', status: 401, code: 'UNAUTHORIZED' },
+            json: {
+              errors: [
+                { message: 'Unauthorized', extensions: { code: 'UNAUTHORIZED' } },
+              ],
+            },
           });
           return;
         }
-        await route.fulfill({
-          json: memberMeWireSchema.parse({ ...goodMe, roles: [session.role] }),
-        });
+        if (accessProof) {
+          await route.fulfill({
+            json:
+              session.role === 'admin'
+                ? {
+                    data:
+                      operation === 'CurrentAdminAccess'
+                        ? { adminOperations: { activeAlertCount: 0 } }
+                        : { pendingDmProfileVerifications: { total: 0 } },
+                  }
+                : {
+                    errors: [
+                      { message: 'Forbidden', extensions: { code: 'FORBIDDEN' } },
+                    ],
+                  },
+          });
+          return;
+        }
+        const mine = characters.filter((character) => character.ownerId === goodMe.id);
+        const data =
+          operation === 'MyPersonalization'
+            ? { myPersonalization: goodPersonalization }
+            : operation === 'MemberMe'
+              ? {
+                  memberMe: memberMeWireSchema.parse({
+                    ...goodMe,
+                    roles: [session.role],
+                  }),
+                }
+              : operation === 'MyUnreadNotificationCount'
+                ? { myUnreadNotificationCount: goodUnread.count }
+                : {
+                    myCharacters: {
+                      items: mine.map(({ id, status }) => ({ id, status })),
+                      total: mine.length,
+                    },
+                  };
+        await route.fulfill({ json: { data } });
         return;
       }
       const fixtures: Record<string, unknown> = {
-        '/v1/stats': goodStats,
-        '/v1/site-settings/home-banner': goodBanner,
-        '/v1/backstories': goodBackstories,
-        '/v1/me/notifications/unread-count': goodUnread,
+        SiteStats: {
+          siteStats: {
+            totalQuests: goodStats.totalQuests,
+            activeCharacters: goodStats.activeCharacters,
+          },
+        },
+        HomeBanner: { homeBanner: goodBanner },
       };
-      if (pathname in fixtures) {
-        await route.fulfill({ json: fixtures[pathname] });
+      if (operation && operation in fixtures) {
+        await route.fulfill({ json: { data: fixtures[operation] } });
+        return;
+      }
+      if (qa && operation === 'Backstories') {
+        await route.fulfill({
+          json: {
+            data: {
+              backstories: {
+                items: goodBackstories.map(({ id, name }) => ({ id, name })),
+                total: goodBackstories.length,
+              },
+            },
+          },
+        });
         return;
       }
       if (
         qa &&
-        characters.some((c) => pathname === `/v1/characters/${c.id}/progression`)
+        operation === 'CharacterProgression' &&
+        characters.some((character) => character.id === body.variables?.characterId)
       ) {
-        await route.fulfill({ json: goodProgression });
+        await route.fulfill({
+          json: { data: { characterProgression: goodProgression } },
+        });
         return;
       }
-    }
-    if (pathname === '/v1/graphql' && request.method() === 'POST') {
-      const body = graphqlBody.parse(request.postDataJSON());
-      const operation = body.query.match(/\bquery\s+(\w+)/)?.[1];
+      if (qa && (operation === 'QuestRegions' || operation === 'CharacterRegions')) {
+        await route.fulfill({ json: { data: { regions } } });
+        return;
+      }
+      if (qa && operation === 'QuestBoardChrome') {
+        await route.fulfill({
+          json: { data: { communityDirectory: goodLanes.communityDirectory } },
+        });
+        return;
+      }
       if (qa && operation === 'Quest') {
         await route.fulfill({
           json: {
@@ -187,7 +287,24 @@ async function installRoutes(
         return;
       }
       if (qa && operation === 'QuestList') {
-        await route.fulfill({ json: { data: { quests: board } } });
+        const filters = body.variables?.filters;
+        const items = quests.filter(
+          (quest) =>
+            (filters?.status == null || quest.status === filters.status) &&
+            (filters?.displayStatus == null ||
+              quest.displayStatus === filters.displayStatus),
+        );
+        const offset = body.variables?.offset ?? 0;
+        await route.fulfill({
+          json: {
+            data: {
+              quests: {
+                items: items.slice(offset, offset + (body.variables?.limit ?? 50)),
+                total: items.length,
+              },
+            },
+          },
+        });
         return;
       }
       if (operation === 'HomeWarRoom') {
@@ -203,8 +320,10 @@ async function installRoutes(
       json: { error: 'Unexpected scenario request' },
     });
   });
-  return () =>
+  return () => {
     expect(unexpected, 'scenario must cover every requested API').toEqual([]);
+    return operations;
+  };
 }
 
 export async function installQaWalkthrough(page: Page) {
@@ -219,7 +338,7 @@ export async function installGallerySession(
     Buffer.from(JSON.stringify({ alg: 'none', typ: 'JWT' })).toString('base64url'),
     Buffer.from(
       JSON.stringify({
-        sub: goodMe.id,
+        member_id: goodMe.id,
         exp: Math.floor(Date.now() / 1000) + 3600,
         roles: role === 'forged-admin' ? ['admin'] : [],
       }),

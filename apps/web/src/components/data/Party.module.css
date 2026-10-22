@@ -1,0 +1,12 @@
+/* Moved from inline styles (2026-10-21). Scoped under .party so the
+   overflow badge's colour outranks the global .type-caption colour, as the
+   inline style it replaces did. */
+:global(.party) .overflow {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  margin-left: -8px;
+  color: var(--color-text-2);
+  background-color: var(--color-bg-surface);
+  border: 2px solid var(--color-border);
+}

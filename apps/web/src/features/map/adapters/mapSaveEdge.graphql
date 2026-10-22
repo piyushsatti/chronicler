@@ -1,0 +1,5 @@
+mutation MapSaveEdge($mapId: ID!, $input: PointcrawlEdgeInput!, $meta: CommandMeta!) {
+  setPointcrawlEdge(mapId: $mapId, input: $input, meta: $meta) {
+    id
+  }
+}

@@ -43,7 +43,7 @@ WHERE d.kind='codex_entry' AND d.deleted_at IS NULL
   AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
       $3::uuid,$4::text[],$5::text,
       $6::boolean,$7::boolean,
-      COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id),ARRAY[]::uuid[]))
+      COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=$3::uuid),ARRAY[]::uuid[]))
 `
 
 type CountProductCodexDirectoryParams struct {
@@ -74,15 +74,15 @@ func (q *Queries) CountProductCodexDirectory(ctx context.Context, arg CountProdu
 const countProductDocumentBacklinks = `-- name: CountProductDocumentBacklinks :one
 SELECT count(*)::bigint AS total,
        COALESCE(bool_or($1::boolean AND (
-        NOT document_readable(src.public_id,sa.public_id,src.status,src.visibility,src.policy,$2::uuid,$3::text[],$4::text,FALSE,$5::boolean,COALESCE(ARRAY(SELECT m.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=src.id),ARRAY[]::uuid[]))
-        OR NOT document_readable(tgt.public_id,ta.public_id,tgt.status,tgt.visibility,tgt.policy,$2::uuid,$3::text[],$4::text,FALSE,$5::boolean,COALESCE(ARRAY(SELECT m.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=tgt.id),ARRAY[]::uuid[])))),FALSE) AS admin_override
+        NOT document_readable(src.public_id,sa.public_id,src.status,src.visibility,src.policy,$2::uuid,$3::text[],$4::text,FALSE,$5::boolean,COALESCE(ARRAY(SELECT src.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=src.id AND m.public_id=$2::uuid),ARRAY[]::uuid[]))
+        OR NOT document_readable(tgt.public_id,ta.public_id,tgt.status,tgt.visibility,tgt.policy,$2::uuid,$3::text[],$4::text,FALSE,$5::boolean,COALESCE(ARRAY(SELECT tgt.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=tgt.id AND m.public_id=$2::uuid),ARRAY[]::uuid[])))),FALSE) AS admin_override
 FROM document_links l JOIN documents src ON src.id=l.source_id AND src.deleted_at IS NULL
 LEFT JOIN members sa ON sa.id=src.author_id
 JOIN documents tgt ON l.target_type='document' AND tgt.id=l.document_target_id AND tgt.deleted_at IS NULL
 LEFT JOIN members ta ON ta.id=tgt.author_id
 WHERE tgt.slug=$6::text
-AND document_readable(src.public_id,sa.public_id,src.status,src.visibility,src.policy,$2::uuid,$3::text[],$4::text,$1::boolean,$5::boolean,COALESCE(ARRAY(SELECT m.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=src.id),ARRAY[]::uuid[]))
-AND document_readable(tgt.public_id,ta.public_id,tgt.status,tgt.visibility,tgt.policy,$2::uuid,$3::text[],$4::text,$1::boolean,$5::boolean,COALESCE(ARRAY(SELECT m.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=tgt.id),ARRAY[]::uuid[]))
+AND document_readable(src.public_id,sa.public_id,src.status,src.visibility,src.policy,$2::uuid,$3::text[],$4::text,$1::boolean,$5::boolean,COALESCE(ARRAY(SELECT src.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=src.id AND m.public_id=$2::uuid),ARRAY[]::uuid[]))
+AND document_readable(tgt.public_id,ta.public_id,tgt.status,tgt.visibility,tgt.policy,$2::uuid,$3::text[],$4::text,$1::boolean,$5::boolean,COALESCE(ARRAY(SELECT tgt.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=tgt.id AND m.public_id=$2::uuid),ARRAY[]::uuid[]))
 `
 
 type CountProductDocumentBacklinksParams struct {
@@ -128,8 +128,8 @@ func (q *Queries) CountProductDocumentRevisions(ctx context.Context, documentID 
 const countProductDocuments = `-- name: CountProductDocuments :one
 WITH population AS (
  SELECT d.id, d.public_id, d.kind, d.slug, d.title, d.category, d.status, d.visibility, d.policy, d.body, d.frontmatter_yaml, d.author_id, d.published_at, d.deleted_at, d.created_at, d.updated_at, d.deleted_by, d.published_by, d.version, author.public_id AS author_public_id,
-        COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id
-                       WHERE dr.document_id=d.id ORDER BY reader.public_id), ARRAY[]::uuid[]) AS reader_ids
+        COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id
+                       WHERE dr.document_id=d.id AND reader.public_id=$2::uuid), ARRAY[]::uuid[]) AS readable_document_ids
  FROM documents d LEFT JOIN members author ON author.id=d.author_id
  WHERE d.deleted_at IS NULL
    AND ($6::text IS NULL OR d.kind=$6::text)
@@ -146,11 +146,11 @@ SELECT count(*)::bigint AS total,
        COALESCE(bool_or($1::boolean AND NOT document_readable(
          d.public_id,d.author_public_id,d.status,d.visibility,d.policy,$2::uuid,
          $3::text[],$4::text,FALSE,
-         $5::boolean,d.reader_ids)),FALSE) AS admin_override
+         $5::boolean,d.readable_document_ids)),FALSE) AS admin_override
 FROM population d
 WHERE document_readable(d.public_id,d.author_public_id,d.status,d.visibility,d.policy,
       $2::uuid,$3::text[],$4::text,
-      $1::boolean,$5::boolean,d.reader_ids)
+      $1::boolean,$5::boolean,d.readable_document_ids)
 `
 
 type CountProductDocumentsParams struct {
@@ -246,10 +246,10 @@ SELECT d.public_id AS id,d.kind,d.slug,d.title,d.category,d.status,d.visibility,
        d.frontmatter_yaml,d.policy,author.public_id AS author_id,d.updated_at,d.version,
        document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,$1::uuid,
          $2::text[],$3::text,$4::boolean,
-         $5::boolean,COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id),ARRAY[]::uuid[])) AS readable,
+         $5::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=$1::uuid),ARRAY[]::uuid[])) AS readable,
        COALESCE($4::boolean AND NOT document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,$1::uuid,
          $2::text[],$3::text,FALSE,
-         $5::boolean,COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id),ARRAY[]::uuid[])),FALSE) AS admin_override
+         $5::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=$1::uuid),ARRAY[]::uuid[])),FALSE) AS admin_override
 FROM documents d LEFT JOIN members author ON author.id=d.author_id
 WHERE d.slug=$6::text AND d.kind='codex_entry' AND d.deleted_at IS NULL
 `
@@ -321,10 +321,10 @@ SELECT d.id AS internal_id, d.public_id AS id, d.kind, d.slug, d.title, d.catego
                       WHERE dr.document_id=d.id ORDER BY reader.public_id), ARRAY[]::uuid[]) AS reader_ids,
        document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,$1::uuid,
          $2::text[],$3::text,$4::boolean,
-         $5::boolean,COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id),ARRAY[]::uuid[])) AS readable,
+         $5::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=$1::uuid),ARRAY[]::uuid[])) AS readable,
        COALESCE($4::boolean AND NOT document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,$1::uuid,
          $2::text[],$3::text,FALSE,
-         $5::boolean,COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id),ARRAY[]::uuid[])),FALSE) AS admin_override,
+         $5::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=$1::uuid),ARRAY[]::uuid[])),FALSE) AS admin_override,
        COALESCE(ARRAY(SELECT member.public_id FROM lieutenant_assignments la JOIN members member ON member.id=la.member_id
                       WHERE la.npc_document_id=d.id ORDER BY member.public_id), ARRAY[]::uuid[]) AS lieutenant_ids,
        COALESCE(ARRAY(SELECT q.public_id FROM document_links l JOIN quests q ON q.id=l.quest_target_id
@@ -425,10 +425,10 @@ SELECT d.id AS internal_id, d.public_id AS id, d.kind, d.slug, d.title, d.catego
                       WHERE dr.document_id=d.id ORDER BY reader.public_id), ARRAY[]::uuid[]) AS reader_ids,
        document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,$1::uuid,
          $2::text[],$3::text,$4::boolean,
-         $5::boolean,COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id),ARRAY[]::uuid[])) AS readable,
+         $5::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=$1::uuid),ARRAY[]::uuid[])) AS readable,
        COALESCE($4::boolean AND NOT document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,$1::uuid,
          $2::text[],$3::text,FALSE,
-         $5::boolean,COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id),ARRAY[]::uuid[])),FALSE) AS admin_override,
+         $5::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=$1::uuid),ARRAY[]::uuid[])),FALSE) AS admin_override,
        COALESCE(ARRAY(SELECT member.public_id FROM lieutenant_assignments la JOIN members member ON member.id=la.member_id
                       WHERE la.npc_document_id=d.id ORDER BY member.public_id), ARRAY[]::uuid[]) AS lieutenant_ids,
        COALESCE(ARRAY(SELECT q.public_id FROM document_links l JOIN quests q ON q.id=l.quest_target_id
@@ -517,6 +517,107 @@ func (q *Queries) GetProductDocumentBySlug(ctx context.Context, arg GetProductDo
 	return i, err
 }
 
+const getProductDocumentRevisionParent = `-- name: GetProductDocumentRevisionParent :one
+SELECT d.id AS internal_id, d.public_id AS id, d.kind, d.slug, d.title, d.category,
+       d.status, d.visibility, d.policy, d.body, d.frontmatter_yaml, d.author_id AS author_internal_id,
+       author.public_id AS author_id, d.published_at, publisher.public_id AS published_by,
+       d.deleted_at, deleter.public_id AS deleted_by, d.created_at, d.updated_at, d.version,
+       COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id
+                      WHERE dr.document_id=d.id ORDER BY reader.public_id), ARRAY[]::uuid[]) AS reader_ids,
+       document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,$1::uuid,
+         $2::text[],$3::text,$4::boolean,
+         $5::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=$1::uuid),ARRAY[]::uuid[])) AS readable,
+       COALESCE($4::boolean AND NOT document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,$1::uuid,
+         $2::text[],$3::text,FALSE,
+         $5::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=$1::uuid),ARRAY[]::uuid[])),FALSE) AS admin_override,
+       COALESCE(ARRAY(SELECT member.public_id FROM lieutenant_assignments la JOIN members member ON member.id=la.member_id
+                      WHERE la.npc_document_id=d.id ORDER BY member.public_id), ARRAY[]::uuid[]) AS lieutenant_ids,
+       COALESCE(ARRAY(SELECT q.public_id FROM document_links l JOIN quests q ON q.id=l.quest_target_id
+                      WHERE l.source_id=d.id AND l.target_type='quest' ORDER BY q.public_id), ARRAY[]::uuid[]) AS linked_quest_ids
+FROM documents d
+LEFT JOIN members author ON author.id=d.author_id
+LEFT JOIN members publisher ON publisher.id=d.published_by
+LEFT JOIN members deleter ON deleter.id=d.deleted_by
+WHERE d.public_id=$6::uuid
+`
+
+type GetProductDocumentRevisionParentParams struct {
+	ViewerID     pgtype.UUID `json:"viewer_id"`
+	ViewerRoles  []string    `json:"viewer_roles"`
+	ViewerHandle string      `json:"viewer_handle"`
+	ViewerAdmin  bool        `json:"viewer_admin"`
+	ViewerLiveDm bool        `json:"viewer_live_dm"`
+	DocumentID   pgtype.UUID `json:"document_id"`
+}
+
+type GetProductDocumentRevisionParentRow struct {
+	InternalID       int64              `json:"internal_id"`
+	ID               pgtype.UUID        `json:"id"`
+	Kind             string             `json:"kind"`
+	Slug             string             `json:"slug"`
+	Title            string             `json:"title"`
+	Category         pgtype.Text        `json:"category"`
+	Status           string             `json:"status"`
+	Visibility       string             `json:"visibility"`
+	Policy           []byte             `json:"policy"`
+	Body             string             `json:"body"`
+	FrontmatterYaml  pgtype.Text        `json:"frontmatter_yaml"`
+	AuthorInternalID pgtype.Int8        `json:"author_internal_id"`
+	AuthorID         pgtype.UUID        `json:"author_id"`
+	PublishedAt      pgtype.Timestamptz `json:"published_at"`
+	PublishedBy      pgtype.UUID        `json:"published_by"`
+	DeletedAt        pgtype.Timestamptz `json:"deleted_at"`
+	DeletedBy        pgtype.UUID        `json:"deleted_by"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt        pgtype.Timestamptz `json:"updated_at"`
+	Version          int32              `json:"version"`
+	ReaderIds        interface{}        `json:"reader_ids"`
+	Readable         bool               `json:"readable"`
+	AdminOverride    interface{}        `json:"admin_override"`
+	LieutenantIds    interface{}        `json:"lieutenant_ids"`
+	LinkedQuestIds   interface{}        `json:"linked_quest_ids"`
+}
+
+func (q *Queries) GetProductDocumentRevisionParent(ctx context.Context, arg GetProductDocumentRevisionParentParams) (GetProductDocumentRevisionParentRow, error) {
+	row := q.db.QueryRow(ctx, getProductDocumentRevisionParent,
+		arg.ViewerID,
+		arg.ViewerRoles,
+		arg.ViewerHandle,
+		arg.ViewerAdmin,
+		arg.ViewerLiveDm,
+		arg.DocumentID,
+	)
+	var i GetProductDocumentRevisionParentRow
+	err := row.Scan(
+		&i.InternalID,
+		&i.ID,
+		&i.Kind,
+		&i.Slug,
+		&i.Title,
+		&i.Category,
+		&i.Status,
+		&i.Visibility,
+		&i.Policy,
+		&i.Body,
+		&i.FrontmatterYaml,
+		&i.AuthorInternalID,
+		&i.AuthorID,
+		&i.PublishedAt,
+		&i.PublishedBy,
+		&i.DeletedAt,
+		&i.DeletedBy,
+		&i.CreatedAt,
+		&i.UpdatedAt,
+		&i.Version,
+		&i.ReaderIds,
+		&i.Readable,
+		&i.AdminOverride,
+		&i.LieutenantIds,
+		&i.LinkedQuestIds,
+	)
+	return i, err
+}
+
 const insertProductDocument = `-- name: InsertProductDocument :one
 INSERT INTO documents(public_id,kind,slug,title,category,status,visibility,policy,body,frontmatter_yaml,author_id,version,created_at,updated_at)
 VALUES($1::uuid,$2::text,$3::text,$4::text,$5::text,'draft',$6::text,$7::jsonb,$8::text,$9::text,(SELECT id FROM members WHERE public_id=$10::uuid),1,$11::timestamptz,$11::timestamptz)
@@ -545,7 +646,6 @@ type InsertProductDocumentRow struct {
 	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
 }
 
-// Aggregate writes are separate named statements and run in the caller's UOW.
 func (q *Queries) InsertProductDocument(ctx context.Context, arg InsertProductDocumentParams) (InsertProductDocumentRow, error) {
 	row := q.db.QueryRow(ctx, insertProductDocument,
 		arg.ID,
@@ -709,7 +809,7 @@ WHERE d.kind='codex_entry' AND d.status='published' AND d.deleted_at IS NULL AND
   AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
       $1::uuid,$2::text[],$3::text,
       $4::boolean,$5::boolean,
-      COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id),ARRAY[]::uuid[]))
+      COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=$1::uuid),ARRAY[]::uuid[]))
 GROUP BY d.category ORDER BY d.category
 `
 
@@ -762,7 +862,7 @@ WHERE d.kind='codex_entry' AND d.deleted_at IS NULL
   AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
       $3::uuid,$4::text[],$5::text,
       $6::boolean,$7::boolean,
-      COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id),ARRAY[]::uuid[]))
+      COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=$3::uuid),ARRAY[]::uuid[]))
 ORDER BY d.updated_at DESC,d.public_id DESC LIMIT $9::int OFFSET $8::int
 `
 
@@ -846,10 +946,10 @@ SELECT input.ordinality::integer AS input_index,
        d.published_at, d.deleted_at, deleter.public_id AS deleted_by, d.updated_at, d.version,
        document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,$1::uuid,
          $2::text[],$3::text,$4::boolean,
-         $5::boolean,COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id),ARRAY[]::uuid[])) AS readable,
+         $5::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=$1::uuid),ARRAY[]::uuid[])) AS readable,
        COALESCE($4::boolean AND NOT document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,$1::uuid,
          $2::text[],$3::text,FALSE,
-         $5::boolean,COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id),ARRAY[]::uuid[])),FALSE) AS admin_override
+         $5::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=$1::uuid),ARRAY[]::uuid[])),FALSE) AS admin_override
 FROM unnest($6::uuid[]) WITH ORDINALITY AS input(public_id, ordinality)
 LEFT JOIN members m ON m.public_id = input.public_id
 LEFT JOIN documents d ON d.author_id = m.id AND d.kind = 'community' AND d.category = 'dm_table' AND d.deleted_at IS NULL
@@ -941,15 +1041,15 @@ func (q *Queries) ListProductDmTablesForMembers(ctx context.Context, arg ListPro
 const listProductDocumentBacklinks = `-- name: ListProductDocumentBacklinks :many
 SELECT src.public_id AS source_id,tgt.public_id AS target_id,l.relation,src.kind,src.slug,
        COALESCE($1::boolean AND (
-        NOT document_readable(src.public_id,sa.public_id,src.status,src.visibility,src.policy,$2::uuid,$3::text[],$4::text,FALSE,$5::boolean,COALESCE(ARRAY(SELECT m.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=src.id),ARRAY[]::uuid[]))
-        OR NOT document_readable(tgt.public_id,ta.public_id,tgt.status,tgt.visibility,tgt.policy,$2::uuid,$3::text[],$4::text,FALSE,$5::boolean,COALESCE(ARRAY(SELECT m.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=tgt.id),ARRAY[]::uuid[]))),FALSE) AS admin_override
+        NOT document_readable(src.public_id,sa.public_id,src.status,src.visibility,src.policy,$2::uuid,$3::text[],$4::text,FALSE,$5::boolean,COALESCE(ARRAY(SELECT src.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=src.id AND m.public_id=$2::uuid),ARRAY[]::uuid[]))
+        OR NOT document_readable(tgt.public_id,ta.public_id,tgt.status,tgt.visibility,tgt.policy,$2::uuid,$3::text[],$4::text,FALSE,$5::boolean,COALESCE(ARRAY(SELECT tgt.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=tgt.id AND m.public_id=$2::uuid),ARRAY[]::uuid[]))),FALSE) AS admin_override
 FROM document_links l JOIN documents src ON src.id=l.source_id AND src.deleted_at IS NULL
 LEFT JOIN members sa ON sa.id=src.author_id
 JOIN documents tgt ON l.target_type='document' AND tgt.id=l.document_target_id AND tgt.deleted_at IS NULL
 LEFT JOIN members ta ON ta.id=tgt.author_id
 WHERE tgt.slug=$6::text
-AND document_readable(src.public_id,sa.public_id,src.status,src.visibility,src.policy,$2::uuid,$3::text[],$4::text,$1::boolean,$5::boolean,COALESCE(ARRAY(SELECT m.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=src.id),ARRAY[]::uuid[]))
-AND document_readable(tgt.public_id,ta.public_id,tgt.status,tgt.visibility,tgt.policy,$2::uuid,$3::text[],$4::text,$1::boolean,$5::boolean,COALESCE(ARRAY(SELECT m.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=tgt.id),ARRAY[]::uuid[]))
+AND document_readable(src.public_id,sa.public_id,src.status,src.visibility,src.policy,$2::uuid,$3::text[],$4::text,$1::boolean,$5::boolean,COALESCE(ARRAY(SELECT src.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=src.id AND m.public_id=$2::uuid),ARRAY[]::uuid[]))
+AND document_readable(tgt.public_id,ta.public_id,tgt.status,tgt.visibility,tgt.policy,$2::uuid,$3::text[],$4::text,$1::boolean,$5::boolean,COALESCE(ARRAY(SELECT tgt.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=tgt.id AND m.public_id=$2::uuid),ARRAY[]::uuid[]))
 ORDER BY src.updated_at DESC,src.public_id DESC,l.relation LIMIT $8::int OFFSET $7::int
 `
 
@@ -1094,9 +1194,9 @@ LEFT JOIN regions r ON l.target_type='region' AND r.id=l.region_target_id
 WHERE document_readable(src.public_id,source_author.public_id,src.status,src.visibility,src.policy,
       $2::uuid,$3::text[],$4::text,
       $5::boolean,$6::boolean,
-      COALESCE(ARRAY(SELECT m.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=src.id),ARRAY[]::uuid[]))
+      COALESCE(ARRAY(SELECT src.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=src.id AND m.public_id=$2::uuid),ARRAY[]::uuid[]))
   AND CASE l.target_type
-    WHEN 'document' THEN td.id IS NOT NULL AND document_readable(td.public_id,target_author.public_id,td.status,td.visibility,td.policy,$2::uuid,$3::text[],$4::text,$5::boolean,$6::boolean,COALESCE(ARRAY(SELECT m.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=td.id),ARRAY[]::uuid[]))
+    WHEN 'document' THEN td.id IS NOT NULL AND document_readable(td.public_id,target_author.public_id,td.status,td.visibility,td.policy,$2::uuid,$3::text[],$4::text,$5::boolean,$6::boolean,COALESCE(ARRAY(SELECT td.public_id FROM document_readers dr JOIN members m ON m.id=dr.member_id WHERE dr.document_id=td.id AND m.public_id=$2::uuid),ARRAY[]::uuid[]))
     -- Quest identity is public; the separate held protected-relation admission clause is not inferred here.
     WHEN 'quest' THEN q.id IS NOT NULL
     WHEN 'character' THEN c.id IS NOT NULL
@@ -1153,8 +1253,8 @@ func (q *Queries) ListProductDocumentSubjects(ctx context.Context, arg ListProdu
 const listProductDocuments = `-- name: ListProductDocuments :many
 WITH population AS (
  SELECT d.id, d.public_id, d.kind, d.slug, d.title, d.category, d.status, d.visibility, d.policy, d.body, d.frontmatter_yaml, d.author_id, d.published_at, d.deleted_at, d.created_at, d.updated_at, d.deleted_by, d.published_by, d.version, author.public_id AS author_public_id,
-        COALESCE(ARRAY(SELECT reader.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id
-                       WHERE dr.document_id=d.id ORDER BY reader.public_id), ARRAY[]::uuid[]) AS reader_ids
+        COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id
+                       WHERE dr.document_id=d.id AND reader.public_id=$2::uuid), ARRAY[]::uuid[]) AS readable_document_ids
  FROM documents d LEFT JOIN members author ON author.id=d.author_id
  WHERE d.deleted_at IS NULL
    AND ($8::text IS NULL OR d.kind=$8::text)
@@ -1173,11 +1273,11 @@ SELECT d.public_id AS id, d.kind, d.slug, d.title, d.category, d.status, d.visib
        COALESCE($1::boolean AND NOT document_readable(
          d.public_id,d.author_public_id,d.status,d.visibility,d.policy,$2::uuid,
          $3::text[],$4::text,FALSE,
-         $5::boolean,d.reader_ids),FALSE) AS admin_override
+         $5::boolean,d.readable_document_ids),FALSE) AS admin_override
 FROM population d
 WHERE document_readable(d.public_id,d.author_public_id,d.status,d.visibility,d.policy,
       $2::uuid,$3::text[],$4::text,
-      $1::boolean,$5::boolean,d.reader_ids)
+      $1::boolean,$5::boolean,d.readable_document_ids)
 ORDER BY d.updated_at DESC,d.public_id DESC
 LIMIT $7::int OFFSET $6::int
 `
@@ -1397,6 +1497,67 @@ func (q *Queries) ListProductLieutenantAssignments(ctx context.Context, arg List
 	return items, nil
 }
 
+const loadProductDocumentWriteFacts = `-- name: LoadProductDocumentWriteFacts :many
+SELECT d.public_id AS document_id, r.public_id AS region_id,
+       EXISTS (SELECT 1 FROM archon_assignments aa JOIN members m ON m.id=aa.member_id
+               WHERE aa.region_id=r.id AND m.public_id=$1::uuid) AS assigned_archon,
+       dm.public_id AS quest_dm_id, q.public_id AS quest_id
+FROM documents d
+LEFT JOIN LATERAL (
+ SELECT region.id,region.public_id FROM regions region JOIN (
+   SELECT l.region_target_id AS id FROM document_links l
+   WHERE l.source_id=d.id AND l.region_target_id IS NOT NULL
+   UNION
+   SELECT m.region_id FROM pointcrawl_entry_links pel JOIN maps m ON m.id=pel.map_id
+   WHERE pel.document_id=d.id AND pel.relation='location' AND m.region_id IS NOT NULL
+ ) linked ON linked.id=region.id
+) r ON TRUE
+LEFT JOIN quests q ON q.document_id=d.id AND q.deleted_at IS NULL
+LEFT JOIN members dm ON dm.id=q.dm_id
+WHERE d.public_id=ANY($2::uuid[])
+ORDER BY d.public_id,r.public_id
+`
+
+type LoadProductDocumentWriteFactsParams struct {
+	ActorID     pgtype.UUID   `json:"actor_id"`
+	DocumentIds []pgtype.UUID `json:"document_ids"`
+}
+
+type LoadProductDocumentWriteFactsRow struct {
+	DocumentID     pgtype.UUID `json:"document_id"`
+	RegionID       pgtype.UUID `json:"region_id"`
+	AssignedArchon bool        `json:"assigned_archon"`
+	QuestDmID      pgtype.UUID `json:"quest_dm_id"`
+	QuestID        pgtype.UUID `json:"quest_id"`
+}
+
+// Aggregate writes are separate named statements and run in the caller's UOW.
+func (q *Queries) LoadProductDocumentWriteFacts(ctx context.Context, arg LoadProductDocumentWriteFactsParams) ([]LoadProductDocumentWriteFactsRow, error) {
+	rows, err := q.db.Query(ctx, loadProductDocumentWriteFacts, arg.ActorID, arg.DocumentIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []LoadProductDocumentWriteFactsRow{}
+	for rows.Next() {
+		var i LoadProductDocumentWriteFactsRow
+		if err := rows.Scan(
+			&i.DocumentID,
+			&i.RegionID,
+			&i.AssignedArchon,
+			&i.QuestDmID,
+			&i.QuestID,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const lockProductDocumentByID = `-- name: LockProductDocumentByID :one
 SELECT d.id AS internal_id, d.public_id AS id, d.kind, d.slug, d.title, d.category,
        d.status, d.visibility, d.policy, d.body, d.frontmatter_yaml, d.author_id AS author_internal_id,
@@ -1473,6 +1634,53 @@ func (q *Queries) LockProductDocumentByID(ctx context.Context, documentID pgtype
 	return i, err
 }
 
+const lockProductSummaryQuests = `-- name: LockProductSummaryQuests :many
+SELECT q.public_id AS id FROM quests q
+WHERE q.deleted_at IS NULL AND (
+ q.public_id=ANY($1::uuid[]) OR EXISTS (
+   SELECT 1 FROM document_links l JOIN documents d ON d.id=l.source_id
+   WHERE l.quest_target_id=q.id AND l.relation='summarizes'
+     AND d.public_id=$2::uuid))
+ORDER BY q.public_id FOR UPDATE OF q
+`
+
+type LockProductSummaryQuestsParams struct {
+	QuestIds   []pgtype.UUID `json:"quest_ids"`
+	DocumentID pgtype.UUID   `json:"document_id"`
+}
+
+func (q *Queries) LockProductSummaryQuests(ctx context.Context, arg LockProductSummaryQuestsParams) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, lockProductSummaryQuests, arg.QuestIds, arg.DocumentID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.UUID{}
+	for rows.Next() {
+		var id pgtype.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		items = append(items, id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const nextProductDocumentRevision = `-- name: NextProductDocumentRevision :one
+SELECT (COALESCE(max(r.rev),0)+1)::integer AS rev FROM document_revisions r
+JOIN documents d ON d.id=r.document_id WHERE d.public_id=$1::uuid
+`
+
+func (q *Queries) NextProductDocumentRevision(ctx context.Context, documentID pgtype.UUID) (int32, error) {
+	row := q.db.QueryRow(ctx, nextProductDocumentRevision, documentID)
+	var rev int32
+	err := row.Scan(&rev)
+	return rev, err
+}
+
 const productBatchDocumentReaderIds = `-- name: ProductBatchDocumentReaderIds :many
 SELECT input.ordinality::integer AS input_index,
        input.public_id AS document_id,
@@ -1532,9 +1740,9 @@ WITH requested AS (
         $2::uuid, $3::text[], $4::text,
         $5::boolean, $6::boolean,
         COALESCE(ARRAY(
-            SELECT reader.public_id FROM document_readers dr
+            SELECT brief.public_id FROM document_readers dr
             JOIN members reader ON reader.id = dr.member_id
-            WHERE dr.document_id = brief.id
+            WHERE dr.document_id = brief.id AND reader.public_id = $2::uuid
         ), ARRAY[]::uuid[])
     )
 ), regions AS (
@@ -1640,9 +1848,9 @@ WITH requested AS (
         $2::uuid, $3::text[], $4::text,
         $5::boolean, $6::boolean,
         COALESCE(ARRAY(
-            SELECT reader.public_id FROM document_readers dr
+            SELECT brief.public_id FROM document_readers dr
             JOIN members reader ON reader.id = dr.member_id
-            WHERE dr.document_id = brief.id
+            WHERE dr.document_id = brief.id AND reader.public_id = $2::uuid
         ), ARRAY[]::uuid[])
     )
 ), quest_players AS (
@@ -1747,38 +1955,78 @@ WITH requested AS (
            input.public_id AS document_id
     FROM unnest($1::uuid[]) WITH ORDINALITY AS input(public_id, ordinality)
 ), summaries AS (
-    SELECT r.input_index, r.document_id, d.id AS document_internal_id
+    SELECT r.input_index, r.document_id, d.id AS document_internal_id,
+           author.public_id AS summary_author_id,
+           COALESCE(document_readable(
+               d.public_id, author.public_id, d.status, d.visibility, d.policy,
+               $2::uuid, $3::text[], $4::text,
+               $5::boolean, $6::boolean,
+               COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr
+                 JOIN members reader ON reader.id=dr.member_id
+                 WHERE dr.document_id=d.id AND reader.public_id=$2::uuid), ARRAY[]::uuid[])
+           ), FALSE)::boolean AS summary_readable
     FROM requested r
     JOIN documents d ON d.public_id = r.document_id AND d.deleted_at IS NULL AND d.kind = 'summary'
-), admitted AS (
+    LEFT JOIN members author ON author.id=d.author_id
+), linked AS (
     SELECT s.input_index, s.document_id,
-           q.public_id AS quest_id, q.scheduled_at, l.summary_append_order,
+           q.public_id AS quest_id, q.short_code, q.scheduled_at, l.summary_append_order,
            dm.public_id AS dm_id, dm.display_name AS dm_display_name,
-           arc.name AS arc_name, gtm.game_day
+           arc.name AS arc_name, gtm.game_day, brief.title,
+           COALESCE(brief.id IS NOT NULL AND document_readable(
+               brief.public_id, brief_author.public_id, brief.status, brief.visibility, brief.policy,
+               $2::uuid, $3::text[], $4::text,
+               $5::boolean, $6::boolean,
+               COALESCE(ARRAY(
+                   SELECT brief.public_id FROM document_readers dr
+                   JOIN members reader ON reader.id = dr.member_id
+                   WHERE dr.document_id = brief.id AND reader.public_id = $2::uuid
+               ), ARRAY[]::uuid[])
+           ), FALSE) AS brief_readable
     FROM summaries s
     JOIN document_links l ON l.source_id = s.document_internal_id
       AND l.relation = 'summarizes' AND l.quest_target_id IS NOT NULL
     JOIN quests q ON q.id = l.quest_target_id AND q.deleted_at IS NULL
-    JOIN documents brief ON brief.id = q.document_id AND brief.deleted_at IS NULL
-    JOIN members brief_author ON brief_author.id = brief.author_id
+    LEFT JOIN documents brief ON brief.id = q.document_id AND brief.deleted_at IS NULL
+    LEFT JOIN members brief_author ON brief_author.id = brief.author_id
     JOIN members dm ON dm.id = q.dm_id
     LEFT JOIN quest_arcs arc ON arc.id = q.arc_id
     LEFT JOIN game_time_map gtm ON gtm.real_date = ((q.scheduled_at AT TIME ZONE 'UTC')::date)
-    WHERE document_readable(
-        brief.public_id, brief_author.public_id, brief.status, brief.visibility, brief.policy,
-        $2::uuid, $3::text[], $4::text,
-        $5::boolean, $6::boolean,
-        COALESCE(ARRAY(
-            SELECT reader.public_id FROM document_readers dr
-            JOIN members reader ON reader.id = dr.member_id
-            WHERE dr.document_id = brief.id
-        ), ARRAY[]::uuid[])
-    )
 )
-SELECT input_index, document_id, quest_id, scheduled_at, summary_append_order,
-       dm_id, dm_display_name, arc_name, game_day
-FROM admitted
-ORDER BY input_index, summary_append_order, quest_id
+SELECT s.input_index, s.document_id, linked.quest_id, COALESCE(linked.short_code,'')::text AS short_code,
+       readable_brief.title AS quest_title,
+       readable_quest.scheduled_at, COALESCE(linked.summary_append_order,0)::bigint AS summary_append_order,
+       readable_dm.public_id AS dm_id,
+       COALESCE(readable_dm.display_name,'')::text AS dm_display_name,
+       readable_arc.name AS arc_name, readable_game.game_day,
+       s.summary_author_id, s.summary_readable,
+       ARRAY(SELECT q.public_id FROM document_links l JOIN quests q ON q.id=l.quest_target_id
+         WHERE l.source_id=s.document_internal_id AND l.relation='summarizes' AND q.deleted_at IS NULL
+         ORDER BY l.summary_append_order,q.public_id)::uuid[] AS authoring_quest_ids,
+       ARRAY(SELECT c.public_id FROM document_links l JOIN characters c ON c.id=l.character_target_id
+         WHERE l.source_id=s.document_internal_id AND l.relation='subject' AND c.deleted_at IS NULL
+         ORDER BY l.summary_append_order,c.public_id)::uuid[] AS authoring_character_ids,
+       (EXISTS(SELECT 1 FROM linked linked_quest WHERE linked_quest.input_index=s.input_index)
+        AND NOT EXISTS(SELECT 1 FROM document_links l
+          LEFT JOIN quests q ON q.id=l.quest_target_id
+          WHERE l.source_id=s.document_internal_id AND l.target_type='quest' AND l.relation='summarizes'
+          AND (q.id IS NULL OR q.deleted_at IS NOT NULL))
+        AND NOT EXISTS(SELECT 1 FROM linked hidden WHERE hidden.input_index=s.input_index AND NOT hidden.brief_readable)
+        AND NOT EXISTS(SELECT 1 FROM document_links l
+          LEFT JOIN characters c ON c.id=l.character_target_id
+          WHERE l.source_id=s.document_internal_id AND l.target_type='character' AND l.relation='subject'
+          AND (c.id IS NULL OR c.deleted_at IS NOT NULL))
+        AND (SELECT count(*) FROM document_links l WHERE l.source_id=s.document_internal_id
+             AND l.character_target_id IS NOT NULL AND l.relation='subject')<=1
+       )::boolean AS authoring_complete
+FROM summaries s
+LEFT JOIN linked ON linked.input_index=s.input_index
+LEFT JOIN quests readable_quest ON readable_quest.public_id=linked.quest_id AND linked.brief_readable
+LEFT JOIN documents readable_brief ON readable_brief.id=readable_quest.document_id AND readable_brief.deleted_at IS NULL
+LEFT JOIN members readable_dm ON readable_dm.id=readable_quest.dm_id
+LEFT JOIN quest_arcs readable_arc ON readable_arc.id=readable_quest.arc_id
+LEFT JOIN game_time_map readable_game ON readable_game.real_date=((readable_quest.scheduled_at AT TIME ZONE 'UTC')::date)
+ORDER BY s.input_index, linked.summary_append_order, linked.quest_id
 `
 
 type ProductSummaryDerivedQuestFactsParams struct {
@@ -1791,15 +2039,22 @@ type ProductSummaryDerivedQuestFactsParams struct {
 }
 
 type ProductSummaryDerivedQuestFactsRow struct {
-	InputIndex         int32              `json:"input_index"`
-	DocumentID         interface{}        `json:"document_id"`
-	QuestID            pgtype.UUID        `json:"quest_id"`
-	ScheduledAt        pgtype.Timestamptz `json:"scheduled_at"`
-	SummaryAppendOrder int64              `json:"summary_append_order"`
-	DmID               pgtype.UUID        `json:"dm_id"`
-	DmDisplayName      string             `json:"dm_display_name"`
-	ArcName            pgtype.Text        `json:"arc_name"`
-	GameDay            pgtype.Int4        `json:"game_day"`
+	InputIndex            int32              `json:"input_index"`
+	DocumentID            interface{}        `json:"document_id"`
+	QuestID               pgtype.UUID        `json:"quest_id"`
+	ShortCode             string             `json:"short_code"`
+	QuestTitle            pgtype.Text        `json:"quest_title"`
+	ScheduledAt           pgtype.Timestamptz `json:"scheduled_at"`
+	SummaryAppendOrder    int64              `json:"summary_append_order"`
+	DmID                  pgtype.UUID        `json:"dm_id"`
+	DmDisplayName         string             `json:"dm_display_name"`
+	ArcName               pgtype.Text        `json:"arc_name"`
+	GameDay               pgtype.Int4        `json:"game_day"`
+	SummaryAuthorID       pgtype.UUID        `json:"summary_author_id"`
+	SummaryReadable       bool               `json:"summary_readable"`
+	AuthoringQuestIds     []pgtype.UUID      `json:"authoring_quest_ids"`
+	AuthoringCharacterIds []pgtype.UUID      `json:"authoring_character_ids"`
+	AuthoringComplete     bool               `json:"authoring_complete"`
 }
 
 // SummaryDerived set queries (≤3/chunk): quest links, participants, regions/pointcrawl.
@@ -1824,12 +2079,19 @@ func (q *Queries) ProductSummaryDerivedQuestFacts(ctx context.Context, arg Produ
 			&i.InputIndex,
 			&i.DocumentID,
 			&i.QuestID,
+			&i.ShortCode,
+			&i.QuestTitle,
 			&i.ScheduledAt,
 			&i.SummaryAppendOrder,
 			&i.DmID,
 			&i.DmDisplayName,
 			&i.ArcName,
 			&i.GameDay,
+			&i.SummaryAuthorID,
+			&i.SummaryReadable,
+			&i.AuthoringQuestIds,
+			&i.AuthoringCharacterIds,
+			&i.AuthoringComplete,
 		); err != nil {
 			return nil, err
 		}
@@ -1839,6 +2101,19 @@ func (q *Queries) ProductSummaryDerivedQuestFacts(ctx context.Context, arg Produ
 		return nil, err
 	}
 	return items, nil
+}
+
+const readProductDocumentAuthor = `-- name: ReadProductDocumentAuthor :one
+SELECT author.public_id AS id FROM documents d
+JOIN members author ON author.id=d.author_id
+WHERE d.public_id=$1::uuid
+`
+
+func (q *Queries) ReadProductDocumentAuthor(ctx context.Context, documentID pgtype.UUID) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, readProductDocumentAuthor, documentID)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
 }
 
 const replaceProductDocumentLinks = `-- name: ReplaceProductDocumentLinks :exec
@@ -1874,7 +2149,7 @@ WITH source_document AS MATERIALIZED (
  ORDER BY q.public_id FOR UPDATE OF q
 ), removed_quests AS (
  DELETE FROM document_links l USING source_document d
- WHERE l.source_id=d.id AND l.target_type='quest'
+ WHERE l.source_id=d.id AND l.target_type='quest' AND l.relation='summarizes'
    AND NOT EXISTS (SELECT 1 FROM requested_quests wanted WHERE wanted.id=l.quest_target_id)
    AND EXISTS (SELECT 1 FROM locked_quests locked WHERE locked.id=l.quest_target_id)
  RETURNING l.quest_target_id
@@ -1886,7 +2161,7 @@ WITH source_document AS MATERIALIZED (
  RETURNING quest_target_id
 ), removed_characters AS (
  DELETE FROM document_links l USING source_document d
- WHERE l.source_id=d.id AND l.target_type='character'
+ WHERE l.source_id=d.id AND l.target_type='character' AND l.relation='subject'
    AND ($3::uuid IS NULL OR NOT EXISTS (
      SELECT 1 FROM characters c WHERE c.id=l.character_target_id
        AND c.public_id=$3::uuid))
@@ -1912,6 +2187,36 @@ type ReplaceProductSummaryLinksParams struct {
 func (q *Queries) ReplaceProductSummaryLinks(ctx context.Context, arg ReplaceProductSummaryLinksParams) error {
 	_, err := q.db.Exec(ctx, replaceProductSummaryLinks, arg.DocumentID, arg.QuestIds, arg.CharacterID)
 	return err
+}
+
+const resolveProductMentionHandles = `-- name: ResolveProductMentionHandles :many
+SELECT public_id AS id, handle FROM members
+WHERE handle=ANY($1::text[]) ORDER BY public_id
+`
+
+type ResolveProductMentionHandlesRow struct {
+	ID     pgtype.UUID `json:"id"`
+	Handle string      `json:"handle"`
+}
+
+func (q *Queries) ResolveProductMentionHandles(ctx context.Context, handles []string) ([]ResolveProductMentionHandlesRow, error) {
+	rows, err := q.db.Query(ctx, resolveProductMentionHandles, handles)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ResolveProductMentionHandlesRow{}
+	for rows.Next() {
+		var i ResolveProductMentionHandlesRow
+		if err := rows.Scan(&i.ID, &i.Handle); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const revokeProductLieutenant = `-- name: RevokeProductLieutenant :exec

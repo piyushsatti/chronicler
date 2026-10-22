@@ -1,0 +1,9 @@
+query RetainedDocumentById($id: ID!) {
+  documentById(id: $id) {
+    id
+    slug
+    kind
+    category
+    title
+  }
+}

@@ -1,6 +1,7 @@
 mutation SyncCharacterDdb($characterId: ID!, $ddbUrl: String!, $meta: CommandMeta!) {
   syncCharacterDdb(characterId: $characterId, ddbUrl: $ddbUrl, meta: $meta) {
     succeeded
+    safeError
     attemptedAt
   }
 }

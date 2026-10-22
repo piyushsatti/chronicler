@@ -44,7 +44,7 @@ WITH job_alerts AS (
             ELSE 'Background job needs attention'
         END::text AS label,
         'warning'::text AS severity,
-        '/admin/operations'::text AS remediation_href,
+        '/admin/data-health'::text AS remediation_href,
         created_at AS first_seen_at,
         updated_at AS last_seen_at
     FROM background_jobs
@@ -55,7 +55,7 @@ heartbeat_alerts AS (
         'bot:heartbeat:stale'::text AS key,
         'Bot heartbeat is stale'::text AS label,
         'warning'::text AS severity,
-        '/admin/operations'::text AS remediation_href,
+        '/admin/data-health'::text AS remediation_href,
         latest.received_at AS first_seen_at,
         latest.received_at AS last_seen_at
     FROM (SELECT max(received_at) AS received_at FROM bot_heartbeats) latest
@@ -150,29 +150,52 @@ func (q *Queries) SiteAdminDeliveryCounts(ctx context.Context, deliveryState pgt
 const siteAdminDeliveryJobs = `-- name: SiteAdminDeliveryJobs :many
 WITH matching AS (
     SELECT b.public_id, b.state, b.attempts, b.redrive_count, b.safe_error_code, b.next_run_at,
-           b.created_at, b.updated_at, b.payload,
-           q.public_id AS quest_public_id, q.short_code AS quest_short_code, d.title AS quest_title,
-           q.discord_desired_revision, q.discord_applied_revision, q.discord_message_id, q.event_url
+           b.created_at, b.updated_at, b.payload
     FROM background_jobs b
-    LEFT JOIN quests q ON q.public_id::text = b.payload ->> 'questId'
-    LEFT JOIN documents d ON d.id = q.document_id
     WHERE b.kind = 'quest_discord_delivery'
       AND ($1::text IS NULL OR b.state = $1)
 ), page AS (
-    SELECT public_id, state, attempts, redrive_count, safe_error_code, next_run_at, created_at, updated_at, payload, quest_public_id, quest_short_code, quest_title, discord_desired_revision, discord_applied_revision, discord_message_id, event_url FROM matching ORDER BY updated_at DESC, public_id LIMIT $3::integer OFFSET $2::integer
+    SELECT public_id, state, attempts, redrive_count, safe_error_code, next_run_at, created_at, updated_at, payload FROM matching ORDER BY updated_at DESC, public_id LIMIT $3::integer OFFSET $2::integer
+), projected AS (
+    SELECT page.public_id, page.state, page.attempts, page.redrive_count, page.safe_error_code, page.next_run_at, page.created_at, page.updated_at, page.payload,
+           q.public_id AS quest_public_id, q.short_code AS quest_short_code,
+           (CASE WHEN d.id IS NOT NULL AND d.deleted_at IS NULL AND document_readable(
+             d.public_id, author.public_id, d.status, d.visibility, d.policy,
+             $4::uuid, $5::text[], $6::text,
+             $7::boolean, $8::boolean, $9::uuid[])
+             THEN d.title END)::text AS quest_title,
+           COALESCE($7::boolean AND d.id IS NOT NULL AND d.deleted_at IS NULL
+             AND document_readable(d.public_id, author.public_id, d.status, d.visibility, d.policy,
+               $4::uuid, $5::text[], $6::text,
+               $7::boolean, $8::boolean, $9::uuid[])
+             AND NOT document_readable(d.public_id, author.public_id, d.status, d.visibility, d.policy,
+               $4::uuid, $5::text[], $6::text,
+               false, $8::boolean, $9::uuid[]), false)::boolean AS admin_override,
+           q.discord_desired_revision, q.discord_applied_revision, q.discord_message_id, q.event_url
+    FROM page
+    LEFT JOIN quests q ON q.public_id::text = page.payload ->> 'public_id' AND q.deleted_at IS NULL
+    LEFT JOIN documents d ON d.id = q.document_id AND d.kind = 'quest_brief'
+    LEFT JOIN members author ON author.id = d.author_id
 )
 SELECT (SELECT count(*) FROM matching)::bigint AS total,
-       page.public_id, page.state, page.attempts, page.redrive_count, page.safe_error_code,
-       page.next_run_at, page.created_at, page.updated_at, page.quest_public_id, page.quest_short_code,
-       page.quest_title, page.discord_desired_revision, page.discord_applied_revision, page.discord_message_id,
-       page.event_url
-FROM (SELECT 1) marker LEFT JOIN page ON true
+       projected.public_id, projected.state, projected.attempts, projected.redrive_count, projected.safe_error_code,
+       projected.next_run_at, projected.created_at, projected.updated_at, projected.quest_public_id, projected.quest_short_code,
+       projected.quest_title, projected.discord_desired_revision, projected.discord_applied_revision, projected.discord_message_id,
+       projected.event_url, COALESCE(projected.admin_override, false)::boolean AS admin_override
+FROM (SELECT 1) marker LEFT JOIN projected ON true
+ORDER BY projected.updated_at DESC, projected.public_id
 `
 
 type SiteAdminDeliveryJobsParams struct {
-	DeliveryState pgtype.Text `json:"delivery_state"`
-	PageOffset    int32       `json:"page_offset"`
-	PageLimit     int32       `json:"page_limit"`
+	DeliveryState pgtype.Text   `json:"delivery_state"`
+	PageOffset    int32         `json:"page_offset"`
+	PageLimit     int32         `json:"page_limit"`
+	ViewerID      pgtype.UUID   `json:"viewer_id"`
+	ViewerRoles   []string      `json:"viewer_roles"`
+	ViewerHandle  string        `json:"viewer_handle"`
+	ViewerAdmin   bool          `json:"viewer_admin"`
+	ViewerLiveDm  bool          `json:"viewer_live_dm"`
+	ReaderIds     []pgtype.UUID `json:"reader_ids"`
 }
 
 type SiteAdminDeliveryJobsRow struct {
@@ -192,10 +215,21 @@ type SiteAdminDeliveryJobsRow struct {
 	DiscordAppliedRevision pgtype.Int4        `json:"discord_applied_revision"`
 	DiscordMessageID       pgtype.Text        `json:"discord_message_id"`
 	EventUrl               pgtype.Text        `json:"event_url"`
+	AdminOverride          bool               `json:"admin_override"`
 }
 
 func (q *Queries) SiteAdminDeliveryJobs(ctx context.Context, arg SiteAdminDeliveryJobsParams) ([]SiteAdminDeliveryJobsRow, error) {
-	rows, err := q.db.Query(ctx, siteAdminDeliveryJobs, arg.DeliveryState, arg.PageOffset, arg.PageLimit)
+	rows, err := q.db.Query(ctx, siteAdminDeliveryJobs,
+		arg.DeliveryState,
+		arg.PageOffset,
+		arg.PageLimit,
+		arg.ViewerID,
+		arg.ViewerRoles,
+		arg.ViewerHandle,
+		arg.ViewerAdmin,
+		arg.ViewerLiveDm,
+		arg.ReaderIds,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -220,6 +254,7 @@ func (q *Queries) SiteAdminDeliveryJobs(ctx context.Context, arg SiteAdminDelive
 			&i.DiscordAppliedRevision,
 			&i.DiscordMessageID,
 			&i.EventUrl,
+			&i.AdminOverride,
 		); err != nil {
 			return nil, err
 		}

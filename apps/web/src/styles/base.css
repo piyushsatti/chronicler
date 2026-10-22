@@ -1,6 +1,7 @@
 /* Skin Imposition chrome with Chronicler tokens (no raw hex here).
    Token/layer imports live in styles/index.css. */
 :root {
+  --site-header-height: var(--sp-8);
   --imposition-shell-nav-background: var(--color-bg-panel);
   --imposition-shell-border-color: var(--color-border);
 }
@@ -71,6 +72,30 @@ a {
   color: var(--color-text);
 }
 
+.state-denied {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-6) var(--sp-5);
+  max-inline-size: 40rem;
+}
+
+.state-denied > p {
+  margin: 0;
+  color: var(--color-text-2);
+}
+
+.state-inline {
+  align-items: center;
+  margin: 0;
+  color: var(--color-text-2);
+}
+
+.state-inline > p {
+  margin: 0;
+}
+
 .state-loading {
   border-radius: var(--rad-sm);
   background: linear-gradient(
@@ -97,14 +122,37 @@ a {
 /* Default gaps for target compositions; the preserved data-gap/data-wrap
    rules remain authoritative in the same components layer. */
 @layer components {
-  .stack { gap: var(--sp-4); }
-  .row { gap: var(--sp-3); }
+  .stack {
+    gap: var(--sp-4);
+  }
+  .row {
+    gap: var(--sp-3);
+  }
 }
 
+/* `main[data-shell-main]` is a column flex container, and auto inline
+   margins switch off cross-axis stretch, so without an explicit width the
+   shell shrinks to its content. width:100% + max-width keeps it full width
+   up to the same 1180px measure as `.page`; side gutters come from the
+   shared `.page` rule in shell.css. */
 .page-shell {
+  inline-size: 100%;
   max-width: 73.75rem;
+  min-width: 0;
   margin: 0 auto;
   padding: var(--sp-7) var(--sp-4) var(--sp-8);
+}
+
+.page-shell[data-max='wide'] {
+  max-width: 86.25rem;
+}
+
+.page-shell[data-max='narrow'] {
+  max-width: 56.25rem;
+}
+
+.page-shell > .type-display {
+  overflow-wrap: anywhere;
 }
 
 [data-shell-nav] {
@@ -144,7 +192,7 @@ a {
 }
 
 .site-chrome[data-site-pattern='bottom-bar'] .site-chrome__top {
-  min-height: var(--sp-7);
+  min-height: var(--sp-8);
   gap: var(--sp-2);
   padding-inline: var(--sp-3);
 }
@@ -175,7 +223,6 @@ a {
   align-items: center;
   gap: var(--sp-1);
   min-width: 0;
-  overflow-x: auto;
 }
 
 .site-chrome__link {
@@ -190,6 +237,7 @@ a {
 }
 
 .site-chrome__links .site-chrome__link {
+  flex: 0 0 auto;
   height: 2.25rem;
   padding: 0 var(--sp-3);
   border-radius: var(--rad-pill);
@@ -205,9 +253,73 @@ a {
   color: var(--color-bg-deep);
 }
 
+.nav-drawer-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: var(--color-backdrop);
+}
+
+.nav-drawer-panel {
+  position: fixed;
+  top: var(--site-header-height, var(--sp-8));
+  right: 0;
+  left: 0;
+  z-index: 41;
+  max-height: calc(100dvh - var(--site-header-height, var(--sp-8)));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--sp-2);
+  background: color-mix(in srgb, var(--color-bg-deep) 97%, transparent);
+  border-bottom: 1px solid var(--color-border);
+  box-shadow: var(--shadow-3);
+  backdrop-filter: blur(12px);
+}
+
+.nav-drawer-title {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.nav-drawer-nav {
+  display: flex;
+  flex-direction: column;
+}
+
+.nav-drawer-link {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: var(--sp-3) var(--sp-4);
+  border-radius: var(--rad-sm);
+  color: var(--color-text-2);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-decoration: none;
+  overflow-wrap: anywhere;
+}
+
+.nav-drawer-link:hover {
+  background: var(--color-bg-surface);
+  color: var(--color-text);
+}
+
+.nav-drawer-link[aria-current='page'] {
+  color: var(--color-accent);
+}
+
+.nav-drawer-link:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 .site-chrome__bottom {
-  position: sticky;
-  bottom: 0;
   z-index: 2;
   display: flex;
   align-items: stretch;
@@ -221,7 +333,8 @@ a {
 }
 
 .site-chrome__bottom .site-chrome__link {
-  flex: 1 1 0;
+  /* Content-sized, but shrinkable: six links keep full labels and an eighth never overflows. */
+  flex: 1 1 auto;
   flex-direction: column;
   justify-content: center;
   gap: 0.125rem;
@@ -272,22 +385,6 @@ a {
   color: var(--color-text-3);
   font-family: var(--font-mono);
   font-size: 0.625rem;
-}
-
-.site-chrome[data-site-pattern='bottom-bar'] .site-chrome__search {
-  width: 2.5rem;
-  min-width: 0;
-  justify-content: center;
-  padding: 0;
-}
-
-.site-chrome[data-site-pattern='bottom-bar'] .site-chrome__search-label,
-.site-chrome[data-site-pattern='bottom-bar'] .site-chrome__search-kbd {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
 }
 
 .site-chrome__login {

@@ -1,0 +1,7 @@
+mutation QuestSetArc($id: ID!, $input: QuestEditInput!, $meta: CommandMeta!) {
+  updateQuest(id: $id, input: $input, meta: $meta) {
+    id
+    updatedAt
+    arcId
+  }
+}

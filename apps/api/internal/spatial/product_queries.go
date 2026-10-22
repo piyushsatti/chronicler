@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"reflect"
 	"strings"
+	"time"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
@@ -72,8 +73,18 @@ func (s ProductQueries) RenderStoredGameDate(gameDay *int32, definition *json.Ra
 	if gameDay == nil {
 		return nil, nil
 	}
-	_ = definition
-	return &product.GameDateView{Day: *gameDay}, nil
+	if definition == nil {
+		return nil, apierr.New(apierr.Internal, "stored calendar definition unavailable")
+	}
+	parsed, err := parseCalendarDefinition(*definition)
+	if err != nil {
+		return nil, apierr.New(apierr.Internal, "stored calendar definition invalid")
+	}
+	view, err := renderCalendarDate(*gameDay, parsed)
+	if err != nil {
+		return nil, apierr.New(apierr.Internal, "stored game date cannot be rendered")
+	}
+	return &view, nil
 }
 
 func (s ProductQueries) ArchonAssignments(ctx context.Context, actor auth.Authority, spec ArchonAssignmentsSpec) (ArchonPage, error) {
@@ -107,6 +118,16 @@ func (s ProductQueries) RegionActivity(ctx context.Context, actor auth.Authority
 }
 
 func (s ProductQueries) GameCalendar(ctx context.Context, actor auth.Authority, spec GameCalendarSpec) (GameCalendarView, error) {
+	from, fromErr := time.Parse("2006-01-02", string(spec.RealFrom))
+	to, toErr := time.Parse("2006-01-02", string(spec.RealTo))
+	if fromErr != nil || toErr != nil || !from.Before(to) || to.Sub(from) > 366*24*time.Hour {
+		return GameCalendarView{}, apierr.New(apierr.Invalid, "invalid calendar date range")
+	}
+	asOf, err := product.UTCNow(s.Clock)
+	if err != nil {
+		return GameCalendarView{}, err
+	}
+	spec.AsOf = asOf
 	if err := s.admit(ctx, actor, auth.Operation("Query.gameCalendar")); err != nil {
 		return GameCalendarView{}, err
 	}
@@ -161,7 +182,16 @@ func (s ProductQueries) Regions(ctx context.Context, actor auth.Authority, spec 
 	if err := s.admit(ctx, actor, auth.Operation("Query.regions")); err != nil {
 		return nil, err
 	}
-	return s.Reads.Region.ReadRegions(ctx, actor, spec)
+	views, err := s.Reads.Region.ReadRegions(ctx, actor, spec)
+	if err != nil {
+		return nil, err
+	}
+	for i := range views {
+		if err := s.setRegionCapability(ctx, actor, &views[i]); err != nil {
+			return nil, err
+		}
+	}
+	return views, nil
 }
 
 func (s ProductQueries) Maps(ctx context.Context, actor auth.Authority, spec MapsSpec) ([]MapView, error) {
@@ -171,7 +201,16 @@ func (s ProductQueries) Maps(ctx context.Context, actor auth.Authority, spec Map
 	if err := s.admit(ctx, actor, auth.Operation("Query.maps")); err != nil {
 		return nil, err
 	}
-	return s.Reads.Map.ReadMaps(ctx, actor, spec)
+	views, err := s.Reads.Map.ReadMaps(ctx, actor, spec)
+	if err != nil {
+		return nil, err
+	}
+	for i := range views {
+		if err := s.setMapCapability(ctx, actor, &views[i]); err != nil {
+			return nil, err
+		}
+	}
+	return views, nil
 }
 
 func (s ProductQueries) GameDatesForRealDates(ctx context.Context, dates []product.Date) ([]product.BatchResult[product.GameDateView], error) {
@@ -237,5 +276,12 @@ func (s ProductQueries) Map(ctx context.Context, actor auth.Authority, spec MapS
 	if err := s.admit(ctx, actor, auth.Operation("Query.map")); err != nil {
 		return nil, err
 	}
-	return s.Reads.Map.ReadMap(ctx, actor, spec)
+	view, err := s.Reads.Map.ReadMap(ctx, actor, spec)
+	if err != nil || view == nil {
+		return view, err
+	}
+	if err := s.setMapCapability(ctx, actor, view); err != nil {
+		return nil, err
+	}
+	return view, nil
 }

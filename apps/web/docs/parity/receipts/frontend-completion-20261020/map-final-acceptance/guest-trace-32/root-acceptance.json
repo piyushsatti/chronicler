@@ -1,0 +1,25 @@
+{
+  "at": "2026-10-20T19:27:10.254850+00:00",
+  "nativeSession": 45688,
+  "exit": 0,
+  "frontendEpoch": 32,
+  "apiEpoch": 12,
+  "guestRoute": "/map",
+  "viewport": {
+    "width": 1920
+  },
+  "tests": 1,
+  "traceRequestsInspected": 14,
+  "authorizationHeaders": 0,
+  "cookieHeaders": 0,
+  "separateFromAll40TimingTrials": true,
+  "authenticatedTrace": false,
+  "artifacts": {
+    "playwright-report.json": "336d05a494c7a7665937265f1c64d558b07b1f5118ae4fe25a630b5bb3e56603",
+    "browser-results/route-acceptance-guest-reads-map-guest-chromium-1920/trace.zip": "1f180b8756ab49101fd6e8e643996d251fcac17a8f80c5a682c30236751db47d"
+  },
+  "priorRejectedLaunches": [
+    "../guest-trace-32-rejected-launch.json",
+    "../guest-trace-32-rejected-selection.json"
+  ]
+}

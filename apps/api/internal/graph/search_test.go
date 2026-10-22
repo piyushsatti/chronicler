@@ -2,72 +2,58 @@ package graph
 
 import (
 	"context"
+	"errors"
 	"log/slog"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
+	"github.com/piyushsatti/chronicler/apps/api/internal/member"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
+	"github.com/piyushsatti/chronicler/apps/api/internal/site"
 )
 
-type searchDocumentsRepo struct {
-	last document.DocumentsSpec
-	out  document.DocumentListResult
-	err  error
+type searchDiscovery struct {
+	calls int
+	query string
+	kinds []string
+	page  product.Page
+	out   document.DiscoveryPage
 }
 
-func (r *searchDocumentsRepo) ReadCodexCategories(context.Context, auth.Authority, document.CodexCategoriesSpec) ([]document.CategoryCountView, error) {
+func (s *searchDiscovery) SearchDiscovery(_ context.Context, _ auth.Authority, query string, kinds []string, page product.Page) (document.DiscoveryPage, error) {
+	s.query, s.kinds, s.page = query, kinds, page
+	s.calls++
+	return s.out, nil
+}
+func (*searchDiscovery) RecentDiscovery(context.Context, auth.Authority) ([]document.DiscoveryBucket, error) {
 	return nil, nil
 }
-func (r *searchDocumentsRepo) ReadCodexDirectory(context.Context, auth.Authority, document.CodexDirectorySpec) (document.CodexDirectoryResult, error) {
-	return document.CodexDirectoryResult{}, nil
+func (*searchDiscovery) CountDiscovery(context.Context, auth.Authority) (document.DiscoveryCounts, error) {
+	return document.DiscoveryCounts{}, nil
 }
-func (r *searchDocumentsRepo) ReadCodexEntry(context.Context, auth.Authority, document.CodexEntrySpec) (*document.CodexEntryCardView, error) {
-	return nil, nil
+
+type searchSiteRepo struct {
+	site.SiteReadRepository
+	last  site.SearchSpec
+	calls int
 }
-func (r *searchDocumentsRepo) ReadDocument(context.Context, auth.Authority, document.DocumentSpec) (*document.DocumentView, error) {
-	return nil, nil
-}
-func (r *searchDocumentsRepo) ReadDocumentBacklinks(context.Context, auth.Authority, document.DocumentBacklinksSpec) ([]document.DocumentLinkView, error) {
-	return nil, nil
-}
-func (r *searchDocumentsRepo) ReadDocumentById(context.Context, auth.Authority, document.DocumentByIdSpec) (*document.DocumentView, error) {
-	return nil, nil
-}
-func (r *searchDocumentsRepo) ReadDocumentRevisions(context.Context, auth.Authority, document.DocumentRevisionsSpec) (document.DocumentRevisionPage, error) {
-	return document.DocumentRevisionPage{}, nil
-}
-func (r *searchDocumentsRepo) ReadDocuments(_ context.Context, _ auth.Authority, spec document.DocumentsSpec) (document.DocumentListResult, error) {
+
+func (r *searchSiteRepo) ReadMemberSearch(_ context.Context, _ auth.Authority, spec site.SearchSpec) (site.MemberDiscoveryPage, error) {
 	r.last = spec
-	return r.out, r.err
+	r.calls++
+	return site.MemberDiscoveryPage{Items: []member.MemberSearchHitView{{MemberId: "member-id", Handle: "alpha", DisplayName: "Alpha"}}, Total: 3, Order: "handle_asc_id_asc"}, nil
 }
-func (r *searchDocumentsRepo) ReadDocumentsTrash(context.Context, auth.Authority, document.DocumentsTrashSpec) (document.DocumentListResult, error) {
-	return document.DocumentListResult{}, nil
-}
-func (r *searchDocumentsRepo) ReadLieutenantAssignments(context.Context, auth.Authority, document.LieutenantAssignmentsSpec) (document.LieutenantPage, error) {
-	return document.LieutenantPage{}, nil
-}
-func (r *searchDocumentsRepo) ReadPreviewBody(context.Context, auth.Authority, document.PreviewBodySpec) (string, error) {
-	return "", nil
-}
-
-type searchDocumentsBatch struct{}
-
-func (searchDocumentsBatch) ReadBatchDocuments(context.Context, auth.Authority, []document.DocumentKey) ([]product.BatchResult[document.DocumentView], error) {
-	return nil, nil
-}
-func (searchDocumentsBatch) ReadBatchDmTables(context.Context, auth.Authority, []document.IDKey) ([]product.BatchResult[document.DocumentView], error) {
-	return nil, nil
-}
-func (searchDocumentsBatch) ReadBatchSummaryDerived(context.Context, auth.Authority, []document.IDKey) ([]product.BatchResult[document.SummaryDerivedView], error) {
-	return nil, nil
-}
-func (searchDocumentsBatch) ReadBatchDocumentSubjects(context.Context, auth.Authority, []document.DocumentSubjectsKey) ([]product.BatchResult[document.SubjectLinkList], error) {
-	return nil, nil
-}
-func (searchDocumentsBatch) ReadBatchReaderIds(context.Context, auth.Authority, []document.IDKey) ([]product.BatchResult[document.ReaderIDList], error) {
-	return nil, nil
+func (*searchSiteRepo) ReadSearchableKinds(context.Context, auth.Authority, site.SearchableKindsSpec) ([]site.SearchKindView, error) {
+	out := []site.SearchKindView{}
+	for _, kind := range site.SearchableKinds() {
+		out = append(out, site.SearchKindView{Key: kind.Key, Label: kind.Label, Searchable: kind.Searchable})
+	}
+	return out, nil
 }
 
 type searchAudience struct{}
@@ -92,13 +78,10 @@ func (searchAudience) HasArchon(context.Context, string, string) (bool, error) {
 	return false, nil
 }
 
-func testSearchDocumentQueries(t *testing.T, repo *searchDocumentsRepo) *document.ProductQueries {
+func testHybridSearchResolver(t *testing.T, repo *searchSiteRepo, discovery *searchDiscovery) *Resolver {
 	t.Helper()
 	policy, err := auth.NewPolicy(auth.PolicyProviders{
-		Assignments:          searchAudience{},
-		Audience:             searchAudience{},
-		Identities:           searchAudience{},
-		SummaryRelationships: searchAudience{},
+		Assignments: searchAudience{}, Audience: searchAudience{}, Identities: searchAudience{}, SummaryRelationships: searchAudience{},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -107,54 +90,142 @@ func testSearchDocumentQueries(t *testing.T, repo *searchDocumentsRepo) *documen
 	if err != nil {
 		t.Fatal(err)
 	}
-	queries, err := document.NewProductQueries(
-		document.ProductReadRepos{Document: repo, Batch: searchDocumentsBatch{}},
-		policy,
-		func() time.Time { return time.Date(2026, 10, 18, 20, 0, 0, 0, time.UTC) },
-		observer,
-	)
+	queries, err := site.NewProductQueries(site.ProductReadRepos{Site: repo}, policy, time.Now, observer, discovery)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return queries
+	return &Resolver{Services: Services{SiteQueries: queries}}
 }
 
-func TestSearchUsesProductDocuments(t *testing.T) {
-	cat := "lore"
-	repo := &searchDocumentsRepo{out: document.DocumentListResult{
-		Total: 1,
-		Items: []document.DocumentView{{
-			Id: "11111111-1111-4111-8111-111111111111", Kind: "codex_entry", Category: &cat,
-			Slug: "alpha", Title: "Alpha Codex",
-		}},
-	}}
-	r := &Resolver{Services: Services{DocumentQueries: testSearchDocumentQueries(t, repo)}}
-	actor, err := auth.NewAuthority("reader", []auth.Role{auth.Player}, "active", "approved")
+func anonymousSearchContext(t *testing.T) context.Context {
+	t.Helper()
+	state, err := NewRequestState(auth.Claims{}, func(context.Context, string) (auth.Authority, error) {
+		t.Fatal("anonymous request unexpectedly resolved member authority")
+		return auth.Authority{}, nil
+	}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	ctx := auth.WithAuthority(context.Background(), actor)
+	return WithRequestState(context.Background(), state)
+}
 
-	got, err := r.Query().Search(ctx, "Alpha", nil, 20, 0)
+func TestSearchUsesBothProductDiscoveryFamilies(t *testing.T) {
+	cat, shortCode := "lore", "Q12"
+	discovery := &searchDiscovery{out: document.DiscoveryPage{
+		Total: 7, Order: "rank_desc_updated_at_desc_id_desc",
+		Items: []document.DocumentSearchHitView{{Id: "doc-id", Kind: "quest_brief", Category: &cat, Slug: "alpha", Title: "Alpha", Snippet: "Safe body", QuestShortCode: &shortCode}},
+	}}
+	repo := &searchSiteRepo{}
+	r := testHybridSearchResolver(t, repo, discovery)
+	got, err := r.Query().Search(anonymousSearchContext(t), "Alpha", nil, 2, 2)
 	if err != nil {
-		t.Fatalf("Search: %v", err)
+		t.Fatal(err)
 	}
-	if repo.last.Filters == nil || repo.last.Filters.Search == nil || *repo.last.Filters.Search != "Alpha" {
-		t.Fatalf("DocumentsSpec filters = %+v", repo.last.Filters)
+	if discovery.query != "Alpha" || discovery.kinds != nil || discovery.page != (product.Page{Limit: 2, Offset: 2}) || repo.last.Limit != 2 || repo.last.Offset != 2 {
+		t.Fatalf("family paging docs=%+v members=%+v", discovery, repo.last)
 	}
-	if repo.last.Limit != 20 || repo.last.Offset != 0 {
-		t.Fatalf("page = limit %d offset %d", repo.last.Limit, repo.last.Offset)
+	if got.Query != "Alpha" || got.DocumentTotal != 7 || got.MemberTotal != 3 || got.DocumentOrder != "rank_desc_updated_at_desc_id_desc" || got.MemberOrder != "handle_asc_id_asc" {
+		t.Fatalf("meta=%+v", got)
 	}
-	if got.Query != "Alpha" || got.DocumentTotal != 1 || got.DocumentOrder != documentListOrder {
-		t.Fatalf("result meta = %+v", got)
+	if len(got.Documents) != 1 || got.Documents[0].Snippet != "Safe body" || got.Documents[0].QuestShortCode == nil || *got.Documents[0].QuestShortCode != "Q12" || len(got.Members) != 1 || got.Members[0].Handle != "alpha" {
+		t.Fatalf("hits=%+v members=%+v", got.Documents, got.Members)
 	}
-	if len(got.Documents) != 1 || got.Documents[0].Slug != "alpha" || got.Documents[0].Snippet != "Alpha Codex" {
-		t.Fatalf("documents = %+v", got.Documents)
+}
+
+func TestSearchKindsAndPages(t *testing.T) {
+	for _, tc := range []struct {
+		name                        string
+		kinds                       []string
+		limit, offset               int
+		invalid, documents, members bool
+	}{
+		{name: "empty none", kinds: []string{}, limit: 1},
+		{name: "member only", kinds: []string{"member"}, limit: 1, members: true},
+		{name: "document only", kinds: []string{"rule"}, limit: 1, documents: true},
+		{name: "unknown rejected", kinds: []string{"hex"}, limit: 1, invalid: true},
+		{name: "zero limit", limit: 0, invalid: true},
+		{name: "negative offset", limit: 1, offset: -1, invalid: true},
+		{name: "overflow limit", limit: 1 << 32, invalid: true},
+		{name: "overflow offset", limit: 1, offset: 1 << 32, invalid: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repo, discovery := &searchSiteRepo{}, &searchDiscovery{out: document.DiscoveryPage{Items: []document.DocumentSearchHitView{}, Order: "rank_desc_updated_at_desc_id_desc"}}
+			r := testHybridSearchResolver(t, repo, discovery)
+			got, err := r.Query().Search(anonymousSearchContext(t), "needle", tc.kinds, tc.limit, tc.offset)
+			if tc.invalid {
+				failure, ok := errors.AsType[*apierr.Error](err)
+				if !ok || failure.Code != apierr.Invalid {
+					t.Fatalf("error=%v", err)
+				}
+				if repo.calls != 0 || discovery.calls != 0 {
+					t.Fatal("invalid request reached a reader")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if (discovery.query != "") != tc.documents || (repo.calls != 0) != tc.members || got.Documents == nil || got.Members == nil {
+				t.Fatalf("family selection=%+v / %+v / %+v", discovery, repo, got)
+			}
+		})
 	}
-	if got.Documents[0].Category == nil || *got.Documents[0].Category != "lore" {
-		t.Fatalf("category = %v", got.Documents[0].Category)
+}
+
+func TestSearchRejectsInvalidQueryAndKindsBeforeReaders(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		query   string
+		kinds   []string
+		invalid bool
+	}{
+		{name: "empty query", query: "", invalid: true},
+		{name: "one Unicode character", query: "界"},
+		{name: "200 Unicode characters", query: strings.Repeat("😀", 200)},
+		{name: "201 Unicode characters", query: strings.Repeat("😀", 201), invalid: true},
+		{name: "mixed Unicode boundary", query: strings.Repeat("a", 199) + "界"},
+		{name: "mixed Unicode overflow", query: strings.Repeat("a", 200) + "界", invalid: true},
+		{name: "100 kinds", query: "needle", kinds: slices.Repeat([]string{"rule", "member"}, 50)},
+		{name: "101 kinds", query: "needle", kinds: slices.Repeat([]string{"member"}, 101), invalid: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := &searchSiteRepo{}
+			discovery := &searchDiscovery{out: document.DiscoveryPage{Items: []document.DocumentSearchHitView{}, Order: "rank_desc_updated_at_desc_id_desc"}}
+			r := testHybridSearchResolver(t, repo, discovery)
+			got, err := r.Query().Search(anonymousSearchContext(t), tc.query, tc.kinds, 101, 0)
+			if tc.invalid {
+				failure, ok := errors.AsType[*apierr.Error](err)
+				if !ok || failure.Code != apierr.Invalid {
+					t.Fatalf("error=%v, want INVALID", err)
+				}
+				if repo.calls != 0 || discovery.calls != 0 {
+					t.Fatal("invalid request reached a reader")
+				}
+				return
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if repo.calls != 1 || discovery.calls != 1 || discovery.query != tc.query || repo.last.Query != tc.query || got.Query != tc.query || discovery.page.Limit != 101 || repo.last.Limit != 101 {
+				t.Fatalf("valid boundary not forwarded unchanged docs=%+v members=%+v result=%+v", discovery, repo, got)
+			}
+		})
 	}
-	if got.Members == nil || len(got.Members) != 0 || got.MemberTotal != 0 {
-		t.Fatalf("members must stay empty under documents-only Search: %+v", got.Members)
+}
+
+func TestSearchableKindsUsesAcceptedVocabulary(t *testing.T) {
+	r := testHybridSearchResolver(t, &searchSiteRepo{}, &searchDiscovery{})
+	got, err := r.Query().SearchableKinds(anonymousSearchContext(t))
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"codex_entry", "rule", "summary", "quest_brief", "community", "member"}
+	if len(got) != len(want) {
+		t.Fatalf("kinds=%+v", got)
+	}
+	for i, kind := range got {
+		if kind.Key != want[i] || !kind.Searchable {
+			t.Fatalf("kind=%+v want %s", kind, want[i])
+		}
 	}
 }

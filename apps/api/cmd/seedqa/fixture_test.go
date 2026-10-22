@@ -67,7 +67,7 @@ func TestQAColumnsMatchInitialDDL(t *testing.T) {
 	}
 	createTable := regexp.MustCompile(`(?s)CREATE TABLE (\w+) \((.*?)\n\);`)
 	column := regexp.MustCompile(`(?m)^    ([a-z][a-z0-9_]*) [a-zA-Z]`)
-	alterColumn := regexp.MustCompile(`(?m)^ALTER TABLE (\w+) (?:(ADD|DROP) COLUMN (\w+)|(RENAME) COLUMN (\w+) TO (\w+))`)
+	alterColumn := regexp.MustCompile(`(?m)^ALTER TABLE (\w+) (?:(ADD|DROP) COLUMN (?:IF (?:NOT )?EXISTS )?(\w+)|(RENAME) COLUMN (\w+) TO (\w+))`)
 	for _, entry := range entries {
 		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".sql") {
 			continue

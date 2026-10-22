@@ -1,0 +1,51 @@
+{
+  "at": "2026-10-20T22:46:49.280770+00:00",
+  "nativeSession": 92583,
+  "exit": 0,
+  "test": "TestQuestBrowserLifecycleCurrentJourneys",
+  "nativeSeconds": 40.14,
+  "nativeCompileReceiptSha256": "8d991e8697c0ed7ac297508297648c63c67a8fdad847a02657cd7bbfcc60ee8f",
+  "completedJourneyCount": 9,
+  "observedOperationCount": 385,
+  "operationOutcomeLimitation": "Original nine-driver receipt stores operation identity, not per-operation outcome fields; terminal native observer/SQL gate passed. No invented per-operation phase or timestamps.",
+  "summaryResponsiveWidths": [
+    390,
+    768,
+    1920
+  ],
+  "readonlyMutationCountBeforeAfter": [
+    24,
+    24
+  ],
+  "rootViewedImages": [
+    "quest-summary-390.png",
+    "quest-summary-768.png"
+  ],
+  "nativeSqlReadbackCounts": {
+    "jobs": 4,
+    "links": 4,
+    "ledger": 1,
+    "points": 3,
+    "quests": 51,
+    "roster": 4,
+    "receipts": 33,
+    "documents": 53,
+    "characters": 4
+  },
+  "invariants": {
+    "cacheViolations": 0,
+    "capacityViolations": 0,
+    "duplicateQuestAwards": 0
+  },
+  "databaseDropped": true,
+  "sourceDrift": false,
+  "frontend": "Current source625 equivalent immutableBuild38 5158792f/7fe52f1e; isolated fixture Vite with native15 realAPI, not preview4205",
+  "scope": "Nine original lifecycle journeys and three additive summary layouts. Default thirteen-stage Calendar composition remains separate and failed; no provider/visual approval claim.",
+  "artifacts": {
+    "browser-receipt.json": "c8cb8182db9179bd602013e6f1a0e66ac3d69cc2e1315294eb9cf603adab0001",
+    "native-persisted-readback.json": "0af8788175006c9861a92f9486591509f85ab51c76e208ae5148951b0257c481",
+    "native-invariants.json": "34130fecf6209e3c7252bec4d6594c80efc5ada52e5150a77ff16a15b9429c74",
+    "native-cleanup.json": "47a378a94f61c9694127dbf3066fd545455a2b4973af457b5409b5ac84e9bae5",
+    "native.log": "79c2a292e71163175941250a1e5f2fc9082cf0674a6f49089eea659919b1d2bb"
+  }
+}

@@ -30,11 +30,13 @@ export function Button({
       disabled={isDisabled}
       className={cx(
         'btn',
+        // Canonical variant/size hooks, styled in atlas.css / primitives.css.
         `btn--${variant}`,
+        `btn--${size}`,
+        // Legacy aliases: the vendored .hf2 sheet (atlas-components.css) still
+        // keys variant/size on bare classes, so Button keeps emitting them.
         variant === 'primary' && 'primary',
         variant === 'ghost' && 'ghost',
-        variant === 'danger' && 'btn--danger',
-        `btn--${size}`,
         size !== 'md' && size,
         className,
       )}

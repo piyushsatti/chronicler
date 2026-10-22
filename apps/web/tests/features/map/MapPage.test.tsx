@@ -1,20 +1,1234 @@
-import { describe, expect, it } from 'vitest';
-import { screen } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
+import { graphql, HttpResponse } from 'msw';
+import { Routes, Route, useNavigate } from 'react-router-dom';
+import { useAuth } from '../../../src/auth/AuthContext.js';
+import { TOKEN_KEY } from '../../../src/auth/storage.js';
+import { queryKeys } from '../../../src/features/map/feature.js';
+import * as adapter from '../../../src/features/map/adapters/mapAdapter.js';
+import { server } from '../../../src/mocks/server.js';
 import { MapPage } from '../../../src/features/map/pages/MapPage.js';
+import { PointcrawlViewport } from '../../../src/features/map/components/PointcrawlViewport.js';
+import {
+  RegionHubPage,
+  RegionsDirectoryPage,
+} from '../../../src/features/map/pages/RegionHubPage.js';
 import { renderWithProviders } from '../../test-utils.js';
+import good from '../../fixtures/wire/map/good.json';
+import member from '../../fixtures/wire/me/good.json';
 
+function token(actor = 'A') {
+  return `${btoa('{}')}.${btoa(JSON.stringify({ sub: actor, exp: 4102444800 }))}.test`;
+}
+function session() {
+  localStorage.setItem(TOKEN_KEY, token());
+  server.use(
+    graphql.query('MemberMe', ({ request }) =>
+      HttpResponse.json({
+        data: {
+          memberMe: {
+            ...member,
+            id: request.headers.get('authorization')?.includes(token('B'))
+              ? 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+              : member.id,
+            roles: ['archon', 'player'],
+          },
+        },
+      }),
+    ),
+    graphql.query('MapAtlas', () =>
+      HttpResponse.json({ data: { map: { ...good, canEdit: true } } }),
+    ),
+  );
+}
+function Controls() {
+  const auth = useAuth();
+  const navigate = useNavigate();
+  return (
+    <>
+      <button onClick={() => auth.storeToken(token('B'))}>Account B</button>
+      <button onClick={auth.logout}>Sign out</button>
+      <button onClick={() => navigate('/map/OTHER')}>Other map</button>
+    </>
+  );
+}
+function deferred<T>() {
+  let resolve: (value: T) => void = () => {};
+  let reject: (cause: unknown) => void = () => {};
+  const promise = new Promise<T>((release, fail) => {
+    resolve = release;
+    reject = fail;
+  });
+  return { promise, resolve, reject };
+}
+
+const locationDocument = {
+  id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+  slug: 'private-location',
+  kind: 'codex_entry',
+  category: 'Locations',
+  title: 'Private location',
+  effectiveBody: 'Actor A body',
+};
+const linkedMap = {
+  ...good,
+  canEdit: true,
+  pointcrawlNodes: [
+    {
+      ...good.pointcrawlNodes[0]!,
+      linkedEntries: [
+        {
+          mapId: good.id,
+          nodeId: good.pointcrawlNodes[0]!.id,
+          documentId: locationDocument.id,
+          relation: 'location',
+          createdAt: good.createdAt,
+          createdBy: member.id,
+        },
+      ],
+    },
+    ...good.pointcrawlNodes.slice(1),
+  ],
+};
+
+function renderMap(route = '/map') {
+  return renderWithProviders(
+    <Routes>
+      <Route
+        path="/map"
+        element={
+          <>
+            <Controls />
+            <MapPage />
+          </>
+        }
+      />
+      <Route
+        path="/map/:atlasCode"
+        element={
+          <>
+            <Controls />
+            <MapPage />
+          </>
+        }
+      />
+    </Routes>,
+    { route },
+  );
+}
 describe('MapPage', () => {
-  it('exposes map page host and hexes region under compact viewport', async () => {
-    renderWithProviders(<MapPage />);
+  it('keeps dense locations and connections fully named without overlapping SVG prose', async () => {
+    const names = [
+      'The very long complete name of the northern gate overlooking the river',
+      'A nearby location at almost the same coordinates',
+      'A coincident location with its own identity',
+    ];
+    const nodes = good.pointcrawlNodes.map((node, index) => ({
+      ...node,
+      name: names[index] ?? node.name,
+      x: index === 0 ? 112.5 : 120,
+      y: index === 0 ? -7.25 : 0,
+    }));
+    server.use(
+      graphql.query('MapAtlas', () =>
+        HttpResponse.json({
+          data: {
+            map: {
+              ...good,
+              pointcrawlNodes: nodes,
+              pointcrawlEdges: good.pointcrawlEdges.map((edge) => ({
+                ...edge,
+                directed: true,
+                label: 'The full name of the directed connection',
+              })),
+            },
+          },
+        }),
+      ),
+    );
+    renderMap();
+    const list = await screen.findByRole('list', { name: 'Map locations' });
+    const viewport = screen.getByRole('region', { name: 'Pointcrawl viewport' });
+    const graph = within(viewport).getByRole('group', {
+      name: 'Lightfall pointcrawl graph',
+    });
+    nodes.forEach((node) => {
+      expect(within(list).getByRole('button', { name: node.name })).toBeVisible();
+      const marker = within(graph).getByRole('button', { name: node.name });
+      expect(marker).toHaveAttribute('transform', `translate(${node.x} ${node.y})`);
+      expect(marker.querySelector('title')).toHaveTextContent(node.name);
+    });
+    expect(graph.querySelector('text')).toBeNull();
     expect(
-      await screen.findByRole('heading', { name: 'Map' }),
+      [...graph.querySelectorAll('title')].map((title) => title.textContent),
+    ).toContain('The full name of the directed connection (one way)');
+    expect(screen.getByRole('region', { name: 'Map connections' })).toHaveTextContent(
+      'The full name of the directed connection',
+    );
+    const caption = screen.getByRole('status');
+    expect(caption).toHaveTextContent(names[0]!);
+    fireEvent.click(within(list).getByRole('button', { name: names[2] }));
+    expect(caption).toHaveTextContent(names[2]!);
+    expect(caption).not.toHaveTextContent(names[0]!);
+    expect(screen.getByRole('region', { name: 'Selected location' })).toHaveTextContent(
+      names[2]!,
+    );
+  });
+  it('offers the same real locations through the graph and list on a compact allocation', async () => {
+    renderMap();
+    const list = await screen.findByRole('list', { name: 'Map locations' });
+    expect(within(list).getAllByRole('button')).toHaveLength(3);
+    const graph = screen.getByRole('group', { name: 'Lightfall pointcrawl graph' });
+    fireEvent.keyDown(within(graph).getByRole('button', { name: 'Lightfall Gate' }), {
+      key: 'ArrowRight',
+    });
+    expect(screen.getByRole('region', { name: 'Selected location' })).toHaveTextContent(
+      'Old Watchtower',
+    );
+    fireEvent.click(within(list).getByRole('button', { name: 'River Crossing' }));
+    expect(screen.getByRole('region', { name: 'Selected location' })).toHaveTextContent(
+      'River Crossing',
+    );
+    expect(
+      screen.queryByRole('button', { name: 'Add location' }),
+    ).not.toBeInTheDocument();
+    expect(document.querySelector('[data-page-region="body"]')).toBeTruthy();
+  });
+  it('reads more than four linked documents in authorized batches and hides unavailable document identities', async () => {
+    const first = good.pointcrawlNodes[0]!;
+    const ids = Array.from(
+      { length: 6 },
+      (_, index) => `dddddddd-dddd-4ddd-8ddd-${String(index).padStart(12, '0')}`,
+    );
+    const entries = ids.map((documentId) => ({
+      mapId: good.id,
+      nodeId: first.id,
+      documentId,
+      relation: 'location',
+      createdAt: good.createdAt,
+      createdBy: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+    }));
+    const batches: string[][] = [];
+    server.use(
+      graphql.query('MapAtlas', () =>
+        HttpResponse.json({
+          data: {
+            map: { ...good, pointcrawlNodes: [{ ...first, linkedEntries: entries }] },
+          },
+        }),
+      ),
+      graphql.query('MapDocuments', ({ variables }) => {
+        const ids = [
+          variables.id0,
+          variables.id1,
+          variables.id2,
+          variables.id3,
+          variables.id4,
+        ];
+        batches.push(ids);
+        return HttpResponse.json({
+          data: Object.fromEntries(
+            ids.map((id, index) => [
+              `document${index}`,
+              id.endsWith('000005')
+                ? null
+                : {
+                    id,
+                    slug: `location-${id.slice(-1)}`,
+                    kind: 'codex_entry',
+                    category: 'Locations',
+                    title: `Location ${id.slice(-1)}`,
+                    effectiveBody: 'Canonical Location body.',
+                  },
+            ]),
+          ),
+        });
+      }),
+    );
+    renderMap();
+    expect(await screen.findByRole('link', { name: 'Location 4' })).toHaveAttribute(
+      'href',
+      '/codex/location-4',
+    );
+    expect(
+      await screen.findByText('This linked document is unavailable for this viewer.'),
     ).toBeInTheDocument();
-    expect(await screen.findByRole('list', { name: /hex/i })).toBeInTheDocument();
-    const host = document.querySelector('[data-page="map"]');
-    expect(host).toBeTruthy();
-    expect(host).toHaveAttribute('data-page-arrangement', 'single-pane');
-    expect(document.querySelector('[data-page-region="hexes"]')).toBeTruthy();
-    expect(document.querySelector('[data-page-region="features"]')).toBeNull();
+    expect(batches).toHaveLength(2);
+    expect(screen.queryByText(ids[5]!)).not.toBeInTheDocument();
+  });
+  it('restores node selection from the URL and reports unavailable maps', async () => {
+    renderMap(`/map/LFC?node=${good.pointcrawlNodes[2]?.id}`);
+    expect(
+      await screen.findByRole('region', { name: 'Selected location' }),
+    ).toHaveTextContent('River Crossing');
+  });
+  it('uses server edit capability and retains values after a rejected save', async () => {
+    session();
+    server.use(
+      graphql.query('MapAtlas', () =>
+        HttpResponse.json({ data: { map: { ...good, canEdit: true } } }),
+      ),
+      graphql.mutation('MapSaveNode', () =>
+        HttpResponse.json({
+          errors: [
+            { message: 'No longer authorized', extensions: { code: 'FORBIDDEN' } },
+          ],
+        }),
+      ),
+    );
+    renderMap();
+    fireEvent.click(await screen.findByRole('button', { name: 'Add location' }));
+    fireEvent.change(screen.getByLabelText('Location name'), {
+      target: { value: 'Retained location' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() =>
+      expect(
+        screen
+          .getAllByRole('alert')
+          .some((alert) =>
+            /Sign in to see this|You don’t have access to this/.test(
+              alert.textContent ?? '',
+            ),
+          ),
+      ).toBe(true),
+    );
+    expect(screen.getByLabelText('Location name')).toHaveValue('Retained location');
+  });
+  it.each(['success', 'failure'] as const)(
+    'keeps account B’s new draft after account A’s late %s',
+    async (outcome) => {
+      session();
+      const held = deferred<{ id: string }>();
+      const save = vi.spyOn(adapter, 'saveNode').mockReturnValueOnce(held.promise);
+      try {
+        renderMap();
+        fireEvent.click(await screen.findByRole('button', { name: 'Add location' }));
+        fireEvent.change(screen.getByRole('textbox', { name: 'Location name' }), {
+          target: { value: 'A draft' },
+        });
+        fireEvent.submit(screen.getByRole('button', { name: 'Save' }).closest('form')!);
+        expect(save).toHaveBeenCalledTimes(1);
+        fireEvent.click(screen.getByText('Account B', { selector: 'button' }));
+        await waitFor(() =>
+          expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+        );
+        fireEvent.click(await screen.findByRole('button', { name: 'Add location' }));
+        fireEvent.change(screen.getByRole('textbox', { name: 'Location name' }), {
+          target: { value: 'B draft' },
+        });
+        await act(async () => {
+          if (outcome === 'success') held.resolve({ id: good.pointcrawlNodes[1]!.id });
+          else held.reject(new Error('A failed'));
+        });
+        expect(screen.getByRole('dialog')).toHaveTextContent('Save location');
+        expect(screen.getByRole('textbox', { name: 'Location name' })).toHaveValue(
+          'B draft',
+        );
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+        expect(
+          screen.getByLabelText('Selected location', { selector: 'section' }),
+        ).toHaveTextContent('Lightfall Gate');
+      } finally {
+        save.mockRestore();
+      }
+    },
+  );
+  it.each(['Sign out', 'Other map', 'select node', 'revoke capability'])(
+    'resets the draft on %s and ignores its pending save',
+    async (change) => {
+      session();
+      const held = deferred<{ id: string }>();
+      const save = vi.spyOn(adapter, 'saveNode').mockReturnValueOnce(held.promise);
+      try {
+        const { queryClient } = renderMap();
+        fireEvent.click(await screen.findByRole('button', { name: 'Add location' }));
+        fireEvent.change(screen.getByRole('textbox', { name: 'Location name' }), {
+          target: { value: 'Old draft' },
+        });
+        fireEvent.submit(screen.getByRole('button', { name: 'Save' }).closest('form')!);
+        if (change === 'select node')
+          fireEvent.click(
+            within(
+              screen.getByLabelText('Map locations', { selector: 'ul' }),
+            ).getByText('River Crossing', { selector: 'button' }),
+          );
+        else if (change === 'revoke capability')
+          await act(async () => {
+            queryClient.setQueryData(queryKeys.map('LFC'), {
+              ...(await adapter.loadMap('LFC')),
+              canEdit: false,
+            });
+          });
+        else fireEvent.click(screen.getByText(change, { selector: 'button' }));
+        await waitFor(() =>
+          expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+        );
+        const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+        await act(async () => {
+          held.resolve({ id: good.pointcrawlNodes[1]!.id });
+        });
+        expect(invalidate).not.toHaveBeenCalled();
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+        invalidate.mockRestore();
+      } finally {
+        save.mockRestore();
+      }
+    },
+  );
+  it('rejects synchronous duplicate submits and reuses the payload key after a lost response', async () => {
+    session();
+    const held = deferred<{ id: string }>();
+    const save = vi
+      .spyOn(adapter, 'saveNode')
+      .mockReturnValueOnce(held.promise)
+      .mockRejectedValueOnce(new Error('lost'));
+    try {
+      renderMap();
+      fireEvent.click(await screen.findByRole('button', { name: 'Add location' }));
+      fireEvent.change(screen.getByRole('textbox', { name: 'Location name' }), {
+        target: { value: 'Retry me' },
+      });
+      const form = screen.getByRole('button', { name: 'Save' }).closest('form')!;
+      fireEvent.submit(form);
+      fireEvent.submit(form);
+      expect(save).toHaveBeenCalledTimes(1);
+      await act(async () => {
+        held.reject(new Error('lost'));
+      });
+      fireEvent.submit(form);
+      await waitFor(() => expect(save).toHaveBeenCalledTimes(2));
+      expect(save.mock.calls[1]?.[2]).toBe(save.mock.calls[0]?.[2]);
+      expect(screen.getByRole('textbox', { name: 'Location name' })).toHaveValue(
+        'Retry me',
+      );
+    } finally {
+      save.mockRestore();
+    }
+  });
+  it('refetches current authority after a server denial and removes edit controls', async () => {
+    session();
+    let allowed = true;
+    server.use(
+      graphql.query('MapAtlas', () =>
+        HttpResponse.json({ data: { map: { ...good, canEdit: allowed } } }),
+      ),
+      graphql.mutation('MapSaveNode', () => {
+        allowed = false;
+        return HttpResponse.json({
+          errors: [{ message: 'revoked', extensions: { code: 'FORBIDDEN' } }],
+        });
+      }),
+    );
+    renderMap();
+    fireEvent.click(await screen.findByRole('button', { name: 'Add location' }));
+    fireEvent.change(screen.getByRole('textbox', { name: 'Location name' }), {
+      target: { value: 'Denied draft' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /Sign in to see this|You don’t have access to this/,
+    );
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(
+      screen.queryByRole('button', { name: 'Add location' }),
+    ).not.toBeInTheDocument();
+  });
+  it.each(['/map', `/map/LFC?node=${good.pointcrawlNodes[0]!.id}`])(
+    'keeps role-loss feedback after current Me clears and reloads Map data at %s',
+    async (route) => {
+      session();
+      let revoked = false;
+      const reload = deferred<void>();
+      let pendingReloads = 0;
+      server.use(
+        graphql.query('MemberMe', () =>
+          HttpResponse.json({
+            data: {
+              memberMe: {
+                ...member,
+                roles: revoked ? ['player'] : ['archon', 'player'],
+              },
+            },
+          }),
+        ),
+        graphql.query('MapAtlas', async () => {
+          if (revoked) {
+            pendingReloads++;
+            await reload.promise;
+          }
+          return HttpResponse.json({ data: { map: { ...good, canEdit: !revoked } } });
+        }),
+        graphql.mutation('MapSaveNode', () => {
+          revoked = true;
+          return HttpResponse.json({
+            errors: [{ message: 'role revoked', extensions: { code: 'FORBIDDEN' } }],
+          });
+        }),
+      );
+      const { queryClient } = renderMap(route);
+      fireEvent.click(await screen.findByRole('button', { name: 'Add location' }));
+      fireEvent.change(screen.getByRole('textbox', { name: 'Location name' }), {
+        target: { value: 'Denied after role loss' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+      await waitFor(() =>
+        expect(queryClient.getQueryData<typeof member>(['me'])?.roles).toEqual([
+          'player',
+        ]),
+      );
+      await waitFor(() =>
+        expect(queryClient.getQueryData(queryKeys.map('LFC'))).toBeUndefined(),
+      );
+      await waitFor(() => expect(pendingReloads).toBeGreaterThan(0));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      await act(async () => {
+        reload.resolve();
+      });
+      await screen.findByRole('region', { name: 'Selected location' });
+      await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      expect(
+        screen.queryByRole('button', { name: 'Add location' }),
+      ).not.toBeInTheDocument();
+      expect(
+        screen
+          .queryAllByRole('alert')
+          .filter((alert) =>
+            /Sign in to see this|You don’t have access to this/.test(
+              alert.textContent ?? '',
+            ),
+          ),
+      ).toHaveLength(1);
+      const list = screen.getByRole('list', { name: 'Map locations' });
+      fireEvent.click(within(list).getByRole('button', { name: 'River Crossing' }));
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      fireEvent.click(within(list).getByRole('button', { name: 'Lightfall Gate' }));
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    },
+  );
+  it.each(['Account B', 'Other map'])(
+    'discards role-loss feedback after %s during the cache reload',
+    async (change) => {
+      session();
+      let revoked = false;
+      const reload = deferred<void>();
+      let pendingReloads = 0;
+      server.use(
+        graphql.query('MemberMe', ({ request }) =>
+          HttpResponse.json({
+            data: {
+              memberMe: {
+                ...member,
+                id: request.headers.get('authorization')?.includes(token('B'))
+                  ? 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+                  : member.id,
+                roles: revoked ? ['player'] : ['archon', 'player'],
+              },
+            },
+          }),
+        ),
+        graphql.query('MapAtlas', async () => {
+          if (revoked) {
+            pendingReloads++;
+            await reload.promise;
+          }
+          return HttpResponse.json({ data: { map: { ...good, canEdit: !revoked } } });
+        }),
+        graphql.mutation('MapSaveNode', () => {
+          revoked = true;
+          return HttpResponse.json({
+            errors: [{ message: 'role revoked', extensions: { code: 'FORBIDDEN' } }],
+          });
+        }),
+      );
+      const { queryClient } = renderMap('/map/LFC');
+      fireEvent.click(await screen.findByRole('button', { name: 'Add location' }));
+      fireEvent.change(screen.getByRole('textbox', { name: 'Location name' }), {
+        target: { value: 'Denied before leaving' },
+      });
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+      await waitFor(() =>
+        expect(queryClient.getQueryData<typeof member>(['me'])?.roles).toEqual([
+          'player',
+        ]),
+      );
+      await waitFor(() =>
+        expect(queryClient.getQueryData(queryKeys.map('LFC'))).toBeUndefined(),
+      );
+      await waitFor(() => expect(pendingReloads).toBeGreaterThan(0));
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        /Sign in to see this|You don’t have access to this/,
+      );
+      fireEvent.click(screen.getByRole('button', { name: change }));
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      await act(async () => {
+        reload.resolve();
+      });
+      await screen.findByRole('region', { name: 'Selected location' });
+      await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    },
+  );
+  it('does not refresh after a pending save completes following unmount', async () => {
+    session();
+    const held = deferred<{ id: string }>();
+    const save = vi.spyOn(adapter, 'saveNode').mockReturnValueOnce(held.promise);
+    try {
+      const { unmount, queryClient } = renderMap();
+      fireEvent.click(await screen.findByRole('button', { name: 'Add location' }));
+      fireEvent.submit(screen.getByRole('button', { name: 'Save' }).closest('form')!);
+      unmount();
+      const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+      await act(async () => {
+        held.resolve({ id: good.pointcrawlNodes[1]!.id });
+      });
+      expect(invalidate).not.toHaveBeenCalled();
+      invalidate.mockRestore();
+    } finally {
+      save.mockRestore();
+    }
+  });
+  it.each(['create', 'edge', 'link'] as const)(
+    'ignores an old account’s %s completion while the new account edits',
+    async (kind) => {
+      session();
+      const held = deferred<{ id: string; atlasCode: string }>();
+      const create = vi.spyOn(adapter, 'createMap').mockReturnValueOnce(held.promise);
+      const edge = vi.spyOn(adapter, 'saveEdge').mockReturnValueOnce(held.promise);
+      const link = vi
+        .spyOn(adapter, 'changeEntry')
+        .mockReturnValueOnce(held.promise.then(() => undefined));
+      const region = {
+        id: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+        name: 'Assigned Region',
+        canCreateMap: true,
+        kind: 'charter',
+        charterDeadline: null,
+        documentId: null,
+        createdAt: good.createdAt,
+      };
+      server.use(
+        graphql.query('MapDirectory', () =>
+          HttpResponse.json({ data: { maps: [good], regions: [region] } }),
+        ),
+        graphql.query('MapLocationDocuments', () =>
+          HttpResponse.json({
+            data: { documents: { total: 1, items: [locationDocument] } },
+          }),
+        ),
+      );
+      try {
+        renderMap();
+        await screen.findByRole('button', { name: 'Add location' });
+        fireEvent.click(
+          screen.getByRole('button', {
+            name:
+              kind === 'create'
+                ? 'Create map'
+                : kind === 'edge'
+                  ? 'Add connection'
+                  : 'Link Location document',
+          }),
+        );
+        if (kind === 'create') {
+          for (const name of ['Map name', 'Atlas code', 'Family'])
+            fireEvent.change(screen.getByRole('textbox', { name }), {
+              target: { value: 'A map' },
+            });
+        } else if (kind === 'link')
+          fireEvent.change(
+            await screen.findByRole('combobox', {
+              name: 'Location document',
+            }),
+            { target: { value: locationDocument.id } },
+          );
+        fireEvent.submit(screen.getByRole('button', { name: 'Save' }).closest('form')!);
+        expect(
+          kind === 'create' ? create : kind === 'edge' ? edge : link,
+        ).toHaveBeenCalledTimes(1);
+        fireEvent.click(screen.getByText('Account B', { selector: 'button' }));
+        await waitFor(() =>
+          expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
+        );
+        fireEvent.click(await screen.findByRole('button', { name: 'Add location' }));
+        fireEvent.change(screen.getByRole('textbox', { name: 'Location name' }), {
+          target: { value: 'B new draft' },
+        });
+        await act(async () => {
+          held.resolve({ id: good.pointcrawlNodes[1]!.id, atlasCode: 'OLD-CREATE' });
+        });
+        expect(screen.getByRole('textbox', { name: 'Location name' })).toHaveValue(
+          'B new draft',
+        );
+        expect(
+          screen.getByText('Lightfall', { selector: 'h1, h2, h3, h4, h5, h6' }),
+        ).toBeInTheDocument();
+      } finally {
+        create.mockRestore();
+        edge.mockRestore();
+        link.mockRestore();
+      }
+    },
+  );
+  it.each(['account change', 'unmount'])(
+    'does not seed a late linked-Document result after %s',
+    async (change) => {
+      session();
+      server.use(
+        graphql.query('MapAtlas', () =>
+          HttpResponse.json({ data: { map: linkedMap } }),
+        ),
+      );
+      const held = deferred<(adapter.MapDocument | null)[]>();
+      const load = vi
+        .spyOn(adapter, 'loadMapDocuments')
+        .mockReturnValueOnce(held.promise)
+        .mockResolvedValue([null]);
+      try {
+        const { queryClient, unmount } = renderMap();
+        await waitFor(() => expect(load).toHaveBeenCalledTimes(1));
+        if (change === 'unmount') unmount();
+        else {
+          fireEvent.click(screen.getByRole('button', { name: 'Account B' }));
+          await waitFor(() => expect(load).toHaveBeenCalledTimes(2));
+          await screen.findByText(
+            'This linked document is unavailable for this viewer.',
+          );
+        }
+        await act(async () => {
+          held.resolve([locationDocument]);
+        });
+        expect(
+          queryClient.getQueryData(queryKeys.mapDocument(locationDocument.id)),
+        ).toBe(change === 'unmount' ? undefined : null);
+        expect(screen.queryByText('Actor A body')).not.toBeInTheDocument();
+      } finally {
+        load.mockRestore();
+      }
+    },
+  );
+  it.each(['success', 'failure'] as const)(
+    'ignores account A’s late unlink %s while account B edits',
+    async (outcome) => {
+      session();
+      server.use(
+        graphql.query('MapAtlas', () =>
+          HttpResponse.json({ data: { map: linkedMap } }),
+        ),
+      );
+      const held = deferred<void>();
+      const load = vi
+        .spyOn(adapter, 'loadMapDocuments')
+        .mockResolvedValue([locationDocument]);
+      const unlink = vi.spyOn(adapter, 'changeEntry').mockReturnValueOnce(held.promise);
+      try {
+        const { queryClient } = renderMap();
+        fireEvent.click(
+          await screen.findByRole('button', { name: 'Unlink Private location' }),
+        );
+        expect(unlink).toHaveBeenCalledTimes(1);
+        fireEvent.click(screen.getByRole('button', { name: 'Account B' }));
+        fireEvent.click(await screen.findByRole('button', { name: 'Add location' }));
+        fireEvent.change(screen.getByRole('textbox', { name: 'Location name' }), {
+          target: { value: 'B unchanged' },
+        });
+        const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
+        await act(async () => {
+          if (outcome === 'success') held.resolve();
+          else held.reject(new Error('A unlink failed'));
+        });
+        expect(invalidate).not.toHaveBeenCalled();
+        expect(screen.getByRole('textbox', { name: 'Location name' })).toHaveValue(
+          'B unchanged',
+        );
+        expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+        invalidate.mockRestore();
+      } finally {
+        load.mockRestore();
+        unlink.mockRestore();
+      }
+    },
+  );
+  it('does not let an old unlink completion unlock a new request after capability is restored', async () => {
+    session();
+    server.use(
+      graphql.query('MapAtlas', () => HttpResponse.json({ data: { map: linkedMap } })),
+    );
+    const first = deferred<void>();
+    const second = deferred<void>();
+    const load = vi
+      .spyOn(adapter, 'loadMapDocuments')
+      .mockResolvedValue([locationDocument]);
+    const unlink = vi
+      .spyOn(adapter, 'changeEntry')
+      .mockReturnValueOnce(first.promise)
+      .mockReturnValueOnce(second.promise);
+    try {
+      const { queryClient } = renderMap();
+      fireEvent.click(
+        await screen.findByRole('button', { name: 'Unlink Private location' }),
+      );
+      const map = queryClient.getQueryData<adapter.Pointcrawl>(queryKeys.map('LFC'));
+      expect(map).toBeDefined();
+      await act(async () => {
+        queryClient.setQueryData(queryKeys.map('LFC'), { ...map, canEdit: false });
+      });
+      await waitFor(() =>
+        expect(
+          screen.queryByRole('button', { name: 'Unlink Private location' }),
+        ).not.toBeInTheDocument(),
+      );
+      await act(async () => {
+        queryClient.setQueryData(queryKeys.map('LFC'), map);
+      });
+      fireEvent.click(
+        await screen.findByRole('button', { name: 'Unlink Private location' }),
+      );
+      expect(unlink).toHaveBeenCalledTimes(2);
+      await act(async () => {
+        first.resolve();
+      });
+      expect(
+        screen.getByRole('button', { name: 'Unlink Private location' }),
+      ).toBeDisabled();
+      await act(async () => {
+        second.resolve();
+      });
+    } finally {
+      load.mockRestore();
+      unlink.mockRestore();
+    }
+  });
+  it('does not navigate or close a new account’s draft when an old save’s refresh finishes', async () => {
+    session();
+    const map = await adapter.loadMap('LFC');
+    const held = deferred<adapter.Pointcrawl>();
+    const load = vi
+      .spyOn(adapter, 'loadMap')
+      .mockResolvedValueOnce(map)
+      .mockReturnValueOnce(held.promise)
+      .mockResolvedValue(map);
+    const save = vi
+      .spyOn(adapter, 'saveNode')
+      .mockResolvedValueOnce({ id: good.pointcrawlNodes[1]!.id });
+    try {
+      renderMap();
+      fireEvent.click(await screen.findByRole('button', { name: 'Add location' }));
+      fireEvent.submit(screen.getByRole('button', { name: 'Save' }).closest('form')!);
+      await waitFor(() => expect(load).toHaveBeenCalledTimes(2));
+      fireEvent.click(screen.getByText('Account B', { selector: 'button' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'Add location' }));
+      fireEvent.change(screen.getByRole('textbox', { name: 'Location name' }), {
+        target: { value: 'B after refresh' },
+      });
+      await act(async () => {
+        held.resolve(map);
+      });
+      expect(screen.getByRole('textbox', { name: 'Location name' })).toHaveValue(
+        'B after refresh',
+      );
+      expect(
+        screen.getByLabelText('Selected location', { selector: 'section' }),
+      ).toHaveTextContent('Lightfall Gate');
+    } finally {
+      load.mockRestore();
+      save.mockRestore();
+    }
   });
 });
 
+describe('PointcrawlViewport marker allocation', () => {
+  it.each([
+    { label: 'tall letterboxed', width: 520, height: 520, origin: -180 },
+    { label: 'wide letterboxed', width: 1040, height: 260, origin: -180 },
+    { label: 'matching enlarged', width: 1040, height: 520, origin: -130 },
+    { label: 'matching compact', width: 260, height: 130, origin: -280 },
+  ])('tracks both drag axes in a $label allocation', ({ width, height, origin }) => {
+    render(
+      <PointcrawlViewport
+        map={{ ...good, nodes: good.pointcrawlNodes, edges: good.pointcrawlEdges }}
+        selectedId={good.pointcrawlNodes[0]?.id ?? null}
+        onSelect={vi.fn()}
+      />,
+    );
+    const graph = screen.getByRole('group', { name: 'Lightfall pointcrawl graph' });
+    const rectangle = vi
+      .spyOn(graph, 'getBoundingClientRect')
+      .mockReturnValue(new DOMRect(0, 0, width, height));
+    const capture = vi.fn();
+    Object.defineProperty(graph, 'setPointerCapture', { value: capture });
+    const pointer = (type: string, clientX: number, clientY: number) => {
+      const event = new MouseEvent(type, { bubbles: true, clientX, clientY });
+      Object.defineProperty(event, 'pointerId', { value: 1 });
+      fireEvent(graph, event);
+    };
+    try {
+      expect(graph).toHaveAttribute('viewBox', '-80 -80 520 260');
+      pointer('pointerdown', 10, 20);
+      pointer('pointermove', 110, 120);
+      expect(capture).toHaveBeenCalledWith(1);
+      expect(graph).toHaveAttribute('viewBox', `${origin} ${origin} 520 260`);
+      pointer('pointerup', 110, 120);
+      pointer('pointermove', 210, 220);
+      expect(graph).toHaveAttribute('viewBox', `${origin} ${origin} 520 260`);
+      fireEvent.click(screen.getByRole('button', { name: 'Fit map' }));
+      expect(graph).toHaveAttribute('viewBox', '-80 -80 520 260');
+    } finally {
+      rectangle.mockRestore();
+    }
+  });
+  it('keeps markers the same screen size while zoom separates coordinates and resize preserves the camera', () => {
+    const observers: GraphObserver[] = [];
+    class GraphObserver implements ResizeObserver {
+      private target: Element | null = null;
+      readonly observe = vi.fn((target: Element) => {
+        this.target = target;
+      });
+      readonly unobserve = vi.fn();
+      readonly disconnect = vi.fn();
+      constructor(private readonly callback: ResizeObserverCallback) {
+        observers.push(this);
+      }
+      resize(width: number, height: number): void {
+        if (!this.target) throw new Error('Missing observed graph');
+        const size = { inlineSize: width, blockSize: height };
+        this.callback(
+          [
+            {
+              target: this.target,
+              contentRect: new DOMRect(0, 0, width, height),
+              borderBoxSize: [size],
+              contentBoxSize: [size],
+              devicePixelContentBoxSize: [size],
+            },
+          ],
+          this,
+        );
+      }
+    }
+    vi.stubGlobal('ResizeObserver', GraphObserver);
+    const view = render(
+      <PointcrawlViewport
+        map={{ ...good, nodes: good.pointcrawlNodes, edges: good.pointcrawlEdges }}
+        selectedId={good.pointcrawlNodes[0]?.id ?? null}
+        onSelect={vi.fn()}
+      />,
+    );
+    try {
+      const graph = screen.getByRole('group', { name: 'Lightfall pointcrawl graph' });
+      const circle = graph.querySelector('circle');
+      const line = graph.querySelector('line');
+      expect(circle).not.toBeNull();
+      expect(observers).toHaveLength(1);
+      const observer = observers[0];
+      if (!observer) throw new Error('Missing graph observer');
+      const initialViewBox = graph.getAttribute('viewBox');
+      const position = circle?.parentElement?.getAttribute('transform');
+      const endpoints = ['x1', 'y1', 'x2', 'y2'].map((key) => line?.getAttribute(key));
+      act(() => observer.resize(1040, 520));
+      const fittedRadius = Number(circle?.getAttribute('r'));
+      expect(fittedRadius * 2).toBeCloseTo(8);
+      fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
+      expect(graph).not.toHaveAttribute('viewBox', initialViewBox);
+      expect(Number(circle?.getAttribute('r')) * 3).toBeCloseTo(8);
+      const zoomedViewBox = graph.getAttribute('viewBox');
+      act(() => observer.resize(520, 260));
+      expect(graph).toHaveAttribute('viewBox', zoomedViewBox);
+      expect(Number(circle?.getAttribute('r')) * 1.5).toBeCloseTo(8);
+      expect(circle?.parentElement).toHaveAttribute('transform', position);
+      expect(['x1', 'y1', 'x2', 'y2'].map((key) => line?.getAttribute(key))).toEqual(
+        endpoints,
+      );
+      act(() => observer.resize(0, 0));
+      expect(Number(circle?.getAttribute('r')) * 1.5).toBeCloseTo(8);
+      fireEvent.click(screen.getByRole('button', { name: 'Fit map' }));
+      expect(graph).toHaveAttribute('viewBox', initialViewBox);
+      expect(Number(circle?.getAttribute('r'))).toBeCloseTo(8);
+      view.unmount();
+      expect(observer.disconnect).toHaveBeenCalledOnce();
+    } finally {
+      view.unmount();
+      vi.unstubAllGlobals();
+    }
+  });
+});
+describe('Region navigation', () => {
+  const region = {
+    id: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+    name: 'Test Region',
+    canCreateMap: false,
+    kind: 'charter',
+    charterDeadline: null,
+    documentId: null,
+    createdAt: good.createdAt,
+  };
+  it('explains unmapped Legacy slugs without guessing a current Region', async () => {
+    renderWithProviders(
+      <Routes>
+        <Route path="/regions/:slug" element={<RegionHubPage />} />
+      </Routes>,
+      { route: '/regions/old-slug' },
+    );
+    expect(screen.getByText(/older Region link/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Browse regions' })).toHaveAttribute(
+      'href',
+      '/regions',
+    );
+  });
+  it('uses actual Region UUIDs and readable directory rows', async () => {
+    server.use(
+      graphql.query('MapDirectory', () =>
+        HttpResponse.json({
+          data: { maps: [{ ...good, regionId: region.id }], regions: [region] },
+        }),
+      ),
+    );
+    renderWithProviders(<RegionsDirectoryPage />);
+    expect(await screen.findByRole('link', { name: 'Test Region' })).toHaveAttribute(
+      'href',
+      `/regions/${region.id}`,
+    );
+    expect(screen.getByText(/1 available map$/)).toBeInTheDocument();
+  });
+  it('renders current quest and pointcrawl location counts without the retired metric', async () => {
+    server.use(
+      graphql.query('MapDirectory', () =>
+        HttpResponse.json({ data: { maps: [], regions: [region] } }),
+      ),
+      graphql.query('MapRegionCounts', () =>
+        HttpResponse.json({
+          data: {
+            regionCounts: {
+              regionId: region.id,
+              questCount: 7,
+              pointcrawlNodeCount: 3,
+            },
+          },
+        }),
+      ),
+    );
+    renderWithProviders(
+      <Routes>
+        <Route path="/regions/:slug" element={<RegionHubPage />} />
+      </Routes>,
+      { route: `/regions/${region.id}` },
+    );
+    expect(await screen.findByText('7 quests · 3 map locations')).toBeInTheDocument();
+    expect(screen.queryByText(/linked features/i)).not.toBeInTheDocument();
+  });
+  it('lists region quests by their brief titles with status and seats', async () => {
+    server.use(
+      graphql.query('MapDirectory', () =>
+        HttpResponse.json({
+          data: { maps: [{ ...good, regionId: region.id }], regions: [region] },
+        }),
+      ),
+      graphql.query('MapRegionActivity', () =>
+        HttpResponse.json({
+          data: {
+            regionActivity: {
+              regionId: region.id,
+              regionName: region.name,
+              fillingCount: 1,
+              scheduledCount: 0,
+              liveCount: 0,
+              openQuests: [
+                {
+                  id: 'abababab-abab-4bab-8bab-abababababab',
+                  shortCode: 'qa-chalk-and-wheel',
+                  scheduledAt: '2026-11-02T18:00:00Z',
+                  slotsMax: 5,
+                  filledCount: 1,
+                },
+              ],
+              liveQuests: [],
+            },
+          },
+        }),
+      ),
+      graphql.query('MapQuestTitles', () =>
+        HttpResponse.json({
+          data: {
+            quests: {
+              items: [
+                {
+                  shortCode: 'qa-chalk-and-wheel',
+                  status: 'open',
+                  displayStatus: 'filling',
+                  briefDocument: { title: 'Chalk and Wheel' },
+                },
+              ],
+            },
+          },
+        }),
+      ),
+    );
+    renderWithProviders(
+      <Routes>
+        <Route path="/regions/:slug" element={<RegionHubPage />} />
+      </Routes>,
+      { route: `/regions/${region.id}` },
+    );
+    expect(await screen.findByRole('link', { name: 'Chalk and Wheel' })).toHaveAttribute(
+      'href',
+      '/quests/qa-chalk-and-wheel',
+    );
+    expect(screen.queryByText('qa-chalk-and-wheel')).not.toBeInTheDocument();
+    expect(screen.getByText('1/5 seats')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: region.name })).toBeVisible();
+  });
+
+  function activityWith(count: number) {
+    const openQuests = Array.from({ length: count }, (_, index) => ({
+      id: `abababab-abab-4bab-8bab-${String(index).padStart(12, '0')}`,
+      shortCode: `qa-${index}`,
+      scheduledAt: '2026-11-02T18:00:00Z',
+      slotsMax: 5,
+      filledCount: 1,
+    }));
+    return graphql.query('MapRegionActivity', () =>
+      HttpResponse.json({
+        data: {
+          regionActivity: {
+            regionId: region.id,
+            regionName: region.name,
+            fillingCount: count,
+            scheduledCount: 0,
+            liveCount: 0,
+            openQuests,
+            liveQuests: [],
+          },
+        },
+      }),
+    );
+  }
+  const directoryWithMap = () =>
+    graphql.query('MapDirectory', () =>
+      HttpResponse.json({
+        data: { maps: [{ ...good, regionId: region.id }], regions: [region] },
+      }),
+    );
+  function renderRegion() {
+    renderWithProviders(
+      <Routes>
+        <Route path="/regions/:slug" element={<RegionHubPage />} />
+      </Routes>,
+      { route: `/regions/${region.id}` },
+    );
+  }
+
+  it('shows a failed title read as an error with retry, not as untitled quests', async () => {
+    let fail = true;
+    server.use(
+      directoryWithMap(),
+      activityWith(1),
+      graphql.query('MapQuestTitles', () =>
+        fail
+          ? HttpResponse.json({ errors: [{ message: 'boom' }] })
+          : HttpResponse.json({
+              data: {
+                quests: {
+                  items: [
+                    {
+                      shortCode: 'qa-0',
+                      status: 'open',
+                      displayStatus: 'filling',
+                      briefDocument: { title: 'Recovered title' },
+                    },
+                  ],
+                },
+              },
+            }),
+      ),
+    );
+    renderRegion();
+    const retry = await screen.findByRole('button', { name: 'Retry quest titles' });
+    expect(screen.queryByText('Untitled quest')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'qa-0' })).toHaveAttribute(
+      'href',
+      '/quests/qa-0',
+    );
+    fail = false;
+    fireEvent.click(retry);
+    expect(await screen.findByRole('link', { name: 'Recovered title' })).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Retry quest titles' })).toBeNull();
+  });
+
+  it('reads titles for a region with more quests than one title page', async () => {
+    const asked: string[][] = [];
+    server.use(
+      directoryWithMap(),
+      activityWith(51),
+      graphql.query('MapQuestTitles', ({ variables }) => {
+        const codes = variables.codes as string[];
+        asked.push(codes);
+        return HttpResponse.json({
+          data: {
+            quests: {
+              items: codes.map((code) => ({
+                shortCode: code,
+                status: 'open',
+                displayStatus: 'filling',
+                briefDocument: { title: `Title ${code}` },
+              })),
+            },
+          },
+        });
+      }),
+    );
+    renderRegion();
+    expect(await screen.findByRole('link', { name: 'Title qa-50' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Title qa-0' })).toBeVisible();
+    expect(asked.map((codes) => codes.length).sort((a, b) => a - b)).toEqual([1, 50]);
+  });
+});
+
+describe('MapPage reader presentation', () => {
+  it('names import-id connections by their route kind and hides canvas positions from readers', async () => {
+    server.use(
+      graphql.query('MapAtlas', () =>
+        HttpResponse.json({
+          data: {
+            map: {
+              ...good,
+              canEdit: false,
+              pointcrawlEdges: good.pointcrawlEdges.map((edge) => ({
+                ...edge,
+                kind: 'river_ford',
+                label: 'leg-7',
+              })),
+            },
+          },
+        }),
+      ),
+    );
+    renderMap();
+    const connections = await screen.findByRole('region', { name: 'Map connections' });
+    expect(connections).toHaveTextContent('River ford');
+    expect(connections).not.toHaveTextContent('leg-7');
+    expect(screen.getByRole('region', { name: 'Selected location' })).not.toHaveTextContent(
+      /Canvas position|Coordinates/,
+    );
+  });
+
+  it('switches atlas through the menu instead of a native select', async () => {
+    renderMap();
+    await screen.findByRole('region', { name: 'Map connections' });
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+    const trigger = screen.getByRole('button', { name: /^Atlas\s+Lightfall/ });
+    expect(trigger).toHaveAccessibleName(/LFC/);
+    fireEvent.click(trigger);
+    const item = await screen.findByRole('menuitem', { name: /Lightfall/ });
+    expect(item).toBeVisible();
+    expect(item).toHaveAttribute('aria-current', 'true');
+  });
+});

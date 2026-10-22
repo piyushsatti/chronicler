@@ -12,20 +12,26 @@
   box-shadow: var(--focus-ring);
 }
 
-/* Button state aliases complete the visual variants that the typed Button
-   API already exposes, without adding palette literals at the component
-   layer. */
-.btn[data-primitive='button'][data-variant='danger'],
-.btn[data-primitive='button'][data-variant='danger-armed'] {
+/* Danger variant. Keyed on the canonical `.btn--{variant}` class (see
+   atlas.css Buttons) so Button and link-buttons share one hook; data-variant
+   is test/telemetry only. Unlayered so it also beats the vendored .hf2 .btn. */
+.btn.btn--danger {
   background: var(--color-danger);
   border-color: var(--color-danger);
   color: var(--color-bg-deep);
 }
 
-.btn[data-primitive='button'][data-variant='danger']:hover,
-.btn[data-primitive='button'][data-variant='danger-armed']:hover {
+.btn.btn--danger:hover {
   background: color-mix(in srgb, var(--color-danger) 88%, var(--color-bg-deep));
   border-color: color-mix(in srgb, var(--color-danger) 88%, var(--color-bg-deep));
+}
+
+/* Link-buttons (`<a class="btn btn--…">`): base.css's unlayered
+   `a { color: inherit }` outranks every layered .btn colour, so a primary
+   link would render light text on the accent fill. Hand colour back to the
+   layered .btn rules instead of restating any variant value here. */
+a.btn {
+  color: revert-layer;
 }
 
 .btn[data-primitive='button']:disabled,
@@ -119,13 +125,17 @@ button.pr-avatar {
   position: fixed;
   inset: 0;
   z-index: 50;
-  display: flex;
-  align-items: center;
-  justify-content: center;
   background-color: var(--color-backdrop);
 }
 
+/* Base UI portals the backdrop and popup as siblings, so the popup centres
+   itself in the viewport instead of relying on the backdrop's flexbox. */
 .pr-modal__dialog {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 50;
   background-color: var(--overlay-bg);
   border: 1px solid var(--overlay-border);
   border-radius: var(--rad-sm);
@@ -154,6 +164,8 @@ button.pr-avatar {
 }
 
 .pr-modal__close {
+  min-width: 44px;
+  min-height: 44px;
   cursor: pointer;
   color: var(--color-text-muted);
   background: none;
@@ -182,6 +194,12 @@ button.pr-avatar {
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
+}
+
+.site-chrome[data-site-pattern='bottom-bar'] .pr-toast__stack {
+  bottom: calc(
+    var(--bottomnav-height) + var(--sp-4) + env(safe-area-inset-bottom, 0px)
+  );
 }
 
 .pr-toast {
@@ -384,13 +402,13 @@ button.pr-avatar {
 [data-el="week-grid.cell"][data-skin="default"][data-heat="3"],
 [data-el="calendar.cell"][data-heat="3"] {
   background-color: var(--color-accent-hover);
-  color: var(--color-bg);
+  color: var(--color-bg-deep);
 }
 
 [data-el="week-grid.cell"][data-skin="default"][data-heat="4"],
 [data-el="calendar.cell"][data-heat="4"] {
   background-color: var(--color-text);
-  color: var(--color-bg);
+  color: var(--color-bg-deep);
 }
 
 [data-el="calendar.cell"] {
@@ -454,21 +472,47 @@ button.pr-avatar {
   box-shadow: var(--focus-ring);
 }
 
+/* Interactive chips render as <button class="chip">; atlas .chip sets no
+   border/cursor, so reset the UA button chrome without touching the font
+   size atlas owns. Tone borders below out-rank this reset; the line tone's
+   border lives in layered atlas.css, which any unlayered border here would
+   beat, so it is excluded rather than restated. */
+button.chip {
+  appearance: none;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+:where(button.chip):not([data-tone='line']) {
+  border: 0;
+}
+
 .chip[data-tone='accent'] {
-  border-color: var(--color-accent);
+  border: 1px solid var(--color-accent);
+  background: color-mix(in srgb, var(--color-accent) var(--chip-tint-weak), var(--color-bg-panel));
+  color: var(--color-accent);
 }
 
 .chip[data-tone='status'] {
   border: 1px solid var(--color-border-2);
 }
 
+/* Category chips read as a taxonomy tag: panel ground, hairline, and the
+   region colour (when a consumer sets --region-color) on the .dot marker. */
 .chip[data-tone='category'] {
-  background: var(--color-bg-surface);
+  background: var(--color-bg-panel);
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
 }
 
 .chip[data-selected='1'] {
   background: var(--color-accent);
+  border-color: var(--color-accent);
   color: var(--color-bg-deep);
+}
+
+.chip[data-selected='1'] .dot {
+  background: currentColor;
 }
 
 .chip[data-size='sm'] {
@@ -498,6 +542,30 @@ button.pr-avatar {
   border: 1px solid var(--color-border);
   background: var(--color-bg-surface);
   color: var(--color-text);
+}
+
+/* Native date/time input: the field skin plus a browser picker that follows
+   the theme's mode and accent instead of default light chrome. */
+input.field-input[type='datetime-local'] {
+  color-scheme: light;
+  accent-color: var(--color-accent);
+  font: inherit;
+  min-inline-size: 0;
+}
+
+[data-mode='dark'] input.field-input[type='datetime-local'] {
+  color-scheme: dark;
+}
+
+input.field-input[type='datetime-local']::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+input.field-input[type='datetime-local']:focus-visible {
+  outline: none;
+  border-color: var(--color-accent);
+  box-shadow: var(--focus-ring);
 }
 
 .field-input[data-mono='1'] {
@@ -547,6 +615,83 @@ textarea.field-input {
   gap: var(--sp-2);
 }
 
+/* Field group: a <fieldset> that groups related fields without the UA
+   border, padding and min-content sizing; the legend reads as a heading.
+   Put it inside a Card for a visible group surface. */
+.field-group {
+  min-inline-size: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.field-group > legend {
+  margin-block-end: var(--sp-3);
+  padding: 0;
+}
+
+/* Checkbox (Base UI Checkbox root + indicator). The box border uses
+   --color-text-3 so the unchecked control clears 3:1 non-text contrast. */
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.checkbox[data-disabled] {
+  color: var(--control-disabled-fg);
+  cursor: not-allowed;
+}
+
+.checkbox__box {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  inline-size: 18px;
+  block-size: 18px;
+  border: 1px solid var(--color-text-3);
+  border-radius: var(--rad-xs);
+  background: var(--color-bg-surface);
+  color: var(--btn-primary-ink, var(--color-hero-on-brand-ink));
+}
+
+.checkbox__box[data-checked] {
+  border-color: var(--btn-primary-bg, var(--color-accent));
+  background: var(--btn-primary-bg, var(--color-accent));
+}
+
+.checkbox__box[data-disabled] {
+  border-color: var(--control-disabled-border);
+  background: var(--control-disabled-bg);
+  color: var(--control-disabled-fg);
+}
+
+.checkbox__box:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+.checkbox__label {
+  min-inline-size: 0;
+}
+
+.checkbox__indicator {
+  display: grid;
+  place-items: center;
+}
+
+.checkbox__indicator svg {
+  inline-size: 12px;
+  block-size: 12px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 /* Popover */
 
 /* The trigger is a bare <button>; without this reset it renders with UA chrome
@@ -565,7 +710,6 @@ textarea.field-input {
 }
 
 .pop-content {
-  z-index: 40;
   background: var(--overlay-bg);
   border: 1px solid var(--overlay-border);
   border-radius: var(--rad-sm);
@@ -584,10 +728,30 @@ textarea.field-input {
   overflow-wrap: anywhere;
 }
 
+/* Menu items carry their own padding; the popup's .stack gap would double it. */
 .pop-content[data-variant='menu'] {
+  gap: 2px;
   max-width: min(36rem, calc(100vw - 1rem));
   max-height: min(70dvh, 32rem);
   overflow: auto;
+}
+
+/* Default Menu item skin (Base UI sets data-highlighted / data-disabled).
+   :where keeps it below caller skins such as the editor's .hf2 .pf-opt. */
+:where(.pop-content[data-variant='menu']) :where([role='menuitem']) {
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--rad-sm);
+  cursor: pointer;
+}
+
+:where(.pop-content[data-variant='menu']) [role='menuitem'][data-highlighted] {
+  background: var(--color-bg-surface);
+  color: var(--color-text);
+}
+
+:where(.pop-content[data-variant='menu']) [role='menuitem'][data-disabled] {
+  cursor: default;
+  opacity: 0.5;
 }
 
 .pop-content[data-variant='menu'] :is(button, [role='menuitem'], a):focus-visible {
@@ -663,19 +827,42 @@ textarea.field-input {
   border-radius: var(--rad-sm);
 }
 
+/* Focus stays on the list (aria-activedescendant); ring the list itself. */
+.listbox:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
 .listbox-option {
   padding: var(--sp-2) var(--sp-3);
   cursor: pointer;
   font-size: 13px;
 }
 
-.listbox-option:hover {
+.listbox[data-size='sm'] .listbox-option {
+  padding: var(--sp-1) var(--sp-2);
+  font-size: 12px;
+}
+
+.listbox[data-size='lg'] .listbox-option {
+  padding: var(--sp-3) var(--sp-4);
+  font-size: 14px;
+}
+
+.listbox-option:not([aria-disabled='true']):hover {
   background: var(--color-bg-surface);
 }
 
 .listbox-option[data-selected='1'] {
   background: var(--color-accent);
   color: var(--color-bg-deep);
+}
+
+/* Active (aria-activedescendant) option while the list has keyboard focus;
+   visible on its own when focus lands before anything is selected. */
+.listbox:focus-visible .listbox-option[data-active='1'] {
+  outline: 2px solid var(--color-accent);
+  outline-offset: -2px;
 }
 
 .listbox-option[aria-disabled='true'] {
@@ -776,4 +963,269 @@ textarea.field-input {
 .calendar-surface {
   display: grid;
   gap: var(--sp-2);
+}
+
+/* === Markup/stylesheet convergence (2026-10-21) ===
+   Rules for primitives whose emitted hooks had no matching CSS
+   (.design-sync/NOTES.md "App styling defects"). Each block keys on the
+   hooks the component emits; no second vocabulary. */
+
+/* AvatarGroup: overlapping horizontal row (atlas .party overlap) plus the
+   "+N" overflow bubble, which stretches to the tallest avatar. */
+.pr-avatar-group > * + * {
+  margin-inline-start: calc(-1 * var(--sp-2));
+}
+
+.pr-avatar-group__more {
+  align-self: stretch;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  padding-inline: var(--sp-1);
+  border-radius: var(--rad-pill);
+  color: var(--color-text-2);
+  font-size: var(--type-label-size, 0.6875rem);
+}
+
+/* SegmentedControl: selection uses atlas `.seg button.on` (the class
+   QuestBoardView already uses). Size to content so a column flex parent
+   (.stack) cannot stretch the track; data-size='sm' tightens the pills. */
+.seg[data-component='SegmentedControl'] {
+  width: fit-content;
+  max-width: 100%;
+}
+
+.seg[data-size='sm'] .seg__opt {
+  padding: 3px 10px;
+  font-size: 11px;
+}
+
+.seg__opt:disabled {
+  cursor: not-allowed;
+  color: var(--control-disabled-fg);
+}
+
+/* Tabs primitive: the root is a block (tab row above the panel); the row
+   carries atlas's .tabs flex + hairline. Active state keys on the emitted
+   .tabs__tab--active (the hook community.module.css already overrides).
+   :where() keeps specificity low so feature overrides (community.module.css,
+   AdminWorkspaceShell.css) still win. */
+:where(.tabs[data-component='Tabs']) {
+  display: block;
+  border-bottom: 0;
+  margin-bottom: 0;
+}
+
+:where(.tabs[data-component='Tabs']) > .tabs__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-1);
+  border-bottom: 1px solid var(--color-border);
+  margin-bottom: var(--sp-5);
+}
+
+:where(.tabs[data-component='Tabs']) .tabs__tab {
+  flex: none;
+}
+
+:where(.tabs[data-component='Tabs']) .tabs__tab--active {
+  color: var(--color-text);
+  border-bottom-color: var(--color-accent);
+}
+
+:where(.tabs[data-component='Tabs']) > .tabs__panel {
+  min-width: 0;
+}
+
+/* Popover / Menu: Base UI portals the positioner to <body> and anchors it to
+   the .pop-trigger (side/align/collision handled in JS); the panel keeps the
+   .pop-content skin. Outside-press dismissal needs no backdrop element.
+   Sits above the modal layer (50) so a Menu or Popover opened inside a Modal
+   paints over it, and below toasts (100). */
+.pop-positioner {
+  z-index: 60;
+}
+
+:where(.pop-positioner) > .pop-content {
+  width: max-content;
+  max-width: min(32rem, calc(100vw - 2 * var(--sp-4)));
+}
+
+/* Skeleton: block box so inline width/height apply; the shimmer itself is
+   motion.css's .skeleton-shimmer (motion catalog row 17). */
+.skeleton {
+  display: block;
+  width: 100%;
+  height: var(--sp-4);
+  border-radius: var(--rad-sm);
+}
+
+/* ListRow */
+.list-row {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  width: 100%;
+  min-width: 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-radius: var(--rad-sm);
+  color: inherit;
+  text-align: start;
+}
+
+button.list-row {
+  appearance: none;
+  margin: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+button.list-row:where(:not(:disabled):not([data-selected='1'])):hover {
+  background: var(--color-bg-surface);
+}
+
+.list-row[data-selected='1'] {
+  background: color-mix(in srgb, var(--color-accent) var(--chip-tint-weak), var(--color-bg-panel));
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+
+button.list-row:disabled {
+  cursor: not-allowed;
+  color: var(--control-disabled-fg);
+}
+
+button.list-row:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* StatTile: panel surface with a tone rail (same inline-start rail as
+   .pr-toast). */
+.stat-tile {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+  padding: var(--sp-3) var(--sp-4);
+  background: var(--color-bg-panel);
+  border: 1px solid var(--color-border);
+  border-inline-start: 3px solid var(--color-border-2);
+  border-radius: var(--rad-sm);
+}
+
+.stat-tile[data-size='sm'] {
+  padding: var(--sp-2) var(--sp-3);
+}
+
+.stat-tile[data-size='lg'] {
+  padding: var(--sp-4) var(--sp-5);
+}
+
+.stat-tile__label,
+.stat-tile__hint {
+  color: var(--color-text-muted);
+}
+
+.stat-tile__value {
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-tile[data-tone='accent'] {
+  border-inline-start-color: var(--color-accent);
+}
+
+.stat-tile[data-tone='accent'] .stat-tile__value {
+  color: var(--color-accent);
+}
+
+.stat-tile[data-tone='good'] {
+  border-inline-start-color: var(--status-success-indicator);
+}
+
+.stat-tile[data-tone='warn'] {
+  border-inline-start-color: var(--status-warning-indicator);
+}
+
+.stat-tile[data-tone='danger'] {
+  border-inline-start-color: var(--status-danger-indicator);
+}
+
+/* WeekGrid interactive cells are <button data-el="week-grid.cell">. Reset UA
+   chrome for every skin; the default skin keeps its box from the B3 rules
+   above and gains pointer, hover, and selected states. */
+button[data-el='week-grid.cell'] {
+  appearance: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+
+button[data-el='week-grid.cell'][data-skin='default'] {
+  cursor: pointer;
+}
+
+[data-el='week-grid.cell'][data-skin='default']:where(button):hover {
+  border-color: var(--color-text-muted);
+}
+
+[data-el='week-grid.cell'][data-skin='default'][data-selected='1'] {
+  border-color: var(--color-accent);
+  box-shadow: inset 0 0 0 1px var(--color-accent);
+}
+
+button[data-el='week-grid.cell']:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Chip.Row: wrapping chip strip. */
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+/* Hot heat cells use dark ink; type classes inside must inherit it, not
+   keep their own muted/accent colour (bronze-on-bronze otherwise). */
+[data-el='week-grid.cell'][data-skin='default'][data-heat='2'],
+[data-el='calendar.cell'][data-heat='2'] {
+  color: var(--color-bg-deep);
+}
+:is([data-el='week-grid.cell'][data-skin='default'], [data-el='calendar.cell']):is([data-heat='2'], [data-heat='3'], [data-heat='4']) :where(.type-caption, .type-value) {
+  color: inherit;
+}
+
+/* Moved from inline styles (2026-10-21) */
+
+/* Avatar: uploaded image fills the round .av frame (position: relative),
+   laid over the initials and revealed only once it has loaded. */
+.pr-avatar .pr-avatar-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  display: block;
+  opacity: 0;
+}
+
+.pr-avatar .pr-avatar-img[data-loaded='1'] {
+  opacity: 1;
+}
+
+/* RegionLabel compact: fixed minimum chip width. */
+.chip.region-label-compact {
+  min-width: 56px;
 }

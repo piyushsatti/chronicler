@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useMemo } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../../api/queryKeys.js';
 import { toAppError } from '../../../errors/toAppError.js';
@@ -6,16 +6,19 @@ import type { AppError } from '../../../errors/types.js';
 import { loadNotifications } from '../adapters/notificationsAdapter.js';
 import type { NotificationView } from '../types.js';
 import { useMarkNotificationsRead } from './useMarkNotificationsRead.js';
+import { useNotificationSession } from './useNotificationSession.js';
 
 const PAGE_SIZE = 20;
 
-export type NotificationsPageView =
+type NotificationsPageView =
   | { status: 'loading' }
-  | { status: 'error'; error: AppError }
+  | { status: 'error'; error: AppError; retry: () => void }
   | {
       status: 'ready';
       items: NotificationView[];
       markReadFailureIds: string[];
+      markReadSuccessCount: number;
+      loadMoreError: AppError | null;
       retryMarkRead: () => void;
       isFetchingNextPage: boolean;
       hasNextPage: boolean;
@@ -24,10 +27,22 @@ export type NotificationsPageView =
 
 export function useNotificationsPage(): NotificationsPageView {
   const queryClient = useQueryClient();
+  const { session, isCurrent, requireCurrent, accountError, retryAccount } =
+    useNotificationSession();
   const q = useInfiniteQuery({
-    queryKey: queryKeys.notificationsInbox(PAGE_SIZE),
-    queryFn: ({ pageParam }) =>
-      loadNotifications({ limit: PAGE_SIZE, before: pageParam ?? null }),
+    queryKey: [...queryKeys.notificationsInbox(PAGE_SIZE), session?.authority ?? null],
+    queryFn: async ({ pageParam, signal }) => {
+      const active = requireCurrent(session);
+      const page = await loadNotifications({
+        limit: PAGE_SIZE,
+        before: pageParam ?? null,
+        session: { token: active.token, signal },
+      });
+      requireCurrent(active);
+      return page;
+    },
+    enabled: session !== null,
+    retry: false,
     initialPageParam: null as string | null,
     getNextPageParam: (last) => (last.hasMore ? last.nextBefore : undefined),
   });
@@ -35,16 +50,24 @@ export function useNotificationsPage(): NotificationsPageView {
     enqueue,
     retry: retryMarkRead,
     failedIds: markReadFailureIds,
+    succeededIds,
   } = useMarkNotificationsRead();
 
   useEffect(() => {
-    if (!q.dataUpdatedAt) return;
+    if (!q.dataUpdatedAt || !isCurrent(session)) return;
     void queryClient.invalidateQueries({
       queryKey: queryKeys.notificationsUnread,
     });
-  }, [q.dataUpdatedAt, queryClient]);
+  }, [q.dataUpdatedAt, queryClient, isCurrent, session]);
 
-  const items = q.data?.pages.flatMap((page) => page.items) ?? [];
+  const items = useMemo(() => {
+    const unique = new Map<string, NotificationView>();
+    for (const page of q.data?.pages ?? [])
+      for (const item of page.items) {
+        if (!unique.has(item.id)) unique.set(item.id, item);
+      }
+    return [...unique.values()];
+  }, [q.data]);
 
   useEffect(() => {
     enqueue(
@@ -55,23 +78,33 @@ export function useNotificationsPage(): NotificationsPageView {
   }, [enqueue, items]);
 
   const fetchNextPage = useCallback(() => {
-    void q.fetchNextPage();
-  }, [q.fetchNextPage]);
+    if (isCurrent(session)) void q.fetchNextPage();
+  }, [q.fetchNextPage, isCurrent, session]);
 
-  if (q.isError) {
+  if (accountError || (q.isError && !q.isFetchNextPageError)) {
     return {
       status: 'error',
-      error: toAppError(q.error, 'notifications:page'),
+      error: toAppError(accountError ?? q.error, 'notifications:page'),
+      retry: () => {
+        if (accountError) void retryAccount();
+        else if (isCurrent(session)) void q.refetch();
+      },
     };
   }
-  if (q.isLoading || !q.data) {
+  if (!isCurrent(session) || q.isLoading || !q.data) {
     return { status: 'loading' };
   }
 
   return {
     status: 'ready',
-    items,
+    items: items.map((item) =>
+      succeededIds.includes(item.id) ? { ...item, unread: false } : item,
+    ),
     markReadFailureIds,
+    markReadSuccessCount: succeededIds.length,
+    loadMoreError: q.isFetchNextPageError
+      ? toAppError(q.error, 'notifications:more')
+      : null,
     retryMarkRead,
     isFetchingNextPage: q.isFetchingNextPage,
     hasNextPage: Boolean(q.hasNextPage),

@@ -37,18 +37,40 @@ describe('characterTabsAdapter', () => {
     if (result.ok) expect(result.data[0]?.href).toBe('/summaries/vault');
   });
 
-  it('parses participations', () => {
-    const result = parseParticipations({
-      items: [
-        {
-          questId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
-          status: 'played',
-          characterName: 'Lyra',
-          createdAt: '2026-01-01T18:00:00Z',
-        },
-      ],
+  it('names each participation by its quest, not by the character', () => {
+    const played = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
+    const untitled = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+    const hidden = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
+    const row = (questId: string) => ({
+      questId,
+      status: 'played',
+      characterName: 'Lyra',
+      createdAt: '2026-01-01T18:00:00Z',
     });
+    const result = parseParticipations(
+      { items: [row(played), row(untitled), row(hidden)] },
+      {
+        [played]: {
+          shortCode: 'Q-7',
+          title: 'The Salt Stair',
+          scheduledAt: '2026-01-03T18:00:00Z',
+        },
+        [untitled]: { shortCode: 'Q-8', title: null, scheduledAt: null },
+        [hidden]: null,
+      },
+    );
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.data[0]?.label).toBe('Lyra');
+    if (!result.ok) return;
+    expect(result.data.map((item) => item.label)).toEqual([
+      'The Salt Stair',
+      'Q-8',
+      'Quest not available',
+    ]);
+    expect(result.data.some((item) => item.label === 'Lyra')).toBe(false);
+    expect(result.data[0]).toMatchObject({
+      href: '/quests/Q-7',
+      scheduledAt: '2026-01-03T18:00:00Z',
+    });
+    expect(result.data[2]?.href).toBeNull();
   });
 });

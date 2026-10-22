@@ -1,10 +1,10 @@
-export type SummaryCategoryMeta = {
+type SummaryCategoryMeta = {
   label: string;
   color: string;
   bg: string;
 };
 
-export const SUMMARY_CATEGORY_META: Record<string, SummaryCategoryMeta> = {
+const SUMMARY_CATEGORY_META: Record<string, SummaryCategoryMeta> = {
   dm: {
     label: 'DM RECAP',
     color: 'var(--evt-dm)',
@@ -22,7 +22,7 @@ export const SUMMARY_CATEGORY_META: Record<string, SummaryCategoryMeta> = {
   },
 };
 
-export const DEFAULT_SUMMARY_CATEGORY_META: SummaryCategoryMeta = {
+const DEFAULT_SUMMARY_CATEGORY_META: SummaryCategoryMeta = {
   label: 'ENTRY',
   color: 'var(--color-text-3)',
   bg: 'var(--color-bg-surface)',

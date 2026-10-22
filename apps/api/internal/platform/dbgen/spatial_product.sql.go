@@ -295,24 +295,74 @@ func (q *Queries) GetProductMap(ctx context.Context, atlasCode string) (GetProdu
 }
 
 const getProductRegionCounts = `-- name: GetProductRegionCounts :one
+WITH target AS (
+ SELECT r.id,r.public_id FROM regions r
+ WHERE r.public_id=$1 AND r.deleted_at IS NULL
+), admitted_nodes AS (
+ SELECT pn.id,
+        COALESCE($2::boolean
+          AND EXISTS (SELECT 1 FROM pointcrawl_entry_links loc WHERE loc.node_id=pn.id AND loc.relation='location')
+          AND NOT EXISTS (
+            SELECT 1 FROM pointcrawl_entry_links loc JOIN documents d ON d.id=loc.document_id
+            LEFT JOIN members author ON author.id=d.author_id
+            WHERE loc.node_id=pn.id AND loc.relation='location' AND d.deleted_at IS NULL
+              AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
+                $3::uuid,$4::text[],$5::text,
+                false,$6::boolean,$7::uuid[])
+          ),false)::boolean AS admin_override
+ FROM target r JOIN maps m ON m.region_id=r.id
+ JOIN pointcrawl_nodes pn ON pn.map_id=m.id
+ WHERE NOT EXISTS (SELECT 1 FROM pointcrawl_entry_links loc
+                   WHERE loc.node_id=pn.id AND loc.relation='location')
+    OR EXISTS (SELECT 1 FROM pointcrawl_entry_links loc JOIN documents d ON d.id=loc.document_id
+               LEFT JOIN members author ON author.id=d.author_id
+               WHERE loc.node_id=pn.id AND loc.relation='location' AND d.deleted_at IS NULL
+                 AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
+                   $3::uuid,$4::text[],$5::text,
+                   $2::boolean,$6::boolean,$7::uuid[]))
+)
 SELECT r.public_id AS region_id,
-       (SELECT count(*)::int FROM maps m JOIN pointcrawl_nodes pn ON pn.map_id=m.id
-        WHERE m.region_id=r.id) AS pointcrawl_node_count,
+       (SELECT count(*)::int FROM admitted_nodes) AS pointcrawl_node_count,
        (SELECT count(*)::int FROM quest_regions qr JOIN quests q ON q.id=qr.quest_id
-        WHERE qr.region_id=r.id AND q.deleted_at IS NULL) AS quest_count
-FROM regions r WHERE r.public_id=$1 AND r.deleted_at IS NULL
+        WHERE qr.region_id=r.id AND q.deleted_at IS NULL) AS quest_count,
+       COALESCE((SELECT bool_or(admin_override) FROM admitted_nodes),false)::boolean AS admin_override
+FROM target r
 `
+
+type GetProductRegionCountsParams struct {
+	RegionID     pgtype.UUID   `json:"region_id"`
+	ViewerAdmin  bool          `json:"viewer_admin"`
+	ViewerID     pgtype.UUID   `json:"viewer_id"`
+	ViewerRoles  []string      `json:"viewer_roles"`
+	ViewerHandle string        `json:"viewer_handle"`
+	ViewerLiveDm bool          `json:"viewer_live_dm"`
+	ReaderIds    []pgtype.UUID `json:"reader_ids"`
+}
 
 type GetProductRegionCountsRow struct {
 	RegionID            pgtype.UUID `json:"region_id"`
 	PointcrawlNodeCount int32       `json:"pointcrawl_node_count"`
 	QuestCount          int32       `json:"quest_count"`
+	AdminOverride       bool        `json:"admin_override"`
 }
 
-func (q *Queries) GetProductRegionCounts(ctx context.Context, regionID pgtype.UUID) (GetProductRegionCountsRow, error) {
-	row := q.db.QueryRow(ctx, getProductRegionCounts, regionID)
+func (q *Queries) GetProductRegionCounts(ctx context.Context, arg GetProductRegionCountsParams) (GetProductRegionCountsRow, error) {
+	row := q.db.QueryRow(ctx, getProductRegionCounts,
+		arg.RegionID,
+		arg.ViewerAdmin,
+		arg.ViewerID,
+		arg.ViewerRoles,
+		arg.ViewerHandle,
+		arg.ViewerLiveDm,
+		arg.ReaderIds,
+	)
 	var i GetProductRegionCountsRow
-	err := row.Scan(&i.RegionID, &i.PointcrawlNodeCount, &i.QuestCount)
+	err := row.Scan(
+		&i.RegionID,
+		&i.PointcrawlNodeCount,
+		&i.QuestCount,
+		&i.AdminOverride,
+	)
 	return i, err
 }
 
@@ -535,7 +585,17 @@ const listProductPointcrawlEdgesForMaps = `-- name: ListProductPointcrawlEdgesFo
 WITH requested AS (
  SELECT value,ordinality FROM jsonb_array_elements($1::jsonb) WITH ORDINALITY AS e(value,ordinality)
 ), visible_nodes AS (
- SELECT k.ordinality,n.id,n.map_id
+ SELECT k.ordinality,n.id,n.map_id,
+        COALESCE($2::boolean
+         AND EXISTS (SELECT 1 FROM pointcrawl_entry_links loc WHERE loc.node_id=n.id AND loc.relation='location')
+         AND NOT EXISTS (
+           SELECT 1 FROM pointcrawl_entry_links loc JOIN documents ld ON ld.id=loc.document_id
+           LEFT JOIN members la ON la.id=ld.author_id
+           WHERE loc.node_id=n.id AND loc.relation='location' AND ld.deleted_at IS NULL
+             AND document_readable(ld.public_id,la.public_id,ld.status,ld.visibility,ld.policy,
+               $3::uuid,$4::text[],$5::text,
+               false,$6::boolean,$7::uuid[])
+         ),false)::boolean AS admin_override
  FROM requested k JOIN maps m ON m.public_id=(k.value->>'parent_id')::uuid
  JOIN pointcrawl_nodes n ON n.map_id=m.id
  WHERE NOT EXISTS (SELECT 1 FROM pointcrawl_entry_links loc
@@ -545,16 +605,25 @@ WITH requested AS (
       LEFT JOIN members author ON author.id=d.author_id
       WHERE loc.node_id=n.id AND loc.relation='location' AND d.deleted_at IS NULL
         AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
-          $2::uuid,$3::text[],$4::text,
-          $5::boolean,$6::boolean,$7::uuid[])
+          $3::uuid,$4::text[],$5::text,
+          $2::boolean,$6::boolean,$7::uuid[])
     )
 ), ranked AS (
 SELECT k.ordinality::int AS key_ordinal,(k.value->>'parent_id')::uuid AS parent_id,m.public_id AS map_id,e.public_id AS id,
        a.public_id AS node_a,b.public_id AS node_b,e.directed,e.kind,e.label,
-       CASE WHEN d.id IS NULL THEN NULL WHEN d.deleted_at IS NULL AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
-         $2::uuid,$3::text[],$4::text,
-         $5::boolean,$6::boolean,$7::uuid[])
-         THEN d.public_id END AS document_id,
+       (CASE WHEN d.id IS NULL THEN NULL WHEN d.deleted_at IS NULL AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
+         $3::uuid,$4::text[],$5::text,
+         $2::boolean,$6::boolean,$7::uuid[])
+         THEN d.public_id END)::uuid AS document_id,
+       COALESCE(va.admin_override OR vb.admin_override OR (
+         $2::boolean AND d.id IS NOT NULL AND d.deleted_at IS NULL
+         AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
+           $3::uuid,$4::text[],$5::text,
+           $2::boolean,$6::boolean,$7::uuid[])
+         AND NOT document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
+           $3::uuid,$4::text[],$5::text,
+           false,$6::boolean,$7::uuid[])
+       ),false)::boolean AS admin_override,
        (k.value->>'offset')::int AS row_offset,(k.value->>'limit')::int AS row_limit,
        row_number() OVER (PARTITION BY k.ordinality ORDER BY e.public_id) AS rn
 FROM requested k
@@ -565,11 +634,11 @@ JOIN visible_nodes vb ON vb.ordinality=k.ordinality AND vb.id=e.node_b
 JOIN pointcrawl_nodes a ON a.id=va.id JOIN pointcrawl_nodes b ON b.id=vb.id
 LEFT JOIN documents d ON d.id=e.document_id LEFT JOIN members author ON author.id=d.author_id
 )
-SELECT key_ordinal,parent_id,map_id,true AS parent_exists,id,node_a,node_b,directed,kind,label,document_id
+SELECT key_ordinal,parent_id,map_id,true AS parent_exists,id,node_a,node_b,directed,kind,label,document_id,admin_override
 FROM ranked WHERE rn>row_offset AND rn<=row_offset+row_limit
 UNION ALL
 SELECT k.ordinality::int,(k.value->>'parent_id')::uuid,m.public_id,(m.id IS NOT NULL),
-       NULL::uuid,NULL::uuid,NULL::uuid,NULL::boolean,NULL::text,NULL::text,NULL::uuid
+       NULL::uuid,NULL::uuid,NULL::uuid,false,''::text,NULL::text,NULL::uuid,false::boolean
 FROM requested k LEFT JOIN maps m ON m.public_id=(k.value->>'parent_id')::uuid
 WHERE NOT EXISTS (SELECT 1 FROM ranked r WHERE r.key_ordinal=k.ordinality AND r.rn> (k.value->>'offset')::int AND r.rn<=((k.value->>'offset')::int+(k.value->>'limit')::int))
 ORDER BY key_ordinal,id
@@ -577,35 +646,36 @@ ORDER BY key_ordinal,id
 
 type ListProductPointcrawlEdgesForMapsParams struct {
 	Keys         []byte        `json:"keys"`
+	ViewerAdmin  bool          `json:"viewer_admin"`
 	ViewerID     pgtype.UUID   `json:"viewer_id"`
 	ViewerRoles  []string      `json:"viewer_roles"`
 	ViewerHandle string        `json:"viewer_handle"`
-	ViewerAdmin  bool          `json:"viewer_admin"`
 	ViewerLiveDm bool          `json:"viewer_live_dm"`
 	ReaderIds    []pgtype.UUID `json:"reader_ids"`
 }
 
 type ListProductPointcrawlEdgesForMapsRow struct {
-	KeyOrdinal   int32       `json:"key_ordinal"`
-	ParentID     pgtype.UUID `json:"parent_id"`
-	MapID        pgtype.UUID `json:"map_id"`
-	ParentExists bool        `json:"parent_exists"`
-	ID           pgtype.UUID `json:"id"`
-	NodeA        pgtype.UUID `json:"node_a"`
-	NodeB        pgtype.UUID `json:"node_b"`
-	Directed     bool        `json:"directed"`
-	Kind         string      `json:"kind"`
-	Label        pgtype.Text `json:"label"`
-	DocumentID   interface{} `json:"document_id"`
+	KeyOrdinal    int32       `json:"key_ordinal"`
+	ParentID      pgtype.UUID `json:"parent_id"`
+	MapID         pgtype.UUID `json:"map_id"`
+	ParentExists  bool        `json:"parent_exists"`
+	ID            pgtype.UUID `json:"id"`
+	NodeA         pgtype.UUID `json:"node_a"`
+	NodeB         pgtype.UUID `json:"node_b"`
+	Directed      bool        `json:"directed"`
+	Kind          string      `json:"kind"`
+	Label         pgtype.Text `json:"label"`
+	DocumentID    pgtype.UUID `json:"document_id"`
+	AdminOverride bool        `json:"admin_override"`
 }
 
 func (q *Queries) ListProductPointcrawlEdgesForMaps(ctx context.Context, arg ListProductPointcrawlEdgesForMapsParams) ([]ListProductPointcrawlEdgesForMapsRow, error) {
 	rows, err := q.db.Query(ctx, listProductPointcrawlEdgesForMaps,
 		arg.Keys,
+		arg.ViewerAdmin,
 		arg.ViewerID,
 		arg.ViewerRoles,
 		arg.ViewerHandle,
-		arg.ViewerAdmin,
 		arg.ViewerLiveDm,
 		arg.ReaderIds,
 	)
@@ -628,6 +698,7 @@ func (q *Queries) ListProductPointcrawlEdgesForMaps(ctx context.Context, arg Lis
 			&i.Kind,
 			&i.Label,
 			&i.DocumentID,
+			&i.AdminOverride,
 		); err != nil {
 			return nil, err
 		}
@@ -643,9 +714,24 @@ const listProductPointcrawlLinksForNodes = `-- name: ListProductPointcrawlLinksF
 WITH ranked AS (
  SELECT k.ordinality::int AS key_ordinal,(k.value->>'parent_id')::uuid AS parent_id,m.public_id AS map_id,n.public_id AS node_id,d.public_id AS document_id,
         l.relation,l.created_at,creator.public_id AS created_by,
+        COALESCE($1::boolean AND (
+          NOT document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
+            $2::uuid,$3::text[],$4::text,
+            false,$5::boolean,$6::uuid[])
+          OR (COALESCE($1::boolean
+         AND EXISTS (SELECT 1 FROM pointcrawl_entry_links loc WHERE loc.node_id=n.id AND loc.relation='location')
+         AND NOT EXISTS (
+           SELECT 1 FROM pointcrawl_entry_links loc JOIN documents ld ON ld.id=loc.document_id
+           LEFT JOIN members la ON la.id=ld.author_id
+           WHERE loc.node_id=n.id AND loc.relation='location' AND ld.deleted_at IS NULL
+             AND document_readable(ld.public_id,la.public_id,ld.status,ld.visibility,ld.policy,
+               $2::uuid,$3::text[],$4::text,
+               false,$5::boolean,$6::uuid[])
+         ),false)::boolean)
+        ),false)::boolean AS admin_override,
         (k.value->>'offset')::int AS row_offset,(k.value->>'limit')::int AS row_limit,
         row_number() OVER (PARTITION BY k.ordinality ORDER BY l.relation,d.public_id) AS rn
- FROM jsonb_array_elements($1::jsonb) WITH ORDINALITY k(value,ordinality)
+ FROM jsonb_array_elements($7::jsonb) WITH ORDINALITY k(value,ordinality)
  JOIN pointcrawl_nodes n ON n.public_id=(k.value->>'parent_id')::uuid
  JOIN maps m ON m.id=n.map_id
  JOIN pointcrawl_entry_links l ON l.node_id=n.id
@@ -654,7 +740,7 @@ WITH ranked AS (
  LEFT JOIN members author ON author.id=d.author_id
  WHERE l.map_id=m.id AND d.deleted_at IS NULL AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
    $2::uuid,$3::text[],$4::text,
-   $5::boolean,$6::boolean,$7::uuid[])
+   $1::boolean,$5::boolean,$6::uuid[])
    AND (NOT EXISTS (SELECT 1 FROM pointcrawl_entry_links loc
                     WHERE loc.node_id=n.id AND loc.relation='location')
      OR EXISTS (SELECT 1 FROM pointcrawl_entry_links loc JOIN documents ld ON ld.id=loc.document_id
@@ -662,9 +748,9 @@ WITH ranked AS (
                 WHERE loc.node_id=n.id AND loc.relation='location' AND ld.deleted_at IS NULL
                   AND document_readable(ld.public_id,la.public_id,ld.status,ld.visibility,ld.policy,
                     $2::uuid,$3::text[],$4::text,
-                    $5::boolean,$6::boolean,$7::uuid[])))
+                    $1::boolean,$5::boolean,$6::uuid[])))
 )
-SELECT key_ordinal,parent_id,map_id,true AS parent_exists,node_id,document_id,relation,created_at,created_by FROM ranked
+SELECT key_ordinal,parent_id,map_id,true AS parent_exists,node_id,document_id,relation,created_at,created_by,admin_override FROM ranked
 WHERE rn>row_offset AND rn<=row_offset+row_limit
 UNION ALL
 SELECT k.ordinality::int,(k.value->>'parent_id')::uuid,m.public_id,(n.id IS NOT NULL AND (
@@ -674,9 +760,9 @@ SELECT k.ordinality::int,(k.value->>'parent_id')::uuid,m.public_id,(n.id IS NOT 
              WHERE loc.node_id=n.id AND loc.relation='location' AND d.deleted_at IS NULL
                AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
                  $2::uuid,$3::text[],$4::text,
-                 $5::boolean,$6::boolean,$7::uuid[])))),
-       n.public_id,NULL::uuid,NULL::text,NULL::timestamptz,NULL::uuid
-FROM jsonb_array_elements($1::jsonb) WITH ORDINALITY k(value,ordinality)
+                 $1::boolean,$5::boolean,$6::uuid[])))),
+       n.public_id,NULL::uuid,''::text,NULL::timestamptz,NULL::uuid,false::boolean
+FROM jsonb_array_elements($7::jsonb) WITH ORDINALITY k(value,ordinality)
 LEFT JOIN pointcrawl_nodes n ON n.public_id=(k.value->>'parent_id')::uuid
 LEFT JOIN maps m ON m.id=n.map_id
 WHERE NOT EXISTS (SELECT 1 FROM ranked r WHERE r.key_ordinal=k.ordinality AND r.rn>(k.value->>'offset')::int AND r.rn<=((k.value->>'offset')::int+(k.value->>'limit')::int))
@@ -684,36 +770,37 @@ ORDER BY key_ordinal,relation,document_id
 `
 
 type ListProductPointcrawlLinksForNodesParams struct {
-	Keys         []byte        `json:"keys"`
+	ViewerAdmin  bool          `json:"viewer_admin"`
 	ViewerID     pgtype.UUID   `json:"viewer_id"`
 	ViewerRoles  []string      `json:"viewer_roles"`
 	ViewerHandle string        `json:"viewer_handle"`
-	ViewerAdmin  bool          `json:"viewer_admin"`
 	ViewerLiveDm bool          `json:"viewer_live_dm"`
 	ReaderIds    []pgtype.UUID `json:"reader_ids"`
+	Keys         []byte        `json:"keys"`
 }
 
 type ListProductPointcrawlLinksForNodesRow struct {
-	KeyOrdinal   int32              `json:"key_ordinal"`
-	ParentID     pgtype.UUID        `json:"parent_id"`
-	MapID        pgtype.UUID        `json:"map_id"`
-	ParentExists bool               `json:"parent_exists"`
-	NodeID       pgtype.UUID        `json:"node_id"`
-	DocumentID   pgtype.UUID        `json:"document_id"`
-	Relation     string             `json:"relation"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	CreatedBy    pgtype.UUID        `json:"created_by"`
+	KeyOrdinal    int32              `json:"key_ordinal"`
+	ParentID      pgtype.UUID        `json:"parent_id"`
+	MapID         pgtype.UUID        `json:"map_id"`
+	ParentExists  bool               `json:"parent_exists"`
+	NodeID        pgtype.UUID        `json:"node_id"`
+	DocumentID    pgtype.UUID        `json:"document_id"`
+	Relation      string             `json:"relation"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	CreatedBy     pgtype.UUID        `json:"created_by"`
+	AdminOverride bool               `json:"admin_override"`
 }
 
 func (q *Queries) ListProductPointcrawlLinksForNodes(ctx context.Context, arg ListProductPointcrawlLinksForNodesParams) ([]ListProductPointcrawlLinksForNodesRow, error) {
 	rows, err := q.db.Query(ctx, listProductPointcrawlLinksForNodes,
-		arg.Keys,
+		arg.ViewerAdmin,
 		arg.ViewerID,
 		arg.ViewerRoles,
 		arg.ViewerHandle,
-		arg.ViewerAdmin,
 		arg.ViewerLiveDm,
 		arg.ReaderIds,
+		arg.Keys,
 	)
 	if err != nil {
 		return nil, err
@@ -732,6 +819,7 @@ func (q *Queries) ListProductPointcrawlLinksForNodes(ctx context.Context, arg Li
 			&i.Relation,
 			&i.CreatedAt,
 			&i.CreatedBy,
+			&i.AdminOverride,
 		); err != nil {
 			return nil, err
 		}
@@ -746,10 +834,20 @@ func (q *Queries) ListProductPointcrawlLinksForNodes(ctx context.Context, arg Li
 const listProductPointcrawlNodesForMaps = `-- name: ListProductPointcrawlNodesForMaps :many
 WITH ranked AS (
 SELECT k.ordinality::int AS key_ordinal,(k.value->>'parent_id')::uuid AS parent_id,m.public_id AS map_id,n.public_id AS id,n.name,n.x,n.y,
-       n.created_at,submap.public_id AS submap_id,(k.value->>'offset')::int AS row_offset,
+       n.created_at,submap.public_id AS submap_id,
+       COALESCE($1::boolean
+         AND EXISTS (SELECT 1 FROM pointcrawl_entry_links loc WHERE loc.node_id=n.id AND loc.relation='location')
+         AND NOT EXISTS (
+           SELECT 1 FROM pointcrawl_entry_links loc JOIN documents ld ON ld.id=loc.document_id
+           LEFT JOIN members la ON la.id=ld.author_id
+           WHERE loc.node_id=n.id AND loc.relation='location' AND ld.deleted_at IS NULL
+             AND document_readable(ld.public_id,la.public_id,ld.status,ld.visibility,ld.policy,
+               $2::uuid,$3::text[],$4::text,
+               false,$5::boolean,$6::uuid[])
+         ),false)::boolean AS admin_override,(k.value->>'offset')::int AS row_offset,
        (k.value->>'limit')::int AS row_limit,
        row_number() OVER (PARTITION BY k.ordinality ORDER BY n.public_id) AS rn
-FROM jsonb_array_elements($1::jsonb) WITH ORDINALITY k(value,ordinality)
+FROM jsonb_array_elements($7::jsonb) WITH ORDINALITY k(value,ordinality)
 JOIN maps m ON m.public_id=(k.value->>'parent_id')::uuid
 JOIN pointcrawl_nodes n ON n.map_id=m.id LEFT JOIN maps submap ON submap.id=n.submap_id
 WHERE NOT EXISTS (SELECT 1 FROM pointcrawl_entry_links loc
@@ -760,52 +858,53 @@ WHERE NOT EXISTS (SELECT 1 FROM pointcrawl_entry_links loc
      WHERE loc.node_id=n.id AND loc.relation='location' AND d.deleted_at IS NULL
        AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
          $2::uuid,$3::text[],$4::text,
-         $5::boolean,$6::boolean,$7::uuid[])
+         $1::boolean,$5::boolean,$6::uuid[])
    )
 )
-SELECT key_ordinal,parent_id,map_id,true AS parent_exists,id,name,x,y,created_at,submap_id
+SELECT key_ordinal,parent_id,map_id,true AS parent_exists,id,name,x,y,created_at,submap_id,admin_override
 FROM ranked WHERE rn>row_offset AND rn<=row_offset+row_limit
 UNION ALL
 SELECT k.ordinality::int,(k.value->>'parent_id')::uuid,m.public_id,(m.id IS NOT NULL),
-       NULL::uuid,NULL::text,NULL::double precision,NULL::double precision,NULL::timestamptz,NULL::uuid
-FROM jsonb_array_elements($1::jsonb) WITH ORDINALITY k(value,ordinality)
+       NULL::uuid,''::text,0::double precision,0::double precision,NULL::timestamptz,NULL::uuid,false::boolean
+FROM jsonb_array_elements($7::jsonb) WITH ORDINALITY k(value,ordinality)
 LEFT JOIN maps m ON m.public_id=(k.value->>'parent_id')::uuid
 WHERE NOT EXISTS (SELECT 1 FROM ranked r WHERE r.key_ordinal=k.ordinality AND r.rn>(k.value->>'offset')::int AND r.rn<=((k.value->>'offset')::int+(k.value->>'limit')::int))
 ORDER BY key_ordinal,id
 `
 
 type ListProductPointcrawlNodesForMapsParams struct {
-	Keys         []byte        `json:"keys"`
+	ViewerAdmin  bool          `json:"viewer_admin"`
 	ViewerID     pgtype.UUID   `json:"viewer_id"`
 	ViewerRoles  []string      `json:"viewer_roles"`
 	ViewerHandle string        `json:"viewer_handle"`
-	ViewerAdmin  bool          `json:"viewer_admin"`
 	ViewerLiveDm bool          `json:"viewer_live_dm"`
 	ReaderIds    []pgtype.UUID `json:"reader_ids"`
+	Keys         []byte        `json:"keys"`
 }
 
 type ListProductPointcrawlNodesForMapsRow struct {
-	KeyOrdinal   int32              `json:"key_ordinal"`
-	ParentID     pgtype.UUID        `json:"parent_id"`
-	MapID        pgtype.UUID        `json:"map_id"`
-	ParentExists bool               `json:"parent_exists"`
-	ID           pgtype.UUID        `json:"id"`
-	Name         string             `json:"name"`
-	X            float64            `json:"x"`
-	Y            float64            `json:"y"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	SubmapID     pgtype.UUID        `json:"submap_id"`
+	KeyOrdinal    int32              `json:"key_ordinal"`
+	ParentID      pgtype.UUID        `json:"parent_id"`
+	MapID         pgtype.UUID        `json:"map_id"`
+	ParentExists  bool               `json:"parent_exists"`
+	ID            pgtype.UUID        `json:"id"`
+	Name          string             `json:"name"`
+	X             float64            `json:"x"`
+	Y             float64            `json:"y"`
+	CreatedAt     pgtype.Timestamptz `json:"created_at"`
+	SubmapID      pgtype.UUID        `json:"submap_id"`
+	AdminOverride bool               `json:"admin_override"`
 }
 
 func (q *Queries) ListProductPointcrawlNodesForMaps(ctx context.Context, arg ListProductPointcrawlNodesForMapsParams) ([]ListProductPointcrawlNodesForMapsRow, error) {
 	rows, err := q.db.Query(ctx, listProductPointcrawlNodesForMaps,
-		arg.Keys,
+		arg.ViewerAdmin,
 		arg.ViewerID,
 		arg.ViewerRoles,
 		arg.ViewerHandle,
-		arg.ViewerAdmin,
 		arg.ViewerLiveDm,
 		arg.ReaderIds,
+		arg.Keys,
 	)
 	if err != nil {
 		return nil, err
@@ -825,6 +924,7 @@ func (q *Queries) ListProductPointcrawlNodesForMaps(ctx context.Context, arg Lis
 			&i.Y,
 			&i.CreatedAt,
 			&i.SubmapID,
+			&i.AdminOverride,
 		); err != nil {
 			return nil, err
 		}
@@ -869,10 +969,10 @@ func (q *Queries) ListProductRealDates(ctx context.Context, arg ListProductRealD
 
 const listProductRegions = `-- name: ListProductRegions :many
 SELECT r.public_id AS id, r.name, r.kind, r.charter_deadline, r.created_at,
-       CASE WHEN d.id IS NULL THEN NULL WHEN d.deleted_at IS NULL AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
+       (CASE WHEN d.id IS NULL THEN NULL WHEN d.deleted_at IS NULL AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
          $1::uuid,$2::text[],$3::text,
          $4::boolean,$5::boolean,$6::uuid[])
-         THEN d.public_id END AS document_id
+         THEN d.public_id END)::uuid AS document_id
 FROM regions r LEFT JOIN documents d ON d.id=r.document_id
 LEFT JOIN members author ON author.id=d.author_id
 WHERE r.deleted_at IS NULL
@@ -898,7 +998,7 @@ type ListProductRegionsRow struct {
 	Kind            string             `json:"kind"`
 	CharterDeadline pgtype.Timestamptz `json:"charter_deadline"`
 	CreatedAt       pgtype.Timestamptz `json:"created_at"`
-	DocumentID      interface{}        `json:"document_id"`
+	DocumentID      pgtype.UUID        `json:"document_id"`
 }
 
 func (q *Queries) ListProductRegions(ctx context.Context, arg ListProductRegionsParams) ([]ListProductRegionsRow, error) {
@@ -1190,23 +1290,71 @@ func (q *Queries) LockProductPointcrawlEdge(ctx context.Context, edgeID pgtype.U
 	return i, err
 }
 
+const lockProductPointcrawlEntryIdentity = `-- name: LockProductPointcrawlEntryIdentity :one
+SELECT m.public_id AS map_id,n.public_id AS node_id,d.public_id AS document_id,
+       l.relation,l.created_at,creator.public_id AS created_by
+FROM pointcrawl_entry_links l JOIN maps m ON m.id=l.map_id
+JOIN pointcrawl_nodes n ON n.id=l.node_id JOIN documents d ON d.id=l.document_id
+JOIN members creator ON creator.id=l.created_by
+WHERE m.public_id=$1::uuid AND n.public_id=$2::uuid
+  AND d.public_id=$3::uuid AND l.relation=$4
+FOR UPDATE OF l
+`
+
+type LockProductPointcrawlEntryIdentityParams struct {
+	MapID      pgtype.UUID `json:"map_id"`
+	NodeID     pgtype.UUID `json:"node_id"`
+	DocumentID pgtype.UUID `json:"document_id"`
+	Relation   string      `json:"relation"`
+}
+
+type LockProductPointcrawlEntryIdentityRow struct {
+	MapID      pgtype.UUID        `json:"map_id"`
+	NodeID     pgtype.UUID        `json:"node_id"`
+	DocumentID pgtype.UUID        `json:"document_id"`
+	Relation   string             `json:"relation"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	CreatedBy  pgtype.UUID        `json:"created_by"`
+}
+
+func (q *Queries) LockProductPointcrawlEntryIdentity(ctx context.Context, arg LockProductPointcrawlEntryIdentityParams) (LockProductPointcrawlEntryIdentityRow, error) {
+	row := q.db.QueryRow(ctx, lockProductPointcrawlEntryIdentity,
+		arg.MapID,
+		arg.NodeID,
+		arg.DocumentID,
+		arg.Relation,
+	)
+	var i LockProductPointcrawlEntryIdentityRow
+	err := row.Scan(
+		&i.MapID,
+		&i.NodeID,
+		&i.DocumentID,
+		&i.Relation,
+		&i.CreatedAt,
+		&i.CreatedBy,
+	)
+	return i, err
+}
+
 const lockProductPointcrawlNode = `-- name: LockProductPointcrawlNode :one
 SELECT n.id, n.public_id, n.map_id, n.name, n.x, n.y, n.submap_id, n.created_at,
-       m.public_id AS map_public_id
+       m.public_id AS map_public_id,submap.public_id AS submap_public_id
 FROM pointcrawl_nodes n JOIN maps m ON m.id=n.map_id
+LEFT JOIN maps submap ON submap.id=n.submap_id
 WHERE n.public_id=$1 FOR UPDATE OF n
 `
 
 type LockProductPointcrawlNodeRow struct {
-	ID          int64              `json:"id"`
-	PublicID    pgtype.UUID        `json:"public_id"`
-	MapID       int64              `json:"map_id"`
-	Name        string             `json:"name"`
-	X           float64            `json:"x"`
-	Y           float64            `json:"y"`
-	SubmapID    pgtype.Int8        `json:"submap_id"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	MapPublicID pgtype.UUID        `json:"map_public_id"`
+	ID             int64              `json:"id"`
+	PublicID       pgtype.UUID        `json:"public_id"`
+	MapID          int64              `json:"map_id"`
+	Name           string             `json:"name"`
+	X              float64            `json:"x"`
+	Y              float64            `json:"y"`
+	SubmapID       pgtype.Int8        `json:"submap_id"`
+	CreatedAt      pgtype.Timestamptz `json:"created_at"`
+	MapPublicID    pgtype.UUID        `json:"map_public_id"`
+	SubmapPublicID pgtype.UUID        `json:"submap_public_id"`
 }
 
 func (q *Queries) LockProductPointcrawlNode(ctx context.Context, nodeID pgtype.UUID) (LockProductPointcrawlNodeRow, error) {
@@ -1222,25 +1370,28 @@ func (q *Queries) LockProductPointcrawlNode(ctx context.Context, nodeID pgtype.U
 		&i.SubmapID,
 		&i.CreatedAt,
 		&i.MapPublicID,
+		&i.SubmapPublicID,
 	)
 	return i, err
 }
 
 const lockProductRegion = `-- name: LockProductRegion :one
 SELECT r.id, r.public_id, r.name, r.kind, r.charter_deadline, r.document_id,
-       r.deleted_at, r.created_at
-FROM regions r WHERE r.public_id=$1 FOR UPDATE
+	   r.deleted_at, r.created_at,d.public_id AS document_public_id
+FROM regions r LEFT JOIN documents d ON d.id=r.document_id
+WHERE r.public_id=$1 FOR UPDATE OF r
 `
 
 type LockProductRegionRow struct {
-	ID              int64              `json:"id"`
-	PublicID        pgtype.UUID        `json:"public_id"`
-	Name            string             `json:"name"`
-	Kind            string             `json:"kind"`
-	CharterDeadline pgtype.Timestamptz `json:"charter_deadline"`
-	DocumentID      pgtype.Int8        `json:"document_id"`
-	DeletedAt       pgtype.Timestamptz `json:"deleted_at"`
-	CreatedAt       pgtype.Timestamptz `json:"created_at"`
+	ID               int64              `json:"id"`
+	PublicID         pgtype.UUID        `json:"public_id"`
+	Name             string             `json:"name"`
+	Kind             string             `json:"kind"`
+	CharterDeadline  pgtype.Timestamptz `json:"charter_deadline"`
+	DocumentID       pgtype.Int8        `json:"document_id"`
+	DeletedAt        pgtype.Timestamptz `json:"deleted_at"`
+	CreatedAt        pgtype.Timestamptz `json:"created_at"`
+	DocumentPublicID pgtype.UUID        `json:"document_public_id"`
 }
 
 func (q *Queries) LockProductRegion(ctx context.Context, regionID pgtype.UUID) (LockProductRegionRow, error) {
@@ -1255,6 +1406,7 @@ func (q *Queries) LockProductRegion(ctx context.Context, regionID pgtype.UUID) (
 		&i.DocumentID,
 		&i.DeletedAt,
 		&i.CreatedAt,
+		&i.DocumentPublicID,
 	)
 	return i, err
 }
@@ -1399,6 +1551,25 @@ func (q *Queries) ReadProductGameDates(ctx context.Context, realDates []pgtype.D
 	return items, nil
 }
 
+const readProductMapReference = `-- name: ReadProductMapReference :one
+SELECT m.public_id AS map_id,r.public_id AS region_id
+FROM maps m LEFT JOIN regions r ON r.id=m.region_id
+WHERE m.public_id=$1::uuid
+  AND (m.region_id IS NULL OR r.deleted_at IS NULL)
+`
+
+type ReadProductMapReferenceRow struct {
+	MapID    pgtype.UUID `json:"map_id"`
+	RegionID pgtype.UUID `json:"region_id"`
+}
+
+func (q *Queries) ReadProductMapReference(ctx context.Context, mapID pgtype.UUID) (ReadProductMapReferenceRow, error) {
+	row := q.db.QueryRow(ctx, readProductMapReference, mapID)
+	var i ReadProductMapReferenceRow
+	err := row.Scan(&i.MapID, &i.RegionID)
+	return i, err
+}
+
 const readProductRegionActivity = `-- name: ReadProductRegionActivity :many
 WITH target AS (
  SELECT r.id,r.public_id,r.name
@@ -1501,6 +1672,60 @@ func (q *Queries) ReadProductTimeAnchorAtOrBefore(ctx context.Context, realUtc p
 	return i, err
 }
 
+const readProductTimeProjectionAnchors = `-- name: ReadProductTimeProjectionAnchors :many
+WITH predecessor AS (
+ SELECT public_id AS id,real_utc,epoch_day,rate,note
+ FROM time_anchors WHERE real_utc<=($1::date::timestamp AT TIME ZONE 'UTC')
+ ORDER BY real_utc DESC,public_id DESC LIMIT 1
+), future AS (
+ SELECT public_id AS id,real_utc,epoch_day,rate,note
+ FROM time_anchors
+ WHERE real_utc>($1::date::timestamp AT TIME ZONE 'UTC')
+   AND real_utc<($2::date::timestamp AT TIME ZONE 'UTC')
+)
+SELECT id, real_utc, epoch_day, rate, note FROM predecessor UNION ALL SELECT id, real_utc, epoch_day, rate, note FROM future
+ORDER BY real_utc,id
+`
+
+type ReadProductTimeProjectionAnchorsParams struct {
+	RealFrom pgtype.Date `json:"real_from"`
+	RealTo   pgtype.Date `json:"real_to"`
+}
+
+type ReadProductTimeProjectionAnchorsRow struct {
+	ID       pgtype.UUID        `json:"id"`
+	RealUtc  pgtype.Timestamptz `json:"real_utc"`
+	EpochDay int32              `json:"epoch_day"`
+	Rate     float64            `json:"rate"`
+	Note     pgtype.Text        `json:"note"`
+}
+
+func (q *Queries) ReadProductTimeProjectionAnchors(ctx context.Context, arg ReadProductTimeProjectionAnchorsParams) ([]ReadProductTimeProjectionAnchorsRow, error) {
+	rows, err := q.db.Query(ctx, readProductTimeProjectionAnchors, arg.RealFrom, arg.RealTo)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ReadProductTimeProjectionAnchorsRow{}
+	for rows.Next() {
+		var i ReadProductTimeProjectionAnchorsRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.RealUtc,
+			&i.EpochDay,
+			&i.Rate,
+			&i.Note,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const replaceProductGameTimeMapRange = `-- name: ReplaceProductGameTimeMapRange :one
 WITH requested AS (
  SELECT (entry->>'real_date')::date AS real_date,(entry->>'game_day')::integer AS game_day
@@ -1527,6 +1752,86 @@ func (q *Queries) ReplaceProductGameTimeMapRange(ctx context.Context, arg Replac
 	var changed_rows int32
 	err := row.Scan(&changed_rows)
 	return changed_rows, err
+}
+
+const resolveProductQuestPointcrawlNodes = `-- name: ResolveProductQuestPointcrawlNodes :many
+SELECT n.public_id AS node_id, m.public_id AS map_id, r.public_id AS region_id,
+       COALESCE($1::boolean
+         AND EXISTS (SELECT 1 FROM pointcrawl_entry_links loc WHERE loc.node_id=n.id AND loc.relation='location')
+         AND NOT EXISTS (
+           SELECT 1 FROM pointcrawl_entry_links loc JOIN documents d ON d.id=loc.document_id
+           LEFT JOIN members author ON author.id=d.author_id
+           WHERE loc.node_id=n.id AND loc.relation='location' AND d.deleted_at IS NULL
+             AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
+               $2::uuid,$3::text[],$4::text,
+               false,$5::boolean,$6::uuid[])
+         ),false)::boolean AS admin_override
+FROM pointcrawl_nodes n
+JOIN maps m ON m.id=n.map_id
+LEFT JOIN regions r ON r.id=m.region_id
+WHERE n.public_id=ANY($7::uuid[]) AND m.map_kind='pointcrawl'
+  AND (m.region_id IS NULL OR r.deleted_at IS NULL)
+  AND (NOT EXISTS (SELECT 1 FROM pointcrawl_entry_links loc
+                   WHERE loc.node_id=n.id AND loc.relation='location')
+    OR EXISTS (
+      SELECT 1 FROM pointcrawl_entry_links loc JOIN documents d ON d.id=loc.document_id
+      LEFT JOIN members author ON author.id=d.author_id
+      WHERE loc.node_id=n.id AND loc.relation='location' AND d.deleted_at IS NULL
+        AND document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,
+          $2::uuid,$3::text[],$4::text,
+          $1::boolean,$5::boolean,$6::uuid[])
+    ))
+ORDER BY n.public_id
+`
+
+type ResolveProductQuestPointcrawlNodesParams struct {
+	ViewerAdmin  bool          `json:"viewer_admin"`
+	ViewerID     pgtype.UUID   `json:"viewer_id"`
+	ViewerRoles  []string      `json:"viewer_roles"`
+	ViewerHandle string        `json:"viewer_handle"`
+	ViewerLiveDm bool          `json:"viewer_live_dm"`
+	ReaderIds    []pgtype.UUID `json:"reader_ids"`
+	NodeIds      []pgtype.UUID `json:"node_ids"`
+}
+
+type ResolveProductQuestPointcrawlNodesRow struct {
+	NodeID        pgtype.UUID `json:"node_id"`
+	MapID         pgtype.UUID `json:"map_id"`
+	RegionID      pgtype.UUID `json:"region_id"`
+	AdminOverride bool        `json:"admin_override"`
+}
+
+func (q *Queries) ResolveProductQuestPointcrawlNodes(ctx context.Context, arg ResolveProductQuestPointcrawlNodesParams) ([]ResolveProductQuestPointcrawlNodesRow, error) {
+	rows, err := q.db.Query(ctx, resolveProductQuestPointcrawlNodes,
+		arg.ViewerAdmin,
+		arg.ViewerID,
+		arg.ViewerRoles,
+		arg.ViewerHandle,
+		arg.ViewerLiveDm,
+		arg.ReaderIds,
+		arg.NodeIds,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ResolveProductQuestPointcrawlNodesRow{}
+	for rows.Next() {
+		var i ResolveProductQuestPointcrawlNodesRow
+		if err := rows.Scan(
+			&i.NodeID,
+			&i.MapID,
+			&i.RegionID,
+			&i.AdminOverride,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const restoreProductRegion = `-- name: RestoreProductRegion :one
@@ -1672,6 +1977,11 @@ const softDeleteProductRegion = `-- name: SoftDeleteProductRegion :execrows
 UPDATE regions r SET deleted_at=$1,
   deleted_by=(SELECT id FROM members WHERE public_id=$2::uuid)
 WHERE r.public_id=$3::uuid AND r.deleted_at IS NULL
+  AND NOT EXISTS (SELECT 1 FROM maps m WHERE m.region_id=r.id)
+  AND NOT EXISTS (SELECT 1 FROM characters c WHERE c.region_id=r.id
+                  AND c.deleted_at IS NULL AND c.status='active')
+  AND NOT EXISTS (SELECT 1 FROM quest_regions qr JOIN quests q ON q.id=qr.quest_id
+                  WHERE qr.region_id=r.id AND q.deleted_at IS NULL AND q.status IN ('open','full'))
 `
 
 type SoftDeleteProductRegionParams struct {

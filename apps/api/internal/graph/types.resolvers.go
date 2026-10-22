@@ -35,6 +35,14 @@ func (r *adminOperationsTypeResolver) ActiveAlerts(ctx context.Context, obj *Adm
 	return toAdminHealthAlertTypes(list.Items), nil
 }
 
+// GuildID is the resolver for the guildId field.
+func (r *characterTypeResolver) GuildID(ctx context.Context, obj *CharacterType) (*string, error) {
+	if obj == nil {
+		return nil, nil
+	}
+	return readableDocumentID(ctx, obj.GuildID)
+}
+
 // Subjects is the resolver for the subjects field.
 func (r *codexEntryCardTypeResolver) Subjects(ctx context.Context, obj *CodexEntryCardType, limit int, offset int) ([]*DocumentLinkType, error) {
 	if obj == nil || obj.Document == nil || obj.Document.ID == "" {
@@ -155,7 +163,7 @@ func (r *documentTypeResolver) SummaryDerived(ctx context.Context, obj *Document
 
 // CurrentGameDate is the resolver for the currentGameDate field.
 func (r *gameCalendarTypeResolver) CurrentGameDate(ctx context.Context, obj *GameCalendarType) (*GameDateType, error) {
-	if obj == nil || obj.CurrentGameDay == nil {
+	if obj == nil || obj.CurrentGameDay == nil || len(obj.Definition) == 0 {
 		return nil, nil
 	}
 	if r.Services.SpatialQueries == nil {
@@ -375,6 +383,14 @@ func (r *questArcTypeResolver) Quests(ctx context.Context, obj *QuestArcType, li
 	return out, nil
 }
 
+// DocumentID is the resolver for the documentId field.
+func (r *questTypeResolver) DocumentID(ctx context.Context, obj *QuestType) (*string, error) {
+	if obj == nil {
+		return nil, nil
+	}
+	return readableDocumentID(ctx, obj.DocumentID)
+}
+
 // Dm is the resolver for the dm field.
 func (r *questTypeResolver) Dm(ctx context.Context, obj *QuestType) (*QuestDmType, error) {
 	if obj == nil || obj.DmID == "" {
@@ -530,10 +546,21 @@ func (r *questTypeResolver) DiscordDelivery(ctx context.Context, obj *QuestType)
 	return toQuestDiscordDeliveryType(*view), nil
 }
 
+// DocumentID is the resolver for the documentId field.
+func (r *regionTypeResolver) DocumentID(ctx context.Context, obj *RegionType) (*string, error) {
+	if obj == nil {
+		return nil, nil
+	}
+	return readableDocumentID(ctx, obj.DocumentID)
+}
+
 // AdminOperationsType returns AdminOperationsTypeResolver implementation.
 func (r *Resolver) AdminOperationsType() AdminOperationsTypeResolver {
 	return &adminOperationsTypeResolver{r}
 }
+
+// CharacterType returns CharacterTypeResolver implementation.
+func (r *Resolver) CharacterType() CharacterTypeResolver { return &characterTypeResolver{r} }
 
 // CodexEntryCardType returns CodexEntryCardTypeResolver implementation.
 func (r *Resolver) CodexEntryCardType() CodexEntryCardTypeResolver {
@@ -573,7 +600,11 @@ func (r *Resolver) QuestArcType() QuestArcTypeResolver { return &questArcTypeRes
 // QuestType returns QuestTypeResolver implementation.
 func (r *Resolver) QuestType() QuestTypeResolver { return &questTypeResolver{r} }
 
+// RegionType returns RegionTypeResolver implementation.
+func (r *Resolver) RegionType() RegionTypeResolver { return &regionTypeResolver{r} }
+
 type adminOperationsTypeResolver struct{ *Resolver }
+type characterTypeResolver struct{ *Resolver }
 type codexEntryCardTypeResolver struct{ *Resolver }
 type documentTypeResolver struct{ *Resolver }
 type gameCalendarTypeResolver struct{ *Resolver }
@@ -584,15 +615,4 @@ type memberTypeResolver struct{ *Resolver }
 type pointcrawlNodeTypeResolver struct{ *Resolver }
 type questArcTypeResolver struct{ *Resolver }
 type questTypeResolver struct{ *Resolver }
-
-func loadDocumentByID(ctx context.Context, id string) (*document.DocumentView, error) {
-	loaders, err := requestLoaders(ctx)
-	if err != nil {
-		return nil, err
-	}
-	loader, err := requireLoader(loaders.Documents, "documents")
-	if err != nil {
-		return nil, err
-	}
-	return loader.Load(ctx, document.DocumentKey{ID: id})
-}
+type regionTypeResolver struct{ *Resolver }

@@ -1,0 +1,7 @@
+mutation ProfileSubmitDmProfile($expectedRevision: Int!, $meta: CommandMeta!) {
+  submitDmProfileForVerification(expectedRevision: $expectedRevision, meta: $meta) {
+    memberId
+    status
+    reviewRevision
+  }
+}

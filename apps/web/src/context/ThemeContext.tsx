@@ -1,24 +1,23 @@
-/**
- * ThemeProvider — local preference state + DOM application.
- * Server pull/push (personalization v2) lands with T413; Wave 1 is local-only.
- */
 import {
   createContext,
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   type ReactNode,
 } from 'react';
 import { useAppDispatch, useAppSelector, useAppStore } from '../store/hooks.js';
 import {
   preferencesLocallyChanged,
+  preferencesHydrated,
   selectPreferences,
   selectResolvedMode,
   systemModeObserved,
 } from '../store/preferencesSlice.js';
 import {
   applyPrefs,
+  loadPrefs,
   resolveMode,
   savePrefs,
   subscribeSystemMode,
@@ -28,6 +27,8 @@ import {
   type ResolvedMode,
   type UserPreferences,
 } from './theme.utils.js';
+import { useAuth } from '../auth/AuthContext.js';
+import { useMotionCollapse } from '../motion/useMotionCollapse.js';
 
 export type ThemeContextValue = {
   prefs: UserPreferences;
@@ -36,6 +37,8 @@ export type ThemeContextValue = {
   setTheme: (theme: ColorTheme) => void;
   setColorblindSafe: (enabled: boolean) => void;
   setBgEffect: (bgEffect: BgEffectId) => void;
+  setPreferences: (patch: Partial<UserPreferences>) => void;
+  hydratePreferences: (prefs: UserPreferences) => void;
 };
 
 const ThemeContext = createContext<ThemeContextValue | undefined>(undefined);
@@ -49,10 +52,29 @@ export function ThemeProvider({
   const resolvedMode = useAppSelector(selectResolvedMode);
   const dispatch = useAppDispatch();
   const store = useAppStore();
+  const { memberId } = useAuth();
+  const motionCollapsed = useMotionCollapse();
 
-  useEffect(() => {
-    applyPrefs(prefs, resolvedMode);
-  }, [prefs, resolvedMode]);
+  useLayoutEffect(() => {
+    applyPrefs(prefs, resolvedMode, motionCollapsed);
+  }, [prefs, resolvedMode, motionCollapsed]);
+
+  const hydratePreferences = useCallback(
+    (next: UserPreferences): void => {
+      savePrefs(next, memberId);
+      dispatch(
+        preferencesHydrated({ patch: next, resolvedMode: resolveMode(next.mode) }),
+      );
+    },
+    [dispatch, memberId],
+  );
+
+  useLayoutEffect(() => {
+    const next = loadPrefs(memberId);
+    dispatch(
+      preferencesHydrated({ patch: next, resolvedMode: resolveMode(next.mode) }),
+    );
+  }, [dispatch, memberId]);
 
   useEffect(() => {
     if (prefs.mode !== 'system') return;
@@ -70,7 +92,7 @@ export function ThemeProvider({
       const current = store.getState().preferences.prefs;
       const next = { ...current, ...patch };
       const nextResolved = resolveMode(next.mode);
-      savePrefs(next);
+      savePrefs(next, memberId);
       applyPrefs(next, nextResolved);
       dispatch(
         preferencesLocallyChanged({
@@ -79,12 +101,12 @@ export function ThemeProvider({
         }),
       );
     },
-    [dispatch, store],
+    [dispatch, store, memberId],
   );
 
   const setMode = useCallback(
     (mode: ColorMode): void => {
-      applyLocal({ mode, modeExplicit: mode === 'system' });
+      applyLocal({ mode, modeExplicit: true });
     },
     [applyLocal],
   );
@@ -118,13 +140,22 @@ export function ThemeProvider({
       setTheme,
       setColorblindSafe,
       setBgEffect,
+      setPreferences: applyLocal,
+      hydratePreferences,
     }),
-    [prefs, resolvedMode, setMode, setTheme, setColorblindSafe, setBgEffect],
+    [
+      prefs,
+      resolvedMode,
+      setMode,
+      setTheme,
+      setColorblindSafe,
+      setBgEffect,
+      applyLocal,
+      hydratePreferences,
+    ],
   );
 
-  return (
-    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 
 export function useTheme(): ThemeContextValue {

@@ -1,0 +1,35 @@
+{
+  "at": "2026-10-20T22:32:07.613638Z",
+  "captureNativeSession": 3718,
+  "captureExit": 0,
+  "composeNativeSession": 15411,
+  "composeExit": 0,
+  "currentFrontend": 38,
+  "mainComparisons": 14,
+  "captureStates": 21,
+  "recursivePngs": 56,
+  "verifiedExactPixelHalves": 28,
+  "datedSupplementImages": 8,
+  "actualRootCompositesViewed": [
+    "1280-home-guest.png",
+    "390-quests.png",
+    "1280-chronicles.png",
+    "390-codex.png"
+  ],
+  "independentAll14ImageReview": "inprogress; sourceboundseparatereportwillrecordactualverdict",
+  "matchedPreferences": false,
+  "preferenceMismatches": 12,
+  "ownerVisualApproval": false,
+  "bindings": {
+    "capture-report.json": "6eeb2c059d7de86f5a97f20fba5f4a6a999d600a5663de929436957cd4886191",
+    "compositions.json": "994f71d169f48799ab44ffd535e67961be076fa0611764546657d962519c46e0",
+    "review.html": "2004e6536bb454bb3df31d3e75d36b61aee4a7bec0f789f9c13181fa2ef7fbc3"
+  },
+  "buildReceiptSha256": "a7cd56a792264008e068ace59b608999da60f27ed128b360509944a8fbfe522b",
+  "limits": [
+    "ActualmainRIGHTBuild38; A18source36/Q6dated/D14+Map12source35supplementcaptions retained, notfresh38workflowphotos.",
+    "LegacyoriginaldesktopLEFTandexplicitCodexCommunityRulesrendererfixtures/phonecaptures remain disclosedprovenance; no pixelparityfromequalimagehalves.",
+    "Savedstarfield/data/category/banner/live-sessiondifferencesretained, no cosmeticdatamutationtoproducematches.",
+    "SupportedAPIunmodifiedcredentialmemory/stdinonly; contextcloseddoesnotrevoke30daytoken; no signing-secretread/forgery orvalidproviderOAuthclaim."
+  ]
+}

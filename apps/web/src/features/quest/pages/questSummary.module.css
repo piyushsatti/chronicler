@@ -1,0 +1,27 @@
+/* UA heading and paragraph margins would add to the stack gaps. */
+.page :is(h1, h2, p) {
+  margin: 0;
+}
+
+.stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 9rem), 1fr));
+  gap: var(--sp-3);
+  max-inline-size: 32rem;
+}
+
+.empty {
+  padding: var(--sp-4);
+  border: 1px dashed var(--color-border-2);
+  border-radius: var(--rad-sm);
+  color: var(--color-text-2);
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}

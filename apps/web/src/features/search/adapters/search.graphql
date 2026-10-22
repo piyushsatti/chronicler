@@ -1,9 +1,14 @@
-query Search($query: String!, $kinds: [String!], $limit: Int!) {
-  search(query: $query, kinds: $kinds, limit: $limit) {
+query Search($query: String!, $kinds: [String!], $limit: Int!, $offset: Int!) {
+  search(query: $query, kinds: $kinds, limit: $limit, offset: $offset) {
     query
+    documentTotal
+    documentOrder
+    memberTotal
+    memberOrder
     documents {
       id
       kind
+      category
       slug
       title
       snippet
@@ -13,6 +18,7 @@ query Search($query: String!, $kinds: [String!], $limit: Int!) {
       memberId
       handle
       displayName
+      avatarUrl
     }
   }
 }

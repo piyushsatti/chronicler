@@ -6,7 +6,7 @@ const discordDeliveryWireSchema = z.object({
   overallStatus: z.string().min(1),
 });
 
-const participantWireSchema = z.object({
+export const participantWireSchema = z.object({
   memberId: z.string().uuid(),
   characterId: z.string().uuid(),
   characterName: z.string(),
@@ -51,7 +51,17 @@ export const questListWireSchema = z.object({
   total: z.number().int().nonnegative(),
 });
 
-export const communityEntryWireSchema = z.object({
+export const upcomingQuestWireSchema = z.object({
+  id: z.string().uuid(),
+  scheduledAt: z.string().datetime({ offset: true }),
+});
+
+export const upcomingPageWireSchema = z.object({
+  items: z.array(upcomingQuestWireSchema),
+  total: z.number().int().nonnegative(),
+});
+
+const communityEntryWireSchema = z.object({
   memberId: z.string().uuid(),
   handle: z.string(),
   displayName: z.string(),

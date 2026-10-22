@@ -5,6 +5,7 @@ package quest
 import (
 	"context"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -80,7 +81,7 @@ func TestProductQuestDmSummariesRequiresQuestDMAuthorshipAndDocumentReadability(
 		t.Fatalf("set Quest filter metadata: %v", err)
 	}
 	assertQuestReadFiltersAndPages(t, fixture, questID, dmID)
-	assertQuestSignupCapacityAndHistory(t, fixture, questID, dmID)
+	assertQuestSignupCapacityAndRoster(t, fixture, questID, dmID)
 	_, err = fixture.Pool.Exec(ctx, `
 		INSERT INTO documents(public_id,kind,slug,title,status,visibility,body,author_id)
 		SELECT v.public_id, 'summary', v.slug, v.title, 'published', v.visibility, v.body, author.id
@@ -231,7 +232,8 @@ func productNamedSQL(t *testing.T, name string) string {
 	if end < 0 {
 		end = len(source) - start
 	}
-	return strings.TrimSpace(string(source[start : start+end]))
+	query := strings.TrimSpace(string(source[start : start+end]))
+	return regexp.MustCompile(`sqlc\.(?:narg|arg)\((\w+)\)`).ReplaceAllString(query, "@$1")
 }
 
 func assertQuestReadFiltersAndPages(t *testing.T, fixture *dbtest.ProductFixture, questID, dmID string) {
@@ -364,7 +366,7 @@ func productRowWithUUID(t *testing.T, rows pgx.Rows, column int) ([]any, pgtype.
 	return values, publicID
 }
 
-func assertQuestSignupCapacityAndHistory(t *testing.T, fixture *dbtest.ProductFixture, questID, dmID string) {
+func assertQuestSignupCapacityAndRoster(t *testing.T, fixture *dbtest.ProductFixture, questID, dmID string) {
 	t.Helper()
 	ctx := context.Background()
 	var questDBID, memberDBID, characterDBID int64
@@ -451,28 +453,13 @@ func assertQuestSignupCapacityAndHistory(t *testing.T, fixture *dbtest.ProductFi
 	if afterStatus != "open" || afterCount != 1 {
 		t.Fatalf("Quest capacity after admission = %s/%d, want open/1", afterStatus, afterCount)
 	}
-	if _, err := fixture.Pool.Exec(ctx, productNamedSQL(t, "ProductQuestInsertHistory"), pgx.StrictNamedArgs{
-		"quest_id": questDBID, "actor_id": memberDBID, "kind": "participant_signed_up",
-		"facts": map[string]string{"character": "QTEST-CHAR"}, "at": at,
-	}); err != nil {
-		t.Fatalf("execute Quest history write: %v", err)
+	var persistedCount, signedUpCount int32
+	if err := fixture.Pool.QueryRow(ctx, `SELECT q.filled_count,
+		(SELECT count(*)::integer FROM quest_participants p WHERE p.quest_id=q.id AND p.status='signed_up')
+		FROM quests q WHERE q.public_id=$1`, db.MustUUID(questID)).Scan(&persistedCount, &signedUpCount); err != nil {
+		t.Fatalf("read persisted Quest roster and capacity: %v", err)
 	}
-	historyRows, err := fixture.Pool.Query(ctx, productNamedSQL(t, "ProductQuestReadHistory"), pgx.StrictNamedArgs{
-		"quest_id": db.MustUUID(questID), "row_limit": int32(10), "row_offset": int32(0),
-	})
-	if err != nil {
-		t.Fatalf("execute Quest history read: %v", err)
-	}
-	if !historyRows.Next() {
-		historyRows.Close()
-		t.Fatal("Quest history read omitted the signup event")
-	}
-	history, err := historyRows.Values()
-	historyRows.Close()
-	if err != nil {
-		t.Fatalf("read Quest history event: %v", err)
-	}
-	if history[4] != "participant_signed_up" {
-		t.Fatalf("Quest history kind = %v, want participant_signed_up", history[4])
+	if persistedCount != 1 || signedUpCount != persistedCount {
+		t.Fatalf("persisted Quest capacity=%d signed_up roster=%d", persistedCount, signedUpCount)
 	}
 }

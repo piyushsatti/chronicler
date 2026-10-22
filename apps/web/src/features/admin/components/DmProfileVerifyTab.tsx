@@ -1,7 +1,10 @@
+import { AdminReadFailure } from './AdminReadFailure.js';
+import { AdminPagination } from './AdminPagination.js';
 import { Link } from 'react-router-dom';
 import { Button } from '../../../components/primitives/Button.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
+import { statusLabel } from '../../../utils/format.js';
 import type { useDmProfileVerifyTab } from '../hooks/useDmProfileVerifyTab.js';
 
 export function DmProfileVerifyTab({
@@ -12,7 +15,7 @@ export function DmProfileVerifyTab({
   const { queue, noteById, setNoteById, feedback, feedbackIsError, decide } = view;
 
   if (queue.isError) {
-    return <StatePanel status="error" error={queue.error} />;
+    return <AdminReadFailure error={queue.error} retry={queue.retry} />;
   }
   if (queue.isLoading || !queue.data) {
     return <StatePanel status="loading" />;
@@ -20,6 +23,7 @@ export function DmProfileVerifyTab({
   if (queue.data.length === 0) {
     return (
       <div className="stack">
+        <AdminPagination page={view.pagination} />
         {feedback ? (
           <p className="type-caption" role={feedbackIsError ? 'alert' : 'status'}>
             {feedback}
@@ -37,13 +41,14 @@ export function DmProfileVerifyTab({
           {feedback}
         </p>
       ) : null}
+      <AdminPagination page={view.pagination} />
       <ul className="stack">
         {queue.data.map((row) => (
           <li key={row.memberId} className="card stack">
             <p className="type-title">{row.displayName}</p>
             <p className="type-caption">
               @{row.handle}
-              {row.status ? ` · ${row.status}` : ''}
+              {row.status ? ` · ${statusLabel(row.status)}` : ''}
             </p>
             <Link className="type-link" to={`/dms/@${row.handle}`}>
               Open DM profile
@@ -51,7 +56,8 @@ export function DmProfileVerifyTab({
             <label className="stack">
               <span className="type-label">Change-request note</span>
               <textarea
-                className="field"
+                disabled={decide.isPending}
+                className="field-input"
                 rows={2}
                 value={noteById[row.memberId] ?? ''}
                 onChange={(event) =>

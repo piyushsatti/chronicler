@@ -1,0 +1,74 @@
+[
+  {
+    "id": "71000000-0000-4000-8000-000000000001",
+    "kind": "codex_entry",
+    "slug": "silver-road",
+    "category": "Places",
+    "questCode": null,
+    "href": "/codex/silver-road"
+  },
+  {
+    "id": "71000000-0000-4000-8000-000000000002",
+    "kind": "rule",
+    "slug": "player-guide",
+    "category": "Guide",
+    "questCode": null,
+    "href": "/rules/guides/player-guide"
+  },
+  {
+    "id": "71000000-0000-4000-8000-000000000003",
+    "kind": "rule",
+    "slug": "rest-ruling",
+    "category": "Ruling",
+    "questCode": null,
+    "href": "/rules/rulings/rest-ruling"
+  },
+  {
+    "id": "71000000-0000-4000-8000-000000000004",
+    "kind": "summary",
+    "slug": "the-return",
+    "category": null,
+    "questCode": null,
+    "href": "/chronicles/the-return"
+  },
+  {
+    "id": "71000000-0000-4000-8000-000000000005",
+    "kind": "community",
+    "slug": "monthly-news",
+    "category": "news",
+    "questCode": null,
+    "href": "/community/entries/monthly-news"
+  },
+  {
+    "id": "71000000-0000-4000-8000-000000000006",
+    "kind": "community",
+    "slug": "safety-tools",
+    "category": "dm_table",
+    "questCode": null,
+    "href": "/community/dm-table/safety-tools"
+  },
+  {
+    "id": "71000000-0000-4000-8000-000000000007",
+    "kind": "quest_brief",
+    "slug": "unrelated-to-quest-code",
+    "category": null,
+    "questCode": "Q-AUTHORITATIVE",
+    "href": "/quests/Q-AUTHORITATIVE"
+  },
+  {
+    "id": "71000000-0000-4000-8000-000000000008",
+    "kind": "quest_brief",
+    "slug": "orphan-brief",
+    "category": null,
+    "questCode": null,
+    "href": null
+  },
+  {
+    "id": "71000000-0000-4000-8000-000000000009",
+    "kind": "unsupported",
+    "slug": "unhandled-document",
+    "category": null,
+    "questCode": null,
+    "href": null
+  }
+]

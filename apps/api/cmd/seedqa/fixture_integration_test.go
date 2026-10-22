@@ -81,7 +81,7 @@ func TestQAFreshPostgresDoubleLoad(t *testing.T) {
 	var previous map[string]string
 	for load := 1; load <= 2; load++ {
 		n, err := apply(ctx, pool, lines)
-		if err != nil || n != 637 {
+		if err != nil || n != len(lines) {
 			t.Fatalf("load %d specifications=%d err=%v", load, n, err)
 		}
 		snapshot := assertQADatabase(t, ctx, pool, lines, counts)
@@ -89,7 +89,7 @@ func TestQAFreshPostgresDoubleLoad(t *testing.T) {
 			t.Fatal("second load changed persisted rows, values, or defaults")
 		}
 		previous = snapshot
-		t.Logf("load %d: 637 specifications, all 45 application table populations, explicit values and resolved references verified", load)
+		t.Logf("load %d: %d specifications, all %d application table populations, explicit values and resolved references verified", load, len(lines), len(counts))
 	}
 	job, question := qaQuestion(t)
 	mux := http.NewServeMux()
@@ -149,13 +149,18 @@ func assertQADatabase(t *testing.T, ctx context.Context, pool *pgxpool.Pool, lin
 	if err := rows.Err(); err != nil {
 		t.Fatal(err)
 	}
-	if len(tables) != 45 || len(counts) != len(tables) {
-		t.Fatalf("schema tables=%d fixture tables=%d", len(tables), len(counts))
+	fixtureTables := []string{"character_catalog_picks", "member_unlocks", "role_changes", "unlockables"}
+	for table := range counts {
+		fixtureTables = append(fixtureTables, table)
+	}
+	sort.Strings(fixtureTables)
+	if !reflect.DeepEqual(tables, fixtureTables) {
+		t.Fatalf("schema tables=%v fixture tables=%v", tables, fixtureTables)
 	}
 	snapshot := map[string]string{}
 	for _, table := range tables {
-		if !ident.MatchString(table) || counts[table] == 0 {
-			t.Fatalf("application table %q has no seed specification", table)
+		if !ident.MatchString(table) {
+			t.Fatalf("invalid application table %q", table)
 		}
 		var count int
 		var data string

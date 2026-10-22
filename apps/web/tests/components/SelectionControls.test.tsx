@@ -26,8 +26,15 @@ describe('Listbox', () => {
     expect(listbox).toHaveAttribute('data-size', 'lg');
     expect(listbox).toHaveAttribute('tabindex', '0');
     expect(screen.getByRole('option', { name: 'Alpha' })).toHaveAttribute('aria-selected', 'true');
+    for (const option of screen.getAllByRole('option')) {
+      expect(option.tagName).toBe('LI');
+      expect(option).not.toHaveAttribute('tabindex');
+      expect(option.parentElement).toBe(listbox);
+    }
     await user.click(screen.getByRole('option', { name: 'Gamma' }));
-    expect(screen.getByRole('option', { name: 'Gamma' })).toHaveClass('listbox__opt');
+    expect(screen.getByRole('option', { name: 'Gamma' })).toHaveClass('listbox-option');
+    expect(screen.getByRole('option', { name: 'Gamma' })).toHaveAttribute('data-selected', '1');
+    expect(screen.getByRole('option', { name: 'Alpha' })).not.toHaveAttribute('data-selected');
     expect(screen.getByRole('option', { name: 'Gamma' })).toHaveAttribute('aria-selected', 'true');
     expect(onValueChange.mock.calls).toEqual([['c']]);
     rerender(<Listbox options={options} defaultValue="b" onValueChange={onValueChange} />);
@@ -88,7 +95,7 @@ describe('Listbox', () => {
     fireEvent.keyDown(listbox, { key: 'Enter' });
     expect(onValueChange.mock.calls).toEqual([['c'], ['c'], ['a'], ['a']]);
     expect(screen.getByRole('option', { name: 'Alpha' })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByRole('option', { name: 'Beta' })).toBeDisabled();
+    expect(screen.getByRole('option', { name: 'Beta' })).toHaveAttribute('aria-disabled', 'true');
   });
 
   it('leaves an initially unselected control idle when every option is disabled', () => {
@@ -100,8 +107,9 @@ describe('Listbox', () => {
     expect(screen.getAllByRole('option')).toHaveLength(3);
     for (const option of screen.getAllByRole('option')) {
       expect(option).toHaveAttribute('aria-selected', 'false');
-      expect(option).toBeDisabled();
+      expect(option).toHaveAttribute('aria-disabled', 'true');
     }
+    expect(screen.getByRole('listbox')).not.toHaveAttribute('aria-activedescendant');
     expect(onValueChange).not.toHaveBeenCalled();
   });
 

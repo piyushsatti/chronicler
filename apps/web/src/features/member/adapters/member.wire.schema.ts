@@ -6,5 +6,3 @@ export const memberMeWireSchema = z.object({
   displayName: z.string().min(1),
   roles: z.array(z.string()),
 });
-
-export type MemberMeWire = z.infer<typeof memberMeWireSchema>;

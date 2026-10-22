@@ -1,0 +1,26 @@
+{
+  "at": "2026-10-20T18:56:17.982436+00:00",
+  "buildExit": 0,
+  "buildNativeSession": 11702,
+  "sourceInputs": 625,
+  "sourceManifestSha256": "f012675c4d58e18b2c7ab0e6a004cb6df1e085add1ba47fc6959a69712505756",
+  "distFiles": 181,
+  "distManifestSha256": "329032b06f250850eacdd40f2b575f56b6c23a6d9eb57675607f0ebf01becfda",
+  "sourceDrift": [],
+  "buildScope": "Exactly3productTS files: Rules canCreate via existing server proof+two editor links, duplicate NPC/Faction PageShell h1 removed. All CSS/generated/API bytes unchanged.",
+  "independentReviewSha256": "48029bc0e5b2a370bd42c49c21eaf1dc823ddc9fcfdded27dba7d6cb4a18079b",
+  "manifestPathBases": {
+    "source": "repository root",
+    "dist": "this package dist directory"
+  },
+  "previewMounted": true,
+  "previewNativeSession": 69035,
+  "previewUrl": "http://127.0.0.1:4199",
+  "mountedObservedAt": "2026-10-20T18:58:12.749097+00:00",
+  "mountedSourceInputsMatch": true,
+  "spaHttp": 200,
+  "apiHealth": 204,
+  "apiHealthUrl": "http://127.0.0.1:8080/health",
+  "sameOriginGraphqlStatus": 200,
+  "apiEpoch": "API12 d103a48f"
+}

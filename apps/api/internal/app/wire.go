@@ -60,6 +60,10 @@ func Wire(ctx context.Context, cfg config.Config) API {
 			slog.Error("database required but unavailable", "env", cfg.Env, "error", err)
 			panic("database required: " + err.Error())
 		}
+		if err := cfg.Validate(ctx, nil); err != nil {
+			slog.Error("startup configuration invalid", "error", err)
+			panic("startup configuration: " + err.Error())
+		}
 		slog.Warn("database unavailable; using in-memory stores", "error", err)
 		return mem
 	}
@@ -70,7 +74,7 @@ func emptyServices(_ quest.Commands) graph.Services {
 	return graph.Services{}
 }
 
-func wirePostgres(_ context.Context, cfg config.Config, pool *db.Pool, base API) API {
+func wirePostgres(ctx context.Context, cfg config.Config, pool *db.Pool, base API) API {
 	pgxPool := pool.Pool
 	q := dbgen.New(pgxPool)
 	jobStore := jobs.NewPostgresStore(pgxPool)
@@ -80,7 +84,15 @@ func wirePostgres(_ context.Context, cfg config.Config, pool *db.Pool, base API)
 	})
 	questCmd := quest.NewCommands(questRunner, time.Now)
 
-	memStore := member.NewPostgresStore(pgxPool)
+	memStore, err := member.NewFromDBTX(pgxPool, cfg.PlatformOwnerMemberID)
+	if err == nil {
+		err = cfg.Validate(ctx, memStore.ResolveAuthority)
+	}
+	if err != nil {
+		pool.Close()
+		slog.Error("member authority wiring failed", "error", err)
+		panic("member authority wiring: " + err.Error())
+	}
 	base.Authority = memStore.ResolveAuthority
 	docRepo := document.NewPostgresReadRepo(pgxPool)
 	docQ := document.Queries{

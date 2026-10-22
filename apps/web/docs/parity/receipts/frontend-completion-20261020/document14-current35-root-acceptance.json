@@ -1,0 +1,92 @@
+{
+  "at": "2026-10-20T21:23:30.006733+00:00",
+  "nativeSession": 68314,
+  "exit": 0,
+  "durationSeconds": 172.04,
+  "test": "TestDocumentBrowserCurrentBoundaries",
+  "originalStages": 18,
+  "responsiveCases": 42,
+  "widths": [
+    390,
+    900,
+    1920
+  ],
+  "hiddenRuleDenialActors": [
+    "guest",
+    "other"
+  ],
+  "operationAttempts": 893,
+  "operationOutcomes": {
+    "complete": 893
+  },
+  "directReads": 116,
+  "persistedCounts": {
+    "links": 5,
+    "notices": 1,
+    "receipts": 72,
+    "documents": 13
+  },
+  "extraResponsiveMutations": 0,
+  "sourceUnchanged": {
+    "production-inputs": true,
+    "owned-inputs": true
+  },
+  "compatibilityArcUnchanged": true,
+  "frontendChecks": [
+    {
+      "stage": "before",
+      "receipt": ".local/workspace-setup/frontend-completion-20261020/production-preview-35/build-receipt.json",
+      "receiptSha256": "281dc16d84afdb91f9f9eebf97f208fa1067978d50810950b16dcad9a72c669f",
+      "sourceManifestSha256": "8e583a46cfc02804dd5c13e14f29588a770d8ef67af2777df7f7322b19b87f4f",
+      "sourceInputs": 625,
+      "distManifestSha256": "0d8a144b1ac9b1dc9efc2139a629f42273c4923c26c9a3d159f8d42b48fd6d36",
+      "distFiles": 181,
+      "at": "2026-10-20T21:19:52.302Z"
+    },
+    {
+      "stage": "after",
+      "receipt": ".local/workspace-setup/frontend-completion-20261020/production-preview-35/build-receipt.json",
+      "receiptSha256": "281dc16d84afdb91f9f9eebf97f208fa1067978d50810950b16dcad9a72c669f",
+      "sourceManifestSha256": "8e583a46cfc02804dd5c13e14f29588a770d8ef67af2777df7f7322b19b87f4f",
+      "sourceInputs": 625,
+      "distManifestSha256": "0d8a144b1ac9b1dc9efc2139a629f42273c4923c26c9a3d159f8d42b48fd6d36",
+      "distFiles": 181,
+      "at": "2026-10-20T21:22:41.620Z"
+    }
+  ],
+  "cleanup": {
+    "apiStarted": true,
+    "at": "2026-10-20T21:22:41.738969372Z",
+    "database": "product_case_1",
+    "databaseDropped": true,
+    "listenersClosed": {
+      "api": true,
+      "vite": true
+    },
+    "nodeStarted": true,
+    "runtimeStarted": true
+  },
+  "actualRootImagesViewed": [
+    "responsive-ruling-editor-390.png",
+    "responsive-local-twoquest-summary-1920.png",
+    "responsive-local-twoquest-summary-390.png"
+  ],
+  "artifacts": {
+    "root-preflight.json": "d0cbb8493611f63a9071ea4024785d8b9afd8821e105f76f790f9224ef565bd6",
+    "browser-receipt.json": "9255a346ae2aaecc89c3abf163ca4c2bd3a7419f3ec20240e07f6630f22287b1",
+    "native-persisted-readback.json": "39e7062d918443cc66326fcd9f2d51d69ab70d8b59e28ddc07e66a073698eea0",
+    "native-compatibility-readback.json": "14b26fd9107f130121f7e30366d43de7b1a96cbacaf8c08e418656cc30f6a2c8",
+    "native-cleanup.json": "0dfb370048ee6d9b6d43d033574d4a72772ddb4e809f5fd6650924a634e4296e",
+    "http-observer.json": "c5e74ca83d5f9615b67698badf6db8cbb8c64a0f74954a48ad9ecb2a5eabe59b",
+    "native.log": "86515ab98975828eb38a7bb0df08dcbd5fdec40a07179fb9d9849118138b6e41",
+    "responsive-ruling-editor-390.png": "f83cf226cccf78f5350e66fca35d19ad0abd4448e00a4423a6d63db9102110b6",
+    "responsive-local-twoquest-summary-1920.png": "e2c3531024823e0fe1d8d5f5cc2983c668bed4580ae6d43588640ad7efa46556",
+    "responsive-local-twoquest-summary-390.png": "ceb61f7043c884c76fe06e25c1c72a8ce125cd7f41821e3adcc5ececd9bacd89"
+  },
+  "limits": [
+    "Actual immutable Build35assets/native13isolatedrealAPI; full original persistence/privacy/lifecycle and exact expected privateRuleDenial oracle passed.",
+    "Root inspectedthemed nativeAudiencecontrols/QuestassociationCard with wrappingphone/desktop fields. Sourcepeer75a856da establishes preservedsemantics; no owner Legacy pixelapproval.",
+    "Fullpage screenshotsretain actualfixedbottomnav at captureviewport; controls separatelypassed realviewport/clip/focus/paint checks while scrolled. Not allrole/theme/actionCartesian.",
+    "LocalunsavedtwoQuestselector is responsiveevidence only; actual multiquestpersistence remains separateQuest6datedproof. Doc12no-tests andD11failure retainedwithoutpromotion; no provider/OAuthclaim."
+  ]
+}

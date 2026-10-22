@@ -1,0 +1,88 @@
+{
+  "reviewedAt": "2026-10-20T18:18:10.937689+00:00",
+  "nativeSession": 90163,
+  "nativeExit": 0,
+  "elapsedNativeSeconds": 58.12,
+  "completedStages": 11,
+  "actualBrowserRequests": 509,
+  "operationOutcomes": {
+    "complete": 495,
+    "aborted": 12,
+    "superseded_tab_query": 2
+  },
+  "commandReceipts": 55,
+  "nativeSettingsRetry": {
+    "ActorID": "5823c2d4-873a-4bd5-8d6a-79f4805bca8a",
+    "FailedKey": "f600cff6-e228-4601-80f5-c3468cf014cc",
+    "RetryKey": "27161517-b8e9-4ff9-bde8-61ad8fc9531b",
+    "PayloadSHA256": "f8bf6b32c2b5803cc1cd12cfb1b23f20e013e83ea9db4d2955d4bd6185753a77",
+    "FailedStatus": 200,
+    "RetryStatus": 200,
+    "FailedCodes": [
+      "INTERNAL"
+    ],
+    "RetryCodes": [],
+    "RolledBack": true,
+    "FaultRemoved": true,
+    "Persisted": true,
+    "Errors": null
+  },
+  "browserSettingsRetry": {
+    "actorId": "5823c2d4-873a-4bd5-8d6a-79f4805bca8a",
+    "failedOrdinal": 6,
+    "failedKey": "f600cff6-e228-4601-80f5-c3468cf014cc",
+    "retryOrdinal": 7,
+    "retryKey": "27161517-b8e9-4ff9-bde8-61ad8fc9531b",
+    "payloadSHA256": "f8bf6b32c2b5803cc1cd12cfb1b23f20e013e83ea9db4d2955d4bd6185753a77",
+    "visibleError": true,
+    "visibleRetry": true,
+    "saved": true
+  },
+  "productionOwnedInputsBeforeAfterEqual": true,
+  "cleanup": {
+    "apiClosed": true,
+    "apiStarted": true,
+    "at": "2026-10-20T18:14:44.123538909Z",
+    "database": "product_case_1",
+    "databaseAbsenceQueryFailed": false,
+    "databaseDropFailed": false,
+    "databaseDropped": true,
+    "databaseRemaining": 0,
+    "listenersClosed": {
+      "api": true,
+      "reservedPort": true
+    },
+    "nodeStarted": true,
+    "runtimePoolClosed": true,
+    "runtimePoolStarted": true
+  },
+  "nativeBinarySha256": "81e6a8161fddc4e38a4f47d82e5e5601419dc8bf9548d873ad988e79c5cb39fc",
+  "frontendSourceManifestSha256": "4017d327d2d8739c95aba95dfe9f8d2a2188c5297ee8b479614050f45cbb0460",
+  "noMocks": true,
+  "newExternalProviderCalls": false,
+  "oauth": false,
+  "visualApproval": false,
+  "artifacts": {
+    "attempt-input-account_browser_integration_test.go": "629bc891a73b7c192ff5849d56e3d6354b1cf30eef7ef49f1e51979e7b18fe8c",
+    "character-desktop.png": "524c1a8e021668df65fa96829c881a4ea0f27f941734570abfe42e778d48a52f",
+    "native-readback.json": "d7450b5eb61b33c53056d216df34a480ee51ab63a7fda6c17bbe9ef2004c91bc",
+    "native-inventory.json": "3efa4c6df596229336317eebd0cb882b4f63747fefc1486ec3fb679cc29a517f",
+    "attempt-input-browser.mjs": "7f90d5857466e48781eb112acd12a5bb1915961f6dcf6e043a9269000894ef98",
+    "browser-receipt.json": "06d63f8d4959bf5919c6deb6e896e21048bbd5630f9819aa36c1377cf236e750",
+    "owned-inputs-after.json": "48333eccb3fd53ab0b34e3c62dfa754ddd69cb318cb4346a468b7154a78f165b",
+    "profile-phone.png": "27421b380593e51da6df0919388d882b8620db211c3872ec16e33402f3a9acbd",
+    "settings-save-failed.png": "0ea753d01b527800d1cb831ad4703674f57006b2853d32db73c453c4fab0f8bf",
+    "native-cleanup.json": "48c369b5aba564e73210bbc18f59b86d3139d250d5342827e97403e1bc5c5975",
+    "native-browser-process.json": "d7b57c12c9207165c5554325efb443018b263cdf06651a4bd2a05fb547612833",
+    "native-browser-process-ended.json": "0bfe415722bda5a0ebd6e9267e86b2536bd8a33777718e024de453058cfd8b34",
+    "production-inputs-after.json": "91f532d1ba27695b1019ed89fb152b2cad6212591b932bd100cfaa514e3c876c",
+    "production-inputs-before.json": "91f532d1ba27695b1019ed89fb152b2cad6212591b932bd100cfaa514e3c876c",
+    "native-settings-retry.json": "11c6546b3ca6bb018d2d730aa7bc69bad31384a752760b34e57e21fbe8fcce95",
+    "owned-inputs.json": "48333eccb3fd53ab0b34e3c62dfa754ddd69cb318cb4346a468b7154a78f165b"
+  },
+  "limits": [
+    "Real firstfailedsave is not successfulsave; failedkey absent and55durablereceipts afterexactmatchingretry proven.",
+    "Default11-stage branch intentionally makes no newproviderfetch; actualdefaultDDBsuccess remains Account13 withunchangedproductionclient.",
+    "Discord application/OAuth andownerpixelapproval separate."
+  ]
+}

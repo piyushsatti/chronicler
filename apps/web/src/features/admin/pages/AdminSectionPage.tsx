@@ -1,5 +1,5 @@
+import { DmDashboard } from '../components/DmDashboard.js';
 import { Tabs } from '../../../components/primitives/Tabs.js';
-import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { AdminWorkspaceShell } from '../AdminWorkspaceShell.js';
 import { BackstoriesPanel } from '../components/BackstoriesPanel.js';
 import { CharacterDirectoryPanel } from '../components/CharacterDirectoryPanel.js';
@@ -21,22 +21,6 @@ import {
   useDmDashboardPage,
 } from '../hooks/useAdminSectionPage.js';
 
-export function AdminSectionPage({
-  page,
-  title,
-  children,
-}: {
-  page: string;
-  title: string;
-  children: React.ReactNode;
-}): React.JSX.Element {
-  return (
-    <AdminWorkspaceShell page={page} title={title}>
-      {children}
-    </AdminWorkspaceShell>
-  );
-}
-
 function SectionIntro({
   label,
   heading,
@@ -47,7 +31,7 @@ function SectionIntro({
   caption: string;
 }): React.JSX.Element {
   return (
-    <div className="stack">
+    <div className="stack" data-gap="2">
       <span className="type-label">{label}</span>
       <h2 className="type-heading">{heading}</h2>
       <p className="type-caption">{caption}</p>
@@ -57,8 +41,6 @@ function SectionIntro({
 
 function PeopleBody(): React.JSX.Element {
   const view = useAdminPeoplePage();
-  if (view.status === 'error') return <StatePanel status="error" error={view.error} />;
-  if (view.status !== 'ready') return <StatePanel status={view.status} />;
   return (
     <div className="stack">
       <SectionIntro
@@ -72,9 +54,9 @@ function PeopleBody(): React.JSX.Element {
 }
 export function AdminPeoplePage(): React.JSX.Element {
   return (
-    <AdminSectionPage page="admin-people" title="People">
+    <AdminWorkspaceShell page="admin-people" title="People">
       <PeopleBody />
-    </AdminSectionPage>
+    </AdminWorkspaceShell>
   );
 }
 
@@ -92,16 +74,14 @@ function CharactersBody(): React.JSX.Element {
 }
 export function AdminCharactersPage(): React.JSX.Element {
   return (
-    <AdminSectionPage page="admin-characters" title="Characters">
+    <AdminWorkspaceShell page="admin-characters" title="Characters">
       <CharactersBody />
-    </AdminSectionPage>
+    </AdminWorkspaceShell>
   );
 }
 
 function WorldBody(): React.JSX.Element {
   const view = useAdminWorldPage();
-  if (view.status === 'error') return <StatePanel status="error" error={view.error} />;
-  if (view.status !== 'ready') return <StatePanel status={view.status} />;
   return (
     <div className="stack">
       <SectionIntro
@@ -133,16 +113,14 @@ function WorldBody(): React.JSX.Element {
 }
 export function AdminWorldPage(): React.JSX.Element {
   return (
-    <AdminSectionPage page="admin-world" title="World">
+    <AdminWorkspaceShell page="admin-world" title="World">
       <WorldBody />
-    </AdminSectionPage>
+    </AdminWorkspaceShell>
   );
 }
 
 function ContentBody(): React.JSX.Element {
   const view = useAdminContentPage();
-  if (view.status === 'error') return <StatePanel status="error" error={view.error} />;
-  if (view.status !== 'ready') return <StatePanel status={view.status} />;
   return (
     <div className="stack">
       <SectionIntro
@@ -174,9 +152,9 @@ function ContentBody(): React.JSX.Element {
 }
 export function AdminContentPage(): React.JSX.Element {
   return (
-    <AdminSectionPage page="admin-content" title="Content">
+    <AdminWorkspaceShell page="admin-content" title="Content">
       <ContentBody />
-    </AdminSectionPage>
+    </AdminWorkspaceShell>
   );
 }
 
@@ -194,9 +172,9 @@ function DeliveryBody(): React.JSX.Element {
 }
 export function AdminDeliveryPage(): React.JSX.Element {
   return (
-    <AdminSectionPage page="admin-delivery" title="Delivery">
+    <AdminWorkspaceShell page="admin-delivery" title="Delivery">
       <DeliveryBody />
-    </AdminSectionPage>
+    </AdminWorkspaceShell>
   );
 }
 
@@ -214,15 +192,15 @@ function DataHealthBody(): React.JSX.Element {
 }
 export function AdminDataHealthPage(): React.JSX.Element {
   return (
-    <AdminSectionPage page="admin-data-health" title="Data health">
+    <AdminWorkspaceShell page="admin-data-health" title="Data health">
       <DataHealthBody />
-    </AdminSectionPage>
+    </AdminWorkspaceShell>
   );
 }
 
 function DmDashboardBody(): React.JSX.Element {
   const view = useDmDashboardPage();
-  return <StatePanel status={view.status} error={view.error} />;
+  return <DmDashboard view={view} />;
 }
 export function DMDashboardPage(): React.JSX.Element {
   return (

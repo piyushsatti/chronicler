@@ -77,6 +77,8 @@ type DocumentType {
   deletedAt: DateTime
   deletedBy: ID
   effectiveBody: String
+  canEditBody: Boolean!
+  canEditMetadata: Boolean!
   author: DocumentAuthorType
   publishedAt: DateTime
   summaryDerived: SummaryDerivedType
@@ -95,6 +97,8 @@ enum PreviewAudience {
 }
 
 type SummaryDerivedType {
+  authoring: SummaryAuthoringType
+  quests: [SummaryQuestRefType!]!
   regions: [SummaryRegionType!]!
   pointcrawlNodes: [SummaryPointcrawlNodeType!]!
   dms: [SummaryDmType!]!
@@ -103,6 +107,18 @@ type SummaryDerivedType {
   arc: String
   gameDay: Int
   gameDate: GameDateType
+}
+
+type SummaryAuthoringType {
+  characterId: ID
+  complete: Boolean!
+  questIds: [ID!]!
+}
+
+type SummaryQuestRefType {
+  id: ID!
+  shortCode: String!
+  title: String
 }
 
 type SummaryDmType {

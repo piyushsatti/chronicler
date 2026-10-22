@@ -1,0 +1,55 @@
+{
+  "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "slug": "vault-delve",
+  "kind": "summary",
+  "category": "session",
+  "status": "published",
+  "visibility": "public",
+  "title": "Vault Delve",
+  "effectiveBody": "## Into the vault\n\nThe door opened for **our party**.\n\n> [!note] Remember\n> Bring a lantern.",
+  "canEditBody": false,
+  "canEditMetadata": false,
+  "updatedAt": "2026-10-19T10:00:00Z",
+  "author": {
+    "handle": "mira"
+  },
+  "summaryDerived": {
+    "regions": [
+      {
+        "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
+        "name": "Dalmond"
+      }
+    ],
+    "dms": [
+      {
+        "id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "displayName": "Mira"
+      }
+    ],
+    "players": [
+      {
+        "characterId": "cccccccc-cccc-4ccc-8ccc-cccccccccccc",
+        "characterShortCode": "C-13",
+        "characterName": "Thorn",
+        "memberId": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+        "manual": false
+      }
+    ],
+    "occurredAt": "2026-10-18T10:00:00Z",
+    "arc": "Deep Roads",
+    "gameDay": 142,
+    "gameDate": null,
+    "quests": [
+      {
+        "id": "12345678-1234-4234-8234-123456789012",
+        "shortCode": "qa-played-orchard",
+        "title": "The vault expedition"
+      },
+      {
+        "id": "12345678-1234-4234-8234-123456789013",
+        "shortCode": "Q-14",
+        "title": null
+      }
+    ]
+  }
+}

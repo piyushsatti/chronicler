@@ -1,0 +1,5 @@
+mutation EditorDelete($id: ID!, $expectedRevision: Int!, $meta: CommandMeta!) {
+  deleteDocument(id: $id, expectedRevision: $expectedRevision, meta: $meta) {
+    replayed
+  }
+}

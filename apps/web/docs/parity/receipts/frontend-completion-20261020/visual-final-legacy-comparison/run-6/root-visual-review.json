@@ -1,0 +1,58 @@
+{
+  "at": "2026-10-20T19:19:16.746149+00:00",
+  "captureNativeSession": 1301,
+  "captureExit": 0,
+  "composeSession": 81150,
+  "composeExit": 0,
+  "frontend": {
+    "epoch": 32,
+    "source": {
+      "path": ".local/workspace-setup/frontend-completion-20261020/production-preview-32/source.sha256",
+      "sha256": "f012675c4d58e18b2c7ab0e6a004cb6df1e085add1ba47fc6959a69712505756"
+    },
+    "dist": {
+      "path": ".local/workspace-setup/frontend-completion-20261020/production-preview-32/dist.sha256",
+      "sha256": "329032b06f250850eacdd40f2b575f56b6c23a6d9eb57675607f0ebf01becfda"
+    },
+    "build": {
+      "path": ".local/workspace-setup/frontend-completion-20261020/production-preview-32/build-receipt.json",
+      "sha256": "f96bd96da61a06d8d9c54e7f36148e235d1eca15fe9d3f783b49f3e41ec29b6f"
+    }
+  },
+  "rawStates": 21,
+  "rawPng": 42,
+  "sideBySides": 14,
+  "allPairsActuallyInspectedByRoot": [
+    "composites/1280-home-guest.png",
+    "composites/1280-home-player.png",
+    "composites/1280-quests.png",
+    "composites/1280-chronicles.png",
+    "composites/1280-codex.png",
+    "composites/1280-community.png",
+    "composites/1280-rules.png",
+    "composites/390-home-guest.png",
+    "composites/390-home-player.png",
+    "composites/390-quests.png",
+    "composites/390-chronicles.png",
+    "composites/390-codex.png",
+    "composites/390-community.png",
+    "composites/390-rules.png"
+  ],
+  "independentPixelCheck": "Root PIL checked all28 composite halves exactly equal original viewport PNG pixels; no resize/crop/mask. Full-page originals remain linked.",
+  "leftIsLegacy": true,
+  "newApiMocks": false,
+  "authenticatedTraceOrHar": false,
+  "ownerVisualApproval": false,
+  "matchedPreferences": false,
+  "reviewedCorrections": [
+    "Single directory heading and authorized Rules creation actions have separate current32 live journey evidence.",
+    "Current32 main14 captures preserve Legacy typography, navigation, card/timeline structure and responsive stacking; substantive taxonomy/content/role differences remain disclosed.",
+    "Eight dated real-workflow supplement photos actually viewed by root; no fresh32 timing or pixel parity inferred from them."
+  ],
+  "limits": "Different campaign data, roles, dates and source epochs remain confounders. No pixel-parity, applied provider delivery, or owner visual approval is claimed.",
+  "artifacts": {
+    "capture-report.json": "3839f6bdb14895ec2957e779b317dbe4915b033a4101daffe016063be18300a2",
+    "compositions.json": "90af68bc2ea3676dc91816f53a554195f1003e8fa412f76ef64265d8a5912c13",
+    "review.html": "72c0a0ac81270cf852220217a1e30228f38be08dae246c55af3d43afbf6c0082"
+  }
+}

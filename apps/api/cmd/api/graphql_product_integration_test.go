@@ -59,7 +59,7 @@ func TestProductFixtureFoundation(t *testing.T) {
 	}
 	for _, fixture := range []*productFixture{first, second} {
 		var version int64
-		if err := fixture.pool.QueryRow(ctx, `SELECT max(version_id) FROM goose_db_version WHERE is_applied`).Scan(&version); err != nil || version != 3 {
+		if err := fixture.pool.QueryRow(ctx, `SELECT max(version_id) FROM goose_db_version WHERE is_applied`).Scan(&version); err != nil || version != 2 {
 			t.Fatalf("product migration version=%d err=%v", version, err)
 		}
 		rows, err := fixture.pool.Query(ctx, `SELECT tablename FROM pg_tables WHERE schemaname='public' AND tablename<>'goose_db_version' ORDER BY tablename`)

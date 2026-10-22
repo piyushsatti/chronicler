@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '../../components/primitives/Button.js';
 import type { EntityLinkIndex } from './types.js';
+import styles from './editor.module.css';
 
 export type LiveEditorCommand =
   | 'bold'
@@ -546,6 +547,7 @@ function PlainLiveEditor({
         ) : null}
         <textarea
           ref={ref}
+          aria-label="Document body"
           className="field live-editor__input"
           rows={compact ? 6 : 16}
           value={value}
@@ -604,6 +606,11 @@ function PlainLiveEditor({
   );
 }
 
+function sizeBlockInput(input: HTMLTextAreaElement): void {
+  input.style.height = 'auto';
+  input.style.height = `${input.scrollHeight}px`;
+}
+
 function BlocksLiveEditor({
   value,
   onChange,
@@ -624,6 +631,42 @@ function BlocksLiveEditor({
   const [acIdx, setAcIdx] = useState(0);
   const caretRef = useRef<{ idx: number; pos: number } | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const inputObserver = useRef<ResizeObserver | null>(null);
+  const inputResizeFrame = useRef<number | null>(null);
+  const setInputRef = useCallback((input: HTMLTextAreaElement | null): void => {
+    inputObserver.current?.disconnect();
+    inputObserver.current = null;
+    if (inputResizeFrame.current !== null) {
+      cancelAnimationFrame(inputResizeFrame.current);
+      inputResizeFrame.current = null;
+    }
+    inputRef.current = input;
+    if (!input) return;
+    let width: number | undefined;
+    const observer = new ResizeObserver((entries) => {
+      const nextWidth = entries[0]?.contentRect.width;
+      if (
+        inputRef.current !== input ||
+        inputObserver.current !== observer ||
+        nextWidth === undefined ||
+        nextWidth === width
+      ) {
+        return;
+      }
+      width = nextWidth;
+      if (inputResizeFrame.current !== null) {
+        cancelAnimationFrame(inputResizeFrame.current);
+      }
+      inputResizeFrame.current = requestAnimationFrame(() => {
+        inputResizeFrame.current = null;
+        if (inputRef.current === input && inputObserver.current === observer) {
+          sizeBlockInput(input);
+        }
+      });
+    });
+    inputObserver.current = observer;
+    observer.observe(input);
+  }, []);
   const lastSent = useRef(value);
   const pendingCaret = useRef<number | null>(null);
   const lastActive = useRef(0);
@@ -659,8 +702,7 @@ function BlocksLiveEditor({
         /* ignore */
       }
       caretRef.current = null;
-      el.style.height = 'auto';
-      el.style.height = `${el.scrollHeight}px`;
+      sizeBlockInput(el);
     }
   }, [active]);
 
@@ -674,8 +716,7 @@ function BlocksLiveEditor({
       } catch {
         /* ignore */
       }
-      inputRef.current.style.height = 'auto';
-      inputRef.current.style.height = `${inputRef.current.scrollHeight}px`;
+      sizeBlockInput(inputRef.current);
     }
   });
 
@@ -729,8 +770,7 @@ function BlocksLiveEditor({
       setAcIdx(0);
       return;
     }
-    e.target.style.height = 'auto';
-    e.target.style.height = `${e.target.scrollHeight}px`;
+    sizeBlockInput(e.target);
     setLines((ls) => {
       const n = ls.slice();
       n[i] = v;
@@ -976,7 +1016,8 @@ function BlocksLiveEditor({
 
   const inputFor = (i: number, mono: boolean): React.JSX.Element => (
     <textarea
-      ref={inputRef}
+      ref={setInputRef}
+      aria-label="Document body"
       className={`le-input ${mono ? 'le-mono type-code' : leTypeClass(lines[i])}`}
       rows={1}
       spellCheck={!mono}
@@ -1034,7 +1075,7 @@ function BlocksLiveEditor({
             <span className="le-chip">
               {r.kind === 'mermaid' ? 'diagram · click to edit' : `${r.kind} · click to edit`}
             </span>
-            <pre className="type-caption" style={{ whiteSpace: 'pre-wrap', margin: 0 }}>
+            <pre className={`type-caption ${styles.widgetSource}`}>
               {md}
             </pre>
           </div>,

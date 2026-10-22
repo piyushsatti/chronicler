@@ -3,6 +3,13 @@ query Quest($id: ID, $shortCode: String) {
     id
     shortCode
     status
+    dmId
+    updatedAt
+    arcId
+    arc {
+      id
+      name
+    }
     scheduledAt
     durationHours
     slotsMax
@@ -18,6 +25,8 @@ query Quest($id: ID, $shortCode: String) {
       id
       slug
       title
+      effectiveBody
+      frontmatter
     }
     discordDelivery {
       desiredRevision
@@ -32,6 +41,10 @@ query Quest($id: ID, $shortCode: String) {
       characterName
       memberHandle
       status
+    }
+    pointcrawlLinks(limit: 100) {
+      pointcrawlNodeId
+      role
     }
   }
 }

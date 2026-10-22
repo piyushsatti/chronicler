@@ -261,16 +261,16 @@ func questsListParams(spec QuestsSpec) (dbgen.ProductQuestListPageParams, error)
 	if spec.Filters != nil {
 		f := spec.Filters
 		if f.Status != nil {
-			params.Status = *f.Status
+			params.Status = pgtype.Text{String: *f.Status, Valid: true}
 		}
 		if f.DisplayStatus != nil {
-			params.DisplayStatus = *f.DisplayStatus
+			params.DisplayStatus = pgtype.Text{String: *f.DisplayStatus, Valid: true}
 		}
 		if f.Kind != nil {
-			params.Kind = *f.Kind
+			params.Kind = pgtype.Text{String: *f.Kind, Valid: true}
 		}
 		if f.Search != nil {
-			params.Search = *f.Search
+			params.Search = pgtype.Text{String: *f.Search, Valid: true}
 		}
 		if len(f.ShortCodes) > 0 {
 			params.ShortCodes = f.ShortCodes
@@ -565,6 +565,13 @@ func (p *ProductPostgres) ReadBatchQuests(ctx context.Context, _ auth.Authority,
 		}
 		out[positions[position]] = product.BatchResult[QuestView]{Value: mapQuestBatchRow(row)}
 	}
+	views := make([]*QuestView, 0, len(out))
+	for _, slot := range out {
+		views = append(views, slot.Value)
+	}
+	if err := p.fillQuestRegionIDs(ctx, views...); err != nil {
+		return nil, err
+	}
 	return out, nil
 }
 
@@ -598,10 +605,25 @@ func (p *ProductPostgres) ReadBatchRewardEntitlements(_ context.Context, _ auth.
 	return out, nil
 }
 
-func (p *ProductPostgres) ReadRewardDecisionCoverage(_ context.Context, questIDs []string) ([]RewardDecisionCoverage, error) {
-	out := make([]RewardDecisionCoverage, len(questIDs))
+func (p *ProductPostgres) ReadRewardDecisionCoverage(ctx context.Context, questIDs []string) ([]RewardDecisionCoverage, error) {
+	ids := make([]pgtype.UUID, len(questIDs))
 	for i, id := range questIDs {
-		out[i] = RewardDecisionCoverage{QuestID: id}
+		parsed, err := questUUID(id)
+		if err != nil {
+			return nil, err
+		}
+		ids[i] = parsed
+	}
+	rows, err := p.queries().ProductQuestRewardCoverage(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]RewardDecisionCoverage, 0, len(rows))
+	for _, row := range rows {
+		if !row.LiveQuestID.Valid {
+			return nil, apierr.New(apierr.NotFound, "quest not found")
+		}
+		out = append(out, RewardDecisionCoverage{QuestID: db.UUIDString(row.QuestID), Closed: row.Closed, HasFullClosureDecision: row.Complete})
 	}
 	return out, nil
 }
@@ -754,7 +776,8 @@ func (p *ProductPostgres) ReadQuest(ctx context.Context, _ auth.Authority, spec 
 			}
 			return nil, err
 		}
-		return mapQuestReadByIDRow(row), nil
+		view := mapQuestReadByIDRow(row)
+		return view, p.fillQuestRegionIDs(ctx, view)
 	case spec.ShortCode != nil && strings.TrimSpace(*spec.ShortCode) != "":
 		row, err := p.queries().ProductQuestReadByShortCode(ctx, dbgen.ProductQuestReadByShortCodeParams{
 			AsOf:      asOf,
@@ -766,7 +789,8 @@ func (p *ProductPostgres) ReadQuest(ctx context.Context, _ auth.Authority, spec 
 			}
 			return nil, err
 		}
-		return mapQuestReadByShortCodeRow(row), nil
+		view := mapQuestReadByShortCodeRow(row)
+		return view, p.fillQuestRegionIDs(ctx, view)
 	default:
 		return nil, apierr.New(apierr.Invalid, "quest id or short code required")
 	}
@@ -796,7 +820,7 @@ func (p *ProductPostgres) ReadQuestBoard(ctx context.Context, _ auth.Authority, 
 			items = append(items, *view)
 		}
 	}
-	return QuestListResult{Items: items, Total: total}, nil
+	return QuestListResult{Items: items, Total: total}, p.fillQuestRegionIDs(ctx, questViewPointers(items)...)
 }
 func (p *ProductPostgres) ReadQuestGenreOptions(ctx context.Context, _ auth.Authority, _ QuestGenreOptionsSpec) ([]string, error) {
 	rows, err := p.queries().ProductQuestGenreOptions(ctx)
@@ -838,7 +862,8 @@ func (p *ProductPostgres) ReadQuests(ctx context.Context, _ auth.Authority, spec
 	if err != nil {
 		return QuestListResult{}, err
 	}
-	return questListFromPageRows(rows), nil
+	result := questListFromPageRows(rows)
+	return result, p.fillQuestRegionIDs(ctx, questViewPointers(result.Items)...)
 }
 
 func (p *ProductPostgres) ReadRecentlyClosedQuests(ctx context.Context, _ auth.Authority, spec RecentlyClosedQuestsSpec) (QuestListResult, error) {
@@ -866,7 +891,7 @@ func (p *ProductPostgres) ReadRecentlyClosedQuests(ctx context.Context, _ auth.A
 			items = append(items, *view)
 		}
 	}
-	return QuestListResult{Items: items, Total: total}, nil
+	return QuestListResult{Items: items, Total: total}, p.fillQuestRegionIDs(ctx, questViewPointers(items)...)
 }
 func (p *ProductPostgres) ReadQuestArc(ctx context.Context, _ auth.Authority, spec QuestArcSpec) (*QuestArcView, error) {
 	arcID, err := questUUID(strings.TrimSpace(spec.Id))

@@ -1,15 +1,23 @@
 {
   "id": "ffffffff-ffff-4fff-8fff-ffffffffffff",
   "slug": "mira-table",
-  "kind": "dm_table",
-  "category": null,
+  "kind": "community",
+  "category": "dm_table",
   "status": "published",
   "visibility": "public",
   "title": "Mira's Table",
   "effectiveBody": "Weekly sandbox nights.",
   "frontmatter": {
     "blurb": "Open table for Lightfall newcomers.",
-    "tags": ["sandbox", "beginner"]
+    "tags": [
+      "sandbox",
+      "beginner"
+    ]
   },
-  "author": { "handle": "mira" }
+  "author": {
+    "handle": "mira"
+  },
+  "authorId": "11111111-1111-4111-8111-111111111111",
+  "canEditBody": false,
+  "canEditMetadata": false
 }

@@ -61,21 +61,34 @@ func TestMapActiveAlertsProjectsJobAndSkipsEmptyPage(t *testing.T) {
 	first := time.Date(2026, 10, 5, 12, 0, 0, 0, time.UTC)
 	last := time.Date(2026, 10, 5, 13, 0, 0, 0, time.UTC)
 	got, err = mapActiveAlerts([]dbgen.SiteActiveAlertsRow{{
-		Total:           1,
+		Total:           2,
 		Key:             pgtype.Text{String: "job:aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa:state:dead", Valid: true},
 		Label:           pgtype.Text{String: "Background job is dead", Valid: true},
 		Severity:        pgtype.Text{String: "warning", Valid: true},
-		RemediationHref: pgtype.Text{String: "/admin/operations", Valid: true},
+		RemediationHref: pgtype.Text{String: "/admin/data-health", Valid: true},
+		FirstSeenAt:     pgtype.Timestamptz{Time: first, Valid: true},
+		LastSeenAt:      pgtype.Timestamptz{Time: last, Valid: true},
+	}, {
+		Total:           2,
+		Key:             pgtype.Text{String: "bot:heartbeat:stale", Valid: true},
+		Label:           pgtype.Text{String: "Bot heartbeat is stale", Valid: true},
+		Severity:        pgtype.Text{String: "warning", Valid: true},
+		RemediationHref: pgtype.Text{String: "/admin/data-health", Valid: true},
 		FirstSeenAt:     pgtype.Timestamptz{Time: first, Valid: true},
 		LastSeenAt:      pgtype.Timestamptz{Time: last, Valid: true},
 	}})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(got.Items) != 1 || got.Items[0].Key == "" || got.Items[0].Severity != "warning" {
+	if len(got.Items) != 2 || got.Items[0].Key == "" || got.Items[0].Severity != "warning" {
 		t.Fatalf("got=%+v", got.Items)
 	}
 	if got.Items[0].FirstSeenAt == nil || !got.Items[0].FirstSeenAt.Equal(first) {
 		t.Fatalf("firstSeen=%v", got.Items[0].FirstSeenAt)
+	}
+	for _, alert := range got.Items {
+		if alert.RemediationHref != "/admin/data-health" {
+			t.Fatalf("alert %s destination=%q", alert.Key, alert.RemediationHref)
+		}
 	}
 }

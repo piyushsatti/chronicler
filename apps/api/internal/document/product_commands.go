@@ -6,6 +6,7 @@ import (
 	"reflect"
 	"time"
 
+	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
@@ -51,7 +52,7 @@ func documentWriteFacts(view *DocumentView) auth.DocumentWriteFacts {
 	if view == nil {
 		return auth.DocumentWriteFacts{}
 	}
-	return auth.DocumentWriteFacts{ID: view.Id, AuthorID: view.AuthorId, Kind: view.Kind, Category: view.Category}
+	return auth.DocumentWriteFacts{ID: view.Id, AuthorID: view.AuthorId, Kind: view.Kind, Category: view.Category, LinkedRegionIDs: view.LinkedRegionIDs}
 }
 
 func runDocumentWrite[T any](
@@ -64,7 +65,7 @@ func runDocumentWrite[T any](
 	meta product.CommandMeta,
 	subjectID string,
 	lock func(context.Context, DocumentWriteRepository) (*DocumentView, error),
-	store func(context.Context, DocumentWriteRepository, auth.Authority, time.Time) (T, error),
+	store func(context.Context, ProductCommandRepos, auth.Authority, time.Time) (T, error),
 ) (T, error) {
 	var result T
 	fingerprint, err := product.Fingerprint(spec)
@@ -88,6 +89,12 @@ func runDocumentWrite[T any](
 		if err != nil {
 			return err
 		}
+		if before == nil {
+			return apierr.New(apierr.NotFound, "document not found")
+		}
+		if err := admitDocumentDisclosure(*before, fresh); err != nil {
+			return err
+		}
 		request, err := auth.ForDocumentWrite(operation, documentWriteFacts(before))
 		if err != nil {
 			return err
@@ -99,18 +106,31 @@ func runDocumentWrite[T any](
 		if !decision.Allowed {
 			return apierr.New(apierr.Forbidden, "document command forbidden")
 		}
+		if err := admitDocumentBody(ctx, repos.Document, fresh, spec); err != nil {
+			return err
+		}
 		claim, err := repos.Replay.Claim(ctx, fresh.Claims().MemberID, replayName, meta.IdempotencyKey, fingerprint)
 		if err != nil {
 			return err
 		}
 		if claim.Replay {
-			return json.Unmarshal(claim.Receipt, &result)
+			if err := json.Unmarshal(claim.Receipt, &result); err != nil {
+				return err
+			}
+			if replayed, ok := any(&result).(*DocumentView); ok {
+				current, err := repos.Document.ReadCommandDocument(ctx, fresh, replayed.Id)
+				if err != nil {
+					return err
+				}
+				*replayed = current
+			}
+			return nil
 		}
 		at, err := product.UTCNow(s.Clock)
 		if err != nil {
 			return err
 		}
-		result, err = store(ctx, repos.Document, fresh, at)
+		result, err = store(auth.WithAuthority(ctx, fresh), repos, fresh, at)
 		if err != nil {
 			return err
 		}
@@ -118,7 +138,7 @@ func runDocumentWrite[T any](
 			if commandDependencyMissing(repos.Audit) {
 				return apierr.New(apierr.Internal, "override recorder required")
 			}
-			if err := repos.Audit.Record(ctx, auth.OverrideFact{
+			if err := repos.Audit.Record(ctx, claim, auth.OverrideFact{
 				ActorID: fresh.Claims().MemberID, Operation: request.Operation(), SubjectType: "document", SubjectID: subjectID, RuleCode: decision.RuleCode, At: at,
 			}); err != nil {
 				return err
@@ -188,7 +208,7 @@ func runDocumentOp[T any](
 		if err != nil {
 			return err
 		}
-		result, err = store(ctx, repos, fresh, at)
+		result, err = store(auth.WithAuthority(ctx, fresh), repos, fresh, at)
 		if err != nil {
 			return err
 		}
@@ -196,7 +216,7 @@ func runDocumentOp[T any](
 			if commandDependencyMissing(repos.Audit) {
 				return apierr.New(apierr.Internal, "override recorder required")
 			}
-			if err := repos.Audit.Record(ctx, auth.OverrideFact{
+			if err := repos.Audit.Record(ctx, claim, auth.OverrideFact{
 				ActorID: fresh.Claims().MemberID, Operation: request.Operation(), SubjectType: "document", SubjectID: subjectID, RuleCode: decision.RuleCode, At: at,
 			}); err != nil {
 				return err
@@ -246,7 +266,15 @@ func (s ProductCommands) CreateDocument(ctx context.Context, actor auth.Authorit
 			return err
 		}
 		if claim.Replay {
-			return json.Unmarshal(claim.Receipt, &result)
+			if err := json.Unmarshal(claim.Receipt, &result); err != nil {
+				return err
+			}
+			current, err := repos.Document.ReadCommandDocument(ctx, fresh, result.Id)
+			if err != nil {
+				return err
+			}
+			result = current
+			return nil
 		}
 		at, err := product.UTCNow(s.Clock)
 		if err != nil {
@@ -255,11 +283,21 @@ func (s ProductCommands) CreateDocument(ctx context.Context, actor auth.Authorit
 		docID := s.IDs()
 		revID := s.IDs()
 		locked := CreateDocumentState{SubjectID: docID}
-		result, err = repos.Document.StoreCreateDocument(ctx, CreateDocumentWrite{
+		result, err = repos.Document.StoreCreateDocument(auth.WithAuthority(ctx, fresh), CreateDocumentWrite{
 			ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked, RevisionID: &revID,
 		})
 		if err != nil {
 			return err
+		}
+		if decision.UsedOverride {
+			if commandDependencyMissing(repos.Audit) {
+				return apierr.New(apierr.Internal, "override recorder required")
+			}
+			if err := repos.Audit.Record(ctx, claim, auth.OverrideFact{
+				ActorID: fresh.Claims().MemberID, Operation: request.Operation(), SubjectType: "document", SubjectID: docID, RuleCode: decision.RuleCode, At: at,
+			}); err != nil {
+				return err
+			}
 		}
 		receipt, err := json.Marshal(result)
 		if err != nil {
@@ -271,6 +309,9 @@ func (s ProductCommands) CreateDocument(ctx context.Context, actor auth.Authorit
 }
 
 func (s ProductCommands) UpdateDocument(ctx context.Context, actor auth.Authority, spec UpdateDocumentSpec, meta product.CommandMeta) (DocumentView, error) {
+	if err := validateDocumentEdit(spec.Input); err != nil {
+		return DocumentView{}, err
+	}
 	if err := commandPublicID(&spec.Id); err != nil {
 		return DocumentView{}, err
 	}
@@ -283,12 +324,10 @@ func (s ProductCommands) UpdateDocument(ctx context.Context, actor auth.Authorit
 			if !state.Exists || state.Before == nil {
 				return nil, apierr.New(apierr.NotFound, "document not found")
 			}
-			if spec.Input.ExpectedRevision != int32(state.Version) {
-				return nil, apierr.New(apierr.Conflict, "document revision mismatch")
-			}
 			return state.Before, nil
 		},
-		func(ctx context.Context, repo DocumentWriteRepository, fresh auth.Authority, at time.Time) (DocumentView, error) {
+		func(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time) (DocumentView, error) {
+			repo := repos.Document
 			state, err := repo.LockUpdateDocument(ctx, spec)
 			if err != nil {
 				return DocumentView{}, err
@@ -310,16 +349,22 @@ func (s ProductCommands) PublishDocument(ctx context.Context, actor auth.Authori
 			if err != nil || !state.Exists || state.Before == nil {
 				return nil, apierr.New(apierr.NotFound, "document not found")
 			}
-			if spec.ExpectedRevision != int32(state.Version) {
-				return nil, apierr.New(apierr.Conflict, "document revision mismatch")
-			}
 			return state.Before, nil
 		},
-		func(ctx context.Context, repo DocumentWriteRepository, fresh auth.Authority, at time.Time) (DocumentView, error) {
+		func(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time) (DocumentView, error) {
+			repo := repos.Document
 			state, _ := repo.LockPublishDocument(ctx, spec)
-			return repo.StorePublishDocument(ctx, PublishDocumentWrite{
-				ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: state,
+			revisionID := s.IDs()
+			view, err := repo.StorePublishDocument(ctx, PublishDocumentWrite{
+				ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: state, RevisionID: &revisionID,
 			})
+			if err != nil {
+				return DocumentView{}, err
+			}
+			if err := recordDocumentEvents(ctx, repos, documentRevisionEvents(notification.DocumentPublished, view.Id, revisionID, fresh.Claims().MemberID, at, nil)); err != nil {
+				return DocumentView{}, err
+			}
+			return view, nil
 		},
 	)
 }
@@ -334,12 +379,10 @@ func (s ProductCommands) UnpublishDocument(ctx context.Context, actor auth.Autho
 			if err != nil || !state.Exists || state.Before == nil {
 				return nil, apierr.New(apierr.NotFound, "document not found")
 			}
-			if spec.ExpectedRevision != int32(state.Version) {
-				return nil, apierr.New(apierr.Conflict, "document revision mismatch")
-			}
 			return state.Before, nil
 		},
-		func(ctx context.Context, repo DocumentWriteRepository, fresh auth.Authority, at time.Time) (DocumentView, error) {
+		func(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time) (DocumentView, error) {
+			repo := repos.Document
 			state, _ := repo.LockUnpublishDocument(ctx, spec)
 			return repo.StoreUnpublishDocument(ctx, UnpublishDocumentWrite{
 				ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: state,
@@ -349,6 +392,9 @@ func (s ProductCommands) UnpublishDocument(ctx context.Context, actor auth.Autho
 }
 
 func (s ProductCommands) EditPublishedDocument(ctx context.Context, actor auth.Authority, spec EditPublishedDocumentSpec, meta product.CommandMeta) (DocumentView, error) {
+	if err := validateDocumentEdit(spec.Input); err != nil {
+		return DocumentView{}, err
+	}
 	if err := commandPublicID(&spec.Id); err != nil {
 		return DocumentView{}, err
 	}
@@ -358,21 +404,45 @@ func (s ProductCommands) EditPublishedDocument(ctx context.Context, actor auth.A
 			if err != nil || !state.Exists || state.Before == nil {
 				return nil, apierr.New(apierr.NotFound, "document not found")
 			}
-			if spec.Input.ExpectedRevision != int32(state.Version) {
-				return nil, apierr.New(apierr.Conflict, "document revision mismatch")
-			}
 			return state.Before, nil
 		},
-		func(ctx context.Context, repo DocumentWriteRepository, fresh auth.Authority, at time.Time) (DocumentView, error) {
-			state, _ := repo.LockEditPublishedDocument(ctx, spec)
-			return repo.StoreEditPublishedDocument(ctx, EditPublishedDocumentWrite{
+		func(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time) (DocumentView, error) {
+			repo := repos.Document
+			state, err := repo.LockEditPublishedDocument(ctx, spec)
+			if err != nil {
+				return DocumentView{}, err
+			}
+			body := state.RawBody
+			if spec.Input.Body.Set && spec.Input.Body.Value != nil {
+				body = *spec.Input.Body.Value
+			}
+			mentions, err := newDocumentMentions(ctx, repos.Mentions, state.RawBody, body, fresh.Claims().MemberID)
+			if err != nil {
+				return DocumentView{}, err
+			}
+			revisionID := s.IDs()
+			view, err := repo.StoreEditPublishedDocument(ctx, EditPublishedDocumentWrite{
 				ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: state,
+				RevisionID: &revisionID, NewMentionMemberIDs: mentions,
 			})
+			if err != nil {
+				return DocumentView{}, err
+			}
+			if err := recordDocumentEvents(ctx, repos, documentRevisionEvents(notification.DocumentEdited, view.Id, revisionID, fresh.Claims().MemberID, at, mentions)); err != nil {
+				return DocumentView{}, err
+			}
+			return view, nil
 		},
 	)
 }
 
 func (s ProductCommands) SetDocumentVisibility(ctx context.Context, actor auth.Authority, spec SetDocumentVisibilitySpec, meta product.CommandMeta) (DocumentView, error) {
+	if err := validateDocumentAudience(spec.Input); err != nil {
+		return DocumentView{}, err
+	}
+	if spec.ExpectedRevision < 1 {
+		return DocumentView{}, apierr.New(apierr.Invalid, "document version required")
+	}
 	if err := commandPublicID(&spec.Id); err != nil {
 		return DocumentView{}, err
 	}
@@ -382,12 +452,10 @@ func (s ProductCommands) SetDocumentVisibility(ctx context.Context, actor auth.A
 			if err != nil || !state.Exists || state.Before == nil {
 				return nil, apierr.New(apierr.NotFound, "document not found")
 			}
-			if spec.ExpectedRevision != int32(state.Version) {
-				return nil, apierr.New(apierr.Conflict, "document revision mismatch")
-			}
 			return state.Before, nil
 		},
-		func(ctx context.Context, repo DocumentWriteRepository, fresh auth.Authority, at time.Time) (DocumentView, error) {
+		func(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time) (DocumentView, error) {
+			repo := repos.Document
 			state, _ := repo.LockSetDocumentVisibility(ctx, spec)
 			return repo.StoreSetDocumentVisibility(ctx, SetDocumentVisibilityWrite{
 				ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: state,
@@ -406,12 +474,10 @@ func (s ProductCommands) DeleteDocument(ctx context.Context, actor auth.Authorit
 			if err != nil || !state.Exists || state.Before == nil {
 				return nil, apierr.New(apierr.NotFound, "document not found")
 			}
-			if spec.ExpectedRevision != int32(state.Version) {
-				return nil, apierr.New(apierr.Conflict, "document revision mismatch")
-			}
 			return state.Before, nil
 		},
-		func(ctx context.Context, repo DocumentWriteRepository, fresh auth.Authority, at time.Time) (product.CommandReceipt, error) {
+		func(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time) (product.CommandReceipt, error) {
+			repo := repos.Document
 			state, _ := repo.LockDeleteDocument(ctx, spec)
 			return repo.StoreDeleteDocument(ctx, DeleteDocumentWrite{
 				ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: state,
@@ -432,7 +498,8 @@ func (s ProductCommands) RestoreDocument(ctx context.Context, actor auth.Authori
 			}
 			return state.Before, nil
 		},
-		func(ctx context.Context, repo DocumentWriteRepository, fresh auth.Authority, at time.Time) (DocumentView, error) {
+		func(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time) (DocumentView, error) {
+			repo := repos.Document
 			state, _ := repo.LockRestoreDocument(ctx, spec)
 			return repo.StoreRestoreDocument(ctx, RestoreDocumentWrite{
 				ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: state,

@@ -1,0 +1,11 @@
+mutation ProfileUpdateMyDmProfile($input: UpdateDmProfileInput!, $meta: CommandMeta!) {
+  updateMyDmProfile(input: $input, meta: $meta) {
+    memberId
+    status
+    reviewRevision
+    tagline
+    philosophy
+    houseRules
+    acceptingPlayers
+  }
+}

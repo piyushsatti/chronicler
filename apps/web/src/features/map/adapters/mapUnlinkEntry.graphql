@@ -1,0 +1,17 @@
+mutation MapUnlinkEntry(
+  $mapId: ID!
+  $nodeId: ID!
+  $documentId: ID!
+  $relation: String!
+  $meta: CommandMeta!
+) {
+  unlinkPointcrawlEntry(
+    mapId: $mapId
+    nodeId: $nodeId
+    documentId: $documentId
+    relation: $relation
+    meta: $meta
+  ) {
+    replayed
+  }
+}

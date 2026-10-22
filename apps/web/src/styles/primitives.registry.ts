@@ -1,4 +1,4 @@
-// A6 registry: the 26 primitives ruled by Epic B
+// A6 registry: the primitives ruled by Epic B (26) plus Menu (27)
 // (notes/design/epic-drafts/epic-B-primitives-gallery-effects.md, owner ruling
 // 2026-08-02). Epic B is mid-flight: `status` is the source of truth for
 // which rows have shipped a module plus a gallery entry; 'pending' rows have
@@ -61,11 +61,15 @@ export const PRIMITIVES_REGISTRY: PrimitiveRegistryEntry[] = [
   { id: 24, name: 'Calendar', group: 'B11', galleryEntryId: 'calendar', module: 'components/primitives/Calendar', status: 'built' },
   { id: 25, name: 'FieldDateTime', group: 'B11', galleryEntryId: 'field-date-time', module: 'components/primitives/FieldDateTime', status: 'built' },
   { id: 26, name: 'Legend', group: 'B12', galleryEntryId: 'legend', module: 'components/primitives/Legend', status: 'built' },
+  { id: 27, name: 'Menu', group: 'B2', galleryEntryId: 'menu', module: 'components/primitives/Menu', status: 'built' },
+  { id: 28, name: 'Checkbox', group: 'B2', galleryEntryId: 'checkbox', module: 'components/primitives/Checkbox', status: 'built' },
 ];
 
 // registry ids are insertion order, not doc numbering: 24 Calendar = doc primitive 20,
-// 25 FieldDateTime = doc primitive 21 (one-pair counting); 26 Legend appended last.
+// 25 FieldDateTime = doc primitive 21 (one-pair counting); 26 Legend; 27 Menu
+// (Base UI menu-button, split from Popover's former `variant: 'menu'`); 28 Checkbox
+// (Base UI Checkbox, replaces native checkboxes) appended last.
 
-if (PRIMITIVES_REGISTRY.length !== 26) {
-  throw new Error(`primitives.registry.ts: expected 26 ruled primitives, found ${PRIMITIVES_REGISTRY.length}`);
+if (PRIMITIVES_REGISTRY.length !== 28) {
+  throw new Error(`primitives.registry.ts: expected 28 ruled primitives, found ${PRIMITIVES_REGISTRY.length}`);
 }

@@ -1,5 +1,5 @@
-query DmTableSchedule($limit: Int!) {
-  questBoard(limit: $limit) {
+query DmTableSchedule($memberId: ID!, $limit: Int!, $offset: Int!) {
+  quests(filters: { dmId: $memberId }, limit: $limit, offset: $offset) {
     items {
       id
       shortCode
@@ -8,13 +8,10 @@ query DmTableSchedule($limit: Int!) {
       slotsMax
       filledCount
       displayStatus
-      dm {
-        handle
-        displayName
-      }
       briefDocument {
         title
       }
     }
+    total
   }
 }

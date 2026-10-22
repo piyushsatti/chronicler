@@ -1,0 +1,22 @@
+query MapDirectory($limit: Int! = 50, $offset: Int! = 0) {
+  maps(mapKind: "pointcrawl", limit: $limit, offset: $offset) {
+    id
+    canEdit
+    name
+    atlasCode
+    family
+    mapKind
+    assetPath
+    regionId
+    createdAt
+  }
+  regions(limit: $limit, offset: $offset) {
+    canCreateMap
+    id
+    name
+    kind
+    charterDeadline
+    documentId
+    createdAt
+  }
+}

@@ -34,7 +34,7 @@ func TestProductPostgresReadMapping(t *testing.T) {
 	}
 	view, err := mapProductCharacter(
 		id, "C-READ", "Mapper", ownerID, backstoryID, pgtype.UUID{}, pgtype.UUID{}, "active",
-		pgtype.Text{String: "description", Valid: true}, pgtype.Text{}, 12,
+		pgtype.Text{String: "description", Valid: true}, pgtype.Text{}, pgtype.Text{}, pgtype.Text{}, 12,
 		pgtype.Timestamptz{Time: createdAt, Valid: true}, pgtype.Timestamptz{Time: createdAt, Valid: true},
 		pgtype.Timestamptz{Time: submittedAt, Valid: true}, "PENDING", nil, pgtype.Timestamptz{},
 	)
@@ -44,7 +44,7 @@ func TestProductPostgresReadMapping(t *testing.T) {
 	if view.Id != "10000000-0000-4000-8000-000000000001" || view.OwnerId != "30000000-0000-4000-8000-000000000003" {
 		t.Fatalf("UUID mapping = id %q owner %q", view.Id, view.OwnerId)
 	}
-	if view.Description == nil || *view.Description != "description" || view.DdbUrl != nil || view.BackstoryId == nil || *view.BackstoryId != "20000000-0000-4000-8000-000000000002" || view.GuildId != nil || view.RegionId != nil {
+	if view.Description == nil || *view.Description != "description" || view.DdbUrl != nil || view.ImageUrl != nil || view.BackstoryId == nil || *view.BackstoryId != "20000000-0000-4000-8000-000000000002" || view.GuildId != nil || view.RegionId != nil {
 		t.Fatalf("nullable mapping = %+v", view)
 	}
 	if view.VerificationStatus != CharacterReviewStatusPending || view.VerificationSubmittedAt == nil || !view.VerificationSubmittedAt.Equal(submittedAt) {

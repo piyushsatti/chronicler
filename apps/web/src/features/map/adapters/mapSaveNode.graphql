@@ -1,0 +1,5 @@
+mutation MapSaveNode($mapId: ID!, $input: PointcrawlNodeInput!, $meta: CommandMeta!) {
+  upsertPointcrawlNode(mapId: $mapId, input: $input, meta: $meta) {
+    id
+  }
+}

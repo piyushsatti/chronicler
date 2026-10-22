@@ -39,6 +39,7 @@ type MemberReadRepository interface {
 	ReadMembers(ctx context.Context, actor auth.Authority, spec MembersSpec) (MemberListResult, error)
 	ReadMyAvailability(ctx context.Context, actor auth.Authority, spec MyAvailabilitySpec) ([]AvailabilitySlotView, error)
 	ReadMyPersonalization(ctx context.Context, actor auth.Authority, spec MyPersonalizationSpec) (*MyPersonalizationView, error)
+	ReadMyPrivateNotes(ctx context.Context, actor auth.Authority, spec MyPrivateNotesSpec) (PrivateNotesView, error)
 	ReadMyUnlocks(ctx context.Context, actor auth.Authority, spec MyUnlocksSpec) (GrantSnapshot, error)
 	ReadPendingDmProfileVerifications(ctx context.Context, actor auth.Authority, spec PendingDmProfileVerificationsSpec) (CommunityDirectoryResult, error)
 }
@@ -62,6 +63,8 @@ type MemberWriteRepository interface {
 	StoreUpdateMyProfile(ctx context.Context, write UpdateMyProfileWrite) (MemberView, error)
 	LockUpdateMySettings(ctx context.Context, actorID string, spec UpdateMySettingsSpec) (UpdateMySettingsState, error)
 	StoreUpdateMySettings(ctx context.Context, write UpdateMySettingsWrite) (MemberSettingsView, error)
+	LockSetMyPrivateNotes(ctx context.Context, actorID string) (SetMyPrivateNotesState, error)
+	StoreSetMyPrivateNotes(ctx context.Context, write SetMyPrivateNotesWrite) (PrivateNotesView, error)
 }
 
 type ProductBatchRepository interface {

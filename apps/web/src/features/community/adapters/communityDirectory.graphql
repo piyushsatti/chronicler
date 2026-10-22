@@ -1,5 +1,9 @@
-query CommunityDirectory($limit: Int!) {
-  communityDirectory(limit: $limit) {
+query CommunityDirectory(
+  $filters: CommunityDirectoryFiltersInput
+  $limit: Int!
+  $offset: Int = 0
+) {
+  communityDirectory(filters: $filters, limit: $limit, offset: $offset) {
     entries {
       memberId
       handle
@@ -8,6 +12,8 @@ query CommunityDirectory($limit: Int!) {
       acceptingPlayers
       isDm
       roles
+      avatarUrl
+      availableDays
     }
     total
   }

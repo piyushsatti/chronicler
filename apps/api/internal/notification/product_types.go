@@ -83,22 +83,23 @@ type SubjectProjection struct {
 }
 
 type Facts struct {
-	Version             int32
-	EventKind           EventKind
-	VerificationID      *string
-	Verdict             *string
-	QuestChangeID       *string
-	OldScheduledAt      *time.Time
-	NewScheduledAt      *time.Time
-	RevisionID          *string
-	CharacterID         *string
-	FromStatus          *string
-	ToStatus            *string
-	DecisionID          *string
-	NewMentionMemberIDs []string
-	RequestID           *string
-	ChangedFields       []string
-	Decision            *string
+	RecipientMemberIDs  []string   `json:"recipientMemberIds,omitempty"`
+	Version             int32      `json:"version"`
+	EventKind           EventKind  `json:"eventKind"`
+	VerificationID      *string    `json:"verificationId,omitempty"`
+	Verdict             *string    `json:"verdict,omitempty"`
+	QuestChangeID       *string    `json:"questChangeId,omitempty"`
+	OldScheduledAt      *time.Time `json:"oldScheduledAt,omitempty"`
+	NewScheduledAt      *time.Time `json:"newScheduledAt,omitempty"`
+	RevisionID          *string    `json:"revisionId,omitempty"`
+	CharacterID         *string    `json:"characterId,omitempty"`
+	FromStatus          *string    `json:"fromStatus,omitempty"`
+	ToStatus            *string    `json:"toStatus,omitempty"`
+	DecisionID          *string    `json:"decisionId,omitempty"`
+	NewMentionMemberIDs []string   `json:"newMentionMemberIds,omitempty"`
+	RequestID           *string    `json:"requestId,omitempty"`
+	ChangedFields       []string   `json:"changedFields,omitempty"`
+	Decision            *string    `json:"decision,omitempty"`
 }
 
 type EventKind string
@@ -133,13 +134,13 @@ type RequestParties struct {
 }
 
 type Event struct {
-	Key         string
-	Kind        EventKind
-	SubjectType string
-	SubjectID   string
-	ActorID     string
-	Facts       Facts
-	OccurredAt  time.Time
+	Key         string    `json:"key"`
+	Kind        EventKind `json:"kind"`
+	SubjectType string    `json:"subjectType"`
+	SubjectID   string    `json:"subjectId"`
+	ActorID     string    `json:"actorId"`
+	Facts       Facts     `json:"facts"`
+	OccurredAt  time.Time `json:"occurredAt"`
 }
 
 type Preferences struct {

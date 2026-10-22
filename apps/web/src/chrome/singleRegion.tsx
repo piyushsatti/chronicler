@@ -2,7 +2,7 @@ import type { PageDeclaration } from '@pi/react-imposition';
 import { PageHost, type PageRegionRenderers } from '@pi/react-imposition/react';
 import type { ReactElement, ReactNode } from 'react';
 
-export function singleBodyDeclaration(page: string): PageDeclaration {
+function singleBodyDeclaration(page: string): PageDeclaration {
   return {
     page,
     regions: [{ role: 'body', priority: 1 }],

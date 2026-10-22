@@ -65,7 +65,7 @@ describe('homeLanesAdapter', () => {
       waitlistCount: 1,
     });
     const props = mapToOpenQuestCardProps(quest!, {
-      myCharacterIds: new Set([CHAR_ID]),
+      memberId: MEMBER_ID,
     });
     expect(props).toMatchObject({
       code: 'Q-101',
@@ -77,7 +77,6 @@ describe('homeLanesAdapter', () => {
       totalSlots: 4,
     });
   });
-
 
   it('retains the three filling quests in recruiting with their order and labels', () => {
     const result = parseHomeLanesWire(recruitment);

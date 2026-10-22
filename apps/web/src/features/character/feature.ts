@@ -1,5 +1,9 @@
 import { HttpResponse } from 'msw';
-import type { FeatureGraphql, FeatureHandlers, FeatureRoute } from '../../chrome/featureModule.js';
+import type {
+  FeatureGraphql,
+  FeatureHandlers,
+  FeatureRoute,
+} from '../../chrome/featureModule.js';
 import { lazyElement } from '../../chrome/lazyElement.js';
 import { shortCodeRedirectRoute } from '../../chrome/routeBuilders.js';
 import goodBackstories from '../../../tests/fixtures/wire/backstories/good.json';
@@ -9,18 +13,35 @@ import goodProgression from '../../../tests/fixtures/wire/character/progression-
 
 export const endpoints = {} as const;
 
+// D5: the wire fixtures predate imageUrl; the mocks carry it (null shows initials).
+const characterMock = { ...goodCharacter, imageUrl: null as string | null };
+const rosterMock = {
+  ...goodCharacters,
+  items: goodCharacters.items.map((item) => ({ ...item, imageUrl: null })),
+};
+
 export const queryKeys = {
   character: (id: string) => ['character', id] as const,
   characters: (filters: string) => ['characters', filters] as const,
   characterProgression: (id: string) => ['characterProgression', id] as const,
+  characterBackstory: (id: string, regionId: string) =>
+    ['characterBackstory', id, regionId] as const,
   backstories: ['backstories'] as const,
 };
 
 export const graphql: FeatureGraphql = {
-  /** Quest signup keeps a minimal MyCharacters op; list uses MyCharacterList. */
   MyCharacters: () => HttpResponse.json({ data: { myCharacters: goodCharacters } }),
-  MyCharacterList: () => HttpResponse.json({ data: { myCharacters: goodCharacters } }),
-  Character: () => HttpResponse.json({ data: { character: goodCharacter } }),
+  CharacterDirectory: () => HttpResponse.json({ data: { characters: rosterMock } }),
+  CharacterCreationCatalog: () =>
+    HttpResponse.json({ data: { creationCatalog: { items: [], total: 0 } } }),
+  CharacterActivity: () =>
+    HttpResponse.json({
+      data: {
+        characterLogs: { items: [], total: 0 },
+        downtimeProjects: { items: [], total: 0 },
+      },
+    }),
+  Character: () => HttpResponse.json({ data: { character: characterMock } }),
   CharacterRegions: () =>
     HttpResponse.json({
       data: {
@@ -38,6 +59,7 @@ export const graphql: FeatureGraphql = {
         updateCharacterProfile: {
           id: goodCharacter.id,
           description: goodCharacter.description,
+          imageUrl: characterMock.imageUrl,
           updatedAt: goodCharacter.updatedAt,
         },
       },
@@ -47,6 +69,7 @@ export const graphql: FeatureGraphql = {
       data: {
         syncCharacterDdb: {
           succeeded: true,
+          safeError: null,
           attemptedAt: goodCharacter.updatedAt,
         },
       },
@@ -56,7 +79,7 @@ export const graphql: FeatureGraphql = {
       data: {
         submitForVerification: {
           id: goodCharacter.id,
-          verificationStatus: 'submitted',
+          verificationStatus: 'PENDING',
           updatedAt: goodCharacter.updatedAt,
         },
       },
@@ -72,6 +95,15 @@ export const graphql: FeatureGraphql = {
       },
     }),
   Backstories: () =>
+    HttpResponse.json({
+      data: {
+        backstories: {
+          items: goodBackstories,
+          total: goodBackstories.length,
+        },
+      },
+    }),
+  CharacterBackstory: () =>
     HttpResponse.json({
       data: {
         backstories: {
@@ -109,6 +141,17 @@ export const graphql: FeatureGraphql = {
             },
           ],
           total: 1,
+        },
+      },
+    }),
+  CharacterHistoryQuest: ({ variables }) =>
+    HttpResponse.json({
+      data: {
+        quest: {
+          id: variables?.id,
+          shortCode: 'Q-7',
+          scheduledAt: '2026-01-03T18:00:00Z',
+          briefDocument: { title: 'The Salt Stair' },
         },
       },
     }),

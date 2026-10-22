@@ -1,0 +1,7 @@
+mutation EditorRestore($id: ID!, $meta: CommandMeta!) {
+  restoreDocument(id: $id, meta: $meta) {
+    id
+    slug
+    version
+  }
+}

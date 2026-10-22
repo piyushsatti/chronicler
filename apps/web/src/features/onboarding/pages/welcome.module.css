@@ -1,0 +1,21 @@
+/* Destination cards: three across when there is room, one column on a phone. */
+.places {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: var(--sp-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.places > li {
+  display: flex;
+}
+
+.places > li > * {
+  flex: 1;
+}
+
+.places :where(h3, p) {
+  margin: 0;
+}

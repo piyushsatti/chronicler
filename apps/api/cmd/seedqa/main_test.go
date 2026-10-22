@@ -3,6 +3,9 @@ package main
 import (
 	"os"
 	"testing"
+	"time"
+
+	"github.com/piyushsatti/chronicler/apps/api/internal/spatial"
 )
 
 func TestParseJSONLSkipsBlanks(t *testing.T) {
@@ -92,5 +95,54 @@ func TestInsertSQL(t *testing.T) {
 	want := "INSERT INTO quests (public_id, dm_id) VALUES ($1, $2) ON CONFLICT (public_id) DO NOTHING"
 	if got != want {
 		t.Fatalf("got %s", got)
+	}
+}
+
+func TestGameTimeMapFollowsSeededAnchor(t *testing.T) {
+	days := map[string]int{}
+	var anchors int
+	for _, row := range generateQA() {
+		switch row.Table {
+		case "time_anchors":
+			anchors++
+		case "game_time_map":
+			days[row.Row["real_date"].(string)] = row.Row["game_day"].(int)
+		}
+	}
+	if anchors != 1 {
+		t.Fatalf("time_anchors=%d", anchors)
+	}
+	// 2026-01-01 anchor, epoch 0, rate 1.5: 1 Oct is 273 days in, so floor(409.5).
+	want := map[string]int{
+		"2026-10-01T00:00:00Z": 409,
+		"2026-10-15T00:00:00Z": 430,
+		"2026-10-18T00:00:00Z": 435,
+		"2026-10-19T00:00:00Z": 436,
+		"2026-10-31T00:00:00Z": 454,
+	}
+	for date, day := range want {
+		if days[date] != day {
+			t.Fatalf("%s game_day=%d want %d", date, days[date], day)
+		}
+	}
+	// The map is not pinned to one month: every date from the anchor through the
+	// range has a row, and every row agrees with the API's own formula.
+	if len(days) != qaMappedDays {
+		t.Fatalf("game_time_map rows=%d want %d", len(days), qaMappedDays)
+	}
+	for d := 0; d < qaMappedDays; d++ {
+		midnight := qaAnchor.RealUtc.AddDate(0, 0, d)
+		got, ok := days[midnight.Format(time.RFC3339)]
+		if !ok {
+			t.Fatalf("no game day for %s", midnight.Format(time.DateOnly))
+		}
+		want, err := spatial.GameDayAt(midnight, qaAnchor)
+		if err != nil || got != int(want) {
+			t.Fatalf("%s game_day=%d want %d (%v)", midnight.Format(time.DateOnly), got, want, err)
+		}
+	}
+	// November holds seeded quests, so its calendar month must be mapped too.
+	if _, ok := days["2026-11-20T00:00:00Z"]; !ok {
+		t.Fatal("no game day for a seeded November quest date")
 	}
 }

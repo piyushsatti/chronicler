@@ -25,40 +25,83 @@
   gap: var(--sp-2);
 }
 
-.heroRow {
+.profile {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  min-width: 0;
+}
+
+.profile h1,
+.profile h2,
+.profile p {
+  margin: 0;
+}
+
+.charHero {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   gap: var(--sp-4);
+  min-width: 0;
 }
 
 .heroBody {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-3);
+  gap: var(--sp-2);
   min-width: 0;
-  flex: 1;
+  flex: 1 1 260px;
 }
 
+.heroActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+/* Round initials token, the same family as the roster card avatars. */
 .token {
   flex: 0 0 auto;
-  width: 3rem;
-  height: 3rem;
+  width: 5.5rem;
+  height: 5.5rem;
   display: grid;
   place-items: center;
-  border: 1px solid var(--color-border);
-  background: var(--color-surface-2, var(--color-bg));
-  font-family: var(--font-heading);
-  font-size: 1.125rem;
-  letter-spacing: 0.04em;
+  border: 1.5px solid var(--color-border);
+  border-radius: 50%;
+  background: var(--color-bg-surface);
+  color: var(--color-text-2);
+  font-size: 1.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
   text-transform: uppercase;
 }
 
-.actions {
+.portrait {
+  padding: 0;
+  object-fit: cover;
+  display: block;
+}
+
+/* Story card beside the progression card at desktop width; stacked otherwise. */
+.sheet {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+  gap: var(--sp-4);
+  align-items: start;
+}
+
+:global([data-width-class='compact']) .sheet,
+:global([data-width-class='medium']) .sheet {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.sheetCard {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-3);
-  margin-top: var(--sp-2);
+  gap: var(--sp-5);
+  min-width: 0;
 }
 
 .actionRow {
@@ -75,9 +118,13 @@
   max-width: 65ch;
 }
 
-.narrative h2,
-.narrative p {
+.narrative > h2,
+.narrative > p {
   margin: 0;
+}
+
+.plainProse {
+  white-space: pre-line;
 }
 
 .tabList {
@@ -86,7 +133,7 @@
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: var(--sp-3);
+  gap: var(--sp-2);
 }
 
 .tabList a {
@@ -107,6 +154,102 @@
   display: flex;
   flex-direction: column;
   gap: var(--sp-3);
-  padding-top: var(--sp-2);
-  border-top: 1px solid var(--color-border);
+}
+
+.tabRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-1) var(--sp-3);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--rad-sm);
+  background: var(--color-bg-panel);
+}
+
+.tabRow p {
+  margin: 0;
+}
+
+.tabRowBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.tabEmpty {
+  margin: 0;
+  padding: var(--sp-5);
+  border: 1px dashed var(--color-border-2);
+  border-radius: var(--rad-sm);
+  color: var(--color-text-3);
+  text-align: center;
+}
+
+.roster {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(260px, 100%), 1fr));
+  gap: var(--sp-4);
+}
+
+.roster h2,
+.roster p {
+  margin: 0;
+}
+
+.roster a {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  text-decoration: none;
+}
+
+.cardRow {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.cardAvatar {
+  flex: 0 0 auto;
+  display: inline-flex;
+}
+
+.cardBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.statCard {
+  gap: var(--sp-3);
+  padding: var(--sp-5);
+  border-radius: var(--rad);
+}
+
+.statCard p {
+  margin: 0;
+}
+
+/* Segmented control, search field and checkbox share one baseline. */
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--sp-3) var(--sp-4);
+}
+
+.filters > :global(.field) {
+  flex: 1 1 240px;
+  max-width: 360px;
+}
+
+:global([data-width-class='compact']) .token {
+  width: 4rem;
+  height: 4rem;
+  font-size: 1.25rem;
 }

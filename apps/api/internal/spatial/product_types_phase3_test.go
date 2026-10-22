@@ -20,7 +20,7 @@ func TestPhase3TaskSPA01Acceptance(t *testing.T) {
 			reflect.TypeFor[ArchonAssignmentView](),
 			reflect.TypeFor[ArchonPage](),
 			reflect.TypeFor[GameCalendarView](),
-			reflect.TypeFor[HexAdmission](),
+			reflect.TypeFor[PointcrawlAdmission](),
 			reflect.TypeFor[GameDayCellView](),
 			reflect.TypeFor[HexChangePage](),
 			reflect.TypeFor[HexChangeView](),
@@ -233,38 +233,38 @@ func TestPhase3TaskSPA01Acceptance(t *testing.T) {
 		if err := json.Unmarshal(sections["additional_types"], &additionalTypes); err != nil {
 			t.Fatal(err)
 		}
-		spatialHexAdmission := make(map[string]string)
-		if err := json.Unmarshal(additionalTypes["spatial.HexAdmission"], &spatialHexAdmission); err != nil {
-			t.Fatalf("decode spatial.HexAdmission contract: %v", err)
+		spatialPointcrawlAdmission := make(map[string]string)
+		if err := json.Unmarshal(additionalTypes["spatial.PointcrawlAdmission"], &spatialPointcrawlAdmission); err != nil {
+			t.Fatalf("decode spatial.PointcrawlAdmission contract: %v", err)
 		}
-		if len(spatialHexAdmission) == 0 {
-			t.Fatal("spatial.HexAdmission is missing from additional_types")
+		if len(spatialPointcrawlAdmission) == 0 {
+			t.Fatal("spatial.PointcrawlAdmission is missing from additional_types")
 		}
-		wantHexAdmission := []struct {
+		wantPointcrawlAdmission := []struct {
 			name string
 			typ  string
-		}{{"ID", "string"}, {"MapID", "string"}, {"RegionID", "*string"}, {"Role", "string"}}
-		if len(spatialHexAdmission) != len(wantHexAdmission) {
-			t.Fatalf("spatial.HexAdmission contract has %d fields, want %d", len(spatialHexAdmission), len(wantHexAdmission))
+		}{{"ID", "string"}, {"MapID", "string"}, {"RegionID", "*string"}, {"Role", "string"}, {"AdminOverride", "bool"}}
+		if len(spatialPointcrawlAdmission) != len(wantPointcrawlAdmission) {
+			t.Fatalf("spatial.PointcrawlAdmission contract has %d fields, want %d", len(spatialPointcrawlAdmission), len(wantPointcrawlAdmission))
 		}
-		hexAdmissionType := types["HexAdmission"]
-		if hexAdmissionType == nil || hexAdmissionType.NumField() != len(wantHexAdmission) {
-			t.Fatalf("compiled HexAdmission has %v fields, want %d", hexAdmissionType, len(wantHexAdmission))
+		hexAdmissionType := types["PointcrawlAdmission"]
+		if hexAdmissionType == nil || hexAdmissionType.NumField() != len(wantPointcrawlAdmission) {
+			t.Fatalf("compiled PointcrawlAdmission has %v fields, want %d", hexAdmissionType, len(wantPointcrawlAdmission))
 		}
-		for i, field := range wantHexAdmission {
-			if spatialHexAdmission[field.name] != field.typ {
-				t.Errorf("additional_types spatial.HexAdmission.%s = %q, want %q", field.name, spatialHexAdmission[field.name], field.typ)
+		for i, field := range wantPointcrawlAdmission {
+			if spatialPointcrawlAdmission[field.name] != field.typ {
+				t.Errorf("additional_types spatial.PointcrawlAdmission.%s = %q, want %q", field.name, spatialPointcrawlAdmission[field.name], field.typ)
 			}
 			actual := hexAdmissionType.Field(i)
 			if actual.Name != field.name || actual.Type != resolve(field.typ) {
-				t.Errorf("HexAdmission field %d is %s %s, contract requires %s %s", i, actual.Name, actual.Type, field.name, field.typ)
+				t.Errorf("PointcrawlAdmission field %d is %s %s, contract requires %s %s", i, actual.Name, actual.Type, field.name, field.typ)
 			}
 		}
 		if len(seen) != 107 || len(types) != 108 {
 			t.Fatalf("contract=%d compiled=%d declarations, want 107 owned plus one additional type", len(seen), len(types))
 		}
 		for name := range types {
-			if name == "HexAdmission" {
+			if name == "PointcrawlAdmission" {
 				continue
 			}
 			if !seen[name] {

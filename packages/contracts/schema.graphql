@@ -250,6 +250,8 @@ type CharacterType {
   ddbMirror: CharacterDDBMirrorType
   proficiencies: [DDBProficiencyType!]!
   displayIcon: String
+  "Owner-supplied https portrait URL (D5); null shows the initials token."
+  imageUrl: String
   daysActive: Int!
 }
 
@@ -267,7 +269,10 @@ input CreateCharacterInput {
   guildId: ID = null
   description: String = null
   backgroundText: String = null
+  "Required on create (D4): a https://www.dndbeyond.com/characters/<id> sheet URL."
   ddbUrl: String = null
+  "Optional https URL, at most 2048 characters."
+  imageUrl: String = null
   shortCode: String = null
 }
 
@@ -328,6 +333,8 @@ type ProgressionListResult {
 input UpdateCharacterProfileInput {
   description: String
   backgroundText: String
+  "Omit to keep, null to clear, or an https URL of at most 2048 characters."
+  imageUrl: String
 }
 
 input UpsertCreationCatalogEntryInput {
@@ -469,6 +476,7 @@ input QuestEditInput {
 }
 input QuestSummaryInput {
   documentId: ID
+  expectedRevision: Int
   questIds: [ID!]!
   characterId: ID
   title: String!
@@ -664,6 +672,8 @@ type DocumentType {
   deletedAt: DateTime
   deletedBy: ID
   effectiveBody: String
+  canEditBody: Boolean!
+  canEditMetadata: Boolean!
   author: DocumentAuthorType
   publishedAt: DateTime
   summaryDerived: SummaryDerivedType
@@ -682,6 +692,8 @@ enum PreviewAudience {
 }
 
 type SummaryDerivedType {
+  authoring: SummaryAuthoringType
+  quests: [SummaryQuestRefType!]!
   regions: [SummaryRegionType!]!
   pointcrawlNodes: [SummaryPointcrawlNodeType!]!
   dms: [SummaryDmType!]!
@@ -690,6 +702,18 @@ type SummaryDerivedType {
   arc: String
   gameDay: Int
   gameDate: GameDateType
+}
+
+type SummaryAuthoringType {
+  characterId: ID
+  complete: Boolean!
+  questIds: [ID!]!
+}
+
+type SummaryQuestRefType {
+  id: ID!
+  shortCode: String!
+  title: String
 }
 
 type SummaryDmType {
@@ -738,6 +762,7 @@ extend type Query {
     offset: Int! = 0
   ): CommunityDirectoryResult!
   myPersonalization: MyPersonalizationType
+  myPrivateNotes: MyPrivateNotesType!
   memberMe: MemberType!
   memberByDiscordId(discordId: String!): MemberType
   memberRoleHistory(memberId: ID!, limit: Int! = 50, offset: Int! = 0): RoleChangePage!
@@ -784,6 +809,7 @@ extend type Mutation {
     meta: CommandMeta!
   ): MemberUnlockType!
   updateMySettings(input: MemberSettingsPatch!, meta: CommandMeta!): MemberSettingsType!
+  setMyPrivateNotes(body: String!, meta: CommandMeta!): MyPrivateNotesType!
   upsertUnlockable(
     id: ID
     input: UpsertUnlockableInput!
@@ -975,6 +1001,16 @@ type MemberUnlockType {
 
 type MyPersonalizationType {
   settings: MemberSettingsType
+}
+
+"""
+The caller's own private notes (D6): Markdown, at most 10,000 characters.
+Readable and writable only by the member who owns them; never exposed on
+any member, profile or admin read.
+"""
+type MyPrivateNotesType {
+  body: String!
+  updatedAt: DateTime
 }
 
 type RoleChangeType {
@@ -1698,6 +1734,7 @@ type GameDateType {
 
 type MapType {
   id: ID!
+  canEdit: Boolean!
   name: String!
   atlasCode: String!
   family: String!
@@ -1750,6 +1787,7 @@ type RegionCountsType {
 }
 
 type RegionType {
+  canCreateMap: Boolean!
   id: ID!
   name: String!
   kind: String!

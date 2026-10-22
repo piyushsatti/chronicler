@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "definition": "Shared vectors for character URL rules. The API is authoritative (ddb.go canonicalDdbCharacterID, product_commands.go validateCharacterImageURL); the web copies (apps/web/src/features/character/ddbUrl.ts, imageUrl.ts) are UX-only. Go and vitest both run these vectors so drift fails CI. Values are what the client sends (already trimmed). Tests also pad length_prefix with 'a' to exactly max_length (valid) and max_length+1 (invalid) characters.",
+  "ddbCharacterUrl": {
+    "valid": [
+      "https://www.dndbeyond.com/characters/123456",
+      "https://www.dndbeyond.com/characters/7/",
+      "HTTPS://WWW.DNDBEYOND.COM/characters/7",
+      "https://www.dndbeyond.com/characters/9223372036854775807"
+    ],
+    "invalid": [
+      "",
+      "http://www.dndbeyond.com/characters/1",
+      "https://dndbeyond.com/characters/1",
+      "https://evil.example/characters/1",
+      "https://www.dndbeyond.com/profile/someone",
+      "https://www.dndbeyond.com/profile/someone/characters/1",
+      "https://www.dndbeyond.com/Characters/1",
+      "https://www.dndbeyond.com/characters/0",
+      "https://www.dndbeyond.com/characters/9223372036854775808",
+      "https://www.dndbeyond.com/characters/1?tab=spells",
+      "https://www.dndbeyond.com/characters/1#x",
+      "https://www.dndbeyond.com:443/characters/1",
+      "https://user@www.dndbeyond.com/characters/1",
+      "https://www.dndbeyond.com/characters/1//",
+      "https://www.dndbeyond.com/characters/abc",
+      "https://www.dnd\tbeyond.com/characters/1",
+      "javascript:alert(1)"
+    ]
+  },
+  "characterImageUrl": {
+    "max_length": 2048,
+    "valid": [
+      "https://example.com/portrait.png",
+      "https://i.imgur.com/a.png",
+      "https://cdn.example.org/p/x.webp?size=2",
+      "https://cdn.example.org/a/b.webp?size=200#top"
+    ],
+    "invalid": [
+      "",
+      "http://example.com/a.png",
+      "HTTPS://example.com/a.png",
+      "https:example.com/a.png",
+      "https://",
+      "https:///a.png",
+      "https://user:pw@example.com/a.png",
+      "https://@example.com/a.png",
+      "https://example.com/a b.png",
+      "https://exa mple.org/a.png",
+      "https://example.com\\a.png",
+      "https://example.com/%zz.png",
+      "data:image/png;base64,AAAA",
+      "javascript:alert(1)"
+    ],
+    "length_prefix": "https://example.com/"
+  }
+}

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
-	"github.com/piyushsatti/chronicler/apps/api/internal/platform/jobs"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/idempotency"
 )
 
 // Operation is the exact case-sensitive SDL Query or Mutation wire identity.
@@ -68,7 +68,7 @@ type OverrideReadObserver interface {
 }
 
 type OverrideRecorder interface {
-	Record(ctx context.Context, fact OverrideFact) error
+	Record(ctx context.Context, claim idempotency.Claim, fact OverrideFact) error
 }
 
 type SafeOverrideObserver struct{ Logger *slog.Logger }
@@ -80,13 +80,13 @@ func NewSafeOverrideObserver(logger *slog.Logger) (*SafeOverrideObserver, error)
 	return &SafeOverrideObserver{Logger: logger}, nil
 }
 
-type PostgresOverrideRecorder struct{ DB jobs.SQLExecutor }
+type ReceiptOverrideRecorder struct{ Replay idempotency.Repository }
 
-func NewOverrideRecorder(db jobs.SQLExecutor) (*PostgresOverrideRecorder, error) {
-	if missingPolicyDependency(db) {
-		return nil, apierr.New(apierr.Internal, "override executor required")
+func NewOverrideRecorder(replay idempotency.Repository) (*ReceiptOverrideRecorder, error) {
+	if missingPolicyDependency(replay) {
+		return nil, apierr.New(apierr.Internal, "override receipt repository required")
 	}
-	return &PostgresOverrideRecorder{DB: db}, nil
+	return &ReceiptOverrideRecorder{Replay: replay}, nil
 }
 
 func missingPolicyDependency(value any) bool {
@@ -114,23 +114,15 @@ func (o *SafeOverrideObserver) Observe(ctx context.Context, fact OverrideFact) {
 		"ruleCode", fact.RuleCode, "at", fact.At)
 }
 
-// Record uses the injected current business transaction. It never acquires a
-// connection, commits, or supplies a second clock for the command's fact.
-func (r *PostgresOverrideRecorder) Record(ctx context.Context, fact OverrideFact) error {
+// Record stages safe facts against the command's actual transaction-local claim.
+func (r *ReceiptOverrideRecorder) Record(ctx context.Context, claim idempotency.Claim, fact OverrideFact) error {
 	if !overrideRuleCode(fact.RuleCode) {
 		return apierr.New(apierr.Invalid, "invalid override rule")
 	}
-	tag, err := r.DB.Exec(ctx, `INSERT INTO auth_override_audit
- (actor_id, operation, subject_type, subject_public_id, rule_code, recorded_at)
- VALUES ((SELECT id FROM members WHERE public_id = $1::uuid), $2, $3, $4::uuid, $5, $6)`,
-		fact.ActorID, string(fact.Operation), fact.SubjectType, fact.SubjectID, fact.RuleCode, fact.At)
-	if err != nil {
-		return err
-	}
-	if tag.RowsAffected() != 1 {
-		return apierr.New(apierr.Internal, "override audit was not recorded")
-	}
-	return nil
+	return r.Replay.RecordOverride(ctx, claim, idempotency.CommandOverrideFact{
+		ActorID: fact.ActorID, Operation: string(fact.Operation), SubjectType: fact.SubjectType,
+		SubjectID: fact.SubjectID, RuleCode: fact.RuleCode, At: fact.At,
+	})
 }
 
 func overrideRuleCode(code string) bool {
@@ -168,8 +160,9 @@ type QuestFacts struct {
 func (QuestFacts) policyInput() {}
 
 type QuestHexFacts struct {
-	ID, Role string
-	RegionID *string
+	ID, Role      string
+	RegionID      *string
+	AdminOverride bool
 }
 type RegionFacts struct{ ID string }
 
@@ -397,7 +390,7 @@ var operationRules = map[Operation]policyRule{
 	"Mutation.setMemberRolesBatch":                ruleAdmin,
 	"Mutation.setMyAvailability":                  rulePlayerSelf,
 	"Mutation.setPointcrawlEdge":                  ruleMap,
-	"Mutation.setQuestPointcrawlLinks":             ruleQuest,
+	"Mutation.setQuestPointcrawlLinks":            ruleQuest,
 	"Mutation.setUnlockableActive":                ruleAdmin,
 	"Mutation.signupForQuest":                     ruleSignup,
 	"Mutation.submitDmProfileForVerification":     ruleDMSelf,
@@ -416,6 +409,7 @@ var operationRules = map[Operation]policyRule{
 	"Mutation.updateMyDmProfile":                  ruleDMSelf,
 	"Mutation.updateMyProfile":                    ruleSelf,
 	"Mutation.updateMySettings":                   ruleSelf,
+	"Mutation.setMyPrivateNotes":                  ruleSelf,
 	"Mutation.updateQuest":                        ruleQuest,
 	"Mutation.updateQuestAnnouncementRoleSetting": ruleAdmin,
 	"Mutation.updateRegion":                       ruleRegion,
@@ -473,6 +467,7 @@ var operationRules = map[Operation]policyRule{
 	"Query.myCharacters":                          ruleSelf,
 	"Query.myNotifications":                       ruleSelf,
 	"Query.myPersonalization":                     ruleSelf,
+	"Query.myPrivateNotes":                        ruleSelf,
 	"Query.myQuestSignups":                        ruleSelf,
 	"Query.myUnlocks":                             ruleSelf,
 	"Query.myUnreadNotificationCount":             ruleSelf,
@@ -932,6 +927,7 @@ func (p *Policy) Decide(ctx context.Context, actor Authority, request Request) (
 		}
 		f.ownership = facts.DMID != actor.claims.MemberID
 		for _, hex := range facts.Hexes {
+			f.audience = f.audience || hex.AdminOverride
 			if hex.Role == "visited" {
 				gates, err := p.mapFailures(ctx, actor, hex.RegionID)
 				if err != nil {

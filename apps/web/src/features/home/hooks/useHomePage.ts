@@ -1,9 +1,8 @@
 import type { AppError } from '../../../errors/types.js';
 import { toAppError } from '../../../errors/toAppError.js';
-import type { HomeViewModel } from '../adapters/homeAdapter.js';
 import type { HomeLanesViewModel } from '../adapters/homeLanesAdapter.js';
-import { useHome } from './useHome.js';
 import { useHomeLanes } from './useHomeLanes.js';
+import { useHomePresentation } from './useHomePresentation.js';
 
 export type PageData<T> =
   | { status: 'loading' }
@@ -12,48 +11,35 @@ export type PageData<T> =
   | { status: 'ready'; view: T };
 
 export type HomePageView = {
-  buckets: HomeViewModel;
   lanes: HomeLanesViewModel;
-};
+} & ReturnType<typeof useHomePresentation>;
 
 function lanesAreEmpty(lanes: HomeLanesViewModel): boolean {
   return (
-    lanes.recruiting.length === 0 &&
-    lanes.upcoming.length === 0 &&
-    lanes.recentlyClosed.length === 0 &&
-    lanes.dmsAccepting.length === 0
+    lanes.totals.questBoard === 0 &&
+    lanes.totals.upcoming === 0 &&
+    lanes.totals.recentlyClosed === 0 &&
+    lanes.totals.dmsAccepting === 0
   );
 }
 
-function bucketsAreEmpty(buckets: HomeViewModel): boolean {
-  return buckets.headingTitle == null && buckets.recentByCategory.every((b) => b.documents.length === 0);
-}
-
 export function useHomePage(): PageData<HomePageView> {
-  const buckets = useHome();
   const lanes = useHomeLanes();
-
-  if (buckets.isError) {
-    return {
-      status: 'error',
-      error: toAppError(buckets.error, 'home:page'),
-    };
-  }
+  const presentation = useHomePresentation(lanes.data?.recruiting ?? []);
   if (lanes.isError) {
     return {
       status: 'error',
       error: toAppError(lanes.error, 'home:page'),
     };
   }
-  if (buckets.isLoading || !buckets.data || lanes.isLoading || !lanes.data) {
+  if (lanes.isLoading || !lanes.data) {
     return { status: 'loading' };
   }
-  // Archive buckets are demoted; ready when Legacy lanes OR demoted archive has content.
-  if (lanesAreEmpty(lanes.data) && bucketsAreEmpty(buckets.data)) {
+  if (lanesAreEmpty(lanes.data)) {
     return { status: 'empty' };
   }
   return {
     status: 'ready',
-    view: { buckets: buckets.data, lanes: lanes.data },
+    view: { lanes: lanes.data, ...presentation },
   };
 }

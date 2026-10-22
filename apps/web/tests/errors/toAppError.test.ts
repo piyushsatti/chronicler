@@ -6,7 +6,7 @@ describe('toAppError', () => {
   it('maps 403 to forbidden copy', () => {
     const err = toAppError(new TransportError('FORBIDDEN', { status: 403 }), 'x');
     expect(err.kind).toBe('forbidden');
-    expect(err.userMessage).toMatch(/Permissions may have changed/);
+    expect(err.userMessage).toMatch(/You don’t have access to this/);
   });
 
   it('never surfaces raw transport message', () => {

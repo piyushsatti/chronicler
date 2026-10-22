@@ -75,3 +75,78 @@ describe('useEditorDraft', () => {
     expect(result.current.isDirty).toBe(false);
   });
 });
+
+it('never restores a previous account or revision into the current draft', () => {
+  const { result, rerender } = renderHook(
+    ({ actorId, version }) =>
+      useEditorDraft(
+        'guide',
+        'same-doc',
+        { meta: { title: 'Current title' }, body: 'Current source' },
+        { actorId, version, canEditBody: true },
+      ),
+    { initialProps: { actorId: 'first', version: 1 } },
+  );
+  act(() => result.current.setBody('PRIVATE FIRST ACCOUNT'));
+  rerender({ actorId: 'second', version: 1 });
+  expect(result.current.body).toBe('Current source');
+  expect(result.current.isDirty).toBe(false);
+  rerender({ actorId: 'first', version: 2 });
+  expect(result.current.body).toBe('Current source');
+  expect(result.current.isDirty).toBe(false);
+});
+it('keeps active edits but marks them stale when the server version advances', () => {
+  const { result, rerender } = renderHook(
+    ({ version }) =>
+      useEditorDraft(
+        'guide',
+        'doc',
+        { meta: { title: 'Current' }, body: `Source ${version}` },
+        { actorId: 'actor', version, canEditBody: true },
+      ),
+    { initialProps: { version: 1 } },
+  );
+  act(() => result.current.setBody('Local changes'));
+  rerender({ version: 2 });
+  expect(result.current.body).toBe('Local changes');
+  expect(result.current.stale).toBe(true);
+});
+it('drops cached body and undo history when body permission is revoked', () => {
+  const { result, rerender } = renderHook(
+    ({ canEditBody }) =>
+      useEditorDraft(
+        'guide',
+        'doc',
+        {
+          meta: { title: 'Current' },
+          body: canEditBody ? 'Complete body' : 'Safe projection',
+        },
+        { actorId: 'actor', version: 1, canEditBody },
+      ),
+    { initialProps: { canEditBody: true } },
+  );
+  act(() => result.current.setBody('PRIVATE LOCAL CONTENT'));
+  rerender({ canEditBody: false });
+  expect(result.current.body).toBe('Safe projection');
+  expect(localStorage.getItem(draftStorageKey('guide', 'doc', 'actor', 1))).toBeNull();
+  act(() => result.current.undo());
+  expect(result.current.body).toBe('Safe projection');
+});
+it('undoes and redoes body and metadata as one document history', () => {
+  const { result } = renderHook(() =>
+    useEditorDraft('guide', 'history-doc', {
+      meta: { title: 'Original' },
+      body: 'Body',
+    }),
+  );
+  act(() => result.current.setMeta((old) => ({ ...old, title: 'Renamed' })));
+  act(() => result.current.setBody('New body'));
+  act(() => result.current.undo());
+  expect(result.current.meta.title).toBe('Renamed');
+  expect(result.current.body).toBe('Body');
+  act(() => result.current.undo());
+  expect(result.current.meta.title).toBe('Original');
+  expect(result.current.isDirty).toBe(false);
+  act(() => result.current.redo());
+  expect(result.current.meta.title).toBe('Renamed');
+});

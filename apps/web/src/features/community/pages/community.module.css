@@ -1,0 +1,197 @@
+.root h1,
+.root h2,
+.root p {
+  margin: 0;
+}
+
+:global([data-width-class='compact']) .root > :global(.page) {
+  padding: var(--sp-4) var(--sp-3) var(--sp-6);
+}
+
+.root header {
+  margin-bottom: var(--sp-4);
+}
+
+.root header p {
+  max-width: 460px;
+  /* Match the non-weight axes pinned in Legacy's weight-only font. */
+  font-variation-settings:
+    'SOFT' 0,
+    'opsz' 14,
+    'WONK' 0;
+}
+
+.root .tabs {
+  display: block;
+  border: 0;
+  margin: 0;
+}
+
+.root .tabs :global(.tabs__list) {
+  display: flex;
+  flex-wrap: wrap;
+  width: fit-content;
+  max-width: 100%;
+  margin-bottom: var(--sp-5);
+  padding: 4px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--rad-pill);
+  background: var(--color-bg-surface);
+}
+
+.root .tabs :global(.tabs__tab) {
+  padding: 8px 28px;
+  border: 0;
+  border-radius: var(--rad-pill);
+  background: transparent;
+  color: var(--color-text-3);
+  font: inherit;
+  font-size: var(--type-caption-size, 0.8125rem);
+  cursor: pointer;
+}
+
+/* At phone width the four tabs stay one row and scroll rather than wrapping. */
+:global([data-width-class='compact']) .root .tabs :global(.tabs__list) {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+:global([data-width-class='compact']) .root .tabs :global(.tabs__tab) {
+  flex: 0 0 auto;
+  padding: 8px 14px;
+  white-space: nowrap;
+}
+
+.root .tabs :global(.tabs__tab--active) {
+  background: var(--color-bg-panel);
+  color: var(--color-text);
+}
+
+.members {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(280px, 100%), 1fr));
+  gap: var(--sp-3);
+}
+
+.member {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.memberBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+  flex: 1;
+}
+
+.memberHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.tagline {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Every day cell fills its grid row, so the week reads as one even band. */
+.week {
+  align-items: stretch;
+}
+
+.week > [data-el='week-grid.cell'] {
+  display: flex;
+  min-width: 0;
+}
+
+.day {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  min-width: 0;
+  min-height: 132px;
+  padding: var(--sp-3) var(--sp-1);
+  border: 1px solid var(--color-border);
+  border-radius: var(--rad-sm);
+  background: var(--color-bg-surface);
+  text-align: center;
+}
+
+.day[data-empty='true'] {
+  background: transparent;
+  border-style: dashed;
+}
+
+.day[data-empty='true'] :global(.type-value) {
+  color: var(--color-text-3);
+}
+
+.dayAvatars {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+:global([data-width-class='compact']) .day {
+  min-height: 0;
+  padding: var(--sp-2) 0;
+}
+
+.findTable {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3) var(--sp-5);
+}
+
+.loadMore {
+  align-self: flex-start;
+}
+
+.root nav[aria-label='Community directories'] {
+  margin-top: var(--sp-6);
+}
+
+.entry {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  max-width: 760px;
+  min-width: 0;
+}
+
+.entry h1 {
+  margin: 0;
+}
+
+.backLink {
+  align-self: flex-start;
+  margin-inline-start: calc(-1 * var(--sp-3));
+}
+
+.entryMeta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2) var(--sp-3);
+}
+
+.entryBody {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

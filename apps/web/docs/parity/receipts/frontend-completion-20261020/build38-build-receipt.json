@@ -1,0 +1,33 @@
+{
+  "at": "2026-10-20T22:23:33.795776Z",
+  "buildExit": 0,
+  "buildNativeSession": 91635,
+  "sourceInputs": 625,
+  "sourceManifestSha256": "5158792f05a29af96d1611f135978a16b1dc3dcad9e834e4a833f696effc9e2b",
+  "distFiles": 181,
+  "distManifestSha256": "7fe52f1ed475a83931beb6ef00232b20461a04565218a0c6bc1a54e4437dfa2a",
+  "sourceDrift": [],
+  "buildScope": "Onebase:root --site-header-height:var(--sp-8) default; sameexistingfallback/runtimeJSauthority; no handler/DOM/APIchange",
+  "separateTestBindings": {
+    "apps/web/tests/components/SiteNav.test.tsx": "65f0102eee4f3b474f1b0242e57511f7bf65c03f7cd26540483c3aa0b4a9aa6a",
+    "apps/web/tests/adminCompletionPersistence.test.tsx": "ef1f26004b2d322bc6a4ef56180e16705804666f49b85d037128eb35df6eeae5"
+  },
+  "independentReviewSha256": "fcafee220fed62f0aba60a893ec7c97277839556713c8966aaa577fe344a08de",
+  "manifestPathBases": {
+    "source": "repository root",
+    "dist": "this package dist directory"
+  },
+  "previewMounted": true,
+  "viteBuildTiming": "\u2713 built in 9.64s",
+  "apiEpoch": "API12 d103a48f",
+  "previewNativeSession": 13996,
+  "previewUrl": "http://127.0.0.1:4205",
+  "mountedObservedAt": "2026-10-20T22:23:53.544532Z",
+  "mountedSourceInputsMatch": true,
+  "spaHttp": 200,
+  "spaBytesEqualImmutableIndex": true,
+  "apiHealth": 204,
+  "apiHealthUrl": "http://127.0.0.1:8080/health",
+  "sameOriginGraphqlStatus": 200,
+  "runtimeServicesSha256": "98b00c05cd9415be5d18b26a30acc3468e640b6f44ebccd9199b9e685f77b994"
+}

@@ -3,14 +3,17 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Field } from '../../../components/foundation/Field.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
+import { Modal } from '../../../components/primitives/Modal.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import { useSearchPalette } from '../hooks/useSearchPalette.js';
+import { SearchHitRow } from './SearchHitRow.js';
 import '../search.css';
 
 type SearchDialogContextValue = {
@@ -18,21 +21,12 @@ type SearchDialogContextValue = {
   openSearch: () => void;
   closeSearch: () => void;
 };
-
 const SearchDialogContext = createContext<SearchDialogContextValue | null>(null);
-
 export function useSearchDialog(): SearchDialogContextValue {
-  const ctx = useContext(SearchDialogContext);
-  if (!ctx) {
+  const context = useContext(SearchDialogContext);
+  if (!context)
     throw new Error('useSearchDialog must be used within SearchCommandRoot');
-  }
-  return ctx;
-}
-
-function hitHref(kind: string, slug: string | null, title: string): string {
-  if (kind === 'member' && slug) return `/community`;
-  if (slug) return `/documents/${slug}`;
-  return `/search?q=${encodeURIComponent(title)}`;
+  return context;
 }
 
 function SearchDialogPanel({
@@ -40,114 +34,121 @@ function SearchDialogPanel({
 }: {
   onNavigate: () => void;
 }): React.JSX.Element {
-  const { query, setQuery, searchQ } = useSearchPalette();
-
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    queueMicrotask(() => panelRef.current?.querySelector('input')?.focus());
+  }, []);
+  const { query, setQuery, queryError, searchQ, retrySearch } = useSearchPalette();
+  const hits = searchQ.data ? [...searchQ.data.documents, ...searchQ.data.members] : [];
   return (
-    <div className="search-dialog stack">
+    <div
+      ref={panelRef}
+      className="stack"
+      data-gap="4"
+      onKeyDown={(event) => {
+        if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+        const links = [
+          ...(panelRef.current?.querySelectorAll<HTMLAnchorElement>(
+            '.search-results a',
+          ) ?? []),
+        ];
+        if (links.length === 0) return;
+        event.preventDefault();
+        const current = links.findIndex((link) => link === document.activeElement);
+        const next =
+          event.key === 'ArrowDown'
+            ? (current + 1) % links.length
+            : (current <= 0 ? links.length : current) - 1;
+        links[next]?.focus();
+      }}
+    >
       <Field
         label="Search the chronicle"
+        placeholder="Search the archive…"
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        error={queryError ?? undefined}
+        onChange={(event) => setQuery(event.target.value)}
       />
       {!query.trim() ? (
         <p className="type-caption">Type to search entries and members.</p>
-      ) : searchQ.isError ? (
-        <StatePanel
-          status="error"
-          error={toAppError(searchQ.error, 'search:palette')}
-        />
-      ) : searchQ.isLoading || !searchQ.data ? (
+      ) : queryError ? null : searchQ.isError ? (
+        <>
+          <StatePanel
+            status="error"
+            error={toAppError(searchQ.error, 'search:palette')}
+          />
+          <button className="btn" type="button" onClick={retrySearch}>
+            Retry search
+          </button>
+        </>
+      ) : searchQ.isPending ? (
         <StatePanel status="loading" />
-      ) : searchQ.data.length === 0 ? (
+      ) : hits.length === 0 ? (
         <StatePanel status="empty" emptyMessage="No matches." />
       ) : (
-        <ul className="stack">
-          {searchQ.data.map((hit) => (
-            <li key={`${hit.kind}-${hit.id}`} className="card">
-              {hit.kind === 'member' ? (
-                <p className="type-title">{hit.title}</p>
-              ) : (
-                <Link
-                  className="type-title"
-                  to={hitHref(hit.kind, hit.slug, hit.title)}
-                  onClick={onNavigate}
-                >
-                  {hit.title}
-                </Link>
-              )}
-              <p className="type-caption">{hit.kind}</p>
-            </li>
-          ))}
-        </ul>
+        <>
+          <p className="type-caption">
+            {searchQ.data?.documentTotal} documents · {searchQ.data?.memberTotal}{' '}
+            members
+          </p>
+          <ul className="search-results stack" data-gap="2">
+            {hits.map((hit) => (
+              <SearchHitRow
+                key={'handle' in hit ? `member-${hit.memberId}` : hit.id}
+                hit={hit}
+                onNavigate={onNavigate}
+              />
+            ))}
+          </ul>
+        </>
       )}
+      <Link
+        className="btn"
+        to={`/search${query ? `?q=${encodeURIComponent(query)}` : ''}`}
+        onClick={onNavigate}
+      >
+        Open full search
+      </Link>
     </div>
   );
 }
 
-export function SearchCommandRoot({ children }: { children: ReactNode }): React.JSX.Element {
+export function SearchCommandRoot({
+  children,
+}: {
+  children: ReactNode;
+}): React.JSX.Element {
   const [open, setOpen] = useState(false);
-  const location = useLocation();
-  const navigate = useNavigate();
+  const { key: locationKey } = useLocation();
+  // Navigating closes the dialog: reset during render instead of a sync effect.
+  const [openLocationKey, setOpenLocationKey] = useState(locationKey);
+  if (openLocationKey !== locationKey) {
+    setOpenLocationKey(locationKey);
+    setOpen(false);
+  }
   const openSearch = useCallback(() => setOpen(true), []);
   const closeSearch = useCallback(() => setOpen(false), []);
-
   useEffect(() => {
-    setOpen(false);
-  }, [location.key]);
-
-  useEffect(() => {
-    function onKeyDown(event: KeyboardEvent): void {
-      const mod = event.metaKey || event.ctrlKey;
-      if (mod && event.key.toLowerCase() === 'k') {
+    function onKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
-        setOpen(true);
-      }
-      if (event.key === 'Escape') {
-        setOpen(false);
+        setOpen((current) => !current);
       }
     }
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
   }, []);
-
   return (
     <SearchDialogContext.Provider value={{ open, openSearch, closeSearch }}>
       {children}
-      {open ? (
-        <div
-          className="search-dialog-backdrop"
-          role="presentation"
-          onClick={closeSearch}
-          onKeyDown={() => undefined}
-        >
-          <div
-            className="search-dialog card"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Search the chronicle"
-            onClick={(event) => event.stopPropagation()}
-            onKeyDown={() => undefined}
-          >
-            <div className="row">
-              <p className="type-title">Search the chronicle</p>
-              <button type="button" className="btn ghost" onClick={closeSearch}>
-                Close
-              </button>
-              <button
-                type="button"
-                className="btn"
-                onClick={() => {
-                  closeSearch();
-                  navigate('/search');
-                }}
-              >
-                Open full search
-              </button>
-            </div>
-            <SearchDialogPanel onNavigate={closeSearch} />
-          </div>
-        </div>
-      ) : null}
+      <Modal
+        open={open}
+        title="Search the chronicle"
+        onClose={closeSearch}
+        className="search-dialog"
+      >
+        {open ? <SearchDialogPanel onNavigate={closeSearch} /> : null}
+      </Modal>
     </SearchDialogContext.Provider>
   );
 }
