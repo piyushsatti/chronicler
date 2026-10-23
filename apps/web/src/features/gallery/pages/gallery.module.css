@@ -1,29 +1,55 @@
-.jump {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.index {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
+  inline-size: min(var(--filter-search-width), 100%);
   gap: var(--sp-2);
 }
 
-.jump a {
-  text-decoration: none;
+.item {
+  min-inline-size: 0;
+}
+
+.item[data-layout='full'] {
+  grid-column: 1 / -1;
 }
 
 /* Anchored entries land below the sticky top bar instead of under it. */
 .entry {
   scroll-margin-top: var(--sp-8);
   min-width: 0;
+  block-size: 100%;
 }
 
-.entry h2 {
+.entryHeader {
+  --type-display-size: var(--type-heading-size, 1.125rem);
+  overflow-wrap: anywhere;
+}
+
+.preview {
+  min-inline-size: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--rad-sm);
+  background: var(--color-bg-surface);
+}
+
+.preview > p {
   margin: 0;
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--color-border);
 }
 
-/* Wide demos (WeekGrid, Table) scroll inside their card rather than the page. */
+/* Demo chrome stays in its frame; portaled menus and dialogs remain interactive. */
 .demo {
+  position: relative;
+  isolation: isolate;
+  contain: layout paint;
+  padding: var(--sp-3);
   min-width: 0;
   max-width: 100%;
   overflow-x: auto;
+}
+
+.demo > * {
+  min-inline-size: 0;
+  max-inline-size: 100%;
 }

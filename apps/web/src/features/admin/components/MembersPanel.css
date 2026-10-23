@@ -1,6 +1,7 @@
 .members-directory-panel {
   width: 100%;
   min-width: 0;
+  container-type: inline-size;
 }
 
 .admin-member-row {
@@ -49,4 +50,43 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-size: var(--type-body-size, 0.9375rem);
+}
+
+.admin-member-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  block-size: 100%;
+}
+
+.admin-member-roles {
+  margin-block-start: auto;
+}
+
+.admin-member-row__handle {
+  min-block-size: 1lh;
+}
+
+@container (inline-size < 36rem) {
+  .admin-member-grid {
+    gap: var(--sp-2);
+  }
+
+  .admin-member-card {
+    gap: var(--sp-1);
+    padding: var(--sp-2) var(--sp-3);
+  }
+
+  .admin-member-row__handle {
+    display: none;
+  }
+
+  .admin-member-row__name {
+    gap: 0;
+  }
+
+  .admin-member-roles {
+    padding-inline-start: calc(28px + var(--sp-3));
+  }
 }

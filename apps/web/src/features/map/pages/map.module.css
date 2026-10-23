@@ -42,7 +42,9 @@
 }
 .graph {
   width: 100%;
-  height: 24rem;
+  height: auto;
+  min-height: 12rem;
+  max-height: 32rem;
   display: block;
   color: var(--color-text);
   touch-action: none;
@@ -54,7 +56,9 @@
 .edge {
   color: var(--color-text-2);
 }
-.edge line {
+.edge polyline {
+  fill: none;
+  stroke-linejoin: round;
   stroke: currentColor;
   stroke-width: 2px;
 }
@@ -145,12 +149,46 @@
   box-shadow: inset 3px 0 var(--color-accent);
 }
 .details {
+  display: grid;
+  gap: var(--sp-3);
   min-width: 0;
   overflow-wrap: anywhere;
 }
+.details h2,
+.details h3,
+.details h4,
+.details p {
+  margin: 0;
+}
+.linkedEmpty {
+  padding: var(--sp-3);
+}
+.linkedHeading {
+  padding-block-start: var(--sp-2);
+  border-top: 1px solid var(--color-border);
+}
+.entryPreview {
+  margin-block: var(--sp-3);
+}
+.entryPreview summary {
+  color: var(--color-text-2);
+  cursor: pointer;
+}
+.disclosure summary {
+  cursor: pointer;
+}
+.disclosure details[open] > summary {
+  margin-block-end: var(--sp-4);
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-block-start: var(--sp-3);
+}
 .linkedDocument {
   border-top: 1px solid var(--color-border);
-  padding-block: var(--sp-4);
+  padding-block: var(--sp-3);
 }
 .connections {
   list-style: none;
@@ -182,9 +220,6 @@
   .explorer {
     grid-template-columns: minmax(0, 1fr) var(--rail-width);
   }
-  .graph {
-    height: 32rem;
-  }
 }
 .mapMeta {
   display: flex;
@@ -209,21 +244,35 @@
 .start {
   align-self: flex-start;
 }
-/* Narrow pages: the location list goes two-up so it is not a 1,200px column,
-   and the canvas drops its empty letterbox height. */
 @container (max-width: 47.99rem) {
-  .viewport {
-    overflow-x: auto;
+  .explorer {
+    gap: 0;
   }
-  /* The canvas fits the card so the whole graph is visible on load; labels
-     truncate (full name on hover and in the list below) and zoom reveals detail. */
+  .explorer .viewport {
+    border-end-start-radius: 0;
+    border-end-end-radius: 0;
+  }
+  .details {
+    border-start-start-radius: 0;
+    border-start-end-radius: 0;
+    border-block-start: 3px solid var(--color-accent);
+    max-block-size: 50svh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .details::before {
+    content: '';
+    justify-self: center;
+    inline-size: var(--sp-7);
+    block-size: var(--sp-1);
+    border-radius: var(--sp-2);
+    background: var(--color-border);
+  }
   .graph {
-    height: 20rem;
+    max-height: 24rem;
   }
-  /* Eighteen labels cannot share a phone-width canvas without colliding: only the
-     selected location is named on the canvas; the list below names them all. */
-  .node[aria-pressed='false'] .nodeLabel {
-    display: none;
+  .canvasActions {
+    flex-basis: 100%;
   }
 }
 .mapCardHead {

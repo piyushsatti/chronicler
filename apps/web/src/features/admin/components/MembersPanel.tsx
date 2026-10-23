@@ -11,7 +11,7 @@ import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { BulkRoleBar } from './BulkRoleBar.js';
 import type { useMembersPanel } from '../hooks/useMembersPanel.js';
-import { useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useRef, useState } from 'react';
 import {
   handleLabel,
   pluralize,
@@ -42,6 +42,7 @@ export function MembersPanel({
     saveRoles,
     bulkBar,
   } = view;
+  const [bulkMode, setBulkMode] = useState(false);
   const editorHeading = useRef<HTMLHeadingElement>(null);
   const search = useRef<HTMLInputElement>(null);
   const memberButtons = useRef(new Map<string, HTMLButtonElement>());
@@ -93,7 +94,7 @@ export function MembersPanel({
             ...ROLE_OPTIONS.map((role) => ({ value: role, label: roleLabel(role) })),
           ]}
         />
-        <FilterBar.Group>
+        <FilterBar.Group label="Status">
           <Chip selected={view.status === ''} onClick={() => view.setStatus('')}>
             All
           </Chip>
@@ -107,9 +108,21 @@ export function MembersPanel({
             </Chip>
           ))}
         </FilterBar.Group>
+        <Button
+          variant="secondary"
+          size="sm"
+          disabled={saveRoles.isPending || bulkBar.batch.isPending}
+          aria-pressed={bulkMode}
+          onClick={() => {
+            setBulkMode((current) => !current);
+            setCheckedIds(new Set());
+          }}
+        >
+          {bulkMode ? 'Done selecting' : 'Select members'}
+        </Button>
       </FilterBar>
       <AdminPagination page={view.pagination} />
-      <BulkRoleBar view={bulkBar} />
+      {bulkMode ? <BulkRoleBar view={bulkBar} /> : null}
       {selected ? (
         <Card
           as="section"
@@ -165,16 +178,16 @@ export function MembersPanel({
       {members.length === 0 ? (
         <EmptyState kind="generic" message="No members match these filters." />
       ) : (
-        <CardGrid as="ul" aria-label="Members">
+        <CardGrid as="ul" aria-label="Members" className="admin-member-grid" gap={3}>
           {members.map((member) => (
             <li key={member.id}>
               <Card
-                className="stack"
+                className="admin-member-card"
                 pad={3}
                 data-selected={selected?.id === member.id ? 'true' : undefined}
               >
                 <div className="admin-member-row row">
-                  <Checkbox
+                  {bulkMode ? <Checkbox
                     ariaLabel={`Select ${labelFor(member)}`}
                     disabled={saveRoles.isPending || bulkBar.batch.isPending}
                     checked={checkedIds.has(member.id)}
@@ -186,7 +199,7 @@ export function MembersPanel({
                         return next;
                       });
                     }}
-                  />
+                  /> : null}
                   <button
                     type="button"
                     ref={(button) => {
@@ -196,6 +209,7 @@ export function MembersPanel({
                     disabled={saveRoles.isPending || bulkBar.batch.isPending}
                     className="admin-member-row__select"
                     aria-expanded={selected?.id === member.id}
+                    title={labelFor(member)}
                     onClick={() => {
                       setSelected(member);
                       setDraftRoles([...member.roles]);
@@ -204,18 +218,21 @@ export function MembersPanel({
                     <Avatar name={labelFor(member)} size="sm" online={false} />
                     <span className="admin-member-row__name">
                       <span className="type-title">{labelFor(member)}</span>
-                      {handleLabel(member.handle) &&
-                      !labelFor(member)
-                        .toLocaleLowerCase()
-                        .includes((handleLabel(member.handle) ?? '').slice(1)) ? (
-                        <span className="type-caption">
-                          {handleLabel(member.handle)}
-                        </span>
-                      ) : null}
+                      <span className="type-caption admin-member-row__handle">
+                        {handleLabel(member.handle) &&
+                        !labelFor(member).toLocaleLowerCase().includes(
+                          (handleLabel(member.handle) ?? '').slice(1),
+                        ) ? handleLabel(member.handle) : '\u00a0'}
+                      </span>
                     </span>
                   </button>
                 </div>
-                <Chip.Row>
+                <Chip.Row className="admin-member-roles">
+                  {member.status !== 'active' ? (
+                    <Chip tone={member.status === 'banned' ? 'danger' : 'warning'} size="sm">
+                      {statusLabel(member.status)}
+                    </Chip>
+                  ) : null}
                   {member.roles.length === 0 ? (
                     <Chip tone="line" size="sm">
                       No roles

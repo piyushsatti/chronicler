@@ -82,6 +82,7 @@ export function useMembersPanel() {
         .map((member) => ({
           id: member.id,
           handle: member.handle,
+          displayName: member.displayName,
           roles: member.roles,
         })),
     [directory.data, checkedIds],

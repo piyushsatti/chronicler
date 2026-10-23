@@ -44,6 +44,7 @@ type GalleryEntry = {
   id: string;
   title: string;
   section: 'primitives' | 'identity' | 'motion' | 'effects';
+  layout?: 'full';
   render: () => ReactNode;
 };
 
@@ -80,7 +81,7 @@ function CardDemo(): React.JSX.Element {
     createElement(
       'p',
       { className: 'type-body' },
-      'Default card used for interactive containers and gallery smoke.',
+      'A default card with a heading and supporting content.',
     ),
   );
 }
@@ -274,7 +275,7 @@ function ToastDemo(): React.JSX.Element {
         'Error',
       ),
     ),
-    createElement(Toast, { tone: 'info' }, 'Static Toast chip (presentational)'),
+    createElement(Toast, { tone: 'info' }, 'An informational message.'),
     items.length
       ? createElement(
           'ul',
@@ -369,17 +370,17 @@ function AvatarGroupDemo(): React.JSX.Element {
 }
 
 function TableDemo(): React.JSX.Element {
-  type Row = { code: string; title: string };
+  type Row = { title: string; status: string };
   return createElement(Table<Row>, {
     columns: [
-      { key: 'code', label: 'Code', sortable: true },
-      { key: 'title', label: 'Title' },
+      { key: 'title', label: 'Quest', sortable: true },
+      { key: 'status', label: 'Status' },
     ],
     rows: [
-      { code: 'Q-101', title: 'Harbor mystery' },
-      { code: 'Q-102', title: 'Salt stair' },
+      { title: 'Harbor mystery', status: 'Open' },
+      { title: 'Salt stair', status: 'Full' },
     ],
-    rowKey: (row) => row.code,
+    rowKey: (row) => row.title,
   });
 }
 
@@ -483,8 +484,8 @@ function StubNoticeDemo(): React.JSX.Element {
 
 function CalendarDemo(): React.JSX.Element {
   return createElement(Calendar, {
-    title: 'Calendar surface',
-    caption: 'Month grid placeholder for gallery QA.',
+    title: 'October adventures',
+    caption: 'A calendar heading with supporting text.',
   });
 }
 
@@ -587,37 +588,41 @@ export const GALLERY_ENTRIES: readonly GalleryEntry[] = [
   },
   {
     id: 'page-header',
-    title: 'PageHeader',
+    title: 'Page header',
     section: 'primitives',
+    layout: 'full',
     render: () => createElement(PageHeaderDemo),
   },
   {
     id: 'filter-bar',
-    title: 'FilterBar',
+    title: 'Filter bar',
     section: 'primitives',
+    layout: 'full',
     render: () => createElement(FilterBarDemo),
   },
   {
     id: 'card-grid',
-    title: 'CardGrid',
+    title: 'Card grid',
     section: 'primitives',
+    layout: 'full',
     render: () => createElement(CardGridDemo),
   },
   {
     id: 'detail-layout',
-    title: 'DetailLayout',
+    title: 'Detail layout',
     section: 'primitives',
+    layout: 'full',
     render: () => createElement(DetailLayoutDemo),
   },
   {
     id: 'empty-state',
-    title: 'EmptyState',
+    title: 'Empty state',
     section: 'primitives',
     render: () => createElement(EmptyDemo),
   },
   {
     id: 'error-state',
-    title: 'ErrorState',
+    title: 'Error state',
     section: 'primitives',
     render: () => createElement(ErrorDemo),
   },
@@ -641,7 +646,7 @@ export const GALLERY_ENTRIES: readonly GalleryEntry[] = [
   },
   {
     id: 'status-badge',
-    title: 'StatusBadge',
+    title: 'Status badge',
     section: 'primitives',
     render: () => createElement(StatusBadgeDemo),
   },
@@ -671,7 +676,7 @@ export const GALLERY_ENTRIES: readonly GalleryEntry[] = [
   },
   {
     id: 'avatar-group',
-    title: 'AvatarGroup',
+    title: 'Avatar group',
     section: 'primitives',
     render: () => createElement(AvatarGroupDemo),
   },
@@ -683,19 +688,19 @@ export const GALLERY_ENTRIES: readonly GalleryEntry[] = [
   },
   {
     id: 'list-row',
-    title: 'ListRow',
+    title: 'List row',
     section: 'primitives',
     render: () => createElement(ListRowDemo),
   },
   {
     id: 'stat-tile',
-    title: 'StatTile',
+    title: 'Stat tile',
     section: 'primitives',
     render: () => createElement(StatTileDemo),
   },
   {
     id: 'segmented-control',
-    title: 'SegmentedControl',
+    title: 'Segmented control',
     section: 'primitives',
     render: () => createElement(SegmentedDemo),
   },
@@ -707,7 +712,7 @@ export const GALLERY_ENTRIES: readonly GalleryEntry[] = [
   },
   {
     id: 'color-swatch',
-    title: 'ColorSwatch',
+    title: 'Color swatch',
     section: 'primitives',
     render: () => createElement(ColorSwatchDemo),
   },
@@ -719,7 +724,7 @@ export const GALLERY_ENTRIES: readonly GalleryEntry[] = [
   },
   {
     id: 'stub-notice',
-    title: 'StubNotice',
+    title: 'Unavailable state',
     section: 'primitives',
     render: () => createElement(StubNoticeDemo),
   },
@@ -731,19 +736,20 @@ export const GALLERY_ENTRIES: readonly GalleryEntry[] = [
   },
   {
     id: 'week-grid',
-    title: 'WeekGrid',
+    title: 'Week grid',
     section: 'primitives',
+    layout: 'full',
     render: () => createElement(WeekGridDemo),
   },
   {
     id: 'split-pane',
-    title: 'SplitPane',
+    title: 'Split pane',
     section: 'primitives',
     render: () => createElement(SplitPaneDemo),
   },
   {
     id: 'master-detail',
-    title: 'MasterDetail',
+    title: 'Master detail',
     section: 'primitives',
     render: () => createElement(MasterDetailDemo),
   },
@@ -755,7 +761,7 @@ export const GALLERY_ENTRIES: readonly GalleryEntry[] = [
   },
   {
     id: 'field-date-time',
-    title: 'FieldDateTime',
+    title: 'Date and time field',
     section: 'primitives',
     render: () => createElement(FieldDateTimeDemo),
   },
@@ -775,18 +781,21 @@ export const GALLERY_ENTRIES: readonly GalleryEntry[] = [
     id: 'identity-effects',
     title: 'Identity presentation',
     section: 'identity',
+    layout: 'full',
     render: () => createElement(Cosmetics),
   },
   {
     id: 'motion',
     title: 'Motion',
     section: 'motion',
+    layout: 'full',
     render: () => createElement(Motion),
   },
   {
     id: 'effects',
     title: 'Effects',
     section: 'effects',
+    layout: 'full',
     render: () => createElement(Effects),
   },
 ];
@@ -794,12 +803,6 @@ export const GALLERY_ENTRIES: readonly GalleryEntry[] = [
 export const GALLERY_SECTIONS = [
   { id: 'primitives', title: 'Primitives' },
   { id: 'identity', title: 'Identity' },
-  {
-    id: 'identity-effects',
-    title: 'Identity presentation',
-    section: 'identity',
-    render: () => createElement(Cosmetics),
-  },
   { id: 'motion', title: 'Motion' },
   { id: 'effects', title: 'Effects' },
 ] as const;

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Avatar } from '../../../components/primitives/Avatar.js';
 import { Card } from '../../../components/primitives/Card.js';
+import { CardGrid } from '../../../components/primitives/CardGrid.js';
 import {
   LAUNCH_COSMETICS,
   resolveCosmeticEffect,
@@ -61,10 +62,12 @@ export function Cosmetics() {
         checked={dense}
         onCheckedChange={setDense}
       />
-      <div className="stack" data-cosmetic-density={dense ? 'dense' : 'comfortable'}>
-        {LAUNCH_COSMETICS.map((def) => (
-          <CosmeticPair key={def.id} def={def} selected={selected} />
-        ))}
+      <div data-cosmetic-density={dense ? 'dense' : 'comfortable'}>
+        <CardGrid aria-label="Identity presentation examples">
+          {LAUNCH_COSMETICS.map((def) => (
+            <CosmeticPair key={def.id} def={def} selected={selected} />
+          ))}
+        </CardGrid>
       </div>
     </section>
   );

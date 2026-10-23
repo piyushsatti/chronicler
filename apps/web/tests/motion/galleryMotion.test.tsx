@@ -75,8 +75,23 @@ describe('Actual Gallery presentation demos', () => {
     expect(container.querySelectorAll('[data-effect-demo-collapse]')).toHaveLength(3);
     expect(container.querySelectorAll('[data-cosmetic-demo]')).toHaveLength(5);
     expect(
-      screen.getByRole('radiogroup', { name: 'Background effect' }),
+      screen.getByRole('button', { name: /^Background effect/ }),
     ).toBeInTheDocument();
+  });
+  it('offers every readable effect choice and applies the selected preference', async () => {
+    renderWithProviders(<Effects />);
+    const picker = screen.getByRole('button', { name: /^Background effect/ });
+    await userEvent.click(picker);
+    expect((await screen.findAllByRole('menuitem')).map((item) => item.textContent)).toEqual([
+      'None', 'Starfield', 'Glow pulse', 'Gradient sweep',
+    ]);
+    await userEvent.click(screen.getByRole('menuitem', { name: /^Glow pulse$/ }));
+    expect(picker).toHaveTextContent('Glow pulse');
+    expect(document.documentElement).toHaveAttribute('data-bg-effect', 'glow-pulse');
+    await userEvent.click(picker);
+    await userEvent.click(await screen.findByRole('menuitem', { name: /^None$/ }));
+    expect(picker).toHaveTextContent('None');
+    expect(document.documentElement).toHaveAttribute('data-bg-effect', 'none');
   });
   it('opens the retained Gallery for a server-admitted configured owner without stored roles', async () => {
     signIn([]);

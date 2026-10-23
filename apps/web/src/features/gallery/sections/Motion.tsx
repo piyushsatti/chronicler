@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Button } from '../../../components/primitives/Button.js';
 import { Card } from '../../../components/primitives/Card.js';
+import { CardGrid } from '../../../components/primitives/CardGrid.js';
 import { MOTION_CATALOG, type MotionId } from '../../../motion/catalog.js';
 import type { MotionEntry } from '../../../motion/types.js';
 import { useMotionCollapse } from '../../../motion/useMotionCollapse.js';
@@ -165,9 +166,11 @@ export function Motion() {
         Real motion previews beside their static state. Device and saved motion
         suppression apply to every preview. Hover or focus the lift preview.
       </p>
-      {DEMO_IDS.map((id) => (
-        <MotionPair key={id} id={id} />
-      ))}
+      <CardGrid aria-label="Motion examples">
+        {DEMO_IDS.map((id) => (
+          <MotionPair key={id} id={id} />
+        ))}
+      </CardGrid>
     </section>
   );
 }

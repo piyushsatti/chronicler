@@ -2,7 +2,7 @@ import { useId } from 'react';
 import { Button } from '../../../components/primitives/Button.js';
 import { Card } from '../../../components/primitives/Card.js';
 import type { useBulkRoleBar } from '../hooks/useBulkRoleBar.js';
-import { personName } from '../../../utils/format.js';
+import { memberLabeler } from '../memberLabels.js';
 import { Checkbox } from '../../../components/primitives/Checkbox.js';
 import { Select } from '../../../components/primitives/Select.js';
 
@@ -24,13 +24,8 @@ export function BulkRoleBar({
     selected,
   } = view;
 
-  if (selected.length === 0) {
-    return (
-      <p className="type-caption" data-el="admin.bulkRoleBar.empty">
-        Select members to edit roles in bulk.
-      </p>
-    );
-  }
+  const disabled = batch.isPending || selected.length === 0;
+  const labelFor = memberLabeler(submittedMembers);
 
   const canSubmit =
     !batch.isPending && (!requiresExplicitChoice || touched) && selected.length > 0;
@@ -38,19 +33,17 @@ export function BulkRoleBar({
   return (
     <Card className="stack" data-component="BulkRoleBar" data-el="admin.bulkRoleBar">
       <h3 className="type-heading">Bulk roles · {selected.length} selected</h3>
-      {requiresExplicitChoice ? (
-        <p className="type-caption">
-          These members have different roles. Choose the roles to give them before you
-          apply.
-        </p>
-      ) : null}
+      <p className="type-caption">
+        Select members below and choose the roles to give them. Different roles
+        require an explicit choice.
+      </p>
       <div className="row" data-wrap="1">
         <div className="stack">
           <span className="type-label" id={roleLabelId}>Base role</span>
           <Select
             label="Base role"
             labelId={roleLabelId}
-            disabled={batch.isPending}
+            disabled={disabled}
             value={form.baseTier}
             onValueChange={(value) => {
               setTouched(true);
@@ -77,7 +70,7 @@ export function BulkRoleBar({
           <Checkbox
             key={key}
             label={label}
-            disabled={batch.isPending}
+            disabled={disabled}
             checked={form[key]}
             onCheckedChange={(checked) => {
               setTouched(true);
@@ -100,7 +93,7 @@ export function BulkRoleBar({
             const member = submittedMembers.find((m) => m.id === row.id);
             return (
               <li key={row.id} className="type-caption">
-                {member ? personName(member) : 'Member'}:{' '}
+                {member ? labelFor(member) : 'Member'}:{' '}
                 {row.ok ? 'saved' : (row.error ?? 'failed')}
               </li>
             );

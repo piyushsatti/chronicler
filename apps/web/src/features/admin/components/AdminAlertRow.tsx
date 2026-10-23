@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { Chip } from '../../../components/primitives/Chip.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
 import { humanizeKey } from '../../../utils/format.js';
@@ -19,7 +19,16 @@ function severityTone(severity: string): 'danger' | 'warning' | 'line' {
   return 'line';
 }
 
-/** One alert, the same on Today, Delivery and Data health. */
+const REMEDIATION_LABELS: Record<string, string> = {
+  '/admin/data-health': 'Review diagnostics',
+  '/admin/delivery': 'Review delivery',
+  '/admin/people': 'Review members',
+  '/admin/world': 'Review world settings',
+  '/admin/content': 'Review content',
+  '/admin/review': 'Review queue',
+};
+
+/** Active problems retain the server's label and remediation destination. */
 export function AdminAlertRow({
   alert,
   className,
@@ -28,6 +37,11 @@ export function AdminAlertRow({
   className?: string;
 }): React.JSX.Element {
   const { formatDateTime } = useDateFormatter();
+  const { pathname } = useLocation();
+  const destination = alert.remediationHref.split(/[?#]/)[0].replace(/\/+$/, '');
+  const canReviewDestination =
+    isSafeInternalPath(alert.remediationHref) &&
+    destination !== pathname.replace(/\/+$/, '');
   return (
     <li className={className}>
       <div className="stack" data-gap="1">
@@ -37,14 +51,19 @@ export function AdminAlertRow({
             Last seen {formatDateTime(alert.lastSeenAt)}
           </span>
         ) : null}
+        {!canReviewDestination ? (
+          <span className="type-caption">
+            Repair instructions and a separate destination are not provided.
+          </span>
+        ) : null}
       </div>
       <div className="row" data-gap="2" data-align="center" data-wrap="1">
         <Chip tone={severityTone(alert.severity)} size="sm">
           {humanizeKey(alert.severity)}
         </Chip>
-        {isSafeInternalPath(alert.remediationHref) ? (
+        {canReviewDestination ? (
           <Link className="btn btn--secondary btn--sm" to={alert.remediationHref}>
-            View details
+            {REMEDIATION_LABELS[destination] ?? 'Review linked page'}
           </Link>
         ) : null}
       </div>

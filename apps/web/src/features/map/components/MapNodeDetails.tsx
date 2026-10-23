@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { ContentRenderer } from '../../../components/foundation/ContentRenderer.js';
 import { Button } from '../../../components/primitives/Button.js';
+import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { documentHref } from '../../../utils/documentHref.js';
 import {
   useMapNodeDetails,
@@ -13,15 +14,23 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
   const { map, node, maps, onEdit, onReload } = props;
   const { pending, error, documentIds, documents, submap, unlink } =
     useMapNodeDetails(props);
+  const linkAction = map.canEdit ? (
+    <Button variant="secondary" onClick={() => onEdit({ kind: 'link', map, node })}>
+      Link a Codex entry
+    </Button>
+  ) : null;
   return (
     <section
-      className={`card stack ${styles.details}`}
+      className={`card ${styles.details}`}
       id="map-location-details"
       aria-label="Selected location"
       data-map-selected={node.id}
     >
       <div className={styles.toolbar}>
-        <h2 className="type-heading">{node.name}</h2>
+        <div>
+          <p className="type-caption">Selected location</p>
+          <h2 className="type-title">{node.name}</h2>
+        </div>
         {map.canEdit ? (
           <Button
             variant="ghost"
@@ -42,9 +51,21 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
       ) : node.submapId ? (
         <p className="type-caption">This submap is unavailable for this viewer.</p>
       ) : null}
-      <h3 className="type-label">Linked entries</h3>
+      <h3 className={`type-title ${styles.linkedHeading}`}>
+        Linked entries ({node.linkedEntries.length})
+      </h3>
       {node.linkedEntries.length === 0 ? (
-        <p>No Codex entries are linked to this location yet.</p>
+        <EmptyState
+          className={styles.linkedEmpty}
+          message="No Codex entries are linked to this location yet."
+          action={
+            linkAction ?? (
+              <Link className="btn btn--secondary btn--sm" to="/codex">
+                Browse Codex
+              </Link>
+            )
+          }
+        />
       ) : (
         node.linkedEntries.map((link) => {
           const documentIndex = documentIds.indexOf(link.documentId);
@@ -67,7 +88,7 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
                 </p>
               ) : document ? (
                 <>
-                  <h4 className="type-title">
+                  <h4 className="type-ui">
                     {href ? (
                       <Link className={styles.docLink} to={href}>
                         {document.title}
@@ -83,12 +104,15 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
                     <span className="type-caption">{humanizeKey(link.relation)}</span>
                   </div>
                   {document.effectiveBody ? (
-                    <ContentRenderer body={document.effectiveBody} />
+                    <details className={styles.entryPreview}>
+                      <summary>Read entry preview</summary>
+                      <ContentRenderer body={document.effectiveBody} />
+                    </details>
                   ) : null}
                   {map.canEdit ? (
                     <Button
                       size="sm"
-                      variant="secondary"
+                      variant="danger"
                       pending={pending === `${link.documentId}:${link.relation}`}
                       disabled={Boolean(pending)}
                       onClick={() => {
@@ -119,11 +143,7 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
           </Button>
         </p>
       ) : null}
-      {map.canEdit ? (
-        <Button variant="secondary" onClick={() => onEdit({ kind: 'link', map, node })}>
-          Link a Codex entry
-        </Button>
-      ) : null}
+      {node.linkedEntries.length ? linkAction : null}
     </section>
   );
 }

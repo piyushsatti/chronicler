@@ -84,6 +84,45 @@ export function MapPage(): React.JSX.Element {
     if (nextAtlas) navigate(`/map/${encodeURIComponent(nextAtlas)}`);
     else if (nextNode) select(nextNode);
   }
+  const directoryMaps = page.directory.data?.maps ?? [];
+  const regionOptions = [
+    { id: '', name: 'All regions', count: directoryMaps.length },
+    ...(directoryMaps.some((item) => item.regionId === null)
+      ? [
+          {
+            id: 'global',
+            name: 'Global',
+            count: directoryMaps.filter((item) => item.regionId === null).length,
+          },
+        ]
+      : []),
+    ...(page.directory.data?.regions ?? []).flatMap((region) => {
+      const count = directoryMaps.filter((item) => item.regionId === region.id).length;
+      return count ? [{ id: region.id, name: region.name, count }] : [];
+    }),
+  ];
+  const requestedRegion = params.get('region') ?? '';
+  const regionFilter = regionOptions.some((option) => option.id === requestedRegion)
+    ? requestedRegion
+    : '';
+  const visibleMaps = directoryMaps.filter(
+    (item) => !regionFilter || (item.regionId ?? 'global') === regionFilter,
+  );
+  const chooseRegion = (value: string) => {
+    const candidates = directoryMaps.filter(
+      (item) => !value || (item.regionId ?? 'global') === value,
+    );
+    const target =
+      candidates.find((item) => item.atlasCode === page.selectedAtlas) ?? candidates[0];
+    if (!target) return;
+    const next = new URLSearchParams(params);
+    if (value) next.set('region', value);
+    else next.delete('region');
+    if (target.atlasCode !== page.selectedAtlas) next.delete('node');
+    navigate(
+      `/map/${encodeURIComponent(target.atlasCode)}${next.size ? `?${next}` : ''}`,
+    );
+  };
   const countLabel = map
     ? `${pluralize(map.nodes.length, 'location')}, ${pluralize(map.edges.length, 'connection')}`
     : undefined;
@@ -139,14 +178,30 @@ export function MapPage(): React.JSX.Element {
           label="Choose a map"
           count={page.map.isFetching ? 'Refreshing…' : countLabel}
         >
+          <FilterBar.Group label="Region">
+            {regionOptions.map((region) => (
+              <Chip
+                key={region.id}
+                size="sm"
+                selected={regionFilter === region.id}
+                onClick={() => chooseRegion(region.id)}
+              >
+                {region.name} ({region.count})
+              </Chip>
+            ))}
+          </FilterBar.Group>
           <FilterBar.Picker
             label="Map"
             value={page.selectedAtlas}
-            options={page.directory.data.maps.map((item) => ({
+            options={visibleMaps.map((item) => ({
               value: item.atlasCode,
               label: item.name,
             }))}
-            onValueChange={(code) => navigate(`/map/${encodeURIComponent(code)}`)}
+            onValueChange={(code) =>
+              navigate(
+                `/map/${encodeURIComponent(code)}${regionFilter ? `?region=${encodeURIComponent(regionFilter)}` : ''}`,
+              )
+            }
           />
         </FilterBar>
       ) : null}
@@ -249,30 +304,35 @@ export function MapPage(): React.JSX.Element {
                 Selected location: {selected.name}.
               </p>
             ) : null}
-            <section className="card stack" aria-label="Map locations">
-              <h2 className="type-heading">Locations</h2>
-              <ul className={styles.nodeList} aria-label="Map locations">
-                {map.nodes.map((node) => (
-                  <li key={node.id}>
-                    <button
-                      type="button"
-                      className={styles.locationButton}
-                      aria-pressed={node.id === selected?.id}
-                      onClick={() => select(node.id)}
-                    >
-                      {node.name}
-                      {node.submapId ? (
-                        <span className="type-caption">Submap</span>
-                      ) : null}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-              {map.nodes.length === 0 ? <p>No locations to select.</p> : null}
+            <section className={`card ${styles.disclosure}`} aria-label="Map locations">
+              <details>
+                <summary className="type-title">Locations ({map.nodes.length})</summary>
+                <ul className={styles.nodeList} aria-label="Map locations">
+                  {map.nodes.map((node) => (
+                    <li key={node.id}>
+                      <button
+                        type="button"
+                        className={styles.locationButton}
+                        aria-pressed={node.id === selected?.id}
+                        onClick={() => select(node.id)}
+                      >
+                        {node.name}
+                        {node.submapId ? (
+                          <span className="type-caption">Submap</span>
+                        ) : null}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                {map.nodes.length === 0 ? <p>No locations to select.</p> : null}
+              </details>
             </section>
-            <section className="card" aria-label="Map connections">
-              <details className="stack">
-                <summary className="type-heading">
+            <section
+              className={`card ${styles.disclosure}`}
+              aria-label="Map connections"
+            >
+              <details>
+                <summary className="type-title">
                   Connections ({map.edges.length})
                 </summary>
                 {map.edges.length ? (
@@ -295,7 +355,9 @@ export function MapPage(): React.JSX.Element {
                             </Button>
                             <span aria-hidden="true">{edge.directed ? '→' : '↔'}</span>
                             <span className={styles.srOnly}>
-                              {edge.directed ? 'leads one way to' : 'connects both ways with'}
+                              {edge.directed
+                                ? 'leads one way to'
+                                : 'connects both ways with'}
                             </span>
                             <Button
                               variant="ghost"

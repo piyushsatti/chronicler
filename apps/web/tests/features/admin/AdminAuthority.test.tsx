@@ -95,6 +95,7 @@ describe('validated workspace authority', () => {
       expect(await screen.findByRole('alert')).toHaveTextContent(
         'You don’t have access to this',
       );
+      expect(screen.getByRole('heading', { name: 'Admin', level: 1 })).toBeVisible();
       expect(
         screen.queryByRole('navigation', { name: 'Admin sections' }),
       ).not.toBeInTheDocument();

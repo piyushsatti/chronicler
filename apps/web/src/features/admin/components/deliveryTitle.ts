@@ -1,27 +1,16 @@
-/** What to call a Discord delivery row: the quest, else its position and revision. */
+/** The quest title is the target; unmatched jobs retain their list position. */
 export function deliveryTitle(
-  delivery: {
-    questTitle: string | null;
-    questShortCode: string | null;
-    desiredRevision: number | null;
-  },
+  delivery: { questTitle: string | null },
   position?: number,
 ): string {
-  return (
-    delivery.questTitle ??
-    delivery.questShortCode ??
-    `Quest delivery${position ? ` ${position}` : ''}${
-      delivery.desiredRevision !== null ? `, revision ${delivery.desiredRevision}` : ''
-    }`
-  );
+  return delivery.questTitle?.trim() || `Quest delivery${position ? ` ${position}` : ''}`;
 }
 
-/** A short line that tells otherwise identical rows apart: when it was created and a stable reference. */
 export function deliveryReference(
-  delivery: { id: string; createdAt: string },
+  delivery: { createdAt: string },
   formatDateTime: (value: string) => string,
 ): string {
-  return `Created ${formatDateTime(delivery.createdAt)}, ref ${delivery.id.replace(/-/g, '').slice(0, 6)}`;
+  return `Created ${formatDateTime(delivery.createdAt)}`;
 }
 
 /** Chip tone for a delivery state: calm when done, amber while waiting, red when it needs a person. */

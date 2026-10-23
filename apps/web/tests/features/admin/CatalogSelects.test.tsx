@@ -37,7 +37,8 @@ it('keeps backstory region filtering and source region choices', async () => {
 
 it('uses the base-role menu to mark a bulk role choice as changed', async () => {
   renderWithProviders(<AdminPeoplePage />, { route: '/admin/people' });
-  await userEvent.click(await screen.findByRole('checkbox', { name: 'Select Mira' }));
+  await userEvent.click(await screen.findByRole('button', { name: 'Select members' }));
+  await userEvent.click(screen.getByRole('checkbox', { name: 'Select Mira' }));
   await choose('Base role', 'Spectator');
   expect(screen.getByRole('button', { name: 'Apply roles to selection' })).toBeEnabled();
 });

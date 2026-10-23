@@ -4,12 +4,13 @@ import type { Pointcrawl } from '../adapters/mapAdapter.js';
 import styles from '../pages/map.module.css';
 import { edgeDisplayLabel } from '../edgeLabel.js';
 import { placeLabels } from '../labelLayout.js';
+import { Chip } from '../../../components/primitives/Chip.js';
 
 export function graphBounds(nodes: Pointcrawl['nodes']) {
-  let minX = 0,
-    minY = 0,
-    maxX = 0,
-    maxY = 0;
+  let minX = nodes[0]?.x ?? 0,
+    minY = nodes[0]?.y ?? 0,
+    maxX = minX,
+    maxY = minY;
   for (const node of nodes) {
     minX = Math.min(minX, node.x);
     minY = Math.min(minY, node.y);
@@ -70,39 +71,63 @@ export function PointcrawlViewport({
     () => new Map(renderNodes.map((node) => [node.id, node])),
     [renderNodes],
   );
+  const connectors = useMemo(
+    () =>
+      map.edges.flatMap((edge) => {
+        const a = byId.get(edge.nodeA);
+        const b = byId.get(edge.nodeB);
+        if (!a || !b) return [];
+        const middleY = (a.y + b.y) / 2;
+        const points =
+          a.y === b.y ? [a, b] : [a, { x: a.x, y: middleY }, { x: b.x, y: middleY }, b];
+        return [{ edge, points }];
+      }),
+    [map.edges, byId],
+  );
   const width = bounds.width / camera.zoom;
   const height = bounds.height / camera.zoom;
   const pixelsPerUnit =
     size.width > 0 && size.height > 0
       ? Math.min(size.width / width, size.height / height)
       : 1;
+  const viewX = bounds.x + (bounds.width - width) / 2 + camera.x;
+  const viewY = bounds.y + (bounds.height - height) / 2 + camera.y;
   const labels = useMemo(
     () =>
       new Map(
         placeLabels(
-          renderNodes.map((node) => ({
-            id: node.id,
-            name: node.name,
-            x: node.x * pixelsPerUnit,
-            y: node.y * pixelsPerUnit,
-          })),
-          map.edges.flatMap((edge) => {
-            const a = byId.get(edge.nodeA);
-            const b = byId.get(edge.nodeB);
-            return a && b
-              ? [
-                  {
-                    x1: a.x * pixelsPerUnit,
-                    y1: a.y * pixelsPerUnit,
-                    x2: b.x * pixelsPerUnit,
-                    y2: b.y * pixelsPerUnit,
-                  },
-                ]
-              : [];
-          }),
+          [...renderNodes]
+            .sort((a, b) => Number(b.id === selectedId) - Number(a.id === selectedId))
+            .map((node) => ({
+              id: node.id,
+              name: node.name,
+              x: node.x * pixelsPerUnit,
+              y: node.y * pixelsPerUnit,
+            })),
+          connectors.flatMap(({ points }) =>
+            points.slice(1).flatMap((point, index) => {
+              const previous = points[index];
+              return previous
+                ? [
+                    {
+                      x1: previous.x * pixelsPerUnit,
+                      y1: previous.y * pixelsPerUnit,
+                      x2: point.x * pixelsPerUnit,
+                      y2: point.y * pixelsPerUnit,
+                    },
+                  ]
+                : [];
+            }),
+          ),
+          {
+            x1: viewX * pixelsPerUnit,
+            y1: viewY * pixelsPerUnit,
+            x2: (viewX + width) * pixelsPerUnit,
+            y2: (viewY + height) * pixelsPerUnit,
+          },
         ).map((label) => [label.id, label]),
       ),
-    [renderNodes, pixelsPerUnit, map.edges, byId],
+    [renderNodes, pixelsPerUnit, connectors, selectedId, viewX, viewY, width, height],
   );
   const keyboardSelect = (event: React.KeyboardEvent<SVGGElement>, index: number) => {
     let next = index;
@@ -164,9 +189,10 @@ export function PointcrawlViewport({
       <svg
         ref={graph}
         className={styles.graph}
+        style={{ aspectRatio: `${bounds.width} / ${bounds.height}` }}
         role="group"
         aria-label={`${map.name} pointcrawl graph`}
-        viewBox={`${bounds.x + (bounds.width - width) / 2 + camera.x} ${bounds.y + (bounds.height - height) / 2 + camera.y} ${width} ${height}`}
+        viewBox={`${viewX} ${viewY} ${width} ${height}`}
         onPointerDown={(event) => {
           if (event.target === event.currentTarget) {
             drag.current = {
@@ -218,26 +244,19 @@ export function PointcrawlViewport({
             <path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" />
           </marker>
         </defs>
-        {map.edges.map((edge) => {
-          const a = byId.get(edge.nodeA);
-          const b = byId.get(edge.nodeB);
-          return a && b ? (
-            <g key={edge.id} className={styles.edge}>
-              <line
-                x1={a.x}
-                y1={a.y}
-                x2={b.x}
-                y2={b.y}
-                markerEnd={edge.directed ? `url(#${marker})` : undefined}
-                vectorEffect="non-scaling-stroke"
-              />
-              <title>
-                {edgeDisplayLabel(edge)}
-                {edge.directed ? ' (one way)' : ''}
-              </title>
-            </g>
-          ) : null;
-        })}
+        {connectors.map(({ edge, points }) => (
+          <g key={edge.id} className={styles.edge}>
+            <polyline
+              points={points.map((point) => `${point.x},${point.y}`).join(' ')}
+              markerEnd={edge.directed ? `url(#${marker})` : undefined}
+              vectorEffect="non-scaling-stroke"
+            />
+            <title>
+              {edgeDisplayLabel(edge)}
+              {edge.directed ? ' (one way)' : ''}
+            </title>
+          </g>
+        ))}
         {renderNodes.map((node, index) => {
           const label = labels.get(node.id);
           return (
@@ -250,6 +269,7 @@ export function PointcrawlViewport({
               data-node-index={index}
               className={styles.node}
               transform={`translate(${node.x} ${node.y})`}
+              onFocus={() => onSelect(node.id)}
               onClick={() => onSelect(node.id)}
               onKeyDown={(event) => keyboardSelect(event, index)}
             >
@@ -258,7 +278,10 @@ export function PointcrawlViewport({
               <text
                 className={styles.nodeLabel}
                 aria-hidden="true"
+                x={(label?.dx ?? 0) / pixelsPerUnit}
                 y={(label?.dy ?? 24) / pixelsPerUnit}
+                textLength={label?.width ? label.width / pixelsPerUnit : undefined}
+                lengthAdjust="spacingAndGlyphs"
                 fontSize={13 / pixelsPerUnit}
                 textAnchor="middle"
                 strokeWidth={4 / pixelsPerUnit}
@@ -269,8 +292,27 @@ export function PointcrawlViewport({
           );
         })}
       </svg>
+      <div className={styles.legend} role="group" aria-label="Map legend">
+        <Chip size="sm" tone="line">
+          ○ Location
+        </Chip>
+        <Chip size="sm" tone="accent">
+          ● Selected
+        </Chip>
+        {map.edges.length ? (
+          <Chip size="sm" tone="line">
+            ─ Connection
+          </Chip>
+        ) : null}
+        {map.edges.some((edge) => edge.directed) ? (
+          <Chip size="sm" tone="line">
+            → One-way connection
+          </Chip>
+        ) : null}
+      </div>
       <p className={`type-caption ${styles.canvasHint}`}>
-        Drag to pan. Arrow keys move between locations.
+        Drag to pan. Arrow keys select locations and reveal their full names. Zoom in or
+        open Locations for crowded labels.
       </p>
     </section>
   );

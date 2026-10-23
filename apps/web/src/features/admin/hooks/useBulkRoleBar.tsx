@@ -17,6 +17,7 @@ import {
 export type BulkRoleMember = {
   id: string;
   handle: string;
+  displayName: string;
   roles: string[];
 };
 

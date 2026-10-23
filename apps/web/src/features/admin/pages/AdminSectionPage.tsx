@@ -1,3 +1,4 @@
+import { FilterBar } from '../../../components/primitives/FilterBar.js';
 import { DmDashboard } from '../components/DmDashboard.js';
 import { SectionSwitch } from '../components/SectionSwitch.js';
 import { AdminWorkspaceShell } from '../AdminWorkspaceShell.js';
@@ -70,16 +71,34 @@ function WorldBody(): React.JSX.Element {
           {
             id: 'regions',
             label: 'Regions',
-            panel: <RegionsPanel view={view.data.regions} />,
+            count: view.data.regions.regions.data
+              ? `${view.data.regions.regions.data.length}${view.data.regions.pagination.hasNext || view.data.regions.pagination.offset ? ' on page' : ''}`
+              : null,
+            filters: (
+              <FilterBar.Picker
+                label="Region kind"
+                value={view.data.regions.filterKind}
+                onValueChange={view.data.regions.setFilterKind}
+                options={[
+                  { value: '', label: 'All kinds' },
+                  { value: 'uncharted', label: 'Uncharted' },
+                  { value: 'archon', label: 'Archon' },
+                  { value: 'server', label: 'Server' },
+                ]}
+              />
+            ),
+            panel: <RegionsPanel view={view.data.regions} showFilters={false} />,
           },
           {
             id: 'anchors',
             label: 'Time anchors',
+            count: view.data.anchors.pagination.total,
             panel: <TimeAnchorPanel view={view.data.anchors} />,
           },
           {
             id: 'calendar',
             label: 'Calendar',
+            count: view.data.calendar.calendar.data ? 1 : null,
             panel: <GameCalendarPanel view={view.data.calendar} />,
           },
         ]}

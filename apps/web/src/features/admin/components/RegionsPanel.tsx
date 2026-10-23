@@ -23,8 +23,10 @@ const REGION_KINDS = ['uncharted', 'archon', 'server'] as const;
 
 export function RegionsPanel({
   view,
+  showFilters = true,
 }: {
   view: ReturnType<typeof useRegionsPanel>;
+  showFilters?: boolean;
 }): React.JSX.Element {
   const { regions, editing, create, saveEdit } = view;
   const { formatDate } = useDateFormatter();
@@ -33,7 +35,7 @@ export function RegionsPanel({
   if (!regions.data) return <StatePanel status="loading" />;
   return (
     <div className="stack" data-testid="regions-panel" data-el="admin.regionsPanel">
-      <FilterBar
+      {showFilters ? <FilterBar
         label="Filter regions"
         count={pluralize(regions.data.length, 'region')}
       >
@@ -54,7 +56,7 @@ export function RegionsPanel({
             </Chip>
           ))}
         </FilterBar.Group>
-      </FilterBar>
+      </FilterBar> : null}
       {view.message ? (
         <p className="type-caption" role="status">
           {view.message}
@@ -157,7 +159,7 @@ export function RegionsPanel({
             const nextKind = view.nextKind(region.kind);
             return (
               <li key={region.id}>
-                <Card className="stack" pad={4}>
+                <Card className="stack admin-region-card" pad={4}>
                   <div
                     className="row"
                     data-justify="between"
@@ -169,11 +171,11 @@ export function RegionsPanel({
                       {humanizeKey(region.kind)}
                     </Chip>
                   </div>
-                  {region.charterDeadline && !isSentinelDate(region.charterDeadline) ? (
-                    <p className="type-caption">
-                      Charter due {formatDate(region.charterDeadline)}
-                    </p>
-                  ) : null}
+                  <p className="type-caption admin-region-meta">
+                    {region.charterDeadline && !isSentinelDate(region.charterDeadline)
+                      ? `Charter due ${formatDate(region.charterDeadline)}`
+                      : 'No charter deadline'}
+                  </p>
                   <div className="row" data-gap="2" data-wrap="1">
                     <Button
                       type="button"
@@ -240,6 +242,10 @@ export function RegionsPanel({
             Create region
           </Button>
         </div>
+        <p className="type-caption">
+          Uncharted is the initial stage, Archon is the next stage, and Server is
+          the final stage. Use Advance on an existing region to move it forward.
+        </p>
       </Card>
       {view.advancement ? (
         <Modal

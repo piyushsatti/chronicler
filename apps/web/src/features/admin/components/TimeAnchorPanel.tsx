@@ -1,3 +1,4 @@
+import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
 import { AdminReadFailure } from './AdminReadFailure.js';
 import { AdminPagination } from './AdminPagination.js';
 import { Button } from '../../../components/primitives/Button.js';
@@ -12,6 +13,7 @@ export function TimeAnchorPanel({
 }: {
   view: ReturnType<typeof useTimeAnchorPanel>;
 }): React.JSX.Element {
+  const { formatDateTime } = useDateFormatter();
   const {
     BLANK,
     toLocalInputValue,
@@ -60,7 +62,7 @@ export function TimeAnchorPanel({
         </Button>
       </div>
       <p className="type-caption">
-        Anchors regenerate future game_time_map days server-side on write.
+        Saving an anchor recalculates future dates in the game calendar.
       </p>
       <AdminPagination page={view.pagination} />
       {message ? (
@@ -138,11 +140,11 @@ export function TimeAnchorPanel({
       ) : (
         <ul className="stack">
           {anchors.data.map((a) => (
-            <li key={a.id} className="card row" data-justify="between">
+            <li key={a.id} className="card row" data-justify="between" data-wrap="1">
               <div className="stack">
-                <p className="type-title">{a.realUtc}</p>
+                <p className="type-title">{formatDateTime(a.realUtc)}</p>
                 <p className="type-caption">
-                  epoch {a.epochDay} · rate {a.rate}
+                  Game day {a.epochDay} · rate {a.rate}
                   {a.note ? ` · ${a.note}` : ''}
                 </p>
               </div>

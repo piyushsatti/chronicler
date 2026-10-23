@@ -23,28 +23,28 @@ describe('MembersPanel', () => {
   it('opens the role editor independently of bulk selection and restores focus on Back', async () => {
     renderWithProviders(<AdminPeoplePage />, { route: '/admin/people' });
     const member = await screen.findByRole('button', { name: /Mira/ });
-    const select = screen.getByRole('checkbox', { name: 'Select Mira' });
+    expect(screen.queryByRole('checkbox', { name: 'Select Mira' })).not.toBeInTheDocument();
     await userEvent.click(member);
-    expect(select).not.toBeChecked();
     const editor = screen.getByRole('region', { name: 'Role editor' });
     expect(within(editor).getByRole('heading', { name: 'Mira' })).toHaveFocus();
     await userEvent.click(
       within(editor).getByRole('button', { name: 'Back to members' }),
     );
     expect(member).toHaveFocus();
-    expect(
-      screen.queryByRole('button', { name: 'Save roles' }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save roles' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Select members' }));
+    const select = screen.getByRole('checkbox', { name: 'Select Mira' });
+    expect(select).not.toBeChecked();
     await userEvent.click(select);
     expect(select).toBeChecked();
-    expect(
-      screen.queryByRole('button', { name: 'Save roles' }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Save roles' })).not.toBeInTheDocument();
   });
 
   it('keeps bulk selection when moving between member editors', async () => {
     renderWithProviders(<AdminPeoplePage />, { route: '/admin/people' });
     const first = await screen.findByRole('button', { name: /Mira/ });
+    expect(screen.queryByRole('checkbox', { name: 'Select Mira' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Select members' }));
     const select = screen.getByRole('checkbox', { name: 'Select Mira' });
     await userEvent.click(select);
     await userEvent.click(first);
@@ -76,6 +76,7 @@ describe('MembersPanel', () => {
     );
     renderWithProviders(<AdminPeoplePage />, { route: '/admin/people' });
     const member = await screen.findByRole('button', { name: /Mira/ });
+    await userEvent.click(screen.getByRole('button', { name: 'Select members' }));
     await userEvent.click(screen.getByRole('checkbox', { name: 'Select Mira' }));
     const bulk = screen
       .getByRole('heading', { name: 'Bulk roles · 1 selected' })
@@ -100,6 +101,29 @@ describe('MembersPanel', () => {
       ],
       meta: { idempotencyKey: expect.any(String) },
     });
+  });
+
+  it('keeps the bulk controls mounted for zero, one and mixed-role selections', async () => {
+    renderWithProviders(<AdminPeoplePage />, { route: '/admin/people' });
+    await screen.findByRole('button', { name: /Mira/ });
+    await userEvent.click(screen.getByRole('button', { name: 'Select members' }));
+    const baseRole = screen.getByRole('button', { name: /^Base role/ });
+    const apply = screen.getByRole('button', { name: 'Apply roles to selection' });
+    const help = screen.getByText(/Select members below and choose/);
+    expect(baseRole).toBeDisabled();
+    expect(apply).toBeDisabled();
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Mira' }));
+    expect(baseRole).toBeEnabled();
+    expect(apply).toBeEnabled();
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Ashwin' }));
+    expect(screen.getByRole('button', { name: /^Base role/ })).toBe(baseRole);
+    expect(screen.getByText(/Select members below and choose/)).toBe(help);
+    expect(apply).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: 'Done selecting' }));
+    expect(screen.queryByRole('checkbox', { name: 'Select Mira' })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Select members' }));
+    expect(screen.getByRole('checkbox', { name: 'Select Mira' })).not.toBeChecked();
+    expect(screen.getByRole('button', { name: 'Apply roles to selection' })).toBeDisabled();
   });
 
   it('shows controlled error on GraphQL failure', async () => {

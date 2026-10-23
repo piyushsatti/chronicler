@@ -110,8 +110,9 @@ describe('Admin today and delivery', () => {
     const panel = within(
       document.querySelector('[data-el="admin.deliveryPanel"]') as HTMLElement,
     );
-    expect(panel.getByText('Site address: not set')).toBeVisible();
-    expect(panel.getByText('Discord announcements role: not set')).toBeVisible();
+    expect(panel.getByText('Site address')).toBeVisible();
+    expect(panel.getAllByText('Not set')).toHaveLength(2);
+    expect(panel.getByText('Discord announcements role')).toBeVisible();
     // State reads as a label; unknown revisions are left out rather than spelled out.
     expect(panel.getByText('Gave up', { exact: true })).toBeVisible();
     expect(panel.queryByText(/revision unknown/i)).not.toBeInTheDocument();
@@ -146,7 +147,8 @@ describe('Admin today and delivery', () => {
     const panel = within(
       document.querySelector('[data-el="admin.deliveryPanel"]') as HTMLElement,
     );
-    expect(panel.getByText('Site address: https://campaign.example')).toBeVisible();
+    expect(panel.getByText('Site address')).toBeVisible();
+    expect(panel.getByText('https://campaign.example')).toBeVisible();
     expect(panel.getAllByText(label)).toHaveLength(2);
   });
 });

@@ -19,3 +19,19 @@
 .admin-workspace a.type-title:hover {
   color: var(--color-accent);
 }
+
+.admin-section-count {
+  color: inherit;
+  margin-inline-start: var(--sp-2);
+  padding-inline-start: var(--sp-2);
+  border-inline-start: 1px solid currentColor;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-region-card {
+  block-size: 100%;
+}
+
+.admin-region-meta {
+  min-block-size: 1lh;
+}

@@ -211,7 +211,7 @@ function AuthorizedWorkspace({
               ? { to: '/me', label: 'Your page' }
               : { to: '/', label: 'Home' }
           }
-          title={title}
+          title={authority === 'dm' ? title : 'Admin'}
         />
         <StatePanel
           status="error"

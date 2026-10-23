@@ -155,7 +155,8 @@ describe('MapPage', () => {
       ),
     );
     renderMap();
-    const list = await screen.findByRole('list', { name: 'Map locations' });
+    fireEvent.click(await screen.findByText('Locations (3)', { selector: 'summary' }));
+    const list = screen.getByRole('list', { name: 'Map locations' });
     const viewport = screen.getByRole('region', { name: 'Pointcrawl viewport' });
     const graph = within(viewport).getByRole('group', {
       name: 'Lightfall pointcrawl graph',
@@ -171,7 +172,9 @@ describe('MapPage', () => {
       const full = nodes[index]?.name ?? '';
       const shown = label.textContent ?? '';
       expect(
-        shown === full || (shown.endsWith('…') && full.startsWith(shown.slice(0, -1))),
+        shown === '' ||
+          shown === full ||
+          (shown.endsWith('…') && full.startsWith(shown.slice(0, -1))),
       ).toBe(true);
     });
     expect(
@@ -191,7 +194,8 @@ describe('MapPage', () => {
   });
   it('offers the same real locations through the graph and list on a compact allocation', async () => {
     renderMap();
-    const list = await screen.findByRole('list', { name: 'Map locations' });
+    fireEvent.click(await screen.findByText('Locations (3)', { selector: 'summary' }));
+    const list = screen.getByRole('list', { name: 'Map locations' });
     expect(within(list).getAllByRole('button')).toHaveLength(3);
     const graph = screen.getByRole('group', { name: 'Lightfall pointcrawl graph' });
     fireEvent.keyDown(within(graph).getByRole('button', { name: 'Lightfall Gate' }), {
@@ -362,13 +366,14 @@ describe('MapPage', () => {
           target: { value: 'Old draft' },
         });
         fireEvent.submit(screen.getByRole('button', { name: 'Save' }).closest('form')!);
-        if (change === 'select node')
+        if (change === 'select node') {
+          fireEvent.click(screen.getByText('Locations (3)', { selector: 'summary' }));
           fireEvent.click(
             within(
               screen.getByLabelText('Map locations', { selector: 'ul' }),
             ).getByText('River Crossing', { selector: 'button' }),
           );
-        else if (change === 'revoke capability')
+        } else if (change === 'revoke capability')
           await act(async () => {
             queryClient.setQueryData(queryKeys.map('LFC'), {
               ...(await adapter.loadMap('LFC')),
@@ -515,6 +520,7 @@ describe('MapPage', () => {
             ),
           ),
       ).toHaveLength(1);
+      fireEvent.click(screen.getByText('Locations (3)', { selector: 'summary' }));
       const list = screen.getByRole('list', { name: 'Map locations' });
       fireEvent.click(within(list).getByRole('button', { name: 'River Crossing' }));
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -653,8 +659,12 @@ describe('MapPage', () => {
               target: { value: 'A map' },
             });
         } else if (kind === 'link') {
-          await userEvent.click(await screen.findByRole('button', { name: /^Location document/ }));
-          await userEvent.click(await screen.findByRole('menuitem', { name: locationDocument.title }));
+          await userEvent.click(
+            await screen.findByRole('button', { name: /^Location document/ }),
+          );
+          await userEvent.click(
+            await screen.findByRole('menuitem', { name: locationDocument.title }),
+          );
         }
         fireEvent.submit(screen.getByRole('button', { name: 'Save' }).closest('form')!);
         expect(
@@ -851,11 +861,11 @@ describe('MapPage', () => {
 
 describe('PointcrawlViewport marker allocation', () => {
   it.each([
-    { label: 'tall letterboxed', width: 520, height: 520, origin: -180 },
-    { label: 'wide letterboxed', width: 1040, height: 260, origin: -180 },
-    { label: 'matching enlarged', width: 1040, height: 520, origin: -130 },
-    { label: 'matching compact', width: 260, height: 130, origin: -280 },
-  ])('tracks both drag axes in a $label allocation', ({ width, height, origin }) => {
+    { label: 'tall letterboxed', width: 400, height: 520, x: -60, y: -180 },
+    { label: 'wide letterboxed', width: 800, height: 260, x: -60, y: -180 },
+    { label: 'matching enlarged', width: 800, height: 520, x: -10, y: -130 },
+    { label: 'matching compact', width: 200, height: 130, x: -160, y: -280 },
+  ])('tracks both drag axes in a $label allocation', ({ width, height, x, y }) => {
     render(
       <PointcrawlViewport
         map={{ ...good, nodes: good.pointcrawlNodes, edges: good.pointcrawlEdges }}
@@ -875,16 +885,16 @@ describe('PointcrawlViewport marker allocation', () => {
       fireEvent(graph, event);
     };
     try {
-      expect(graph).toHaveAttribute('viewBox', '-80 -80 520 260');
+      expect(graph).toHaveAttribute('viewBox', '40 -80 400 260');
       pointer('pointerdown', 10, 20);
       pointer('pointermove', 110, 120);
       expect(capture).toHaveBeenCalledWith(1);
-      expect(graph).toHaveAttribute('viewBox', `${origin} ${origin} 520 260`);
+      expect(graph).toHaveAttribute('viewBox', `${x} ${y} 400 260`);
       pointer('pointerup', 110, 120);
       pointer('pointermove', 210, 220);
-      expect(graph).toHaveAttribute('viewBox', `${origin} ${origin} 520 260`);
+      expect(graph).toHaveAttribute('viewBox', `${x} ${y} 400 260`);
       fireEvent.click(screen.getByRole('button', { name: 'Fit map' }));
-      expect(graph).toHaveAttribute('viewBox', '-80 -80 520 260');
+      expect(graph).toHaveAttribute('viewBox', '40 -80 400 260');
     } finally {
       rectangle.mockRestore();
     }
@@ -929,14 +939,15 @@ describe('PointcrawlViewport marker allocation', () => {
     try {
       const graph = screen.getByRole('group', { name: 'Lightfall pointcrawl graph' });
       const circle = graph.querySelector('circle');
-      const line = graph.querySelector('line');
+      const connector = graph.querySelector('polyline');
+      expect(connector).not.toBeNull();
       expect(circle).not.toBeNull();
       expect(observers).toHaveLength(1);
       const observer = observers[0];
       if (!observer) throw new Error('Missing graph observer');
       const initialViewBox = graph.getAttribute('viewBox');
       const position = circle?.parentElement?.getAttribute('transform');
-      const endpoints = ['x1', 'y1', 'x2', 'y2'].map((key) => line?.getAttribute(key));
+      const endpoints = connector?.getAttribute('points');
       act(() => observer.resize(1040, 520));
       const fittedRadius = Number(circle?.getAttribute('r'));
       expect(fittedRadius * 2).toBeCloseTo(9);
@@ -948,9 +959,7 @@ describe('PointcrawlViewport marker allocation', () => {
       expect(graph).toHaveAttribute('viewBox', zoomedViewBox);
       expect(Number(circle?.getAttribute('r')) * 1.5).toBeCloseTo(9);
       expect(circle?.parentElement).toHaveAttribute('transform', position);
-      expect(['x1', 'y1', 'x2', 'y2'].map((key) => line?.getAttribute(key))).toEqual(
-        endpoints,
-      );
+      expect(connector).toHaveAttribute('points', endpoints);
       act(() => observer.resize(0, 0));
       expect(Number(circle?.getAttribute('r')) * 1.5).toBeCloseTo(9);
       fireEvent.click(screen.getByRole('button', { name: 'Fit map' }));
@@ -1198,6 +1207,77 @@ describe('Region navigation', () => {
 });
 
 describe('MapPage reader presentation', () => {
+  it('keeps details anchored directly to the canvas and discloses the complete location list on request', async () => {
+    renderMap();
+    const selected = await screen.findByRole('region', { name: 'Selected location' });
+    const viewport = screen.getByRole('region', { name: 'Pointcrawl viewport' });
+    expect(viewport.nextElementSibling).toBe(selected);
+    const locations = screen.getByRole('region', { name: 'Map locations' });
+    const connections = screen.getByRole('region', { name: 'Map connections' });
+    expect(locations.querySelector('details')).not.toHaveAttribute('open');
+    expect(connections.querySelector('details')).not.toHaveAttribute('open');
+    fireEvent.click(
+      within(locations).getByText('Locations (3)', { selector: 'summary' }),
+    );
+    expect(
+      within(locations).getByRole('button', { name: 'River Crossing' }),
+    ).toBeVisible();
+    fireEvent.focus(within(viewport).getByRole('button', { name: 'Old Watchtower' }));
+    expect(screen.getByRole('region', { name: 'Selected location' })).toHaveTextContent(
+      'Old Watchtower',
+    );
+    expect(locations.querySelector('details')).toHaveAttribute('open');
+  });
+
+  it('filters the map picker by counted regions and opens an available map in the chosen region', async () => {
+    const region = {
+      id: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+      name: 'Northern Reach',
+      kind: 'charter',
+      canCreateMap: false,
+      charterDeadline: null,
+      documentId: null,
+      createdAt: good.createdAt,
+    };
+    const regionalMap = {
+      ...good,
+      id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaab',
+      name: 'Northern trails',
+      atlasCode: 'NORTH',
+      regionId: region.id,
+    };
+    server.use(
+      graphql.query('MapDirectory', () =>
+        HttpResponse.json({ data: { maps: [good, regionalMap], regions: [region] } }),
+      ),
+      graphql.query('MapAtlas', ({ variables }) =>
+        HttpResponse.json({
+          data: { map: variables.atlasCode === 'NORTH' ? regionalMap : good },
+        }),
+      ),
+    );
+    renderMap();
+    fireEvent.click(await screen.findByRole('button', { name: 'Northern Reach (1)' }));
+    expect(
+      await screen.findByRole('heading', { level: 1, name: 'Northern trails' }),
+    ).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Northern Reach (1)' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    fireEvent.click(screen.getByRole('button', { name: /^Map Northern trails/ }));
+    expect(
+      await screen.findByRole('menuitem', { name: 'Northern trails' }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole('menuitem', { name: 'Lightfall' }),
+    ).not.toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
+    fireEvent.click(screen.getByRole('button', { name: 'All regions (2)' }));
+    fireEvent.click(screen.getByRole('button', { name: /^Map Northern trails/ }));
+    expect(await screen.findByRole('menuitem', { name: 'Lightfall' })).toBeVisible();
+  });
+
   it('names import-id connections by their route kind and hides canvas positions from readers', async () => {
     server.use(
       graphql.query('MapAtlas', () =>
