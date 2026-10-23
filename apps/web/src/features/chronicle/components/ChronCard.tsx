@@ -2,7 +2,7 @@ import type { CSSProperties } from 'react';
 import { Avatar } from '../../../components/primitives/Avatar.js';
 import { Card } from '../../../components/primitives/Card.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
-import { handleOnlyName } from '../../../utils/format.js';
+import { personLabels } from '../../../utils/format.js';
 import type { ChronicleListItemView } from '../adapters/chronicleAdapter.js';
 import { regionColorVar } from '../regionColor.js';
 import { summaryCategoryMeta } from '../summaryCategory.js';
@@ -10,12 +10,13 @@ import styles from './chronCard.module.css';
 
 type ChronCardProps = {
   entry: ChronicleListItemView;
+  authorLabel?: string;
   /** Show the entry type chip; hidden when every entry shares one type. */
   showType?: boolean;
 };
 
 /** One chronicle entry. The whole card is the link to the entry. */
-export function ChronCard({ entry, showType = true }: ChronCardProps): React.JSX.Element {
+export function ChronCard({ entry, authorLabel, showType = true }: ChronCardProps): React.JSX.Element {
   const { formatDate } = useDateFormatter();
   const when = entry.occurredAt ?? entry.publishedAt;
   const typeMeta = summaryCategoryMeta(entry.category);
@@ -26,7 +27,7 @@ export function ChronCard({ entry, showType = true }: ChronCardProps): React.JSX
       ? `Game day ${entry.gameDay}`
       : null;
   const author = entry.authorHandle
-    ? handleOnlyName(entry.authorHandle)
+    ? authorLabel ?? personLabels([{ displayName: entry.authorDisplayName, handle: entry.authorHandle }])[0]
     : null;
 
   const typeColorVars = {

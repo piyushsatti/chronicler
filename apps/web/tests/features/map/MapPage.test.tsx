@@ -9,7 +9,7 @@ import {
   within,
 } from '@testing-library/react';
 import { graphql, HttpResponse } from 'msw';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../../src/auth/AuthContext.js';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
 import { queryKeys } from '../../../src/features/map/feature.js';
@@ -57,6 +57,17 @@ function Controls() {
       <button onClick={() => auth.storeToken(token('B'))}>Account B</button>
       <button onClick={auth.logout}>Sign out</button>
       <button onClick={() => navigate('/map/OTHER')}>Other map</button>
+    </>
+  );
+}
+function HistoryControls() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  return (
+    <>
+      <button onClick={() => navigate(-1)}>Back</button>
+      <button onClick={() => navigate(1)}>Forward</button>
+      <output aria-label="Current filters">{location.search}</output>
     </>
   );
 }
@@ -1010,6 +1021,41 @@ describe('Region navigation', () => {
       `/regions/${region.id}`,
     );
     expect(screen.getByText(/1 map$/)).toBeInTheDocument();
+  });
+  it('filters the directory from URL state, supports browser history, and clears empty results', async () => {
+    const regions = [
+      region,
+      { ...region, id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', name: 'Test Hollow' },
+      { ...region, id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', name: 'North Reach', kind: 'province' },
+    ];
+    server.use(
+      graphql.query('MapDirectory', () =>
+        HttpResponse.json({ data: { maps: [], regions } }),
+      ),
+    );
+    renderWithProviders(
+      <>
+        <HistoryControls />
+        <RegionsDirectoryPage />
+      </>,
+    );
+    const user = userEvent.setup();
+    expect(await screen.findByText('3 regions')).toBeVisible();
+    await user.type(screen.getByRole('searchbox', { name: 'Search regions' }), 'test');
+    expect(screen.getByText('2 regions')).toBeVisible();
+    expect(screen.getByLabelText('Current filters')).toHaveTextContent('?q=test');
+    await user.click(screen.getByRole('button', { name: 'Charter' }));
+    expect(screen.getByLabelText('Current filters')).toHaveTextContent('?q=test&kind=charter');
+    await user.click(screen.getByRole('button', { name: 'Back' }));
+    expect(screen.getByLabelText('Current filters')).toHaveTextContent('?q=test');
+    await user.click(screen.getByRole('button', { name: 'Forward' }));
+    expect(screen.getByLabelText('Current filters')).toHaveTextContent('?q=test&kind=charter');
+    await user.clear(screen.getByRole('searchbox', { name: 'Search regions' }));
+    await user.type(screen.getByRole('searchbox', { name: 'Search regions' }), 'nothing');
+    expect(screen.getByText('0 regions')).toBeVisible();
+    await user.click(screen.getByRole('button', { name: 'Clear filters' }));
+    expect(screen.getByText('3 regions')).toBeVisible();
+    expect(screen.getByLabelText('Current filters')).toBeEmptyDOMElement();
   });
   it('renders current quest and pointcrawl location counts without the retired metric', async () => {
     server.use(

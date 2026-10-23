@@ -13,7 +13,7 @@ import {
   formatInstant,
   longDateLabel,
   monthLabel as civilMonthLabel,
-  personName,
+  personLabels,
   pluralize,
   statusLabel,
   weekdayColumn,
@@ -79,6 +79,7 @@ function CalendarFilters({
 
 export function CalendarPage(): React.JSX.Element {
   const page = useCalendarPage();
+  const questDmLabels = personLabels((page.quests.data?.items ?? []).map((quest) => quest.dm));
   const dates = useDateFormatter();
   const state = page.state;
   const grid = page.calendar.data?.gameCalendar.monthGrid ?? [];
@@ -341,7 +342,7 @@ export function CalendarPage(): React.JSX.Element {
                       </p>
                       {page.quests.data.items.length ? (
                         <ul className={styles.questList}>
-                          {page.quests.data.items.map((quest) => (
+                          {page.quests.data.items.map((quest, index) => (
                             <li key={quest.id} className={styles.questRow}>
                               <div
                                 className="row"
@@ -363,7 +364,7 @@ export function CalendarPage(): React.JSX.Element {
                                 {dates.formatScheduled(quest.scheduledAt)},{' '}
                                 {quest.filledCount} of{' '}
                                 {pluralize(quest.slotsMax, 'seat')} filled
-                                {quest.dm ? `, run by ${personName(quest.dm)}` : ''}
+                                {quest.dm ? `, run by ${questDmLabels[index]}` : ''}
                               </span>
                             </li>
                           ))}

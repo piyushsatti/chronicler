@@ -382,7 +382,7 @@ function ProfileView({
                     ? 'Add your availability from Edit profile.'
                     : `${name} hasn't set their availability.`
                 }
-                action={owner ? <Button variant="secondary" size="sm" onClick={() => setEdit('profile')}>Set availability</Button> : undefined}
+                action={owner ? <Button variant="secondary" size="sm" onClick={() => setEdit('profile')}>Set availability</Button> : <Link className="type-link" to="/quests">Find a quest</Link>}
               />
             )}
           </Card>

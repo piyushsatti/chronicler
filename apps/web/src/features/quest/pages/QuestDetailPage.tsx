@@ -19,7 +19,7 @@ import { useQuestDetailPage } from '../hooks/useQuestDetailPage.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
 import { useMemberHref } from '../../../hooks/useMemberHref.js';
 import styles from './questDetail.module.css';
-import { handleLabel, isSentinelDate, personLabels, pluralize, statusLabel } from '../../../utils/format.js';
+import { isSentinelDate, personLabels, pluralize, statusLabel } from '../../../utils/format.js';
 
 const DECLARATION: PageDeclaration = {
   page: 'quest-detail',
@@ -82,9 +82,15 @@ export function QuestDetailPage(): React.JSX.Element {
   const quest = page.view;
   const summaryHref = `/quests/${encodeURIComponent(quest.shortCode)}/summary`;
   const seatsOpen = Math.max(0, quest.slotsMax - quest.filledCount);
-  const dmLabel = quest.dmName
-    ? personLabels([{ displayName: quest.dmName, handle: quest.dmHandle }])[0]
-    : null;
+  const hasDm = Boolean(quest.dmName || quest.dmHandle);
+  const peopleLabels = personLabels([
+    ...(hasDm ? [{ displayName: quest.dmName, handle: quest.dmHandle }] : []),
+    ...quest.participants.map((participant) => ({
+      displayName: participant.memberDisplayName,
+      handle: participant.memberHandle,
+    })),
+  ]);
+  const dmLabel = hasDm ? peopleLabels[0] : null;
 
   const rail = (
     <Card as="section" pad={5} aria-label="About this quest">
@@ -182,7 +188,7 @@ export function QuestDetailPage(): React.JSX.Element {
                     />
                   ) : (
                     <ul className={styles.roster}>
-                      {quest.participants.map((participant) => (
+                      {quest.participants.map((participant, index) => (
                         <li key={participant.characterId} className={styles.rosterRow}>
                           <Avatar name={participant.characterName} size="sm" />
                           <div className="stack" data-gap="1">
@@ -190,7 +196,7 @@ export function QuestDetailPage(): React.JSX.Element {
                               {participant.characterName}
                             </span>
                             <span className="type-caption">
-                              Played by {handleLabel(participant.memberHandle) ?? 'a member'}
+                              Played by {peopleLabels[index + (hasDm ? 1 : 0)]}
                             </span>
                           </div>
                           <Chip size="sm" tone="line">

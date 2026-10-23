@@ -1,0 +1,8 @@
+query ChronicleAuthorName($handle: String!) {
+  memberProfile(handle: $handle) {
+    member {
+      handle
+      displayName
+    }
+  }
+}

@@ -1,6 +1,6 @@
 import { graphql, http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
@@ -37,6 +37,33 @@ describe('ChroniclesListPage', () => {
     expect(screen.getByRole('group', { name: 'Region' })).toBeInTheDocument();
     expect(screen.getByText('2 of 2 entries')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'New entry' })).not.toBeInTheDocument();
+  });
+
+  it('disambiguates shared author names on cards and filters while filtering by raw handle', async () => {
+    const user = userEvent.setup();
+    const seenHandles: string[] = [];
+    server.use(
+      graphql.query('ChronicleAuthorName', ({ variables }) => {
+        const handle = String(variables.handle);
+        seenHandles.push(handle);
+        return HttpResponse.json({
+          data: {
+            memberProfile: {
+              member: { handle, displayName: 'Dev' },
+            },
+          },
+        });
+      }),
+    );
+    renderWithProviders(<ChroniclesListPage />);
+    expect((await screen.findAllByText('Dev (@mira)')).length).toBe(2);
+    expect(screen.getAllByText('Dev (@ash)')).toHaveLength(2);
+    await openFilters(user);
+    const authorFilter = screen.getByRole('group', { name: 'Author' });
+    await user.click(within(authorFilter).getByRole('button', { name: 'Dev (@mira)' }));
+    expect(screen.getByText('Vault Delve — Session recap')).toBeVisible();
+    expect(screen.queryByText("Ash's table notes")).not.toBeInTheDocument();
+    expect(seenHandles).toEqual(expect.arrayContaining(['mira', 'ash']));
   });
 
   it('filters the timeline by search', async () => {
@@ -204,7 +231,7 @@ describe('ChroniclesListPage', () => {
     expect(offsets).toEqual([0, 100]);
     expect(screen.getByText('Second-page-only chronicle')).toBeInTheDocument();
     await openFilters(user);
-    for (const name of ['Late arc', 'Late region', '@late-author']) {
+    for (const name of ['Late arc', 'Late region', 'Member (@late-author)']) {
       await user.click(screen.getByRole('button', { name }));
       // The active filter is announced, not only drawn.
       expect(screen.getByRole('button', { name, pressed: true })).toBeVisible();

@@ -6,6 +6,7 @@ query PendingCharacterVerifications($limit: Int! = 50, $offset: Int! = 0) {
       shortCode
       name
       ownerHandle
+      ownerDisplayName
       ddbUrl
       verificationSubmittedAt
     }

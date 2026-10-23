@@ -8,6 +8,7 @@ import { useAuth } from '../auth/AuthContext.js';
 import { useOwnsCharacter } from '../features/member/hooks/useOwnsCharacter.js';
 import { useSearchDialog } from '../features/search/components/SearchCommandRoot.js';
 import { useMe } from '../hooks/useMe.js';
+import { personName } from '../utils/format.js';
 import {
   destinationsForAuth,
   isPersonalPath,
@@ -349,7 +350,7 @@ export function SiteChrome({ children }: { children: ReactNode }): React.JSX.Ele
         <NotificationBell />
         <AccountSlot
           isAuthenticated={isSignedIn}
-          name={me.data?.displayName ?? me.data?.handle}
+          name={personName(me.data)}
           active={personal}
         />
       </header>

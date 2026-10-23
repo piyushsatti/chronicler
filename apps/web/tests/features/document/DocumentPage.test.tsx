@@ -1,4 +1,4 @@
-import { http, HttpResponse } from 'msw';
+import { graphql, http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { screen } from '@testing-library/react';
 import { Route, Routes } from 'react-router-dom';
@@ -6,6 +6,7 @@ import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
 import { DocumentPage } from '../../../src/features/document/pages/DocumentPage.js';
 import { server } from '../../../src/mocks/server.js';
 import { renderWithProviders } from '../../test-utils.js';
+import goodMemberProfile from '../../fixtures/wire/profile/member-profile-good.json';
 
 describe('DocumentPage', () => {
   it('renders document title and body', async () => {
@@ -19,6 +20,30 @@ describe('DocumentPage', () => {
       await screen.findByRole('heading', { name: 'Tree of Light' }),
     ).toBeInTheDocument();
     expect(screen.getByText(/Tree stands at the heart/)).toBeInTheDocument();
+  });
+
+  it('shows the document author display name from the existing member profile', async () => {
+    server.use(
+      graphql.query('MemberProfile', () =>
+        HttpResponse.json({
+          data: {
+            memberProfile: {
+              ...goodMemberProfile,
+              member: { ...goodMemberProfile.member, handle: 'lorekeeper', displayName: 'Mira' },
+            },
+          },
+        }),
+      ),
+    );
+    renderWithProviders(
+      <Routes>
+        <Route path="/documents/:slug" element={<DocumentPage />} />
+      </Routes>,
+      { route: '/documents/tree-of-light' },
+    );
+    const author = await screen.findByRole('region', { name: 'Author' });
+    expect(await screen.findByText('Mira')).toBeVisible();
+    expect(author).toHaveTextContent('Posted this feature');
   });
 
   it('shows controlled error', async () => {

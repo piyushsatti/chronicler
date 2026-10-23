@@ -4,6 +4,14 @@ export const calendarEraWireSchema = z.object({
   era: z.object({ abbrev: z.string().trim().min(1) }),
 });
 
+export const chronicleAuthorNameWireSchema = z.object({
+  memberProfile: z
+    .object({
+      member: z.object({ handle: z.string(), displayName: z.string() }),
+    })
+    .nullable(),
+});
+
 const chronicleGameDateWireSchema = z.object({
   eraAbbrev: z.string(),
   year: z.number().int(),

@@ -353,7 +353,7 @@ export type AdminCharactersQueryVariables = Exact<{
 }>;
 
 
-export type AdminCharactersQuery = { adminCharacterDirectory: { total: number, items: Array<{ id: string, shortCode: string, name: string, ownerHandle: string, status: string, verificationStatus: string }> } };
+export type AdminCharactersQuery = { adminCharacterDirectory: { total: number, items: Array<{ id: string, shortCode: string, name: string, ownerHandle: string, ownerDisplayName: string, status: string, verificationStatus: string }> } };
 
 export type AdminCreationCatalogQueryVariables = Exact<{
   limit?: number;
@@ -498,7 +498,7 @@ export type PendingCharacterVerificationsQueryVariables = Exact<{
 }>;
 
 
-export type PendingCharacterVerificationsQuery = { pendingCharacterVerifications: { total: number, items: Array<{ id: string, shortCode: string, name: string, ownerHandle: string, ddbUrl: string | null, verificationSubmittedAt: string | null }> } };
+export type PendingCharacterVerificationsQuery = { pendingCharacterVerifications: { total: number, items: Array<{ id: string, shortCode: string, name: string, ownerHandle: string, ownerDisplayName: string, ddbUrl: string | null, verificationSubmittedAt: string | null }> } };
 
 export type PendingDmProfilesQueryVariables = Exact<{
   limit: number;
@@ -777,6 +777,13 @@ export type UpsertDowntimeProjectMutationVariables = Exact<{
 
 
 export type UpsertDowntimeProjectMutation = { upsertDowntimeProject: { id: string, name: string, progress: number, status: string } };
+
+export type ChronicleAuthorNameQueryVariables = Exact<{
+  handle: string;
+}>;
+
+
+export type ChronicleAuthorNameQuery = { memberProfile: { member: { handle: string, displayName: string } } | null };
 
 export type ChronicleDetailQueryVariables = Exact<{
   slug: string;
@@ -1538,7 +1545,7 @@ export type QuestQueryVariables = Exact<{
 }>;
 
 
-export type QuestQuery = { quest: { id: string, shortCode: string, status: string, dmId: string, updatedAt: string, arcId: string | null, scheduledAt: string, durationHours: number, slotsMax: number, filledCount: number, displayStatus: string | null, genres: Array<string>, tags: Array<string>, arc: { id: string, name: string } | null, dm: { handle: string, displayName: string } | null, briefDocument: { id: string, slug: string, title: string, effectiveBody: string | null, frontmatter: unknown } | null, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string, nextRetryAt: string | null, errorMessage: string | null }, participants: Array<{ memberId: string, characterId: string, characterName: string, memberHandle: string, status: string }>, pointcrawlLinks: Array<{ pointcrawlNodeId: string, role: string }> } | null };
+export type QuestQuery = { quest: { id: string, shortCode: string, status: string, dmId: string, updatedAt: string, arcId: string | null, scheduledAt: string, durationHours: number, slotsMax: number, filledCount: number, displayStatus: string | null, genres: Array<string>, tags: Array<string>, arc: { id: string, name: string } | null, dm: { handle: string, displayName: string } | null, briefDocument: { id: string, slug: string, title: string, effectiveBody: string | null, frontmatter: unknown } | null, discordDelivery: { desiredRevision: number, appliedRevision: number, overallStatus: string, nextRetryAt: string | null, errorMessage: string | null }, participants: Array<{ memberId: string, characterId: string, characterName: string, memberHandle: string, memberDisplayName: string, status: string }>, pointcrawlLinks: Array<{ pointcrawlNodeId: string, role: string }> } | null };
 
 export type QuestListQueryVariables = Exact<{
   filters: QuestFiltersInput;
@@ -1577,7 +1584,7 @@ export type QuestParticipantsQueryVariables = Exact<{
 }>;
 
 
-export type QuestParticipantsQuery = { quest: { participants: Array<{ memberId: string, characterId: string, characterName: string, memberHandle: string, memberAvatarUrl: string | null, status: string }> } | null };
+export type QuestParticipantsQuery = { quest: { participants: Array<{ memberId: string, characterId: string, characterName: string, memberHandle: string, memberDisplayName: string, memberAvatarUrl: string | null, status: string }> } | null };
 
 export type QuestSetPointcrawlLinksMutationVariables = Exact<{
   questId: string;

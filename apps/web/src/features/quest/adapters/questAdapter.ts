@@ -88,6 +88,7 @@ export type QuestParticipantView = {
   characterId: string;
   characterName: string;
   memberHandle: string;
+  memberDisplayName?: string;
   status: string;
 };
 
@@ -171,7 +172,7 @@ function mapBoardItem(
     tags: item.tags,
     regionName: item.regions.map((id) => regionNameById.get(id)).find(Boolean) ?? null,
     dmHandle: item.dm?.handle ?? null,
-    dmName: item.dm?.displayName ?? item.dm?.handle ?? null,
+    dmName: item.dm?.displayName ?? null,
     participants,
     waitlistCount: participants.filter((p) => p.status === 'waitlisted').length,
     discordDelivery: mapDelivery(item.discordDelivery),
@@ -190,7 +191,7 @@ export function mapToBoardCardProps(
     description: quest.hookText,
     status: quest.cardStatus,
     region: quest.regionName,
-    dmUsername: quest.dmHandle ?? quest.dmName,
+    dmUsername: quest.dmHandle,
     dmName: quest.dmName,
     totalSlots: quest.slotsMax,
     when: formatScheduled(quest.scheduledAt, timeZone),
@@ -250,6 +251,7 @@ export function parseQuestDetail(wire: unknown): AdapterResult<QuestDetailView> 
         characterId: p.characterId,
         characterName: p.characterName,
         memberHandle: p.memberHandle,
+        memberDisplayName: p.memberDisplayName,
         status: p.status,
       })),
       durationHours: parsed.data.durationHours,

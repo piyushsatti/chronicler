@@ -13,7 +13,7 @@ import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { ErrorState } from '../../../components/primitives/ErrorState.js';
 import { Skeleton } from '../../../components/primitives/Skeleton.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
-import { civilDateInZone, monthLabel } from '../../../utils/format.js';
+import { civilDateInZone, monthLabel, personLabels } from '../../../utils/format.js';
 import type { ChronicleListItemView } from '../adapters/chronicleAdapter.js';
 import { ChronCard } from '../components/ChronCard.js';
 import { ChronicleFilterBar } from '../components/ChronicleFilterBar.js';
@@ -107,6 +107,16 @@ export function ChroniclesListPage(): React.JSX.Element {
   const [searchQuery, setSearchQuery] = useState('');
 
   const allEvents = page.status === 'ready' ? page.view.items : [];
+  const visibleAuthorLabels = personLabels(allEvents.map((entry) => ({
+    displayName: entry.authorDisplayName,
+    handle: entry.authorHandle,
+  })));
+  const authorLabels = new Map<string, string>();
+  allEvents.forEach((entry, index) => {
+    if (entry.authorHandle && !authorLabels.has(entry.authorHandle)) {
+      authorLabels.set(entry.authorHandle, visibleAuthorLabels[index] ?? entry.authorHandle);
+    }
+  });
 
   const regionOptions = useMemo(
     () => ['All', ...distinctSorted(allEvents.map((e) => e.region))],
@@ -220,6 +230,7 @@ export function ChroniclesListPage(): React.JSX.Element {
               regionOptions={regionOptions}
               arcOptions={arcOptions}
               authorOptions={authorOptions}
+              authorLabels={authorLabels}
               count={`${events.length} of ${allEvents.length} ${
                 allEvents.length === 1 ? 'entry' : 'entries'
               }`}
@@ -248,7 +259,11 @@ export function ChroniclesListPage(): React.JSX.Element {
                   <CardGrid as="ul" gap={4} aria-label={label}>
                     {groupEvents.map((entry) => (
                       <li key={entry.id} className={styles.item}>
-                        <ChronCard entry={entry} showType={mixedTypes} />
+                        <ChronCard
+                          entry={entry}
+                          authorLabel={entry.authorHandle ? authorLabels.get(entry.authorHandle) : undefined}
+                          showType={mixedTypes}
+                        />
                       </li>
                     ))}
                   </CardGrid>

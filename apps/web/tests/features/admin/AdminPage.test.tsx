@@ -9,6 +9,7 @@ import {
 } from '../../../src/features/admin/pages/AdminSectionPage.js';
 import { renderWithProviders } from '../../test-utils.js';
 import { mockGraphqlOps, signIn } from './authority-test-utils.js';
+import goodChars from '../../fixtures/wire/admin/chars-good.json';
 import goodOps from '../../fixtures/wire/admin/ops-good.json';
 import type { AdminOperationsQuery } from '../../../src/api/graphql.operations.gen.js';
 
@@ -186,5 +187,30 @@ describe('Admin character directory', () => {
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Salt Coast' }));
     expect(await screen.findByText('No characters match these filters.')).toBeVisible();
     expect(seen).toContainEqual(expect.objectContaining({ regionId }));
+  });
+
+  it('disambiguates duplicate character owner names with their handles', async () => {
+    mockGraphqlOps({
+      AdminRegions: () => HttpResponse.json({ data: { regions: [] } }),
+      AdminCharacters: () =>
+        HttpResponse.json({
+          data: {
+            adminCharacterDirectory: {
+              ...goodChars,
+              items: [
+                ...goodChars.items,
+                {
+                  ...goodChars.items[0],
+                  id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+                  ownerHandle: 'mira',
+                },
+              ],
+            },
+          },
+        }),
+    });
+    renderWithProviders(<AdminCharactersPage />, { route: '/admin/characters' });
+    expect(await screen.findByText('Played by Ashwin (@ashwin)')).toBeVisible();
+    expect(screen.getByText('Played by Ashwin (@mira)')).toBeVisible();
   });
 });

@@ -7,7 +7,7 @@ import { Chip } from '../../../components/primitives/Chip.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { toAppError } from '../../../errors/toAppError.js';
-import { CHARACTER_STATUS_LABELS, characterStatusLabel, handleOnlyName, pluralize, verificationLabel } from '../../../utils/format.js';
+import { CHARACTER_STATUS_LABELS, characterStatusLabel, personLabels, pluralize, verificationLabel } from '../../../utils/format.js';
 import type { CharacterDirectoryPanelView } from '../hooks/useCharacterDirectoryPanel.js';
 import styles from './CharacterDirectoryPanel.module.css';
 
@@ -21,6 +21,10 @@ export function CharacterDirectoryPanel({
 }): React.JSX.Element {
   const { query, pagination, regions } = view;
   const filtered = Boolean(view.namePrefix || view.status || view.regionId);
+  const ownerLabels = personLabels((query.data ?? []).map((row) => ({
+    displayName: row.ownerDisplayName,
+    handle: row.ownerHandle,
+  })));
 
   return (
     <section
@@ -103,7 +107,7 @@ export function CharacterDirectoryPanel({
       ) : null}
       {query.data?.length ? (
         <CardGrid as="ul" aria-label="Characters">
-          {query.data.map((row) => (
+          {query.data.map((row, index) => (
             <li key={row.id}>
               <Card className="stack" pad={3}>
                 <Link
@@ -113,11 +117,7 @@ export function CharacterDirectoryPanel({
                 >
                   {row.name}
                 </Link>
-                {handleOnlyName(row.ownerHandle, '') ? (
-                  <span className="type-caption">
-                    Played by {handleOnlyName(row.ownerHandle, '')}
-                  </span>
-                ) : null}
+                <span className="type-caption">Played by {ownerLabels[index]}</span>
                 <Chip.Row>
                   <Chip size="sm" tone="line">
                     {characterStatusLabel(row.status)}

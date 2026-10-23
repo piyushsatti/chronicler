@@ -26,6 +26,16 @@ export const graphql: FeatureGraphql = {
     HttpResponse.json({
       data: { [body.variables?.byId ? 'byId' : 'bySlug']: goodDetail },
     }),
+  ChronicleAuthorName: (body) => {
+    const handle = String(body.variables?.handle ?? '');
+    return HttpResponse.json({
+      data: {
+        memberProfile: handle
+          ? { member: { handle, displayName: handle === 'mira' ? 'Mira' : 'Member' } }
+          : null,
+      },
+    });
+  },
 };
 
 export const handlers: FeatureHandlers = [];

@@ -8,6 +8,7 @@ import { graphqlRequest } from '../../../api/graphql.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import { findCodexCategory } from '../../../utils/codexCategories.js';
+import { personLabels } from '../../../utils/format.js';
 import type { EntityLinkEntry, EntityLinkIndex } from '../types.js';
 import BOARD_QUERY from './entityLinkQuestBoard.graphql?raw';
 import CODEX_QUERY from './entityLinkCodexDirectory.graphql?raw';
@@ -121,6 +122,7 @@ export async function searchEntityLinkFeed(
     if (!docs.success || !members.success) {
       throw toAppError({ failure: 'InvalidWire' }, 'editor:entity-search');
     }
+    const memberLabels = personLabels(members.data);
     const entries: EntityLinkEntry[] = [
       ...docs.data.map((d) => ({
         id: d.id,
@@ -128,9 +130,9 @@ export async function searchEntityLinkFeed(
         kind: d.kind,
         href: d.slug ? `/${d.kind}/${d.slug}` : undefined,
       })),
-      ...members.data.map((m) => ({
+      ...members.data.map((m, index) => ({
         id: m.memberId,
-        label: m.displayName,
+        label: memberLabels[index],
         kind: 'Profile',
         href: `/players/@${m.handle}`,
       })),

@@ -142,6 +142,9 @@ describe('retained Quest journeys', () => {
     renderDetail();
     await screen.findByRole('button', { name: 'Review closure' });
     expect(
+      screen.getByRole('group', { name: /Lyra Storm/ }),
+    ).toHaveTextContent('Member (@player1)');
+    expect(
       screen.queryByRole('button', { name: 'Mark played' }),
     ).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /^Attendance/ }));

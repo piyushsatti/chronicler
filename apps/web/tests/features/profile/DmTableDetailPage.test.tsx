@@ -46,10 +46,10 @@ describe('DM table reading page', () => {
     expect(screen.queryByText('Weekly sandbox nights.')).not.toBeInTheDocument();
   });
 
-  it('falls back to a marked handle when the author profile is unavailable', async () => {
+  it('shows an explicit unnamed identity with the marked handle when the author profile is unavailable', async () => {
     server.use(graphql.query('MemberProfile', () => HttpResponse.json({ data: { memberProfile: null } })));
     reader();
-    expect(await screen.findByRole('link', { name: '@mira' })).toHaveAttribute('href', '/dms/@mira');
+    expect(await screen.findByRole('link', { name: 'Unnamed member (@mira)' })).toHaveAttribute('href', '/dms/@mira');
     expect(screen.queryByText(profile.member.displayName, { exact: true })).not.toBeInTheDocument();
   });
 });

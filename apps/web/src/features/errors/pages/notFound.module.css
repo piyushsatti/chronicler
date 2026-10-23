@@ -1,5 +1,0 @@
-/* The card's stack gap spaces its lines; default paragraph and heading margins doubled it. */
-.card > :where(p, nav),
-.card :where(h2) {
-  margin: 0;
-}

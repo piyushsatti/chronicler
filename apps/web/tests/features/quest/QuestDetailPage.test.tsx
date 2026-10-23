@@ -45,6 +45,52 @@ describe('QuestDetailPage', () => {
     expect(document.querySelector('[data-page-region="summary"]')).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Roster' })).toBeInTheDocument();
     expect(screen.getByText('Lyra Storm')).toBeInTheDocument();
+    expect(screen.getByText(/Played by/)).toHaveTextContent(
+      'Played by Member (@player1)',
+    );
+  });
+
+  it('disambiguates the quest DM and roster owners as one visible group', async () => {
+    server.use(
+      graphql.query('Quest', () =>
+        HttpResponse.json({
+          data: {
+            quest: {
+              ...detailGood,
+              dm: { handle: 'gm', displayName: 'Mira' },
+              participants: [
+                {
+                  memberId: '11111111-1111-4111-8111-111111111111',
+                  characterId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+                  characterName: 'Lyra Storm',
+                  memberHandle: 'player1',
+                  memberDisplayName: 'Mira',
+                  status: 'signed_up',
+                },
+                {
+                  memberId: '22222222-2222-4222-8222-222222222222',
+                  characterId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+                  characterName: 'Rook Vale',
+                  memberHandle: 'player2',
+                  memberDisplayName: 'Mira',
+                  status: 'signed_up',
+                },
+              ],
+            },
+          },
+        }),
+      ),
+    );
+    renderWithProviders(
+      <Routes>
+        <Route path="/quests/:code" element={<QuestDetailPage />} />
+      </Routes>,
+      { route: '/quests/Q-101' },
+    );
+
+    expect(await screen.findByText('Mira (@gm)')).toBeInTheDocument();
+    expect(screen.getByText('Played by Mira (@player1)')).toBeInTheDocument();
+    expect(screen.getByText('Played by Mira (@player2)')).toBeInTheDocument();
   });
 
   it('surfaces pending Discord as async status while keeping signup available', async () => {

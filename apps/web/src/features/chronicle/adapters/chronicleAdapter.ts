@@ -1,15 +1,18 @@
 import type {
+  ChronicleAuthorNameQuery,
   ChronicleDetailQuery,
   ChronicleListQuery,
 } from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import LIST_QUERY from './chronicleList.graphql?raw';
 import DETAIL_QUERY from './chronicleDetail.graphql?raw';
+import AUTHOR_NAME_QUERY from './chronicleAuthorName.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
 import { nextCivilDay } from '../../../utils/format.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import {
   chronicleDetailWireSchema,
+  chronicleAuthorNameWireSchema,
   chronicleSummaryDerivedWireSchema,
   chronicleListWireSchema,
   calendarEraWireSchema,
@@ -30,6 +33,7 @@ export type ChronicleListItemView = {
   title: string;
   category: string | null;
   authorHandle: string | null;
+  authorDisplayName: string | null;
   excerpt: string | null;
   tags: string[];
   region: string | null;
@@ -91,6 +95,7 @@ function mapListItem(
     title: item.title,
     category: item.category ?? null,
     authorHandle: item.author?.handle ?? null,
+    authorDisplayName: null,
     excerpt,
     tags,
     region: derived?.regions?.[0]?.name ?? null,
@@ -214,7 +219,51 @@ export async function loadChronicleList(
       total = page.total;
       eraAbbrev = page.eraAbbrev;
     } while (items.length < total);
-    return { items, total, eraAbbrev };
+    const handles = [
+      ...new Set(
+        items.flatMap((item) => (item.authorHandle ? [item.authorHandle] : [])),
+      ),
+    ];
+    const authors = await Promise.allSettled(
+      handles.map(async (handle) => {
+        session.signal.throwIfAborted();
+        session.assertCurrent();
+        const data = await graphqlRequest<ChronicleAuthorNameQuery>(
+          AUTHOR_NAME_QUERY,
+          { handle: handle.replace(/^@/, '').trim() },
+          {
+            headers: {
+              Authorization: session.token ? `Bearer ${session.token}` : '',
+            },
+            signal: session.signal,
+          },
+        );
+        session.signal.throwIfAborted();
+        session.assertCurrent();
+        const author = chronicleAuthorNameWireSchema.safeParse(data);
+        return [
+          handle,
+          author.success ? author.data.memberProfile?.member.displayName ?? null : null,
+        ] as const;
+      }),
+    );
+    session.signal.throwIfAborted();
+    session.assertCurrent();
+    const displayNames = new Map(
+      authors.flatMap((author) =>
+        author.status === 'fulfilled' ? [author.value] : [],
+      ),
+    );
+    return {
+      items: items.map((item) => ({
+        ...item,
+        authorDisplayName: item.authorHandle
+          ? displayNames.get(item.authorHandle) ?? null
+          : null,
+      })),
+      total,
+      eraAbbrev,
+    };
   } catch (err) {
     throw toAppError(err, 'chronicle:list');
   }

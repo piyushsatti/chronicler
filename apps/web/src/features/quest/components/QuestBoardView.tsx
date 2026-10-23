@@ -13,7 +13,7 @@ import type {
   QuestBoardCardPropsView,
 } from '../adapters/questAdapter.js';
 import type { BoardSegment as Segment } from '../hooks/useQuestBoardPage.js';
-import { personName } from '../../../utils/format.js';
+import { personLabels } from '../../../utils/format.js';
 import styles from './questBoard.module.css';
 
 const SEGMENTS: Segment[] = ['Open', 'Scheduled', 'Live', 'All'];
@@ -23,6 +23,7 @@ export type LiveStripItem = {
   shortCode: string;
   title: string;
   dmHandle: string | null;
+  dmName: string | null;
 };
 
 type QuestBoardViewProps = {
@@ -58,6 +59,20 @@ type QuestBoardViewProps = {
 
 /** Props-only board composition. Data and layout authority arrive from its hook. */
 export function QuestBoardView(page: QuestBoardViewProps): React.JSX.Element {
+  const peopleLabels = personLabels([
+    ...page.liveStrip.map((quest) => ({
+      displayName: quest.dmName,
+      handle: quest.dmHandle,
+    })),
+    ...(page.status === 'ready'
+      ? page.view.map((quest) => ({
+          displayName: quest.dmName,
+          handle: quest.dmHandle,
+        }))
+      : []),
+  ]);
+  const liveDmLabels = peopleLabels.slice(0, page.liveStrip.length);
+  const dmLabels = peopleLabels.slice(page.liveStrip.length);
   return (
     <section className={styles.board} aria-label="Quest board" data-el="quests.root">
       <PageHeader
@@ -101,7 +116,7 @@ export function QuestBoardView(page: QuestBoardViewProps): React.JSX.Element {
         <div data-el="quests.liveBand" className={`live-band ${styles.liveBand}`}>
           <span className="pulse" />
           <span className="type-label">Live now</span>
-          {page.liveStrip.map((q) => (
+          {page.liveStrip.map((q, index) => (
             <span key={q.id} className={styles.liveItem}>
               <span className="sep" />
               <button
@@ -109,7 +124,7 @@ export function QuestBoardView(page: QuestBoardViewProps): React.JSX.Element {
                 className={`det ${styles.liveQuest}`}
                 onClick={() => page.onOpenQuest(q.shortCode)}
               >
-                <em>{personName({ handle: q.dmHandle })}</em>, {q.title}
+                <em>{liveDmLabels[index]}</em>, {q.title}
               </button>
             </span>
           ))}
@@ -197,7 +212,7 @@ export function QuestBoardView(page: QuestBoardViewProps): React.JSX.Element {
       ) : (
         <>
           <CardGrid as="ul" gap={5} aria-label={`${page.segment} quests`}>
-            {page.view.map((quest) => {
+            {page.view.map((quest, index) => {
               const card = quest.card;
               return (
                 <li key={quest.id} className={styles.cardItem}>
@@ -208,7 +223,7 @@ export function QuestBoardView(page: QuestBoardViewProps): React.JSX.Element {
                     status={card.status}
                     region={card.region}
                     dmUsername={card.dmUsername}
-                    dmName={card.dmName}
+                    dmName={dmLabels[index]}
                     party={card.party}
                     waitlistCount={card.waitlistCount}
                     totalSlots={card.totalSlots}

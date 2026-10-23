@@ -110,6 +110,7 @@ const charPendingSchema = z.object({
         shortCode: z.string(),
         name: z.string(),
         ownerHandle: z.string(),
+        ownerDisplayName: z.string(),
         ddbUrl: z.string().nullable().optional(),
         verificationSubmittedAt: z.string().nullable().optional(),
       }),
@@ -182,6 +183,7 @@ const adminCharsSchema = z.object({
       shortCode: z.string(),
       name: z.string(),
       ownerHandle: z.string(),
+      ownerDisplayName: z.string(),
       status: z.string(),
       verificationStatus: z.string(),
     }),
@@ -202,6 +204,7 @@ export type CharVerifyRow = {
   shortCode: string;
   name: string;
   ownerHandle: string;
+  ownerDisplayName: string;
   ddbUrl: string | null;
   verificationSubmittedAt: string | null;
 };
@@ -222,6 +225,7 @@ export type AdminCharRow = {
   shortCode: string;
   name: string;
   ownerHandle: string;
+  ownerDisplayName: string;
   status: string;
   verificationStatus: string;
 };
@@ -255,6 +259,7 @@ export function parseCharPending(wire: unknown): AdapterResult<CharVerifyRow[]> 
       shortCode: i.shortCode,
       name: i.name,
       ownerHandle: i.ownerHandle,
+      ownerDisplayName: i.ownerDisplayName,
       ddbUrl: i.ddbUrl ?? null,
       verificationSubmittedAt: i.verificationSubmittedAt ?? null,
     })),

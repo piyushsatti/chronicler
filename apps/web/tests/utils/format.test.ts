@@ -16,6 +16,7 @@ import {
   longDateLabel,
   weekdayColumn,
   personName,
+  personLabels,
   handleLabel,
   isMachineId,
 } from '../../src/utils/format.js';
@@ -139,11 +140,16 @@ describe('reader-facing labels', () => {
 describe('people and identifiers', () => {
   it('shows display names, falling back to a readable handle, never a snowflake', () => {
     expect(personName({ displayName: 'Sable Vey', handle: 'sable' })).toBe('Sable Vey');
-    expect(personName({ displayName: '  ', handle: '@sable' })).toBe('sable');
+    expect(personName({ displayName: 'Sable Vey' })).toBe('Sable Vey');
+    expect(personName({ displayName: 'Sable Vey', handle: '' })).toBe('Sable Vey');
+    expect(personName({ displayName: 'Sable Vey', handle: null })).toBe('Sable Vey');
+    expect(personName({ displayName: '  ', handle: '@sable' })).toBe('Unnamed member (@sable)');
     expect(personName({ displayName: null, handle: '100000000000000001' })).toBe(
       'Unnamed member',
     );
-    expect(personName({ displayName: '100000000000000001', handle: 'parsec' })).toBe('parsec');
+    expect(personName({ displayName: '100000000000000001', handle: 'parsec' })).toBe(
+      'Unnamed member (@parsec)',
+    );
     expect(personName(null, 'Someone')).toBe('Someone');
   });
   it('labels handles with @ and hides numeric ids', () => {
@@ -153,11 +159,22 @@ describe('people and identifiers', () => {
     expect(handleLabel('')).toBeNull();
   });
   it('keeps QA fixture members visible with a readable label and no retained suffix', async () => {
-    const { personLabels } = await import('../../src/utils/format.js');
     const member = { displayName: 'qa-prof-1020-1792473593710 retained', handle: 'qa-prof-1020-1792473593710' };
-    expect(personName(member)).toBe('Member');
+    expect(personName(member)).toBe('Member (@qa-prof-1020-1792473593710)');
     expect(personLabels([member])).toEqual(['Member (@qa-prof-1020-1792473593710)']);
     expect(personName({ displayName: 'Retained scholar', handle: 'scholar' })).toBe('Retained scholar');
+  });
+  it('disambiguates generic and shared names for distinct people while preserving repeated people', () => {
+    expect(personLabels([
+      { id: 'one', displayName: 'dev', handle: 'one' },
+      { id: 'two', displayName: 'dev', handle: 'two' },
+    ])).toEqual(['dev (@one)', 'dev (@two)']);
+    expect(personLabels([
+      { id: 'one', displayName: 'Mira Vale', handle: 'mira' },
+      { id: 'two', displayName: 'Mira Vale', handle: 'vale' },
+    ])).toEqual(['Mira Vale (@mira)', 'Mira Vale (@vale)']);
+    const samePerson = { id: 'one', displayName: 'Mira Vale', handle: 'mira' };
+    expect(personLabels([samePerson, samePerson])).toEqual(['Mira Vale', 'Mira Vale']);
   });
   it('recognises machine identifiers', () => {
     expect(isMachineId('qa-the-salt-stair')).toBe(true);
@@ -191,7 +208,6 @@ describe('civil calendar labels', () => {
 
 describe('round 4 helpers', () => {
   it('disambiguates duplicate, generic and empty names', async () => {
-    const { personLabels } = await import('../../src/utils/format.js');
     expect(
       personLabels([
         { displayName: 'Sable', handle: 'sable' },
@@ -201,7 +217,9 @@ describe('round 4 helpers', () => {
         { displayName: '', handle: '' },
       ]),
     ).toEqual(['Sable', 'Sam (@sam1)', 'Sam (@sam2)', 'Member (@quiet)', 'Unnamed member']);
-    expect(personLabels([{ displayName: '', handle: 'pell' }])).toEqual(['@pell']);
+    expect(personLabels([{ displayName: '', handle: 'pell' }])).toEqual([
+      'Unnamed member (@pell)',
+    ]);
   });
 
   it('hides sentinel dates', async () => {

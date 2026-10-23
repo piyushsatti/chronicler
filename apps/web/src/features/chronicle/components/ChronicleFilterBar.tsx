@@ -2,7 +2,6 @@ import { useId, useState } from 'react';
 import { Button } from '../../../components/primitives/Button.js';
 import { Chip } from '../../../components/primitives/Chip.js';
 import { FilterBar } from '../../../components/primitives/FilterBar.js';
-import { handleOnlyName } from '../../../utils/format.js';
 import styles from './chronicleFilterBar.module.css';
 
 type ChronicleFilterBarProps = {
@@ -17,6 +16,7 @@ type ChronicleFilterBarProps = {
   regionOptions: string[];
   arcOptions: string[];
   authorOptions: string[];
+  authorLabels: ReadonlyMap<string, string>;
   /** "12 of 40 entries" style count shown at the bar's right edge. */
   count: string;
   /** Narrow layouts fold the chip groups behind a toggle next to the search. */
@@ -68,6 +68,7 @@ export function ChronicleFilterBar({
   regionOptions,
   arcOptions,
   authorOptions,
+  authorLabels,
   count,
   collapsible = false,
 }: ChronicleFilterBarProps): React.JSX.Element {
@@ -119,7 +120,7 @@ export function ChronicleFilterBar({
             options={authorOptions}
             active={activeAuthor}
             onChange={onAuthorChange}
-            formatOption={(handle) => handleOnlyName(handle)}
+            formatOption={(handle) => authorLabels.get(handle) ?? handle}
           />
           {activeCount ? (
             <Button

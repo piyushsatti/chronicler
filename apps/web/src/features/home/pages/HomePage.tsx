@@ -37,7 +37,7 @@ import { useMemberHref } from '../../../hooks/useMemberHref.js';
 import { useHomeBanner } from '../hooks/useHomeBanner.js';
 import { useHomePage, type HomePageView } from '../hooks/useHomePage.js';
 import styles from './home.module.css';
-import { personLabels, statusLabel } from '../../../utils/format.js';
+import { handleLabel, personLabels, statusLabel } from '../../../utils/format.js';
 
 const HOME_DECLARATION: PageDeclaration = {
   page: 'home',
@@ -192,9 +192,11 @@ const PHONE_LANE_CAP = 2;
 
 function RecruitingLane({
   cards,
+  dmLabels,
   total,
 }: {
   cards: QuestCardProps[];
+  dmLabels: ReadonlyMap<string, string>;
   total: number;
 }): React.JSX.Element {
   const navigate = useNavigate();
@@ -221,14 +223,18 @@ function RecruitingLane({
         />
       ) : (
         <CardGrid as="ul" gap={5} aria-label="Open quests">
-          {shown.map((card) => (
-            <li key={card.code} className={styles.cardItem}>
-              <QuestCard
-                {...card}
-                onSignUpClick={() => navigate(`/quests/${card.code}`)}
-              />
-            </li>
-          ))}
+          {shown.map((card) => {
+            const handle = handleLabel(card.dmUsername)?.toLowerCase();
+            return (
+              <li key={card.code} className={styles.cardItem}>
+                <QuestCard
+                  {...card}
+                  dmName={handle ? dmLabels.get(handle) ?? card.dmName : card.dmName}
+                  onSignUpClick={() => navigate(`/quests/${card.code}`)}
+                />
+              </li>
+            );
+          })}
         </CardGrid>
       )}
     </section>
@@ -238,16 +244,19 @@ function RecruitingLane({
 function UpcomingLane({
   quests,
   schedule,
+  dmLabels,
   total,
 }: {
   quests: HomeQuestView[];
   schedule: HomeLanesViewModel['upcomingSchedule'];
+  dmLabels: ReadonlyMap<string, string>;
   total: number;
 }): React.JSX.Element {
   const { formatScheduled } = useDateFormatter();
   const navigate = useNavigate();
   const { widthClass } = useSizeClasses();
   const laneCap = widthClass === 'compact' ? PHONE_LANE_CAP : LANE_CAP;
+  const shown = quests.slice(0, laneCap);
   return (
     <section
       className="lane"
@@ -281,17 +290,15 @@ function UpcomingLane({
             className={`cols ${styles.weekStripCols}`}
             data-n={widthClass === 'expanded' ? 3 : 1}
           >
-            {quests.slice(0, laneCap).map((quest) => (
+            {shown.map((quest) => {
+              const handle = handleLabel(quest.dmHandle)?.toLowerCase();
+              return (
               <Sched
                 key={quest.id}
                 title={quest.title}
                 status={quest.cardStatus}
                 region={quest.regionName}
-                dmUsername={
-                  quest.dmName || quest.dmHandle
-                    ? personLabels([{ displayName: quest.dmName, handle: quest.dmHandle }])[0]
-                    : null
-                }
+                dmUsername={handle ? dmLabels.get(handle) ?? null : null}
                 party={quest.participants.map((p) => ({
                   characterName: p.characterName,
                   characterId: p.characterId,
@@ -301,7 +308,8 @@ function UpcomingLane({
                 when={formatScheduled(quest.scheduledAt)}
                 onOpen={() => navigate(`/quests/${quest.shortCode}`)}
               />
-            ))}
+              );
+            })}
           </div>
         </Card>
       )}
@@ -370,15 +378,16 @@ function RecentLane({
 
 function DmLane({
   dms,
+  dmLabels,
 }: {
   dms: HomeLanesViewModel['dmsAccepting'];
+  dmLabels: ReadonlyMap<string, string>;
 }): React.JSX.Element {
   const memberHref = useMemberHref();
   const { widthClass } = useSizeClasses();
   if (dms.length === 0) {
     return emptyRegion();
   }
-  const labels = personLabels(dms);
   const shown = dms.slice(0, widthClass === 'compact' ? PHONE_LANE_CAP : dms.length);
   return (
     <section className="lane" aria-label="DMs accepting" data-el="home.dmsAccepting">
@@ -391,31 +400,38 @@ function DmLane({
             </Link>
           ) : null}
         </div>
-        {shown.map((dm) => (
+        {shown.map((dm) => {
+          const handle = handleLabel(dm.handle)?.toLowerCase();
+          const label = (handle ? dmLabels.get(handle) : undefined) ?? personLabels([dm])[0];
+          return (
           <div
             key={dm.memberId}
             className={`row ${styles.dmRow}`}
             data-justify="between"
           >
             <div className="row" data-gap="3">
-              <Avatar name={labels[dms.indexOf(dm)]} size="sm" online={false} />
-              <span className="type-body">{labels[dms.indexOf(dm)]}</span>
+              <Avatar name={label} size="sm" online={false} />
+              <span className="type-body">{label}</span>
             </div>
             <Link
               className="btn btn--ghost btn--sm"
               to={memberHref(dm, 'dm')}
-              aria-label={`${labels[dms.indexOf(dm)]} profile`}
+              aria-label={`${label} profile`}
             >
               View profile
             </Link>
           </div>
-        ))}
+          );
+        })}
       </Card>
     </section>
   );
 }
 
-function readyRegions(view: HomePageView): PageRegionRenderers {
+function readyRegions(
+  view: HomePageView,
+  dmLabels: ReadonlyMap<string, string>,
+): PageRegionRenderers {
   const opts = view;
   const { lanes } = view;
   return {
@@ -430,19 +446,20 @@ function readyRegions(view: HomePageView): PageRegionRenderers {
     banner: () => <HomeBannerRegion />,
     'new-here': () => <HomeNewHereRegion showFor={opts.showNewHere} />,
     'lane-recruiting': () => (
-      <RecruitingLane cards={opts.cards} total={lanes.totals.questBoard} />
+      <RecruitingLane cards={opts.cards} dmLabels={dmLabels} total={lanes.totals.questBoard} />
     ),
     'lane-upcoming': () => (
       <UpcomingLane
         quests={lanes.upcoming}
         schedule={lanes.upcomingSchedule}
+        dmLabels={dmLabels}
         total={lanes.totals.upcoming}
       />
     ),
     'lane-recent': () => (
       <RecentLane quests={lanes.recentlyClosed} total={lanes.totals.recentlyClosed} />
     ),
-    'lane-dms': () => <DmLane dms={lanes.dmsAccepting} />,
+    'lane-dms': () => <DmLane dms={lanes.dmsAccepting} dmLabels={dmLabels} />,
   };
 }
 
@@ -480,6 +497,34 @@ function statusRegions(
 export function HomePage(): React.JSX.Element {
   const page = useHomePage();
   const { widthClass } = useSizeClasses();
+  const visibleLaneCap = widthClass === 'compact' ? PHONE_LANE_CAP : LANE_CAP;
+  const visiblePeople =
+    page.status === 'ready'
+      ? [
+          ...page.view.cards.slice(0, visibleLaneCap).map((card) => ({
+            displayName: card.dmName,
+            handle: card.dmUsername,
+          })),
+          ...page.view.lanes.upcoming.slice(0, visibleLaneCap).map((quest) => ({
+            displayName: quest.dmName,
+            handle: quest.dmHandle,
+          })),
+          ...page.view.lanes.dmsAccepting
+            .slice(
+              0,
+              widthClass === 'compact'
+                ? PHONE_LANE_CAP
+                : page.view.lanes.dmsAccepting.length,
+            )
+            .map((dm) => ({ displayName: dm.displayName, handle: dm.handle })),
+        ]
+      : [];
+  const labels = personLabels(visiblePeople);
+  const dmLabels = new Map<string, string>();
+  visiblePeople.forEach((person, index) => {
+    const handle = handleLabel(person.handle)?.toLowerCase();
+    if (handle) dmLabels.set(handle, labels[index]);
+  });
   const regions: PageRegionRenderers =
     page.status === 'error'
       ? statusRegions('error', page.error)
@@ -487,7 +532,7 @@ export function HomePage(): React.JSX.Element {
         ? statusRegions('loading')
         : page.status === 'empty'
           ? statusRegions('empty')
-          : readyRegions(page.view);
+          : readyRegions(page.view, dmLabels);
 
   return (
     <PageShell context="war-room" className="hf2">

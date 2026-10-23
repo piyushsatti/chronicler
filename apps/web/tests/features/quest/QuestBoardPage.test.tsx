@@ -18,6 +18,53 @@ function visibleQuestTitles() {
 }
 
 describe('QuestBoardPage', () => {
+  it('disambiguates generic DM names across quest cards', async () => {
+    const genericDms = {
+      ...recruitment,
+      items: recruitment.items.map((item) => ({
+        ...item,
+        dm: { ...item.dm, displayName: 'dev' },
+      })),
+    };
+    server.use(
+      graphql.query('QuestList', () =>
+        HttpResponse.json({ data: { quests: genericDms } }),
+      ),
+    );
+    renderWithProviders(<QuestBoardPage />);
+    await screen.findByText('The Hound of Culann');
+    const cards = screen.getAllByTestId('quest-card');
+    expect(within(cards[0]).getByText('dev (@_coolpants)')).toBeInTheDocument();
+    expect(within(cards[1]).getByText('dev (@mortal.bard)')).toBeInTheDocument();
+    expect(within(cards[2]).getByText('dev (@kd29)')).toBeInTheDocument();
+  });
+
+  it('disambiguates the live strip and quest cards as one visible group', async () => {
+    const card = {
+      ...recruitment.items[0],
+      dm: { handle: 'mira', displayName: 'Mira' },
+    };
+    const liveQuest = {
+      ...recruitment.items[1],
+      dm: { handle: 'mara', displayName: 'Mira' },
+      displayStatus: 'live',
+    };
+    server.use(
+      graphql.query('QuestList', ({ variables }) => {
+        const items =
+          variables.filters.displayStatus === 'live' ? [liveQuest] : [card];
+        return HttpResponse.json({ data: { quests: { items, total: items.length } } });
+      }),
+    );
+    renderWithProviders(<QuestBoardPage />);
+    await screen.findByText('The Hound of Culann');
+
+    const cardElement = screen.getByTestId('quest-card');
+    const liveBand = document.querySelector('[data-el="quests.liveBand"]');
+    expect(within(cardElement).getByText('Mira (@mira)')).toBeInTheDocument();
+    expect(liveBand).toHaveTextContent('Mira (@mara)');
+  });
+
   it('lists the generic Open population in server order with tavern chrome', async () => {
     renderWithProviders(<QuestBoardPage />);
     expect(await screen.findByText('Siege of Kraghold')).toBeInTheDocument();

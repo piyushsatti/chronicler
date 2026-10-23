@@ -117,6 +117,81 @@ describe('loadChronicleList', () => {
     expect(authorization).toBe('');
   });
 
+  it('keeps chronicle authors readable when their public profile is missing', async () => {
+    server.use(
+      graphql.query('ChronicleList', () =>
+        HttpResponse.json({
+          data: {
+            documents: { items: [good.items[0]], total: 1 },
+            gameCalendar: calendar,
+          },
+        }),
+      ),
+      graphql.query('ChronicleAuthorName', () =>
+        HttpResponse.json({ data: { memberProfile: null } }),
+      ),
+    );
+    const result = await loadChronicleList(guestSession());
+    expect(result.items[0]).toMatchObject({
+      authorHandle: 'mira',
+      authorDisplayName: null,
+    });
+  });
+
+  it('stops chronicle author enrichment when its read signal is cancelled', async () => {
+    const controller = new AbortController();
+    let begin!: () => void;
+    let release!: () => void;
+    const started = new Promise<void>((resolve) => { begin = resolve; });
+    const pending = new Promise<void>((resolve) => { release = resolve; });
+    server.use(
+      graphql.query('ChronicleList', () =>
+        HttpResponse.json({
+          data: {
+            documents: { items: [good.items[0]], total: 1 },
+            gameCalendar: calendar,
+          },
+        }),
+      ),
+      graphql.query('ChronicleAuthorName', async () => {
+        begin();
+        await pending;
+        return HttpResponse.json({ data: { memberProfile: null } });
+      }),
+    );
+    const loading = loadChronicleList({ ...guestSession(), signal: controller.signal });
+    await started;
+    controller.abort();
+    release();
+    await expect(loading).rejects.toBeDefined();
+  });
+
+  it('rejects chronicle author enrichment when the current authority changes', async () => {
+    let current = true;
+    server.use(
+      graphql.query('ChronicleList', () =>
+        HttpResponse.json({
+          data: {
+            documents: { items: [good.items[0]], total: 1 },
+            gameCalendar: calendar,
+          },
+        }),
+      ),
+      graphql.query('ChronicleAuthorName', () => {
+        current = false;
+        return HttpResponse.json({ data: { memberProfile: null } });
+      }),
+    );
+    await expect(
+      loadChronicleList({
+        ...guestSession(),
+        assertCurrent: () => {
+          if (!current) throw new Error('stale authority');
+        },
+      }),
+    ).rejects.toBeDefined();
+  });
+
   it.each([
     'total drift',
     'duplicate identity',

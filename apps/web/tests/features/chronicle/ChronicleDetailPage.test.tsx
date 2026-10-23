@@ -212,13 +212,13 @@ describe('Summary and Chronicle reader', () => {
     expect(within(author).getByRole('heading', { name: 'Written by' })).toBeVisible();
   });
 
-  it('falls back to a readable handle when the public author profile is unavailable', async () => {
+  it('labels the author with a handle when the public author profile is unavailable', async () => {
     server.use(graphql.query('MemberProfile', () => HttpResponse.json({
       data: { memberProfile: null },
     })));
     reader('/chronicles/vault-delve');
     const author = await screen.findByRole('region', { name: 'Author' });
-    expect(within(author).getByRole('link', { name: '@mira' }))
+    expect(within(author).getByRole('link', { name: 'Unnamed member (@mira)' }))
       .toHaveAttribute('href', '/players/@mira');
   });
 

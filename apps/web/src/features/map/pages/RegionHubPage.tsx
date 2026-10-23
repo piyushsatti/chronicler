@@ -1,7 +1,7 @@
 import type { PageDeclaration } from '@pi/react-imposition';
 import { PageHost, type PageRegionRenderers } from '@pi/react-imposition/react';
 import { useId } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { PageShell } from '../../../components/foundation/PageShell.js';
 import { ContentRenderer } from '../../../components/foundation/ContentRenderer.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
@@ -9,6 +9,8 @@ import { Button } from '../../../components/primitives/Button.js';
 import { CardGrid } from '../../../components/primitives/CardGrid.js';
 import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { Card } from '../../../components/primitives/Card.js';
+import { EmptyState } from '../../../components/primitives/EmptyState.js';
+import { FilterBar } from '../../../components/primitives/FilterBar.js';
 import { humanizeKey, isSentinelDate, pluralize, statusLabel } from '../../../utils/format.js';
 import { Chip } from '../../../components/primitives/Chip.js';
 import { documentHref } from '../../../utils/documentHref.js';
@@ -329,6 +331,32 @@ function RegionCard({
 
 export function RegionsDirectoryPage(): React.JSX.Element {
   const directory = useRegionsDirectory();
+  const [params, setParams] = useSearchParams();
+  const query = params.get('q') ?? '';
+  const requestedKind = params.get('kind') ?? '';
+  const regionsList = directory.data?.regions ?? [];
+  const kinds = [...new Set(regionsList.map((region) => region.kind))];
+  const kind = kinds.includes(requestedKind) ? requestedKind : '';
+  const visibleRegions = regionsList.filter((region) =>
+    (!kind || region.kind === kind) &&
+    region.name.toLowerCase().includes(query.trim().toLowerCase()),
+  );
+  const updateFilter = (key: 'q' | 'kind', value: string, replace = false) => {
+    setParams((current) => {
+      const next = new URLSearchParams(current);
+      if (value) next.set(key, value);
+      else next.delete(key);
+      return next;
+    }, { replace });
+  };
+  const clearFilters = () => {
+    setParams((current) => {
+      const next = new URLSearchParams(current);
+      next.delete('q');
+      next.delete('kind');
+      return next;
+    });
+  };
   const regions: PageRegionRenderers = {
     body: () => (
       <div className={`stack ${styles.page}`}>
@@ -342,6 +370,31 @@ export function RegionsDirectoryPage(): React.JSX.Element {
             </Link>
           }
         />
+        <FilterBar
+          label="Filter regions"
+          count={directory.data ? pluralize(visibleRegions.length, 'region') : undefined}
+        >
+          <FilterBar.Search
+            label="Search regions"
+            placeholder="Search regions…"
+            value={query}
+            onValueChange={(value) => updateFilter('q', value, true)}
+          />
+          <FilterBar.Group label="Kind">
+            <Chip selected={!kind} onClick={() => updateFilter('kind', '')}>
+              All
+            </Chip>
+            {kinds.map((value) => (
+              <Chip
+                key={value}
+                selected={kind === value}
+                onClick={() => updateFilter('kind', value)}
+              >
+                {humanizeKey(value)}
+              </Chip>
+            ))}
+          </FilterBar.Group>
+        </FilterBar>
         {directory.isPending ? (
           <StatePanel status="loading" />
         ) : directory.isError ? (
@@ -358,9 +411,9 @@ export function RegionsDirectoryPage(): React.JSX.Element {
               Retry regions
             </Button>
           </>
-        ) : directory.data.regions.length ? (
+        ) : visibleRegions.length ? (
           <CardGrid className={styles.regionGrid}>
-            {directory.data.regions.map((region) => (
+            {visibleRegions.map((region) => (
               <RegionCard
                 key={region.id}
                 region={region}
@@ -370,11 +423,15 @@ export function RegionsDirectoryPage(): React.JSX.Element {
               />
             ))}
           </CardGrid>
-        ) : (
-          <StatePanel
-            status="empty"
-            emptyMessage="No regions are available for this viewer."
+        ) : regionsList.length ? (
+          <EmptyState
+            kind="no-results"
+            message="No regions match these filters."
+            actionLabel="Clear filters"
+            onAction={clearFilters}
           />
+        ) : (
+          <StatePanel status="empty" emptyMessage="No regions are available for this viewer." />
         )}
       </div>
     ),

@@ -13,6 +13,7 @@ export const questParticipantWireSchema = z.object({
   characterId: z.string().uuid(),
   characterName: z.string(),
   memberHandle: z.string(),
+  memberDisplayName: z.string().optional(),
   memberAvatarUrl: z.string().nullable().optional(),
   status: z.string(),
 });

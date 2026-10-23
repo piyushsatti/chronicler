@@ -1,6 +1,11 @@
+import { graphql, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
-import { parseEntityLinkIndex } from '../../../src/features/editor/adapters/entityLinkIndexAdapter.js';
+import {
+  parseEntityLinkIndex,
+  searchEntityLinkFeed,
+} from '../../../src/features/editor/adapters/entityLinkIndexAdapter.js';
 import { parseQuestGenreOptions } from '../../../src/features/editor/adapters/questGenreOptionsAdapter.js';
+import { server } from '../../../src/mocks/server.js';
 
 describe('entityLinkIndexAdapter', () => {
   it('maps quest codes and codex titles', () => {
@@ -41,6 +46,46 @@ describe('entityLinkIndexAdapter', () => {
         label: 'Salt Guild',
         kind: 'Codex',
         href: '/codex/guild',
+      },
+    ]);
+  });
+
+  it('labels generic and shared member names while preserving profile identity and links', async () => {
+    server.use(
+      graphql.query('EntityLinkSearch', () =>
+        HttpResponse.json({
+          data: {
+            search: {
+              documents: [],
+              members: [
+                { memberId: 'member-1', handle: 'quiet', displayName: '' },
+                { memberId: 'member-2', handle: 'mira1', displayName: 'Mira' },
+                { memberId: 'member-3', handle: 'mira2', displayName: 'Mira' },
+              ],
+            },
+          },
+        }),
+      ),
+    );
+
+    await expect(searchEntityLinkFeed('mira')).resolves.toEqual([
+      {
+        id: 'member-1',
+        label: 'Unnamed member (@quiet)',
+        kind: 'Profile',
+        href: '/players/@quiet',
+      },
+      {
+        id: 'member-2',
+        label: 'Mira (@mira1)',
+        kind: 'Profile',
+        href: '/players/@mira1',
+      },
+      {
+        id: 'member-3',
+        label: 'Mira (@mira2)',
+        kind: 'Profile',
+        href: '/players/@mira2',
       },
     ]);
   });

@@ -40,7 +40,7 @@ describe('QuestCard', () => {
     );
     expect(within(card).getByText('3 seats open')).toBeInTheDocument();
     expect(within(card).getByText('1 of 4 filled')).toBeInTheDocument();
-    expect(within(card).getByText('mira')).toBeInTheDocument();
+    expect(within(card).getByText('Unknown DM (@mira)')).toBeInTheDocument();
     expect(within(card).queryByText('new DM')).not.toBeInTheDocument();
     expect(within(card).queryByText('Last session')).not.toBeInTheDocument();
     expect(within(card).getByText('The Marches')).toBeInTheDocument();
@@ -53,6 +53,12 @@ describe('QuestCard', () => {
     const card = screen.getByRole('article', { name: /Siege of Kraghold/i });
     expect(within(card).getByText('Mira Vale')).toBeInTheDocument();
     expect(within(card).queryByText('mira')).not.toBeInTheDocument();
+  });
+
+  it('adds the DM handle when the display name is generic', () => {
+    renderWithProviders(<QuestCard {...baseProps} dmName="dev" />);
+    const card = screen.getByRole('article', { name: /Siege of Kraghold/i });
+    expect(within(card).getByText('dev (@mira)')).toBeInTheDocument();
   });
 
   it('shows waitlist affordance next to spots left', () => {

@@ -5,7 +5,7 @@ import { Button } from '../../../components/primitives/Button.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
-import { handleOnlyName } from '../../../utils/format.js';
+import { personLabels } from '../../../utils/format.js';
 import { isSafeDdbUrl } from '../../../utils/url.js';
 import type { useCharacterVerifyTab } from '../hooks/useCharacterVerifyTab.js';
 
@@ -58,12 +58,17 @@ export function CharacterVerifyTab({
     );
   }
 
+  const ownerLabels = personLabels(queue.data.map((row) => ({
+    displayName: row.ownerDisplayName,
+    handle: row.ownerHandle,
+  })));
+
   return (
     <div className="stack" data-testid="character-verify-rows">
       {feedbackNode}
       <AdminPagination page={view.pagination} />
       <ul className="stack">
-        {queue.data.map((row) => {
+        {queue.data.map((row, index) => {
           const ddbUrl = isSafeDdbUrl(row.ddbUrl) ? row.ddbUrl : null;
           return (
             <li key={row.id} className="card stack">
@@ -71,9 +76,7 @@ export function CharacterVerifyTab({
                 {row.name}
               </Link>
               <p className="type-caption">
-                {row.ownerHandle
-                  ? `Played by ${handleOnlyName(row.ownerHandle)}. `
-                  : ''}
+                Played by {ownerLabels[index]}.{' '}
                 {row.verificationSubmittedAt
                   ? `Submitted ${formatDate(row.verificationSubmittedAt)}. `
                   : ''}

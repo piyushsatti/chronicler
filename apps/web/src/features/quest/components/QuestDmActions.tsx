@@ -3,7 +3,7 @@ import { Button } from '../../../components/primitives/Button.js';
 import { Card } from '../../../components/primitives/Card.js';
 import { Modal } from '../../../components/primitives/Modal.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
-import { handleLabel, personName } from '../../../utils/format.js';
+import { personLabels } from '../../../utils/format.js';
 import type { AppError } from '../../../errors/types.js';
 import type { QuestDetailView } from '../adapters/questAdapter.js';
 import type { Attendance, QuestCommand, Reward } from '../adapters/questCommands.js';
@@ -44,11 +44,6 @@ export function closeInput(
   return { attendance, rewards };
 }
 
-function memberTag(handle: string): string {
-  const label = handleLabel(handle);
-  return label ? `(${label})` : `(${personName({ handle })})`;
-}
-
 export function QuestDmActions({
   quest,
   pending,
@@ -64,6 +59,16 @@ export function QuestDmActions({
   const attendanceLabelId = useId();
   const roster = quest.participants.filter(
     (participant) => participant.status !== 'withdrawn',
+  );
+  const rosterLabels = personLabels(
+    roster.map((participant) => ({
+      id: participant.memberId,
+      displayName: participant.memberDisplayName,
+      handle: participant.memberHandle,
+    })),
+  );
+  const memberLabelByCharacterId = new Map(
+    roster.map((participant, index) => [participant.characterId, rosterLabels[index]]),
   );
   const [rows, setRows] = useState<AttendanceRow[]>(() =>
     roster.map((participant) => ({
@@ -135,7 +140,7 @@ export function QuestDmActions({
                 .map((participant) => (
                   <Checkbox
                     key={participant.characterId}
-                    label={`${participant.characterName} ${memberTag(participant.memberHandle)}`}
+                    label={`${participant.characterName} · ${memberLabelByCharacterId.get(participant.characterId)}`}
                     checked={selected.includes(participant.characterId)}
                     disabled={pending}
                     onCheckedChange={(checked) =>
@@ -175,7 +180,7 @@ export function QuestDmActions({
             Record final attendance for each character. PCXP is awarded only when the
             quest closes. Zero records no award.
           </p>
-          {roster.map((participant) => {
+          {roster.map((participant, index) => {
             const row = rows.find(
               (item) => item.characterId === participant.characterId,
             );
@@ -186,7 +191,7 @@ export function QuestDmActions({
                 disabled={pending}
               >
                 <legend>
-                  {participant.characterName} {memberTag(participant.memberHandle)}
+                  {participant.characterName} · {rosterLabels[index]}
                 </legend>
                 <div className="stack">
                   <span id={`${attendanceLabelId}-${participant.characterId}`}>Attendance</span>

@@ -15,6 +15,12 @@ describe('VerifyPage', () => {
   it('lists pending queues', async () => {
     renderWithProviders(<VerifyPage />);
     expect(await screen.findByText('Pending Hero')).toBeInTheDocument();
+    expect(
+      screen.getByText((_, element) =>
+        element?.tagName === 'P' &&
+        element.textContent?.startsWith('Played by Member (@ashwin).') === true,
+      ),
+    ).toBeVisible();
     // The DM queue is not the default; it is a segment in the filter bar.
     await screen.findByRole('button', { name: /^DM profiles/ });
     // Character tab is default and shows the pending character.

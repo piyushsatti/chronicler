@@ -22,6 +22,71 @@ vi.mock('@pi/react-imposition/react', async (importOriginal) => ({
 }));
 
 describe('HomePage', () => {
+  it('disambiguates shared DM names across recruiting cards but not repeated people', async () => {
+    const sameNamedDms = {
+      ...recruitment,
+      questBoard: {
+        ...recruitment.questBoard,
+        items: [
+          { ...recruitment.questBoard.items[0], dm: { handle: 'mira', displayName: 'Mira' } },
+          { ...recruitment.questBoard.items[1], dm: { handle: 'mara', displayName: 'Mira' } },
+          {
+            ...recruitment.questBoard.items[2],
+            dm: { handle: 'mira', displayName: 'Mira' },
+          },
+        ],
+      },
+    };
+    server.use(
+      graphql.query('HomeWarRoom', () => HttpResponse.json({ data: sameNamedDms })),
+    );
+    renderWithProviders(<HomePage />);
+    const lane = await screen.findByRole('region', { name: 'Recruiting now' });
+    expect(within(lane).getAllByText('Mira (@mira)')).toHaveLength(2);
+    expect(within(lane).getByText('Mira (@mara)')).toBeInTheDocument();
+  });
+
+  it('uses the same name cohort across recruiting and upcoming cards', async () => {
+    const scheduledAt = new Date(Date.now() + 3_600_000).toISOString();
+    const scheduledId = '00000000-0000-4000-8000-000000000901';
+    const data = {
+      ...recruitment,
+      questBoard: {
+        items: [
+          {
+            ...recruitment.questBoard.items[0],
+            dm: { handle: 'mira', displayName: 'Mira' },
+          },
+        ],
+        total: 1,
+      },
+      quests: {
+        items: [
+          {
+            ...goodLanes.quests.items[0],
+            id: scheduledId,
+            scheduledAt,
+            dm: { handle: 'mara', displayName: 'Mira' },
+          },
+        ],
+        total: 1,
+      },
+    };
+    server.use(
+      graphql.query('HomeWarRoom', () => HttpResponse.json({ data })),
+      graphql.query('HomeUpcoming', () =>
+        HttpResponse.json({
+          data: { quests: { items: [{ id: scheduledId, scheduledAt }], total: 1 } },
+        }),
+      ),
+    );
+    renderWithProviders(<HomePage />);
+    const recruitingLane = await screen.findByRole('region', { name: 'Recruiting now' });
+    const upcomingLane = await screen.findByRole('region', { name: 'Coming up' });
+    expect(within(recruitingLane).getByText('Mira (@mira)')).toBeInTheDocument();
+    expect(within(upcomingLane).getByText('Mira (@mara)')).toBeInTheDocument();
+  });
+
   it('shows server totals and counts all51 scheduled quests while keeping preview cards capped', async () => {
     const scheduledAt = new Date(Date.now() + 3_600_000).toISOString();
     const quests = Array.from({ length: 51 }, (_, index) => ({

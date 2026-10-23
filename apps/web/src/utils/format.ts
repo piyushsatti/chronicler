@@ -337,31 +337,26 @@ export function handleLabel(handle: string | null | undefined): string | null {
 }
 
 export type PersonLike = {
+  id?: string;
+  memberId?: string;
   displayName?: string | null;
   handle?: string | null;
 };
 
-/**
- * The name to show for a member: the display name, else a readable handle
- * (without "@"), else `fallback`. Never a snowflake or UUID. Show
- * `handleLabel` only as secondary text on profiles.
- */
+/** A member's display label; use personLabels for a visible group of people. */
 export function personName(
   person: PersonLike | null | undefined,
   fallback = 'Unnamed member',
 ): string {
-  const display = (person?.displayName ?? '').trim().replace(/^qa[-_]\S+\s+retained$/i, 'Member');
-  if (display && !SNOWFLAKE.test(display) && !UUID.test(display)) return display;
-  const handle = handleLabel(person?.handle);
-  return handle ? handle.slice(1) : fallback;
+  return personLabels([person], fallback)[0];
 }
 
-/** A person known only by handle (authors, owners): "@handle", never a bare lowercase token. */
+/** A person known only by handle still gets a readable name before the handle. */
 export function handleOnlyName(
   handle: string | null | undefined,
   fallback = 'Unnamed member',
 ): string {
-  return handleLabel(handle) ?? fallback;
+  return personName({ handle }, fallback);
 }
 
 const GENERIC_NAMES = new Set(['member', 'user', 'player', 'unknown', 'unnamed', 'unnamed member', 'anonymous', 'dev']);
@@ -376,24 +371,32 @@ export function personLabels(
   people: readonly (PersonLike | null | undefined)[],
   fallback = 'Unnamed member',
 ): string[] {
-  const names = people.map((person) => personName(person, fallback));
-  const counts = new Map<string, number>();
-  for (const name of names) {
+  const names = people.map((person) => {
+    const display = (person?.displayName ?? '').trim().replace(/^qa[-_]\S+\s+retained$/i, 'Member');
+    const displayHandle = display.startsWith('@') ? display.slice(1).toLowerCase() : '';
+    const handle = (person?.handle ?? '').trim().replace(/^@/, '').toLowerCase();
+    const isHandleDisplay = displayHandle !== '' && handle !== '' && displayHandle === handle;
+    return display && !isHandleDisplay && !SNOWFLAKE.test(display) && !UUID.test(display)
+      ? display
+      : fallback;
+  });
+  const membersByName = new Map<string, Set<unknown>>();
+  names.forEach((name, index) => {
     const key = name.toLowerCase();
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
+    const person = people[index];
+    const identity = person?.id ?? person?.memberId ?? handleLabel(person?.handle)?.toLowerCase() ?? person;
+    const members = membersByName.get(key) ?? new Set();
+    members.add(identity);
+    membersByName.set(key, members);
+  });
   return people.map((person, index) => {
     const name = names[index];
     const handle = handleLabel(person?.handle);
-    // No usable display name: the handle is all there is, and "@" marks it as one.
-    const display = (person?.displayName ?? '').trim();
-    if (handle && (!display || SNOWFLAKE.test(display) || UUID.test(display))) return handle;
     const needsHandle =
       name === fallback ||
       GENERIC_NAMES.has(name.toLowerCase()) ||
-      (counts.get(name.toLowerCase()) ?? 0) > 1;
+      (membersByName.get(name.toLowerCase())?.size ?? 0) > 1;
     if (!handle || !needsHandle) return name;
-    if (name === fallback) return handle;
-    return name.toLowerCase() === handle.slice(1).toLowerCase() ? name : `${name} (${handle})`;
+    return `${name} (${handle})`;
   });
 }

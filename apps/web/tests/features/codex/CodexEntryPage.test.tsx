@@ -5,6 +5,7 @@ import { Route, Routes, useLocation } from 'react-router-dom';
 import { routes } from '../../../src/features/codex/feature.js';
 import { server } from '../../../src/mocks/server.js';
 import entry from '../../fixtures/wire/codex/entry-good.json';
+import goodMemberProfile from '../../fixtures/wire/profile/member-profile-good.json';
 import { renderWithProviders } from '../../test-utils.js';
 
 function Location(): React.JSX.Element {
@@ -44,6 +45,23 @@ describe('Codex document routes', () => {
   it('renders the canonical document body and real backlink count', async () => {
     renderReader('/codex/tree-of-light');
     await expectReader();
+  });
+
+  it('shows the entry author display name from the existing member profile', async () => {
+    server.use(
+      graphql.query('MemberProfile', () =>
+        HttpResponse.json({
+          data: {
+            memberProfile: {
+              ...goodMemberProfile,
+              member: { ...goodMemberProfile.member, handle: 'lorekeeper', displayName: 'Mira' },
+            },
+          },
+        }),
+      ),
+    );
+    renderReader('/codex/tree-of-light');
+    expect(await screen.findByText(/by Mira/)).toBeVisible();
   });
 
   it.each([

@@ -154,7 +154,10 @@ describe('admin adapters', () => {
   it('parses character directory', () => {
     const result = parseAdminChars(goodChars);
     expect(result.ok).toBe(true);
-    if (result.ok) expect(result.data[0]?.shortCode).toBe('C-101');
+    if (result.ok) {
+      expect(result.data[0]?.shortCode).toBe('C-101');
+      expect(result.data[0]?.ownerDisplayName).toBe('Ashwin');
+    }
   });
 
   it('parses members directory', () => {
@@ -171,7 +174,9 @@ describe('admin adapters', () => {
 
   it('parses verify queues', () => {
     expect(parseDmQueue(goodDm).ok).toBe(true);
-    expect(parseCharPending(goodPending).ok).toBe(true);
+    const pending = parseCharPending(goodPending);
+    expect(pending.ok).toBe(true);
+    if (pending.ok) expect(pending.data[0]?.ownerDisplayName).toBe('Member');
   });
 });
 

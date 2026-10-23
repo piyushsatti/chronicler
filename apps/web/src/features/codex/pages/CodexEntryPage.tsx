@@ -9,8 +9,9 @@ import { DetailLayout } from '../../../components/primitives/DetailLayout.js';
 import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { Skeleton } from '../../../components/primitives/Skeleton.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
+import { useMemberProfile } from '../../../hooks/useMemberProfile.js';
 import { codexCategoryHeading } from '../../../utils/codexCategories.js';
-import { handleLabel, humanizeKey, pluralize } from '../../../utils/format.js';
+import { humanizeKey, personLabels, pluralize } from '../../../utils/format.js';
 import { useCodexBacklinks } from '../hooks/useCodexBacklinks.js';
 import { useCodexEntryPage } from '../hooks/useCodexEntryPage.js';
 import { useCodexPage } from '../hooks/useCodexPage.js';
@@ -127,6 +128,8 @@ function MoreInCategory({
 export function CodexEntryPage(): React.JSX.Element {
   const { slug = '' } = useParams();
   const page = useCodexEntryPage(slug);
+  const authorHandle = page.status === 'ready' ? page.view.authorHandle ?? '' : '';
+  const authorProfile = useMemberProfile(authorHandle);
   const { formatDate } = useDateFormatter();
   const back = { to: '/codex', label: 'Codex' };
 
@@ -156,7 +159,9 @@ export function CodexEntryPage(): React.JSX.Element {
   } else {
     const entry = page.view;
     const categoryLabel = entry.category ?? humanizeKey(entry.kind);
-    const author = handleLabel(entry.authorHandle);
+    const author = entry.authorHandle
+      ? personLabels([{ displayName: authorProfile.data?.member.displayName, handle: entry.authorHandle }])[0]
+      : null;
     regions = {
       body: () => (
         <div className={styles.entryPage}>

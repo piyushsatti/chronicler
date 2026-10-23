@@ -126,7 +126,7 @@ function mapQuestItem(
     dmAvatarUrl: item.dm?.avatarUrl ?? null,
     participants,
     waitlistCount,
-    dmName: item.dm?.displayName ?? item.dm?.handle ?? null,
+    dmName: item.dm?.displayName ?? null,
     discordDelivery: {
       desiredRevision: item.discordDelivery.desiredRevision,
       appliedRevision: item.discordDelivery.appliedRevision,
@@ -286,7 +286,7 @@ export function mapToQuestCardProps(
         ? () => opts.onWithdrawConfirm?.(own.characterId)
         : undefined,
     animIndex: opts.animIndex,
-    dmUsername: quest.dmHandle ?? quest.dmDisplayName,
+    dmUsername: quest.dmHandle,
     dmName: quest.dmDisplayName,
     party: seated.map((p) => ({
       characterName: p.characterName,

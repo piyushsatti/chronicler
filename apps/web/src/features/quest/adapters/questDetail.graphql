@@ -40,6 +40,7 @@ query Quest($id: ID, $shortCode: String) {
       characterId
       characterName
       memberHandle
+      memberDisplayName
       status
     }
     pointcrawlLinks(limit: 100) {

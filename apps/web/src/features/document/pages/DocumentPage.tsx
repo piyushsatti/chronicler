@@ -9,7 +9,8 @@ import { Card } from '../../../components/primitives/Card.js';
 import { Chip } from '../../../components/primitives/Chip.js';
 import { DetailLayout } from '../../../components/primitives/DetailLayout.js';
 import { PageHeader } from '../../../components/primitives/PageHeader.js';
-import { handleOnlyName, humanizeKey } from '../../../utils/format.js';
+import { useMemberProfile } from '../../../hooks/useMemberProfile.js';
+import { humanizeKey, personLabels } from '../../../utils/format.js';
 import { useDocumentPage } from '../hooks/useDocumentPage.js';
 
 const DECLARATION: PageDeclaration = {
@@ -22,6 +23,8 @@ const BACK = { to: '/community', label: 'Community' } as const;
 export function DocumentPage(): React.JSX.Element {
   const { slug = '' } = useParams();
   const page = useDocumentPage(slug);
+  const authorHandle = page.status === 'ready' ? page.view.authorHandle ?? '' : '';
+  const authorProfile = useMemberProfile(authorHandle);
 
   if (page.status !== 'ready') {
     const regions: PageRegionRenderers = {
@@ -49,7 +52,9 @@ export function DocumentPage(): React.JSX.Element {
 
   const doc = page.view;
   const kind = humanizeKey(doc.category ?? doc.kind);
-  const author = doc.authorHandle ? handleOnlyName(doc.authorHandle) : null;
+  const author = doc.authorHandle
+    ? personLabels([{ displayName: authorProfile.data?.member.displayName, handle: doc.authorHandle }])[0]
+    : null;
   const rail = author ? (
     <Card as="section" pad={5} aria-label="Author">
       <div className="row" data-gap="3" data-align="center">

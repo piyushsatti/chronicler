@@ -28,12 +28,16 @@ export function SeriesPage(): React.JSX.Element {
   const dms = [
     ...new Map(
       arc?.quests.flatMap((quest) =>
-        quest.dm ? [[quest.dm.handle, quest.dm] as const] : [],
+        quest.dm
+          ? [[quest.dm.handle.trim().replace(/^@/, '').toLowerCase(), quest.dm] as const]
+          : [],
       ),
     ).values(),
   ];
   const dmLabels = personLabels(dms);
-  const labels = new Map(dms.map((dm, index) => [dm.handle, dmLabels[index]]));
+  const labels = new Map(
+    dms.map((dm, index) => [dm.handle.trim().replace(/^@/, '').toLowerCase(), dmLabels[index]]),
+  );
   const next = arc?.quests
     .filter(
       (quest) =>
@@ -110,7 +114,11 @@ export function SeriesPage(): React.JSX.Element {
                       status={toCardStatus(quest.displayStatus, quest.status)}
                       when={dates.formatScheduled(quest.scheduledAt)}
                       dmUsername={quest.dm?.handle}
-                      dmName={quest.dm ? labels.get(quest.dm.handle) : undefined}
+                      dmName={
+                        quest.dm
+                          ? labels.get(quest.dm.handle.trim().replace(/^@/, '').toLowerCase())
+                          : undefined
+                      }
                       totalSlots={quest.slotsMax}
                       party={quest.participants
                         .filter((member) => SEATED.has(member.status))

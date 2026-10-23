@@ -5,6 +5,7 @@ query QuestParticipants($questId: ID!, $offset: Int! = 0) {
       characterId
       characterName
       memberHandle
+      memberDisplayName
       memberAvatarUrl
       status
     }

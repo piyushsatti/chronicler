@@ -30,6 +30,25 @@ describe('DMProfilePage', () => {
     expect(screen.getByRole('link', { name: 'DMs' })).toHaveAttribute('href', '/dms');
   });
 
+  it('offers visitors a quest link when public availability is empty', async () => {
+    server.use(
+      graphql.query('MemberProfile', () =>
+        HttpResponse.json({ data: { memberProfile: { ...profile, availability: [] } } }),
+      ),
+    );
+    renderWithProviders(
+      <Routes>
+        <Route path="/dms/:shortCode" element={<DMProfilePage />} />
+      </Routes>,
+      { route: '/dms/@mira' },
+    );
+
+    const availability = await screen.findByRole('complementary', { name: 'Availability' });
+    expect(within(availability).getByText(/hasn't set their availability\./)).toBeVisible();
+    expect(within(availability).getByRole('link', { name: 'Find a quest' })).toHaveAttribute('href', '/quests');
+    expect(within(availability).queryByRole('button', { name: 'Set availability' })).not.toBeInTheDocument();
+  });
+
   it('lists the DM’s series and separates played future quests from upcoming quests', async () => {
     const quest = (id: string, title: string, status: string) => ({ id, shortCode: id, status, scheduledAt: '2098-01-01T12:00:00Z', slotsMax: 4, filledCount: 2, briefDocument: { title } });
     server.use(

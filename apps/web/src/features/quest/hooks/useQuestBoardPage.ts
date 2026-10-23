@@ -104,6 +104,7 @@ export function useQuestBoardPage() {
       shortCode: quest.shortCode,
       title: quest.title,
       dmHandle: quest.dmHandle,
+      dmName: quest.dmName,
     })),
     canCreate:
       !authority.isError &&
