@@ -127,6 +127,22 @@ describe('retained aliases preserve identity and intent', () => {
 });
 
 describe('Calendar page', () => {
+  it.each(['/calendar?month=2026-10', '/calendar?month=2026-10&status=open', '/calendar?day=2026-10-14'])(
+    'labels a wholly empty month without treating a filtered empty result as one: %s',
+    async (route) => {
+      server.use(graphql.query('RetainedCalendarQuests', () => HttpResponse.json({
+        data: { quests: { total: 0, items: [] } },
+      })));
+      renderWithProviders(<CalendarPage />, { route });
+      await screen.findByText(/Today in the campaign:/);
+      await within(screen.getByRole('region', { name: 'Filter quests' })).findByText('0 quests');
+      if (route === '/calendar?month=2026-10') {
+        expect(screen.getByText('No quests this month')).toBeVisible();
+      } else {
+        expect(screen.queryByText('No quests this month')).not.toBeInTheDocument();
+      }
+    },
+  );
   it('restores named dates and full schedule paging, keeps legacy search when changing month', async () => {
     const seen: unknown[] = [];
     server.use(

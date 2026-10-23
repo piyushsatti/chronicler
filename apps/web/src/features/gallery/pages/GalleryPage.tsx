@@ -79,6 +79,16 @@ function GallerySection({
           />
         </div>
       </FilterBar>
+      <details className={styles.jumpLinks}>
+        <summary className="type-caption">Jump to example</summary>
+        <nav className="row" data-wrap="1" data-gap="2" aria-label={`${section.title} example links`}>
+          {visible.map((entry) => (
+            <a key={entry.id} className="type-caption" href={`#gallery-${entry.id}`}>
+              {entry.title}
+            </a>
+          ))}
+        </nav>
+      </details>
       <CardGrid as="ul" aria-label={`${section.title} examples`}>
         {visible.map((entry) => (
           <li key={entry.id} className={styles.item} data-layout={entry.layout}>

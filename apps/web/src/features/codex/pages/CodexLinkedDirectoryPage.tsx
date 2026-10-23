@@ -6,6 +6,7 @@ import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { Card } from '../../../components/primitives/Card.js';
 import { CardGrid } from '../../../components/primitives/CardGrid.js';
 import { FilterBar } from '../../../components/primitives/FilterBar.js';
+import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { Skeleton } from '../../../components/primitives/Skeleton.js';
 import { useMe } from '../../../hooks/useMe.js';
@@ -55,15 +56,15 @@ export function CodexLinkedDirectoryPage({
     );
   } else if (page.status === 'empty') {
     body = (
-      <StatePanel
-        status="empty"
-        emptyMessage={
+      <EmptyState
+        className={styles.directoryEmpty}
+        message={
           query.trim()
             ? `No ${noun} match “${query.trim()}”.`
             : `No ${noun} yet. Published ${singular} entries will show up here.`
         }
         action={
-          <>
+          <div className="row" data-wrap="1" data-gap="2">
             {me && !query.trim() ? (
               <Link className="btn btn--primary" to={newHref}>
                 New {singular}
@@ -72,7 +73,7 @@ export function CodexLinkedDirectoryPage({
             <Link className="btn btn--secondary" to="/codex">
               Browse the Codex
             </Link>
-          </>
+          </div>
         }
       />
     );
@@ -120,7 +121,7 @@ export function CodexLinkedDirectoryPage({
                 ? page.view.length >= (page.total ?? page.view.length)
                   ? pluralize(page.view.length, 'entry', 'entries')
                   : `Showing ${page.view.length} of ${page.total} entries`
-                : undefined
+                : page.status === 'empty' ? '0 entries' : undefined
             }
           >
             <FilterBar.Search

@@ -36,7 +36,7 @@ export function LoginPage(): React.JSX.Element {
           {page.loginError ? (
             <StatePanel status="error" error={page.loginError} variant="inline" />
           ) : null}
-          <div className="row" data-wrap="1" data-gap="3">
+          <div className={`row ${styles.actions}`} data-wrap="1" data-gap="3">
             <Button type="button" variant="primary" onClick={page.login}>
               Continue with Discord
             </Button>

@@ -26,7 +26,9 @@ describe('Community document reader', () => {
     expect(await screen.findByRole('heading', { name: entry.title })).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Welcome' })).toBeVisible();
     expect(screen.getByText('stories').tagName).toBe('STRONG');
-    expect(await screen.findByRole('link', { name: 'Mira' })).toHaveAttribute('href', '/players/@mira');
+    const authorLinks = await screen.findAllByRole('link', { name: 'Mira · @mira' });
+    expect(authorLinks).toHaveLength(2);
+    for (const link of authorLinks) expect(link).toHaveAttribute('href', '/players/@mira');
     expect(screen.getAllByRole('link', { name: 'Community' })).toHaveLength(1);
     expect(screen.queryByText('Back to the community directory')).not.toBeInTheDocument();
   });

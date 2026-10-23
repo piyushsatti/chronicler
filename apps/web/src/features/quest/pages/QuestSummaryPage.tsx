@@ -139,7 +139,11 @@ export function QuestSummaryPage(): React.JSX.Element {
                     <Link className="btn btn--primary btn--sm" to={href}>
                       Write a DM summary
                     </Link>
-                  ) : null
+                  ) : (
+                    <Link className="btn btn--secondary btn--sm" to={`/quests/${encodeURIComponent(quest.shortCode)}`}>
+                      Back to the quest
+                    </Link>
+                  )
                 }
               />
             ) : (

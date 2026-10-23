@@ -59,6 +59,7 @@ export function CharacterListPage(): React.JSX.Element {
                 <CreateCharacterForm onCancel={() => setCreating(false)} />
               ) : null}
               <FilterBar
+                className={styles.filters}
                 label="Filter characters"
                 count={
                   state.status === 'loading' ? (

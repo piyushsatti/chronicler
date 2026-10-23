@@ -64,10 +64,12 @@ export function SeriesPage(): React.JSX.Element {
               arc ? (
                 <>
                   <span>{pluralize(arc.questCount, 'quest')}</span>
-                  {dmLabels.length ? <span>With {dmLabels.join(', ')}</span> : null}
-                  {next ? (
-                    <span>Next session {dates.formatScheduled(next.scheduledAt)}</span>
-                  ) : null}
+                  <span className="stack" data-gap="1">
+                    {dmLabels.length ? <span>With {dmLabels.join(', ')}</span> : null}
+                    {next ? (
+                      <span>Next session {dates.formatScheduled(next.scheduledAt)}</span>
+                    ) : null}
+                  </span>
                 </>
               ) : undefined
             }

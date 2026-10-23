@@ -5,6 +5,13 @@
 .search-hit p {
   margin: 0;
 }
+.search-family__heading {
+  flex-wrap: nowrap;
+  align-items: baseline;
+}
+.search-family__heading > .type-caption {
+  white-space: nowrap;
+}
 .search-results {
   list-style: none;
   margin: 0;

@@ -296,6 +296,25 @@ describe('retained Quest journeys', () => {
     expect(screen.getByRole('link', { name: 'Write a character summary' })).toHaveAttribute('href', `/summaries/new?questId=${detail.id}&characterId=${characterId}`);
   });
 
+  it.each([false, true])('gives empty summaries a role-valid action, staff=%s', async (staff) => {
+    if (staff) login();
+    server.use(graphql.query('QuestSummaryPage', () => HttpResponse.json({
+      data: { questSummaries: { ...summaries, summaries: [] } },
+    })));
+    renderWithProviders(
+      <Routes><Route path="/quests/:code/summary" element={<QuestSummaryPage />} /></Routes>,
+      { route: '/quests/Q-101/summary' },
+    );
+    const section = await screen.findByRole('region', { name: 'Linked summaries' });
+    if (staff) {
+      expect(within(section).getByRole('link', { name: 'Write a DM summary' })).toHaveAttribute('href', `/summaries/new?questId=${detail.id}`);
+      expect(within(section).queryByRole('link', { name: 'Back to the quest' })).not.toBeInTheDocument();
+    } else {
+      expect(within(section).getByRole('link', { name: 'Back to the quest' })).toHaveAttribute('href', '/quests/Q-101');
+      expect(within(section).queryByRole('link', { name: 'Write a DM summary' })).not.toBeInTheDocument();
+    }
+  });
+
   it('keeps quest arc and pointcrawl menu selections connected to their existing actions', async () => {
     login();
     const writes: unknown[] = [];

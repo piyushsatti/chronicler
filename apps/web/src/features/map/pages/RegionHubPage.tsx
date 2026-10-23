@@ -55,7 +55,7 @@ function RegionDocument({ id, regionName }: { id: string; regionName: string }) 
     return <p className="type-caption">The region entry is unavailable to you.</p>;
   const href = documentHref(document.data);
   return (
-    <article className="card stack" aria-label="Region entry">
+    <article className={`card stack ${styles.regionDescription}`} aria-label="Region entry">
       <h2 className="type-heading">About this region</h2>
       {document.data.title.trim() !== regionName.trim() ? (
         <p className="type-caption">From the entry “{document.data.title}”</p>
@@ -323,6 +323,7 @@ function RegionCard({
         {region.name}
       </h2>
       <p className="type-caption" id={`${id}-meta`}>
+        {humanizeKey(region.kind)} ·{' '}
         {pluralize(mapCount, 'map')}
       </p>
     </Card>

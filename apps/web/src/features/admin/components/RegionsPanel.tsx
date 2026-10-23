@@ -243,8 +243,7 @@ export function RegionsPanel({
           </Button>
         </div>
         <p className="type-caption">
-          Uncharted is the initial stage, Archon is the next stage, and Server is
-          the final stage. Use Advance on an existing region to move it forward.
+          Use Advance on an existing region to move it forward.
         </p>
       </Card>
       {view.advancement ? (

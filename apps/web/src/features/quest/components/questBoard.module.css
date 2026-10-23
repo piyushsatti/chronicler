@@ -19,6 +19,10 @@
   flex: 1;
 }
 
+.filters :global(.filter-bar__group) {
+  gap: var(--sp-1);
+}
+
 .pagination {
   display: flex;
   justify-content: center;

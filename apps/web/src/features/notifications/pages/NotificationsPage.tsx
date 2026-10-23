@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { ProtectedRoute } from '../../../auth/ProtectedRoute.js';
 import { SingleRegionPage } from '../../../chrome/singleRegion.js';
 import { PageShell } from '../../../components/foundation/PageShell.js';
@@ -9,9 +10,12 @@ import { NotificationRow } from '../components/NotificationRow.js';
 import { NotificationsLoadMoreSentinel } from '../components/NotificationsLoadMoreSentinel.js';
 import { useNotificationsPage } from '../hooks/useNotificationsPage.js';
 import { pluralize } from '../../../utils/format.js';
+import { Chip } from '../../../components/primitives/Chip.js';
+import { FilterBar } from '../../../components/primitives/FilterBar.js';
 
 function NotificationsBody(): React.JSX.Element {
   const page = useNotificationsPage();
+  const [readState, setReadState] = useState<'All' | 'Unread'>('All');
 
   if (page.status === 'error') {
     return (
@@ -37,9 +41,27 @@ function NotificationsBody(): React.JSX.Element {
     hasNextPage,
     fetchNextPage,
   } = page;
+  const visibleItems =
+    readState === 'Unread' ? items.filter((item) => item.unread) : items;
 
   return (
     <div className="stack" data-el="notifications.list">
+      <FilterBar
+        label="Filter notifications"
+        count={pluralize(visibleItems.length, 'notification')}
+      >
+        <FilterBar.Group label="Show">
+          {(['All', 'Unread'] as const).map((state) => (
+            <Chip
+              key={state}
+              selected={readState === state}
+              onClick={() => setReadState(state)}
+            >
+              {state}
+            </Chip>
+          ))}
+        </FilterBar.Group>
+      </FilterBar>
       {markReadFailureIds.length > 0 ? (
         <p className="type-caption" role="alert">
           Some notifications could not be marked as read.
@@ -56,16 +78,18 @@ function NotificationsBody(): React.JSX.Element {
         </p>
       ) : null}
       {loadMoreError ? <StatePanel status="error" error={loadMoreError} /> : null}
-      {items.length === 0 && hasNextPage ? (
+      {visibleItems.length === 0 && hasNextPage ? (
         <StatePanel
           status="empty"
           variant="inline"
           emptyMessage="No visible notifications on this page. More may be available."
         />
-      ) : items.length === 0 ? (
+      ) : visibleItems.length === 0 ? (
         <StatePanel
           status="empty"
-          title="No notifications yet"
+          title={
+            readState === 'Unread' ? 'No unread notifications' : 'No notifications yet'
+          }
           emptyMessage="Updates about your characters, quests and documents will show up here."
           action={
             <Link className="btn btn--secondary" to="/settings">
@@ -75,14 +99,14 @@ function NotificationsBody(): React.JSX.Element {
         />
       ) : (
         <ul className="notification-list stack">
-          {items.map((item) => (
+          {visibleItems.map((item) => (
             <li key={item.id} className="notification-list__item">
               <NotificationRow notification={item} />
             </li>
           ))}
         </ul>
       )}
-      {items.length > 0 ? (
+      {visibleItems.length > 0 ? (
         <div className="row" data-wrap="1">
           <Link className="btn btn--ghost btn--sm" to="/settings">
             Notification settings

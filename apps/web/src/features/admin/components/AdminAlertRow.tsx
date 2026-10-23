@@ -44,7 +44,7 @@ export function AdminAlertRow({
     destination !== pathname.replace(/\/+$/, '');
   return (
     <li className={className}>
-      <div className="stack" data-gap="1">
+      <div className="stack" data-gap="0">
         <span className="type-title">{alert.label}</span>
         {alert.lastSeenAt ? (
           <span className="type-caption">

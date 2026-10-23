@@ -54,7 +54,7 @@
 .backlinks {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-3);
+  gap: var(--sp-2);
 }
 
 .backlinkList {
@@ -81,6 +81,10 @@
 }
 
 /* NPC and Faction directories */
+
+.directoryEmpty {
+  padding-block: var(--sp-4);
+}
 
 .directoryCard {
   display: flex;

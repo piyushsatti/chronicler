@@ -8,6 +8,10 @@
   display: none;
 }
 
+.groups :global(.filter-bar__group) {
+  column-gap: var(--sp-1);
+}
+
 /* The page's .hf2 skin makes line chips transparent; keep the selected one filled. */
 .groups button[data-component='Chip'][data-selected='1'] {
   background: var(--color-accent);

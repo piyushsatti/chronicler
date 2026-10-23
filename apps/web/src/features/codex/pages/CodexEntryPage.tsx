@@ -96,7 +96,7 @@ function MoreInCategory({
   return (
     <Card
       as="section"
-      pad={4}
+      pad={3}
       className={styles.backlinks}
       aria-labelledby="more-heading"
     >

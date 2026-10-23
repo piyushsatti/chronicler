@@ -45,7 +45,7 @@ function SearchFamily({
       aria-label={title}
       aria-busy={result.isFetching}
     >
-      <div className="row" data-gap="2">
+      <div className="search-family__heading row" data-gap="2">
         <h2 className="type-heading">{title}</h2>
         {result.data ? <span className="type-caption">{total} results</span> : null}
       </div>

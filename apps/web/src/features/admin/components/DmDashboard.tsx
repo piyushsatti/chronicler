@@ -106,7 +106,7 @@ export function DmDashboard({ view }: { view: ReturnType<typeof useDmDashboard> 
           </>
         }
       />
-      <CardGrid gap={3} aria-label="Your DM stats">
+      <CardGrid className="dm-dashboard__stats" gap={3} aria-label="Your DM stats">
         <StatTile label="Quests posted" value={data.quests.total} />
         {data.dmStats ? <StatTile label="Sessions run" value={data.dmStats.sessionCount} /> : null}
         <StatTile label="DM tables" value={data.documents.total} />

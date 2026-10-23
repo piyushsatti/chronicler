@@ -48,6 +48,19 @@ describe('Gallery reference', () => {
     expect(screen.getByRole('list', { name: 'Primitives examples' }).children).toHaveLength(33);
   });
 
+  it('offers jump links to the examples in the selected section', async () => {
+    signIn();
+    renderWithProviders(<GalleryPage />, { route: '/gallery' });
+    await screen.findByRole('tablist', { name: 'Gallery sections' });
+    await userEvent.click(screen.getByText('Jump to example'));
+    const links = within(screen.getByRole('navigation', { name: 'Primitives example links' })).getAllByRole('link');
+    expect(links).toHaveLength(33);
+    for (const link of links) {
+      const target = document.querySelector(link.getAttribute('href') ?? '');
+      expect(target).toHaveAttribute('aria-label', `${link.textContent} example`);
+    }
+  });
+
   it('sends production visits to not found before mounting staff reference content', async () => {
     vi.stubEnv('DEV', false);
     renderWithProviders(

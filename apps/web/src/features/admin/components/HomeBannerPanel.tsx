@@ -44,7 +44,7 @@ export function HomeBannerPanel({
   }
 
   const preview = (
-    <Card className={`stack ${styles.panel}`} data-gap="3" aria-label="Banner preview">
+    <Card className={`stack ${styles.panel}`} data-gap="2" aria-label="Banner preview">
       <span className="type-label">Preview</span>
       {enabled ? (
         <div className={styles.preview} data-el="admin.homeBannerPreview">

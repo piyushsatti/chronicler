@@ -40,6 +40,14 @@
   min-width: 0;
 }
 
+.reader {
+  gap: var(--sp-3);
+}
+
+.recovery :global(.state-panel) {
+  padding-block: var(--sp-4);
+}
+
 .related {
   display: flex;
   flex-direction: column;

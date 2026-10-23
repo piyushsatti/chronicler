@@ -95,3 +95,12 @@
 .owner :global(.btn) {
   align-self: flex-start;
 }
+
+.body :global(.card.stack) {
+  gap: var(--sp-3);
+}
+
+.body :global(.empty-state) {
+  gap: var(--sp-2);
+  padding: var(--sp-4);
+}

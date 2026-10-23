@@ -11,14 +11,14 @@ export function NotFoundPage(): React.JSX.Element {
           status="empty"
           emptyMessage="This page doesn’t exist. It may have moved, or the link may be wrong."
           action={
-            <>
+            <div className="row" data-wrap="1" data-gap="2">
               <Link className="btn btn--primary" to="/">
                 Return home
               </Link>
               <Link className="btn btn--secondary" to="/search">
                 Search the chronicle
               </Link>
-            </>
+            </div>
           }
         />
       </SingleRegionPage>

@@ -220,11 +220,16 @@ describe('notification retry and completion feedback', () => {
     expect(screen.queryByRole('link', { name: 'Document 8' })).not.toBeInTheDocument();
   });
 
-  it('reports confirmed mark-read success and updates the row immediately', async () => {
+  it('reports confirmed mark-read success while keeping the row new for this visit', async () => {
     renderWithProviders(<NotificationsPage />, { route: '/notifications' });
     expect(
       await screen.findByText('Marked 1 notification as read.'),
     ).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByText('Read')).toBeInTheDocument());
+    await waitFor(() =>
+      expect(screen.getByLabelText('Quest signup: Seat confirmed, unread')).toHaveAttribute(
+        'data-unread',
+        'true',
+      ),
+    );
   });
 });

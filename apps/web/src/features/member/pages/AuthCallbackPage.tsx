@@ -17,7 +17,7 @@ export function AuthCallbackPage(): React.JSX.Element {
           <Card
             as="section"
             className={`stack reading-column ${styles.card}`}
-            data-gap="4"
+            data-gap="3"
             aria-label="Sign-in problem"
           >
             <StatePanel status="error" error={error} variant="inline" />

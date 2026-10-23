@@ -2,3 +2,8 @@
 .card > :where(p, h2) {
   margin: 0;
 }
+
+:global([data-width-class='compact']) .actions {
+  flex-direction: column;
+  align-items: stretch;
+}

@@ -135,7 +135,7 @@ export function CodexPage(): React.JSX.Element {
               </FilterBar.Group>
             )}
           </FilterBar>
-          <div className="stack" data-gap="5">
+          <div className="stack" data-gap="4">
             {page.status === 'error' ? (
               <StatePanel status="error" error={page.error} />
             ) : page.status === 'loading' ? (

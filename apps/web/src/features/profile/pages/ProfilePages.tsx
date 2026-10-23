@@ -76,7 +76,7 @@ function DmInformation({
   canCreate: boolean;
 }) {
   return (
-    <div className="stack" data-gap="5">
+    <div className="stack" data-gap="4">
       <Card className="stack" pad={4}>
         <div className={styles.cardHead}>
           <h2 className="type-heading">DM tables</h2>
@@ -389,7 +389,7 @@ function ProfileView({
         }
       >
         <ProfileActivity key={profile.member.id} memberId={profile.member.id} owner={owner} sessionsRun={role === 'dm' ? dmDetails.details.data?.dmStats?.sessionCount : undefined} about={
-        <div className="stack" data-gap="5">
+        <div className="stack" data-gap="4">
           {profile.dmProfile || hasActivity ? <Card className="stack" pad={4}>
             <h2 className="type-heading">About</h2>
             {profile.dmProfile?.tagline ? (

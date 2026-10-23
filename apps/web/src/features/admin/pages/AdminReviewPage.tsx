@@ -32,7 +32,7 @@ function ReviewQueues(): React.JSX.Element {
   return (
     <section
       className="admin-workspace-section stack"
-      data-gap="4"
+      data-gap="3"
       aria-label="Review queues"
     >
       <FilterBar label="Review queue">

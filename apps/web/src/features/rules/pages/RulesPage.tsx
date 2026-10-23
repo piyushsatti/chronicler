@@ -162,7 +162,7 @@ export function RulesPage(): React.JSX.Element {
           ) : page.status === 'empty' ? (
             <StatePanel status="empty" emptyMessage="No rules published yet." />
           ) : (
-            <>
+            <div className="stack" data-gap="4">
               {show !== 'rulings' ? (
                 <section className="stack" data-gap="4" aria-label="Guides">
                   <div className="row" data-align="baseline" data-gap="3">
@@ -251,7 +251,11 @@ export function RulesPage(): React.JSX.Element {
                           <Link className="btn btn--sm" to="/rules/rulings/new">
                             Add ruling
                           </Link>
-                        ) : undefined
+                        ) : (
+                          <Link className="btn btn--secondary btn--sm" to="/rules?show=guides">
+                            Browse guides
+                          </Link>
+                        )
                       }
                     />
                   )}
@@ -263,7 +267,7 @@ export function RulesPage(): React.JSX.Element {
                   />
                 </section>
               ) : null}
-            </>
+            </div>
           )}
         </div>
       </SingleRegionPage>

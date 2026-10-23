@@ -80,6 +80,31 @@ function SessionControls({ nextToken }: { nextToken: string }) {
 }
 
 describe('RulesPage', () => {
+  it('lets visitors browse guides from the empty rulings section', async () => {
+    server.use(graphql.query('RulesList', () => response(rows(1))));
+    renderRules();
+    const browse = await screen.findByRole('link', { name: 'Browse guides' });
+    expect(browse).toHaveAttribute('href', '/rules?show=guides');
+    await userEvent.click(browse);
+    expect(screen.getByRole('region', { name: 'Guides' })).toBeVisible();
+    expect(screen.queryByRole('region', { name: 'Rulings' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Add ruling' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the staff create action in the empty rulings section', async () => {
+    localStorage.setItem(TOKEN_KEY, token('rule-creator'));
+    server.use(
+      graphql.query('MemberMe', () => HttpResponse.json({ data: { memberMe: goodMe } })),
+      graphql.query('CurrentReviewAccess', () => HttpResponse.json({
+        data: { pendingDmProfileVerifications: { total: 0 } },
+      })),
+      graphql.query('RulesList', () => response(rows(1))),
+    );
+    renderRules();
+    expect(await screen.findByRole('link', { name: 'Add ruling' })).toHaveAttribute('href', '/rules/rulings/new');
+    expect(screen.queryByRole('link', { name: 'Browse guides' })).not.toBeInTheDocument();
+  });
+
   it('renders one title, a guide gallery, and a ruling rail', async () => {
     renderRules();
     expect(await screen.findByRole('link', { name: /Combat basics/ })).toHaveAttribute(

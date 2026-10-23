@@ -101,6 +101,6 @@
 }
 
 .boardCard .seatTotal {
+  flex-basis: 100%;
   color: var(--color-text-3);
-  white-space: nowrap;
 }

@@ -37,6 +37,11 @@
   border-top: 0;
 }
 
+.playerIdentity {
+  text-wrap: pretty;
+  overflow-wrap: anywhere;
+}
+
 .openSeat {
   color: var(--color-text-3);
 }

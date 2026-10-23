@@ -106,7 +106,7 @@ function BackstorySection({
   } else {
     body = (
       <div data-el="character.backstoryEmpty">
-        <EmptyState message="No backstory written yet." action={<Link className="type-link" to="/characters">Browse characters</Link>} />
+        <EmptyState className={styles.backstoryEmpty} message="No backstory written yet." action={<Link className="type-link" to="/characters">Browse characters</Link>} />
       </div>
     );
   }

@@ -31,31 +31,33 @@ export function WelcomePage(): React.JSX.Element {
     >
       <SingleRegionPage page="welcome">
         <div className="stack" data-gap="5">
-          <p className="type-narrative">
-            {isAuthenticated
-              ? 'Pick up a quest, check on your characters, or catch up on what the other tables have been doing.'
-              : 'Chronicler keeps the server’s quests, characters and codex in one place. Sign in with your Discord account to sign up for sessions and keep your characters.'}
-          </p>
-          <div className="row" data-wrap="1" data-gap="3">
-            {isAuthenticated ? (
-              <>
-                <Link className="btn btn--primary" to="/quests">
-                  Find a quest
-                </Link>
-                <Link className="btn btn--secondary" to="/characters">
-                  Your characters
-                </Link>
-              </>
-            ) : (
-              <>
-                <Link className="btn btn--primary" to="/login">
-                  Continue with Discord
-                </Link>
-                <Link className="btn btn--secondary" to="/">
-                  Browse as guest
-                </Link>
-              </>
-            )}
+          <div className="stack" data-gap="4">
+            <p className="type-narrative">
+              {isAuthenticated
+                ? 'Pick up a quest, check on your characters, or catch up on what the other tables have been doing.'
+                : 'Chronicler keeps the server’s quests, characters and codex in one place. Sign in with your Discord account to sign up for sessions and keep your characters.'}
+            </p>
+            <div className="row" data-wrap="1" data-gap="3">
+              {isAuthenticated ? (
+                <>
+                  <Link className="btn btn--primary" to="/quests">
+                    Find a quest
+                  </Link>
+                  <Link className="btn btn--secondary" to="/characters">
+                    Your characters
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <Link className="btn btn--primary" to="/login">
+                    Continue with Discord
+                  </Link>
+                  <Link className="btn btn--secondary" to="/">
+                    Browse as guest
+                  </Link>
+                </>
+              )}
+            </div>
           </div>
           <section className="stack" aria-labelledby="welcome-places" data-gap="3">
             <h2 className="type-heading" id="welcome-places">

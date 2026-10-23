@@ -195,8 +195,8 @@ export function QuestDetailPage(): React.JSX.Element {
                             <span className="type-title">
                               {participant.characterName}
                             </span>
-                            <span className="type-caption">
-                              Played by {peopleLabels[index + (hasDm ? 1 : 0)]}
+                            <span className={`type-caption ${styles.playerIdentity}`}>
+                              {'Played\u00a0by\u00a0'}{peopleLabels[index + (hasDm ? 1 : 0)]}
                             </span>
                           </div>
                           <Chip size="sm" tone="line">

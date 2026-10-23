@@ -72,6 +72,14 @@ export function CommunityEntryPage(): React.JSX.Element {
   const view = page.view;
   const author = view.author ? { ...authorProfile.data?.member, handle: view.author.handle } : null;
   const authorName = author ? personLabels([author])[0] : null;
+  const authorIdentity = author && authorName ? (
+    <Link className="type-link" to={memberHref(author, 'player')}>
+      {authorName}
+      {handleLabel(author.handle) && !authorName.includes(handleLabel(author.handle) ?? '') ? (
+        <span className="type-caption"> · {handleLabel(author.handle)}</span>
+      ) : null}
+    </Link>
+  ) : null;
   const when = [view.publishedAt, view.updatedAt].find((value) => value && !isSentinelDate(value));
   const otherPosts = related.data?.filter((post) => post.id !== view.id) ?? [];
   const rail = (
@@ -87,15 +95,7 @@ export function CommunityEntryPage(): React.JSX.Element {
           <span className="type-label">Posted by</span>
           <div className="row" data-gap="3" data-align="center">
             <Avatar name={authorName} src={author.avatarUrl ?? undefined} size="md" online={false} />
-            <div className="stack" data-gap="1">
-              <Link className="type-title" to={memberHref(author, 'player')}>
-                {authorName}
-              </Link>
-              {handleLabel(author.handle) &&
-              !authorName.includes(handleLabel(author.handle) ?? '') ? (
-                <span className="type-caption">{handleLabel(author.handle)}</span>
-              ) : null}
-            </div>
+            {authorIdentity}
           </div>
         </Card>
       ) : null}
@@ -135,6 +135,7 @@ export function CommunityEntryPage(): React.JSX.Element {
         title={view.title}
         meta={
           <>
+            {authorIdentity}
             {view.category ? (
               <Chip size="sm" tone="category">
                 {humanizeKey(view.category)}

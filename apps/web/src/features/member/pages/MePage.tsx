@@ -72,12 +72,14 @@ function ProfileHero({
           </div>
         </div>
         <div className={styles.actions}>
-          <Link className="btn btn--secondary" to="/me/personalize">
-            Personalize
-          </Link>
-          <Link className="btn btn--secondary" to="/settings">
-            Settings
-          </Link>
+          <div className={styles.actionGroup}>
+            <Link className="btn btn--secondary" to="/me/personalize">
+              Personalize
+            </Link>
+            <Link className="btn btn--secondary" to="/settings">
+              Settings
+            </Link>
+          </div>
           {isDm ? (
             <Link className="btn btn--secondary" to="/dm">
               DM dashboard
@@ -88,12 +90,14 @@ function ProfileHero({
               Admin
             </Link>
           ) : null}
-          <Link className="btn btn--ghost" to={publicPath}>
-            View public profile
-          </Link>
-          <Button variant="ghost" className={styles.signOut} onClick={() => logout()}>
-            Sign out
-          </Button>
+          <div className={styles.publicActions}>
+            <Link className="btn btn--ghost" to={publicPath}>
+              View public profile
+            </Link>
+            <Button variant="ghost" onClick={() => logout()}>
+              Sign out
+            </Button>
+          </div>
         </div>
       </div>
     </Card>

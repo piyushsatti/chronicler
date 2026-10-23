@@ -18,21 +18,23 @@ export function PersonalizePreview(): React.JSX.Element {
       className={styles.preview}
       aria-label="Preview of your member card"
     >
-      <h2 className="type-heading">How others see you</h2>
-      <div className={styles.card}>
-        <Avatar name={name} size="lg" ring="accent" />
-        <div className={styles.who}>
-          <p className="type-title">{name}</p>
-          {handle ? <p className="type-caption">{handle}</p> : null}
-          {me && me.roles.length > 0 ? (
-            <div className={styles.chips}>
-              {me.roles.map((role) => (
-                <Chip key={role} size="sm" tone="line">
-                  {roleLabel(role)}
-                </Chip>
-              ))}
-            </div>
-          ) : null}
+      <div className={styles.identityPreview}>
+        <h2 className="type-heading">How others see you</h2>
+        <div className={styles.card}>
+          <Avatar name={name} size="lg" ring="accent" />
+          <div className={styles.who}>
+            <p className="type-title">{name}</p>
+            {handle ? <p className="type-caption">{handle}</p> : null}
+            {me && me.roles.length > 0 ? (
+              <div className={styles.chips}>
+                {me.roles.map((role) => (
+                  <Chip key={role} size="sm" tone="line">
+                    {roleLabel(role)}
+                  </Chip>
+                ))}
+              </div>
+            ) : null}
+          </div>
         </div>
       </div>
       <p className="type-body">

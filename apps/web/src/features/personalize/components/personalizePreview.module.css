@@ -8,6 +8,16 @@
   margin: 0;
 }
 
+.identityPreview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.identityPreview > h2 {
+  margin: 0;
+}
+
 .card {
   display: flex;
   align-items: center;

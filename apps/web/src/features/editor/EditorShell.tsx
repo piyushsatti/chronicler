@@ -259,6 +259,7 @@ export function EditorShell({
         className="editor-shell"
         data-component="EditorShell"
         data-state={briefMissing ? 'brief-missing' : 'denied'}
+        data-type={typeKey}
       >
         <StatePanel
           status={briefMissing ? 'empty' : 'denied'}
@@ -365,7 +366,7 @@ export function EditorShell({
   );
 
   return (
-    <Card className="editor-shell stack" data-component="EditorShell" data-mode={mode}>
+    <Card className="editor-shell stack" data-component="EditorShell" data-mode={mode} data-type={typeKey}>
       {draftRecovery ? (
         <section className="stack" aria-label="Saved drafts from earlier revisions">
           <h2 className="type-heading">Saved drafts from earlier revisions</h2>

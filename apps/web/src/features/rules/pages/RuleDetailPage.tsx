@@ -38,7 +38,7 @@ export function RuleDetailPage({ family }: { family: RuleFamily }): React.JSX.El
     const notFound = page.error.kind === 'not_found';
     regions = {
       body: () => (
-        <div className={styles.detail}>
+        <div className={`${styles.detail} ${notFound ? styles.recovery : ''}`}>
           <PageHeader
             back={back}
             title={`${noun === 'ruling' ? 'Ruling' : 'Guide'}${notFound ? ' not found' : ''}`}
@@ -97,7 +97,7 @@ export function RuleDetailPage({ family }: { family: RuleFamily }): React.JSX.El
     const hubLabel = family === 'rulings' ? 'Related guides' : 'More guides';
     regions = {
       body: () => (
-        <article className={styles.detail}>
+        <article className={`${styles.detail} ${styles.reader}`}>
           <PageHeader
             back={back}
             title={rule.title}

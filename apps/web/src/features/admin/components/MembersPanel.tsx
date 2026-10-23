@@ -94,20 +94,15 @@ export function MembersPanel({
             ...ROLE_OPTIONS.map((role) => ({ value: role, label: roleLabel(role) })),
           ]}
         />
-        <FilterBar.Group label="Status">
-          <Chip selected={view.status === ''} onClick={() => view.setStatus('')}>
-            All
-          </Chip>
-          {MEMBER_STATUSES.map((status) => (
-            <Chip
-              key={status}
-              selected={view.status === status}
-              onClick={() => view.setStatus(status)}
-            >
-              {statusLabel(status)}
-            </Chip>
-          ))}
-        </FilterBar.Group>
+        <FilterBar.Picker
+          label="Status"
+          value={view.status}
+          onValueChange={view.setStatus}
+          options={[
+            { value: '', label: 'All' },
+            ...MEMBER_STATUSES.map((status) => ({ value: status, label: statusLabel(status) })),
+          ]}
+        />
         <Button
           variant="secondary"
           size="sm"

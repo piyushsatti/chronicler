@@ -108,7 +108,7 @@ export function ChronicleDetailPage(): React.JSX.Element {
     : [];
 
   const rail = (
-    <div className={`stack ${styles.rail}`} data-gap="4">
+    <div className={`stack ${styles.rail}`} data-gap="3">
       <Card as="section" pad={5} aria-label="Author">
         {author && authorHref ? (
           <div className="stack" data-gap="3">

@@ -5,6 +5,8 @@ import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
 import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
 import { CodexPage } from '../../../src/features/codex/pages/CodexPage.js';
+import { NpcsDirectoryPage } from '../../../src/features/codex/pages/NpcsDirectoryPage.js';
+import { FactionsDirectoryPage } from '../../../src/features/codex/pages/FactionsDirectoryPage.js';
 import { routes } from '../../../src/features/codex/feature.js';
 import { server } from '../../../src/mocks/server.js';
 import empty from '../../fixtures/wire/codex/empty-list.json';
@@ -117,6 +119,16 @@ describe('CodexPage', () => {
     );
     renderWithProviders(<CodexPage />);
     expect(await screen.findByText('No codex entries.')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['NPCs', NpcsDirectoryPage],
+    ['Factions', FactionsDirectoryPage],
+  ])('keeps the zero count and browse action in the empty %s directory', async (title, Directory) => {
+    renderWithProviders(<Directory />);
+    expect(await screen.findByText('0 entries')).toBeVisible();
+    expect(screen.getByRole('region', { name: `Filter ${title}` })).toHaveTextContent('0 entries');
+    expect(screen.getByRole('link', { name: 'Browse the Codex' })).toHaveAttribute('href', '/codex');
   });
 
   it('shows controlled error', async () => {

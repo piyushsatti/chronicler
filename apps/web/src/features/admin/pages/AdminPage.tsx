@@ -173,7 +173,7 @@ export function AdminTodayBody(): React.JSX.Element {
   if (view.status === 'loading') return <StatePanel status="loading" />;
   const { ops, characterTotal, reviewTotal } = view.data;
   return (
-    <div className="stack" data-gap="5">
+    <div className="stack" data-gap="4">
       <TodaySummary
         ops={ops}
         characterTotal={characterTotal}

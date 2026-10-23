@@ -133,6 +133,7 @@ export function QuestBoardView(page: QuestBoardViewProps): React.JSX.Element {
 
       <FilterBar
         label="Quest board filters"
+        className={styles.filters}
         count={
           page.total !== null && page.status !== 'error'
             ? `${page.total} ${page.total === 1 ? 'quest' : 'quests'}`

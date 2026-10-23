@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../../api/queryKeys.js';
 import { toAppError } from '../../../errors/toAppError.js';
@@ -6,7 +6,10 @@ import type { AppError } from '../../../errors/types.js';
 import { loadNotifications } from '../adapters/notificationsAdapter.js';
 import type { NotificationView } from '../types.js';
 import { useMarkNotificationsRead } from './useMarkNotificationsRead.js';
-import { useNotificationSession } from './useNotificationSession.js';
+import {
+  useNotificationSession,
+  type NotificationSession,
+} from './useNotificationSession.js';
 
 const PAGE_SIZE = 20;
 
@@ -29,6 +32,10 @@ export function useNotificationsPage(): NotificationsPageView {
   const queryClient = useQueryClient();
   const { session, isCurrent, requireCurrent, accountError, retryAccount } =
     useNotificationSession();
+  const [unreadSnapshot, setUnreadSnapshot] = useState<{
+    session: NotificationSession;
+    ids: ReadonlySet<string>;
+  } | null>(null);
   const q = useInfiniteQuery({
     queryKey: [...queryKeys.notificationsInbox(PAGE_SIZE), session?.authority ?? null],
     queryFn: async ({ pageParam, signal }) => {
@@ -69,6 +76,15 @@ export function useNotificationsPage(): NotificationsPageView {
     return [...unique.values()];
   }, [q.data]);
 
+  if (unreadSnapshot && unreadSnapshot.session !== session) {
+    setUnreadSnapshot(null);
+  } else if (!unreadSnapshot && session && isCurrent(session) && q.data) {
+    setUnreadSnapshot({
+      session,
+      ids: new Set(items.filter((item) => item.unread).map((item) => item.id)),
+    });
+  }
+
   useEffect(() => {
     enqueue(
       items
@@ -97,9 +113,10 @@ export function useNotificationsPage(): NotificationsPageView {
 
   return {
     status: 'ready',
-    items: items.map((item) =>
-      succeededIds.includes(item.id) ? { ...item, unread: false } : item,
-    ),
+    items: items.map((item) => ({
+      ...item,
+      unread: unreadSnapshot?.ids.has(item.id) ?? false,
+    })),
     markReadFailureIds,
     markReadSuccessCount: succeededIds.length,
     loadMoreError: q.isFetchNextPageError

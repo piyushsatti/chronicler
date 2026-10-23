@@ -45,11 +45,18 @@
   inline-size: 100%;
 }
 
-.actions > a {
+.actions a {
   white-space: nowrap;
 }
 
-.signOut {
+.actionGroup,
+.publicActions {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-2);
+}
+
+.publicActions {
   margin-inline-start: auto;
 }
 

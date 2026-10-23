@@ -47,9 +47,7 @@
 }
 
 .admin-member-row__name > .type-title {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
   font-size: var(--type-body-size, 0.9375rem);
 }
 

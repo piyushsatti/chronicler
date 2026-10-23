@@ -191,6 +191,10 @@ export function CalendarPage(): React.JSX.Element {
                           <span key={day}>{day}</span>
                         ))}
                       </div>
+                      {page.quests.isSuccess && page.quests.data.total === 0 &&
+                      !state.day && !state.q && !state.status && !state.dmId && !state.regionId ? (
+                        <p className="type-caption">No quests this month</p>
+                      ) : null}
                       <div
                         className={styles.days}
                         role="list"

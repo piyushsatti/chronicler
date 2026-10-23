@@ -1,4 +1,5 @@
 import { Button } from '../../../components/primitives/Button.js';
+import { useState } from 'react';
 import { isSafeInternalPath, isSafeUrl } from '../../../utils/url.js';
 import { AdminPagination } from './AdminPagination.js';
 import { deliveryReference, deliveryTitle, deliveryTone } from './deliveryTitle.js';
@@ -6,6 +7,7 @@ import { Link } from 'react-router-dom';
 import { Card } from '../../../components/primitives/Card.js';
 import { Chip } from '../../../components/primitives/Chip.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
+import { FilterBar } from '../../../components/primitives/FilterBar.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
 import { humanizeKey, isSentinelDate, labelFor, pluralize } from '../../../utils/format.js';
@@ -41,6 +43,7 @@ export function DeliveryPanel({
   view: AdminOperationsView;
 }): React.JSX.Element {
   const { query } = view;
+  const [state, setState] = useState('');
   const { formatDateTime } = useDateFormatter();
   if (query.isError) {
     return (
@@ -55,15 +58,13 @@ export function DeliveryPanel({
   }
 
   const ops = query.data;
+  const states = [...new Set([
+    ...ops.deliveries.map((delivery) => delivery.state),
+    ...(state ? [state] : []),
+  ])];
+  const deliveries = ops.deliveries.filter((delivery) => !state || delivery.state === state);
   return (
     <div className="stack" data-el="admin.deliveryPanel">
-      <p className="type-caption">
-        {pluralize(ops.pendingDeliveryCount, 'delivery', 'deliveries')} waiting ·{' '}
-        {ops.deliveryTotal} recorded ·{' '}
-        <Link to="/admin/data-health">
-          {pluralize(ops.activeAlertCount, 'active alert')}
-        </Link>
-      </p>
       <Card className={`stack ${styles.panel}`}>
         <h2 className="type-title">Setup</h2>
         <ul className={styles.list} aria-label="Delivery setup">
@@ -138,16 +139,38 @@ export function DeliveryPanel({
       </Card>
       <Card as="section" className={`stack ${styles.panel}`} aria-label="Deliveries">
         <h2 className="type-title">Deliveries</h2>
+        <FilterBar
+          label="Filter deliveries"
+          count={pluralize(deliveries.length, 'delivery', 'deliveries')}
+        >
+          <FilterBar.Picker
+            label="Status on this page"
+            value={state}
+            onValueChange={setState}
+            options={[
+              { value: '', label: 'All' },
+              ...states.map((value) => ({ value, label: labelFor(value, DELIVERY_STATES) })),
+            ]}
+          />
+          <span className="type-caption">
+            {ops.deliveryTotal} recorded · {pluralize(ops.pendingDeliveryCount, 'delivery', 'deliveries')} waiting
+          </span>
+          <Link className="type-caption" to="/admin/data-health">
+            {pluralize(ops.activeAlertCount, 'active alert')}
+          </Link>
+        </FilterBar>
         <AdminPagination page={view.deliveryPage} />
-        {ops.deliveries.length === 0 ? (
+        {deliveries.length === 0 ? (
           <EmptyState
             kind="no-events"
             message="No deliveries on this page."
-            action={<Link to="/quests" className="btn btn--secondary">Browse quests</Link>}
+            action={state
+              ? <Button variant="secondary" onClick={() => setState('')}>Clear filters</Button>
+              : <Link to="/quests" className="btn btn--secondary">Browse quests</Link>}
           />
         ) : (
             <ul className={styles.list} aria-label="Deliveries">
-              {ops.deliveries.map((delivery, index) => {
+              {deliveries.map((delivery) => {
                 const retryAt =
                   delivery.nextAttemptAt &&
                   !['succeeded', 'cancelled', 'dead'].includes(delivery.state)
@@ -155,7 +178,7 @@ export function DeliveryPanel({
                     : null;
                 const title = deliveryTitle(
                   delivery,
-                  view.deliveryPage.offset + index + 1,
+                  view.deliveryPage.offset + ops.deliveries.indexOf(delivery) + 1,
                 );
                 return (
                   <li key={delivery.id} className={styles.item}>

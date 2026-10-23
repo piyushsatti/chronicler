@@ -90,3 +90,7 @@
 .loadMore {
   align-self: flex-start;
 }
+
+.filters {
+  row-gap: var(--sp-2);
+}

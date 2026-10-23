@@ -192,3 +192,18 @@
 
 .facts dt { color: var(--color-text-3); }
 .facts dd { margin: 0; text-align: end; }
+
+.backstoryEmpty {
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+:global([data-width-class='compact']) .filters {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+:global([data-width-class='compact']) .filters :global(.filter-bar__search) {
+  grid-column: 1 / -1;
+}

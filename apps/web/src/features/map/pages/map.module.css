@@ -216,6 +216,9 @@
   min-width: 0;
   overflow-wrap: anywhere;
 }
+.regionDescription > :global(.cr-prose) {
+  max-inline-size: var(--page-max-reading);
+}
 @container (min-width: 64rem) {
   .explorer {
     grid-template-columns: minmax(0, 1fr) var(--rail-width);
@@ -255,7 +258,8 @@
   .details {
     border-start-start-radius: 0;
     border-start-end-radius: 0;
-    border-block-start: 3px solid var(--color-accent);
+    border: 1px solid var(--color-border-2);
+    background: color-mix(in srgb, var(--color-bg-panel) 95%, var(--color-accent));
     max-block-size: 50svh;
     overflow-y: auto;
     overscroll-behavior: contain;

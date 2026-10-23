@@ -46,20 +46,15 @@ export function CharacterDirectoryPanel({
           value={view.namePrefix}
           onValueChange={view.setNamePrefix}
         />
-        <FilterBar.Group>
-          <Chip selected={view.status === ''} onClick={() => view.setStatus('')}>
-            All
-          </Chip>
-          {Object.entries(CHARACTER_STATUS_LABELS).map(([value, label]) => (
-            <Chip
-              key={value}
-              selected={view.status === value}
-              onClick={() => view.setStatus(value)}
-            >
-              {label}
-            </Chip>
-          ))}
-        </FilterBar.Group>
+        <FilterBar.Picker
+          label="Status"
+          value={view.status}
+          onValueChange={view.setStatus}
+          options={[
+            { value: '', label: 'All' },
+            ...Object.entries(CHARACTER_STATUS_LABELS).map(([value, label]) => ({ value, label })),
+          ]}
+        />
         <FilterBar.Picker
           label="Region"
           value={view.regionId}

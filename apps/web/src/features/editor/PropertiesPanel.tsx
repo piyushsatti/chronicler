@@ -195,7 +195,7 @@ export function PropertiesPanel({
           !fieldEmpty(f, values[f.key]) &&
           f.type !== 'toggle';
         return (
-          <div key={f.key} className="pf-row" data-err={show ? 1 : 0}>
+          <div key={f.key} className="pf-row" data-field={f.key} data-err={show ? 1 : 0}>
             <div className="pf-label">
               {f.label}
               {f.required ? <span className="pf-hint">Required</span> : null}

@@ -170,7 +170,7 @@ export function CommunityPage(): React.JSX.Element {
   const available = members.filter((member) => member.availableDays.length > 0);
 
   const filterBar = (count: string | undefined, extra?: React.ReactNode) => (
-    <FilterBar label="Filter community" count={count}>
+    <FilterBar className={styles.filters} label="Filter community" count={count}>
       <FilterBar.Search
         label="Search the community"
         placeholder="Search by name"

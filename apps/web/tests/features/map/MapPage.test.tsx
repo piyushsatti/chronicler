@@ -1021,6 +1021,7 @@ describe('Region navigation', () => {
       `/regions/${region.id}`,
     );
     expect(screen.getByText(/1 map$/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Test Region' })).toHaveTextContent('Charter · 1 map');
   });
   it('filters the directory from URL state, supports browser history, and clears empty results', async () => {
     const regions = [
