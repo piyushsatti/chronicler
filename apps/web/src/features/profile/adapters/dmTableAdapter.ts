@@ -29,6 +29,7 @@ export type DmTableSessionView = {
   title: string;
   scheduledAt: string;
   status: string;
+  rawStatus: string;
   slotsMax: number;
   filledCount: number;
 };
@@ -150,9 +151,10 @@ export async function loadDmTableSchedule(
       items: parsed.data.items.map((q) => ({
         id: q.id,
         shortCode: q.shortCode,
-        title: q.briefDocument?.title ?? q.shortCode,
+        title: q.briefDocument?.title ?? 'Untitled quest',
         scheduledAt: q.scheduledAt,
         status: q.displayStatus ?? q.status,
+        rawStatus: q.status,
         slotsMax: q.slotsMax,
         filledCount: q.filledCount,
       })),

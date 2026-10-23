@@ -1,0 +1,11 @@
+query QuestArcsPage($offset: Int!) {
+  questArcs(limit: 50, offset: $offset) {
+    total
+    items {
+      id
+      name
+      createdBy
+      questCount
+    }
+  }
+}

@@ -55,12 +55,12 @@ const SECTIONS = [
   },
 ] as const;
 
-function adminDeclaration(page: string, bare: boolean): PageDeclaration {
+function adminDeclaration(page: string, bare: boolean, authority: WorkspaceAuthority): PageDeclaration {
   return {
     page,
     regions: [
       ...(bare ? [] : [{ role: 'summary', priority: 0 }]),
-      { role: 'nav', priority: 1 },
+      ...(authority === 'dm' ? [] : [{ role: 'nav', priority: 1 }]),
       { role: 'body', priority: 2 },
     ],
   };
@@ -218,22 +218,29 @@ function AuthorizedWorkspace({
           error={account.error ?? undefined}
           deniedMessage={
             authority === 'dm'
-              ? 'Only DMs can open this. Apply from Community, DMs.'
+              ? 'Only DMs can open this dashboard. Apply to run quests from the DM directory.'
               : 'This area is for staff.'
           }
+          action={authority === 'dm' ? <Link className="btn btn--primary" to="/dms">Browse DMs and apply</Link> : undefined}
           onRetry={account.reload}
+          retryLabel={authority === 'dm' ? 'Check access again' : undefined}
         />
         {denied ? null : <AuthorityRecovery reload={account.reload} />}
       </section>
     );
   }
-  if (account.status === 'loading') return <StatePanel status="loading" />;
+  if (account.status === 'loading') return authority === 'dm' ? (
+    <div className="stack">
+      <PageHeader back={{ to: '/me', label: 'Your page' }} title={title} />
+      <StatePanel status="loading" />
+    </div>
+  ) : <StatePanel status="loading" />;
   return (
     <AuthorityFailureContext.Provider value={failures.report}>
       <div className="admin-workspace" data-layout="admin-workspace">
         <PageHost
           key={account.commandKey}
-          declaration={adminDeclaration(page, bareHeader)}
+          declaration={adminDeclaration(page, bareHeader, authority)}
           regions={hostRegions}
         />
       </div>

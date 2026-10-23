@@ -41,6 +41,7 @@ export const graphql: FeatureGraphql = {
         downtimeProjects: { items: [], total: 0 },
       },
     }),
+  CharacterOwner: () => HttpResponse.json({ data: { member: { id: goodCharacter.ownerId, handle: 'mira', displayName: 'Mira', avatarUrl: null } } }),
   Character: () => HttpResponse.json({ data: { character: characterMock } }),
   CharacterRegions: () =>
     HttpResponse.json({

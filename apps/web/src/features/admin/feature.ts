@@ -83,6 +83,7 @@ export const graphql: FeatureGraphql = {
     HttpResponse.json({
       data: {
         dmStats: { sessionCount: 0 },
+        questArcs: { total: 0, items: [] },
         quests: { total: 0, items: [] },
         documents: { total: 0, items: [] },
       },

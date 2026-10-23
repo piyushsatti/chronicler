@@ -1,12 +1,15 @@
-import { useId } from 'react';
+import { useId, type FocusEventHandler } from 'react';
 import { cx } from './cx.js';
 import { Menu } from './Menu.js';
+import './Select.css';
 
 export type SelectOption = { value: string; label: string };
 
 export type SelectProps = {
   /** Names the control for assistive tech; also the menu name. */
   label: string;
+  id?: string;
+  onBlur?: FocusEventHandler<HTMLButtonElement>;
   /** The visible caption's id, when the caller draws one; it then names the trigger. */
   labelId?: string;
   value: string;
@@ -18,6 +21,8 @@ export type SelectProps = {
   /** Included in a surrounding form's data as a hidden field. */
   name?: string;
   'aria-describedby'?: string;
+  'aria-invalid'?: boolean;
+  'aria-required'?: boolean;
   className?: string;
 };
 
@@ -26,6 +31,8 @@ export type SelectProps = {
  * from Menu. Filters inside a FilterBar use FilterBar.Picker instead. */
 export function Select({
   label,
+  id,
+  onBlur,
   labelId,
   value,
   options,
@@ -34,18 +41,25 @@ export function Select({
   disabled = false,
   name,
   'aria-describedby': describedBy,
+  'aria-invalid': invalid,
+  'aria-required': required,
   className,
 }: SelectProps): React.JSX.Element {
   const valueId = useId();
   const current = options.find((option) => option.value === value);
   return (
     <div className={cx('select', className)} data-component="Select" data-disabled={disabled || undefined}>
-      {name ? <input type="hidden" name={name} value={value} /> : null}
+      {required ? <span id={`${valueId}-required`} className="select__required">Required</span> : null}
+      {name ? <input type="hidden" name={name} value={value} disabled={disabled} /> : null}
       <Menu
         ariaLabel={label}
+        triggerId={id}
+        onTriggerBlur={onBlur}
         triggerLabelledBy={labelId ? `${labelId} ${valueId}` : undefined}
         triggerDisabled={disabled}
-        triggerDescribedBy={describedBy}
+        triggerDescribedBy={[describedBy, required ? `${valueId}-required` : undefined].filter(Boolean).join(' ') || undefined}
+        triggerInvalid={invalid}
+        className="select__popup"
         listClassName="select__list"
         items={options.map((option) => ({
           key: option.value || 'none',

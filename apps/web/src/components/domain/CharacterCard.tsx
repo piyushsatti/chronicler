@@ -1,16 +1,23 @@
-import { Avatar } from '../../../components/primitives/Avatar.js';
-import { Card } from '../../../components/primitives/Card.js';
-import type { CharacterViewModel } from '../adapters/characterAdapter.js';
-import { isCharacterImageUrl } from '../imageUrl.js';
-import { characterStatusLabel } from '../../../utils/format.js';
-import styles from '../pages/characterDetail.module.css';
+import { Avatar } from '../primitives/Avatar.js';
+import { Card } from '../primitives/Card.js';
+import { isCharacterImageUrl } from '../../utils/characterImageUrl.js';
+import { characterStatusLabel } from '../../utils/format.js';
+import styles from './CharacterCard.module.css';
+
+type CharacterCardView = {
+  shortCode: string;
+  name: string;
+  status: string;
+  imageUrl: string | null;
+  ddbMirror?: { classes: string | null; species: string | null } | null;
+};
 
 /** Roster card: small portrait (initials when absent or broken), status, name, class. */
 export function CharacterCard({
   character,
   showStatus = true,
 }: {
-  character: CharacterViewModel;
+  character: CharacterCardView;
   showStatus?: boolean;
 }): React.JSX.Element {
   const initials = character.name

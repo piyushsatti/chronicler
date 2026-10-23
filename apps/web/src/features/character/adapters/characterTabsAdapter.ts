@@ -10,6 +10,8 @@ import CO_PLAYERS_QUERY from './coPlayers.graphql?raw';
 import SUMMARIES_QUERY from './characterSummaries.graphql?raw';
 import PARTICIPATIONS_QUERY from './participationsByCharacter.graphql?raw';
 import HISTORY_QUEST_QUERY from './characterHistoryQuest.graphql?raw';
+import { personLabels } from '../../../utils/format.js';
+import { loadCharacterOwner } from './characterOwnerAdapter.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 
@@ -152,10 +154,10 @@ export function parseParticipations(
   };
 }
 
-async function loadHistoryQuest(id: string): Promise<HistoryQuest | null> {
+async function loadHistoryQuest(id: string, init?: RequestInit): Promise<HistoryQuest | null> {
   const data = await graphqlRequest<CharacterHistoryQuestQuery>(HISTORY_QUEST_QUERY, {
     id,
-  });
+  }, init);
   const parsed = historyQuestSchema.safeParse(data.quest ?? null);
   if (!parsed.success)
     throw toAppError({ failure: 'InvalidWire' }, 'character:history');
@@ -177,7 +179,9 @@ export async function loadCoPlayers(characterId: string): Promise<CoPlayerView[]
     const result = parseCoPlayers(data.coPlayers);
     if (!result.ok)
       throw toAppError({ failure: result.failure }, 'character:co-players');
-    return result.data;
+    const members = await Promise.all(result.data.map((row) => loadCharacterOwner(row.key)));
+    const labels = personLabels(members, 'Player unavailable');
+    return result.data.map((row, index) => ({ ...row, label: labels[index] }));
   } catch (err) {
     throw toAppError(err, 'character:co-players');
   }
@@ -203,21 +207,28 @@ export async function loadCharacterSummaries(
 
 export async function loadCharacterParticipations(
   characterId: string,
+  init?: RequestInit,
 ): Promise<ParticipationView[]> {
   try {
-    const data = await graphqlRequest<ParticipationsByCharacterQuery>(
-      PARTICIPATIONS_QUERY,
-      { characterId, limit: 50, offset: 0 },
-    );
-    const rows = participationSchema.safeParse(data.participationsByCharacter);
-    // The participation page names no quest, so each distinct quest is read once.
-    const ids = rows.success ? [...new Set(rows.data.items.map((i) => i.questId))] : [];
+    const items: z.infer<typeof participationSchema>['items'] = [];
+    for (;;) {
+      init?.signal?.throwIfAborted();
+      const data = await graphqlRequest<ParticipationsByCharacterQuery>(
+        PARTICIPATIONS_QUERY,
+        { characterId, limit: 50, offset: items.length },
+        init,
+      );
+      const page = participationSchema.safeParse(data.participationsByCharacter);
+      if (!page.success) throw toAppError({ failure: 'InvalidWire' }, 'character:participations');
+      items.push(...page.data.items);
+      if (page.data.total === undefined || items.length >= page.data.total) break;
+      if (page.data.items.length === 0) throw toAppError({ failure: 'InvalidWire' }, 'character:participations');
+    }
+    const ids = [...new Set(items.map((item) => item.questId))];
     const quests = Object.fromEntries(
-      await Promise.all(
-        ids.map(async (id) => [id, await loadHistoryQuest(id)] as const),
-      ),
+      await Promise.all(ids.map(async (id) => [id, await loadHistoryQuest(id, init)] as const)),
     );
-    const result = parseParticipations(data.participationsByCharacter, quests);
+    const result = parseParticipations({ items }, quests);
     if (!result.ok) {
       throw toAppError({ failure: result.failure }, 'character:participations');
     }

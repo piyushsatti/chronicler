@@ -1,8 +1,7 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMemberProfile } from '../../../hooks/useMemberProfile.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AppError } from '../../../errors/types.js';
 import {
-  loadMemberProfile,
   type MemberProfileView,
 } from '../adapters/memberProfileAdapter.js';
 
@@ -27,11 +26,7 @@ export type ProfileBodyView =
 
 export function useProfileBody(shortCode: string): ProfileBodyView {
   const handle = normalizeHandle(shortCode);
-  const profile = useQuery({
-    queryKey: ['memberProfile', handle],
-    queryFn: () => loadMemberProfile(handle),
-    enabled: handle.length > 0,
-  });
+  const profile = useMemberProfile(handle);
 
   if (profile.isError) {
     return { status: 'error', error: toAppError(profile.error, 'profile:page') };

@@ -11,7 +11,7 @@ import { Chip } from '../../../components/primitives/Chip.js';
 import { FilterBar } from '../../../components/primitives/FilterBar.js';
 import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { pluralize } from '../../../utils/format.js';
-import { CharacterCard } from '../components/CharacterCard.js';
+import { CharacterCard } from '../../../components/domain/CharacterCard.js';
 import { CreateCharacterForm } from '../components/CreateCharacterForm.js';
 import {
   CHARACTER_PAGE_SIZE,

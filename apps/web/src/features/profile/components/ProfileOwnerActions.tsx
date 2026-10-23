@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Button } from '../../../components/primitives/Button.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import type { MemberProfileView } from '../adapters/memberProfileAdapter.js';
 import { useProfileActions } from '../hooks/useProfileActions.js';
+import { Select } from '../../../components/primitives/Select.js';
 import { Checkbox } from '../../../components/primitives/Checkbox.js';
-import { statusLabel } from '../../../utils/format.js';
+import { statusLabel, weekdayLabel } from '../../../utils/format.js';
 const DAYS = [
   'MONDAY',
   'TUESDAY',
@@ -32,6 +33,7 @@ export function ProfileOwnerActions({
   canAvailability: boolean;
   canDm: boolean;
 }) {
+  const dayLabelId = useId();
   const actions = useProfileActions(profile.member.handle);
   const [name, setName] = useState(profile.member.displayName);
   const [avatar, setAvatar] = useState(profile.member.avatarUrl ?? '');
@@ -128,19 +130,17 @@ export function ProfileOwnerActions({
           {slots.map((slot, index) => (
             <fieldset className="stack" key={index} disabled={actions.pending}>
               <legend>Window {index + 1}</legend>
-              <label className="stack">
-                Day
-                <select
-                  className="field-input"
-                  aria-label={`Day ${index + 1}`}
+              <div className="stack">
+                <span id={`${dayLabelId}-${index}`}>Day {index + 1}</span>
+                <Select
+                  label={`Day ${index + 1}`}
+                  labelId={`${dayLabelId}-${index}`}
                   value={slot.day}
-                  onChange={(event) => changeSlot(index, 'day', event.target.value)}
-                >
-                  {DAYS.map((day) => (
-                    <option key={day}>{day}</option>
-                  ))}
-                </select>
-              </label>
+                  disabled={actions.pending}
+                  options={DAYS.map((day) => ({ value: day, label: weekdayLabel(day) }))}
+                  onValueChange={(value) => changeSlot(index, 'day', value)}
+                />
+              </div>
               <label className="stack">
                 Start time
                 <input

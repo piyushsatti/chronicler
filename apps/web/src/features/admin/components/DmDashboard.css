@@ -41,33 +41,3 @@
 .dm-dashboard__quests a {
   overflow-wrap: anywhere;
 }
-
-.dm-dashboard__tables {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.dm-dashboard__table {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: var(--sp-2) var(--sp-4);
-  padding-block: var(--sp-3);
-  border-bottom: 1px solid var(--color-border-2);
-}
-
-.dm-dashboard__table:first-child {
-  padding-top: 0;
-}
-
-.dm-dashboard__table:last-child {
-  padding-bottom: 0;
-  border-bottom: 0;
-}
-
-.dm-dashboard__table > .type-title {
-  min-width: 0;
-  flex: 1;
-  overflow-wrap: anywhere;
-}

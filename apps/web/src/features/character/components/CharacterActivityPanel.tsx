@@ -1,4 +1,7 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { EmptyState } from '../../../components/primitives/EmptyState.js';
+import { Select } from '../../../components/primitives/Select.js';
 import { Button } from '../../../components/primitives/Button.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { toAppError } from '../../../errors/toAppError.js';
@@ -14,6 +17,9 @@ export function CharacterActivityPanel({
   characterId: string;
   owner: boolean;
 }): React.JSX.Element {
+  const statusLabelId = useId();
+  const logId = useId();
+  const projectId = useId();
   const state = useCharacterActivity(characterId);
   const { formatDate } = useDateFormatter();
   const [amount, setAmount] = useState('');
@@ -63,7 +69,10 @@ export function CharacterActivityPanel({
             ))}
           </ul>
         ) : (
-          <p className="type-caption">No log entries on this page.</p>
+          <EmptyState
+            message="No log entries on this page."
+            action={owner ? <a className="type-link" href={`#${logId}`}>Write a log entry</a> : <Link className="type-link" to="/quests">Browse quests</Link>}
+          />
         )}
         {owner ? (
           <form
@@ -83,6 +92,7 @@ export function CharacterActivityPanel({
                 required
                 maxLength={8000}
                 aria-label="New log entry"
+                id={logId}
                 disabled={state.write.isPending}
                 value={body}
                 onChange={(event) => setBody(event.target.value)}
@@ -127,7 +137,10 @@ export function CharacterActivityPanel({
             ))}
           </ul>
         ) : (
-          <p className="type-caption">No downtime projects on this page.</p>
+          <EmptyState
+            message="No downtime projects on this page."
+            action={owner ? <a className="type-link" href={`#${projectId}`}>Start a project</a> : <Link className="type-link" to="/characters">Browse characters</Link>}
+          />
         )}
         {owner ? (
           <form
@@ -161,6 +174,7 @@ export function CharacterActivityPanel({
                 required
                 maxLength={200}
                 aria-label="Project name"
+                id={projectId}
                 disabled={state.write.isPending}
                 value={name}
                 onChange={(event) => setName(event.target.value)}
@@ -205,20 +219,21 @@ export function CharacterActivityPanel({
                   onChange={(event) => setTarget(event.target.value)}
                 />
               </label>
-              <label className="stack">
-                <span className="type-label">Project status</span>
-                <select
-                  className="field-input"
-                  aria-label="Project status"
+              <div className="stack">
+                <span id={statusLabelId} className="type-label">Project status</span>
+                <Select
+                  label="Project status"
+                  labelId={statusLabelId}
                   disabled={state.write.isPending}
                   value={status}
-                  onChange={(event) => setStatus(event.target.value)}
-                >
-                  <option value="active">Active</option>
-                  <option value="completed">Completed</option>
-                  <option value="abandoned">Abandoned</option>
-                </select>
-              </label>
+                  onValueChange={setStatus}
+                  options={[
+                    { value: 'active', label: 'Active' },
+                    { value: 'completed', label: 'Completed' },
+                    { value: 'abandoned', label: 'Abandoned' },
+                  ]}
+                />
+              </div>
             </div>
             <label className="stack">
               <span className="type-label">Project notes</span>

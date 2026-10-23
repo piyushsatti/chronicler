@@ -6,7 +6,7 @@ import {
 import {
   imageUrlError,
   isCharacterImageUrl,
-} from '../../../src/features/character/imageUrl.js';
+} from '../../../src/utils/characterImageUrl.js';
 // Shared with the API's Go tests (internal/character/url_rules_fixture_test.go) so drift fails CI.
 import vectors from '../../../../../packages/contracts/fixtures/url-rules.v1.json';
 

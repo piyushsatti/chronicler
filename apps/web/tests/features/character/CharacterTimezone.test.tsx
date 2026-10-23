@@ -71,11 +71,11 @@ describe('Character timestamp timezone', () => {
       </>,
       { route: '/characters/C-101' },
     );
-    expect(await screen.findByText(/Synced from D&D Beyond.*7 Mar 2026/)).toBeVisible();
+    expect(await screen.findByText(/D&D Beyond last synced.*7 Mar 2026/)).toBeVisible();
     expect(await screen.findByText('7 Mar 2026', { exact: true })).toBeVisible();
     const reads = { mirrorReads, activityReads };
     await userEvent.setup().click(screen.getByRole('button', { name: 'Change zone' }));
-    expect(screen.getByText(/Synced from D&D Beyond.*8 Mar 2026/)).toBeVisible();
+    expect(screen.getByText(/D&D Beyond last synced.*8 Mar 2026/)).toBeVisible();
     expect(screen.getByText('8 Mar 2026', { exact: true })).toBeVisible();
     expect({ mirrorReads, activityReads }).toEqual(reads);
   });

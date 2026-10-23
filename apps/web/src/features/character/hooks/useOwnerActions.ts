@@ -12,7 +12,7 @@ import {
 } from '../adapters/characterMutations.js';
 import type { CharacterViewModel } from '../adapters/characterAdapter.js';
 import { ddbUrlError } from '../ddbUrl.js';
-import { imageUrlError } from '../imageUrl.js';
+import { imageUrlError } from '../../../utils/characterImageUrl.js';
 
 type OwnerCommand =
   | {

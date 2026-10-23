@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { FocusEventHandler, ReactNode } from 'react';
 import { Menu as BaseMenu } from '@base-ui/react/menu';
 import { cx } from './cx.js';
 
@@ -15,6 +15,8 @@ export type MenuItemSpec = {
 
 export type MenuProps = {
   trigger: ReactNode;
+  triggerId?: string;
+  onTriggerBlur?: FocusEventHandler<HTMLButtonElement>;
   items: MenuItemSpec[];
   ariaLabel?: string;
   /** Names the trigger button from visible text elsewhere (`aria-labelledby`). */
@@ -23,6 +25,7 @@ export type MenuProps = {
   triggerDisabled?: boolean;
   /** Id list naming help text for the trigger (`aria-describedby`). */
   triggerDescribedBy?: string;
+  triggerInvalid?: boolean;
   /** Applied to the popup panel (portaled to <body>), e.g. a scope class. */
   className?: string;
   /** Wraps the items in a `<div>` with this class (scroll caps, list layout). */
@@ -44,11 +47,14 @@ export type MenuProps = {
  */
 export function Menu({
   trigger,
+  triggerId,
+  onTriggerBlur,
   items,
   ariaLabel,
   triggerLabelledBy,
   triggerDisabled,
   triggerDescribedBy,
+  triggerInvalid,
   className,
   listClassName,
   itemClassName,
@@ -80,9 +86,12 @@ export function Menu({
     >
       <BaseMenu.Trigger
         className="pop-trigger"
+        id={triggerId}
+        onBlur={onTriggerBlur}
         aria-labelledby={triggerLabelledBy}
         disabled={triggerDisabled}
         aria-describedby={triggerDescribedBy}
+        aria-invalid={triggerInvalid}
       >
         {trigger}
       </BaseMenu.Trigger>

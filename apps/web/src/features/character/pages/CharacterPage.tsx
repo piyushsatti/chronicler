@@ -14,7 +14,10 @@ import { Chip } from '../../../components/primitives/Chip.js';
 import { DetailLayout } from '../../../components/primitives/DetailLayout.js';
 import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { Card } from '../../../components/primitives/Card.js';
-import { StatTile } from '../../../components/primitives/StatTile.js';
+import { Avatar } from '../../../components/primitives/Avatar.js';
+import { useMemberHref } from '../../../hooks/useMemberHref.js';
+import { useCharacterOwner } from '../hooks/useCharacterOwner.js';
+import { toAppError } from '../../../errors/toAppError.js';
 import { Tabs } from '../../../components/primitives/Tabs.js';
 import type { AppError } from '../../../errors/types.js';
 import { useMe } from '../../../hooks/useMe.js';
@@ -29,6 +32,8 @@ import { useCharacterBackstory } from '../hooks/useCharacterBackstory.js';
 import { useCharacterPage } from '../hooks/useCharacterPage.js';
 import {
   characterStatusLabel,
+  personName,
+  personLabels,
   formatInstant,
   isSentinelDate,
   statusLabel,
@@ -44,15 +49,8 @@ import styles from './characterDetail.module.css';
 
 const DECLARATION: PageDeclaration = {
   page: 'character',
-  regions: [
-    { role: 'profile', priority: 1 },
-    { role: 'tabs', priority: 2 },
-  ],
+  regions: [{ role: 'profile', priority: 1 }],
 };
-
-function emptyRegion(): React.JSX.Element {
-  return <div hidden />;
-}
 
 function lifeBadge(status: string): Status {
   const raw = status.toLowerCase();
@@ -108,7 +106,7 @@ function BackstorySection({
   } else {
     body = (
       <div data-el="character.backstoryEmpty">
-        <EmptyState message="No backstory written yet." />
+        <EmptyState message="No backstory written yet." action={<Link className="type-link" to="/characters">Browse characters</Link>} />
       </div>
     );
   }
@@ -141,7 +139,7 @@ function ProgressionPanel({ characterId }: { characterId: string }): React.JSX.E
   if (progression.status === 'empty') {
     return (
       <div data-el="character.progressionEmpty">
-        <EmptyState message="No progression entries yet." />
+        <EmptyState message="No progression entries yet." action={<Link className="type-link" to="/quests">Find a quest</Link>} />
       </div>
     );
   }
@@ -183,7 +181,7 @@ function HistoryPanel({ characterId }: { characterId: string }): React.JSX.Eleme
   if (history.status === 'empty') {
     return (
       <div data-el="character.historyEmpty">
-        <EmptyState message="No quest history yet." />
+        <EmptyState message="No quest history yet." action={<Link className="type-link" to="/quests">Browse quests</Link>} />
       </div>
     );
   }
@@ -230,7 +228,7 @@ function ConnectionsPanel({ characterId }: { characterId: string }): React.JSX.E
   if (connections.status === 'empty') {
     return (
       <div data-el="character.connectionsEmpty">
-        <EmptyState message="No co-players recorded yet." />
+        <EmptyState message="No co-players recorded yet." action={<Link className="type-link" to="/players">Meet the players</Link>} />
       </div>
     );
   }
@@ -263,7 +261,7 @@ function SummariesPanel({ characterId }: { characterId: string }): React.JSX.Ele
   if (summaries.status === 'empty') {
     return (
       <div data-el="character.summariesEmpty">
-        <EmptyState message="No summaries yet." />
+        <EmptyState message="No summaries yet." action={<Link className="type-link" to="/chronicles">Browse chronicles</Link>} />
       </div>
     );
   }
@@ -280,6 +278,21 @@ function SummariesPanel({ characterId }: { characterId: string }): React.JSX.Ele
   );
 }
 
+function CharacterOwnerCard({ ownerId }: { ownerId: string | null }) {
+  const owner = useCharacterOwner(ownerId);
+  const memberHref = useMemberHref();
+  return <Card className="stack" pad={5}>
+    <h2 className="type-heading">Played by</h2>
+    {!ownerId || (owner.isSuccess && !owner.data) ? <EmptyState message="The player profile is not available." action={<Link className="type-link" to="/players">Browse players</Link>} /> :
+      owner.isError ? <StatePanel variant="inline" status="error" error={toAppError(owner.error, 'character:owner')} onRetry={owner.retry} /> :
+      !owner.data ? <StatePanel variant="inline" status="loading" /> :
+      <Link className={styles.cardRow} to={memberHref(owner.data, 'player')}>
+        <Avatar name={personName(owner.data)} src={owner.data.avatarUrl ?? undefined} size="md" />
+        <span className="type-title">{personLabels([owner.data])[0]}</span>
+      </Link>}
+  </Card>;
+}
+
 function readyRegions(
   character: CharacterViewModel,
   opts: { showOwner: boolean; timeZone: string | null },
@@ -292,8 +305,7 @@ function readyRegions(
 
   const mirror = character.ddbMirror;
   const facts = [
-    mirror?.level ? `Level ${mirror.level}` : null,
-    mirror?.classes ?? null,
+    mirror?.classes || (mirror?.level ? `Level ${mirror.level}` : null),
     mirror?.species ?? null,
   ]
     .filter(Boolean)
@@ -351,17 +363,22 @@ function readyRegions(
           }
         />
         <DetailLayout
-          railLabel="Experience"
+          railLabel="Player and character facts"
           rail={
-            <StatTile
-              className={styles.statCard}
-              label="Experience"
-              value={`${character.pcxp ?? 0} XP`}
-            >
+            <div className="stack" data-gap="4">
+            <CharacterOwnerCard ownerId={character.ownerId} />
+            <Card className="stack" pad={5}>
+              <h2 className="type-heading">Quick facts</h2>
+              <dl className={styles.facts}>
+                {mirror?.level != null ? <><dt>Level</dt><dd>{mirror.level}</dd></> : null}
+                {character.daysActive != null ? <><dt>Days active</dt><dd>{character.daysActive}</dd></> : null}
+                {character.regionName ? <><dt>Region</dt><dd>{character.regionName}</dd></> : null}
+                <dt>Experience</dt><dd>{character.pcxp ?? 0} XP</dd>
+              </dl>
               {character.ddbMirror ? (
                 <p className="type-caption">
                   {character.ddbMirror.syncedAt
-                    ? `Synced from D&D Beyond ${formatInstant(character.ddbMirror.syncedAt, opts.timeZone, 'date')}`
+                    ? `D&D Beyond last synced ${formatInstant(character.ddbMirror.syncedAt, opts.timeZone, 'date')}`
                     : 'Synced from D&D Beyond'}
                 </p>
               ) : (
@@ -371,74 +388,75 @@ function readyRegions(
                     : 'No D&D Beyond link on file.'}
                 </p>
               )}
-            </StatTile>
+            </Card>
+            </div>
           }
         >
-          <Card pad={5} className={styles.sheetCard}>
-            <BackstorySection
-              backstoryId={character.backstoryId}
-              regionId={character.regionId}
-            />
-            {character.description ? (
-              <section
-                className={styles.narrative}
-                aria-labelledby="description-heading"
-              >
-                <h2 id="description-heading" className="type-title">
-                  Description
-                </h2>
-                {/* Same reading style as the backstory lore; plain text, so line breaks are kept. */}
-                <div className="cr-prose" data-el="character.description">
-                  <p className={styles.plainProse}>{character.description}</p>
-                </div>
-              </section>
-            ) : null}
-          </Card>
-        </DetailLayout>
-        {opts.showOwner ? (
-          <Card pad={5} className={styles.ownerShelf}>
-            <OwnerActions key={character.id} character={character} />
-          </Card>
-        ) : null}
-      </div>
-    ),
-    tabs: () => (
-      <Tabs
-        aria-label="Character sections"
-        items={[
-          {
-            id: 'progression',
-            label: 'Progression',
-            panel: <ProgressionPanel characterId={character.id} />,
-          },
-          {
-            id: 'history',
-            label: 'Quest history',
-            panel: <HistoryPanel characterId={character.id} />,
-          },
-          {
-            id: 'connections',
-            label: 'Connections',
-            panel: <ConnectionsPanel characterId={character.id} />,
-          },
-          {
-            id: 'activity',
-            label: 'Logs & downtime',
-            panel: (
-              <CharacterActivityPanel
-                key={character.id}
-                characterId={character.id}
-                owner={opts.showOwner}
+          <div className="stack" data-gap="5">
+            <Card pad={5} className={styles.sheetCard}>
+              <BackstorySection
+                backstoryId={character.backstoryId}
+                regionId={character.regionId}
               />
-            ),
-          },
-          {
-            id: 'summaries',
-            label: 'Summaries',
-            panel: <SummariesPanel characterId={character.id} />,
-          },
-        ]}
-      />
+              {character.description ? (
+                <section
+                  className={styles.narrative}
+                  aria-labelledby="description-heading"
+                >
+                  <h2 id="description-heading" className="type-title">
+                    Description
+                  </h2>
+                  {/* Same reading style as the backstory lore; plain text, so line breaks are kept. */}
+                  <div className="cr-prose" data-el="character.description">
+                    <p className={styles.plainProse}>{character.description}</p>
+                  </div>
+                </section>
+              ) : null}
+            </Card>
+            {opts.showOwner ? (
+              <Card pad={5} className={styles.ownerShelf}>
+                <OwnerActions key={character.id} character={character} />
+              </Card>
+            ) : null}
+            <Tabs
+              aria-label="Character sections"
+              items={[
+                {
+                  id: 'progression',
+                  label: 'Progression',
+                  panel: <ProgressionPanel characterId={character.id} />,
+                },
+                {
+                  id: 'history',
+                  label: 'Quest history',
+                  panel: <HistoryPanel characterId={character.id} />,
+                },
+                {
+                  id: 'connections',
+                  label: 'Connections',
+                  panel: <ConnectionsPanel characterId={character.id} />,
+                },
+                {
+                  id: 'activity',
+                  label: 'Logs & downtime',
+                  panel: (
+                    <CharacterActivityPanel
+                      key={character.id}
+                      characterId={character.id}
+                      owner={opts.showOwner}
+                    />
+                  ),
+                },
+                {
+                  id: 'summaries',
+                  label: 'Summaries',
+                  panel: <SummariesPanel characterId={character.id} />,
+                },
+              ]}
+            />
+          </div>
+        </DetailLayout>
+      </div>
     ),
   };
 }
@@ -472,7 +490,6 @@ function statusRegions(
         )}
       </div>
     ),
-    tabs: emptyRegion,
   };
 }
 

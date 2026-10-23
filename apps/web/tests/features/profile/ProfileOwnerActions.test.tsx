@@ -15,6 +15,20 @@ function profile() {
   return parsed.data;
 }
 describe('Profile owner writes', () => {
+  it('keeps the selected weekday value when saving availability', async () => {
+    let slots: unknown;
+    server.use(graphql.mutation('ProfileSetMyAvailability', ({ variables }) => {
+      slots = variables.slots;
+      return HttpResponse.json({ data: { setMyAvailability: variables.slots } });
+    }));
+    const user = userEvent.setup();
+    renderWithProviders(<ProfileOwnerActions profile={profile()} canAvailability canDm={false} />);
+    await user.click(screen.getByRole('button', { name: /^Day 1 / }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Tuesday' }));
+    await user.click(screen.getByRole('button', { name: 'Save availability' }));
+    await screen.findByText('Availability saved.');
+    expect(slots).toEqual([{ ...wire.availability[0], day: 'TUESDAY' }]);
+  });
   it('omits an untouched avatar and explicitly clears a removed one', async () => {
     const attempts: Record<string, unknown>[] = [];
     server.use(

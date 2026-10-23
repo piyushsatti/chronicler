@@ -1,10 +1,20 @@
 import { z } from 'zod';
-import type { DmDashboardQuery } from '../../../api/graphql.operations.gen.js';
+import type { DmDashboardQuery, QuestArcsPageQuery } from '../../../api/graphql.operations.gen.js';
+import ARCS from '../../../api/questArcsPage.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
 import { adminRead, type AdminReadRequest } from './adminRequest.js';
 import QUERY from './dmDashboard.graphql?raw';
 const schema = z.object({
   dmStats: z.object({ sessionCount: z.number().int().nonnegative() }).nullable(),
+  questArcs: z.object({
+    total: z.number().int().nonnegative(),
+    items: z.array(z.object({
+      id: z.string().uuid(),
+      name: z.string(),
+      createdBy: z.string().uuid(),
+      questCount: z.number().int().nonnegative(),
+    })),
+  }),
   quests: z.object({
     total: z.number().int().nonnegative(),
     items: z.array(
@@ -47,5 +57,15 @@ export async function loadDmDashboard(
   );
   const parsed = schema.safeParse(data);
   if (!parsed.success) throw toAppError({ failure: 'InvalidWire' }, 'dm:dashboard');
-  return parsed.data;
+  const arcs = [...parsed.data.questArcs.items];
+  while (arcs.length < parsed.data.questArcs.total) {
+    const next = await adminRead<QuestArcsPageQuery>(ARCS, { offset: arcs.length }, request);
+    const page = schema.shape.questArcs.safeParse(next.questArcs);
+    if (!page.success || page.data.total !== parsed.data.questArcs.total || !page.data.items.length)
+      throw toAppError({ failure: 'InvalidWire' }, 'dm:series');
+    arcs.push(...page.data.items);
+  }
+  if (arcs.length !== parsed.data.questArcs.total || new Set(arcs.map((arc) => arc.id)).size !== arcs.length)
+    throw toAppError({ failure: 'InvalidWire' }, 'dm:series');
+  return { ...parsed.data, series: arcs.filter((arc) => arc.createdBy === memberId) };
 }

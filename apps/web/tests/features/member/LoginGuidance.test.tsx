@@ -51,6 +51,7 @@ describe('sign-in guidance', () => {
   it('does not claim a redirect when the guest opened sign-in directly', () => {
     renderWithProviders(<LoginPage />, { route: '/login' });
     expect(screen.getByRole('heading', { level: 1, name: 'Sign in' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Home' })).toHaveAttribute('href', '/');
     expect(screen.queryByText(/Sign in to continue/)).toBeNull();
   });
 

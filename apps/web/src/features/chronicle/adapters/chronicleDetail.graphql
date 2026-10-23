@@ -19,6 +19,7 @@ fragment ChronicleReaderDocument on DocumentType {
   canEditBody
   canEditMetadata
   updatedAt
+  publishedAt
   author {
     handle
   }

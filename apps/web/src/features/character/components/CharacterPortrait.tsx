@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { isCharacterImageUrl } from '../imageUrl.js';
+import { isCharacterImageUrl } from '../../../utils/characterImageUrl.js';
 import styles from '../pages/characterDetail.module.css';
 
 /**

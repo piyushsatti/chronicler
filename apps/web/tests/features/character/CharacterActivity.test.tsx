@@ -58,7 +58,7 @@ describe('Character activity', () => {
       }),
       graphql.mutation('UpsertDowntimeProject', ({ variables }) => {
         requests.push({ kind: 'project', variables });
-        project = { ...project, progress: 3 };
+        project = { ...project, progress: 3, status: 'completed' };
         return HttpResponse.json({
           data: {
             upsertDowntimeProject: {
@@ -90,6 +90,8 @@ describe('Character activity', () => {
     await user.click(screen.getByRole('button', { name: 'Edit Study' }));
     await user.clear(screen.getByLabelText('Progress'));
     await user.type(screen.getByLabelText('Progress'), '3');
+    await user.click(screen.getByRole('button', { name: /^Project status / }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Completed' }));
     await user.click(screen.getByRole('button', { name: 'Save downtime project' }));
     await waitFor(() =>
       expect(requests.find((item) => item.kind === 'project')?.variables).toMatchObject(
@@ -100,12 +102,12 @@ describe('Character activity', () => {
             name: 'Study',
             progress: 3,
             target: 5,
-            status: 'active',
+            status: 'completed',
           },
         },
       ),
     );
-    await screen.findByText('3 / 5 · Active');
+    await screen.findByText('3 / 5 · Completed');
   });
   it('does not offer write forms to another viewer', async () => {
     renderWithProviders(

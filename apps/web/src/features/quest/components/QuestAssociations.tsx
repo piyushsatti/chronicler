@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../../components/primitives/Button.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
@@ -7,6 +7,7 @@ import type { QuestDetailView } from '../adapters/questAdapter.js';
 import type { PointcrawlLink } from '../adapters/questCommands.js';
 import type { useQuestDetailPage } from '../hooks/useQuestDetailPage.js';
 import { Checkbox } from '../../../components/primitives/Checkbox.js';
+import { Select } from '../../../components/primitives/Select.js';
 
 type Detail = ReturnType<typeof useQuestDetailPage>;
 export function QuestAssociations({
@@ -17,6 +18,7 @@ export function QuestAssociations({
   detail: Detail;
 }): React.JSX.Element {
   const [arcId, setArcId] = useState(quest.arc?.id ?? '');
+  const labelId = useId();
   const [links, setLinks] = useState<PointcrawlLink[]>(quest.pointcrawlLinks);
   const { arcs, maps, nodes, commands } = detail;
   const error = arcs.error ?? maps.error ?? nodes.error;
@@ -53,22 +55,20 @@ export function QuestAssociations({
         }}
       >
         <h3 className="type-title">Quest arc</h3>
-        <label className="stack">
-          Arc membership
-          <select
-            aria-label="Arc membership"
+        <div className="stack">
+          <span id={`${labelId}-arc`}>Arc membership</span>
+          <Select
+            label="Arc membership"
+            labelId={`${labelId}-arc`}
             disabled={commands.pending || !arcs.data}
             value={arcId}
-            onChange={(event) => setArcId(event.target.value)}
-          >
-            <option value="">No arc</option>
-            {arcs.data?.map((arc) => (
-              <option key={arc.id} value={arc.id}>
-                {arc.name}
-              </option>
-            ))}
-          </select>
-        </label>
+            onValueChange={setArcId}
+            options={[
+              { value: '', label: 'No arc' },
+              ...(arcs.data ?? []).map((arc) => ({ value: arc.id, label: arc.name })),
+            ]}
+          />
+        </div>
         {quest.arc ? (
           <Link to={`/series/${encodeURIComponent(quest.arc.id)}`}>
             View {quest.arc.name}
@@ -90,22 +90,20 @@ export function QuestAssociations({
           Choose expected destinations and places visited. Saving replaces this quest’s
           associations; links from other maps stay selected.
         </p>
-        <label className="stack">
-          Pointcrawl map
-          <select
-            aria-label="Pointcrawl map"
+        <div className="stack">
+          <span id={`${labelId}-map`}>Pointcrawl map</span>
+          <Select
+            label="Pointcrawl map"
+            labelId={`${labelId}-map`}
             value={detail.atlasCode}
             disabled={commands.pending || !maps.data}
-            onChange={(event) => detail.setAtlasCode(event.target.value)}
-          >
-            <option value="">Choose a map</option>
-            {maps.data?.map((map) => (
-              <option key={map.id} value={map.atlasCode}>
-                {map.name}
-              </option>
-            ))}
-          </select>
-        </label>
+            onValueChange={detail.setAtlasCode}
+            options={[
+              { value: '', label: 'Choose a map' },
+              ...(maps.data ?? []).map((map) => ({ value: map.atlasCode, label: map.name })),
+            ]}
+          />
+        </div>
         {detail.atlasCode ? (
           <Link to={`/map/${encodeURIComponent(detail.atlasCode)}`}>Open map</Link>
         ) : null}

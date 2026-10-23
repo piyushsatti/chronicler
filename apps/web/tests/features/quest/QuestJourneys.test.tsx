@@ -70,10 +70,11 @@ describe('retained Quest journeys', () => {
       }),
     );
     renderDetail();
-    await screen.findByLabelText('Your character');
-    expect(screen.queryByRole('option', { name: /Pending/ })).not.toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: /^Your character/ }));
+    const rook = await screen.findByRole('menuitem', { name: 'Rook' });
+    expect(screen.queryByRole('menuitem', { name: /Pending/ })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign up' })).toBeDisabled();
-    await user.selectOptions(screen.getByLabelText('Your character'), otherId);
+    await user.click(rook);
     await user.click(screen.getByRole('button', { name: 'Sign up' }));
     expect(await screen.findByText('You joined the waitlist.')).toBeInTheDocument();
     expect(inputs).toEqual([
@@ -143,7 +144,8 @@ describe('retained Quest journeys', () => {
     expect(
       screen.queryByRole('button', { name: 'Mark played' }),
     ).not.toBeInTheDocument();
-    await user.selectOptions(screen.getByLabelText('Attendance'), 'played');
+    await user.click(screen.getByRole('button', { name: /^Attendance/ }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Played' }));
     await user.clear(screen.getByLabelText('PCXP award'));
     await user.type(screen.getByLabelText('PCXP award'), '3');
     await user.type(
@@ -254,6 +256,9 @@ describe('retained Quest journeys', () => {
   it('links the shared summary editor using authoritative UUIDs without prose search', async () => {
     login();
     server.use(
+      graphql.query('Quest', () => HttpResponse.json({ data: { quest: {
+        ...detail, participants: detail.participants.map((participant) => ({ ...participant, memberId: actorId })),
+      } } })),
       graphql.query('QuestSummaryPage', () =>
         HttpResponse.json({
           data: {
@@ -283,5 +288,34 @@ describe('retained Quest journeys', () => {
       'href',
       `/summaries/${summaries.summaries[0].id}/edit`,
     );
+    await userEvent.click(screen.getByRole('button', { name: /^Summary character/ }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Lyra Storm' }));
+    expect(screen.getByRole('link', { name: 'Write a character summary' })).toHaveAttribute('href', `/summaries/new?questId=${detail.id}&characterId=${characterId}`);
+  });
+
+  it('keeps quest arc and pointcrawl menu selections connected to their existing actions', async () => {
+    login();
+    const writes: unknown[] = [];
+    server.use(
+      graphql.query('QuestArcOptions', () => HttpResponse.json({ data: { questArcs: { total: 1, items: [{ id: otherId, name: 'Coastal voyages' }] } } })),
+      graphql.query('QuestMapOptions', () => HttpResponse.json({ data: { maps: [{ id: otherId, name: 'Harbor map', atlasCode: 'HARBOR', canEdit: true }] } })),
+      graphql.query('QuestNodeOptions', () => HttpResponse.json({ data: { map: { canEdit: true, pointcrawlNodes: [] } } })),
+      graphql.mutation('QuestSetArc', ({ variables }) => {
+        writes.push(variables);
+        return HttpResponse.json({ data: { updateQuest: { id: detail.id, updatedAt: detail.updatedAt, arcId: otherId } } });
+      }),
+    );
+    renderDetail();
+    await userEvent.click(await screen.findByRole('tab', { name: 'Details' }));
+    const arc = await screen.findByRole('button', { name: /^Arc membership/ });
+    await waitFor(() => expect(arc).toBeEnabled());
+    await userEvent.click(arc);
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Coastal voyages' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Save arc membership' }));
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(writes[0]).toMatchObject({ id: detail.id, input: { arcId: otherId } });
+    await userEvent.click(screen.getByRole('button', { name: /^Pointcrawl map/ }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Harbor map' }));
+    expect(screen.getByRole('link', { name: 'Open map' })).toHaveAttribute('href', '/map/HARBOR');
   });
 });

@@ -11,6 +11,7 @@ export const characterWireSchema = z.object({
   regionId: z.string().uuid().nullable().optional(),
   description: z.string().nullable().optional(),
   pcxp: z.number().int().optional(),
+  daysActive: z.number().int().nonnegative().optional(),
   verificationSubmittedAt: z.string().nullable().optional(),
   ddbMirror: z
     .object({

@@ -118,6 +118,7 @@ describe('Retained admin pagination and persisted readback', () => {
         return HttpResponse.json({
           data: {
             dmStats: { sessionCount: 31 },
+            questArcs: { total: 0, items: [] },
             quests: {
               total: 26,
               items: [
@@ -233,6 +234,7 @@ describe('Retained admin pagination and persisted readback', () => {
         return HttpResponse.json({
           data: {
             dmStats: null,
+            questArcs: { total: 0, items: [] },
             quests: {
               total: 2,
               items: [
@@ -296,6 +298,7 @@ describe('Retained admin pagination and persisted readback', () => {
         HttpResponse.json({
           data: {
             dmStats: null,
+            questArcs: { total: 0, items: [] },
             quests: { total: 0, items: [] },
             documents: { total: 0, items: [] },
           },
@@ -314,7 +317,8 @@ describe('Retained admin pagination and persisted readback', () => {
       }),
     );
     renderWithProviders(<DMDashboardPage />, { route: '/dm' });
-    expect(await screen.findByText('You have not posted any quests yet.')).toBeVisible();
+    expect(await screen.findByText('You have no upcoming quests yet.')).toBeVisible();
+    expect(screen.getByText('You have no past quests yet.')).toBeVisible();
     expect(screen.getByRole('link', { name: 'New DM table' })).toBeVisible();
     await waitFor(() => expect(profileReads).toBeGreaterThan(0));
     await waitFor(() =>

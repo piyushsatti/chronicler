@@ -1,11 +1,15 @@
 import { graphql, HttpResponse } from 'msw';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import { Route, Routes } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import { routes } from '../../../src/features/chronicle/feature.js';
 import { parseChronicleDetail } from '../../../src/features/chronicle/adapters/chronicleAdapter.js';
 import { server } from '../../../src/mocks/server.js';
 import detail from '../../fixtures/wire/chronicle/detail-good.json';
+import list from '../../fixtures/wire/chronicle/list-good.json';
+import calendar from '../../fixtures/wire/chronicle/calendar-good.json';
+import memberProfile from '../../fixtures/wire/profile/member-profile-good.json';
+import { DEFAULT_PREFERENCES, savePrefs } from '../../../src/context/theme.utils.js';
 import { renderWithProviders } from '../../test-utils.js';
 
 function reader(path: string) {
@@ -40,14 +44,23 @@ describe('Summary and Chronicle reader', () => {
     expect(screen.getByRole('heading', { name: 'Into the vault' })).toBeVisible();
     expect(screen.getByText('our party').tagName).toBe('STRONG');
     expect(screen.getByText('Deep Roads')).toBeVisible();
-    expect(screen.getByRole('link', { name: 'The vault expedition' })).toHaveAttribute(
-      'href',
-      '/quests/qa-played-orchard',
+    const facts = within(screen.getByLabelText('Session details'));
+    expect(facts.getByRole('link', { name: 'The vault expedition' })).toHaveAttribute(
+      'href', '/quests/qa-played-orchard',
     );
-    expect(screen.getByRole('link', { name: 'Q-14' })).toHaveAttribute(
+    expect(facts.getByRole('link', { name: 'Quest details' })).toHaveAttribute(
       'href',
       '/quests/Q-14',
     );
+    expect(facts.getAllByRole('link', { name: 'View roster' })[0]).toHaveAttribute(
+      'href', '/quests/qa-played-orchard',
+    );
+    expect(facts.getByRole('link', { name: 'Dalmond' })).toHaveAttribute(
+      'href', `/regions/${detail.summaryDerived.regions[0].id}`,
+    );
+    expect(await within(screen.getByRole('region', { name: 'Author' }))
+      .findByRole('link', { name: 'Mira' })).toHaveAttribute('href', '/players/@mira');
+    expect(screen.getByText('Played 18 Oct 2026')).toBeVisible();
     expect(screen.getByRole('link', { name: 'Thorn' })).toHaveAttribute(
       'href',
       '/characters/C-13',
@@ -102,7 +115,8 @@ describe('Summary and Chronicle reader', () => {
       ),
     );
     reader('/chronicles/vault-delve');
-    expect(await screen.findByText('No body available for this viewer.')).toBeVisible();
+    expect(await screen.findByText('No readable body is available for this entry.')).toBeVisible();
+    expect(screen.getAllByRole('link', { name: 'Browse Chronicles' }).length).toBeGreaterThan(0);
   });
 
   it.each([
@@ -178,6 +192,101 @@ describe('Summary and Chronicle reader', () => {
     expect(await screen.findByLabelText('Session details')).toHaveTextContent(
       'Game day0',
     );
+  });
+
+  it('shows a generic author name with their handle and real avatar', async () => {
+    server.use(
+      graphql.query('MemberProfile', () => HttpResponse.json({
+        data: { memberProfile: {
+          ...memberProfile,
+          member: { ...memberProfile.member, displayName: 'Member', avatarUrl: '/mira.png' },
+        } },
+      })),
+    );
+    reader('/summaries/vault-delve');
+    const author = await screen.findByRole('region', { name: 'Author' });
+    expect(await within(author).findByRole('link', { name: /Member \(@mira\)/ }))
+      .toHaveAttribute('href', '/players/@mira');
+    expect(within(author).getByRole('img', { name: 'Member (@mira)' }))
+      .toHaveAttribute('src', '/mira.png');
+    expect(within(author).getByRole('heading', { name: 'Written by' })).toBeVisible();
+  });
+
+  it('falls back to a readable handle when the public author profile is unavailable', async () => {
+    server.use(graphql.query('MemberProfile', () => HttpResponse.json({
+      data: { memberProfile: null },
+    })));
+    reader('/chronicles/vault-delve');
+    const author = await screen.findByRole('region', { name: 'Author' });
+    expect(within(author).getByRole('link', { name: '@mira' }))
+      .toHaveAttribute('href', '/players/@mira');
+  });
+
+  it('uses publication in the viewer time zone when the played date is a sentinel', async () => {
+    savePrefs({ ...DEFAULT_PREFERENCES, timezone: 'America/Los_Angeles' }, null);
+    server.use(graphql.query('ChronicleDetail', () => HttpResponse.json({
+      data: { bySlug: {
+        ...detail,
+        publishedAt: '2026-09-14T00:30:00Z',
+        summaryDerived: { ...detail.summaryDerived, occurredAt: '2099-01-01T00:00:00Z' },
+      } },
+    })));
+    reader('/summaries/vault-delve');
+    expect(await screen.findByText(/Published 13 Sept? 2026/)).toBeVisible();
+    expect(screen.queryByText(/2099/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Updated 19 Oct/)).not.toBeInTheDocument();
+  });
+
+  it('omits the facts card when the date is the only session detail', async () => {
+    server.use(graphql.query('ChronicleDetail', () => HttpResponse.json({
+      data: { bySlug: {
+        ...detail,
+        summaryDerived: { quests: [], regions: [], dms: [], players: [], occurredAt: '2026-10-18T10:00:00Z' },
+      } },
+    })));
+    reader('/chronicles/vault-delve');
+    expect(await screen.findByText('Played 18 Oct 2026')).toBeVisible();
+    expect(screen.queryByLabelText('Session details')).not.toBeInTheDocument();
+  });
+
+  it('relates only entries from the same author or region rather than unrelated arc matches', async () => {
+    server.use(graphql.query('ChronicleList', () => HttpResponse.json({
+      data: {
+        gameCalendar: calendar,
+        documents: {
+          total: 3,
+          items: [
+            { ...list.items[1], title: 'By the same author', author: { handle: 'mira' }, summaryDerived: { regions: [] } },
+            { ...list.items[0], id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', title: 'Unrelated entry', author: { handle: 'ash' }, summaryDerived: { regions: [], arc: 'Deep Roads' } },
+            { ...list.items[0], id: 'ffffffff-ffff-4fff-8fff-ffffffffffff', slug: 'same-region', title: 'From this region', author: { handle: 'ash' }, summaryDerived: { regions: [{ id: 'other-region', name: 'Elsewhere' }, ...detail.summaryDerived.regions] } },
+          ],
+        },
+      },
+    })));
+    reader('/chronicles/vault-delve');
+    const related = await screen.findByRole('region', { name: 'Related entries' });
+    expect(await within(related).findByRole('link', { name: /By the same author/ }))
+      .toHaveAttribute('href', '/chronicles/dm-table-notes');
+    expect(within(related).getByRole('link', { name: /From this region/ }))
+      .toHaveAttribute('href', '/chronicles/same-region');
+    expect(within(related).queryByRole('link', { name: /Unrelated entry/ })).not.toBeInTheDocument();
+  });
+
+  it('gives an action when no related entries or author are recorded', async () => {
+    server.use(
+      graphql.query('ChronicleDetail', () => HttpResponse.json({
+        data: { bySlug: { ...detail, author: null, summaryDerived: null } },
+      })),
+      graphql.query('ChronicleList', () => HttpResponse.json({
+        data: { documents: { items: [], total: 0 }, gameCalendar: calendar },
+      })),
+    );
+    reader('/chronicles/vault-delve');
+    const related = await screen.findByRole('region', { name: 'Related entries' });
+    expect(await within(related).findByText('No other entries by this author or from these regions are available.')).toBeVisible();
+    expect(within(related).getByRole('link', { name: 'Browse Chronicles' })).toHaveAttribute('href', '/chronicles');
+    expect(screen.getByText('No author is recorded for this entry.')).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Meet the community' })).toHaveAttribute('href', '/community');
   });
 
   it('rejects an empty authoritative quest code rather than constructing a guessed URL', () => {

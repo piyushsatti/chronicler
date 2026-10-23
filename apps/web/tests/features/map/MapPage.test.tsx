@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
 import {
   act,
   fireEvent,
@@ -651,13 +652,10 @@ describe('MapPage', () => {
             fireEvent.change(screen.getByRole('textbox', { name }), {
               target: { value: 'A map' },
             });
-        } else if (kind === 'link')
-          fireEvent.change(
-            await screen.findByRole('combobox', {
-              name: 'Location document',
-            }),
-            { target: { value: locationDocument.id } },
-          );
+        } else if (kind === 'link') {
+          await userEvent.click(await screen.findByRole('button', { name: /^Location document/ }));
+          await userEvent.click(await screen.findByRole('menuitem', { name: locationDocument.title }));
+        }
         fireEvent.submit(screen.getByRole('button', { name: 'Save' }).closest('form')!);
         expect(
           kind === 'create' ? create : kind === 'edge' ? edge : link,

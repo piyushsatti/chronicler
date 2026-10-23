@@ -1,4 +1,8 @@
 query ProfileDmDetails($memberId: ID!, $limit: Int!, $offset: Int!) {
+  questArcs(limit: 50, offset: 0) {
+    total
+    items { id name createdBy questCount }
+  }
   dmStats(memberId: $memberId) {
     sessionCount
   }

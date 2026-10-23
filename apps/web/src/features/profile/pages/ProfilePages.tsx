@@ -5,6 +5,8 @@ import { ContentRenderer } from '../../../components/foundation/ContentRenderer.
 import { PageShell } from '../../../components/foundation/PageShell.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { Chip } from '../../../components/primitives/Chip.js';
+import { ProfileActivity } from '../components/ProfileActivity.js';
+import { CardGrid } from '../../../components/primitives/CardGrid.js';
 import { Card } from '../../../components/primitives/Card.js';
 import { Avatar } from '../../../components/primitives/Avatar.js';
 import { DetailLayout } from '../../../components/primitives/DetailLayout.js';
@@ -15,7 +17,7 @@ import { toAppError } from '../../../errors/toAppError.js';
 import { useMe } from '../../../hooks/useMe.js';
 import { useMemberHref } from '../../../hooks/useMemberHref.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
-import { clockLabel, handleLabel, handleOnlyName, isSentinelDate, personName, pluralize, roleLabel, statusLabel, weekdayLabel } from '../../../utils/format.js';
+import { clockLabel, handleLabel, handleOnlyName, isSentinelDate, personLabels, pluralize, roleLabel, statusLabel, weekdayLabel } from '../../../utils/format.js';
 import type { DmTableSessionView } from '../types.js';
 import { ProfileOwnerActions } from '../components/ProfileOwnerActions.js';
 import { useDmTableDetailPage } from '../hooks/useDmTableDetailPage.js';
@@ -23,7 +25,7 @@ import { useProfileBody } from '../hooks/useProfileBody.js';
 import { useProfileDmDetails } from '../hooks/useProfileDmDetails.js';
 import styles from './profile.module.css';
 
-function Sessions({ items }: { items: DmTableSessionView[] }) {
+function Sessions({ items, emptyMessage = 'No sessions are scheduled yet.', action }: { items: DmTableSessionView[]; emptyMessage?: string; action?: React.ReactNode }) {
   const { formatDateTime } = useDateFormatter();
   return items.length ? (
     <ul className={styles.sessions}>
@@ -53,8 +55,8 @@ function Sessions({ items }: { items: DmTableSessionView[] }) {
     </ul>
   ) : (
     <EmptyState
-      message="No sessions are scheduled yet."
-      action={
+      message={emptyMessage}
+      action={action ??
         <Link className="btn btn--secondary btn--sm" to="/quests">
           Browse the quest board
         </Link>
@@ -62,24 +64,21 @@ function Sessions({ items }: { items: DmTableSessionView[] }) {
     />
   );
 }
+function isPastQuest(quest: DmTableSessionView) {
+  return ['played', 'closed', 'completed', 'cancelled'].includes(quest.rawStatus) || Date.parse(quest.scheduledAt) < Date.now();
+}
 function DmInformation({
-  memberId,
+  state,
   canCreate,
 }: {
-  memberId: string;
+  state: ReturnType<typeof useProfileDmDetails>;
   canCreate: boolean;
 }) {
-  const state = useProfileDmDetails(memberId);
   return (
     <div className="stack" data-gap="5">
       <Card className="stack" pad={4}>
         <div className={styles.cardHead}>
           <h2 className="type-heading">DM tables</h2>
-          {state.details.data?.dmStats ? (
-            <Chip size="sm" tone="line">
-              {pluralize(state.details.data.dmStats.sessionCount, 'session')} run
-            </Chip>
-          ) : null}
           {canCreate && state.details.data?.documents.items.length ? (
             <Link className="btn btn--secondary btn--sm" to="/editor/dm-table">
               New DM table
@@ -96,9 +95,9 @@ function DmInformation({
         ) : state.details.data ? (
           <>
             {state.details.data.documents.items.length ? (
-              <ul className={styles.sessions}>
+              <CardGrid>
                 {state.details.data.documents.items.map((table) => (
-                  <li key={table.id} className={styles.session}>
+                  <Card key={table.id} className="stack" pad={4}>
                     <Link
                       className={`type-title ${styles.titleLink}`}
                       to={`/community/dm-table/${table.slug}`}
@@ -116,9 +115,9 @@ function DmInformation({
                         Edit {table.title}
                       </Link>
                     ) : null}
-                  </li>
+                  </Card>
                 ))}
-              </ul>
+              </CardGrid>
             ) : (
               <EmptyState
                 message={
@@ -131,7 +130,7 @@ function DmInformation({
                     <Link className="btn btn--secondary btn--sm" to="/editor/dm-table">
                       New DM table
                     </Link>
-                  ) : undefined
+                  ) : <Link className="type-link" to="/dms">Browse DMs</Link>
                 }
               />
             )}
@@ -164,7 +163,17 @@ function DmInformation({
         ) : null}
       </Card>
       <Card className="stack" pad={4}>
-        <h2 className="type-heading">Sessions</h2>
+        <div className={styles.cardHead}>
+          <h2 className="type-heading">Series</h2>
+          {canCreate ? <Link className="btn btn--secondary btn--sm" to="/series/new">Create a series</Link> : null}
+        </div>
+        {state.details.isError ? <StatePanel status="error" error={toAppError(state.details.error, 'profile:series')} /> :
+          state.details.isPending ? <StatePanel status="loading" /> :
+          state.details.data?.questArcs.items.length ? <CardGrid>{state.details.data.questArcs.items.map((arc) => <Card key={arc.id} variant="clickable" to={`/series/${arc.id}`} pad={4}><h3 className="type-title">{arc.name}</h3><p className="type-caption">{pluralize(arc.questCount, 'quest')}</p></Card>)}</CardGrid> :
+          <EmptyState message="No quest series have been shared yet." action={canCreate ? <Link className="type-link" to="/series/new">Create a series</Link> : <Link className="type-link" to="/quests">Browse quests</Link>} />}
+      </Card>
+      <Card className="stack" pad={4}>
+        <h2 className="type-heading">Quests</h2>
         {state.schedule.isError ? (
           <StatePanel
             status="error"
@@ -174,7 +183,17 @@ function DmInformation({
           <StatePanel status="loading" />
         ) : state.schedule.data ? (
           <>
-            <Sessions items={state.schedule.data.items} />
+            {state.schedule.data.items.length ? <>
+              <section className="stack" aria-label="Upcoming quests">
+                <h3 className="type-title">Upcoming quests</h3>
+                <Sessions items={state.schedule.data.items.filter((quest) => !isPastQuest(quest))} emptyMessage="No upcoming quests on this page." action={<Link className="type-link" to={canCreate ? '/quests/new' : '/quests'}>{canCreate ? 'Post a quest' : 'Browse quests'}</Link>} />
+              </section>
+              <section className="stack" aria-label="Past quests">
+                <h3 className="type-title">Past quests</h3>
+                <Sessions items={state.schedule.data.items.filter(isPastQuest)} emptyMessage="No past quests on this page." />
+              </section>
+            </> : <Sessions items={[]} action={canCreate ? <Link className="type-link" to="/quests/new">Post a quest</Link> : undefined} />}
+
             {state.schedule.data.total > state.schedulePageSize ? (
               <nav className="row" data-wrap="1" aria-label="DM session pages">
                 <Button
@@ -245,7 +264,7 @@ function ProfileBody({
       </div>
     );
   }
-  return <ProfileView role={role} page={page} me={me} />;
+  return <ProfileView key={page.profile.member.id} role={role} page={page} me={me} />;
 }
 function ProfileView({
   role,
@@ -258,13 +277,15 @@ function ProfileView({
 }) {
   const [editing, setEditing] = useState(false);
   const profile = page.profile;
+  const showDmInformation = role === 'dm' || profile.member.roles.includes('dm');
+  const dmDetails = useProfileDmDetails(profile.member.id, showDmInformation);
   const owner = me.data?.id === profile.member.id;
   const roles = me.data?.roles ?? [];
   const canDm = roles.includes('dm') || roles.includes('admin');
   const activity = profile.activitySummary;
   const hasActivity =
     activity.messages + activity.reactions + activity.voiceMinutes > 0;
-  const name = personName(profile.member);
+  const name = personLabels([profile.member])[0];
   const handle = handleLabel(profile.member.handle);
   return (
     <div className={styles.body} data-el="profile.body">
@@ -309,11 +330,6 @@ function ProfileView({
                   {roleLabel(value)}
                 </Chip>
               ))}
-            {owner && profile.dmProfile ? (
-              <Chip size="sm" tone="status">
-                {statusLabel(profile.dmProfile.status)}
-              </Chip>
-            ) : null}
             {profile.dmProfile && page.member.isDm ? (
               <Chip
                 size="sm"
@@ -342,6 +358,7 @@ function ProfileView({
         rail={
           <Card className="stack" pad={4}>
             <h2 className="type-heading">Availability</h2>
+            {profile.availability.length ? <p className="type-caption">Weekly times as supplied by this member; their time zone is not shared.</p> : null}
             {profile.availability.length ? (
               <ul className={styles.slots}>
                 {profile.availability.map((slot, index) => (
@@ -363,18 +380,20 @@ function ProfileView({
                     ? 'Add your availability from Edit profile.'
                     : `${name} hasn't set their availability.`
                 }
+                action={owner ? <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>Set availability</Button> : undefined}
               />
             )}
           </Card>
         }
       >
+        <ProfileActivity key={profile.member.id} memberId={profile.member.id} owner={owner} sessionsRun={role === 'dm' ? dmDetails.details.data?.dmStats?.sessionCount : undefined} about={
         <div className="stack" data-gap="5">
-          <Card className="stack" pad={4}>
+          {profile.dmProfile || hasActivity ? <Card className="stack" pad={4}>
             <h2 className="type-heading">About</h2>
             {profile.dmProfile?.tagline ? (
               <p className="type-body">{profile.dmProfile.tagline}</p>
-            ) : owner ? (
-              <EmptyState message="No tagline yet. Add one from Edit profile." />
+            ) : owner && canDm ? (
+              <EmptyState message="You have not written a bio yet." action={<Button variant="secondary" size="sm" onClick={() => setEditing(true)}>Edit profile</Button>} />
             ) : !profile.dmProfile?.philosophy &&
               !profile.dmProfile?.houseRules &&
               !hasActivity ? (
@@ -400,15 +419,16 @@ function ProfileView({
                 {pluralize(activity.voiceMinutes, 'voice minute')} on Discord
               </p>
             ) : null}
-          </Card>
-          {role === 'dm' || profile.member.roles.includes('dm') ? (
+          </Card> : <EmptyState message="No Discord activity has been recorded yet." action={owner ? <Link className="type-link" to="/quests">Find a quest</Link> : undefined} />}
+          {showDmInformation ? (
             <DmInformation
               key={profile.member.id}
-              memberId={profile.member.id}
+              state={dmDetails}
               canCreate={owner && canDm}
             />
           ) : null}
         </div>
+        } />
       </DetailLayout>
     </div>
   );

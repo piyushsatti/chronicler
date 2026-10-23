@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import type { PageDeclaration } from '@pi/react-imposition';
 import { PageHost, type PageRegionRenderers } from '@pi/react-imposition/react';
 import { Link, useParams } from 'react-router-dom';
@@ -13,6 +13,7 @@ import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { Chip } from '../../../components/primitives/Chip.js';
 import { StatTile } from '../../../components/primitives/StatTile.js';
+import { Select } from '../../../components/primitives/Select.js';
 import styles from './questSummary.module.css';
 
 const DECLARATION: PageDeclaration = {
@@ -23,6 +24,7 @@ export function QuestSummaryPage(): React.JSX.Element {
   const { code = '' } = useParams();
   const page = useQuestSummaryPage(code);
   const [characterId, setCharacterId] = useState('');
+  const characterLabelId = useId();
   let regions: PageRegionRenderers;
   if (page.status === 'error')
     regions = {
@@ -100,25 +102,19 @@ export function QuestSummaryPage(): React.JSX.Element {
               ) : null}
               {own.length ? (
                 <div className="row" data-wrap="1" data-gap="3" data-align="end">
-                  <label className="stack" data-gap="1">
-                    <span className="type-label">Summary character</span>
-                    <select
-                      className="field-input"
-                      aria-label="Summary character"
+                  <div className="stack" data-gap="1">
+                    <span className="type-label" id={characterLabelId}>Summary character</span>
+                    <Select
+                      label="Summary character"
+                      labelId={characterLabelId}
                       value={characterId}
-                      onChange={(event) => setCharacterId(event.target.value)}
-                    >
-                      <option value="">Choose your participating character</option>
-                      {own.map((participant) => (
-                        <option
-                          key={participant.characterId}
-                          value={participant.characterId}
-                        >
-                          {participant.characterName}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                      onValueChange={setCharacterId}
+                      options={[
+                        { value: '', label: 'Choose your participating character' },
+                        ...own.map((participant) => ({ value: participant.characterId, label: participant.characterName })),
+                      ]}
+                    />
+                  </div>
                   {own.some(
                     (participant) => participant.characterId === characterId,
                   ) ? (

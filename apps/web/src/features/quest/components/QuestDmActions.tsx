@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Button } from '../../../components/primitives/Button.js';
 import { Card } from '../../../components/primitives/Card.js';
 import { Modal } from '../../../components/primitives/Modal.js';
@@ -8,6 +8,7 @@ import type { AppError } from '../../../errors/types.js';
 import type { QuestDetailView } from '../adapters/questAdapter.js';
 import type { Attendance, QuestCommand, Reward } from '../adapters/questCommands.js';
 import { Checkbox } from '../../../components/primitives/Checkbox.js';
+import { Select } from '../../../components/primitives/Select.js';
 
 export type AttendanceRow = {
   characterId: string;
@@ -60,6 +61,7 @@ export function QuestDmActions({
   error: AppError | null;
 }): React.JSX.Element {
   const [selected, setSelected] = useState<string[]>([]);
+  const attendanceLabelId = useId();
   const roster = quest.participants.filter(
     (participant) => participant.status !== 'withdrawn',
   );
@@ -186,26 +188,28 @@ export function QuestDmActions({
                 <legend>
                   {participant.characterName} {memberTag(participant.memberHandle)}
                 </legend>
-                <label className="stack">
-                  Attendance
-                  <select
-                    aria-label="Attendance"
-                    required
+                <div className="stack">
+                  <span id={`${attendanceLabelId}-${participant.characterId}`}>Attendance</span>
+                  <Select
+                    label="Attendance"
+                    labelId={`${attendanceLabelId}-${participant.characterId}`}
+                    disabled={pending}
                     value={row?.status ?? ''}
-                    onChange={(event) => {
-                      const value = event.target.value;
+                    aria-required
+                    onValueChange={(value) => {
                       if (value === 'played' || value === 'no_show' || value === '')
                         change(participant.characterId, {
                           status: value,
                           ...(value !== 'played' ? { pcxp: '0' } : {}),
                         });
                     }}
-                  >
-                    <option value="">Choose attendance</option>
-                    <option value="played">Played</option>
-                    <option value="no_show">No show</option>
-                  </select>
-                </label>
+                    options={[
+                      { value: '', label: 'Choose attendance' },
+                      { value: 'played', label: 'Played' },
+                      { value: 'no_show', label: 'No show' },
+                    ]}
+                  />
+                </div>
                 <label className="stack">
                   PCXP award
                   <input

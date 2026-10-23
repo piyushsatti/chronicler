@@ -1,3 +1,4 @@
+import { useId } from 'react';
 import { AdminReadFailure } from './AdminReadFailure.js';
 import { AdminPagination } from './AdminPagination.js';
 import { Button } from '../../../components/primitives/Button.js';
@@ -7,12 +8,14 @@ import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { humanizeKey } from '../../../utils/format.js';
 import type { useCreationCatalogPanel } from '../hooks/useCreationCatalogPanel.js';
 import { Checkbox } from '../../../components/primitives/Checkbox.js';
+import { Select } from '../../../components/primitives/Select.js';
 
 export function CreationCatalogPanel({
   view,
 }: {
   view: ReturnType<typeof useCreationCatalogPanel>;
 }): React.JSX.Element {
+  const labelId = useId();
   const {
     BLANK,
     catalog,
@@ -60,21 +63,19 @@ export function CreationCatalogPanel({
             onChange={(e) => view.setFilterKind(e.target.value)}
           />
         </label>
-        <label className="stack">
-          <span className="type-label">Region filter</span>
-          <select
-            className="field-input"
+        <div className="stack">
+          <span className="type-label" id={`${labelId}-filter`}>Region filter</span>
+          <Select
+            label="Region filter"
+            labelId={`${labelId}-filter`}
             value={view.filterRegion}
-            onChange={(e) => view.setFilterRegion(e.target.value)}
-          >
-            <option value="">All regions</option>
-            {(regions.data ?? []).map((region) => (
-              <option key={region.id} value={region.id}>
-                {region.name}
-              </option>
-            ))}
-          </select>
-        </label>
+            onValueChange={view.setFilterRegion}
+            options={[
+              { value: '', label: 'All regions' },
+              ...(regions.data ?? []).map((region) => ({ value: region.id, label: region.name })),
+            ]}
+          />
+        </div>
       </div>
       {regions.isError ? <StatePanel status="error" error={regions.error} /> : null}
       <AdminPagination page={view.pagination} />
@@ -108,24 +109,22 @@ export function CreationCatalogPanel({
               onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
             />
           </label>
-          <label className="stack">
-            <span className="type-label">Introduced by region</span>
-            <select
+          <div className="stack">
+            <span className="type-label" id={`${labelId}-introduced`}>Introduced by region</span>
+            <Select
+              label="Introduced by region"
+              labelId={`${labelId}-introduced`}
               disabled={save.isPending}
-              className="field-input"
               value={form.introducedByRegionId}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, introducedByRegionId: e.target.value }))
+              onValueChange={(introducedByRegionId) =>
+                setForm((f) => ({ ...f, introducedByRegionId }))
               }
-            >
-              <option value="">None</option>
-              {(regions.data ?? []).map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.name}
-                </option>
-              ))}
-            </select>
-          </label>
+              options={[
+                { value: '', label: 'None' },
+                ...(regions.data ?? []).map((region) => ({ value: region.id, label: region.name })),
+              ]}
+            />
+          </div>
           <Checkbox
             label="Available"
             disabled={save.isPending}

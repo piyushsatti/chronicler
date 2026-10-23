@@ -1,4 +1,6 @@
+import { useId } from 'react';
 import { Card } from '../../components/primitives/Card.js';
+import { Select } from '../../components/primitives/Select.js';
 import styles from './editor.module.css';
 import { Button } from '../../components/primitives/Button.js';
 import { StatePanel } from '../../components/foundation/StatePanel.js';
@@ -12,6 +14,7 @@ export function EditorSummaryLinks({
   view: EditorSummaryLinksView;
   disabled?: boolean;
 }) {
+  const characterLabelId = useId();
   if (!view.active) return null;
   return (
     <Card as="section" className={`stack ${styles.panel}`} aria-label="Summary links">
@@ -99,27 +102,27 @@ export function EditorSummaryLinks({
               More quests
             </Button>
           </div>
-          <label className="field">
-            <span className="field-label">Summary character</span>
-            <select
-              className="field-input"
+          <div className="field">
+            <span className="field-label" id={characterLabelId}>Summary character</span>
+            <Select
+              label="Summary character"
+              labelId={characterLabelId}
               value={view.characterId ?? ''}
-              onChange={(event) => view.setCharacter(event.target.value)}
-            >
-              <option value="">No character (owning DM)</option>
-              {view.characterId &&
-              !view.characters.items.some(
-                (character) => character.id === view.characterId,
-              ) ? (
-                <option value={view.characterId}>Current selected character</option>
-              ) : null}
-              {view.characters.items.map((character) => (
-                <option key={character.id} value={character.id}>
-                  {character.name}
-                </option>
-              ))}
-            </select>
-          </label>
+              disabled={disabled}
+              onValueChange={view.setCharacter}
+              options={[
+                { value: '', label: 'No character (owning DM)' },
+                ...(view.characterId &&
+                !view.characters.items.some((character) => character.id === view.characterId)
+                  ? [{ value: view.characterId, label: 'Current selected character' }]
+                  : []),
+                ...view.characters.items.map((character) => ({
+                  value: character.id,
+                  label: character.name,
+                })),
+              ]}
+            />
+          </div>
           <p className="type-caption">
             Players pick a character who took part in every linked quest. Without a
             character, every linked quest must be one you run.

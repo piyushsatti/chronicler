@@ -1,11 +1,12 @@
 import { useId, useState, type ReactNode } from 'react';
 import { Button } from '../../../components/primitives/Button.js';
+import { Select } from '../../../components/primitives/Select.js';
 import { Checkbox } from '../../../components/primitives/Checkbox.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import { useCharacterCreation } from '../hooks/useCharacterCreation.js';
 import { DDB_URL_HINT, ddbUrlError } from '../ddbUrl.js';
-import { imageUrlError } from '../imageUrl.js';
+import { imageUrlError } from '../../../utils/characterImageUrl.js';
 
 type FieldKey = 'region' | 'backstory' | 'ddb' | 'image';
 
@@ -25,7 +26,7 @@ function ValidatedField({
 }): React.JSX.Element {
   return (
     <div className="stack">
-      <label className="type-label" htmlFor={id}>
+      <label className="type-label" id={`${id}-label`} htmlFor={id}>
         {label}
       </label>
       {children}
@@ -126,53 +127,47 @@ export function CreateCharacterForm({
             />
           </label>
           <ValidatedField id={ids.region} label="Region" error={shown('region')}>
-            <select
-              className="field-input"
-              {...invalidProps(ids.region, shown('region'))}
+            <Select
+              label="Region"
+              id={ids.region}
+              onBlur={() => touch('region')}
+              labelId={`${ids.region}-label`}
+              aria-required
+              aria-invalid={Boolean(shown('region')) || undefined}
+              aria-describedby={shown('region') ? `${ids.region}-error` : undefined}
               disabled={state.create.isPending}
               value={state.regionId}
-              onChange={(event) => {
-                state.setRegionId(event.target.value);
+              placeholder="Choose a region"
+              options={state.query.data.regions.map((option) => ({ value: option.id, label: option.name }))}
+              onValueChange={(value) => {
+                state.setRegionId(value);
                 setPicks([]);
                 touch('region');
               }}
-              onBlur={() => touch('region')}
-            >
-              <option value="" disabled>
-                Choose a region
-              </option>
-              {state.query.data.regions.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.name}
-                </option>
-              ))}
-            </select>
+            />
           </ValidatedField>
           <ValidatedField
             id={ids.backstory}
             label="Backstory"
             error={shown('backstory')}
           >
-            <select
-              className="field-input"
-              {...invalidProps(ids.backstory, shown('backstory'))}
+            <Select
+              label="Backstory"
+              id={ids.backstory}
+              onBlur={() => touch('backstory')}
+              labelId={`${ids.backstory}-label`}
+              aria-required
+              aria-invalid={Boolean(shown('backstory')) || undefined}
+              aria-describedby={shown('backstory') ? `${ids.backstory}-error` : undefined}
               disabled={state.create.isPending}
               value={backstory}
-              onChange={(event) => {
-                setBackstory(event.target.value);
+              placeholder="Choose a backstory"
+              options={state.query.data.backstories.map((option) => ({ value: option.id, label: option.name }))}
+              onValueChange={(value) => {
+                setBackstory(value);
                 touch('backstory');
               }}
-              onBlur={() => touch('backstory')}
-            >
-              <option value="" disabled>
-                Choose a backstory
-              </option>
-              {state.query.data.backstories.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.name}
-                </option>
-              ))}
-            </select>
+            />
           </ValidatedField>
           <ValidatedField
             id={ids.ddb}

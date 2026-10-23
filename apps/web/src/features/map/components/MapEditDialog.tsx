@@ -1,8 +1,10 @@
+import { useId, useState } from 'react';
 import { Modal } from '../../../components/primitives/Modal.js';
 import { Button } from '../../../components/primitives/Button.js';
 import { useMapEdit, type MapEdit } from '../hooks/useMapEdit.js';
 import styles from '../pages/map.module.css';
 import { Checkbox } from '../../../components/primitives/Checkbox.js';
+import { Select } from '../../../components/primitives/Select.js';
 const titles = {
   create: 'Create map',
   node: 'Save location',
@@ -18,6 +20,14 @@ export function MapEditDialog(props: {
   admit: (regionId?: string | null) => boolean;
 }) {
   const { edit } = props;
+  const labelId = useId();
+  const [regionId, setRegionId] = useState(
+    edit.kind === 'create' && !edit.global ? (edit.regions[0]?.id ?? '') : '',
+  );
+  const [submapId, setSubmapId] = useState(edit.kind === 'node' ? (edit.node?.submapId ?? '') : '');
+  const [nodeA, setNodeA] = useState(edit.kind === 'edge' ? (edit.edge?.nodeA ?? edit.nodes[0]?.id ?? '') : '');
+  const [nodeB, setNodeB] = useState(edit.kind === 'edge' ? (edit.edge?.nodeB ?? edit.nodes[1]?.id ?? edit.nodes[0]?.id ?? '') : '');
+  const [documentId, setDocumentId] = useState('');
   const {
     pending,
     error,
@@ -30,6 +40,11 @@ export function MapEditDialog(props: {
     submit,
     close,
   } = useMapEdit(props);
+  const locationOptions = edit.kind === 'link'
+    ? (locations.data?.items ?? [])
+      .filter((document) => !edit.node.linkedEntries.some((link) => link.documentId === document.id && link.relation === 'location'))
+      .map((document) => ({ value: document.id, label: document.title }))
+    : [];
   return (
     <Modal open title={titles[edit.kind]} onClose={close}>
       <form
@@ -52,17 +67,21 @@ export function MapEditDialog(props: {
               Family
               <input name="family" required maxLength={200} />
             </label>
-            <label>
-              Region
-              <select name="regionId" required={!edit.global}>
-                {edit.global ? <option value="">Global map</option> : null}
-                {edit.regions.map((region) => (
-                  <option key={region.id} value={region.id}>
-                    {region.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+            <div className="stack">
+              <span id={`${labelId}-region`}>Region</span>
+              <Select
+                label="Region"
+                labelId={`${labelId}-region`}
+                name="regionId"
+                value={regionId}
+                onValueChange={setRegionId}
+                aria-required={!edit.global}
+                options={[
+                  ...(edit.global ? [{ value: '', label: 'Global map' }] : []),
+                  ...edit.regions.map((region) => ({ value: region.id, label: region.name })),
+                ]}
+              />
+            </div>
           </>
         ) : null}
         {edit.kind === 'node' ? (
@@ -98,51 +117,50 @@ export function MapEditDialog(props: {
                 />
               </label>
             </div>
-            <label>
-              Submap
-              <select name="submapId" defaultValue={edit.node?.submapId ?? ''}>
-                <option value="">No submap</option>
-                {edit.maps
+            <div className="stack">
+              <span id={`${labelId}-submap`}>Submap</span>
+              <Select
+                label="Submap"
+                labelId={`${labelId}-submap`}
+                name="submapId"
+                value={submapId}
+                onValueChange={setSubmapId}
+                options={[
+                  { value: '', label: 'No submap' },
+                  ...edit.maps
                   .filter((map) => map.id !== edit.map.id)
-                  .map((map) => (
-                    <option key={map.id} value={map.id}>
-                      {map.name}
-                    </option>
-                  ))}
-              </select>
-            </label>
+                  .map((map) => ({ value: map.id, label: map.name })),
+                ]}
+              />
+            </div>
           </>
         ) : null}
         {edit.kind === 'edge' ? (
           <>
-            <label>
-              From location
-              <select
+            <div className="stack">
+              <span id={`${labelId}-from`}>From location</span>
+              <Select
+                label="From location"
+                labelId={`${labelId}-from`}
                 name="nodeA"
-                required
-                defaultValue={edit.edge?.nodeA ?? edit.nodes[0]?.id}
-              >
-                {edit.nodes.map((node) => (
-                  <option key={node.id} value={node.id}>
-                    {node.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label>
-              To location
-              <select
+                aria-required
+                value={nodeA}
+                onValueChange={setNodeA}
+                options={edit.nodes.map((node) => ({ value: node.id, label: node.name }))}
+              />
+            </div>
+            <div className="stack">
+              <span id={`${labelId}-to`}>To location</span>
+              <Select
+                label="To location"
+                labelId={`${labelId}-to`}
                 name="nodeB"
-                required
-                defaultValue={edit.edge?.nodeB ?? edit.nodes[1]?.id}
-              >
-                {edit.nodes.map((node) => (
-                  <option key={node.id} value={node.id}>
-                    {node.name}
-                  </option>
-                ))}
-              </select>
-            </label>
+                aria-required
+                value={nodeB}
+                onValueChange={setNodeB}
+                options={edit.nodes.map((node) => ({ value: node.id, label: node.name }))}
+              />
+            </div>
             <label>
               Connection kind
               <input
@@ -176,6 +194,7 @@ export function MapEditDialog(props: {
                 onChange={(event) => {
                   setSearch(event.target.value);
                   setOffset(0);
+                  setDocumentId('');
                 }}
               />
             </label>
@@ -190,33 +209,27 @@ export function MapEditDialog(props: {
               <p role="status">Loading Location documents…</p>
             ) : (
               <>
-                <label>
-                  Location document
-                  <select name="documentId" required defaultValue="">
-                    <option value="" disabled>
-                      Choose a readable Location document
-                    </option>
-                    {locations.data.items
-                      .filter(
-                        (document) =>
-                          !edit.node.linkedEntries.some(
-                            (link) =>
-                              link.documentId === document.id &&
-                              link.relation === 'location',
-                          ),
-                      )
-                      .map((document) => (
-                        <option key={document.id} value={document.id}>
-                          {document.title}
-                        </option>
-                      ))}
-                  </select>
-                </label>
+                <div className="stack">
+                  <span id={`${labelId}-document`}>Location document</span>
+                  <Select
+                    label="Location document"
+                    labelId={`${labelId}-document`}
+                    name="documentId"
+                    value={locationOptions.some((option) => option.value === documentId) ? documentId : ''}
+                    onValueChange={setDocumentId}
+                    aria-required
+                    placeholder="Choose a readable Location document"
+                    options={locationOptions}
+                  />
+                </div>
                 <div className={styles.toolbar}>
                   <Button
                     variant="ghost"
                     disabled={offset === 0}
-                    onClick={() => setOffset((value) => Math.max(0, value - 50))}
+                    onClick={() => {
+                      setDocumentId('');
+                      setOffset((value) => Math.max(0, value - 50));
+                    }}
                   >
                     Previous
                   </Button>
@@ -226,7 +239,10 @@ export function MapEditDialog(props: {
                   <Button
                     variant="ghost"
                     disabled={offset + 50 >= locations.data.total}
-                    onClick={() => setOffset((value) => value + 50)}
+                    onClick={() => {
+                      setDocumentId('');
+                      setOffset((value) => value + 50);
+                    }}
                   >
                     Next
                   </Button>

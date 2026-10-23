@@ -33,6 +33,7 @@ export type ChronicleListItemView = {
   excerpt: string | null;
   tags: string[];
   region: string | null;
+  regionIds: string[];
   arc: string | null;
   occurredAt: string | null;
   gameDay: number | null;
@@ -56,6 +57,7 @@ export type ChronicleDetailView = {
   body: string | null;
   authorHandle: string | null;
   updatedAt: string | null;
+  publishedAt: string | null;
   canEdit: boolean;
   summary: (typeof chronicleSummaryDerivedWireSchema)['_output'];
 };
@@ -92,6 +94,7 @@ function mapListItem(
     excerpt,
     tags,
     region: derived?.regions?.[0]?.name ?? null,
+    regionIds: derived?.regions?.map((region) => region.id) ?? [],
     arc: derived?.arc ?? null,
     occurredAt: derived?.occurredAt ?? null,
     gameDay: derived?.gameDay ?? null,
@@ -152,6 +155,7 @@ export function parseChronicleDetail(
       summary: hasSummaryDetails ? summary : null,
       authorHandle: parsed.data.author?.handle ?? null,
       updatedAt: parsed.data.updatedAt ?? null,
+      publishedAt: parsed.data.publishedAt ?? null,
     },
   };
 }

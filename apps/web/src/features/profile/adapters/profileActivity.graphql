@@ -1,0 +1,15 @@
+query ProfileActivity($memberId: ID!, $limit: Int!, $offset: Int!) {
+  memberActivityStats(memberId: $memberId) {
+    questsPlayed
+    summariesAuthored
+  }
+  documents(filters: { kind: "summary", status: "published", createdBy: $memberId }, limit: $limit, offset: $offset) {
+    total
+    items {
+      id
+      slug
+      title
+      publishedAt
+    }
+  }
+}

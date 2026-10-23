@@ -79,7 +79,7 @@ describe('Character owner admission', () => {
       </Routes>,
       { route: '/characters/C-101' },
     );
-    expect(await screen.findByText(/Synced from D&D Beyond/)).toBeVisible();
+    expect(await screen.findByText(/D&D Beyond last synced/)).toBeVisible();
     expect(screen.getByText(/Wizard · Elf/)).toBeVisible();
     await userEvent
       .setup()
@@ -87,7 +87,7 @@ describe('Character owner admission', () => {
     expect(await screen.findByText(/The provider timed out/)).toHaveTextContent(
       'last synchronized data were kept',
     );
-    expect(await screen.findByText(/Synced from D&D Beyond/)).toBeVisible();
+    expect(await screen.findByText(/D&D Beyond last synced/)).toBeVisible();
     expect(screen.getByText(/Wizard · Elf/)).toBeVisible();
     expect(screen.getByRole('textbox', { name: 'Description' })).toHaveValue(
       wire.description,

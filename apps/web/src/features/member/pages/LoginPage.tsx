@@ -14,11 +14,11 @@ export function LoginPage(): React.JSX.Element {
   if (page.isAuthenticated) return <Navigate to="/me" replace />;
 
   return (
-    <PageShell title="Sign in">
+    <PageShell title="Sign in" back={{ to: '/', label: 'Home' }}>
       <SingleRegionPage page="login">
         <Card
           as="section"
-          className={`stack reading-column ${styles.card}`}
+          className={`stack ${styles.card}`}
           data-gap="4"
           aria-label="Sign in"
         >
@@ -27,7 +27,7 @@ export function LoginPage(): React.JSX.Element {
               Sign in to continue. You’ll come back to the page you were opening.
             </p>
           ) : null}
-          <p className="type-body">
+          <p className="type-body reading-column">
             Chronicler uses the Discord account you play on the server with. Signing in
             lets you sign up for quests, keep your characters and write session
             summaries. Discord shares only your public profile with us, never your

@@ -49,12 +49,13 @@ export async function loadCharacterDirectory(
   filters: CharacterDirectoryFilters,
   limit: number,
   offset: number,
+  init?: RequestInit,
 ) {
   const data = await graphqlRequest<CharacterDirectoryQuery>(DIRECTORY, {
     filters,
     limit,
     offset,
-  });
+  }, init);
   const parsed = characterListWireSchema.safeParse(data.characters);
   if (!parsed.success)
     throw toAppError({ failure: 'InvalidWire' }, 'character:directory');

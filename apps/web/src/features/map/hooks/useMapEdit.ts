@@ -91,6 +91,14 @@ export function useMapEdit({
     if (busy.current || !isCurrent()) return;
     const data = new FormData(event.currentTarget);
     const text = (name: string) => String(data.get(name) ?? '').trim();
+    if (
+      (edit.kind === 'create' && !edit.global && !text('regionId')) ||
+      (edit.kind === 'edge' && (!text('nodeA') || !text('nodeB'))) ||
+      (edit.kind === 'link' && !text('documentId'))
+    ) {
+      setError('Please select an item in the list.');
+      return;
+    }
     const regionId = edit.kind === 'create' ? text('regionId') || null : undefined;
     if (!current.current.admit(regionId)) return;
     const active = () => isCurrent() && current.current.admit(regionId);

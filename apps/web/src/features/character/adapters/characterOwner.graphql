@@ -1,0 +1,8 @@
+query CharacterOwner($id: ID!) {
+  member(id: $id) {
+    id
+    handle
+    displayName
+    avatarUrl
+  }
+}

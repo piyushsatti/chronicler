@@ -24,9 +24,10 @@ export const graphql: FeatureGraphql = {
     }
     return HttpResponse.json({ data: { memberProfile: goodMemberProfile } });
   },
+  ProfileActivity: () => HttpResponse.json({ data: { memberActivityStats: null, documents: { items: [], total: 0 } } }),
   ProfileDmDetails: () =>
     HttpResponse.json({
-      data: { dmStats: { sessionCount: 0 }, documents: { items: [], total: 0 } },
+      data: { questArcs: { items: [], total: 0 }, dmStats: { sessionCount: 0 }, documents: { items: [], total: 0 } },
     }),
   ProfileUpdateMyProfile: () =>
     HttpResponse.json({

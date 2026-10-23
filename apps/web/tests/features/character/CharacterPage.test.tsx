@@ -48,6 +48,25 @@ describe('CharacterPage', () => {
     expect(screen.getByRole('tab', { name: 'Connections' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Summaries' })).toBeInTheDocument();
     expect(await screen.findByText('+100 XP')).toBeInTheDocument();
+    const main = screen.getByRole('heading', { name: 'Backstory' })
+      .closest('.detail-layout__main');
+    expect(main).toContainElement(screen.getByRole('tablist', { name: 'Character sections' }));
+    expect(main).toContainElement(screen.getByRole('tabpanel', { name: 'Progression' }));
+  });
+
+  it('links the player card and shows real quick facts without repeating the level in header metadata', async () => {
+    server.use(
+      graphql.query('Character', () => HttpResponse.json({ data: { character: { ...character, daysActive: 39, ddbMirror: { level: 8, xp: 0, classes: 'Chronicler 8', species: 'Elf', background: null, syncedAt: null } } } })),
+      graphql.query('CharacterOwner', () => HttpResponse.json({ data: { member: { id: character.ownerId, handle: 'holt', displayName: 'Bram Holt', avatarUrl: 'https://example.test/holt.png' } } })),
+    );
+    renderCharacter();
+    const player = await screen.findByRole('link', { name: /Bram Holt/ });
+    expect(player).toHaveAttribute('href', '/players/@holt');
+    expect(player.querySelector('img')).toHaveAttribute('src', 'https://example.test/holt.png');
+    const meta = document.querySelector('.page-header__meta');
+    expect(meta).toHaveTextContent('Chronicler 8 · Elf');
+    expect(meta).not.toHaveTextContent('Level 8');
+    expect(screen.getByText('Days active').nextElementSibling).toHaveTextContent('39');
   });
 
   it('lists quest history by quest title, linked to the quest, not by the character name', async () => {

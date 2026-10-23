@@ -24,6 +24,7 @@ export type CharacterViewModel = {
   regionName: string | null;
   description: string | null;
   pcxp?: number;
+  daysActive?: number;
   verificationSubmittedAt?: string | null;
   ddbMirror?: NonNullable<ReturnType<typeof characterWireSchema.parse>>['ddbMirror'];
   ddbUrl: string | null;
@@ -53,6 +54,7 @@ export function parseCharacter(wire: unknown): AdapterResult<CharacterViewModel>
       regionName: null,
       description: parsed.data.description ?? null,
       pcxp: parsed.data.pcxp ?? 0,
+      daysActive: parsed.data.daysActive,
       verificationSubmittedAt: parsed.data.verificationSubmittedAt ?? null,
       ddbMirror: parsed.data.ddbMirror ?? null,
       ddbUrl: parsed.data.ddbUrl ?? null,

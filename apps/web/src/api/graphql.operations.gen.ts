@@ -316,6 +316,13 @@ export type VerificationVerdict =
   | 'APPROVED'
   | 'REJECTED';
 
+export type QuestArcsPageQueryVariables = Exact<{
+  offset: number;
+}>;
+
+
+export type QuestArcsPageQuery = { questArcs: { total: number, items: Array<{ id: string, name: string, createdBy: string, questCount: number }> } };
+
 export type CurrentAdminAccessQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -483,7 +490,7 @@ export type DmDashboardQueryVariables = Exact<{
 }>;
 
 
-export type DmDashboardQuery = { dmStats: { sessionCount: number } | null, quests: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, slotsMax: number, filledCount: number, briefDocument: { title: string } | null }> }, documents: { total: number, items: Array<{ id: string, slug: string, title: string, status: string, authorId: string, canEditMetadata: boolean, canEditBody: boolean }> } };
+export type DmDashboardQuery = { dmStats: { sessionCount: number } | null, questArcs: { total: number, items: Array<{ id: string, name: string, createdBy: string, questCount: number }> }, quests: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, slotsMax: number, filledCount: number, briefDocument: { title: string } | null }> }, documents: { total: number, items: Array<{ id: string, slug: string, title: string, status: string, authorId: string, canEditMetadata: boolean, canEditBody: boolean }> } };
 
 export type PendingCharacterVerificationsQueryVariables = Exact<{
   limit?: number;
@@ -613,7 +620,7 @@ export type CharacterQueryVariables = Exact<{
 }>;
 
 
-export type CharacterQuery = { character: { id: string, shortCode: string, name: string, status: string, ownerId: string, verificationStatus: CharacterReviewStatus, backstoryId: string | null, regionId: string | null, description: string | null, ddbUrl: string | null, imageUrl: string | null, displayIcon: string | null, updatedAt: string, pcxp: number, verificationSubmittedAt: string | null, ddbMirror: { level: number | null, xp: number | null, classes: string | null, species: string | null, background: string | null, syncedAt: string | null } | null } | null };
+export type CharacterQuery = { character: { id: string, shortCode: string, name: string, status: string, ownerId: string, verificationStatus: CharacterReviewStatus, backstoryId: string | null, regionId: string | null, description: string | null, ddbUrl: string | null, imageUrl: string | null, displayIcon: string | null, updatedAt: string, pcxp: number, daysActive: number, verificationSubmittedAt: string | null, ddbMirror: { level: number | null, xp: number | null, classes: string | null, species: string | null, background: string | null, syncedAt: string | null } | null } | null };
 
 export type CharacterActivityQueryVariables = Exact<{
   characterId: string;
@@ -657,6 +664,13 @@ export type CharacterHistoryQuestQueryVariables = Exact<{
 
 
 export type CharacterHistoryQuestQuery = { quest: { id: string, shortCode: string, scheduledAt: string, briefDocument: { title: string } | null } | null };
+
+export type CharacterOwnerQueryVariables = Exact<{
+  id: string;
+}>;
+
+
+export type CharacterOwnerQuery = { member: { id: string, handle: string, displayName: string, avatarUrl: string | null } | null };
 
 export type CharacterProgressionQueryVariables = Exact<{
   characterId: string;
@@ -771,9 +785,9 @@ export type ChronicleDetailQueryVariables = Exact<{
 }>;
 
 
-export type ChronicleDetailQuery = { bySlug?: { id: string, slug: string, kind: string, category: string | null, status: string, visibility: string, title: string, effectiveBody: string | null, canEditBody: boolean, canEditMetadata: boolean, updatedAt: string, author: { handle: string } | null, summaryDerived: { occurredAt: string | null, arc: string | null, gameDay: number | null, quests: Array<{ id: string, shortCode: string, title: string | null }>, regions: Array<{ id: string, name: string }>, dms: Array<{ id: string, displayName: string }>, players: Array<{ characterId: string, characterShortCode: string, characterName: string, memberId: string, manual: boolean }>, gameDate: { eraAbbrev: string, year: number, periodName: string, periodIndex: number, periodType: string, day: number } | null } | null } | null, byId?: { id: string, slug: string, kind: string, category: string | null, status: string, visibility: string, title: string, effectiveBody: string | null, canEditBody: boolean, canEditMetadata: boolean, updatedAt: string, author: { handle: string } | null, summaryDerived: { occurredAt: string | null, arc: string | null, gameDay: number | null, quests: Array<{ id: string, shortCode: string, title: string | null }>, regions: Array<{ id: string, name: string }>, dms: Array<{ id: string, displayName: string }>, players: Array<{ characterId: string, characterShortCode: string, characterName: string, memberId: string, manual: boolean }>, gameDate: { eraAbbrev: string, year: number, periodName: string, periodIndex: number, periodType: string, day: number } | null } | null } | null };
+export type ChronicleDetailQuery = { bySlug?: { id: string, slug: string, kind: string, category: string | null, status: string, visibility: string, title: string, effectiveBody: string | null, canEditBody: boolean, canEditMetadata: boolean, updatedAt: string, publishedAt: string | null, author: { handle: string } | null, summaryDerived: { occurredAt: string | null, arc: string | null, gameDay: number | null, quests: Array<{ id: string, shortCode: string, title: string | null }>, regions: Array<{ id: string, name: string }>, dms: Array<{ id: string, displayName: string }>, players: Array<{ characterId: string, characterShortCode: string, characterName: string, memberId: string, manual: boolean }>, gameDate: { eraAbbrev: string, year: number, periodName: string, periodIndex: number, periodType: string, day: number } | null } | null } | null, byId?: { id: string, slug: string, kind: string, category: string | null, status: string, visibility: string, title: string, effectiveBody: string | null, canEditBody: boolean, canEditMetadata: boolean, updatedAt: string, publishedAt: string | null, author: { handle: string } | null, summaryDerived: { occurredAt: string | null, arc: string | null, gameDay: number | null, quests: Array<{ id: string, shortCode: string, title: string | null }>, regions: Array<{ id: string, name: string }>, dms: Array<{ id: string, displayName: string }>, players: Array<{ characterId: string, characterShortCode: string, characterName: string, memberId: string, manual: boolean }>, gameDate: { eraAbbrev: string, year: number, periodName: string, periodIndex: number, periodType: string, day: number } | null } | null } | null };
 
-export type ChronicleReaderDocumentFragment = { id: string, slug: string, kind: string, category: string | null, status: string, visibility: string, title: string, effectiveBody: string | null, canEditBody: boolean, canEditMetadata: boolean, updatedAt: string, author: { handle: string } | null, summaryDerived: { occurredAt: string | null, arc: string | null, gameDay: number | null, quests: Array<{ id: string, shortCode: string, title: string | null }>, regions: Array<{ id: string, name: string }>, dms: Array<{ id: string, displayName: string }>, players: Array<{ characterId: string, characterShortCode: string, characterName: string, memberId: string, manual: boolean }>, gameDate: { eraAbbrev: string, year: number, periodName: string, periodIndex: number, periodType: string, day: number } | null } | null };
+export type ChronicleReaderDocumentFragment = { id: string, slug: string, kind: string, category: string | null, status: string, visibility: string, title: string, effectiveBody: string | null, canEditBody: boolean, canEditMetadata: boolean, updatedAt: string, publishedAt: string | null, author: { handle: string } | null, summaryDerived: { occurredAt: string | null, arc: string | null, gameDay: number | null, quests: Array<{ id: string, shortCode: string, title: string | null }>, regions: Array<{ id: string, name: string }>, dms: Array<{ id: string, displayName: string }>, players: Array<{ characterId: string, characterShortCode: string, characterName: string, memberId: string, manual: boolean }>, gameDate: { eraAbbrev: string, year: number, periodName: string, periodIndex: number, periodType: string, day: number } | null } | null };
 
 export type ChronicleListQueryVariables = Exact<{
   limit: number;
@@ -1405,6 +1419,15 @@ export type MemberProfileQueryVariables = Exact<{
 
 export type MemberProfileQuery = { memberProfile: { member: { id: string, handle: string, displayName: string, avatarUrl: string | null, roles: Array<string>, status: string, joinedAt: string }, dmProfile: { memberId: string, tagline: string | null, philosophy: string | null, houseRules: string | null, tableInfo: unknown, acceptingPlayers: boolean, status: string, reviewRevision: number } | null, availability: Array<{ day: string, startTime: string, endTime: string, note: string | null }>, activitySummary: { voiceMinutes: number, messages: number, reactions: number } } | null };
 
+export type ProfileActivityQueryVariables = Exact<{
+  memberId: string;
+  limit: number;
+  offset: number;
+}>;
+
+
+export type ProfileActivityQuery = { memberActivityStats: { questsPlayed: number, summariesAuthored: number } | null, documents: { total: number, items: Array<{ id: string, slug: string, title: string, publishedAt: string | null }> } };
+
 export type ProfileDmDetailsQueryVariables = Exact<{
   memberId: string;
   limit: number;
@@ -1412,7 +1435,7 @@ export type ProfileDmDetailsQueryVariables = Exact<{
 }>;
 
 
-export type ProfileDmDetailsQuery = { dmStats: { sessionCount: number } | null, documents: { total: number, items: Array<{ id: string, slug: string, title: string, status: string, authorId: string, canEditBody: boolean, canEditMetadata: boolean }> } };
+export type ProfileDmDetailsQuery = { questArcs: { total: number, items: Array<{ id: string, name: string, createdBy: string, questCount: number }> }, dmStats: { sessionCount: number } | null, documents: { total: number, items: Array<{ id: string, slug: string, title: string, status: string, authorId: string, canEditBody: boolean, canEditMetadata: boolean }> } };
 
 export type ProfileSetMyAvailabilityMutationVariables = Exact<{
   slots: Array<AvailabilitySlotInput> | AvailabilitySlotInput;

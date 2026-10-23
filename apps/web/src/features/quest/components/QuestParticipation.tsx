@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../../components/primitives/Button.js';
 import { Card } from '../../../components/primitives/Card.js';
 import { Modal } from '../../../components/primitives/Modal.js';
+import { Select } from '../../../components/primitives/Select.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { QuestDetailView, MyCharacterRef } from '../adapters/questAdapter.js';
@@ -33,6 +34,7 @@ export function QuestParticipation({
   commandError: AppError | null;
 }): React.JSX.Element {
   const [selected, setSelected] = useState('');
+  const characterLabelId = useId();
   const [withdrawing, setWithdrawing] = useState<MyCharacterRef | null>(null);
   const preplay = quest.machineStatus === 'open' || quest.machineStatus === 'full';
   const own = quest.participants.filter(
@@ -121,23 +123,21 @@ export function QuestParticipation({
               });
           }}
         >
-          <label className="stack">
-            <span className="type-caption">Your character</span>
-            <select
-              aria-label="Your character"
+          <div className="stack">
+            <span className="type-caption" id={characterLabelId}>Your character</span>
+            <Select
+              label="Your character"
+              labelId={characterLabelId}
               value={selected}
-              required
+              aria-required
               disabled={pending}
-              onChange={(event) => setSelected(event.target.value)}
-            >
-              <option value="">Choose your character</option>
-              {eligible.map((character) => (
-                <option key={character.id} value={character.id}>
-                  {character.name}
-                </option>
-              ))}
-            </select>
-          </label>
+              onValueChange={setSelected}
+              options={[
+                { value: '', label: 'Choose your character' },
+                ...eligible.map((character) => ({ value: character.id, label: character.name })),
+              ]}
+            />
+          </div>
           <Button
             type="submit"
             disabled={

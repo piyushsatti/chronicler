@@ -1,14 +1,17 @@
+import { useId } from 'react';
 import { Button } from '../../../components/primitives/Button.js';
 import { Card } from '../../../components/primitives/Card.js';
 import type { useBulkRoleBar } from '../hooks/useBulkRoleBar.js';
 import { personName } from '../../../utils/format.js';
 import { Checkbox } from '../../../components/primitives/Checkbox.js';
+import { Select } from '../../../components/primitives/Select.js';
 
 export function BulkRoleBar({
   view,
 }: {
   view: ReturnType<typeof useBulkRoleBar>;
 }): React.JSX.Element {
+  const roleLabelId = useId();
   const {
     submittedMembers,
     report,
@@ -42,24 +45,26 @@ export function BulkRoleBar({
         </p>
       ) : null}
       <div className="row" data-wrap="1">
-        <label className="stack">
-          <span className="type-label">Base role</span>
-          <select
+        <div className="stack">
+          <span className="type-label" id={roleLabelId}>Base role</span>
+          <Select
+            label="Base role"
+            labelId={roleLabelId}
             disabled={batch.isPending}
-            className="field-input"
             value={form.baseTier}
-            onChange={(e) => {
+            onValueChange={(value) => {
               setTouched(true);
               setForm((f) => ({
                 ...f,
-                baseTier: e.target.value === 'Spectator' ? 'Spectator' : 'Player',
+                baseTier: value === 'Spectator' ? 'Spectator' : 'Player',
               }));
             }}
-          >
-            <option value="Player">Player</option>
-            <option value="Spectator">Spectator</option>
-          </select>
-        </label>
+            options={[
+              { value: 'Player', label: 'Player' },
+              { value: 'Spectator', label: 'Spectator' },
+            ]}
+          />
+        </div>
         {(
           [
             ['grantDm', 'DM'],

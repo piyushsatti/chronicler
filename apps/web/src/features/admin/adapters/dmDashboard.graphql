@@ -8,6 +8,15 @@ query DmDashboard(
   dmStats(memberId: $memberId) {
     sessionCount
   }
+  questArcs(limit: 50, offset: 0) {
+    total
+    items {
+      id
+      name
+      createdBy
+      questCount
+    }
+  }
   quests(filters: { dmId: $memberId }, limit: $questLimit, offset: $questOffset) {
     total
     items {

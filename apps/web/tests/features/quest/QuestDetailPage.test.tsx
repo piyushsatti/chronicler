@@ -77,10 +77,8 @@ describe('QuestDetailPage', () => {
     expect(delivery).toHaveAttribute('data-terminal', '0');
     expect(delivery).toHaveAttribute('role', 'status');
     expect(await screen.findByRole('button', { name: 'Sign up' })).toBeDisabled();
-    await userEvent.selectOptions(
-      screen.getByLabelText('Your character'),
-      'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
-    );
+    await userEvent.click(screen.getByRole('button', { name: /^Your character/ }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Lyra Storm' }));
     expect(screen.getByRole('button', { name: 'Sign up' })).toBeEnabled();
   });
 

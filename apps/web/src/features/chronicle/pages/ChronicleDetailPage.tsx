@@ -8,11 +8,14 @@ import { Avatar } from '../../../components/primitives/Avatar.js';
 import { Card } from '../../../components/primitives/Card.js';
 import { Chip } from '../../../components/primitives/Chip.js';
 import { DetailLayout } from '../../../components/primitives/DetailLayout.js';
+import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { useChroniclesPage } from '../hooks/useChroniclesPage.js';
 import { useChronicleDetailPage } from '../hooks/useChronicleDetailPage.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
-import { handleOnlyName, personName } from '../../../utils/format.js';
+import { useMemberHref } from '../../../hooks/useMemberHref.js';
+import { isSentinelDate, personLabels } from '../../../utils/format.js';
+import { useMemberProfile } from '../../../hooks/useMemberProfile.js';
 import styles from './chronicleDetail.module.css';
 import { summaryCategoryMeta } from '../summaryCategory.js';
 
@@ -25,9 +28,12 @@ const BACK = { to: '/chronicles', label: 'Chronicles' } as const;
 
 export function ChronicleDetailPage(): React.JSX.Element {
   const { formatDate } = useDateFormatter();
+  const memberHref = useMemberHref();
   const { id, slug } = useParams();
   const page = useChronicleDetailPage(slug ?? id ?? '');
   const list = useChroniclesPage();
+  const authorHandle = page.status === 'ready' ? page.view.authorHandle : null;
+  const authorProfile = useMemberProfile(authorHandle ?? '');
 
   if (page.status !== 'ready') {
     const regions: PageRegionRenderers = {
@@ -63,159 +69,187 @@ export function ChronicleDetailPage(): React.JSX.Element {
   const category = chronicle.category
     ? summaryCategoryMeta(chronicle.category).label
     : 'Entry';
-  const author = chronicle.authorHandle
-    ? handleOnlyName(chronicle.authorHandle)
+  const authorMember = authorProfile.data?.member;
+  const author = authorHandle
+    ? personLabels([{ displayName: authorMember?.displayName, handle: authorHandle }])[0]
     : null;
-  const when = summary?.occurredAt ?? chronicle.updatedAt;
+  const authorHref = authorHandle
+    ? memberHref({ memberId: authorMember?.id, handle: authorHandle }, 'player')
+    : null;
+  const when = [summary?.occurredAt, chronicle.publishedAt, chronicle.updatedAt].find(
+    (value) => value && !isSentinelDate(value),
+  );
+  const whenLabel = when === summary?.occurredAt
+    ? 'Played'
+    : when === chronicle.publishedAt
+      ? 'Published'
+      : 'Updated';
   const regionNames = summary?.regions.map((region) => region.name) ?? [];
+  const regionIds = new Set(summary?.regions.map((region) => region.id));
+  const hasSessionDetails = summary && Boolean(
+    summary.quests?.length || summary.regions.length || summary.arc ||
+    summary.gameDate || summary.gameDay != null || summary.dms?.length ||
+    summary.players?.length,
+  );
+  const editHref = `/summaries/${encodeURIComponent(chronicle.id)}/edit`;
+  const related = list.status === 'ready'
+    ? list.view.items
+        .filter((item) => item.id !== chronicle.id)
+        .map((item) => ({
+          item,
+          score:
+            (item.regionIds.some((regionId) => regionIds.has(regionId)) ? 2 : 0) +
+            (item.authorHandle && item.authorHandle.toLowerCase() === authorHandle?.toLowerCase() ? 1 : 0),
+        }))
+        .filter(({ score }) => score > 0)
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 4)
+        .map(({ item }) => item)
+    : [];
 
-  const related =
-    list.status === 'ready'
-      ? list.view.items
-          .filter((item) => item.id !== chronicle.id)
-          .map((item) => ({
-            item,
-            score:
-              (item.region && regionNames.includes(item.region) ? 2 : 0) +
-              (summary?.arc && item.arc === summary.arc ? 2 : 0) +
-              (item.authorHandle && item.authorHandle === chronicle.authorHandle ? 1 : 0),
-          }))
-          .sort((a, b) => b.score - a.score)
-          .slice(0, 4)
-          .map(({ item }) => item)
-      : [];
-
-  const authorCard = author ? (
-    <Card as="section" pad={5} aria-label="Author">
-      <div className="row" data-gap="3" data-align="center">
-        <Avatar name={author} size="md" online={false} />
-        <div className="stack" data-gap="1">
-          <span className="type-title">{author}</span>
-          <span className="type-caption">
-            {chronicle.category ? `Wrote this ${category.toLowerCase()}` : 'Author'}
-          </span>
-        </div>
-      </div>
-    </Card>
-  ) : null;
-
-  const relatedCard = related.length ? (
-    <Card as="section" pad={5} aria-label="More from the chronicle">
-      <h2 className="type-heading">More from the chronicle</h2>
-      <ul className="stack" data-gap="2">
-        {related.map((item) => (
-          <li key={item.id}>
-            <Link to={`/chronicles/${encodeURIComponent(item.slug)}`}>{item.title}</Link>
-          </li>
-        ))}
-      </ul>
-    </Card>
-  ) : null;
-
-  const details = summary ? (
-    <Card as="section" pad={5}>
-      <dl className="stack" data-gap="4" aria-label="Session details">
-        {summary.quests?.length ? (
-          <div>
-            <dt className="type-label">Quests</dt>
-            <dd>
-              {summary.quests.map((quest, index) => (
-                <span key={quest.id}>
-                  {index ? ', ' : ''}
-                  <Link to={`/quests/${encodeURIComponent(quest.shortCode)}`}>
-                    {quest.title?.trim() || quest.shortCode}
-                  </Link>
-                </span>
-              ))}
-            </dd>
+  const rail = (
+    <div className={`stack ${styles.rail}`} data-gap="4">
+      <Card as="section" pad={5} aria-label="Author">
+        {author && authorHref ? (
+          <div className="stack" data-gap="3">
+            <h2 className="type-heading">Written by</h2>
+            <Link className={`row ${styles.author}`} data-gap="3" to={authorHref} aria-label={author}>
+              <Avatar
+                name={author}
+                src={authorMember?.avatarUrl ?? undefined}
+                size="md"
+                online={false}
+              />
+              <span className="type-title">{author}</span>
+            </Link>
           </div>
-        ) : null}
-        {summary.arc ? (
-          <div>
-            <dt className="type-label">Arc</dt>
-            <dd>{summary.arc}</dd>
-          </div>
-        ) : null}
-        {summary.gameDate ? (
-          <div>
-            <dt className="type-label">Game date</dt>
-            <dd>
-              {summary.gameDate.eraAbbrev} {summary.gameDate.year} ·{' '}
-              {summary.gameDate.periodName} {summary.gameDate.day}
-            </dd>
-          </div>
-        ) : null}
-        {!summary.gameDate && summary.gameDay != null ? (
-          <div>
-            <dt className="type-label">Game day</dt>
-            <dd>{summary.gameDay}</dd>
-          </div>
-        ) : null}
-        {summary.occurredAt ? (
-          <div>
-            <dt className="type-label">Played</dt>
-            <dd>
-              <time dateTime={summary.occurredAt}>{formatDate(summary.occurredAt)}</time>
-            </dd>
-          </div>
-        ) : null}
-        {regionNames.length ? (
-          <div>
-            <dt className="type-label">Regions</dt>
-            <dd>{regionNames.join(', ')}</dd>
-          </div>
-        ) : null}
-        {summary.dms?.length ? (
-          <div>
-            <dt className="type-label">Dungeon masters</dt>
-            <dd>
-              {summary.dms
-                .map((dm) => personName({ displayName: dm.displayName }))
-                .join(', ')}
-            </dd>
-          </div>
-        ) : null}
-        {summary.players?.length ? (
-          <div>
-            <dt className="type-label">Characters</dt>
-            <dd>
-              {summary.players.map((player, index) => (
-                <span key={player.characterId}>
-                  {index ? ', ' : ''}
-                  <Link to={`/characters/${encodeURIComponent(player.characterShortCode)}`}>
-                    {player.characterName}
-                  </Link>
-                </span>
-              ))}
-            </dd>
-          </div>
-        ) : null}
-      </dl>
-    </Card>
-  ) : null;
-
-  const rail =
-    authorCard || details || relatedCard ? (
-      <div className={`stack ${styles.rail}`} data-gap="4">
-        {authorCard}
-        {details}
-        {relatedCard}
-      </div>
-    ) : null;
+        ) : (
+          <EmptyState
+            message="No author is recorded for this entry."
+            action={<Link to="/community">Meet the community</Link>}
+          />
+        )}
+      </Card>
+      {summary && hasSessionDetails ? (
+        <Card as="section" pad={5}>
+          <dl className="stack" data-gap="4" aria-label="Session details">
+            {summary.quests?.length ? (
+              <div>
+                <dt className="type-label">Quests</dt>
+                <dd className="stack" data-gap="3">
+                  {summary.quests.map((quest) => (
+                    <div key={quest.id} className="stack" data-gap="1">
+                      <Link to={`/quests/${encodeURIComponent(quest.shortCode)}`}>
+                        {quest.title?.trim() || 'Quest details'}
+                      </Link>
+                      <Link className="type-caption" to={`/quests/${encodeURIComponent(quest.shortCode)}`}>
+                        View roster
+                      </Link>
+                    </div>
+                  ))}
+                </dd>
+              </div>
+            ) : null}
+            {regionNames.length ? (
+              <div>
+                <dt className="type-label">Regions</dt>
+                <dd className="stack" data-gap="1">
+                  {summary.regions.map((region) => (
+                    <Link key={region.id} to={`/regions/${encodeURIComponent(region.id)}`}>
+                      {region.name}
+                    </Link>
+                  ))}
+                </dd>
+              </div>
+            ) : null}
+            {summary.arc ? (
+              <div>
+                <dt className="type-label">Arc</dt>
+                <dd>{summary.arc}</dd>
+              </div>
+            ) : null}
+            {summary.gameDate ? (
+              <div>
+                <dt className="type-label">Game date</dt>
+                <dd>
+                  {summary.gameDate.eraAbbrev} {summary.gameDate.year} ·{' '}
+                  {summary.gameDate.periodName} {summary.gameDate.day}
+                </dd>
+              </div>
+            ) : summary.gameDay != null ? (
+              <div>
+                <dt className="type-label">Game day</dt>
+                <dd>{summary.gameDay}</dd>
+              </div>
+            ) : null}
+            {summary.dms?.length ? (
+              <div>
+                <dt className="type-label">Dungeon masters</dt>
+                <dd>{personLabels(summary.dms).join(', ')}</dd>
+              </div>
+            ) : null}
+            {summary.players?.length ? (
+              <div>
+                <dt className="type-label">Characters</dt>
+                <dd className="stack" data-gap="1">
+                  {summary.players.map((player) => (
+                    <Link key={player.characterId} to={`/characters/${encodeURIComponent(player.characterShortCode)}`}>
+                      {player.characterName}
+                    </Link>
+                  ))}
+                </dd>
+              </div>
+            ) : null}
+          </dl>
+        </Card>
+      ) : null}
+      <Card as="section" pad={5} aria-label="Related entries" className="stack" data-gap="3">
+        <h2 className="type-heading">Related entries</h2>
+        {list.status === 'loading' ? (
+          <StatePanel status="loading" />
+        ) : list.status === 'error' ? (
+          <StatePanel status="error" error={list.error} onRetry={list.refetch} />
+        ) : related.length ? (
+          <ul className="stack" data-gap="2">
+            {related.map((item) => (
+              <li key={item.id}>
+                <Link className={`list-row ${styles.related}`} to={`/chronicles/${encodeURIComponent(item.slug)}`}>
+                  <span className="stack" data-gap="1">
+                    <span className="type-ui">{item.title}</span>
+                    {item.region ? <span className="type-caption">{item.region}</span> : null}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <EmptyState
+            message="No other entries by this author or from these regions are available."
+            action={<Link to="/chronicles">Browse Chronicles</Link>}
+          />
+        )}
+      </Card>
+    </div>
+  );
 
   const regions: PageRegionRenderers = {
     body: () => (
       <DetailLayout rail={rail} railLabel="About this entry">
         <DetailLayout.Reading>
-          <Card as="article" pad={6}>
-            {chronicle.body ? (
+          {chronicle.body?.trim() ? (
+            <Card as="article" pad={6}>
               <div className="summary-prose">
                 <ContentRenderer body={chronicle.body} />
               </div>
-            ) : (
-              <p className="type-caption">No body available for this viewer.</p>
-            )}
-          </Card>
+            </Card>
+          ) : (
+            <EmptyState
+              message="No readable body is available for this entry."
+              action={chronicle.canEdit
+                ? <Link className="btn btn--secondary" to={editHref}>Write this entry</Link>
+                : <Link className="btn btn--secondary" to="/chronicles">Browse Chronicles</Link>}
+            />
+          )}
         </DetailLayout.Reading>
       </DetailLayout>
     ),
@@ -224,39 +258,27 @@ export function ChronicleDetailPage(): React.JSX.Element {
   return (
     <PageShell>
       <PageHeader
+        className={styles.header}
         back={BACK}
         title={chronicle.title}
-        actions={
-          chronicle.canEdit ? (
-            <Link
-              className="btn btn--secondary"
-              to={`/summaries/${encodeURIComponent(chronicle.id)}/edit`}
-            >
-              Edit entry
-            </Link>
-          ) : null
-        }
+        actions={chronicle.canEdit ? <Link className="btn btn--secondary" to={editHref}>Edit entry</Link> : null}
         meta={
           <>
-            <Chip size="sm" tone="line">
-              {category}
-            </Chip>
-            {author ? (
-              <span className="row" data-gap="2" data-align="center">
-                <Avatar name={author} size="xs" online={false} />
+            <Chip size="sm" tone="line">{category}</Chip>
+            {author && authorHref ? (
+              <Link className={`row ${styles.author}`} data-gap="2" to={authorHref} aria-label={author}>
+                <Avatar name={author} src={authorMember?.avatarUrl ?? undefined} size="xs" online={false} />
                 {author}
-              </span>
+              </Link>
             ) : null}
-            {when ? (
-              <time dateTime={when}>
-                {summary?.occurredAt ? '' : 'Updated '}
-                {formatDate(when)}
-              </time>
-            ) : null}
-            {regionNames.map((name) => (
-              <Chip key={name} size="sm">
-                {name}
-              </Chip>
+            {when ? <time dateTime={when}>{whenLabel} {formatDate(when)}</time> : null}
+            {summary?.regions.map((region) => (
+              <Link key={region.id} to={`/regions/${encodeURIComponent(region.id)}`}>{region.name}</Link>
+            ))}
+            {summary?.quests?.map((quest) => (
+              <Link key={quest.id} to={`/quests/${encodeURIComponent(quest.shortCode)}`}>
+                {quest.title?.trim() || 'Quest details'}
+              </Link>
             ))}
           </>
         }

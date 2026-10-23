@@ -100,8 +100,10 @@ describe('Character directory', () => {
     renderWithProviders(<CreateCharacterForm onCancel={() => undefined} />);
     await screen.findByLabelText('Character name');
     await user.type(screen.getByLabelText('Character name'), 'New hero');
-    await user.selectOptions(screen.getByLabelText('Region'), REGION);
-    await user.selectOptions(screen.getByLabelText('Backstory'), backstory);
+    await user.click(screen.getByRole('button', { name: /^Region / }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Lightfall' }));
+    await user.click(screen.getByRole('button', { name: /^Backstory / }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Origin' }));
     await user.click(await screen.findByRole('checkbox', { name: /Soldier/ }));
     expect(screen.getByRole('checkbox', { name: /Soldier/ })).toHaveClass(
       'checkbox__box',
@@ -159,13 +161,10 @@ describe('Character directory', () => {
     const user = userEvent.setup();
     renderWithProviders(<CreateCharacterForm onCancel={() => undefined} />);
     await user.type(await screen.findByLabelText('Character name'), 'New hero');
-    await user.selectOptions(screen.getByLabelText('Region'), REGION);
-    await user.selectOptions(
-      screen.getByLabelText('Backstory'),
-      screen
-        .getAllByRole('option')
-        .find((o) => o.textContent === 'Child of the Weeping')!,
-    );
+    await user.click(screen.getByRole('button', { name: /^Region / }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Lightfall' }));
+    await user.click(screen.getByRole('button', { name: /^Backstory / }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Child of the Weeping' }));
     const ddb = screen.getByLabelText('D&D Beyond URL');
     expect(screen.getByText('D&D Beyond URL').textContent).not.toMatch(/optional/i);
     await user.click(screen.getByRole('button', { name: 'Create character' }));
@@ -237,7 +236,7 @@ describe('Character directory', () => {
     expect(await screen.findByText('1 character')).toBeInTheDocument();
     expect(screen.queryByText('1 characters')).not.toBeInTheDocument();
   });
-  it('requires a region and backstory chosen from a disabled placeholder', async () => {
+  it('requires a region and backstory and validates an empty control on blur', async () => {
     let created = 0;
     server.use(
       graphql.mutation('CreateCharacter', () => {
@@ -250,13 +249,15 @@ describe('Character directory', () => {
     const user = userEvent.setup();
     renderWithProviders(<CreateCharacterForm onCancel={() => undefined} />);
     await user.type(await screen.findByLabelText('Character name'), 'New hero');
-    const region = screen.getByLabelText('Region');
-    expect(screen.getByRole('option', { name: 'Choose a region' })).toBeDisabled();
-    expect(screen.getByRole('option', { name: 'Choose a backstory' })).toBeDisabled();
-    expect(screen.queryByRole('option', { name: 'No region' })).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('option', { name: 'No backstory' }),
-    ).not.toBeInTheDocument();
+    const region = screen.getByRole('button', { name: /^Region / });
+    expect(region).toHaveTextContent('Choose a region');
+    await user.click(screen.getByText('Region', { selector: 'label' }));
+    expect(await screen.findByRole('menu', { name: 'Region' })).toBeVisible();
+    await user.keyboard('{Escape}');
+    expect(region).toHaveFocus();
+    await user.tab();
+    expect(await screen.findByText('Choose a region for this character.')).toBeVisible();
+    expect(screen.getByRole('button', { name: /^Backstory / })).toHaveTextContent('Choose a backstory');
     await user.type(
       screen.getByLabelText('D&D Beyond URL'),
       'https://www.dndbeyond.com/characters/7',
@@ -269,7 +270,8 @@ describe('Character directory', () => {
     ]);
     expect(region).toHaveAttribute('aria-invalid', 'true');
     expect(created).toBe(0);
-    await user.selectOptions(region, REGION);
+    await user.click(region);
+    await user.click(await screen.findByRole('menuitem', { name: 'Lightfall' }));
     expect(screen.getAllByRole('alert')).toHaveLength(1);
   });
 
@@ -286,13 +288,10 @@ describe('Character directory', () => {
     const user = userEvent.setup();
     renderWithProviders(<CreateCharacterForm onCancel={() => undefined} />);
     await user.type(await screen.findByLabelText('Character name'), 'New hero');
-    await user.selectOptions(screen.getByLabelText('Region'), REGION);
-    await user.selectOptions(
-      screen.getByLabelText('Backstory'),
-      screen
-        .getAllByRole('option')
-        .find((o) => o.textContent === 'Child of the Weeping')!,
-    );
+    await user.click(screen.getByRole('button', { name: /^Region / }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Lightfall' }));
+    await user.click(screen.getByRole('button', { name: /^Backstory / }));
+    await user.click(await screen.findByRole('menuitem', { name: 'Child of the Weeping' }));
     await user.type(
       screen.getByLabelText('D&D Beyond URL'),
       'https://www.dndbeyond.com/characters/7',
