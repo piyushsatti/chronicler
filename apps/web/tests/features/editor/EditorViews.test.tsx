@@ -1,4 +1,5 @@
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { useState } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
@@ -43,7 +44,7 @@ function props(): EditorShellProps {
 describe('editor props-only views', () => {
   it.each(['demo', 'dm-table', 'summary', 'guide', 'ruling'] as const)(
     'keeps %s formatting beside primary Publish and secondary Save draft in the shared toolbar',
-    (typeKey) => {
+    async (typeKey) => {
       render(
         <MemoryRouter>
           <EditorShell {...props()} typeKey={typeKey} undo={vi.fn()} canUndo />
@@ -64,8 +65,13 @@ describe('editor props-only views', () => {
       expect(screen.getByRole('button', { name: 'Undo' })).toHaveAccessibleName('Undo');
       expect(screen.queryByText('Advanced')).not.toBeInTheDocument();
       expect(screen.getByText('Required')).toBeVisible();
-      fireEvent.keyDown(screen.getByRole('tab', { name: 'Write' }), { key: 'End' });
-      expect(screen.getByRole('tab', { name: 'Preview' })).toHaveAttribute(
+      const user = userEvent.setup();
+      const write = screen.getByRole('tab', { name: 'Write' });
+      await user.click(write);
+      await user.keyboard('{End}');
+      const preview = screen.getByRole('tab', { name: 'Preview' });
+      expect(preview).toHaveFocus();
+      expect(preview).toHaveAttribute(
         'aria-selected',
         'true',
       );

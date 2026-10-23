@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router-dom';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { TabNav, Tabs } from '../../../src/components/primitives/Tabs.js';
+import { PageToolbar } from '../../../src/components/primitives/PageToolbar.js';
 import { scrollEdges } from '../../../src/components/primitives/useScrollEdges.js';
 
 describe('Tabs', () => {
@@ -66,6 +67,34 @@ describe('Tabs', () => {
     expect(screen.getByRole('tabpanel', { name: 'Muster' })).toHaveTextContent('Muster content');
   });
 
+  it('keeps linked panels and keyboard selection when the track is inside a page toolbar', async () => {
+    const user = userEvent.setup();
+    render(
+      <Tabs
+        aria-label="Community sections"
+        items={[
+          { id: 'muster', label: 'Free this week', panel: 'Muster content' },
+          { id: 'dms', label: 'DMs', panel: 'DM content' },
+        ]}
+        renderTrack={(track) => <PageToolbar label="Community toolbar" segments={track} count="12 members" />}
+      />,
+    );
+    const toolbar = screen.getByRole('region', { name: 'Community toolbar' });
+    const list = screen.getByRole('tablist', { name: 'Community sections' });
+    expect(toolbar).toContainElement(list);
+    expect(toolbar).toContainElement(screen.getByText('12 members'));
+    expect(list).not.toContainElement(screen.getByText('12 members'));
+    await user.tab();
+    await user.keyboard('{ArrowRight}');
+    const tab = screen.getByRole('tab', { name: 'DMs' });
+    const panel = screen.getByRole('tabpanel', { name: 'DMs' });
+    expect(tab).toHaveFocus();
+    expect(tab).toHaveAttribute('aria-selected', 'true');
+    expect(tab).toHaveAttribute('aria-controls', panel.id);
+    expect(panel).toHaveTextContent('DM content');
+    expect(toolbar).not.toContainElement(panel);
+  });
+
   it('Tabs.Nav marks the current route link with aria-current', () => {
     render(
       <MemoryRouter>
@@ -84,11 +113,48 @@ describe('Tabs', () => {
     expect(screen.getByRole('link', { name: 'World' })).not.toHaveAttribute('aria-current');
   });
 
-  it('has one skin: the top-nav pill, active filled with ink', () => {
-    const css = readFileSync(join(process.cwd(), 'src/styles/primitives.css'), 'utf8');
-    expect(css).toMatch(
-      /\.tabs\[data-component\] \.tabs__tab:is\(\[aria-selected='true'\], \[aria-current='page'\]\) \{\s*background: var\(--color-text\);\s*color: var\(--color-bg-deep\);/,
+  it('shares one roving tab stop and supports arrow, Home/End, and Tab return for route links', async () => {
+    const user = userEvent.setup();
+    render(
+      <MemoryRouter>
+        <button type="button">Before</button>
+        <TabNav
+          aria-label="Admin sections"
+          items={[
+            { to: '/admin/members', label: 'Members', current: false },
+            { to: '/admin/world', label: 'World', current: true },
+            { to: '/admin/roles', label: 'Roles', current: false },
+          ]}
+        />
+        <button type="button">After</button>
+      </MemoryRouter>,
     );
+    const members = screen.getByRole('link', { name: 'Members' });
+    const world = screen.getByRole('link', { name: 'World' });
+    const roles = screen.getByRole('link', { name: 'Roles' });
+    expect(members).toHaveAttribute('href', '/admin/members');
+    expect([members, world, roles].map((link) => link.tabIndex)).toEqual([-1, 0, -1]);
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'Before' })).toHaveFocus();
+    await user.tab();
+    expect(world).toHaveFocus();
+    await user.keyboard('{ArrowRight}');
+    expect(roles).toHaveFocus();
+    await user.keyboard('{Home}');
+    expect(members).toHaveFocus();
+    await user.keyboard('{End}');
+    expect(roles).toHaveFocus();
+    await user.tab();
+    expect(screen.getByRole('button', { name: 'After' })).toHaveFocus();
+    await user.tab({ shift: true });
+    expect(roles).toHaveFocus();
+  });
+
+  it('uses the shared 40px track, inset 32px indicator, and reduced-motion rule', () => {
+    const css = readFileSync(join(process.cwd(), 'src/styles/primitives.css'), 'utf8');
+    expect(css).toMatch(/\.segmented-track \{[\s\S]*?height: var\(--segment-track-size\);[\s\S]*?padding: 3px;/);
+    expect(css).toMatch(/\.segmented-pill \{[\s\S]*?height: var\(--segment-highlight-size\);/);
+    expect(css).toMatch(/@media \(prefers-reduced-motion: reduce\) \{ \.segmented-pill \{ transition: none;/);
     expect(css).not.toMatch(/pr-tabs__tab|tabs\.list/);
   });
 });
@@ -103,11 +169,11 @@ describe('tab row overflow', () => {
     expect(scrollEdges({ scrollLeft: 200, scrollWidth: 500, clientWidth: 300 })).toBe('start');
   });
 
-  it('scrolls instead of clipping, keeps the focus ring inside, and fades the hidden edge', () => {
+  it('keeps the shared segmented track scrollable and the focus ring inside', () => {
     const css = readFileSync(join(process.cwd(), 'src/styles/primitives.css'), 'utf8');
-    const list = css.match(/\.tabs\[data-component\] > \.tabs__list \{([^}]*)\}/)?.[1] ?? '';
-    expect(list).toContain('overflow-x: auto');
-    expect(list).toContain('padding: var(--sp-1)');
-    expect(css).toMatch(/\.tabs__list\[data-overflow='end'\] \{\s*mask-image/);
+    const track = css.match(/\.segmented-track \{([^}]*)\}/)?.[1] ?? '';
+    expect(track).toContain('overflow-x: auto');
+    expect(track).toContain('padding: 3px');
+    expect(css).toMatch(/\.segmented-option:focus-visible \{[^}]*outline-offset: -3px;/);
   });
 });

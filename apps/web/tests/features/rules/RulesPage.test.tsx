@@ -38,6 +38,22 @@ function renderRules(controls?: ReactNode) {
   return { ...view, queryClient: harness.queryClient };
 }
 
+function expectRulesToolbar(): void {
+  expect(screen.getByRole('region', { name: 'Filter rules' })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'All', pressed: true })).toBeVisible();
+  expect(
+    screen.queryByRole('button', { name: 'Search rules' }) ??
+      screen.getByRole('searchbox', { name: 'Search rules' }),
+  ).toBeVisible();
+}
+
+async function rulesSearch(user: ReturnType<typeof userEvent.setup>) {
+  const input = screen.queryByRole('searchbox', { name: 'Search rules' });
+  if (input) return input;
+  await user.click(screen.getByRole('button', { name: 'Search rules' }));
+  return screen.getByRole('searchbox', { name: 'Search rules' });
+}
+
 function rows(count: number, title = 'Guide') {
   return Array.from({ length: count }, (_, index) => ({
     ...good.items[0],
@@ -81,8 +97,13 @@ function SessionControls({ nextToken }: { nextToken: string }) {
 
 describe('RulesPage', () => {
   it('lets visitors browse guides from the empty rulings section', async () => {
-    server.use(graphql.query('RulesList', () => response(rows(1))));
+    const rulesRequested = deferred();
+    server.use(graphql.query('RulesList', () => {
+      rulesRequested.release();
+      return response(rows(1));
+    }));
     renderRules();
+    await rulesRequested.promise;
     const browse = await screen.findByRole('link', { name: 'Browse guides' });
     expect(browse).toHaveAttribute('href', '/rules?show=guides');
     await userEvent.click(browse);
@@ -117,7 +138,7 @@ describe('RulesPage', () => {
     );
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(screen.getByRole('heading', { name: 'Rules' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Search rules')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Search rules' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Filter rules' })).toBeInTheDocument();
     // Rulings are a section below the guides, not a right rail.
     const guides = screen.getByRole('region', { name: 'Guides' });
@@ -151,6 +172,7 @@ describe('RulesPage', () => {
       );
       renderRules();
       expect(await screen.findByText('No rules published yet.')).toBeVisible();
+      expectRulesToolbar();
       expect(await screen.findByRole('link', { name: 'New guide' })).toHaveAttribute(
         'href',
         '/rules/guides/new',
@@ -319,7 +341,7 @@ describe('RulesPage', () => {
     const user = userEvent.setup();
     renderRules();
     await screen.findByRole('link', { name: /Combat basics/ });
-    await user.type(screen.getByLabelText('Search rules'), 'allies');
+    await user.type(await rulesSearch(user), 'allies');
     expect(
       screen.queryByRole('link', { name: /Combat basics/ }),
     ).not.toBeInTheDocument();
@@ -378,7 +400,7 @@ describe('RulesPage', () => {
     await user.click(screen.getByRole('button', { name: 'Previous guides' }));
     expect(screen.getByRole('link', { name: /^Guide 1 / })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Next guides' }));
-    await user.type(screen.getByLabelText('Search rules'), 'crosspage excerpt');
+    await user.type(await rulesSearch(user), 'crosspage excerpt');
     expect(screen.getByText('1 result for "crosspage excerpt"')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Guide 101/ })).toHaveAttribute(
       'href',
@@ -386,12 +408,12 @@ describe('RulesPage', () => {
     );
     expect(screen.getByText('No rulings match.')).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Guide pages' })).toBeNull();
-    await user.clear(screen.getByLabelText('Search rules'));
+    await user.clear(await rulesSearch(user));
     expect(screen.getByRole('link', { name: /^Guide 1 / })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /^Ruling 1 / })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Next guides' }));
-    await user.type(screen.getByLabelText('Search rules'), 'Guide 1');
-    expect(screen.getByLabelText('Search rules')).toHaveValue('Guide 1');
+    await user.type(await rulesSearch(user), 'Guide 1');
+    expect(screen.getByRole('searchbox', { name: 'Search rules' })).toHaveValue('Guide 1');
     expect(screen.getByRole('link', { name: /^Guide 1 / })).toBeInTheDocument();
     expect(
       within(screen.getByRole('navigation', { name: 'Guide pages' })).getByText(
@@ -426,13 +448,15 @@ describe('RulesPage', () => {
     try {
       await waitFor(() => expect(held).toBe(true));
       expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
+      expectRulesToolbar();
       expect(screen.queryByRole('link', { name: /Partial guide/ })).toBeNull();
-      await user.type(screen.getByLabelText('Search rules'), 'Partial');
+      await user.type(await rulesSearch(user), 'Partial');
       expect(screen.queryByText(/results for/)).toBeNull();
       await act(async () => gate.release());
       expect(await screen.findByRole('alert')).toHaveTextContent(
         'Something went wrong. Please try again.',
       );
+      expectRulesToolbar();
       expect(screen.queryByRole('link', { name: /Partial guide/ })).toBeNull();
       failing = false;
       await user.click(screen.getByRole('button', { name: 'Try again' }));

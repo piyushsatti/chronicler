@@ -132,20 +132,20 @@ describe('SegmentedControl', () => {
       <SegmentedControl options={options} defaultValue="a" onValueChange={onValueChange}
         className="custom-seg" size="sm" aria-label="Letters" />,
     );
-    const group = screen.getByRole('radiogroup', { name: 'Letters' });
+    const group = screen.getByRole('toolbar', { name: 'Letters' });
     expect(group.tagName).toBe('DIV');
-    expect(group).toHaveClass('seg', 'custom-seg');
+    expect(group).toHaveClass('segmented-track', 'custom-seg');
     expect(group).toHaveAttribute('data-component', 'SegmentedControl');
     expect(group).toHaveAttribute('data-size', 'sm');
-    expect(screen.getByRole('radio', { name: 'Alpha' })).toHaveAttribute('aria-checked', 'true');
-    await user.click(screen.getByRole('radio', { name: 'Gamma' }));
-    const selected = screen.getByRole('radio', { name: 'Gamma' });
-    expect(selected).toHaveClass('seg__opt');
-    expect(selected).toHaveAttribute('aria-checked', 'true');
-    expect(selected).toHaveAttribute('data-active', '1');
+    expect(screen.getByRole('button', { name: 'Alpha' })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screen.getByRole('button', { name: 'Gamma' }));
+    const selected = screen.getByRole('button', { name: 'Gamma' });
+    expect(selected).toHaveClass('segmented-option');
+    expect(selected).toHaveAttribute('aria-pressed', 'true');
+    expect(selected).toHaveAttribute('data-segment-active', 'true');
     expect(onValueChange.mock.calls).toEqual([['c']]);
     rerender(<SegmentedControl options={options} defaultValue="b" onValueChange={onValueChange} />);
-    expect(selected).toHaveAttribute('aria-checked', 'true');
+    expect(selected).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('keeps the controlled choice until parent rerender and reports repeated choices', async () => {
@@ -154,53 +154,60 @@ describe('SegmentedControl', () => {
     const { rerender } = render(
       <SegmentedControl options={options} value="a" defaultValue="c" onValueChange={onValueChange} />,
     );
-    await user.click(screen.getByRole('radio', { name: 'Gamma' }));
-    await user.click(screen.getByRole('radio', { name: 'Alpha' }));
-    expect(screen.getByRole('radio', { name: 'Alpha' })).toHaveAttribute('aria-checked', 'true');
-    expect(screen.getByRole('radio', { name: 'Gamma' })).toHaveAttribute('aria-checked', 'false');
+    await user.click(screen.getByRole('button', { name: 'Gamma' }));
+    await user.click(screen.getByRole('button', { name: 'Alpha' }));
+    expect(screen.getByRole('button', { name: 'Alpha' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Gamma' })).toHaveAttribute('aria-pressed', 'false');
     expect(onValueChange.mock.calls).toEqual([['c'], ['a']]);
     rerender(<SegmentedControl options={options} value="c" onValueChange={onValueChange} />);
-    expect(screen.getByRole('radio', { name: 'Gamma' })).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByRole('button', { name: 'Gamma' })).toHaveAttribute('aria-pressed', 'true');
   });
 
-  it('wraps arrow selection in both directions while skipping disabled choices', async () => {
+  it('wraps focus in both directions and activates only on Space', async () => {
     const user = userEvent.setup();
     const onValueChange = vi.fn();
     render(<SegmentedControl options={options} defaultValue="a" onValueChange={onValueChange} />);
-    const alpha = screen.getByRole('radio', { name: 'Alpha' });
-    const gamma = screen.getByRole('radio', { name: 'Gamma' });
-    await user.click(screen.getByRole('radio', { name: 'Beta' }));
+    const alpha = screen.getByRole('button', { name: 'Alpha' });
+    const gamma = screen.getByRole('button', { name: 'Gamma' });
+    await user.click(screen.getByRole('button', { name: 'Beta' }));
     expect(onValueChange).not.toHaveBeenCalled();
-    fireEvent.keyDown(alpha, { key: 'ArrowRight' });
-    expect(gamma).toHaveAttribute('aria-checked', 'true');
-    fireEvent.keyDown(gamma, { key: 'ArrowDown' });
-    expect(alpha).toHaveAttribute('aria-checked', 'true');
-    fireEvent.keyDown(alpha, { key: 'ArrowLeft' });
-    expect(gamma).toHaveAttribute('aria-checked', 'true');
-    fireEvent.keyDown(gamma, { key: 'ArrowUp' });
-    fireEvent.keyDown(alpha, { key: 'Enter' });
-    expect(onValueChange.mock.calls).toEqual([['c'], ['a'], ['c'], ['a']]);
-    expect(screen.getByRole('radio', { name: 'Beta' })).toBeDisabled();
+    await user.click(alpha);
+    await user.keyboard('{ArrowRight}');
+    expect(gamma).toHaveFocus();
+    expect(gamma).toHaveAttribute('aria-pressed', 'false');
+    await user.keyboard(' ');
+    expect(gamma).toHaveAttribute('aria-pressed', 'true');
+    await user.keyboard('{ArrowRight}');
+    expect(alpha).toHaveAttribute('aria-pressed', 'false');
+    await user.keyboard('{ArrowLeft}');
+    expect(gamma).toHaveFocus();
+    await user.keyboard('{Home}');
+    expect(alpha).toHaveFocus();
+    await user.keyboard('{End}');
+    expect(gamma).toHaveFocus();
+    expect(gamma).toHaveAttribute('aria-pressed', 'true');
+    expect(onValueChange.mock.calls).toEqual([['a'], ['c']]);
+    expect(screen.getByRole('button', { name: 'Beta' })).toBeDisabled();
   });
 
   it('starts with no choice when value and defaultValue are undefined', async () => {
     const user = userEvent.setup();
     render(<SegmentedControl options={options} />);
-    for (const radio of screen.getAllByRole('radio')) {
-      expect(radio).toHaveAttribute('aria-checked', 'false');
-      expect(radio).not.toHaveAttribute('data-active');
+    for (const button of screen.getAllByRole('button')) {
+      expect(button).toHaveAttribute('aria-pressed', 'false');
+      expect(button).toHaveAttribute('data-segment-active', 'false');
     }
-    await user.click(screen.getByRole('radio', { name: 'Gamma' }));
-    expect(screen.getByRole('radio', { name: 'Gamma' })).toHaveAttribute('aria-checked', 'true');
+    await user.click(screen.getByRole('button', { name: 'Gamma' }));
+    expect(screen.getByRole('button', { name: 'Gamma' })).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('does not change a choice when every option is disabled', () => {
     const onValueChange = vi.fn();
     render(<SegmentedControl options={options.map((option) => ({ ...option, disabled: true }))}
       defaultValue="a" onValueChange={onValueChange} />);
-    fireEvent.keyDown(screen.getByRole('radio', { name: 'Alpha' }), { key: 'ArrowRight' });
-    fireEvent.keyDown(screen.getByRole('radio', { name: 'Alpha' }), { key: 'ArrowLeft' });
-    expect(screen.getByRole('radio', { name: 'Alpha' })).toHaveAttribute('aria-checked', 'true');
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Alpha' }), { key: 'ArrowRight' });
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Alpha' }), { key: 'ArrowLeft' });
+    expect(screen.getByRole('button', { name: 'Alpha' })).toHaveAttribute('aria-pressed', 'true');
     expect(onValueChange).not.toHaveBeenCalled();
   });
 
@@ -213,7 +220,7 @@ describe('SegmentedControl', () => {
     expect(group).toHaveAttribute('data-component', 'SegmentedControl');
     expect(group).toHaveAttribute('data-size', 'sm');
     expect(group).toHaveTextContent('Choose a letter');
-    expect(screen.queryByRole('radiogroup')).not.toBeInTheDocument();
+    expect(screen.queryByRole('toolbar')).not.toBeInTheDocument();
   });
 });
 
@@ -229,9 +236,9 @@ it('integrates both control consumers with parent-owned state', async () => {
   }
   render(<SelectionPair />);
   await user.click(screen.getByRole('option', { name: 'Gamma' }));
-  expect(screen.getByRole('radio', { name: 'Gamma' })).toHaveAttribute('aria-checked', 'true');
+  expect(screen.getByRole('button', { name: 'Gamma' })).toHaveAttribute('aria-pressed', 'true');
   expect(screen.getByLabelText('Current selection')).toHaveTextContent('c');
-  await user.click(screen.getByRole('radio', { name: 'Alpha' }));
+  await user.click(screen.getByRole('button', { name: 'Alpha' }));
   expect(screen.getByRole('option', { name: 'Alpha' })).toHaveAttribute('aria-selected', 'true');
   expect(screen.getByLabelText('Current selection')).toHaveTextContent('a');
 });

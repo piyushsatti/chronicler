@@ -34,7 +34,7 @@ describe('PersonalizePage', () => {
       await screen.findByRole('heading', { level: 1, name: 'Personalize' }),
     ).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: /^Theme/ })).toBeInTheDocument();
-    expect(screen.getByRole('radiogroup', { name: 'Color mode' })).toBeInTheDocument();
+    expect(screen.getByRole('toolbar', { name: 'Color mode' })).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: /^Theme/ }));
     expect(await screen.findByRole('menuitem', { name: 'Parchment' })).toBeInTheDocument();
     await userEvent.keyboard('{Escape}');

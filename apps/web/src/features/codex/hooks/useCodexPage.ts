@@ -29,7 +29,7 @@ export function useCodexPage(categoryPrefix: string, search = ''): CodexPageData
       loadCodexDirectory({
         categoryPrefix: categoryPrefix || undefined,
         search: search.trim() || undefined,
-        limit: 50,
+        limit: 12,
         offset: pageParam,
       }),
     getNextPageParam: (last, pages) => {

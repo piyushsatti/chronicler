@@ -1,85 +1,63 @@
 import type { CSSProperties } from 'react';
+import { Link } from 'react-router-dom';
 import { Avatar } from '../../../components/primitives/Avatar.js';
-import { Card } from '../../../components/primitives/Card.js';
-import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
 import { personLabels } from '../../../utils/format.js';
 import type { ChronicleListItemView } from '../adapters/chronicleAdapter.js';
-import { regionColorVar } from '../regionColor.js';
-import { summaryCategoryMeta } from '../summaryCategory.js';
+import { summaryCategoryLabel, summaryCategoryMeta } from '../summaryCategory.js';
 import styles from './chronCard.module.css';
 
 type ChronCardProps = {
   entry: ChronicleListItemView;
   authorLabel?: string;
-  /** Show the entry type chip; hidden when every entry shares one type. */
-  showType?: boolean;
 };
 
-/** One chronicle entry. The whole card is the link to the entry. */
-export function ChronCard({ entry, authorLabel, showType = true }: ChronCardProps): React.JSX.Element {
-  const { formatDate } = useDateFormatter();
-  const when = entry.occurredAt ?? entry.publishedAt;
-  const typeMeta = summaryCategoryMeta(entry.category);
-  const regionColor = entry.region ? regionColorVar(entry.region) : undefined;
-  const dayLabel = entry.gameDate
-    ? `${entry.gameDate.eraAbbrev} ${entry.gameDate.year} · ${entry.gameDate.periodName} ${entry.gameDate.day}`
-    : entry.gameDay != null
-      ? `Game day ${entry.gameDay}`
-      : null;
+export function ChronCard({ entry, authorLabel }: ChronCardProps): React.JSX.Element {
+  const isDmOnly = entry.visibility === 'dm_only';
+  const typeMeta = summaryCategoryMeta(isDmOnly ? 'dm' : entry.category);
   const author = entry.authorHandle
     ? authorLabel ?? personLabels([{ displayName: entry.authorDisplayName, handle: entry.authorHandle }])[0]
     : null;
-
   const typeColorVars = {
     '--chron-type-color': typeMeta.color,
     '--chron-type-bg': typeMeta.bg,
   } as CSSProperties;
 
   return (
-    <Card
-      variant="clickable"
-      to={`/chronicles/${encodeURIComponent(entry.slug)}`}
-      data-el="chronicles.card"
-      aria-label={`${entry.title}${dayLabel ? `, ${dayLabel}` : ''}`}
-      pad={4}
-      className={`stack ${styles.entry}`}
+    <article
+      className={styles.entry}
       style={typeColorVars}
+      data-entry-kind={isDmOnly || entry.category === 'dm' ? 'dm' : 'session'}
+      data-el="chronicles.card"
     >
-      <div className="row" data-gap="2" data-justify="between" data-wrap="1">
-        {showType ? (
-          <span className={`chip ${styles.typeChip}`}>{typeMeta.label}</span>
-        ) : null}
-        {when || dayLabel ? (
-          <span className="type-caption">{when ? formatDate(when) : dayLabel}</span>
-        ) : null}
-      </div>
-
-      {entry.title ? (
-        <h3 className={`type-title ${styles.title}`}>{entry.title}</h3>
-      ) : null}
-
-      {entry.excerpt ? (
-        <p className={`type-body ${styles.excerpt}`}>{entry.excerpt}</p>
-      ) : null}
-
-      <div className={`row ${styles.footer}`} data-gap="2" data-wrap="1">
-        {author ? (
-          <>
-            <Avatar name={author} size="xs" online={false} />
-            <span className="type-caption">{author}</span>
-          </>
-        ) : null}
-        {entry.region ? (
-          <span className="chip">
-            <span
-              className="dot"
-              style={{ '--region-color': regionColor } as CSSProperties}
-            />
-            {entry.region}
+      <div className={styles.labels}>
+        <span className={styles.typeLabel}>{summaryCategoryLabel(isDmOnly ? 'dm' : entry.category)}</span>
+        {isDmOnly ? (
+          <span className={styles.privacy}>
+            <svg viewBox="0 0 16 16" aria-hidden="true">
+              <rect x="3.5" y="7" width="9" height="7" rx="1.3" />
+              <path d="M5.5 7V4.8a2.5 2.5 0 0 1 5 0V7" />
+            </svg>
+            DMs only
           </span>
         ) : null}
-        {entry.arc ? <span className="type-caption">{entry.arc}</span> : null}
       </div>
-    </Card>
+      <h3 className={styles.title}>{entry.title}</h3>
+      {entry.excerpt ? <p className={styles.excerpt}>{entry.excerpt}</p> : null}
+      <div className={styles.footer}>
+        {author ? (
+          <span className={styles.author}>
+            <Avatar name={author} size="xs" online={false} />
+            {author}
+          </span>
+        ) : <span />}
+        <Link
+          className={styles.readLink}
+          to={`/chronicles/${encodeURIComponent(entry.slug)}`}
+          aria-label={`Read entry: ${entry.title}`}
+        >
+          Read entry <span aria-hidden="true">→</span>
+        </Link>
+      </div>
+    </article>
   );
 }

@@ -7,6 +7,7 @@
    .boardCard so they outrank the unlayered .type-* colour rules. */
 .boardCard {
   position: relative;
+  isolation: isolate;
   overflow: hidden;
 }
 

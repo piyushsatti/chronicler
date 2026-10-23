@@ -19,6 +19,10 @@ export type MapNodeDetailsProps = {
   maps: MapAtlasView[];
   onEdit: (edit: MapEdit) => void;
   onReload: () => Promise<void>;
+  region: string;
+  onClose: () => void;
+  onShowOnMap: () => void;
+  onSelect: (id: string) => void;
 };
 export function useMapNodeDetails({ map, node, maps, onReload }: MapNodeDetailsProps) {
   const { token, sessionReady, isCurrentSession } = useAuth();

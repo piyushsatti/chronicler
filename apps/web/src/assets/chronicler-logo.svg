@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 382 80" role="img" aria-labelledby="title">
+  <title id="title">Chronicler</title>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M17 8c8 3 15 9 22 17 9 10 17 22 23 34-10-5-21-10-31-17C20 33 13 23 17 8Z" fill="#85592f" stroke="#1b1712" stroke-width="2.5"/>
+    <path d="M17 8Q40 38 64 65" stroke="#1b1712" stroke-width="2.5"/>
+    <path d="m31 23 13-2M36 30l15-2M42 37l15-2M48 44l15-2M26 27l-9 1m14 6-10 2m16 5-10 3m17 2-10 4" stroke="#faf7f0" stroke-width="2"/>
+    <path d="m64 65 5 9-10-5 4-4Z" fill="#1b1712" stroke="#1b1712" stroke-width="1.5"/>
+    <path d="m64 65-5 4" stroke="#faf7f0" stroke-width="1.3"/>
+  </g>
+  <text x="94" y="57" fill="#1b1712" font-family="Georgia, 'Times New Roman', serif" font-size="46" font-weight="600" letter-spacing="-1.5">Chronicler</text>
+</svg>

@@ -4,20 +4,29 @@
   margin: 0;
 }
 
-.count {
-  margin-inline-start: var(--sp-1);
-  color: var(--color-text-3);
-  font-variant-numeric: tabular-nums;
-}
-
-[data-selected='1'] > .count {
-  color: inherit;
-}
-
 .divider {
   flex: 1;
   height: 1px;
   background: var(--color-border);
+}
+
+.resultsIntro {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  margin-block: var(--sp-1) 0;
+  color: var(--color-text-2);
+}
+
+.resultsIntro p {
+  font-size: 14px;
+}
+
+.loadingMore {
+  padding-block: var(--sp-2);
+  color: var(--color-text-2);
+  text-align: center;
 }
 
 /* Entry reader */
@@ -97,6 +106,61 @@
 .directoryCard h2,
 .directoryCard p {
   margin: 0;
+}
+
+.codexCard {
+  min-height: 146px;
+  gap: 0;
+}
+
+.directoryCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.entryType {
+  color: var(--color-accent);
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.entryOpen {
+  display: grid;
+  inline-size: 40px;
+  block-size: 40px;
+  flex: 0 0 auto;
+  place-items: center;
+  border: 1px solid var(--color-border-2);
+  border-radius: 50%;
+  color: var(--color-text-2);
+  font-size: 16px;
+}
+
+.entryTitle {
+  font: 650 16px/1.3 var(--font-title);
+  letter-spacing: -0.025em;
+  margin-block: calc(var(--sp-1) - 1px) calc(var(--sp-2) - 2px);
+}
+
+:global([data-width-class='compact']) .codexCard {
+  min-height: 0;
+  padding: var(--sp-2) var(--sp-3);
+}
+
+:global([data-width-class='compact']) .narrative {
+  -webkit-line-clamp: 2;
+}
+
+.narrative {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--color-text-2);
+  font-family: var(--font-narrative);
+  font-size: 13px;
+  line-height: 1.55;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
 }
 
 .clamp {

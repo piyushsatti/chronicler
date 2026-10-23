@@ -56,7 +56,11 @@ function Controls() {
     <>
       <button onClick={() => auth.storeToken(token('B'))}>Account B</button>
       <button onClick={auth.logout}>Sign out</button>
-      <button onClick={() => navigate('/map/OTHER')}>Other map</button>
+      <button
+        onClick={() => navigate(`/map/OTHER?node=${good.pointcrawlNodes[0]!.id}`)}
+      >
+        Other map
+      </button>
     </>
   );
 }
@@ -110,7 +114,7 @@ const linkedMap = {
   ],
 };
 
-function renderMap(route = '/map') {
+function renderMap(route = `/map/LFC?node=${good.pointcrawlNodes[0]!.id}`) {
   return renderWithProviders(
     <Routes>
       <Route
@@ -179,15 +183,17 @@ describe('MapPage', () => {
       expect(marker.querySelector('title')).toHaveTextContent(node.name);
     });
     // Long names are shortened on the canvas; the full name stays in the title and list.
-    [...graph.querySelectorAll('text')].forEach((label, index) => {
-      const full = nodes[index]?.name ?? '';
-      const shown = label.textContent ?? '';
-      expect(
-        shown === '' ||
-          shown === full ||
-          (shown.endsWith('…') && full.startsWith(shown.slice(0, -1))),
-      ).toBe(true);
-    });
+    [...graph.querySelectorAll('g[role="button"] text:last-child')].forEach(
+      (label, index) => {
+        const full = nodes[index]?.name ?? '';
+        const shown = label.textContent ?? '';
+        expect(
+          shown === '' ||
+            shown === full ||
+            (shown.endsWith('…') && full.startsWith(shown.slice(0, -1))),
+        ).toBe(true);
+      },
+    );
     expect(
       [...graph.querySelectorAll('title')].map((title) => title.textContent),
     ).toContain('The full name of the directed connection (one way)');
@@ -465,7 +471,10 @@ describe('MapPage', () => {
       screen.queryByRole('button', { name: 'Add location' }),
     ).not.toBeInTheDocument();
   });
-  it.each(['/map', `/map/LFC?node=${good.pointcrawlNodes[0]!.id}`])(
+  it.each([
+    `/map?atlas=LFC&node=${good.pointcrawlNodes[0]!.id}`,
+    `/map/LFC?node=${good.pointcrawlNodes[0]!.id}`,
+  ])(
     'keeps role-loss feedback after current Me clears and reloads Map data at %s',
     async (route) => {
       session();
@@ -574,7 +583,7 @@ describe('MapPage', () => {
           });
         }),
       );
-      const { queryClient } = renderMap('/map/LFC');
+      const { queryClient } = renderMap(`/map/LFC?node=${good.pointcrawlNodes[0]!.id}`);
       fireEvent.click(await screen.findByRole('button', { name: 'Add location' }));
       fireEvent.change(screen.getByRole('textbox', { name: 'Location name' }), {
         target: { value: 'Denied before leaving' },
@@ -961,21 +970,21 @@ describe('PointcrawlViewport marker allocation', () => {
       const endpoints = connector?.getAttribute('points');
       act(() => observer.resize(1040, 520));
       const fittedRadius = Number(circle?.getAttribute('r'));
-      expect(fittedRadius * 2).toBeCloseTo(9);
+      expect(fittedRadius * 2).toBeCloseTo(17);
       fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
       expect(graph).not.toHaveAttribute('viewBox', initialViewBox);
-      expect(Number(circle?.getAttribute('r')) * 3).toBeCloseTo(9);
+      expect(Number(circle?.getAttribute('r')) * 3).toBeCloseTo(17);
       const zoomedViewBox = graph.getAttribute('viewBox');
       act(() => observer.resize(520, 260));
       expect(graph).toHaveAttribute('viewBox', zoomedViewBox);
-      expect(Number(circle?.getAttribute('r')) * 1.5).toBeCloseTo(9);
+      expect(Number(circle?.getAttribute('r')) * 1.5).toBeCloseTo(17);
       expect(circle?.parentElement).toHaveAttribute('transform', position);
       expect(connector).toHaveAttribute('points', endpoints);
       act(() => observer.resize(0, 0));
-      expect(Number(circle?.getAttribute('r')) * 1.5).toBeCloseTo(9);
+      expect(Number(circle?.getAttribute('r')) * 1.5).toBeCloseTo(17);
       fireEvent.click(screen.getByRole('button', { name: 'Fit map' }));
       expect(graph).toHaveAttribute('viewBox', initialViewBox);
-      expect(Number(circle?.getAttribute('r'))).toBeCloseTo(9);
+      expect(Number(circle?.getAttribute('r'))).toBeCloseTo(17);
       view.unmount();
       expect(observer.disconnect).toHaveBeenCalledOnce();
     } finally {
@@ -1021,13 +1030,20 @@ describe('Region navigation', () => {
       `/regions/${region.id}`,
     );
     expect(screen.getByText(/1 map$/)).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Test Region' })).toHaveTextContent('Charter · 1 map');
+    expect(screen.getByRole('link', { name: 'Test Region' })).toHaveTextContent(
+      'Charter · 1 map',
+    );
   });
   it('filters the directory from URL state, supports browser history, and clears empty results', async () => {
     const regions = [
       region,
       { ...region, id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', name: 'Test Hollow' },
-      { ...region, id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', name: 'North Reach', kind: 'province' },
+      {
+        ...region,
+        id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+        name: 'North Reach',
+        kind: 'province',
+      },
     ];
     server.use(
       graphql.query('MapDirectory', () =>
@@ -1046,13 +1062,20 @@ describe('Region navigation', () => {
     expect(screen.getByText('2 regions')).toBeVisible();
     expect(screen.getByLabelText('Current filters')).toHaveTextContent('?q=test');
     await user.click(screen.getByRole('button', { name: 'Charter' }));
-    expect(screen.getByLabelText('Current filters')).toHaveTextContent('?q=test&kind=charter');
+    expect(screen.getByLabelText('Current filters')).toHaveTextContent(
+      '?q=test&kind=charter',
+    );
     await user.click(screen.getByRole('button', { name: 'Back' }));
     expect(screen.getByLabelText('Current filters')).toHaveTextContent('?q=test');
     await user.click(screen.getByRole('button', { name: 'Forward' }));
-    expect(screen.getByLabelText('Current filters')).toHaveTextContent('?q=test&kind=charter');
+    expect(screen.getByLabelText('Current filters')).toHaveTextContent(
+      '?q=test&kind=charter',
+    );
     await user.clear(screen.getByRole('searchbox', { name: 'Search regions' }));
-    await user.type(screen.getByRole('searchbox', { name: 'Search regions' }), 'nothing');
+    await user.type(
+      screen.getByRole('searchbox', { name: 'Search regions' }),
+      'nothing',
+    );
     expect(screen.getByText('0 regions')).toBeVisible();
     await user.click(screen.getByRole('button', { name: 'Clear filters' }));
     expect(screen.getByText('3 regions')).toBeVisible();
@@ -1269,14 +1292,14 @@ describe('MapPage reader presentation', () => {
     expect(
       within(locations).getByRole('button', { name: 'River Crossing' }),
     ).toBeVisible();
-    fireEvent.focus(within(viewport).getByRole('button', { name: 'Old Watchtower' }));
+    fireEvent.click(within(viewport).getByRole('button', { name: 'Old Watchtower' }));
     expect(screen.getByRole('region', { name: 'Selected location' })).toHaveTextContent(
       'Old Watchtower',
     );
     expect(locations.querySelector('details')).toHaveAttribute('open');
   });
 
-  it('filters the map picker by counted regions and opens an available map in the chosen region', async () => {
+  it('filters directory cards by regions and preserves the directory route and result count', async () => {
     const region = {
       id: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
       name: 'Northern Reach',
@@ -1303,26 +1326,25 @@ describe('MapPage reader presentation', () => {
         }),
       ),
     );
-    renderMap();
-    fireEvent.click(await screen.findByRole('button', { name: 'Northern Reach (1)' }));
-    expect(
-      await screen.findByRole('heading', { level: 1, name: 'Northern trails' }),
-    ).toBeVisible();
-    expect(screen.getByRole('button', { name: 'Northern Reach (1)' })).toHaveAttribute(
+    renderMap('/map');
+    fireEvent.click(await screen.findByRole('button', { name: 'Northern Reach' }));
+    expect(screen.getByRole('heading', { level: 1, name: 'Maps' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'Northern Reach' })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
-    fireEvent.click(screen.getByRole('button', { name: /^Map Northern trails/ }));
+    expect(screen.getByText('1 map')).toBeVisible();
+    const cards = screen.getByRole('region', { name: 'Campaign maps' });
     expect(
-      await screen.findByRole('menuitem', { name: 'Northern trails' }),
-    ).toBeVisible();
-    expect(
-      screen.queryByRole('menuitem', { name: 'Lightfall' }),
-    ).not.toBeInTheDocument();
-    fireEvent.keyDown(screen.getByRole('menu'), { key: 'Escape' });
-    fireEvent.click(screen.getByRole('button', { name: 'All regions (2)' }));
-    fireEvent.click(screen.getByRole('button', { name: /^Map Northern trails/ }));
-    expect(await screen.findByRole('menuitem', { name: 'Lightfall' })).toBeVisible();
+      within(cards).getByRole('link', { name: /Northern trails/ }),
+    ).toHaveAttribute('href', '/map/NORTH');
+    expect(within(cards).queryByRole('link', { name: /Lightfall/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'All maps' }));
+    expect(screen.getByText('2 maps')).toBeVisible();
+    expect(within(cards).getByRole('link', { name: /Lightfall/ })).toHaveAttribute(
+      'href',
+      '/map/LFC',
+    );
   });
 
   it('names import-id connections by their route kind and hides canvas positions from readers', async () => {
@@ -1352,15 +1374,18 @@ describe('MapPage reader presentation', () => {
     ).not.toHaveTextContent(/Canvas position|Coordinates/);
   });
 
-  it('switches atlas through the menu instead of a native select', async () => {
+  it('uses sibling navigation links instead of a native select', async () => {
     renderMap();
     await screen.findByRole('region', { name: 'Map connections' });
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
-    const trigger = screen.getByRole('button', { name: /^Map\s+Lightfall/ });
-    expect(trigger).not.toHaveAccessibleName(/LFC/);
-    fireEvent.click(trigger);
-    const item = await screen.findByRole('menuitem', { name: /Lightfall/ });
-    expect(item).toBeVisible();
-    expect(item).toHaveAttribute('aria-current', 'true');
+    const navigation = screen.getByRole('navigation', { name: 'Choose a map' });
+    expect(within(navigation).getByRole('link', { name: 'Lightfall' })).toHaveAttribute(
+      'href',
+      '/map/LFC',
+    );
+    expect(within(navigation).getByRole('link', { name: 'Lightfall' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
   });
 });

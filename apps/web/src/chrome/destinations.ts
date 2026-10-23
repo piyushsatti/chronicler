@@ -1,5 +1,3 @@
-import type { NavPattern } from '@pi/react-imposition';
-
 export type SiteDestination = {
   id: string;
   label: string;
@@ -85,14 +83,6 @@ export function destinationsForAuth(auth?: NavAuth): readonly SiteDestination[] 
     ...(auth?.isAdmin ? [ADMIN_DESTINATION] : []),
   ];
   return [...PRIMARY_DESTINATIONS, ...extras];
-}
-
-/**
- * bottom-bar keeps the six links in the bottom bar.
- * drawer and inline-row join those links to the top bar.
- */
-export function siteLinksPlacement(pattern: NavPattern): 'top' | 'bottom' {
-  return pattern === 'bottom-bar' ? 'bottom' : 'top';
 }
 
 export function currentDestinationId(

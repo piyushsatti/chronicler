@@ -109,11 +109,11 @@ it('requires explicit choices when changing deny-all to visibility rules or a na
     <AudienceEditor />,
     editorHarness(`/rules/guides/${id}/edit`, '/rules/guides/:id/edit'),
   );
-  const mode = await screen.findByRole('radiogroup', { name: 'Who can read this' });
-  const custom = () => within(mode).getByRole('radio', { name: 'Choose readers' });
-  expect(custom()).toBeChecked();
+  const mode = await screen.findByRole('toolbar', { name: 'Who can read this' });
+  const custom = () => within(mode).getByRole('button', { name: 'Choose readers' });
+  expect(custom()).toHaveAttribute('aria-pressed', 'true');
   expect(screen.getByText(/An empty list lets\s+no one read this/)).toBeVisible();
-  fireEvent.click(within(mode).getByRole('radio', { name: 'Same as visibility' }));
+  fireEvent.click(within(mode).getByRole('button', { name: 'Same as visibility' }));
   expect(
     screen.queryByRole('textbox', { name: 'Reader handles' }),
   ).not.toBeInTheDocument();

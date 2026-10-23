@@ -23,12 +23,13 @@ function deferred() {
   });
   return { promise, release };
 }
-function rows(count: number, title: string) {
+function rows(count: number, title: string, visibility = 'public') {
   return Array.from({ length: count }, (_, index) => ({
     ...good.items[0],
     id: `6f000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
     slug: `scope-summary-${index + 1}`,
     title: `${title} ${index + 1}`,
+    visibility,
   }));
 }
 type ChronicleResponse = {
@@ -158,14 +159,14 @@ describe('Chronicle current account and audience scope', () => {
           if (request.headers.get('authorization') !== `Bearer ${first}`)
             return response(rows(1, 'Current public summary'));
           if (Number(variables.offset) === 0)
-            return response(rows(100, 'Previous private summary'), 101);
+            return response(rows(100, 'Previous private summary', 'dm_only'), 101);
           held = request;
           await gate.promise;
           return outcome === 'failure'
             ? HttpResponse.json({
                 errors: [{ message: 'Late failure', extensions: { code: 'INTERNAL' } }],
               })
-            : response(rows(101, 'Previous private summary').slice(100), 101);
+            : response(rows(101, 'Previous private summary', 'dm_only').slice(100), 101);
         }),
       );
       const rendered = harness();
@@ -212,7 +213,7 @@ describe('Chronicle current account and audience scope', () => {
           await gate.promise;
           return response(rows(1, 'Current readable summary'));
         }
-        return response(rows(1, 'Private DM summary'));
+        return response(rows(1, 'Private DM summary', 'dm_only'));
       }),
     );
     const rendered = renderWithProviders(<ChroniclesListPage />);
@@ -224,7 +225,11 @@ describe('Chronicle current account and audience scope', () => {
       });
       await waitFor(() => expect(currentRequests).toBeGreaterThan(0));
       expect(screen.queryByText('Private DM summary 1')).not.toBeInTheDocument();
-      expect(screen.queryByLabelText('Search entries')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Search entries' })).toHaveAttribute(
+        'aria-expanded',
+        'false',
+      );
+      expect(screen.queryByRole('searchbox', { name: 'Search entries' })).not.toBeInTheDocument();
       await act(async () => {
         gate.release();
       });
@@ -256,10 +261,10 @@ describe('Chronicle current account and audience scope', () => {
         if (request.headers.get('authorization') === '')
           return response(rows(1, 'Guest summary'));
         if (Number(variables.offset) === 0)
-          return response(rows(100, 'Private summary'), 101);
+          return response(rows(100, 'Private summary', 'dm_only'), 101);
         held = true;
         await gate.promise;
-        return response(rows(101, 'Private summary').slice(100), 101);
+        return response(rows(101, 'Private summary', 'dm_only').slice(100), 101);
       }),
     );
     const rendered = harness();
@@ -300,7 +305,7 @@ describe('Chronicle current account and audience scope', () => {
       ),
       graphql.query('ChronicleList', () => {
         reads++;
-        return response(rows(1, 'Private member summary'));
+        return response(rows(1, 'Private member summary', 'dm_only'));
       }),
     );
     const rendered = harness();

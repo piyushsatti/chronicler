@@ -1,6 +1,6 @@
 import { graphql, http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
 import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
@@ -26,6 +26,7 @@ function setViewportWidth(width: number) {
 describe('CodexPage', () => {
   afterEach(() => {
     setViewportWidth(1440);
+    vi.unstubAllGlobals();
   });
 
   it('renders a readable custom-category entry absent from the published category catalogue', async () => {
@@ -63,7 +64,17 @@ describe('CodexPage', () => {
     expect(await screen.findByText('Tree of Light')).toBeInTheDocument();
     expect(screen.getByText('The Continent of Weeping')).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-    expect(screen.getByRole('group', { name: 'Category' })).toBeInTheDocument();
+    const categories = screen.getByRole('toolbar', { name: 'Codex categories' });
+    expect(
+      within(categories).getAllByRole('button')
+        .map((button) => button.textContent?.trim()),
+    ).toEqual(['All', 'Lore', 'Locations', 'Entities', 'Features', 'More']);
+    const count = within(screen.getByRole('region', { name: 'Filter the Codex' }))
+      .getByText('2 entries');
+    expect(count).toBeVisible();
+    expect(categories).not.toContainElement(count);
+    expect(screen.getByRole('link', { name: 'Regions' })).toHaveAttribute('href', '/regions');
+    expect(screen.getByRole('link', { name: 'Map' })).toHaveAttribute('href', '/map');
   });
 
   it('filters category groups and searches their actual titles', async () => {
@@ -76,21 +87,43 @@ describe('CodexPage', () => {
     expect(screen.queryByText('Tree of Light')).not.toBeInTheDocument();
     expect(screen.getByText('The Continent of Weeping')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: /All/ }));
+    await user.click(screen.getByRole('button', { name: 'Search the Codex' }));
     await user.type(screen.getByLabelText('Search the Codex'), 'tree');
     await screen.findByText('Tree of Light');
     expect(screen.getByText('Tree of Light')).toBeInTheDocument();
     expect(screen.queryByText('The Continent of Weeping')).not.toBeInTheDocument();
   });
 
-  it('collapses the category chips into a picker on phones', async () => {
+  it('shows, edits and clears the query from a direct Codex search URL', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<CodexPage />, { route: '/codex?q=seal' });
+
+    const search = screen.getByRole('searchbox', { name: 'Search the Codex' });
+    expect(search).toBeVisible();
+    expect(search).toHaveValue('seal');
+    await screen.findByText('No entries match these filters.');
+    await user.clear(search);
+    await user.type(search, 'tree');
+    expect(await screen.findByText('Tree of Light')).toBeInTheDocument();
+    expect(screen.queryByText('The Continent of Weeping')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Clear and close search the codex' }));
+    expect(screen.queryByRole('searchbox', { name: 'Search the Codex' })).not.toBeInTheDocument();
+    expect(await screen.findByText('The Continent of Weeping')).toBeInTheDocument();
+    expect(screen.getByText('Tree of Light')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Search the Codex' }));
+    expect(screen.getByRole('searchbox', { name: 'Search the Codex' })).toHaveValue('');
+  });
+
+  it('keeps the segmented categories and More menu on phones', async () => {
     setViewportWidth(390);
     const user = userEvent.setup();
     renderWithProviders(<CodexPage />);
     await screen.findByText('Tree of Light');
-    expect(screen.queryByRole('button', { name: /Locations/ })).toBeNull();
-    await user.click(screen.getByRole('button', { name: /Category/ }));
-    await user.click(await screen.findByRole('menuitem', { name: /Locations/ }));
-    await screen.findByText('The Continent of Weeping');
+    expect(screen.getByRole('toolbar', { name: 'Codex categories' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /More/ }));
+    await user.click(await screen.findByRole('menuitemradio', { name: /NPCs/ }));
+    expect(await screen.findByText('No entries match these filters.')).toBeInTheDocument();
     expect(screen.queryByText('Tree of Light')).not.toBeInTheDocument();
   });
 
@@ -145,19 +178,34 @@ describe('CodexPage', () => {
     );
   });
 
-  it('pages beyond fifty entries and delegates nested-prefix and title search to the server', async () => {
+  it('loads the next Codex batch on scroll and delegates category and title search to the server', async () => {
     setViewportWidth(1440);
     const user = userEvent.setup();
-    const rows = Array.from({ length: 52 }, (_, index) => ({
+    let observerCallback: IntersectionObserverCallback | undefined;
+    const observe = vi.fn();
+    class TestObserver implements IntersectionObserver {
+      readonly root = null;
+      readonly rootMargin = '160px 0px';
+      readonly thresholds = [0];
+      constructor(callback: IntersectionObserverCallback) {
+        observerCallback = callback;
+      }
+      observe = observe;
+      disconnect = vi.fn();
+      takeRecords = () => [];
+      unobserve = vi.fn();
+    }
+    vi.stubGlobal('IntersectionObserver', TestObserver);
+    const rows = Array.from({ length: 14 }, (_, index) => ({
       id: `10000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
       slug: `review-entry-${index}`,
       title:
-        index === 50
+        index === 12
           ? 'Hidden Lore target'
-          : index === 51
+          : index === 13
             ? 'History target'
             : `Recent entry ${index}`,
-      category: index === 50 ? 'Lore' : index === 51 ? 'Lore/History' : 'Entities',
+      category: index === 12 ? 'Lore' : index === 13 ? 'Lore/History' : 'Entities',
       effectiveBody: 'Review fixture',
     }));
     const requests: Array<{
@@ -196,9 +244,9 @@ describe('CodexPage', () => {
               total: matching.length,
             },
             codexCategories: [
-              { category: 'Entities' },
-              { category: 'Lore' },
-              { category: 'Lore/History' },
+              { category: 'Entities', count: 12 },
+              { category: 'Lore', count: 1 },
+              { category: 'Lore/History', count: 1 },
             ],
           },
         });
@@ -207,15 +255,20 @@ describe('CodexPage', () => {
     renderWithProviders(<CodexPage />);
     await screen.findByText('Recent entry 0');
     expect(screen.queryByText('Hidden Lore target')).not.toBeInTheDocument();
-    expect(screen.getByText('Showing 50 of 52 entries')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: /^Show 2 more/ }));
+    expect(screen.getByText('Showing 12 of 14 entries')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Show .* more/ })).not.toBeInTheDocument();
+    expect(observe).toHaveBeenCalled();
+    observerCallback?.(
+      [{ isIntersecting: true } as IntersectionObserverEntry],
+      {} as IntersectionObserver,
+    );
     expect(await screen.findByText('Hidden Lore target')).toBeInTheDocument();
-    expect(screen.getByText('52 entries')).toBeInTheDocument();
+    expect(screen.getByText('14 entries')).toBeInTheDocument();
     expect(requests.slice(0, 2)).toEqual([
-      { prefix: '', search: '', limit: 50, offset: 0 },
-      { prefix: '', search: '', limit: 50, offset: 50 },
+      { prefix: '', search: '', limit: 12, offset: 0 },
+      { prefix: '', search: '', limit: 12, offset: 12 },
     ]);
-    await user.click(screen.getByRole('button', { name: /^Lore\s?\d*$/ }));
+    await user.click(screen.getByRole('button', { name: 'Lore' }));
     await screen.findByText('2 entries');
     expect(screen.getByText('Hidden Lore target')).toBeInTheDocument();
     expect(screen.getByText('History target')).toBeInTheDocument();
@@ -223,9 +276,10 @@ describe('CodexPage', () => {
     expect(requests).toContainEqual({
       prefix: 'Lore',
       search: '',
-      limit: 50,
+      limit: 12,
       offset: 0,
     });
+    await user.click(screen.getByRole('button', { name: 'Search the Codex' }));
     await user.type(screen.getByLabelText('Search the Codex'), 'History');
     await screen.findByText('1 entry');
     expect(screen.getByText('History target')).toBeInTheDocument();
@@ -233,7 +287,7 @@ describe('CodexPage', () => {
     expect(requests).toContainEqual({
       prefix: 'Lore',
       search: 'History',
-      limit: 50,
+      limit: 12,
       offset: 0,
     });
   });

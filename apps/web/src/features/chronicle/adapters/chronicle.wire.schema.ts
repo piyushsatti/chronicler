@@ -80,6 +80,7 @@ export const chronicleListWireSchema = z.object({
       id: true,
       slug: true,
       category: true,
+      visibility: true,
       title: true,
       effectiveBody: true,
       frontmatter: true,
@@ -87,7 +88,7 @@ export const chronicleListWireSchema = z.object({
       updatedAt: true,
       publishedAt: true,
       summaryDerived: true,
-    }),
+    }).extend({ visibility: z.string().min(1) }),
   ),
   total: z.number().int().nonnegative(),
 });

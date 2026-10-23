@@ -1,6 +1,9 @@
 /* === SECTION 1: FONT VARIABLES === */
 
 :root {
+  --page-title-size: 36px;
+  --segment-track-size: 40px;
+  --segment-highlight-size: 32px;
   --font-body:      'Geist', sans-serif;
   --font-display:   'Fraunces Variable', serif;
   --font-heading:   'Fraunces Variable', serif;
@@ -11,6 +14,8 @@
   --font-title:        'Lexend Variable', 'Geist', sans-serif;
   --font-title-weight: 700;
 }
+
+.site-chrome[data-width-class='compact'] { --page-title-size: 32px; }
 
 /* === SECTION 2: COLOUR THEMES === */
 

@@ -4,6 +4,7 @@
       "id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
       "slug": "vault-delve-summary",
       "category": "character",
+      "visibility": "public",
       "title": "Vault Delve — Session recap",
       "frontmatter": {
         "excerpt": "The vault door finally gave way.",
@@ -31,6 +32,7 @@
       "id": "dddddddd-dddd-4ddd-8ddd-dddddddddddd",
       "slug": "dm-table-notes",
       "category": "dm",
+      "visibility": "public",
       "title": "Ash's table notes",
       "frontmatter": {
         "excerpt": "What the party did not see.",

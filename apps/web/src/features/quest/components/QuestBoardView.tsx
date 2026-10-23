@@ -1,10 +1,11 @@
 import { Link } from 'react-router-dom';
+import type { RefObject } from 'react';
 import type { AppError } from '../../../errors/types.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { Button } from '../../../components/primitives/Button.js';
-import { CardGrid } from '../../../components/primitives/CardGrid.js';
 import { Chip } from '../../../components/primitives/Chip.js';
-import { FilterBar } from '../../../components/primitives/FilterBar.js';
+import { CardGrid } from '../../../components/primitives/CardGrid.js';
+import { PageToolbar } from '../../../components/primitives/PageToolbar.js';
 import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { QuestCard } from '../../../components/domain/QuestCard.js';
 import { SeriesCreateAction } from '../../../components/domain/SeriesCreateAction.js';
@@ -12,11 +13,21 @@ import type {
   QuestBoardItemView,
   QuestBoardCardPropsView,
 } from '../adapters/questAdapter.js';
-import type { BoardSegment as Segment } from '../hooks/useQuestBoardPage.js';
+import type { BoardSegment as Segment, QuestQuickFilter } from '../hooks/useQuestBoardPage.js';
 import { personLabels } from '../../../utils/format.js';
 import styles from './questBoard.module.css';
 
-const SEGMENTS: Segment[] = ['Open', 'Scheduled', 'Live', 'All'];
+const SEGMENTS = [
+  { value: 'Open', label: 'Open' },
+  { value: 'Live', label: 'Live' },
+  { value: 'All', label: 'All' },
+] as const;
+const QUICK_FILTERS = [
+  { value: 'All', label: 'All' },
+  { value: 'Today', label: 'Today' },
+  { value: 'Tomorrow', label: 'Tomorrow' },
+  { value: 'This week', label: 'This week' },
+] as const;
 
 export type LiveStripItem = {
   id: string;
@@ -29,8 +40,11 @@ export type LiveStripItem = {
 type QuestBoardViewProps = {
   segment: Segment;
   setSegment: (segment: Segment) => void;
+  quickFilter: QuestQuickFilter;
+  setQuickFilter: (filter: QuestQuickFilter) => void;
+  search: string;
+  setSearch: (search: string) => void;
   total: number | null;
-  openCount: number | null;
   liveCount: number | null;
   dmsAcceptingCount: number | null;
   metadataError: unknown;
@@ -38,9 +52,10 @@ type QuestBoardViewProps = {
   liveStrip: LiveStripItem[];
   canCreate: boolean;
   hasMore: boolean;
+  isFetchingNextPage: boolean;
+  sentinelRef: RefObject<HTMLDivElement | null>;
   isFetching: boolean;
   isBoardMutating: boolean;
-  loadMore: () => void;
   retry: () => void;
   onOpenQuest: (shortCode: string) => void;
   onSignUp: (quest: QuestBoardItemView) => void;
@@ -131,32 +146,48 @@ export function QuestBoardView(page: QuestBoardViewProps): React.JSX.Element {
         </div>
       ) : null}
 
-      <FilterBar
-        label="Quest board filters"
-        className={styles.filters}
+      <PageToolbar
+        label="Quest filters"
+        segments={
+          <PageToolbar.Segments
+            aria-label="Quest status"
+            options={SEGMENTS}
+            value={page.segment}
+            onValueChange={page.setSegment}
+          />
+        }
+        quickFilters={
+          <PageToolbar.Segments
+            aria-label="Quest date"
+            size="sm"
+            options={QUICK_FILTERS}
+            value={page.quickFilter}
+            onValueChange={page.setQuickFilter}
+          />
+        }
         count={
           page.total !== null && page.status !== 'error'
-            ? `${page.total} ${page.total === 1 ? 'quest' : 'quests'}`
+            ? page.hasMore
+              ? `${page.total} shown`
+              : `${page.total} ${page.total === 1 ? 'quest' : 'quests'}`
             : undefined
         }
-      >
-        <FilterBar.Group label="Show">
-          {SEGMENTS.map((segment) => (
-            <Chip
-              key={segment}
-              selected={page.segment === segment}
-              onClick={() => page.setSegment(segment)}
-            >
-              {segment}
-            </Chip>
-          ))}
-        </FilterBar.Group>
-        {page.isFetching && page.status !== 'loading' ? (
-          <span className="type-caption" role="status" aria-live="polite">
-            Updating…
-          </span>
-        ) : null}
-      </FilterBar>
+        actions={
+          <>
+            <PageToolbar.Search
+              label="Search quests"
+              value={page.search}
+              onValueChange={page.setSearch}
+              placeholder="Search quests"
+            />
+            {page.isFetching && page.status !== 'loading' ? (
+              <span className="type-caption" role="status" aria-live="polite">
+                Updating…
+              </span>
+            ) : null}
+          </>
+        }
+      />
 
       {page.actionError ? <StatePanel status="error" error={page.actionError} /> : null}
       {page.metadataError ? (
@@ -197,22 +228,30 @@ export function QuestBoardView(page: QuestBoardViewProps): React.JSX.Element {
             status="empty"
             title="No quests here"
             emptyMessage={
-              page.segment === 'All'
+              page.quickFilter !== 'All' || page.search.trim()
+                ? 'No quests match these filters.'
+                : page.segment === 'All'
                 ? 'There are no quests on the board yet.'
                 : `No ${page.segment.toLowerCase()} quests right now.`
             }
             action={
-              page.segment === 'All' ? undefined : (
-                <Button variant="secondary" onClick={() => page.setSegment('All')}>
+              page.segment !== 'All' || page.quickFilter !== 'All' || page.search.trim() ? (
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    page.setSegment('All');
+                    page.setQuickFilter('All');
+                    page.setSearch('');
+                  }}
+                >
                   Show all quests
                 </Button>
-              )
+              ) : undefined
             }
           />
         </div>
       ) : (
-        <>
-          <CardGrid as="ul" gap={5} aria-label={`${page.segment} quests`}>
+        <CardGrid as="ul" gap={5} aria-label={`${page.segment} quests`}>
             {page.view.map((quest, index) => {
               const card = quest.card;
               return (
@@ -239,19 +278,13 @@ export function QuestBoardView(page: QuestBoardViewProps): React.JSX.Element {
               );
             })}
           </CardGrid>
-          {page.hasMore ? (
-            <div data-el="quests.pagination" className={styles.pagination}>
-              <Button
-                variant="secondary"
-                onClick={page.loadMore}
-                pending={page.isFetching}
-              >
-                Load more
-              </Button>
-            </div>
-          ) : null}
-        </>
       )}
+      {page.hasMore ? <div ref={page.sentinelRef} aria-hidden="true" /> : null}
+      {page.isFetchingNextPage ? (
+        <p className="type-caption" role="status" aria-live="polite">
+          Loading more quests…
+        </p>
+      ) : null}
     </section>
   );
 }

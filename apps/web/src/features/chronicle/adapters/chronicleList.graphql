@@ -11,6 +11,7 @@ query ChronicleList($limit: Int!, $offset: Int!, $realFrom: Date!, $realTo: Date
       id
       slug
       category
+      visibility
       title
       effectiveBody
       frontmatter

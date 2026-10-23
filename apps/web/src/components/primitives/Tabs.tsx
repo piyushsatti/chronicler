@@ -1,8 +1,9 @@
-import { useId, type ReactNode } from 'react';
-import { Link } from 'react-router-dom';
+import { useRef, type ReactNode } from 'react';
+import { Tabs as BaseTabs } from '@base-ui/react/tabs';
 import { cx } from './cx.js';
 import { useControllable } from './useControllable.js';
-import { useScrollEdges } from './useScrollEdges.js';
+import { SegmentedNav } from './SegmentedNav.js';
+import { useSegmentIndicator } from './useSegmentIndicator.js';
 
 export type TabItem = {
   id: string;
@@ -21,6 +22,7 @@ export type TabsProps = {
   className?: string;
   /** `sm` is a compact row for sub-tabs under a page-level tab row; same skin. */
   size?: 'md' | 'sm';
+  renderTrack?: (track: ReactNode) => ReactNode;
 };
 
 /** Page-section tabs. One skin: the top-nav pill (filled ink when active).
@@ -33,73 +35,55 @@ export function Tabs({
   'aria-label': ariaLabel,
   className,
   size = 'md',
+  renderTrack,
 }: TabsProps): React.JSX.Element {
   const [active, setActive] = useControllable({
     value,
     defaultValue: defaultTabId ?? items[0]?.id ?? '',
     onChange: onValueChange,
   });
-  const id = useId();
   const current = items.find((item) => item.id === active) ?? items[0];
-  const listRef = useScrollEdges<HTMLDivElement>(`${current?.id}:${items.length}`);
-
-  return (
-    <div className={cx('tabs', className)} data-component="Tabs" data-size={size}>
-      <div ref={listRef} className="tabs__list" role="tablist" aria-label={ariaLabel}>
-        {items.map((item, index) => (
-          <button
+  const trackRef = useRef<HTMLDivElement>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
+  useSegmentIndicator(trackRef, rowRef, `${current?.id}:${items.length}`);
+  const track = (
+    <div ref={trackRef} className="segmented-track tabs__track" data-size={size}>
+      <BaseTabs.List ref={rowRef} className="segmented-row segmented-options" aria-label={ariaLabel}>
+        <BaseTabs.Indicator className="segmented-pill" />
+        {items.map((item) => (
+          <BaseTabs.Tab
             key={item.id}
-            type="button"
-            role="tab"
-            id={`${id}-tab-${index}`}
-            aria-controls={`${id}-panel-${index}`}
-            aria-selected={item.id === current?.id}
-            tabIndex={item.id === current?.id ? 0 : -1}
-            className="tabs__tab"
-            onClick={() => setActive(item.id)}
-            onKeyDown={(event) => {
-              let target: number;
-              switch (event.key) {
-                case 'ArrowRight':
-                  target = (index + 1) % items.length;
-                  break;
-                case 'ArrowLeft':
-                  target = (index - 1 + items.length) % items.length;
-                  break;
-                case 'Home':
-                  target = 0;
-                  break;
-                case 'End':
-                  target = items.length - 1;
-                  break;
-                default:
-                  return;
-              }
-              const next = items[target];
-              if (!next) return;
-              event.preventDefault();
-              setActive(next.id);
-              document.getElementById(`${id}-tab-${target}`)?.focus();
-            }}
+            value={item.id}
+            className="segmented-option"
+            data-segment-active={item.id === current?.id}
+            onFocus={() => setActive(item.id)}
           >
             {item.label}
-          </button>
+          </BaseTabs.Tab>
         ))}
-      </div>
-      {items.map((item, index) => (
-        <div
+      </BaseTabs.List>
+    </div>
+  );
+  return (
+    <BaseTabs.Root
+      className={cx('tabs', className)}
+      data-component="Tabs"
+      data-size={size}
+      value={current?.id ?? ''}
+      onValueChange={(next) => setActive(String(next))}
+    >
+      {renderTrack ? renderTrack(track) : track}
+      {items.map((item) => (
+        <BaseTabs.Panel
           key={item.id}
-          id={`${id}-panel-${index}`}
+          value={item.id}
           className="tabs__panel"
-          role="tabpanel"
-          aria-labelledby={`${id}-tab-${index}`}
-          hidden={item.id !== current?.id}
           tabIndex={0}
         >
           {item.id === current?.id ? item.panel : null}
-        </div>
+        </BaseTabs.Panel>
       ))}
-    </div>
+    </BaseTabs.Root>
   );
 }
 
@@ -120,24 +104,13 @@ export function TabNav({
   'aria-label': string;
   className?: string;
 }): React.JSX.Element {
-  const listRef = useScrollEdges<HTMLDivElement>(
-    `${items.findIndex((item) => item.current)}:${items.length}`,
-  );
   return (
-    <nav className={cx('tabs', className)} data-component="TabNav" aria-label={ariaLabel}>
-      <div ref={listRef} className="tabs__list">
-        {items.map((item) => (
-          <Link
-            key={item.to}
-            to={item.to}
-            className="tabs__tab"
-            aria-current={item.current ? 'page' : undefined}
-          >
-            {item.label}
-          </Link>
-        ))}
-      </div>
-    </nav>
+    <SegmentedNav
+      items={items}
+      label={ariaLabel}
+      className={cx('tabs', className)}
+      component="TabNav"
+    />
   );
 }
 

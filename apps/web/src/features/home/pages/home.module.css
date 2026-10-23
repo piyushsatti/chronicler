@@ -110,6 +110,7 @@
 /* Moved from inline styles (2026-10-21) */
 .banner {
   position: relative;
+  isolation: isolate;
   overflow: hidden;
   min-height: 196px;
   border-radius: var(--rad);

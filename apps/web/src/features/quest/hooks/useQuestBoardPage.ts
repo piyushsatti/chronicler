@@ -15,12 +15,17 @@ import {
   mapToBoardCardProps,
   type QuestBoardItemView,
   type QuestBoardCardPropsView,
-  type QuestListFilters,
 } from '../adapters/questAdapter.js';
 import { loadQuestAuthoringAuthority } from '../adapters/questOptionsAdapter.js';
 import { useQuestMutations } from './useQuestMutations.js';
+import { useInfiniteScroll } from '../../../components/primitives/useInfiniteScroll.js';
+import {
+  filterQuestBoardItems,
+  type BoardSegment,
+  type QuestQuickFilter,
+} from '../questBoardFilters.js';
 
-export type BoardSegment = 'Open' | 'Scheduled' | 'Live' | 'All';
+export type { BoardSegment, QuestQuickFilter } from '../questBoardFilters.js';
 type CardRow = QuestBoardItemView & { card: QuestBoardCardPropsView };
 type PageData =
   | { status: 'loading' }
@@ -28,12 +33,6 @@ type PageData =
   | { status: 'empty' }
   | { status: 'ready'; view: CardRow[] };
 const PAGE_SIZE = 50;
-const FILTERS: Record<BoardSegment, QuestListFilters> = {
-  Open: { status: 'open' },
-  Scheduled: { displayStatus: 'scheduled' },
-  Live: { displayStatus: 'live' },
-  All: {},
-};
 export function useQuestBoardPage() {
   const { timeZone } = useDateFormatter();
   const navigate = useNavigate();
@@ -41,25 +40,22 @@ export function useQuestBoardPage() {
   const { isAuthenticated } = useAuth();
   const me = useMe();
   const [segment, setSegment] = useState<BoardSegment>('Open');
-  const filters = FILTERS[segment];
+  const [quickFilter, setQuickFilter] = useState<QuestQuickFilter>('All');
+  const [search, setSearch] = useState('');
   const query = useInfiniteQuery({
-    queryKey: ['quests', 'pages', filters],
+    queryKey: ['quests', 'pages', {}],
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>
-      loadQuestList({ filters, limit: PAGE_SIZE, offset: pageParam }),
+      loadQuestList({ filters: {}, limit: PAGE_SIZE, offset: pageParam }),
     getNextPageParam: (last, pages) => {
       const loaded = pages.reduce((total, page) => total + page.items.length, 0);
       return last.items.length && loaded < last.total ? loaded : undefined;
     },
   });
-  const open = useQuery({
-    queryKey: queryKeys.questList(FILTERS.Open, 1, 0),
-    queryFn: () => loadQuestList({ filters: FILTERS.Open, limit: 1, offset: 0 }),
-  });
   const live = useQuery({
-    queryKey: queryKeys.questList(FILTERS.Live, PAGE_SIZE, 0),
+    queryKey: queryKeys.questList({ displayStatus: 'live' }, PAGE_SIZE, 0),
     queryFn: () =>
-      loadQuestList({ filters: FILTERS.Live, limit: PAGE_SIZE, offset: 0 }),
+      loadQuestList({ filters: { displayStatus: 'live' }, limit: PAGE_SIZE, offset: 0 }),
   });
   const chrome = useQuery({
     queryKey: ['questBoardChrome'],
@@ -85,16 +81,28 @@ export function useQuestBoardPage() {
         (participant.status === 'signed_up' || participant.status === 'waitlisted'),
     );
   const items = query.data?.pages.flatMap((page) => page.items) ?? [];
+  const visibleItems = filterQuestBoardItems(items, segment, quickFilter, search, timeZone);
+  const sentinelRef = useInfiniteScroll({
+    enabled: query.hasNextPage && !query.isFetching,
+    onLoadMore: () => {
+      if (!query.isFetching) void query.fetchNextPage();
+    },
+  });
   const shared = {
     segment,
     setSegment,
-    total: query.data?.pages[0]?.total ?? null,
-    openCount: open.isError ? null : (open.data?.total ?? null),
+    quickFilter,
+    setQuickFilter,
+    search,
+    setSearch,
+    total: visibleItems.length,
+    hasMore: query.hasNextPage && !query.isError,
+    isFetchingNextPage: query.isFetchingNextPage,
+    sentinelRef,
     liveCount: live.isError ? null : (live.data?.total ?? null),
     dmsAcceptingCount: chrome.isError ? null : (chrome.data?.dmsAcceptingCount ?? null),
-    metadataError: open.error ?? live.error ?? chrome.error ?? characters.error,
+    metadataError: live.error ?? chrome.error ?? characters.error,
     retryMetadata: () => {
-      void open.refetch();
       void live.refetch();
       void chrome.refetch();
       if (isAuthenticated && me.data) void characters.refetch();
@@ -113,12 +121,8 @@ export function useQuestBoardPage() {
     retry: () => {
       void query.refetch();
     },
-    hasMore: query.hasNextPage,
     isFetching: query.isFetching,
     isBoardMutating: commands.pending,
-    loadMore: () => {
-      if (!query.isFetching) void query.fetchNextPage();
-    },
     onOpenQuest: (shortCode: string) =>
       navigate(`/quests/${encodeURIComponent(shortCode)}`),
     onSignUp: (quest: QuestBoardItemView) =>
@@ -145,11 +149,11 @@ export function useQuestBoardPage() {
   if (query.isError)
     page = { status: 'error', error: toAppError(query.error, 'quest:board') };
   else if (!query.data) page = { status: 'loading' };
-  else if (!items.length) page = { status: 'empty' };
+  else if (!visibleItems.length) page = { status: 'empty' };
   else
     page = {
       status: 'ready',
-      view: items.map((quest) => ({
+      view: visibleItems.map((quest) => ({
         ...quest,
         card: mapToBoardCardProps(quest, timeZone),
       })),

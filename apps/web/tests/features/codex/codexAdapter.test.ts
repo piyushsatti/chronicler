@@ -18,9 +18,7 @@ describe('parseCodexDirectory', () => {
       expect(result.data.items).toHaveLength(2);
       expect(result.data.items[0]?.title).toBe('Tree of Light');
       expect(result.data.total).toBe(2);
-      expect(result.data.categories).toEqual(
-        categories.map(({ category }) => ({ category })),
-      );
+      expect(result.data.categories).toEqual(categories);
     }
   });
 

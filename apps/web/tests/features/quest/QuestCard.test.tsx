@@ -28,7 +28,7 @@ beforeEach(() => {
 });
 
 describe('QuestCard', () => {
-  it('presents board chrome: seats, title, hook, DM, party, signup; no code', () => {
+  it('presents board chrome and keeps the scheduled date and time visible', () => {
     renderWithProviders(<QuestCard {...baseProps} onSignUpClick={() => {}} />);
     const card = screen.getByRole('article', { name: /Siege of Kraghold/i });
     expect(within(card).queryByText('Q-101')).not.toBeInTheDocument();
@@ -44,7 +44,7 @@ describe('QuestCard', () => {
     expect(within(card).queryByText('new DM')).not.toBeInTheDocument();
     expect(within(card).queryByText('Last session')).not.toBeInTheDocument();
     expect(within(card).getByText('The Marches')).toBeInTheDocument();
-    expect(within(card).getByText(/Sat 20 Oct/)).toBeInTheDocument();
+    expect(within(card).getByText('Sat 20 Oct 2026, 20:00 BST')).toBeInTheDocument();
     expect(within(card).getByRole('button', { name: 'Sign up' })).toBeInTheDocument();
   });
 

@@ -16,7 +16,8 @@ describe('Gallery reference', () => {
     expect(within(sections).getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
       'Primitives', 'Identity', 'Motion', 'Effects',
     ]);
-    expect(screen.getByRole('list', { name: 'Primitives examples' }).children).toHaveLength(33);
+    expect(screen.getByRole('list', { name: 'Primitives examples' }).children).toHaveLength(34);
+    expect(screen.getByRole('region', { name: 'Page toolbar example' })).toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Page header example' })).toHaveTextContent('Example');
 
     await userEvent.click(within(sections).getByRole('tab', { name: 'Identity' }));
@@ -38,14 +39,14 @@ describe('Gallery reference', () => {
     await userEvent.click(picker);
     await userEvent.click(await screen.findByRole('menuitem', { name: /^Modal$/ }));
     expect(screen.getByRole('list', { name: 'Primitives examples' }).children).toHaveLength(1);
-    expect(screen.getByText('1 of 33 examples')).toBeInTheDocument();
+    expect(screen.getByText('1 of 34 examples')).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Open modal' }));
     expect(screen.getByRole('dialog', { name: 'Gallery modal' })).toBeInTheDocument();
     await userEvent.keyboard('{Escape}');
     expect(screen.queryByRole('dialog', { name: 'Gallery modal' })).not.toBeInTheDocument();
     await userEvent.click(picker);
     await userEvent.click(await screen.findByRole('menuitem', { name: /^All examples$/ }));
-    expect(screen.getByRole('list', { name: 'Primitives examples' }).children).toHaveLength(33);
+    expect(screen.getByRole('list', { name: 'Primitives examples' }).children).toHaveLength(34);
   });
 
   it('offers jump links to the examples in the selected section', async () => {
@@ -54,7 +55,8 @@ describe('Gallery reference', () => {
     await screen.findByRole('tablist', { name: 'Gallery sections' });
     await userEvent.click(screen.getByText('Jump to example'));
     const links = within(screen.getByRole('navigation', { name: 'Primitives example links' })).getAllByRole('link');
-    expect(links).toHaveLength(33);
+    expect(links).toHaveLength(34);
+    expect(links.some((link) => link.textContent === 'Page toolbar')).toBe(true);
     for (const link of links) {
       const target = document.querySelector(link.getAttribute('href') ?? '');
       expect(target).toHaveAttribute('aria-label', `${link.textContent} example`);

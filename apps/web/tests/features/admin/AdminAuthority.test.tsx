@@ -50,7 +50,7 @@ const adminSections = [
 ] as const;
 
 describe('validated workspace authority', () => {
-  it('reveals each Admin section on keyboard focus in both directions', async () => {
+  it('reaches each Admin section through the roving keyboard navigation', async () => {
     signIn();
     renderWithProviders(
       <AdminWorkspaceShell page="test-navigation" title="Navigation">
@@ -73,17 +73,23 @@ describe('validated workspace authority', () => {
       'Data health',
     ]);
     expect(links[1]).toHaveAttribute('aria-current', 'page');
-    // Every section link is a tab stop, in both directions (the browser
-    // scrolls a focused link into the TabNav row).
     const user = userEvent.setup();
-    for (const link of links) {
-      await user.tab();
-      expect(link).toHaveFocus();
-    }
-    for (let index = links.length - 2; index >= 0; index--) {
-      await user.tab({ shift: true });
-      expect(links[index]).toHaveFocus();
-    }
+    expect(links.filter((link) => link.tabIndex === 0)).toEqual([links[1]]);
+    links[1].focus();
+    await user.keyboard('{ArrowRight}');
+    expect(links[2]).toHaveFocus();
+    await user.keyboard('{ArrowLeft}');
+    expect(links[1]).toHaveFocus();
+    await user.keyboard('{Home}');
+    expect(links[0]).toHaveFocus();
+    await user.keyboard('{End}');
+    expect(links[links.length - 1]).toHaveFocus();
+    await user.keyboard('{ArrowRight}');
+    expect(links[0]).toHaveFocus();
+    await user.tab();
+    expect(links).not.toContain(document.activeElement);
+    await user.tab({ shift: true });
+    expect(links[0]).toHaveFocus();
   });
 
   it.each(adminSections)(

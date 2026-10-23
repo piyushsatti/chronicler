@@ -113,9 +113,9 @@ describe('Private notes on /me', () => {
     const box = await within(section).findByLabelText('Notes (Markdown)');
     expect(box).toHaveValue(good.body);
 
-    await userEvent.click(within(section).getByRole('radio', { name: 'Preview' }));
+    await userEvent.click(within(section).getByRole('button', { name: 'Preview' }));
     expect(within(section).getByRole('heading', { name: 'Debts' })).toBeVisible();
-    await userEvent.click(within(section).getByRole('radio', { name: 'Write' }));
+    await userEvent.click(within(section).getByRole('button', { name: 'Write' }));
 
     const editor = within(section).getByLabelText('Notes (Markdown)');
     await userEvent.clear(editor);

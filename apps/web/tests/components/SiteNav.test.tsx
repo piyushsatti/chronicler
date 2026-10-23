@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { act, screen } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from '../../src/App.js';
 import { useToast } from '../../src/hooks/useToast.js';
@@ -120,19 +120,19 @@ describe('SiteChrome', () => {
   });
   it('renders the six live destinations, with search and log in outside that list', () => {
     renderWithProviders(<App />);
-    const nav = screen
-      .getAllByRole('navigation', { name: 'Primary' })
-      .find((element) => element.hasAttribute('data-site-links'));
-    expect(nav).toBeTruthy();
+    const nav = screen.getByRole('navigation', { name: 'Primary' });
     expect(nav).toHaveAttribute('data-site-links');
+    expect(nav).toHaveAttribute('data-site-links-placement', 'top');
+    expect(nav.closest('header')).toBe(screen.getByRole('banner'));
+    expect(document.querySelector('.app-shell__bottomnav')).toBeNull();
     for (const name of LIVE_LINKS) {
-      expect(screen.getByRole('link', { name })).toBeInTheDocument();
+      expect(within(nav).getByRole('link', { name })).toBeInTheDocument();
     }
     expect(screen.queryByRole('link', { name: 'Characters' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Map' })).not.toBeInTheDocument();
-    expect(nav?.querySelectorAll('[data-nav-item]')).toHaveLength(6);
-    expect(nav?.querySelector('[aria-label="Search the chronicle"]')).toBeNull();
-    expect(nav?.querySelector('[href="/login"]')).toBeNull();
+    expect(nav.querySelectorAll('[data-nav-item]')).toHaveLength(6);
+    expect(within(nav).queryByRole('button', { name: 'Search the chronicle' })).toBeNull();
+    expect(within(nav).queryByRole('link', { name: 'Log in' })).toBeNull();
     expect(
       screen.getByRole('button', { name: 'Search the chronicle' }),
     ).toBeInTheDocument();
@@ -170,7 +170,7 @@ describe('SiteChrome', () => {
     );
   });
 
-  it('preserves the library responsive classes, navigation and height veto on the sole shell', () => {
+  it('keeps site links in the header across library patterns and preserves responsive classes and height veto', () => {
     const viewport = document.documentElement;
     const width = Object.getOwnPropertyDescriptor(viewport, 'clientWidth');
     const height = Object.getOwnPropertyDescriptor(viewport, 'clientHeight');
@@ -181,6 +181,7 @@ describe('SiteChrome', () => {
       const root = document.querySelector('#app');
       for (const [widthPx, heightPx, widthClass, heightClass, pattern, twoPane] of [
         [390, 844, 'compact', 'regular', 'bottom-bar', 'false'],
+        [390, 390, 'compact', 'compact', 'bottom-bar', 'false'],
         [768, 1024, 'medium', 'regular', 'drawer', 'false'],
         [1920, 1080, 'expanded', 'regular', 'inline-row', 'true'],
         [844, 390, 'expanded', 'compact', 'drawer', 'false'],
@@ -197,6 +198,14 @@ describe('SiteChrome', () => {
         expect(root).toHaveAttribute('data-nav-pattern', pattern);
         expect(root).toHaveAttribute('data-site-pattern', pattern);
         expect(root).toHaveAttribute('data-two-pane', twoPane);
+        const nav = screen.getByRole('navigation', { name: 'Primary' });
+        expect(nav).toHaveAttribute('data-site-links-placement', 'top');
+        expect(nav.closest('header')).toBe(screen.getByRole('banner'));
+        expect(document.querySelector('[data-site-links-placement="bottom"]')).toBeNull();
+        expect(document.querySelector('.app-shell__bottomnav')).toBeNull();
+        expect(screen.queryByRole('button', { name: 'Menu' }) !== null).toBe(
+          pattern === 'drawer',
+        );
       }
     } finally {
       view.unmount();

@@ -7,10 +7,9 @@ import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { Card } from '../../../components/primitives/Card.js';
 import { Button } from '../../../components/primitives/Button.js';
 import { CardGrid } from '../../../components/primitives/CardGrid.js';
-import { Chip } from '../../../components/primitives/Chip.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
-import { FilterBar } from '../../../components/primitives/FilterBar.js';
 import { PageHeader } from '../../../components/primitives/PageHeader.js';
+import { PageToolbar } from '../../../components/primitives/PageToolbar.js';
 import { useRulesPage } from '../hooks/useRulesPage.js';
 import styles from './rules.module.css';
 import { pluralize } from '../../../utils/format.js';
@@ -113,7 +112,7 @@ export function RulesPage(): React.JSX.Element {
               ) : null
             }
           />
-          <FilterBar
+          <PageToolbar
             label="Filter rules"
             count={
               page.status !== 'ready'
@@ -122,33 +121,27 @@ export function RulesPage(): React.JSX.Element {
                   ? `${pluralize(guides.length + rulings.length, 'result')} for "${query}"`
                   : `${pluralize(hub.guides.length, 'guide')}, ${pluralize(hub.rulings.length, 'ruling')}`
             }
-          >
-            <FilterBar.Search
-              label="Search rules"
-              placeholder="Search a guide, ruling, or item rule…"
-              value={query}
-              onValueChange={changeQuery}
-            />
-            {page.status === 'ready' ? (
-              <FilterBar.Group label="Show">
-                {(
-                  [
-                    ['all', 'All'],
-                    ['guides', 'Guides'],
-                    ['rulings', 'Rulings'],
-                  ] as const
-                ).map(([value, label]) => (
-                  <Chip
-                    key={value}
-                    selected={show === value}
-                    onClick={() => setShow(value)}
-                  >
-                    {label}
-                  </Chip>
-                ))}
-              </FilterBar.Group>
-            ) : null}
-          </FilterBar>
+            segments={(
+              <PageToolbar.Segments
+                aria-label="Show rules"
+                value={show}
+                onValueChange={setShow}
+                options={[
+                  { value: 'all', label: 'All' },
+                  { value: 'guides', label: 'Guides' },
+                  { value: 'rulings', label: 'Rulings' },
+                ]}
+              />
+              )}
+            actions={
+              <PageToolbar.Search
+                label="Search rules"
+                placeholder="Search a guide, ruling, or item rule…"
+                value={query}
+                onValueChange={changeQuery}
+              />
+            }
+          />
 
           {page.status === 'error' ? (
             <StatePanel

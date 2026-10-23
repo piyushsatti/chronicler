@@ -4,7 +4,6 @@ import {
   destinationsForAuth,
   isPersonalPath,
   PRIMARY_DESTINATIONS,
-  siteLinksPlacement,
 } from '../../src/chrome/destinations.js';
 
 describe('destinationsForAuth', () => {
@@ -75,7 +74,7 @@ describe('destinationsForAuth', () => {
     expect(adminLink.matches('/admin')).toBe(true);
     expect(adminLink.matches('/administrator')).toBe(false);
 
-    // The bottom bar shows full labels (no shortened variants).
+    // Site navigation keeps full labels.
     expect(admin.every((destination) => !('shortLabel' in destination))).toBe(true);
 
     const verifier = destinationsForAuth({
@@ -87,15 +86,20 @@ describe('destinationsForAuth', () => {
     expect(verifier.map((destination) => destination.id)).toContain('verification');
   });
 
-  it('puts links in the bottom bar only for the bottom-bar pattern', () => {
-    expect(siteLinksPlacement('bottom-bar')).toBe('bottom');
-    expect(siteLinksPlacement('drawer')).toBe('top');
-    expect(siteLinksPlacement('inline-row')).toBe('top');
-  });
-
   it('currentDestinationId matches quests and community-owned characters', () => {
     expect(currentDestinationId('/quests/Q-101')).toBe('quests');
     expect(currentDestinationId('/characters/C-1')).toBe('community');
+  });
+
+  it('keeps the former bottom destinations at their existing full-label routes', () => {
+    expect(destinationsForAuth().map(({ label, href }) => [label, href])).toEqual([
+      ['Home', '/'],
+      ['Quests', '/quests'],
+      ['Chronicles', '/chronicles'],
+      ['Codex', '/codex'],
+      ['Rules', '/rules'],
+      ['Community', '/community'],
+    ]);
   });
 
   it('login is not a primary destination id', () => {

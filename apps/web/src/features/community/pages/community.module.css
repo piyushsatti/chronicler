@@ -91,6 +91,6 @@
   align-self: flex-start;
 }
 
-.filters {
-  row-gap: var(--sp-2);
+.toolbar {
+  margin-bottom: var(--sp-5);
 }

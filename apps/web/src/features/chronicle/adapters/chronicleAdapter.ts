@@ -32,6 +32,7 @@ export type ChronicleListItemView = {
   slug: string;
   title: string;
   category: string | null;
+  visibility: string;
   authorHandle: string | null;
   authorDisplayName: string | null;
   excerpt: string | null;
@@ -94,6 +95,7 @@ function mapListItem(
     slug: item.slug,
     title: item.title,
     category: item.category ?? null,
+    visibility: item.visibility,
     authorHandle: item.author?.handle ?? null,
     authorDisplayName: null,
     excerpt,

@@ -1,12 +1,12 @@
 import { useSearchParams } from 'react-router-dom';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { PageHeader } from '../../../components/primitives/PageHeader.js';
+import { PageToolbar } from '../../../components/primitives/PageToolbar.js';
 import { CardGrid } from '../../../components/primitives/CardGrid.js';
 import { useMemberHref } from '../../../hooks/useMemberHref.js';
 import { SingleRegionPage } from '../../../chrome/singleRegion.js';
 import { PageShell } from '../../../components/foundation/PageShell.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
-import { FilterBar } from '../../../components/primitives/FilterBar.js';
 import { Tabs } from '../../../components/primitives/Tabs.js';
 import { Card } from '../../../components/primitives/Card.js';
 import { Avatar } from '../../../components/primitives/Avatar.js';
@@ -27,7 +27,7 @@ import {
 } from '../../../utils/format.js';
 import styles from './community.module.css';
 
-const TAB_IDS = ['muster', 'dms', 'players', 'characters'];
+const TAB_IDS = ['muster', 'dms', 'players', 'characters'] as const;
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const PAGE_SIZE = 12;
@@ -117,9 +117,7 @@ export function CommunityPage(): React.JSX.Element {
   const characters = useCommunityCharacters();
   const [params, setParams] = useSearchParams();
   const requestedTab = params.get('tab');
-  const tab = TAB_IDS.includes(requestedTab ?? '')
-    ? (requestedTab as string)
-    : 'muster';
+  const tab = TAB_IDS.find((id) => id === requestedTab) ?? 'muster';
   const selectTab = (id: string): void => {
     setParams(
       (prev) => {
@@ -169,17 +167,15 @@ export function CommunityPage(): React.JSX.Element {
   );
   const available = members.filter((member) => member.availableDays.length > 0);
 
-  const filterBar = (count: string | undefined, extra?: React.ReactNode) => (
-    <FilterBar className={styles.filters} label="Filter community" count={count}>
-      <FilterBar.Search
-        label="Search the community"
-        placeholder="Search by name"
-        value={query}
-        onValueChange={setQuery}
-      />
-      {extra}
-    </FilterBar>
-  );
+  const counts = {
+    muster: pluralize(available.length, 'member'),
+    dms: pluralize(hub.dms.length, 'DM'),
+    players: pluralize(hub.players.length, 'player'),
+    characters:
+      characters.data && !characters.isError
+        ? pluralize(visibleCharacters.length, 'character')
+        : undefined,
+  };
   const clearSearch = needle ? (
     <Button variant="secondary" size="sm" onClick={() => setQuery('')}>
       Clear search
@@ -210,13 +206,39 @@ export function CommunityPage(): React.JSX.Element {
               aria-label="Community sections"
               value={tab}
               onValueChange={selectTab}
+              renderTrack={(track) => (
+                <div className={styles.toolbar}>
+                  <PageToolbar
+                    label="Filter community"
+                    segments={track}
+                    count={counts[tab]}
+                    quickFilters={
+                      tab === 'dms' ? (
+                        <Chip
+                          selected={accepting}
+                          onClick={() => setAccepting(!accepting)}
+                        >
+                          Accepting players
+                        </Chip>
+                      ) : undefined
+                    }
+                    actions={
+                      <PageToolbar.Search
+                        label="Search the community"
+                        placeholder="Search by name"
+                        value={query}
+                        onValueChange={setQuery}
+                      />
+                    }
+                  />
+                </div>
+              )}
               items={[
                 {
                   id: 'muster',
                   label: 'Free this week',
                   panel: (
                     <div className="stack" data-gap="5">
-                      {filterBar(pluralize(available.length, 'member'))}
                       <Card pad={4} className="stack" data-gap="3">
                         <h2 className="type-title">Members free each day</h2>
                         <WeekGrid
@@ -263,17 +285,6 @@ export function CommunityPage(): React.JSX.Element {
                   label: 'DMs',
                   panel: (
                     <div className="stack" data-gap="5">
-                      {filterBar(
-                        pluralize(hub.dms.length, 'DM'),
-                        <FilterBar.Group>
-                          <Chip
-                            selected={accepting}
-                            onClick={() => setAccepting(!accepting)}
-                          >
-                            Accepting players
-                          </Chip>
-                        </FilterBar.Group>,
-                      )}
                       <MemberList
                         members={hub.dms}
                         empty="No DMs match."
@@ -288,7 +299,6 @@ export function CommunityPage(): React.JSX.Element {
                   label: 'Players',
                   panel: (
                     <div className="stack" data-gap="5">
-                      {filterBar(pluralize(hub.players.length, 'player'))}
                       <MemberList
                         members={hub.players}
                         empty="No players match."
@@ -305,7 +315,6 @@ export function CommunityPage(): React.JSX.Element {
                     <StatePanel status="error" error={characters.error ?? undefined} />
                   ) : characters.data ? (
                     <div className="stack" data-gap="5">
-                      {filterBar(pluralize(visibleCharacters.length, 'character'))}
                       {visibleCharacters.length === 0 ? (
                         <EmptyState
                           message={

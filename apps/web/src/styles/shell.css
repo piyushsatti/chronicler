@@ -12,11 +12,6 @@
    The chrome stamps data-site-pattern; Imposition stamps data-width-class.
    ============================================================ */
 
-/* Single source for the bar's height: the bar sets it, `main` reserves it. */
-:root {
-  --bottomnav-height: 56px;
-}
-
 .app-shell {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -25,9 +20,8 @@
   min-height: 100dvh;
   grid-template-areas:
     'topbar'
-    'main'
-    'bottomnav';
-  grid-template-rows: auto 1fr auto;
+    'main';
+  grid-template-rows: auto 1fr;
 }
 
 .app-shell__main {
@@ -37,42 +31,15 @@
   min-width: 0;
 }
 
-/* The bottom bar stays in the viewport, so content scrolls UNDER it and the last
-   screenful is obscured. Reserve its height plus the safe-area inset. Only
-   in the modes that actually show the bar — shell.css owns that fact, so it
-   owns the reservation too. */
-.app-shell__main {
-  padding-bottom: calc(var(--bottomnav-height) + env(safe-area-inset-bottom, 0px));
-}
-
 :root:has(.site-chrome) {
   scroll-padding-top: var(--site-header-height, var(--sp-8));
-}
-
-:root:has(.site-chrome[data-site-pattern='bottom-bar']) {
-  scroll-padding-bottom: calc(
-    var(--bottomnav-height) + env(safe-area-inset-bottom, 0px)
-  );
-}
-
-.site-chrome:not([data-site-pattern='bottom-bar']) .app-shell__main {
-  padding-bottom: 0;
 }
 
 .topbar {
   grid-area: topbar;
 }
 
-.app-shell__bottomnav {
-  grid-area: bottomnav;
-}
-
 /* ── Which navigation model is present ──────────────────────── */
-
-/* Default (compact): bottom bar carries the destinations. */
-.app-shell__bottomnav {
-  display: flex;
-}
 
 .nav-drawer-root,
 .nav-links-row {
@@ -88,6 +55,34 @@
   display: flex;
   flex-wrap: wrap;
 }
+
+.site-chrome__brand { order: 1; }
+.site-chrome__links.segmented-track { order: 2; display: block; flex: 0 1 auto; width: fit-content; max-width: 100%; min-width: 0; }
+.site-chrome__spacer { order: 3; }
+.site-chrome__search { order: 4; }
+.site-chrome__bell { order: 5; }
+.site-chrome__avatar, .site-chrome__login { order: 6; }
+.site-chrome__top > .type-link { order: 7; }
+.site-chrome__links.segmented-track .segmented-row { width: max-content; min-width: max-content; }
+.site-chrome__links.segmented-track .site-chrome__link { min-height: var(--segment-highlight-size); }
+.site-chrome__spacer { flex: 1 1 auto; }
+.site-chrome__brand img { display: block; width: auto; height: 28px; object-fit: contain; }
+[data-mode='dark'] .site-chrome__brand img { filter: brightness(0) invert(1); }
+.site-chrome__bell > svg { transform: translateY(2.5px); }
+
+[data-width-class='compact'] .site-chrome__top {
+  flex-wrap: wrap;
+  min-height: 0;
+  gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-4);
+}
+[data-width-class='compact'] .site-chrome__brand { order: 1; }
+[data-width-class='compact'] .site-chrome__search { order: 2; margin-left: auto; }
+[data-width-class='compact'] .site-chrome__bell { order: 3; }
+[data-width-class='compact'] .site-chrome__avatar,
+[data-width-class='compact'] .site-chrome__login { order: 4; }
+[data-width-class='compact'] .site-chrome__links.segmented-track { order: 5; flex: 1 0 100%; width: 100%; }
+[data-width-class='compact'] .site-chrome__spacer { display: none; }
 
 .site-chrome__top {
   container-name: site-header;
@@ -115,65 +110,6 @@
     clip: rect(0 0 0 0);
   }
 }
-
-/* ── Bottom navigation: reachability, not fit ───────────────── */
-
-/* A top-anchored nav on a large phone puts every destination in the
-   least reachable part of the screen. This bar is about thumbs. */
-.app-shell__bottomnav {
-  position: fixed;
-  inset-inline: 0;
-  bottom: 0;
-  z-index: 20;
-  align-items: stretch;
-  justify-content: space-around;
-  gap: var(--sp-1);
-  overflow-x: auto;
-  border-top: 1px solid var(--color-border);
-  background: color-mix(in srgb, var(--color-bg-deep) 92%, transparent);
-  backdrop-filter: blur(14px);
-  /* index.html already sets viewport-fit=cover, which opts INTO drawing
-     under the home indicator. Without this the bar sits beneath it. */
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-}
-
-.app-shell__bottomnav a {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  flex: 1 1 0;
-  min-width: 0;
-  /* 44px floor (iOS HIG). Every interactive element in the app today is
-     36-40px, sized for a cursor rather than a thumb. */
-  min-height: max(44px, var(--bottomnav-height));
-  padding: var(--sp-2) var(--sp-1);
-  color: var(--color-text-muted);
-  text-decoration: none;
-  transition: color 140ms;
-}
-
-.app-shell__bottomnav a[aria-current='page'] {
-  color: var(--color-accent);
-}
-
-.app-shell__bottomnav a:focus-visible {
-  outline: 2px solid var(--color-accent);
-  outline-offset: -2px;
-}
-
-.app-shell__bottomnav .bottomnav-label {
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-/* Seven authorized destinations plus six 4px gaps leave 42px slots at
-   320px. Remove only the gaps at that narrow edge so every target keeps the
-   44px touch-width floor while the bar remains a single row. */
-/* viewport queries removed — use Imposition navPatternFor / declarations */
 
 /* ── Page gutters scale with the space available ────────────── */
 

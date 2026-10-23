@@ -201,7 +201,7 @@ a {
 .site-chrome__top {
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: 35;
   display: flex;
   align-items: center;
   gap: var(--sp-3);
@@ -210,12 +210,6 @@ a {
   background: color-mix(in srgb, var(--color-bg-deep) 88%, transparent);
   border-bottom: 1px solid var(--color-border);
   backdrop-filter: blur(14px);
-}
-
-.site-chrome[data-site-pattern='bottom-bar'] .site-chrome__top {
-  min-height: var(--sp-8);
-  gap: var(--sp-2);
-  padding-inline: var(--sp-3);
 }
 
 .site-chrome__spacer {
@@ -259,19 +253,9 @@ a {
 
 .site-chrome__links .site-chrome__link {
   flex: 0 0 auto;
-  height: 2.25rem;
+  height: var(--segment-highlight-size);
+  min-height: var(--segment-highlight-size);
   padding: 0 var(--sp-3);
-  border-radius: var(--rad-pill);
-}
-
-.site-chrome__links .site-chrome__link:hover {
-  background: var(--color-bg-surface);
-  color: var(--color-text);
-}
-
-.site-chrome__links .site-chrome__link[aria-current='page'] {
-  background: var(--color-text);
-  color: var(--color-bg-deep);
 }
 
 .nav-drawer-backdrop {
@@ -340,53 +324,13 @@ a {
   outline-offset: 2px;
 }
 
-.site-chrome__bottom {
-  z-index: 2;
-  display: flex;
-  align-items: stretch;
-  justify-content: space-around;
-  gap: 0;
-  min-height: var(--bottomnav-height);
-  padding-bottom: env(safe-area-inset-bottom, 0px);
-  overflow-x: auto;
-  overscroll-behavior-x: contain;
-  scrollbar-width: none;
-  background: var(--color-bg-panel);
-  border-top: 1px solid var(--color-border);
-  backdrop-filter: blur(14px);
-}
-
-.site-chrome__bottom .site-chrome__link {
-  /* Full labels, never truncated: links share the width, and a bar with more
-     links than fit (staff accounts) scrolls sideways instead of clipping text. */
-  flex: 1 0 auto;
-  flex-direction: column;
-  justify-content: center;
-  gap: 0.125rem;
-  min-width: 0;
-  min-height: 2.75rem;
-  padding: var(--sp-2) 0.125rem;
-  color: var(--color-text-muted);
-}
-
-.site-chrome__bottom .site-chrome__link[aria-current='page'] {
-  color: var(--color-accent);
-}
-
-.site-chrome__bottom .site-chrome__link-label {
-  font-size: 0.625rem;
-  letter-spacing: -0.015em;
-  line-height: 1.2;
-  white-space: nowrap;
-}
-
 .site-chrome__search {
   display: flex;
   flex-shrink: 0;
   align-items: center;
   gap: var(--sp-2);
   height: 2.5rem;
-  min-width: 16rem;
+  min-width: 15rem;
   padding: 0 var(--sp-4);
   border: 1px solid var(--color-border-2);
   border-radius: var(--rad-pill);
@@ -418,11 +362,11 @@ a {
   align-items: center;
   gap: var(--sp-2);
   height: 2.5rem;
-  padding: 0 var(--sp-4);
-  border: none;
+  padding: 0 var(--sp-4) 1px;
+  border: 1px solid var(--btn-primary-bg, var(--color-accent));
   border-radius: var(--rad-pill);
-  background: var(--discord-brand);
-  color: white; /* Preserved fixed Discord brand foreground (Nav.css). */
+  background: var(--btn-primary-bg, var(--color-accent));
+  color: var(--btn-primary-ink, var(--color-hero-on-brand-ink));
   font-family: var(--font-body);
   font-size: 0.84375rem;
   font-weight: 550;
@@ -431,7 +375,7 @@ a {
 }
 
 .site-chrome__login:hover {
-  background: var(--discord-brand-hover);
+  background: var(--btn-primary-bg-hover, var(--color-accent-hover));
 }
 
 .site-chrome__avatar {

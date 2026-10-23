@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { graphql, HttpResponse } from 'msw';
 import { CommunityPage } from '../../../src/features/community/pages/CommunityPage.js';
@@ -16,7 +16,19 @@ describe('CommunityPage', () => {
     expect(
       await screen.findByRole('tab', { name: 'Free this week' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('1 member')).toBeInTheDocument();
+    const toolbar = screen.getByRole('region', { name: 'Filter community' });
+    expect(toolbar).toHaveAttribute('data-component', 'PageToolbar');
+    const tabs = within(toolbar).getByRole('tablist', { name: 'Community sections' });
+    expect(within(tabs).getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
+      'Free this week',
+      'DMs',
+      'Players',
+      'Characters',
+    ]);
+    const count = within(toolbar).getByText('1 member');
+    expect(count).toBeVisible();
+    expect(tabs).not.toContainElement(count);
+    expect(screen.getByRole('tabpanel', { name: 'Free this week' })).toBeVisible();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(
       screen.getByRole('list', { name: "Who's free this week" }),
@@ -39,6 +51,74 @@ describe('CommunityPage', () => {
       'href',
       '/characters/C-101',
     );
+  });
+
+  it('uses one shared search action and keeps filtered counts beside the tabs', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<CommunityPage />);
+    await screen.findByRole('tab', { name: 'Free this week' });
+    const toolbar = screen.getByRole('region', { name: 'Filter community' });
+    expect(screen.queryByRole('searchbox', { name: 'Search the community' })).toBeNull();
+    await user.click(
+      within(toolbar).getByRole('button', { name: 'Search the community' }),
+    );
+    const search = within(toolbar).getByRole('searchbox', {
+      name: 'Search the community',
+    });
+    expect(search).toHaveFocus();
+    await user.type(search, 'Alex');
+    expect(within(toolbar).getByText('1 member')).toBeVisible();
+    await user.click(within(toolbar).getByRole('tab', { name: 'DMs' }));
+    expect(within(toolbar).getByText('0 DMs')).toBeVisible();
+    expect(screen.getByText('No DMs match.')).toBeVisible();
+    await user.click(
+      within(toolbar).getByRole('button', {
+        name: 'Clear and close search the community',
+      }),
+    );
+    expect(within(toolbar).getByText('1 DM')).toBeVisible();
+    expect(screen.getByRole('link', { name: /Mira/ })).toBeVisible();
+    expect(screen.queryByRole('searchbox', { name: 'Search the community' })).toBeNull();
+  });
+
+  it('keeps the DM accepting filter and result count in the shared toolbar', async () => {
+    server.use(
+      graphql.query('CommunityDirectory', () =>
+        HttpResponse.json({
+          data: {
+            communityDirectory: {
+              entries: [
+                ...directory.entries,
+                {
+                  ...directory.entries[0],
+                  memberId: '44444444-4444-4444-8444-444444444444',
+                  handle: 'galen',
+                  displayName: 'Galen',
+                  acceptingPlayers: false,
+                },
+              ],
+              total: 3,
+            },
+          },
+        }),
+      ),
+    );
+    const user = userEvent.setup();
+    renderWithProviders(<CommunityPage />, { route: '/community?tab=dms' });
+    await screen.findByRole('link', { name: /Galen/ });
+    const toolbar = screen.getByRole('region', { name: 'Filter community' });
+    expect(within(toolbar).getByText('2 DMs')).toBeVisible();
+    const accepting = within(toolbar).getByRole('button', {
+      name: 'Accepting players',
+    });
+    await user.click(accepting);
+    expect(accepting).toHaveAttribute('aria-pressed', 'true');
+    expect(within(toolbar).getByText('1 DM')).toBeVisible();
+    expect(screen.queryByRole('link', { name: /Galen/ })).toBeNull();
+    await user.click(accepting);
+    expect(accepting).toHaveAttribute('aria-pressed', 'false');
+    expect(within(toolbar).getByText('2 DMs')).toBeVisible();
+    expect(screen.getByRole('link', { name: /Galen/ })).toBeVisible();
   });
 
   it('keeps DM and player profile navigation in their tabs', async () => {

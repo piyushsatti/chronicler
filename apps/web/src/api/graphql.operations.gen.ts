@@ -804,7 +804,7 @@ export type ChronicleListQueryVariables = Exact<{
 }>;
 
 
-export type ChronicleListQuery = { gameCalendar: { definition: unknown }, documents: { total: number, items: Array<{ id: string, slug: string, category: string | null, title: string, effectiveBody: string | null, frontmatter: unknown, updatedAt: string, publishedAt: string | null, author: { handle: string } | null, summaryDerived: { occurredAt: string | null, arc: string | null, gameDay: number | null, regions: Array<{ id: string, name: string }>, dms: Array<{ id: string, displayName: string }>, gameDate: { eraAbbrev: string, year: number, periodName: string, periodIndex: number, periodType: string, day: number } | null } | null }> } };
+export type ChronicleListQuery = { gameCalendar: { definition: unknown }, documents: { total: number, items: Array<{ id: string, slug: string, category: string | null, visibility: string, title: string, effectiveBody: string | null, frontmatter: unknown, updatedAt: string, publishedAt: string | null, author: { handle: string } | null, summaryDerived: { occurredAt: string | null, arc: string | null, gameDay: number | null, regions: Array<{ id: string, name: string }>, dms: Array<{ id: string, displayName: string }>, gameDate: { eraAbbrev: string, year: number, periodName: string, periodIndex: number, periodType: string, day: number } | null } | null }> } };
 
 export type CodexBacklinkDocumentQueryVariables = Exact<{
   id: string;
@@ -821,7 +821,7 @@ export type CodexDirectoryQueryVariables = Exact<{
 }>;
 
 
-export type CodexDirectoryQuery = { codexCategories: Array<{ category: string }>, codexDirectory: { total: number, items: Array<{ id: string, slug: string, title: string, category: string | null, effectiveBody: string | null }> } };
+export type CodexDirectoryQuery = { codexCategories: Array<{ category: string, count: number }>, codexDirectory: { total: number, items: Array<{ id: string, slug: string, title: string, category: string | null, effectiveBody: string | null }> } };
 
 export type CodexEntryQueryVariables = Exact<{
   slug: string;

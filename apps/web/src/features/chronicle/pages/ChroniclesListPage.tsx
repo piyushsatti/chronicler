@@ -1,23 +1,27 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import type { PageDeclaration } from '@pi/react-imposition';
 import {
   PageHost,
-  useSizeClasses,
   type PageRegionRenderers,
 } from '@pi/react-imposition/react';
 import { Link } from 'react-router-dom';
 import { PageShell } from '../../../components/foundation/PageShell.js';
-import { CardGrid } from '../../../components/primitives/CardGrid.js';
 import { PageHeader } from '../../../components/primitives/PageHeader.js';
+import { PageToolbar } from '../../../components/primitives/PageToolbar.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { ErrorState } from '../../../components/primitives/ErrorState.js';
 import { Skeleton } from '../../../components/primitives/Skeleton.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
-import { civilDateInZone, monthLabel, personLabels } from '../../../utils/format.js';
+import { personLabels } from '../../../utils/format.js';
 import type { ChronicleListItemView } from '../adapters/chronicleAdapter.js';
 import { ChronCard } from '../components/ChronCard.js';
-import { ChronicleFilterBar } from '../components/ChronicleFilterBar.js';
 import { useCanCreateSummary, useChroniclesPage } from '../hooks/useChroniclesPage.js';
+import {
+  filterChroniclesByRange,
+  groupChroniclesByPublicationDate,
+  type ChronicleRange,
+} from '../chronicleTimeline.js';
+import { summaryCategoryLabel, summaryCategoryMeta } from '../summaryCategory.js';
 import styles from './chronicles.module.css';
 
 const DECLARATION: PageDeclaration = {
@@ -25,86 +29,33 @@ const DECLARATION: PageDeclaration = {
   regions: [{ role: 'body', priority: 1 }],
 };
 
-const UNDATED_LABEL = 'Not yet dated';
+const RANGE_OPTIONS = [
+  { value: 'all', label: 'All' },
+  { value: 'week', label: 'This week' },
+  { value: 'month', label: 'This month' },
+] as const;
 
-function gameDaySortValue(entry: ChronicleListItemView): number {
-  return entry.gameDay ?? Number.NEGATIVE_INFINITY;
+function presentationCategory(entry: ChronicleListItemView): string | null {
+  return entry.visibility === 'dm_only' ? 'dm' : entry.category;
 }
 
-/** The real-world instant an undated entry is filed under: when it was played, else when it entered the chronicle. */
-function realDateOf(entry: ChronicleListItemView): string | null {
-  return entry.occurredAt ?? entry.publishedAt;
-}
-
-/**
- * Game-dated entries come first, newest game day first, grouped by calendar
- * period. Entries without a game date fall back to the real month they were
- * played or published, so they still read as a timeline.
- */
-function groupByCalendarPeriod(
-  items: ChronicleListItemView[],
-  timeZone: string | null,
-): Array<{ label: string; events: ChronicleListItemView[] }> {
-  const dated = items
-    .map((entry, index) => ({ entry, index }))
-    .filter(({ entry }) => entry.gameDate != null || entry.gameDay != null)
-    .sort(
-      (a, b) =>
-        gameDaySortValue(b.entry) - gameDaySortValue(a.entry) || a.index - b.index,
-    );
-  const groups = new Map<string, { label: string; events: ChronicleListItemView[] }>();
-  for (const { entry } of dated) {
-    const date = entry.gameDate;
-    const key = date ? `date:${date.year}:${date.periodIndex}` : `day:${entry.gameDay}`;
-    const label = date
-      ? `${date.eraAbbrev} ${date.year} · ${date.periodName}`
-      : `Game day ${entry.gameDay}`;
-    const group = groups.get(key);
-    if (group) group.events.push(entry);
-    else groups.set(key, { label, events: [entry] });
-  }
-  const withoutGameDate = items.filter(
-    (entry) => entry.gameDate == null && entry.gameDay == null,
-  );
-  const realMonths = new Map<
-    string,
-    { label: string; events: ChronicleListItemView[] }
-  >();
-  const undated: ChronicleListItemView[] = [];
-  for (const { entry } of withoutGameDate
-    .map((entry, index) => ({ entry, index, at: Date.parse(realDateOf(entry) ?? '') }))
-    .sort((a, b) => (b.at || 0) - (a.at || 0) || a.index - b.index)) {
-    // The month the viewer saw it happen, in their chosen zone, not UTC.
-    const day = civilDateInZone(realDateOf(entry), timeZone);
-    if (!day) {
-      undated.push(entry);
-      continue;
-    }
-    const key = day.slice(0, 7);
-    const group = realMonths.get(key);
-    if (group) group.events.push(entry);
-    else realMonths.set(key, { label: monthLabel(key), events: [entry] });
-  }
-  return [
-    ...groups.values(),
-    ...realMonths.values(),
-    ...(undated.length > 0 ? [{ label: UNDATED_LABEL, events: undated }] : []),
-  ];
-}
-
-function distinctSorted(values: Array<string | null>): string[] {
-  return [...new Set(values.filter((v): v is string => v != null && v !== ''))].sort();
+function publicationDateLabel(date: string | null): string {
+  if (!date) return 'Not yet dated';
+  return new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(`${date}T00:00:00Z`));
 }
 
 export function ChroniclesListPage(): React.JSX.Element {
   const page = useChroniclesPage();
-  const { widthClass } = useSizeClasses();
   const canCreate = useCanCreateSummary();
-
-  const [activeRegion, setActiveRegion] = useState('All');
-  const [activeArc, setActiveArc] = useState('All');
-  const [activeAuthor, setActiveAuthor] = useState('All');
+  const [range, setRange] = useState<ChronicleRange>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const { timeZone } = useDateFormatter();
+  const now = useMemo(() => new Date(), []);
 
   const allEvents = page.status === 'ready' ? page.view.items : [];
   const visibleAuthorLabels = personLabels(allEvents.map((entry) => ({
@@ -118,26 +69,9 @@ export function ChroniclesListPage(): React.JSX.Element {
     }
   });
 
-  const regionOptions = useMemo(
-    () => ['All', ...distinctSorted(allEvents.map((e) => e.region))],
-    [allEvents],
-  );
-  const arcOptions = useMemo(
-    () => ['All', ...distinctSorted(allEvents.map((e) => e.arc))],
-    [allEvents],
-  );
-  const authorOptions = useMemo(
-    () => ['All', ...distinctSorted(allEvents.map((e) => e.authorHandle))],
-    [allEvents],
-  );
-
   const events = useMemo(() => {
     const needle = searchQuery.trim().toLocaleLowerCase();
-    return allEvents.filter((entry) => {
-      if (activeRegion !== 'All' && entry.region !== activeRegion) return false;
-      if (activeArc !== 'All' && entry.arc !== activeArc) return false;
-      if (activeAuthor !== 'All' && (entry.authorHandle ?? '') !== activeAuthor)
-        return false;
+    return filterChroniclesByRange(allEvents, range, now, timeZone).filter((entry) => {
       if (!needle) return true;
       return [
         entry.title,
@@ -148,27 +82,23 @@ export function ChroniclesListPage(): React.JSX.Element {
         ...entry.tags,
       ].some((value) => value?.toLocaleLowerCase().includes(needle));
     });
-  }, [allEvents, activeArc, activeAuthor, activeRegion, searchQuery]);
-
-  const { timeZone } = useDateFormatter();
-  const grouped = useMemo(
-    () => groupByCalendarPeriod(events, timeZone),
+  }, [allEvents, now, range, searchQuery, timeZone]);
+  const groups = useMemo(
+    () => groupChroniclesByPublicationDate(events, timeZone),
     [events, timeZone],
   );
-  const mixedTypes = new Set(allEvents.map((entry) => entry.category)).size > 1;
-  const hasKnownGameDay = allEvents.some((entry) => entry.gameDay != null);
-  const hasNamedGameDate = allEvents.some((entry) => entry.gameDate != null);
+  const kinds = new Map<string, string>();
+  events.forEach((entry) => {
+    const category = presentationCategory(entry);
+    kinds.set(summaryCategoryLabel(category), category ?? 'session');
+  });
+  const showKinds = kinds.size > 1;
 
   const header = (
     <div data-el="chronicles.eyebrow" className={styles.header}>
       <PageHeader
         title="Chronicles"
         lede="Session recaps, player journals and world events from across the campaign."
-        meta={
-          page.status === 'ready' && hasKnownGameDay && !hasNamedGameDate
-            ? 'Named calendar dates are not configured; showing game-day ordinals.'
-            : undefined
-        }
         actions={
           canCreate && (page.status === 'ready' || page.status === 'empty') ? (
             <Link
@@ -183,91 +113,85 @@ export function ChroniclesListPage(): React.JSX.Element {
       />
     </div>
   );
+  const toolbar = (
+    <div className={styles.filters}>
+      <PageToolbar
+        label="Filter chronicles"
+        segments={(
+          <PageToolbar.Segments
+            aria-label="Chronicle date range"
+            size="sm"
+            options={RANGE_OPTIONS}
+            value={range}
+            onValueChange={(value) => setRange(value)}
+          />
+        )}
+        count={page.status === 'ready' ? `${events.length} ${events.length === 1 ? 'entry' : 'entries'}` : undefined}
+        actions={(
+          <PageToolbar.Search
+            label="Search entries"
+            value={searchQuery}
+            onValueChange={setSearchQuery}
+            placeholder=""
+          />
+        )}
+      />
+    </div>
+  );
 
   let regions: PageRegionRenderers;
   if (page.status === 'error') {
-    regions = {
-      body: () => (
-        <>
-          {header}
-          <ErrorState onRetry={page.refetch} />
-        </>
-      ),
-    };
+    regions = { body: () => <>{header}{toolbar}<ErrorState onRetry={page.refetch} /></> };
   } else if (page.status === 'loading') {
-    regions = {
-      body: () => (
-        <>
-          {header}
-          <Skeleton height={110} aria-label="Loading chronicles" />
-        </>
-      ),
-    };
+    regions = { body: () => <>{header}{toolbar}<Skeleton height={110} aria-label="Loading chronicles" /></> };
   } else if (page.status === 'empty') {
-    regions = {
-      body: () => (
-        <>
-          {header}
-          <EmptyState kind="timeline-empty" />
-        </>
-      ),
-    };
+    regions = { body: () => <>{header}{toolbar}<EmptyState kind="timeline-empty" /></> };
   } else {
     regions = {
       body: () => (
         <>
           {header}
-          <div className={styles.filters}>
-            <ChronicleFilterBar
-              searchQuery={searchQuery}
-              onSearchQueryChange={setSearchQuery}
-              activeRegion={activeRegion}
-              onRegionChange={setActiveRegion}
-              activeArc={activeArc}
-              onArcChange={setActiveArc}
-              activeAuthor={activeAuthor}
-              onAuthorChange={setActiveAuthor}
-              regionOptions={regionOptions}
-              arcOptions={arcOptions}
-              authorOptions={authorOptions}
-              authorLabels={authorLabels}
-              count={`${events.length} of ${allEvents.length} ${
-                allEvents.length === 1 ? 'entry' : 'entries'
-              }`}
-              collapsible={widthClass !== 'expanded'}
-            />
-          </div>
+          {toolbar}
 
-          <div data-el="chronicles.timeline">
+          {showKinds ? (
+            <div className={styles.legend} role="group" aria-label="Entry types">
+              {[...kinds].map(([label, category]) => {
+                const meta = summaryCategoryMeta(category);
+                return (
+                  <span key={label} className={styles.legendItem}>
+                    <span className={styles.legendDot} style={{ '--chron-type-color': meta.color } as CSSProperties} />
+                    {label}
+                  </span>
+                );
+              })}
+            </div>
+          ) : null}
+
+          <div data-el="chronicles.timeline" className={styles.timeline}>
             {events.length === 0 ? (
               <EmptyState
                 kind="timeline-empty"
-                message="No entries match these filters."
+                message="No entries match this view."
               />
             ) : (
-              grouped.map(({ label, events: groupEvents }) => (
-                <div key={label} className={styles.period}>
-                  <div
-                    className={`row ${styles.periodHeader}`}
-                    data-el="chronicles.seasonHeader"
-                    data-gap="3"
-                  >
-                    <h2 className="type-heading">{label}</h2>
-                    <div className={styles.periodRule} />
+              groups.map(({ date, entries }) => (
+                <section key={date ?? 'undated'} className={styles.dayGroup}>
+                  <div className={styles.dayHeading}>
+                    <h2 data-el="chronicles.publicationDate">{publicationDateLabel(date)}</h2>
+                    <span>{entries.length} {entries.length === 1 ? 'entry' : 'entries'} · publication date</span>
+                    <span className={styles.dayRule} />
                   </div>
-
-                  <CardGrid as="ul" gap={4} aria-label={label}>
-                    {groupEvents.map((entry) => (
+                  <ol className={styles.entries} aria-label={publicationDateLabel(date)}>
+                    {entries.map((entry) => (
                       <li key={entry.id} className={styles.item}>
                         <ChronCard
                           entry={entry}
                           authorLabel={entry.authorHandle ? authorLabels.get(entry.authorHandle) : undefined}
-                          showType={mixedTypes}
                         />
                       </li>
                     ))}
-                  </CardGrid>
-                </div>
+                  </ol>
+                </section>
               ))
             )}
           </div>

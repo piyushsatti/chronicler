@@ -291,6 +291,7 @@ describe('parseChronicleList', () => {
     expect(result.data.total).toBe(2);
     const first = result.data.items[0];
     expect(first?.title).toBe('Vault Delve — Session recap');
+    expect(first?.visibility).toBe('public');
     expect(first?.excerpt).toBe('The vault door finally gave way.');
     expect(first?.tags).toEqual(['delve', 'vault']);
     expect(first?.region).toBe('Dalmond');
@@ -298,6 +299,22 @@ describe('parseChronicleList', () => {
     expect(first?.gameDay).toBe(142);
     expect(first?.gameDate?.eraAbbrev).toBe('AE');
     expect(first?.authorHandle).toBe('mira');
+  });
+
+  it('preserves document visibility for presentation without inferring it from category', () => {
+    const result = parseChronicleList({
+      ...good,
+      items: [
+        { ...good.items[0], category: 'session', visibility: 'dm_only' },
+        { ...good.items[1], category: 'dm', visibility: 'public' },
+      ],
+    });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.items.map(({ category, visibility }) => [category, visibility])).toEqual([
+      ['session', 'dm_only'],
+      ['dm', 'public'],
+    ]);
   });
 
   it.each(['Authored preview', '', null, 42])(

@@ -42,7 +42,7 @@ export function PageHeader({
 }: PageHeaderProps): React.JSX.Element {
   const Heading = level === 1 ? 'h1' : 'h2';
   return (
-    <div className={cx('page-header', className)} data-component="PageHeader">
+    <div className={cx('page-header', className)} data-component="PageHeader" data-title-role={back ? 'detail' : 'index'}>
       {back ? (
         <Link className="page-header__back type-caption" to={back.to}>
           <span aria-hidden="true">←</span>

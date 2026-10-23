@@ -245,12 +245,6 @@ button.pr-avatar {
   gap: var(--sp-2);
 }
 
-.site-chrome[data-site-pattern='bottom-bar'] .pr-toast__stack {
-  bottom: calc(
-    var(--bottomnav-height) + var(--sp-4) + env(safe-area-inset-bottom, 0px)
-  );
-}
-
 .pr-toast {
   box-sizing: border-box;
   display: flex;
@@ -882,6 +876,7 @@ textarea.field-input {
 }
 
 .pr-avatar-group {
+  isolation: isolate;
   display: inline-flex;
   align-items: center;
   position: relative;
@@ -1029,113 +1024,145 @@ textarea.field-input {
   font-size: var(--type-label-size, 0.6875rem);
 }
 
-/* SegmentedControl: selection uses atlas `.seg button.on` (the class
-   QuestBoardView already uses). Size to content so a column flex parent
-   (.stack) cannot stretch the track; data-size='sm' tightens the pills. */
-.seg[data-component='SegmentedControl'] {
+.segmented-track {
+  box-sizing: border-box;
+  position: relative;
+  isolation: isolate;
+  display: block;
   width: fit-content;
   max-width: 100%;
-}
-
-.seg[data-size='sm'] .seg__opt {
-  padding: 3px 10px;
-  font-size: 11px;
-}
-
-.seg__opt:disabled {
-  cursor: not-allowed;
-  color: var(--control-disabled-fg);
-}
-
-/* Tabs primitive (Tabs and Tabs.Nav): one skin, the top-nav pill
-   (.site-chrome__links .site-chrome__link). Same height, radius and type;
-   active = filled ink. Page sections never restyle it. */
-.tabs[data-component] {
-  display: block;
   min-width: 0;
-}
-
-.tabs[data-component] > .tabs__list {
-  display: flex;
-  flex-wrap: nowrap;
-  align-items: center;
-  gap: var(--sp-1);
-  min-width: 0;
-  max-inline-size: 100%;
-  /* The padding keeps the focus ring inside the scroller's clip box; the
-     negative inline margin keeps the first pill on the frame edge. */
-  margin: calc(-1 * var(--sp-1)) calc(-1 * var(--sp-1)) var(--sp-4);
-  padding: var(--sp-1);
+  height: var(--segment-track-size);
+  padding: 3px;
   overflow-x: auto;
+  overflow-y: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--rad-pill);
+  background: var(--color-bg-deep);
   overscroll-behavior-x: contain;
-  scroll-padding-inline: var(--sp-6);
   scrollbar-width: none;
-  --tabs-fade: var(--sp-8);
+  scroll-padding-inline: 3px;
 }
 
-/* Narrow widths: the row scrolls sideways and the clipped edge fades so
-   people can see there is more (useScrollEdges sets data-overflow). */
-.tabs[data-component] > .tabs__list[data-overflow='end'] {
-  mask-image: linear-gradient(to right, black calc(100% - var(--tabs-fade)), transparent);
+.segmented-track::-webkit-scrollbar { display: none; }
+.segmented-row { position: relative; width: max-content; min-width: 100%; height: var(--segment-highlight-size); }
+.segmented-options { position: relative; display: flex; width: max-content; min-width: 100%; height: 100%; align-items: stretch; }
+.segmented-track:not([data-site-links]) :is(.segmented-row, .segmented-options) {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  min-width: max-content;
+}
+.segmented-pill {
+  position: absolute;
+  z-index: 0;
+  top: 0;
+  left: 0;
+  width: var(--active-tab-width, 0);
+  height: var(--segment-highlight-size);
+  transform: translateX(var(--active-tab-left, 0));
+  border-radius: var(--rad-pill);
+  background: var(--color-bg-panel);
+  box-shadow: var(--shadow-2);
+  transition: transform 260ms cubic-bezier(.65, 0, .35, 1), width 260ms cubic-bezier(.65, 0, .35, 1);
+  pointer-events: none;
 }
 
-.tabs[data-component] > .tabs__list[data-overflow='start'] {
-  mask-image: linear-gradient(to right, transparent, black var(--tabs-fade));
-}
-
-.tabs[data-component] > .tabs__list[data-overflow='start end'] {
-  mask-image: linear-gradient(
-    to right,
-    transparent,
-    black var(--tabs-fade),
-    black calc(100% - var(--tabs-fade)),
-    transparent
-  );
-}
-
-.tabs[data-component] .tabs__tab {
+.segmented-option {
+  box-sizing: border-box;
+  position: relative;
+  z-index: 1;
   display: inline-flex;
-  flex: none;
+  flex: 1 0 auto;
   align-items: center;
+  justify-content: center;
   gap: var(--sp-2);
-  height: 2.25rem;
-  padding: 0 var(--sp-3);
+  height: var(--segment-highlight-size);
+  min-height: var(--segment-highlight-size);
+  padding: 0 var(--sp-4);
+  padding-block-end: 1px;
   border: 0;
   border-radius: var(--rad-pill);
   background: transparent;
   color: var(--color-text-2);
-  font-family: inherit;
-  font-size: 0.84375rem;
-  font-weight: 500;
+  font: 500 13px/.85 var(--font-body);
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
 }
 
-.tabs[data-component][data-size='sm'] .tabs__tab {
-  height: 1.875rem;
-  padding: 0 var(--sp-3);
-  font-size: 0.78125rem;
+.segmented-option:is([aria-pressed='true'], [aria-selected='true'], [aria-current='page']) { color: var(--color-accent); font-weight: 650; }
+.segmented-option:focus-visible { z-index: 2; outline: 2px solid var(--color-accent); outline-offset: -3px; }
+.segmented-option:disabled { color: var(--control-disabled-fg); cursor: not-allowed; }
+.segmented-track[data-size='sm'] { --control-font-size: 12px; }
+.segmented-track[data-size='sm'] .segmented-option { padding-inline: var(--sp-2); font-size: var(--control-font-size); }
+.segmented-more { gap: var(--sp-1); }
+.site-chrome__links .segmented-pill { background: var(--color-text); }
+.site-chrome__links .site-chrome__link[aria-current='page'] { color: var(--color-bg-deep); }
+.segmented-chevron { display: block; width: 12px; height: 12px; overflow: visible; }
+.segmented-menu-item[aria-checked='true'] { background: var(--color-bg-surface); color: var(--color-accent); }
+@media (prefers-reduced-motion: reduce) { .segmented-pill { transition: none; } }
+
+@container (max-width: 700px) {
+  .segmented-track {
+    --nav-fade-left: 0px;
+    --nav-fade-right: 0px;
+    -webkit-mask-image: linear-gradient(to right, transparent, var(--color-text) var(--nav-fade-left), var(--color-text) calc(100% - var(--nav-fade-right)), transparent);
+    mask-image: linear-gradient(to right, transparent, var(--color-text) var(--nav-fade-left), var(--color-text) calc(100% - var(--nav-fade-right)), transparent);
+  }
+  .segmented-track.can-scroll-left { --nav-fade-left: 20px; }
+  .segmented-track.can-scroll-right { --nav-fade-right: 20px; }
 }
 
-.tabs[data-component] .tabs__tab:hover {
-  background: var(--color-bg-surface);
-  color: var(--color-text);
+.page-toolbar {
+  box-sizing: border-box;
+  container-type: inline-size;
+  display: flex;
+  min-height: 64px;
+  align-items: center;
+  flex-wrap: nowrap;
+  gap: var(--sp-3);
+  padding: 11px var(--sp-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--rad);
+  background: var(--color-bg-panel);
 }
+.page-toolbar__segments, .page-toolbar__quick-filters { display: flex; min-width: 0; align-items: center; gap: var(--sp-2); }
+.page-toolbar__quick-filters { margin-left: auto; }
+.page-toolbar__actions { display: flex; flex: 0 0 auto; align-items: center; gap: var(--sp-3); }
+.page-toolbar:not(:has(.page-toolbar__quick-filters)) .page-toolbar__actions { margin-left: auto; }
+.page-toolbar__count { color: var(--color-text-2); font-size: 12px; line-height: 1; white-space: nowrap; }
+.page-toolbar__icon {
+  box-sizing: border-box;
+  display: inline-flex;
+  flex: 0 0 40px;
+  width: 40px;
+  height: 40px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--rad-pill);
+  background: var(--color-bg-deep);
+  color: var(--color-text-2);
+  cursor: pointer;
+}
+.page-toolbar__icon svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.page-toolbar__icon:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.page-toolbar__search { display: flex; flex: 0 1 240px; align-items: center; gap: var(--sp-2); }
+.page-toolbar__search .filter-bar__search { flex: 1 1 auto; width: auto; min-width: 0; }
+.page-toolbar__search .filter-bar__input { min-width: 0; }
 
-.tabs[data-component] .tabs__tab:is([aria-selected='true'], [aria-current='page']) {
-  background: var(--color-text);
-  color: var(--color-bg-deep);
-}
+[data-width-class='compact'] .page-toolbar { min-height: 112px; flex-wrap: wrap; gap: var(--sp-2); padding: 11px var(--sp-3); }
+[data-width-class='compact'] .page-toolbar__segments { flex: 1 0 100%; }
+[data-width-class='compact'] .page-toolbar__quick-filters { flex: 1 1 0; width: 100%; margin-left: 0; }
+[data-width-class='compact'] .page-toolbar__actions { flex: 0 0 auto; max-width: 100%; margin-left: auto; }
+[data-width-class='compact'] .page-toolbar__search { min-width: 0; }
 
-.tabs[data-component] .tabs__tab:focus-visible {
-  outline: none;
-  box-shadow: var(--focus-ring);
-}
-
-.tabs[data-component] > .tabs__panel {
-  min-width: 0;
-}
+.tabs[data-component='Tabs'] { display: block; min-width: 0; container-type: inline-size; }
+.tabs[data-component='TabNav'] { display: block; min-width: 0; }
+.tabs[data-component='Tabs'] > .tabs__track { margin-bottom: var(--sp-4); }
+.tabs[data-component='Tabs'] .tabs__panel { min-width: 0; }
 
 /* Popover / Menu: Base UI portals the positioner to <body> and anchors it to
    the .pop-trigger (side/align/collision handled in JS); the panel keeps the
@@ -1362,9 +1389,15 @@ button[data-el='week-grid.cell']:focus-visible {
   min-width: 0;
 }
 
-.page-header__title {
+.page-header[data-title-role='index'] .page-header__title {
+  font-family: var(--font-title);
+  font-size: var(--page-title-size);
+  font-weight: var(--font-title-weight);
+  line-height: 1.2;
+  letter-spacing: -0.045em;
   overflow-wrap: anywhere;
 }
+
 
 .page-header__actions {
   display: flex;
@@ -1376,6 +1409,7 @@ button[data-el='week-grid.cell']:focus-visible {
 .page-header__lede {
   max-inline-size: var(--page-max-reading);
 }
+.page-header[data-title-role='index'] .page-header__lede { color: var(--color-text-2); font-size: 14px; line-height: 1.5; }
 
 .page-header__meta {
   display: flex;

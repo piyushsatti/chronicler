@@ -33,6 +33,7 @@ import { Table } from '../../../components/primitives/Table.js';
 import { Tabs } from '../../../components/primitives/Tabs.js';
 import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { FilterBar } from '../../../components/primitives/FilterBar.js';
+import { PageToolbar } from '../../../components/primitives/PageToolbar.js';
 import { CardGrid } from '../../../components/primitives/CardGrid.js';
 import { Toast } from '../../../components/primitives/Toast.js';
 import { useToast } from '../../../hooks/useToast.js';
@@ -411,16 +412,60 @@ function StatTileDemo(): React.JSX.Element {
 }
 
 function SegmentedDemo(): React.JSX.Element {
-  const [seg, setSeg] = useState('a');
+  const [seg, setSeg] = useState('all');
   return createElement(SegmentedControl, {
-    'aria-label': 'Gallery segments',
+    'aria-label': 'Codex categories',
     value: seg,
     onValueChange: setSeg,
     options: [
-      { value: 'a', label: 'A' },
-      { value: 'b', label: 'B' },
-      { value: 'c', label: 'C' },
+      { value: 'all', label: 'All' },
+      { value: 'lore', label: 'Lore' },
+      { value: 'locations', label: 'Locations' },
+      { value: 'entities', label: 'Entities' },
+      { value: 'features', label: 'Features' },
     ],
+    moreOptions: [
+      { value: 'rules', label: 'Rules' },
+      { value: 'artifacts', label: 'Artifacts' },
+      { value: 'events', label: 'Events' },
+    ],
+  });
+}
+
+function PageToolbarDemo(): React.JSX.Element {
+  const [status, setStatus] = useState('open');
+  const [dateRange, setDateRange] = useState('all');
+  const [search, setSearch] = useState('');
+  return createElement(PageToolbar, {
+    label: 'Quest list controls',
+    segments: createElement(PageToolbar.Segments, {
+      'aria-label': 'Quest status',
+      options: [
+        { value: 'open', label: 'Open' },
+        { value: 'live', label: 'Live' },
+        { value: 'all', label: 'All' },
+      ],
+      value: status,
+      onValueChange: setStatus,
+    }),
+    quickFilters: createElement(PageToolbar.Segments, {
+      'aria-label': 'Quest date',
+      size: 'sm',
+      options: [
+        { value: 'all', label: 'All' },
+        { value: 'today', label: 'Today' },
+        { value: 'tomorrow', label: 'Tomorrow' },
+        { value: 'week', label: 'This week' },
+      ],
+      value: dateRange,
+      onValueChange: setDateRange,
+    }),
+    count: '12 quests',
+    actions: createElement(PageToolbar.Search, {
+      label: 'Search quests',
+      value: search,
+      onValueChange: setSearch,
+    }),
   });
 }
 
@@ -599,6 +644,13 @@ export const GALLERY_ENTRIES: readonly GalleryEntry[] = [
     section: 'primitives',
     layout: 'full',
     render: () => createElement(FilterBarDemo),
+  },
+  {
+    id: 'page-toolbar',
+    title: 'Page toolbar',
+    section: 'primitives',
+    layout: 'full',
+    render: () => createElement(PageToolbarDemo),
   },
   {
     id: 'card-grid',

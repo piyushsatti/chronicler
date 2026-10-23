@@ -1,5 +1,9 @@
-import { useId, useRef, type KeyboardEvent, type ReactNode } from 'react';
+import { Toggle } from '@base-ui/react/toggle';
+import { ToggleGroup } from '@base-ui/react/toggle-group';
+import { Menu as BaseMenu } from '@base-ui/react/menu';
+import { useId, useRef, useState, type ReactNode } from 'react';
 import { useControllable } from './useControllable.js';
+import { useSegmentIndicator } from './useSegmentIndicator.js';
 
 export type SegmentedControlOption<V extends string> = {
   value: V;
@@ -8,7 +12,8 @@ export type SegmentedControlOption<V extends string> = {
 };
 
 export type SegmentedControlProps<V extends string = string> = {
-  options?: SegmentedControlOption<V>[];
+  options?: readonly SegmentedControlOption<V>[];
+  moreOptions?: readonly SegmentedControlOption<V>[];
   value?: V;
   onValueChange?: (v: V) => void;
   defaultValue?: V;
@@ -18,14 +23,9 @@ export type SegmentedControlProps<V extends string = string> = {
   'aria-label'?: string;
 };
 
-/**
- * Radiogroup segmented control (not a tablist), following the WAI-ARIA APG
- * radio group pattern: roving tabindex with a single tab stop (the checked
- * enabled radio, else the first enabled one); arrows move focus with wrap
- * and check the focused radio; Home/End jump to the first/last enabled radio.
- */
 export function SegmentedControl<V extends string = string>({
   options,
+  moreOptions = [],
   value,
   onValueChange,
   defaultValue,
@@ -34,97 +34,96 @@ export function SegmentedControl<V extends string = string>({
   children,
   'aria-label': ariaLabel = 'Options',
 }: SegmentedControlProps<V>): React.JSX.Element {
-  const [current, setValue] = useControllable<V>({
-    value,
-    defaultValue,
-    onChange: onValueChange,
-  });
-  const baseId = useId();
-  const optionRefs = useRef<(HTMLButtonElement | null)[]>([]);
+  const [current, setValue] = useControllable<V>({ value, defaultValue, onChange: onValueChange });
+  const [menuOpen, setMenuOpen] = useState(false);
+  const id = useId();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
+  const currentInMore = moreOptions.some((option) => option.value === current);
+  const moreToggleValue = `${id}-more`;
+  const optionToggleValue = (index: number): string => `${id}-option-${index}`;
+  const activeIndex = options?.findIndex((option) => option.value === current) ?? -1;
+  const activeValue = currentInMore ? moreToggleValue : activeIndex >= 0 ? optionToggleValue(activeIndex) : '';
+
+  useSegmentIndicator(rootRef, rowRef, `${activeValue}:${options?.length}:${moreOptions.length}`);
 
   if (!options?.length) {
     return (
-      <div
-        className={className}
-        data-component="SegmentedControl"
-        data-size={size}
-        role="group"
-        aria-label={ariaLabel}
-      >
+      <div className={className} data-component="SegmentedControl" data-size={size} role="group" aria-label={ariaLabel}>
         {children}
       </div>
     );
   }
 
-  const enabledIdxs = options.flatMap((o, i) => (o.disabled ? [] : [i]));
-  const checkedIdx = options.findIndex((o) => o.value === current && !o.disabled);
-  const tabStopIdx = checkedIdx >= 0 ? checkedIdx : (enabledIdxs[0] ?? -1);
-
-  function moveTo(idx: number): void {
-    optionRefs.current[idx]?.focus();
-    setValue(options![idx].value);
-  }
-
-  function onKeyDown(e: KeyboardEvent<HTMLButtonElement>, idx: number): void {
-    if (!enabledIdxs.length) return;
-    const n = options!.length;
-    let target: number | undefined;
-    if (
-      e.key === 'ArrowRight' ||
-      e.key === 'ArrowDown' ||
-      e.key === 'ArrowLeft' ||
-      e.key === 'ArrowUp'
-    ) {
-      const step = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : -1;
-      for (let i = 1; i <= n; i++) {
-        const cand = (idx + step * i + n * n) % n;
-        if (!options![cand].disabled) {
-          target = cand;
-          break;
-        }
-      }
-    } else if (e.key === 'Home') {
-      target = enabledIdxs[0];
-    } else if (e.key === 'End') {
-      target = enabledIdxs[enabledIdxs.length - 1];
-    } else {
-      return;
-    }
-    e.preventDefault();
-    if (target !== undefined) moveTo(target);
-  }
-
   return (
     <div
-      className={['seg', className].filter(Boolean).join(' ')}
+      ref={rootRef}
+      className={['segmented-track', className].filter(Boolean).join(' ')}
       data-component="SegmentedControl"
       data-size={size}
-      role="radiogroup"
+      role="toolbar"
       aria-label={ariaLabel}
     >
-      {options.map((opt, idx) => {
-        const selected = opt.value === current;
-        return (
-          <button
-            key={opt.value}
-            ref={(el) => {
-              optionRefs.current[idx] = el;
-            }}
-            id={`${baseId}-${opt.value}`}
-            type="button"
-            role="radio"
-            aria-checked={selected}
-            tabIndex={idx === tabStopIdx ? 0 : -1}
-            disabled={opt.disabled}
-            data-active={selected ? '1' : undefined}
-            className={selected ? 'seg__opt on' : 'seg__opt'}
-            onClick={() => setValue(opt.value)}
-            onKeyDown={(e) => onKeyDown(e, idx)}
-          >
-            {opt.label}
-          </button>
-        );
-      })}
+      <div ref={rowRef} className="segmented-row">
+        <span className="segmented-pill" aria-hidden="true" />
+        <ToggleGroup
+          value={activeValue ? [activeValue] : []}
+          onValueChange={(next) => {
+            const selected = next[0];
+            const selectedIndex = options?.findIndex((_, index) => optionToggleValue(index) === selected) ?? -1;
+            if (selectedIndex >= 0) setValue(options![selectedIndex].value);
+          }}
+          className="segmented-options"
+          aria-label={ariaLabel}
+        >
+          {options.map((option, index) => (
+            <Toggle
+              key={option.value}
+              value={optionToggleValue(index)}
+              disabled={option.disabled}
+              className="segmented-option"
+              data-segment-active={current === option.value}
+              onClick={() => {
+                if (current === option.value) onValueChange?.(option.value);
+              }}
+            >
+              {option.label}
+            </Toggle>
+          ))}
+          {moreOptions.length > 0 ? (
+            <BaseMenu.Root open={menuOpen} onOpenChange={setMenuOpen}>
+              <BaseMenu.Trigger
+                className="segmented-option segmented-more"
+                onClick={() => setMenuOpen(true)}
+                render={<Toggle value={moreToggleValue} data-segment-active={currentInMore} />}
+              >
+                More
+                <svg className="segmented-chevron" viewBox="0 0 12 12" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="m2.5 4.25 3.5 3.5 3.5-3.5" />
+                </svg>
+              </BaseMenu.Trigger>
+              <BaseMenu.Portal>
+                <BaseMenu.Positioner className="pop-positioner" side="bottom" align="start" sideOffset={4}>
+                  <BaseMenu.Popup className="pop-content stack" data-component="Menu" data-variant="menu" aria-label={`${ariaLabel} more options`}>
+                    {moreOptions.map((option) => (
+                      <BaseMenu.Item
+                        key={option.value}
+                        className="segmented-menu-item"
+                        role="menuitemradio"
+                        aria-checked={current === option.value}
+                        disabled={option.disabled}
+                        onClick={() => setValue(option.value)}
+                      >
+                        {option.label}
+                      </BaseMenu.Item>
+                    ))}
+                  </BaseMenu.Popup>
+                </BaseMenu.Positioner>
+              </BaseMenu.Portal>
+            </BaseMenu.Root>
+          ) : null}
+        </ToggleGroup>
+      </div>
     </div>
   );
 }

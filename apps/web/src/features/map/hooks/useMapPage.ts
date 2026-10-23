@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLayoutEffect, useRef } from 'react';
 import { useAuth } from '../../../auth/AuthContext.js';
 import { useMe } from '../../../hooks/useMe.js';
@@ -18,12 +18,33 @@ export function useMapPage(atlasCode: string) {
     queryKey: queryKeys.mapDirectory,
     queryFn: loadMapDirectory,
   });
-  const selectedAtlas = atlasCode || directory.data?.maps[0]?.atlasCode || '';
+  const selectedAtlas = atlasCode;
   const map = useQuery({
     queryKey: queryKeys.map(selectedAtlas),
     queryFn: () => loadMap(selectedAtlas),
     enabled: Boolean(selectedAtlas),
   });
+  const directoryMaps = directory.data?.maps ?? [];
+  const siblingData = useQueries({
+    queries: directoryMaps
+      .filter((item) => item.atlasCode !== selectedAtlas)
+      .map((item) => ({
+        queryKey: queryKeys.map(item.atlasCode),
+        queryFn: () => loadMap(item.atlasCode),
+        enabled: Boolean(selectedAtlas),
+      })),
+  });
+  const siblingMaps = directoryMaps.filter(
+    (item) =>
+      item.id === map.data?.id ||
+      (map.data?.regionId && item.regionId === map.data.regionId) ||
+      map.data?.nodes.some((node) => node.submapId === item.id) ||
+      siblingData.some(
+        (query) =>
+          query.data?.id === item.id &&
+          query.data.nodes.some((node) => node.submapId === map.data?.id),
+      ),
+  );
   const isAdmin = Boolean(me.data?.roles.includes('admin'));
   const creatableRegions =
     directory.data?.regions.filter((region) => region.canCreateMap) ?? [];
@@ -102,6 +123,7 @@ export function useMapPage(atlasCode: string) {
     directory,
     map,
     selectedAtlas,
+    siblingMaps,
     creatableRegions,
     canCreate: Boolean(
       me.data && !directory.isError && (isAdmin || creatableRegions.length),

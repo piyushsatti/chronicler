@@ -10,12 +10,13 @@ export type LabelPlacement = {
   truncated: boolean;
 };
 
-const FONT_PX = 13;
+const FONT_PX = 12;
 const CHAR_PX = 8;
-const GAP_PX = 8;
-const NODE_RADIUS = 9;
-const BELOW = 24;
-const ABOVE = -16;
+const GAP_PX = 10;
+export const MAP_PIN_RADIUS = 17;
+export const MAP_PIN_TAIL = 25;
+const BELOW = MAP_PIN_TAIL + 15;
+const ABOVE = -MAP_PIN_RADIUS - 10;
 const LONG = 18;
 const SHORT = 9;
 
@@ -31,7 +32,7 @@ function labelBox(node: LabelInput, text: string, dy: number, dx = 0): LabelBoun
   return {
     x1: node.x + dx - half,
     x2: node.x + dx + half,
-    y1: node.y + dy - FONT_PX - 3,
+    y1: node.y + dy - FONT_PX - 2,
     y2: node.y + dy + 5,
   };
 }
@@ -40,40 +41,86 @@ function overlaps(a: LabelBounds, b: LabelBounds): boolean {
   return a.x1 < b.x2 && a.x2 > b.x1 && a.y1 < b.y2 && a.y2 > b.y1;
 }
 
-/** The viewport routes connectors orthogonally, so intersection is exact. */
+/** Liang–Barsky clipping checks the actual route path against each label plate. */
 function crosses(box: LabelBounds, seg: Segment): boolean {
-  return (
-    Math.max(seg.x1, seg.x2) > box.x1 &&
-    Math.min(seg.x1, seg.x2) < box.x2 &&
-    Math.max(seg.y1, seg.y2) > box.y1 &&
-    Math.min(seg.y1, seg.y2) < box.y2
-  );
+  const dx = seg.x2 - seg.x1;
+  const dy = seg.y2 - seg.y1;
+  let t0 = 0;
+  let t1 = 1;
+  for (const [p, q] of [
+    [-dx, seg.x1 - box.x1],
+    [dx, box.x2 - seg.x1],
+    [-dy, seg.y1 - box.y1],
+    [dy, box.y2 - seg.y1],
+  ]) {
+    if (p === 0) {
+      if (q < 0) return false;
+      continue;
+    }
+    const t = q / p;
+    if (p < 0) t0 = Math.max(t0, t);
+    else t1 = Math.min(t1, t);
+    if (t0 > t1) return false;
+  }
+  return true;
 }
 
 export function placeLabels(
   nodes: readonly LabelInput[],
   segments: readonly Segment[] = [],
   bounds?: LabelBounds,
+  selectedId?: string,
 ): LabelPlacement[] {
   const circles: LabelBounds[] = nodes.map((n) => ({
-    x1: n.x - NODE_RADIUS - GAP_PX,
-    x2: n.x + NODE_RADIUS + GAP_PX,
-    y1: n.y - NODE_RADIUS - GAP_PX,
-    y2: n.y + NODE_RADIUS + GAP_PX,
+    x1: n.x - MAP_PIN_RADIUS - 1,
+    x2: n.x + MAP_PIN_RADIUS + 1,
+    y1: n.y - MAP_PIN_RADIUS - 1,
+    y2: n.y + MAP_PIN_RADIUS + 1,
   }));
   const placed: LabelBounds[] = [];
   return nodes.map((node, index) => {
+    const long = shorten(node.name, LONG);
+    const short = shorten(node.name, SHORT);
+    const marginY = bounds
+      ? [
+          bounds.y1 + FONT_PX + 2 - node.y,
+          bounds.y2 - 5 - node.y,
+        ]
+      : [];
+    const beside = (text: string) =>
+      [ABOVE, -5, BELOW].flatMap((dy) => {
+        const dx = text.length * CHAR_PX / 2 + GAP_PX / 2 + MAP_PIN_RADIUS + 2;
+        return [
+          { text, dy, dx: -dx },
+          { text, dy, dx },
+        ];
+      });
     const attempts = [
-      { text: shorten(node.name, LONG), dy: BELOW },
-      { text: shorten(node.name, LONG), dy: ABOVE },
-      { text: shorten(node.name, SHORT), dy: BELOW },
-      { text: shorten(node.name, SHORT), dy: ABOVE },
+      { text: long, dy: BELOW, dx: 0 },
+      { text: long, dy: ABOVE, dx: 0 },
+      ...(node.id === selectedId
+        ? [
+            ...marginY.map((dy) => ({ text: long, dy, dx: 0 })),
+            ...beside(long),
+          ]
+        : []),
+      { text: short, dy: BELOW, dx: 0 },
+      { text: short, dy: ABOVE, dx: 0 },
+      ...(node.id === selectedId
+        ? [
+            ...marginY.map((dy) => ({ text: short, dy, dx: 0 })),
+            ...beside(short),
+          ]
+        : []),
     ].map((attempt) => {
-      const box = labelBox(node, attempt.text, attempt.dy);
-      const dx = bounds
+      const box = labelBox(node, attempt.text, attempt.dy, attempt.dx);
+      const shiftX = bounds
         ? Math.max(0, bounds.x1 - box.x1) + Math.min(0, bounds.x2 - box.x2)
         : 0;
-      return { ...attempt, dx };
+      const shiftY = bounds
+        ? Math.max(0, bounds.y1 - box.y1) + Math.min(0, bounds.y2 - box.y2)
+        : 0;
+      return { ...attempt, dx: attempt.dx + shiftX, dy: attempt.dy + shiftY };
     });
     const free = (box: LabelBounds): boolean =>
       (!bounds ||
@@ -84,9 +131,23 @@ export function placeLabels(
       !placed.some((other) => overlaps(box, other)) &&
       !circles.some((circle, i) => i !== index && overlaps(box, circle)) &&
       !segments.some((segment) => crosses(box, segment));
-    const chosen = attempts.find((attempt) =>
-      free(labelBox(node, attempt.text, attempt.dy, attempt.dx)),
-    );
+    const chosen =
+      attempts.find((attempt) =>
+        free(labelBox(node, attempt.text, attempt.dy, attempt.dx)),
+      ) ??
+      (node.id === selectedId
+        ? attempts.find((attempt) => {
+            const box = labelBox(node, attempt.text, attempt.dy, attempt.dx);
+            return (
+              (!bounds ||
+                (box.x1 >= bounds.x1 &&
+                  box.x2 <= bounds.x2 &&
+                  box.y1 >= bounds.y1 &&
+                  box.y2 <= bounds.y2)) &&
+              !circles.some((circle, i) => i !== index && overlaps(box, circle))
+            );
+          })
+        : undefined);
     if (chosen) placed.push(labelBox(node, chosen.text, chosen.dy, chosen.dx));
     return {
       id: node.id,

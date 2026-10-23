@@ -1,35 +1,110 @@
 .root h1,
 .root h2,
 .root p {
-  margin: 0;
-}
-
-.period {
-  margin-bottom: var(--sp-7);
-}
-
-.periodHeader {
-  margin-bottom: var(--sp-4);
-  align-items: baseline;
-}
-
-.periodHeader > * {
-  white-space: nowrap;
-}
-
-.periodRule {
-  flex: 1;
-  border-top: 1px solid var(--color-border-2);
-}
-
-.item {
-  min-width: 0;
+  margin-top: 0;
 }
 
 .header {
   margin-bottom: var(--sp-5);
 }
 
+.timeline {
+  padding-inline-start: calc(var(--sp-6) + var(--sp-1));
+}
+
 .filters {
+  margin-bottom: var(--sp-4);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-4);
+  color: var(--color-text-2);
+  font-size: 12px;
+}
+
+.legendItem {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.legendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--chron-type-color);
+}
+
+.dayGroup {
   margin-bottom: var(--sp-6);
+}
+
+.dayHeading {
+  display: flex;
+  align-items: baseline;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-2);
+}
+
+.dayHeading h2 {
+  flex: 0 0 auto;
+  margin-bottom: 0;
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 650;
+}
+
+.dayHeading > span:not(.dayRule) {
+  color: var(--color-text-2);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.dayRule {
+  flex: 1 1 auto;
+  min-width: var(--sp-3);
+  border-top: 1px solid var(--color-border-2);
+}
+
+.entries {
+  position: relative;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.entries::before {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -26px;
+  border-left: 1px solid var(--color-border-2);
+  content: '';
+}
+
+.item {
+  min-width: 0;
+}
+
+:global([data-width-class='compact']) .dayHeading {
+  gap: var(--sp-2);
+}
+
+:global([data-width-class='compact']) .timeline {
+  padding-inline-start: calc(var(--sp-5) + var(--sp-1));
+}
+
+:global([data-width-class='compact']) .entries::before {
+  left: -21px;
+}
+
+:global([data-width-class='compact']) .dayHeading h2 {
+  font-size: 13px;
+}
+
+:global([data-width-class='compact']) .dayHeading > span:not(.dayRule) {
+  font-size: 10px;
 }

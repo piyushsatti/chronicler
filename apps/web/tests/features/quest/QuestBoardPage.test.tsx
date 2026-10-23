@@ -1,5 +1,5 @@
 import { graphql, http, HttpResponse } from 'msw';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
@@ -7,9 +7,38 @@ import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
 import { QuestBoardPage } from '../../../src/features/quest/pages/QuestBoardPage.js';
 import { server } from '../../../src/mocks/server.js';
 import { queryKeys } from '../../../src/api/queryKeys.js';
+import { DEFAULT_PREFERENCES, savePrefs } from '../../../src/context/theme.utils.js';
 import listGood from '../../fixtures/wire/quest/list-good.json';
 import recruitment from '../../fixtures/wire/quest/board-recruitment.json';
 import { renderWithProviders } from '../../test-utils.js';
+
+afterEach(() => {
+  vi.unstubAllGlobals();
+  vi.useRealTimers();
+});
+
+function installIntersectionHarness(): () => void {
+  const callbacks: IntersectionObserverCallback[] = [];
+  class TestObserver implements IntersectionObserver {
+    readonly root = null;
+    readonly rootMargin = '160px 0px';
+    readonly thresholds = [0];
+    constructor(callback: IntersectionObserverCallback) {
+      callbacks.push(callback);
+    }
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+    takeRecords(): IntersectionObserverEntry[] {
+      return [];
+    }
+  }
+  vi.stubGlobal('IntersectionObserver', TestObserver);
+  return () => callbacks.at(-1)?.(
+    [{ isIntersecting: true } as IntersectionObserverEntry],
+    {} as IntersectionObserver,
+  );
+}
 
 function visibleQuestTitles() {
   return screen
@@ -33,10 +62,13 @@ describe('QuestBoardPage', () => {
     );
     renderWithProviders(<QuestBoardPage />);
     await screen.findByText('The Hound of Culann');
-    const cards = screen.getAllByTestId('quest-card');
-    expect(within(cards[0]).getByText('dev (@_coolpants)')).toBeInTheDocument();
-    expect(within(cards[1]).getByText('dev (@mortal.bard)')).toBeInTheDocument();
-    expect(within(cards[2]).getByText('dev (@kd29)')).toBeInTheDocument();
+    const cardFor = (title: string) =>
+      screen.getAllByTestId('quest-card').find((card) =>
+        within(card).queryByText(title),
+      );
+    expect(within(cardFor("Lily's Nightmares")!).getByText('dev (@mortal.bard)')).toBeInTheDocument();
+    expect(within(cardFor('The Hound of Culann')!).getByText('dev (@_coolpants)')).toBeInTheDocument();
+    expect(within(cardFor('Pawluck Region Story Finale')!).getByText('dev (@kd29)')).toBeInTheDocument();
   });
 
   it('disambiguates the live strip and quest cards as one visible group', async () => {
@@ -65,10 +97,15 @@ describe('QuestBoardPage', () => {
     expect(liveBand).toHaveTextContent('Mira (@mara)');
   });
 
-  it('lists the generic Open population in server order with tavern chrome', async () => {
+  it('lists Open quests by earliest schedule with tavern chrome', async () => {
     renderWithProviders(<QuestBoardPage />);
     expect(await screen.findByText('Siege of Kraghold')).toBeInTheDocument();
-    expect(visibleQuestTitles()).toEqual(['Live at the Gate', 'Siege of Kraghold']);
+    expect(visibleQuestTitles()).toEqual(['Siege of Kraghold', 'Festival Run']);
+    expect(
+      within(screen.getAllByTestId('quest-card')[0]).getByText(
+        /\d{1,2} \w{3} 2026, \d{2}:\d{2}/,
+      ),
+    ).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Quests');
     expect(screen.getByText('2 quests')).toBeInTheDocument();
@@ -102,12 +139,12 @@ describe('QuestBoardPage', () => {
       'true',
     );
     expect(visibleQuestTitles()).toEqual([
-      'The Hound of Culann',
       "Lily's Nightmares",
-      'Pawluck Region Story Finale',
-      'The Silent Sawmills II',
       'The Silence',
+      'The Hound of Culann',
+      'Pawluck Region Story Finale',
       'The Bell Tower of Dal',
+      'The Silent Sawmills II',
     ]);
     const cards = screen.getAllByRole('article');
     cards.forEach((card) => {
@@ -117,80 +154,82 @@ describe('QuestBoardPage', () => {
     expect(await screen.findByText('Quest detail destination')).toBeInTheDocument();
   });
 
-  it('requests each server segment and keeps full-live rows and all machine statuses', async () => {
+  it('filters projected statuses locally and keeps every status in All', async () => {
     const user = userEvent.setup();
     const requests: unknown[] = [];
-    const populations = {
-      open: [listGood.items[4], listGood.items[6]],
-      scheduled: [listGood.items[7]],
-      live: [listGood.items[4], listGood.items[5]],
-      all: listGood.items,
-    };
     server.use(
       graphql.query('QuestList', ({ variables }) => {
         requests.push(variables);
-        const key =
-          variables.filters.displayStatus ?? variables.filters.status ?? 'all';
-        const items = populations[key as keyof typeof populations];
-        return HttpResponse.json({ data: { quests: { items, total: items.length } } });
+        return HttpResponse.json({ data: { quests: listGood } });
       }),
     );
     renderWithProviders(<QuestBoardPage />);
-    await screen.findByText('Siege of Kraghold');
-    expect(visibleQuestTitles()).toEqual(['Live at the Gate', 'Siege of Kraghold']);
+    await screen.findByText('Festival Run');
+    expect(visibleQuestTitles()).toEqual(['Siege of Kraghold', 'Festival Run']);
     expect(screen.getByRole('button', { name: 'Open' })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
-    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute(
-      'aria-pressed',
-      'false',
-    );
-
-    await user.click(screen.getByRole('button', { name: 'Scheduled' }));
-    await screen.findByText('Festival Run');
-    expect(visibleQuestTitles()).toEqual(['Festival Run']);
-    await user.click(screen.getByRole('button', { name: 'Live' }));
-    await screen.findByText('Full party at the Gate');
+    const statusBar = () => screen.getByRole('toolbar', { name: 'Quest status' });
+    await user.click(within(statusBar()).getByRole('button', { name: 'Live' }));
+    await screen.findByText('Live at the Gate');
     expect(visibleQuestTitles()).toEqual([
       'Live at the Gate',
       'Full party at the Gate',
     ]);
-    await user.click(screen.getByRole('button', { name: 'All' }));
+    await user.click(within(statusBar()).getByRole('button', { name: 'All' }));
     await screen.findByText('Settled expedition');
     expect(visibleQuestTitles()).toEqual(
-      listGood.items.map((item) => item.briefDocument.title),
+      [...listGood.items]
+        .sort((a, b) => a.scheduledAt.localeCompare(b.scheduledAt) || a.id.localeCompare(b.id))
+        .map((item) => item.briefDocument.title),
     );
-    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute(
+    expect(within(statusBar()).getByRole('button', { name: 'All' })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
-    expect(screen.getByRole('button', { name: 'Open' })).toHaveAttribute(
+    expect(within(statusBar()).getByRole('button', { name: 'Open' })).toHaveAttribute(
       'aria-pressed',
       'false',
     );
-    // Open + Live meta queries run alongside the segment grid query.
-    expect(
-      requests.filter((r) => {
-        const filters = (r as { filters: Record<string, string> }).filters;
-        return filters.status === 'open' && !filters.displayStatus;
-      }).length,
-    ).toBeGreaterThanOrEqual(1);
-    expect(requests).toEqual(
-      expect.arrayContaining([
-        { filters: { status: 'open' }, limit: 50, offset: 0 },
-        { filters: { displayStatus: 'scheduled' }, limit: 50, offset: 0 },
-        { filters: { displayStatus: 'live' }, limit: 50, offset: 0 },
-        { filters: {}, limit: 50, offset: 0 },
-      ]),
-    );
+    expect(requests).toContainEqual({ filters: {}, limit: 50, offset: 0 });
   });
 
-  it('loads complete offset pages and retains each segment cache', async () => {
+  it('uses the saved viewer zone for both quick filters and card dates', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-01-01T00:30:00Z'));
+    savePrefs({ ...DEFAULT_PREFERENCES, timezone: 'America/Los_Angeles' }, null);
     const user = userEvent.setup();
+    const items = listGood.items.slice(6).map((item, index) => ({
+      ...item,
+      scheduledAt: index === 0 ? '2025-12-31T23:00:00Z' : '2026-01-01T09:00:00Z',
+    }));
+    server.use(
+      graphql.query('QuestList', ({ variables }) => HttpResponse.json({
+        data: { quests: variables.filters.displayStatus === 'live'
+          ? { items: [], total: 0 }
+          : { items, total: items.length } },
+      })),
+    );
+    renderWithProviders(<QuestBoardPage />);
+    await screen.findByText('Siege of Kraghold');
+    const dateBar = screen.getByRole('toolbar', { name: 'Quest date' });
+
+    await user.click(within(dateBar).getByRole('button', { name: 'Today' }));
+    expect(visibleQuestTitles()).toEqual(['Siege of Kraghold']);
+    expect(within(screen.getByRole('article')).getByText('Wed 31 Dec 2025, 15:00')).toBeInTheDocument();
+
+    await user.click(within(dateBar).getByRole('button', { name: 'Tomorrow' }));
+    expect(visibleQuestTitles()).toEqual(['Festival Run']);
+    expect(within(screen.getByRole('article')).getByText('Thu 1 Jan 2026, 01:00')).toBeInTheDocument();
+  });
+
+  it('loads another offset page when the current page has no Open matches', async () => {
+    const user = userEvent.setup();
+    const intersect = installIntersectionHarness();
     const requests: unknown[] = [];
     const items = Array.from({ length: 51 }, (_, index) => ({
-      ...listGood.items[6],
+      ...(index === 50 ? listGood.items[6] : listGood.items[3]),
       id: `00000000-0000-4000-8000-${String(index + 100).padStart(12, '0')}`,
       shortCode: `Q-${index + 1000}`,
       briefDocument: {
@@ -201,8 +240,7 @@ describe('QuestBoardPage', () => {
     server.use(
       graphql.query('QuestList', ({ variables }) => {
         requests.push(variables);
-        const population =
-          variables.filters.displayStatus === 'live' ? [listGood.items[5]] : items;
+        const population = items;
         return HttpResponse.json({
           data: {
             quests: {
@@ -220,28 +258,21 @@ describe('QuestBoardPage', () => {
     queryClient.setQueryData(queryKeys.questBoard, [
       { title: 'Unrelated board cache' },
     ]);
-    await screen.findByText('Recruitment 50');
-    expect(screen.getAllByRole('article')).toHaveLength(50);
+    expect(await screen.findByText('No open quests right now.')).toBeInTheDocument();
     expect(screen.queryByText('Recruitment 51')).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Load more' }));
+    intersect();
     await screen.findByText('Recruitment 51');
-    expect(screen.getAllByRole('article')).toHaveLength(51);
-    expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Live' }));
-    await screen.findByText('Full party at the Gate');
     expect(screen.getAllByRole('article')).toHaveLength(1);
-    await user.click(screen.getByRole('button', { name: 'Open' }));
-    await screen.findByText('Recruitment 50');
-    expect(screen.getByText('Recruitment 51')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument();
-    await waitFor(() => expect(requests.length).toBeGreaterThanOrEqual(4));
+    await user.click(within(screen.getByRole('toolbar', { name: 'Quest status' })).getByRole('button', { name: 'All' }));
+    expect(screen.getAllByRole('article')).toHaveLength(51);
+    await waitFor(() => expect(requests.length).toBeGreaterThanOrEqual(2));
     expect(requests).toContainEqual({
-      filters: { status: 'open' },
+      filters: {},
       limit: 50,
       offset: 50,
     });
     expect(
-      queryClient.getQueryData(['quests', 'pages', { status: 'open' }]),
+      queryClient.getQueryData(['quests', 'pages', {}]),
     ).toMatchObject({
       pages: [
         { items: expect.any(Array), total: 51 },
@@ -270,7 +301,7 @@ describe('QuestBoardPage', () => {
       6,
     );
     expect(
-      screen.getByRole('region', { name: 'Quest board filters' }),
+      screen.getByRole('region', { name: 'Quest filters' }),
     ).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     release();
@@ -287,12 +318,50 @@ describe('QuestBoardPage', () => {
     );
     renderWithProviders(<QuestBoardPage />);
     expect(await screen.findByText('No open quests right now.')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'All' }));
-    expect(await screen.findByRole('button', { name: 'All' })).toHaveAttribute(
+    const statusBar = screen.getByRole('toolbar', { name: 'Quest status' });
+    await user.click(within(statusBar).getByRole('button', { name: 'All' }));
+    expect(within(statusBar).getByRole('button', { name: 'All' })).toHaveAttribute(
       'aria-pressed',
       'true',
     );
     expect(screen.queryAllByRole('article')).toHaveLength(0);
+  });
+
+  it('recovers visible quests from an empty All plus This week result', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<QuestBoardPage />);
+    await screen.findByText('Siege of Kraghold');
+
+    const statusBar = screen.getByRole('toolbar', { name: 'Quest status' });
+    await user.click(within(statusBar).getByRole('button', { name: 'All' }));
+    const dateBar = screen.getByRole('toolbar', { name: 'Quest date' });
+    await user.click(within(dateBar).getByRole('button', { name: 'This week' }));
+
+    expect(await screen.findByText('No quests match these filters.')).toBeInTheDocument();
+    expect(screen.queryByText('There are no quests on the board yet.')).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Show all quests' }));
+    expect(within(dateBar).getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getAllByRole('article')).toHaveLength(listGood.items.length);
+  });
+
+  it('clears status, date, and search together when showing all quests', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<QuestBoardPage />);
+    await screen.findByText('Siege of Kraghold');
+    const statusBar = screen.getByRole('toolbar', { name: 'Quest status' });
+    const dateBar = screen.getByRole('toolbar', { name: 'Quest date' });
+    await user.click(within(dateBar).getByRole('button', { name: 'This week' }));
+    await user.click(screen.getByRole('button', { name: 'Search quests' }));
+    const search = screen.getByRole('searchbox', { name: 'Search quests' });
+    await user.type(search, 'no matching quest');
+
+    expect(screen.queryAllByRole('article')).toHaveLength(0);
+    await user.click(screen.getByRole('button', { name: 'Show all quests' }));
+
+    expect(within(statusBar).getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true');
+    expect(within(dateBar).getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true');
+    expect(search).toHaveValue('');
+    expect(screen.getAllByRole('article')).toHaveLength(listGood.items.length);
   });
 
   it('rejects an empty first page with a positive population instead of claiming an empty lane', async () => {
@@ -337,9 +406,7 @@ describe('QuestBoardPage', () => {
     await user.click(screen.getByRole('button', { name: 'Try again' }));
     await screen.findByText('The Hound of Culann');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
-    expect(requests).toEqual(
-      expect.arrayContaining([{ filters: { status: 'open' }, limit: 50, offset: 0 }]),
-    );
+    expect(requests).toContainEqual({ filters: {}, limit: 50, offset: 0 });
   });
 
   it('renders a live strip when live quests exist', async () => {

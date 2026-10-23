@@ -34,3 +34,8 @@ export function summaryCategoryMeta(
   const key = (category ?? '').toLowerCase();
   return SUMMARY_CATEGORY_META[key] ?? DEFAULT_SUMMARY_CATEGORY_META;
 }
+
+export function summaryCategoryLabel(category: string | null | undefined): string {
+  const label = summaryCategoryMeta(category).label;
+  return label.endsWith('recap') ? label : `${label} recap`;
+}

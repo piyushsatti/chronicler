@@ -21,6 +21,7 @@ export const codexDirectoryWireSchema = z.object({
 export const codexCategoriesWireSchema = z.array(
   z.object({
     category: z.string(),
+    count: z.number().int().nonnegative(),
   }),
 );
 
