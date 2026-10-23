@@ -5,7 +5,9 @@ export function NpcsDirectoryPage(): React.JSX.Element {
     <CodexLinkedDirectoryPage
       title="NPCs"
       categoryPrefix="NPC"
-      eyebrow="The cast"
+      noun="NPCs"
+      singular="NPC"
+      lede="The people of the world: allies, rivals and everyone in between."
     />
   );
 }

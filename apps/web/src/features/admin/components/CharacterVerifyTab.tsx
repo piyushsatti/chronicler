@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom';
 import { Button } from '../../../components/primitives/Button.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
+import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
+import { handleOnlyName } from '../../../utils/format.js';
 import { isSafeDdbUrl } from '../../../utils/url.js';
 import type { useCharacterVerifyTab } from '../hooks/useCharacterVerifyTab.js';
 
@@ -12,6 +14,7 @@ export function CharacterVerifyTab({
 }: {
   view: ReturnType<typeof useCharacterVerifyTab>;
 }): React.JSX.Element {
+  const { formatDate } = useDateFormatter();
   const {
     queue,
     changeRequestId,
@@ -49,7 +52,7 @@ export function CharacterVerifyTab({
         {feedbackNode}
         <EmptyState
           kind="no-characters"
-          message="No characters are awaiting verification."
+          message="Nothing to review. No characters are waiting for verification."
         />
       </div>
     );
@@ -64,29 +67,28 @@ export function CharacterVerifyTab({
           const ddbUrl = isSafeDdbUrl(row.ddbUrl) ? row.ddbUrl : null;
           return (
             <li key={row.id} className="card stack">
-              <p className="type-title">
-                <Link className="type-link" to={`/characters/${row.shortCode}`}>
-                  {row.name}
-                </Link>
-              </p>
+              <Link className="type-title" to={`/characters/${row.shortCode}`}>
+                {row.name}
+              </Link>
               <p className="type-caption">
-                {row.shortCode}
-                {row.ownerHandle ? ` · @${row.ownerHandle}` : ''}
+                {row.ownerHandle
+                  ? `Played by ${handleOnlyName(row.ownerHandle)}. `
+                  : ''}
+                {row.verificationSubmittedAt
+                  ? `Submitted ${formatDate(row.verificationSubmittedAt)}. `
+                  : ''}
                 {ddbUrl ? (
-                  <>
-                    {' · '}
-                    <a href={ddbUrl} target="_blank" rel="noopener noreferrer">
-                      D&amp;D Beyond
-                    </a>
-                  </>
+                  <a href={ddbUrl} target="_blank" rel="noopener noreferrer">
+                    D&amp;D Beyond sheet
+                  </a>
                 ) : (
-                  ' · no DDB link'
+                  'No D&D Beyond link.'
                 )}
               </p>
               <div className="row">
                 <Button
                   type="button"
-                  variant="ghost"
+                  variant="secondary"
                   size="sm"
                   disabled={decide.isPending || row.verificationSubmittedAt === null}
                   onClick={() => {
@@ -138,7 +140,9 @@ export function CharacterVerifyTab({
                   }}
                 >
                   <label className="stack">
-                    <span className="type-label">Change request note (required)</span>
+                    <span className="type-label">
+                      What does the owner need to change?
+                    </span>
                     <textarea
                       disabled={
                         decide.isPending || row.verificationSubmittedAt === null

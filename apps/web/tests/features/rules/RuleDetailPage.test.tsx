@@ -26,11 +26,8 @@ describe('rule detail families', () => {
   it('shows a guide on its guide URL', async () => {
     renderAt(`/rules/guides/${guide.slug}`);
     expect(await screen.findByText(guide.effectiveBody!)).toBeInTheDocument();
-    expect(
-      screen.getByText('Guide', { selector: '[data-component="Chip"]' }),
-    ).toBeInTheDocument();
     // The way back sits above the title, not under it.
-    const back = screen.getByRole('link', { name: '← Rules' });
+    const back = screen.getByRole('link', { name: 'Rules' });
     const title = screen.getByRole('heading', { level: 1, name: guide.title });
     expect(
       back.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING,
@@ -41,9 +38,11 @@ describe('rule detail families', () => {
   it('does not serve a guide on a ruling URL', async () => {
     renderAt(`/rules/rulings/${guide.slug}`);
     expect(
-      await screen.findByText('There is no ruling at this address.'),
+      await screen.findByText(
+        'This ruling may have been removed, or the link is out of date.',
+      ),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Back to Rules' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Rules' })).toHaveAttribute(
       'href',
       '/rules',
     );
@@ -53,7 +52,9 @@ describe('rule detail families', () => {
   it('does not serve a ruling on a guide URL', async () => {
     renderAt(`/rules/guides/${ruling.slug}`);
     expect(
-      await screen.findByText('There is no guide at this address.'),
+      await screen.findByText(
+        'This guide may have been removed, or the link is out of date.',
+      ),
     ).toBeInTheDocument();
   });
 

@@ -13,7 +13,7 @@ export function useEditorHistory(documentId: string | null, enabled: boolean) {
   const query = useQuery({
     queryKey: ['editor', 'revisions', documentId, offset],
     queryFn: () => loadEditorRevisions(documentId ?? '', offset),
-    enabled: enabled && open && documentId !== null,
+    enabled: enabled && documentId !== null,
   });
   return {
     error: query.error,

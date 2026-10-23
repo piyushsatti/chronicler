@@ -1,13 +1,25 @@
 import { AdminReadFailure } from './AdminReadFailure.js';
 import { Button } from '../../../components/primitives/Button.js';
 import { Card } from '../../../components/primitives/Card.js';
+import { Select } from '../../../components/primitives/Select.js';
 import { Modal } from '../../../components/primitives/Modal.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { AdminPagination } from './AdminPagination.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
-import { humanizeKey } from '../../../utils/format.js';
+import { Chip } from '../../../components/primitives/Chip.js';
+import { CardGrid } from '../../../components/primitives/CardGrid.js';
+import { FilterBar } from '../../../components/primitives/FilterBar.js';
+import { humanizeKey, isSentinelDate, pluralize } from '../../../utils/format.js';
 import type { useRegionsPanel } from '../hooks/useRegionsPanel.js';
+
+const KIND_TONE: Record<string, 'accent' | 'status' | 'line'> = {
+  server: 'accent',
+  archon: 'status',
+  uncharted: 'line',
+};
+
+const REGION_KINDS = ['uncharted', 'archon', 'server'] as const;
 
 export function RegionsPanel({
   view,
@@ -20,58 +32,29 @@ export function RegionsPanel({
     return <AdminReadFailure error={regions.error} retry={regions.retry} />;
   if (!regions.data) return <StatePanel status="loading" />;
   return (
-    <Card className="stack" data-testid="regions-panel" data-el="admin.regionsPanel">
-      <h3 className="type-heading">Regions</h3>
-      <div className="row">
-        <label className="stack">
-          <span className="type-label">Region kind</span>
-          <select
-            className="field-input"
-            value={view.filterKind}
-            onChange={(e) => view.setFilterKind(e.target.value)}
+    <div className="stack" data-testid="regions-panel" data-el="admin.regionsPanel">
+      <FilterBar
+        label="Filter regions"
+        count={pluralize(regions.data.length, 'region')}
+      >
+        <FilterBar.Group>
+          <Chip
+            selected={view.filterKind === ''}
+            onClick={() => view.setFilterKind('')}
           >
-            <option value="">All kinds</option>
-            {['uncharted', 'archon', 'server'].map((kind) => (
-              <option key={kind} value={kind}>
-                {humanizeKey(kind)}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <div className="row" data-wrap="1">
-        <label className="stack">
-          <span className="type-label">Name</span>
-          <input
-            className="field-input"
-            value={view.name}
-            disabled={create.isPending}
-            onChange={(e) => view.setName(e.target.value)}
-          />
-        </label>
-        <label className="stack">
-          <span className="type-label">Kind</span>
-          <select
-            className="field-input"
-            value={view.kind}
-            disabled={create.isPending}
-            onChange={(e) => view.setKind(e.target.value)}
-          >
-            {['uncharted', 'archon', 'server'].map((kind) => (
-              <option key={kind} value={kind}>
-                {humanizeKey(kind)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <Button
-          type="button"
-          disabled={view.commandPending || !view.name.trim()}
-          onClick={() => create.mutate()}
-        >
-          Create region
-        </Button>
-      </div>
+            All kinds
+          </Chip>
+          {REGION_KINDS.map((kind) => (
+            <Chip
+              key={kind}
+              selected={view.filterKind === kind}
+              onClick={() => view.setFilterKind(kind)}
+            >
+              {humanizeKey(kind)}
+            </Chip>
+          ))}
+        </FilterBar.Group>
+      </FilterBar>
       {view.message ? (
         <p className="type-caption" role="status">
           {view.message}
@@ -79,8 +62,8 @@ export function RegionsPanel({
       ) : null}
       {create.isError ? <StatePanel status="error" error={create.error} /> : null}
       {editing ? (
-        <div className="card stack" data-el="admin.regionDetailEditor">
-          <h4 className="type-heading">Edit {editing.region.name}</h4>
+        <Card className="stack" data-el="admin.regionDetailEditor">
+          <h3 className="type-heading">Edit {editing.region.name}</h3>
           {editing.status === 'loading' ? (
             <StatePanel status="loading" />
           ) : editing.status === 'error' ? (
@@ -110,7 +93,7 @@ export function RegionsPanel({
               </label>
               <p className="type-caption">Kind: {humanizeKey(editing.region.kind)}</p>
               <label className="stack">
-                <span className="type-label">Region Document UUID</span>
+                <span className="type-label">Region document ID</span>
                 <input
                   className="field-input"
                   disabled={saveEdit.isPending}
@@ -133,7 +116,7 @@ export function RegionsPanel({
                 />
               </label>
               <label className="stack">
-                <span className="type-label">Archon member UUIDs, one per line</span>
+                <span className="type-label">Archon member IDs, one per line</span>
                 <textarea
                   className="field-input"
                   disabled={saveEdit.isPending}
@@ -163,60 +146,101 @@ export function RegionsPanel({
           {saveEdit.isError ? (
             <StatePanel status="error" error={saveEdit.error} />
           ) : null}
-        </div>
+        </Card>
       ) : null}
       <AdminPagination page={view.pagination} />
       {regions.data.length === 0 ? (
         <EmptyState kind="no-regions" message="No regions match this filter." />
       ) : (
-        <ul className="stack">
+        <CardGrid as="ul" aria-label="Regions">
           {regions.data.map((region) => {
             const nextKind = view.nextKind(region.kind);
             return (
-              <li
-                key={region.id}
-                className="card row"
-                data-wrap="1"
-                data-justify="between"
-              >
-                <div className="stack">
-                  <p className="type-title">{region.name}</p>
-                  <p className="type-caption">
-                    {humanizeKey(region.kind)}
-                    {region.charterDeadline
-                      ? ` · Charter due ${formatDate(region.charterDeadline)}`
-                      : ''}
-                  </p>
-                </div>
-                <div className="row" data-gap="2" data-wrap="1">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    disabled={view.commandPending || view.advancement !== null}
-                    onClick={() => {
-                      void view.beginEdit(region);
-                    }}
+              <li key={region.id}>
+                <Card className="stack" pad={4}>
+                  <div
+                    className="row"
+                    data-justify="between"
+                    data-align="center"
+                    data-wrap="1"
                   >
-                    Edit
-                  </Button>
-                  {nextKind ? (
+                    <span className="type-title">{region.name}</span>
+                    <Chip size="sm" tone={KIND_TONE[region.kind] ?? 'category'}>
+                      {humanizeKey(region.kind)}
+                    </Chip>
+                  </div>
+                  {region.charterDeadline && !isSentinelDate(region.charterDeadline) ? (
+                    <p className="type-caption">
+                      Charter due {formatDate(region.charterDeadline)}
+                    </p>
+                  ) : null}
+                  <div className="row" data-gap="2" data-wrap="1">
                     <Button
                       type="button"
-                      variant="secondary"
                       size="sm"
-                      disabled={view.commandPending || editing !== null}
-                      onClick={() => view.beginAdvance(region)}
+                      variant="secondary"
+                      disabled={view.commandPending || view.advancement !== null}
+                      onClick={() => {
+                        void view.beginEdit(region);
+                      }}
                     >
-                      Advance to {humanizeKey(nextKind)}
+                      Edit
                     </Button>
-                  ) : null}
-                </div>
+                    {nextKind ? (
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        disabled={view.commandPending || editing !== null}
+                        onClick={() => view.beginAdvance(region)}
+                      >
+                        Advance to {humanizeKey(nextKind)}
+                      </Button>
+                    ) : null}
+                  </div>
+                </Card>
               </li>
             );
           })}
-        </ul>
+        </CardGrid>
       )}
+      <Card className="stack" pad={4}>
+        <h2 className="type-title">Add a region</h2>
+        <div className="row" data-wrap="1" data-align="end">
+          <label className="stack">
+            <span className="type-label">Name</span>
+            <input
+              className="field-input"
+              value={view.name}
+              disabled={create.isPending}
+              onChange={(e) => view.setName(e.target.value)}
+            />
+          </label>
+          <div className="stack">
+            <span className="type-label" id="region-kind-label">
+              Kind
+            </span>
+            <Select
+              label="Kind"
+              labelId="region-kind-label"
+              value={view.kind}
+              disabled={create.isPending}
+              onValueChange={view.setKind}
+              options={REGION_KINDS.map((kind) => ({
+                value: kind,
+                label: humanizeKey(kind),
+              }))}
+            />
+          </div>
+          <Button
+            type="button"
+            disabled={view.commandPending || !view.name.trim()}
+            onClick={() => create.mutate()}
+          >
+            Create region
+          </Button>
+        </div>
+      </Card>
       {view.advancement ? (
         <Modal
           open
@@ -247,6 +271,6 @@ export function RegionsPanel({
           </div>
         </Modal>
       ) : null}
-    </Card>
+    </div>
   );
 }

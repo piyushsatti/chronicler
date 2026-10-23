@@ -23,12 +23,8 @@ describe('QuestBoardPage', () => {
     expect(await screen.findByText('Siege of Kraghold')).toBeInTheDocument();
     expect(visibleQuestTitles()).toEqual(['Live at the Gate', 'Siege of Kraghold']);
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
-      'The Tavern Board',
-    );
-    expect(screen.getByText('Find a table')).toBeInTheDocument();
-    expect(screen.getByText(/quests open/)).toBeInTheDocument();
-    expect(screen.getByText('Open: 2 quests')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Quests');
+    expect(screen.getByText('2 quests')).toBeInTheDocument();
     expect(screen.getByRole('list', { name: 'Open quests' })).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /Sign up/i }).length).toBeGreaterThan(
       0,
@@ -54,8 +50,8 @@ describe('QuestBoardPage', () => {
       { route: '/quests' },
     );
     await screen.findByText('The Hound of Culann');
-    expect(screen.getByRole('tab', { name: 'Open' })).toHaveAttribute(
-      'aria-selected',
+    expect(screen.getByRole('button', { name: 'Open' })).toHaveAttribute(
+      'aria-pressed',
       'true',
     );
     expect(visibleQuestTitles()).toEqual([
@@ -67,13 +63,10 @@ describe('QuestBoardPage', () => {
       'The Bell Tower of Dal',
     ]);
     const cards = screen.getAllByRole('article');
-    const expectedCodes = ['Q-417', 'Q-419', 'Q-420', 'Q-421', 'Q-422', 'Q-425'];
-    cards.forEach((card, index) => {
-      expect(within(card).getByText(expectedCodes[index])).toBeInTheDocument();
+    cards.forEach((card) => {
+      expect(within(card).queryByText(/^Q-\d+$/)).not.toBeInTheDocument();
     });
-    await user.click(
-      screen.getByRole('button', { name: /Open Q-417: The Hound of Culann/i }),
-    );
+    await user.click(screen.getByRole('button', { name: /Open The Hound of Culann/i }));
     expect(await screen.findByText('Quest detail destination')).toBeInTheDocument();
   });
 
@@ -98,25 +91,37 @@ describe('QuestBoardPage', () => {
     renderWithProviders(<QuestBoardPage />);
     await screen.findByText('Siege of Kraghold');
     expect(visibleQuestTitles()).toEqual(['Live at the Gate', 'Siege of Kraghold']);
-    expect(screen.getByRole('tab', { name: 'Open' })).toHaveClass('on');
-    expect(screen.getByRole('tab', { name: 'All' })).not.toHaveClass('on');
+    expect(screen.getByRole('button', { name: 'Open' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
 
-    await user.click(screen.getByRole('tab', { name: 'Scheduled' }));
+    await user.click(screen.getByRole('button', { name: 'Scheduled' }));
     await screen.findByText('Festival Run');
     expect(visibleQuestTitles()).toEqual(['Festival Run']);
-    await user.click(screen.getByRole('tab', { name: 'Live' }));
+    await user.click(screen.getByRole('button', { name: 'Live' }));
     await screen.findByText('Full party at the Gate');
     expect(visibleQuestTitles()).toEqual([
       'Live at the Gate',
       'Full party at the Gate',
     ]);
-    await user.click(screen.getByRole('tab', { name: 'All' }));
+    await user.click(screen.getByRole('button', { name: 'All' }));
     await screen.findByText('Settled expedition');
     expect(visibleQuestTitles()).toEqual(
       listGood.items.map((item) => item.briefDocument.title),
     );
-    expect(screen.getByRole('tab', { name: 'All' })).toHaveClass('on');
-    expect(screen.getByRole('tab', { name: 'Open' })).not.toHaveClass('on');
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Open' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    );
     // Open + Live meta queries run alongside the segment grid query.
     expect(
       requests.filter((r) => {
@@ -175,10 +180,10 @@ describe('QuestBoardPage', () => {
     await screen.findByText('Recruitment 51');
     expect(screen.getAllByRole('article')).toHaveLength(51);
     expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('tab', { name: 'Live' }));
+    await user.click(screen.getByRole('button', { name: 'Live' }));
     await screen.findByText('Full party at the Gate');
     expect(screen.getAllByRole('article')).toHaveLength(1);
-    await user.click(screen.getByRole('tab', { name: 'Open' }));
+    await user.click(screen.getByRole('button', { name: 'Open' }));
     await screen.findByText('Recruitment 50');
     expect(screen.getByText('Recruitment 51')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Load more' })).not.toBeInTheDocument();
@@ -218,7 +223,7 @@ describe('QuestBoardPage', () => {
       6,
     );
     expect(
-      screen.getByRole('tablist', { name: 'Quest board filters' }),
+      screen.getByRole('region', { name: 'Quest board filters' }),
     ).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
     release();
@@ -234,10 +239,10 @@ describe('QuestBoardPage', () => {
       ),
     );
     renderWithProviders(<QuestBoardPage />);
-    expect(await screen.findByText('No quests in this lane.')).toBeInTheDocument();
-    await user.click(screen.getByRole('tab', { name: 'All' }));
-    expect(await screen.findByRole('tab', { name: 'All' })).toHaveAttribute(
-      'aria-selected',
+    expect(await screen.findByText('No open quests right now.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'All' }));
+    expect(await screen.findByRole('button', { name: 'All' })).toHaveAttribute(
+      'aria-pressed',
       'true',
     );
     expect(screen.queryAllByRole('article')).toHaveLength(0);
@@ -253,7 +258,7 @@ describe('QuestBoardPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'The server returned data this screen cannot use.',
     );
-    expect(screen.queryByText('No quests in this lane.')).not.toBeInTheDocument();
+    expect(screen.queryByText('No open quests right now.')).not.toBeInTheDocument();
   });
 
   it('retries the selected generic population after a controlled error', async () => {
@@ -278,8 +283,8 @@ describe('QuestBoardPage', () => {
       'Something went wrong. Please try again.',
     );
     expect(screen.queryByText('private failure detail')).not.toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: 'Open' })).toHaveAttribute(
-      'aria-selected',
+    expect(screen.getByRole('button', { name: 'Open' })).toHaveAttribute(
+      'aria-pressed',
       'true',
     );
     await user.click(screen.getByRole('button', { name: 'Try again' }));

@@ -1,9 +1,8 @@
 import { ProtectedRoute } from '../../../auth/ProtectedRoute.js';
 import { SingleRegionPage } from '../../../chrome/singleRegion.js';
 import { PageShell } from '../../../components/foundation/PageShell.js';
+import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { Link } from 'react-router-dom';
-import { Card } from '../../../components/primitives/Card.js';
-import styles from '../components/loginNotifications.module.css';
 import { Button } from '../../../components/primitives/Button.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { NotificationRow } from '../components/NotificationRow.js';
@@ -64,28 +63,16 @@ function NotificationsBody(): React.JSX.Element {
           emptyMessage="No visible notifications on this page. More may be available."
         />
       ) : items.length === 0 ? (
-        <Card
-          as="section"
-          className={`stack ${styles.panel}`}
-          data-gap="3"
-          aria-labelledby="inbox-empty"
-        >
-          <h2 className="type-title" id="inbox-empty">
-            No notifications yet
-          </h2>
-          <p className="type-body">
-            Character verifications, quest signups and scheduling, and activity on your
-            documents will show up here. Choose which ones you get in your settings.
-          </p>
-          <div className="row" data-wrap="1" data-gap="2">
-            <Link className="btn btn--secondary" to="/quests">
-              Find a quest
-            </Link>
-            <Link className="btn btn--ghost" to="/settings">
+        <StatePanel
+          status="empty"
+          title="No notifications yet"
+          emptyMessage="Updates about your characters, quests and documents will show up here."
+          action={
+            <Link className="btn btn--secondary" to="/settings">
               Notification settings
             </Link>
-          </div>
-        </Card>
+          }
+        />
       ) : (
         <ul className="notification-list stack">
           {items.map((item) => (
@@ -121,7 +108,11 @@ function NotificationsBody(): React.JSX.Element {
 export function NotificationsPage(): React.JSX.Element {
   return (
     <ProtectedRoute>
-      <PageShell eyebrow="Inbox" title="Notifications">
+      <PageShell>
+        <PageHeader
+          title="Notifications"
+          lede="Reviews, sign-ups and schedule changes that involve you."
+        />
         <SingleRegionPage page="notifications">
           <NotificationsBody />
         </SingleRegionPage>

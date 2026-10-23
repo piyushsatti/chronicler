@@ -27,9 +27,13 @@ import { Popover } from '../../../components/primitives/Popover.js';
 import { SegmentedControl } from '../../../components/primitives/SegmentedControl.js';
 import { Skeleton } from '../../../components/primitives/Skeleton.js';
 import { SplitPane } from '../../../components/primitives/SplitPane.js';
+import { DetailLayout } from '../../../components/primitives/DetailLayout.js';
 import { StatTile } from '../../../components/primitives/StatTile.js';
 import { Table } from '../../../components/primitives/Table.js';
 import { Tabs } from '../../../components/primitives/Tabs.js';
+import { PageHeader } from '../../../components/primitives/PageHeader.js';
+import { FilterBar } from '../../../components/primitives/FilterBar.js';
+import { CardGrid } from '../../../components/primitives/CardGrid.js';
 import { Toast } from '../../../components/primitives/Toast.js';
 import { useToast } from '../../../hooks/useToast.js';
 import { WeekGrid } from '../../../components/primitives/WeekGrid.js';
@@ -98,17 +102,86 @@ function TabsDemo(): React.JSX.Element {
   });
 }
 
+function PageHeaderDemo(): React.JSX.Element {
+  return createElement(
+    'div',
+    { className: 'stack', 'data-gap': '6' },
+    createElement(PageHeader, {
+      level: 2,
+      title: 'Community',
+      lede: "See who's free, find a table, and browse everyone on the server.",
+      meta: '42 members',
+      actions: createElement(Button, { variant: 'primary', size: 'sm' }, 'New entry'),
+    }),
+    createElement(PageHeader, {
+      level: 2,
+      back: { to: '/codex', label: 'Codex' },
+      title: 'Lightfall Coast',
+      meta: 'Updated 19 Oct 2026 by Sable Vey',
+    }),
+  );
+}
+
+function DetailLayoutDemo(): React.JSX.Element {
+  return createElement(DetailLayout, {
+    railLabel: 'About this entry',
+    rail: createElement(Card, { pad: 4 }, 'Related links sit in the rail.'),
+    children: createElement(DetailLayout.Reading, {
+      children: createElement(
+        'p',
+        { className: 'type-narrative' },
+        'The prose body sits in the reading column; tables and cards use the full main column.',
+      ),
+    }),
+  });
+}
+
+function FilterBarDemo(): React.JSX.Element {
+  const [author, setAuthor] = useState('all');
+  return createElement(
+    FilterBar,
+    { label: 'Filter entries', count: '24 entries' },
+    createElement(FilterBar.Search, {
+      label: 'Search entries',
+      placeholder: 'Search entries',
+    }),
+    createElement(
+      FilterBar.Group,
+      { label: 'Author' },
+      ...['all', 'mine', 'dms'].map((value) =>
+        createElement(
+          Chip,
+          { key: value, selected: author === value, onClick: () => setAuthor(value) },
+          value,
+        ),
+      ),
+    ),
+  );
+}
+
+function CardGridDemo(): React.JSX.Element {
+  return createElement(
+    CardGrid,
+    { as: 'ul', 'aria-label': 'Demo cards' },
+    ...['One', 'Two', 'Three', 'Four'].map((label) =>
+      createElement('li', { key: label }, createElement(Card, { pad: 4 }, label)),
+    ),
+  );
+}
+
 function EmptyDemo(): React.JSX.Element {
   return createElement(EmptyState, {
     kind: 'no-quests',
-    message: 'Gallery empty-state demo.',
+    message: 'No quests match these filters.',
+    actionLabel: 'Clear filters',
+    onAction: () => undefined,
   });
 }
 
 function ErrorDemo(): React.JSX.Element {
   return createElement(ErrorState, {
-    title: 'Gallery error demo',
-    message: 'Retry control is wired for contract smoke.',
+    title: 'Couldn’t load this',
+    message: 'Check your connection and try again.',
     onRetry: () => undefined,
   });
 }
@@ -393,14 +466,18 @@ function CheckboxDemo(): React.JSX.Element {
       onCheckedChange: setChecked,
     }),
     createElement(Checkbox, { label: 'Unchecked', defaultChecked: false }),
-    createElement(Checkbox, { label: 'Disabled', defaultChecked: true, disabled: true }),
+    createElement(Checkbox, {
+      label: 'Disabled',
+      defaultChecked: true,
+      disabled: true,
+    }),
   );
 }
 
 function StubNoticeDemo(): React.JSX.Element {
   return createElement(StubNotice, {
-    title: 'Stub',
-    message: 'Capability stub — not wired yet.',
+    title: 'Not available yet',
+    message: 'This feature isn’t available yet.',
   });
 }
 
@@ -507,6 +584,30 @@ export const GALLERY_ENTRIES: readonly GalleryEntry[] = [
     title: 'Tabs',
     section: 'primitives',
     render: () => createElement(TabsDemo),
+  },
+  {
+    id: 'page-header',
+    title: 'PageHeader',
+    section: 'primitives',
+    render: () => createElement(PageHeaderDemo),
+  },
+  {
+    id: 'filter-bar',
+    title: 'FilterBar',
+    section: 'primitives',
+    render: () => createElement(FilterBarDemo),
+  },
+  {
+    id: 'card-grid',
+    title: 'CardGrid',
+    section: 'primitives',
+    render: () => createElement(CardGridDemo),
+  },
+  {
+    id: 'detail-layout',
+    title: 'DetailLayout',
+    section: 'primitives',
+    render: () => createElement(DetailLayoutDemo),
   },
   {
     id: 'empty-state',

@@ -5,24 +5,15 @@
   min-width: 0;
 }
 
-.hero {
+.facts {
+  margin: 0;
   display: flex;
   flex-direction: column;
-  gap: var(--sp-3);
-  padding-bottom: var(--sp-2);
-  border-bottom: 1px solid var(--color-border);
+  gap: var(--sp-4);
 }
 
-.hero h1,
-.hero p {
+.facts dd {
   margin: 0;
-}
-
-.meta {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--sp-2);
 }
 
 .roster {
@@ -44,4 +35,24 @@
 
 .rosterRow:first-child {
   border-top: 0;
+}
+
+.openSeat {
+  color: var(--color-text-3);
+}
+
+.openMark {
+  inline-size: var(--sp-6);
+  block-size: var(--sp-6);
+  border-radius: 50%;
+  border: 1px dashed var(--color-border-2);
+}
+
+/* UA heading and paragraph margins would add to the card stack gaps. */
+.root :is(h2, h3, p) {
+  margin: 0;
+}
+
+.facts + p {
+  margin-top: var(--sp-4);
 }

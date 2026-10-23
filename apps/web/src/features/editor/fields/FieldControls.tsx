@@ -176,7 +176,11 @@ function OptionState<T>({
     );
   if (options.status === 'loading')
     return (
-      <Skeleton width="100%" height="2.25rem" aria-label={`Loading ${label.toLowerCase()}`} />
+      <Skeleton
+        width="100%"
+        height="2.25rem"
+        aria-label={`Loading ${label.toLowerCase()}`}
+      />
     );
   if (options.status === 'empty')
     return (
@@ -366,7 +370,7 @@ export function DateTimeField({
         }}
         ariaLabel={label}
       />
-      <span className="type-caption">Timezone: {timeZone}</span>
+      <span className="type-caption">Shown in your time zone ({timeZone.replace(/_/g, ' ')})</span>
       {unresolved?.status === 'gap' ? (
         <p role="alert">This time does not exist in {timeZone}. Choose another time.</p>
       ) : unresolved?.status === 'invalid' ? (
@@ -651,7 +655,7 @@ export function GenreTagsField({
     <div className="pf-tags row" data-wrap="1">
       {value.map((t) => (
         <span key={t} className="pf-tag chip" data-tone="line">
-          {t}
+          {t.charAt(0).toUpperCase() + t.slice(1)}
           <button
             type="button"
             aria-label={`Remove genre ${t}`}

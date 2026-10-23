@@ -1,14 +1,13 @@
 import { AdminPagination } from './AdminPagination.js';
 import { Link } from 'react-router-dom';
+import { Card } from '../../../components/primitives/Card.js';
+import { CardGrid } from '../../../components/primitives/CardGrid.js';
+import { FilterBar } from '../../../components/primitives/FilterBar.js';
 import { Chip } from '../../../components/primitives/Chip.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { toAppError } from '../../../errors/toAppError.js';
-import {
-  CHARACTER_STATUS_LABELS,
-  characterStatusLabel,
-  verificationLabel,
-} from '../../../utils/format.js';
+import { CHARACTER_STATUS_LABELS, characterStatusLabel, handleOnlyName, pluralize, verificationLabel } from '../../../utils/format.js';
 import type { CharacterDirectoryPanelView } from '../hooks/useCharacterDirectoryPanel.js';
 import styles from './CharacterDirectoryPanel.module.css';
 
@@ -25,55 +24,55 @@ export function CharacterDirectoryPanel({
 
   return (
     <section
-      className={`card stack ${styles.panel}`}
+      className={`stack ${styles.panel}`}
       aria-label="Character directory"
       data-el="admin.characterDirectory"
     >
-      <h3 className="type-heading">Character directory</h3>
-      <div className={styles.filters}>
-        <label className="stack" data-gap="1">
-          <span className="type-label">Name starts with</span>
-          <input
-            className="field-input"
-            type="search"
-            value={view.namePrefix}
-            onChange={(e) => view.setNamePrefix(e.target.value)}
-          />
-        </label>
-        <label className="stack" data-gap="1">
-          <span className="type-label">Status</span>
-          <select
-            className="field-input"
-            value={view.status}
-            onChange={(e) => view.setStatus(e.target.value)}
-          >
-            <option value="">All statuses</option>
-            {Object.entries(CHARACTER_STATUS_LABELS).map(([value, label]) => (
-              <option key={value} value={value}>
-                {label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="stack" data-gap="1">
-          <span className="type-label">Region</span>
-          <select
-            className="field-input"
-            value={view.regionId}
-            disabled={regions.isPending && !view.regionId}
-            onChange={(e) => view.setRegionId(e.target.value)}
-          >
-            <option value="">
-              {regions.isPending ? 'Loading regions…' : 'All regions'}
-            </option>
-            {(regions.data ?? []).map((region) => (
-              <option key={region.id} value={region.id}>
-                {region.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
+      <FilterBar
+        label="Filter characters"
+        count={
+          query.data
+            ? pluralize(pagination.total ?? query.data.length, 'character')
+            : undefined
+        }
+      >
+        <FilterBar.Search
+          label="Character name starts with"
+          placeholder="Search by name"
+          value={view.namePrefix}
+          onValueChange={view.setNamePrefix}
+        />
+        <FilterBar.Group>
+          <Chip selected={view.status === ''} onClick={() => view.setStatus('')}>
+            All
+          </Chip>
+          {Object.entries(CHARACTER_STATUS_LABELS).map(([value, label]) => (
+            <Chip
+              key={value}
+              selected={view.status === value}
+              onClick={() => view.setStatus(value)}
+            >
+              {label}
+            </Chip>
+          ))}
+        </FilterBar.Group>
+        <FilterBar.Picker
+          label="Region"
+          value={view.regionId}
+          disabled={regions.isPending && !view.regionId}
+          onValueChange={view.setRegionId}
+          options={[
+            {
+              value: '',
+              label: regions.isPending ? 'Loading regions…' : 'All regions',
+            },
+            ...(regions.data ?? []).map((region) => ({
+              value: region.id,
+              label: region.name,
+            })),
+          ]}
+        />
+      </FilterBar>
       {regions.isError ? (
         <StatePanel
           variant="inline"
@@ -103,35 +102,36 @@ export function CharacterDirectoryPanel({
         />
       ) : null}
       {query.data?.length ? (
-        <ul className={styles.list}>
+        <CardGrid as="ul" aria-label="Characters">
           {query.data.map((row) => (
-            <li key={row.id} className={styles.row}>
-              <div className="stack" data-gap="1">
-                <span className="type-title">
-                  {row.name} <span className="type-code">{row.shortCode}</span>
-                </span>
-                <span className="type-caption">@{row.ownerHandle}</span>
-              </div>
-              <div className="row" data-wrap="1" data-gap="2" data-align="center">
-                <Chip size="sm" tone="line">
-                  {characterStatusLabel(row.status)}
-                </Chip>
-                {REVIEW_STATES.has(row.verificationStatus.toLowerCase()) ? (
-                  <Chip size="sm" tone="status">
-                    {verificationLabel(row.verificationStatus)}
-                  </Chip>
-                ) : null}
+            <li key={row.id}>
+              <Card className="stack" pad={3}>
                 <Link
-                  className="btn btn--secondary btn--sm"
+                  className="type-title"
                   to={`/characters/${row.shortCode}`}
                   aria-label={`Open ${row.name}`}
                 >
-                  Open
+                  {row.name}
                 </Link>
-              </div>
+                {handleOnlyName(row.ownerHandle, '') ? (
+                  <span className="type-caption">
+                    Played by {handleOnlyName(row.ownerHandle, '')}
+                  </span>
+                ) : null}
+                <Chip.Row>
+                  <Chip size="sm" tone="line">
+                    {characterStatusLabel(row.status)}
+                  </Chip>
+                  {REVIEW_STATES.has(row.verificationStatus.toLowerCase()) ? (
+                    <Chip size="sm" tone="status">
+                      {verificationLabel(row.verificationStatus)}
+                    </Chip>
+                  ) : null}
+                </Chip.Row>
+              </Card>
             </li>
           ))}
-        </ul>
+        </CardGrid>
       ) : null}
     </section>
   );

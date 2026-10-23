@@ -14,10 +14,7 @@ import { createTestQueryClient } from '../../../src/providers.js';
 import { createAppStore } from '../../../src/store/store.js';
 import { server } from '../../../src/mocks/server.js';
 import goodNotifications from '../../fixtures/wire/notifications/list-good.json';
-import {
-  dispatchFeatureGraphql,
-  graphqlOperationName,
-} from './graphql-test-utils.js';
+import { dispatchFeatureGraphql, graphqlOperationName } from './graphql-test-utils.js';
 
 function seedToken(): void {
   const header = btoa(JSON.stringify({ alg: 'none', typ: 'JWT' }));

@@ -21,14 +21,18 @@ function wrapper() {
   function Wrapper({ children }: { children: ReactNode }) {
     return (
       <QueryClientProvider client={client}>
-        <MemoryRouter><AuthProvider>{children}</AuthProvider></MemoryRouter>
+        <MemoryRouter>
+          <AuthProvider>{children}</AuthProvider>
+        </MemoryRouter>
       </QueryClientProvider>
     );
   }
   return { client, Wrapper };
 }
 async function ready(client: ReturnType<typeof createTestQueryClient>) {
-  await waitFor(() => expect(client.getQueryData(['me'])).toMatchObject({ id: characterActor.id }));
+  await waitFor(() =>
+    expect(client.getQueryData(['me'])).toMatchObject({ id: characterActor.id }),
+  );
 }
 function character() {
   const parsed = parseCharacter(wire);

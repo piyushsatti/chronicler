@@ -51,10 +51,9 @@
     color: var(--color-text-3);
   }
   .eyebrow {
-    font-family: var(--font-mono);
-    font-size: 11px;
-    letter-spacing: 0.12em;
-    text-transform: uppercase;
+    font-family: var(--font-body);
+    font-size: 12.5px;
+    font-weight: 500;
     color: var(--color-text-3);
   }
   .num { font-variant-numeric: tabular-nums; }
@@ -96,16 +95,8 @@
   [data-justify="center"]  { justify-content: center; }
   [data-justify="end"]     { justify-content: flex-end; }
 
-  /* Page container — Atlas-structured pages render inside this */
-  .page {
-    max-width: 1180px;
-    margin: 0 auto;
-    padding: var(--sp-7) var(--sp-6) var(--sp-8);
-    font-size: 14px;
-    line-height: 1.5;
-  }
-  .page[data-max="wide"]   { max-width: 1380px; }
-  .page[data-max="narrow"] { max-width: 900px; }
+  /* Page container: the one frame lives in base.css (.page) and reads the
+     layout tokens; there is no wide or narrow tier. */
 
   /* Responsive collapse for grids on small screens */
   /* viewport queries removed — use Imposition navPatternFor / declarations */
@@ -427,7 +418,7 @@
     margin-bottom: var(--sp-6);
   }
   .live-band .pulse { width: 9px; height: 9px; border-radius: 50%; background: var(--color-status-dead); animation: atlas-pulse 1.5s infinite; flex-shrink: 0; }
-  .live-band .lbl { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 500; }
+  .live-band .lbl { font-family: var(--font-body); font-size: 12.5px; font-weight: 600; }
   .live-band .sep { width: 1px; height: 16px; background: color-mix(in srgb, var(--color-bg-deep) 22%, transparent); }
   .live-band .det { font-size: 13px; opacity: 0.9; }
   .live-band .det em { font-style: normal; font-weight: 600; }
@@ -471,7 +462,7 @@
   .week { margin-bottom: var(--sp-4); }
   .week .day { padding: var(--sp-3) var(--sp-2); border-radius: var(--rad-sm); text-align: center; background: var(--color-bg-surface); }
   .week .day[data-busy="1"] { background: var(--color-bg-surface); }
-  .week .day .dow { font-size: 10.5px; color: var(--color-text-3); text-transform: uppercase; letter-spacing: 0.06em; }
+  .week .day .dow { font-size: 12px; color: var(--color-text-3); }
   .week .day .n   { font-family: var(--font-display); font-size: 22px; font-weight: 500; margin: 3px 0 1px; }
   .week .day .lbl { font-size: 10px; color: var(--color-text-3); }
   .muster-day { padding: var(--sp-3) var(--sp-2); border-radius: var(--rad-sm); text-align: center; background: var(--color-bg-surface); border: 1px solid var(--color-border); }
@@ -479,7 +470,7 @@
 
   /* ── Data table ──────────────────────────────────────────── */
   .tbl { width: 100%; border-collapse: collapse; }
-  .tbl th { text-align: left; padding: var(--sp-2) var(--sp-3); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-text-3); font-weight: 600; border-bottom: 1px solid var(--color-border); }
+  .tbl th { text-align: left; padding: var(--sp-2) var(--sp-3); font-size: 12px; color: var(--color-text-3); font-weight: 600; border-bottom: 1px solid var(--color-border); }
   .tbl td { padding: var(--sp-3); border-bottom: 1px solid var(--color-border); font-size: 13px; vertical-align: middle; }
   .tbl tr:last-child td { border-bottom: none; }
   .tbl tr:hover td { background: var(--color-bg-surface); }
@@ -544,13 +535,7 @@
   .sec-label { display: flex; align-items: baseline; justify-content: space-between; margin: var(--sp-6) 0 var(--sp-3); }
   .sec-label h3 { font-family: var(--font-display); font-size: 19px; font-weight: 500; letter-spacing: -0.015em; margin: 0; color: var(--color-text); }
 
-  /* ── Tabs ────────────────────────────────────────────────── */
-  .tabs { display: flex; gap: var(--sp-1); border-bottom: 1px solid var(--color-border); margin-bottom: var(--sp-5); }
-  /* Tab items only: scoped to the tab list so links and buttons inside a
-     tab panel keep their own styling. */
-  :is(.tabs__list, .tabs:not([data-component='Tabs'])) > :is(a, button) { padding: 10px 14px; font-size: 13.5px; font-weight: 550; color: var(--color-text-3); cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; user-select: none; background: none; border-top: none; border-left: none; border-right: none; font-family: inherit; }
-  :is(.tabs__list, .tabs:not([data-component='Tabs'])) > :is(a, button):hover { color: var(--color-text); }
-  :is(.tabs__list, .tabs:not([data-component='Tabs'])) > :is(a, button).active { color: var(--color-text); border-bottom-color: var(--color-accent); }
+  /* Tabs: the one skin is the Tabs primitive's (primitives.css). */
 
   /* ── Timeline ────────────────────────────────────────────── */
   .tl { position: relative; padding-left: var(--sp-5); }
@@ -571,11 +556,11 @@
   .prose .drop::first-letter { font-size: 3.4em; float: left; line-height: 0.8; padding: 6px 10px 0 0; font-weight: 500; color: var(--color-accent); }
   .gameinfo { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--sp-3) var(--sp-5); }
   .gameinfo .gi { display: flex; flex-direction: column; gap: 3px; padding: var(--sp-3) 0; border-bottom: 1px solid var(--color-border); }
-  .gameinfo .gi .k { font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--color-text-3); }
+  .gameinfo .gi .k { font-size: 12px; color: var(--color-text-3); }
   .gameinfo .gi .v { font-size: 14px; font-weight: 500; }
 
   /* ── Roster grid ─────────────────────────────────────────── */
-  .roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: var(--sp-4); }
+  .roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(var(--card-min), 100%), 1fr)); gap: var(--sp-4); }
 
   /* ── Icon helper ─────────────────────────────────────────── */
   .ico { flex-shrink: 0; }

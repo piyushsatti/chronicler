@@ -3,6 +3,7 @@ import { Button } from '../../../components/primitives/Button.js';
 import type { Pointcrawl } from '../adapters/mapAdapter.js';
 import styles from '../pages/map.module.css';
 import { edgeDisplayLabel } from '../edgeLabel.js';
+import { placeLabels } from '../labelLayout.js';
 
 export function graphBounds(nodes: Pointcrawl['nodes']) {
   let minX = 0,
@@ -26,10 +27,13 @@ export function PointcrawlViewport({
   map,
   selectedId,
   onSelect,
+  actions,
 }: {
   map: Pointcrawl;
   selectedId: string | null;
   onSelect: (id: string) => void;
+  /** Editing controls (Add location / Add connection) for people who can edit. */
+  actions?: React.ReactNode;
 }) {
   const marker = useId().replaceAll(':', '');
   const renderNodes = useMemo(() => {
@@ -72,6 +76,34 @@ export function PointcrawlViewport({
     size.width > 0 && size.height > 0
       ? Math.min(size.width / width, size.height / height)
       : 1;
+  const labels = useMemo(
+    () =>
+      new Map(
+        placeLabels(
+          renderNodes.map((node) => ({
+            id: node.id,
+            name: node.name,
+            x: node.x * pixelsPerUnit,
+            y: node.y * pixelsPerUnit,
+          })),
+          map.edges.flatMap((edge) => {
+            const a = byId.get(edge.nodeA);
+            const b = byId.get(edge.nodeB);
+            return a && b
+              ? [
+                  {
+                    x1: a.x * pixelsPerUnit,
+                    y1: a.y * pixelsPerUnit,
+                    x2: b.x * pixelsPerUnit,
+                    y2: b.y * pixelsPerUnit,
+                  },
+                ]
+              : [];
+          }),
+        ).map((label) => [label.id, label]),
+      ),
+    [renderNodes, pixelsPerUnit, map.edges, byId],
+  );
   const keyboardSelect = (event: React.KeyboardEvent<SVGGElement>, index: number) => {
     let next = index;
     if (event.key === 'Home') next = 0;
@@ -127,6 +159,7 @@ export function PointcrawlViewport({
           Fit map
         </Button>
         <span className="type-caption">{Math.round(camera.zoom * 100)}%</span>
+        {actions ? <div className={styles.canvasActions}>{actions}</div> : null}
       </div>
       <svg
         ref={graph}
@@ -205,27 +238,39 @@ export function PointcrawlViewport({
             </g>
           ) : null;
         })}
-        {renderNodes.map((node, index) => (
-          <g
-            key={node.id}
-            role="button"
-            aria-label={node.name}
-            aria-pressed={node.id === selectedId}
-            tabIndex={node.id === selectedId || (!selectedId && index === 0) ? 0 : -1}
-            data-node-index={index}
-            className={styles.node}
-            transform={`translate(${node.x} ${node.y})`}
-            onClick={() => onSelect(node.id)}
-            onKeyDown={(event) => keyboardSelect(event, index)}
-          >
-            <title>{node.name}</title>
-            <circle r={8 / pixelsPerUnit} vectorEffect="non-scaling-stroke" />
-          </g>
-        ))}
+        {renderNodes.map((node, index) => {
+          const label = labels.get(node.id);
+          return (
+            <g
+              key={node.id}
+              role="button"
+              aria-label={node.name}
+              aria-pressed={node.id === selectedId}
+              tabIndex={node.id === selectedId || (!selectedId && index === 0) ? 0 : -1}
+              data-node-index={index}
+              className={styles.node}
+              transform={`translate(${node.x} ${node.y})`}
+              onClick={() => onSelect(node.id)}
+              onKeyDown={(event) => keyboardSelect(event, index)}
+            >
+              <title>{node.name}</title>
+              <circle r={9 / pixelsPerUnit} vectorEffect="non-scaling-stroke" />
+              <text
+                className={styles.nodeLabel}
+                aria-hidden="true"
+                y={(label?.dy ?? 24) / pixelsPerUnit}
+                fontSize={13 / pixelsPerUnit}
+                textAnchor="middle"
+                strokeWidth={4 / pixelsPerUnit}
+              >
+                {label?.text ?? node.name}
+              </text>
+            </g>
+          );
+        })}
       </svg>
-      <p className="type-caption">
-        Drag the background to pan. Arrow keys choose locations. Full location names and
-        connections are listed below.
+      <p className={`type-caption ${styles.canvasHint}`}>
+        Drag to pan. Arrow keys move between locations.
       </p>
     </section>
   );

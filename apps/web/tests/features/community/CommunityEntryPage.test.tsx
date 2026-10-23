@@ -52,7 +52,7 @@ describe('Community document reader', () => {
       ),
     );
     reader();
-    expect(await screen.findByText('No body available for this viewer.')).toBeVisible();
+    expect(await screen.findByText('Nothing to read here yet.')).toBeVisible();
   });
 
   it('hides the prior body when a later read loses permission', async () => {
@@ -92,7 +92,7 @@ describe('Community document reader', () => {
         "This community post doesn't exist, or it isn't shared with you.",
       ),
     ).toBeVisible();
-    expect(screen.getByRole('link', { name: '← Community' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Back to Community' })).toHaveAttribute(
       'href',
       '/community',
     );

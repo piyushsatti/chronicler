@@ -159,9 +159,7 @@ export function trackPrivilegedRequests() {
             'CurrentAdminAccess',
             'CurrentReviewAccess',
             'QuestAuthoringAuthority',
-          ].includes(
-            graphqlOperationName(body.query) ?? '',
-          )
+          ].includes(graphqlOperationName(body.query) ?? '')
         )
           return;
       } catch {

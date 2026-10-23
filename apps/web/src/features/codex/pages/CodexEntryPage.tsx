@@ -5,12 +5,15 @@ import { PageShell } from '../../../components/foundation/PageShell.js';
 import { ContentRenderer } from '../../../components/foundation/ContentRenderer.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { Card } from '../../../components/primitives/Card.js';
+import { DetailLayout } from '../../../components/primitives/DetailLayout.js';
+import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { Skeleton } from '../../../components/primitives/Skeleton.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
 import { codexCategoryHeading } from '../../../utils/codexCategories.js';
-import { humanizeKey, pluralize } from '../../../utils/format.js';
+import { handleLabel, humanizeKey, pluralize } from '../../../utils/format.js';
 import { useCodexBacklinks } from '../hooks/useCodexBacklinks.js';
 import { useCodexEntryPage } from '../hooks/useCodexEntryPage.js';
+import { useCodexPage } from '../hooks/useCodexPage.js';
 import styles from './codex.module.css';
 
 const DECLARATION: PageDeclaration = {
@@ -24,17 +27,22 @@ function Backlinks({
 }: {
   links: { documentId: string; relation: string }[];
   count: number;
-}): React.JSX.Element {
+}): React.JSX.Element | null {
   const rows = useCodexBacklinks(links);
   const visible = rows.filter((row) => row.status !== 'hidden');
+  // Nothing links here: say nothing instead of an empty card.
+  if (count === 0 || (links.length > 0 && visible.length === 0)) return null;
   return (
-    <Card as="section" pad={4} className={styles.backlinks} aria-labelledby="backlinks-heading">
-      <h2 id="backlinks-heading" className="type-label">
+    <Card
+      as="section"
+      pad={4}
+      className={styles.backlinks}
+      aria-labelledby="backlinks-heading"
+    >
+      <h2 id="backlinks-heading" className="type-heading">
         Linked from
       </h2>
-      {count === 0 || (links.length > 0 && visible.length === 0) ? (
-        <p className="type-caption">Nothing links here yet.</p>
-      ) : (
+      {
         <ul className={styles.backlinkList}>
           {visible.map((row) =>
             row.status === 'loading' ? (
@@ -44,7 +52,10 @@ function Backlinks({
             ) : row.status === 'ready' ? (
               <li key={row.key} className={styles.backlink}>
                 {row.view.href ? (
-                  <Link className={`type-title ${styles.backlinkTitle}`} to={row.view.href}>
+                  <Link
+                    className={`type-title ${styles.backlinkTitle}`}
+                    to={row.view.href}
+                  >
                     {row.view.title}
                   </Link>
                 ) : (
@@ -58,12 +69,57 @@ function Backlinks({
             ) : null,
           )}
         </ul>
-      )}
+      }
       {count > links.length ? (
         <p className="type-caption">
-          Showing {links.length} of {pluralize(count, 'linking entry', 'linking entries')}.
+          Showing {links.length} of{' '}
+          {pluralize(count, 'linking entry', 'linking entries')}.
         </p>
       ) : null}
+    </Card>
+  );
+}
+
+/** Other entries filed under the same category, so the rail is never empty. */
+function MoreInCategory({
+  category,
+  currentSlug,
+}: {
+  category: string;
+  currentSlug: string;
+}): React.JSX.Element | null {
+  const page = useCodexPage(category);
+  if (page.status !== 'ready') return null;
+  const related = page.view.filter((entry) => entry.slug !== currentSlug).slice(0, 6);
+  if (related.length === 0) return null;
+  return (
+    <Card
+      as="section"
+      pad={4}
+      className={styles.backlinks}
+      aria-labelledby="more-heading"
+    >
+      <h2 id="more-heading" className="type-heading">
+        More in {codexCategoryHeading(category)}
+      </h2>
+      <ul className={styles.backlinkList}>
+        {related.map((entry) => (
+          <li key={entry.id} className={styles.backlink}>
+            <Link
+              className={`type-ui ${styles.backlinkTitle}`}
+              to={`/codex/${entry.slug}`}
+            >
+              {entry.title}
+            </Link>
+          </li>
+        ))}
+      </ul>
+      <Link
+        className="type-caption"
+        to={`/codex?category=${encodeURIComponent(category)}`}
+      >
+        See all {codexCategoryHeading(category)}
+      </Link>
     </Card>
   );
 }
@@ -72,24 +128,26 @@ export function CodexEntryPage(): React.JSX.Element {
   const { slug = '' } = useParams();
   const page = useCodexEntryPage(slug);
   const { formatDate } = useDateFormatter();
-  const back = (
-    <Link className={`btn btn--ghost btn--sm ${styles.back}`} to="/codex">
-      ← Codex
-    </Link>
-  );
+  const back = { to: '/codex', label: 'Codex' };
 
   let regions: PageRegionRenderers;
   if (page.status === 'error') {
     regions = {
       body: () => (
         <div className={styles.entryPage}>
-          {back}
-          <StatePanel status="error" error={page.error} />
-          {page.error.kind === 'not_found' ? (
-            <Link className={`btn btn--secondary ${styles.back}`} to="/codex">
-              Browse the Codex
-            </Link>
-          ) : null}
+          <PageHeader back={back} title="Codex entry" />
+          <StatePanel
+            status="error"
+            title={page.error.kind === 'not_found' ? 'Entry not found' : undefined}
+            error={page.error}
+            action={
+              page.error.kind === 'not_found' ? (
+                <Link className="btn btn--secondary" to="/codex">
+                  Browse the Codex
+                </Link>
+              ) : undefined
+            }
+          />
         </div>
       ),
     };
@@ -98,51 +156,76 @@ export function CodexEntryPage(): React.JSX.Element {
   } else {
     const entry = page.view;
     const categoryLabel = entry.category ?? humanizeKey(entry.kind);
+    const author = handleLabel(entry.authorHandle);
     regions = {
       body: () => (
         <div className={styles.entryPage}>
-          {back}
-          <header className={styles.entryHeader}>
-            <div className="stack" data-gap="3">
-              {entry.category ? (
-                <Link
-                  className={`chip ${styles.categoryChip}`}
-                  data-tone="category"
-                  to={`/codex?category=${encodeURIComponent(entry.category)}`}
-                  aria-label={`More ${codexCategoryHeading(entry.category)}`}
-                >
-                  {categoryLabel}
-                </Link>
-              ) : (
-                <span className="chip" data-tone="category">
-                  {categoryLabel}
-                </span>
-              )}
-              <h1 className="type-display">{entry.title}</h1>
-              <p className="type-caption">
-                {entry.backlinkCount === 0
-                  ? 'Nothing links here yet'
-                  : `Linked from ${pluralize(entry.backlinkCount, 'entry', 'entries')}`}
-                {entry.authorHandle ? ` · by @${entry.authorHandle}` : ''}
-                {entry.updatedAt ? ` · updated ${formatDate(entry.updatedAt)}` : ''}
-              </p>
-            </div>
-            {entry.canEdit ? (
-              <Link className="btn btn--secondary" to={`/codex/${entry.id}/edit`}>
-                Edit entry
-              </Link>
-            ) : null}
-          </header>
-          <div className={styles.entryLayout}>
-            <Card as="article" pad={5} className={styles.entryBody}>
-              {entry.body ? (
-                <ContentRenderer body={entry.body} />
-              ) : (
-                <p className="type-caption">No body available for this viewer.</p>
-              )}
-            </Card>
-            <Backlinks links={entry.backlinks} count={entry.backlinkCount} />
-          </div>
+          <PageHeader
+            back={back}
+            title={entry.title}
+            meta={
+              <>
+                {entry.category ? (
+                  <Link
+                    className={`chip ${styles.categoryChip}`}
+                    data-tone="category"
+                    to={`/codex?category=${encodeURIComponent(entry.category)}`}
+                    aria-label={`More ${codexCategoryHeading(entry.category)}`}
+                  >
+                    {categoryLabel}
+                  </Link>
+                ) : (
+                  <span className="chip" data-tone="category">
+                    {categoryLabel}
+                  </span>
+                )}
+                {entry.backlinkCount > 0 ? (
+                  <span>
+                    Linked from {pluralize(entry.backlinkCount, 'entry', 'entries')}
+                  </span>
+                ) : null}
+                {author ? <span>by {author}</span> : null}
+                {entry.updatedAt ? (
+                  <span>Updated {formatDate(entry.updatedAt)}</span>
+                ) : null}
+              </>
+            }
+            actions={
+              <>
+                {entry.category === 'Locations' ? (
+                  <Link className="btn btn--secondary" to="/map">
+                    View on map
+                  </Link>
+                ) : null}
+                {entry.canEdit ? (
+                  <Link className="btn btn--primary" to={`/codex/${entry.id}/edit`}>
+                    Edit entry
+                  </Link>
+                ) : null}
+              </>
+            }
+          />
+          <DetailLayout
+            rail={
+              <div className={styles.entryPage}>
+                <Backlinks links={entry.backlinks} count={entry.backlinkCount} />
+                {entry.category ? (
+                  <MoreInCategory category={entry.category} currentSlug={entry.slug} />
+                ) : null}
+              </div>
+            }
+            railLabel="Linked entries"
+          >
+            <DetailLayout.Reading>
+              <Card as="article" pad={5} className={styles.entryBody}>
+                {entry.body ? (
+                  <ContentRenderer body={entry.body} />
+                ) : (
+                  <p className="type-caption">No body available for this viewer.</p>
+                )}
+              </Card>
+            </DetailLayout.Reading>
+          </DetailLayout>
         </div>
       ),
     };

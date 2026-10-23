@@ -1,0 +1,19 @@
+query MemberUpcoming($from: DateTime!, $limit: Int! = 100, $offset: Int! = 0) {
+  quests(filters: { scheduledFrom: $from }, limit: $limit, offset: $offset) {
+    total
+    items {
+      id
+      shortCode
+      status
+      scheduledAt
+      briefDocument {
+        title
+      }
+      participants(limit: 100) {
+        memberId
+        characterName
+        status
+      }
+    }
+  }
+}

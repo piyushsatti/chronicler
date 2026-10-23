@@ -1,24 +1,28 @@
-import { Link } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { ProtectedRoute } from '../../../auth/ProtectedRoute.js';
 import { SingleRegionPage } from '../../../chrome/singleRegion.js';
 import { useCurrentAccess } from '../../../auth/useCurrentAccess.js';
 import { PageShell } from '../../../components/foundation/PageShell.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
-import { Button } from '../../../components/primitives/Button.js';
 import { Card } from '../../../components/primitives/Card.js';
+import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { Tabs } from '../../../components/primitives/Tabs.js';
 import { GALLERY_ENTRIES, GALLERY_SECTIONS } from '../entries/index.js';
 import styles from './gallery.module.css';
 
 function GalleryGate({ children }: { children: React.ReactNode }): React.JSX.Element {
   const access = useCurrentAccess('admin');
-  // Non-ready states get the same container but no Gallery title, so a
-  // denied member never sees the surface name as a page heading.
+  // Non-ready states get the frame and the page title, so a denied member
+  // sees the same surface as every other staff-only page.
   if (access.status === 'error')
     return (
-      <PageShell>
-        <StatePanel status="error" error={access.error ?? undefined} />
-        <Button onClick={access.reload}>Retry staff access</Button>
+      <PageShell title="Staff only" back={{ to: '/', label: 'Home' }}>
+        <StatePanel
+          status="error"
+          error={access.error ?? undefined}
+          onRetry={access.reload}
+          retryLabel="Reload account"
+        />
       </PageShell>
     );
   if (access.status === 'loading')
@@ -29,12 +33,12 @@ function GalleryGate({ children }: { children: React.ReactNode }): React.JSX.Ele
     );
   if (!access.allowed)
     return (
-      <PageShell>
+      <PageShell title="Staff only" back={{ to: '/', label: 'Home' }}>
         <StatePanel
           status="denied"
-          deniedMessage="This design surface requires staff access."
+          title="Staff only"
+          deniedMessage="The gallery is for staff."
           onRetry={access.reload}
-          retryLabel="Retry staff access"
         />
       </PageShell>
     );
@@ -86,18 +90,18 @@ function GalleryTree(): React.JSX.Element {
 }
 
 export function GalleryPage(): React.JSX.Element {
+  // A developer reference: production builds do not serve it to anyone.
+  if (!import.meta.env.DEV) return <Navigate to="/404" replace />;
   return (
     <ProtectedRoute>
       <GalleryGate>
-        <PageShell eyebrow="Design QA" title="Gallery">
+        <PageShell>
           <SingleRegionPage page="gallery">
-            <p className="type-body">
-              Admin-only design surface. Entry demos mirror the legacy gallery tree.
-            </p>
+            <PageHeader
+              title="Gallery"
+              lede="Developer reference for staff: every shared component and pattern, with its states."
+            />
             <GalleryTree />
-            <Link className="type-link" to="/">
-              Return home
-            </Link>
           </SingleRegionPage>
         </PageShell>
       </GalleryGate>

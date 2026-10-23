@@ -1,5 +1,7 @@
 import { AdminReadFailure } from '../components/AdminReadFailure.js';
 import { Link } from 'react-router-dom';
+import { deliveryReference, deliveryTitle, deliveryTone } from '../components/deliveryTitle.js';
+import { AdminAlertRow } from '../components/AdminAlertRow.js';
 import { AdminWorkspaceShell } from '../AdminWorkspaceShell.js';
 import { Card } from '../../../components/primitives/Card.js';
 import { Chip } from '../../../components/primitives/Chip.js';
@@ -7,8 +9,8 @@ import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { StatTile } from '../../../components/primitives/StatTile.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
-import { humanizeKey, labelFor, pluralize } from '../../../utils/format.js';
 import { isSafeInternalPath } from '../../../utils/url.js';
+import { labelFor, pluralize } from '../../../utils/format.js';
 import type { AdminOpsView } from '../types.js';
 import { useAdminTodayPage } from '../hooks/useAdminSectionPage.js';
 import styles from './adminToday.module.css';
@@ -35,8 +37,7 @@ function TodaySummary({
   reviewTotal: number | null;
 }): React.JSX.Element {
   return (
-    <section className="stack" data-gap="3" data-el="admin.today.summary">
-      <h2 className="type-label">At a glance</h2>
+    <section aria-label="Summary" data-el="admin.today.summary">
       <div className={styles.summary}>
         <Link
           className={styles.stat}
@@ -47,7 +48,7 @@ function TodaySummary({
             label="Active alerts"
             value={ops.activeAlertCount}
             tone={ops.activeAlertCount ? 'warn' : 'good'}
-            hint="Data health"
+            hint="See Data health"
           />
         </Link>
         <Link className={styles.stat} to="/admin/delivery">
@@ -63,11 +64,15 @@ function TodaySummary({
             label="Awaiting review"
             value={reviewTotal ?? '–'}
             tone={reviewTotal ? 'accent' : 'neutral'}
-            hint="Character verification"
+            hint="Waiting for a decision"
           />
         </Link>
         <Link className={styles.stat} to="/admin/characters">
-          <StatTile label="Characters" value={characterTotal ?? '–'} hint="Directory" />
+          <StatTile
+            label="Characters"
+            value={characterTotal ?? '–'}
+            hint="In the directory"
+          />
         </Link>
       </div>
     </section>
@@ -75,14 +80,13 @@ function TodaySummary({
 }
 
 function AttentionCard({ ops }: { ops: AdminOpsView }): React.JSX.Element {
-  const { formatDateTime } = useDateFormatter();
   const shown = ops.activeAlerts.slice(0, PREVIEW);
   return (
     <Card className={`stack ${styles.panel}`} data-el="admin.today.attention">
       <div className="row" data-justify="between" data-align="center">
         <h2 className="type-title">Needs attention</h2>
         <Link
-          className="btn btn--ghost btn--sm"
+          className="btn btn--secondary btn--sm"
           to="/admin/data-health"
           aria-label="View all alerts"
         >
@@ -97,27 +101,7 @@ function AttentionCard({ ops }: { ops: AdminOpsView }): React.JSX.Element {
       ) : (
         <ul className={styles.list} aria-label="Active alerts">
           {shown.map((alert) => (
-            <li key={alert.key} className={styles.item}>
-              <div className="stack" data-gap="1">
-                <span className="type-title">{alert.label}</span>
-                <span className="type-caption">
-                  Last seen {formatDateTime(alert.lastSeenAt)}
-                </span>
-              </div>
-              <div className="row" data-gap="2" data-align="center">
-                <Chip tone="status" size="sm">
-                  {humanizeKey(alert.severity)}
-                </Chip>
-                {isSafeInternalPath(alert.remediationHref) ? (
-                  <Link
-                    className="btn btn--secondary btn--sm"
-                    to={alert.remediationHref}
-                  >
-                    Open
-                  </Link>
-                ) : null}
-              </div>
-            </li>
+            <AdminAlertRow key={alert.key} alert={alert} className={styles.item} />
           ))}
         </ul>
       )}
@@ -138,7 +122,7 @@ function RecentDeliveriesCard({ ops }: { ops: AdminOpsView }): React.JSX.Element
       <div className="row" data-justify="between" data-align="center">
         <h2 className="type-title">Recent Discord deliveries</h2>
         <Link
-          className="btn btn--ghost btn--sm"
+          className="btn btn--secondary btn--sm"
           to="/admin/delivery"
           aria-label="View all deliveries"
         >
@@ -149,19 +133,30 @@ function RecentDeliveriesCard({ ops }: { ops: AdminOpsView }): React.JSX.Element
         <EmptyState kind="no-events" message="No deliveries recorded yet." />
       ) : (
         <ul className={styles.list} aria-label="Recent deliveries">
-          {shown.map((delivery) => (
+          {shown.map((delivery, index) => (
             <li key={delivery.id} className={styles.item}>
               <div className="stack" data-gap="1">
                 <span className="type-title">
-                  {delivery.questTitle ?? delivery.questShortCode ?? 'Untitled quest'}
+                  {deliveryTitle(delivery, index + 1)}
                 </span>
                 <span className="type-caption">
-                  Updated {formatDateTime(delivery.updatedAt)}
+                  {deliveryReference(delivery, formatDateTime)}. Updated{' '}
+                  {formatDateTime(delivery.updatedAt)}
                 </span>
               </div>
-              <Chip tone={delivery.state === 'succeeded' ? 'line' : 'status'} size="sm">
-                {labelFor(delivery.state, DELIVERY_STATES)}
-              </Chip>
+              <div className="row" data-gap="2" data-align="center" data-wrap="1">
+                <Chip
+                  tone={deliveryTone(delivery.state)}
+                  size="sm"
+                >
+                  {labelFor(delivery.state, DELIVERY_STATES)}
+                </Chip>
+                {delivery.questLink && isSafeInternalPath(delivery.questLink) ? (
+                  <Link className="btn btn--secondary btn--sm" to={delivery.questLink}>
+                    Open quest
+                  </Link>
+                ) : null}
+              </div>
             </li>
           ))}
         </ul>
@@ -194,7 +189,11 @@ export function AdminTodayBody(): React.JSX.Element {
 
 export function AdminPage(): React.JSX.Element {
   return (
-    <AdminWorkspaceShell page="admin-today" title="Today">
+    <AdminWorkspaceShell
+      page="admin-today"
+      title="Today"
+      lede="What needs attention across the server right now."
+    >
       <AdminTodayBody />
     </AdminWorkspaceShell>
   );

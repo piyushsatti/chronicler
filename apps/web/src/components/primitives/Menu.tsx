@@ -19,6 +19,10 @@ export type MenuProps = {
   ariaLabel?: string;
   /** Names the trigger button from visible text elsewhere (`aria-labelledby`). */
   triggerLabelledBy?: string;
+  /** Disables the trigger button itself (not focusable, does not open). */
+  triggerDisabled?: boolean;
+  /** Id list naming help text for the trigger (`aria-describedby`). */
+  triggerDescribedBy?: string;
   /** Applied to the popup panel (portaled to <body>), e.g. a scope class. */
   className?: string;
   /** Wraps the items in a `<div>` with this class (scroll caps, list layout). */
@@ -43,6 +47,8 @@ export function Menu({
   items,
   ariaLabel,
   triggerLabelledBy,
+  triggerDisabled,
+  triggerDescribedBy,
   className,
   listClassName,
   itemClassName,
@@ -72,7 +78,12 @@ export function Menu({
       open={open}
       onOpenChange={onOpenChange ? (next) => onOpenChange(next) : undefined}
     >
-      <BaseMenu.Trigger className="pop-trigger" aria-labelledby={triggerLabelledBy}>
+      <BaseMenu.Trigger
+        className="pop-trigger"
+        aria-labelledby={triggerLabelledBy}
+        disabled={triggerDisabled}
+        aria-describedby={triggerDescribedBy}
+      >
         {trigger}
       </BaseMenu.Trigger>
       <BaseMenu.Portal>

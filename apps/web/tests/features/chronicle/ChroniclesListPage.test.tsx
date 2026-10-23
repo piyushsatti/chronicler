@@ -27,16 +27,16 @@ async function openFilters(user: ReturnType<typeof userEvent.setup>): Promise<vo
 describe('ChroniclesListPage', () => {
   it('renders timeline chips and season groups from the chronicle list', async () => {
     renderWithProviders(<ChroniclesListPage />);
-    expect(await screen.findByText('SESSION')).toBeInTheDocument();
+    expect((await screen.findAllByText('Session')).length).toBeGreaterThan(0);
     await openFilters(userEvent.setup());
-    expect(screen.getByText('DM RECAP')).toBeInTheDocument();
-    expect(screen.getByText('AE 412 · FROSTMELT')).toBeInTheDocument();
+    expect(screen.getByText('DM recap')).toBeInTheDocument();
+    expect(screen.getByText('AE 412 · Frostmelt')).toBeInTheDocument();
     expect(screen.getByText('Vault Delve — Session recap')).toBeInTheDocument();
     expect(screen.getByLabelText('Search entries')).toBeInTheDocument();
     expect(screen.getByRole('group', { name: 'Arc' })).toBeInTheDocument();
     expect(screen.getByRole('group', { name: 'Region' })).toBeInTheDocument();
-    expect(screen.getByText('CY · 2 ENTRIES')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: '+ New entry' })).not.toBeInTheDocument();
+    expect(screen.getByText('2 of 2 entries')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'New entry' })).not.toBeInTheDocument();
   });
 
   it('filters the timeline by search', async () => {
@@ -63,7 +63,7 @@ describe('ChroniclesListPage', () => {
     ).toBeInTheDocument();
   });
 
-  it('uses the configured era on an empty timeline', async () => {
+  it('shows the empty timeline state with a configured era', async () => {
     server.use(
       graphql.query('ChronicleList', () =>
         HttpResponse.json({
@@ -75,7 +75,7 @@ describe('ChroniclesListPage', () => {
       ),
     );
     renderWithProviders(<ChroniclesListPage />);
-    expect(await screen.findByText('CY · 0 ENTRIES')).toBeInTheDocument();
+    expect(await screen.findByText('No chronicle entries yet.')).toBeInTheDocument();
   });
 
   it('waits for validated membership then offers a new entry to a player', async () => {
@@ -97,9 +97,9 @@ describe('ChroniclesListPage', () => {
       expect(screen.getByLabelText('Loading chronicles')).toBeInTheDocument(),
     );
     expect(screen.queryByText('Vault Delve — Session recap')).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: '+ New entry' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'New entry' })).not.toBeInTheDocument();
     release();
-    expect(await screen.findByRole('link', { name: '+ New entry' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: 'New entry' })).toHaveAttribute(
       'href',
       '/summaries/new',
     );
@@ -114,7 +114,7 @@ describe('ChroniclesListPage', () => {
     );
     renderWithProviders(<ChroniclesListPage />);
     expect(await screen.findByText('Vault Delve — Session recap')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: '+ New entry' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'New entry' })).not.toBeInTheDocument();
   });
 
   it('offers a new entry to a DM only once the DM profile is approved', async () => {
@@ -137,11 +137,11 @@ describe('ChroniclesListPage', () => {
     );
     const first = renderWithProviders(<ChroniclesListPage />);
     expect(await screen.findByText('Vault Delve — Session recap')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: '+ New entry' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'New entry' })).not.toBeInTheDocument();
     first.unmount();
     status = 'approved';
     renderWithProviders(<ChroniclesListPage />);
-    expect(await screen.findByRole('link', { name: '+ New entry' })).toBeVisible();
+    expect(await screen.findByRole('link', { name: 'New entry' })).toBeVisible();
   });
 
   it('does not grant a create affordance when membership fails', async () => {
@@ -156,7 +156,7 @@ describe('ChroniclesListPage', () => {
     renderWithProviders(<ChroniclesListPage />);
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.queryByText('Vault Delve — Session recap')).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: '+ New entry' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'New entry' })).not.toBeInTheDocument();
   });
 
   it('filters the complete101-row timeline using Arc, Region, Author and text unique to the second page', async () => {
@@ -200,7 +200,7 @@ describe('ChroniclesListPage', () => {
     );
     const user = userEvent.setup();
     renderWithProviders(<ChroniclesListPage />);
-    await screen.findByText('CY · 101 ENTRIES');
+    await screen.findByText('101 of 101 entries');
     expect(offsets).toEqual([0, 100]);
     expect(screen.getByText('Second-page-only chronicle')).toBeInTheDocument();
     await openFilters(user);
@@ -228,8 +228,8 @@ describe('ChroniclesListPage', () => {
       ),
     );
     renderWithProviders(<ChroniclesListPage />);
-    expect(await screen.findByText('GAME TIMELINE · 2 ENTRIES')).toBeInTheDocument();
-    expect(screen.getByText('AE 412 · FROSTMELT')).toBeInTheDocument();
+    expect(await screen.findByText('2 of 2 entries')).toBeInTheDocument();
+    expect(screen.getByText('AE 412 · Frostmelt')).toBeInTheDocument();
   });
   it('files entries without a game date under the real month they happened', async () => {
     const base = goodList.items[0];

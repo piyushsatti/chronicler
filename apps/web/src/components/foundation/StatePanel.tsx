@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import type { AppError } from '../../errors/types.js';
 import { Button } from '../primitives/Button.js';
@@ -31,52 +32,92 @@ const DENIED_COPY: Record<
   },
 };
 
-/** One designed denial: heading, plain explanation, and a sign-in or way back. */
+/** One designed denial: heading, plain explanation, one way forward.
+ * Guests (and ended sessions) sign in; members who lack access go back home,
+ * with the caller's retry (e.g. reload account) as the only extra. */
 function DeniedPanel({
   reason,
+  title,
   message,
+  action,
   onRetry,
   retryLabel = 'Reload account',
 }: {
   reason: DeniedReason;
+  title?: string;
   message?: string;
+  action?: ReactNode;
   onRetry?: () => void;
   retryLabel?: string;
 }): React.JSX.Element {
   const { audience, rememberReturn } = useViewerAudience();
   const copy = DENIED_COPY[reason][audience];
   const body = audience === 'member' && message ? message : copy.body;
-  const guest = audience === 'guest';
+  const signIn = audience === 'guest' || reason === 'unauthorized';
   return (
-    <section
-      className="card state-denied"
+    <PanelSurface
+      state="denied"
       role="alert"
-      data-reason={reason}
-      data-audience={audience}
+      title={audience === 'member' && title ? title : copy.title}
+      body={body}
+      data={{ 'data-reason': reason, 'data-audience': audience }}
     >
-      <h2 className="type-title">{copy.title}</h2>
-      <p className="type-body">{body}</p>
-      <div className="row" data-wrap="1" data-gap="3">
-        {guest || reason === 'unauthorized' ? (
-          <Link className="btn btn--primary" to="/login" onClick={rememberReturn}>
-            {guest ? 'Sign in' : 'Sign in again'}
-          </Link>
-        ) : (
-          <>
+      {signIn ? (
+        <Link className="btn btn--primary" to="/login" onClick={rememberReturn}>
+          {audience === 'guest' ? 'Sign in' : 'Sign in again'}
+        </Link>
+      ) : (
+        <>
+          {action ?? (
             <Link className="btn" to="/">
               Back to home
             </Link>
-            {onRetry ? (
-              <Button variant="ghost" onClick={onRetry}>
-                {retryLabel}
-              </Button>
-            ) : null}
-            <Link className="btn btn--ghost" to="/login" onClick={rememberReturn}>
-              Sign in again
-            </Link>
-          </>
-        )}
-      </div>
+          )}
+          {onRetry ? (
+            <Button variant="ghost" onClick={onRetry}>
+              {retryLabel}
+            </Button>
+          ) : null}
+        </>
+      )}
+    </PanelSurface>
+  );
+}
+
+/** The one page-level state surface: a parchment card at frame width with an
+ * optional heading, one sentence, and its action row. */
+function PanelSurface({
+  state,
+  role,
+  title,
+  body,
+  data,
+  busy,
+  children,
+}: {
+  state: 'denied' | 'error' | 'empty' | 'loading';
+  role?: 'alert' | 'status';
+  title?: string;
+  body: ReactNode;
+  data?: Record<string, string>;
+  busy?: boolean;
+  children?: ReactNode;
+}): React.JSX.Element {
+  return (
+    <section
+      className={state === 'loading' ? 'card state-panel state-loading' : 'card state-panel'}
+      role={role}
+      aria-busy={busy || undefined}
+      data-state={state}
+      {...data}
+    >
+      {title ? <h2 className="type-title">{title}</h2> : null}
+      <p className={state === 'loading' ? 'type-caption' : 'type-body'}>{body}</p>
+      {children ? (
+        <div className="state-panel__actions row" data-wrap="1" data-gap="3">
+          {children}
+        </div>
+      ) : null}
     </section>
   );
 }
@@ -87,6 +128,7 @@ function InlineState({
   error,
   emptyMessage,
   deniedMessage,
+  action,
   onRetry,
   retryLabel,
 }: StatePanelProps & { emptyMessage: string }): React.JSX.Element {
@@ -99,7 +141,14 @@ function InlineState({
     );
   }
   if (status === 'empty') {
-    return <p className="state-inline type-caption">{emptyMessage}</p>;
+    return action ? (
+      <div className="state-inline row" data-wrap="1" data-gap="3">
+        <p className="type-body">{emptyMessage}</p>
+        {action}
+      </div>
+    ) : (
+      <p className="state-inline type-caption">{emptyMessage}</p>
+    );
   }
   const reason: DeniedReason | null =
     status === 'denied'
@@ -132,10 +181,16 @@ function InlineState({
 type StatePanelProps = {
   status: 'loading' | 'error' | 'empty' | 'denied';
   error?: AppError;
+  /** Page variant: a short heading ("DM table not found"). Denials keep their
+   * own heading for guests; members see this one when given. */
+  title?: string;
   emptyMessage?: string;
   /** Replaces the member explanation on a denial; guests always get the sign-in copy. */
   deniedMessage?: string;
-  /** Offered on a member denial, for example to reload current access; inline, on any error. */
+  /** The one action for an empty, error or member-denied page state, usually
+   * a Link ("Find a quest", "Back to Codex"). */
+  action?: ReactNode;
+  /** Offered on a member denial, for example to reload current access; on any error. */
   onRetry?: () => void;
   retryLabel?: string;
   /** `page` (default) is the full card for page-level states; `inline` is one line plus the action, for sub-panels. */
@@ -145,8 +200,10 @@ type StatePanelProps = {
 export function StatePanel({
   status,
   error,
+  title,
   emptyMessage = 'Nothing here yet.',
   deniedMessage,
+  action,
   onRetry,
   retryLabel,
   variant = 'page',
@@ -158,6 +215,7 @@ export function StatePanel({
         error={error}
         emptyMessage={emptyMessage}
         deniedMessage={deniedMessage}
+        action={action}
         onRetry={onRetry}
         retryLabel={retryLabel}
       />
@@ -167,7 +225,9 @@ export function StatePanel({
     return (
       <DeniedPanel
         reason="forbidden"
+        title={title}
         message={deniedMessage}
+        action={action}
         onRetry={onRetry}
         retryLabel={retryLabel}
       />
@@ -178,28 +238,36 @@ export function StatePanel({
       return (
         <DeniedPanel
           reason={error.kind}
+          title={title}
           message={deniedMessage}
+          action={action}
           onRetry={onRetry}
           retryLabel={retryLabel}
         />
       );
     }
     return (
-      <div className="card" role="alert">
-        <p className="type-body">{error?.userMessage ?? 'Something went wrong.'}</p>
-      </div>
+      <PanelSurface
+        state="error"
+        role="alert"
+        title={title}
+        body={error?.userMessage ?? 'Something went wrong.'}
+      >
+        {action}
+        {onRetry ? (
+          <Button variant={action ? 'ghost' : 'secondary'} onClick={onRetry}>
+            {retryLabel ?? 'Try again'}
+          </Button>
+        ) : null}
+      </PanelSurface>
     );
   }
   if (status === 'loading') {
-    return (
-      <div className="card state-loading" role="status" aria-busy="true">
-        <p className="type-caption">Loading…</p>
-      </div>
-    );
+    return <PanelSurface state="loading" role="status" busy body="Loading…" />;
   }
   return (
-    <div className="card state-empty">
-      <p className="state-empty__title">{emptyMessage}</p>
-    </div>
+    <PanelSurface state="empty" title={title} body={emptyMessage}>
+      {action}
+    </PanelSurface>
   );
 }

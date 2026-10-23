@@ -1,4 +1,5 @@
 import { StatePanel } from '../../components/foundation/StatePanel.js';
+import { PageHeader } from '../../components/primitives/PageHeader.js';
 import { EditorShell } from './EditorShell.js';
 import { EditorSummaryLinks } from './EditorSummaryLinks.js';
 import { EditorDocumentControls } from './EditorDocumentControls.js';
@@ -14,6 +15,44 @@ const editorLabels = {
   'dm-table': 'DM table',
   demo: 'editor example',
 } as const;
+
+const PARENT_LABELS = {
+  quest: 'Quests',
+  codex: 'Codex',
+  summary: 'Chronicles',
+  guide: 'Rules',
+  ruling: 'Rules',
+  'dm-table': 'DMs',
+  demo: 'Home',
+} as const;
+
+/** The page the editor returns to, named for what it is. Editing a quest
+ * returns to that quest, so it carries the quest's title. */
+function backFor(
+  typeKey: keyof typeof PARENT_LABELS,
+  to: string,
+  title: string,
+  slug?: unknown,
+): { to: string; label: string } {
+  const quest = typeKey === 'quest' && to !== '/quests';
+  // A saved Codex entry returns to that entry, named for it.
+  if (typeKey === 'codex' && typeof slug === 'string' && slug.trim())
+    return {
+      to: `/codex/${encodeURIComponent(slug.trim())}`,
+      label: title.trim() || 'Entry',
+    };
+  return { to, label: quest ? title.trim() || 'Quest' : PARENT_LABELS[typeKey] };
+}
+
+/** "New Lore entry" when a Codex category is already chosen; otherwise the plain noun. */
+function headerTitle(view: EditorWorkspaceView): string {
+  const verb = view.mode === 'edit' ? 'Edit' : 'New';
+  const category =
+    typeof view.meta.category === 'string' ? view.meta.category.trim() : '';
+  if (view.typeKey === 'codex' && view.mode === 'new' && category)
+    return `New ${category} entry`;
+  return `${verb} ${editorLabels[view.typeKey]}`;
+}
 
 function sentence(label: string): string {
   return label.charAt(0).toUpperCase() + label.slice(1);
@@ -32,23 +71,19 @@ export function EditorWorkspace({
     >
       {view.denied ? (
         // A viewer without edit rights gets the document's name, not an "Edit" verb.
-        <header className={`stack ${styles.header}`}>
-          <p className="eyebrow">{sentence(editorLabels[view.typeKey])}</p>
-          <h1 className="type-display">
-            {view.deniedAction === 'create'
+        <PageHeader
+          back={backFor(view.typeKey, view.cancelTo, view.meta.title)}
+          title={
+            view.deniedAction === 'create'
               ? `New ${editorLabels[view.typeKey]}`
-              : view.meta.title.trim() || sentence(editorLabels[view.typeKey])}
-          </h1>
-        </header>
+              : view.meta.title.trim() || sentence(editorLabels[view.typeKey])
+          }
+        />
       ) : (
-        <header className={`stack ${styles.header}`}>
-          <h1 className="type-display">
-            {view.mode === 'edit' ? 'Edit' : 'Create'} {editorLabels[view.typeKey]}
-          </h1>
-          {view.mode === 'edit' && view.meta.title.trim() ? (
-            <p className="type-caption">{view.meta.title}</p>
-          ) : null}
-        </header>
+        <PageHeader
+          back={backFor(view.typeKey, view.cancelTo, view.meta.title, view.meta.slug)}
+          title={headerTitle(view)}
+        />
       )}
       <EditorSummaryLinks view={view.summaryLinks} disabled={!view.canEditMetadata} />
       <EditorShell

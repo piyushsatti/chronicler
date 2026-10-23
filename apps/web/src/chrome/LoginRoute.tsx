@@ -1,15 +1,6 @@
 import { LoginPage } from '../features/member/pages/LoginPage.js';
-import { LoginNotificationsPanel } from '../features/notifications/components/LoginNotificationsPanel.js';
-import { useAuth } from '../auth/AuthContext.js';
 
-/** Composes member login with notifications without a cross-feature import. */
+/** Route element for /login. Signed-in members are redirected to /me by LoginPage. */
 export function LoginRoute(): React.JSX.Element {
-  const { isAuthenticated } = useAuth();
-  return (
-    <LoginPage
-      notificationsSlot={
-        isAuthenticated ? <LoginNotificationsPanel enabled /> : null
-      }
-    />
-  );
+  return <LoginPage />;
 }

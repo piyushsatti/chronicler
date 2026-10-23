@@ -1,8 +1,4 @@
-query CharacterBackstory(
-  $filters: BackstoryFiltersInput
-  $limit: Int!
-  $offset: Int!
-) {
+query CharacterBackstory($filters: BackstoryFiltersInput, $limit: Int!, $offset: Int!) {
   backstories(filters: $filters, limit: $limit, offset: $offset) {
     items {
       id

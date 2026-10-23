@@ -1,11 +1,13 @@
 import { Link } from 'react-router-dom';
 import { Button } from '../../../components/primitives/Button.js';
+import { Chip } from '../../../components/primitives/Chip.js';
+import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { Card } from '../../../components/primitives/Card.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { Table, type Column } from '../../../components/primitives/Table.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
-import { statusLabel } from '../../../utils/format.js';
+import { isSentinelDate, pluralize, statusLabel } from '../../../utils/format.js';
 import { AdminPagination } from './AdminPagination.js';
 import type { useDmDashboard } from '../hooks/useDmDashboard.js';
 import './DmDashboard.css';
@@ -36,9 +38,9 @@ export function DmDashboard({ view }: { view: ReturnType<typeof useDmDashboard> 
       key: 'status',
       label: 'Status',
       render: (quest) => (
-        <span className="chip" data-tone="line">
+        <Chip tone="line" size="sm">
           {statusLabel(quest.status)}
-        </span>
+        </Chip>
       ),
     },
     {
@@ -51,7 +53,7 @@ export function DmDashboard({ view }: { view: ReturnType<typeof useDmDashboard> 
       key: 'scheduledAt',
       label: 'Scheduled',
       render: (quest) =>
-        quest.scheduledAt ? (
+        quest.scheduledAt && !isSentinelDate(quest.scheduledAt) ? (
           <time dateTime={quest.scheduledAt}>{formatDateTime(quest.scheduledAt)}</time>
         ) : (
           'Unscheduled'
@@ -61,34 +63,56 @@ export function DmDashboard({ view }: { view: ReturnType<typeof useDmDashboard> 
       key: 'manage',
       label: 'Manage',
       render: (quest) => (
-        <Link className="type-link" to={`/quests/${quest.shortCode}`}>
-          Manage participation, attendance and summary
+        <Link
+          className="type-link"
+          to={`/quests/${quest.shortCode}`}
+          aria-label="Manage participation, attendance and summary"
+        >
+          Manage
         </Link>
       ),
     },
   ];
   return (
     <div className="dm-dashboard stack">
-      <div className="row" data-wrap="1">
-        {view.canCreateQuest ? (
-          <Link className="btn btn--secondary" to="/quests/new">
-            Create quest
-          </Link>
-        ) : null}
-        <Link className="type-link" to="/me">
-          Edit DM profile and availability
-        </Link>
-      </div>
-      <p className="type-caption">
-        {data.dmStats
-          ? `${data.dmStats.sessionCount} recorded sessions`
-          : 'Session statistics unavailable.'}
-      </p>
+      <PageHeader
+        title="DM dashboard"
+        meta={
+          <>
+            <span>{pluralize(data.quests.total, 'quest')} posted</span>
+            {data.dmStats ? (
+              <span>{pluralize(data.dmStats.sessionCount, 'session')} run</span>
+            ) : null}
+          </>
+        }
+        actions={
+          <>
+            <Link className="btn btn--secondary" to="/me">
+              Edit DM profile
+            </Link>
+            {view.canCreateQuest && data.quests.items.length > 0 ? (
+              <Link className="btn btn--primary" to="/quests/new">
+                Post a quest
+              </Link>
+            ) : null}
+          </>
+        }
+      />
       <Card className="stack">
         <h2 className="type-heading">Your quests</h2>
         <AdminPagination page={view.questPage} />
         {data.quests.items.length === 0 ? (
-          <EmptyState kind="generic" message="No quests on this page." />
+          <EmptyState
+            kind="generic"
+            message="You have not posted any quests yet."
+            action={
+              view.canCreateQuest ? (
+                <Link className="btn btn--primary btn--sm" to="/quests/new">
+                  Post a quest
+                </Link>
+              ) : undefined
+            }
+          />
         ) : (
           <Table
             className="dm-dashboard__quests type-caption"
@@ -99,13 +123,25 @@ export function DmDashboard({ view }: { view: ReturnType<typeof useDmDashboard> 
         )}
       </Card>
       <Card className="stack">
-        <h2 className="type-heading">Your DM tables</h2>
-        <Link className="type-link" to="/editor/dm-table">
-          Create DM table
-        </Link>
+        <div className="row" data-wrap="1" data-justify="between" data-align="center">
+          <h2 className="type-heading">Your DM tables</h2>
+          {data.documents.items.length > 0 ? (
+            <Link className="btn btn--secondary btn--sm" to="/editor/dm-table">
+              New DM table
+            </Link>
+          ) : null}
+        </div>
         <AdminPagination page={view.tablePage} />
         {data.documents.items.length === 0 ? (
-          <EmptyState kind="generic" message="No DM tables on this page." />
+          <EmptyState
+            kind="generic"
+            message="You have no DM tables yet."
+            action={
+              <Link className="btn btn--secondary btn--sm" to="/editor/dm-table">
+                New DM table
+              </Link>
+            }
+          />
         ) : (
           <ul className="dm-dashboard__tables">
             {data.documents.items.map((table) => (

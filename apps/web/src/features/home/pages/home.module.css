@@ -10,12 +10,6 @@
   margin: 0;
 }
 
-.root [data-el='questCard.hook'] [data-el='content.body'] {
-  font-size: inherit;
-  line-height: inherit;
-  color: inherit;
-}
-
 .root :global(.shelf) {
   margin-bottom: var(--sp-5);
 }
@@ -69,10 +63,6 @@
   flex-shrink: 0;
 }
 
-.heading h1 {
-  margin: 0;
-}
-
 .banner[data-media='true'] {
   display: grid;
   grid-template-columns: minmax(0, 1fr) min(38%, 360px);
@@ -103,10 +93,6 @@
 
 .root[data-compact='true'] :global(.shelf) {
   grid-template-columns: auto minmax(0, 1fr);
-}
-
-:global([data-width-class='compact']) :global(.hf2) > :global(.page):has(> .root) {
-  padding: var(--sp-4) var(--sp-3) var(--sp-6);
 }
 
 :global([data-width-class='compact']) .root[data-compact='true'] :global(.shelf) {
@@ -169,22 +155,36 @@
 .banner .bannerText {
   color: var(--color-hero-ink-2);
   margin-bottom: 16px;
-  max-width: 440px;
+  max-inline-size: 60ch;
 }
 
-.heading .statsRow {
-  margin-top: 10px;
+.cardItem {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.cardItem > article {
+  flex: 1;
 }
 
 .weekStripCols {
   margin-top: var(--sp-4);
 }
 
-.recentHeader {
-  margin-bottom: var(--sp-3);
-}
-
 .dmRow {
   padding: var(--sp-3) 0;
   border-bottom: 1px solid var(--color-border);
+}
+
+.banner[data-bare='true'] {
+  min-height: 0;
+}
+
+.banner[data-bare='true'] .bannerContent {
+  min-height: 0;
+}
+
+.banner[data-bare='true'] .bannerTitle {
+  margin-bottom: 0;
 }

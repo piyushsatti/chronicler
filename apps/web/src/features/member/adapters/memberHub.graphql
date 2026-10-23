@@ -1,0 +1,19 @@
+query MemberHub($memberId: ID!) {
+  member(id: $memberId) {
+    id
+    joinedAt
+    avatarUrl
+  }
+  memberActivityStats(memberId: $memberId) {
+    questsPlayed
+    summariesAuthored
+    messages
+    voiceMinutes
+    longestSessionHours
+    recentSessions(limit: 5) {
+      kind
+      occurredAt
+      amount
+    }
+  }
+}

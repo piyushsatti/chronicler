@@ -117,9 +117,7 @@ export async function searchEntityLinkFeed(
       limit,
     });
     const docs = z.array(searchDocSchema).safeParse(data.search?.documents ?? []);
-    const members = z
-      .array(searchMemberSchema)
-      .safeParse(data.search?.members ?? []);
+    const members = z.array(searchMemberSchema).safeParse(data.search?.members ?? []);
     if (!docs.success || !members.success) {
       throw toAppError({ failure: 'InvalidWire' }, 'editor:entity-search');
     }

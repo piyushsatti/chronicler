@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
 import {
   loadHomeLanes,
-  mapToOpenQuestCardProps,
+  mapToQuestCardProps,
 } from '../../../src/features/home/adapters/homeLanesAdapter.js';
 import { withdrawFromHomeQuest } from '../../../src/features/home/adapters/homeParticipationAdapter.js';
 import { server } from '../../../src/mocks/server.js';
@@ -52,12 +52,12 @@ describe('Home adapters', () => {
     expect(loaded.recruiting[0]?.waitlistCount).toBe(1);
     const entry = loaded.recruiting[0];
     if (!entry) throw new Error('fixture quest absent');
-    expect(mapToOpenQuestCardProps(entry, { memberId: me.id })).toMatchObject({
+    expect(mapToQuestCardProps(entry, { memberId: me.id })).toMatchObject({
       mine: true,
       waitlisted: true,
     });
     expect(
-      mapToOpenQuestCardProps(entry, {
+      mapToQuestCardProps(entry, {
         memberId: '22222222-2222-4222-8222-222222222222',
       }),
     ).toMatchObject({ mine: false });

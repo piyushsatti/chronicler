@@ -21,7 +21,7 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
       data-map-selected={node.id}
     >
       <div className={styles.toolbar}>
-        <h2 className="type-title">{node.name}</h2>
+        <h2 className="type-heading">{node.name}</h2>
         {map.canEdit ? (
           <Button
             variant="ghost"
@@ -32,12 +32,6 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
           </Button>
         ) : null}
       </div>
-      {/* Canvas positions only matter to the people who arrange the map. */}
-      {map.canEdit ? (
-        <p className="type-caption">
-          Canvas position {node.x}, {node.y}
-        </p>
-      ) : null}
       {submap ? (
         <Link
           className={`btn btn--secondary btn--sm ${styles.start}`}
@@ -48,9 +42,9 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
       ) : node.submapId ? (
         <p className="type-caption">This submap is unavailable for this viewer.</p>
       ) : null}
-      <h3 className="type-label">Linked documents</h3>
+      <h3 className="type-label">Linked entries</h3>
       {node.linkedEntries.length === 0 ? (
-        <p>No documents linked to this location.</p>
+        <p>No Codex entries are linked to this location yet.</p>
       ) : (
         node.linkedEntries.map((link) => {
           const documentIndex = documentIds.indexOf(link.documentId);
@@ -63,10 +57,10 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
               key={`${link.documentId}:${link.relation}`}
             >
               {query?.isPending ? (
-                <p role="status">Loading linked document…</p>
+                <p role="status">Loading linked entry…</p>
               ) : query?.isError ? (
                 <p role="alert">
-                  A linked document could not load.{' '}
+                  A linked entry could not load.{' '}
                   <Button variant="ghost" size="sm" onClick={query.retry}>
                     Retry
                   </Button>
@@ -86,9 +80,7 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
                     <Chip size="sm" tone="category">
                       {document.category ?? humanizeKey(document.kind)}
                     </Chip>
-                    <span className="type-caption">
-                      {humanizeKey(link.relation)}
-                    </span>
+                    <span className="type-caption">{humanizeKey(link.relation)}</span>
                   </div>
                   {document.effectiveBody ? (
                     <ContentRenderer body={document.effectiveBody} />
@@ -108,7 +100,7 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
                   ) : null}
                 </>
               ) : (
-                <p>This linked document is unavailable for this viewer.</p>
+                <p>This linked entry is unavailable to you.</p>
               )}
             </article>
           );
@@ -129,7 +121,7 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
       ) : null}
       {map.canEdit ? (
         <Button variant="secondary" onClick={() => onEdit({ kind: 'link', map, node })}>
-          Link Location document
+          Link a Codex entry
         </Button>
       ) : null}
     </section>

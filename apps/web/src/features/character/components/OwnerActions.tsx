@@ -141,8 +141,8 @@ export function OwnerActions({
         </Button>
       </div>
       <p className="type-caption">
-        Save profile keeps your description and image. Synchronization separately updates the
-        D&amp;D Beyond mirror and its URL.
+        Save profile keeps your description and image. Synchronization separately
+        updates the D&amp;D Beyond mirror and its URL.
       </p>
       {actions.message ? (
         <p role="status" className="type-caption">

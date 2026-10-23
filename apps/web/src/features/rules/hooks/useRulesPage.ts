@@ -23,7 +23,11 @@ export function useRulesPage(): PageData<RulesHubView> {
   const me = useMe();
   const reviewAccess = useCurrentAccess('review');
   const authority =
-    auth.token === null ? 'guest' : me.isSuccess ? currentAccessIdentity(me.data) : null;
+    auth.token === null
+      ? 'guest'
+      : me.isSuccess
+        ? currentAccessIdentity(me.data)
+        : null;
   const session = useMemo(
     () => (authority === null ? null : { token: auth.token, authority }),
     [auth.token, authority],

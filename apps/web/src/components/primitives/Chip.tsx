@@ -1,7 +1,7 @@
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from 'react';
 import { cx } from './cx.js';
 
-export type ChipTone = 'neutral' | 'line' | 'accent' | 'status' | 'category';
+export type ChipTone = 'neutral' | 'line' | 'accent' | 'status' | 'category' | 'warning' | 'danger';
 export type ChipSize = 'sm' | 'md';
 
 export type ChipProps = {

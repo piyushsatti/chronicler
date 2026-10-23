@@ -52,9 +52,7 @@ describe('Summary and Chronicle reader', () => {
       'href',
       '/characters/C-13',
     );
-    expect(
-      screen.queryByRole('link', { name: 'Edit summary' }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Edit entry' })).not.toBeInTheDocument();
     expect(requests[0]).toMatchObject(
       path.includes(detail.id)
         ? { id: detail.id, byId: true, slug: '' }
@@ -88,7 +86,7 @@ describe('Summary and Chronicle reader', () => {
         ),
       );
       reader('/chronicles/vault-delve');
-      expect(await screen.findByRole('link', { name: 'Edit summary' })).toHaveAttribute(
+      expect(await screen.findByRole('link', { name: 'Edit entry' })).toHaveAttribute(
         'href',
         `/summaries/${detail.id}/edit`,
       );

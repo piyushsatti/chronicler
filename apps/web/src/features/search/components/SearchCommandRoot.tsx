@@ -145,7 +145,7 @@ export function SearchCommandRoot({
         open={open}
         title="Search the chronicle"
         onClose={closeSearch}
-        className="search-dialog"
+        size="palette"
       >
         {open ? <SearchDialogPanel onNavigate={closeSearch} /> : null}
       </Modal>

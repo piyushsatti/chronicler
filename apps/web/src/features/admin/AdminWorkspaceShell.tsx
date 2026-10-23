@@ -6,6 +6,8 @@ import { ProtectedRoute } from '../../auth/ProtectedRoute.js';
 import { StatePanel } from '../../components/foundation/StatePanel.js';
 import { PageShell } from '../../components/foundation/PageShell.js';
 import { Button } from '../../components/primitives/Button.js';
+import { PageHeader } from '../../components/primitives/PageHeader.js';
+import { TabNav } from '../../components/primitives/Tabs.js';
 import './AdminWorkspaceShell.css';
 import {
   AuthorityFailureContext,
@@ -53,12 +55,12 @@ const SECTIONS = [
   },
 ] as const;
 
-function adminDeclaration(page: string): PageDeclaration {
+function adminDeclaration(page: string, bare: boolean): PageDeclaration {
   return {
     page,
     regions: [
-      { role: 'nav', priority: 0 },
-      { role: 'summary', priority: 1 },
+      ...(bare ? [] : [{ role: 'summary', priority: 0 }]),
+      { role: 'nav', priority: 1 },
       { role: 'body', priority: 2 },
     ],
   };
@@ -77,42 +79,25 @@ function AdminNavRegion({
   );
   if (sections.length === 0) return <div hidden />;
   return (
-    <div className="admin-workspace__nav-scroll">
-      <nav className="admin-workspace__nav" aria-label="Admin sections">
-        {sections.map((section) => (
-          <Link
-            key={section.href}
-            to={section.href}
-            className="admin-workspace__nav-link"
-            aria-current={section.match(location.pathname) ? 'page' : undefined}
-            onFocus={(event) =>
-              event.currentTarget.scrollIntoView({
-                block: 'nearest',
-                inline: 'nearest',
-              })
-            }
-          >
-            {section.label}
-          </Link>
-        ))}
-      </nav>
-    </div>
+    <TabNav
+      aria-label="Admin sections"
+      items={sections.map((section) => ({
+        to: section.href,
+        label: section.label,
+        current: section.match(location.pathname),
+      }))}
+    />
   );
 }
 
 function AdminSummaryRegion({
   title,
-  authority = 'admin',
+  lede,
 }: {
   title: string;
-  authority?: WorkspaceAuthority;
+  lede?: string;
 }): React.JSX.Element {
-  return (
-    <header className="admin-workspace__header">
-      <p className="eyebrow">{authority === 'dm' ? 'DM' : 'Admin'}</p>
-      <h1 className="type-display">{title}</h1>
-    </header>
-  );
+  return <PageHeader title={title} lede={lede} />;
 }
 
 function AuthorityRecovery({
@@ -145,26 +130,29 @@ export function AdminWorkspaceShell({
   title,
   children,
   summary,
+  lede,
   authority = 'admin',
+  bareHeader = false,
 }: {
   page: string;
   title: string;
+  lede?: string;
   children: ReactNode;
   summary?: ReactNode;
   authority?: WorkspaceAuthority;
+  /** The body renders its own PageHeader, so the shell draws none. */
+  bareHeader?: boolean;
 }): React.JSX.Element {
   return (
     <ProtectedRoute>
-      <PageShell
-        context="war-room"
-        max={authority === 'dm' ? 'default' : 'wide'}
-        className="admin-workspace-page"
-      >
+      <PageShell context="war-room" className="admin-workspace-page">
         <AuthorizedWorkspace
           key={page}
           page={page}
           title={title}
+          lede={lede}
           summary={summary}
+          bareHeader={bareHeader}
           authority={authority}
         >
           {children}
@@ -177,29 +165,29 @@ export function AdminWorkspaceShell({
 function AuthorizedWorkspace({
   page,
   title,
+  lede,
   summary,
   authority,
+  bareHeader,
   children,
 }: {
   page: string;
   title: string;
+  lede?: string;
   summary?: ReactNode;
   authority: WorkspaceAuthority;
+  bareHeader: boolean;
   children: ReactNode;
 }): React.JSX.Element {
   const account = useAdminAuthority(authority);
   const failures = usePageAuthorityFailures(account.error);
-  const regions: PageRegionRenderers = {
+  const regions: Record<string, () => React.JSX.Element> = {
     nav: () => (
       <AdminNavRegion canAdmin={account.canAdmin} canReview={account.canReview} />
     ),
     summary: () => (
       <div className="stack">
-        {summary != null ? (
-          summary
-        ) : (
-          <AdminSummaryRegion title={title} authority={authority} />
-        )}
+        {summary != null ? summary : <AdminSummaryRegion title={title} lede={lede} />}
         {failures.permissionsChanged ? (
           // The denied panel below already offers sign-in; this adds the reload.
           <AuthorityRecovery reload={account.reload} signIn={false} />
@@ -208,14 +196,31 @@ function AuthorizedWorkspace({
     ),
     body: () => <div className="admin-workspace__body">{children}</div>,
   };
+  const { summary: summaryRegion, ...bareRegions } = regions;
+  const hostRegions: PageRegionRenderers = bareHeader
+    ? bareRegions
+    : { ...bareRegions, summary: summaryRegion! };
   if (account.status === 'error') {
     const denied =
       account.error?.kind === 'forbidden' || account.error?.kind === 'unauthorized';
     return (
-      <section className="stack" aria-label={`${title} access`}>
+      <section className="stack" data-gap="5" aria-label={`${title} access`}>
+        <PageHeader
+          back={
+            authority === 'dm'
+              ? { to: '/me', label: 'Your page' }
+              : { to: '/', label: 'Home' }
+          }
+          title={title}
+        />
         <StatePanel
           status="error"
           error={account.error ?? undefined}
+          deniedMessage={
+            authority === 'dm'
+              ? 'Only DMs can open this. Apply from Community, DMs.'
+              : 'This area is for staff.'
+          }
           onRetry={account.reload}
         />
         {denied ? null : <AuthorityRecovery reload={account.reload} />}
@@ -228,8 +233,8 @@ function AuthorizedWorkspace({
       <div className="admin-workspace" data-layout="admin-workspace">
         <PageHost
           key={account.commandKey}
-          declaration={adminDeclaration(page)}
-          regions={regions}
+          declaration={adminDeclaration(page, bareHeader)}
+          regions={hostRegions}
         />
       </div>
     </AuthorityFailureContext.Provider>

@@ -26,7 +26,11 @@ function editorEditPath(typeKey: EditorTypeKey, id: string): string {
     return `/rules/${typeKey}s/${encodeURIComponent(id)}/edit`;
   return `/${typeKey === 'codex' ? 'codex' : 'summaries'}/${encodeURIComponent(id)}/edit`;
 }
-export function editorCancelPath(typeKey: EditorTypeKey, mode: EditorMode, id?: string): string {
+export function editorCancelPath(
+  typeKey: EditorTypeKey,
+  mode: EditorMode,
+  id?: string,
+): string {
   switch (typeKey) {
     case 'quest':
       return mode === 'edit' && id ? `/quests/${encodeURIComponent(id)}` : '/quests';
@@ -293,7 +297,11 @@ export function useEditorWorkspace({
     schemaAccess,
     canEditBody: !busy && enabled && initial.canEditBody && !trashed,
     canEditMetadata: !busy && enabled && initial.canEditMetadata && !trashed,
-    cancelTo: editorCancelPath(typeKey, mode, paramHint ?? initial.redirectHint ?? undefined),
+    cancelTo: editorCancelPath(
+      typeKey,
+      mode,
+      paramHint ?? initial.redirectHint ?? undefined,
+    ),
     statusMessage,
     showPropertyErrors,
     slugLocked: mode === 'edit',

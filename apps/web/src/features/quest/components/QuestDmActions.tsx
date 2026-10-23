@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Button } from '../../../components/primitives/Button.js';
+import { Card } from '../../../components/primitives/Card.js';
 import { Modal } from '../../../components/primitives/Modal.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
+import { handleLabel, personName } from '../../../utils/format.js';
 import type { AppError } from '../../../errors/types.js';
 import type { QuestDetailView } from '../adapters/questAdapter.js';
 import type { Attendance, QuestCommand, Reward } from '../adapters/questCommands.js';
@@ -39,6 +41,11 @@ export function closeInput(
   if (rewards.reduce((total, reward) => total + reward.pcxp, 0) > 2147483647)
     return null;
   return { attendance, rewards };
+}
+
+function memberTag(handle: string): string {
+  const label = handleLabel(handle);
+  return label ? `(${label})` : `(${personName({ handle })})`;
 }
 
 export function QuestDmActions({
@@ -80,20 +87,20 @@ export function QuestDmActions({
       current.map((row) => (row.characterId === id ? { ...row, ...patch } : row)),
     );
   return (
-    <section className="stack" aria-label="DM controls">
+    <Card as="section" pad={5} className="stack" aria-label="DM controls">
       <h2 className="type-title">DM controls</h2>
       {preplay ? (
         <>
-          <div className="row" data-gap="2">
+          <div className="row" data-gap="2" data-wrap="1" data-justify="between">
             <Button
-              variant="secondary"
+              variant="primary"
               disabled={pending}
               onClick={() => setConfirm('played')}
             >
               Mark played
             </Button>
             <Button
-              variant="ghost"
+              variant="danger"
               disabled={pending}
               onClick={() => setConfirm('cancelled')}
             >
@@ -126,7 +133,7 @@ export function QuestDmActions({
                 .map((participant) => (
                   <Checkbox
                     key={participant.characterId}
-                    label={`${participant.characterName} · @${participant.memberHandle}`}
+                    label={`${participant.characterName} ${memberTag(participant.memberHandle)}`}
                     checked={selected.includes(participant.characterId)}
                     disabled={pending}
                     onCheckedChange={(checked) =>
@@ -177,7 +184,7 @@ export function QuestDmActions({
                 disabled={pending}
               >
                 <legend>
-                  {participant.characterName} · @{participant.memberHandle}
+                  {participant.characterName} {memberTag(participant.memberHandle)}
                 </legend>
                 <label className="stack">
                   Attendance
@@ -305,6 +312,6 @@ export function QuestDmActions({
             : 'Confirm'}
         </Button>
       </Modal>
-    </section>
+    </Card>
   );
 }

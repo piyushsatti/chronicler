@@ -36,11 +36,11 @@ describe('QuestDetailPage', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Siege of Kraghold' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Q-101')).toBeInTheDocument();
+    expect(screen.queryByText('Q-101')).not.toBeInTheDocument();
     // Discord delivery sync is an operator signal, hidden from guests and players.
     expect(screen.queryByText(/Discord/)).not.toBeInTheDocument();
     expect(
-      screen.getByText('Sign in to claim a seat at this table.'),
+      screen.getByRole('link', { name: 'Sign in to join this quest' }),
     ).toBeInTheDocument();
     expect(document.querySelector('[data-page-region="summary"]')).toBeTruthy();
     expect(screen.getByRole('tab', { name: 'Roster' })).toBeInTheDocument();
@@ -72,7 +72,7 @@ describe('QuestDetailPage', () => {
       </Routes>,
       { route: '/quests/Q-101' },
     );
-    expect(await screen.findByText(/Discord syncing · pending/)).toBeInTheDocument();
+    expect(await screen.findByText(/Discord post pending/)).toBeInTheDocument();
     const delivery = document.querySelector('[data-el="quest.discordDelivery"]');
     expect(delivery).toHaveAttribute('data-terminal', '0');
     expect(delivery).toHaveAttribute('role', 'status');
@@ -189,7 +189,7 @@ describe('QuestDetailPage', () => {
     );
     await screen.findByRole('heading', { level: 1, name: 'Siege of Kraghold' });
     expect(
-      within(screen.getByRole('tabpanel')).getByText('No participants yet.'),
+      within(screen.getByRole('tabpanel')).getByText('No one has signed up yet.'),
     ).toBeInTheDocument();
   });
 

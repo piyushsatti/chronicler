@@ -49,7 +49,10 @@ const PENDING: EditorLoadResult = {
 };
 
 /** Who may start a new record. The rule and its divergence from the API live in `canCreateRecord`. */
-export function canCreate(typeKey: EditorTypeKey, actor: CreateActor | undefined): boolean {
+export function canCreate(
+  typeKey: EditorTypeKey,
+  actor: CreateActor | undefined,
+): boolean {
   return canCreateRecord(typeKey, actor);
 }
 
@@ -85,7 +88,9 @@ function createAccessFor(
     };
   if (liveDm.status !== 'ready') return { status: 'loading' };
   return {
-    status: canCreate(typeKey, { roles, liveDm: liveDm.liveDm }) ? 'allowed' : 'forbidden',
+    status: canCreate(typeKey, { roles, liveDm: liveDm.liveDm })
+      ? 'allowed'
+      : 'forbidden',
   };
 }
 
@@ -144,7 +149,9 @@ export function useEditorPage(
     },
   });
   // Only a new quest or summary for a DM the roles cannot settle reads the DM profile.
-  const liveDm = useLiveDm(mode === 'new' && createNeedsLiveDm(typeKey, me?.roles ?? []));
+  const liveDm = useLiveDm(
+    mode === 'new' && createNeedsLiveDm(typeKey, me?.roles ?? []),
+  );
   const access = createAccessFor(typeKey, mode, reviewAccess, meQuery, liveDm);
   if (query.isError)
     return {

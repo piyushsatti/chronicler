@@ -1,202 +1,296 @@
-import { useId, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { ProtectedRoute } from '../../../auth/ProtectedRoute.js';
 import { SingleRegionPage } from '../../../chrome/singleRegion.js';
 import { PageShell } from '../../../components/foundation/PageShell.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { useMe } from '../../../hooks/useMe.js';
 import { useAuth } from '../../../auth/AuthContext.js';
+import { useCurrentAccess } from '../../../auth/useCurrentAccess.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import { Avatar } from '../../../components/primitives/Avatar.js';
 import { Button } from '../../../components/primitives/Button.js';
 import { Card } from '../../../components/primitives/Card.js';
-import { ContentRenderer } from '../../../components/foundation/ContentRenderer.js';
+import { CardGrid } from '../../../components/primitives/CardGrid.js';
+import { Chip } from '../../../components/primitives/Chip.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
-import { SegmentedControl } from '../../../components/primitives/SegmentedControl.js';
 import { Skeleton } from '../../../components/primitives/Skeleton.js';
+import { StatTile } from '../../../components/primitives/StatTile.js';
+import { Tabs } from '../../../components/primitives/Tabs.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
-import { listLabel, roleLabel } from '../../../utils/format.js';
+import {
+  characterStatusLabel,
+  personName,
+  pluralize,
+  roleLabel,
+  statusLabel,
+} from '../../../utils/format.js';
+import { PrivateNotesPanel } from '../components/PrivateNotes.js';
 import { usePrivateNotes } from '../hooks/usePrivateNotes.js';
-import styles from './privateNotes.module.css';
+import type { RosterCharacter } from '../adapters/memberHubAdapter.js';
+import { useMemberHub, type MemberHub } from '../hooks/useMemberHub.js';
+import type { MemberViewModel } from '../adapters/memberAdapter.js';
+import styles from './me.module.css';
 
-function NotesIcon(): React.JSX.Element {
-  return (
-    <svg
-      className={styles.emptyIcon}
-      width="28"
-      height="28"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.5"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M6 3h9l3 3v15H6z" />
-      <path d="M9 9h6M9 13h6M9 17h4" />
-    </svg>
-  );
+const TAB_IDS = ['overview', 'characters', 'notes'] as const;
+type TabId = (typeof TAB_IDS)[number];
+
+function isTabId(value: string | null): value is TabId {
+  return TAB_IDS.some((id) => id === value);
 }
 
-function LockIcon(): React.JSX.Element {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect x="5" y="11" width="14" height="10" rx="2" />
-      <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-    </svg>
-  );
+function formatHours(minutes: number): string {
+  const hours = Math.floor(minutes / 60);
+  const rest = Math.round(minutes % 60);
+  return hours > 0 ? `${hours}h ${rest}m` : `${rest}m`;
 }
 
-function PrivateNotes(): React.JSX.Element {
-  const notes = usePrivateNotes();
-  const { formatDateTime } = useDateFormatter();
-  const [writing, setWriting] = useState(false);
-  const [mode, setMode] = useState<'write' | 'preview'>('write');
-  const fieldId = useId();
-  const counterId = `${fieldId}-count`;
-
-  let body: React.JSX.Element;
-  if (notes.status === 'error') {
-    body = (
-      <StatePanel
-        variant="inline"
-        status="error"
-        error={notes.error}
-        onRetry={notes.retry}
-        retryLabel="Retry notes"
-      />
-    );
-  } else if (notes.status === 'loading') {
-    body = (
-      <div className="stack" data-gap="2" aria-busy="true">
-        <Skeleton width="12rem" height="1rem" aria-label="Loading private notes" />
-        <Skeleton height="14rem" aria-label="Loading private notes" />
-      </div>
-    );
-  } else if (notes.status === 'empty' && !writing && !notes.dirty) {
-    body = (
-      <EmptyState
-        className={styles.empty}
-        illustration={<NotesIcon />}
-        message="No notes yet."
-        actionLabel="Start writing"
-        onAction={() => setWriting(true)}
-      >
-        <p className="type-caption">
-          Keep names, debts, rumours and plans here. Markdown works.
-        </p>
-      </EmptyState>
-    );
-  } else {
-    const updatedAt = notes.status === 'ready' ? notes.view.updatedAt : null;
-    body = (
-      <div className="stack" data-gap="3">
-        <SegmentedControl
-          aria-label="Notes view"
-          size="sm"
-          value={mode}
-          onValueChange={setMode}
-          options={[
-            { value: 'write', label: 'Write' },
-            { value: 'preview', label: 'Preview' },
-          ]}
-        />
-        {mode === 'write' ? (
-          <div className="field" data-invalid={notes.overLimit ? 'true' : 'false'}>
-            <label htmlFor={fieldId} className="type-label">
-              Notes (Markdown)
-            </label>
-            <textarea
-              id={fieldId}
-              className={`field-input ${styles.editor}`}
-              rows={12}
-              aria-describedby={counterId}
-              aria-invalid={notes.overLimit || undefined}
-              disabled={notes.saving}
-              value={notes.text}
-              onChange={(event) => notes.setText(event.target.value)}
-            />
-          </div>
-        ) : (
-          <div className={styles.preview} aria-label="Notes preview">
-            {notes.text.trim() ? (
-              <ContentRenderer body={notes.text} />
-            ) : (
-              <p className="type-caption">Nothing to preview yet.</p>
-            )}
-          </div>
-        )}
-        <div className={styles.footer}>
-          <span
-            id={counterId}
-            className={`type-caption ${styles.counter}`}
-            data-over={notes.overLimit ? 'true' : 'false'}
-          >
-            {notes.length.toLocaleString('en-GB')} / {notes.max.toLocaleString('en-GB')}{' '}
-            characters
-            {notes.overLimit ? ' · too long to save' : ''}
-          </span>
-          <div className="row" data-wrap="1">
-            {notes.saveError ? (
-              <p
-                className={`type-caption ${styles.feedback}`}
-                data-tone="error"
-                role="alert"
-              >
-                Not saved. {notes.saveError.userMessage}
-              </p>
-            ) : (
-              <p className={`type-caption ${styles.feedback}`} role="status">
-                {notes.justSaved
-                  ? 'Saved.'
-                  : notes.dirty
-                    ? 'Unsaved changes.'
-                    : updatedAt
-                      ? `Last saved ${formatDateTime(updatedAt)}`
-                      : ''}
-              </p>
-            )}
-            <Button
-              onClick={notes.save}
-              pending={notes.saving}
-              disabled={!notes.dirty || notes.overLimit}
-            >
-              {notes.saving ? 'Saving…' : 'Save notes'}
-            </Button>
+function ProfileHero({
+  me,
+  avatarUrl,
+}: {
+  me: MemberViewModel;
+  avatarUrl: string | undefined;
+}): React.JSX.Element {
+  const { logout } = useAuth();
+  const adminAccess = useCurrentAccess('admin');
+  const isDm = me.roles.includes('dm');
+  const name = personName(me);
+  const publicPath = `/${isDm ? 'dms' : 'players'}/@${me.handle}`;
+  return (
+    <Card as="section" pad={5} className={styles.hero} aria-label="Your profile">
+      <div className={styles.heroBody}>
+        <Avatar name={name} src={avatarUrl} size="lg" ring="accent" />
+        <div className={styles.identity}>
+          <h1 className="type-display">{name}</h1>
+          <p className="type-caption">@{me.handle}</p>
+          <div className={styles.chips}>
+            {me.roles.map((role) => (
+              <Chip key={role} size="sm" tone="line">
+                {roleLabel(role)}
+              </Chip>
+            ))}
           </div>
         </div>
+        <div className={styles.actions}>
+          <Link className="btn btn--secondary" to="/me/personalize">
+            Personalize
+          </Link>
+          <Link className="btn btn--secondary" to="/settings">
+            Settings
+          </Link>
+          {isDm ? (
+            <Link className="btn btn--secondary" to="/dm">
+              DM dashboard
+            </Link>
+          ) : null}
+          {adminAccess.allowed ? (
+            <Link className="btn btn--secondary" to="/admin">
+              Admin
+            </Link>
+          ) : null}
+          <Link className="btn btn--ghost" to={publicPath}>
+            View public profile
+          </Link>
+          <Button variant="ghost" className={styles.signOut} onClick={() => logout()}>
+            Sign out
+          </Button>
+        </div>
       </div>
-    );
-  }
-
-  return (
-    <Card as="section" className="stack" pad={4} aria-labelledby={`${fieldId}-heading`}>
-      <div className={styles.heading}>
-        <h2 id={`${fieldId}-heading`} className="type-heading">
-          Private notes
-        </h2>
-        <p className={`type-caption ${styles.privacy}`}>
-          <LockIcon />
-          Only you can see these.
-        </p>
-      </div>
-      {body}
     </Card>
   );
 }
 
+function StatRow({ data }: { data: MemberHub }): React.JSX.Element | null {
+  const { formatDate } = useDateFormatter();
+  if (data.hub.status === 'error') return null;
+  if (data.hub.status === 'loading') {
+    return <Skeleton height="5rem" aria-label="Loading your stats" />;
+  }
+  const { stats, joinedAt } = data.hub.data;
+  const tiles: Array<{ label: string; value: string | number }> = [];
+  if (stats.questsPlayed > 0) {
+    tiles.push({ label: 'Quests played', value: stats.questsPlayed });
+  }
+  if (data.roster.status === 'ready') {
+    tiles.push({ label: 'Characters', value: data.roster.data.length });
+  }
+  if (stats.summariesAuthored > 0) {
+    tiles.push({ label: 'Summaries written', value: stats.summariesAuthored });
+  }
+  if (stats.voiceMinutes > 0) {
+    tiles.push({ label: 'Voice time', value: formatHours(stats.voiceMinutes) });
+  }
+  if (stats.messages > 0) {
+    tiles.push({ label: 'Messages', value: Math.round(stats.messages) });
+  }
+  tiles.push({ label: 'Member since', value: formatDate(joinedAt) });
+  return (
+    <div className={styles.stats} role="list" aria-label="Your stats">
+      {tiles.map((tile) => (
+        <div key={tile.label} role="listitem">
+          {/* One size for every tile so labels and values share a baseline
+              (a date in the display face would not fit a phone column). */}
+          <StatTile label={tile.label} value={tile.value} size="sm" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function Overview({ data }: { data: MemberHub }): React.JSX.Element {
+  const { formatScheduled, formatDateTime } = useDateFormatter();
+  const sessions = data.hub.status === 'ready' ? data.hub.data.recentSessions : [];
+  return (
+    <div className={styles.overview}>
+      <section className="stack" data-gap="3" aria-labelledby="me-upcoming">
+        <div className={styles.sectionHead}>
+          <h2 id="me-upcoming" className="type-heading">
+            Upcoming sign-ups
+          </h2>
+          {data.upcoming.status === 'ready' && data.upcoming.data.length > 0 ? (
+            <Link className="type-link" to="/quests">
+              Browse quests
+            </Link>
+          ) : null}
+        </div>
+        {data.upcoming.status === 'error' ? (
+          <StatePanel
+            variant="inline"
+            status="error"
+            error={data.upcoming.error}
+            onRetry={data.retry}
+            retryLabel="Retry sign-ups"
+          />
+        ) : data.upcoming.status === 'loading' ? (
+          <Skeleton height="4rem" aria-label="Loading your sign-ups" />
+        ) : data.upcoming.data.length === 0 ? (
+          <EmptyState
+            message="No upcoming sign-ups."
+            action={
+              <Link className="btn btn--sm" to="/quests">
+                Find a quest
+              </Link>
+            }
+          />
+        ) : (
+          <ul className={styles.list}>
+            {data.upcoming.data.map((item) => (
+              <li key={item.questId}>
+                <Card variant="clickable" to={`/quests/${item.shortCode}`} pad={4}>
+                  <div className={styles.rowCard}>
+                    <div className={styles.rowMain}>
+                      <p className="type-label">{statusLabel(item.status)}</p>
+                      <h3 className="type-title">{item.title}</h3>
+                      <p className="type-caption">as {item.characterName}</p>
+                    </div>
+                    <p className="type-caption">{formatScheduled(item.scheduledAt)}</p>
+                  </div>
+                </Card>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+      {sessions.length > 0 ? (
+        <section className="stack" data-gap="3" aria-labelledby="me-activity">
+          <h2 id="me-activity" className="type-heading">
+            Recent activity
+          </h2>
+          <ul className={styles.list}>
+            {sessions.map((session, index) => (
+              <li key={`${session.occurredAt}-${index}`}>
+                <Card pad={4}>
+                  <div className={styles.rowCard}>
+                    <p className="type-body">{session.kind}</p>
+                    <p className="type-caption">{formatDateTime(session.occurredAt)}</p>
+                  </div>
+                </Card>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+    </div>
+  );
+}
+
+function CharacterTile({
+  character,
+}: {
+  character: RosterCharacter;
+}): React.JSX.Element {
+  const initials = character.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word.charAt(0))
+    .join('');
+  return (
+    <Card variant="clickable" to={`/characters/${character.shortCode}`} pad={4}>
+      <div className={styles.charRow}>
+        <span aria-hidden>
+          <Avatar
+            name={initials || '?'}
+            src={character.imageUrl ?? undefined}
+            size="md"
+          />
+        </span>
+        <div className={styles.rowMain}>
+          <p className="type-label">{characterStatusLabel(character.status)}</p>
+          <h3 className="type-title">{character.name}</h3>
+          <p className="type-caption">{character.detail || 'Character'}</p>
+        </div>
+      </div>
+    </Card>
+  );
+}
+
+function Roster({ data }: { data: MemberHub }): React.JSX.Element {
+  const { roster } = data;
+  const create = (
+    <Link className="btn btn--primary" to="/characters?new=1">
+      Create a character
+    </Link>
+  );
+  return (
+    <div className={styles.overview}>
+      <div className={styles.sectionHead}>
+        <h2 className="type-heading">
+          {roster.status === 'ready'
+            ? pluralize(roster.data.length, 'character')
+            : 'Your characters'}
+        </h2>
+        {roster.status === 'ready' && roster.data.length === 0 ? null : create}
+      </div>
+      {roster.status === 'error' ? (
+        <StatePanel
+          variant="inline"
+          status="error"
+          error={roster.error}
+          onRetry={data.retry}
+          retryLabel="Retry characters"
+        />
+      ) : roster.status === 'loading' ? (
+        <Skeleton height="6rem" aria-label="Loading your characters" />
+      ) : roster.data.length === 0 ? (
+        <EmptyState
+          message="You have no characters yet. Create one to sign up for quests."
+          action={create}
+        />
+      ) : (
+        <CardGrid as="ul" gap={4} aria-label="Your characters">
+          {roster.data.map((character) => (
+            <li key={character.id}>
+              <CharacterTile character={character} />
+            </li>
+          ))}
+        </CardGrid>
+      )}
+    </div>
+  );
+}
+
 function MeBody(): React.JSX.Element {
-  const { logout } = useAuth();
   const meQ = useMe();
 
   if (meQ.isError) {
@@ -219,60 +313,77 @@ function MeBody(): React.JSX.Element {
     );
   }
 
-  const me = meQ.data;
+  return <MeHub me={meQ.data} />;
+}
+
+function MeHub({ me }: { me: MemberViewModel }): React.JSX.Element {
+  const data = useMemberHub(me.id);
+  const notes = usePrivateNotes();
+  const [params, setParams] = useSearchParams();
+  const requested = params.get('tab');
+  const tab: TabId = isTabId(requested) ? requested : 'overview';
+  const selectTab = (id: string): void => {
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (id === 'overview') next.delete('tab');
+        else next.set('tab', id);
+        return next;
+      },
+      { replace: true },
+    );
+  };
   const isDm = me.roles.includes('dm');
-  const links = [
-    {
-      to: `/${isDm ? 'dms' : 'players'}/@${me.handle}`,
-      title: 'My profile',
-      caption: 'How other members see you, with your availability.',
-    },
-    {
-      to: '/characters',
-      title: 'Characters',
-      caption: 'Your roster and character sheets.',
-    },
-    {
-      to: '/me/personalize',
-      title: 'Personalize',
-      caption: 'Theme, motion and time zone.',
-    },
-  ];
-  // Same layout as the member profile pages: identity header, then cards.
+
   return (
     <PageShell context="tavern" className="hf2">
       <SingleRegionPage page="me">
-        <div className="stack" data-gap="4">
-          <header className="stack">
-            <p className="eyebrow">{listLabel(me.roles.map(roleLabel)) || 'Member'}</p>
-            <Avatar name={me.displayName || me.handle} />
-            <h1 className="type-display">{me.displayName || me.handle}</h1>
-            <p className="type-caption">@{me.handle}</p>
-          </header>
-          <nav aria-label="Your account" className="stack" data-gap="3">
-            {links.map((link) => (
-              <Card
-                key={link.to}
-                variant="clickable"
-                to={link.to}
-                className="stack"
-                pad={4}
-              >
-                <span className="type-title">{link.title}</span>
-                <span className="type-caption">{link.caption}</span>
-              </Card>
-            ))}
-          </nav>
-          <PrivateNotes />
-          <Card className="stack" pad={4}>
-            <h2 className="type-heading">Session</h2>
-            <p className="type-caption">Signed in with Discord as @{me.handle}.</p>
-            <div className="row">
-              <Button variant="secondary" onClick={() => logout()}>
-                Sign out
-              </Button>
-            </div>
-          </Card>
+        <div className={styles.body}>
+          <ProfileHero
+            me={me}
+            avatarUrl={
+              data.hub.status === 'ready'
+                ? (data.hub.data.avatarUrl ?? undefined)
+                : undefined
+            }
+          />
+          {data.hub.status === 'error' ? (
+            <StatePanel
+              variant="inline"
+              status="error"
+              error={data.hub.error}
+              onRetry={data.retry}
+              retryLabel="Retry your stats"
+            />
+          ) : null}
+          <StatRow data={data} />
+          <Tabs
+            aria-label="Your account sections"
+            value={tab}
+            onValueChange={selectTab}
+            items={[
+              { id: 'overview', label: 'Overview', panel: <Overview data={data} /> },
+              {
+                id: 'characters',
+                label: 'Characters',
+                panel: <Roster data={data} />,
+              },
+              { id: 'notes', label: 'Notes', panel: <PrivateNotesPanel notes={notes} /> },
+            ]}
+          />
+          {isDm ? (
+            <Card as="section" pad={4} className={styles.dmPanel} aria-label="DM mode">
+              <div>
+                <p className="type-label">DM mode</p>
+                <p className="type-body">
+                  Full DM statistics and quest management live on the DM dashboard.
+                </p>
+              </div>
+              <Link className="btn btn--secondary" to="/dm">
+                Open DM dashboard
+              </Link>
+            </Card>
+          ) : null}
         </div>
       </SingleRegionPage>
     </PageShell>

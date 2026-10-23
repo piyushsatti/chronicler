@@ -1,5 +1,8 @@
-import { useId, useState, type ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
 import { cx } from './cx.js';
+import { useControllable } from './useControllable.js';
+import { useScrollEdges } from './useScrollEdges.js';
 
 export type TabItem = {
   id: string;
@@ -9,18 +12,40 @@ export type TabItem = {
 
 export type TabsProps = {
   items: readonly TabItem[];
+  /** Controlled active tab id. */
+  value?: string;
   defaultTabId?: string;
+  onValueChange?: (id: string) => void;
+  /** Names the tab list when the page has more than one. */
+  'aria-label'?: string;
   className?: string;
+  /** `sm` is a compact row for sub-tabs under a page-level tab row; same skin. */
+  size?: 'md' | 'sm';
 };
 
-export function Tabs({ items, defaultTabId, className }: TabsProps): React.JSX.Element {
-  const [active, setActive] = useState(defaultTabId ?? items[0]?.id ?? '');
+/** Page-section tabs. One skin: the top-nav pill (filled ink when active).
+ * Use SegmentedControl for value switches inside a form. */
+export function Tabs({
+  items,
+  value,
+  defaultTabId,
+  onValueChange,
+  'aria-label': ariaLabel,
+  className,
+  size = 'md',
+}: TabsProps): React.JSX.Element {
+  const [active, setActive] = useControllable({
+    value,
+    defaultValue: defaultTabId ?? items[0]?.id ?? '',
+    onChange: onValueChange,
+  });
   const id = useId();
   const current = items.find((item) => item.id === active) ?? items[0];
+  const listRef = useScrollEdges<HTMLDivElement>(`${current?.id}:${items.length}`);
 
   return (
-    <div className={cx('tabs', className)} data-component="Tabs">
-      <div className="tabs__list" role="tablist">
+    <div className={cx('tabs', className)} data-component="Tabs" data-size={size}>
+      <div ref={listRef} className="tabs__list" role="tablist" aria-label={ariaLabel}>
         {items.map((item, index) => (
           <button
             key={item.id}
@@ -30,7 +55,7 @@ export function Tabs({ items, defaultTabId, className }: TabsProps): React.JSX.E
             aria-controls={`${id}-panel-${index}`}
             aria-selected={item.id === current?.id}
             tabIndex={item.id === current?.id ? 0 : -1}
-            className={cx('tabs__tab', item.id === current?.id && 'tabs__tab--active')}
+            className="tabs__tab"
             onClick={() => setActive(item.id)}
             onKeyDown={(event) => {
               let target: number;
@@ -77,3 +102,43 @@ export function Tabs({ items, defaultTabId, className }: TabsProps): React.JSX.E
     </div>
   );
 }
+
+export type TabNavItem = {
+  to: string;
+  label: string;
+  current: boolean;
+};
+
+/** Route-level section navigation (links, not tab panels) in the same pill
+ * skin as Tabs and the top nav. The current link gets aria-current="page". */
+export function TabNav({
+  items,
+  'aria-label': ariaLabel,
+  className,
+}: {
+  items: readonly TabNavItem[];
+  'aria-label': string;
+  className?: string;
+}): React.JSX.Element {
+  const listRef = useScrollEdges<HTMLDivElement>(
+    `${items.findIndex((item) => item.current)}:${items.length}`,
+  );
+  return (
+    <nav className={cx('tabs', className)} data-component="TabNav" aria-label={ariaLabel}>
+      <div ref={listRef} className="tabs__list">
+        {items.map((item) => (
+          <Link
+            key={item.to}
+            to={item.to}
+            className="tabs__tab"
+            aria-current={item.current ? 'page' : undefined}
+          >
+            {item.label}
+          </Link>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+Tabs.Nav = TabNav;

@@ -4,9 +4,9 @@ import { PageShell } from '../../../components/foundation/PageShell.js';
 
 export function SettingsPage(): React.JSX.Element {
   return (
-    <PageShell eyebrow="Account" title="Settings">
+    <PageShell title="Settings" back={{ to: '/me', label: 'Profile' }}>
       <SingleRegionPage page="settings">
-        <SettingsForm />
+        <SettingsForm section="settings" />
       </SingleRegionPage>
     </PageShell>
   );

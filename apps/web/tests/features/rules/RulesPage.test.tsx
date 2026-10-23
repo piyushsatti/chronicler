@@ -91,10 +91,16 @@ describe('RulesPage', () => {
       '/rules/rulings/ruling-cover',
     );
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-    expect(
-      screen.getByRole('heading', { name: 'Server Mechanics' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Rules' })).toBeInTheDocument();
     expect(screen.getByLabelText('Search rules')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Filter rules' })).toBeInTheDocument();
+    // Rulings are a section below the guides, not a right rail.
+    const guides = screen.getByRole('region', { name: 'Guides' });
+    const rulings = screen.getByRole('region', { name: 'Rulings' });
+    expect(
+      guides.compareDocumentPosition(rulings) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.queryByRole('navigation', { name: /pages$/ })).toBeNull();
     expect(screen.queryByRole('link', { name: 'New guide' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'New ruling' })).toBeNull();
   });
@@ -137,7 +143,7 @@ describe('RulesPage', () => {
       expect(
         await screen.findByRole(
           'heading',
-          { level: 1, name: `Create ${kind}` },
+          { level: 1, name: `New ${kind}` },
           { timeout: 3000 },
         ),
       ).toBeVisible();
@@ -359,7 +365,7 @@ describe('RulesPage', () => {
     expect(screen.getByRole('link', { name: /^Guide 1 / })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /^Ruling 1 / })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: 'Next guides' }));
-    await user.click(screen.getByRole('button', { name: 'Guide 1' }));
+    await user.type(screen.getByLabelText('Search rules'), 'Guide 1');
     expect(screen.getByLabelText('Search rules')).toHaveValue('Guide 1');
     expect(screen.getByRole('link', { name: /^Guide 1 / })).toBeInTheDocument();
     expect(

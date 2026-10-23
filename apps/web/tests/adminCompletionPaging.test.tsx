@@ -58,9 +58,10 @@ describe('Retained admin pagination and persisted readback', () => {
       await screen.findByRole('button', { name: /Person 50/ }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Person 0/ })).not.toBeInTheDocument();
-    await userEvent.selectOptions(screen.getByLabelText('Role filter'), 'dm');
+    await userEvent.click(screen.getByRole('button', { name: /Role/ }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'DM' }));
     expect(
-      await screen.findByText('No members match this filter.'),
+      await screen.findByText('No members match these filters.'),
     ).toBeInTheDocument();
     // A filter that fits on one page shows no pager at all.
     expect(screen.queryByRole('button', { name: 'Previous' })).not.toBeInTheDocument();
@@ -94,7 +95,7 @@ describe('Retained admin pagination and persisted readback', () => {
     );
     renderWithProviders(<AdminContentPage />, { route: '/admin/content' });
     const label = await screen.findByLabelText('Media label');
-    expect(screen.getByLabelText('Media kind')).toHaveValue('illustration');
+    expect(screen.getByRole('button', { name: /^Media kind/ })).toHaveTextContent('illustration');
     await userEvent.clear(label);
     await userEvent.type(label, 'New image');
     await userEvent.click(screen.getByRole('button', { name: 'Save banner' }));
@@ -156,11 +157,11 @@ describe('Retained admin pagination and persisted readback', () => {
       'href',
       '/quests/Q-1',
     );
-    expect(await screen.findByRole('link', { name: 'Create quest' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: 'Post a quest' })).toHaveAttribute(
       'href',
       '/quests/new',
     );
-    expect(screen.getByRole('link', { name: 'Create DM table' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'New DM table' })).toHaveAttribute(
       'href',
       '/editor/dm-table',
     );
@@ -272,7 +273,7 @@ describe('Retained admin pagination and persisted readback', () => {
       '/quests/Q-NIGHT',
     );
     await userEvent.click(screen.getByRole('button', { name: 'Show New York time' }));
-    const scheduled = screen.getByText(/Sat, 07 Mar 2026, 23:30/);
+    const scheduled = screen.getByText(/Sat 7 Mar 2026, 23:30/);
     expect(scheduled.tagName).toBe('TIME');
     expect(scheduled).toHaveAttribute('datetime', '2026-03-08T04:30:00Z');
     const unscheduled = screen.getByRole('row', { name: /Unscheduled quest/ });
@@ -280,12 +281,12 @@ describe('Retained admin pagination and persisted readback', () => {
     expect(unscheduled.querySelector('time')).toBeNull();
     const before = reads;
     await userEvent.click(screen.getByRole('button', { name: 'Show Kolkata time' }));
-    expect(screen.getByText(/Sun, 08 Mar 2026, 10:00/)).toHaveAttribute(
+    expect(screen.getByText(/Sun 8 Mar 2026, 10:00/)).toHaveAttribute(
       'datetime',
       '2026-03-08T04:30:00Z',
     );
     expect(reads).toBe(before);
-    expect(screen.queryByText(/Sat, 07 Mar 2026, 23:30/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Sat 7 Mar 2026, 23:30/)).not.toBeInTheDocument();
   });
   it('offers Create quest only once the DM profile is approved, as the API requires', async () => {
     signIn(['dm']);
@@ -313,11 +314,11 @@ describe('Retained admin pagination and persisted readback', () => {
       }),
     );
     renderWithProviders(<DMDashboardPage />, { route: '/dm' });
-    expect(await screen.findByText('No quests on this page.')).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Create DM table' })).toBeVisible();
+    expect(await screen.findByText('You have not posted any quests yet.')).toBeVisible();
+    expect(screen.getByRole('link', { name: 'New DM table' })).toBeVisible();
     await waitFor(() => expect(profileReads).toBeGreaterThan(0));
     await waitFor(() =>
-      expect(screen.queryByRole('link', { name: 'Create quest' })).toBeNull(),
+      expect(screen.queryByRole('link', { name: 'Post a quest' })).toBeNull(),
     );
   });
 });

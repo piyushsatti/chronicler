@@ -257,7 +257,8 @@ describe('parseRulesList', () => {
       items: [
         {
           ...good.items[1],
-          effectiveBody: '---\ntitle: Cover\nsummary: "Allies give half cover."\n---\n- **Half**',
+          effectiveBody:
+            '---\ntitle: Cover\nsummary: "Allies give half cover."\n---\n- **Half**',
         },
       ],
       total: 1,

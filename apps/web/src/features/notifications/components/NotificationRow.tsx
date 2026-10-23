@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { Chip } from '../../../components/primitives/Chip.js';
 import { Card } from '../../../components/primitives/Card.js';
 import type { NotificationView } from '../types.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
@@ -55,17 +56,16 @@ export function NotificationRow({
       aria-label={`${displayKind}: ${displayTitle}${isUnread ? ', unread' : ''}`}
       className="row"
     >
-      <span aria-hidden="true" className="type-label">
-        {isUnread ? '●' : '○'}
-      </span>
       <div className="stack">
         <div className="row">
           <span className="type-label" data-el="notifications.row.kind">
             {displayKind}
           </span>
-          <span className="type-caption" data-el="notifications.row.readState">
-            {isUnread ? 'Unread' : 'Read'}
-          </span>
+          <Chip size="sm" tone={isUnread ? 'accent' : 'line'}>
+            <span data-el="notifications.row.readState">
+              {isUnread ? 'Unread' : 'Read'}
+            </span>
+          </Chip>
         </div>
         {title}
         {notification.destination.status === 'unavailable' ? (

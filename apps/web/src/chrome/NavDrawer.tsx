@@ -25,10 +25,15 @@ function HamburgerIcon(): React.JSX.Element {
 
 export type NavDrawerProps = {
   destinations: readonly SiteDestination[];
+  /** Personal routes light up the avatar, so no destination is active. */
+  personal?: boolean;
 };
 
 /** Medium / compact-height drawer nav — hamburger + focus-trapped panel. */
-export function NavDrawer({ destinations }: NavDrawerProps): React.JSX.Element {
+export function NavDrawer({
+  destinations,
+  personal = false,
+}: NavDrawerProps): React.JSX.Element {
   const location = useLocation();
   const [open, setOpen] = useState(false);
   const hamburgerRef = useRef<HTMLButtonElement>(null);
@@ -115,7 +120,7 @@ export function NavDrawer({ destinations }: NavDrawerProps): React.JSX.Element {
                 </h2>
                 <nav aria-label="Mobile navigation" className="nav-drawer-nav">
                   {destinations.map((destination) => {
-                    const active = destination.matches(location.pathname);
+                    const active = !personal && destination.matches(location.pathname);
                     return (
                       <Link
                         key={destination.id}

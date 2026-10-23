@@ -251,9 +251,7 @@ export function CreateCharacterForm({
               ))
             )}
           </fieldset>
-          <p className="type-caption">
-            Your character starts awaiting approval.
-          </p>
+          <p className="type-caption">Your character starts awaiting approval.</p>
           <div className="row" data-wrap="1">
             <Button
               type="submit"

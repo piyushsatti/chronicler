@@ -1,5 +1,5 @@
 import { DmDashboard } from '../components/DmDashboard.js';
-import { Tabs } from '../../../components/primitives/Tabs.js';
+import { SectionSwitch } from '../components/SectionSwitch.js';
 import { AdminWorkspaceShell } from '../AdminWorkspaceShell.js';
 import { BackstoriesPanel } from '../components/BackstoriesPanel.js';
 import { CharacterDirectoryPanel } from '../components/CharacterDirectoryPanel.js';
@@ -21,40 +21,21 @@ import {
   useDmDashboardPage,
 } from '../hooks/useAdminSectionPage.js';
 
-function SectionIntro({
-  label,
-  heading,
-  caption,
-}: {
-  label: string;
-  heading: string;
-  caption: string;
-}): React.JSX.Element {
-  return (
-    <div className="stack" data-gap="2">
-      <span className="type-label">{label}</span>
-      <h2 className="type-heading">{heading}</h2>
-      <p className="type-caption">{caption}</p>
-    </div>
-  );
-}
-
 function PeopleBody(): React.JSX.Element {
   const view = useAdminPeoplePage();
   return (
     <div className="stack">
-      <SectionIntro
-        label="Directory"
-        heading="Members & roles"
-        caption="Search the roster and assign staff roles."
-      />
       <MembersPanel view={view.data} />
     </div>
   );
 }
 export function AdminPeoplePage(): React.JSX.Element {
   return (
-    <AdminWorkspaceShell page="admin-people" title="People">
+    <AdminWorkspaceShell
+      page="admin-people"
+      title="People"
+      lede="Search members and give them staff roles."
+    >
       <PeopleBody />
     </AdminWorkspaceShell>
   );
@@ -63,18 +44,17 @@ export function AdminPeoplePage(): React.JSX.Element {
 function CharactersBody(): React.JSX.Element {
   return (
     <div className="stack">
-      <SectionIntro
-        label="Directory"
-        heading="Characters"
-        caption="Browse campaign characters and open ownership records."
-      />
       <CharacterDirectoryPanel view={useAdminCharactersPage()} />
     </div>
   );
 }
 export function AdminCharactersPage(): React.JSX.Element {
   return (
-    <AdminWorkspaceShell page="admin-characters" title="Characters">
+    <AdminWorkspaceShell
+      page="admin-characters"
+      title="Characters"
+      lede="Browse every character and open their records."
+    >
       <CharactersBody />
     </AdminWorkspaceShell>
   );
@@ -84,12 +64,8 @@ function WorldBody(): React.JSX.Element {
   const view = useAdminWorldPage();
   return (
     <div className="stack">
-      <SectionIntro
-        label="World"
-        heading="Regions, anchors, calendar"
-        caption="Maintain geography, timeline anchors, and the game calendar."
-      />
-      <Tabs
+      <SectionSwitch
+        label="World sections"
         items={[
           {
             id: 'regions',
@@ -113,7 +89,11 @@ function WorldBody(): React.JSX.Element {
 }
 export function AdminWorldPage(): React.JSX.Element {
   return (
-    <AdminWorkspaceShell page="admin-world" title="World">
+    <AdminWorkspaceShell
+      page="admin-world"
+      title="World"
+      lede="Maintain regions, time anchors and the game calendar."
+    >
       <WorldBody />
     </AdminWorkspaceShell>
   );
@@ -123,12 +103,8 @@ function ContentBody(): React.JSX.Element {
   const view = useAdminContentPage();
   return (
     <div className="stack">
-      <SectionIntro
-        label="Content"
-        heading="Site surfaces"
-        caption="Edit the home banner, backstories, and creation catalog."
-      />
-      <Tabs
+      <SectionSwitch
+        label="Content sections"
         items={[
           {
             id: 'home',
@@ -152,7 +128,11 @@ function ContentBody(): React.JSX.Element {
 }
 export function AdminContentPage(): React.JSX.Element {
   return (
-    <AdminWorkspaceShell page="admin-content" title="Content">
+    <AdminWorkspaceShell
+      page="admin-content"
+      title="Content"
+      lede="Edit the home banner, backstories and the creation catalog."
+    >
       <ContentBody />
     </AdminWorkspaceShell>
   );
@@ -161,18 +141,17 @@ export function AdminContentPage(): React.JSX.Element {
 function DeliveryBody(): React.JSX.Element {
   return (
     <div className="stack">
-      <SectionIntro
-        label="Delivery"
-        heading="Discord delivery"
-        caption="Watch pending jobs and active delivery alerts."
-      />
       <DeliveryPanel view={useAdminDeliveryPage()} />
     </div>
   );
 }
 export function AdminDeliveryPage(): React.JSX.Element {
   return (
-    <AdminWorkspaceShell page="admin-delivery" title="Delivery">
+    <AdminWorkspaceShell
+      page="admin-delivery"
+      title="Delivery"
+      lede="Check that quests reach Discord, and see what needs attention."
+    >
       <DeliveryBody />
     </AdminWorkspaceShell>
   );
@@ -181,18 +160,17 @@ export function AdminDeliveryPage(): React.JSX.Element {
 function DataHealthBody(): React.JSX.Element {
   return (
     <div className="stack">
-      <SectionIntro
-        label="Integrity"
-        heading="Data health"
-        caption="Watchdog alerts and remediation surfaces from live operations."
-      />
       <DataHealthPanel view={useAdminDataHealthPage()} />
     </div>
   );
 }
 export function AdminDataHealthPage(): React.JSX.Element {
   return (
-    <AdminWorkspaceShell page="admin-data-health" title="Data health">
+    <AdminWorkspaceShell
+      page="admin-data-health"
+      title="Data health"
+      lede="Background jobs and the bot report their problems here."
+    >
       <DataHealthBody />
     </AdminWorkspaceShell>
   );
@@ -204,7 +182,12 @@ function DmDashboardBody(): React.JSX.Element {
 }
 export function DMDashboardPage(): React.JSX.Element {
   return (
-    <AdminWorkspaceShell page="dm-dashboard" title="DM dashboard" authority="dm">
+    <AdminWorkspaceShell
+      page="dm-dashboard"
+      title="DM dashboard"
+      authority="dm"
+      bareHeader
+    >
       <DmDashboardBody />
     </AdminWorkspaceShell>
   );

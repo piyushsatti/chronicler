@@ -16,7 +16,7 @@ import * as profile from '../features/profile/feature.js';
 import * as quest from '../features/quest/feature.js';
 import * as rules from '../features/rules/feature.js';
 import * as search from '../features/search/feature.js';
-import { ROUTE_MANIFEST_PATHS } from '../routes/routeManifest.js';
+import { isRouteEnabled, ROUTE_MANIFEST_PATHS } from '../routes/routeManifest.js';
 import type { FeatureRoute, FeatureSlice } from './featureModule.js';
 import {
   mergeEndpointSlices,
@@ -65,7 +65,9 @@ function orderRoutesByManifest(routes: readonly FeatureRoute[]): FeatureRoute[] 
   return ordered;
 }
 
-const flatRoutes = SLICES.flatMap((slice) => slice.routes);
+const flatRoutes = SLICES.flatMap((slice) => slice.routes).filter((route) =>
+  isRouteEnabled(route.path),
+);
 
 export const routes = orderRoutesByManifest(flatRoutes);
 

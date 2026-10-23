@@ -23,10 +23,7 @@ describe('DMProfilePage', () => {
     expect(await screen.findByText('@mira')).toBeInTheDocument();
     expect(screen.getByText('Horror & heists')).toBeInTheDocument();
     expect(screen.getByText('Accepting players')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Back to directory' })).toHaveAttribute(
-      'href',
-      '/dms',
-    );
+    expect(screen.getByRole('link', { name: /DMs/ })).toHaveAttribute('href', '/dms');
   });
 
   it('shows controlled error on GraphQL failure', async () => {

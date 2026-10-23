@@ -3,7 +3,6 @@ import { PageHost } from '@pi/react-imposition/react';
 import { PageShell } from '../../../components/foundation/PageShell.js';
 import { QuestBoardView } from '../components/QuestBoardView.js';
 import { useQuestBoardPage } from '../hooks/useQuestBoardPage.js';
-import styles from '../components/questBoard.module.css';
 
 const DECLARATION: PageDeclaration = {
   page: 'quest-board',
@@ -13,7 +12,7 @@ const DECLARATION: PageDeclaration = {
 export function QuestBoardPage(): React.JSX.Element {
   const page = useQuestBoardPage();
   return (
-    <PageShell context="tavern" max="wide" className={`hf2 ${styles.shell}`}>
+    <PageShell context="tavern" className="hf2">
       <PageHost
         declaration={DECLARATION}
         regions={{ body: () => <QuestBoardView {...page} /> }}

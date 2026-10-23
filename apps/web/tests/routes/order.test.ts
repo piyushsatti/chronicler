@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { matchRoutes } from 'react-router-dom';
 import { routes } from '../../src/chrome/featureRegistry.js';
-import { ROUTE_MANIFEST_PATHS } from '../../src/routes/routeManifest.js';
+import {
+  DEV_ONLY_ROUTE_PATHS,
+  isRouteEnabled,
+  ROUTE_MANIFEST_PATHS,
+} from '../../src/routes/routeManifest.js';
 
 describe('route registry order', () => {
   it('registers every manifest path exactly once before the catch-all', () => {
@@ -41,5 +45,15 @@ describe('route registry order', () => {
     expect(registered).not.toContain('/rules/:slug');
     expect(registered).not.toContain('/chronicles/:slug');
     expect(registered).not.toContain('/documents/:slug');
+  });
+});
+
+describe('dev-only routes', () => {
+  it('registers the editor demo only in dev builds', () => {
+    expect(isRouteEnabled('/editor-demo', true)).toBe(true);
+    expect(isRouteEnabled('/editor-demo', false)).toBe(false);
+    expect(isRouteEnabled('/_demo', false)).toBe(false);
+    expect(isRouteEnabled('/quests/new', false)).toBe(true);
+    expect(DEV_ONLY_ROUTE_PATHS).toEqual(['/editor-demo', '/_demo']);
   });
 });

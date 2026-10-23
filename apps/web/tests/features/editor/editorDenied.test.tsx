@@ -146,10 +146,7 @@ describe('starting a record the account may not create', () => {
       'href',
       '/rules',
     );
-    expect(screen.getByRole('link', { name: 'Switch account' })).toHaveAttribute(
-      'href',
-      '/login',
-    );
+    expect(screen.queryByRole('link', { name: 'Switch account' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'Publish' })).toBeNull();
   });
 
@@ -171,7 +168,7 @@ describe('starting a record the account may not create', () => {
       wrapper: editorHarness('/rules/guides/new', '/rules/guides/new').wrapper,
     });
     expect(await screen.findByRole('button', { name: 'Publish' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 1, name: 'Create guide' })).toBeVisible();
+    expect(screen.getByRole('heading', { level: 1, name: 'New guide' })).toBeVisible();
   });
 
   it('surfaces a failed account lookup on a new guide with a working retry, not an endless load', async () => {
@@ -318,7 +315,7 @@ describe('editing a record that does not exist', () => {
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: 'We couldn’t find that DM table',
+        name: 'DM table not found',
       }),
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to DMs' })).toHaveAttribute(
@@ -345,7 +342,7 @@ describe('editing a record that does not exist', () => {
       ).wrapper,
     });
     expect(
-      await screen.findByRole('heading', { name: 'We couldn’t find that DM table' }),
+      await screen.findByRole('heading', { name: 'DM table not found' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to DMs' })).toBeVisible();
     expect(screen.queryByRole('link', { name: 'Create a DM table' })).toBeNull();

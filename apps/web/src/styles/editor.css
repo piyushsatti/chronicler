@@ -44,7 +44,7 @@
 
   /* tags */
   .hf2 .pf-tags{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; padding:2px; }
-  .hf2 .pf-tag{ display:inline-flex; align-items:center; gap:5px; font-family:var(--font-mono); font-size:11px; color:var(--color-text-2);
+  .hf2 .pf-tag{ display:inline-flex; align-items:center; gap:5px; font-family:var(--font-body); font-size:12px; font-weight:500; color:var(--color-text-2);
     background:var(--color-bg-surface); border:1px solid var(--color-border); border-radius:6px; padding:3px 4px 3px 9px; }
   .hf2 .pf-tag button{ all:unset; cursor:pointer; color:var(--color-text-4); font-size:13px; line-height:1; padding:0 2px; }
   .hf2 .pf-tag button:hover{ color:var(--color-status-dead); }
@@ -78,7 +78,7 @@
   /* viewport queries removed — use Imposition navPatternFor / declarations */
 
 
-  .hf2 .le-doc{ max-width:720px; margin:0 auto; padding:8px 0 40vh; color:var(--color-text-2); }
+  .hf2 .le-doc{ max-width:var(--page-max-reading); margin:0 auto; padding:8px 0 40vh; color:var(--color-text-2); }
   /* #17: compact variant for LiveEditor instances embedded inline (not
      owning the whole page body) -- e.g. one per audience-block text run in
      the summary editor. Swaps the whole-page 40vh click-below gutter for a
@@ -107,7 +107,7 @@
   .hf2 .le-widget .cr-prose{ pointer-events:none; }
   .hf2 .le-widget:hover .le-chip{ opacity:1; }
   .hf2 .le-chip{ position:absolute; top:8px; right:10px; z-index:2; opacity:0; transition:opacity 140ms;
-    font-family:var(--font-mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--color-text-3);
+    font-family:var(--font-body); font-size:11px; color:var(--color-text-3);
     background:var(--color-bg-deep); border:1px solid var(--color-border); border-radius:6px; padding:3px 7px; pointer-events:none; }
 
   /* raw rows inside an open widget */
@@ -119,7 +119,7 @@
   .hf2 .le-add{ cursor:text; padding:10px; margin:4px 6px 0; color:var(--color-text-4); font-size:13.5px; border-radius:7px; }
   .hf2 .le-add:hover{ background:var(--color-bg-surface); color:var(--color-text-3); }
   .hf2 .le-input::placeholder{ color:var(--color-text-4); }
-  .hf2 .le-add{ max-width:720px; margin-left:auto; margin-right:auto; }
+  .hf2 .le-add{ max-width:var(--page-max-reading); margin-left:auto; margin-right:auto; }
 
   .hf2 .le-toolbar{ display:flex; align-items:center; gap:3px; flex-wrap:wrap; padding:7px 12px; margin:0; background:var(--color-bg-panel); border-bottom:1px solid var(--color-border); position:sticky; top:64px; z-index:15; }
   .hf2 .le-tb-btn{ all:unset; cursor:pointer; min-width:26px; height:26px; padding:0 7px; box-sizing:border-box; display:inline-flex; align-items:center; justify-content:center; border-radius:7px; font-size:12.5px; font-weight:600; color:var(--color-text-2); }
@@ -137,23 +137,23 @@
 
   .hf2 .le-menu-backdrop{ position:fixed; inset:0; z-index:50; }
   .hf2 .le-menu{ position:absolute; z-index:51; top:calc(100% + 6px); right:0; width:300px; max-width:78vw; background:var(--color-bg-panel); border:1px solid var(--color-border-2); border-radius:12px; box-shadow:var(--shadow-3); padding:8px; }
-  .hf2 .le-menu-head{ font-family:var(--font-mono); font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--color-text-3); padding:4px 8px 8px; }
+  .hf2 .le-menu-head{ font-family:var(--font-body); font-size:11px; color:var(--color-text-3); padding:4px 8px 8px; }
   .hf2 .le-menu-search{ all:unset; box-sizing:border-box; width:100%; padding:8px 10px; margin-bottom:6px; border:1px solid var(--color-border); border-radius:8px; font-size:13px; color:var(--color-text); }
   .hf2 .le-menu-search:focus{ border-color:var(--color-border-2); box-shadow:0 0 0 3px color-mix(in srgb, var(--color-accent) 8%, transparent); }
   .hf2 .le-menu-list{ display:flex; flex-direction:column; gap:1px; max-height:240px; overflow:auto; }
   .hf2 .le-menu-item{ all:unset; cursor:pointer; display:flex; align-items:center; gap:8px; padding:7px 9px; border-radius:7px; font-size:13px; color:var(--color-text); }
   .hf2 .le-menu-item:hover{ background:var(--color-bg-surface); }
-  .hf2 .le-menu-kind{ font-family:var(--font-mono); font-size:8.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--color-text-3); background:var(--color-bg-surface); border:1px solid var(--color-border); border-radius:4px; padding:2px 5px; flex-shrink:0; }
+  .hf2 .le-menu-kind{ font-family:var(--font-body); font-size:11px; font-weight:500; color:var(--color-text-3); background:var(--color-bg-surface); border:1px solid var(--color-border); border-radius:4px; padding:2px 5px; flex-shrink:0; }
   .hf2 .le-menu-tok{ font-family:var(--font-mono); font-size:10.5px; color:var(--color-accent); flex-shrink:0; }
   .hf2 .le-menu-empty{ padding:14px; text-align:center; color:var(--color-text-3); font-size:12.5px; }
-  .hf2 .le-menu-field{ display:grid; gap:4px; padding:5px 8px; color:var(--color-text-3); font-family:var(--font-mono); font-size:9px; letter-spacing:.06em; text-transform:uppercase; }
+  .hf2 .le-menu-field{ display:grid; gap:4px; padding:5px 8px; color:var(--color-text-3); font-family:var(--font-body); font-size:11px; }
   .hf2 .le-menu-field input, .hf2 .le-menu-field select{ box-sizing:border-box; width:100%; padding:7px 8px; border:1px solid var(--color-border); border-radius:7px; background:var(--color-bg-panel); color:var(--color-text); font:inherit; font-family:var(--font-body); font-size:12px; letter-spacing:0; text-transform:none; }
   .hf2 .le-menu-item:disabled{ cursor:not-allowed; opacity:.45; }
   .hf2 .le-ac{ position:fixed; z-index:60; width:260px; max-width:80vw; background:var(--color-bg-panel); border:1px solid var(--color-border-2); border-radius:10px; box-shadow:var(--shadow-3); padding:6px; }
-  .hf2 .le-ac-head{ font-family:var(--font-mono); font-size:8.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--color-text-3); padding:3px 8px 6px; }
+  .hf2 .le-ac-head{ font-family:var(--font-body); font-size:11px; font-weight:500; color:var(--color-text-3); padding:3px 8px 6px; }
   .hf2 .le-ac-item{ all:unset; cursor:pointer; display:flex; align-items:center; gap:8px; padding:6px 9px; border-radius:7px; font-size:13px; color:var(--color-text); }
   .hf2 .le-ac-item:hover{ background:var(--color-bg-surface); }
-  .hf2 .le-ac-cat{ font-family:var(--font-mono); font-size:8.5px; letter-spacing:.06em; color:var(--color-text-3); }
+  .hf2 .le-ac-cat{ font-family:var(--font-body); font-size:11px; color:var(--color-text-3); }
 
 /* AudienceBlockField (R8) — LOCK (server-strip) vs BLUR (client spoiler) must
    read distinctly by shape + icon + microcopy, not colour alone. */
@@ -183,7 +183,7 @@
   .hf2 .ab-editor-head{ display:flex; align-items:center; gap:8px; }
   .hf2 .ab-editor-ic{ flex-shrink:0; color:var(--color-text-2); }
   .hf2 .ab-editor--blur .ab-editor-ic{ color:var(--color-accent); }
-  .hf2 .ab-editor-label{ flex:1; min-width:0; font-family:var(--font-mono); font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:var(--color-text-2); }
+  .hf2 .ab-editor-label{ flex:1; min-width:0; font-family:var(--font-body); font-size:12px; font-weight:500; color:var(--color-text-2); }
   .hf2 .ab-editor-remove{ all:unset; cursor:pointer; width:26px; height:26px; display:grid; place-items:center; border-radius:6px; color:var(--color-text-3); font-size:15px; line-height:1; }
   .hf2 .ab-editor-remove:hover{ background:var(--color-bg-surface); color:var(--color-status-dead); }
   .hf2 .ab-editor-remove:focus-visible{ outline:2px solid var(--color-accent); outline-offset:1px; }
@@ -219,7 +219,7 @@
   .hf2 .ab-block-head{ display:flex; align-items:center; gap:8px; }
   .hf2 .ab-block-ic{ flex-shrink:0; color:var(--color-text-2); }
   .hf2 .ab-block--blur .ab-block-ic{ color:var(--color-accent); }
-  .hf2 .ab-block-label{ font-family:var(--font-mono); font-size:11px; letter-spacing:.04em; text-transform:uppercase; color:var(--color-text-2); }
+  .hf2 .ab-block-label{ font-family:var(--font-body); font-size:12px; font-weight:500; color:var(--color-text-2); }
   .hf2 .ab-block-redacted{ font-family:var(--font-mono); font-size:13px; color:var(--color-text-3); margin:0; }
   .hf2 .ab-block-microcopy{ font-size:11.5px; color:var(--color-text-3); margin:0; }
   .hf2 .ab-reveal-btn{ all:unset; cursor:pointer; align-self:flex-start; min-height:36px; padding:0 14px; display:inline-flex; align-items:center;

@@ -3,7 +3,7 @@ import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
-import { QuestBoardCard } from '../../../src/features/quest/components/QuestBoardCard.js';
+import { QuestCard } from '../../../src/components/domain/QuestCard.js';
 import { renderWithProviders } from '../../test-utils.js';
 
 function token(exp = Date.now() / 1000 + 3600): string {
@@ -27,29 +27,37 @@ beforeEach(() => {
   localStorage.clear();
 });
 
-describe('QuestBoardCard', () => {
-  it('presents Atlas board chrome: code, spots, title, hook, DM, party, signup', () => {
-    renderWithProviders(<QuestBoardCard {...baseProps} />);
+describe('QuestCard', () => {
+  it('presents board chrome: seats, title, hook, DM, party, signup; no code', () => {
+    renderWithProviders(<QuestCard {...baseProps} />);
     const card = screen.getByRole('article', { name: /Siege of Kraghold/i });
-    expect(within(card).getByText('Q-101')).toBeInTheDocument();
+    expect(within(card).queryByText('Q-101')).not.toBeInTheDocument();
     expect(within(card).getByTestId('qboard-title')).toHaveTextContent(
       'Siege of Kraghold',
     );
     expect(within(card).getByTestId('qboard-hook')).toHaveTextContent(
       'The walls still stand. For now.',
     );
-    expect(within(card).getByText('3 spots left')).toBeInTheDocument();
+    expect(within(card).getByText('3 seats open')).toBeInTheDocument();
+    expect(within(card).getByText('1 of 4 filled')).toBeInTheDocument();
     expect(within(card).getByText('mira')).toBeInTheDocument();
     expect(within(card).queryByText('new DM')).not.toBeInTheDocument();
     expect(within(card).queryByText('Last session')).not.toBeInTheDocument();
     expect(within(card).getByText('The Marches')).toBeInTheDocument();
     expect(within(card).getByText(/Sat 20 Oct/)).toBeInTheDocument();
-    expect(within(card).getByRole('button', { name: /Sign up/i })).toBeInTheDocument();
+    expect(within(card).getByRole('button', { name: 'Sign up' })).toBeInTheDocument();
+  });
+
+  it('shows the DM by display name when one is given', () => {
+    renderWithProviders(<QuestCard {...baseProps} dmName="Mira Vale" />);
+    const card = screen.getByRole('article', { name: /Siege of Kraghold/i });
+    expect(within(card).getByText('Mira Vale')).toBeInTheDocument();
+    expect(within(card).queryByText('mira')).not.toBeInTheDocument();
   });
 
   it('shows waitlist affordance next to spots left', () => {
     renderWithProviders(
-      <QuestBoardCard
+      <QuestCard
         {...baseProps}
         waitlistCount={3}
         totalSlots={4}
@@ -69,10 +77,10 @@ describe('QuestBoardCard', () => {
 
   it('shows Now chip for live status and strikethrough for cancelled', () => {
     const { rerender } = renderWithProviders(
-      <QuestBoardCard {...baseProps} status="live" />,
+      <QuestCard {...baseProps} status="live" />,
     );
     expect(screen.getByText('Now')).toBeInTheDocument();
-    rerender(<QuestBoardCard {...baseProps} status="cancelled" />);
+    rerender(<QuestCard {...baseProps} status="cancelled" />);
     expect(screen.getByRole('button', { name: 'Cancelled' })).toBeDisabled();
     expect(screen.getByTestId('qboard-title')).toHaveStyle({
       textDecoration: 'line-through',
@@ -86,7 +94,7 @@ describe('QuestBoardCard', () => {
       <Routes>
         <Route
           path="/"
-          element={<QuestBoardCard {...baseProps} onSignUpClick={onSignUpClick} />}
+          element={<QuestCard {...baseProps} onSignUpClick={onSignUpClick} />}
         />
         <Route path="/login" element={<p>Login destination</p>} />
       </Routes>,
@@ -100,9 +108,7 @@ describe('QuestBoardCard', () => {
     const user = userEvent.setup();
     const onSignUpClick = vi.fn();
     localStorage.setItem(TOKEN_KEY, token());
-    renderWithProviders(
-      <QuestBoardCard {...baseProps} onSignUpClick={onSignUpClick} />,
-    );
+    renderWithProviders(<QuestCard {...baseProps} onSignUpClick={onSignUpClick} />);
     await user.click(screen.getByRole('button', { name: /Sign up/i }));
     expect(onSignUpClick).toHaveBeenCalledOnce();
   });
@@ -111,7 +117,7 @@ describe('QuestBoardCard', () => {
     const user = userEvent.setup();
     const onWithdrawConfirm = vi.fn();
     renderWithProviders(
-      <QuestBoardCard {...baseProps} mine onWithdrawConfirm={onWithdrawConfirm} />,
+      <QuestCard {...baseProps} mine onWithdrawConfirm={onWithdrawConfirm} />,
     );
     await user.click(screen.getByRole('button', { name: 'Withdraw' }));
     expect(screen.getByText('Withdraw from this quest?')).toBeInTheDocument();

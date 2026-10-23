@@ -27,7 +27,6 @@ export * from '../../src/components/primitives/WeekGrid.js';
 export * from '../../src/components/foundation/Field.js';
 export * from '../../src/components/foundation/PageShell.js';
 export * from '../../src/components/foundation/RegionLabel.js';
-export * from '../../src/components/foundation/ShortCodeBadge.js';
 export * from '../../src/components/foundation/StatePanel.js';
 export * from '../../src/components/foundation/StatusBadge.js';
 export * from '../../src/components/foundation/StubNotice.js';

@@ -54,13 +54,15 @@ describe('Admin today and delivery', () => {
   it('summarises counts and previews alerts without embedding the full lists', async () => {
     renderWithProviders(<AdminTodayBody />);
 
-    const summary = await screen.findByRole('heading', { name: 'At a glance' });
-    const summaryScope = within(summary.closest('section') as HTMLElement);
+    const summary = await screen.findByRole('region', { name: 'Summary' });
+    const summaryScope = within(summary);
     expect(
       summaryScope.getByRole('link', { name: /Active alerts\s*1/ }),
     ).toHaveAttribute('href', '/admin/data-health');
     expect(
-      summaryScope.getByRole('link', { name: /Pending deliveries\s*2\s*of 5 deliveries/ }),
+      summaryScope.getByRole('link', {
+        name: /Pending deliveries\s*2\s*of 5 deliveries/,
+      }),
     ).toHaveAttribute('href', '/admin/delivery');
     expect(summaryScope.getByRole('link', { name: /Awaiting review/ })).toHaveAttribute(
       'href',
@@ -104,31 +106,24 @@ describe('Admin today and delivery', () => {
         HttpResponse.json({ data: { adminOperations: unobservedOps } }),
     });
     renderWithProviders(<AdminDeliveryPage />, { route: '/admin/delivery' });
-    expect(await screen.findByText('Quest delivery', { exact: true })).toBeVisible();
+    expect(await screen.findByText(/^Quest delivery/)).toBeVisible();
     const panel = within(
       document.querySelector('[data-el="admin.deliveryPanel"]') as HTMLElement,
     );
-    expect(
-      panel.getByText(/Public origin: not configured \(not observed\)/),
-    ).toBeVisible();
-    expect(
-      panel.getByText(
-        /Announcement role: not configured · Site settings · not observed/,
-      ),
-    ).toBeVisible();
+    expect(panel.getByText('Site address: not set')).toBeVisible();
+    expect(panel.getByText('Discord announcements role: not set')).toBeVisible();
     // State reads as a label; unknown revisions are left out rather than spelled out.
     expect(panel.getByText('Gave up', { exact: true })).toBeVisible();
     expect(panel.queryByText(/revision unknown/i)).not.toBeInTheDocument();
     expect(panel.queryByText(/\d{4}-\d{2}-\d{2}T/)).not.toBeInTheDocument();
-    expect(panel.getByText('Delivery total: 1', { exact: true })).toBeVisible();
     expect(panel.queryByRole('link', { name: 'Open quest' })).not.toBeInTheDocument();
-    expect(panel.queryByText(/healthy|needs attention/)).not.toBeInTheDocument();
+    expect(panel.queryByText(/Healthy|Needs attention/)).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it.each([
-    [true, 'healthy'],
-    [false, 'needs attention'],
+    [true, 'Healthy'],
+    [false, 'Needs attention'],
   ] as const)('shows actual observed health (%s)', async (observed, label) => {
     mockGraphqlOps({
       AdminOperations: () =>
@@ -147,21 +142,12 @@ describe('Admin today and delivery', () => {
         }),
     });
     renderWithProviders(<AdminDeliveryPage />, { route: '/admin/delivery' });
-    expect(await screen.findByText('Quest delivery', { exact: true })).toBeVisible();
+    expect(await screen.findByText(/^Quest delivery/)).toBeVisible();
     const panel = within(
       document.querySelector('[data-el="admin.deliveryPanel"]') as HTMLElement,
     );
-    expect(
-      panel.getByText(
-        `Mode: Disabled · Public origin: https://campaign.example (${label})`,
-        { exact: true },
-      ),
-    ).toBeVisible();
-    expect(
-      panel.getByText(`Announcement role: not configured · Site settings · ${label}`, {
-        exact: true,
-      }),
-    ).toBeVisible();
+    expect(panel.getByText('Site address: https://campaign.example')).toBeVisible();
+    expect(panel.getAllByText(label)).toHaveLength(2);
   });
 });
 
@@ -192,10 +178,10 @@ describe('Admin character directory', () => {
       },
     });
     renderWithProviders(<AdminCharactersPage />, { route: '/admin/characters' });
-    const region = await screen.findByRole('combobox', { name: 'Region' });
-    await screen.findByRole('option', { name: 'Salt Coast' });
+    const region = await screen.findByRole('button', { name: /Region/ });
     expect(screen.queryByText(/UUID/)).not.toBeInTheDocument();
-    await userEvent.selectOptions(region, 'Salt Coast');
+    await userEvent.click(region);
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Salt Coast' }));
     expect(await screen.findByText('No characters match these filters.')).toBeVisible();
     expect(seen).toContainEqual(expect.objectContaining({ regionId }));
   });

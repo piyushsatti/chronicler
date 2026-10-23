@@ -1,5 +1,5 @@
 import { graphql, http, HttpResponse } from 'msw';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
@@ -10,7 +10,22 @@ import { server } from '../../../src/mocks/server.js';
 import empty from '../../fixtures/wire/codex/empty-list.json';
 import { renderWithProviders } from '../../test-utils.js';
 
+const viewport = vi.hoisted(() => ({
+  widthClass: 'expanded' as 'compact' | 'expanded',
+}));
+vi.mock('@pi/react-imposition/react', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@pi/react-imposition/react')>()),
+  useSizeClasses: () => ({ widthClass: viewport.widthClass }),
+}));
+function setViewportWidth(width: number) {
+  viewport.widthClass = width < 600 ? 'compact' : 'expanded';
+}
+
 describe('CodexPage', () => {
+  afterEach(() => {
+    setViewportWidth(1440);
+  });
+
   it('renders a readable custom-category entry absent from the published category catalogue', async () => {
     server.use(
       graphql.query('CodexDirectory', () =>
@@ -46,12 +61,11 @@ describe('CodexPage', () => {
     expect(await screen.findByText('Tree of Light')).toBeInTheDocument();
     expect(screen.getByText('The Continent of Weeping')).toBeInTheDocument();
     expect(screen.getAllByRole('heading', { level: 1 })).toHaveLength(1);
-    expect(
-      screen.getByRole('navigation', { name: 'Codex categories' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: 'Category' })).toBeInTheDocument();
   });
 
   it('filters category groups and searches their actual titles', async () => {
+    setViewportWidth(1440);
     const user = userEvent.setup();
     renderWithProviders(<CodexPage />);
     await screen.findByText('Tree of Light');
@@ -64,6 +78,18 @@ describe('CodexPage', () => {
     await screen.findByText('Tree of Light');
     expect(screen.getByText('Tree of Light')).toBeInTheDocument();
     expect(screen.queryByText('The Continent of Weeping')).not.toBeInTheDocument();
+  });
+
+  it('collapses the category chips into a picker on phones', async () => {
+    setViewportWidth(390);
+    const user = userEvent.setup();
+    renderWithProviders(<CodexPage />);
+    await screen.findByText('Tree of Light');
+    expect(screen.queryByRole('button', { name: /Locations/ })).toBeNull();
+    await user.click(screen.getByRole('button', { name: /Category/ }));
+    await user.click(await screen.findByRole('menuitem', { name: /Locations/ }));
+    await screen.findByText('The Continent of Weeping');
+    expect(screen.queryByText('Tree of Light')).not.toBeInTheDocument();
   });
 
   it('follows an entry into the real Codex document reader', async () => {
@@ -80,7 +106,7 @@ describe('CodexPage', () => {
     expect(
       await screen.findByRole('heading', { name: 'Tree of Light' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '← Codex' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Codex' })).toBeInTheDocument();
   });
 
   it('shows empty state', async () => {
@@ -108,6 +134,7 @@ describe('CodexPage', () => {
   });
 
   it('pages beyond fifty entries and delegates nested-prefix and title search to the server', async () => {
+    setViewportWidth(1440);
     const user = userEvent.setup();
     const rows = Array.from({ length: 52 }, (_, index) => ({
       id: `10000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
@@ -169,14 +196,14 @@ describe('CodexPage', () => {
     await screen.findByText('Recent entry 0');
     expect(screen.queryByText('Hidden Lore target')).not.toBeInTheDocument();
     expect(screen.getByText('Showing 50 of 52 entries')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Load more entries' }));
+    await user.click(screen.getByRole('button', { name: /^Show 2 more/ }));
     expect(await screen.findByText('Hidden Lore target')).toBeInTheDocument();
     expect(screen.getByText('52 entries')).toBeInTheDocument();
     expect(requests.slice(0, 2)).toEqual([
       { prefix: '', search: '', limit: 50, offset: 0 },
       { prefix: '', search: '', limit: 50, offset: 50 },
     ]);
-    await user.click(screen.getByRole('button', { name: 'Lore' }));
+    await user.click(screen.getByRole('button', { name: /^Lore\s?\d*$/ }));
     await screen.findByText('2 entries');
     expect(screen.getByText('Hidden Lore target')).toBeInTheDocument();
     expect(screen.getByText('History target')).toBeInTheDocument();

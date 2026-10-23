@@ -21,16 +21,16 @@ describe('Member directory server pages', () => {
     );
     const user = userEvent.setup();
     renderWithProviders(<PlayersDirectoryPage />);
-    await screen.findByText('Page 1 · 49 members');
+    await screen.findByText('Page 1 of 3');
     await user.click(screen.getByRole('button', { name: 'Next members' }));
-    await screen.findByText('Page 2 · 49 members');
+    await screen.findByText('Page 2 of 3');
     expect(attempts.at(-1)).toMatchObject({
       limit: 24,
       offset: 24,
       filters: { role: 'player' },
     });
     await user.type(screen.getByRole('searchbox', { name: 'Search members' }), 'mira');
-    await screen.findByText('Page 1 · 49 members');
+    await screen.findByText('Page 1 of 3');
     expect(attempts.at(-1)).toMatchObject({
       offset: 0,
       filters: { role: 'player', search: 'mira' },
@@ -50,8 +50,8 @@ describe('Member directory server pages', () => {
     );
     const user = userEvent.setup();
     renderWithProviders(<DmsDirectoryPage />);
-    await screen.findByText(/^(Page 1 · )?\d+ members?$/);
-    await user.click(screen.getByRole('checkbox', { name: 'Accepting players only' }));
+    await screen.findByText(/^(Page 1 of \d+|\d+ (DMs?|players?))$/);
+    await user.click(screen.getByRole('button', { name: 'Accepting players' }));
     expect(last).toMatchObject({
       filters: { role: 'dm', dmProfileStatus: 'approved', acceptingPlayers: true },
       offset: 0,
@@ -76,13 +76,13 @@ describe('Member directory server pages', () => {
       ),
     );
     renderWithProviders(<PlayersDirectoryPage />);
-    expect(await screen.findByText('2 members')).toBeInTheDocument();
+    expect(await screen.findByText('2 players')).toBeInTheDocument();
     expect(screen.getByText('Available Saturdays')).toBeInTheDocument();
     expect(screen.queryByRole('navigation', { name: 'Member pages' })).toBeNull();
     // Each card carries an avatar and its availability as a chip.
-    const cards = screen.getAllByRole('link').filter((link) =>
-      link.getAttribute('href')?.startsWith('/players/@'),
-    );
+    const cards = screen
+      .getAllByRole('link')
+      .filter((link) => link.getAttribute('href')?.startsWith('/players/@'));
     expect(cards.length).toBeGreaterThan(0);
     for (const card of cards) {
       expect(card.querySelector('[data-component="Avatar"]')).not.toBeNull();
@@ -97,7 +97,7 @@ describe('Member directory server pages', () => {
     );
     renderWithProviders(<PlayersDirectoryPage />);
     expect(await screen.findByText('No members match these filters.')).toBeVisible();
-    expect(screen.queryByText(/0 members/)).toBeNull();
+    expect(screen.queryByText(/0 players/)).toBeNull();
   });
   it('offers a retry when the directory cannot load', async () => {
     let fail = true;
@@ -114,6 +114,6 @@ describe('Member directory server pages', () => {
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     fail = false;
     await userEvent.click(screen.getByRole('button', { name: 'Retry members' }));
-    expect(await screen.findByText('2 members')).toBeInTheDocument();
+    expect(await screen.findByText('2 players')).toBeInTheDocument();
   });
 });

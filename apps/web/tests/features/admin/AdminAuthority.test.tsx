@@ -73,29 +73,16 @@ describe('validated workspace authority', () => {
       'Data health',
     ]);
     expect(links[1]).toHaveAttribute('aria-current', 'page');
-    const reveals = links.map((link) => {
-      const reveal = vi.fn();
-      Object.defineProperty(link, 'scrollIntoView', { value: reveal });
-      return reveal;
-    });
+    // Every section link is a tab stop, in both directions (the browser
+    // scrolls a focused link into the TabNav row).
     const user = userEvent.setup();
-    for (const [index, link] of links.entries()) {
+    for (const link of links) {
       await user.tab();
       expect(link).toHaveFocus();
-      expect(reveals[index]).toHaveBeenCalledTimes(1);
-      expect(reveals[index]).toHaveBeenCalledWith({
-        block: 'nearest',
-        inline: 'nearest',
-      });
     }
     for (let index = links.length - 2; index >= 0; index--) {
       await user.tab({ shift: true });
       expect(links[index]).toHaveFocus();
-      expect(reveals[index]).toHaveBeenCalledTimes(2);
-      expect(reveals[index]).toHaveBeenLastCalledWith({
-        block: 'nearest',
-        inline: 'nearest',
-      });
     }
   });
 
@@ -144,7 +131,8 @@ describe('validated workspace authority', () => {
     );
     expect(screen.queryByRole('link', { name: 'People' })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'World' })).not.toBeInTheDocument();
-    expect(requested).toEqual([GRAPHQL_PATH]);
+    // Both queues load so the segment can show their counts.
+    expect(requested).toEqual([GRAPHQL_PATH, GRAPHQL_PATH]);
   });
 
   it.each([{ roles: ['player'] }, { roles: ['dm'] }, { roles: [] }])(
@@ -190,8 +178,12 @@ describe('validated workspace authority', () => {
     const requested = track();
     renderWithProviders(<DMDashboardPage />, { route: '/dm' });
     await screen.findByRole('alert');
+    // The denial sits under the page title; the dashboard body never mounts.
     expect(
-      screen.queryByRole('heading', { name: 'DM dashboard' }),
+      screen.getByRole('heading', { level: 1, name: 'DM dashboard' }),
+    ).toBeVisible();
+    expect(
+      screen.queryByRole('heading', { name: 'Your quests' }),
     ).not.toBeInTheDocument();
     expect(requested).toEqual([]);
   });
@@ -248,7 +240,7 @@ describe('validated workspace authority', () => {
     ],
   ] as const)(
     'shows controlled %s account failure without querying privileged data',
-    async (_name, restResponse, graphqlData, copy) => {
+    async (name, restResponse, graphqlData, copy) => {
       signIn();
       mockMemberMe(restResponse, graphqlData ?? undefined);
       const requested = track();
@@ -258,10 +250,18 @@ describe('validated workspace authority', () => {
       expect(
         screen.getByRole('button', { name: 'Reload account' }),
       ).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'Sign in again' })).toHaveAttribute(
-        'href',
-        '/login',
-      );
+      // A permissions denial offers a way back, not sign-in; other account
+      // failures keep the workspace's own sign-in-again link.
+      if (name === 'forbidden') {
+        expect(
+          screen.queryByRole('link', { name: 'Sign in again' }),
+        ).not.toBeInTheDocument();
+      } else {
+        expect(screen.getByRole('link', { name: 'Sign in again' })).toHaveAttribute(
+          'href',
+          '/login',
+        );
+      }
       expect(requested).toEqual([]);
     },
   );
@@ -294,10 +294,9 @@ describe('validated workspace authority', () => {
       'You don’t have access to this',
     );
     expect(screen.getByRole('button', { name: 'Reload account' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Sign in again' })).toHaveAttribute(
-      'href',
-      '/login',
-    );
+    expect(
+      screen.queryByRole('link', { name: 'Sign in again' }),
+    ).not.toBeInTheDocument();
   });
 
   it('shares a single permission refresh across Review tabs', async () => {
@@ -316,7 +315,7 @@ describe('validated workspace authority', () => {
     });
     const invalidate = vi.spyOn(queryClient, 'invalidateQueries');
     await screen.findByRole('alert');
-    await userEvent.click(screen.getByRole('tab', { name: 'DM Profiles' }));
+    await userEvent.click(screen.getByRole('button', { name: /^DM profiles/ }));
     const scope = JSON.stringify([goodMe.id, ['verifier']]);
     queryClient.setQueryData(
       [...queryKeys.pendingDmProfiles, 'foreign-account', {}, 0],

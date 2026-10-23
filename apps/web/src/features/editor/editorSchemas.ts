@@ -13,13 +13,6 @@ const QUEST_SCHEMA: FieldSchema[] = [
     normalize: (v) => (v || '').replace(/\s+/g, ' ').trim(),
   },
   {
-    key: 'shortCode',
-    label: 'Code',
-    type: 'code',
-    placeholder: 'Assigned when created',
-    readOnly: true,
-  },
-  {
     key: 'kinds',
     label: 'Kind',
     type: 'multiselect',
@@ -42,10 +35,10 @@ const QUEST_SCHEMA: FieldSchema[] = [
   },
   {
     key: 'apl',
-    label: 'APL',
+    label: 'Average party level',
     type: 'text',
     placeholder: 'e.g. 7',
-    hint: 'average party level, optional',
+    hint: 'Optional',
     validate: (v) => {
       if (v == null || v === '') return null;
       const n = Number(v);
@@ -54,7 +47,7 @@ const QUEST_SCHEMA: FieldSchema[] = [
   },
   {
     key: 'durationHours',
-    label: 'Duration (hours)',
+    label: 'Length (hours)',
     type: 'text',
     required: true,
     placeholder: 'e.g. 3',
@@ -66,7 +59,7 @@ const QUEST_SCHEMA: FieldSchema[] = [
   },
   {
     key: 'slotsMax',
-    label: 'Party slots (max)',
+    label: 'Seats',
     type: 'text',
     required: true,
     placeholder: '4',
@@ -114,9 +107,9 @@ const QUEST_SCHEMA: FieldSchema[] = [
   },
   {
     key: 'additionalInfo',
-    label: 'Additional info',
+    label: 'Extra details for players',
     type: 'textarea',
-    placeholder: 'Extra authoring notes…',
+    placeholder: 'Anything players should know before they sign up',
   },
 ];
 
@@ -130,7 +123,7 @@ const CODEX_SCHEMA: FieldSchema[] = [
   },
   {
     key: 'slug',
-    label: 'Slug',
+    label: 'Page address',
     type: 'code',
     readOnly: true,
     placeholder: 'Made from the title when saved',
@@ -150,10 +143,16 @@ const CODEX_SCHEMA: FieldSchema[] = [
 
 /** Guides, rulings, summaries and DM tables share the title and read-only slug fields. */
 const TITLED_DOCUMENT_SCHEMA: FieldSchema[] = [
-  { key: 'title', label: 'Title', type: 'text', required: true, placeholder: 'Give it a title' },
+  {
+    key: 'title',
+    label: 'Title',
+    type: 'text',
+    required: true,
+    placeholder: 'Give it a title',
+  },
   {
     key: 'slug',
-    label: 'Slug',
+    label: 'Page address',
     type: 'code',
     readOnly: true,
     placeholder: 'Made from the title when saved',

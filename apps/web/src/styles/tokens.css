@@ -963,6 +963,22 @@
   --rad-pill: 999px;
   --rad-btn:  8px;   /* D9: buttons are rounded rectangles; chips/pills keep --rad-pill */
 
+  /* Layout (round 3, L1). One page frame for every route: PageShell's
+   * `.page` reads these and nothing else sets a page width. There is no
+   * wide tier. Reading measure applies to an inner column (entry body,
+   * editor body, settings form), never to the frame, so page headers line
+   * up across routes. The compact gutter is set from Imposition's width
+   * class in shell.css (no @media). */
+  --page-max: 73.75rem;          /* 1180px */
+  --page-max-reading: 48rem;
+  --page-gutter-inline: var(--sp-6);
+  --page-pad-block-start: var(--sp-7);
+  --page-pad-block-end: var(--sp-8);
+  --rail-width: 20rem;           /* the one side rail on detail pages */
+  --detail-main-min: 36rem;      /* DetailLayout main column; below this the rail wraps under it */
+  --card-min: 18.75rem;          /* 300px floor for every auto-fill card grid */
+  --filter-search-width: 20rem;  /* FilterBar search field; fixed so typing never resizes it */
+
   /* Elevation scale — NEW (#452, fork 6): 3-step drop-shadow scale,
    * replacing --shadow/--shadow-lift. Migration done 2026-10-21 (owner
    * mapping: --shadow -> --shadow-2, --shadow-lift -> --shadow-3); the

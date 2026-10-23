@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  mapToOpenQuestCardProps,
+  mapToQuestCardProps,
   parseHomeLanesWire,
 } from '../../../src/features/home/adapters/homeLanesAdapter.js';
 import good from '../../fixtures/wire/home/lanes-good.json';
@@ -20,7 +20,7 @@ describe('homeLanesAdapter', () => {
     expect(result.data.dmsAccepting[0]?.handle).toBe('mira');
   });
 
-  it('resolves region names, hook body, participants, and waitlist for OpenQuestCard', () => {
+  it('resolves region names, hook body, participants, and waitlist for the shared quest card', () => {
     const result = parseHomeLanesWire({
       ...good,
       regions: [{ id: REGION_ID, name: 'Ashen Coast' }],
@@ -64,7 +64,7 @@ describe('homeLanesAdapter', () => {
       hookText: 'Hold the gate until dawn.',
       waitlistCount: 1,
     });
-    const props = mapToOpenQuestCardProps(quest!, {
+    const props = mapToQuestCardProps(quest!, {
       memberId: MEMBER_ID,
     });
     expect(props).toMatchObject({
@@ -73,7 +73,7 @@ describe('homeLanesAdapter', () => {
       region: 'Ashen Coast',
       gw: true,
       mine: true,
-      party: [{ name: 'Rook', state: 'confirmed' }],
+      party: [{ characterName: 'Rook' }],
       totalSlots: 4,
     });
   });

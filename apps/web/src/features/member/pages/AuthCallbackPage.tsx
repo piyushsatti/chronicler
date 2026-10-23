@@ -11,29 +11,32 @@ export function AuthCallbackPage(): React.JSX.Element {
   const { error } = useAuthCallback();
 
   return (
-    <PageShell
-      eyebrow="Sign in"
-      title={error ? 'Sign-in didn’t finish' : 'Signing you in'}
-    >
+    <PageShell title={error ? 'Sign-in didn’t finish' : 'Signing you in'}>
       <SingleRegionPage page="auth-callback">
         {error ? (
-          <Card as="section" className={`stack ${styles.card}`}
+          <Card
+            as="section"
+            className={`stack reading-column ${styles.card}`}
             data-gap="4"
-            aria-label="Sign-in problem">
+            aria-label="Sign-in problem"
+          >
             <StatePanel status="error" error={error} variant="inline" />
             <div className="row" data-wrap="1" data-gap="2">
               <Link className="btn btn--primary" to="/login">
                 Try signing in again
               </Link>
-              <Link className="btn btn--ghost" to="/">
+              <Link className="btn btn--secondary" to="/">
                 Browse as guest
               </Link>
             </div>
           </Card>
         ) : (
-          <Card as="section" className={`stack ${styles.card}`}
+          <Card
+            as="section"
+            className={`stack reading-column ${styles.card}`}
             data-gap="3"
-            aria-busy="true">
+            aria-busy="true"
+          >
             <p className="type-body" role="status">
               Finishing sign-in with Discord…
             </p>

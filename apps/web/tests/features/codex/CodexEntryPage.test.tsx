@@ -205,8 +205,14 @@ describe('Codex document routes', () => {
               document: { ...entry.document, canEditBody: true },
             },
             documentBacklinks: [
-              { documentId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', relation: 'see_also' },
-              { documentId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', relation: 'mentions' },
+              {
+                documentId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+                relation: 'see_also',
+              },
+              {
+                documentId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+                relation: 'mentions',
+              },
             ],
           },
         }),

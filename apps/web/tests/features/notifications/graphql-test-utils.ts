@@ -14,8 +14,6 @@ export function dispatchFeatureGraphql(body: GraphqlRequestBody) {
     return featureGraphql[name](body);
   }
   return HttpResponse.json({
-    errors: [
-      { message: 'Unhandled operation', extensions: { code: 'UNHANDLED' } },
-    ],
+    errors: [{ message: 'Unhandled operation', extensions: { code: 'UNHANDLED' } }],
   });
 }

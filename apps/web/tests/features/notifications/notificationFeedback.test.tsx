@@ -154,9 +154,7 @@ describe('notification retry and completion feedback', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Something went wrong. Please try again.',
     );
-    await userEvent.click(
-      screen.getByRole('button', { name: 'Retry clearing' }),
-    );
+    await userEvent.click(screen.getByRole('button', { name: 'Retry clearing' }));
     expect(await screen.findByRole('status')).toHaveTextContent(
       'Cleared 3 alerts for removed pages.',
     );

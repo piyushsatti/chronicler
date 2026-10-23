@@ -15,8 +15,8 @@ describe('VerifyPage', () => {
   it('lists pending queues', async () => {
     renderWithProviders(<VerifyPage />);
     expect(await screen.findByText('Pending Hero')).toBeInTheDocument();
-    // DM tab is not the default; switch via tab button.
-    await screen.findByRole('tab', { name: 'DM Profiles' });
+    // The DM queue is not the default; it is a segment in the filter bar.
+    await screen.findByRole('button', { name: /^DM profiles/ });
     // Character tab is default and shows the pending character.
     expect(screen.getByText('Pending Hero')).toBeInTheDocument();
   });
@@ -75,7 +75,7 @@ describe('VerifyPage', () => {
         await user.click(screen.getByRole('button', { name: 'Request changes' }));
         await user.type(
           screen.getByRole('textbox', {
-            name: 'Change request note (required)',
+            name: 'What does the owner need to change?',
           }),
           note ?? '',
         );
@@ -93,7 +93,7 @@ describe('VerifyPage', () => {
       });
       expect(
         screen.queryByRole('textbox', {
-          name: 'Change request note (required)',
+          name: 'What does the owner need to change?',
         }),
       ).not.toBeInTheDocument();
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();

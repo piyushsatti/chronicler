@@ -93,7 +93,7 @@ describe('Actual Gallery presentation demos', () => {
   it('keeps denied members outside Gallery content', async () => {
     signIn(['player']);
     renderWithProviders(<GalleryPage />, { route: '/gallery' });
-    expect(await screen.findByRole('alert')).toHaveTextContent('requires staff access');
+    expect(await screen.findByRole('alert')).toHaveTextContent('The gallery is for staff');
     expect(screen.queryByRole('heading', { name: 'Gallery' })).not.toBeInTheDocument();
   });
 });

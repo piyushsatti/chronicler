@@ -1,30 +1,9 @@
 .members-directory-panel {
-  container: admin-members / inline-size;
   width: 100%;
   min-width: 0;
 }
 
-.members-directory-workspace {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  align-items: start;
-  gap: var(--sp-4);
-  min-width: 0;
-}
-
-.members-directory-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  min-width: 0;
-}
-
-.members-directory-list > li,
-.admin-member-row,
-.members-inspector-pane {
+.admin-member-row {
   min-width: 0;
 }
 
@@ -35,9 +14,9 @@
 .admin-member-row__select {
   appearance: none;
   display: flex;
-  flex-direction: column;
+  align-items: center;
   flex: 1;
-  gap: var(--sp-1);
+  gap: var(--sp-3);
   min-width: 0;
   padding: 0;
   border: 0;
@@ -55,66 +34,19 @@
   box-shadow: var(--focus-ring);
 }
 
-.members-directory-list [data-selected='true'] {
+.members-directory-panel [data-selected='true'] {
   border-color: var(--color-accent);
 }
 
-.members-inspector-pane {
-  display: none;
-}
-
-.members-directory-workspace[data-inspector-open='true'] > .members-directory-list {
-  display: none;
-}
-
-.members-directory-workspace[data-inspector-open='true'] > .members-inspector-pane {
-  display: flex;
-}
-
-@container admin-members (min-width: 42rem) {
-  .members-directory-workspace {
-    grid-template-columns: minmax(0, 1.35fr) minmax(16rem, 1fr);
-  }
-
-  .members-directory-workspace > .members-directory-list,
-  .members-directory-workspace[data-inspector-open='true'] > .members-directory-list,
-  .members-directory-workspace > .members-inspector-pane {
-    display: flex;
-  }
-
-  .members-directory-back {
-    display: none;
-  }
-
-  /* The editor stays in view while scrolling a long member list. */
-  .members-inspector-pane {
-    position: sticky;
-    top: var(--sp-4);
-    align-self: start;
-  }
-}
-
-/* Empty inspector: explains the pane and summarises roles instead of a blank column. */
-.members-inspector-empty {
-  border-style: dashed;
-  background: transparent;
-}
-
-.members-inspector-empty :is(h3, p, dl, dd) {
-  margin: 0;
-}
-
-.members-role-summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(6.5rem, 1fr));
-  gap: var(--sp-2);
-}
-
-.members-role-summary > div {
+.admin-member-row__name {
   display: flex;
   flex-direction: column;
   gap: var(--sp-1);
-  padding: var(--sp-2) var(--sp-3);
-  border: 1px solid var(--color-border);
-  border-radius: var(--rad-sm);
+  min-width: 0;
+}
+
+.admin-member-row__name > .type-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }

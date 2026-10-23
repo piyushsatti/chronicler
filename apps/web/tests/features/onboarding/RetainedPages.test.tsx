@@ -142,13 +142,15 @@ describe('Calendar page', () => {
       </>,
       { route: '/calendar?date=2026-10-14&search=salt&page=2' },
     );
-    await screen.findByText(/Current campaign date: 24 River, 4 PI/);
-    expect(await screen.findByText('51 quests · Page 2 of 2')).toBeInTheDocument();
-    expect(screen.getByRole('searchbox', { name: 'Search quests' })).toHaveValue('salt');
+    await screen.findByText(/Today in the campaign: 24 River, 4 PI/);
+    expect(await screen.findByText('51 quests, page 2 of 2')).toBeInTheDocument();
+    expect(screen.getByRole('searchbox', { name: 'Search quests' })).toHaveValue(
+      'salt',
+    );
     expect(screen.getByRole('button', { name: 'Next quests' })).toBeDisabled();
     await user.click(screen.getByRole('button', { name: 'Previous quests' }));
     await waitFor(() =>
-      expect(screen.getByText('51 quests · Page 1 of 2')).toBeInTheDocument(),
+      expect(screen.getByText('51 quests, page 1 of 2')).toBeInTheDocument(),
     );
     await user.click(screen.getByRole('button', { name: 'Next month' }));
     await waitFor(() =>
@@ -177,9 +179,11 @@ describe('Calendar page', () => {
     expect(
       await screen.findByText('No game date is recorded for this day.'),
     ).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Thursday 15 October 2026' })).toBeInTheDocument();
     expect(
-      screen.getByText('1 date this month has no recorded game day.'),
+      screen.getByRole('heading', { name: 'Thursday 15 October 2026' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('Dashed days have no recorded game day (1 day).'),
     ).toBeInTheDocument();
     // Day cells show the day number; the ISO date stays machine-readable only.
     const day = screen.getByRole('button', {
@@ -190,21 +194,37 @@ describe('Calendar page', () => {
     expect(day).toHaveAttribute('aria-pressed', 'true');
     expect(screen.queryByText(/2026-10-1\d/)).toBeNull();
   });
+  it('still resolves a shared ?gameDay link into the real-date lookup', async () => {
+    server.use(
+      graphql.query('RetainedRealDates', () =>
+        HttpResponse.json({
+          data: { realDates: { total: 1, items: ['2026-10-14'] } },
+        }),
+      ),
+    );
+    renderWithProviders(<CalendarPage />, {
+      route: '/calendar?month=2026-10&gameDay=113',
+    });
+    expect(await screen.findByText(/Game day 113 falls on 1 stored date/)).toBeVisible();
+    expect(screen.getByRole('spinbutton', { name: 'Game day' })).toHaveValue(113);
+  });
   it('lays the month out under Monday-first weekday headers', async () => {
     renderWithProviders(<CalendarPage />, { route: '/calendar?month=2026-10' });
-    expect(await screen.findByRole('heading', { name: 'October 2026' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'October 2026' }),
+    ).toBeInTheDocument();
     const days = await screen.findByRole('list', { name: 'Days in October 2026' });
     // The fixture grid starts on Wednesday 14 Oct: two blank cells precede it.
     expect(days.querySelectorAll(':scope > span[aria-hidden="true"]')).toHaveLength(2);
     expect(screen.queryByRole('combobox')).toBeNull();
-    expect(screen.getByRole('group', { name: 'Quest status' })).toHaveTextContent(
+    expect(screen.getByRole('group', { name: 'Status' })).toHaveTextContent(
       /All statuses.*Open.*Cancelled/,
     );
   });
   it('tells assistive tech which quest status filter is active', async () => {
     const user = userEvent.setup();
     renderWithProviders(<CalendarPage />, { route: '/calendar?month=2026-10' });
-    const status = await screen.findByRole('group', { name: 'Quest status' });
+    const status = await screen.findByRole('group', { name: 'Status' });
     expect(
       within(status).getByRole('button', { name: 'All statuses', pressed: true }),
     ).toBeVisible();
@@ -244,7 +264,7 @@ describe('Calendar page', () => {
     await userEvent
       .setup()
       .click(screen.getByRole('button', { name: 'Retry calendar' }));
-    await screen.findByText(/Current campaign date: 24 River/);
+    await screen.findByText(/Today in the campaign: 24 River/);
     expect(attempts).toBe(2);
   });
 });
@@ -357,7 +377,7 @@ describe('Series ownership and command retry', () => {
       </Routes>,
       { route: `/series/${good.arc.id}` },
     );
-    await screen.findByText(/0 quests · Created/);
+    await screen.findByText('0 quests');
     expect(
       screen.queryByRole('button', { name: 'Save series name' }),
     ).not.toBeInTheDocument();

@@ -10,6 +10,9 @@ import {
   type Status,
 } from '../../../components/foundation/StatusBadge.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
+import { Chip } from '../../../components/primitives/Chip.js';
+import { DetailLayout } from '../../../components/primitives/DetailLayout.js';
+import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { Card } from '../../../components/primitives/Card.js';
 import { StatTile } from '../../../components/primitives/StatTile.js';
 import { Tabs } from '../../../components/primitives/Tabs.js';
@@ -27,6 +30,7 @@ import { useCharacterPage } from '../hooks/useCharacterPage.js';
 import {
   characterStatusLabel,
   formatInstant,
+  isSentinelDate,
   statusLabel,
   verificationLabel,
 } from '../../../utils/format.js';
@@ -103,16 +107,14 @@ function BackstorySection({
     );
   } else {
     body = (
-      <p className={styles.emptyNote} data-el="character.backstoryEmpty">
-        {backstory.status === 'missing'
-          ? 'This backstory is no longer listed.'
-          : 'No backstory chosen yet.'}
-      </p>
+      <div data-el="character.backstoryEmpty">
+        <EmptyState message="No backstory written yet." />
+      </div>
     );
   }
   return (
     <section className={styles.narrative} aria-labelledby="backstory-heading">
-      <h2 id="backstory-heading" className="type-label">
+      <h2 id="backstory-heading" className="type-title">
         Backstory
       </h2>
       {body}
@@ -138,9 +140,9 @@ function ProgressionPanel({ characterId }: { characterId: string }): React.JSX.E
   }
   if (progression.status === 'empty') {
     return (
-      <p className={styles.tabEmpty} data-el="character.progressionEmpty">
-        No progression entries yet.
-      </p>
+      <div data-el="character.progressionEmpty">
+        <EmptyState message="No progression entries yet." />
+      </div>
     );
   }
   return (
@@ -150,7 +152,7 @@ function ProgressionPanel({ characterId }: { characterId: string }): React.JSX.E
           <div className={styles.tabRowBody}>
             <span className="type-title">
               {entry.amount >= 0 ? '+' : ''}
-              {entry.amount} PCXP
+              {entry.amount} XP
             </span>
             {entry.note ? <p className="type-caption">{entry.note}</p> : null}
           </div>
@@ -180,9 +182,9 @@ function HistoryPanel({ characterId }: { characterId: string }): React.JSX.Eleme
     return <StatePanel variant="inline" status="loading" />;
   if (history.status === 'empty') {
     return (
-      <p className={styles.tabEmpty} data-el="character.historyEmpty">
-        No quest history yet.
-      </p>
+      <div data-el="character.historyEmpty">
+        <EmptyState message="No quest history yet." />
+      </div>
     );
   }
   return (
@@ -199,7 +201,7 @@ function HistoryPanel({ characterId }: { characterId: string }): React.JSX.Eleme
           <p className="type-caption">
             {[
               row.status ? statusLabel(row.status) : null,
-              row.scheduledAt ? formatDate(row.scheduledAt) : null,
+              row.scheduledAt && !isSentinelDate(row.scheduledAt) ? formatDate(row.scheduledAt) : null,
             ]
               .filter(Boolean)
               .join(' · ')}
@@ -227,9 +229,9 @@ function ConnectionsPanel({ characterId }: { characterId: string }): React.JSX.E
   }
   if (connections.status === 'empty') {
     return (
-      <p className={styles.tabEmpty} data-el="character.connectionsEmpty">
-        No co-players recorded yet.
-      </p>
+      <div data-el="character.connectionsEmpty">
+        <EmptyState message="No co-players recorded yet." />
+      </div>
     );
   }
   return (
@@ -260,9 +262,9 @@ function SummariesPanel({ characterId }: { characterId: string }): React.JSX.Ele
     return <StatePanel variant="inline" status="loading" />;
   if (summaries.status === 'empty') {
     return (
-      <p className={styles.tabEmpty} data-el="character.summariesEmpty">
-        No summaries yet.
-      </p>
+      <div data-el="character.summariesEmpty">
+        <EmptyState message="No summaries yet." />
+      </div>
     );
   }
   return (
@@ -284,39 +286,39 @@ function readyRegions(
 ): PageRegionRenderers {
   const badge = lifeBadge(character.status);
   const safeDdb = isSafeDdbUrl(character.ddbUrl) ? character.ddbUrl : null;
+  const showVerification = ['pending', 'rejected', 'approved'].includes(
+    (character.verificationStatus ?? '').toLowerCase(),
+  );
+
+  const mirror = character.ddbMirror;
+  const facts = [
+    mirror?.level ? `Level ${mirror.level}` : null,
+    mirror?.classes ?? null,
+    mirror?.species ?? null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
 
   return {
     profile: () => (
       <div className={styles.profile} data-el="character.profile">
-        <header className={styles.charHero}>
-          <CharacterPortrait
-            key={character.imageUrl ?? ''}
-            name={character.name}
-            imageUrl={character.imageUrl}
-            initials={tokenLabel(character)}
-          />
-          <div className={styles.heroBody}>
-            <p className="type-code">{character.shortCode}</p>
-            <h1 className="type-display">{character.name}</h1>
-            <div className={styles.meta}>
-              <StatusBadge
-                status={badge}
-                label={characterStatusLabel(character.status)}
-              />
-              {character.verificationStatus ? (
-                <span className="chip" data-el="character.verificationStatus">
-                  {verificationLabel(character.verificationStatus)}
-                </span>
-              ) : null}
-              {character.regionName ? (
-                <span className="chip" data-el="character.region">
-                  {character.regionName}
-                </span>
-              ) : null}
-            </div>
-          </div>
-          <div className={styles.heroActions}>
-            {safeDdb ? (
+        <PageHeader
+          back={{ to: '/characters', label: 'Characters' }}
+          title={
+            <span className={styles.titleRow}>
+              <span className={styles.headToken}>
+                <CharacterPortrait
+                  key={character.imageUrl ?? ''}
+                  name={character.name}
+                  imageUrl={character.imageUrl}
+                  initials={tokenLabel(character)}
+                />
+              </span>
+              {character.name}
+            </span>
+          }
+          actions={
+            safeDdb ? (
               <a
                 className="btn btn--secondary"
                 href={safeDdb}
@@ -326,14 +328,52 @@ function readyRegions(
               >
                 D&amp;D Beyond
               </a>
-            ) : (
-              <p className={styles.emptyNote} data-el="character.ddbMissing">
-                No D&amp;D Beyond link on file.
-              </p>
-            )}
-          </div>
-        </header>
-        <div className={styles.sheet}>
+            ) : null
+          }
+          meta={
+            <>
+              {facts ? <span>{facts}</span> : null}
+              <StatusBadge
+                status={badge}
+                label={characterStatusLabel(character.status)}
+              />
+              {showVerification ? (
+                <Chip size="sm" tone="accent">
+                  {verificationLabel(character.verificationStatus ?? '')}
+                </Chip>
+              ) : null}
+              {character.regionName ? (
+                <Chip size="sm" tone="category">
+                  {character.regionName}
+                </Chip>
+              ) : null}
+            </>
+          }
+        />
+        <DetailLayout
+          railLabel="Experience"
+          rail={
+            <StatTile
+              className={styles.statCard}
+              label="Experience"
+              value={`${character.pcxp ?? 0} XP`}
+            >
+              {character.ddbMirror ? (
+                <p className="type-caption">
+                  {character.ddbMirror.syncedAt
+                    ? `Synced from D&D Beyond ${formatInstant(character.ddbMirror.syncedAt, opts.timeZone, 'date')}`
+                    : 'Synced from D&D Beyond'}
+                </p>
+              ) : (
+                <p className={styles.emptyNote}>
+                  {safeDdb
+                    ? 'Not synced from D&D Beyond yet.'
+                    : 'No D&D Beyond link on file.'}
+                </p>
+              )}
+            </StatTile>
+          }
+        >
           <Card pad={5} className={styles.sheetCard}>
             <BackstorySection
               backstoryId={character.backstoryId}
@@ -344,7 +384,7 @@ function readyRegions(
                 className={styles.narrative}
                 aria-labelledby="description-heading"
               >
-                <h2 id="description-heading" className="type-label">
+                <h2 id="description-heading" className="type-title">
                   Description
                 </h2>
                 {/* Same reading style as the backstory lore; plain text, so line breaks are kept. */}
@@ -354,26 +394,7 @@ function readyRegions(
               </section>
             ) : null}
           </Card>
-          <StatTile
-            className={styles.statCard}
-            label="Player character XP"
-            value={`${character.pcxp ?? 0} PCXP`}
-          >
-            {character.ddbMirror ? (
-              <p className="type-caption">
-                Last synchronized ·{' '}
-                {[character.ddbMirror.classes, character.ddbMirror.species]
-                  .filter(Boolean)
-                  .join(' · ')}
-                {character.ddbMirror.syncedAt
-                  ? ` · ${formatInstant(character.ddbMirror.syncedAt, opts.timeZone, 'date')}`
-                  : ''}
-              </p>
-            ) : (
-              <p className={styles.emptyNote}>Not synced from D&amp;D Beyond yet.</p>
-            )}
-          </StatTile>
-        </div>
+        </DetailLayout>
         {opts.showOwner ? (
           <Card pad={5} className={styles.ownerShelf}>
             <OwnerActions key={character.id} character={character} />
@@ -383,6 +404,7 @@ function readyRegions(
     ),
     tabs: () => (
       <Tabs
+        aria-label="Character sections"
         items={[
           {
             id: 'progression',
@@ -426,14 +448,30 @@ function statusRegions(
   error?: AppError,
 ): PageRegionRenderers {
   return {
-    profile: () =>
-      status === 'error' ? (
-        <StatePanel status="error" error={error} />
-      ) : status === 'loading' ? (
-        <StatePanel status="loading" />
-      ) : (
-        <EmptyState kind="not-found" message="That character is not on the roster." />
-      ),
+    profile: () => (
+      <div className={styles.profile}>
+        <PageHeader
+          back={{ to: '/characters', label: 'Characters' }}
+          title="Character"
+        />
+        {status === 'error' ? (
+          <StatePanel status="error" error={error} />
+        ) : status === 'loading' ? (
+          <StatePanel status="loading" />
+        ) : (
+          <StatePanel
+            status="empty"
+            title="Character not found"
+            emptyMessage="That character is not on the roster."
+            action={
+              <Link className="btn" to="/characters">
+                Back to Characters
+              </Link>
+            }
+          />
+        )}
+      </div>
+    ),
     tabs: emptyRegion,
   };
 }

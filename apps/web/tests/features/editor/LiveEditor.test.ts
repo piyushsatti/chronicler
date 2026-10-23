@@ -52,7 +52,15 @@ describe('LiveEditor serializers', () => {
   });
 
   it('detects fenced and table regions', () => {
-    const lines = ['intro', '```mermaid', 'A-->B', '```', '| a | b |', '|---|---|', '| 1 | 2 |'];
+    const lines = [
+      'intro',
+      '```mermaid',
+      'A-->B',
+      '```',
+      '| a | b |',
+      '|---|---|',
+      '| 1 | 2 |',
+    ];
     expect(leRegions(lines)).toEqual([
       { start: 1, end: 3, kind: 'mermaid' },
       { start: 4, end: 6, kind: 'table' },

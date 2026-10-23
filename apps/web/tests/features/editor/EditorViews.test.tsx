@@ -380,7 +380,7 @@ describe('editor props-only views', () => {
     );
     fireEvent.keyDown(window, { key: 's', ctrlKey: true });
     expect(input.onSaveDraft).toHaveBeenCalledTimes(2);
-    fireEvent.click(screen.getByRole('button', { name: 'Read' }));
+    fireEvent.click(screen.getByRole('tab', { name: 'Preview' }));
     expect(input.onPreview).toHaveBeenCalledOnce();
     expect(screen.getByRole('region', { name: 'Read preview' })).toHaveTextContent(
       error.userMessage,

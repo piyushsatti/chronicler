@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { SingleRegionPage } from '../../../chrome/singleRegion.js';
 import { Field } from '../../../components/foundation/Field.js';
 import { PageShell } from '../../../components/foundation/PageShell.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { Button } from '../../../components/primitives/Button.js';
+import { FilterBar } from '../../../components/primitives/FilterBar.js';
 import { Chip } from '../../../components/primitives/Chip.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
@@ -11,6 +13,7 @@ import {
   formatInstant,
   longDateLabel,
   monthLabel as civilMonthLabel,
+  personName,
   pluralize,
   statusLabel,
   weekdayColumn,
@@ -26,6 +29,52 @@ const STATUSES = ['', 'open', 'full', 'played', 'closed', 'cancelled'] as const;
 
 function namedDate(date: CalendarView['gameDate']): string | null {
   return date ? `${date.day} ${date.periodName}, ${date.year} ${date.eraAbbrev}` : null;
+}
+
+/** Search and status filters above the calendar; Enter in the search box applies it. */
+function CalendarFilters({
+  page,
+  total,
+}: {
+  page: ReturnType<typeof useCalendarPage>;
+  total: number | undefined;
+}): React.JSX.Element | null {
+  const state = page.state;
+  const [draft, setDraft] = useState(state?.q ?? '');
+  if (!state) return null;
+  return (
+    <form
+      role="search"
+      aria-label="Search quests"
+      onSubmit={(event) => {
+        event.preventDefault();
+        page.update({ q: draft, page: undefined });
+      }}
+    >
+      <FilterBar
+        label="Filter quests"
+        count={total === undefined ? undefined : pluralize(total, 'quest')}
+      >
+        <FilterBar.Search
+          label="Search quests"
+          placeholder="Search quests"
+          value={draft}
+          onValueChange={setDraft}
+        />
+        <FilterBar.Group label="Status">
+          {STATUSES.map((status) => (
+            <Chip
+              key={status || 'all'}
+              selected={state.status === status}
+              onClick={() => page.update({ status, page: undefined })}
+            >
+              {status ? statusLabel(status) : 'All statuses'}
+            </Chip>
+          ))}
+        </FilterBar.Group>
+      </FilterBar>
+    </form>
+  );
 }
 
 export function CalendarPage(): React.JSX.Element {
@@ -50,9 +99,14 @@ export function CalendarPage(): React.JSX.Element {
         ) : (
           <div className={`stack ${styles.wrap}`} data-gap="5">
             <p className="type-body">
-              Real dates are in UTC and map to days in the campaign. Quest times use
-              your selected time zone.
+              Quests by date, set against the campaign calendar. Times follow your{' '}
+              <Link to="/settings">time zone setting</Link>.
             </p>
+            <CalendarFilters
+              key={state.q}
+              page={page}
+              total={page.quests.data?.total}
+            />
             <div className={styles.layout}>
               <section
                 className={`card stack ${styles.panel} ${styles.monthCard}`}
@@ -77,7 +131,7 @@ export function CalendarPage(): React.JSX.Element {
                         })
                       }
                     >
-                      ‹ Prev
+                      Previous
                     </Button>
                     <Button
                       variant="ghost"
@@ -106,7 +160,7 @@ export function CalendarPage(): React.JSX.Element {
                         })
                       }
                     >
-                      Next ›
+                      Next
                     </Button>
                   </div>
                 </div>
@@ -123,12 +177,9 @@ export function CalendarPage(): React.JSX.Element {
                 ) : (
                   <>
                     <p className="type-caption">
-                      Current campaign date:{' '}
+                      Today in the campaign:{' '}
                       {namedDate(page.calendar.data.gameCalendar.currentGameDate) ??
                         'not recorded'}
-                      {page.calendar.data.gameCalendar.currentGameDay === null
-                        ? ''
-                        : ` · Game day ${page.calendar.data.gameCalendar.currentGameDay}`}
                     </p>
                     <div className="stack" data-gap="1">
                       <div
@@ -181,16 +232,6 @@ export function CalendarPage(): React.JSX.Element {
                                 >
                                   {Number(cell.realDate.slice(8, 10))}
                                 </time>
-                                <span
-                                  className={`type-caption ${styles.gameDay}`}
-                                  data-long={
-                                    cell.gameDay !== null && cell.gameDay >= 1000
-                                      ? '1'
-                                      : undefined
-                                  }
-                                >
-                                  {cell.gameDay === null ? '–' : cell.gameDay}
-                                </span>
                               </button>
                             </div>
                           );
@@ -198,12 +239,10 @@ export function CalendarPage(): React.JSX.Element {
                       </div>
                     </div>
                     <p className={`type-caption ${styles.legend}`}>
-                      <span>Small numbers are campaign game days.</span>
                       {unmapped > 0 ? (
                         <span>
-                          {unmapped === 1
-                            ? '1 date this month has no recorded game day.'
-                            : `${unmapped} dates this month have no recorded game day.`}
+                          Dashed days have no recorded game day
+                          {unmapped === 1 ? ' (1 day).' : ` (${unmapped} days).`}
                         </span>
                       ) : null}
                     </p>
@@ -212,39 +251,34 @@ export function CalendarPage(): React.JSX.Element {
               </section>
 
               <div className="stack" data-gap="5">
-                <section
-                  className={`card stack ${styles.panel}`}
-                  data-gap="2"
-                  aria-label="Selected date"
-                >
-                  <p className="type-label">
-                    {state.day ? 'Selected day' : 'Month begins'}
-                  </p>
-                  <h2 className="type-title">
-                    {longDateLabel(state.day ?? `${state.month}-01`)}
-                  </h2>
-                  {page.calendar.isPending || page.calendar.isError ? null : (
-                    <p className="type-body">
-                      {namedDate(page.calendar.data.gameDate) ??
-                        'No game date is recorded for this day.'}
-                    </p>
-                  )}
-                  <div className="row" data-wrap="1" data-gap="2">
-                    {selectedCell && selectedCell.gameDay !== null ? (
-                      <Button
-                        variant="secondary"
-                        size="sm"
-                        onClick={() =>
-                          page.update({
-                            gameDay: String(selectedCell.gameDay),
-                            realPage: undefined,
-                          })
-                        }
-                      >
-                        Other dates for game day {selectedCell.gameDay}
-                      </Button>
-                    ) : null}
-                    {state.day ? (
+                {state.day ? (
+                  <section
+                    className={`card stack ${styles.panel}`}
+                    data-gap="2"
+                    aria-label="Selected date"
+                  >
+                    <h2 className="type-title">{longDateLabel(state.day)}</h2>
+                    {page.calendar.isPending || page.calendar.isError ? null : (
+                      <p className="type-body">
+                        {namedDate(page.calendar.data.gameDate) ??
+                          'No game date is recorded for this day.'}
+                      </p>
+                    )}
+                    <div className="row" data-wrap="1" data-gap="2">
+                      {selectedCell && selectedCell.gameDay !== null ? (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          onClick={() =>
+                            page.update({
+                              gameDay: String(selectedCell.gameDay),
+                              realPage: undefined,
+                            })
+                          }
+                        >
+                          Other dates for game day {selectedCell.gameDay}
+                        </Button>
+                      ) : null}
                       <Button
                         variant="ghost"
                         size="sm"
@@ -252,11 +286,9 @@ export function CalendarPage(): React.JSX.Element {
                       >
                         Show whole month
                       </Button>
-                    ) : (
-                      <p className="type-caption">Pick a day to narrow the schedule.</p>
-                    )}
-                  </div>
-                </section>
+                    </div>
+                  </section>
+                ) : null}
 
                 <section
                   className={`card stack ${styles.panel}`}
@@ -266,50 +298,6 @@ export function CalendarPage(): React.JSX.Element {
                   <div className="stack" data-gap="1">
                     <h2 className="type-title">Quest schedule</h2>
                     <p className="type-caption">{scopeLabel}</p>
-                  </div>
-                  <form
-                    key={state.q}
-                    className="row"
-                    data-gap="2"
-                    data-align="end"
-                    role="search"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      const data = new FormData(event.currentTarget);
-                      page.update({ q: String(data.get('q') ?? ''), page: undefined });
-                    }}
-                  >
-                    <div data-grow="1">
-                      <Field
-                        label="Search quests"
-                        name="q"
-                        type="search"
-                        defaultValue={state.q}
-                        maxLength={200}
-                      />
-                    </div>
-                    <Button type="submit" variant="secondary">
-                      Search
-                    </Button>
-                  </form>
-                  <div
-                    className="row"
-                    data-wrap="1"
-                    data-gap="2"
-                    role="group"
-                    aria-label="Quest status"
-                  >
-                    {STATUSES.map((status) => (
-                      <Chip
-                        key={status || 'all'}
-                        size="sm"
-                        tone="line"
-                        selected={state.status === status}
-                        onClick={() => page.update({ status, page: undefined })}
-                      >
-                        {status ? statusLabel(status) : 'All statuses'}
-                      </Chip>
-                    ))}
                   </div>
                   {state.dmId || state.regionId ? (
                     <div className="row" data-wrap="1" data-gap="2" data-align="center">
@@ -348,7 +336,7 @@ export function CalendarPage(): React.JSX.Element {
                       <p className="type-caption" hidden={page.quests.data.total === 0}>
                         {pluralize(page.quests.data.total, 'quest')}
                         {page.quests.data.total > PAGE_SIZE
-                          ? ` · Page ${state.page} of ${Math.ceil(page.quests.data.total / PAGE_SIZE)}`
+                          ? `, page ${state.page} of ${Math.ceil(page.quests.data.total / PAGE_SIZE)}`
                           : ''}
                       </p>
                       {page.quests.data.items.length ? (
@@ -367,14 +355,15 @@ export function CalendarPage(): React.JSX.Element {
                                 >
                                   {quest.briefDocument?.title ?? quest.shortCode}
                                 </Link>
-                                <Chip size="sm" tone="status">
+                                <Chip size="sm" tone="line">
                                   {statusLabel(quest.displayStatus ?? quest.status)}
                                 </Chip>
                               </div>
                               <span className="type-caption">
-                                {dates.formatScheduled(quest.scheduledAt)} ·{' '}
-                                {quest.filledCount} of {quest.slotsMax} seats
-                                {quest.dm ? ` · ${quest.dm.displayName}` : ''}
+                                {dates.formatScheduled(quest.scheduledAt)},{' '}
+                                {quest.filledCount} of{' '}
+                                {pluralize(quest.slotsMax, 'seat')} filled
+                                {quest.dm ? `, run by ${personName(quest.dm)}` : ''}
                               </span>
                             </li>
                           ))}
@@ -389,6 +378,23 @@ export function CalendarPage(): React.JSX.Element {
                               : state.day
                                 ? 'No quests are scheduled for this day.'
                                 : 'No quests are scheduled this month.'
+                          }
+                          action={
+                            page.quests.data.total ? undefined : (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                onClick={() =>
+                                  page.update({
+                                    month: moveCivilMonth(state.month, 1),
+                                    day: undefined,
+                                    page: undefined,
+                                  })
+                                }
+                              >
+                                Show next month
+                              </Button>
+                            )
                           }
                         />
                       )}

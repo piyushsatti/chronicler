@@ -1,25 +1,45 @@
+import { useUrlParam } from '../../../hooks/useUrlParam.js';
 import { Link } from 'react-router-dom';
 import { SingleRegionPage } from '../../../chrome/singleRegion.js';
 import { PageShell } from '../../../components/foundation/PageShell.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { Card } from '../../../components/primitives/Card.js';
+import { CardGrid } from '../../../components/primitives/CardGrid.js';
+import { FilterBar } from '../../../components/primitives/FilterBar.js';
+import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { Skeleton } from '../../../components/primitives/Skeleton.js';
 import { useMe } from '../../../hooks/useMe.js';
 import { pluralize } from '../../../utils/format.js';
 import { useCodexPage } from '../hooks/useCodexPage.js';
 import styles from './codex.module.css';
 
+const DIRECTORIES = [
+  { to: '/npcs', label: 'NPCs' },
+  { to: '/factions', label: 'Factions' },
+  { to: '/regions', label: 'Regions' },
+] as const;
+
 export function CodexLinkedDirectoryPage({
   title,
   categoryPrefix,
-  eyebrow,
+  noun,
+  singular,
+  lede,
 }: {
   title: string;
   categoryPrefix: string;
-  eyebrow: string;
+  /** Lower-case plural for copy, e.g. "factions". */
+  noun: string;
+  /** Singular for the create action, e.g. "faction" (NPC keeps its capitals). */
+  singular: string;
+  /** One sentence under the title. */
+  lede: string;
 }): React.JSX.Element {
-  const page = useCodexPage(categoryPrefix);
+  const [query, setQuery] = useUrlParam('q');
+  const page = useCodexPage(categoryPrefix, query);
   const { data: me } = useMe();
+  const remaining =
+    page.status === 'ready' ? Math.max(0, (page.total ?? 0) - page.view.length) : 0;
   const newHref = `/codex/${encodeURIComponent(categoryPrefix)}/new`;
 
   let body: React.JSX.Element;
@@ -27,36 +47,38 @@ export function CodexLinkedDirectoryPage({
     body = <StatePanel status="error" error={page.error} />;
   } else if (page.status === 'loading') {
     body = (
-      <div className={styles.directoryGrid} aria-busy="true">
+      <CardGrid aria-busy="true" gap={3}>
         {Array.from({ length: 6 }, (_, index) => (
           <Skeleton key={index} height="5.5rem" aria-label={`Loading ${title}`} />
         ))}
-      </div>
+      </CardGrid>
     );
   } else if (page.status === 'empty') {
     body = (
-      <div className={`card ${styles.emptyDirectory}`}>
-        <p className="type-title">No {title} in the Codex yet.</p>
-        <p className="type-body">
-          {me
-            ? `Write the first one, or browse the rest of the Codex.`
-            : `Entries tagged ${categoryPrefix} will be listed here once they are published.`}
-        </p>
-        <div className="row" data-wrap="1" data-gap="3" data-justify="center">
-          {me ? (
-            <Link className="btn btn--primary" to={newHref}>
-              New {categoryPrefix} entry
+      <StatePanel
+        status="empty"
+        emptyMessage={
+          query.trim()
+            ? `No ${noun} match “${query.trim()}”.`
+            : `No ${noun} yet. Published ${singular} entries will show up here.`
+        }
+        action={
+          <>
+            {me && !query.trim() ? (
+              <Link className="btn btn--primary" to={newHref}>
+                New {singular}
+              </Link>
+            ) : null}
+            <Link className="btn btn--secondary" to="/codex">
+              Browse the Codex
             </Link>
-          ) : null}
-          <Link className="btn btn--secondary" to="/codex">
-            Browse the Codex
-          </Link>
-        </div>
-      </div>
+          </>
+        }
+      />
     );
   } else {
     body = (
-      <div className={styles.directoryGrid}>
+      <CardGrid gap={3}>
         {page.view.map((entry) => (
           <Card
             key={entry.slug}
@@ -71,7 +93,7 @@ export function CodexLinkedDirectoryPage({
             ) : null}
           </Card>
         ))}
-      </div>
+      </CardGrid>
     );
   }
 
@@ -79,37 +101,65 @@ export function CodexLinkedDirectoryPage({
     <PageShell>
       <SingleRegionPage page="codex-directory">
         <div className={styles.entryPage}>
-          <Link className={`btn btn--ghost btn--sm ${styles.back}`} to="/codex">
-            ← Codex
-          </Link>
-          <header className={styles.entryHeader}>
-            <div className="stack" data-gap="2">
-              <p className="type-label">{eyebrow}</p>
-              <h1 className="type-display">{title}</h1>
-              {page.status === 'ready' ? (
-                <p className="type-caption">
-                  {page.view.length >= (page.total ?? page.view.length)
-                    ? pluralize(page.view.length, 'entry', 'entries')
-                    : `Showing ${page.view.length} of ${page.total} entries`}
-                </p>
-              ) : null}
-            </div>
-            {me && page.status === 'ready' ? (
-              <Link className="btn btn--secondary" to={newHref}>
-                New {categoryPrefix} entry
-              </Link>
-            ) : null}
-          </header>
+          <PageHeader
+            back={{ to: '/codex', label: 'Codex' }}
+            title={title}
+            lede={lede}
+            actions={
+              me && page.status === 'ready' ? (
+                <Link className="btn btn--primary" to={newHref}>
+                  New {singular}
+                </Link>
+              ) : null
+            }
+          />
+          <FilterBar
+            label={`Filter ${title}`}
+            count={
+              page.status === 'ready'
+                ? page.view.length >= (page.total ?? page.view.length)
+                  ? pluralize(page.view.length, 'entry', 'entries')
+                  : `Showing ${page.view.length} of ${page.total} entries`
+                : undefined
+            }
+          >
+            <FilterBar.Search
+              label={`Search ${title}`}
+              placeholder={`Search ${title}…`}
+              value={query}
+              onValueChange={setQuery}
+            />
+            <FilterBar.Group>
+              {DIRECTORIES.map((directory) => (
+                <Link
+                  key={directory.to}
+                  to={directory.to}
+                  className={`chip ${styles.directoryLink}`}
+                  data-component="Chip"
+                  data-tone="neutral"
+                  data-size="md"
+                  data-selected={directory.label === title ? '1' : undefined}
+                  aria-current={directory.label === title ? 'page' : undefined}
+                >
+                  {directory.label}
+                </Link>
+              ))}
+            </FilterBar.Group>
+          </FilterBar>
           {body}
           {page.status === 'ready' && page.hasMore ? (
-            <button
-              className={`btn btn--secondary ${styles.back}`}
-              type="button"
-              disabled={page.isFetching}
-              onClick={page.loadMore}
-            >
-              {page.isFetching ? 'Loading…' : 'Load more entries'}
-            </button>
+            <div>
+              <button
+                className="btn btn--secondary"
+                type="button"
+                disabled={page.isFetching}
+                onClick={page.loadMore}
+              >
+                {page.isFetching
+                  ? 'Loading…'
+                  : `Show ${Math.min(50, remaining)} more (${remaining} left)`}
+              </button>
+            </div>
           ) : null}
         </div>
       </SingleRegionPage>

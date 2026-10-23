@@ -24,6 +24,7 @@ export const GATES = [
   ['B8 effects', 'check-effects.mjs'],
   ['B9 cosmetic', 'check-cosmetic.mjs'],
   ['I1 responsive', 'check-responsive.mjs'],
+  ['L5 page-layout', 'check-page-layout.mjs'],
 ];
 
 export function classifyResult(result) {

@@ -4,6 +4,7 @@ import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import type { MemberProfileView } from '../adapters/memberProfileAdapter.js';
 import { useProfileActions } from '../hooks/useProfileActions.js';
 import { Checkbox } from '../../../components/primitives/Checkbox.js';
+import { statusLabel } from '../../../utils/format.js';
 const DAYS = [
   'MONDAY',
   'TUESDAY',
@@ -216,8 +217,10 @@ export function ProfileOwnerActions({
             Your DM profile
           </h3>
           <p className="type-caption">
-            Review: {profile.dmProfile?.status ?? 'not submitted'} · Revision{' '}
-            {profile.dmProfile?.reviewRevision ?? 0}
+            Review status:{' '}
+            {profile.dmProfile?.status
+              ? statusLabel(profile.dmProfile.status)
+              : 'Not submitted'}
           </p>
           <form
             className="stack"

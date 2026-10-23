@@ -1,6 +1,8 @@
 import type { CSSProperties } from 'react';
 import { Avatar } from '../../../components/primitives/Avatar.js';
 import { Card } from '../../../components/primitives/Card.js';
+import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
+import { handleOnlyName } from '../../../utils/format.js';
 import type { ChronicleListItemView } from '../adapters/chronicleAdapter.js';
 import { regionColorVar } from '../regionColor.js';
 import { summaryCategoryMeta } from '../summaryCategory.js';
@@ -8,10 +10,14 @@ import styles from './chronCard.module.css';
 
 type ChronCardProps = {
   entry: ChronicleListItemView;
-  onClick: () => void;
+  /** Show the entry type chip; hidden when every entry shares one type. */
+  showType?: boolean;
 };
 
-export function ChronCard({ entry, onClick }: ChronCardProps): React.JSX.Element {
+/** One chronicle entry. The whole card is the link to the entry. */
+export function ChronCard({ entry, showType = true }: ChronCardProps): React.JSX.Element {
+  const { formatDate } = useDateFormatter();
+  const when = entry.occurredAt ?? entry.publishedAt;
   const typeMeta = summaryCategoryMeta(entry.category);
   const regionColor = entry.region ? regionColorVar(entry.region) : undefined;
   const dayLabel = entry.gameDate
@@ -19,6 +25,9 @@ export function ChronCard({ entry, onClick }: ChronCardProps): React.JSX.Element
     : entry.gameDay != null
       ? `Game day ${entry.gameDay}`
       : null;
+  const author = entry.authorHandle
+    ? handleOnlyName(entry.authorHandle)
+    : null;
 
   const typeColorVars = {
     '--chron-type-color': typeMeta.color,
@@ -26,92 +35,50 @@ export function ChronCard({ entry, onClick }: ChronCardProps): React.JSX.Element
   } as CSSProperties;
 
   return (
-    <div
-      className={`row ${styles.entry}`}
+    <Card
+      variant="clickable"
+      to={`/chronicles/${encodeURIComponent(entry.slug)}`}
       data-el="chronicles.card"
-      data-gap="3"
-      data-align="start"
+      aria-label={`${entry.title}${dayLabel ? `, ${dayLabel}` : ''}`}
+      pad={4}
+      className={`stack ${styles.entry}`}
       style={typeColorVars}
     >
-      <div
-        className={`stack ${styles.markerColumn}`}
-        data-align="center"
-        data-shrink="0"
-      >
-        <div className={styles.marker} />
+      <div className="row" data-gap="2" data-justify="between" data-wrap="1">
+        {showType ? (
+          <span className={`chip ${styles.typeChip}`}>{typeMeta.label}</span>
+        ) : null}
+        {when || dayLabel ? (
+          <span className="type-caption">{when ? formatDate(when) : dayLabel}</span>
+        ) : null}
       </div>
 
-      <Card
-        variant="clickable"
-        data-interactive="1"
-        onClick={onClick}
-        aria-label={`${typeMeta.label}${dayLabel ? ` — ${dayLabel}` : ''}`}
-        pad={4}
-        className="grow"
-      >
-        <div
-          className={`row ${styles.section}`}
-          data-gap="2"
-          data-justify="between"
-          data-wrap="1"
-        >
-          <div className="row" data-gap="2" data-wrap="1">
-            <span className={`chip type-code ${styles.typeChip}`}>
-              {typeMeta.label}
-            </span>
-            {entry.arc ? <span className="type-caption">{entry.arc.toUpperCase()}</span> : null}
-          </div>
-          {dayLabel ? <span className="type-code">{dayLabel}</span> : null}
-        </div>
+      {entry.title ? (
+        <h3 className={`type-title ${styles.title}`}>{entry.title}</h3>
+      ) : null}
 
-        <div className={`row ${styles.section}`} data-gap="2" data-wrap="1">
-          {entry.authorHandle ? (
-            <>
-              <Avatar name={entry.authorHandle} size="xs" online={false} />
-              <span className="type-caption">{entry.authorHandle}</span>
-            </>
-          ) : null}
+      {entry.excerpt ? (
+        <p className={`type-body ${styles.excerpt}`}>{entry.excerpt}</p>
+      ) : null}
 
-          {entry.region ? (
-            <>
-              <span className="type-caption">·</span>
-              <span className="chip">
-                <span
-                  className="dot"
-                  style={{ '--region-color': regionColor } as CSSProperties}
-                />
-                {entry.region}
-              </span>
-            </>
-          ) : null}
-        </div>
-
-        {entry.title ? (
-          <h3 className={`type-title ${styles.title}`}>
-            {entry.title}
-          </h3>
+      <div className={`row ${styles.footer}`} data-gap="2" data-wrap="1">
+        {author ? (
+          <>
+            <Avatar name={author} size="xs" online={false} />
+            <span className="type-caption">{author}</span>
+          </>
         ) : null}
-
-        {entry.tags.length > 0 ? (
-          <div className={`row ${styles.tags} ${styles.section}`} data-wrap="1">
-            {entry.tags.map((t) => (
-              <span key={t} className={`pf-tag ${styles.tag}`}>
-                {t}
-              </span>
-            ))}
-          </div>
+        {entry.region ? (
+          <span className="chip">
+            <span
+              className="dot"
+              style={{ '--region-color': regionColor } as CSSProperties}
+            />
+            {entry.region}
+          </span>
         ) : null}
-
-        {entry.excerpt ? (
-          <p className={`type-body ${styles.excerpt}`}>
-            {entry.excerpt}
-          </p>
-        ) : null}
-
-        <div className={`row ${styles.footer}`} data-justify="end">
-          <span className="type-code">Read entry →</span>
-        </div>
-      </Card>
-    </div>
+        {entry.arc ? <span className="type-caption">{entry.arc}</span> : null}
+      </div>
+    </Card>
   );
 }

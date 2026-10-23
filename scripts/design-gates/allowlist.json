@@ -1,5 +1,5 @@
 {
-  "_comment": "Allowlists for apps/web design gates. Lengths may only shrink (ratchet). Soft-skipped gates (gallery/motion/effects/cosmetic/orphan) re-arm when their trees land.",
+  "_comment": "Allowlists for apps/web design gates. Lengths may only shrink (ratchet). Soft-skipped gates (gallery/motion/effects/cosmetic/orphan) re-arm when their trees land. pageLayout (L5): justified exceptions, each with a reason. pageLayoutPendingMigration: current violations that round-3 page migration removes (entries match on file+rule+value; seenAtLine is informational).",
   "tokens": [],
   "boundary": [],
   "responsive": [],
@@ -9,5 +9,80 @@
   "stateTrio": [],
   "architectureLadder": [],
   "classCoverage": [],
-  "customProperties": []
+  "customProperties": [],
+  "pageLayout": [
+    {
+      "file": "src/styles/atlas-content.css",
+      "rule": "css-width-literal",
+      "value": "width: min(38%, 360px)",
+      "reason": "Home featured-banner media box inside a card, not a page or card-grid width."
+    },
+    {
+      "file": "src/styles/editor.css",
+      "rule": "css-width-literal",
+      "value": "width: 300px",
+      "reason": "LiveEditor insert-menu popover width (capped by max-width: 78vw)."
+    },
+    {
+      "file": "src/styles/editor.css",
+      "rule": "css-width-literal",
+      "value": "width: 260px",
+      "reason": "LiveEditor autocomplete popover width (capped by max-width: 80vw)."
+    },
+    {
+      "file": "src/styles/effects.css",
+      "rule": "css-width-literal",
+      "value": "width: min(100%, 18rem)",
+      "reason": "Gallery effect demo stage; design QA only."
+    },
+    {
+      "file": "src/styles/primitives.css",
+      "rule": "css-width-literal",
+      "value": "max-width: 560px",
+      "reason": "Modal default dialog size (the primitive owns its overlay sizes)."
+    },
+    {
+      "file": "src/styles/primitives.css",
+      "rule": "css-width-literal",
+      "value": "max-width: 400px",
+      "reason": "Modal size sm."
+    },
+    {
+      "file": "src/styles/primitives.css",
+      "rule": "css-width-literal",
+      "value": "max-width: 720px",
+      "reason": "Modal size lg."
+    },
+    {
+      "file": "src/styles/primitives.css",
+      "rule": "css-width-literal",
+      "value": "width: min(40rem, calc(100vw - 2 * var(--sp-4)))",
+      "reason": "Modal size palette: fixed command-dialog width so it never resizes while typing."
+    },
+    {
+      "file": "src/styles/primitives.css",
+      "rule": "css-width-literal",
+      "value": "width: min(360px, calc(100vw - 2 * var(--sp-4)))",
+      "reason": "Toast width."
+    },
+    {
+      "file": "src/styles/primitives.css",
+      "rule": "css-width-literal",
+      "value": "max-width: min(32rem, calc(100vw - 1rem))",
+      "reason": "Popover/tooltip intrinsic-width cap."
+    },
+    {
+      "file": "src/styles/primitives.css",
+      "rule": "css-width-literal",
+      "value": "max-width: min(36rem, calc(100vw - 1rem))",
+      "reason": "Menu popup intrinsic-width cap."
+    },
+    {
+      "file": "src/styles/primitives.css",
+      "rule": "css-width-literal",
+      "value": "max-width: min(32rem, calc(100vw - 2 * var(--sp-4)))",
+      "reason": "Popover content intrinsic-width cap."
+    }
+  ],
+  "pageLayoutPendingMigration": []
 }

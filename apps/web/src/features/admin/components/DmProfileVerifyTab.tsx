@@ -4,7 +4,9 @@ import { Link } from 'react-router-dom';
 import { Button } from '../../../components/primitives/Button.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
-import { statusLabel } from '../../../utils/format.js';
+import { useMemberHref } from '../../../hooks/useMemberHref.js';
+import { Chip } from '../../../components/primitives/Chip.js';
+import { handleLabel, personName, statusLabel } from '../../../utils/format.js';
 import type { useDmProfileVerifyTab } from '../hooks/useDmProfileVerifyTab.js';
 
 export function DmProfileVerifyTab({
@@ -12,6 +14,7 @@ export function DmProfileVerifyTab({
 }: {
   view: ReturnType<typeof useDmProfileVerifyTab>;
 }): React.JSX.Element {
+  const memberHref = useMemberHref();
   const { queue, noteById, setNoteById, feedback, feedbackIsError, decide } = view;
 
   if (queue.isError) {
@@ -45,16 +48,18 @@ export function DmProfileVerifyTab({
       <ul className="stack">
         {queue.data.map((row) => (
           <li key={row.memberId} className="card stack">
-            <p className="type-title">{row.displayName}</p>
-            <p className="type-caption">
-              @{row.handle}
-              {row.status ? ` · ${statusLabel(row.status)}` : ''}
-            </p>
-            <Link className="type-link" to={`/dms/@${row.handle}`}>
+            <p className="type-title">{personName(row)}</p>
+            <div className="row" data-wrap="1" data-gap="2">
+              {handleLabel(row.handle) ? (
+                <span className="type-caption">{handleLabel(row.handle)}</span>
+              ) : null}
+              {row.status ? <Chip size="sm">{statusLabel(row.status)}</Chip> : null}
+            </div>
+            <Link className="type-link" to={memberHref(row, 'dm')}>
               Open DM profile
             </Link>
             <label className="stack">
-              <span className="type-label">Change-request note</span>
+              <span className="type-label">What does the owner need to change?</span>
               <textarea
                 disabled={decide.isPending}
                 className="field-input"

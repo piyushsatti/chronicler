@@ -4,9 +4,8 @@ import { LoginRoute } from '../../../src/chrome/LoginRoute.js';
 import type { GraphqlRequestBody } from '../../../src/chrome/featureModule.js';
 import { server } from '../../../src/mocks/server.js';
 import adminMe from '../../fixtures/wire/me/admin-good.json';
-import goodNotifications from '../../fixtures/wire/notifications/list-good.json';
-import goodUnread from '../../fixtures/wire/notifications/unread-good.json';
 import { fireEvent, screen } from '@testing-library/react';
+import { Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { LoginPage } from '../../../src/features/member/pages/LoginPage.js';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
@@ -25,9 +24,11 @@ describe('LoginPage initiation failures', () => {
           throw new Error('crypto unavailable');
         });
       } else {
-        vi.spyOn(Object.getPrototypeOf(sessionStorage), 'setItem').mockImplementation(() => {
-          throw new Error('storage unavailable');
-        });
+        vi.spyOn(Object.getPrototypeOf(sessionStorage), 'setItem').mockImplementation(
+          () => {
+            throw new Error('storage unavailable');
+          },
+        );
       }
       renderWithProviders(<LoginPage />);
       fireEvent.click(screen.getByRole('button', { name: 'Continue with Discord' }));
@@ -67,7 +68,7 @@ describe('LoginRoute', () => {
     ).toBeInTheDocument();
   });
 
-  it('shows account links and notifications when signed in as admin', async () => {
+  it('sends a signed-in member to /me instead of showing a second account hub', async () => {
     seedToken();
     server.use(
       http.post(GRAPHQL_PATH, async ({ request }) => {
@@ -76,31 +77,17 @@ describe('LoginRoute', () => {
         if (/\bquery\s+MemberMe\b/.test(q)) {
           return HttpResponse.json({ data: { memberMe: adminMe } });
         }
-        if (/\bquery\s+MyUnreadNotificationCount\b/.test(q)) {
-          return HttpResponse.json({
-            data: { myUnreadNotificationCount: goodUnread.count },
-          });
-        }
-        if (/\bquery\s+MyNotifications\b/.test(q)) {
-          return HttpResponse.json({
-            data: { myNotifications: goodNotifications },
-          });
-        }
-        return HttpResponse.json({
-          errors: [
-            { message: 'Unhandled operation', extensions: { code: 'UNHANDLED' } },
-          ],
-        });
+        return HttpResponse.json({ data: {} });
       }),
     );
-    renderWithProviders(<LoginRoute />);
-    expect(
-      await screen.findByRole('link', { name: 'Admin' }),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Verification' })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Your page' })).toHaveAttribute('href', '/me');
-    expect(screen.queryByRole('link', { name: 'Search' })).toBeNull();
-    expect(await screen.findByText(/You have 2 unread notifications/)).toBeInTheDocument();
-    expect(await screen.findByText('Quest signup')).toBeInTheDocument();
+    renderWithProviders(
+      <Routes>
+        <Route path="/login" element={<LoginRoute />} />
+        <Route path="/me" element={<p>my hub</p>} />
+      </Routes>,
+      { route: '/login' },
+    );
+    expect(await screen.findByText('my hub')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Continue with Discord' })).toBeNull();
   });
 });

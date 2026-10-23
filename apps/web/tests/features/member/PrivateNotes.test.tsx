@@ -68,7 +68,7 @@ describe('Private notes on /me', () => {
         });
       }),
     );
-    renderWithProviders(<MePage />, { route: '/me' });
+    renderWithProviders(<MePage />, { route: '/me?tab=notes' });
     const section = await notesSection();
     expect(within(section).getByText('Only you can see these.')).toBeVisible();
     expect(await within(section).findByText('No notes yet.')).toBeVisible();
@@ -91,10 +91,24 @@ describe('Private notes on /me', () => {
     );
   });
 
+  it('keeps an unsaved draft when the member switches tabs and back', async () => {
+    signIn(['player']);
+    server.use(notesQuery(good));
+    renderWithProviders(<MePage />, { route: '/me?tab=notes' });
+    const section = await notesSection();
+    const box = await within(section).findByLabelText('Notes (Markdown)');
+    await userEvent.type(box, ' extra line');
+    await userEvent.click(screen.getByRole('tab', { name: 'Overview' }));
+    await userEvent.click(screen.getByRole('tab', { name: 'Notes' }));
+    const again = await within(await notesSection()).findByLabelText('Notes (Markdown)');
+    expect(again).toHaveValue(`${good.body} extra line`);
+    expect(screen.getByText('Unsaved changes.')).toBeVisible();
+  });
+
   it('loads saved notes, previews Markdown and blocks saving over the limit', async () => {
     signIn(['player']);
     server.use(notesQuery(good));
-    renderWithProviders(<MePage />, { route: '/me' });
+    renderWithProviders(<MePage />, { route: '/me?tab=notes' });
     const section = await notesSection();
     const box = await within(section).findByLabelText('Notes (Markdown)');
     expect(box).toHaveValue(good.body);
@@ -121,7 +135,7 @@ describe('Private notes on /me', () => {
         }),
       ),
     );
-    renderWithProviders(<MePage />, { route: '/me' });
+    renderWithProviders(<MePage />, { route: '/me?tab=notes' });
     const section = await notesSection();
     await userEvent.click(
       await within(section).findByRole('button', { name: 'Start writing' }),
@@ -149,7 +163,7 @@ describe('Private notes on /me', () => {
           : HttpResponse.json({ data: { myPrivateNotes: good } });
       }),
     );
-    renderWithProviders(<MePage />, { route: '/me' });
+    renderWithProviders(<MePage />, { route: '/me?tab=notes' });
     const section = await notesSection();
     expect(
       within(section).getAllByLabelText('Loading private notes').length,
@@ -186,7 +200,7 @@ describe('Private notes on /me', () => {
         }),
       ),
     );
-    renderWithProviders(<MePage />, { route: '/me' });
+    renderWithProviders(<MePage />, { route: '/me?tab=notes' });
     const section = await notesSection();
     expect(await within(section).findByRole('alert')).toHaveTextContent(
       'You don’t have access to this.',

@@ -2,8 +2,10 @@ import { Link, useParams } from 'react-router-dom';
 import { SingleRegionPage } from '../../../chrome/singleRegion.js';
 import { Field } from '../../../components/foundation/Field.js';
 import { PageShell } from '../../../components/foundation/PageShell.js';
+import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { Button } from '../../../components/primitives/Button.js';
+import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { Chip } from '../../../components/primitives/Chip.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
@@ -17,9 +19,21 @@ export function SeriesPage(): React.JSX.Element {
   const dates = useDateFormatter();
   const arc = !page.arc.isError ? page.arc.data : undefined;
   return (
-    <PageShell title={arc?.name ?? 'Quest series'} context="war-room">
+    <PageShell context="war-room">
       <SingleRegionPage page="series">
         <div className="stack" data-gap="5">
+          <PageHeader
+            back={{ to: '/quests', label: 'Quests' }}
+            title={arc?.name ?? 'Quest series'}
+            meta={
+              arc ? (
+                <>
+                  <span>{pluralize(arc.questCount, 'quest')}</span>
+                  <span>Created {dates.formatDate(arc.createdAt)}</span>
+                </>
+              ) : undefined
+            }
+          />
           {!page.validId ? (
             <p className="type-body">
               This historical series code has no current UUID identity. Open a series
@@ -38,14 +52,16 @@ export function SeriesPage(): React.JSX.Element {
           ) : !arc ? (
             <StatePanel
               status="empty"
+              title="Series not found"
               emptyMessage="This quest series is unavailable."
+              action={
+                <Link className="btn" to="/quests">
+                  Back to Quests
+                </Link>
+              }
             />
           ) : (
             <>
-              <p className="type-caption">
-                {pluralize(arc.questCount, 'quest')} · Created{' '}
-                {dates.formatDate(arc.createdAt)}
-              </p>
               {arc.quests.length ? (
                 <ol className={styles.quests}>
                   {arc.quests.map((quest) => (
@@ -70,9 +86,13 @@ export function SeriesPage(): React.JSX.Element {
                   ))}
                 </ol>
               ) : (
-                <StatePanel
-                  status="empty"
-                  emptyMessage="No quests belong to this series yet."
+                <EmptyState
+                  message="No quests belong to this series yet."
+                  action={
+                    <Link className="btn btn--secondary btn--sm" to="/quests">
+                      Browse the quest board
+                    </Link>
+                  }
                 />
               )}
               {page.canRename ? (
@@ -130,9 +150,6 @@ export function SeriesPage(): React.JSX.Element {
             </form>
           ) : null}
           {page.error ? <StatePanel status="error" error={page.error} /> : null}
-          <Link className="type-link" to="/quests">
-            Browse quests
-          </Link>
         </div>
       </SingleRegionPage>
     </PageShell>

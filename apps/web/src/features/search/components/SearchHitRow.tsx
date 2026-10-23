@@ -1,32 +1,50 @@
 import { Link } from 'react-router-dom';
+import { Chip } from '../../../components/primitives/Chip.js';
+import { humanizeKey, handleLabel } from '../../../utils/format.js';
+import { useMemberHref } from '../../../hooks/useMemberHref.js';
 import type { SearchHitView } from '../adapters/searchAdapter.js';
 import { searchHitHref } from '../searchHit.js';
 
 export function SearchHitRow({
   hit,
   onNavigate,
+  memberLabel,
+  hideKind = false,
 }: {
   hit: SearchHitView;
   onNavigate?: () => void;
+  /** Disambiguated name for a member hit, e.g. "dev (@brune)". */
+  memberLabel?: string;
+  /** The surrounding section already says what kind of hit this is. */
+  hideKind?: boolean;
 }): React.JSX.Element {
   const member = 'handle' in hit;
-  const title = member ? hit.displayName : hit.title;
-  const href = searchHitHref(hit);
+  const title = member ? (memberLabel ?? hit.displayName) : hit.title;
+  const handle = member ? handleLabel(hit.handle) : null;
+  const showHandle = handle !== null && !title.includes(handle);
+  const memberHref = useMemberHref();
+  const href = searchHitHref(hit, memberHref);
   return (
     <li className="search-hit">
       <div className="row" data-gap="2" data-wrap="1">
-        <span className="type-label">
-          {member ? 'Member' : hit.kind.replaceAll('_', ' ')}
-        </span>
+        {hideKind ? null : (
+          <Chip size="sm" tone="category">
+            {member ? 'Member' : humanizeKey(hit.kind)}
+          </Chip>
+        )}
         {href ? (
-          <Link className="type-body" to={href} onClick={onNavigate}>
+          <Link className="type-title" to={href} onClick={onNavigate}>
             {title}
           </Link>
         ) : (
-          <span className="type-body">{title}</span>
+          <span className="type-title">{title}</span>
         )}
       </div>
-      <p className="type-caption">{member ? `@${hit.handle}` : hit.snippet}</p>
+      {member ? (
+        showHandle ? <p className="type-caption">{handle}</p> : null
+      ) : (
+        <p className="type-caption">{hit.snippet}</p>
+      )}
       {!href ? (
         <p className="type-caption">
           This archived brief has no linked quest code.{' '}

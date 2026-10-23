@@ -4,6 +4,11 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { SingleRegionPage } from '../../../chrome/singleRegion.js';
 import { PageShell } from '../../../components/foundation/PageShell.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
+import { Card } from '../../../components/primitives/Card.js';
+import { CardGrid } from '../../../components/primitives/CardGrid.js';
+import { Chip } from '../../../components/primitives/Chip.js';
+import { FilterBar } from '../../../components/primitives/FilterBar.js';
+import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { useMe } from '../../../hooks/useMe.js';
 import { useCodexPage } from '../hooks/useCodexPage.js';
 import { CODE_CATEGORIES } from '../types.js';
@@ -14,6 +19,8 @@ import {
 import { pluralize } from '../../../utils/format.js';
 import styles from './codex.module.css';
 
+type CategoryOption = { name: string; label: string; count: number | null };
+
 export function CodexPage(): React.JSX.Element {
   const [params] = useSearchParams();
   // Entry pages link their category chip here as ?category=<value>.
@@ -22,6 +29,9 @@ export function CodexPage(): React.JSX.Element {
   );
   const [query, setQuery] = useState(() => params.get('q') ?? '');
   const page = useCodexPage(category, query);
+  // The unfiltered list backs the chip counts; with no category it is the
+  // same query as `page`, so react-query shares it.
+  const all = useCodexPage('', query);
   const { data: me } = useMe();
   const { widthClass } = useSizeClasses();
   const entries = page.status === 'ready' ? page.view : [];
@@ -40,72 +50,91 @@ export function CodexPage(): React.JSX.Element {
     }))
     .filter((group) => group.entries.length > 0);
 
+  // Exact per-category counts need every entry loaded; otherwise only the
+  // totals the API reports (All, and the active category) are shown.
+  const allEntries = all.status === 'ready' ? all.view : [];
+  const exact = all.status === 'ready' && !all.hasMore;
+  const countFor = (name: string): number | null => {
+    if (!name) return all.total ?? (all.status === 'empty' ? 0 : null);
+    if (exact)
+      return allEntries.filter(
+        (entry) =>
+          entry.category === name || (entry.category ?? '').startsWith(`${name}/`),
+      ).length;
+    return name === category ? page.total : null;
+  };
+  const options: CategoryOption[] = ['', ...categories].map((name) => ({
+    name,
+    label: name ? codexCategoryHeading(name) : 'All',
+    count: countFor(name),
+  }));
+  const summary =
+    page.status !== 'ready'
+      ? undefined
+      : entries.length >= (page.total ?? entries.length)
+        ? pluralize(entries.length, 'entry', 'entries')
+        : `Showing ${entries.length} of ${page.total} entries`;
+
   return (
     <PageShell context="tavern" className={`hf2 ${styles.root}`}>
       <SingleRegionPage page="codex">
-        <header className={styles.header} data-compact={widthClass !== 'expanded'}>
-          <div className="stack" data-gap="2">
-            <div className="type-label">The Codex · Campaign wiki</div>
-            <h1 className="type-display">Codex</h1>
-            <p className="type-body">
-              The reference layer of the world — who’s who, what’s what, and how it all
-              connects.
-            </p>
-          </div>
-          <div className="stack" data-gap="3" data-align="end">
-            {me ? (
-              <Link className="btn primary" to="/codex/new">
-                + New Codex entry
-              </Link>
-            ) : null}
-            <label className={styles.search}>
-              <span aria-hidden="true">⌕</span>
-              <input
-                aria-label="Search the Codex"
-                placeholder="Search the Codex…"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
+        <div className="stack" data-gap="5">
+          <PageHeader
+            title="Codex"
+            lede="The campaign wiki: people, places, factions and lore, and how they connect."
+            actions={
+              <>
+                <Link className="btn btn--secondary" to="/regions">
+                  Regions
+                </Link>
+                <Link className="btn btn--secondary" to="/map">
+                  Map
+                </Link>
+                {me ? (
+                  <Link className="btn btn--primary" to="/codex/new">
+                    New Codex entry
+                  </Link>
+                ) : null}
+              </>
+            }
+          />
+          <FilterBar label="Filter the Codex" count={summary}>
+            <FilterBar.Search
+              label="Search the Codex"
+              placeholder="Search the Codex…"
+              value={query}
+              onValueChange={setQuery}
+            />
+            {widthClass === 'compact' ? (
+              <FilterBar.Picker
+                label="Category"
+                options={options.map((option) => ({
+                  value: option.name,
+                  label: option.label,
+                  count: option.count,
+                }))}
+                value={category}
+                onValueChange={setCategory}
               />
-            </label>
-          </div>
-        </header>
-        <div className={styles.layout} data-sidebar={widthClass === 'expanded'}>
-          <nav className={`${styles.categories} stack`} aria-label="Codex categories">
-            <div className="type-label">Categories</div>
-            {['', ...categories].map((name) => (
-              <button
-                key={name}
-                type="button"
-                className={styles.category}
-                aria-pressed={category === name}
-                onClick={() => setCategory(name)}
-              >
-                <span className={styles.dot} aria-hidden="true" />
-                <span className="type-ui">
-                  {name ? codexCategoryHeading(name) : 'All'}
-                </span>
-              </button>
-            ))}
-            <div
-              className={`${styles.directories} stack`}
-              data-gap="2"
-              aria-label="Codex directories"
-            >
-              <div className="type-label">Directories</div>
-              <Link className={styles.category} to="/npcs">
-                <span className={styles.dot} aria-hidden="true" />
-                <span className="type-ui">NPC directory</span>
-              </Link>
-              <Link className={styles.category} to="/factions">
-                <span className={styles.dot} aria-hidden="true" />
-                <span className="type-ui">Faction directory</span>
-              </Link>
-              <Link className={styles.category} to="/regions">
-                <span className={styles.dot} aria-hidden="true" />
-                <span className="type-ui">Region directory</span>
-              </Link>
-            </div>
-          </nav>
+            ) : (
+              <FilterBar.Group label="Category">
+                {options.map((option) => (
+                  <Chip
+                    key={option.name || 'all'}
+                    selected={category === option.name}
+                    onClick={() => setCategory(option.name)}
+                  >
+                    {option.label}
+                    {option.count !== null ? (
+                      <span className={`type-caption ${styles.count}`}>
+                        {option.count}
+                      </span>
+                    ) : null}
+                  </Chip>
+                ))}
+              </FilterBar.Group>
+            )}
+          </FilterBar>
           <div className="stack" data-gap="5">
             {page.status === 'error' ? (
               <StatePanel status="error" error={page.error} />
@@ -119,6 +148,20 @@ export function CodexPage(): React.JSX.Element {
                     ? 'No entries match these filters.'
                     : 'No codex entries.'
                 }
+                action={
+                  needle || category ? (
+                    <button
+                      className="btn btn--secondary"
+                      type="button"
+                      onClick={() => {
+                        setQuery('');
+                        setCategory('');
+                      }}
+                    >
+                      Clear filters
+                    </button>
+                  ) : undefined
+                }
               />
             ) : (
               groups.map((group) => (
@@ -129,49 +172,42 @@ export function CodexPage(): React.JSX.Element {
                   aria-label={codexCategoryHeading(group.name)}
                 >
                   <div className="row" data-gap="2">
-                    <span className={styles.dot} aria-hidden="true" />
-                    <h2 className="type-title">{codexCategoryHeading(group.name)}</h2>
+                    <h2 className="type-heading">{codexCategoryHeading(group.name)}</h2>
                     <div className={styles.divider} />
                   </div>
-                  <div className={styles.entries}>
+                  <CardGrid gap={3}>
                     {group.entries.map((entry) => (
-                      <Link
+                      <Card
                         key={entry.id}
+                        variant="clickable"
                         to={`/codex/${entry.slug}`}
-                        className={styles.entry}
+                        className={styles.directoryCard}
+                        pad={4}
                       >
-                        <span className={styles.dot} aria-hidden="true" />
-                        <span className="stack" data-gap="1">
-                          <span className="type-title">{entry.title}</span>
-                          {entry.excerpt ? (
-                            <span className={`type-caption ${styles.excerpt}`}>
-                              {entry.excerpt}
-                            </span>
-                          ) : null}
-                        </span>
-                      </Link>
+                        <span className="type-title">{entry.title}</span>
+                        {entry.excerpt ? (
+                          <span className={`type-caption ${styles.clamp}`}>
+                            {entry.excerpt}
+                          </span>
+                        ) : null}
+                      </Card>
                     ))}
-                  </div>
+                  </CardGrid>
                 </section>
               ))
             )}
-            {page.status === 'ready' ? (
-              <div className="stack" data-gap="3">
-                <p className="type-caption">
-                  {entries.length >= (page.total ?? entries.length)
-                    ? pluralize(entries.length, 'entry', 'entries')
-                    : `Showing ${entries.length} of ${page.total} entries`}
-                </p>
-                {page.hasMore ? (
-                  <button
-                    className="btn"
-                    type="button"
-                    disabled={page.isFetching}
-                    onClick={page.loadMore}
-                  >
-                    {page.isFetching ? 'Loading…' : 'Load more entries'}
-                  </button>
-                ) : null}
+            {page.status === 'ready' && page.hasMore ? (
+              <div>
+                <button
+                  className="btn"
+                  type="button"
+                  disabled={page.isFetching}
+                  onClick={page.loadMore}
+                >
+                  {page.isFetching
+                    ? 'Loading…'
+                    : `Show ${Math.min(50, Math.max(0, (page.total ?? 0) - entries.length))} more (${Math.max(0, (page.total ?? 0) - entries.length)} left)`}
+                </button>
               </div>
             ) : null}
           </div>

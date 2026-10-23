@@ -12,9 +12,7 @@ describe('personalizationAdapter', () => {
     expect(result.data.mode).toBe('system');
     expect(result.data.effectsEnabled).toBe(false);
     expect(result.data.density).toBe('comfortable');
-    expect(result.data.memberId).toBe(
-      'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
-    );
+    expect(result.data.memberId).toBe('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb');
   });
 
   it('rejects bad wire', () => {

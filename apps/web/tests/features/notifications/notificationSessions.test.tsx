@@ -211,7 +211,9 @@ describe('notification current-session reads', () => {
       await waitFor(() => expect(freshLists).toBe(2));
       await act(async () => gate.release());
       await waitFor(() =>
-        expect(screen.getByRole('heading', { name: 'No notifications yet' })).toBeInTheDocument(),
+        expect(
+          screen.getByRole('heading', { name: 'No notifications yet' }),
+        ).toBeInTheDocument(),
       );
       expect(screen.queryByText('Private DM notice')).not.toBeInTheDocument();
       expect(

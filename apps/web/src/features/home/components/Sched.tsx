@@ -1,7 +1,6 @@
 import type { QuestCardStatus } from '../../../view-models/questCard.js';
 import { StatusBadge } from '../../../components/foundation/StatusBadge.js';
 import { RegionLabel } from '../../../components/foundation/RegionLabel.js';
-import { Party } from '../../../components/data/Party.js';
 import { Card } from '../../../components/primitives/Card.js';
 import type { Status } from '../../../components/foundation/StatusBadge.js';
 import styles from './sched.module.css';
@@ -18,6 +17,8 @@ export interface SchedProps {
   dmUsername?: string | null;
   party?: SchedPartyMember[];
   totalSlots?: number | null;
+  /** Occupied seats from the API; party may also hold waitlisted or withdrawn entries. */
+  filledCount?: number | null;
   when?: string | null;
   onOpen?: () => void;
 }
@@ -29,10 +30,17 @@ export function Sched({
   dmUsername,
   party = [],
   totalSlots,
+  filledCount,
   when,
   onOpen,
 }: SchedProps): React.JSX.Element {
-  const slots = totalSlots ?? 6;
+  const seated = filledCount ?? party.length;
+  const seats =
+    totalSlots != null && totalSlots > 0
+      ? `${seated} of ${totalSlots} seats filled`
+      : seated > 0
+        ? `${seated} seated`
+        : null;
 
   return (
     <Card
@@ -68,12 +76,11 @@ export function Sched({
             </span>
           ) : null}
         </div>
-        <Party
-          members={party.map((p) => ({
-            name: p.characterName ?? p.characterId ?? 'Unknown',
-          }))}
-          total={slots}
-        />
+        {seats ? (
+          <span className="type-caption" data-el="schedCard.seats">
+            {seats}
+          </span>
+        ) : null}
       </div>
     </Card>
   );

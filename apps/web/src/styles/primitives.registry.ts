@@ -63,13 +63,20 @@ export const PRIMITIVES_REGISTRY: PrimitiveRegistryEntry[] = [
   { id: 26, name: 'Legend', group: 'B12', galleryEntryId: 'legend', module: 'components/primitives/Legend', status: 'built' },
   { id: 27, name: 'Menu', group: 'B2', galleryEntryId: 'menu', module: 'components/primitives/Menu', status: 'built' },
   { id: 28, name: 'Checkbox', group: 'B2', galleryEntryId: 'checkbox', module: 'components/primitives/Checkbox', status: 'built' },
+  { id: 29, name: 'PageHeader', group: 'B3', galleryEntryId: 'page-header', module: 'components/primitives/PageHeader', status: 'built' },
+  { id: 30, name: 'FilterBar', group: 'B3', galleryEntryId: 'filter-bar', module: 'components/primitives/FilterBar', status: 'built' },
+  { id: 31, name: 'CardGrid', group: 'B3', galleryEntryId: 'card-grid', module: 'components/primitives/CardGrid', status: 'built' },
+  { id: 32, name: 'DetailLayout', group: 'B3', galleryEntryId: 'detail-layout', module: 'components/primitives/DetailLayout', status: 'built' },
 ];
 
 // registry ids are insertion order, not doc numbering: 24 Calendar = doc primitive 20,
 // 25 FieldDateTime = doc primitive 21 (one-pair counting); 26 Legend; 27 Menu
 // (Base UI menu-button, split from Popover's former `variant: 'menu'`); 28 Checkbox
-// (Base UI Checkbox, replaces native checkboxes) appended last.
+// (Base UI Checkbox, replaces native checkboxes); 29-31 PageHeader, FilterBar,
+// CardGrid (round 3 layout anatomy: one header, one filter surface, one card
+// grid per index page) appended last; 32 DetailLayout (round 3 L7: detail
+// pages, main column plus optional --rail-width rail via SplitPane).
 
-if (PRIMITIVES_REGISTRY.length !== 28) {
-  throw new Error(`primitives.registry.ts: expected 28 ruled primitives, found ${PRIMITIVES_REGISTRY.length}`);
+if (PRIMITIVES_REGISTRY.length !== 32) {
+  throw new Error(`primitives.registry.ts: expected 32 ruled primitives, found ${PRIMITIVES_REGISTRY.length}`);
 }

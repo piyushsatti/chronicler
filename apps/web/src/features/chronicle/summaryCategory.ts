@@ -6,24 +6,24 @@ type SummaryCategoryMeta = {
 
 const SUMMARY_CATEGORY_META: Record<string, SummaryCategoryMeta> = {
   dm: {
-    label: 'DM RECAP',
+    label: 'DM recap',
     color: 'var(--evt-dm)',
     bg: 'color-mix(in srgb, var(--evt-dm) 9%, transparent)',
   },
   character: {
-    label: 'SESSION',
+    label: 'Session',
     color: 'var(--evt-progression)',
     bg: 'color-mix(in srgb, var(--evt-progression) 9%, transparent)',
   },
   session: {
-    label: 'SESSION',
+    label: 'Session',
     color: 'var(--evt-progression)',
     bg: 'color-mix(in srgb, var(--evt-progression) 9%, transparent)',
   },
 };
 
 const DEFAULT_SUMMARY_CATEGORY_META: SummaryCategoryMeta = {
-  label: 'ENTRY',
+  label: 'Entry',
   color: 'var(--color-text-3)',
   bg: 'var(--color-bg-surface)',
 };

@@ -2,12 +2,22 @@ import { AdminReadFailure } from './AdminReadFailure.js';
 import { AdminPagination } from './AdminPagination.js';
 import { Button } from '../../../components/primitives/Button.js';
 import { Card } from '../../../components/primitives/Card.js';
+import { CardGrid } from '../../../components/primitives/CardGrid.js';
+import { Avatar } from '../../../components/primitives/Avatar.js';
+import { memberLabeler } from '../memberLabels.js';
+import { Chip } from '../../../components/primitives/Chip.js';
+import { FilterBar } from '../../../components/primitives/FilterBar.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { BulkRoleBar } from './BulkRoleBar.js';
 import type { useMembersPanel } from '../hooks/useMembersPanel.js';
-import { useId, useLayoutEffect, useRef } from 'react';
-import { listLabel, roleLabel, statusLabel } from '../../../utils/format.js';
+import { useLayoutEffect, useRef } from 'react';
+import {
+  handleLabel,
+  pluralize,
+  roleLabel,
+  statusLabel,
+} from '../../../utils/format.js';
 import './MembersPanel.css';
 import { Checkbox } from '../../../components/primitives/Checkbox.js';
 
@@ -32,13 +42,12 @@ export function MembersPanel({
     saveRoles,
     bulkBar,
   } = view;
-  const inspectorId = useId();
-  const inspectorHeading = useRef<HTMLHeadingElement>(null);
+  const editorHeading = useRef<HTMLHeadingElement>(null);
   const search = useRef<HTMLInputElement>(null);
   const memberButtons = useRef(new Map<string, HTMLButtonElement>());
   const returnFocus = useRef<string | null>(null);
   useLayoutEffect(() => {
-    if (selected) inspectorHeading.current?.focus();
+    if (selected) editorHeading.current?.focus();
     else if (returnFocus.current) {
       (memberButtons.current.get(returnFocus.current) ?? search.current)?.focus();
       returnFocus.current = null;
@@ -52,6 +61,7 @@ export function MembersPanel({
     return <StatePanel status="loading" />;
   }
   const members = directory.data;
+  const labelFor = memberLabeler(members);
 
   return (
     <section
@@ -59,179 +69,169 @@ export function MembersPanel({
       data-el="admin.membersPanel"
       aria-label="Members & roles"
     >
-      <label className="stack">
-        <span className="type-label">Search</span>
-        <input
-          ref={search}
-          disabled={saveRoles.isPending || bulkBar.batch.isPending}
-          className="field-input"
+      <FilterBar
+        label="Filter members"
+        count={
+          view.pagination.total !== null
+            ? pluralize(view.pagination.total, 'member')
+            : pluralize(members.length, 'member')
+        }
+      >
+        <FilterBar.Search
+          label="Search members"
+          placeholder="Search by name or handle"
           value={searchInput}
-          onChange={(event) => setSearchInput(event.target.value)}
-          placeholder="Handle or display name"
+          onValueChange={setSearchInput}
+          inputRef={search}
         />
-      </label>
+        <FilterBar.Picker
+          label="Role"
+          value={view.role}
+          onValueChange={view.setRole}
+          options={[
+            { value: '', label: 'All roles' },
+            ...ROLE_OPTIONS.map((role) => ({ value: role, label: roleLabel(role) })),
+          ]}
+        />
+        <FilterBar.Group>
+          <Chip selected={view.status === ''} onClick={() => view.setStatus('')}>
+            All
+          </Chip>
+          {MEMBER_STATUSES.map((status) => (
+            <Chip
+              key={status}
+              selected={view.status === status}
+              onClick={() => view.setStatus(status)}
+            >
+              {statusLabel(status)}
+            </Chip>
+          ))}
+        </FilterBar.Group>
+      </FilterBar>
       <AdminPagination page={view.pagination} />
-      <div className="row" data-wrap="1">
-        <label className="stack">
-          <span className="type-label">Role filter</span>
-          <select
-            className="field-input"
-            value={view.role}
-            onChange={(e) => view.setRole(e.target.value)}
-          >
-            <option value="">All roles</option>
-            {ROLE_OPTIONS.map((role) => (
-              <option key={role} value={role}>
-                {roleLabel(role)}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="stack">
-          <span className="type-label">Status filter</span>
-          <select
-            className="field-input"
-            value={view.status}
-            onChange={(e) => view.setStatus(e.target.value)}
-          >
-            <option value="">All statuses</option>
-            {MEMBER_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {statusLabel(status)}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
       <BulkRoleBar view={bulkBar} />
-      {directory.data.length === 0 ? (
-        <EmptyState kind="generic" message="No members match this filter." />
-      ) : (
-        <div
-          className="members-directory-workspace"
-          data-inspector-open={selected !== null}
+      {selected ? (
+        <Card
+          as="section"
+          className="stack"
+          aria-label="Role editor"
+          data-el="admin.roleEditor"
         >
-          <ul className="members-directory-list" aria-label="Members" role="list">
-            {directory.data.map((member) => (
-              <li key={member.id}>
-                <Card
-                  className="stack"
-                  pad={3}
-                  data-selected={selected?.id === member.id ? 'true' : undefined}
-                >
-                  <div className="admin-member-row row">
-                    <Checkbox
-                      ariaLabel={`Select @${member.handle}`}
-                      disabled={saveRoles.isPending || bulkBar.batch.isPending}
-                      checked={checkedIds.has(member.id)}
-                      onCheckedChange={(checked) => {
-                        setCheckedIds((prev) => {
-                          const next = new Set(prev);
-                          if (checked) next.add(member.id);
-                          else next.delete(member.id);
-                          return next;
-                        });
-                      }}
-                    />
-                    <button
-                      type="button"
-                      ref={(button) => {
-                        if (button) memberButtons.current.set(member.id, button);
-                        else memberButtons.current.delete(member.id);
-                      }}
-                      disabled={saveRoles.isPending || bulkBar.batch.isPending}
-                      className="admin-member-row__select"
-                      aria-controls={inspectorId}
-                      aria-expanded={selected?.id === member.id}
-                      onClick={() => {
-                        setSelected(member);
-                        setDraftRoles([...member.roles]);
-                      }}
-                    >
-                      <span className="type-title">{member.displayName}</span>
-                      <span className="type-code">@{member.handle}</span>
-                      <span className="type-caption">
-                        {listLabel(member.roles.map(roleLabel)) || 'No roles'}
-                      </span>
-                    </button>
-                  </div>
-                </Card>
-              </li>
+          <h3 className="type-heading" ref={editorHeading} tabIndex={-1}>
+            {labelFor(selected)}
+          </h3>
+          <div className="row" data-wrap="1">
+            {ROLE_OPTIONS.map((role) => (
+              <Checkbox
+                key={role}
+                label={roleLabel(role)}
+                disabled={saveRoles.isPending || bulkBar.batch.isPending}
+                checked={draftRoles.includes(role)}
+                onCheckedChange={(checked) => {
+                  setDraftRoles((current) =>
+                    checked
+                      ? Array.from(new Set([...current, role]))
+                      : current.filter((item) => item !== role),
+                  );
+                }}
+              />
             ))}
-          </ul>
-          <aside
-            id={inspectorId}
-            className="members-inspector-pane stack"
-            aria-label="Role editor"
-          >
-            {selected ? (
-              <Card className="stack">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  className="members-directory-back"
-                  disabled={saveRoles.isPending || bulkBar.batch.isPending}
-                  onClick={() => {
-                    returnFocus.current = selected.id;
-                    setSelected(null);
-                  }}
-                >
-                  Back to members
-                </Button>
-                <h3 className="type-heading" ref={inspectorHeading} tabIndex={-1}>
-                  @{selected.handle}
-                </h3>
-                <div className="stack">
-                  {ROLE_OPTIONS.map((role) => (
-                    <Checkbox
-                      key={role}
-                      label={roleLabel(role)}
-                      disabled={saveRoles.isPending || bulkBar.batch.isPending}
-                      checked={draftRoles.includes(role)}
-                      onCheckedChange={(checked) => {
-                        setDraftRoles((current) =>
-                          checked
-                            ? Array.from(new Set([...current, role]))
-                            : current.filter((item) => item !== role),
-                        );
-                      }}
-                    />
-                  ))}
+          </div>
+          <div className="row" data-wrap="1">
+            <Button
+              type="button"
+              disabled={saveRoles.isPending}
+              onClick={() => saveRoles.mutate()}
+            >
+              Save roles
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              disabled={saveRoles.isPending || bulkBar.batch.isPending}
+              onClick={() => {
+                returnFocus.current = selected.id;
+                setSelected(null);
+              }}
+            >
+              Back to members
+            </Button>
+          </div>
+          {saveRoles.isError ? (
+            <StatePanel status="error" error={saveRoles.error} />
+          ) : null}
+        </Card>
+      ) : null}
+      {members.length === 0 ? (
+        <EmptyState kind="generic" message="No members match these filters." />
+      ) : (
+        <CardGrid as="ul" aria-label="Members">
+          {members.map((member) => (
+            <li key={member.id}>
+              <Card
+                className="stack"
+                pad={3}
+                data-selected={selected?.id === member.id ? 'true' : undefined}
+              >
+                <div className="admin-member-row row">
+                  <Checkbox
+                    ariaLabel={`Select ${labelFor(member)}`}
+                    disabled={saveRoles.isPending || bulkBar.batch.isPending}
+                    checked={checkedIds.has(member.id)}
+                    onCheckedChange={(checked) => {
+                      setCheckedIds((prev) => {
+                        const next = new Set(prev);
+                        if (checked) next.add(member.id);
+                        else next.delete(member.id);
+                        return next;
+                      });
+                    }}
+                  />
+                  <button
+                    type="button"
+                    ref={(button) => {
+                      if (button) memberButtons.current.set(member.id, button);
+                      else memberButtons.current.delete(member.id);
+                    }}
+                    disabled={saveRoles.isPending || bulkBar.batch.isPending}
+                    className="admin-member-row__select"
+                    aria-expanded={selected?.id === member.id}
+                    onClick={() => {
+                      setSelected(member);
+                      setDraftRoles([...member.roles]);
+                    }}
+                  >
+                    <Avatar name={labelFor(member)} size="sm" online={false} />
+                    <span className="admin-member-row__name">
+                      <span className="type-title">{labelFor(member)}</span>
+                      {handleLabel(member.handle) &&
+                      !labelFor(member)
+                        .toLocaleLowerCase()
+                        .includes((handleLabel(member.handle) ?? '').slice(1)) ? (
+                        <span className="type-caption">
+                          {handleLabel(member.handle)}
+                        </span>
+                      ) : null}
+                    </span>
+                  </button>
                 </div>
-                <Button
-                  type="button"
-                  disabled={saveRoles.isPending}
-                  onClick={() => saveRoles.mutate()}
-                >
-                  Save roles
-                </Button>
-                {saveRoles.isError ? (
-                  <StatePanel status="error" error={saveRoles.error} />
-                ) : null}
+                <Chip.Row>
+                  {member.roles.length === 0 ? (
+                    <Chip tone="line" size="sm">
+                      No roles
+                    </Chip>
+                  ) : (
+                    member.roles.map((role) => (
+                      <Chip key={role} size="sm">
+                        {roleLabel(role)}
+                      </Chip>
+                    ))
+                  )}
+                </Chip.Row>
               </Card>
-            ) : (
-              <Card className="stack members-inspector-empty" tone="flat" data-gap="3">
-                <span className="type-label">Role editor</span>
-                <h3 className="type-title">No member selected</h3>
-                <p className="type-body">
-                  Choose a member from the list to review and change their roles. Tick
-                  several members to change roles for all of them at once.
-                </p>
-                <dl className="members-role-summary">
-                  {ROLE_OPTIONS.map((role) => (
-                    <div key={role}>
-                      <dt className="type-caption">{roleLabel(role)}</dt>
-                      <dd className="type-ui">
-                        {members.filter((member) => member.roles.includes(role)).length}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-                <p className="type-caption">Role counts are for the members shown.</p>
-              </Card>
-            )}
-          </aside>
-        </div>
+            </li>
+          ))}
+        </CardGrid>
       )}
     </section>
   );

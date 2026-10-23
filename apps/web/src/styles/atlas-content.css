@@ -4,7 +4,7 @@
  */
 
 /* ── prose base ─────────────────────────────────────────────────────── */
-.cr-prose { color: var(--color-text-2); font-family: var(--font-body); font-size: 15px; line-height: 1.8; max-width: 680px; min-width: 0; overflow-wrap: anywhere; }
+.cr-prose { color: var(--color-text-2); font-family: var(--font-body); font-size: 15px; line-height: 1.8; max-width: var(--page-max-reading); min-width: 0; overflow-wrap: anywhere; }
 /* ── summary adventure prose — design: Fraunces 18px (display) ──────── */
 .summary-prose .cr-prose { font-family: var(--font-display); font-size: 18px; line-height: 1.6; color: var(--color-text); }
 .cr-prose.cr-inline { display: inline; font-size: inherit; line-height: inherit; max-width: none; color: inherit; }
@@ -14,7 +14,7 @@
 .cr-prose p { margin: 0 0 14px; text-wrap: pretty; }
 .cr-prose h2 { font-family: var(--font-display); font-weight: 600; font-size: 21px; letter-spacing: -.01em; color: var(--color-text); margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--color-border); }
 .cr-prose h3 { font-family: var(--font-display); font-weight: 600; font-size: 17px; color: var(--color-text); margin: 22px 0 8px; }
-.cr-prose h4 { font-family: var(--font-body); font-weight: 700; font-size: 12.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--color-text-3); margin: 20px 0 6px; }
+.cr-prose h4 { font-family: var(--font-body); font-weight: 700; font-size: 14px; color: var(--color-text-2); margin: 20px 0 6px; }
 .cr-prose strong { color: var(--color-text); font-weight: 600; }
 .cr-prose em { font-style: italic; color: var(--color-text); }
 .cr-prose del { color: var(--color-text-3); }
@@ -48,7 +48,7 @@
 /* ── GFM tables ─────────────────────────────────────────────────────── */
 .cr-prose table { border-collapse: collapse; width: 100%; margin: 0 0 18px; font-size: 13.5px; }
 .cr-prose th, .cr-prose td { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--color-border); vertical-align: top; }
-.cr-prose thead th { font-family: var(--font-mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--color-text-3); font-weight: 500; border-bottom: 1px solid var(--color-border-2); }
+.cr-prose thead th { font-family: var(--font-body); font-size: 12.5px; color: var(--color-text-3); font-weight: 500; border-bottom: 1px solid var(--color-border-2); }
 .cr-prose tbody tr:hover { background: var(--color-bg-surface); }
 
 /* ── task lists ─────────────────────────────────────────────────────── */
@@ -75,7 +75,7 @@
 /* ── mermaid ────────────────────────────────────────────────────────── */
 .cr-mmd { margin: 0 0 18px; padding: 18px 18px 12px; background: var(--color-bg-panel); border: 1px solid var(--color-border); border-radius: 12px; text-align: center; overflow: auto; }
 .cr-mmd svg { max-width: 100%; height: auto; }
-.cr-mmd-cap { margin-top: 10px; font-family: var(--font-mono); font-size: 9.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--color-text-4); }
+.cr-mmd-cap { margin-top: 10px; font-family: var(--font-body); font-size: 12px; color: var(--color-text-3); }
 .cr-mmd-loading { text-align: left; color: var(--color-text-3); font-family: var(--font-mono); font-size: 12px; padding: 6px 0; }
 .cr-mmd-err { text-align: left; border-color: color-mix(in srgb, var(--color-status-dead) 25%, transparent); background: color-mix(in srgb, var(--color-status-dead) 4%, transparent); }
 .cr-mmd-err-h { color: var(--color-status-dead); font-size: 12.5px; font-weight: 600; margin-bottom: 8px; }

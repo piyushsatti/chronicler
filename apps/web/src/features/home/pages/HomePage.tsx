@@ -8,7 +8,10 @@ import { Link, useNavigate } from 'react-router-dom';
 import { PageShell } from '../../../components/foundation/PageShell.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { Button } from '../../../components/primitives/Button.js';
+import { Chip } from '../../../components/primitives/Chip.js';
 import { Card } from '../../../components/primitives/Card.js';
+import { CardGrid } from '../../../components/primitives/CardGrid.js';
+import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { Avatar } from '../../../components/primitives/Avatar.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import type { AppError } from '../../../errors/types.js';
@@ -20,20 +23,21 @@ import type {
   HomeLanesViewModel,
   HomeQuestView,
 } from '../adapters/homeLanesAdapter.js';
-import { OpenQuestCard } from '../components/OpenQuestCard.js';
+import { QuestCard, type QuestCardProps } from '../../../components/domain/QuestCard.js';
 import { NewHereShelf } from '../components/NewHereShelf.js';
 import { Sched } from '../components/Sched.js';
+import { isTitleEcho } from '../bannerText.js';
 import { WeekStrip } from '../components/WeekStrip.js';
 import {
   BannerMediaEmbed,
   classifyBannerMedia,
   isSafeHttpsUrl,
 } from '../../../components/foundation/contentMedia.js';
+import { useMemberHref } from '../../../hooks/useMemberHref.js';
 import { useHomeBanner } from '../hooks/useHomeBanner.js';
 import { useHomePage, type HomePageView } from '../hooks/useHomePage.js';
-import type { OpenQuestCardProps } from '../components/openQuestCard.types.js';
 import styles from './home.module.css';
-import { statusLabel } from '../../../utils/format.js';
+import { personLabels, statusLabel } from '../../../utils/format.js';
 
 const HOME_DECLARATION: PageDeclaration = {
   page: 'home',
@@ -61,11 +65,14 @@ function HomeBannerRegion(): React.JSX.Element {
   }
   const b = banner.data;
   const media = classifyBannerMedia(b.mediaKind, b.mediaUrl, b.mediaLabel);
+  const body = isTitleEcho(b.title, b.body) ? null : b.body;
+  const bare = !body && !(b.ctaLabel && b.ctaHref) && !media;
   return (
     <div
       className={`home-featured-banner ${styles.banner}`}
       data-compact={widthClass !== 'expanded'}
       data-media={media !== null}
+      data-bare={bare}
       data-el="home.banner"
       data-testid="home-featured-banner"
     >
@@ -78,8 +85,8 @@ function HomeBannerRegion(): React.JSX.Element {
         {b.title ? (
           <div className={`type-display ${styles.bannerTitle}`}>{b.title}</div>
         ) : null}
-        {b.body ? (
-          <div className={`type-body ${styles.bannerText}`}>{b.body}</div>
+        {body ? (
+          <div className={`type-body ${styles.bannerText}`}>{body}</div>
         ) : null}
         {b.ctaLabel && b.ctaHref ? (
           <div>
@@ -126,40 +133,38 @@ function HomeHeadingRegion({
   const next = lanes.upcomingSchedule[0];
   const { formatScheduled } = useDateFormatter();
   return (
-    <header className={styles.heading} data-el="home.heading">
-      <div className="type-label" data-el="home.eyebrow">
-        {isAuthenticated ? 'Campaign board' : 'Public board · anyone can browse'}
-      </div>
-      <h1 className="type-display" data-el="home.greeting">
-        {isAuthenticated ? greeting(displayName) : 'Welcome to Chronicler.'}
-      </h1>
-      <div
-        className={`row ${styles.statsRow}`}
-        data-el="home.statsRow"
-        data-gap="4"
-        data-wrap="1"
-      >
-        {stats ? (
-          <span className="type-caption">
-            {stats.totalQuests.toLocaleString()} quests ·{' '}
-            {stats.activeCharacters.toLocaleString()} active characters
+    <div data-el="home.heading">
+      <PageHeader
+        title={isAuthenticated ? greeting(displayName) : 'Welcome to Chronicler.'}
+        meta={
+          <span
+            className="row"
+            data-el="home.statsRow"
+            data-gap="3"
+            data-wrap="1"
+            data-align="center"
+          >
+            {stats ? (
+              <span>
+                {stats.totalQuests.toLocaleString()} quests,{' '}
+                {stats.activeCharacters.toLocaleString()} active characters
+              </span>
+            ) : null}
+            {lanes.totals.dmsAccepting > 0 ? (
+              <Chip size="sm" tone="line">
+                {lanes.totals.dmsAccepting} DM
+                {lanes.totals.dmsAccepting === 1 ? '' : 's'} accepting
+              </Chip>
+            ) : null}
+            {next ? (
+              <Chip size="sm" tone="line">
+                Next session {formatScheduled(next.scheduledAt)}
+              </Chip>
+            ) : null}
           </span>
-        ) : null}
-        {lanes.totals.dmsAccepting > 0 ? (
-          <span className="chip" data-tone="line">
-            <b>
-              {lanes.totals.dmsAccepting} DM{lanes.totals.dmsAccepting === 1 ? '' : 's'}
-            </b>
-            &nbsp;accepting
-          </span>
-        ) : null}
-        {next ? (
-          <span className="chip" data-tone="line">
-            Next session {formatScheduled(next.scheduledAt)}
-          </span>
-        ) : null}
-      </div>
-    </header>
+        }
+      />
+    </div>
   );
 }
 
@@ -170,7 +175,7 @@ function HomeNewHereRegion({ showFor }: { showFor: boolean }): React.JSX.Element
       <NewHereShelf
         title="New here? Start here."
         body="Pick a character and find your next adventure. Browse open quests below, or learn how Chronicler works."
-        primaryCtaLabel="BROWSE OPEN QUESTS →"
+        primaryCtaLabel="Browse open quests"
         primaryCtaHref="/quests"
         secondaryCtaLabel="How it works"
         secondaryCtaHref="/welcome"
@@ -181,43 +186,50 @@ function HomeNewHereRegion({ showFor }: { showFor: boolean }): React.JSX.Element
   );
 }
 
-function RecruitingLane({ cards }: { cards: OpenQuestCardProps[] }): React.JSX.Element {
+const LANE_CAP = 3;
+/** On phones each lane shows two cards and a link to the full list. */
+const PHONE_LANE_CAP = 2;
+
+function RecruitingLane({
+  cards,
+  total,
+}: {
+  cards: QuestCardProps[];
+  total: number;
+}): React.JSX.Element {
   const navigate = useNavigate();
   const { widthClass } = useSizeClasses();
+  const shown = cards.slice(0, widthClass === 'compact' ? PHONE_LANE_CAP : LANE_CAP);
+  const seeAll = Math.max(total, cards.length);
   return (
-    <section className="lane" aria-label="Now — recruiting" data-el="home.lane01">
+    <section className="lane" aria-label="Recruiting now" data-el="home.lane01">
       <div className="lane__head">
-        <div className="lane__title">
-          <span className="n">01</span>
-          <h2 className="type-heading">Now — recruiting</h2>
-        </div>
-        <div className="row" data-gap="2">
-          <Link className="btn btn--sm" data-el="home.lane01.beginnerBtn" to="/quests">
-            Open quests
-          </Link>
-          <Link className="btn ghost btn--sm" data-el="home.lane01.allBtn" to="/quests">
-            All →
-          </Link>
-        </div>
+        <h2 className="type-heading">Recruiting now</h2>
+        <Link className="btn ghost btn--sm" data-el="home.lane01.allBtn" to="/quests">
+          {seeAll > shown.length ? `See all ${seeAll} quests` : 'See all quests'}
+        </Link>
       </div>
       {cards.length === 0 ? (
         <EmptyState
           kind="no-quests"
           message="No open quests right now."
-          actionLabel="Browse the Tavern Board"
-          onAction={() => navigate('/quests')}
+          action={
+            <Link className="btn btn--sm" to="/quests">
+              Browse quests
+            </Link>
+          }
         />
       ) : (
-        <div
-          data-el="home.lane01.grid"
-          className="cols"
-          data-n={widthClass === 'expanded' ? 3 : widthClass === 'medium' ? 2 : 1}
-          data-gap="5"
-        >
-          {cards.map((card) => (
-            <OpenQuestCard key={card.code} {...card} />
+        <CardGrid as="ul" gap={5} aria-label="Open quests">
+          {shown.map((card) => (
+            <li key={card.code} className={styles.cardItem}>
+              <QuestCard
+                {...card}
+                onSignUpClick={() => navigate(`/quests/${card.code}`)}
+              />
+            </li>
           ))}
-        </div>
+        </CardGrid>
       )}
     </section>
   );
@@ -235,25 +247,32 @@ function UpcomingLane({
   const { formatScheduled } = useDateFormatter();
   const navigate = useNavigate();
   const { widthClass } = useSizeClasses();
+  const laneCap = widthClass === 'compact' ? PHONE_LANE_CAP : LANE_CAP;
   return (
     <section
       className="lane"
-      aria-label="Coming up — next two weeks"
+      aria-label="Coming up"
       data-el="home.lane02"
     >
       <div className="lane__head">
         <div className="lane__title">
-          <span className="n">02</span>
-          <h2 className="type-heading">Coming up — next two weeks</h2>
+          <h2 className="type-heading">Coming up in the next two weeks</h2>
         </div>
-        {total > 0 ? <span className="type-caption">{total} scheduled</span> : null}
+        {total > 0 ? (
+          <Link className="btn ghost btn--sm" to="/calendar">
+            {total > laneCap ? `See all ${total} scheduled` : 'Open calendar'}
+          </Link>
+        ) : null}
       </div>
       {quests.length === 0 ? (
         <EmptyState
           kind="no-quests"
           message="Nothing scheduled in the next two weeks."
-          actionLabel="Browse the Tavern Board"
-          onAction={() => navigate('/quests')}
+          action={
+            <Link className="btn btn--sm" to="/quests">
+              Browse quests
+            </Link>
+          }
         />
       ) : (
         <Card data-el="home.weekStrip">
@@ -262,18 +281,23 @@ function UpcomingLane({
             className={`cols ${styles.weekStripCols}`}
             data-n={widthClass === 'expanded' ? 3 : 1}
           >
-            {quests.slice(0, 3).map((quest) => (
+            {quests.slice(0, laneCap).map((quest) => (
               <Sched
                 key={quest.id}
                 title={quest.title}
                 status={quest.cardStatus}
                 region={quest.regionName}
-                dmUsername={quest.dmHandle}
+                dmUsername={
+                  quest.dmName || quest.dmHandle
+                    ? personLabels([{ displayName: quest.dmName, handle: quest.dmHandle }])[0]
+                    : null
+                }
                 party={quest.participants.map((p) => ({
                   characterName: p.characterName,
                   characterId: p.characterId,
                 }))}
                 totalSlots={quest.slotsMax}
+                filledCount={quest.filledCount}
                 when={formatScheduled(quest.scheduledAt)}
                 onOpen={() => navigate(`/quests/${quest.shortCode}`)}
               />
@@ -292,40 +316,34 @@ function RecentLane({
   quests: HomeQuestView[];
   total: number;
 }): React.JSX.Element {
-  const navigate = useNavigate();
   return (
     <section
       className="lane"
-      aria-label="Just happened — last 7 days"
+      aria-label="Just played"
       data-el="home.lane03"
     >
       <div className="lane__head">
         <div className="lane__title">
-          <span className="n">03</span>
-          <h2 className="type-heading">Just happened — last 7 days</h2>
+          <h2 className="type-heading">Just played in the last 7 days</h2>
         </div>
-        <span className="type-caption">{total} closed</span>
+        {total > 0 ? <span className="type-caption">{total} closed</span> : null}
       </div>
-      <Card data-el="home.lane03.recentlyPlayed">
-        <div className={`row ${styles.recentHeader}`} data-justify="between">
-          <span className="type-label">Recently played</span>
-          <Link to="/quests" className="type-ui no-underline">
-            → all quests
-          </Link>
-        </div>
-        {quests.length === 0 ? (
-          <EmptyState
-            kind="no-quests"
-            message="No quests closed out recently."
-            actionLabel="Browse the Tavern Board"
-            onAction={() => navigate('/quests')}
-          />
-        ) : (
+      {quests.length === 0 ? (
+        <EmptyState
+          kind="no-quests"
+          message="No quests have closed in the last 7 days."
+          action={
+            <Link className="btn btn--sm" to="/quests">
+              Browse quests
+            </Link>
+          }
+        />
+      ) : (
+        <Card data-el="home.lane03.recentlyPlayed">
           <table className="tbl">
             <thead>
               <tr>
                 <th>Quest</th>
-                <th>Title</th>
                 <th>Region</th>
                 <th>Status</th>
               </tr>
@@ -334,21 +352,18 @@ function RecentLane({
               {quests.map((quest) => (
                 <tr key={quest.id}>
                   <td>
-                    <span className="code">{quest.shortCode}</span>
-                  </td>
-                  <td>
                     <Link to={`/quests/${quest.shortCode}`}>{quest.title}</Link>
                   </td>
-                  <td>{quest.regionName ?? '—'}</td>
+                  <td>{quest.regionName ?? ''}</td>
                   <td>
-                    <span className="chip">{statusLabel(quest.status)}</span>
+                    <Chip size="sm">{statusLabel(quest.status)}</Chip>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        )}
-      </Card>
+        </Card>
+      )}
     </section>
   );
 }
@@ -358,29 +373,40 @@ function DmLane({
 }: {
   dms: HomeLanesViewModel['dmsAccepting'];
 }): React.JSX.Element {
+  const memberHref = useMemberHref();
+  const { widthClass } = useSizeClasses();
   if (dms.length === 0) {
     return emptyRegion();
   }
+  const labels = personLabels(dms);
+  const shown = dms.slice(0, widthClass === 'compact' ? PHONE_LANE_CAP : dms.length);
   return (
     <section className="lane" aria-label="DMs accepting" data-el="home.dmsAccepting">
       <Card>
-        <h2 className="type-label">DMs accepting requests</h2>
-        {dms.map((dm) => (
+        <div className="lane__head">
+          <h2 className="type-heading">DMs accepting requests</h2>
+          {dms.length > shown.length ? (
+            <Link className="btn ghost btn--sm" to="/dms">
+              See all {dms.length} DMs
+            </Link>
+          ) : null}
+        </div>
+        {shown.map((dm) => (
           <div
             key={dm.memberId}
             className={`row ${styles.dmRow}`}
             data-justify="between"
           >
             <div className="row" data-gap="3">
-              <Avatar name={dm.handle} size="sm" online={false} />
-              <span className="type-caption">{dm.displayName}</span>
+              <Avatar name={labels[dms.indexOf(dm)]} size="sm" online={false} />
+              <span className="type-body">{labels[dms.indexOf(dm)]}</span>
             </div>
             <Link
-              className="chip"
-              to={`/dms/@${dm.handle}`}
-              aria-label={`${dm.displayName} profile`}
+              className="btn btn--ghost btn--sm"
+              to={memberHref(dm, 'dm')}
+              aria-label={`${labels[dms.indexOf(dm)]} profile`}
             >
-              profile →
+              View profile
             </Link>
           </div>
         ))}
@@ -403,7 +429,9 @@ function readyRegions(view: HomePageView): PageRegionRenderers {
     ),
     banner: () => <HomeBannerRegion />,
     'new-here': () => <HomeNewHereRegion showFor={opts.showNewHere} />,
-    'lane-recruiting': () => <RecruitingLane cards={opts.cards} />,
+    'lane-recruiting': () => (
+      <RecruitingLane cards={opts.cards} total={lanes.totals.questBoard} />
+    ),
     'lane-upcoming': () => (
       <UpcomingLane
         quests={lanes.upcoming}
@@ -429,7 +457,16 @@ function statusRegions(
       ) : status === 'loading' ? (
         <StatePanel status="loading" />
       ) : (
-        <StatePanel status="empty" emptyMessage="The war room is quiet for now." />
+        <StatePanel
+          status="empty"
+          title="Nothing on the board yet"
+          emptyMessage="No quests are posted yet."
+          action={
+            <Link className="btn" to="/quests">
+              Browse quests
+            </Link>
+          }
+        />
       ),
     banner: () => <HomeBannerRegion />,
     'new-here': emptyRegion,

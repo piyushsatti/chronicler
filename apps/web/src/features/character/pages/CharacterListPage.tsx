@@ -1,14 +1,15 @@
-import { useState } from 'react';
 import type { PageDeclaration } from '@pi/react-imposition';
 import { PageHost } from '@pi/react-imposition/react';
-import { Field } from '../../../components/foundation/Field.js';
+import { useSearchParams } from 'react-router-dom';
 import { PageShell } from '../../../components/foundation/PageShell.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { Button } from '../../../components/primitives/Button.js';
-import { Checkbox } from '../../../components/primitives/Checkbox.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { Skeleton } from '../../../components/primitives/Skeleton.js';
-import { SegmentedControl } from '../../../components/primitives/SegmentedControl.js';
+import { CardGrid } from '../../../components/primitives/CardGrid.js';
+import { Chip } from '../../../components/primitives/Chip.js';
+import { FilterBar } from '../../../components/primitives/FilterBar.js';
+import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { pluralize } from '../../../utils/format.js';
 import { CharacterCard } from '../components/CharacterCard.js';
 import { CreateCharacterForm } from '../components/CreateCharacterForm.js';
@@ -23,7 +24,19 @@ const DECLARATION: PageDeclaration = {
 };
 export function CharacterListPage(): React.JSX.Element {
   const state = useCharacterListPage();
-  const [creating, setCreating] = useState(false);
+  // The create form is open while `?new=1` is in the URL, so /me can link to it.
+  const [params, setParams] = useSearchParams();
+  const creating = params.get('new') === '1' && state.me.data !== undefined;
+  const setCreating = (open: boolean): void =>
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (open) next.set('new', '1');
+        else next.delete('new');
+        return next;
+      },
+      { replace: true },
+    );
   const view = state.status === 'ready' ? state.view : null;
   return (
     <PageShell context="tavern" className="hf2">
@@ -32,66 +45,90 @@ export function CharacterListPage(): React.JSX.Element {
         regions={{
           body: () => (
             <div className={styles.root}>
-              <header className={styles.hero}>
-                <p className="type-label">Community · Characters</p>
-                <div className={styles.actionRow}>
-                  <h1 className="type-display">The Roster</h1>
-                  {state.me.data ? (
+              <PageHeader
+                back={{ to: '/community', label: 'Community' }}
+                title="Characters"
+                lede="Every adventurer on the server."
+                actions={
+                  state.me.data ? (
                     <Button onClick={() => setCreating(true)}>New character</Button>
-                  ) : null}
-                </div>
-                {state.status === 'loading' ? (
-                  <Skeleton width="9rem" height="1.25rem" aria-label="Loading roster" />
-                ) : state.status === 'error' ? null : (
-                  <p className="type-body">
-                    {pluralize(view?.total ?? 0, 'character')}
-                  </p>
-                )}
-              </header>
+                  ) : undefined
+                }
+              />
               {creating ? (
                 <CreateCharacterForm onCancel={() => setCreating(false)} />
               ) : null}
-              <div className={styles.filters}>
-                <SegmentedControl
-                  aria-label="Roster status"
-                  value={state.statusFilter}
-                  onValueChange={state.setStatusFilter}
-                  options={[
-                    { value: 'active', label: 'Approved' },
-                    { value: '', label: 'All' },
-                  ]}
-                />
-                <Field
+              <FilterBar
+                label="Filter characters"
+                count={
+                  state.status === 'loading' ? (
+                    <Skeleton width="6rem" height="1rem" aria-label="Loading roster" />
+                  ) : state.status === 'error' ? undefined : (
+                    pluralize(view?.total ?? 0, 'character')
+                  )
+                }
+              >
+                <FilterBar.Search
                   label="Search characters by name"
-                  type="search"
+                  placeholder="Search characters…"
                   value={state.name}
-                  onChange={(event) => state.setName(event.target.value)}
+                  onValueChange={state.setName}
                 />
-                {state.me.data ? (
-                  <Checkbox
-                    label="My characters"
-                    checked={state.mine}
-                    onCheckedChange={state.setMine}
-                  />
-                ) : null}
-              </div>
+                <FilterBar.Group label="Show">
+                  <Chip
+                    selected={state.statusFilter === 'active'}
+                    onClick={() => state.setStatusFilter('active')}
+                  >
+                    Approved
+                  </Chip>
+                  <Chip
+                    selected={state.statusFilter === ''}
+                    onClick={() => state.setStatusFilter('')}
+                  >
+                    All
+                  </Chip>
+                  {state.me.data ? (
+                    <Chip
+                      selected={state.mine}
+                      onClick={() => state.setMine(!state.mine)}
+                    >
+                      My characters
+                    </Chip>
+                  ) : null}
+                </FilterBar.Group>
+              </FilterBar>
               {state.status === 'error' ? (
                 <>
                   <StatePanel status="error" error={state.error} />
                   <Button onClick={state.retry}>Retry roster</Button>
                 </>
               ) : state.status === 'loading' ? (
-                <div className={styles.roster} aria-busy="true">
+                <CardGrid>
                   {Array.from({ length: 6 }, (_, index) => (
-                    <Skeleton key={index} height="6.5rem" aria-label="Loading characters" />
+                    <Skeleton
+                      key={index}
+                      height="6.5rem"
+                      aria-label="Loading characters"
+                    />
                   ))}
-                </div>
+                </CardGrid>
               ) : state.status === 'empty' ? (
                 <EmptyState
                   kind="no-characters"
-                  className="card stack"
-                  actionLabel={state.mine && !creating ? 'Create a character' : undefined}
-                  onAction={() => setCreating(true)}
+                  actionLabel={
+                    state.mine && !creating
+                      ? 'Create a character'
+                      : state.name || state.statusFilter === 'active'
+                        ? 'Clear filters'
+                        : undefined
+                  }
+                  onAction={() => {
+                    if (state.mine && !creating) setCreating(true);
+                    else {
+                      state.setName('');
+                      state.setStatusFilter('');
+                    }
+                  }}
                   message={
                     state.mine
                       ? 'You have no characters matching these filters.'
@@ -99,7 +136,7 @@ export function CharacterListPage(): React.JSX.Element {
                   }
                 />
               ) : (
-                <div className={styles.roster}>
+                <CardGrid>
                   {state.view.items.map((character) => (
                     <CharacterCard
                       key={character.id}
@@ -107,7 +144,7 @@ export function CharacterListPage(): React.JSX.Element {
                       showStatus={state.statusFilter !== 'active'}
                     />
                   ))}
-                </div>
+                </CardGrid>
               )}
               {view && view.total > CHARACTER_PAGE_SIZE ? (
                 <nav className={styles.actionRow} aria-label="Character pages">
@@ -119,11 +156,13 @@ export function CharacterListPage(): React.JSX.Element {
                     Previous characters
                   </Button>
                   <span className="type-caption">
-                    Page {state.page} · {pluralize(view.total, 'character')}
+                    Page {state.page} of {Math.ceil(view.total / CHARACTER_PAGE_SIZE)}
                   </span>
                   <Button
                     variant="ghost"
-                    disabled={state.page * CHARACTER_PAGE_SIZE >= view.total || state.fetching}
+                    disabled={
+                      state.page * CHARACTER_PAGE_SIZE >= view.total || state.fetching
+                    }
                     onClick={() => state.setPage(state.page + 1)}
                   >
                     Next characters

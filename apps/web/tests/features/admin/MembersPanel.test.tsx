@@ -20,16 +20,16 @@ describe('MembersPanel', () => {
     expect(screen.getByText('Ashwin')).toBeInTheDocument();
   });
 
-  it('opens the role inspector independently of bulk selection and restores focus on Back', async () => {
+  it('opens the role editor independently of bulk selection and restores focus on Back', async () => {
     renderWithProviders(<AdminPeoplePage />, { route: '/admin/people' });
     const member = await screen.findByRole('button', { name: /Mira/ });
-    const select = screen.getByRole('checkbox', { name: 'Select @mira' });
+    const select = screen.getByRole('checkbox', { name: 'Select Mira' });
     await userEvent.click(member);
     expect(select).not.toBeChecked();
-    const inspector = screen.getByRole('complementary', { name: 'Role editor' });
-    expect(within(inspector).getByRole('heading', { name: '@mira' })).toHaveFocus();
+    const editor = screen.getByRole('region', { name: 'Role editor' });
+    expect(within(editor).getByRole('heading', { name: 'Mira' })).toHaveFocus();
     await userEvent.click(
-      within(inspector).getByRole('button', { name: 'Back to members' }),
+      within(editor).getByRole('button', { name: 'Back to members' }),
     );
     expect(member).toHaveFocus();
     expect(
@@ -42,21 +42,21 @@ describe('MembersPanel', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('keeps bulk selection when moving between member inspectors', async () => {
+  it('keeps bulk selection when moving between member editors', async () => {
     renderWithProviders(<AdminPeoplePage />, { route: '/admin/people' });
     const first = await screen.findByRole('button', { name: /Mira/ });
-    const select = screen.getByRole('checkbox', { name: 'Select @mira' });
+    const select = screen.getByRole('checkbox', { name: 'Select Mira' });
     await userEvent.click(select);
     await userEvent.click(first);
     await userEvent.click(screen.getByRole('button', { name: 'Back to members' }));
     await userEvent.click(screen.getByRole('button', { name: /Ashwin/ }));
-    const inspector = screen.getByRole('complementary', { name: 'Role editor' });
-    expect(within(inspector).getByRole('heading', { name: '@ashwin' })).toHaveFocus();
+    const editor = screen.getByRole('region', { name: 'Role editor' });
+    expect(within(editor).getByRole('heading', { name: 'Ashwin' })).toHaveFocus();
     expect(select).toBeChecked();
     expect(screen.getByText('Bulk roles · 1 selected')).toBeInTheDocument();
   });
 
-  it('retains an edited homogeneous bulk choice through opening and closing an inspector', async () => {
+  it('retains an edited homogeneous bulk choice through opening and closing an editor', async () => {
     const writes: Record<string, unknown>[] = [];
     server.use(
       graphql.mutation('SetMemberRolesBatch', ({ variables }) => {
@@ -76,7 +76,7 @@ describe('MembersPanel', () => {
     );
     renderWithProviders(<AdminPeoplePage />, { route: '/admin/people' });
     const member = await screen.findByRole('button', { name: /Mira/ });
-    await userEvent.click(screen.getByRole('checkbox', { name: 'Select @mira' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Mira' }));
     const bulk = screen
       .getByRole('heading', { name: 'Bulk roles · 1 selected' })
       .closest('[data-component="BulkRoleBar"]');

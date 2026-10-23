@@ -1,7 +1,13 @@
 export type InstantStyle = 'date' | 'dateTime';
 type Timestamp = string | null | undefined;
 const CIVIL_DATE = /^\d{4}-\d{2}-\d{2}$/;
+/** Placeholder dates far in the future (year >= 2099) mean "no date"; never display them. */
+export function isSentinelDate(value: Timestamp): boolean {
+  const year = Number((value ?? '').slice(0, 4));
+  return Number.isInteger(year) && year >= 2099;
+}
 function parseInstant(value: Timestamp): Date | null {
+  if (isSentinelDate(value)) return null;
   if (
     !value ||
     !/^\d{4}-\d{2}-\d{2}T/.test(value) ||
@@ -11,40 +17,84 @@ function parseInstant(value: Timestamp): Date | null {
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
 }
-/** Display instants in the selected zone; civil dates keep their calendar day in every zone. */
+const UTC_ZONES = new Set(['utc', 'etc/utc', 'etc/uct', 'uct', 'gmt', 'etc/gmt', 'zulu', 'etc/zulu']);
+/** True when the viewer explicitly chose UTC (not when the device happens to be in it). */
+function choseUtc(timeZone: string | null): boolean {
+  return timeZone !== null && UTC_ZONES.has(timeZone.trim().toLowerCase());
+}
+function zonedParts(
+  date: Date,
+  timeZone: string | null,
+  options: Intl.DateTimeFormatOptions,
+): Partial<Record<Intl.DateTimeFormatPartTypes, string>> {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    ...options,
+    ...(timeZone ? { timeZone } : {}),
+  }).formatToParts(date);
+  return Object.fromEntries(parts.map((part) => [part.type, part.value]));
+}
+/**
+ * Display instants in the viewer's zone (`timeZone`, else the device zone).
+ * `date` reads "7 Mar 2026"; `dateTime` reads "Sat 7 Mar 2026, 23:30". No zone
+ * name is shown, except " UTC" when the viewer chose UTC and the short zone
+ * name inside the repeated autumn DST hour. Civil dates
+ * ("2026-03-08") keep their calendar day in every zone. Absent or invalid
+ * values read "—".
+ */
 export function formatInstant(
   value: Timestamp,
   timeZone: string | null = null,
   style: InstantStyle = 'dateTime',
 ): string {
+  if (isSentinelDate(value)) return '—';
   if (value && CIVIL_DATE.test(value)) {
     const civil = new Date(`${value}T00:00:00Z`);
-    return Number.isNaN(civil.getTime())
-      ? '—'
-      : new Intl.DateTimeFormat('en-GB', {
-          day: '2-digit',
-          month: 'short',
-          year: 'numeric',
-          timeZone: 'UTC',
-        }).format(civil);
+    if (Number.isNaN(civil.getTime())) return '—';
+    const p = zonedParts(civil, 'UTC', { day: 'numeric', month: 'short', year: 'numeric' });
+    return `${p.day} ${p.month} ${p.year}`;
   }
   const date = parseInstant(value);
   if (!date) return '—';
-  return new Intl.DateTimeFormat('en-GB', {
-    day: '2-digit',
+  const p = zonedParts(date, timeZone, {
+    weekday: 'short',
+    day: 'numeric',
     month: 'short',
     year: 'numeric',
-    ...(style === 'dateTime'
-      ? ({
-          weekday: 'short',
-          hour: '2-digit',
-          minute: '2-digit',
-          timeZoneName: 'short',
-        } as const)
-      : {}),
-    ...(timeZone ? { timeZone } : {}),
-  }).format(date);
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  });
+  const day = `${p.day} ${p.month} ${p.year}`;
+  if (style === 'date') return day;
+  const zone = choseUtc(timeZone)
+    ? ' UTC'
+    : repeatedWallTime(date, timeZone)
+      ? ` ${zonedParts(date, timeZone, { timeZoneName: 'short' }).timeZoneName ?? ''}`.trimEnd()
+      : '';
+  return `${p.weekday} ${day}, ${p.hour}:${p.minute}${zone}`;
 }
+/** The autumn DST hour happens twice; only then does a time need its zone name. */
+function repeatedWallTime(date: Date, timeZone: string | null): boolean {
+  const wall = (at: Date) => {
+    const p = zonedParts(at, timeZone, {
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    });
+    return `${p.day} ${p.hour}:${p.minute}`;
+  };
+  const here = wall(date);
+  // Rollbacks are usually an hour, but Lord Howe falls back 30 minutes and some zones
+  // moved by 2 hours, so look for the same wall time at any offset up to 2 hours away.
+  const minute = 60 * 1000;
+  return REPEAT_PROBES_MIN.some(
+    (m) =>
+      wall(new Date(date.getTime() - m * minute)) === here ||
+      wall(new Date(date.getTime() + m * minute)) === here,
+  );
+}
+const REPEAT_PROBES_MIN = [15, 30, 45, 60, 75, 90, 105, 120] as const;
 /** Existing schedule chips retain their device-zone default and absent-value label. */
 export function formatScheduled(
   value: Timestamp,
@@ -263,4 +313,87 @@ export function listLabel(items: readonly string[]): string {
 export function clockLabel(value: string | null | undefined): string {
   const match = (value ?? '').trim().match(/^(\d{1,2}):(\d{2})/);
   return match ? `${match[1].padStart(2, '0')}:${match[2]}` : (value ?? '').trim();
+}
+
+const SNOWFLAKE = /^\d{15,}$/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const KEBAB_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)+$/;
+
+/**
+ * True for machine identifiers that must never be shown as a name or label:
+ * Discord snowflakes ("100000000000000001"), UUIDs and kebab slugs
+ * ("qa-the-salt-stair").
+ */
+export function isMachineId(value: string | null | undefined): boolean {
+  const raw = (value ?? '').trim().replace(/^@/, '');
+  return SNOWFLAKE.test(raw) || UUID.test(raw) || KEBAB_SLUG.test(raw);
+}
+
+/** "@sable" for a readable handle; null for an empty or numeric (snowflake) one. */
+export function handleLabel(handle: string | null | undefined): string | null {
+  const raw = (handle ?? '').trim().replace(/^@/, '');
+  if (!raw || SNOWFLAKE.test(raw) || UUID.test(raw)) return null;
+  return `@${raw}`;
+}
+
+export type PersonLike = {
+  displayName?: string | null;
+  handle?: string | null;
+};
+
+/**
+ * The name to show for a member: the display name, else a readable handle
+ * (without "@"), else `fallback`. Never a snowflake or UUID. Show
+ * `handleLabel` only as secondary text on profiles.
+ */
+export function personName(
+  person: PersonLike | null | undefined,
+  fallback = 'Unnamed member',
+): string {
+  const display = (person?.displayName ?? '').trim();
+  if (display && !SNOWFLAKE.test(display) && !UUID.test(display)) return display;
+  const handle = handleLabel(person?.handle);
+  return handle ? handle.slice(1) : fallback;
+}
+
+/** A person known only by handle (authors, owners): "@handle", never a bare lowercase token. */
+export function handleOnlyName(
+  handle: string | null | undefined,
+  fallback = 'Unnamed member',
+): string {
+  return handleLabel(handle) ?? fallback;
+}
+
+const GENERIC_NAMES = new Set(['member', 'user', 'player', 'unknown', 'unnamed', 'unnamed member', 'anonymous', 'dev']);
+
+/**
+ * Names for a visible set of people, distinguishable from each other: a name
+ * that is empty, generic ("Member", "dev") or shared with another person in
+ * the list reads "Name (@handle)". Returns labels in input order. Never
+ * includes a snowflake.
+ */
+export function personLabels(
+  people: readonly (PersonLike | null | undefined)[],
+  fallback = 'Unnamed member',
+): string[] {
+  const names = people.map((person) => personName(person, fallback));
+  const counts = new Map<string, number>();
+  for (const name of names) {
+    const key = name.toLowerCase();
+    counts.set(key, (counts.get(key) ?? 0) + 1);
+  }
+  return people.map((person, index) => {
+    const name = names[index];
+    const handle = handleLabel(person?.handle);
+    // No usable display name: the handle is all there is, and "@" marks it as one.
+    const display = (person?.displayName ?? '').trim();
+    if (handle && (!display || SNOWFLAKE.test(display) || UUID.test(display))) return handle;
+    const needsHandle =
+      name === fallback ||
+      GENERIC_NAMES.has(name.toLowerCase()) ||
+      (counts.get(name.toLowerCase()) ?? 0) > 1;
+    if (!handle || !needsHandle) return name;
+    if (name === fallback) return handle;
+    return name.toLowerCase() === handle.slice(1).toLowerCase() ? name : `${name} (${handle})`;
+  });
 }

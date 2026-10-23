@@ -12,7 +12,7 @@ export interface WeekStripProps {
 
 const DOW = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-export function WeekStrip({ quests }: WeekStripProps): React.JSX.Element {
+export function WeekStrip({ quests }: WeekStripProps): React.JSX.Element | null {
   const { timeZone } = useDateFormatter();
   const countByDay = new Map<string, number>();
   for (const quest of quests) {
@@ -26,6 +26,7 @@ export function WeekStrip({ quests }: WeekStripProps): React.JSX.Element {
     cells.push({ date: day, count, bucket: bucketFor(count) });
     day = nextCivilDay(day);
   }
+  if (!cells.some((cell) => cell.count > 0)) return null;
   return (
     <WeekGrid
       ariaLabel="Next 7 days schedule"
@@ -39,9 +40,9 @@ export function WeekStrip({ quests }: WeekStripProps): React.JSX.Element {
             <div className="dow">
               {DOW[civil.getUTCDay()]} {civil.getUTCDate()}
             </div>
-            <div className="type-value">{cell.count || '—'}</div>
+            <div className="type-value">{cell.count || ''}</div>
             <div className="lbl">
-              {cell.count ? (cell.count > 1 ? 'sessions' : 'session') : 'open'}
+              {cell.count ? (cell.count > 1 ? 'sessions' : 'session') : ''}
             </div>
           </div>
         );

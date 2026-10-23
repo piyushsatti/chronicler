@@ -67,7 +67,7 @@
   [data-cols="3"] { display: grid; grid-template-columns: repeat(3, 1fr); }
   [data-cols="4"] { display: grid; grid-template-columns: repeat(4, 1fr); }
   [data-cols="7"] { display: grid; grid-template-columns: repeat(7, 1fr); }
-  [data-cols="auto"] { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+  [data-cols="auto"] { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(var(--card-min), 100%), 1fr)); }
 
   /* viewport queries removed — use Imposition navPatternFor / declarations */
 

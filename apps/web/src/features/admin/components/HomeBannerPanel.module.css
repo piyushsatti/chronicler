@@ -1,8 +1,3 @@
-/* A form reads best at a measure, not across the whole workspace. */
-.panel {
-  max-inline-size: 44rem;
-}
-
 .panel :is(h3, p) {
   margin: 0;
 }
@@ -23,4 +18,34 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr));
   gap: var(--sp-3);
+}
+
+.panel textarea {
+  font-family: inherit;
+}
+
+/* A simplified stand-in for the home banner, on the same hero surface. */
+.preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: var(--sp-5);
+  border: 1px solid var(--color-border);
+  border-radius: var(--rad);
+  background: var(--color-hero-bg);
+  color: var(--color-hero-ink);
+  overflow-wrap: anywhere;
+}
+
+.preview p {
+  margin: 0;
+}
+
+.previewTitle {
+  color: var(--color-hero-ink);
+}
+
+.previewButton {
+  align-self: flex-start;
+  pointer-events: none;
 }

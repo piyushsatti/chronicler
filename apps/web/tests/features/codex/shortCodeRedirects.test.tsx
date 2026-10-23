@@ -13,8 +13,10 @@ describe('NPC and faction shortCode redirects', () => {
   it.each(['/npcs/NPC-7/redirect', '/factions/FAC-2/redirect'])(
     '%s goes straight to the Codex entry in one hop',
     (path) => {
-      const redirect = routes.find((route) => path.startsWith(route.path.split(':')[0]) &&
-        route.path.endsWith('/redirect'))!;
+      const redirect = routes.find(
+        (route) =>
+          path.startsWith(route.path.split(':')[0]) && route.path.endsWith('/redirect'),
+      )!;
       renderWithProviders(
         <Routes>
           <Route path={redirect.path} element={redirect.element} />

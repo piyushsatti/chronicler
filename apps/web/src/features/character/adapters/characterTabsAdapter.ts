@@ -157,7 +157,8 @@ async function loadHistoryQuest(id: string): Promise<HistoryQuest | null> {
     id,
   });
   const parsed = historyQuestSchema.safeParse(data.quest ?? null);
-  if (!parsed.success) throw toAppError({ failure: 'InvalidWire' }, 'character:history');
+  if (!parsed.success)
+    throw toAppError({ failure: 'InvalidWire' }, 'character:history');
   if (!parsed.data) return null;
   return {
     shortCode: parsed.data.shortCode,
@@ -212,7 +213,9 @@ export async function loadCharacterParticipations(
     // The participation page names no quest, so each distinct quest is read once.
     const ids = rows.success ? [...new Set(rows.data.items.map((i) => i.questId))] : [];
     const quests = Object.fromEntries(
-      await Promise.all(ids.map(async (id) => [id, await loadHistoryQuest(id)] as const)),
+      await Promise.all(
+        ids.map(async (id) => [id, await loadHistoryQuest(id)] as const),
+      ),
     );
     const result = parseParticipations(data.participationsByCharacter, quests);
     if (!result.ok) {

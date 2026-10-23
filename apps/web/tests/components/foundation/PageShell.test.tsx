@@ -13,22 +13,45 @@ const css = (file: string): string =>
 describe('PageShell', () => {
   it('renders the eyebrow above the title inside the page container', () => {
     render(
-      <PageShell eyebrow="Inbox" title="Notifications" max="wide">
+      <PageShell eyebrow="Inbox" title="Notifications">
         <p>Body</p>
       </PageShell>,
     );
     const title = screen.getByRole('heading', { level: 1, name: 'Notifications' });
-    const shell = title.parentElement;
-    expect(shell).toHaveClass('page-shell');
-    expect(shell).toHaveAttribute('data-max', 'wide');
-    expect(shell?.firstElementChild).toHaveTextContent('Inbox');
+    const header = title.closest('.page-header');
+    expect(header?.firstElementChild).toHaveTextContent('Inbox');
+    expect(title.closest('.page')).not.toBeNull();
   });
 
-  it('keeps the no-context shell full width inside the flex main', () => {
+  it('renders the same frame with and without a context; context only adds ctx-*', () => {
+    const { container: plain } = render(<PageShell title="A">x</PageShell>);
+    const { container: ctx } = render(
+      <PageShell title="B" context="tavern" max="wide" className="hf2">
+        x
+      </PageShell>,
+    );
+    const plainRoot = plain.firstElementChild;
+    const ctxRoot = ctx.firstElementChild;
+    expect(plainRoot).toHaveClass('page-root');
+    expect(ctxRoot).toHaveClass('page-root', 'ctx-tavern', 'hf2');
+    for (const root of [plainRoot, ctxRoot]) {
+      const frame = root?.firstElementChild;
+      expect(frame).toHaveClass('page');
+      // `max` is accepted for old call sites but there is one width.
+      expect(frame).not.toHaveAttribute('data-max');
+    }
+  });
+
+  it('reads the frame width and gutters from layout tokens only', () => {
     // main[data-shell-main] is a column flex container; auto margins alone
-    // shrink the shell to its content (RC1), so it must declare a width.
-    expect(css('base.css')).toMatch(/\.page-shell \{[^}]*inline-size: 100%/);
-    expect(css('shell.css')).toMatch(/\.page,\s*\.page-shell,/);
+    // shrink the frame to its content (RC1), so it must declare a width.
+    expect(css('base.css')).toMatch(
+      /\.page \{[^}]*inline-size: 100%;[^}]*max-inline-size: var\(--page-max\)/,
+    );
+    expect(css('tokens.css')).toMatch(/--page-max: 73\.75rem/);
+    expect(css('atlas.css')).not.toMatch(/\.page\[data-max/);
+    expect(css('atlas-vendor/atlas-components.css')).not.toMatch(/\.hf2 \.page \{/);
+    expect(css('shell.css')).toMatch(/:root:has\(\.site-chrome\) \{\s*scrollbar-gutter: stable/);
   });
 
   it('strips bullets only from layout lists, not Markdown prose', () => {
@@ -42,7 +65,7 @@ describe('pages render inside PageShell with a title', () => {
   it('NotFound', () => {
     renderWithProviders(<NotFoundPage />, { route: '/nope' });
     const title = screen.getByRole('heading', { level: 1, name: 'Page not found' });
-    expect(title.closest('.page-shell')).not.toBeNull();
+    expect(title.closest('.page')).not.toBeNull();
     expect(screen.getByRole('link', { name: 'Return home' })).toHaveAttribute('href', '/');
     expect(screen.getByRole('link', { name: 'Search the chronicle' })).toHaveAttribute(
       'href',
@@ -56,7 +79,7 @@ describe('pages render inside PageShell with a title', () => {
       level: 1,
       name: 'Find your place at the table',
     });
-    expect(title.closest('.page-shell')).not.toBeNull();
+    expect(title.closest('.page')).not.toBeNull();
     expect(screen.getByRole('link', { name: 'Continue with Discord' })).toHaveAttribute(
       'href',
       '/login',

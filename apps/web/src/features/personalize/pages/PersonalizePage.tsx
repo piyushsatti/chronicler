@@ -6,9 +6,9 @@ import { PageShell } from '../../../components/foundation/PageShell.js';
 export function PersonalizePage(): React.JSX.Element {
   return (
     <ProtectedRoute>
-      <PageShell eyebrow="You" title="Personalize">
+      <PageShell title="Personalize" back={{ to: '/me', label: 'Profile' }}>
         <SingleRegionPage page="personalize">
-          <SettingsForm />
+          <SettingsForm section="personalize" />
         </SingleRegionPage>
       </PageShell>
     </ProtectedRoute>

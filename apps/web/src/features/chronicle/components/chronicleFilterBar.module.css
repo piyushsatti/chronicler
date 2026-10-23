@@ -1,0 +1,16 @@
+/* The chip groups sit directly in the FilterBar's flow; the wrapper only
+   exists so a narrow layout can fold them behind the Filters toggle. */
+.groups {
+  display: contents;
+}
+
+.groups[hidden] {
+  display: none;
+}
+
+/* The page's .hf2 skin makes line chips transparent; keep the selected one filled. */
+.groups button[data-component='Chip'][data-selected='1'] {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-bg-deep);
+}

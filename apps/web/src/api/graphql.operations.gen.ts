@@ -1235,6 +1235,13 @@ export type MapUnlinkEntryMutationVariables = Exact<{
 
 export type MapUnlinkEntryMutation = { unlinkPointcrawlEntry: { replayed: boolean } };
 
+export type MemberHubQueryVariables = Exact<{
+  memberId: string;
+}>;
+
+
+export type MemberHubQuery = { member: { id: string, joinedAt: string, avatarUrl: string | null } | null, memberActivityStats: { questsPlayed: number, summariesAuthored: number, messages: number, voiceMinutes: number, longestSessionHours: number | null, recentSessions: Array<{ kind: string, occurredAt: string, amount: number }> } | null };
+
 export type MemberMeQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -1245,6 +1252,14 @@ export type MemberMyPrivateNotesQueryVariables = Exact<{ [key: string]: never; }
 
 export type MemberMyPrivateNotesQuery = { myPrivateNotes: { body: string, updatedAt: string | null } };
 
+export type MemberRosterQueryVariables = Exact<{
+  limit?: number;
+  offset?: number;
+}>;
+
+
+export type MemberRosterQuery = { myCharacters: { total: number, items: Array<{ id: string, shortCode: string, name: string, status: string, imageUrl: string | null, ddbMirror: { classes: string | null, species: string | null } | null }> } };
+
 export type MemberSetMyPrivateNotesMutationVariables = Exact<{
   body: string;
   meta: CommandMeta;
@@ -1252,6 +1267,15 @@ export type MemberSetMyPrivateNotesMutationVariables = Exact<{
 
 
 export type MemberSetMyPrivateNotesMutation = { setMyPrivateNotes: { body: string, updatedAt: string | null } };
+
+export type MemberUpcomingQueryVariables = Exact<{
+  from: string;
+  limit?: number;
+  offset?: number;
+}>;
+
+
+export type MemberUpcomingQuery = { quests: { total: number, items: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, briefDocument: { title: string } | null, participants: Array<{ memberId: string, characterName: string, status: string }> }> } };
 
 export type AcknowledgeSuppressedNotificationsMutationVariables = Exact<{
   limit: number;

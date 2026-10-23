@@ -1,6 +1,6 @@
 import type { PageDeclaration } from '@pi/react-imposition';
 import { PageHost, type PageRegionRenderers } from '@pi/react-imposition/react';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { PageShell } from '../../../components/foundation/PageShell.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
@@ -11,62 +11,12 @@ import { MapEditDialog } from '../components/MapEditDialog.js';
 import type { MapEdit } from '../hooks/useMapEdit.js';
 import { MapNodeDetails } from '../components/MapNodeDetails.js';
 import { PointcrawlViewport } from '../components/PointcrawlViewport.js';
+import { FilterBar } from '../../../components/primitives/FilterBar.js';
+import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { Chip } from '../../../components/primitives/Chip.js';
-import { Menu } from '../../../components/primitives/Menu.js';
 import { humanizeKey, pluralize } from '../../../utils/format.js';
-import type { MapAtlasView } from '../adapters/mapAdapter.js';
 import { edgeDisplayLabel } from '../edgeLabel.js';
 import styles from './map.module.css';
-
-/** Atlas switcher on the shared Menu primitive (no native select). */
-function AtlasPicker({
-  maps,
-  selected,
-  onSelect,
-}: {
-  maps: MapAtlasView[];
-  selected: string;
-  onSelect: (atlasCode: string) => void;
-}): React.JSX.Element {
-  const [open, setOpen] = useState(false);
-  const labelId = useId();
-  const valueId = useId();
-  const current = maps.find((item) => item.atlasCode === selected);
-  return (
-    <div className={styles.mapPicker}>
-      <span className="type-label" id={labelId}>
-        Atlas
-      </span>
-      <Menu
-        ariaLabel="Choose map"
-        triggerLabelledBy={`${labelId} ${valueId}`}
-        open={open}
-        onOpenChange={setOpen}
-        trigger={
-          <span className={styles.atlasTrigger} id={valueId}>
-            <span>{current?.name ?? selected}</span>
-            <span className="type-code">{selected}</span>
-            <span aria-hidden="true" className={styles.caret}>
-              ▾
-            </span>
-          </span>
-        }
-        items={maps.map((item) => ({
-          key: item.id,
-          textValue: item.name,
-          label: (
-            <span className={styles.atlasOption} data-current={item.atlasCode === selected}>
-              <span>{item.name}</span>
-              <span className="type-code">{item.atlasCode}</span>
-            </span>
-          ),
-          current: item.atlasCode === selected,
-          onSelect: () => onSelect(item.atlasCode),
-        }))}
-      />
-    </div>
-  );
-}
 
 const DECLARATION: PageDeclaration = {
   page: 'map',
@@ -134,31 +84,43 @@ export function MapPage(): React.JSX.Element {
     if (nextAtlas) navigate(`/map/${encodeURIComponent(nextAtlas)}`);
     else if (nextNode) select(nextNode);
   }
+  const countLabel = map
+    ? `${pluralize(map.nodes.length, 'location')}, ${pluralize(map.edges.length, 'connection')}`
+    : undefined;
   const body = (
     <div className={`stack ${styles.page}`}>
+      <PageHeader
+        back={{ to: '/codex', label: 'Codex' }}
+        title={map?.name ?? 'Map'}
+        lede={map ? `${humanizeKey(map.family)} map` : undefined}
+        actions={
+          <>
+            {map?.regionId ? (
+              <Link className="btn btn--secondary" to={`/regions/${map.regionId}`}>
+                Region overview
+              </Link>
+            ) : null}
+            {page.canCreate ? (
+              <Button
+                variant="secondary"
+                onClick={() =>
+                  setEdit({
+                    kind: 'create',
+                    regions: page.creatableRegions,
+                    global: page.isAdmin,
+                  })
+                }
+              >
+                Create map
+              </Button>
+            ) : null}
+          </>
+        }
+      />
       {notice?.noticeScope === noticeScope &&
       (!mapLoaded || notice.targetScope === targetScope) ? (
         <p role="alert">{notice.message}</p>
       ) : null}
-      <div className={styles.toolbar}>
-        <Link className="btn btn--ghost btn--sm" to="/regions">
-          ← Regions
-        </Link>
-        {page.canCreate ? (
-          <Button
-            variant="secondary"
-            onClick={() =>
-              setEdit({
-                kind: 'create',
-                regions: page.creatableRegions,
-                global: page.isAdmin,
-              })
-            }
-          >
-            Create map
-          </Button>
-        ) : null}
-      </div>
       {page.directory.isError ? (
         <div role="alert">
           Map directory could not load.{' '}
@@ -173,11 +135,20 @@ export function MapPage(): React.JSX.Element {
         </div>
       ) : null}
       {page.directory.data?.maps.length ? (
-        <AtlasPicker
-          maps={page.directory.data.maps}
-          selected={page.selectedAtlas}
-          onSelect={(code) => navigate(`/map/${encodeURIComponent(code)}`)}
-        />
+        <FilterBar
+          label="Choose a map"
+          count={page.map.isFetching ? 'Refreshing…' : countLabel}
+        >
+          <FilterBar.Picker
+            label="Map"
+            value={page.selectedAtlas}
+            options={page.directory.data.maps.map((item) => ({
+              value: item.atlasCode,
+              label: item.name,
+            }))}
+            onValueChange={(code) => navigate(`/map/${encodeURIComponent(code)}`)}
+          />
+        </FilterBar>
       ) : null}
       {page.map.isError ? (
         <>
@@ -193,82 +164,79 @@ export function MapPage(): React.JSX.Element {
         </>
       ) : map ? (
         <>
-          <div className={styles.toolbar}>
-            <div className={styles.mapMeta}>
-              <Chip size="sm" tone="category">
-                {humanizeKey(map.family)} map
-              </Chip>
-              <span className="type-caption">
-                {pluralize(map.nodes.length, 'location')} ·{' '}
-                {pluralize(map.edges.length, 'connection')}
-              </span>
-            </div>
-            {map.regionId ? (
-              <Link
-                className="btn btn--secondary btn--sm"
-                to={`/regions/${map.regionId}`}
-              >
-                Region overview
-              </Link>
-            ) : null}
-            {page.map.isFetching ? (
-              <span role="status" className="type-caption">
-                Refreshing…
-              </span>
-            ) : null}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                void reload();
-              }}
-            >
-              Refresh
-            </Button>
-          </div>
-          {map.canEdit ? (
-            <div className={styles.toolbar}>
-              <Button
-                size="sm"
-                onClick={() =>
-                  setEdit({
-                    kind: 'node',
-                    map,
-                    node: null,
-                    maps: page.directory.data?.maps ?? [],
-                  })
-                }
-              >
-                Add location
-              </Button>
-              <Button
-                size="sm"
-                variant="secondary"
-                disabled={map.nodes.length < 2}
-                onClick={() =>
-                  setEdit({ kind: 'edge', map, edge: null, nodes: map.nodes })
-                }
-              >
-                Add connection
-              </Button>
-            </div>
-          ) : null}
           {params.get('node') &&
           !map.nodes.some((node) => node.id === params.get('node')) ? (
             <p role="status">The requested location is unavailable on this map.</p>
           ) : null}
           <div data-map-ready="true" className="stack">
             {map.nodes.length ? (
-              <PointcrawlViewport
-                key={map.id}
-                map={map}
-                selectedId={selected?.id ?? null}
-                onSelect={select}
-              />
+              <div className={styles.explorer}>
+                <PointcrawlViewport
+                  key={map.id}
+                  map={map}
+                  selectedId={selected?.id ?? null}
+                  onSelect={select}
+                  actions={
+                    map.canEdit ? (
+                      <>
+                        <Button
+                          size="sm"
+                          onClick={() =>
+                            setEdit({
+                              kind: 'node',
+                              map,
+                              node: null,
+                              maps: page.directory.data?.maps ?? [],
+                            })
+                          }
+                        >
+                          Add location
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="secondary"
+                          disabled={map.nodes.length < 2}
+                          onClick={() =>
+                            setEdit({ kind: 'edge', map, edge: null, nodes: map.nodes })
+                          }
+                        >
+                          Add connection
+                        </Button>
+                      </>
+                    ) : null
+                  }
+                />
+                {selected ? (
+                  <MapNodeDetails
+                    key={`${page.actorScope}:${map.id}:${selected.id}`}
+                    map={map}
+                    node={selected}
+                    maps={page.directory.data?.maps ?? []}
+                    onEdit={setEdit}
+                    onReload={reload}
+                  />
+                ) : null}
+              </div>
             ) : (
               <StatePanel
                 status="empty"
                 emptyMessage="This map has no locations yet."
+                action={
+                  map.canEdit ? (
+                    <Button
+                      onClick={() =>
+                        setEdit({
+                          kind: 'node',
+                          map,
+                          node: null,
+                          maps: page.directory.data?.maps ?? [],
+                        })
+                      }
+                    >
+                      Add location
+                    </Button>
+                  ) : undefined
+                }
               />
             )}
             {selected ? (
@@ -276,90 +244,89 @@ export function MapPage(): React.JSX.Element {
                 role="status"
                 aria-live="polite"
                 data-map-selection-feedback={selected.id}
-                className={styles.activeLocation}
+                className={styles.srOnly}
               >
-                Selected location: {selected.name}.{' '}
-                <a href="#map-location-details">View details</a>
+                Selected location: {selected.name}.
               </p>
             ) : null}
-            <div className={styles.explorer}>
-              <section className="card stack" aria-label="Map locations">
-                <h2 className="type-heading">Locations</h2>
-                <ul className={styles.nodeList} aria-label="Map locations">
-                  {map.nodes.map((node) => (
-                    <li key={node.id}>
-                      <button
-                        type="button"
-                        className={styles.locationButton}
-                        aria-pressed={node.id === selected?.id}
-                        onClick={() => select(node.id)}
-                      >
-                        {node.name}
-                        {node.submapId ? (
-                          <span className="type-caption">Submap</span>
-                        ) : null}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-                {map.nodes.length === 0 ? <p>No locations to select.</p> : null}
-              </section>
-              {selected ? (
-                <MapNodeDetails
-                  key={`${page.actorScope}:${map.id}:${selected.id}`}
-                  map={map}
-                  node={selected}
-                  maps={page.directory.data?.maps ?? []}
-                  onEdit={setEdit}
-                  onReload={reload}
-                />
-              ) : null}
-            </div>
-            <section className="card stack" aria-label="Map connections">
-              <h2 className="type-heading">Connections</h2>
-              {map.edges.length ? (
-                <ul className={styles.connections}>
-                  {map.edges.map((edge) => {
-                    const a = map.nodes.find((node) => node.id === edge.nodeA);
-                    const b = map.nodes.find((node) => node.id === edge.nodeB);
-                    return a && b ? (
-                      <li key={edge.id}>
-                        <span>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => select(a.id)}
-                          >
-                            {a.name}
-                          </Button>{' '}
-                          {edge.directed ? '→' : '↔'}{' '}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => select(b.id)}
-                          >
-                            {b.name}
-                          </Button>{' '}
-                          <span className="type-caption">· {edgeDisplayLabel(edge)}</span>
-                        </span>
-                        {map.canEdit ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() =>
-                              setEdit({ kind: 'edge', map, edge, nodes: map.nodes })
-                            }
-                          >
-                            Edit connection
-                          </Button>
-                        ) : null}
-                      </li>
-                    ) : null;
-                  })}
-                </ul>
-              ) : (
-                <p>No connections recorded.</p>
-              )}
+            <section className="card stack" aria-label="Map locations">
+              <h2 className="type-heading">Locations</h2>
+              <ul className={styles.nodeList} aria-label="Map locations">
+                {map.nodes.map((node) => (
+                  <li key={node.id}>
+                    <button
+                      type="button"
+                      className={styles.locationButton}
+                      aria-pressed={node.id === selected?.id}
+                      onClick={() => select(node.id)}
+                    >
+                      {node.name}
+                      {node.submapId ? (
+                        <span className="type-caption">Submap</span>
+                      ) : null}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              {map.nodes.length === 0 ? <p>No locations to select.</p> : null}
+            </section>
+            <section className="card" aria-label="Map connections">
+              <details className="stack">
+                <summary className="type-heading">
+                  Connections ({map.edges.length})
+                </summary>
+                {map.edges.length ? (
+                  <ul className={styles.connections}>
+                    {map.edges.map((edge) => {
+                      const a = map.nodes.find((node) => node.id === edge.nodeA);
+                      const b = map.nodes.find((node) => node.id === edge.nodeB);
+                      const touchesSelected =
+                        selected !== null &&
+                        (edge.nodeA === selected.id || edge.nodeB === selected.id);
+                      return a && b ? (
+                        <li key={edge.id}>
+                          <span className={styles.connection}>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => select(a.id)}
+                            >
+                              {a.name}
+                            </Button>
+                            <span aria-hidden="true">{edge.directed ? '→' : '↔'}</span>
+                            <span className={styles.srOnly}>
+                              {edge.directed ? 'leads one way to' : 'connects both ways with'}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => select(b.id)}
+                            >
+                              {b.name}
+                            </Button>
+                            <Chip size="sm" tone="line">
+                              {edgeDisplayLabel(edge)}
+                            </Chip>
+                          </span>
+                          {map.canEdit && touchesSelected ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() =>
+                                setEdit({ kind: 'edge', map, edge, nodes: map.nodes })
+                              }
+                            >
+                              Edit connection
+                            </Button>
+                          ) : null}
+                        </li>
+                      ) : null;
+                    })}
+                  </ul>
+                ) : (
+                  <p>No connections recorded.</p>
+                )}
+              </details>
             </section>
           </div>
         </>
@@ -390,7 +357,7 @@ export function MapPage(): React.JSX.Element {
   );
   const regions: PageRegionRenderers = { body: () => body };
   return (
-    <PageShell title={map?.name ?? 'Map'} className={styles.shell}>
+    <PageShell className={styles.shell}>
       <PageHost declaration={DECLARATION} regions={regions} />
     </PageShell>
   );

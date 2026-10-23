@@ -14,6 +14,6 @@ describe('Button', () => {
 describe('EmptyState', () => {
   it('renders kind message', () => {
     render(<EmptyState kind="no-quests" />);
-    expect(screen.getByText('NO QUESTS FOUND')).toBeInTheDocument();
+    expect(screen.getByText('No quests match.')).toBeInTheDocument();
   });
 });

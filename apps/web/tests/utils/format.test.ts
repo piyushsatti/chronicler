@@ -15,14 +15,17 @@ import {
   monthLabel,
   longDateLabel,
   weekdayColumn,
+  personName,
+  handleLabel,
+  isMachineId,
 } from '../../src/utils/format.js';
 describe('timestamp presentation', () => {
   it('uses selected zones across midnight and accepts equivalent explicit offsets', () => {
     expect(formatInstant('2026-03-08T04:30:00Z', 'America/New_York', 'date')).toBe(
-      '07 Mar 2026',
+      '7 Mar 2026',
     );
     expect(formatInstant('2026-03-08T04:30:00Z', 'Asia/Kolkata', 'date')).toBe(
-      '08 Mar 2026',
+      '8 Mar 2026',
     );
     expect(civilDateInZone('2026-03-08T04:30:00Z', 'America/New_York')).toBe(
       '2026-03-07',
@@ -44,9 +47,19 @@ describe('timestamp presentation', () => {
     expect(second).toContain('01:30');
     expect(first).not.toBe(second);
   });
+  it('tells a repeated wall time apart when the rollback is 30 minutes', () => {
+    const first = formatScheduled('2026-04-04T14:45:00Z', 'Australia/Lord_Howe');
+    const second = formatScheduled('2026-04-04T15:15:00Z', 'Australia/Lord_Howe');
+    expect(first).toContain('01:45');
+    expect(second).toContain('01:45');
+    expect(first).not.toBe(second);
+    expect(formatScheduled('2026-04-04T10:00:00Z', 'Australia/Lord_Howe')).not.toMatch(
+      /[A-Z]{3,}$/,
+    );
+  });
   it('shows civil dates for people on their own day and never parses datetime-local as an instant', () => {
-    expect(formatInstant('2026-03-08', 'America/New_York')).toBe('08 Mar 2026');
-    expect(formatInstant('2026-03-08', 'Pacific/Kiritimati')).toBe('08 Mar 2026');
+    expect(formatInstant('2026-03-08', 'America/New_York')).toBe('8 Mar 2026');
+    expect(formatInstant('2026-03-08', 'Pacific/Kiritimati')).toBe('8 Mar 2026');
     expect(civilDateInZone('2026-03-08', 'Asia/Kolkata')).toBe('2026-03-08');
     expect(formatInstant('2026-03-08T01:30', 'America/New_York')).toBe('—');
     expect(civilDateInZone('2026-03-08T01:30', 'America/New_York')).toBeNull();
@@ -57,8 +70,28 @@ describe('timestamp presentation', () => {
     expect(formatInstant(undefined)).toBe('—');
     const value = '2026-03-08T04:30:00Z';
     const device = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    expect(formatScheduled(value, null)).toBe(formatScheduled(value, device));
-    expect(formatScheduled(value)).toBe(formatScheduled(value, device));
+    // Only a viewer who chose UTC sees the zone name; the device default never does.
+    const deviceFormatted = formatScheduled(value, device).replace(/ UTC$/, '');
+    expect(formatScheduled(value, null)).toBe(deviceFormatted);
+    expect(formatScheduled(value)).toBe(deviceFormatted);
+  });
+  it('reads as "Sat 7 Mar 2026, 23:30" with no zone name unless the viewer chose UTC', () => {
+    expect(formatInstant('2026-03-08T04:30:00Z', 'America/New_York')).toBe(
+      'Sat 7 Mar 2026, 23:30',
+    );
+    expect(formatInstant('2026-11-01T23:00:00Z', 'Europe/London')).toBe(
+      'Sun 1 Nov 2026, 23:00',
+    );
+    expect(formatInstant('2026-11-01T23:00:00Z', 'UTC')).toBe('Sun 1 Nov 2026, 23:00 UTC');
+    expect(formatInstant('2026-11-01T23:00:00Z', 'Etc/UTC', 'date')).toBe('1 Nov 2026');
+  });
+  it('names the zone only inside the repeated autumn hour', () => {
+    expect(formatScheduled('2026-11-01T05:30:00Z', 'America/New_York')).toMatch(
+      /^Sun 1 Nov 2026, 01:30 \S+$/,
+    );
+    expect(formatScheduled('2026-11-01T12:00:00Z', 'America/New_York')).toBe(
+      'Sun 1 Nov 2026, 07:00',
+    );
   });
   it('advances civil days through DST, leap days and year boundaries', () => {
     expect(nextCivilDay('2026-03-08')).toBe('2026-03-09');
@@ -103,6 +136,31 @@ describe('reader-facing labels', () => {
   });
 });
 
+describe('people and identifiers', () => {
+  it('shows display names, falling back to a readable handle, never a snowflake', () => {
+    expect(personName({ displayName: 'Sable Vey', handle: 'sable' })).toBe('Sable Vey');
+    expect(personName({ displayName: '  ', handle: '@sable' })).toBe('sable');
+    expect(personName({ displayName: null, handle: '100000000000000001' })).toBe(
+      'Unnamed member',
+    );
+    expect(personName({ displayName: '100000000000000001', handle: 'parsec' })).toBe('parsec');
+    expect(personName(null, 'Someone')).toBe('Someone');
+  });
+  it('labels handles with @ and hides numeric ids', () => {
+    expect(handleLabel('sable')).toBe('@sable');
+    expect(handleLabel('@sable')).toBe('@sable');
+    expect(handleLabel('100000000000000001')).toBeNull();
+    expect(handleLabel('')).toBeNull();
+  });
+  it('recognises machine identifiers', () => {
+    expect(isMachineId('qa-the-salt-stair')).toBe(true);
+    expect(isMachineId('100000000000000001')).toBe(true);
+    expect(isMachineId('3f2b8c1e-1d2a-4f5b-9c3d-2e1f0a9b8c7d')).toBe(true);
+    expect(isMachineId('The Salt Stair')).toBe(false);
+    expect(isMachineId('sable')).toBe(false);
+  });
+});
+
 describe('civil calendar labels', () => {
   it('names months from a month or a date, without shifting into the viewer zone', () => {
     expect(monthLabel('2026-10')).toBe('October 2026');
@@ -121,5 +179,35 @@ describe('civil calendar labels', () => {
     // November 2026 starts on a Sunday: six blank cells precede the 1st.
     expect(weekdayColumn('2026-11-01')).toBe(6);
     expect(weekdayColumn('2026-02-01')).toBe(6);
+  });
+});
+
+describe('round 4 helpers', () => {
+  it('disambiguates duplicate, generic and empty names', async () => {
+    const { personLabels } = await import('../../src/utils/format.js');
+    expect(
+      personLabels([
+        { displayName: 'Sable', handle: 'sable' },
+        { displayName: 'Sam', handle: 'sam1' },
+        { displayName: 'Sam', handle: 'sam2' },
+        { displayName: 'Member', handle: 'quiet' },
+        { displayName: '', handle: '' },
+      ]),
+    ).toEqual(['Sable', 'Sam (@sam1)', 'Sam (@sam2)', 'Member (@quiet)', 'Unnamed member']);
+    expect(personLabels([{ displayName: '', handle: 'pell' }])).toEqual(['@pell']);
+  });
+
+  it('hides sentinel dates', async () => {
+    const { isSentinelDate, formatInstant } = await import('../../src/utils/format.js');
+    expect(isSentinelDate('2099-12-31T00:00:00Z')).toBe(true);
+    expect(formatInstant('2099-12-31T00:00:00Z')).toBe('—');
+    expect(isSentinelDate('2026-03-07T00:00:00Z')).toBe(false);
+  });
+
+  it('lists the device option first for time zones', async () => {
+    const { timeZoneOptions } = await import('../../src/utils/timeZones.js');
+    const options = timeZoneOptions('Mars/Base');
+    expect(options[0]).toEqual({ value: null, label: 'Use my device time zone' });
+    expect(options.some((o) => o.value === 'Mars/Base')).toBe(true);
   });
 });

@@ -13,8 +13,7 @@ import {
 import { useCurrentAccess } from '../../auth/useCurrentAccess.js';
 import type { EditorRouteProps, EditorTypeKey } from './types.js';
 import { Link } from 'react-router-dom';
-import { Button } from '../../components/primitives/Button.js';
-import { Card } from '../../components/primitives/Card.js';
+import { PageHeader } from '../../components/primitives/PageHeader.js';
 import { EDITOR_BACK_LABELS } from './editorConstants.js';
 import { editorCancelPath } from './hooks/useEditorWorkspace.js';
 import styles from './editor.module.css';
@@ -38,27 +37,32 @@ function EditorNotFound({
   canCreateNew: boolean;
 }): React.JSX.Element {
   const noun = NOT_FOUND_NOUNS[typeKey];
+  const sentence = noun.charAt(0).toUpperCase() + noun.slice(1);
   return (
     <div className={`stack ${styles.workspace}`} data-state="not-found">
-      <header className={`stack ${styles.header}`}>
-        <p className="eyebrow">{noun.charAt(0).toUpperCase() + noun.slice(1)}</p>
-        <h1 className="type-display">We couldn’t find that {noun}</h1>
-      </header>
-      <Card as="section" className={`stack ${styles.denied}`} data-gap="3">
-        <p className="type-body">
-          It may have been moved to the trash, or the link is out of date.
-        </p>
-        <div className="row" data-wrap="1" data-gap="2">
-          <Link className="btn btn--secondary" to={editorCancelPath(typeKey, 'new')}>
-            {EDITOR_BACK_LABELS[typeKey]}
-          </Link>
-          {typeKey === 'dm-table' && canCreateNew ? (
-            <Link className="btn btn--ghost" to="/editor/dm-table">
-              Create a DM table
+      <PageHeader
+        back={{
+          to: editorCancelPath(typeKey, 'new'),
+          label: EDITOR_BACK_LABELS[typeKey].replace(/^Back to (the )?/, ''),
+        }}
+        title={`${sentence} not found`}
+      />
+      <StatePanel
+        status="empty"
+        emptyMessage="It may have been removed, or the link is out of date."
+        action={
+          <>
+            {typeKey === 'dm-table' && canCreateNew ? (
+              <Link className="btn btn--primary" to="/editor/dm-table">
+                Create a DM table
+              </Link>
+            ) : null}
+            <Link className="btn btn--secondary" to={editorCancelPath(typeKey, 'new')}>
+              {EDITOR_BACK_LABELS[typeKey]}
             </Link>
-          ) : null}
-        </div>
-      </Card>
+          </>
+        }
+      />
     </div>
   );
 }
@@ -75,19 +79,8 @@ export function EditorPageView({
       return (
         <EditorNotFound typeKey={typeKey} canCreateNew={page.canCreateNew === true} />
       );
-    const denied = page.error.kind === 'forbidden' || page.error.kind === 'unauthorized';
-    return (
-      <div className="stack" data-gap="3">
-        <StatePanel status="error" error={page.error} onRetry={page.retry} />
-        {page.retry && !denied ? (
-          <div className="row">
-            <Button variant="secondary" onClick={page.retry}>
-              Try again
-            </Button>
-          </div>
-        ) : null}
-      </div>
-    );
+    // StatePanel offers the retry itself ("Try again"; "Reload account" on a denial).
+    return <StatePanel status="error" error={page.error} onRetry={page.retry} />;
   }
   if (page.status === 'loading') return <StatePanel status="loading" />;
   if (page.status === 'empty')

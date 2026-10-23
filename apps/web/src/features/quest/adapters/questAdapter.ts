@@ -108,6 +108,7 @@ export type QuestBoardCardPropsView = {
   status: QuestCardStatus;
   region: string | null;
   dmUsername: string | null;
+  dmName: string | null;
   totalSlots: number;
   when: string;
   party: Array<{
@@ -190,6 +191,7 @@ export function mapToBoardCardProps(
     status: quest.cardStatus,
     region: quest.regionName,
     dmUsername: quest.dmHandle ?? quest.dmName,
+    dmName: quest.dmName,
     totalSlots: quest.slotsMax,
     when: formatScheduled(quest.scheduledAt, timeZone),
     party: seated.map((p) => ({

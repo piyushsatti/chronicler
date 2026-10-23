@@ -7,7 +7,10 @@ import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { ContentRenderer } from '../../../components/foundation/ContentRenderer.js';
 import { Button } from '../../../components/primitives/Button.js';
 import { useQuestSummaryPage } from '../hooks/useQuestSummaryPage.js';
-import { statusLabel } from '../../../utils/format.js';
+import { personLabels, statusLabel } from '../../../utils/format.js';
+import { CardGrid } from '../../../components/primitives/CardGrid.js';
+import { PageHeader } from '../../../components/primitives/PageHeader.js';
+import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { Chip } from '../../../components/primitives/Chip.js';
 import { StatTile } from '../../../components/primitives/StatTile.js';
 import styles from './questSummary.module.css';
@@ -42,31 +45,32 @@ export function QuestSummaryPage(): React.JSX.Element {
     );
     const href = `/summaries/new?questId=${encodeURIComponent(quest.id)}`;
     const pcxpKnown = totals.coverage !== 'LEGACY_UNKNOWN';
+    const canWrite = page.canWriteDM || own.length > 0;
+    const showStats =
+      documents.length > 0 || !pcxpKnown || (totals.totalPcxpAwarded ?? 0) > 0;
     regions = {
       body: () => (
         <article className={`stack ${styles.page}`} data-gap="6">
-          <header className="stack" data-gap="2">
-            <Link
-              className="type-caption"
-              to={`/quests/${encodeURIComponent(quest.shortCode)}`}
-            >
-              ← Quest detail
-            </Link>
-            <p className="eyebrow">{quest.shortCode} · Summary</p>
-            <h1 className="type-display">{quest.title}</h1>
-            <div className="row" data-wrap="1" data-gap="2" data-align="center">
-              <Chip size="sm" tone="status">
-                {statusLabel(quest.status)}
-              </Chip>
-              {quest.dmName ? (
-                <span className="type-caption">Run by {quest.dmName}</span>
-              ) : null}
-            </div>
-          </header>
-          <div className={styles.stats}>
+          <PageHeader
+            back={{
+              to: `/quests/${encodeURIComponent(quest.shortCode)}`,
+              label: quest.title,
+            }}
+            title="Session summaries"
+            meta={
+              quest.dmName ? (
+                <span>
+                  Run by{' '}
+                  {personLabels([{ displayName: quest.dmName, handle: quest.dmHandle }])[0]}
+                </span>
+              ) : null
+            }
+          />
+          {showStats ? (
+          <CardGrid gap={3}>
             <StatTile
               size="sm"
-              label="PCXP awarded"
+              label="XP awarded"
               value={pcxpKnown ? (totals.totalPcxpAwarded ?? 0) : 'Unknown'}
               tone={
                 pcxpKnown && (totals.totalPcxpAwarded ?? 0) > 0 ? 'accent' : 'neutral'
@@ -83,10 +87,11 @@ export function QuestSummaryPage(): React.JSX.Element {
               value={documents.length}
               hint="Linked to this quest"
             />
-          </div>
-          {page.canWriteDM || own.length ? (
+          </CardGrid>
+          ) : null}
+          {canWrite && (documents.length > 0 || own.length > 0) ? (
             <section className="stack" data-gap="3" aria-label="Write a summary">
-              {page.canWriteDM ? (
+              {page.canWriteDM && documents.length > 0 ? (
                 <div className="row" data-wrap="1">
                   <Link className="btn btn--primary" to={href}>
                     Write a DM summary
@@ -129,14 +134,18 @@ export function QuestSummaryPage(): React.JSX.Element {
             </section>
           ) : null}
           <section className="stack" data-gap="3" aria-label="Linked summaries">
-            <h2 className="type-title">Session summaries</h2>
             {!documents.length ? (
-              <p className={`type-body ${styles.empty}`}>
-                No summaries are linked to this quest yet.
-                {page.canWriteDM || own.length
-                  ? ' Write one above and it will appear here.'
-                  : ' They appear here once the DM or players write them.'}
-              </p>
+              <EmptyState
+                kind="timeline-empty"
+                message="No session summaries have been written for this quest yet."
+                action={
+                  page.canWriteDM ? (
+                    <Link className="btn btn--primary btn--sm" to={href}>
+                      Write a DM summary
+                    </Link>
+                  ) : null
+                }
+              />
             ) : (
               <ul className={styles.list}>
                 {documents.map((document) => (
@@ -166,7 +175,7 @@ export function QuestSummaryPage(): React.JSX.Element {
                           className="btn btn--ghost btn--sm"
                           to={`/summaries/${encodeURIComponent(document.id)}/edit`}
                         >
-                          Edit summary
+                          Edit entry
                         </Link>
                       </div>
                     ) : null}

@@ -47,12 +47,12 @@ describe('Character directory', () => {
         filters: { namePrefix: 'Lyra', status: 'active' },
       }),
     );
-    await user.click(screen.getByRole('radio', { name: 'All' }));
+    await user.click(screen.getByRole('button', { name: 'All' }));
     await waitFor(() =>
       expect(requests.at(-1)).toMatchObject({ filters: { namePrefix: 'Lyra' } }),
     );
     expect(requests.at(-1)?.filters).not.toHaveProperty('status');
-    await user.click(screen.getByRole('checkbox', { name: 'My characters' }));
+    await user.click(screen.getByRole('button', { name: 'My characters' }));
     await waitFor(() =>
       expect(requests.at(-1)).toMatchObject({
         filters: { ownerId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa' },
@@ -103,7 +103,9 @@ describe('Character directory', () => {
     await user.selectOptions(screen.getByLabelText('Region'), REGION);
     await user.selectOptions(screen.getByLabelText('Backstory'), backstory);
     await user.click(await screen.findByRole('checkbox', { name: /Soldier/ }));
-    expect(screen.getByRole('checkbox', { name: /Soldier/ })).toHaveClass('checkbox__box');
+    expect(screen.getByRole('checkbox', { name: /Soldier/ })).toHaveClass(
+      'checkbox__box',
+    );
     expect(
       document.querySelector('input[type="checkbox"]:not([aria-hidden="true"])'),
     ).toBeNull();
@@ -134,6 +136,16 @@ describe('Character directory', () => {
     expect(input).not.toHaveProperty('backgroundText');
   });
 
+  it('opens the create form from ?new=1 and closes it on cancel', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<CharacterListPage />, { route: '/characters?new=1' });
+    expect(await screen.findByLabelText('Character name')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Cancel' }));
+    await waitFor(() =>
+      expect(screen.queryByLabelText('Character name')).not.toBeInTheDocument(),
+    );
+  });
+
   it('requires a D&D Beyond character link before creating', async () => {
     let created = 0;
     server.use(
@@ -150,7 +162,9 @@ describe('Character directory', () => {
     await user.selectOptions(screen.getByLabelText('Region'), REGION);
     await user.selectOptions(
       screen.getByLabelText('Backstory'),
-      screen.getAllByRole('option').find((o) => o.textContent === 'Child of the Weeping')!,
+      screen
+        .getAllByRole('option')
+        .find((o) => o.textContent === 'Child of the Weeping')!,
     );
     const ddb = screen.getByLabelText('D&D Beyond URL');
     expect(screen.getByText('D&D Beyond URL').textContent).not.toMatch(/optional/i);
@@ -167,7 +181,9 @@ describe('Character directory', () => {
     expect(created).toBe(0);
     await user.clear(ddb);
     await user.type(ddb, 'https://dndbeyond.com/characters/7');
-    expect(screen.getByRole('alert')).toHaveTextContent('Use your D&D Beyond character link');
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Use your D&D Beyond character link',
+    );
     await user.clear(ddb);
     await user.type(ddb, 'https://www.dndbeyond.com/characters/7');
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -207,7 +223,9 @@ describe('Character directory', () => {
     expect(
       screen.queryByRole('navigation', { name: 'Character pages' }),
     ).not.toBeInTheDocument();
-    expect(screen.getByRole('searchbox', { name: 'Search characters by name' })).toBeInTheDocument();
+    expect(
+      screen.getByRole('searchbox', { name: 'Search characters by name' }),
+    ).toBeInTheDocument();
   });
   it('counts a single character in the singular', async () => {
     server.use(
@@ -236,7 +254,9 @@ describe('Character directory', () => {
     expect(screen.getByRole('option', { name: 'Choose a region' })).toBeDisabled();
     expect(screen.getByRole('option', { name: 'Choose a backstory' })).toBeDisabled();
     expect(screen.queryByRole('option', { name: 'No region' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('option', { name: 'No backstory' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('option', { name: 'No backstory' }),
+    ).not.toBeInTheDocument();
     await user.type(
       screen.getByLabelText('D&D Beyond URL'),
       'https://www.dndbeyond.com/characters/7',
@@ -269,7 +289,9 @@ describe('Character directory', () => {
     await user.selectOptions(screen.getByLabelText('Region'), REGION);
     await user.selectOptions(
       screen.getByLabelText('Backstory'),
-      screen.getAllByRole('option').find((o) => o.textContent === 'Child of the Weeping')!,
+      screen
+        .getAllByRole('option')
+        .find((o) => o.textContent === 'Child of the Weeping')!,
     );
     await user.type(
       screen.getByLabelText('D&D Beyond URL'),
@@ -311,7 +333,10 @@ describe('Character directory', () => {
     );
     renderWithProviders(<CharacterListPage />);
     const lyra = await screen.findByRole('link', { name: /Lyra Storm/ });
-    expect(lyra.querySelector('img')).toHaveAttribute('src', 'https://example.com/lyra.png');
+    expect(lyra.querySelector('img')).toHaveAttribute(
+      'src',
+      'https://example.com/lyra.png',
+    );
     const brann = screen.getByRole('link', { name: /Brann Ironfoot/ });
     expect(brann.querySelector('img')).toBeNull();
     expect(brann).toHaveTextContent('BI');
@@ -329,15 +354,18 @@ describe('Character directory', () => {
     );
     const user = userEvent.setup();
     renderWithProviders(<CharacterListPage />);
-    expect(screen.getAllByRole('status', { name: 'Loading characters' }).length).toBeGreaterThan(0);
-    expect(await screen.findByText('No characters match these filters.')).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('status', { name: 'Loading characters' }).length,
+    ).toBeGreaterThan(0);
+    expect(
+      await screen.findByText('No characters match these filters.'),
+    ).toBeInTheDocument();
     expect(document.querySelector('[data-component="EmptyState"]')).toHaveAttribute(
       'data-kind',
       'no-characters',
     );
     expect(screen.getByText('0 characters')).toBeInTheDocument();
-    const mine = await screen.findByRole('checkbox', { name: 'My characters' });
-    expect(mine).toHaveClass('checkbox__box');
+    const mine = await screen.findByRole('button', { name: 'My characters' });
     await user.click(mine);
     expect(
       await screen.findByText('You have no characters matching these filters.'),
@@ -356,13 +384,17 @@ describe('Character directory', () => {
         calls += 1;
         return calls === 1
           ? HttpResponse.json({ errors: [{ message: 'boom' }] })
-          : HttpResponse.json({ data: { characters: { items: [character], total: 1 } } });
+          : HttpResponse.json({
+              data: { characters: { items: [character], total: 1 } },
+            });
       }),
     );
     const user = userEvent.setup();
     renderWithProviders(<CharacterListPage />);
     await user.click(await screen.findByRole('button', { name: 'Retry roster' }));
-    expect(await screen.findByRole('heading', { name: 'Lyra Storm' })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: 'Lyra Storm' }),
+    ).toBeInTheDocument();
   });
 
   it('labels every card with its status once the list shows all statuses', async () => {
@@ -377,7 +409,7 @@ describe('Character directory', () => {
     renderWithProviders(<CharacterListPage />);
     await screen.findByRole('heading', { name: character.name });
     expect(screen.queryByText('Approved', { selector: 'p' })).not.toBeInTheDocument();
-    await user.click(screen.getByRole('radio', { name: 'All' }));
+    await user.click(screen.getByRole('button', { name: 'All' }));
     expect(await screen.findByText('Approved', { selector: 'p' })).toBeInTheDocument();
   });
 });

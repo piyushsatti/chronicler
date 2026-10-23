@@ -1,6 +1,7 @@
 import { Button } from '../../../components/primitives/Button.js';
 import { Card } from '../../../components/primitives/Card.js';
 import type { useBulkRoleBar } from '../hooks/useBulkRoleBar.js';
+import { personName } from '../../../utils/format.js';
 import { Checkbox } from '../../../components/primitives/Checkbox.js';
 
 export function BulkRoleBar({
@@ -36,13 +37,13 @@ export function BulkRoleBar({
       <h3 className="type-heading">Bulk roles · {selected.length} selected</h3>
       {requiresExplicitChoice ? (
         <p className="type-caption">
-          Selection has mixed roles — touch a control before applying (prevents mass
-          wipe).
+          These members have different roles. Choose the roles to give them before you
+          apply.
         </p>
       ) : null}
       <div className="row" data-wrap="1">
         <label className="stack">
-          <span className="type-label">Base</span>
+          <span className="type-label">Base role</span>
           <select
             disabled={batch.isPending}
             className="field-input"
@@ -94,7 +95,8 @@ export function BulkRoleBar({
             const member = submittedMembers.find((m) => m.id === row.id);
             return (
               <li key={row.id} className="type-caption">
-                @{member?.handle ?? row.id}: {row.ok ? 'ok' : (row.error ?? 'failed')}
+                {member ? personName(member) : 'Member'}:{' '}
+                {row.ok ? 'saved' : (row.error ?? 'failed')}
               </li>
             );
           })}

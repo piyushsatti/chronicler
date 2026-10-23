@@ -44,7 +44,9 @@ describe('AuthCallbackPage', () => {
     function StrictReplayProbe(): null {
       useEffect(() => {
         effectSetups += 1;
-        return () => { effectCleanups += 1; };
+        return () => {
+          effectCleanups += 1;
+        };
       }, []);
       return null;
     }

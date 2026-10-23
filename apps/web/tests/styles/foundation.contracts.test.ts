@@ -94,10 +94,15 @@ describe('shared foundation CSS ownership', () => {
 
   it('preserves Atlas card/button skins and imports primitive state overrides afterward', () => {
     const atlas = postcss.parse(css('atlas.css'));
-    for (const selector of ['.card', '.btn', '.btn.primary', '.btn:disabled', '.eyebrow', '.page']) {
+    for (const selector of ['.card', '.btn', '.btn.primary', '.btn:disabled', '.eyebrow']) {
       expect(rules(base, selector)).toHaveLength(0);
       expect(rules(atlas, selector)).toHaveLength(1);
     }
+    // Round 3 L1: the one page frame lives in base.css and reads layout tokens.
+    expect(rules(atlas, '.page')).toHaveLength(0);
+    expect(declarations(rules(base, '.page')[0])).toMatchObject({
+      'max-inline-size': 'var(--page-max)',
+    });
     expect(declarations(rules(atlas, '.card')[0])).toMatchObject({
       'border-radius': 'var(--rad)', 'box-shadow': 'var(--shadow-2)',
     });

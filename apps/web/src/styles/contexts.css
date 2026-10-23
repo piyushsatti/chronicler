@@ -11,7 +11,7 @@
 
 /* ----- WAR ROOM -----------------------------------------------------------
  * Dense data dashboards: stats, tables, feeds, maps.
- * Emphasis: type-value large, type-label tight uppercase, tabular figures.
+ * Emphasis: type-value large, type-label tight sentence case, tabular figures.
  * Pages: /, /map, /search, /dm, /admin, /regions/:slug
  */
 .ctx-war-room {
@@ -21,10 +21,6 @@
 
 .ctx-war-room .type-value {
   font-variant-numeric: tabular-nums;
-}
-
-.ctx-war-room .type-caption {
-  letter-spacing: 0.05em;
 }
 
 

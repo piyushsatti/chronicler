@@ -1,17 +1,31 @@
 import { Button } from '../../../components/primitives/Button.js';
 import { isSafeInternalPath, isSafeUrl } from '../../../utils/url.js';
 import { AdminPagination } from './AdminPagination.js';
+import { deliveryReference, deliveryTitle, deliveryTone } from './deliveryTitle.js';
+import { AdminAlertRow } from './AdminAlertRow.js';
 import { Link } from 'react-router-dom';
 import { Card } from '../../../components/primitives/Card.js';
 import { Chip } from '../../../components/primitives/Chip.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
+import { StatTile } from '../../../components/primitives/StatTile.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
-import { humanizeKey, labelFor } from '../../../utils/format.js';
+import { humanizeKey, isSentinelDate, labelFor } from '../../../utils/format.js';
 import type { AdminOperationsView } from '../hooks/useAdminOperations.js';
+import styles from './adminOps.module.css';
 
-function healthLabel(observed: boolean | null): string {
-  return observed === null ? 'not observed' : observed ? 'healthy' : 'needs attention';
+/** Health shown as a chip only when it was actually observed. */
+function HealthChip({
+  healthy,
+}: {
+  healthy: boolean | null;
+}): React.JSX.Element | null {
+  if (healthy === null) return null;
+  return (
+    <Chip tone={healthy ? 'line' : 'accent'} size="sm">
+      {healthy ? 'Healthy' : 'Needs attention'}
+    </Chip>
+  );
 }
 
 const DELIVERY_STATES: Record<string, string> = {
@@ -44,131 +58,162 @@ export function DeliveryPanel({
 
   const ops = query.data;
   return (
-    <div className="stack" data-el="admin.deliveryPanel" aria-label="Discord delivery">
-      <Card className="stack">
-        <div className="row" data-justify="between">
-          <h3 className="type-heading">Discord delivery</h3>
-          <Chip tone={ops.activeAlertCount ? 'status' : 'line'} size="sm">
-            {ops.activeAlertCount} active
-          </Chip>
-        </div>
-        <p className="type-body">Active alerts: {ops.activeAlertCount}</p>
-        <p className="type-body">Pending deliveries: {ops.pendingDeliveryCount}</p>
-        <p className="type-caption">Delivery total: {ops.deliveryTotal}</p>
+    <div className="stack" data-el="admin.deliveryPanel">
+      <div className={styles.summary}>
+        <StatTile
+          label="Active alerts"
+          value={ops.activeAlertCount}
+          tone={ops.activeAlertCount ? 'warn' : 'good'}
+        />
+        <StatTile
+          label="Pending deliveries"
+          value={ops.pendingDeliveryCount}
+          hint={`of ${ops.deliveryTotal}`}
+        />
+      </div>
+      <Card className={`stack ${styles.panel}`}>
+        <h2 className="type-title">Setup</h2>
+        <ul className={styles.list} aria-label="Delivery setup">
+          <li className={styles.item}>
+            <span className="type-body">Delivery mode</span>
+            <Chip tone="line" size="sm">
+              {humanizeKey(ops.config.deliveryMode)}
+            </Chip>
+          </li>
+          <li className={styles.item}>
+            <span className="type-body">
+              Site address: {ops.config.publicOrigin || 'not set'}
+            </span>
+            {ops.config.publicOrigin || ops.config.publicOriginHealthy !== null ? (
+              <HealthChip healthy={ops.config.publicOriginHealthy} />
+            ) : (
+              <Chip tone="accent" size="sm">
+                Needs setup
+              </Chip>
+            )}
+          </li>
+          <li className={styles.item}>
+            <span className="type-body">
+              Discord announcements role:{' '}
+              {ops.config.announcementRoleId ? 'set' : 'not set'}
+            </span>
+            {ops.config.announcementRoleId ||
+            ops.config.announcementRoleHealthy !== null ? (
+              <HealthChip healthy={ops.config.announcementRoleHealthy} />
+            ) : (
+              <Chip tone="accent" size="sm">
+                Needs setup
+              </Chip>
+            )}
+          </li>
+        </ul>
       </Card>
-      <Card className="stack">
-        <h3 className="type-heading">Delivery configuration</h3>
-        <p className="type-body">
-          Mode: {humanizeKey(ops.config.deliveryMode)} · Public origin:{' '}
-          {ops.config.publicOrigin || 'not configured'} (
-          {healthLabel(ops.config.publicOriginHealthy)})
-        </p>
-        <p className="type-caption">
-          Announcement role: {ops.config.announcementRoleId ?? 'not configured'} ·{' '}
-          {humanizeKey(ops.config.announcementRoleSource)} ·{' '}
-          {healthLabel(ops.config.announcementRoleHealthy)}
-        </p>
-        <h4 className="type-title">Scheduled work</h4>
+      <Card className={`stack ${styles.panel}`}>
+        <h2 className="type-title">Scheduled jobs</h2>
         {ops.scheduledWork.length === 0 ? (
-          <p className="type-caption">No scheduled-work observations.</p>
+          <EmptyState kind="no-events" message="No scheduled jobs have reported yet." />
         ) : (
-          <ul className="stack">
+          <ul className={styles.list}>
             {ops.scheduledWork.map((work) => (
-              <li key={work.kind}>
-                <strong>{humanizeKey(work.kind)}</strong> ·{' '}
-                {work.outcome ? humanizeKey(work.outcome) : 'No outcome recorded'}
-                <p className="type-caption">
-                  Expected {work.expectedSlot ?? 'unknown'} · Started{' '}
-                  {work.lastStartedAt ? formatDateTime(work.lastStartedAt) : 'never'} ·
-                  Finished{' '}
-                  {work.lastFinishedAt
-                    ? formatDateTime(work.lastFinishedAt)
-                    : 'not recorded'}
-                  {work.safeErrorCode ? ` · ${work.safeErrorCode}` : ''}
-                </p>
+              <li key={work.kind} className={styles.item}>
+                <div className="stack" data-gap="1">
+                  <span className="type-title">{humanizeKey(work.kind)}</span>
+                  <span className="type-caption">
+                    {work.lastStartedAt
+                      ? `Last ran ${formatDateTime(work.lastStartedAt)}`
+                      : 'Has not run yet'}
+                  </span>
+                </div>
+                <Chip tone="line" size="sm">
+                  {work.outcome ? humanizeKey(work.outcome) : 'No result yet'}
+                </Chip>
               </li>
             ))}
           </ul>
         )}
       </Card>
-      <Card className="stack">
-        <h3 className="type-heading">Delivery records</h3>
+      <section className="stack" aria-label="Deliveries" data-gap="3">
+        <h2 className="type-title">Deliveries</h2>
         <AdminPagination page={view.deliveryPage} />
         {ops.deliveries.length === 0 ? (
           <EmptyState kind="no-events" message="No deliveries on this page." />
         ) : (
-          <ul className="stack">
-            {ops.deliveries.map((delivery) => (
-              <li key={delivery.id} className="card stack">
-                <strong>
-                  {delivery.questTitle ?? delivery.questShortCode ?? 'Quest delivery'}
-                </strong>
-                <p className="type-body">
-                  {labelFor(delivery.state, DELIVERY_STATES)}
-                  {delivery.desiredRevision != null || delivery.appliedRevision != null
-                    ? ` · Revision ${delivery.appliedRevision ?? '—'} of ${delivery.desiredRevision ?? '—'} applied`
-                    : ''}
-                </p>
-                <p className="type-caption">
-                  Failures {delivery.failureStreak} / {delivery.maxAttempts} · Next
-                  attempt{' '}
-                  {delivery.nextAttemptAt
-                    ? formatDateTime(delivery.nextAttemptAt)
-                    : 'not scheduled'}{' '}
-                  · Updated {formatDateTime(delivery.updatedAt)}
-                </p>
-                {delivery.safeError ? (
-                  <p role="status" className="type-caption">
-                    {delivery.safeError}
-                  </p>
-                ) : null}
-                {delivery.questLink && isSafeInternalPath(delivery.questLink) ? (
-                  <Link className="type-link" to={delivery.questLink}>
-                    Open quest
-                  </Link>
-                ) : null}
-                {delivery.eventLink && isSafeUrl(delivery.eventLink) ? (
-                  <a
-                    className="type-link"
-                    href={delivery.eventLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    Open Discord event
-                  </a>
-                ) : null}
-              </li>
-            ))}
-          </ul>
+          <Card className={`stack ${styles.panel}`}>
+            <ul className={styles.list} aria-label="Deliveries">
+              {ops.deliveries.map((delivery, index) => {
+                const retryAt =
+                  delivery.nextAttemptAt &&
+                  !['succeeded', 'cancelled', 'dead'].includes(delivery.state)
+                    ? delivery.nextAttemptAt
+                    : null;
+                const title = deliveryTitle(
+                  delivery,
+                  view.deliveryPage.offset + index + 1,
+                );
+                return (
+                  <li key={delivery.id} className={styles.item}>
+                    <div className="stack" data-gap="1">
+                      <span className="type-title">{title}</span>
+                      <span className="type-caption">
+                        {deliveryReference(delivery, formatDateTime)}.{' '}
+                        {delivery.failureStreak > 0
+                          ? `Tried ${delivery.failureStreak} of ${delivery.maxAttempts} times. `
+                          : ''}
+                        {retryAt
+                          ? isSentinelDate(retryAt)
+                            ? 'Waiting for a retry. '
+                            : `Next try ${formatDateTime(retryAt)}. `
+                          : ''}
+                        Updated {formatDateTime(delivery.updatedAt)}.
+                      </span>
+                      {delivery.safeError ? (
+                        <span role="status" className="type-caption">
+                          {delivery.safeError}
+                        </span>
+                      ) : null}
+                    </div>
+                    <div className="row" data-gap="2" data-align="center" data-wrap="1">
+                      <Chip
+                        tone={deliveryTone(delivery.state)}
+                        size="sm"
+                      >
+                        {labelFor(delivery.state, DELIVERY_STATES)}
+                      </Chip>
+                      {delivery.questLink && isSafeInternalPath(delivery.questLink) ? (
+                        <Link
+                          className="btn btn--secondary btn--sm"
+                          to={delivery.questLink}
+                        >
+                          Open quest
+                        </Link>
+                      ) : null}
+                      {delivery.eventLink && isSafeUrl(delivery.eventLink) ? (
+                        <a
+                          className="btn btn--secondary btn--sm"
+                          href={delivery.eventLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Open Discord event
+                        </a>
+                      ) : null}
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </Card>
         )}
-      </Card>
-      <Card className="stack">
-        <h3 className="type-heading">Active alerts</h3>
+      </section>
+      <Card className={`stack ${styles.panel}`}>
+        <h2 className="type-title">Active alerts</h2>
         <AdminPagination page={alertPage} />
         {ops.activeAlerts.length === 0 ? (
-          <EmptyState kind="no-events" message="No active alerts on this page." />
+          <EmptyState kind="no-events" message="No active alerts." />
         ) : (
-          <ul className="stack">
+          <ul className={styles.list} aria-label="Active alerts">
             {ops.activeAlerts.map((alert) => (
-              <li key={alert.key} className="card stack">
-                <div className="row" data-justify="between">
-                  <strong className="type-title">{alert.label}</strong>
-                  <Chip tone="status" size="sm">
-                    {humanizeKey(alert.severity)}
-                  </Chip>
-                </div>
-                <p className="type-caption">
-                  First seen {formatDateTime(alert.firstSeenAt)} · Last seen{' '}
-                  {formatDateTime(alert.lastSeenAt)}
-                </p>
-                {isSafeInternalPath(alert.remediationHref) ? (
-                  <div className="row">
-                    <Link className="btn btn--ghost btn--sm" to={alert.remediationHref}>
-                      View diagnostics
-                    </Link>
-                  </div>
-                ) : null}
-              </li>
+              <AdminAlertRow key={alert.key} alert={alert} className={styles.item} />
             ))}
           </ul>
         )}

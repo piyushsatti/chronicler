@@ -109,34 +109,32 @@ it('requires explicit choices when changing deny-all to visibility rules or a na
     <AudienceEditor />,
     editorHarness(`/rules/guides/${id}/edit`, '/rules/guides/:id/edit'),
   );
-  const mode = await screen.findByRole('radiogroup', { name: 'Audience policy' });
-  const custom = () => within(mode).getByRole('radio', { name: 'Custom policy' });
+  const mode = await screen.findByRole('radiogroup', { name: 'Who can read this' });
+  const custom = () => within(mode).getByRole('radio', { name: 'Choose readers' });
   expect(custom()).toBeChecked();
+  expect(screen.getByText(/An empty list lets\s+no one read this/)).toBeVisible();
+  fireEvent.click(within(mode).getByRole('radio', { name: 'Same as visibility' }));
   expect(
-    screen.getByText(/empty custom policy grants no audience access/),
-  ).toBeVisible();
-  fireEvent.click(within(mode).getByRole('radio', { name: 'Use visibility rules' }));
-  expect(
-    screen.queryByRole('textbox', { name: 'Policy handles' }),
+    screen.queryByRole('textbox', { name: 'Reader handles' }),
   ).not.toBeInTheDocument();
-  fireEvent.click(screen.getByRole('button', { name: 'Save audience' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save readers' }));
   await waitFor(() => expect(document.policy).toBeNull());
   await waitFor(() =>
-    expect(screen.getByRole('button', { name: 'Save audience' })).toBeEnabled(),
+    expect(screen.getByRole('button', { name: 'Save readers' })).toBeEnabled(),
   );
   fireEvent.click(custom());
-  fireEvent.change(screen.getByRole('textbox', { name: 'Policy handles' }), {
+  fireEvent.change(screen.getByRole('textbox', { name: 'Reader handles' }), {
     target: { value: 'member:@reader' },
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Save audience' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save readers' }));
   await waitFor(() => expect(document.policy).toEqual(['member:@reader']));
   await waitFor(() =>
-    expect(screen.getByRole('button', { name: 'Save audience' })).toBeEnabled(),
+    expect(screen.getByRole('button', { name: 'Save readers' })).toBeEnabled(),
   );
-  fireEvent.change(screen.getByRole('textbox', { name: 'Policy handles' }), {
+  fireEvent.change(screen.getByRole('textbox', { name: 'Reader handles' }), {
     target: { value: '' },
   });
-  fireEvent.click(screen.getByRole('button', { name: 'Save audience' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Save readers' }));
   await waitFor(() => expect(document.policy).toEqual([]));
   expect(writes).toEqual([
     { visibility: 'public', policy: null, readerIds: [] },

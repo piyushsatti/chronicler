@@ -98,3 +98,12 @@ export const ROUTE_MANIFEST_PATHS = [
 ] as const;
 
 export type ManifestRoutePath = (typeof ROUTE_MANIFEST_PATHS)[number];
+
+/** Design and QA demos that only dev builds register; a production build
+ * sends these paths to the not-found page (round 3 L7 S8). */
+export const DEV_ONLY_ROUTE_PATHS: readonly ManifestRoutePath[] = ['/editor-demo', '/_demo'];
+
+/** Whether a route path is registered in this build. */
+export function isRouteEnabled(path: string, dev: boolean = import.meta.env.DEV): boolean {
+  return dev || !(DEV_ONLY_ROUTE_PATHS as readonly string[]).includes(path);
+}

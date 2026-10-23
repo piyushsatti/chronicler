@@ -13,9 +13,10 @@ import {
 } from '../../../src/context/theme.utils.js';
 import { effectById } from '../../../src/effects/catalog.js';
 import { AmbientLayer } from '../../../src/chrome/AmbientLayer.js';
-import { SettingsPage } from '../../../src/features/onboarding/pages/SettingsPage.js';
+import { SettingsForm } from '../../../src/chrome/SettingsForm.js';
 import { PreferencesSync } from '../../../src/features/personalize/components/PreferencesSync.js';
 import { server } from '../../../src/mocks/server.js';
+import playerMe from '../../fixtures/wire/me/admin-good.json';
 import good from '../../fixtures/wire/personalize/good.json';
 import { renderWithProviders } from '../../test-utils.js';
 
@@ -37,6 +38,12 @@ const operationSchema = z.object({
   query: z.string(),
   variables: z.object({ input: z.record(z.unknown()).optional() }).optional(),
 });
+
+const themeTrigger = (): HTMLElement => screen.getByRole('button', { name: /^Theme/ });
+async function pickTheme(user: ReturnType<typeof userEvent.setup>, label: string): Promise<void> {
+  await user.click(themeTrigger());
+  await user.click(await screen.findByRole('menuitem', { name: label }));
+}
 
 describe('settings synchronization', () => {
   beforeEach(() => {
@@ -60,6 +67,10 @@ describe('settings synchronization', () => {
           : null;
         if (!account || !settings.has(account))
           throw new Error('Guest must not fetch account preferences');
+        if (/\bquery\s+MemberMe\b/.test(body.query)) {
+          // The personalize rail previews the member, so the session needs a valid account.
+          return HttpResponse.json({ data: { memberMe: playerMe } });
+        }
         const current = settings.get(account)!;
         if (body.query.includes('mutation UpdateMySettings')) {
           const saved = { ...current, ...body.variables?.input };
@@ -74,12 +85,12 @@ describe('settings synchronization', () => {
     const content = (
       <>
         <PreferencesSync />
-        <SettingsPage />
+        <SettingsForm section="personalize" />
       </>
     );
     const view = renderWithProviders(content);
     await waitFor(() =>
-      expect(screen.getByRole('combobox', { name: 'Theme' })).toHaveValue('midnight'),
+      expect(themeTrigger()).toHaveTextContent('Midnight'),
     );
     const switchStoredAccount = (account: string | null): void => {
       const oldValue = localStorage.getItem(TOKEN_KEY);
@@ -92,19 +103,19 @@ describe('settings synchronization', () => {
     };
     act(() => switchStoredAccount('member-b'));
     await waitFor(() =>
-      expect(screen.getByRole('combobox', { name: 'Theme' })).toHaveValue('parchment'),
+      expect(themeTrigger()).toHaveTextContent('Parchment'),
     );
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Theme' }), 'ember');
+    await pickTheme(user, 'Ember');
     await user.click(screen.getByRole('button', { name: 'Save settings' }));
     await screen.findByText('Settings saved.');
     act(() => switchStoredAccount(null));
-    expect(screen.getByRole('combobox', { name: 'Theme' })).toHaveValue('parchment');
+    expect(themeTrigger()).toHaveTextContent('Parchment');
     expect(loadPrefs(null).theme).toBe('parchment');
     expect(loadPrefs('member-a').theme).toBe('midnight');
     expect(loadPrefs('member-b').theme).toBe('ember');
     view.unmount();
     renderWithProviders(content);
-    expect(screen.getByRole('combobox', { name: 'Theme' })).toHaveValue('parchment');
+    expect(themeTrigger()).toHaveTextContent('Parchment');
     expect(
       screen.queryByRole('button', { name: 'Save settings' }),
     ).not.toBeInTheDocument();
@@ -139,26 +150,23 @@ describe('settings synchronization', () => {
     renderWithProviders(
       <>
         <PreferencesSync />
-        <SettingsPage />
+        <SettingsForm section="personalize" />
       </>,
     );
-    const theme = await screen.findByRole('combobox', { name: 'Theme' });
-    await waitFor(() => expect(theme).toHaveValue('ember'));
+    await screen.findByRole('button', { name: /^Theme/ });
+    await waitFor(() => expect(themeTrigger()).toHaveTextContent('Ember'));
     expect(document.documentElement).toHaveAttribute('data-density', 'compact');
     expect(document.documentElement).toHaveAttribute('data-motion-collapse', 'on');
-    expect(screen.getByRole('checkbox', { name: 'Quest signups' })).not.toBeChecked();
-    await user.selectOptions(theme, 'vegan');
-    await user.click(screen.getByRole('checkbox', { name: 'Quest signups' }));
+    await pickTheme(user, 'Vegan');
     await user.click(screen.getByRole('button', { name: 'Save settings' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong');
-    expect(theme).toHaveValue('vegan');
+    expect(themeTrigger()).toHaveTextContent('Vegan');
     await user.click(screen.getByRole('button', { name: 'Retry saving settings' }));
     expect(await screen.findByText('Settings saved.')).toBeInTheDocument();
     expect(attempts).toBe(2);
     expect(loadPrefs('member-a')).toMatchObject({
       theme: 'vegan',
       timezone: 'America/Toronto',
-      notifyQuestSignup: true,
       reducedMotion: true,
     });
   });
@@ -176,13 +184,10 @@ describe('settings synchronization', () => {
     renderWithProviders(
       <>
         <PreferencesSync />
-        <SettingsPage />
+        <SettingsForm section="personalize" />
       </>,
     );
-    await user.selectOptions(
-      screen.getByRole('combobox', { name: 'Theme' }),
-      'midnight',
-    );
+    await pickTheme(user, 'Midnight');
     expect(loadPrefs(null).theme).toBe('midnight');
     expect(
       screen.queryByRole('button', { name: 'Save settings' }),
@@ -215,7 +220,7 @@ describe('settings synchronization', () => {
     renderWithProviders(
       <>
         <PreferencesSync />
-        <SettingsPage />
+        <SettingsForm section="personalize" />
         <AccountControls />
       </>,
     );
@@ -277,17 +282,14 @@ describe('settings synchronization', () => {
       const { queryClient } = renderWithProviders(
         <>
           <PreferencesSync />
-          <SettingsPage />
+          <SettingsForm section="personalize" />
           <AccountControls />
         </>,
       );
       await waitFor(() =>
-        expect(screen.getByRole('combobox', { name: 'Theme' })).toHaveValue('ember'),
+        expect(themeTrigger()).toHaveTextContent('Ember'),
       );
-      await user.selectOptions(
-        screen.getByRole('combobox', { name: 'Theme' }),
-        'vegan',
-      );
+      await pickTheme(user, 'Vegan');
       await user.click(screen.getByRole('button', { name: 'Save settings' }));
       await waitFor(() => expect(release).toBeDefined());
       const oldMutation = queryClient
@@ -302,24 +304,22 @@ describe('settings synchronization', () => {
       );
       if (transition === 'switch') {
         await waitFor(() =>
-          expect(screen.getByRole('combobox', { name: 'Theme' })).toHaveValue(
-            'dracula',
-          ),
+          expect(themeTrigger()).toHaveTextContent('Dracula'),
         );
         expect(screen.getByRole('button', { name: 'Save settings' })).toBeEnabled();
       }
-      expect(screen.getByRole('combobox', { name: 'Theme' })).toBeEnabled();
+      expect(themeTrigger()).toBeEnabled();
       expect(screen.queryByText('Settings saved.')).not.toBeInTheDocument();
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
       await act(async () => {
         release?.();
       });
       await waitFor(() => expect(oldMutation?.state.status).toBe(outcome));
-      expect(screen.getByRole('combobox', { name: 'Theme' })).toBeEnabled();
+      expect(themeTrigger()).toBeEnabled();
       expect(screen.queryByText('Settings saved.')).not.toBeInTheDocument();
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
       if (transition === 'switch')
-        expect(screen.getByRole('combobox', { name: 'Theme' })).toHaveValue('dracula');
+        expect(themeTrigger()).toHaveTextContent('Dracula');
     },
   );
 

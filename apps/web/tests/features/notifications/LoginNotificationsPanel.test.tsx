@@ -52,7 +52,9 @@ describe('LoginNotificationsPanel', () => {
 
     renderPanel();
 
-    expect(await screen.findByText('You have 2 unread notifications.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('You have 2 unread notifications.'),
+    ).toBeInTheDocument();
     expect(screen.getByText('No notifications yet.')).toBeInTheDocument();
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });
@@ -90,7 +92,9 @@ describe('LoginNotificationsPanel', () => {
       });
     });
 
-    expect(await screen.findByText('You have 2 unread notifications.')).toBeInTheDocument();
+    expect(
+      await screen.findByText('You have 2 unread notifications.'),
+    ).toBeInTheDocument();
     expect(screen.getByText('No notifications yet.')).toBeInTheDocument();
     expect(countRequests).toBeGreaterThanOrEqual(2);
   });

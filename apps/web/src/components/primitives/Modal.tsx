@@ -9,6 +9,10 @@ export type ModalProps = {
   description?: ReactNode;
   children?: ReactNode;
   onClose: () => void;
+  /** `palette` is a fixed-size command dialog: its height never changes
+   * with the content, the first child (the input) stays pinned and the
+   * rest scrolls inside. */
+  size?: 'sm' | 'md' | 'lg' | 'palette';
   className?: string;
 };
 
@@ -24,6 +28,7 @@ export function Modal({
   description,
   children,
   onClose,
+  size = 'md',
   className,
 }: ModalProps): React.JSX.Element {
   const popupRef = useRef<HTMLDivElement>(null);
@@ -51,6 +56,7 @@ export function Modal({
         <Dialog.Popup
           ref={popupRef}
           className={cx('pr-modal__dialog', className)}
+          data-size={size === 'md' ? undefined : size}
           aria-modal="true"
           initialFocus={initialFocus}
         >
@@ -65,7 +71,7 @@ export function Modal({
               {description}
             </Dialog.Description>
           ) : null}
-          <div>{children}</div>
+          <div className="pr-modal__body">{children}</div>
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>

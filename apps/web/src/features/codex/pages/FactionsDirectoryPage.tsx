@@ -5,7 +5,9 @@ export function FactionsDirectoryPage(): React.JSX.Element {
     <CodexLinkedDirectoryPage
       title="Factions"
       categoryPrefix="Faction"
-      eyebrow="Power blocs"
+      noun="factions"
+      singular="faction"
+      lede="The groups that shape the region: who they are and what they want."
     />
   );
 }

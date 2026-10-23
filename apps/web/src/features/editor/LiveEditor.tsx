@@ -1,7 +1,11 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Button } from '../../components/primitives/Button.js';
+import { useScrollEdges } from '../../components/primitives/useScrollEdges.js';
 import type { EntityLinkIndex } from './types.js';
 import styles from './editor.module.css';
+
+/** Shown in an empty document; says what the editor does with typed text. */
+const DEFAULT_PLACEHOLDER = 'Start writing. Type [[ to link a Codex entry.';
 
 export type LiveEditorCommand =
   | 'bold'
@@ -368,8 +372,7 @@ function PlainLiveEditor({
     const q = wiki.query.toLowerCase();
     return entityIndex
       .filter(
-        (e) =>
-          e.label.toLowerCase().includes(q) || e.id.toLowerCase().includes(q),
+        (e) => e.label.toLowerCase().includes(q) || e.id.toLowerCase().includes(q),
       )
       .slice(0, 8);
   }, [entityIndex, wiki]);
@@ -483,24 +486,27 @@ function PlainLiveEditor({
     }
   };
 
-  const commands: { id: LiveEditorCommand; label: string }[] = [
-    { id: 'bold', label: 'B' },
-    { id: 'italic', label: 'I' },
-    { id: 'strike', label: 'S' },
-    { id: 'code', label: '</>' },
-    { id: 'h2', label: 'H2' },
-    { id: 'h3', label: 'H3' },
-    { id: 'bullet', label: '•' },
-    { id: 'ordered', label: '1.' },
-    { id: 'quote', label: '“' },
-    { id: 'link', label: 'Link' },
-    { id: 'wikilink', label: '[[]]' },
-    { id: 'table', label: 'Table' },
-    { id: 'diagram', label: 'Diagram' },
-    { id: 'hr', label: '—' },
+  const commands: { id: LiveEditorCommand; label: string; title: string }[] = [
+    { id: 'bold', label: 'B', title: 'Bold' },
+    { id: 'italic', label: 'I', title: 'Italic' },
+    { id: 'strike', label: 'S', title: 'Strikethrough' },
+    { id: 'code', label: '</>', title: 'Inline code' },
+    { id: 'h2', label: 'H2', title: 'Heading' },
+    { id: 'h3', label: 'H3', title: 'Subheading' },
+    { id: 'bullet', label: '•', title: 'Bulleted list' },
+    { id: 'ordered', label: '1.', title: 'Numbered list' },
+    { id: 'quote', label: '“', title: 'Quote' },
+    { id: 'link', label: 'Link', title: 'Link' },
+    { id: 'wikilink', label: '[[]]', title: 'Link to a Codex entry' },
+    { id: 'table', label: 'Table', title: 'Table' },
+    { id: 'diagram', label: 'Diagram', title: 'Diagram' },
+    { id: 'hr', label: '—', title: 'Divider' },
   ];
 
-  const gutterLines = useMemo(() => leDeserialize(value).map((l) => leKind(l)), [value]);
+  const gutterLines = useMemo(
+    () => leDeserialize(value).map((l) => leKind(l)),
+    [value],
+  );
 
   return (
     <div
@@ -510,7 +516,12 @@ function PlainLiveEditor({
       data-compact={compact ? '1' : undefined}
     >
       {toolbar ? (
-        <div className="row" role="toolbar" aria-label="Markdown formatting" data-wrap="1">
+        <div
+          className="row"
+          role="toolbar"
+          aria-label="Markdown formatting"
+          data-wrap="1"
+        >
           {commands.map((cmd) => (
             <Button
               key={cmd.id}
@@ -519,6 +530,7 @@ function PlainLiveEditor({
               size="sm"
               onClick={() => run(cmd.id)}
               aria-label={cmd.id}
+              title={cmd.title}
             >
               {cmd.label}
             </Button>
@@ -539,7 +551,11 @@ function PlainLiveEditor({
         {showGutter ? (
           <div className="live-editor__gutter row" data-el="editor.gutter" aria-hidden>
             {gutterLines.map((kind, i) => (
-              <span key={i} className="type-caption live-editor__gutter-chip" data-kind={kind}>
+              <span
+                key={i}
+                className="type-caption live-editor__gutter-chip"
+                data-kind={kind}
+              >
                 {kind}
               </span>
             ))}
@@ -629,6 +645,7 @@ function BlocksLiveEditor({
     start: number;
   } | null>(null);
   const [acIdx, setAcIdx] = useState(0);
+  const toolbarRef = useScrollEdges<HTMLDivElement>();
   const caretRef = useRef<{ idx: number; pos: number } | null>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const inputObserver = useRef<ResizeObserver | null>(null);
@@ -778,9 +795,7 @@ function BlocksLiveEditor({
     });
     const caret = e.target.selectionStart;
     const m = v.slice(0, caret).match(/\[\[([^[\]]*)$/);
-    setWikiAC(
-      m ? { query: m[1], at: caret, start: caret - m[1].length - 2 } : null,
-    );
+    setWikiAC(m ? { query: m[1], at: caret, start: caret - m[1].length - 2 } : null);
     setAcIdx(0);
   };
 
@@ -801,8 +816,7 @@ function BlocksLiveEditor({
       const list = entityIndex
         .filter(
           (entry) =>
-            entry.label.toLowerCase().includes(q) ||
-            entry.id.toLowerCase().includes(q),
+            entry.label.toLowerCase().includes(q) || entry.id.toLowerCase().includes(q),
         )
         .slice(0, 6);
       if (list.length) {
@@ -1073,11 +1087,11 @@ function BlocksLiveEditor({
             }}
           >
             <span className="le-chip">
-              {r.kind === 'mermaid' ? 'diagram · click to edit' : `${r.kind} · click to edit`}
+              {r.kind === 'mermaid'
+                ? 'diagram · click to edit'
+                : `${r.kind} · click to edit`}
             </span>
-            <pre className={`type-caption ${styles.widgetSource}`}>
-              {md}
-            </pre>
+            <pre className={`type-caption ${styles.widgetSource}`}>{md}</pre>
           </div>,
         );
       }
@@ -1111,27 +1125,26 @@ function BlocksLiveEditor({
     return entityIndex
       .filter(
         (entry) =>
-          entry.label.toLowerCase().includes(q) ||
-          entry.id.toLowerCase().includes(q),
+          entry.label.toLowerCase().includes(q) || entry.id.toLowerCase().includes(q),
       )
       .slice(0, 6);
   }, [entityIndex, wikiAC]);
 
-  const commands: { id: LiveEditorCommand; label: string }[] = [
-    { id: 'bold', label: 'B' },
-    { id: 'italic', label: 'I' },
-    { id: 'strike', label: 'S' },
-    { id: 'code', label: '</>' },
-    { id: 'h2', label: 'H2' },
-    { id: 'h3', label: 'H3' },
-    { id: 'bullet', label: '•' },
-    { id: 'ordered', label: '1.' },
-    { id: 'quote', label: '“' },
-    { id: 'link', label: 'Link' },
-    { id: 'wikilink', label: '[[]]' },
-    { id: 'table', label: 'Table' },
-    { id: 'diagram', label: 'Diagram' },
-    { id: 'hr', label: '—' },
+  const commands: { id: LiveEditorCommand; label: string; title: string }[] = [
+    { id: 'bold', label: 'B', title: 'Bold' },
+    { id: 'italic', label: 'I', title: 'Italic' },
+    { id: 'strike', label: 'S', title: 'Strikethrough' },
+    { id: 'code', label: '</>', title: 'Inline code' },
+    { id: 'h2', label: 'H2', title: 'Heading' },
+    { id: 'h3', label: 'H3', title: 'Subheading' },
+    { id: 'bullet', label: '•', title: 'Bulleted list' },
+    { id: 'ordered', label: '1.', title: 'Numbered list' },
+    { id: 'quote', label: '“', title: 'Quote' },
+    { id: 'link', label: 'Link', title: 'Link' },
+    { id: 'wikilink', label: '[[]]', title: 'Link to a Codex entry' },
+    { id: 'table', label: 'Table', title: 'Table' },
+    { id: 'diagram', label: 'Diagram', title: 'Diagram' },
+    { id: 'hr', label: '—', title: 'Divider' },
   ];
 
   return (
@@ -1144,6 +1157,7 @@ function BlocksLiveEditor({
     >
       {toolbar ? (
         <div
+          ref={toolbarRef}
           className="row le-toolbar"
           role="toolbar"
           aria-label="Markdown formatting"
@@ -1158,6 +1172,7 @@ function BlocksLiveEditor({
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => run(cmd.id)}
               aria-label={cmd.id}
+              title={cmd.title}
             >
               {cmd.label}
             </Button>
@@ -1182,11 +1197,15 @@ function BlocksLiveEditor({
             }
           }}
         >
-          {blankDoc ? placeholder || 'Write…' : 'Write…'}
+          {blankDoc ? placeholder || DEFAULT_PLACEHOLDER : 'Add a paragraph'}
         </div>
       </div>
       {wikiAC && active != null && wikiList.length > 0 ? (
-        <ul className="le-ac live-editor__wiki-suggest card stack" role="listbox" aria-label="Wikilink suggestions">
+        <ul
+          className="le-ac live-editor__wiki-suggest card stack"
+          role="listbox"
+          aria-label="Wikilink suggestions"
+        >
           {wikiList.map((entry, wi) => (
             <li key={entry.id}>
               <button
@@ -1201,7 +1220,9 @@ function BlocksLiveEditor({
                 }}
               >
                 {entry.label}
-                {entry.kind ? <span className="type-caption"> · {entry.kind}</span> : null}
+                {entry.kind ? (
+                  <span className="type-caption"> · {entry.kind}</span>
+                ) : null}
               </button>
             </li>
           ))}
@@ -1215,7 +1236,7 @@ export function LiveEditor({
   value,
   onChange,
   toolbar = true,
-  placeholder = 'Write…',
+  placeholder = DEFAULT_PLACEHOLDER,
   compact = false,
   entityIndex = [],
   variant = 'blocks',

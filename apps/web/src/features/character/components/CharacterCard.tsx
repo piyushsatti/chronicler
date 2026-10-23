@@ -40,7 +40,6 @@ export function CharacterCard({
             {character.ddbMirror?.classes ?? 'Character'}
             {character.ddbMirror?.species ? ` · ${character.ddbMirror.species}` : ''}
           </p>
-
         </div>
       </div>
     </Card>

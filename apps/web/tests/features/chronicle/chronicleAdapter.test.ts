@@ -334,10 +334,10 @@ describe('parseChronicleList', () => {
 });
 
 describe('summaryCategoryMeta', () => {
-  it('maps character and dm to SESSION and DM RECAP chips', () => {
-    expect(summaryCategoryMeta('character').label).toBe('SESSION');
-    expect(summaryCategoryMeta('dm').label).toBe('DM RECAP');
-    expect(summaryCategoryMeta('session').label).toBe('SESSION');
-    expect(summaryCategoryMeta(null).label).toBe('ENTRY');
+  it('maps character and dm to Session and DM recap chips', () => {
+    expect(summaryCategoryMeta('character').label).toBe('Session');
+    expect(summaryCategoryMeta('dm').label).toBe('DM recap');
+    expect(summaryCategoryMeta('session').label).toBe('Session');
+    expect(summaryCategoryMeta(null).label).toBe('Entry');
   });
 });

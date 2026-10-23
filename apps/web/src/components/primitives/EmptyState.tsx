@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import { Button } from './Button.js';
+import { cx } from './cx.js';
 
 export type EmptyStateKind =
   | 'no-quests'
@@ -19,55 +20,64 @@ export type EmptyStateKind =
   | 'not-found'
   | 'schedule-empty';
 
+/** Default sentences, each saying what happened. Pass `message` for the
+ * page's own words and `action` (or actionLabel/onAction) for its one action. */
 const KIND_MESSAGES: Record<EmptyStateKind, string> = {
-  'no-quests': 'NO QUESTS FOUND',
-  'no-characters': 'NO CHARACTERS FOUND',
-  'no-guilds': 'NO GUILDS FOUND',
-  'no-factions': 'NO FACTIONS FOUND',
-  'no-npcs': 'NO NPCs FOUND',
-  'no-results': 'NO RESULTS',
-  'no-events': 'NO EVENTS',
-  'no-series': 'NO SERIES FOUND',
-  'no-regions': 'NO REGIONS FOUND',
-  'no-hexes': 'NO HEXES FOUND',
-  generic: 'NOTHING HERE',
-  'timeline-empty': 'THE CHRONICLE AWAITS — NO EVENTS RECORDED YET',
-  'search-no-results': 'NO RESULTS FOUND IN THE ARCHIVE',
-  'not-authorized': 'ACCESS DENIED — THIS AREA IS RESTRICTED',
-  'not-found': 'THAT HEX IS NOT ON THE MAP',
-  'schedule-empty': 'NO UPCOMING SESSIONS IN THE NEXT 14 DAYS',
+  'no-quests': 'No quests match.',
+  'no-characters': 'No characters yet.',
+  'no-guilds': 'No guilds yet.',
+  'no-factions': 'No factions yet.',
+  'no-npcs': 'No NPCs yet.',
+  'no-results': 'Nothing matches these filters.',
+  'no-events': 'Nothing has happened here yet.',
+  'no-series': 'No series yet.',
+  'no-regions': 'No regions yet.',
+  'no-hexes': 'No hexes yet.',
+  generic: 'Nothing here yet.',
+  'timeline-empty': 'No chronicle entries yet.',
+  'search-no-results': 'Nothing matches that search.',
+  'not-authorized': 'You don’t have access to this.',
+  'not-found': 'We couldn’t find that.',
+  'schedule-empty': 'No sessions in the next 14 days.',
 };
 
 export type EmptyStateProps = {
   message?: string;
   kind?: EmptyStateKind;
   illustration?: ReactNode;
+  /** The one action, usually a Link ("Find a quest"). Wins over actionLabel. */
+  action?: ReactNode;
   actionLabel?: string;
   onAction?: () => void;
   className?: string;
   children?: ReactNode;
 };
 
+/** "Nothing here" inside a page section: one sentence plus one action on the
+ * parchment slot (`.empty-state`). Page-level states use StatePanel. */
 export function EmptyState({
   message,
   kind = 'generic',
   illustration,
+  action,
   actionLabel,
   onAction,
   className,
   children,
 }: EmptyStateProps): React.JSX.Element {
   const text = message ?? KIND_MESSAGES[kind];
+  const fallbackAction =
+    actionLabel && onAction ? (
+      <Button variant="secondary" onClick={onAction}>
+        {actionLabel}
+      </Button>
+    ) : null;
   return (
-    <div className={className} data-component="EmptyState" data-kind={kind}>
+    <div className={cx('empty-state', className)} data-component="EmptyState" data-kind={kind}>
       {illustration}
-      <p>{text}</p>
+      <p className="type-body">{text}</p>
       {children}
-      {actionLabel && onAction ? (
-        <Button variant="secondary" onClick={onAction}>
-          {actionLabel}
-        </Button>
-      ) : null}
+      {action ?? fallbackAction}
     </div>
   );
 }

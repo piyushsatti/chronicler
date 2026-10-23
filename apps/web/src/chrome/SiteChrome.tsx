@@ -5,35 +5,17 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useCurrentAccess } from '../auth/useCurrentAccess.js';
 import { useAuth } from '../auth/AuthContext.js';
+import { useOwnsCharacter } from '../features/member/hooks/useOwnsCharacter.js';
 import { useSearchDialog } from '../features/search/components/SearchCommandRoot.js';
 import { useMe } from '../hooks/useMe.js';
 import {
   destinationsForAuth,
+  isPersonalPath,
   siteLinksPlacement,
   type SiteDestination,
 } from './destinations.js';
 import { NavDrawer } from './NavDrawer.js';
 import { NotificationBell } from './NotificationBell.js';
-
-function BrandGlyph(): React.JSX.Element {
-  return (
-    <svg
-      width="12"
-      height="14"
-      viewBox="0 0 12 14"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.3"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M8.5 1H2C1.4 1 1 1.4 1 2v10c0 .6.4 1 1 1h8c.6 0 1-.4 1-1V3.5L8.5 1z" />
-      <path d="M8.5 1v2.5H11" />
-      <path d="M3 6h6M3 8h6M3 10h4" />
-    </svg>
-  );
-}
 
 function SearchIcon(): React.JSX.Element {
   return (
@@ -156,13 +138,26 @@ function DestinationLinks({
   destinations,
   placement,
   pathname,
+  personal,
 }: {
   destinations: readonly SiteDestination[];
   placement: 'top' | 'bottom';
   pathname: string;
+  /** On personal routes the avatar is active and no main item is. */
+  personal: boolean;
 }): React.JSX.Element {
+  const navRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (placement !== 'bottom') return;
+    const nav = navRef.current;
+    const current = nav?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!nav || !current) return;
+    // Scroll the bar itself (not the page) so the current link is visible when the bar overflows.
+    nav.scrollLeft = Math.max(0, current.offsetLeft - (nav.clientWidth - current.offsetWidth) / 2);
+  }, [placement, pathname, personal]);
   return (
     <nav
+      ref={navRef}
       className={
         placement === 'bottom'
           ? 'site-chrome__bottom app-shell__bottomnav'
@@ -173,11 +168,8 @@ function DestinationLinks({
       aria-label="Primary"
     >
       {destinations.map((destination) => {
-        const active = destination.matches(pathname);
-        const visible =
-          placement === 'bottom'
-            ? (destination.shortLabel ?? destination.label)
-            : destination.label;
+        const active = !personal && destination.matches(pathname);
+        const visible = destination.label;
         return (
           <Link
             key={destination.id}
@@ -208,9 +200,11 @@ function DestinationLinks({
 function AccountSlot({
   isAuthenticated,
   name,
+  active,
 }: {
   isAuthenticated: boolean;
   name: string | undefined;
+  active: boolean;
 }): React.JSX.Element {
   if (!isAuthenticated) {
     return (
@@ -223,7 +217,12 @@ function AccountSlot({
   const label = name ?? 'Account';
   const initial = label.slice(0, 1).toUpperCase();
   return (
-    <Link className="site-chrome__avatar" to="/me" aria-label={label}>
+    <Link
+      className="site-chrome__avatar"
+      to="/me"
+      aria-label={label}
+      aria-current={active ? 'page' : undefined}
+    >
       <span aria-hidden="true">{initial}</span>
     </Link>
   );
@@ -284,6 +283,11 @@ export function SiteChrome({ children }: { children: ReactNode }): React.JSX.Ele
     isAdmin: adminAccess.allowed,
     canVerify: reviewAccess.allowed,
   });
+  const ownCharacter = useOwnsCharacter(
+    /^\/characters\/([^/]+)/.exec(location.pathname)?.[1] ?? null,
+  );
+  const personal =
+    isSignedIn && (ownCharacter || isPersonalPath(location.pathname, me.data?.handle));
   const showDrawer = pattern === 'drawer';
   const showTopLinks = placement === 'top' && !showDrawer;
   const links = (
@@ -291,6 +295,7 @@ export function SiteChrome({ children }: { children: ReactNode }): React.JSX.Ele
       destinations={destinations}
       placement={placement}
       pathname={location.pathname}
+      personal={personal}
     />
   );
 
@@ -308,12 +313,13 @@ export function SiteChrome({ children }: { children: ReactNode }): React.JSX.Ele
       data-el="shell.root"
     >
       <header ref={headerRef} className="site-chrome__top">
-        <Link className="site-chrome__brand" to="/" aria-label="Chronicler">
-          <span className="site-chrome__brand-mark" aria-hidden="true">
-            <BrandGlyph />
-          </span>
+        {/* Text wordmark until the real logo (R3) is supplied. */}
+        <Link className="site-chrome__brand" to="/">
+          <span className="site-chrome__wordmark">Chronicler</span>
         </Link>
-        {showDrawer ? <NavDrawer destinations={destinations} /> : null}
+        {showDrawer ? (
+          <NavDrawer destinations={destinations} personal={personal} />
+        ) : null}
         {showTopLinks ? links : null}
         <span className="site-chrome__spacer" />
         <button
@@ -344,6 +350,7 @@ export function SiteChrome({ children }: { children: ReactNode }): React.JSX.Ele
         <AccountSlot
           isAuthenticated={isSignedIn}
           name={me.data?.displayName ?? me.data?.handle}
+          active={personal}
         />
       </header>
       <main

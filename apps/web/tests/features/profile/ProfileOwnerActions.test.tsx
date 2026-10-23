@@ -206,7 +206,10 @@ describe('Profile owner writes', () => {
       <ProfileOwnerActions profile={profile()} canAvailability canDm />,
     );
     await user.clear(screen.getByRole('textbox', { name: 'Display name' }));
-    await user.type(screen.getByRole('textbox', { name: 'Display name' }), 'Local draft');
+    await user.type(
+      screen.getByRole('textbox', { name: 'Display name' }),
+      'Local draft',
+    );
     await user.type(
       screen.getByRole('textbox', { name: 'Avatar URL' }),
       'https://example.test/local.png',

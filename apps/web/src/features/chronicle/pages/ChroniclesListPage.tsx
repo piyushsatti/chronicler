@@ -1,12 +1,14 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { PageDeclaration } from '@pi/react-imposition';
 import {
   PageHost,
   useSizeClasses,
   type PageRegionRenderers,
 } from '@pi/react-imposition/react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { PageShell } from '../../../components/foundation/PageShell.js';
+import { CardGrid } from '../../../components/primitives/CardGrid.js';
+import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { ErrorState } from '../../../components/primitives/ErrorState.js';
 import { Skeleton } from '../../../components/primitives/Skeleton.js';
@@ -14,7 +16,7 @@ import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
 import { civilDateInZone, monthLabel } from '../../../utils/format.js';
 import type { ChronicleListItemView } from '../adapters/chronicleAdapter.js';
 import { ChronCard } from '../components/ChronCard.js';
-import { FilterSidebar } from '../components/FilterSidebar.js';
+import { ChronicleFilterBar } from '../components/ChronicleFilterBar.js';
 import { useCanCreateSummary, useChroniclesPage } from '../hooks/useChroniclesPage.js';
 import styles from './chronicles.module.css';
 
@@ -55,8 +57,8 @@ function groupByCalendarPeriod(
     const date = entry.gameDate;
     const key = date ? `date:${date.year}:${date.periodIndex}` : `day:${entry.gameDay}`;
     const label = date
-      ? `${date.eraAbbrev} ${date.year} · ${date.periodName.toUpperCase()}`
-      : `GAME DAY ${entry.gameDay}`;
+      ? `${date.eraAbbrev} ${date.year} · ${date.periodName}`
+      : `Game day ${entry.gameDay}`;
     const group = groups.get(key);
     if (group) group.events.push(entry);
     else groups.set(key, { label, events: [entry] });
@@ -96,7 +98,6 @@ function distinctSorted(values: Array<string | null>): string[] {
 
 export function ChroniclesListPage(): React.JSX.Element {
   const page = useChroniclesPage();
-  const navigate = useNavigate();
   const { widthClass } = useSizeClasses();
   const canCreate = useCanCreateSummary();
 
@@ -106,7 +107,6 @@ export function ChroniclesListPage(): React.JSX.Element {
   const [searchQuery, setSearchQuery] = useState('');
 
   const allEvents = page.status === 'ready' ? page.view.items : [];
-  const total = page.status === 'ready' ? page.view.total : 0;
 
   const regionOptions = useMemo(
     () => ['All', ...distinctSorted(allEvents.map((e) => e.region))],
@@ -145,56 +145,32 @@ export function ChroniclesListPage(): React.JSX.Element {
     () => groupByCalendarPeriod(events, timeZone),
     [events, timeZone],
   );
+  const mixedTypes = new Set(allEvents.map((entry) => entry.category)).size > 1;
   const hasKnownGameDay = allEvents.some((entry) => entry.gameDay != null);
   const hasNamedGameDate = allEvents.some((entry) => entry.gameDate != null);
-  const eraAbbrev =
-    page.status === 'ready' || page.status === 'empty' ? page.view.eraAbbrev : null;
-
-  const handleCardClick = useCallback(
-    (slug: string) => navigate(`/chronicles/${slug}`),
-    [navigate],
-  );
 
   const header = (
-    <div
-      className={`row ${styles.header}`}
-      data-el="chronicles.eyebrow"
-      data-align="end"
-      data-justify="between"
-      data-gap="4"
-      data-wrap="1"
-    >
-      <div>
-        <p className="type-label">
-          {page.status === 'ready'
-            ? `${eraAbbrev ? `${eraAbbrev} · ` : 'GAME TIMELINE · '}${total} ${
-                total === 1 ? 'ENTRY' : 'ENTRIES'
-              }`
-            : page.status === 'empty'
-              ? `${eraAbbrev ? `${eraAbbrev} · ` : 'GAME TIMELINE · '}0 ENTRIES`
-              : 'GAME TIMELINE'}
-        </p>
-        <h1 className="type-display">Chronicles</h1>
-        <p className="type-body">
-          Session recaps, player journals, arc summaries, and world events — the living
-          record of this campaign.
-        </p>
-        {page.status === 'ready' && hasKnownGameDay && !hasNamedGameDate ? (
-          <p className="type-caption">
-            Named calendar dates are not configured; showing game-day ordinals.
-          </p>
-        ) : null}
-      </div>
-      {canCreate && (page.status === 'ready' || page.status === 'empty') ? (
-        <Link
-          className="btn primary"
-          to="/summaries/new"
-          data-el="chronicles.newEntryBtn"
-          data-shrink="0"
-        >
-          + New entry
-        </Link>
-      ) : null}
+    <div data-el="chronicles.eyebrow" className={styles.header}>
+      <PageHeader
+        title="Chronicles"
+        lede="Session recaps, player journals and world events from across the campaign."
+        meta={
+          page.status === 'ready' && hasKnownGameDay && !hasNamedGameDate
+            ? 'Named calendar dates are not configured; showing game-day ordinals.'
+            : undefined
+        }
+        actions={
+          canCreate && (page.status === 'ready' || page.status === 'empty') ? (
+            <Link
+              className="btn primary"
+              to="/summaries/new"
+              data-el="chronicles.newEntryBtn"
+            >
+              New entry
+            </Link>
+          ) : null
+        }
+      />
     </div>
   );
 
@@ -231,60 +207,54 @@ export function ChroniclesListPage(): React.JSX.Element {
       body: () => (
         <>
           {header}
-          <div className={styles.layout} data-sidebar={widthClass === 'expanded'}>
-            <div data-el="chronicles.filterSidebar">
-              <FilterSidebar
-                searchQuery={searchQuery}
-                onSearchQueryChange={setSearchQuery}
-                activeRegion={activeRegion}
-                onRegionChange={setActiveRegion}
-                activeArc={activeArc}
-                onArcChange={setActiveArc}
-                activeAuthor={activeAuthor}
-                onAuthorChange={setActiveAuthor}
-                regionOptions={regionOptions}
-                arcOptions={arcOptions}
-                authorOptions={authorOptions}
-                collapsible={widthClass !== 'expanded'}
+          <div className={styles.filters}>
+            <ChronicleFilterBar
+              searchQuery={searchQuery}
+              onSearchQueryChange={setSearchQuery}
+              activeRegion={activeRegion}
+              onRegionChange={setActiveRegion}
+              activeArc={activeArc}
+              onArcChange={setActiveArc}
+              activeAuthor={activeAuthor}
+              onAuthorChange={setActiveAuthor}
+              regionOptions={regionOptions}
+              arcOptions={arcOptions}
+              authorOptions={authorOptions}
+              count={`${events.length} of ${allEvents.length} ${
+                allEvents.length === 1 ? 'entry' : 'entries'
+              }`}
+              collapsible={widthClass !== 'expanded'}
+            />
+          </div>
+
+          <div data-el="chronicles.timeline">
+            {events.length === 0 ? (
+              <EmptyState
+                kind="timeline-empty"
+                message="No entries match these filters."
               />
-            </div>
-
-            <div data-el="chronicles.timeline">
-              {events.length === 0 ? (
-                <EmptyState
-                  kind="timeline-empty"
-                  message="No entries match these filters."
-                />
-              ) : (
-                grouped.map(({ label, events: groupEvents }) => (
-                  <div key={label} className={styles.period}>
-                    <div
-                      className={`row ${styles.periodHeader}`}
-                      data-el="chronicles.seasonHeader"
-                      data-gap="3"
-                    >
-                      <span className="type-label">{label}</span>
-                      <div className={styles.periodRule} />
-                      <span className="type-code">
-                        {groupEvents.length}{' '}
-                        {groupEvents.length === 1 ? 'entry' : 'entries'}
-                      </span>
-                    </div>
-
-                    <div className={styles.periodEntries}>
-                      <div className={styles.spine} />
-                      {groupEvents.map((entry) => (
-                        <ChronCard
-                          key={entry.id}
-                          entry={entry}
-                          onClick={() => handleCardClick(entry.slug)}
-                        />
-                      ))}
-                    </div>
+            ) : (
+              grouped.map(({ label, events: groupEvents }) => (
+                <div key={label} className={styles.period}>
+                  <div
+                    className={`row ${styles.periodHeader}`}
+                    data-el="chronicles.seasonHeader"
+                    data-gap="3"
+                  >
+                    <h2 className="type-heading">{label}</h2>
+                    <div className={styles.periodRule} />
                   </div>
-                ))
-              )}
-            </div>
+
+                  <CardGrid as="ul" gap={4} aria-label={label}>
+                    {groupEvents.map((entry) => (
+                      <li key={entry.id} className={styles.item}>
+                        <ChronCard entry={entry} showType={mixedTypes} />
+                      </li>
+                    ))}
+                  </CardGrid>
+                </div>
+              ))
+            )}
           </div>
         </>
       ),
@@ -292,7 +262,7 @@ export function ChroniclesListPage(): React.JSX.Element {
   }
 
   return (
-    <PageShell context="chronicle" max="default" className={`hf2 ${styles.root}`}>
+    <PageShell context="chronicle" className={`hf2 ${styles.root}`}>
       <PageHost declaration={DECLARATION} regions={regions} />
     </PageShell>
   );

@@ -1,13 +1,5 @@
-.shell :global(.page[data-max='wide']) {
-  max-width: 1380px;
-}
-
 .board h1 {
   margin: 0;
-}
-
-.board [data-el='boardCard.hook'] [data-el='content.body'] {
-  color: inherit;
 }
 
 .board {
@@ -17,34 +9,14 @@
   min-width: 0;
 }
 
-.filters p {
-  margin: 0;
-}
-
-.filters {
+.cardItem {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-3);
-  margin-bottom: var(--sp-2);
-}
-
-.grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--sp-5);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.grid[data-columns='2'] {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.grid > li {
+  flex-direction: column;
   min-width: 0;
+}
+
+.cardItem > article {
+  flex: 1;
 }
 
 .pagination {
@@ -87,13 +59,8 @@
 }
 
 /* Board header and live band (QuestBoardView). */
-.titleRow {
-  gap: 16px;
-}
-
 .metaRow {
   gap: 6px 18px;
-  margin-top: 10px;
 }
 
 .liveCount {
@@ -125,65 +92,4 @@
   padding: 0;
   font: inherit;
   color: inherit;
-}
-
-/* Board card (QuestBoardCard). Descendant rules are scoped under
-   .boardCard so they outrank the unlayered .type-* colour rules. */
-.boardCard {
-  position: relative;
-  overflow: hidden;
-}
-
-.boardCard .boardCardBody {
-  flex: 1;
-  padding: var(--sp-6) var(--sp-6) var(--sp-5);
-}
-
-.boardCard .boardCardSpotsDot {
-  display: inline-block;
-  flex-shrink: 0;
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-}
-
-.boardCard .boardCardWaitlist {
-  color: var(--color-text-3);
-}
-
-.boardCard .boardCardHook {
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3;
-  overflow: hidden;
-  color: var(--color-text-2);
-}
-
-.boardCard .boardCardDmLink {
-  position: relative;
-  z-index: 2;
-  cursor: pointer;
-  border-bottom: 1.5px solid var(--color-border-2);
-  padding-bottom: 1px;
-  color: var(--color-text);
-  text-decoration: none;
-}
-
-.boardCard .boardCardWhen {
-  gap: 4px;
-}
-
-.boardCard .boardCardFooter {
-  position: relative;
-  z-index: 2;
-  border-top: 1px solid var(--color-border);
-  padding: var(--sp-4) var(--sp-6);
-}
-
-.boardCard .boardCardParty {
-  min-width: 0;
-}
-
-.boardCard .boardCardMuted {
-  opacity: 0.55;
 }

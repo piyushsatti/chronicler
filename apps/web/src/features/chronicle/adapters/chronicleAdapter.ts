@@ -55,6 +55,7 @@ export type ChronicleDetailView = {
   category: string | null;
   body: string | null;
   authorHandle: string | null;
+  updatedAt: string | null;
   canEdit: boolean;
   summary: (typeof chronicleSummaryDerivedWireSchema)['_output'];
 };
@@ -150,6 +151,7 @@ export function parseChronicleDetail(
       canEdit: parsed.data.canEditBody || parsed.data.canEditMetadata,
       summary: hasSummaryDetails ? summary : null,
       authorHandle: parsed.data.author?.handle ?? null,
+      updatedAt: parsed.data.updatedAt ?? null,
     },
   };
 }

@@ -9,15 +9,12 @@ import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
 import { queryKeys } from '../../../src/api/queryKeys.js';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
 import type { GraphqlRequestBody } from '../../../src/chrome/featureModule.js';
-import { LoginRoute } from '../../../src/chrome/LoginRoute.js';
+import { LoginNotificationsPanel } from '../../../src/features/notifications/components/LoginNotificationsPanel.js';
 import { NotificationsPage } from '../../../src/features/notifications/pages/NotificationsPage.js';
 import { server } from '../../../src/mocks/server.js';
 import { renderWithProviders } from '../../test-utils.js';
 import goodMe from '../../fixtures/wire/me/good.json';
-import {
-  dispatchFeatureGraphql,
-  graphqlOperationName,
-} from './graphql-test-utils.js';
+import { dispatchFeatureGraphql, graphqlOperationName } from './graphql-test-utils.js';
 
 const FIRST_CURSOR = '2026-10-01T12:00:00Z';
 const READ_AT = '2026-10-02T12:00:00Z';
@@ -123,17 +120,27 @@ function notificationsWire() {
   };
 }
 
-function renderNavigation(route = '/login') {
+/** Stand-in account route: /login now redirects signed-in members to /me, so the cached account preview is mounted here. */
+function AccountRoute(): React.JSX.Element {
+  return (
+    <main>
+      <h1>Your account</h1>
+      <LoginNotificationsPanel enabled />
+    </main>
+  );
+}
+
+function renderNavigation(route = '/account') {
   // One wrapper owns one QueryClient and AuthProvider throughout client-side navigation.
   const rendered = renderWithProviders(
     <>
       <nav aria-label="Test navigation">
-        <Link to="/login">Account route</Link>
+        <Link to="/account">Account route</Link>
         <Link to="/notifications">Inbox route</Link>
       </nav>
       <NotificationBoundary>
         <Routes>
-          <Route path="/login" element={<LoginRoute />} />
+          <Route path="/account" element={<AccountRoute />} />
           <Route path="/notifications" element={<NotificationsPage />} />
         </Routes>
       </NotificationBoundary>
@@ -195,7 +202,9 @@ describe('notification cache across account and inbox navigation', () => {
       act(() => onlineManager.setOnline(false));
       await user.click(screen.getByRole('link', { name: 'Account route' }));
       expectHealthyRoute();
-      expect(screen.getByRole('heading', { level: 1, name: 'Your account' })).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { level: 1, name: 'Your account' }),
+      ).toBeInTheDocument();
       expect(screen.getByText('Latest notice')).toBeInTheDocument();
       expect(screen.queryByText('Older notice')).not.toBeInTheDocument();
       expect(screen.getByText('You’re all caught up.')).toBeInTheDocument();
@@ -265,7 +274,9 @@ describe('notification cache across account and inbox navigation', () => {
         }
       });
       wire.updateLatest();
-      await user.click(screen.getByRole('button', { name: 'Clear alerts for removed pages' }));
+      await user.click(
+        screen.getByRole('button', { name: 'Clear alerts for removed pages' }),
+      );
 
       expect(await screen.findByText('Updated latest notice')).toBeInTheDocument();
       expect(wire.acknowledgementCount()).toBe(1);

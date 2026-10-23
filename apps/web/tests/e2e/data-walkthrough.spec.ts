@@ -62,10 +62,10 @@ test.describe('data walkthrough', () => {
             name: 'Welcome to Chronicler.',
           }),
         ).toBeVisible();
-        const card = page.getByTestId('open-quest-card').filter({
-          has: page.getByTestId('quest-title').filter({ hasText: boardExpectation }),
+        const card = page.getByTestId('quest-card').filter({
+          has: page.getByTestId('qboard-title').filter({ hasText: boardExpectation }),
         });
-        await expect(card.getByTestId('quest-title')).toContainText(boardExpectation);
+        await expect(card.getByTestId('qboard-title')).toContainText(boardExpectation);
         await card.getByRole('link', { name: new RegExp(boardExpectation) }).click();
         await expect(page).toHaveURL(/\/quests\/qa-the-salt-stair$/);
         await expect(

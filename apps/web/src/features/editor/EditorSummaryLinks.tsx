@@ -15,33 +15,33 @@ export function EditorSummaryLinks({
   if (!view.active) return null;
   return (
     <Card as="section" className={`stack ${styles.panel}`} aria-label="Summary links">
-      <h2 className="type-heading">Quest summary</h2>
+      <h2 className="type-heading">Quests and character</h2>
       {!view.editable ? (
-        <p>
-          Quest links and character attribution are unavailable while parts of this
-          summary or its linked records are hidden. Saved links are preserved.
+        <p className="type-caption">
+          You can edit the text, but not the linked quests or character, because some
+          of them are hidden from your account. Existing links are kept when you save.
         </p>
       ) : (
         <fieldset className={`stack ${styles.fields}`} disabled={disabled}>
           <ul className={styles.items} aria-label="Linked quests">
             {view.selected.map((quest) => (
               <li key={quest.id}>
-                {quest.title ?? quest.shortCode} ({quest.shortCode}){' '}
+                {quest.title ?? 'Untitled quest'}{' '}
                 <Button
                   type="button"
                   variant="ghost"
                   onClick={() => view.remove(quest.id)}
                 >
-                  Remove {quest.shortCode}
+                  Remove {quest.title ?? 'quest'}
                 </Button>
               </li>
             ))}
           </ul>
           {view.selected.length === 0 ? (
-            <p role="status">Choose at least one Quest.</p>
+            <p role="status">Choose at least one quest.</p>
           ) : null}
           <label className="field">
-            <span className="field-label">Find a Quest by code</span>
+            <span className="field-label">Find a quest</span>
             <input
               className="field-input"
               value={view.search}
@@ -56,19 +56,19 @@ export function EditorSummaryLinks({
           ) : view.quests.loading ? (
             <StatePanel status="loading" />
           ) : view.quests.items.length === 0 ? (
-            <p>No matching Quests.</p>
+            <p>No matching quests.</p>
           ) : (
             <ul className={styles.items} aria-label="Available quests">
               {view.quests.items.map((quest) => (
                 <li key={quest.id}>
-                  {quest.title ?? quest.shortCode} ({quest.shortCode}){' '}
+                  {quest.title ?? 'Untitled quest'}{' '}
                   <Button
                     type="button"
                     variant="ghost"
                     disabled={view.selected.some((item) => item.id === quest.id)}
                     onClick={() => view.add(quest.id)}
                   >
-                    Add {quest.shortCode}
+                    Add {quest.title ?? 'quest'}
                   </Button>
                 </li>
               ))}
@@ -115,14 +115,14 @@ export function EditorSummaryLinks({
               ) : null}
               {view.characters.items.map((character) => (
                 <option key={character.id} value={character.id}>
-                  {character.name} ({character.shortCode})
+                  {character.name}
                 </option>
               ))}
             </select>
           </label>
           <p className="type-caption">
-            Players choose their own character who participated in every linked Quest.
-            Each linked Quest must belong to the DM when no character is selected.
+            Players pick a character who took part in every linked quest. Without a
+            character, every linked quest must be one you run.
           </p>
           {view.characters.error ? (
             <StatePanel

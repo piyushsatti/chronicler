@@ -18,9 +18,7 @@ describe('DocumentPage', () => {
     expect(
       await screen.findByRole('heading', { name: 'Tree of Light' }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText(/Tree stands at the heart/),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Tree stands at the heart/)).toBeInTheDocument();
   });
 
   it('shows controlled error', async () => {

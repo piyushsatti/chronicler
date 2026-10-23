@@ -330,12 +330,12 @@ describe('Explicit Region lifecycle', () => {
     expect(within(editor).queryByRole('combobox')).not.toBeInTheDocument();
     expect(editor).toHaveTextContent('Kind: Server');
     expect(
-      within(editor).getByRole('textbox', { name: 'Region Document UUID' }),
+      within(editor).getByRole('textbox', { name: 'Region document ID' }),
     ).toHaveValue(documentId);
     expect(
       within(editor).getByRole('textbox', { name: 'Charter deadline' }),
     ).toHaveValue(transitioned.charterDeadline);
-    expect(screen.getByRole('combobox', { name: 'Kind' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^Kind/ })).toBeInTheDocument();
     await userEvent.type(nameInput, ' renamed');
     await userEvent.click(within(editor).getByRole('button', { name: 'Save region' }));
     await waitFor(() => expect(updates).toHaveLength(1));

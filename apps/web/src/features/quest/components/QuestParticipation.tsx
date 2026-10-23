@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../../components/primitives/Button.js';
+import { Card } from '../../../components/primitives/Card.js';
 import { Modal } from '../../../components/primitives/Modal.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { toAppError } from '../../../errors/toAppError.js';
@@ -46,24 +47,35 @@ export function QuestParticipation({
   );
   if (!authenticated)
     return (
-      <p>
-        Sign in to claim a seat at this table. <Link to="/login">Sign in</Link>
-      </p>
+      <Card as="section" pad={5} aria-label="Your participation">
+        <div className="row" data-wrap="1" data-gap="3" data-align="center" data-justify="between">
+          <p className="type-body">Members can claim a seat at this table.</p>
+          <Link className="btn btn--primary" to="/login">
+            Sign in to join this quest
+          </Link>
+        </div>
+      </Card>
     );
   if (!preplay)
     return (
-      <p className="type-caption">
-        Signups and withdrawals are closed for this session.
-      </p>
+      <Card as="section" pad={5} aria-label="Your participation">
+        <p className="type-body">Signups and withdrawals are closed for this session.</p>
+      </Card>
     );
   return (
-    <section className="stack" aria-label="Your participation" id="participation">
+    <Card
+      as="section"
+      pad={5}
+      className="stack"
+      aria-label="Your participation"
+      id="participation"
+    >
       <h2 className="type-title">Your participation</h2>
       {own.map((participant) => (
         <div className="row" data-gap="2" key={participant.characterId}>
           <span>
-            {participant.characterName} ·{' '}
-            {participant.status === 'waitlisted' ? 'Waitlisted' : 'Signed up'}
+            {participant.characterName},{' '}
+            {participant.status === 'waitlisted' ? 'waitlisted' : 'signed up'}
           </span>
           <Button
             variant="secondary"
@@ -121,7 +133,7 @@ export function QuestParticipation({
               <option value="">Choose your character</option>
               {eligible.map((character) => (
                 <option key={character.id} value={character.id}>
-                  {character.name} · {character.shortCode}
+                  {character.name}
                 </option>
               ))}
             </select>
@@ -162,6 +174,6 @@ export function QuestParticipation({
           Confirm withdrawal
         </Button>
       </Modal>
-    </section>
+    </Card>
   );
 }

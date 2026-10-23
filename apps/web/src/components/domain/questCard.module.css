@@ -1,0 +1,106 @@
+/* Shared quest card (Tavern Board and Home). */
+.boardCard [data-el='boardCard.hook'] [data-el='content.body'] {
+  color: inherit;
+}
+
+/* Board card (QuestCard). Descendant rules are scoped under
+   .boardCard so they outrank the unlayered .type-* colour rules. */
+.boardCard {
+  position: relative;
+  overflow: hidden;
+}
+
+.boardCard .boardCardBody {
+  flex: 1;
+  padding: var(--sp-6) var(--sp-6) var(--sp-5);
+}
+
+.boardCard .boardCardHook {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  overflow: hidden;
+  color: var(--color-text-2);
+}
+
+.boardCard .boardCardDmLink {
+  position: relative;
+  z-index: 2;
+  cursor: pointer;
+  border-bottom: 1.5px solid var(--color-border-2);
+  padding-bottom: 1px;
+  color: var(--color-text);
+  text-decoration: none;
+}
+
+.boardCard .boardCardWhen {
+  gap: 4px;
+}
+
+.boardCard .boardCardFooter {
+  position: relative;
+  z-index: 2;
+  border-top: 1px solid var(--color-border);
+  padding: var(--sp-4) var(--sp-6);
+}
+
+.boardCard .boardCardParty {
+  min-width: 0;
+}
+
+.boardCard .boardCardMuted {
+  opacity: 0.55;
+}
+
+.boardCard [data-el='boardCard.title'] {
+  --type-display-size: clamp(1.375rem, 2vw, 1.75rem);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.boardCard .boardCardTop {
+  flex-wrap: wrap;
+  gap: var(--sp-1) var(--sp-3);
+}
+
+.boardCard .boardCardTop [data-el='boardCard.spotsLeft'] {
+  white-space: nowrap;
+}
+
+/* Seat meter: one pip per seat, filled = seated. Replaces the empty avatar
+   rings, which read as decoration at phone width. */
+.boardCard .seatPips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  max-inline-size: calc(6 * 14px);
+}
+
+.boardCard .seatPip {
+  inline-size: 11px;
+  block-size: 11px;
+  border-radius: 50%;
+  border: 1.5px solid var(--color-text-3);
+  background: transparent;
+}
+
+.boardCard .seatPip[data-filled] {
+  border-color: var(--color-text);
+  background: var(--color-text);
+}
+
+.boardCard .seatPips[data-full] .seatPip[data-filled] {
+  border-color: var(--color-text-3);
+  background: var(--color-text-3);
+}
+
+.boardCard .seatCount {
+  color: var(--color-text);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.boardCard .seatTotal {
+  color: var(--color-text-3);
+  white-space: nowrap;
+}

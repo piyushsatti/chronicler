@@ -3,7 +3,6 @@ import type { NavPattern } from '@pi/react-imposition';
 export type SiteDestination = {
   id: string;
   label: string;
-  shortLabel?: string;
   href: string;
   matches: (pathname: string) => boolean;
 };
@@ -31,14 +30,12 @@ export const PRIMARY_DESTINATIONS: readonly SiteDestination[] = [
   {
     id: 'quests',
     label: 'Quests',
-    shortLabel: 'Quest',
     href: '/quests',
-    matches: (pathname) => matchesPath(pathname, ['/quests', '/series']),
+    matches: (pathname) => matchesPath(pathname, ['/quests', '/series', '/calendar']),
   },
   {
     id: 'chronicles',
     label: 'Chronicles',
-    shortLabel: 'Chron',
     href: '/chronicles',
     matches: (pathname) =>
       matchesPath(pathname, ['/chronicles', '/summaries', '/timeline']),
@@ -48,7 +45,7 @@ export const PRIMARY_DESTINATIONS: readonly SiteDestination[] = [
     label: 'Codex',
     href: '/codex',
     matches: (pathname) =>
-      matchesPath(pathname, ['/codex', '/npcs', '/factions', '/regions']),
+      matchesPath(pathname, ['/codex', '/npcs', '/factions', '/regions', '/map']),
   },
   {
     id: 'rules',
@@ -68,7 +65,6 @@ export const PRIMARY_DESTINATIONS: readonly SiteDestination[] = [
 const VERIFY_DESTINATION: SiteDestination = {
   id: 'verification',
   label: 'Verification',
-  shortLabel: 'Verify',
   href: '/admin/review',
   matches: (pathname) => matchesPath(pathname, ['/admin/review']),
 };
@@ -79,7 +75,7 @@ const ADMIN_DESTINATION: SiteDestination = {
   label: 'Admin',
   href: '/admin',
   matches: (pathname) =>
-    matchesPath(pathname, ['/admin']) && !VERIFY_DESTINATION.matches(pathname),
+    matchesPath(pathname, ['/admin', '/gallery']) && !VERIFY_DESTINATION.matches(pathname),
 };
 
 /** Verification and Admin join the same link list when the member holds the right. */
@@ -108,4 +104,32 @@ export function currentDestinationId(
   }
   const match = destinations.find((destination) => destination.matches(pathname));
   return match?.id ?? 'home';
+}
+
+/** Fixed personal paths: the hub, account pages, the DM dashboard and the
+ * DM-table editor (a DM's own tables, reached from /dm). */
+const PERSONAL_PATHS = ['/me', '/settings', '/notifications', '/dm', '/editor/dm-table'];
+
+/**
+ * Personal routes belong to the avatar, not to a main-nav item: the hub,
+ * its sub-pages, account pages, the DM dashboard, and the member's own
+ * public profile.
+ * `handle` is the signed-in member's handle; without it only the fixed
+ * personal paths match.
+ */
+export function isPersonalPath(pathname: string, handle?: string | null): boolean {
+  if (matchesPath(pathname, PERSONAL_PATHS)) return true;
+  if (!handle) return false;
+  const own = handle.toLowerCase();
+  return ['/players/', '/dms/'].some((prefix) => {
+    if (!pathname.startsWith(prefix)) return false;
+    const segment = pathname.slice(prefix.length).split('/')[0] ?? '';
+    let decoded = segment;
+    try {
+      decoded = decodeURIComponent(segment);
+    } catch {
+      // A malformed segment cannot be the member's own handle.
+    }
+    return decoded.replace(/^@/, '').toLowerCase() === own;
+  });
 }

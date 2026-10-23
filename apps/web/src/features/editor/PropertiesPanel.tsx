@@ -5,7 +5,6 @@ import {
   GenreTagsField,
   MultiSelectField,
   PairsField,
-  pfIcon,
   RegionField,
   RegionMultiField,
   SelectField,
@@ -197,16 +196,15 @@ export function PropertiesPanel({
           f.type !== 'toggle';
         return (
           <div key={f.key} className="pf-row" data-err={show ? 1 : 0}>
-            <div className="pf-ic">{pfIcon(f.type)}</div>
             <div className="pf-label">
               {f.label}
-              {f.required ? <span className="pf-req" title="Required" /> : null}
+              {f.required ? <span className="pf-hint">Required</span> : null}
               {ok ? (
                 <span className="pf-ok" title="Valid">
                   ✓
                 </span>
               ) : null}
-              {f.hint ? <span className="pf-hint">· {f.hint}</span> : null}
+              {f.hint ? <span className="pf-hint">{f.hint}</span> : null}
             </div>
             <div className="pf-val">
               {control(f)}

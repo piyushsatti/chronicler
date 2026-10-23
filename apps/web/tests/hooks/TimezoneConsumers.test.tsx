@@ -61,18 +61,18 @@ describe('cached card timezone presentation', () => {
     savePrefs({ ...DEFAULT_PREFERENCES, timezone: 'America/New_York' }, null);
     renderWithProviders(<CachedCards />);
     expect(await screen.findByTestId('home-card-time')).toHaveTextContent(
-      'Sat, 07 Mar 2026, 23:30',
+      'Sat 7 Mar 2026, 23:30',
     );
     expect(await screen.findByTestId('board-card-time')).toHaveTextContent(
-      'Sat, 07 Mar 2026, 23:30',
+      'Sat 7 Mar 2026, 23:30',
     );
     const reads = { homeReads, boardReads };
     await userEvent.setup().click(screen.getByRole('button', { name: 'Change zone' }));
     expect(screen.getByTestId('home-card-time')).toHaveTextContent(
-      'Sun, 08 Mar 2026, 10:00',
+      'Sun 8 Mar 2026, 10:00',
     );
     expect(screen.getByTestId('board-card-time')).toHaveTextContent(
-      'Sun, 08 Mar 2026, 10:00',
+      'Sun 8 Mar 2026, 10:00',
     );
     expect({ homeReads, boardReads }).toEqual(reads);
   });

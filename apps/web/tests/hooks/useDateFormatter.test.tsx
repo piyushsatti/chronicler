@@ -28,11 +28,11 @@ describe('saved timezone formatter', () => {
   it('loads saved preferences and updates mounted output without changing civil dates or local input', async () => {
     savePrefs({ ...DEFAULT_PREFERENCES, timezone: 'America/New_York' }, null);
     renderWithProviders(<Probe />);
-    expect(await screen.findByText('07 Mar 2026')).toBeVisible();
-    expect(screen.getByText('08 Mar 2026')).toBeVisible();
+    expect(await screen.findByText('7 Mar 2026')).toBeVisible();
+    expect(screen.getByText('8 Mar 2026')).toBeVisible();
     expect(screen.getByText(/23:30/)).toBeVisible();
     await userEvent.setup().click(screen.getByRole('button', { name: 'Change zone' }));
-    expect(screen.getAllByText('08 Mar 2026')).toHaveLength(2);
+    expect(screen.getAllByText('8 Mar 2026')).toHaveLength(2);
     expect(screen.getByText(/10:00/)).toBeVisible();
     expect(screen.queryByText('2026-03-08')).not.toBeInTheDocument();
     expect(screen.getByLabelText('Unchanged local input')).toHaveValue(

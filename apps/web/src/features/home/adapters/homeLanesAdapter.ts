@@ -24,7 +24,7 @@ import {
 import type { QuestCardStatus } from '../../../view-models/questCard.js';
 import { toCardStatus } from '../../../view-models/questCard.js';
 import { formatScheduled } from '../../../utils/format.js';
-import type { OpenQuestCardProps } from '../components/openQuestCard.types.js';
+import type { QuestCardProps } from '../../../components/domain/QuestCard.js';
 
 export type DmAcceptingView = {
   memberId: string;
@@ -248,8 +248,8 @@ export function parseHomeLanesWire(wire: {
   };
 }
 
-/** Map a home quest lane item into OpenQuestCard presentation props. */
-export function mapToOpenQuestCardProps(
+/** Map a home quest lane item into the shared quest card's presentation props. */
+export function mapToQuestCardProps(
   quest: HomeQuestView,
   opts: {
     animIndex?: number;
@@ -258,7 +258,7 @@ export function mapToOpenQuestCardProps(
     onWithdrawConfirm?: (characterId: string) => void;
     timeZone?: string | null;
   } = {},
-): OpenQuestCardProps {
+): QuestCardProps {
   const seated = quest.participants.filter((p) => SEATED.has(p.status));
   const own =
     quest.participants.find(
@@ -267,7 +267,6 @@ export function mapToOpenQuestCardProps(
     quest.participants.find(
       (p) => p.memberId === opts.memberId && p.status === 'waitlisted',
     );
-  const mine = own !== undefined;
   const isGw =
     quest.tags.some((t) => t.toLowerCase().includes('guild-quest')) ||
     quest.title.startsWith(':gw:');
@@ -276,11 +275,10 @@ export function mapToOpenQuestCardProps(
     code: quest.shortCode,
     title: quest.title,
     description: quest.hookText,
-    region: quest.regionName ?? undefined,
+    region: quest.regionName,
     status: quest.cardStatus,
     gw: isGw,
-    cancelled: quest.cardStatus === 'cancelled',
-    mine,
+    mine: own !== undefined,
     waitlisted: own?.status === 'waitlisted',
     isMutating: opts.isMutating,
     onWithdrawConfirm:
@@ -288,15 +286,14 @@ export function mapToOpenQuestCardProps(
         ? () => opts.onWithdrawConfirm?.(own.characterId)
         : undefined,
     animIndex: opts.animIndex,
-    dm: {
-      name: quest.dmDisplayName ?? quest.dmHandle ?? '—',
-      avatarUrl: quest.dmAvatarUrl ?? undefined,
-    },
+    dmUsername: quest.dmHandle ?? quest.dmDisplayName,
+    dmName: quest.dmDisplayName,
     party: seated.map((p) => ({
-      name: p.characterName,
-      avatarUrl: p.memberAvatarUrl ?? undefined,
-      state: 'confirmed' as const,
+      characterName: p.characterName,
+      characterId: p.characterId,
+      avatarUrl: p.memberAvatarUrl,
     })),
+    waitlistCount: quest.waitlistCount,
     totalSlots: quest.slotsMax,
     when: formatScheduled(quest.scheduledAt, opts.timeZone),
   };

@@ -15,10 +15,7 @@ import { useUnreadCount } from '../../../src/features/notifications/hooks/useUnr
 import { server } from '../../../src/mocks/server.js';
 import { createTestQueryClient } from '../../../src/providers.js';
 import goodMe from '../../fixtures/wire/me/good.json';
-import {
-  dispatchFeatureGraphql,
-  graphqlOperationName,
-} from './graphql-test-utils.js';
+import { dispatchFeatureGraphql, graphqlOperationName } from './graphql-test-utils.js';
 
 const READ_AT = '2026-10-11T12:00:00Z';
 function ids(count: number, start = 1): string[] {

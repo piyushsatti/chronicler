@@ -11,12 +11,6 @@
   align-items: start;
 }
 
-@container calendar (min-width: 56rem) {
-  .layout {
-    grid-template-columns: minmax(0, 1.6fr) minmax(18rem, 1fr);
-  }
-}
-
 /* UA paragraph and heading margins would stack on top of the card's gap. */
 .panel :is(p, h2, h3) {
   margin: 0;
@@ -115,28 +109,6 @@
 
 .dayNumber {
   font-variant-numeric: tabular-nums;
-}
-
-/* A long campaign reaches five-digit game days. Narrow cells step the number
-   down and, as a last resort, wrap it rather than cut it to "207…". */
-.gameDay {
-  color: var(--color-text-muted);
-  font-variant-numeric: tabular-nums;
-  overflow-wrap: anywhere;
-  line-height: 1.2;
-  max-width: 100%;
-}
-
-.gameDay[data-long='1'] {
-  font-size: 0.6875rem;
-  letter-spacing: -0.01em;
-}
-
-@container calendar (min-width: 40rem) {
-  .gameDay[data-long='1'] {
-    font-size: inherit;
-    letter-spacing: normal;
-  }
 }
 
 .legend {

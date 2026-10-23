@@ -1,6 +1,7 @@
 import { SegmentedControl } from '../../components/primitives/SegmentedControl.js';
 import { Modal } from '../../components/primitives/Modal.js';
 import { Card } from '../../components/primitives/Card.js';
+import { formatInstant } from '../../utils/format.js';
 import styles from './editor.module.css';
 import { Button } from '../../components/primitives/Button.js';
 import { ContentRenderer } from '../../components/foundation/ContentRenderer.js';
@@ -15,9 +16,30 @@ const VISIBILITY_OPTIONS = [
 ];
 
 const POLICY_OPTIONS: { value: 'visibility' | 'custom'; label: string }[] = [
-  { value: 'visibility', label: 'Use visibility rules' },
-  { value: 'custom', label: 'Custom policy' },
+  { value: 'visibility', label: 'Same as visibility' },
+  { value: 'custom', label: 'Choose readers' },
 ];
+
+function HistoryGlyph(): React.JSX.Element {
+  return (
+    <svg
+      width={16}
+      height={16}
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d="M3 12a9 9 0 1 0 3-6.7L3 8" />
+      <path d="M3 3v5h5" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  );
+}
 
 export function EditorDocumentControls({
   view,
@@ -63,57 +85,46 @@ export function EditorDocumentControls({
         <Card
           as="section"
           className={`stack ${styles.panel}`}
-          aria-label="Document state"
+          aria-label="Visibility and publishing"
         >
-          <h2 className="type-heading">Document state</h2>
+          <h2 className="type-heading">Visibility and publishing</h2>
           <p className="type-caption">
             Save or discard edits before changing publication or audience. Changes apply
             immediately.
           </p>
-          <div className="row" data-wrap="1" data-gap="2">
-            {view.trashed ? (
-              <Button
-                type="button"
-                variant="secondary"
-                disabled={view.lifecycleDisabled}
-                onClick={() => view.onLifecycle({ action: 'restore' })}
-              >
-                Restore document
-              </Button>
-            ) : (
-              <>
-                {view.published ? (
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    disabled={view.lifecycleDisabled}
-                    onClick={() => view.onLifecycle({ action: 'unpublish' })}
-                  >
-                    Unpublish
-                  </Button>
-                ) : null}
+          {view.trashed || view.published ? (
+            <div className="row" data-wrap="1" data-gap="2">
+              {view.trashed ? (
                 <Button
                   type="button"
                   variant="secondary"
                   disabled={view.lifecycleDisabled}
-                  onClick={() => {
-                    if (
-                      window.confirm('Move this document to trash? It can be restored.')
-                    )
-                      view.onLifecycle({ action: 'delete' });
-                  }}
+                  onClick={() => view.onLifecycle({ action: 'restore' })}
                 >
-                  Move to trash
+                  Restore document
                 </Button>
-              </>
-            )}
-          </div>
+              ) : (
+                <>
+                  {view.published ? (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      disabled={view.lifecycleDisabled}
+                      onClick={() => view.onLifecycle({ action: 'unpublish' })}
+                    >
+                      Unpublish
+                    </Button>
+                  ) : null}
+                </>
+              )}
+            </div>
+          ) : null}
           {!view.trashed ? (
             <fieldset
               className={`stack ${styles.fields}`}
               disabled={view.lifecycleDisabled}
             >
-              <legend className="field-label">Audience</legend>
+              <legend className={styles.srLegend}>Visibility</legend>
               <div className="field">
                 <span className="field-label">Visibility</span>
                 <SegmentedControl
@@ -125,9 +136,9 @@ export function EditorDocumentControls({
                 />
               </div>
               <div className="field">
-                <span className="field-label">Audience policy</span>
+                <span className="field-label">Who can read this</span>
                 <SegmentedControl<'visibility' | 'custom'>
-                  aria-label="Audience policy"
+                  aria-label="Who can read this"
                   size="sm"
                   value={view.policyMode}
                   onValueChange={view.setPolicyMode}
@@ -137,7 +148,7 @@ export function EditorDocumentControls({
               {view.policyMode === 'custom' ? (
                 <>
                   <label className="field">
-                    <span className="field-label">Policy handles</span>
+                    <span className="field-label">Reader handles</span>
                     <input
                       className="field-input"
                       value={view.policy}
@@ -146,19 +157,20 @@ export function EditorDocumentControls({
                     />
                   </label>
                   <p className="type-caption">
-                    Custom policy replaces visibility rules. An empty custom policy
-                    grants no audience access.
+                    Chosen readers replace the visibility setting. An empty list lets no
+                    one read this.
                   </p>
                 </>
               ) : (
                 <p className="type-caption">
-                  Use the document visibility and named reader rules.
+                  Readers follow the visibility above and any members you add.
                 </p>
               )}
               <label className="field">
                 <span className="field-label">Find a reader by name or handle</span>
                 <input
                   className="field-input"
+                  placeholder="Search members"
                   value={view.audience.search}
                   onChange={(event) => view.audience.setSearch(event.target.value)}
                 />
@@ -207,39 +219,50 @@ export function EditorDocumentControls({
               !view.audience.error ? (
                 <p className="type-caption">No matching members.</p>
               ) : null}
-              <div className="row" data-wrap="1" data-gap="2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={view.audience.offset === 0 || view.audience.loading}
-                  onClick={view.audience.previous}
-                >
-                  Previous members
-                </Button>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  disabled={
-                    view.audience.offset + 20 >= view.audience.total ||
-                    view.audience.loading
-                  }
-                  onClick={view.audience.next}
-                >
-                  More members
+              {view.audience.offset > 0 || view.audience.total > 20 ? (
+                <div className="row" data-wrap="1" data-gap="2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={view.audience.offset === 0 || view.audience.loading}
+                    onClick={view.audience.previous}
+                  >
+                    Previous members
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    disabled={
+                      view.audience.offset + 20 >= view.audience.total ||
+                      view.audience.loading
+                    }
+                    onClick={view.audience.next}
+                  >
+                    More members
+                  </Button>
+                </div>
+              ) : null}
+              <div className="row" data-justify="end">
+                <Button type="button" variant="secondary" onClick={view.saveAudience}>
+                  Save readers
                 </Button>
               </div>
-              <Button type="button" variant="secondary" onClick={view.saveAudience}>
-                Save audience
-              </Button>
             </fieldset>
           ) : null}
           <Button
             type="button"
             variant="ghost"
+            className={styles.historyToggle}
             aria-expanded={history.open}
             onClick={history.toggle}
           >
+            <HistoryGlyph />
             Revision history
+            {history.total > 0 ? (
+              <span className={`type-caption ${styles.historyCount}`}>
+                {history.total}
+              </span>
+            ) : null}
           </Button>
           {history.open ? (
             <section className="stack" aria-label="Revision history">
@@ -260,7 +283,8 @@ export function EditorDocumentControls({
                 history.items.map((revision) => (
                   <details key={revision.id}>
                     <summary>
-                      Revision {revision.rev} · {revision.title} · {revision.recordedAt}
+                      Revision {revision.rev}: {revision.title},{' '}
+                      {formatInstant(revision.recordedAt, view.timeZone)}
                     </summary>
                     <p className="type-caption">{revision.reason}</p>
                     <ContentRenderer body={revision.body} />
@@ -286,6 +310,28 @@ export function EditorDocumentControls({
                 </Button>
               </div>
             </section>
+          ) : null}
+          {!view.trashed ? (
+            <div className={`action-row ${styles.dangerZone}`}>
+              <p className="type-caption">
+                Moving this to the trash hides it from everyone. You can restore it
+                later.
+              </p>
+              <Button
+                type="button"
+                variant="danger"
+                className="action-row__danger"
+                disabled={view.lifecycleDisabled}
+                onClick={() => {
+                  if (
+                    window.confirm('Move this document to trash? It can be restored.')
+                  )
+                    view.onLifecycle({ action: 'delete' });
+                }}
+              >
+                Move to trash
+              </Button>
+            </div>
           ) : null}
         </Card>
       ) : null}

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   currentDestinationId,
   destinationsForAuth,
+  isPersonalPath,
   PRIMARY_DESTINATIONS,
   siteLinksPlacement,
 } from '../../src/chrome/destinations.js';
@@ -17,6 +18,15 @@ describe('destinationsForAuth', () => {
       'rules',
       'community',
     ]);
+  });
+
+  it('groups the map, regions and calendar under their parents', () => {
+    const destinations = destinationsForAuth();
+    expect(currentDestinationId('/map', destinations)).toBe('codex');
+    expect(currentDestinationId('/map/lightfall', destinations)).toBe('codex');
+    expect(currentDestinationId('/regions/lightfall-coast', destinations)).toBe('codex');
+    expect(currentDestinationId('/calendar', destinations)).toBe('quests');
+    expect(currentDestinationId('/measure', destinations)).not.toBe('codex');
   });
 
   it('highlights Chronicles on session summary pages', () => {
@@ -65,10 +75,8 @@ describe('destinationsForAuth', () => {
     expect(adminLink.matches('/admin')).toBe(true);
     expect(adminLink.matches('/administrator')).toBe(false);
 
-    // The bottom bar shares width evenly (base.css), so labels stay as they are.
-    expect(
-      admin.find((destination) => destination.id === 'community')?.shortLabel,
-    ).toBeUndefined();
+    // The bottom bar shows full labels (no shortened variants).
+    expect(admin.every((destination) => !('shortLabel' in destination))).toBe(true);
 
     const verifier = destinationsForAuth({
       isAuthenticated: true,
@@ -92,5 +100,32 @@ describe('destinationsForAuth', () => {
 
   it('login is not a primary destination id', () => {
     expect(currentDestinationId('/login')).toBe('home');
+  });
+});
+
+describe('isPersonalPath', () => {
+  it('claims the hub, account pages and the member own profile', () => {
+    for (const path of ['/me', '/me/personalize', '/settings', '/notifications']) {
+      expect(isPersonalPath(path)).toBe(true);
+    }
+    expect(isPersonalPath('/players/@ashwin', 'ashwin')).toBe(true);
+    expect(isPersonalPath('/dms/@Ashwin/', 'ashwin')).toBe(true);
+  });
+
+  it('claims the DM dashboard and the DM-table editor, not the DM directory', () => {
+    expect(isPersonalPath('/dm')).toBe(true);
+    expect(isPersonalPath('/editor/dm-table')).toBe(true);
+    expect(isPersonalPath('/editor/dm-table/42/edit')).toBe(true);
+    expect(isPersonalPath('/dms')).toBe(false);
+    expect(isPersonalPath('/dms/@pell', 'ashwin')).toBe(false);
+  });
+
+  it('leaves other people and the directories to Community', () => {
+    expect(isPersonalPath('/players/@pell', 'ashwin')).toBe(false);
+    expect(isPersonalPath('/dms/@pell', 'ashwin')).toBe(false);
+    expect(isPersonalPath('/players/@ashwin')).toBe(false);
+    expect(isPersonalPath('/community', 'ashwin')).toBe(false);
+    expect(isPersonalPath('/characters/C-1', 'ashwin')).toBe(false);
+    expect(isPersonalPath('/measure')).toBe(false);
   });
 });

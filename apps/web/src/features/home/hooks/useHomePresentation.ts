@@ -7,7 +7,7 @@ import { toAppError } from '../../../errors/toAppError.js';
 import { useMe } from '../../../hooks/useMe.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
 import {
-  mapToOpenQuestCardProps,
+  mapToQuestCardProps,
   type HomeQuestView,
 } from '../adapters/homeLanesAdapter.js';
 import {
@@ -80,7 +80,7 @@ export function useHomePresentation(quests: HomeQuestView[]) {
     }
   }
   const cards = quests.map((quest, animIndex) =>
-    mapToOpenQuestCardProps(quest, {
+    mapToQuestCardProps(quest, {
       timeZone,
       animIndex,
       memberId,
@@ -97,6 +97,6 @@ export function useHomePresentation(quests: HomeQuestView[]) {
     displayName: isAuthenticated
       ? (me.data?.displayName ?? me.data?.handle ?? null)
       : null,
-    showNewHere: !isAuthenticated || me.data !== undefined,
+    showNewHere: !isAuthenticated,
   };
 }

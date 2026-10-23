@@ -1,18 +1,25 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../../auth/AuthContext.js';
-import { ShortCodeBadge } from '../../../components/foundation/ShortCodeBadge.js';
-import { RegionLabel } from '../../../components/foundation/RegionLabel.js';
-import { Party } from '../../../components/data/Party.js';
-import { Avatar } from '../../../components/primitives/Avatar.js';
-import { RevealConfirmDialog } from '../../../components/domain/RevealConfirmDialog.js';
-import { ContentRenderer } from '../../../components/foundation/ContentRenderer.js';
-import { Button } from '../../../components/primitives/Button.js';
-import { Card } from '../../../components/primitives/Card.js';
-import type { QuestCardStatus } from '../../../view-models/questCard.js';
-import styles from './questBoard.module.css';
+import { useAuth } from '../../auth/AuthContext.js';
+import { useMemberHref } from '../../hooks/useMemberHref.js';
+import { RegionLabel } from '../foundation/RegionLabel.js';
+import { Party } from '../data/Party.js';
+import { Avatar } from '../primitives/Avatar.js';
+import { RevealConfirmDialog } from './RevealConfirmDialog.js';
+import { ContentRenderer } from '../foundation/ContentRenderer.js';
+import { Button } from '../primitives/Button.js';
+import { Card } from '../primitives/Card.js';
+import { StatusBadge } from '../foundation/StatusBadge.js';
+import { motionEntry } from '../../motion/catalog.js';
+import { useFirstLoadStagger } from '../../motion/useFirstLoadStagger.js';
+import type { QuestCardStatus } from '../../view-models/questCard.js';
+import { personName } from '../../utils/format.js';
+import styles from './questCard.module.css';
 
 const PARTY_NAMES_CAP = 8;
+/** Above this many seats the pip row stops being countable at a glance. */
+const SEAT_PIPS_CAP = 12;
+const QUEST_CARD_STAGGER = motionEntry('quest-card-stagger-in');
 
 function IcCal(): React.JSX.Element {
   return (
@@ -34,52 +41,66 @@ function IcCal(): React.JSX.Element {
   );
 }
 
-export type QuestBoardCardPartyMember = {
+export type QuestCardPartyMember = {
   characterName?: string | null;
   characterId?: string | null;
   avatarUrl?: string | null;
 };
 
-/** Legacy QBoardCard props — presentation only; callers own signup/withdraw decisions. */
-export type QuestBoardCardProps = {
+/** Shared quest card (Tavern Board and Home). Presentation only; callers own signup/withdraw decisions. */
+export type QuestCardProps = {
   code: string;
   title: string;
   description?: string | null;
   status: QuestCardStatus;
   region?: string | null;
+  /** DM handle, used for the profile link and as the name fallback. */
   dmUsername?: string | null;
-  party?: QuestBoardCardPartyMember[];
+  /** DM display name; shown in preference to the handle. */
+  dmName?: string | null;
+  party?: QuestCardPartyMember[];
   totalSlots?: number | null;
   waitlistCount?: number | null;
   level?: string | null;
   when?: string | null;
+  /** Guild-quest marker, shown beside the lifecycle badge. */
+  gw?: boolean;
   mine?: boolean;
+  /** The viewer is on the waitlist (changes the ribbon and withdraw copy). */
+  waitlisted?: boolean;
+  /** Row index for the first-load stagger; omit for no entrance motion. */
+  animIndex?: number;
   isMutating?: boolean;
   onSignUpClick?: () => void;
   onWithdrawConfirm?: () => void;
   onOpen?: () => void;
 };
 
-export function QuestBoardCard({
+export function QuestCard({
   code,
   title,
   description,
   status,
   region,
   dmUsername,
+  dmName,
   party = [],
   totalSlots,
   waitlistCount,
   level,
   when,
+  gw = false,
   mine = false,
+  waitlisted = false,
+  animIndex,
   isMutating = false,
   onSignUpClick,
   onWithdrawConfirm,
   onOpen,
-}: QuestBoardCardProps): React.JSX.Element {
+}: QuestCardProps): React.JSX.Element {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const memberHref = useMemberHref();
   const [confirmWithdrawOpen, setConfirmWithdrawOpen] = useState(false);
 
   function handleSignUp(): void {
@@ -97,56 +118,83 @@ export function QuestBoardCard({
   const slots = totalSlots ?? party.length;
   const filled = party.length;
   const spotsLeft = Math.max(0, slots - filled);
-  const partyNames = party.map((p) => p.characterName ?? p.characterId ?? 'Unknown');
+  const partyNames = party.map((p) => p.characterName ?? 'Unnamed character');
 
   const spotsLabel =
-    spotsLeft === 0 ? 'Full' : `${spotsLeft} spot${spotsLeft !== 1 ? 's' : ''} left`;
-
-  const dotColor =
-    spotsLeft === 0
-      ? 'var(--color-text-3)'
-      : spotsLeft <= 2
-        ? 'var(--color-warn)'
-        : 'var(--color-good)';
+    spotsLeft === 0 ? 'Full' : `${spotsLeft} seat${spotsLeft !== 1 ? 's' : ''} open`;
+  const seatsSummary = `${filled} of ${slots} filled`;
+  const dmLabel = personName({ displayName: dmName, handle: dmUsername }, 'Unknown DM');
 
   const isCancelled = status === 'cancelled';
   const detailPath = `/quests/${code}`;
+  const stagger = useFirstLoadStagger(
+    code,
+    animIndex !== undefined,
+    QUEST_CARD_STAGGER,
+  );
 
   return (
     <>
       <Card
         as="article"
-        className={`stack ${styles.boardCard}`}
+        className={`stack ${styles.boardCard}${
+          stagger.staggered && !isCancelled ? ' motion-quest-card-stagger-in' : ''
+        }`}
+        style={stagger.styleForIndex(animIndex ?? 0)}
         pad={0}
         data-el="boardCard.root"
+        data-testid="quest-card"
         data-status={status}
         data-interactive="1"
         aria-labelledby={`quest-card-${code}`}
       >
         {onOpen ? (
-          <Card.ActionOverlay label={`Open ${code}: ${title}`} onClick={onOpen} />
+          <Card.ActionOverlay label={`Open ${title}`} onClick={onOpen} />
         ) : (
-          <Card.ActionOverlay label={`Open ${code}: ${title}`} to={detailPath} />
+          <Card.ActionOverlay label={`Open ${title}`} to={detailPath} />
         )}
-        {mine ? <div className="qc__ribbon">YOU&rsquo;RE IN</div> : null}
+        {mine ? (
+          <div className="qc__ribbon" data-testid="mine-ribbon">
+            {waitlisted ? 'You\u2019re waitlisted' : 'You\u2019re in'}
+          </div>
+        ) : null}
 
         <div className={`stack ${styles.boardCardBody}`} data-gap="4">
-          <div className="row" data-justify="between">
-            <ShortCodeBadge code={code} />
-            <span className="row type-body" data-gap="2">
-              <span className={styles.boardCardSpotsDot} style={{ background: dotColor }} />
-              <span className="type-caption" data-el="boardCard.spotsLeft">
-                {spotsLabel}
-              </span>
-              {!!waitlistCount && waitlistCount > 0 ? (
+          <div
+            className={`row ${styles.boardCardTop}`}
+            data-align="center"
+            data-el="boardCard.seats"
+          >
+            <span className="row" data-gap="3" data-align="center" data-wrap="1">
+              {slots > 0 && slots <= SEAT_PIPS_CAP ? (
                 <span
-                  data-el="boardCard.waitlistCount"
-                  data-testid="qboard-waitlist-count"
-                  className={`type-caption ${styles.boardCardWaitlist}`}
+                  className={styles.seatPips}
+                  aria-hidden="true"
+                  data-full={spotsLeft === 0 ? '1' : undefined}
                 >
-                  · {waitlistCount} waitlisted
+                  {Array.from({ length: slots }, (_, i) => (
+                    <span
+                      key={i}
+                      className={styles.seatPip}
+                      data-filled={i < filled ? '1' : undefined}
+                    />
+                  ))}
                 </span>
               ) : null}
+              <span className={`type-ui ${styles.seatCount}`} data-el="boardCard.spotsLeft">
+                {spotsLabel}
+              </span>
+              <span className={`type-caption ${styles.seatTotal}`}>
+                {seatsSummary}
+                {!!waitlistCount && waitlistCount > 0 ? (
+                  <span
+                    data-el="boardCard.waitlistCount"
+                    data-testid="qboard-waitlist-count"
+                  >
+                    , {waitlistCount} waitlisted
+                  </span>
+                ) : null}
+              </span>
             </span>
           </div>
 
@@ -170,7 +218,8 @@ export function QuestBoardCard({
                   event.stopPropagation();
                   return;
                 }
-                onOpen?.();
+                if (onOpen) onOpen();
+                else navigate(detailPath);
               }}
             >
               <ContentRenderer body={description} className="cr-preview" />
@@ -178,17 +227,14 @@ export function QuestBoardCard({
           ) : null}
 
           <div className="row" data-el="boardCard.dmStrip" data-gap="3">
-            <Avatar name={dmUsername ?? 'Unknown DM'} size="md" />
+            <Avatar name={dmLabel} size="md" />
             <div>
               <div className="type-label">Loremaster</div>
               <div className="row" data-gap="2" data-wrap="1" data-align="baseline">
                 {(() => {
-                  const handle = dmUsername
-                    ? dmUsername.startsWith('@')
-                      ? dmUsername
-                      : `@${dmUsername}`
-                    : null;
-                  const dmPath = handle ? `/dms/${handle}` : undefined;
+                  const dmPath = dmUsername
+                    ? memberHref({ handle: dmUsername }, 'dm')
+                    : undefined;
                   return (
                     <a
                       href={dmPath}
@@ -200,7 +246,7 @@ export function QuestBoardCard({
                       }}
                       className={`type-title ${styles.boardCardDmLink}`}
                     >
-                      {dmUsername ?? 'Unknown DM'}
+                      {dmLabel}
                     </a>
                   );
                 })()}
@@ -209,19 +255,31 @@ export function QuestBoardCard({
           </div>
 
           <div className="row" data-el="boardCard.chips" data-gap="2" data-wrap="1">
+            <StatusBadge status={status} />
+            {gw ? (
+              <span className="chip" data-tone="line">
+                Guild quest
+              </span>
+            ) : null}
             {region ? <RegionLabel region={region} /> : null}
             {level ? (
               <span className="chip" data-el="boardCard.level">
-                Lvl {level}
+                Level {level}
               </span>
             ) : null}
             {status === 'live' ? (
-              <span className={`chip row ${styles.boardCardWhen}`} data-el="boardCard.when">
+              <span
+                className={`chip row ${styles.boardCardWhen}`}
+                data-el="boardCard.when"
+              >
                 <IcCal />
                 Now
               </span>
             ) : when && when !== 'TBA' && when !== '—' ? (
-              <span className={`chip row ${styles.boardCardWhen}`} data-el="boardCard.when">
+              <span
+                className={`chip row ${styles.boardCardWhen}`}
+                data-el="boardCard.when"
+              >
                 <IcCal />
                 {when}
               </span>
@@ -233,10 +291,7 @@ export function QuestBoardCard({
           </div>
         </div>
 
-        <div
-          data-el="boardCard.footer"
-          className={styles.boardCardFooter}
-        >
+        <div data-el="boardCard.footer" className={styles.boardCardFooter}>
           <div className="row" data-justify="between" data-align="start" data-gap="3">
             <div
               className={`stack ${styles.boardCardParty}`}
@@ -245,24 +300,21 @@ export function QuestBoardCard({
             >
               <Party
                 members={party.map((p) => ({
-                  name: p.characterName ?? p.characterId ?? 'Unknown',
+                  name: p.characterName ?? 'Unnamed character',
                   avatarUrl: p.avatarUrl,
                 }))}
-                total={slots}
+                total={filled}
               />
               <div className="type-caption">
-                {partyNames.slice(0, PARTY_NAMES_CAP).join(' · ')}
+                {partyNames.slice(0, PARTY_NAMES_CAP).join(', ')}
                 {partyNames.length > PARTY_NAMES_CAP ? (
                   <span className={styles.boardCardMuted}>
                     {' '}
                     +{partyNames.length - PARTY_NAMES_CAP} more
                   </span>
                 ) : null}
-                {spotsLeft > 0 ? (
-                  <span className={styles.boardCardMuted}>
-                    {party.length > 0 ? ' · ' : ''}
-                    {spotsLeft} open slot{spotsLeft !== 1 ? 's' : ''}
-                  </span>
+                {party.length === 0 ? (
+                  <span className={styles.boardCardMuted}>No one seated yet</span>
                 ) : null}
               </div>
             </div>
@@ -297,7 +349,7 @@ export function QuestBoardCard({
                     handleSignUp();
                   }}
                 >
-                  {isMutating ? 'Working…' : 'Sign up →'}
+                  {isMutating ? 'Working…' : 'Sign up'}
                 </Button>
               )}
             </div>
@@ -309,8 +361,12 @@ export function QuestBoardCard({
         <RevealConfirmDialog
           isOpen={confirmWithdrawOpen}
           title="Withdraw from this quest?"
-          description="This frees your slot and may automatically promote the next waitlisted signup. If you rejoin later, you'll land at the back of the waitlist queue."
-          preview={<span>You will be withdrawn from {code}.</span>}
+          description={
+            waitlisted
+              ? 'This removes your character from the waitlist. If you rejoin later, you will return to the back of the queue.'
+              : "This frees your slot and may automatically promote the next waitlisted signup. If you rejoin later, you'll land at the back of the waitlist queue."
+          }
+          preview={<span>You will be withdrawn from {title}.</span>}
           confirmLabel="Withdraw"
           cancelLabel="Stay signed up"
           onConfirm={() => {

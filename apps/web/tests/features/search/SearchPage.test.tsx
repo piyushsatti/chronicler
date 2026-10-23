@@ -26,6 +26,12 @@ function LocationProbe() {
     </>
   );
 }
+const KIND_LABELS = new Map(kinds.map((kind) => [kind.key, kind.label]));
+async function pickKind(user: ReturnType<typeof userEvent.setup>, key: string) {
+  await user.click(screen.getByRole('button', { name: /Kind/ }));
+  const label = key === 'all' ? 'All kinds' : (KIND_LABELS.get(key) ?? key);
+  await user.click(await screen.findByRole('menuitem', { name: label }));
+}
 const requestSchema = z.object({
   query: z.string(),
   variables: z
@@ -88,7 +94,7 @@ describe('SearchPage', () => {
       </>,
       { route: '/search?q=tree&documents=2&members=1' },
     );
-    expect(screen.getByRole('textbox', { name: 'Search' })).toHaveValue('tree');
+    expect(screen.getByRole('searchbox', { name: 'Search' })).toHaveValue('tree');
     expect(await screen.findByRole('link', { name: 'Document 20' })).toHaveAttribute(
       'href',
       '/codex/document-20',
@@ -106,7 +112,7 @@ describe('SearchPage', () => {
     await user.click(screen.getByRole('button', { name: 'Back in history' }));
     expect(await screen.findByRole('link', { name: 'Member 0' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Document 20' })).toBeInTheDocument();
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Kind' }), 'rule');
+    await pickKind(user, 'rule');
     await waitFor(() =>
       expect(screen.getByLabelText('Location')).toHaveTextContent(
         '/search?q=tree&kinds=rule',
@@ -128,7 +134,7 @@ describe('SearchPage', () => {
     renderWithProviders(<SearchPage />, { route: '/search?q=tree&kinds=' });
     expect(screen.getByText(/No kinds selected/)).toBeInTheDocument();
     expect(seen).toEqual([]);
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Kind' }), 'all');
+    await pickKind(user, 'all');
     expect(await screen.findByRole('link', { name: 'Document 0' })).toBeInTheDocument();
     expect(seen).toContainEqual({ query: 'tree', kinds: null, limit: 20, offset: 0 });
   });
@@ -142,7 +148,7 @@ describe('SearchPage', () => {
     expect(
       screen.queryByRole('link', { name: 'Tree of Light' }),
     ).not.toBeInTheDocument();
-    await user.selectOptions(screen.getByRole('combobox', { name: 'Kind' }), 'all');
+    await pickKind(user, 'all');
     expect(
       await screen.findByRole('link', { name: 'Tree of Light' }),
     ).toBeInTheDocument();

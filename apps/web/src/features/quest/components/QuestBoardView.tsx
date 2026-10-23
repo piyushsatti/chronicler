@@ -2,13 +2,17 @@ import { Link } from 'react-router-dom';
 import type { AppError } from '../../../errors/types.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { Button } from '../../../components/primitives/Button.js';
-import { ErrorState } from '../../../components/primitives/ErrorState.js';
-import { QuestBoardCard } from './QuestBoardCard.js';
+import { CardGrid } from '../../../components/primitives/CardGrid.js';
+import { Chip } from '../../../components/primitives/Chip.js';
+import { FilterBar } from '../../../components/primitives/FilterBar.js';
+import { PageHeader } from '../../../components/primitives/PageHeader.js';
+import { QuestCard } from '../../../components/domain/QuestCard.js';
 import type {
   QuestBoardItemView,
   QuestBoardCardPropsView,
 } from '../adapters/questAdapter.js';
 import type { BoardSegment as Segment } from '../hooks/useQuestBoardPage.js';
+import { personName } from '../../../utils/format.js';
 import styles from './questBoard.module.css';
 
 const SEGMENTS: Segment[] = ['Open', 'Scheduled', 'Live', 'All'];
@@ -23,7 +27,6 @@ export type LiveStripItem = {
 type QuestBoardViewProps = {
   segment: Segment;
   setSegment: (segment: Segment) => void;
-  columns: 1 | 2;
   total: number | null;
   openCount: number | null;
   liveCount: number | null;
@@ -57,67 +60,47 @@ export function QuestBoardView(page: QuestBoardViewProps): React.JSX.Element {
   return (
     <section
       className={styles.board}
-      aria-labelledby="quest-board-title"
+      aria-label="Quest board"
       data-el="quests.root"
     >
-      <header>
-        <div data-el="quests.eyebrow" className="type-label">
-          Find a table
-        </div>
-        <div
-          className={`row ${styles.titleRow}`}
-          data-wrap="1"
-          data-align="center"
-          data-justify="between"
-        >
-          <h1 id="quest-board-title" data-el="quests.title" className="type-display">
-            The Tavern Board
-          </h1>
-          {page.canCreate ? (
+      <PageHeader
+        title="Quests"
+        lede="Open tables, upcoming sessions and the ones running now."
+        actions={
+          page.canCreate ? (
             <Link
               data-el="quests.newQuestBtn"
               to="/quests/new"
               className="btn btn--primary primary"
             >
-              + New quest
+              New quest
             </Link>
-          ) : null}
-        </div>
-        <div
-          data-el="quests.metaRow"
-          className={`row ${styles.metaRow}`}
-          data-wrap="1"
-        >
-          {page.openCount !== null ? (
-            <span className="type-caption">{page.openCount} quests open</span>
-          ) : null}
-          {page.dmsAcceptingCount !== null && page.dmsAcceptingCount > 0 ? (
-            <>
-              <span className="type-caption">·</span>
-              <span className="type-caption">
-                {page.dmsAcceptingCount} DMs accepting
-              </span>
-            </>
-          ) : null}
-          {page.liveCount !== null && page.liveCount > 0 ? (
-            <>
-              <span className="type-caption">·</span>
-              <span className={`row ${styles.liveCount}`}>
-                <span className={styles.liveDot} />
-                <span className="type-ui">{page.liveCount} sessions live now</span>
-              </span>
-            </>
-          ) : null}
-        </div>
-      </header>
+          ) : null
+        }
+        meta={
+          (page.dmsAcceptingCount !== null && page.dmsAcceptingCount > 0) ||
+          (page.liveCount !== null && page.liveCount > 0) ? (
+            <span data-el="quests.metaRow" className={`row ${styles.metaRow}`}>
+              {page.dmsAcceptingCount !== null && page.dmsAcceptingCount > 0 ? (
+                <Chip size="sm" tone="line">
+                  {page.dmsAcceptingCount} DMs accepting
+                </Chip>
+              ) : null}
+              {page.liveCount !== null && page.liveCount > 0 ? (
+                <span className={`row ${styles.liveCount}`}>
+                  <span className={styles.liveDot} />
+                  <span>{page.liveCount} sessions live now</span>
+                </span>
+              ) : null}
+            </span>
+          ) : null
+        }
+      />
 
       {page.liveStrip.length > 0 ? (
-        <div
-          data-el="quests.liveBand"
-          className={`live-band ${styles.liveBand}`}
-        >
+        <div data-el="quests.liveBand" className={`live-band ${styles.liveBand}`}>
           <span className="pulse" />
-          <span className="type-label">Live</span>
+          <span className="type-label">Live now</span>
           {page.liveStrip.map((q) => (
             <span key={q.id} className={styles.liveItem}>
               <span className="sep" />
@@ -126,49 +109,38 @@ export function QuestBoardView(page: QuestBoardViewProps): React.JSX.Element {
                 className={`det ${styles.liveQuest}`}
                 onClick={() => page.onOpenQuest(q.shortCode)}
               >
-                <em>{q.dmHandle ?? 'Unknown DM'}</em> · {q.title}
+                <em>{personName({ handle: q.dmHandle })}</em>, {q.title}
               </button>
             </span>
           ))}
         </div>
       ) : null}
 
-      <div
-        data-el="quests.filters"
-        className={`filters ${styles.filters}`}
+      <FilterBar
+        label="Quest board filters"
+        count={
+          page.total !== null && page.status !== 'error'
+            ? `${page.total} ${page.total === 1 ? 'quest' : 'quests'}`
+            : undefined
+        }
       >
-        <div
-          data-el="quests.seg"
-          className="seg"
-          role="tablist"
-          aria-label="Quest board filters"
-        >
+        <FilterBar.Group label="Show">
           {SEGMENTS.map((segment) => (
-            <button
+            <Chip
               key={segment}
-              type="button"
-              className={page.segment === segment ? 'seg__opt on' : 'seg__opt'}
-              role="tab"
-              aria-selected={page.segment === segment}
-              data-active={page.segment === segment ? '1' : undefined}
+              selected={page.segment === segment}
               onClick={() => page.setSegment(segment)}
             >
               {segment}
-            </button>
+            </Chip>
           ))}
-        </div>
-        <span className="grow" />
+        </FilterBar.Group>
         {page.isFetching && page.status !== 'loading' ? (
           <span className="type-caption" role="status" aria-live="polite">
             Updating…
           </span>
         ) : null}
-        {page.total !== null && page.status !== 'error' ? (
-          <p className="type-caption">
-            {page.segment}: {page.total} {page.total === 1 ? 'quest' : 'quests'}
-          </p>
-        ) : null}
-      </div>
+      </FilterBar>
 
       {page.actionError ? <StatePanel status="error" error={page.actionError} /> : null}
       {page.metadataError ? (
@@ -182,17 +154,13 @@ export function QuestBoardView(page: QuestBoardViewProps): React.JSX.Element {
         </div>
       ) : null}
       {page.status === 'error' ? (
-        <ErrorState message={page.error.userMessage}>
-          <Button variant="secondary" onClick={page.retry} pending={page.isFetching}>
-            Try again
-          </Button>
-        </ErrorState>
+        <StatePanel status="error" error={page.error} onRetry={page.retry} />
       ) : page.status === 'loading' ? (
         <div aria-busy="true" className={styles.loading}>
           <p role="status" className="type-caption">
             Loading…
           </p>
-          <div className={styles.grid} data-columns={page.columns} aria-hidden="true">
+          <CardGrid gap={5} aria-hidden="true">
             {Array.from({ length: 6 }, (_, index) => (
               <div
                 key={index}
@@ -205,31 +173,42 @@ export function QuestBoardView(page: QuestBoardViewProps): React.JSX.Element {
                 <span className={styles.skeletonText} />
               </div>
             ))}
-          </div>
+          </CardGrid>
         </div>
       ) : page.status === 'empty' ? (
         <div data-el="quest-board-empty">
-          <StatePanel status="empty" emptyMessage="No quests in this lane." />
+          <StatePanel
+            status="empty"
+            title="No quests here"
+            emptyMessage={
+              page.segment === 'All'
+                ? 'There are no quests on the board yet.'
+                : `No ${page.segment.toLowerCase()} quests right now.`
+            }
+            action={
+              page.segment === 'All' ? undefined : (
+                <Button variant="secondary" onClick={() => page.setSegment('All')}>
+                  Show all quests
+                </Button>
+              )
+            }
+          />
         </div>
       ) : (
         <>
-          <ul
-            data-el="quests.grid"
-            className={styles.grid}
-            data-columns={page.columns}
-            aria-label={`${page.segment} quests`}
-          >
+          <CardGrid as="ul" gap={5} aria-label={`${page.segment} quests`}>
             {page.view.map((quest) => {
               const card = quest.card;
               return (
-                <li key={quest.id}>
-                  <QuestBoardCard
+                <li key={quest.id} className={styles.cardItem}>
+                  <QuestCard
                     code={card.code}
                     title={card.title}
                     description={card.description}
                     status={card.status}
                     region={card.region}
                     dmUsername={card.dmUsername}
+                    dmName={card.dmName}
                     party={card.party}
                     waitlistCount={card.waitlistCount}
                     totalSlots={card.totalSlots}
@@ -243,7 +222,7 @@ export function QuestBoardView(page: QuestBoardViewProps): React.JSX.Element {
                 </li>
               );
             })}
-          </ul>
+          </CardGrid>
           {page.hasMore ? (
             <div data-el="quests.pagination" className={styles.pagination}>
               <Button

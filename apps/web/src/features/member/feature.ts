@@ -26,6 +26,24 @@ export const queryKeys = {
 
 export const graphql: FeatureGraphql = {
   MemberMe: () => HttpResponse.json({ data: { memberMe: goodMe } }),
+  MemberHub: () =>
+    HttpResponse.json({
+      data: {
+        member: { id: goodMe.id, joinedAt: '2026-01-05T10:00:00Z', avatarUrl: null },
+        memberActivityStats: {
+          questsPlayed: 3,
+          summariesAuthored: 1,
+          messages: 0,
+          voiceMinutes: 0,
+          longestSessionHours: null,
+          recentSessions: [],
+        },
+      },
+    }),
+  MemberUpcoming: () =>
+    HttpResponse.json({ data: { quests: { total: 0, items: [] } } }),
+  MemberRoster: () =>
+    HttpResponse.json({ data: { myCharacters: { total: 0, items: [] } } }),
   MemberMyPrivateNotes: () =>
     HttpResponse.json({ data: { myPrivateNotes: { body: '', updatedAt: null } } }),
   MemberSetMyPrivateNotes: (body) =>

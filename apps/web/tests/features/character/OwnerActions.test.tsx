@@ -31,16 +31,16 @@ describe('OwnerActions', () => {
     let submitted: unknown;
     server.use(
       graphql.mutation('UpdateCharacterProfile', ({ variables }) => {
-          submitted = variables;
-          return HttpResponse.json({
-            data: {
-              updateCharacterProfile: {
-                id: character.id,
-                description: 'New description',
-                updatedAt: character.updatedAt,
-              },
+        submitted = variables;
+        return HttpResponse.json({
+          data: {
+            updateCharacterProfile: {
+              id: character.id,
+              description: 'New description',
+              updatedAt: character.updatedAt,
             },
-          });
+          },
+        });
       }),
     );
     const user = userEvent.setup();
@@ -61,9 +61,10 @@ describe('OwnerActions', () => {
         ddbUrl: expect.anything(),
         displayIcon: expect.anything(),
       }),
-    });    expect(
-      (submitted as { input: Record<string, unknown> }).input,
-    ).not.toHaveProperty('backgroundText');
+    });
+    expect((submitted as { input: Record<string, unknown> }).input).not.toHaveProperty(
+      'backgroundText',
+    );
     expect(screen.queryByLabelText('Background')).not.toBeInTheDocument();
     expect(screen.getByText('Verification: Not submitted')).toBeInTheDocument();
   });
@@ -115,7 +116,9 @@ describe('OwnerActions character image', () => {
 
     view.unmount();
     renderWithProviders(
-      <OwnerActions character={{ ...character, imageUrl: 'https://example.com/a.png' }} />,
+      <OwnerActions
+        character={{ ...character, imageUrl: 'https://example.com/a.png' }}
+      />,
     );
     await user.clear(screen.getByLabelText('Character image URL'));
     await user.click(screen.getByRole('button', { name: 'Save profile' }));

@@ -165,7 +165,14 @@ describe('MapPage', () => {
       expect(marker).toHaveAttribute('transform', `translate(${node.x} ${node.y})`);
       expect(marker.querySelector('title')).toHaveTextContent(node.name);
     });
-    expect(graph.querySelector('text')).toBeNull();
+    // Long names are shortened on the canvas; the full name stays in the title and list.
+    [...graph.querySelectorAll('text')].forEach((label, index) => {
+      const full = nodes[index]?.name ?? '';
+      const shown = label.textContent ?? '';
+      expect(
+        shown === full || (shown.endsWith('…') && full.startsWith(shown.slice(0, -1))),
+      ).toBe(true);
+    });
     expect(
       [...graph.querySelectorAll('title')].map((title) => title.textContent),
     ).toContain('The full name of the directed connection (one way)');
@@ -258,7 +265,7 @@ describe('MapPage', () => {
       '/codex/location-4',
     );
     expect(
-      await screen.findByText('This linked document is unavailable for this viewer.'),
+      await screen.findByText('This linked entry is unavailable to you.'),
     ).toBeInTheDocument();
     expect(batches).toHaveLength(2);
     expect(screen.queryByText(ids[5]!)).not.toBeInTheDocument();
@@ -636,7 +643,7 @@ describe('MapPage', () => {
                 ? 'Create map'
                 : kind === 'edge'
                   ? 'Add connection'
-                  : 'Link Location document',
+                  : 'Link a Codex entry',
           }),
         );
         if (kind === 'create') {
@@ -700,9 +707,7 @@ describe('MapPage', () => {
         else {
           fireEvent.click(screen.getByRole('button', { name: 'Account B' }));
           await waitFor(() => expect(load).toHaveBeenCalledTimes(2));
-          await screen.findByText(
-            'This linked document is unavailable for this viewer.',
-          );
+          await screen.findByText('This linked entry is unavailable to you.');
         }
         await act(async () => {
           held.resolve([locationDocument]);
@@ -936,23 +941,23 @@ describe('PointcrawlViewport marker allocation', () => {
       const endpoints = ['x1', 'y1', 'x2', 'y2'].map((key) => line?.getAttribute(key));
       act(() => observer.resize(1040, 520));
       const fittedRadius = Number(circle?.getAttribute('r'));
-      expect(fittedRadius * 2).toBeCloseTo(8);
+      expect(fittedRadius * 2).toBeCloseTo(9);
       fireEvent.click(screen.getByRole('button', { name: 'Zoom in' }));
       expect(graph).not.toHaveAttribute('viewBox', initialViewBox);
-      expect(Number(circle?.getAttribute('r')) * 3).toBeCloseTo(8);
+      expect(Number(circle?.getAttribute('r')) * 3).toBeCloseTo(9);
       const zoomedViewBox = graph.getAttribute('viewBox');
       act(() => observer.resize(520, 260));
       expect(graph).toHaveAttribute('viewBox', zoomedViewBox);
-      expect(Number(circle?.getAttribute('r')) * 1.5).toBeCloseTo(8);
+      expect(Number(circle?.getAttribute('r')) * 1.5).toBeCloseTo(9);
       expect(circle?.parentElement).toHaveAttribute('transform', position);
       expect(['x1', 'y1', 'x2', 'y2'].map((key) => line?.getAttribute(key))).toEqual(
         endpoints,
       );
       act(() => observer.resize(0, 0));
-      expect(Number(circle?.getAttribute('r')) * 1.5).toBeCloseTo(8);
+      expect(Number(circle?.getAttribute('r')) * 1.5).toBeCloseTo(9);
       fireEvent.click(screen.getByRole('button', { name: 'Fit map' }));
       expect(graph).toHaveAttribute('viewBox', initialViewBox);
-      expect(Number(circle?.getAttribute('r'))).toBeCloseTo(8);
+      expect(Number(circle?.getAttribute('r'))).toBeCloseTo(9);
       view.unmount();
       expect(observer.disconnect).toHaveBeenCalledOnce();
     } finally {
@@ -997,7 +1002,7 @@ describe('Region navigation', () => {
       'href',
       `/regions/${region.id}`,
     );
-    expect(screen.getByText(/1 available map$/)).toBeInTheDocument();
+    expect(screen.getByText(/1 map$/)).toBeInTheDocument();
   });
   it('renders current quest and pointcrawl location counts without the retired metric', async () => {
     server.use(
@@ -1022,7 +1027,7 @@ describe('Region navigation', () => {
       </Routes>,
       { route: `/regions/${region.id}` },
     );
-    expect(await screen.findByText('7 quests · 3 map locations')).toBeInTheDocument();
+    expect(await screen.findByText('7 quests overall')).toBeInTheDocument();
     expect(screen.queryByText(/linked features/i)).not.toBeInTheDocument();
   });
   it('lists region quests by their brief titles with status and seats', async () => {
@@ -1078,10 +1083,9 @@ describe('Region navigation', () => {
       </Routes>,
       { route: `/regions/${region.id}` },
     );
-    expect(await screen.findByRole('link', { name: 'Chalk and Wheel' })).toHaveAttribute(
-      'href',
-      '/quests/qa-chalk-and-wheel',
-    );
+    expect(
+      await screen.findByRole('link', { name: 'Chalk and Wheel' }),
+    ).toHaveAttribute('href', '/quests/qa-chalk-and-wheel');
     expect(screen.queryByText('qa-chalk-and-wheel')).not.toBeInTheDocument();
     expect(screen.getByText('1/5 seats')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: region.name })).toBeVisible();
@@ -1186,8 +1190,11 @@ describe('Region navigation', () => {
       }),
     );
     renderRegion();
-    expect(await screen.findByRole('link', { name: 'Title qa-50' })).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Title qa-0' })).toBeVisible();
+    // The card previews five quests and links to the rest.
+    expect(await screen.findByRole('link', { name: 'Title qa-0' })).toBeVisible();
+    expect(
+      screen.getByRole('link', { name: '46 more on the quest board' }),
+    ).toBeVisible();
     expect(asked.map((codes) => codes.length).sort((a, b) => a - b)).toEqual([1, 50]);
   });
 });
@@ -1215,17 +1222,17 @@ describe('MapPage reader presentation', () => {
     const connections = await screen.findByRole('region', { name: 'Map connections' });
     expect(connections).toHaveTextContent('River ford');
     expect(connections).not.toHaveTextContent('leg-7');
-    expect(screen.getByRole('region', { name: 'Selected location' })).not.toHaveTextContent(
-      /Canvas position|Coordinates/,
-    );
+    expect(
+      screen.getByRole('region', { name: 'Selected location' }),
+    ).not.toHaveTextContent(/Canvas position|Coordinates/);
   });
 
   it('switches atlas through the menu instead of a native select', async () => {
     renderMap();
     await screen.findByRole('region', { name: 'Map connections' });
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
-    const trigger = screen.getByRole('button', { name: /^Atlas\s+Lightfall/ });
-    expect(trigger).toHaveAccessibleName(/LFC/);
+    const trigger = screen.getByRole('button', { name: /^Map\s+Lightfall/ });
+    expect(trigger).not.toHaveAccessibleName(/LFC/);
     fireEvent.click(trigger);
     const item = await screen.findByRole('menuitem', { name: /Lightfall/ });
     expect(item).toBeVisible();

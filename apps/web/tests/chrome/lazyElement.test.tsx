@@ -7,7 +7,7 @@ describe('lazyElement', () => {
     const { container } = render(lazyElement(() => new Promise(() => undefined)));
     expect(screen.getByRole('status', { name: 'Loading page' })).toBeInTheDocument();
     expect(
-      container.querySelector('.page-shell [data-component="Skeleton"]'),
+      container.querySelector('.page [data-component="Skeleton"]'),
     ).not.toBeNull();
     expect(screen.queryByText('Loading…')).not.toBeInTheDocument();
   });

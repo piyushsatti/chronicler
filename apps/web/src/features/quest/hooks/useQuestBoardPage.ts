@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useSizeClasses } from '@pi/react-imposition/react';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { queryKeys } from '../../../api/queryKeys.js';
 import { useAuth } from '../../../auth/AuthContext.js';
@@ -42,7 +41,6 @@ export function useQuestBoardPage() {
   const { isAuthenticated } = useAuth();
   const me = useMe();
   const [segment, setSegment] = useState<BoardSegment>('Open');
-  const { widthClass } = useSizeClasses();
   const filters = FILTERS[segment];
   const query = useInfiniteQuery({
     queryKey: ['quests', 'pages', filters],
@@ -87,11 +85,9 @@ export function useQuestBoardPage() {
         (participant.status === 'signed_up' || participant.status === 'waitlisted'),
     );
   const items = query.data?.pages.flatMap((page) => page.items) ?? [];
-  const columns: 1 | 2 = widthClass === 'expanded' ? 2 : 1;
   const shared = {
     segment,
     setSegment,
-    columns,
     total: query.data?.pages[0]?.total ?? null,
     openCount: open.isError ? null : (open.data?.total ?? null),
     liveCount: live.isError ? null : (live.data?.total ?? null),

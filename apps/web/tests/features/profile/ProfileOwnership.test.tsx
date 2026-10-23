@@ -33,7 +33,7 @@ describe('Profile ownership and table identity', () => {
       screen.queryByRole('heading', { name: 'Your profile' }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole('link', { name: 'Create table' }),
+      screen.queryByRole('link', { name: 'New DM table' }),
     ).not.toBeInTheDocument();
   });
   it('allows matching owner controls and existing table creation route', async () => {
@@ -45,10 +45,11 @@ describe('Profile ownership and table identity', () => {
       </Routes>,
       { route: '/dms/@mira' },
     );
+    await userEvent.click(await screen.findByRole('button', { name: 'Edit profile' }));
     expect(
       await screen.findByRole('heading', { name: 'Your profile' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Create table' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'New DM table' })).toHaveAttribute(
       'href',
       '/editor/dm-table',
     );

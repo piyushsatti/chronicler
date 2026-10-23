@@ -45,10 +45,10 @@ describe('Profile session timezone', () => {
       </>,
       { route: '/dms/@mira' },
     );
-    expect(await screen.findByText(/Sat, 07 Mar 2026, 23:30/)).toBeVisible();
+    expect(await screen.findByText(/Sat 7 Mar 2026, 23:30/)).toBeVisible();
     const before = reads;
     await userEvent.setup().click(screen.getByRole('button', { name: 'Change zone' }));
-    expect(screen.getByText(/Sun, 08 Mar 2026, 10:00/)).toBeVisible();
+    expect(screen.getByText(/Sun 8 Mar 2026, 10:00/)).toBeVisible();
     expect(reads).toBe(before);
   });
 });

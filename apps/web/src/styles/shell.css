@@ -177,19 +177,18 @@
 
 /* ── Page gutters scale with the space available ────────────── */
 
-/* `.page` (atlas.css) hard-codes --sp-6 side padding at every width,
-   which spends 32px of a 375px screen on empty margin. */
-.page,
-.page-shell,
-[data-width-class='compact'] .hf2 .page {
-  padding-inline: var(--sp-4);
+/* --page-gutter-inline is --sp-6; on a phone that spends 32px of a 375px
+   screen on empty margin, so the compact width class halves it. */
+[data-width-class='compact'] {
+  --page-gutter-inline: var(--sp-4);
 }
 
-[data-width-class='medium'] .page,
-[data-width-class='expanded'] .page,
-[data-width-class='medium'] .page-shell,
-[data-width-class='expanded'] .page-shell {
-  padding-inline: var(--sp-6);
+/* Reserve the scrollbar's inline space on the scroller so a tab or filter
+   switch that changes page height never moves the centred frame sideways.
+   The document is the scroller: main[data-shell-main] has overflow-y:auto
+   from Imposition but grows with its content, so it never scrolls itself. */
+:root:has(.site-chrome) {
+  scrollbar-gutter: stable;
 }
 
 /* ── Touch targets are CAPABILITY, not width ────────────────── */

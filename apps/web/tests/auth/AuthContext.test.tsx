@@ -140,7 +140,7 @@ describe('AuthProvider session lifecycle', () => {
       });
       await screen.findByRole('heading', { name: 'Personalize' });
       await waitFor(() =>
-        expect(screen.getByRole('combobox', { name: 'Theme' })).toHaveValue('midnight'),
+        expect(screen.getByRole('button', { name: /^Theme/ })).toHaveTextContent('Midnight'),
       );
       expect(
         queryClient
@@ -163,8 +163,8 @@ describe('AuthProvider session lifecycle', () => {
       );
       expect(responses).toContain(secondId);
       await waitFor(() =>
-        expect(screen.getByRole('combobox', { name: 'Theme' })).toHaveValue(
-          'parchment',
+        expect(screen.getByRole('button', { name: /^Theme/ })).toHaveTextContent(
+          'Parchment',
         ),
       );
       expect(
@@ -296,7 +296,7 @@ describe('AuthProvider session lifecycle', () => {
       }),
     ).toBeInTheDocument();
     expect(
-      screen.getAllByRole('link', { name: 'Siege of Kraghold' }).length,
+      screen.getAllByRole('link', { name: /Siege of Kraghold/ }).length,
     ).toBeGreaterThan(0);
   });
 

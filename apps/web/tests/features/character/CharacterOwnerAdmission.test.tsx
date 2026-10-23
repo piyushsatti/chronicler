@@ -11,7 +11,11 @@ import { signInCharacter, characterActor } from './characterAuth.js';
 
 describe('Character owner admission', () => {
   it('does not offer mutations to an admin who owns another character', async () => {
-    signInCharacter({ ...characterActor, id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', roles: ['admin'] });
+    signInCharacter({
+      ...characterActor,
+      id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+      roles: ['admin'],
+    });
     renderWithProviders(
       <Routes>
         <Route path="/characters/:code" element={<CharacterPage />} />
@@ -75,17 +79,16 @@ describe('Character owner admission', () => {
       </Routes>,
       { route: '/characters/C-101' },
     );
-    const mirror = await screen.findByText(/Last synchronized/);
-    expect(mirror).toHaveTextContent('Wizard · Elf');
+    expect(await screen.findByText(/Synced from D&D Beyond/)).toBeVisible();
+    expect(screen.getByText(/Wizard · Elf/)).toBeVisible();
     await userEvent
       .setup()
       .click(screen.getByRole('button', { name: 'Sync D&D Beyond' }));
     expect(await screen.findByText(/The provider timed out/)).toHaveTextContent(
       'last synchronized data were kept',
     );
-    expect(await screen.findByText(/Last synchronized/)).toHaveTextContent(
-      'Wizard · Elf',
-    );
+    expect(await screen.findByText(/Synced from D&D Beyond/)).toBeVisible();
+    expect(screen.getByText(/Wizard · Elf/)).toBeVisible();
     expect(screen.getByRole('textbox', { name: 'Description' })).toHaveValue(
       wire.description,
     );

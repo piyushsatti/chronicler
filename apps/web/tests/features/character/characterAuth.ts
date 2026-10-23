@@ -7,7 +7,10 @@ export const characterActor = {
   displayName: 'Owner',
   roles: ['player'],
 };
-export function characterToken(subject = 'character-first', expires = Date.now() + 3600000) {
+export function characterToken(
+  subject = 'character-first',
+  expires = Date.now() + 3600000,
+) {
   return `${btoa(JSON.stringify({ alg: 'none' }))}.${btoa(
     JSON.stringify({ sub: subject, exp: Math.floor(expires / 1000) }),
   )}.test`;
@@ -15,8 +18,6 @@ export function characterToken(subject = 'character-first', expires = Date.now()
 export function signInCharacter(actor = characterActor) {
   localStorage.setItem(TOKEN_KEY, characterToken());
   server.use(
-    graphql.query('MemberMe', () =>
-      HttpResponse.json({ data: { memberMe: actor } }),
-    ),
+    graphql.query('MemberMe', () => HttpResponse.json({ data: { memberMe: actor } })),
   );
 }

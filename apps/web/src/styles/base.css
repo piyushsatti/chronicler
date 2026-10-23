@@ -55,35 +55,50 @@ a {
   color: var(--color-accent);
 }
 
-.state-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--sp-3);
-  padding: var(--sp-8) var(--sp-5);
-  text-align: center;
-  color: var(--color-text-3);
-}
-
-.state-empty__title {
-  font-family: var(--font-display);
-  font-size: 1.125rem;
-  color: var(--color-text);
-}
-
-.state-denied {
+/* The one page-level state surface (StatePanel and EmptyState): parchment
+   card at frame width, left aligned, one sentence at reading measure plus one
+   action row. Never a white or centred box. */
+.state-panel,
+.empty-state {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: var(--sp-3);
   padding: var(--sp-6) var(--sp-5);
-  max-inline-size: 40rem;
+  background: var(--color-bg-panel);
+  color: var(--color-text-2);
 }
 
-.state-denied > p {
+.state-panel > :where(h2, p),
+.empty-state > p {
   margin: 0;
+  max-inline-size: var(--page-max-reading);
+}
+
+.state-panel > p,
+.empty-state > p {
   color: var(--color-text-2);
+}
+
+.state-panel > h2 {
+  color: var(--color-text);
+}
+
+.state-panel__actions {
+  margin-top: var(--sp-1);
+}
+
+/* EmptyState inside a page section: a dashed parchment slot, quieter than a
+   content card (no shadow), so "nothing here" never reads as content. */
+.empty-state {
+  padding: var(--sp-5);
+  border: 1px dashed var(--color-border-2);
+  border-radius: var(--rad);
+}
+
+.empty-state.card {
+  border-style: dashed;
+  box-shadow: none;
 }
 
 .state-inline {
@@ -97,12 +112,11 @@ a {
 }
 
 .state-loading {
-  border-radius: var(--rad-sm);
   background: linear-gradient(
     90deg,
-    var(--color-bg-surface),
-    var(--color-border),
-    var(--color-bg-surface)
+    var(--color-bg-panel),
+    var(--color-border-2),
+    var(--color-bg-panel)
   );
   background-size: 200% 100%;
   animation: state-shimmer 1.3s ease-in-out infinite;
@@ -130,29 +144,36 @@ a {
   }
 }
 
-/* `main[data-shell-main]` is a column flex container, and auto inline
-   margins switch off cross-axis stretch, so without an explicit width the
-   shell shrinks to its content. width:100% + max-width keeps it full width
-   up to the same 1180px measure as `.page`; side gutters come from the
-   shared `.page` rule in shell.css. */
-.page-shell {
-  inline-size: 100%;
-  max-width: 73.75rem;
+/* The one page frame (L1). PageShell renders `.page-root > .page` for every
+   route; the width, gutters and block padding come only from the layout
+   tokens. `main[data-shell-main]` is a column flex container and auto inline
+   margins switch off cross-axis stretch, so the frame sets inline-size:100%
+   or it would shrink to its content. */
+.page-root {
   min-width: 0;
-  margin: 0 auto;
-  padding: var(--sp-7) var(--sp-4) var(--sp-8);
 }
 
-.page-shell[data-max='wide'] {
-  max-width: 86.25rem;
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  inline-size: 100%;
+  max-inline-size: var(--page-max);
+  min-width: 0;
+  margin-inline: auto;
+  padding: var(--page-pad-block-start) var(--page-gutter-inline) var(--page-pad-block-end);
 }
 
-.page-shell[data-max='narrow'] {
-  max-width: 56.25rem;
-}
-
-.page-shell > .type-display {
+.page > .type-display {
   overflow-wrap: anywhere;
+}
+
+/* Long-form reading and single forms sit in this inner column; the frame
+   itself never narrows. */
+.reading-column {
+  inline-size: 100%;
+  max-inline-size: var(--page-max-reading);
+  min-width: 0;
 }
 
 [data-shell-nav] {
@@ -208,14 +229,14 @@ a {
   text-decoration: none;
 }
 
-.site-chrome__brand-mark {
-  display: grid;
-  width: 1.625rem;
-  height: 1.625rem;
-  place-items: center;
-  border-radius: var(--rad-sm);
-  background: var(--color-accent);
-  color: var(--color-hero-on-brand-ink);
+.site-chrome__wordmark {
+  color: var(--color-text);
+  font-family: var(--font-title);
+  font-size: 1.125rem;
+  font-weight: var(--font-title-weight);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  white-space: nowrap;
 }
 
 .site-chrome__links {
@@ -324,23 +345,27 @@ a {
   display: flex;
   align-items: stretch;
   justify-content: space-around;
-  gap: var(--sp-1);
+  gap: 0;
   min-height: var(--bottomnav-height);
   padding-bottom: env(safe-area-inset-bottom, 0px);
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
   background: var(--color-bg-panel);
   border-top: 1px solid var(--color-border);
   backdrop-filter: blur(14px);
 }
 
 .site-chrome__bottom .site-chrome__link {
-  /* Content-sized, but shrinkable: six links keep full labels and an eighth never overflows. */
-  flex: 1 1 auto;
+  /* Full labels, never truncated: links share the width, and a bar with more
+     links than fit (staff accounts) scrolls sideways instead of clipping text. */
+  flex: 1 0 auto;
   flex-direction: column;
   justify-content: center;
   gap: 0.125rem;
   min-width: 0;
   min-height: 2.75rem;
-  padding: var(--sp-2) var(--sp-1);
+  padding: var(--sp-2) 0.125rem;
   color: var(--color-text-muted);
 }
 
@@ -349,10 +374,10 @@ a {
 }
 
 .site-chrome__bottom .site-chrome__link-label {
-  max-width: 100%;
-  overflow: hidden;
-  font-size: 0.6875rem;
-  text-overflow: ellipsis;
+  font-size: 0.625rem;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+  white-space: nowrap;
 }
 
 .site-chrome__search {
@@ -421,6 +446,12 @@ a {
   font-family: var(--font-display);
   font-size: 0.875rem;
   text-decoration: none;
+}
+
+/* Personal routes: same filled-ink state as the active nav pill. */
+.site-chrome__avatar[aria-current='page'] {
+  background: var(--color-text);
+  color: var(--color-bg-deep);
 }
 
 .brand-mark {

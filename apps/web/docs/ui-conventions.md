@@ -37,10 +37,10 @@ Every visual property has exactly one sanctioned API. A component that reaches a
 
 | Class            | Purpose           | Font      | Example                |
 | ---------------- | ----------------- | --------- | ---------------------- |
-| `type-display`   | Page titles       | heading   | COMMAND CENTER         |
-| `type-heading`   | Section titles    | heading   | RECENT QUESTS          |
+| `type-display`   | Page titles       | heading   | Command center         |
+| `type-heading`   | Section titles    | heading   | Recent quests          |
 | `type-title`     | Entity/card names | heading   | Siege of Kraghold      |
-| `type-label`     | Micro labels      | heading   | QUESTS ACTIVE          |
+| `type-label`     | Small labels      | body      | Quests active          |
 | `type-body`      | Paragraph text    | body      | Description text...    |
 | `type-narrative` | Prose/lore        | narrative | Adventure summaries... |
 | `type-caption`   | Helper text       | body      | 5 Apr 2025, DM Ashwin  |
@@ -80,6 +80,66 @@ Pre-existing violations are enumerated in `scripts/design-gates/allowlist.json` 
 4. Stateful primitives expose `x` / `onXChange` / `defaultX` (controlled with uncontrolled default, C15); the primitive owns its own state only when `x` is omitted.
 5. Register it in `primitives.registry.ts` so `check:duplication` and `check:orphan` can see it.
 6. Run `pnpm run lint` before opening a PR -- it runs every gate above in sequence and reports every red one, not just the first.
+
+### Page layout primitives
+
+Every route renders inside `PageShell` (one frame, `--page-max`). Index pages compose three registry primitives inside it; do not hand-build headers, filter bars or card grids.
+
+```tsx
+<PageShell context="chronicle" className="hf2">
+  <SingleRegionPage page="chronicles">
+    <PageHeader
+      eyebrow="Game timeline"
+      title="Chronicles"
+      lede="Session recaps, player journals, arc summaries and world events."
+      actions={canCreate ? <Link className="btn btn--primary" to="/editor/new">+ New entry</Link> : null}
+    />
+    <FilterBar label="Filter chronicles" count={`${total} entries`}>
+      <FilterBar.Search label="Search entries" placeholder="Search entries…" value={q} onValueChange={setQ} />
+      <FilterBar.Group label="Author">
+        {authors.map((a) => <Chip key={a.id} selected={a.id === author} onClick={() => setAuthor(a.id)}>{a.label}</Chip>)}
+      </FilterBar.Group>
+    </FilterBar>
+    <CardGrid as="ul" aria-label="Entries">{/* <li> cards */}</CardGrid>
+  </SingleRegionPage>
+</PageShell>
+```
+
+| Primitive | Props | Notes |
+| --------- | ----- | ----- |
+| `PageHeader` | `title`, `back?: { to, label }`, `eyebrow?`, `lede?`, `meta?`, `actions?`, `level?: 1 \| 2` | `back` is the one back-link style ("← Codex", above the title). Actions sit right of the title on its baseline and wrap below on narrow screens. `PageShell title= back=` renders one for simple pages. |
+| `DetailLayout` | children (main), `rail?`, `railLabel?`, `className?`; `DetailLayout.Reading` | Detail pages: full-width main column plus an optional `--rail-width` rail (`<aside>` landmark) through `SplitPane layout="rail"`; the rail wraps under main below `--detail-main-min`. Prose goes in `DetailLayout.Reading`. |
+| `SplitPane` | `start`, `end`, `layout?: 'equal' \| 'rail'`, `label?` | `rail` is what `DetailLayout` uses; pages use `DetailLayout`, not `SplitPane` directly. |
+| `StatePanel` | `status`, `error?`, `title?`, `emptyMessage?`, `deniedMessage?`, `action?`, `onRetry?`, `retryLabel?`, `variant?` | Page states on one parchment card at frame width: heading, one sentence, one action. Errors with `onRetry` get "Try again"; member denials get "Back to home" (or `action`) plus the optional retry; guests get "Sign in". |
+| `EmptyState` | `message?`, `kind?`, `action?` (or `actionLabel` + `onAction`), `className?` | "Nothing here" inside a section: dashed parchment slot, one sentence, one action. Default `kind` copy is sentence case. |
+| `FilterBar` | `label` (region name), `count?`, children | One panel surface, full frame width, wraps. Controls and count share one wrapping flow, so the count trails the last control at the end of the bar instead of taking a row of its own; `aria-live="polite"`. |
+| `FilterBar.Search` | `label`, `value?` / `defaultValue?` / `onValueChange?`, `placeholder?`, `name?` | Fixed `--filter-search-width`; never resizes while typing. |
+| `FilterBar.Group` | `label?`, children | Labelled `role="group"` for chips. Stays one row and scrolls sideways when it outgrows the bar. |
+| `FilterBar.Picker` | `label`, `options` (`value`, `label`, `count?`), `value`, `onValueChange`, `disabled?` | Single-choice filter on `Menu`. Use it instead of a native `<select>` for filters; form fields that submit through `FormData` keep native selects. |
+| `CardGrid` | `as?: 'div' \| 'ul' \| 'ol' \| 'section'`, `gap?: 3 \| 4 \| 5`, `aria-label?` | `repeat(auto-fill, minmax(min(var(--card-min), 100%), 1fr))`. |
+| `Tabs` | `items`, `value?` / `defaultTabId?` / `onValueChange?`, `aria-label?` | Page sections only; one pill skin (active = filled ink). The row scrolls sideways when narrow, fades the clipped edge (`data-overflow`) and keeps the active tab in view. Never restyle it in a feature. |
+| `Tabs.Nav` (`TabNav`) | `items: { to, label, current }[]`, `aria-label` | Route-level section links in the same skin; current link gets `aria-current="page"`. |
+| `Modal` | `size?: 'sm' \| 'md' \| 'lg' \| 'palette'` | `palette` is a fixed-size command dialog: first content child pinned, the rest scrolls. |
+
+Reading content (entry body, editor body, a single settings form) goes in `<div className="reading-column">` (or `DetailLayout.Reading`) inside the frame. A detail page may have one side rail of `--rail-width` through `DetailLayout`, never a hand-rolled grid.
+
+```tsx
+<PageShell context="chronicle" className="hf2">
+  <PageHeader
+    back={{ to: '/chronicles', label: 'Chronicles' }}
+    title={entry.title}
+    meta={<>{personName(entry.author)} · {formatDate(entry.publishedAt)}</>}
+    actions={canEdit ? <Link className="btn" to={editHref}>Edit entry</Link> : null}
+  />
+  <DetailLayout rail={<RelatedLinks entry={entry} />} railLabel="Related">
+    <DetailLayout.Reading><ContentRenderer body={entry.body} /></DetailLayout.Reading>
+  </DetailLayout>
+</PageShell>
+```
+
+Display helpers (`src/utils/format.ts`): `useDateFormatter()` gives `formatDate` ("7 Mar 2026"), `formatDateTime` ("Sat 7 Mar 2026, 23:30", no zone name unless the viewer chose UTC) and `formatScheduled` ("TBA" when absent) in the viewer's zone. `personName({ displayName, handle })` is the only way to name a member; `handleLabel(handle)` gives "@handle" (null for numeric ids) for profile secondary text; `isMachineId(value)` spots slugs, snowflakes and UUIDs that must not be shown. Status and enum keys go through `statusLabel` / `roleLabel` / `humanizeKey`.
+
+The L5 gate `scripts/design-gates/check-page-layout.mjs` fails on literal widths >= 160px, literal `minmax(<len>` card minimums, `max="wide"` on `PageShell`, and `<aside>`/sidebar markup in `features/*/pages`. Justified exceptions go in `allowlist.json` `pageLayout` with a `reason`; `pageLayoutPendingMigration` lists round-3 call sites still to migrate and may only shrink.
 
 ## Key Patterns
 

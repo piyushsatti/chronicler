@@ -17,7 +17,8 @@ export function useProfileDmDetails(memberId: string) {
   });
   const schedule = useQuery({
     queryKey: ['dm-table', 'schedule', memberId, schedulePage],
-    queryFn: () => loadDmTableSchedule(memberId, (schedulePage - 1) * DM_SCHEDULE_PAGE_SIZE),
+    queryFn: () =>
+      loadDmTableSchedule(memberId, (schedulePage - 1) * DM_SCHEDULE_PAGE_SIZE),
   });
   return {
     details,

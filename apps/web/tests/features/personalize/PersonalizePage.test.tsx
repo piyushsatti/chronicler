@@ -1,3 +1,4 @@
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import { screen } from '@testing-library/react';
@@ -5,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
+import { SettingsPage } from '../../../src/features/onboarding/pages/SettingsPage.js';
 import { PersonalizePage } from '../../../src/features/personalize/pages/PersonalizePage.js';
 import { server } from '../../../src/mocks/server.js';
 import { renderWithProviders } from '../../test-utils.js';
@@ -31,25 +33,28 @@ describe('PersonalizePage', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Personalize' }),
     ).toBeInTheDocument();
-    expect(await screen.findByRole('combobox', { name: 'Theme' })).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'Color mode' })).toBeInTheDocument();
-    expect(
-      await screen.findByText('Saved: Parchment theme, system mode.'),
-    ).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Parchment' })).toBeInTheDocument();
-    expect(screen.getByRole('option', { name: 'Starfield' })).toBeInTheDocument();
-    expect(screen.queryByRole('option', { name: 'starfield-twinkle' })).toBeNull();
+    expect(await screen.findByRole('button', { name: /^Theme/ })).toBeInTheDocument();
+    expect(screen.getByRole('radiogroup', { name: 'Color mode' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: /^Theme/ }));
+    expect(await screen.findByRole('menuitem', { name: 'Parchment' })).toBeInTheDocument();
+    await userEvent.keyboard('{Escape}');
+    await userEvent.click(screen.getByRole('button', { name: /^Background effect/ }));
+    expect(await screen.findByRole('menuitem', { name: 'Starfield' })).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: 'starfield-twinkle' })).toBeNull();
   });
 
   it('groups settings without a browser fieldset and uses checkbox primitives', async () => {
-    renderWithProviders(<PersonalizePage />, { route: '/me/personalize' });
-    await screen.findByText('Saved: Parchment theme, system mode.');
+    renderWithProviders(<SettingsPage />, { route: '/settings' });
+    await screen.findByRole('checkbox', { name: 'Quest signups' });
+    expect(screen.queryByRole('button', { name: /^Theme/ })).toBeNull();
     for (const group of screen.getAllByRole('group')) {
       expect(group).toHaveClass('field-group');
     }
     const box = screen.getByRole('checkbox', { name: 'Quest signups' });
     expect(box).toHaveClass('checkbox__box');
-    expect(document.querySelector('input[type="checkbox"]:not([aria-hidden="true"])')).toBeNull();
+    expect(
+      document.querySelector('input[type="checkbox"]:not([aria-hidden="true"])'),
+    ).toBeNull();
   });
 
   it('shows controlled error on GraphQL failure', async () => {

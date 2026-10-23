@@ -28,7 +28,6 @@ describe('CharacterPage', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Lyra Storm' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('C-101')).toBeInTheDocument();
     expect(document.querySelector('[data-el="character.detail"]')).toHaveClass(
       'ctx-rpg',
     );
@@ -48,7 +47,7 @@ describe('CharacterPage', () => {
     expect(screen.getByRole('tab', { name: 'Quest history' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Connections' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Summaries' })).toBeInTheDocument();
-    expect(await screen.findByText('+100 PCXP')).toBeInTheDocument();
+    expect(await screen.findByText('+100 XP')).toBeInTheDocument();
   });
 
   it('lists quest history by quest title, linked to the quest, not by the character name', async () => {
@@ -59,7 +58,7 @@ describe('CharacterPage', () => {
     expect(quest).toHaveAttribute('href', '/quests/Q-7');
     const panel = document.querySelector('[data-el="character.historyReady"]');
     expect(panel).not.toHaveTextContent('Lyra Storm');
-    expect(panel).toHaveTextContent('03 Jan 2026');
+    expect(panel).toHaveTextContent('3 Jan 2026');
   });
 
   it('tolerates missing ddbUrl without inventing a link', async () => {
@@ -201,7 +200,7 @@ describe('CharacterPage', () => {
       </Routes>,
       { route: '/characters/C-101' },
     );
-    expect(await screen.findByText('No backstory chosen yet.')).toBeInTheDocument();
+    expect(await screen.findByText('No backstory written yet.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Backstory' })).toBeInTheDocument();
   });
 
@@ -216,9 +215,7 @@ describe('CharacterPage', () => {
       }),
     );
     renderCharacter();
-    expect(
-      await screen.findByText('This backstory is no longer listed.'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('No backstory written yet.')).toBeInTheDocument();
     expect(offsets).toEqual([
       [null, 0],
       [null, 100],
@@ -254,7 +251,7 @@ describe('CharacterPage', () => {
       expect(
         screen.getByRole('heading', { level: 1, name: 'Lyra Storm' }),
       ).toBeVisible();
-      expect(screen.queryByText('This backstory is no longer listed.')).toBeNull();
+      expect(screen.queryByText('No backstory written yet.')).toBeNull();
       // An inline state inside the section, not a page-level card.
       expect(screen.queryByRole('link', { name: 'Back to home' })).toBeNull();
       fireEvent.click(retry);

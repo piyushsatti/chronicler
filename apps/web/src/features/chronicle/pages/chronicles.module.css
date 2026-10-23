@@ -1,32 +1,19 @@
 .root h1,
+.root h2,
 .root p {
   margin: 0;
 }
 
-.layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: var(--sp-6);
-  align-items: start;
-}
-
-.layout[data-sidebar='true'] {
-  grid-template-columns: 210px minmax(0, 1fr);
-}
-
-.header {
-  margin-bottom: var(--sp-8);
-}
-
 .period {
-  margin-bottom: var(--sp-8);
+  margin-bottom: var(--sp-7);
 }
 
 .periodHeader {
   margin-bottom: var(--sp-4);
+  align-items: baseline;
 }
 
-.periodHeader > span {
+.periodHeader > * {
   white-space: nowrap;
 }
 
@@ -35,16 +22,14 @@
   border-top: 1px solid var(--color-border-2);
 }
 
-.periodEntries {
-  position: relative;
-  padding-left: 2px;
+.item {
+  min-width: 0;
 }
 
-.spine {
-  position: absolute;
-  left: 4px;
-  top: 20px;
-  bottom: 0;
-  width: 1px;
-  background: var(--color-border);
+.header {
+  margin-bottom: var(--sp-5);
+}
+
+.filters {
+  margin-bottom: var(--sp-6);
 }

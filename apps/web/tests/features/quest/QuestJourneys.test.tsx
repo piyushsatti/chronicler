@@ -279,7 +279,7 @@ describe('retained Quest journeys', () => {
     expect(
       await screen.findByRole('link', { name: 'Write a DM summary' }),
     ).toHaveAttribute('href', `/summaries/new?questId=${detail.id}`);
-    expect(screen.getByRole('link', { name: 'Edit summary' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Edit entry' })).toHaveAttribute(
       'href',
       `/summaries/${summaries.summaries[0].id}/edit`,
     );

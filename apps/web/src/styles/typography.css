@@ -29,12 +29,11 @@
 
 .type-heading {
   font-family: var(--font-title);
-  font-size: var(--type-heading-size, clamp(0.875rem, 1.5vw, 1.25rem));
+  font-size: var(--type-heading-size, clamp(1rem, 1.5vw, 1.25rem));
   font-weight: var(--font-title-weight);
   line-height: 1.3;
-  letter-spacing: 0.04em;
+  letter-spacing: -0.01em;
   color: var(--color-text);
-  text-transform: uppercase;
 }
 
 /* ---- Title — entity / card names ----------------------------------------- */
@@ -48,16 +47,15 @@
   color: var(--color-text);
 }
 
-/* ---- Label — micro uppercase labels -------------------------------------- */
+/* ---- Label — small sentence-case labels (fields, stat names) ------------ */
 
 .type-label {
   font-family: var(--font-body);
-  font-size: var(--type-label-size, 0.6875rem);
+  font-size: var(--type-label-size, 0.75rem);
   font-weight: 500;
   line-height: 1.4;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.005em;
   color: var(--color-text-muted);
-  text-transform: uppercase;
 }
 
 /* ---- Body — paragraph text ----------------------------------------------- */
@@ -122,9 +120,7 @@
   font-size: var(--type-ui-size, 0.8125rem);
   font-weight: 500;
   line-height: 1.4;
-  letter-spacing: 0.04em;
   color: var(--color-text-muted);
-  text-transform: uppercase;
 }
 
 /* ---- Link — inline text links and link-styled buttons -------------------- */

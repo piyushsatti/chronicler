@@ -7,7 +7,10 @@ export const profileActor = {
   displayName: 'Mira',
   roles: ['player', 'dm'],
 };
-export function profileToken(subject = 'profile-first', expires = Date.now() + 3600000) {
+export function profileToken(
+  subject = 'profile-first',
+  expires = Date.now() + 3600000,
+) {
   return `${btoa(JSON.stringify({ alg: 'none' }))}.${btoa(
     JSON.stringify({ sub: subject, exp: Math.floor(expires / 1000) }),
   )}.test`;

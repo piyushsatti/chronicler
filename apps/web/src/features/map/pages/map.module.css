@@ -16,7 +16,6 @@
 .toolbar h2 {
   margin-inline-end: auto;
 }
-.mapPicker,
 .form label {
   display: grid;
   gap: var(--sp-2);
@@ -81,15 +80,53 @@
   gap: var(--sp-4);
   align-items: start;
 }
+.srOnly {
+  position: absolute;
+  inline-size: 1px;
+  block-size: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.canvasActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  margin-inline-start: auto;
+}
+.canvasHint {
+  margin: var(--sp-2) 0 0;
+  color: var(--color-text-3);
+}
+.nodeLabel {
+  fill: var(--color-text);
+  stroke: var(--color-bg-panel);
+  paint-order: stroke;
+  stroke-linejoin: round;
+  font-family: var(--font-ui, inherit);
+  font-weight: 500;
+  pointer-events: none;
+}
+.node[aria-pressed='true'] .nodeLabel {
+  font-weight: 700;
+}
+.connection {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
 .nodeList {
   list-style: none;
   padding: 0;
   margin: 0;
-  display: grid;
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--sp-2);
 }
 .locationButton {
-  width: 100%;
+  width: auto;
   text-align: start;
   display: flex;
   gap: var(--sp-3);
@@ -133,55 +170,21 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--sp-3);
 }
+/* CardGrid owns the columns; region cards size to their content. */
 .regionGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
-  gap: var(--sp-4);
+  align-items: start;
 }
 .regionGrid > * {
   min-width: 0;
   overflow-wrap: anywhere;
 }
-@container (min-width: 48rem) {
+@container (min-width: 64rem) {
   .explorer {
-    grid-template-columns: minmax(12rem, 1fr) minmax(0, 2fr);
+    grid-template-columns: minmax(0, 1fr) var(--rail-width);
   }
   .graph {
     height: 32rem;
   }
-}
-.mapPicker {
-  justify-items: start;
-}
-.atlasTrigger {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--sp-3);
-  min-height: 44px;
-  padding: 0 var(--sp-4);
-  border: 1px solid var(--color-border-2);
-  border-radius: var(--rad-btn);
-  background: var(--color-bg-panel);
-  color: var(--color-text);
-  max-width: 100%;
-}
-.atlasTrigger:hover {
-  border-color: var(--color-text-4);
-}
-.caret {
-  color: var(--color-text-3);
-  font-size: 0.75rem;
-}
-.atlasOption {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-4);
-  min-width: 14rem;
-}
-.atlasOption[data-current='true'] {
-  font-weight: 600;
-  color: var(--color-accent);
 }
 .mapMeta {
   display: flex;
@@ -209,11 +212,18 @@
 /* Narrow pages: the location list goes two-up so it is not a 1,200px column,
    and the canvas drops its empty letterbox height. */
 @container (max-width: 47.99rem) {
-  .nodeList {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .viewport {
+    overflow-x: auto;
   }
+  /* The canvas fits the card so the whole graph is visible on load; labels
+     truncate (full name on hover and in the list below) and zoom reveals detail. */
   .graph {
-    height: 18rem;
+    height: 20rem;
+  }
+  /* Eighteen labels cannot share a phone-width canvas without colliding: only the
+     selected location is named on the canvas; the list below names them all. */
+  .node[aria-pressed='false'] .nodeLabel {
+    display: none;
   }
 }
 .mapCardHead {
@@ -251,12 +261,4 @@
 }
 .questTitle:hover {
   color: var(--color-accent);
-}
-.regionHeader {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-}
-.regionHeader h1 {
-  margin: 0;
 }
