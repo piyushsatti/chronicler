@@ -112,10 +112,12 @@ describe('isPersonalPath', () => {
     expect(isPersonalPath('/dms/@Ashwin/', 'ashwin')).toBe(true);
   });
 
-  it('claims the DM dashboard and the DM-table editor, not the DM directory', () => {
+  it('claims the DM dashboard and leaves DM-table editors in Community', () => {
     expect(isPersonalPath('/dm')).toBe(true);
-    expect(isPersonalPath('/editor/dm-table')).toBe(true);
-    expect(isPersonalPath('/editor/dm-table/42/edit')).toBe(true);
+    expect(isPersonalPath('/editor/dm-table')).toBe(false);
+    expect(isPersonalPath('/editor/dm-table/42/edit')).toBe(false);
+    expect(currentDestinationId('/editor/dm-table')).toBe('community');
+    expect(currentDestinationId('/editor/dm-table/42/edit')).toBe('community');
     expect(isPersonalPath('/dms')).toBe(false);
     expect(isPersonalPath('/dms/@pell', 'ashwin')).toBe(false);
   });

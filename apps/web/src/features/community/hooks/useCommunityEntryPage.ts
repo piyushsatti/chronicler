@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AppError } from '../../../errors/types.js';
-import { loadCommunityEntry } from '../adapters/communityEntryAdapter.js';
+import { loadCommunityEntry, loadCommunityEntryRelated } from '../adapters/communityEntryAdapter.js';
 
 type CommunityEntryPageState =
   | { status: 'loading' }
@@ -22,4 +22,13 @@ export function useCommunityEntryPage(slug: string): CommunityEntryPageState {
   }
   if (query.isLoading || !query.data) return { status: 'loading' };
   return { status: 'ready', view: query.data };
+}
+
+export function useCommunityEntryRelated(authorId: string) {
+  const query = useQuery({
+    queryKey: ['communityEntryRelated', authorId],
+    queryFn: () => loadCommunityEntryRelated(authorId),
+    enabled: Boolean(authorId),
+  });
+  return { ...query, retry: () => { void query.refetch(); } };
 }

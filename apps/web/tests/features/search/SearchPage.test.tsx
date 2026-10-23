@@ -1,4 +1,4 @@
-import { http, HttpResponse } from 'msw';
+import { graphql, http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -84,6 +84,20 @@ function pageResponses() {
 }
 
 describe('SearchPage', () => {
+  it('groups results and disambiguates visible member names without redundant Member chips', async () => {
+    server.use(graphql.query('Search', () => HttpResponse.json({ data: { search: {
+      ...good, documents: [], documentTotal: 0, memberTotal: 2,
+      members: [{ ...good.members[0], displayName: 'dev', handle: 'brune' }, { ...good.members[0], memberId: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', displayName: 'dev', handle: 'cox' }],
+    } } })));
+    renderWithProviders(<SearchPage />, { route: '/search?q=dev' });
+    expect(await screen.findByRole('link', { name: 'dev (@brune)' })).toHaveAttribute('href', '/players/@brune');
+    const members = screen.getByRole('region', { name: 'Members' });
+    expect(within(members).getByRole('link', { name: 'dev (@cox)' })).toBeVisible();
+    expect(within(members).queryByText('Member')).not.toBeInTheDocument();
+    const documents = screen.getByRole('region', { name: 'Documents' });
+    expect(within(documents).getByText('No documents match your search.')).toBeVisible();
+    expect(within(documents).getByRole('link', { name: 'Browse the Codex' })).toHaveAttribute('href', '/codex');
+  });
   it('restores URL query/filter/family pages and preserves the other page through back navigation', async () => {
     const seen = pageResponses();
     const user = userEvent.setup();

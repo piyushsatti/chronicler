@@ -23,10 +23,69 @@ export type LiveEditorCommand =
   | 'diagram'
   | 'hr';
 
+const COMMANDS: { id: LiveEditorCommand; title: string; path: string }[] = [
+  {
+    id: 'bold',
+    title: 'Bold',
+    path: 'M6 4h7a4 4 0 0 1 0 8H6m0-8v16h8a4 4 0 0 0 0-8H6',
+  },
+  { id: 'italic', title: 'Italic', path: 'M10 4h10M4 20h10M15 4 9 20' },
+  {
+    id: 'strike',
+    title: 'Strikethrough',
+    path: 'M17 5c-3-2-10-2-10 2 0 3 10 3 10 7 0 5-7 7-11 4M3 12h18',
+  },
+  { id: 'code', title: 'Inline code', path: 'm8 7-5 5 5 5m8-10 5 5-5 5M14 4l-4 16' },
+  {
+    id: 'h2',
+    title: 'Heading',
+    path: 'M4 5v14M14 5v14M4 12h10m4 2c0-3 5-3 4 0l-4 5h4',
+  },
+  {
+    id: 'h3',
+    title: 'Subheading',
+    path: 'M3 5v14M12 5v14M3 12h9m5-2h4l-3 4c6-1 5 7-1 5',
+  },
+  {
+    id: 'bullet',
+    title: 'Bulleted list',
+    path: 'M9 6h12M9 12h12M9 18h12M3 6h1M3 12h1M3 18h1',
+  },
+  {
+    id: 'ordered',
+    title: 'Numbered list',
+    path: 'M10 6h11M10 12h11M10 18h11M3 3h2v6M3 9h4m-4 5c0-3 5-3 4 0l-4 5h4',
+  },
+  {
+    id: 'quote',
+    title: 'Quote',
+    path: 'M10 7H4v6h6V7m0 6c0 4-3 5-5 5m15-11h-6v6h6V7m0 6c0 4-3 5-5 5',
+  },
+  {
+    id: 'link',
+    title: 'Link',
+    path: 'm10 7 2-2a5 5 0 0 1 7 7l-2 2m-3 3-2 2a5 5 0 0 1-7-7l2-2m2 5 6-6',
+  },
+  {
+    id: 'wikilink',
+    title: 'Link to a Codex entry',
+    path: 'M8 4H3v16h5m8-16h5v16h-5m-6-13h4v10h-4z',
+  },
+  { id: 'table', title: 'Table', path: 'M3 4h18v16H3zM3 9h18M3 14h18M9 4v16M15 4v16' },
+  {
+    id: 'diagram',
+    title: 'Diagram',
+    path: 'M9 3h6v5H9zM3 16h6v5H3zm12 0h6v5h-6zM12 8v4M6 16v-4h12v4',
+  },
+  { id: 'hr', title: 'Divider', path: 'M3 12h18' },
+];
+
 export type LiveEditorProps = {
   value: string;
   onChange: (markdown: string) => void;
   toolbar?: boolean;
+  toolbarStart?: React.ReactNode;
+  toolbarEnd?: React.ReactNode;
   placeholder?: string;
   compact?: boolean;
   entityIndex?: EntityLinkIndex;
@@ -279,13 +338,19 @@ function PlainLiveEditor({
   value,
   onChange,
   toolbar,
+  toolbarStart,
+  toolbarEnd,
   placeholder,
   compact,
   entityIndex,
 }: Required<
   Pick<LiveEditorProps, 'value' | 'onChange' | 'toolbar' | 'placeholder' | 'compact'>
-> & { entityIndex: EntityLinkIndex }): React.JSX.Element {
+> &
+  Pick<LiveEditorProps, 'toolbarStart' | 'toolbarEnd'> & {
+    entityIndex: EntityLinkIndex;
+  }): React.JSX.Element {
   const ref = useRef<HTMLTextAreaElement>(null);
+  const toolbarRef = useScrollEdges<HTMLDivElement>();
   const [caret, setCaret] = useState(0);
   const [suggestIdx, setSuggestIdx] = useState(0);
   const [showGutter, setShowGutter] = useState(false);
@@ -486,23 +551,6 @@ function PlainLiveEditor({
     }
   };
 
-  const commands: { id: LiveEditorCommand; label: string; title: string }[] = [
-    { id: 'bold', label: 'B', title: 'Bold' },
-    { id: 'italic', label: 'I', title: 'Italic' },
-    { id: 'strike', label: 'S', title: 'Strikethrough' },
-    { id: 'code', label: '</>', title: 'Inline code' },
-    { id: 'h2', label: 'H2', title: 'Heading' },
-    { id: 'h3', label: 'H3', title: 'Subheading' },
-    { id: 'bullet', label: '•', title: 'Bulleted list' },
-    { id: 'ordered', label: '1.', title: 'Numbered list' },
-    { id: 'quote', label: '“', title: 'Quote' },
-    { id: 'link', label: 'Link', title: 'Link' },
-    { id: 'wikilink', label: '[[]]', title: 'Link to a Codex entry' },
-    { id: 'table', label: 'Table', title: 'Table' },
-    { id: 'diagram', label: 'Diagram', title: 'Diagram' },
-    { id: 'hr', label: '—', title: 'Divider' },
-  ];
-
   const gutterLines = useMemo(
     () => leDeserialize(value).map((l) => leKind(l)),
     [value],
@@ -516,35 +564,53 @@ function PlainLiveEditor({
       data-compact={compact ? '1' : undefined}
     >
       {toolbar ? (
-        <div
-          className="row"
-          role="toolbar"
-          aria-label="Markdown formatting"
-          data-wrap="1"
-        >
-          {commands.map((cmd) => (
+        <div className={`row ${styles.toolbar}`} data-wrap="1">
+          <div
+            ref={toolbarRef}
+            className={`row le-toolbar ${styles.formatting}`}
+            role="toolbar"
+            aria-label="Markdown formatting"
+            data-wrap="1"
+          >
+            {toolbarStart}
+            {COMMANDS.map((cmd) => (
+              <Button
+                key={cmd.id}
+                type="button"
+                variant="ghost"
+                size="sm"
+                onClick={() => run(cmd.id)}
+                aria-label={cmd.title}
+                title={cmd.title}
+              >
+                <svg
+                  width={16}
+                  height={16}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path d={cmd.path} />
+                </svg>
+              </Button>
+            ))}
             <Button
-              key={cmd.id}
               type="button"
               variant="ghost"
               size="sm"
-              onClick={() => run(cmd.id)}
-              aria-label={cmd.id}
-              title={cmd.title}
+              aria-pressed={showGutter}
+              onClick={() => setShowGutter((v) => !v)}
+              aria-label="Toggle structure gutter"
             >
-              {cmd.label}
+              Structure
             </Button>
-          ))}
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            aria-pressed={showGutter}
-            onClick={() => setShowGutter((v) => !v)}
-            aria-label="Toggle structure gutter"
-          >
-            Structure
-          </Button>
+          </div>
+          {toolbarEnd}
         </div>
       ) : null}
       <div className="live-editor__surface stack">
@@ -631,12 +697,17 @@ function BlocksLiveEditor({
   value,
   onChange,
   toolbar,
+  toolbarStart,
+  toolbarEnd,
   placeholder,
   compact,
   entityIndex,
 }: Required<
   Pick<LiveEditorProps, 'value' | 'onChange' | 'toolbar' | 'placeholder' | 'compact'>
-> & { entityIndex: EntityLinkIndex }): React.JSX.Element {
+> &
+  Pick<LiveEditorProps, 'toolbarStart' | 'toolbarEnd'> & {
+    entityIndex: EntityLinkIndex;
+  }): React.JSX.Element {
   const [lines, setLines] = useState(() => leDeserialize(value));
   const [active, setActive] = useState<number | null>(null);
   const [wikiAC, setWikiAC] = useState<{
@@ -1130,23 +1201,6 @@ function BlocksLiveEditor({
       .slice(0, 6);
   }, [entityIndex, wikiAC]);
 
-  const commands: { id: LiveEditorCommand; label: string; title: string }[] = [
-    { id: 'bold', label: 'B', title: 'Bold' },
-    { id: 'italic', label: 'I', title: 'Italic' },
-    { id: 'strike', label: 'S', title: 'Strikethrough' },
-    { id: 'code', label: '</>', title: 'Inline code' },
-    { id: 'h2', label: 'H2', title: 'Heading' },
-    { id: 'h3', label: 'H3', title: 'Subheading' },
-    { id: 'bullet', label: '•', title: 'Bulleted list' },
-    { id: 'ordered', label: '1.', title: 'Numbered list' },
-    { id: 'quote', label: '“', title: 'Quote' },
-    { id: 'link', label: 'Link', title: 'Link' },
-    { id: 'wikilink', label: '[[]]', title: 'Link to a Codex entry' },
-    { id: 'table', label: 'Table', title: 'Table' },
-    { id: 'diagram', label: 'Diagram', title: 'Diagram' },
-    { id: 'hr', label: '—', title: 'Divider' },
-  ];
-
   return (
     <div
       className="live-editor stack"
@@ -1156,27 +1210,44 @@ function BlocksLiveEditor({
       onMouseDown={handleContainerMouseDown}
     >
       {toolbar ? (
-        <div
-          ref={toolbarRef}
-          className="row le-toolbar"
-          role="toolbar"
-          aria-label="Markdown formatting"
-          data-wrap="1"
-        >
-          {commands.map((cmd) => (
-            <Button
-              key={cmd.id}
-              type="button"
-              variant="ghost"
-              size="sm"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => run(cmd.id)}
-              aria-label={cmd.id}
-              title={cmd.title}
-            >
-              {cmd.label}
-            </Button>
-          ))}
+        <div className={`row ${styles.toolbar}`} data-wrap="1">
+          <div
+            ref={toolbarRef}
+            className={`row le-toolbar ${styles.formatting}`}
+            role="toolbar"
+            aria-label="Markdown formatting"
+            data-wrap="1"
+          >
+            {toolbarStart}
+            {COMMANDS.map((cmd) => (
+              <Button
+                key={cmd.id}
+                type="button"
+                variant="ghost"
+                size="sm"
+                onMouseDown={(e) => e.preventDefault()}
+                onClick={() => run(cmd.id)}
+                aria-label={cmd.title}
+                title={cmd.title}
+              >
+                <svg
+                  width={16}
+                  height={16}
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  focusable="false"
+                >
+                  <path d={cmd.path} />
+                </svg>
+              </Button>
+            ))}
+          </div>
+          {toolbarEnd}
         </div>
       ) : null}
       <div className={`le-doc${compact ? ' le-doc-compact' : ''}`}>
@@ -1236,6 +1307,8 @@ export function LiveEditor({
   value,
   onChange,
   toolbar = true,
+  toolbarStart,
+  toolbarEnd,
   placeholder = DEFAULT_PLACEHOLDER,
   compact = false,
   entityIndex = [],
@@ -1247,6 +1320,8 @@ export function LiveEditor({
         value={value}
         onChange={onChange}
         toolbar={toolbar}
+        toolbarStart={toolbarStart}
+        toolbarEnd={toolbarEnd}
         placeholder={placeholder}
         compact={compact}
         entityIndex={entityIndex}
@@ -1258,6 +1333,8 @@ export function LiveEditor({
       value={value}
       onChange={onChange}
       toolbar={toolbar}
+      toolbarStart={toolbarStart}
+      toolbarEnd={toolbarEnd}
       placeholder={placeholder}
       compact={compact}
       entityIndex={entityIndex}

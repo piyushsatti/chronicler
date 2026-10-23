@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { graphql, HttpResponse } from 'msw';
 import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { Route, Routes } from 'react-router-dom';
 import { PlayersDirectoryPage } from '../../../src/features/community/pages/PlayersDirectoryPage.js';
 import { DmsDirectoryPage } from '../../../src/features/community/pages/DmsDirectoryPage.js';
 import { loadCommunityMembers } from '../../../src/features/community/adapters/communityAdapter.js';
@@ -9,6 +10,14 @@ import { server } from '../../../src/mocks/server.js';
 import wire from '../../fixtures/wire/community/directory-good.json';
 import { renderWithProviders } from '../../test-utils.js';
 describe('Member directory server pages', () => {
+  it('switches between the player and DM directories through the role filters', async () => {
+    renderWithProviders(<Routes><Route path="/players" element={<PlayersDirectoryPage />} /><Route path="/dms" element={<DmsDirectoryPage />} /></Routes>, { route: '/players' });
+    expect(await screen.findByRole('button', { name: 'Players' })).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(screen.getByRole('button', { name: 'DMs' }));
+    expect(await screen.findByRole('heading', { level: 1, name: 'DMs' })).toBeVisible();
+    expect(screen.getByRole('button', { name: 'DMs' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Players' })).toHaveAttribute('aria-pressed', 'false');
+  });
   it('sends role/search/offset and retains server total beyond one page', async () => {
     const attempts: Record<string, unknown>[] = [];
     server.use(
@@ -88,6 +97,23 @@ describe('Member directory server pages', () => {
       expect(card.querySelector('[data-component="Avatar"]')).not.toBeNull();
       expect(card.querySelector('[data-component="Chip"]')).not.toBeNull();
     }
+  });
+  it('keeps generic and fixture names distinguishable with a consistent role line', async () => {
+    server.use(graphql.query('CommunityDirectory', () => HttpResponse.json({ data: { communityDirectory: {
+      total: 3,
+      entries: [
+        { ...wire.entries[1], displayName: 'dev', handle: 'brune' },
+        { ...wire.entries[1], memberId: '33333333-3333-4333-8333-333333333333', displayName: 'dev', handle: 'cox' },
+        { ...wire.entries[1], memberId: '44444444-4444-4444-8444-444444444444', displayName: 'qa-prof-1020-1792473593710 retained', handle: 'qa-prof-1020-1792473593710' },
+      ],
+    } } })));
+    renderWithProviders(<PlayersDirectoryPage />);
+    expect(await screen.findByRole('heading', { name: 'dev (@brune)' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'dev (@cox)' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Member (@qa-prof-1020-1792473593710)' })).toBeVisible();
+    expect(screen.queryByText(/retained/)).not.toBeInTheDocument();
+    expect(screen.getAllByText('Player')).toHaveLength(3);
+    expect(screen.getByText('Meet the players, browse their interests, and see when they are free.')).toBeVisible();
   });
   it('shows a designed empty state when no member matches', async () => {
     server.use(

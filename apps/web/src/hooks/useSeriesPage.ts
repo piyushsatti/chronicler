@@ -1,22 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { queryKeys } from '../../../api/queryKeys.js';
-import { useAuth } from '../../../auth/AuthContext.js';
+import { queryKeys } from '../api/queryKeys.js';
+import { useAuth } from '../auth/AuthContext.js';
 import {
   currentAccessIdentity,
   useCurrentAccess,
-} from '../../../auth/useCurrentAccess.js';
-import { toAppError } from '../../../errors/toAppError.js';
-import { TransportError } from '../../../errors/types.js';
-import { useMe } from '../../../hooks/useMe.js';
+} from '../auth/useCurrentAccess.js';
+import { toAppError } from '../errors/toAppError.js';
+import { TransportError } from '../errors/types.js';
+import { useMe } from './useMe.js';
 import {
   loadSeriesArc,
   loadSeriesAuthority,
   upsertSeriesArc,
   type SeriesView,
-} from '../adapters/seriesAdapter.js';
-import { isSeriesIdentity } from '../seriesIdentity.js';
+} from '../features/onboarding/adapters/seriesAdapter.js';
+import { isSeriesIdentity } from '../features/onboarding/seriesIdentity.js';
 
 type Attempt = {
   token: string | null;

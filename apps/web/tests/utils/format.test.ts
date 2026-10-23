@@ -152,6 +152,13 @@ describe('people and identifiers', () => {
     expect(handleLabel('100000000000000001')).toBeNull();
     expect(handleLabel('')).toBeNull();
   });
+  it('keeps QA fixture members visible with a readable label and no retained suffix', async () => {
+    const { personLabels } = await import('../../src/utils/format.js');
+    const member = { displayName: 'qa-prof-1020-1792473593710 retained', handle: 'qa-prof-1020-1792473593710' };
+    expect(personName(member)).toBe('Member');
+    expect(personLabels([member])).toEqual(['Member (@qa-prof-1020-1792473593710)']);
+    expect(personName({ displayName: 'Retained scholar', handle: 'scholar' })).toBe('Retained scholar');
+  });
   it('recognises machine identifiers', () => {
     expect(isMachineId('qa-the-salt-stair')).toBe(true);
     expect(isMachineId('100000000000000001')).toBe(true);

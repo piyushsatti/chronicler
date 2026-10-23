@@ -12,6 +12,7 @@ import { Field } from '../../../components/foundation/Field.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { Modal } from '../../../components/primitives/Modal.js';
 import { toAppError } from '../../../errors/toAppError.js';
+import { personLabels } from '../../../utils/format.js';
 import { useSearchPalette } from '../hooks/useSearchPalette.js';
 import { SearchHitRow } from './SearchHitRow.js';
 import '../search.css';
@@ -40,6 +41,8 @@ function SearchDialogPanel({
   }, []);
   const { query, setQuery, queryError, searchQ, retrySearch } = useSearchPalette();
   const hits = searchQ.data ? [...searchQ.data.documents, ...searchQ.data.members] : [];
+  const memberNames = personLabels(searchQ.data?.members ?? []);
+  const memberNamesById = new Map(searchQ.data?.members.map((member, index) => [member.memberId, memberNames[index]]));
   return (
     <div
       ref={panelRef}
@@ -96,6 +99,7 @@ function SearchDialogPanel({
               <SearchHitRow
                 key={'handle' in hit ? `member-${hit.memberId}` : hit.id}
                 hit={hit}
+                memberLabel={'handle' in hit ? memberNamesById.get(hit.memberId) : undefined}
                 onNavigate={onNavigate}
               />
             ))}

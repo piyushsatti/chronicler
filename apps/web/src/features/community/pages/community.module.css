@@ -24,6 +24,7 @@
   gap: var(--sp-1);
   min-width: 0;
   flex: 1;
+  overflow-wrap: anywhere;
 }
 
 .memberHead {
@@ -32,6 +33,11 @@
   justify-content: space-between;
   gap: var(--sp-2);
   min-width: 0;
+  flex-wrap: wrap;
+}
+
+.memberHead :global(.chip) {
+  white-space: normal;
 }
 
 .tagline {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { Route, Routes } from 'react-router-dom';
 import { graphql, HttpResponse } from 'msw';
 import { routes } from '../../../src/features/rules/feature.js';
@@ -46,6 +46,13 @@ describe('rule detail families', () => {
       'href',
       '/rules',
     );
+    expect(screen.getByRole('link', { name: 'Back to rules' })).toHaveAttribute(
+      'href',
+      '/rules',
+    );
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Ruling not found' }),
+    ).toBeVisible();
     expect(screen.queryByText(guide.effectiveBody!)).not.toBeInTheDocument();
   });
 
@@ -63,6 +70,7 @@ describe('rule detail families', () => {
       graphql.query('RuleDetail', () =>
         HttpResponse.json({
           data: {
+            documentBacklinks: [],
             document: {
               ...ruling,
               status: 'published',
@@ -80,5 +88,90 @@ describe('rule detail families', () => {
     expect(screen.getAllByRole('listitem')).toHaveLength(2);
     expect(screen.queryByText(/summary:/)).not.toBeInTheDocument();
     expect(screen.queryByText(/\*\*/)).not.toBeInTheDocument();
+  });
+
+  it('shows only guides linked to the ruling in its reading rail', async () => {
+    server.use(
+      graphql.query('RulesList', () =>
+        HttpResponse.json({
+          data: {
+            documents: {
+              items: [
+                ...good.items,
+                {
+                  ...guide,
+                  id: '33333333-3333-4333-8333-333333333333',
+                  slug: 'unrelated-guide',
+                  title: 'Unrelated guide',
+                },
+              ],
+              total: 3,
+            },
+          },
+        }),
+      ),
+      graphql.query('RuleDetail', () =>
+        HttpResponse.json({
+          data: {
+            document: ruling,
+            documentBacklinks: [{ documentId: guide.id }],
+          },
+        }),
+      ),
+    );
+    renderAt(`/rules/rulings/${ruling.slug}`);
+    expect(await screen.findByText(ruling.effectiveBody!)).toBeVisible();
+    const rail = await screen.findByRole('complementary', { name: 'Related guides' });
+    expect(
+      await within(rail).findByRole('link', { name: guide.title }),
+    ).toHaveAttribute('href', `/rules/guides/${guide.slug}`);
+    expect(
+      within(rail).queryByRole('link', { name: ruling.title }),
+    ).not.toBeInTheDocument();
+    expect(
+      within(rail).queryByRole('link', { name: 'Unrelated guide' }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('gives missing ruling text and related guides an empty state and a next action', async () => {
+    server.use(
+      graphql.query('RuleDetail', () =>
+        HttpResponse.json({
+          data: {
+            document: { ...ruling, effectiveBody: null },
+            documentBacklinks: [],
+          },
+        }),
+      ),
+    );
+    renderAt(`/rules/rulings/${ruling.slug}`);
+    expect(
+      await screen.findByText('No ruling text is available for this viewer.'),
+    ).toBeVisible();
+    expect(
+      await screen.findByText('No related guides are available for this ruling yet.'),
+    ).toBeVisible();
+    expect(screen.getAllByRole('link', { name: 'Browse rules' })).toHaveLength(2);
+  });
+
+  it('keeps the ruling header and parent link when access is denied', async () => {
+    server.use(
+      graphql.query('RuleDetail', () =>
+        HttpResponse.json({
+          errors: [{ message: 'opaque', extensions: { code: 'FORBIDDEN' } }],
+        }),
+      ),
+    );
+    renderAt('/rules/rulings/restricted');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Sign in to see this');
+    expect(screen.getByRole('heading', { level: 1, name: 'Ruling' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Rules' })).toHaveAttribute(
+      'href',
+      '/rules',
+    );
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute(
+      'href',
+      '/login',
+    );
   });
 });

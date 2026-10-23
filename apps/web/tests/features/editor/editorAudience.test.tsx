@@ -60,7 +60,7 @@ it('selects named readers through server pages while retaining existing reader i
     { wrapper },
   );
   await waitFor(() =>
-    expect(result.current.selected).toEqual([{ id: firstId, label: 'first-reader' }]),
+    expect(result.current.selected).toEqual([{ id: firstId, label: 'Reader' }]),
   );
   act(() => result.current.setSearch('second'));
   await waitFor(() => expect(result.current.matches[0]?.handle).toBe('second-reader'));

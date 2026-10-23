@@ -20,6 +20,7 @@ export const graphql: FeatureGraphql = {
   RuleDetail: (body) =>
     HttpResponse.json({
       data: {
+        documentBacklinks: [],
         document:
           goodRulesList.items.find((item) => item.slug === body.variables?.slug) ??
           null,

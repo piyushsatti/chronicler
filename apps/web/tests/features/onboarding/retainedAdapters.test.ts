@@ -133,8 +133,12 @@ describe('retained Series and Guild identities', () => {
           id: `00000000-0000-4000-8000-${String(index + offset + 100).padStart(12, '0')}`,
           shortCode: `opaque-code-${index + offset}`,
           status: 'open',
+          displayStatus: 'open',
           scheduledAt: '2026-10-14T18:00:00Z',
-          briefDocument: { title: `Quest ${index + offset}` },
+          slotsMax: 4,
+          dm: null,
+          participants: [],
+          briefDocument: { title: `Quest ${index + offset}`, effectiveBody: null },
         }));
         return HttpResponse.json({
           data: { questArc: { ...good.arc, questCount: 51, quests } },

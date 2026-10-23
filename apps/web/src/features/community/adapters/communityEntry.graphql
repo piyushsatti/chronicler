@@ -5,6 +5,7 @@ query CommunityEntry($slug: String!) {
     kind
     category
     title
+    authorId
     effectiveBody
     publishedAt
     updatedAt

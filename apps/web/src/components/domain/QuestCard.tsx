@@ -181,7 +181,10 @@ export function QuestCard({
                   ))}
                 </span>
               ) : null}
-              <span className={`type-ui ${styles.seatCount}`} data-el="boardCard.spotsLeft">
+              <span
+                className={`type-ui ${styles.seatCount}`}
+                data-el="boardCard.spotsLeft"
+              >
                 {spotsLabel}
               </span>
               <span className={`type-caption ${styles.seatTotal}`}>
@@ -319,7 +322,19 @@ export function QuestCard({
               </div>
             </div>
             <div data-shrink="0">
-              {isCancelled ? (
+              {!onSignUpClick && !mine ? (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    if (onOpen) onOpen();
+                    else navigate(detailPath);
+                  }}
+                >
+                  View quest
+                </Button>
+              ) : isCancelled ? (
                 <Button size="sm" disabled>
                   Cancelled
                 </Button>

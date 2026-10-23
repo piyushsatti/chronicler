@@ -4,16 +4,6 @@
   min-inline-size: 0;
 }
 
-.header {
-  gap: var(--sp-2);
-  margin-block-end: var(--sp-3);
-}
-
-.header > :where(h1, p) {
-  margin: 0;
-  overflow-wrap: anywhere;
-}
-
 /* Formatting tools sit left, the action group right. The action group keeps
    Publish, Save draft and Cancel on one line and drops to its own row, right
    aligned, when the card is narrow. */
@@ -23,9 +13,14 @@
   gap: var(--sp-2) var(--sp-3);
 }
 
-.tools {
-  align-items: center;
-  gap: var(--sp-2);
+.formatting {
+  flex: 1 1 0;
+  min-inline-size: 0;
+}
+
+.formatting > :global(.row[role='group']) {
+  border-inline-end: 1px solid var(--color-border);
+  padding-inline-end: var(--sp-2);
 }
 
 .actions {
@@ -71,11 +66,6 @@
 
 .historyToggle {
   align-self: flex-start;
-}
-
-/* The stack gap alone spaces the denial card; heading margins doubled it. */
-.denied > :where(h2, p) {
-  margin: 0;
 }
 
 .workspace :global(.editor-shell),
@@ -202,32 +192,21 @@
   flex-shrink: 0;
 }
 
-/* On a phone the save actions take one full-width row under the mode buttons. */
 @container editor (max-width: 30rem) {
+  .formatting {
+    flex-basis: 100%;
+  }
+
   .actions {
     flex-basis: 100%;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;
     justify-content: stretch;
   }
 
-  /* Publish, Save draft and Cancel share one line; the dirty note sits above them. */
   .actions > :global(.btn) {
     flex: 1 1 0;
     min-inline-size: 0;
     padding-inline: var(--sp-2);
-  }
-
-  .actions > :global([role='status']) {
-    flex-basis: 100%;
-  }
-
-  /* Mode tabs left, Undo/Redo pushed right, on one line. */
-  .tools {
-    inline-size: 100%;
-  }
-
-  .tools > :global(.row[role='group']) {
-    margin-inline-start: auto;
   }
 }
 
@@ -256,16 +235,6 @@
     black calc(100% - 2rem),
     transparent
   );
-}
-
-@container editor (min-width: 44rem) {
-  .workspace :global(.pf-row) {
-    grid-template-columns: 138px minmax(0, 1fr);
-  }
-
-  .workspace :global(.pf-val) {
-    grid-column: auto;
-  }
 }
 
 .panel {
@@ -321,6 +290,20 @@
   min-inline-size: 0;
   gap: var(--sp-2);
   overflow-wrap: anywhere;
+}
+
+.linksDisclosure > summary {
+  cursor: pointer;
+}
+
+.linksDisclosure[open] > summary {
+  margin-block-end: var(--sp-4);
+}
+
+.questChoices {
+  max-block-size: calc(var(--sp-8) * 3);
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
 }
 
 /* Moved from inline styles (2026-10-21) */

@@ -1,11 +1,14 @@
 import { createElement } from 'react';
-import { act, renderHook } from '@testing-library/react';
+import { act, render, renderHook, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { graphql, HttpResponse } from 'msw';
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
 import { server } from '../../../src/mocks/server.js';
 import { createTestQueryClient } from '../../../src/providers.js';
 import { useEditorPublish } from '../../../src/features/editor/hooks/useEditorPublish.js';
+import { useEditorSummaryLinks } from '../../../src/features/editor/hooks/useEditorSummaryLinks.js';
+import { EditorSummaryLinks } from '../../../src/features/editor/EditorSummaryLinks.js';
 import {
   loadEditorRecord,
   parseDocumentLoad,
@@ -47,6 +50,93 @@ function harness() {
       createElement(QueryClientProvider, { client }, children),
   };
 }
+it('keeps hidden quest associations without inventing reader links for unavailable references', () => {
+  const base = initial();
+  const source = {
+    ...base,
+    meta: { ...base.meta, questIds: [q1, q2] },
+    summary: {
+      authoring: { questIds: [q1, q2], characterId: character, complete: false },
+      quests: [{ id: q1, shortCode: 'Q-1', title: 'Visible quest' }],
+    },
+  };
+  const setMeta = vi.fn();
+  const { result } = renderHook(
+    () =>
+      useEditorSummaryLinks({
+        initial: source,
+        meta: source.meta,
+        setMeta,
+        enabled: true,
+        scopeKey: 'incomplete-summary',
+      }),
+    harness(),
+  );
+  expect(result.current.selected).toEqual([
+    { id: q1, shortCode: 'Q-1', title: 'Visible quest' },
+    { id: q2, shortCode: null, title: null },
+  ]);
+  render(
+    <MemoryRouter>
+      <EditorSummaryLinks view={result.current} />
+    </MemoryRouter>,
+  );
+  expect(screen.getByRole('link', { name: 'Visible quest' })).toHaveAttribute(
+    'href',
+    '/quests/Q-1',
+  );
+  expect(screen.getByText('Unavailable quest').closest('a')).toBeNull();
+  expect(screen.getAllByRole('link')).toHaveLength(1);
+  expect(source.meta.questIds).toEqual([q1, q2]);
+  expect(setMeta).not.toHaveBeenCalled();
+});
+it('lets a summary started without quest context link a quest using the existing summary upsert', async () => {
+  const source = await loadEditorRecord({ typeKey: 'summary', mode: 'new' });
+  expect(source.summary?.authoring).toEqual({
+    questIds: [],
+    characterId: null,
+    complete: true,
+  });
+  let saved: unknown;
+  server.use(
+    graphql.mutation('EditorUpsertQuestSummary', ({ variables }) => {
+      saved = variables.input;
+      return HttpResponse.json({
+        data: { upsertQuestSummary: { id, slug: 'linked-summary', version: 1 } },
+      });
+    }),
+    graphql.mutation('CreateDocument', () => {
+      throw new Error('Linked summary must retain quest associations');
+    }),
+  );
+  const { result } = renderHook(
+    () =>
+      useEditorPublish({
+        typeKey: 'summary',
+        mode: 'new',
+        initial: source,
+        meta: {
+          ...source.meta,
+          title: 'From the table',
+          questIds: [q1],
+          characterId: character,
+        },
+        body: 'What happened',
+        onInvalidTitle: () => {},
+        onSuccess: () => {},
+      }),
+    harness(),
+  );
+  await act(async () => {
+    await result.current.mutateAsync(false);
+  });
+  expect(saved).toMatchObject({
+    questIds: [q1],
+    characterId: character,
+    title: 'From the table',
+    body: 'What happened',
+  });
+});
 it('reads source attribution rather than roster players and retains incomplete associations', () => {
   const parsed = parseDocumentLoad({
     id,

@@ -1,5 +1,6 @@
 import type { PageDeclaration } from '@pi/react-imposition';
 import { PageHost } from '@pi/react-imposition/react';
+import { useNavigate } from 'react-router-dom';
 import { PageShell } from '../../../components/foundation/PageShell.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { Card } from '../../../components/primitives/Card.js';
@@ -19,6 +20,7 @@ import styles from './directory.module.css';
 export function MemberDirectoryPage({ role }: { role: 'dm' | 'player' }) {
   const state = useCommunityDirectoryPage(role);
   const memberHref = useMemberHref();
+  const navigate = useNavigate();
   const labelFor = memberLabeler(state.status === 'ready' ? state.view.items : []);
   const title = role === 'dm' ? 'DMs' : 'Players';
   const declaration: PageDeclaration = {
@@ -35,6 +37,7 @@ export function MemberDirectoryPage({ role }: { role: 'dm' | 'player' }) {
               <PageHeader
                 back={{ to: '/community', label: 'Community' }}
                 title={title}
+                lede={role === 'dm' ? 'Meet the DMs and find a table for your next adventure.' : 'Meet the players, browse their interests, and see when they are free.'}
               />
               <FilterBar
                 label={`Filter ${title.toLowerCase()}`}
@@ -50,6 +53,10 @@ export function MemberDirectoryPage({ role }: { role: 'dm' | 'player' }) {
                   value={state.search}
                   onValueChange={state.setSearch}
                 />
+                <FilterBar.Group label="Browse">
+                  <Chip selected={role === 'player'} onClick={() => void navigate('/players')}>Players</Chip>
+                  <Chip selected={role === 'dm'} onClick={() => void navigate('/dms')}>DMs</Chip>
+                </FilterBar.Group>
                 {role === 'dm' ? (
                   <FilterBar.Group>
                     <Chip
@@ -116,18 +123,16 @@ export function MemberDirectoryPage({ role }: { role: 'dm' | 'player' }) {
                           />
                           <div className={styles.cardBody}>
                             <h2 className="type-title">{label}</h2>
-                            {handleLabel(member.handle) &&
-                            !label.includes(handleLabel(member.handle) ?? '') ? (
-                              <p className="type-caption">
-                                {handleLabel(member.handle)}
-                              </p>
-                            ) : null}
+                            <p className="type-caption">
+                              {member.isDm ? 'Dungeon master' : 'Player'}
+                              {handleLabel(member.handle) && !label.includes(handleLabel(member.handle) ?? '') ? ` · ${handleLabel(member.handle)}` : ''}
+                            </p>
                             {member.tagline ? (
                               <p className={`type-body ${styles.tagline}`}>
                                 {member.tagline}
                               </p>
                             ) : null}
-                            <div className={styles.chips}>
+                            {member.isDm || member.availableDays.length ? <div className={styles.chips}>
                               {member.isDm ? (
                                 <Chip
                                   size="sm"
@@ -144,7 +149,7 @@ export function MemberDirectoryPage({ role }: { role: 'dm' | 'player' }) {
                                   {weekdayList(member.availableDays, { plural: true })}
                                 </Chip>
                               ) : null}
-                            </div>
+                            </div> : null}
                           </div>
                         </Card>
                       );

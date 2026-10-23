@@ -29,7 +29,7 @@ beforeEach(() => {
 
 describe('QuestCard', () => {
   it('presents board chrome: seats, title, hook, DM, party, signup; no code', () => {
-    renderWithProviders(<QuestCard {...baseProps} />);
+    renderWithProviders(<QuestCard {...baseProps} onSignUpClick={() => {}} />);
     const card = screen.getByRole('article', { name: /Siege of Kraghold/i });
     expect(within(card).queryByText('Q-101')).not.toBeInTheDocument();
     expect(within(card).getByTestId('qboard-title')).toHaveTextContent(
@@ -77,10 +77,10 @@ describe('QuestCard', () => {
 
   it('shows Now chip for live status and strikethrough for cancelled', () => {
     const { rerender } = renderWithProviders(
-      <QuestCard {...baseProps} status="live" />,
+      <QuestCard {...baseProps} status="live" onSignUpClick={() => {}} />,
     );
     expect(screen.getByText('Now')).toBeInTheDocument();
-    rerender(<QuestCard {...baseProps} status="cancelled" />);
+    rerender(<QuestCard {...baseProps} status="cancelled" onSignUpClick={() => {}} />);
     expect(screen.getByRole('button', { name: 'Cancelled' })).toBeDisabled();
     expect(screen.getByTestId('qboard-title')).toHaveStyle({
       textDecoration: 'line-through',
@@ -112,6 +112,23 @@ describe('QuestCard', () => {
     await user.click(screen.getByRole('button', { name: /Sign up/i }));
     expect(onSignUpClick).toHaveBeenCalledOnce();
   });
+
+  it.each(['open', 'closed', 'cancelled'] as const)(
+    'lets guests browse a %s quest without a signup callback',
+    async (status) => {
+      renderWithProviders(
+        <Routes>
+          <Route path="/" element={<QuestCard {...baseProps} status={status} />} />
+          <Route path="/quests/Q-101" element={<p>Quest destination</p>} />
+          <Route path="/login" element={<p>Login destination</p>} />
+        </Routes>,
+      );
+      expect(screen.queryByRole('button', { name: 'Sign up' })).not.toBeInTheDocument();
+      await userEvent.setup().click(screen.getByRole('button', { name: 'View quest' }));
+      expect(await screen.findByText('Quest destination')).toBeVisible();
+      expect(screen.queryByText('Login destination')).not.toBeInTheDocument();
+    },
+  );
 
   it('opens confirm before withdraw and only then fires onWithdrawConfirm', async () => {
     const user = userEvent.setup();

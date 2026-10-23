@@ -1,23 +1,54 @@
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { SingleRegionPage } from '../../../chrome/singleRegion.js';
+import { QuestCard } from '../../../components/domain/QuestCard.js';
 import { Field } from '../../../components/foundation/Field.js';
 import { PageShell } from '../../../components/foundation/PageShell.js';
 import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { Button } from '../../../components/primitives/Button.js';
+import { CardGrid } from '../../../components/primitives/CardGrid.js';
+import { DetailLayout } from '../../../components/primitives/DetailLayout.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
-import { Chip } from '../../../components/primitives/Chip.js';
+import { Modal } from '../../../components/primitives/Modal.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
-import { useSeriesPage } from '../hooks/useSeriesPage.js';
-import { pluralize, statusLabel } from '../../../utils/format.js';
-import styles from './series.module.css';
+import { useSeriesPage } from '../../../hooks/useSeriesPage.js';
+import { isSentinelDate, personLabels, pluralize } from '../../../utils/format.js';
+import { toCardStatus } from '../../../view-models/questCard.js';
+
+const SEATED = new Set(['signed_up', 'selected', 'played']);
 
 export function SeriesPage(): React.JSX.Element {
   const { shortCode = '' } = useParams();
   const page = useSeriesPage(shortCode);
   const dates = useDateFormatter();
+  const [renaming, setRenaming] = useState(false);
   const arc = !page.arc.isError ? page.arc.data : undefined;
+  const dms = [
+    ...new Map(
+      arc?.quests.flatMap((quest) =>
+        quest.dm ? [[quest.dm.handle, quest.dm] as const] : [],
+      ),
+    ).values(),
+  ];
+  const dmLabels = personLabels(dms);
+  const labels = new Map(dms.map((dm, index) => [dm.handle, dmLabels[index]]));
+  const next = arc?.quests
+    .filter(
+      (quest) =>
+        !isSentinelDate(quest.scheduledAt) &&
+        Date.parse(quest.scheduledAt) >= Date.now() &&
+        !['closed', 'cancelled'].includes(
+          toCardStatus(quest.displayStatus, quest.status),
+        ),
+    )
+    .sort((a, b) => Date.parse(a.scheduledAt) - Date.parse(b.scheduledAt))[0];
+  const backAction = (
+    <Link className="btn btn--primary" to="/quests">
+      Back to quests
+    </Link>
+  );
   return (
     <PageShell context="war-room">
       <SingleRegionPage page="series">
@@ -29,127 +60,123 @@ export function SeriesPage(): React.JSX.Element {
               arc ? (
                 <>
                   <span>{pluralize(arc.questCount, 'quest')}</span>
-                  <span>Created {dates.formatDate(arc.createdAt)}</span>
+                  {dmLabels.length ? <span>With {dmLabels.join(', ')}</span> : null}
+                  {next ? (
+                    <span>Next session {dates.formatScheduled(next.scheduledAt)}</span>
+                  ) : null}
                 </>
               ) : undefined
             }
+            actions={
+              page.canRename ? (
+                <Button variant="secondary" onClick={() => setRenaming(true)}>
+                  Rename series
+                </Button>
+              ) : undefined
+            }
           />
-          {!page.validId ? (
-            <p className="type-body">
-              This historical series code has no current UUID identity. Open a series
-              from its quest’s arc link to continue.
-            </p>
-          ) : page.arc.isError ? (
-            <>
+          <DetailLayout>
+            {!page.validId ? (
+              <StatePanel
+                status="empty"
+                title="Series not found"
+                emptyMessage="This series link is out of date. Open a series from its quest on the board."
+                action={backAction}
+              />
+            ) : page.arc.isError ? (
               <StatePanel
                 status="error"
                 error={toAppError(page.arc.error, 'series:read')}
+                onRetry={page.retry}
+                action={backAction}
               />
-              <Button onClick={page.retry}>Try again</Button>
-            </>
-          ) : page.arc.isPending ? (
-            <StatePanel status="loading" />
-          ) : !arc ? (
-            <StatePanel
-              status="empty"
-              title="Series not found"
-              emptyMessage="This quest series is unavailable."
-              action={
-                <Link className="btn" to="/quests">
-                  Back to Quests
-                </Link>
-              }
-            />
-          ) : (
-            <>
-              {arc.quests.length ? (
-                <ol className={styles.quests}>
-                  {arc.quests.map((quest) => (
-                    <li key={quest.id}>
-                      <Link
-                        className={styles.quest}
-                        to={`/quests/${encodeURIComponent(quest.shortCode)}`}
-                      >
-                        <span className="stack" data-gap="1">
-                          <span className="type-title">
-                            {quest.briefDocument?.title ?? quest.shortCode}
-                          </span>
-                          <span className="type-caption">
-                            {dates.formatScheduled(quest.scheduledAt)}
-                          </span>
-                        </span>
-                        <Chip size="sm" tone="line">
-                          {statusLabel(quest.status)}
-                        </Chip>
-                      </Link>
-                    </li>
-                  ))}
-                </ol>
-              ) : (
-                <EmptyState
-                  message="No quests belong to this series yet."
-                  action={
-                    <Link className="btn btn--secondary btn--sm" to="/quests">
-                      Browse the quest board
-                    </Link>
-                  }
-                />
-              )}
-              {page.canRename ? (
-                <form
-                  key={arc.name}
-                  className={`card stack ${styles.form}`}
-                  onSubmit={(event) => {
-                    event.preventDefault();
-                    const data = new FormData(event.currentTarget);
-                    void page.save(arc.id, String(data.get('name') ?? ''));
-                  }}
-                >
-                  <h2 className="type-title">Edit series name</h2>
-                  <div className={styles.inline}>
-                    <Field
-                      label="Series name"
-                      name="name"
-                      required
-                      maxLength={200}
-                      defaultValue={arc.name}
+            ) : page.arc.isPending ? (
+              <StatePanel status="loading" />
+            ) : !arc ? (
+              <StatePanel
+                status="empty"
+                title="Series not found"
+                emptyMessage="This quest series is unavailable."
+                action={backAction}
+              />
+            ) : arc.quests.length ? (
+              <CardGrid as="ol" aria-label="Quests in this series" gap={5}>
+                {arc.quests.map((quest) => (
+                  <li key={quest.id}>
+                    <QuestCard
+                      code={quest.shortCode}
+                      title={quest.briefDocument?.title ?? 'Untitled quest'}
+                      description={quest.briefDocument?.effectiveBody}
+                      status={toCardStatus(quest.displayStatus, quest.status)}
+                      when={dates.formatScheduled(quest.scheduledAt)}
+                      dmUsername={quest.dm?.handle}
+                      dmName={quest.dm ? labels.get(quest.dm.handle) : undefined}
+                      totalSlots={quest.slotsMax}
+                      party={quest.participants
+                        .filter((member) => SEATED.has(member.status))
+                        .map((member) => ({
+                          characterId: member.characterId,
+                          characterName: member.characterName,
+                          avatarUrl: member.memberAvatarUrl,
+                        }))}
+                      waitlistCount={
+                        quest.participants.filter(
+                          (member) => member.status === 'waitlisted',
+                        ).length
+                      }
                     />
-                    <Button type="submit" variant="secondary" pending={page.pending}>
-                      Save series name
-                    </Button>
-                  </div>
-                </form>
-              ) : null}
-            </>
-          )}
-          {page.authorityError ? (
-            <>
-              <StatePanel status="error" error={page.authorityError} />
-              <Button onClick={page.retryAuthority}>Retry permissions</Button>
-            </>
-          ) : null}
-          {page.canCreate ? (
-            <form
-              className={`card stack ${styles.form}`}
-              onSubmit={(event) => {
-                event.preventDefault();
-                const form = event.currentTarget;
-                const data = new FormData(form);
-                void page.save(null, String(data.get('name') ?? ''), () =>
-                  form.reset(),
-                );
-              }}
+                  </li>
+                ))}
+              </CardGrid>
+            ) : (
+              <EmptyState
+                message="No quests belong to this series yet."
+                action={
+                  <Link className="btn btn--secondary btn--sm" to="/quests">
+                    Browse the quest board
+                  </Link>
+                }
+              />
+            )}
+          </DetailLayout>
+          {arc ? (
+            <Modal
+              open={renaming && page.canRename}
+              title="Rename series"
+              onClose={() => setRenaming(false)}
+              size="sm"
             >
-              <h2 className="type-title">Create a quest series</h2>
-              <div className={styles.inline}>
-                <Field label="New series name" name="name" required maxLength={200} />
-                <Button type="submit" variant="secondary" pending={page.pending}>
-                  Create series
-                </Button>
-              </div>
-            </form>
+              <form
+                key={arc.name}
+                className="stack"
+                data-gap="4"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  const data = new FormData(event.currentTarget);
+                  void page.save(arc.id, String(data.get('name') ?? ''), () =>
+                    setRenaming(false),
+                  );
+                }}
+              >
+                <Field
+                  label="Series name"
+                  name="name"
+                  required
+                  maxLength={200}
+                  defaultValue={arc.name}
+                />
+                {page.error ? <StatePanel status="error" error={page.error} /> : null}
+                <div className="row" data-gap="3" data-wrap="1">
+                  <Button type="submit" pending={page.pending}>
+                    Save series name
+                  </Button>
+                  <Button variant="ghost" onClick={() => setRenaming(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </Modal>
           ) : null}
-          {page.error ? <StatePanel status="error" error={page.error} /> : null}
         </div>
       </SingleRegionPage>
     </PageShell>

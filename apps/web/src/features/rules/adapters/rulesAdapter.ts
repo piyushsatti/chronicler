@@ -8,7 +8,11 @@ import DETAIL_QUERY from './ruleDetail.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import { isRulingCategory } from '../../../utils/documentHref.js';
-import { ruleDocumentWireSchema, rulesListWireSchema } from './rules.wire.schema.js';
+import {
+  ruleBacklinksWireSchema,
+  ruleDocumentWireSchema,
+  rulesListWireSchema,
+} from './rules.wire.schema.js';
 
 export type RuleListItemView = {
   id: string;
@@ -29,6 +33,7 @@ export type RuleDetailView = {
   authorHandle: string | null;
   updatedAt: string | null;
   canEdit: boolean;
+  backlinkIds: string[];
 };
 
 export type RulesHubView = {
@@ -119,11 +124,17 @@ export function parseRulesList(wire: unknown): AdapterResult<RulesHubView> {
   };
 }
 
-export function parseRuleDetail(wire: unknown): AdapterResult<RuleDetailView> {
+export function parseRuleDetail(
+  wire: unknown,
+  backlinksWire: unknown = [],
+): AdapterResult<RuleDetailView> {
   const parsed = ruleDocumentWireSchema.safeParse(wire);
+  const backlinks = ruleBacklinksWireSchema.safeParse(backlinksWire);
   if (!parsed.success) {
     return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
   }
+  if (!backlinks.success)
+    return { ok: false, failure: 'InvalidWire', detail: backlinks.error.message };
   const category = parsed.data.category ?? null;
   return {
     ok: true,
@@ -137,6 +148,7 @@ export function parseRuleDetail(wire: unknown): AdapterResult<RuleDetailView> {
       authorHandle: parsed.data.author?.handle ?? null,
       updatedAt: parsed.data.updatedAt ?? null,
       canEdit: parsed.data.canEditBody === true || parsed.data.canEditMetadata === true,
+      backlinkIds: backlinks.data.map((link) => link.documentId),
     },
   };
 }
@@ -208,7 +220,7 @@ export async function loadRuleDetail(
     if (data.document == null) {
       throw toAppError({ failure: 'NotFound' }, 'rules:detail');
     }
-    const result = parseRuleDetail(data.document);
+    const result = parseRuleDetail(data.document, data.documentBacklinks);
     if (!result.ok) throw toAppError({ failure: result.failure }, 'rules:detail');
     // A slug shared across families must not leak a guide onto a ruling URL.
     if (result.data.isRuling !== (family === 'rulings')) {

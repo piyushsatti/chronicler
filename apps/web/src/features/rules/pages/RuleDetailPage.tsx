@@ -6,13 +6,15 @@ import { ContentRenderer } from '../../../components/foundation/ContentRenderer.
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { DetailLayout } from '../../../components/primitives/DetailLayout.js';
 import { PageHeader } from '../../../components/primitives/PageHeader.js';
+import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { useRuleDetailPage } from '../hooks/useRuleDetailPage.js';
 import type { RuleFamily } from '../adapters/rulesAdapter.js';
 import { documentHref } from '../../../utils/documentHref.js';
 import { useRulesPage } from '../hooks/useRulesPage.js';
-import { handleLabel } from '../../../utils/format.js';
+import { isSentinelDate, personLabels } from '../../../utils/format.js';
 import { Card } from '../../../components/primitives/Card.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
+import { useMemberProfile } from '../../../hooks/useMemberProfile.js';
 import styles from './rules.module.css';
 
 const DECLARATION: PageDeclaration = {
@@ -24,6 +26,9 @@ export function RuleDetailPage({ family }: { family: RuleFamily }): React.JSX.El
   const { slug, id } = useParams();
   const page = useRuleDetailPage(slug ?? id ?? '', family);
   const hub = useRulesPage();
+  const authorProfile = useMemberProfile(
+    page.status === 'ready' ? (page.view.authorHandle ?? '') : '',
+  );
 
   const noun = family === 'rulings' ? 'ruling' : 'guide';
   const { formatDate } = useDateFormatter();
@@ -36,27 +41,48 @@ export function RuleDetailPage({ family }: { family: RuleFamily }): React.JSX.El
         <div className={styles.detail}>
           <PageHeader
             back={back}
-            title={
-              notFound ? `${noun === 'ruling' ? 'Ruling' : 'Guide'} not found` : 'Rules'
-            }
+            title={`${noun === 'ruling' ? 'Ruling' : 'Guide'}${notFound ? ' not found' : ''}`}
           />
           <StatePanel
             status={notFound ? 'empty' : 'error'}
             error={page.error}
             emptyMessage={`This ${noun} may have been removed, or the link is out of date.`}
+            action={
+              <Link className="btn btn--primary" to="/rules">
+                Back to rules
+              </Link>
+            }
           />
         </div>
       ),
     };
   } else if (page.status === 'loading') {
-    regions = { body: () => <StatePanel status="loading" /> };
+    regions = {
+      body: () => (
+        <div className={styles.detail}>
+          <PageHeader back={back} title={noun === 'ruling' ? 'Ruling' : 'Guide'} />
+          <StatePanel status="loading" />
+        </div>
+      ),
+    };
   } else {
     const rule = page.view;
-    const author = handleLabel(rule.authorHandle);
+    const author = rule.authorHandle
+      ? personLabels([
+          {
+            displayName: authorProfile.data?.member.displayName,
+            handle: rule.authorHandle,
+          },
+        ])[0]
+      : null;
     const siblings =
       hub.status === 'ready'
-        ? (family === 'rulings' ? hub.view.rulings : hub.view.guides)
-            .filter((entry) => entry.id !== rule.id)
+        ? hub.view.guides
+            .filter(
+              (entry) =>
+                entry.id !== rule.id &&
+                (family !== 'rulings' || rule.backlinkIds.includes(entry.id)),
+            )
             .slice(0, 6)
         : [];
     const ordered =
@@ -68,7 +94,7 @@ export function RuleDetailPage({ family }: { family: RuleFamily }): React.JSX.El
     const at = ordered.findIndex((entry) => entry.id === rule.id);
     const previous = at > 0 ? ordered[at - 1] : undefined;
     const next = at >= 0 ? ordered[at + 1] : undefined;
-    const hubLabel = family === 'rulings' ? 'More rulings' : 'More guides';
+    const hubLabel = family === 'rulings' ? 'Related guides' : 'More guides';
     regions = {
       body: () => (
         <article className={styles.detail}>
@@ -78,7 +104,7 @@ export function RuleDetailPage({ family }: { family: RuleFamily }): React.JSX.El
             meta={
               <>
                 {author ? <span>by {author}</span> : null}
-                {rule.updatedAt ? (
+                {rule.updatedAt && !isSentinelDate(rule.updatedAt) ? (
                   <span>Updated {formatDate(rule.updatedAt)}</span>
                 ) : null}
               </>
@@ -97,7 +123,11 @@ export function RuleDetailPage({ family }: { family: RuleFamily }): React.JSX.El
           <DetailLayout
             railLabel={hubLabel}
             rail={
-              siblings.length > 0 ? (
+              hub.status === 'loading' ? (
+                <StatePanel status="loading" variant="inline" />
+              ) : hub.status === 'error' ? (
+                <StatePanel status="error" error={hub.error} onRetry={hub.refetch} />
+              ) : siblings.length > 0 ? (
                 <Card as="section" pad={4} className="stack" data-gap="3">
                   <h2 className="type-heading">{hubLabel}</h2>
                   <ul className={styles.related}>
@@ -113,17 +143,44 @@ export function RuleDetailPage({ family }: { family: RuleFamily }): React.JSX.El
                     ))}
                   </ul>
                 </Card>
-              ) : undefined
+              ) : (
+                <EmptyState
+                  message={
+                    family === 'rulings'
+                      ? 'No related guides are available for this ruling yet.'
+                      : 'No other guides are available yet.'
+                  }
+                  action={
+                    <Link className="btn btn--secondary btn--sm" to="/rules">
+                      Browse rules
+                    </Link>
+                  }
+                />
+              )
             }
           >
             <DetailLayout.Reading>
-              <Card pad={5} className={styles.detailBody}>
-                {rule.body ? (
+              {rule.body ? (
+                <Card pad={5} className={styles.detailBody}>
                   <ContentRenderer body={rule.body} className={styles.detailProse} />
-                ) : (
-                  <p className="type-caption">No body available for this viewer.</p>
-                )}
-              </Card>
+                </Card>
+              ) : (
+                <EmptyState
+                  message={`No ${noun} text is available for this viewer.`}
+                  action={
+                    <Link
+                      className="btn btn--secondary btn--sm"
+                      to={
+                        rule.canEdit
+                          ? `/rules/${family}/${encodeURIComponent(rule.id)}/edit`
+                          : '/rules'
+                      }
+                    >
+                      {rule.canEdit ? `Add ${noun} text` : 'Browse rules'}
+                    </Link>
+                  }
+                />
+              )}
               {previous || next ? (
                 <nav className={styles.pager} aria-label={`More ${family}`}>
                   {previous ? (

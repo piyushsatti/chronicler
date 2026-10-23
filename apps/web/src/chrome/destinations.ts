@@ -58,7 +58,7 @@ export const PRIMARY_DESTINATIONS: readonly SiteDestination[] = [
     label: 'Community',
     href: '/community',
     matches: (pathname) =>
-      matchesPath(pathname, ['/community', '/players', '/dms', '/characters']),
+      matchesPath(pathname, ['/community', '/players', '/dms', '/characters', '/editor/dm-table']),
   },
 ];
 
@@ -106,9 +106,7 @@ export function currentDestinationId(
   return match?.id ?? 'home';
 }
 
-/** Fixed personal paths: the hub, account pages, the DM dashboard and the
- * DM-table editor (a DM's own tables, reached from /dm). */
-const PERSONAL_PATHS = ['/me', '/settings', '/notifications', '/dm', '/editor/dm-table'];
+const PERSONAL_PATHS = ['/me', '/settings', '/notifications', '/dm'];
 
 /**
  * Personal routes belong to the avatar, not to a main-nav item: the hub,

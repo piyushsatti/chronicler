@@ -26,6 +26,17 @@
   gap: var(--sp-1);
   min-width: 0;
   flex: 1;
+  overflow-wrap: anywhere;
+}
+
+.cardBody h2 {
+  margin: 0;
+}
+
+.chips :global(.chip) {
+  max-inline-size: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .tagline {

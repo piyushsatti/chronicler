@@ -9,9 +9,22 @@ query RetainedSeriesArc($id: ID!, $offset: Int!) {
       id
       shortCode
       status
+      displayStatus
       scheduledAt
+      slotsMax
+      dm {
+        handle
+        displayName
+      }
       briefDocument {
         title
+        effectiveBody
+      }
+      participants(limit: 100) {
+        characterId
+        characterName
+        memberAvatarUrl
+        status
       }
     }
   }

@@ -1,5 +1,9 @@
 import { z } from 'zod';
 
+export const ruleBacklinksWireSchema = z.array(
+  z.object({ documentId: z.string().uuid() }),
+);
+
 export const ruleDocumentWireSchema = z.object({
   id: z.string().uuid(),
   slug: z.string().min(1),

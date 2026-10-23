@@ -41,6 +41,64 @@ function props(): EditorShellProps {
 }
 
 describe('editor props-only views', () => {
+  it.each(['demo', 'dm-table', 'summary', 'guide', 'ruling'] as const)(
+    'keeps %s formatting beside primary Publish and secondary Save draft in the shared toolbar',
+    (typeKey) => {
+      render(
+        <MemoryRouter>
+          <EditorShell {...props()} typeKey={typeKey} undo={vi.fn()} canUndo />
+        </MemoryRouter>,
+      );
+      const formatting = screen.getByRole('toolbar', { name: 'Markdown formatting' });
+      const publish = screen.getByRole('button', { name: 'Publish' });
+      expect(formatting.parentElement).toContainElement(publish);
+      expect(publish).toHaveAttribute('data-variant', 'primary');
+      expect(screen.getByRole('button', { name: 'Save draft' })).toHaveAttribute(
+        'data-variant',
+        'secondary',
+      );
+      expect(screen.getByRole('button', { name: 'Bold' })).toHaveAttribute(
+        'title',
+        'Bold',
+      );
+      expect(screen.getByRole('button', { name: 'Undo' })).toHaveAccessibleName('Undo');
+      expect(screen.queryByText('Advanced')).not.toBeInTheDocument();
+      expect(screen.getByText('Required')).toBeVisible();
+      fireEvent.keyDown(screen.getByRole('tab', { name: 'Write' }), { key: 'End' });
+      expect(screen.getByRole('tab', { name: 'Preview' })).toHaveAttribute(
+        'aria-selected',
+        'true',
+      );
+    },
+  );
+
+  it('shows an existing page address only in Advanced and copies the reader path', async () => {
+    const writeText = vi.fn(async () => {});
+    vi.stubGlobal('navigator', { ...navigator, clipboard: { writeText } });
+    try {
+      render(
+        <MemoryRouter>
+          <EditorShell
+            {...props()}
+            slugLocked
+            meta={{ title: 'Guide', slug: 'a-guide', kind: 'rule', category: 'guide' }}
+          />
+        </MemoryRouter>,
+      );
+      const advanced = screen.getByText('Advanced').closest('details');
+      expect(advanced).not.toHaveAttribute('open');
+      fireEvent.click(screen.getByText('Advanced'));
+      fireEvent.click(screen.getByRole('button', { name: 'Copy' }));
+      expect(writeText).toHaveBeenCalledWith('/rules/guides/a-guide');
+      expect(await screen.findByRole('button', { name: 'Copied' })).toBeInTheDocument();
+      expect(
+        screen.queryByRole('textbox', { name: 'Page address' }),
+      ).not.toBeInTheDocument();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
   it('shows one Quest save action and keeps its keyboard save path', () => {
     const input = { ...props(), typeKey: 'quest' as const, saveLabel: 'Save quest' };
     render(
@@ -227,8 +285,14 @@ describe('editor props-only views', () => {
   });
 
   it('renders controlled route error, loading and explicit empty view states', () => {
-    const view = render(<EditorPageView page={{ status: 'error', error }} />);
+    const view = render(<EditorPageView page={{ status: 'error', error }} />, {
+      wrapper: MemoryRouter,
+    });
     expect(screen.getByRole('alert')).toHaveTextContent(error.userMessage);
+    expect(
+      screen.getByRole('heading', { level: 1, name: 'Example editor' }),
+    ).toBeVisible();
+    expect(screen.getByRole('link', { name: /home/i })).toHaveAttribute('href', '/');
     view.rerender(<EditorPageView page={{ status: 'loading' }} />);
     expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
     // View-contract proof only: the current load adapter never returns an empty edit record.
@@ -261,8 +325,8 @@ describe('editor props-only views', () => {
       entityIndex: [],
       entityIndexError: null,
       mutationError: null,
-      saveLabel: 'Save changes',
-      publishLabel: 'Save and view',
+      saveLabel: 'Save draft',
+      publishLabel: 'Publish',
       canEditBody: true,
       denied: false,
       briefMissing: false,
@@ -270,6 +334,7 @@ describe('editor props-only views', () => {
       schemaAccess: {},
       canEditMetadata: true,
       stale: false,
+      draftRecovery: undefined,
       onReload: vi.fn(),
       navigationBlocked: false,
       stay: vi.fn(),
@@ -294,6 +359,7 @@ describe('editor props-only views', () => {
       summaryLinks: {
         active: false,
         editable: false,
+        hiddenLinks: false,
         search: '',
         setSearch: vi.fn(),
         selected: [],

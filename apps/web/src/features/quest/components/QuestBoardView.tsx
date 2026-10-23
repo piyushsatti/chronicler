@@ -7,6 +7,7 @@ import { Chip } from '../../../components/primitives/Chip.js';
 import { FilterBar } from '../../../components/primitives/FilterBar.js';
 import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { QuestCard } from '../../../components/domain/QuestCard.js';
+import { SeriesCreateAction } from '../../../components/domain/SeriesCreateAction.js';
 import type {
   QuestBoardItemView,
   QuestBoardCardPropsView,
@@ -58,24 +59,23 @@ type QuestBoardViewProps = {
 /** Props-only board composition. Data and layout authority arrive from its hook. */
 export function QuestBoardView(page: QuestBoardViewProps): React.JSX.Element {
   return (
-    <section
-      className={styles.board}
-      aria-label="Quest board"
-      data-el="quests.root"
-    >
+    <section className={styles.board} aria-label="Quest board" data-el="quests.root">
       <PageHeader
         title="Quests"
         lede="Open tables, upcoming sessions and the ones running now."
         actions={
-          page.canCreate ? (
-            <Link
-              data-el="quests.newQuestBtn"
-              to="/quests/new"
-              className="btn btn--primary primary"
-            >
-              New quest
-            </Link>
-          ) : null
+          <>
+            <SeriesCreateAction />
+            {page.canCreate ? (
+              <Link
+                data-el="quests.newQuestBtn"
+                to="/quests/new"
+                className="btn btn--primary primary"
+              >
+                New quest
+              </Link>
+            ) : null}
+          </>
         }
         meta={
           (page.dmsAcceptingCount !== null && page.dmsAcceptingCount > 0) ||

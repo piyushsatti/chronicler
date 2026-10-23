@@ -262,7 +262,14 @@ export function useEditorWorkspace({
     setBody,
     isDirty,
     onSaveDraft: () => {
-      if (!busy) publish.mutate(false);
+      if (busy || !admit() || trashed || invalidSession) return;
+      if (initial.briefPublished && typeKey !== 'quest') {
+        setStatusMessage(
+          draft.saveDraft()
+            ? 'Draft saved on this device. Publish to update the live page.'
+            : 'Draft could not be saved on this device. Keep this page open to preserve your edits.',
+        );
+      } else publish.mutate(false);
     },
     onPublish: () => {
       if (!busy) publish.mutate(true);
@@ -277,17 +284,13 @@ export function useEditorWorkspace({
         ? mode === 'new'
           ? 'Create quest'
           : 'Save quest'
-        : initial.briefPublished
-          ? 'Save changes'
-          : 'Save draft',
+        : 'Save draft',
     publishLabel:
       typeKey === 'quest'
         ? mode === 'new'
           ? 'Create quest'
           : 'Save quest'
-        : initial.briefPublished
-          ? 'Save and view'
-          : 'Publish',
+        : 'Publish',
     // The server grants neither right, so the editor would be inert: show a denial.
     // A quest without a loadable brief is inert for everyone, admins included.
     denied: mode === 'edit' && !initial.canEditMetadata && !initial.canEditBody,
@@ -306,6 +309,26 @@ export function useEditorWorkspace({
     showPropertyErrors,
     slugLocked: mode === 'edit',
     stale: draft.stale,
+    draftRecovery:
+      enabled && initial.canEditMetadata && !draft.stale && draft.recoverableDrafts.length
+        ? {
+            items: draft.recoverableDrafts,
+            recover: (key: string) => {
+              if (busy || !admit() || trashed) return;
+              if (
+                isDirty &&
+                !window.confirm(
+                  'Replace your current edits with this older draft? Copy anything you want to keep first.',
+                )
+              )
+                return;
+              draft.recoverDraft(key);
+              setStatusMessage(
+                'Recovered an older draft. Copy its title and body before discarding local edits and reloading the live page. Publishing this draft is blocked.',
+              );
+            },
+          }
+        : undefined,
     onReload: reloadLatest,
     navigationBlocked: blocker.state === 'blocked',
     stay: () => {

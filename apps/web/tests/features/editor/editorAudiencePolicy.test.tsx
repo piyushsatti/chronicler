@@ -124,8 +124,11 @@ it('requires explicit choices when changing deny-all to visibility rules or a na
   );
   fireEvent.click(custom());
   fireEvent.change(screen.getByRole('textbox', { name: 'Reader handles' }), {
-    target: { value: 'member:@reader' },
+    target: { value: '@reader,' },
   });
+  expect(screen.getByRole('textbox', { name: 'Reader handles' })).toHaveValue(
+    '@reader, ',
+  );
   fireEvent.click(screen.getByRole('button', { name: 'Save readers' }));
   await waitFor(() => expect(document.policy).toEqual(['member:@reader']));
   await waitFor(() =>

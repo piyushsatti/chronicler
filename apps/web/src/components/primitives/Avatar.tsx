@@ -46,6 +46,14 @@ const DATA_SIZE: Record<AvatarSize, string | undefined> = {
   token: 'token',
 };
 
+function isPlaceholderSource(src: string): boolean {
+  try {
+    return /(?:^|\.)(?:test|invalid|example)$/.test(new URL(src).hostname);
+  } catch {
+    return false;
+  }
+}
+
 function AvatarImage({
   src,
   label,
@@ -115,7 +123,7 @@ export const Avatar = forwardRef<HTMLElement, AvatarProps>(function Avatar(
 
   const content =
     children ??
-    (!empty && src ? (
+    (!empty && src && !isPlaceholderSource(src) ? (
       <AvatarImage key={src} src={src} label={name || 'Avatar'} initials={initials} />
     ) : (
       initials

@@ -1,7 +1,7 @@
 import { SegmentedControl } from '../../components/primitives/SegmentedControl.js';
 import { Modal } from '../../components/primitives/Modal.js';
 import { Card } from '../../components/primitives/Card.js';
-import { formatInstant } from '../../utils/format.js';
+import { formatInstant, personLabels } from '../../utils/format.js';
 import styles from './editor.module.css';
 import { Button } from '../../components/primitives/Button.js';
 import { ContentRenderer } from '../../components/foundation/ContentRenderer.js';
@@ -47,6 +47,14 @@ export function EditorDocumentControls({
   view: EditorWorkspaceView;
 }): React.JSX.Element {
   const history = view.history;
+  const memberNames = personLabels(view.audience.matches);
+  const policyEntries = view.policy.split(',').map((entry) => entry.trim());
+  const namedReaders = policyEntries.filter(
+    (entry) => entry === '' || entry.startsWith('member:@'),
+  );
+  const otherRules = policyEntries.filter(
+    (entry) => entry && !entry.startsWith('member:@'),
+  );
   return (
     <>
       <Modal
@@ -151,14 +159,29 @@ export function EditorDocumentControls({
                     <span className="field-label">Reader handles</span>
                     <input
                       className="field-input"
-                      value={view.policy}
-                      onChange={(event) => view.setPolicy(event.target.value)}
-                      placeholder="member:@handle, role:dm"
+                      placeholder="@reader, @another-reader"
+                      value={namedReaders
+                        .map((entry) => entry.slice('member:'.length))
+                        .join(', ')}
+                      onChange={(event) =>
+                        view.setPolicy(
+                          [
+                            ...otherRules,
+                            ...event.target.value
+                              .split(',')
+                              .map((handle) => handle.trim())
+                              .map((handle) =>
+                                handle ? `member:@${handle.replace(/^@/, '')}` : '',
+                              ),
+                          ].join(', '),
+                        )
+                      }
                     />
                   </label>
                   <p className="type-caption">
-                    Chosen readers replace the visibility setting. An empty list lets no
-                    one read this.
+                    {otherRules.length > 0
+                      ? 'Additional reader rules stay in place when you save.'
+                      : 'Chosen readers replace the visibility setting. An empty list lets no one read this.'}
                   </p>
                 </>
               ) : (
@@ -198,9 +221,9 @@ export function EditorDocumentControls({
               ) : null}
               {view.audience.loading ? <StatePanel status="loading" /> : null}
               <ul className={styles.items} aria-label="Matching members">
-                {view.audience.matches.map((member) => (
+                {view.audience.matches.map((member, index) => (
                   <li key={member.memberId}>
-                    {member.displayName} (@{member.handle}){' '}
+                    {memberNames[index]}{' '}
                     <Button
                       type="button"
                       size="sm"
@@ -208,7 +231,7 @@ export function EditorDocumentControls({
                       disabled={view.audience.selectedIds.includes(member.memberId)}
                       onClick={() => view.audience.add(member.memberId)}
                     >
-                      Add @{member.handle}
+                      Add {memberNames[index]}
                     </Button>
                   </li>
                 ))}
@@ -242,7 +265,7 @@ export function EditorDocumentControls({
                   </Button>
                 </div>
               ) : null}
-              <div className="row" data-justify="end">
+              <div className="row">
                 <Button type="button" variant="secondary" onClick={view.saveAudience}>
                   Save readers
                 </Button>
@@ -258,7 +281,7 @@ export function EditorDocumentControls({
           >
             <HistoryGlyph />
             Revision history
-            {history.total > 0 ? (
+            {!history.loading ? (
               <span className={`type-caption ${styles.historyCount}`}>
                 {history.total}
               </span>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/primitives/Button.js';
+import { Tabs } from '../../components/primitives/Tabs.js';
 import { Card } from '../../components/primitives/Card.js';
 import { ContentRenderer } from '../../components/foundation/ContentRenderer.js';
 import { LiveEditor } from './LiveEditor.js';
@@ -12,13 +13,9 @@ import type { EditorMeta as LoadMeta } from './adapters/editorLoad.js';
 import type { EditorFieldOptions, EditorPreview, EditorTypeKey } from './types.js';
 import { StatePanel } from '../../components/foundation/StatePanel.js';
 import type { EntityLinkIndex } from './types.js';
+import { documentHref } from '../../utils/documentHref.js';
 
 export type ShellMode = 'edit' | 'read';
-
-const MODE_TABS: { value: ShellMode; label: string }[] = [
-  { value: 'edit', label: 'Write' },
-  { value: 'read', label: 'Preview' },
-];
 
 function HistoryIcon({ direction }: { direction: 'undo' | 'redo' }): React.JSX.Element {
   return (
@@ -152,6 +149,10 @@ export type EditorShellProps = {
   redo?: () => void;
   canUndo?: boolean;
   canRedo?: boolean;
+  draftRecovery?: {
+    items: { key: string; revision: number }[];
+    recover: (key: string) => void;
+  };
 };
 
 export function EditorShell({
@@ -187,14 +188,35 @@ export function EditorShell({
   redo,
   canUndo,
   canRedo,
+  draftRecovery,
 }: EditorShellProps): React.JSX.Element {
   const [mode, setMode] = useState<ShellMode>('edit');
   const schema = schemaForType(typeKey, meta, schemaAccess);
   // The page address is assigned on create and never typed by the author: new
   // items hide it, saved items show it once, read-only, under Advanced.
   const visibleSchema = schema.filter((field) => field.key !== 'slug');
-  const pageAddress =
-    typeof meta.slug === 'string' && meta.slug.trim() ? meta.slug.trim() : null;
+  const slug = typeof meta.slug === 'string' ? meta.slug.trim() : '';
+  const pageAddress = slug
+    ? documentHref({
+        kind:
+          typeof meta.kind === 'string'
+            ? meta.kind
+            : typeKey === 'guide' || typeKey === 'ruling'
+              ? 'rule'
+              : typeKey === 'dm-table'
+                ? 'community'
+                : typeKey === 'codex'
+                  ? 'codex_entry'
+                  : typeKey,
+        category:
+          typeof meta.category === 'string'
+            ? meta.category
+            : typeKey === 'dm-table'
+              ? 'dm_table'
+              : typeKey,
+        slug,
+      })
+    : null;
 
   useEffect(() => {
     const h = (e: KeyboardEvent): void => {
@@ -233,127 +255,138 @@ export function EditorShell({
               : `Your account doesn’t have edit rights for this ${noun}.`,
         };
     return (
-      <Card
-        as="section"
-        className={`editor-shell stack ${styles.denied}`}
+      <div
+        className="editor-shell"
         data-component="EditorShell"
         data-state={briefMissing ? 'brief-missing' : 'denied'}
-        data-gap="3"
-        aria-labelledby="editor-denied-title"
       >
-        {briefMissing ? (
-          <h2 className="type-title" id="editor-denied-title">
-            This quest has no brief to edit yet
-          </h2>
-        ) : (
-          <>
-            <h2 className="type-title" id="editor-denied-title">
-              {copy.title}
-            </h2>
-            <p className="type-body">{copy.body}</p>
-          </>
-        )}
-        <div className="row" data-wrap="1" data-gap="2">
-          <Link className="btn btn--secondary" to={cancelTo}>
-            {typeKey === 'quest' && !creating
-              ? 'Back to the quest'
-              : EDITOR_BACK_LABELS[typeKey]}
-          </Link>
-        </div>
-      </Card>
+        <StatePanel
+          status={briefMissing ? 'empty' : 'denied'}
+          title={briefMissing ? 'This quest has no brief to edit yet' : copy.title}
+          emptyMessage="There is no brief available to edit."
+          deniedMessage={copy.body}
+          action={
+            <Link
+              className="btn btn--secondary"
+              to={typeKey === 'dm-table' ? '/me' : cancelTo}
+            >
+              {typeKey === 'dm-table'
+                ? 'Your page'
+                : typeKey === 'quest' && !creating
+                  ? 'Back to the quest'
+                  : EDITOR_BACK_LABELS[typeKey]}
+            </Link>
+          }
+        />
+      </div>
     );
   }
 
-  return (
-    <Card className="editor-shell stack" data-component="EditorShell" data-mode={mode}>
-      <div className={`row ${styles.toolbar}`} data-wrap="1">
-        <div className={`row ${styles.tools}`}>
-          <div className="tabs" data-component="Tabs">
-            <div className="tabs__list" role="tablist" aria-label="Editor mode">
-              {MODE_TABS.map(({ value, label }) => (
-                <button
-                  key={value}
-                  type="button"
-                  role="tab"
-                  id={`editor-mode-${value}`}
-                  aria-controls="editor-body"
-                  aria-selected={mode === value}
-                  tabIndex={mode === value ? 0 : -1}
-                  className="tabs__tab"
-                  onClick={() => {
-                    if (value === 'read') onPreview();
-                    setMode(value);
-                  }}
-                  onKeyDown={(event) => {
-                    if (event.key !== 'ArrowLeft' && event.key !== 'ArrowRight') return;
-                    event.preventDefault();
-                    const next = value === 'edit' ? 'read' : 'edit';
-                    if (next === 'read') onPreview();
-                    setMode(next);
-                    document.getElementById(`editor-mode-${next}`)?.focus();
-                  }}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          </div>
-          {undo || redo ? (
-            <div className="row" role="group" aria-label="History" data-gap="1">
-              {undo ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  aria-label="Undo"
-                  title="Undo"
-                  disabled={!canUndo || !canEditMetadata}
-                  onClick={undo}
-                >
-                  <HistoryIcon direction="undo" />
-                </Button>
-              ) : null}
-              {redo ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  aria-label="Redo"
-                  title="Redo"
-                  disabled={!canRedo || !canEditMetadata}
-                  onClick={redo}
-                >
-                  <HistoryIcon direction="redo" />
-                </Button>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
-        <div className={`row ${styles.actions}`}>
-          {isDirty ? (
-            <span className="type-caption" role="status">
-              Unsaved draft
-            </span>
-          ) : null}
-          {typeKey !== 'quest' ? (
-            <Button type="button" disabled={publishDisabled} onClick={onPublish}>
-              {publishLabel}
-            </Button>
-          ) : null}
+  const historyTools =
+    undo || redo ? (
+      <div className="row" role="group" aria-label="History" data-gap="1">
+        {undo ? (
           <Button
             type="button"
-            variant={typeKey === 'quest' ? 'primary' : 'secondary'}
-            disabled={saveDisabled}
-            onClick={onSaveDraft}
+            size="sm"
+            variant="ghost"
+            aria-label="Undo"
+            title="Undo"
+            disabled={!canUndo || !canEditMetadata}
+            onClick={undo}
           >
-            {saveLabel}
+            <HistoryIcon direction="undo" />
           </Button>
-          <Link className="btn btn--ghost" to={cancelTo}>
-            Cancel
-          </Link>
-        </div>
+        ) : null}
+        {redo ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            aria-label="Redo"
+            title="Redo"
+            disabled={!canRedo || !canEditMetadata}
+            onClick={redo}
+          >
+            <HistoryIcon direction="redo" />
+          </Button>
+        ) : null}
       </div>
+    ) : null;
+  const actions = (
+    <div className={`row ${styles.actions}`} aria-label="Document actions">
+      {typeKey !== 'quest' ? (
+        <Button
+          type="button"
+          variant="primary"
+          disabled={publishDisabled}
+          onClick={onPublish}
+        >
+          {publishLabel}
+        </Button>
+      ) : null}
+      <Button
+        type="button"
+        variant={typeKey === 'quest' ? 'primary' : 'secondary'}
+        disabled={saveDisabled}
+        onClick={onSaveDraft}
+      >
+        {saveLabel}
+      </Button>
+      <Link className="btn btn--ghost" to={cancelTo}>
+        Cancel
+      </Link>
+    </div>
+  );
+  const unavailableBody = (
+    <section className="stack" aria-label="Body editing unavailable">
+      <p className="type-caption">
+        Body editing is currently unavailable. Metadata changes preserve the source
+        body.
+      </p>
+      <ContentRenderer body={body} />
+    </section>
+  );
+  const previewBody = (
+    <section className="stack" aria-label="Read preview">
+      {preview.status === 'error' ? (
+        <StatePanel status="error" error={preview.error} />
+      ) : preview.status === 'loading' || preview.status === 'idle' ? (
+        <StatePanel status="loading" />
+      ) : (
+        <ContentRenderer body={preview.body} />
+      )}
+      {preview.status === 'error' ? (
+        <Button type="button" variant="secondary" onClick={onPreview}>
+          Retry preview
+        </Button>
+      ) : null}
+    </section>
+  );
 
+  return (
+    <Card className="editor-shell stack" data-component="EditorShell" data-mode={mode}>
+      {draftRecovery ? (
+        <section className="stack" aria-label="Saved drafts from earlier revisions">
+          <h2 className="type-heading">Saved drafts from earlier revisions</h2>
+          <p className="type-caption">
+            The live page has changed. Recover a saved draft to copy its title and
+            body. Publishing stays blocked until you reload the live page.
+          </p>
+          <div className="row" data-wrap="1" data-gap="2">
+            {draftRecovery.items.map((draft) => (
+              <Button
+                key={draft.key}
+                type="button"
+                variant="secondary"
+                onClick={() => draftRecovery.recover(draft.key)}
+              >
+                Recover saved draft from revision {draft.revision}
+              </Button>
+            ))}
+          </div>
+        </section>
+      ) : null}
       <fieldset
         className="editor-shell__properties stack"
         aria-label="Properties"
@@ -369,47 +402,57 @@ export function EditorShell({
           options={options}
         />
       </fieldset>
-      {pageAddress ? <PageAddress address={pageAddress} /> : null}
-
-      <div
-        id="editor-body"
-        role="tabpanel"
-        aria-labelledby={`editor-mode-${mode}`}
-        className="stack"
-      >
-        {!canEditBody ? (
-          <section className="stack" aria-label="Body editing unavailable">
-            <p className="type-caption">
-              Body editing is currently unavailable. Metadata changes preserve the
-              source body.
-            </p>
-            <ContentRenderer body={body} />
-          </section>
-        ) : mode === 'edit' ? (
-          <LiveEditor
-            value={body}
-            onChange={setBody}
-            placeholder={BODY_PLACEHOLDERS[typeKey]}
-            entityIndex={entityIndex}
-          />
-        ) : (
-          <section className="stack" aria-label="Read preview">
-            {preview.status === 'error' ? (
-              <StatePanel status="error" error={preview.error} />
-            ) : preview.status === 'loading' || preview.status === 'idle' ? (
-              <StatePanel status="loading" />
+      {slugLocked && pageAddress ? <PageAddress address={pageAddress} /> : null}
+      <Tabs
+        aria-label="Editor mode"
+        value={mode}
+        onValueChange={(value) => {
+          if (value === 'read') onPreview();
+          if (value === 'read' || value === 'edit') setMode(value);
+        }}
+        items={[
+          {
+            id: 'edit',
+            label: 'Write',
+            panel: canEditBody ? (
+              <LiveEditor
+                value={body}
+                onChange={setBody}
+                placeholder={BODY_PLACEHOLDERS[typeKey]}
+                entityIndex={entityIndex}
+                toolbarStart={historyTools}
+                toolbarEnd={actions}
+              />
             ) : (
-              <ContentRenderer body={preview.body} />
-            )}
-            {preview.status === 'error' ? (
-              <Button type="button" variant="secondary" onClick={onPreview}>
-                Retry preview
-              </Button>
-            ) : null}
-          </section>
-        )}
-      </div>
-
+              <div className="stack">
+                <div className={`row ${styles.toolbar}`} data-wrap="1">
+                  {historyTools}
+                  {actions}
+                </div>
+                {unavailableBody}
+              </div>
+            ),
+          },
+          {
+            id: 'read',
+            label: 'Preview',
+            panel: (
+              <div className="stack">
+                <div className={`row ${styles.toolbar}`} data-wrap="1">
+                  {historyTools}
+                  {actions}
+                </div>
+                {canEditBody ? previewBody : unavailableBody}
+              </div>
+            ),
+          },
+        ]}
+      />
+      {isDirty ? (
+        <p className="type-caption" role="status">
+          Unsaved draft
+        </p>
+      ) : null}
       {statusMessage ? (
         <p className="type-caption" role="status">
           {statusMessage}

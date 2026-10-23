@@ -8,12 +8,17 @@ import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { Avatar } from '../../../components/primitives/Avatar.js';
 import { Card } from '../../../components/primitives/Card.js';
 import { Chip } from '../../../components/primitives/Chip.js';
+import { EmptyState } from '../../../components/primitives/EmptyState.js';
+import { Button } from '../../../components/primitives/Button.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
 import { useMemberHref } from '../../../hooks/useMemberHref.js';
+import { useMemberProfile } from '../../../hooks/useMemberProfile.js';
 import type { AppError } from '../../../errors/types.js';
-import { useCommunityEntryPage } from '../hooks/useCommunityEntryPage.js';
+import { useCommunityEntryPage, useCommunityEntryRelated } from '../hooks/useCommunityEntryPage.js';
 import { DetailLayout } from '../../../components/primitives/DetailLayout.js';
-import { handleLabel, humanizeKey, personLabels } from '../../../utils/format.js';
+import { handleLabel, humanizeKey, isSentinelDate, personLabels } from '../../../utils/format.js';
+import { documentHref } from '../../../utils/documentHref.js';
+import { toAppError } from '../../../errors/toAppError.js';
 
 const DECLARATION: PageDeclaration = {
   page: 'community-entry',
@@ -45,6 +50,8 @@ export function CommunityEntryPage(): React.JSX.Element {
   const page = useCommunityEntryPage(slug);
   const { formatDate } = useDateFormatter();
   const memberHref = useMemberHref();
+  const authorProfile = useMemberProfile(page.status === 'ready' ? page.view.author?.handle ?? '' : '');
+  const related = useCommunityEntryRelated(page.status === 'ready' ? page.view.authorId : '');
 
   if (page.status !== 'ready') {
     const regions: PageRegionRenderers = {
@@ -63,9 +70,10 @@ export function CommunityEntryPage(): React.JSX.Element {
   }
 
   const view = page.view;
-  const author = view.author;
+  const author = view.author ? { ...authorProfile.data?.member, handle: view.author.handle } : null;
   const authorName = author ? personLabels([author])[0] : null;
-  const when = view.publishedAt ?? view.updatedAt;
+  const when = [view.publishedAt, view.updatedAt].find((value) => value && !isSentinelDate(value));
+  const otherPosts = related.data?.filter((post) => post.id !== view.id) ?? [];
   const rail = (
     <div className="stack" data-gap="4">
       {author && authorName ? (
@@ -78,19 +86,29 @@ export function CommunityEntryPage(): React.JSX.Element {
         >
           <span className="type-label">Posted by</span>
           <div className="row" data-gap="3" data-align="center">
-            <Avatar name={authorName} size="md" online={false} />
+            <Avatar name={authorName} src={author.avatarUrl ?? undefined} size="md" online={false} />
             <div className="stack" data-gap="1">
               <Link className="type-title" to={memberHref(author, 'player')}>
                 {authorName}
               </Link>
               {handleLabel(author.handle) &&
-              handleLabel(author.handle) !== `@${authorName}` ? (
+              !authorName.includes(handleLabel(author.handle) ?? '') ? (
                 <span className="type-caption">{handleLabel(author.handle)}</span>
               ) : null}
             </div>
           </div>
         </Card>
       ) : null}
+      <Card as="section" pad={5} className="stack" data-gap="3" aria-label="More by this author">
+        <h2 className="type-title">More by this author</h2>
+        {related.isError ? (
+          <StatePanel status="error" error={toAppError(related.error, 'community:related')} action={<Button variant="secondary" size="sm" onClick={related.retry}>Retry posts</Button>} />
+        ) : related.isPending ? <StatePanel status="loading" /> : otherPosts.length ? (
+          <ul className="stack" data-gap="3">
+            {otherPosts.map((post) => <li key={post.id}><Link className="type-link" to={documentHref(post) ?? '/community'}>{post.title}</Link></li>)}
+          </ul>
+        ) : <EmptyState message="There are no other shared posts by this author yet." action={<Link className="type-link" to="/search?kinds=community">Find community posts</Link>} />}
+      </Card>
     </div>
   );
   const regions: PageRegionRenderers = {
@@ -103,7 +121,7 @@ export function CommunityEntryPage(): React.JSX.Element {
                 <ContentRenderer body={view.effectiveBody} />
               </div>
             ) : (
-              <p className="type-body">Nothing to read here yet.</p>
+              <EmptyState message="Nothing to read here yet." action={<Link className="type-link" to="/search?kinds=community">Find community posts</Link>} />
             )}
           </Card>
         </DetailLayout.Reading>

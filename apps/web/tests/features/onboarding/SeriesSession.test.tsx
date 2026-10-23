@@ -1,4 +1,5 @@
 import { act, renderHook, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { graphql, HttpResponse } from 'msw';
 import { Profiler, type ReactNode } from 'react';
@@ -8,8 +9,8 @@ import { AuthProvider, useAuth } from '../../../src/auth/AuthContext.js';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
 import { createTestQueryClient } from '../../../src/providers.js';
 import { server } from '../../../src/mocks/server.js';
-import { useSeriesPage } from '../../../src/features/onboarding/hooks/useSeriesPage.js';
-import { SeriesPage } from '../../../src/features/onboarding/pages/SeriesPage.js';
+import { useSeriesPage } from '../../../src/hooks/useSeriesPage.js';
+import { SeriesCreateAction } from '../../../src/components/domain/SeriesCreateAction.js';
 import { currentAccessIdentity } from '../../../src/auth/useCurrentAccess.js';
 import { renderWithProviders } from '../../test-utils.js';
 import good from '../../fixtures/wire/onboarding/retained-good.json';
@@ -138,18 +139,17 @@ describe('Series session-bound command admission', () => {
         }}
       >
         <Routes>
-          <Route path="/series/:shortCode" element={<SeriesPage />} />
+          <Route path="/quests" element={<SeriesCreateAction />} />
         </Routes>
       </Profiler>,
-      { route: `/series/${good.arc.id}` },
+      { route: '/quests' },
     );
     const client = view.queryClient;
     observer.client = client;
-    await screen.findByRole('heading', { name: good.arc.name, level: 1 });
     await waitFor(() => {
       expect(reads).toBe(1);
       expect(client?.getQueryState(['me'])?.fetchStatus).toBe('idle');
-      expect(client?.getQueryState(['series', good.arc.id])?.fetchStatus).toBe('idle');
+      expect(client?.getQueryState(['series', ''])?.fetchStatus).toBe('idle');
       expect(
         client?.getQueryState(['currentAccess', 'admin', currentAccessIdentity(other)])
           ?.status,
@@ -168,6 +168,9 @@ describe('Series session-bound command admission', () => {
         canCreate: true,
       }),
     );
+    await userEvent
+      .setup()
+      .click(await screen.findByRole('button', { name: 'New series' }));
     expect(await screen.findByRole('button', { name: 'Create series' })).toBeVisible();
     expect(
       screen.queryByRole('button', { name: 'Save series name' }),

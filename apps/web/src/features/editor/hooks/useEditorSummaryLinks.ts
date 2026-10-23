@@ -18,11 +18,7 @@ export function useEditorSummaryLinks({
   scopeKey: string;
 }) {
   const source = initial.summary?.authoring;
-  const active =
-    initial.summary !== undefined &&
-    (source === null ||
-      source?.complete === false ||
-      (source?.questIds.length ?? 0) > 0);
+  const active = initial.summary !== undefined;
   const editable =
     active &&
     enabled &&
@@ -58,20 +54,28 @@ export function useEditorSummaryLinks({
   const parsed = parseSummaryRelations(meta);
   const ids = parsed.success ? parsed.data.questIds : [];
   const characterId = parsed.success ? parsed.data.characterId : null;
+  const hiddenLinks =
+    source?.complete === false &&
+    source.questIds.some(
+      (id) => !initial.summary?.quests.some((quest) => quest.id === id),
+    );
   return {
     active,
     editable,
+    hiddenLinks,
     search: page.search,
     setSearch: (search: string) => setNavigation({ ...page, search, questOffset: 0 }),
-    selected: ids.map(
-      (id) =>
-        refs.find((quest) => quest.id === id) ??
-        initial.summary?.quests.find((quest) => quest.id === id) ?? {
-          id,
-          shortCode: 'Linked quest',
-          title: null,
-        },
-    ),
+    selected: parsed.success
+      ? ids.map(
+          (id) =>
+            refs.find((quest) => quest.id === id) ??
+            initial.summary?.quests.find((quest) => quest.id === id) ?? {
+              id,
+              shortCode: null,
+              title: null,
+            },
+        )
+      : (initial.summary?.quests ?? []),
     add: (id: string) => {
       const choice = quests.data?.items.find((quest) => quest.id === id);
       if (!editable || !choice || ids.includes(id)) return;

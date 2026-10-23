@@ -183,7 +183,11 @@ export function useEditorPublish({
                     : null));
         const sourceSummary = typeKey === 'summary' ? initial.summary?.authoring : null;
         let summaryRelations: SummaryRelations | null = null;
-        if (sourceSummary?.complete && sourceSummary.questIds.length > 0) {
+        if (
+          sourceSummary?.complete &&
+          (sourceSummary.questIds.length > 0 ||
+            (Array.isArray(meta.questIds) && meta.questIds.length > 0))
+        ) {
           const parsed = parseSummaryRelations(meta);
           if (!parsed.success)
             throw safeAppError(

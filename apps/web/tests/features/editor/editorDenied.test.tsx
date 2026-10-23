@@ -202,9 +202,9 @@ describe('starting a record the account may not create', () => {
     expect(
       await screen.findByRole('heading', { name: 'You can’t create a DM table' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Back to DMs' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: 'Your page' })).toHaveAttribute(
       'href',
-      '/dms',
+      '/me',
     );
     first.unmount();
 

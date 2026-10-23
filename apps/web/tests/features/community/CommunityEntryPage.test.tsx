@@ -26,6 +26,39 @@ describe('Community document reader', () => {
     expect(await screen.findByRole('heading', { name: entry.title })).toBeVisible();
     expect(screen.getByRole('heading', { name: 'Welcome' })).toBeVisible();
     expect(screen.getByText('stories').tagName).toBe('STRONG');
+    expect(await screen.findByRole('link', { name: 'Mira' })).toHaveAttribute('href', '/players/@mira');
+    expect(screen.getAllByRole('link', { name: 'Community' })).toHaveLength(1);
+    expect(screen.queryByText('Back to the community directory')).not.toBeInTheDocument();
+  });
+
+  it('loads only a few shared posts from the same author and excludes the current post', async () => {
+    let filters: unknown;
+    server.use(graphql.query('CommunityEntryRelated', ({ variables }) => {
+      filters = variables;
+      return HttpResponse.json({ data: { documents: { items: [entry, { ...entry, id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', slug: 'another-post', title: 'Another story' }] } } });
+    }));
+    reader();
+    expect(await screen.findByRole('link', { name: 'Another story' })).toHaveAttribute('href', '/community/entries/another-post');
+    expect(filters).toEqual({ authorId: entry.authorId });
+    expect(screen.queryByRole('link', { name: entry.title })).not.toBeInTheDocument();
+  });
+
+  it('uses an actionable empty related-post state', async () => {
+    reader();
+    expect(await screen.findByText('There are no other shared posts by this author yet.')).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Find community posts' })).toHaveAttribute('href', '/search?kinds=community');
+  });
+
+  it('keeps the post readable when related posts fail and retries only that section', async () => {
+    let fail = true;
+    server.use(graphql.query('CommunityEntryRelated', () => fail ? HttpResponse.json({ errors: [{ message: 'unavailable', extensions: { code: 'INTERNAL' } }] }) : HttpResponse.json({ data: { documents: { items: [entry] } } })));
+    reader();
+    expect(await screen.findByRole('heading', { name: 'Welcome' })).toBeVisible();
+    const retry = await screen.findByRole('button', { name: 'Retry posts' });
+    fail = false;
+    await act(async () => { retry.click(); });
+    expect(await screen.findByText('There are no other shared posts by this author yet.')).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Welcome' })).toBeVisible();
   });
 
   it('keeps the loading state until the adapter returns', async () => {

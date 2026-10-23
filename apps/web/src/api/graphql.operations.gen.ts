@@ -851,7 +851,14 @@ export type CommunityEntryQueryVariables = Exact<{
 }>;
 
 
-export type CommunityEntryQuery = { document: { id: string, slug: string, kind: string, category: string | null, title: string, effectiveBody: string | null, publishedAt: string | null, updatedAt: string, author: { handle: string } | null } | null };
+export type CommunityEntryQuery = { document: { id: string, slug: string, kind: string, category: string | null, title: string, authorId: string, effectiveBody: string | null, publishedAt: string | null, updatedAt: string, author: { handle: string } | null } | null };
+
+export type CommunityEntryRelatedQueryVariables = Exact<{
+  authorId: string;
+}>;
+
+
+export type CommunityEntryRelatedQuery = { documents: { items: Array<{ id: string, slug: string, title: string, kind: string, category: string | null }> } };
 
 export type DocumentQueryVariables = Exact<{
   slug: string;
@@ -1365,7 +1372,7 @@ export type RetainedSeriesArcQueryVariables = Exact<{
 }>;
 
 
-export type RetainedSeriesArcQuery = { questArc: { id: string, name: string, createdBy: string, createdAt: string, questCount: number, quests: Array<{ id: string, shortCode: string, status: string, scheduledAt: string, briefDocument: { title: string } | null }> } | null };
+export type RetainedSeriesArcQuery = { questArc: { id: string, name: string, createdBy: string, createdAt: string, questCount: number, quests: Array<{ id: string, shortCode: string, status: string, displayStatus: string | null, scheduledAt: string, slotsMax: number, dm: { handle: string, displayName: string } | null, briefDocument: { title: string, effectiveBody: string | null } | null, participants: Array<{ characterId: string, characterName: string, memberAvatarUrl: string | null, status: string }> }> } | null };
 
 export type RetainedSeriesAuthorityQueryVariables = Exact<{
   handle: string;
@@ -1637,7 +1644,7 @@ export type RuleDetailQueryVariables = Exact<{
 }>;
 
 
-export type RuleDetailQuery = { document: { id: string, slug: string, kind: string, category: string | null, status: string, visibility: string, title: string, effectiveBody: string | null, updatedAt: string, canEditBody: boolean, canEditMetadata: boolean, author: { handle: string } | null } | null };
+export type RuleDetailQuery = { document: { id: string, slug: string, kind: string, category: string | null, status: string, visibility: string, title: string, effectiveBody: string | null, updatedAt: string, canEditBody: boolean, canEditMetadata: boolean, author: { handle: string } | null } | null, documentBacklinks: Array<{ documentId: string }> };
 
 export type RulesListQueryVariables = Exact<{
   limit: number;

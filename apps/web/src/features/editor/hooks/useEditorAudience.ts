@@ -1,3 +1,4 @@
+import { personLabels } from '../../../utils/format.js';
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import {
@@ -39,6 +40,7 @@ export function useEditorAudience({
       ),
     enabled: enabled && selectedIds.length > 0,
   });
+  const readerNames = personLabels(selected.data?.map((item) => item.member) ?? []);
   return {
     search,
     setSearch,
@@ -52,7 +54,7 @@ export function useEditorAudience({
     selected: selectedIds.map((id) => ({
       id,
       label:
-        selected.data?.find((item) => item.id === id)?.member?.handle ??
+        readerNames[selected.data?.findIndex((item) => item.id === id) ?? -1] ??
         'Existing reader',
     })),
     add: (id: string) => {

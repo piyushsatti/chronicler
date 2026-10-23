@@ -57,12 +57,12 @@ describe('CharacterPage', () => {
   it('links the player card and shows real quick facts without repeating the level in header metadata', async () => {
     server.use(
       graphql.query('Character', () => HttpResponse.json({ data: { character: { ...character, daysActive: 39, ddbMirror: { level: 8, xp: 0, classes: 'Chronicler 8', species: 'Elf', background: null, syncedAt: null } } } })),
-      graphql.query('CharacterOwner', () => HttpResponse.json({ data: { member: { id: character.ownerId, handle: 'holt', displayName: 'Bram Holt', avatarUrl: 'https://example.test/holt.png' } } })),
+      graphql.query('CharacterOwner', () => HttpResponse.json({ data: { member: { id: character.ownerId, handle: 'holt', displayName: 'Bram Holt', avatarUrl: 'https://cdn.discordapp.com/holt.png' } } })),
     );
     renderCharacter();
     const player = await screen.findByRole('link', { name: /Bram Holt/ });
     expect(player).toHaveAttribute('href', '/players/@holt');
-    expect(player.querySelector('img')).toHaveAttribute('src', 'https://example.test/holt.png');
+    expect(player.querySelector('img')).toHaveAttribute('src', 'https://cdn.discordapp.com/holt.png');
     const meta = document.querySelector('.page-header__meta');
     expect(meta).toHaveTextContent('Chronicler 8 · Elf');
     expect(meta).not.toHaveTextContent('Level 8');

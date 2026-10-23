@@ -242,6 +242,7 @@ function emptyDraft(
             : typeKey === 'dm-table'
               ? 'community'
               : typeKey,
+      ...(typeKey === 'summary' ? { questIds: [], characterId: null } : {}),
       kinds: ['standard'],
       regions: [],
       genres: [],
@@ -263,6 +264,14 @@ function emptyDraft(
     briefPublished: false,
     updatedAt: null,
     documentVersion: null,
+    ...(typeKey === 'summary'
+      ? {
+          summary: {
+            authoring: { questIds: [], characterId: null, complete: true },
+            quests: [],
+          },
+        }
+      : {}),
   };
 }
 

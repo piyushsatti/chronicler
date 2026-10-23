@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { SingleRegionPage } from '../../../chrome/singleRegion.js';
 import { ContentRenderer } from '../../../components/foundation/ContentRenderer.js';
@@ -15,9 +14,11 @@ import { Button } from '../../../components/primitives/Button.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import { useMe } from '../../../hooks/useMe.js';
+import { useMemberProfile } from '../../../hooks/useMemberProfile.js';
 import { useMemberHref } from '../../../hooks/useMemberHref.js';
+import { useUrlParam } from '../../../hooks/useUrlParam.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
-import { clockLabel, handleLabel, handleOnlyName, isSentinelDate, personLabels, pluralize, roleLabel, statusLabel, weekdayLabel } from '../../../utils/format.js';
+import { clockLabel, handleLabel, isSentinelDate, personLabels, pluralize, roleLabel, statusLabel, weekdayLabel } from '../../../utils/format.js';
 import type { DmTableSessionView } from '../types.js';
 import { ProfileOwnerActions } from '../components/ProfileOwnerActions.js';
 import { useDmTableDetailPage } from '../hooks/useDmTableDetailPage.js';
@@ -275,7 +276,8 @@ function ProfileView({
   page: Extract<ReturnType<typeof useProfileBody>, { status: 'ready' }>;
   me: ReturnType<typeof useMe>;
 }) {
-  const [editing, setEditing] = useState(false);
+  const [edit, setEdit] = useUrlParam('edit');
+  const editing = edit === 'profile';
   const profile = page.profile;
   const showDmInformation = role === 'dm' || profile.member.roles.includes('dm');
   const dmDetails = useProfileDmDetails(profile.member.id, showDmInformation);
@@ -312,7 +314,7 @@ function ProfileView({
             <Button
               variant="secondary"
               aria-expanded={editing}
-              onClick={() => setEditing(!editing)}
+              onClick={() => setEdit(editing ? '' : 'profile')}
             >
               {editing ? 'Close editor' : 'Edit profile'}
             </Button>
@@ -380,7 +382,7 @@ function ProfileView({
                     ? 'Add your availability from Edit profile.'
                     : `${name} hasn't set their availability.`
                 }
-                action={owner ? <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>Set availability</Button> : undefined}
+                action={owner ? <Button variant="secondary" size="sm" onClick={() => setEdit('profile')}>Set availability</Button> : undefined}
               />
             )}
           </Card>
@@ -393,7 +395,7 @@ function ProfileView({
             {profile.dmProfile?.tagline ? (
               <p className="type-body">{profile.dmProfile.tagline}</p>
             ) : owner && canDm ? (
-              <EmptyState message="You have not written a bio yet." action={<Button variant="secondary" size="sm" onClick={() => setEditing(true)}>Edit profile</Button>} />
+              <EmptyState message="You have not written a bio yet." action={<Button variant="secondary" size="sm" onClick={() => setEdit('profile')}>Edit profile</Button>} />
             ) : !profile.dmProfile?.philosophy &&
               !profile.dmProfile?.houseRules &&
               !hasActivity ? (
@@ -458,6 +460,9 @@ export function DmTableDetailPage() {
   const state = useDmTableDetailPage(slug);
   const memberHref = useMemberHref();
   const doc = state.doc.data;
+  const authorProfile = useMemberProfile(doc?.authorHandle ?? '');
+  const author = doc?.authorHandle ? { ...authorProfile.data?.member, handle: doc.authorHandle } : null;
+  const authorName = author ? personLabels([author])[0] : null;
   const back = { to: '/community?tab=dms', label: 'Community' };
   const backAction = (
     <Link className="btn" to="/community?tab=dms">
@@ -509,20 +514,20 @@ export function DmTableDetailPage() {
                       {tag}
                     </Chip>
                   ))}
-                  {doc.authorHandle ? (
-                    <Link
-                      className="type-link"
-                      to={memberHref({ handle: doc.authorHandle }, 'dm')}
-                    >
-                      Hosted by {handleOnlyName(doc.authorHandle)}
-                    </Link>
-                  ) : null}
                 </>
               }
             />
             <DetailLayout
-              railLabel="Sessions"
+              railLabel="About this table"
               rail={
+                <div className="stack" data-gap="4">
+                {author && authorName ? <Card as="section" className="stack" pad={4} data-gap="3" aria-label="Hosted by">
+                  <h2 className="type-title">Hosted by</h2>
+                  <div className={styles.titleRow}>
+                    <Avatar name={authorName} src={author.avatarUrl ?? undefined} size="md" />
+                    <Link className="type-title" to={memberHref({ memberId: doc.authorId, handle: author.handle }, 'dm')}>{authorName}</Link>
+                  </div>
+                </Card> : null}
                 <Card className="stack" pad={4}>
                   <h2 className="type-heading">Sessions</h2>
                   {state.schedule.isError ? (
@@ -565,16 +570,17 @@ export function DmTableDetailPage() {
                         </nav>
                       ) : null}
                     </>
-                  ) : null}
+                  ) : <EmptyState message="No sessions are scheduled yet." action={<Link className="type-link" to="/quests">Browse the quest board</Link>} />}
                 </Card>
+                </div>
               }
             >
               <DetailLayout.Reading>
-                {doc.body ? (
-                  <ContentRenderer body={doc.body} />
+                <Card as="article" pad={6}>{doc.body ? (
+                  <div className="summary-prose"><ContentRenderer body={doc.body} /></div>
                 ) : (
-                  <p className="type-caption">This table has no write-up yet.</p>
-                )}
+                  <EmptyState message="This table has no write-up yet." action={doc.canEdit ? <Link className="btn btn--secondary btn--sm" to={`/editor/dm-table/${doc.id}/edit`}>Write about this table</Link> : <Link className="type-link" to="/community?tab=dms">Find another table</Link>} />
+                )}</Card>
               </DetailLayout.Reading>
             </DetailLayout>
           </div>

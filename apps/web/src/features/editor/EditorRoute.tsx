@@ -74,17 +74,43 @@ export function EditorPageView({
   page: EditorPageData;
   typeKey?: EditorTypeKey;
 }): React.JSX.Element {
+  const noun = NOT_FOUND_NOUNS[typeKey];
+  const stateHeader = (
+    <PageHeader
+      back={{
+        to: editorCancelPath(typeKey, 'new'),
+        label: EDITOR_BACK_LABELS[typeKey].replace(/^Back to (the )?/, ''),
+      }}
+      title={`${noun.charAt(0).toUpperCase() + noun.slice(1)} editor`}
+    />
+  );
   if (page.status === 'error') {
     if (page.error.kind === 'not_found')
       return (
         <EditorNotFound typeKey={typeKey} canCreateNew={page.canCreateNew === true} />
       );
     // StatePanel offers the retry itself ("Try again"; "Reload account" on a denial).
-    return <StatePanel status="error" error={page.error} onRetry={page.retry} />;
+    return (
+      <div className="stack">
+        {stateHeader}
+        <StatePanel status="error" error={page.error} onRetry={page.retry} />
+      </div>
+    );
   }
-  if (page.status === 'loading') return <StatePanel status="loading" />;
+  if (page.status === 'loading')
+    return (
+      <div className="stack">
+        {stateHeader}
+        <StatePanel status="loading" />
+      </div>
+    );
   if (page.status === 'empty')
-    return <StatePanel status="empty" emptyMessage="No editor record available." />;
+    return (
+      <div className="stack">
+        {stateHeader}
+        <StatePanel status="empty" emptyMessage="No editor record available." />
+      </div>
+    );
   return <EditorWorkspace view={page.view} />;
 }
 

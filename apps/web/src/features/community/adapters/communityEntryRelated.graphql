@@ -1,0 +1,11 @@
+query CommunityEntryRelated($authorId: ID!) {
+  documents(filters: { kind: "community", createdBy: $authorId }, limit: 4) {
+    items {
+      id
+      slug
+      title
+      kind
+      category
+    }
+  }
+}

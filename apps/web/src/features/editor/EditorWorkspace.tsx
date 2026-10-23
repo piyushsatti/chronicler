@@ -5,6 +5,8 @@ import { EditorSummaryLinks } from './EditorSummaryLinks.js';
 import { EditorDocumentControls } from './EditorDocumentControls.js';
 import styles from './editor.module.css';
 import type { EditorWorkspaceView } from './hooks/useEditorWorkspace.js';
+import { Link } from 'react-router-dom';
+import { useMe } from '../../hooks/useMe.js';
 
 const editorLabels = {
   quest: 'quest',
@@ -58,6 +60,20 @@ function sentence(label: string): string {
   return label.charAt(0).toUpperCase() + label.slice(1);
 }
 
+function DmProfileShortcut(): React.JSX.Element | null {
+  const me = useMe().data;
+  if (!me) return null;
+  return (
+    <p className="type-caption">
+      Your table describes how you run games.{' '}
+      <Link className="type-link" to={`/dms/@${encodeURIComponent(me.handle)}?edit=profile`}>
+        Edit your DM profile
+      </Link>{' '}
+      to change your tagline, availability or whether you accept players.
+    </p>
+  );
+}
+
 /** Props-only view; the page composition hook owns draft and transport state. */
 export function EditorWorkspace({
   view,
@@ -85,7 +101,22 @@ export function EditorWorkspace({
           title={headerTitle(view)}
         />
       )}
-      <EditorSummaryLinks view={view.summaryLinks} disabled={!view.canEditMetadata} />
+      {!view.denied ? (
+        <>
+          {view.published && view.typeKey !== 'quest' ? (
+            <p className="type-caption">
+              Drafts for published pages are saved on this device. Publish updates the
+              live page.
+            </p>
+          ) : view.typeKey === 'summary' ? (
+            <p className="type-caption">
+              Drafts stay private until you publish. Published summaries are public
+              unless you change their readers.
+            </p>
+          ) : null}
+          {view.typeKey === 'dm-table' ? <DmProfileShortcut /> : null}
+        </>
+      ) : null}
       <EditorShell
         {...view}
         errorSlot={
@@ -99,6 +130,9 @@ export function EditorWorkspace({
           </>
         }
       />
+      {!view.denied ? (
+        <EditorSummaryLinks view={view.summaryLinks} disabled={!view.canEditMetadata} />
+      ) : null}
       <EditorDocumentControls view={view} />
     </div>
   );

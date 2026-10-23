@@ -26,15 +26,49 @@ function loadDraft(key: string | null): Snapshot | null {
     return null;
   }
 }
-function persist(key: string | null, value: Snapshot): void {
-  if (!key) return;
+
+type RevisionDraft = { key: string; revision: number; snapshot: Snapshot };
+
+function loadOlderDrafts(
+  typeKey: EditorTypeKey,
+  recordId: string,
+  scope: DraftScope,
+): RevisionDraft[] {
+  if (!scope.actorId || !scope.canEditBody || typeof scope.version !== 'number')
+    return [];
+  const prefix = draftStorageKey(typeKey, recordId, scope.actorId, '');
+  try {
+    const drafts: RevisionDraft[] = [];
+    for (let index = 0; index < localStorage.length; index++) {
+      const key = localStorage.key(index);
+      if (!key?.startsWith(prefix)) continue;
+      const revision = Number(key.slice(prefix.length));
+      if (
+        !Number.isSafeInteger(revision) ||
+        revision < 0 ||
+        revision >= scope.version ||
+        key !== draftStorageKey(typeKey, recordId, scope.actorId, revision)
+      )
+        continue;
+      const snapshot = loadDraft(key);
+      if (snapshot) drafts.push({ key, revision, snapshot });
+    }
+    return drafts.sort((a, b) => b.revision - a.revision);
+  } catch {
+    return [];
+  }
+}
+
+function persist(key: string | null, value: Snapshot): boolean {
+  if (!key) return false;
   try {
     localStorage.setItem(
       key,
       JSON.stringify({ ...value, savedAt: new Date().toISOString() }),
     );
+    return true;
   } catch {
-    /* Crash recovery is best effort. */
+    return false;
   }
 }
 function removeDraft(key: string | null): void {
@@ -77,7 +111,7 @@ export function useEditorDraft(
   // Never render a previous account/record's state while waiting for an effect.
   const current = state.identity === identity ? state : makeState();
   const dirty = JSON.stringify(current.values) !== current.baseline;
-  const stale = current.key !== key && dirty;
+  const stale = current.key !== key;
   const values = scope.canEditBody
     ? current.values
     : { ...current.values, body: server.body };
@@ -86,7 +120,13 @@ export function useEditorDraft(
       if (old.identity !== identity) return makeState();
       if (old.editableBody && !scope.canEditBody) {
         removeDraft(old.key);
-        return { ...makeState(), values: { meta: old.values.meta, body: server.body } };
+        const value = { meta: old.values.meta, body: server.body };
+        return {
+          ...makeState(),
+          key: old.key,
+          values: value,
+          history: [value],
+        };
       }
       if (old.baseline === signature && old.key === key) return old;
       if (JSON.stringify(old.values) !== old.baseline) return old;
@@ -142,6 +182,7 @@ export function useEditorDraft(
     removeDraft(current.key);
     setState({ ...makeState(), values: server, history: [server], cursor: 0 });
   };
+  const recoverableDrafts = loadOlderDrafts(typeKey, recordId, scope);
   return {
     ...values,
     setMeta,
@@ -149,6 +190,17 @@ export function useEditorDraft(
     isDirty: dirty,
     stale,
     saveDraft: () => persist(current.key, values),
+    recoverableDrafts,
+    recoverDraft: (savedKey: string) => {
+      const saved = recoverableDrafts.find((draft) => draft.key === savedKey);
+      if (!saved) return;
+      setState({
+        ...makeState(),
+        key: saved.key,
+        values: saved.snapshot,
+        history: [saved.snapshot],
+      });
+    },
     clearDraft,
     resetDraft,
     undo: () => travel(-1),

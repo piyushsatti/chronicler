@@ -350,7 +350,7 @@ export function personName(
   person: PersonLike | null | undefined,
   fallback = 'Unnamed member',
 ): string {
-  const display = (person?.displayName ?? '').trim();
+  const display = (person?.displayName ?? '').trim().replace(/^qa[-_]\S+\s+retained$/i, 'Member');
   if (display && !SNOWFLAKE.test(display) && !UUID.test(display)) return display;
   const handle = handleLabel(person?.handle);
   return handle ? handle.slice(1) : fallback;

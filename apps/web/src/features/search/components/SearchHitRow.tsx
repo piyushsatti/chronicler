@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Chip } from '../../../components/primitives/Chip.js';
-import { humanizeKey, handleLabel } from '../../../utils/format.js';
+import { humanizeKey, handleLabel, personLabels } from '../../../utils/format.js';
 import { useMemberHref } from '../../../hooks/useMemberHref.js';
 import type { SearchHitView } from '../adapters/searchAdapter.js';
 import { searchHitHref } from '../searchHit.js';
@@ -19,7 +19,7 @@ export function SearchHitRow({
   hideKind?: boolean;
 }): React.JSX.Element {
   const member = 'handle' in hit;
-  const title = member ? (memberLabel ?? hit.displayName) : hit.title;
+  const title = member ? (memberLabel ?? personLabels([hit])[0]) : hit.title;
   const handle = member ? handleLabel(hit.handle) : null;
   const showHandle = handle !== null && !title.includes(handle);
   const memberHref = useMemberHref();

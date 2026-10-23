@@ -15,8 +15,9 @@ import {
   ScheduleAliasPage,
 } from '../../../src/features/onboarding/pages/RetainedAliasesPage.js';
 import { SeriesPage } from '../../../src/features/onboarding/pages/SeriesPage.js';
+import { SeriesCreateAction } from '../../../src/components/domain/SeriesCreateAction.js';
 import { SeriesRedirect } from '../../../src/features/onboarding/SeriesRedirect.js';
-import { useSeriesPage } from '../../../src/features/onboarding/hooks/useSeriesPage.js';
+import { useSeriesPage } from '../../../src/hooks/useSeriesPage.js';
 import { renderWithProviders } from '../../test-utils.js';
 import good from '../../fixtures/wire/onboarding/retained-good.json';
 
@@ -205,7 +206,9 @@ describe('Calendar page', () => {
     renderWithProviders(<CalendarPage />, {
       route: '/calendar?month=2026-10&gameDay=113',
     });
-    expect(await screen.findByText(/Game day 113 falls on 1 stored date/)).toBeVisible();
+    expect(
+      await screen.findByText(/Game day 113 falls on 1 stored date/),
+    ).toBeVisible();
     expect(screen.getByRole('spinbutton', { name: 'Game day' })).toHaveValue(113);
   });
   it('lays the month out under Monday-first weekday headers', async () => {
@@ -296,17 +299,24 @@ describe('Series ownership and command retry', () => {
       <>
         <Routes>
           <Route path="/series/:shortCode" element={<SeriesPage />} />
+          <Route path="/quests" element={<SeriesCreateAction />} />
         </Routes>
         <Location />
       </>,
       { route: `/series/${good.arc.id}` },
     );
     const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Rename series' }));
     const field = await screen.findByRole('textbox', { name: 'Series name' });
     await user.clear(field);
     await user.type(field, 'Renamed arc');
     await user.click(screen.getByRole('button', { name: 'Save series name' }));
     await screen.findByRole('heading', { name: 'Renamed arc' });
+    expect(
+      screen.queryByRole('button', { name: 'New series' }),
+    ).not.toBeInTheDocument();
+    await user.click(screen.getByRole('link', { name: 'Quests' }));
+    await user.click(await screen.findByRole('button', { name: 'New series' }));
     const create = await screen.findByRole('textbox', { name: 'New series name' });
     await user.type(create, 'New arc');
     await user.click(screen.getByRole('button', { name: 'Create series' }));
@@ -336,7 +346,7 @@ describe('Series ownership and command retry', () => {
       { route: '/series/old-S-12' },
     );
     expect(
-      screen.getByText(/historical series code has no current UUID/),
+      screen.getByText(/This series link is out of date/),
     ).toBeInTheDocument();
     first.unmount();
     renderWithProviders(
@@ -379,10 +389,19 @@ describe('Series ownership and command retry', () => {
     );
     await screen.findByText('0 quests');
     expect(
+      await screen.findByText('No quests belong to this series yet.'),
+    ).toBeVisible();
+    expect(
+      screen.getByRole('link', { name: 'Browse the quest board' }),
+    ).toHaveAttribute('href', '/quests');
+    expect(
       screen.queryByRole('button', { name: 'Save series name' }),
     ).not.toBeInTheDocument();
     expect(
       screen.queryByRole('button', { name: 'Create series' }),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Rename series' }),
     ).not.toBeInTheDocument();
   });
   it('reuses a lost-response key, rejects synchronous duplicate dispatch and retains current authority', async () => {

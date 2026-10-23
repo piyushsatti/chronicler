@@ -22,8 +22,21 @@ const questSchema = z.object({
   id: z.string().uuid(),
   shortCode: z.string().min(1),
   status: z.string(),
+  displayStatus: z.string().nullable(),
   scheduledAt: z.string().datetime({ offset: true }),
-  briefDocument: z.object({ title: z.string() }).nullable(),
+  slotsMax: z.number().int().nonnegative(),
+  dm: z.object({ handle: z.string(), displayName: z.string() }).nullable(),
+  briefDocument: z
+    .object({ title: z.string(), effectiveBody: z.string().nullable() })
+    .nullable(),
+  participants: z.array(
+    z.object({
+      characterId: z.string().uuid(),
+      characterName: z.string(),
+      memberAvatarUrl: z.string().nullable(),
+      status: z.string(),
+    }),
+  ),
 });
 const pageSchema = arcSchema.extend({ quests: z.array(questSchema) });
 export type SeriesView = z.infer<typeof pageSchema>;

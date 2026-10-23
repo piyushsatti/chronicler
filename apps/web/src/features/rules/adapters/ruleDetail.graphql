@@ -15,4 +15,7 @@ query RuleDetail($slug: String!) {
       handle
     }
   }
+  documentBacklinks(slug: $slug, limit: 100) {
+    documentId
+  }
 }
