@@ -2,9 +2,9 @@
 
 ## Release path
 
-Feature branches enter `staging` through an up-to-date pull request with a squash merge. A pull request from `staging` to `main` uses a normal merge. CI runs on pull requests. Do not push directly to `main` or open a `main` pull request from another branch.
+`main` is the trunk. Every change reaches `main` through a pull request with a squash merge; merge commits and rebase merges are disabled. Pull requests into `main` must pass the `go`, `web`, `agent`, and `tooling` checks. Nobody pushes directly to `main`, and the ruleset has no bypass. Long-lived feature work uses a branch named `integration`, which also squash-merges into `main`. Merged branches are deleted automatically.
 
-The target staging release is a manual `workflow_dispatch` on a self-hosted runner on the owner's machine. It runs the backend with Docker Compose, exposes the API through Cloudflare Tunnel at `chronicler-api.piyushsatti.com`, and deploys the frontend to Vercel at `chronicler.piyushsatti.com`.
+A staging release starts from a tag in `staging-YYYY.MM.DD.N` form on a selected commit. There is no staging branch and no manual dispatch. The target staging workflow runs on a self-hosted runner on the owner's machine. It runs the backend with Docker Compose, exposes the API through Cloudflare Tunnel at `chronicler-api.piyushsatti.com`, and deploys the frontend to Vercel at `chronicler.piyushsatti.com`.
 
 A production release starts from a CalVer tag in `YYYY.MM.DD` or `YYYY.MM.DD.N` form. The tag must point to a commit on `main`. GitHub Actions deploys the backend to one DigitalOcean droplet with [`compose.production.yaml`](/deploy/compose.production.yaml) and GHCR images, checks health, and retains an exact rollback target without deleting the database. The same release deploys the frontend to Vercel at `chronicler.smokebombstudios.com`; its API origin is `api.chronicler.smokebombstudios.com`.
 

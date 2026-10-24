@@ -138,6 +138,8 @@ Templates (frozen): [docs/templates/](/docs/templates/README.md). Index: [docs/R
 
 ## Releases and changelog
 
+`main` is the trunk. Open a pull request for every change; it lands as a squash merge after the `go`, `web`, `agent`, and `tooling` checks pass. Staging releases use `staging-YYYY.MM.DD.N` tags and production releases use `YYYY.MM.DD[.N]` tags on `main` ([deploy runbook](/deploy/docs/deploy-runbook.md)).
+
 User-visible changes belong in [CHANGELOG.md](/CHANGELOG.md) under `[Unreleased]` until a version is cut. Release tagging and production promotion follow GitHub Actions only ([D33](/docs/decisions/D33-GitHub-Actions-Owns-Production-Releases.md)).
 
 ## Getting help
