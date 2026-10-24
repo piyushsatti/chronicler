@@ -6,6 +6,7 @@ import { join } from 'node:path';
 import { URL } from 'node:url';
 import {
   emptyDefinitions,
+  declarationsIn,
   findings,
   isCovered,
   referencesIn,
@@ -86,11 +87,23 @@ test('comments never reference or define', () => {
 
 test('references record line and fallback; non-custom var( text is ignored', () => {
   const bg = css.references.find((r) => r.name === '--color-bg');
-  assert.equal(bg.line, 9);
+  assert.equal(bg.line, 13);
   assert.equal(bg.fallback, false);
   assert.deepEqual(referencesIn('var(foo) var( --x ,1)'), [
     { name: '--x', dynamic: false, fallback: true, index: 9 },
   ]);
+});
+
+test('declarations ignore empty literal names and retain dynamic-name recognition', () => {
+  assert.deepEqual(
+    declarationsIn('--: 0; --good: 1; --\u0000dynamic: 2;').map(
+      ({ name, dynamic }) => ({ name, dynamic }),
+    ),
+    [
+      { name: '--good', dynamic: false },
+      { name: '--', dynamic: true },
+    ],
+  );
 });
 
 test('scanScope unions package and app definitions and excludes generated files and tests', () => {

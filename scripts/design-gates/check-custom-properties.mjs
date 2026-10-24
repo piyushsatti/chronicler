@@ -111,10 +111,14 @@ export function referencesIn(text) {
 /** `--name:` declarations (and `@property --name`) in a text. */
 export function declarationsIn(text) {
   const out = [];
-  const re = /(?<![\w-])--(?=[\w\u0000-])/g;
+  const re = /(?<![\w-])--/g;
   let m;
   while ((m = re.exec(text))) {
     const { name, dynamic, end } = readName(text, m.index);
+    if (name.length === 2 && !dynamic) {
+      re.lastIndex = Math.max(end, m.index + 2);
+      continue;
+    }
     let k = end;
     while (k < text.length && /\s/.test(text[k])) k++;
     const before = text.slice(Math.max(0, m.index - 12), m.index);

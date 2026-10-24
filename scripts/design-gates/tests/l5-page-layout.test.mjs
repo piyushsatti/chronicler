@@ -15,7 +15,10 @@ test('flags literal page widths >= 160px and ignores tokens, small sizes and bre
     '/* width: 900px */',
   ].join('\n');
   const hits = scanCss('src/features/x/x.module.css', css);
-  assert.deepEqual(hits.map((h) => h.line), [1, 2, 3]);
+  assert.deepEqual(
+    hits.map((h) => h.line),
+    [1, 2, 3],
+  );
   assert.deepEqual(new Set(rules(hits)), new Set(['css-width-literal']));
 });
 
@@ -26,7 +29,10 @@ test('flags literal card minimums in grid-template-columns, not the token', () =
     '.i { grid-template-columns: minmax(0, 1fr) auto; }',
   ].join('\n');
   const hits = scanCss('src/features/x/x.module.css', css);
-  assert.deepEqual(hits.map((h) => [h.line, h.rule]), [[1, 'grid-card-min']]);
+  assert.deepEqual(
+    hits.map((h) => [h.line, h.rule]),
+    [[1, 'grid-card-min']],
+  );
 });
 
 test('flags max="wide" anywhere and filter sidebars only in feature pages', () => {

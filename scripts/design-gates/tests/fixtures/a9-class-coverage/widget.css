@@ -1,13 +1,27 @@
 /* .widget__ghost { color: red; } is commented out and must not count */
 @layer components {
   .widget,
-  .widget--calm { display: block; }
-  .widget[data-selected='1'] { outline: 1px solid; }
-  .widget:hover > .widget__icon { color: var(--x); }
-  .slot__header { padding: 0; }
-  a[href$='.widget__body'] { color: inherit; }
+  .widget--calm {
+    display: block;
+  }
+  .widget[data-selected='1'] {
+    outline: 1px solid;
+  }
+  .widget:hover > .widget__icon {
+    color: var(--x);
+  }
+  .slot__header {
+    padding: 0;
+  }
+  a[href$='.widget__body'] {
+    color: inherit;
+  }
 }
 @media (min-width: 1px) {
-  .type-body { font: inherit; }
+  .type-body {
+    font: inherit;
+  }
 }
-[data-gap='2'] { gap: 2px; }
+[data-gap='2'] {
+  gap: 2px;
+}

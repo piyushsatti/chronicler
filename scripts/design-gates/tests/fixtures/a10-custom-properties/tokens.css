@@ -3,7 +3,11 @@
   --color-text: #111;
   --color-region-north: #222;
 }
-@property --angle { syntax: '<angle>'; inherits: false; initial-value: 0deg; }
+@property --angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
 .heat {
   /* var(--commented-ref) never counts as a reference */
   color: var(--color-bg);

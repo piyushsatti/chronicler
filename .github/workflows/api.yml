@@ -30,6 +30,12 @@ jobs:
         with:
           go-version: '1.26.x'
           cache-dependency-path: apps/api/go.sum
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+      - name: Install JS workspace (discord sensor tests)
+        working-directory: .
+        run: bun install --frozen-lockfile
       - name: Merge GraphQL schema
         working-directory: .
         run: bash scripts/merge-graphql-schema
@@ -48,12 +54,6 @@ jobs:
         run: go mod download
       - name: Vet
         run: go vet ./...
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-      - name: Install JS workspace (discord sensor tests)
-        working-directory: .
-        run: bun install --frozen-lockfile
       - name: Verify loop (unit, contract, integration via testcontainers, discord sensor)
         run: bash scripts/verify-loop.sh
         env:

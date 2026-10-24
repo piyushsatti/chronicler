@@ -29,18 +29,18 @@ func TestWireConfiguredOwnerHTTPAuthority(t *testing.T) {
 	f := dbtest.NewProductFixture(t)
 	owner, player, admin := uuid.NewString(), uuid.NewString(), uuid.NewString()
 	for _, actor := range []struct {
-		id, handle string
-		roles      []string
+		id, handle, discordID string
+		roles                 []string
 	}{
-		{owner, "wire-owner", []string{"player"}},
-		{player, "wire-player", []string{"player"}},
-		{admin, "wire-admin", []string{"player", "admin"}},
+		{owner, "wire-owner", "12345678901234567", []string{"player"}},
+		{player, "wire-player", "22345678901234567", []string{"player"}},
+		{admin, "wire-admin", "32345678901234567", []string{"player", "admin"}},
 	} {
-		if _, err := f.Pool.Exec(ctx, `INSERT INTO members(public_id,discord_id,handle,display_name,roles) VALUES($1,$2,$2,$2,$3)`, actor.id, actor.handle, actor.roles); err != nil {
+		if _, err := f.Pool.Exec(ctx, `INSERT INTO members(public_id,discord_id,handle,display_name,roles) VALUES($1,$2,$3,$3,$4)`, actor.id, actor.discordID, actor.handle, actor.roles); err != nil {
 			t.Fatal(err)
 		}
 	}
-	cfg := config.Config{DatabaseURL: f.DatabaseURL, RequireDatabase: true, JWTSecret: "wire-owner-synthetic-secret", PlatformOwnerMemberID: owner}
+	cfg := config.Config{DatabaseURL: f.DatabaseURL, RequireDatabase: true, JWTSecret: "wire-owner-synthetic-secret", PlatformOwnerDiscordID: "12345678901234567"}
 	runtime := Wire(ctx, cfg)
 	t.Cleanup(runtime.Pool.Close)
 	mux := http.NewServeMux()
@@ -54,6 +54,23 @@ func TestWireConfiguredOwnerHTTPAuthority(t *testing.T) {
 		`query CurrentAdminAccess { adminOperations(limit:1,offset:0) { activeAlertCount } }`,
 		`query CurrentReviewAccess { pendingDmProfileVerifications(limit:1,offset:0) { total } }`,
 	}
+	t.Run("UUID configured owner retains mounted read access", func(t *testing.T) {
+		uuidCfg := cfg
+		uuidCfg.PlatformOwnerDiscordID = ""
+		uuidCfg.PlatformOwnerMemberID = owner
+		uuidRuntime := Wire(ctx, uuidCfg)
+		defer uuidRuntime.Pool.Close()
+		uuidMux := http.NewServeMux()
+		MountFromAPI(uuidMux, uuidRuntime, uuidCfg)
+		uuidHandler := auth.LiveMiddleware(login.Parser(uuidCfg.JWTSecret), uuidRuntime.Authority, uuidMux)
+		actor, err := uuidRuntime.Authority(ctx, owner)
+		if err != nil || !actor.IsPlatformOwner() || uuidRuntime.Members.ConfiguredOwnerID() != owner {
+			t.Fatalf("UUID configured owner=%v retained=%v err=%v", actor.IsPlatformOwner(), uuidRuntime.Members.ConfiguredOwnerID() == owner, err)
+		}
+		for _, query := range queries {
+			wireOwnerGraphQL(t, uuidHandler, ownerToken, query, nil, http.StatusOK, "")
+		}
+	})
 	t.Run("configured Player owner survives production wiring", func(t *testing.T) {
 		actor, err := runtime.Authority(ctx, owner)
 		if err != nil || !actor.IsPlatformOwner() || actor.Claims().Has(auth.Admin) || runtime.Members.ConfiguredOwnerID() != owner {
@@ -217,18 +234,21 @@ func TestWireConfiguredOwnerHTTPAuthority(t *testing.T) {
 func TestWireConfiguredOwnerStartupValidation(t *testing.T) {
 	ctx := context.Background()
 	f := dbtest.NewProductFixture(t)
-	inactive, banned := uuid.NewString(), uuid.NewString()
-	for _, actor := range []struct{ id, status string }{{inactive, "inactive"}, {banned, "banned"}} {
-		if _, err := f.Pool.Exec(ctx, `INSERT INTO members(public_id,discord_id,handle,display_name,roles,status) VALUES($1::uuid,$1::text,$1::text,'Unavailable owner',ARRAY['player'],$2)`, actor.id, actor.status); err != nil {
+	inactive, banned, mismatch := uuid.NewString(), uuid.NewString(), uuid.NewString()
+	for _, actor := range []struct{ id, discordID, status string }{{inactive, "42345678901234567", "inactive"}, {banned, "52345678901234567", "banned"}, {mismatch, "62345678901234567", "active"}} {
+		if _, err := f.Pool.Exec(ctx, `INSERT INTO members(public_id,discord_id,handle,display_name,roles,status) VALUES($1::uuid,$2,$2,'Unavailable owner',ARRAY['player'],$3)`, actor.id, actor.discordID, actor.status); err != nil {
 			t.Fatal(err)
 		}
 	}
-	for _, test := range []struct{ name, owner, reason string }{
-		{"malformed", "not-a-uuid", "invalid"},
-		{"noncanonical", strings.ToUpper("aaaaaaaa-0000-4000-8000-000000000001"), "invalid"},
-		{"missing", uuid.NewString(), "configured owner must resolve active"},
-		{"inactive", inactive, "configured owner must resolve active"},
-		{"banned", banned, "configured owner must resolve active"},
+	for _, test := range []struct{ name, owner, discordOwner, reason string }{
+		{"malformed", "not-a-uuid", "", "invalid"},
+		{"noncanonical", strings.ToUpper("aaaaaaaa-0000-4000-8000-000000000001"), "", "invalid"},
+		{"missing", uuid.NewString(), "", "configured owner must resolve active"},
+		{"inactive", inactive, "", "configured owner must resolve active"},
+		{"banned", banned, "", "configured owner must resolve active"},
+		{"unknown Discord", "", "72345678901234567", "configured owner must resolve active"},
+		{"inactive Discord", "", "42345678901234567", "configured owner must resolve active"},
+		{"mismatched dual owner", inactive, "62345678901234567", "configured owner identity mismatch"},
 	} {
 		t.Run(test.name, func(t *testing.T) {
 			defer func() {
@@ -238,10 +258,21 @@ func TestWireConfiguredOwnerStartupValidation(t *testing.T) {
 					t.Errorf("startup rejection=%v; want %q", recovered, test.reason)
 				}
 			}()
-			runtime := Wire(ctx, config.Config{DatabaseURL: f.DatabaseURL, RequireDatabase: true, JWTSecret: "wire-owner-startup-secret", PlatformOwnerMemberID: test.owner})
+			runtime := Wire(ctx, config.Config{DatabaseURL: f.DatabaseURL, RequireDatabase: true, JWTSecret: "wire-owner-startup-secret", PlatformOwnerMemberID: test.owner, PlatformOwnerDiscordID: test.discordOwner})
 			runtime.Pool.Close()
 		})
 	}
+	t.Run("matching dual identifiers resolve one immutable owner", func(t *testing.T) {
+		active := uuid.NewString()
+		if _, err := f.Pool.Exec(ctx, `INSERT INTO members(public_id,discord_id,handle,display_name,roles) VALUES($1::uuid,'82345678901234567','dual-owner','dual-owner',ARRAY['player'])`, active); err != nil {
+			t.Fatal(err)
+		}
+		runtime := Wire(ctx, config.Config{DatabaseURL: f.DatabaseURL, RequireDatabase: true, JWTSecret: "wire-owner-startup-secret", PlatformOwnerMemberID: active, PlatformOwnerDiscordID: "82345678901234567"})
+		defer runtime.Pool.Close()
+		if runtime.Members.ConfiguredOwnerID() != active {
+			t.Fatalf("configured owner=%q want %q", runtime.Members.ConfiguredOwnerID(), active)
+		}
+	})
 	t.Run("absent owner grants no implicit ownership", func(t *testing.T) {
 		if _, err := f.Pool.Exec(ctx, `UPDATE members SET status='active' WHERE public_id=$1`, inactive); err != nil {
 			t.Fatal(err)
@@ -266,6 +297,16 @@ func TestWireConfiguredOwnerRejectsMemoryFallback(t *testing.T) {
 			}
 		}()
 		Wire(context.Background(), cfg)
+	})
+	t.Run("configured Discord owner cannot use memory fallback", func(t *testing.T) {
+		defer func() {
+			recovered := recover()
+			message, ok := recovered.(string)
+			if !ok || !strings.Contains(message, "configured Discord owner requires member lookup") {
+				t.Errorf("startup rejection=%v", recovered)
+			}
+		}()
+		Wire(context.Background(), config.Config{DatabaseURL: ":invalid-url", PlatformOwnerDiscordID: "92345678901234567"})
 	})
 	t.Run("ordinary development fallback remains available", func(t *testing.T) {
 		cfg.PlatformOwnerMemberID = ""

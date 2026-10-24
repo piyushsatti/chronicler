@@ -52,7 +52,8 @@ function stripCssComments(css) {
   return css.replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, ' '));
 }
 
-const WIDTH_DECL_RE = /(?<![\w-])(max-width|max-inline-size|width|inline-size)\s*:\s*([^;{}]+)/g;
+const WIDTH_DECL_RE =
+  /(?<![\w-])(max-width|max-inline-size|width|inline-size)\s*:\s*([^;{}]+)/g;
 const GRID_DECL_RE = /(?<![\w-])grid-template-columns\s*:\s*([^;{}]+)/g;
 const LENGTH_RE = /(?<![\w.-])(\d+(?:\.\d+)?)(px|rem|em)\b/g;
 const LITERAL_MINMAX_RE = /minmax\(\s*(?:min\(\s*)?\d+(?:\.\d+)?(?:px|rem|em)\b/;
@@ -69,7 +70,12 @@ export function scanCss(relPath, css) {
       for (const len of value.matchAll(LENGTH_RE)) {
         const px = Number(len[1]) * PX_PER[len[2]];
         if (px >= MIN_PX) {
-          hits.push({ file: relPath, line: idx + 1, rule: 'css-width-literal', value: `${m[1]}: ${value}` });
+          hits.push({
+            file: relPath,
+            line: idx + 1,
+            rule: 'css-width-literal',
+            value: `${m[1]}: ${value}`,
+          });
           break;
         }
       }
@@ -77,7 +83,12 @@ export function scanCss(relPath, css) {
     for (const m of line.matchAll(GRID_DECL_RE)) {
       const value = m[1].trim();
       if (LITERAL_MINMAX_RE.test(value)) {
-        hits.push({ file: relPath, line: idx + 1, rule: 'grid-card-min', value: `grid-template-columns: ${value}` });
+        hits.push({
+          file: relPath,
+          line: idx + 1,
+          rule: 'grid-card-min',
+          value: `grid-template-columns: ${value}`,
+        });
       }
     }
   });
@@ -93,14 +104,29 @@ export function scanTsx(relPath, src) {
   const isPage = /^src\/features\/[^/]+\/pages\//.test(relPath);
   src.split('\n').forEach((line, idx) => {
     if (PAGE_MAX_WIDE_RE.test(line) && /PageShell|max=/.test(line)) {
-      hits.push({ file: relPath, line: idx + 1, rule: 'page-max-wide', value: 'max="wide"' });
+      hits.push({
+        file: relPath,
+        line: idx + 1,
+        rule: 'page-max-wide',
+        value: 'max="wide"',
+      });
     }
     if (!isPage) return;
     const code = line.replace(/\/\/.*$/, '');
     if (ASIDE_RE.test(code)) {
-      hits.push({ file: relPath, line: idx + 1, rule: 'filter-sidebar', value: '<aside>' });
+      hits.push({
+        file: relPath,
+        line: idx + 1,
+        rule: 'filter-sidebar',
+        value: '<aside>',
+      });
     } else if (SIDEBAR_RE.test(code) && !/^\s*(import\b|\*|\/\*)/.test(code)) {
-      hits.push({ file: relPath, line: idx + 1, rule: 'filter-sidebar', value: code.match(SIDEBAR_RE)[0] });
+      hits.push({
+        file: relPath,
+        line: idx + 1,
+        rule: 'filter-sidebar',
+        value: code.match(SIDEBAR_RE)[0],
+      });
     }
   });
   return hits;
@@ -130,7 +156,8 @@ function main() {
   const pending = allowlist.pageLayoutPendingMigration ?? [];
   const problems = [];
   for (const entry of justified) {
-    if (!entry.reason) problems.push(`pageLayout entry without a reason: ${keyOf(entry)}`);
+    if (!entry.reason)
+      problems.push(`pageLayout entry without a reason: ${keyOf(entry)}`);
   }
   const budget = new Map();
   for (const entry of [...justified, ...pending]) {
@@ -143,7 +170,9 @@ function main() {
     if (left > 0) budget.set(k, left - 1);
     else unlisted.push(hit);
   }
-  const stale = [...budget].filter(([, n]) => n > 0).map(([k, n]) => `${k}${n > 1 ? ` (x${n})` : ''}`);
+  const stale = [...budget]
+    .filter(([, n]) => n > 0)
+    .map(([k, n]) => `${k}${n > 1 ? ` (x${n})` : ''}`);
 
   if (jsonMode) {
     console.log(JSON.stringify(hits, null, 2));
@@ -152,11 +181,15 @@ function main() {
   if (listMode) {
     for (const h of hits) console.log(`${h.file}:${h.line} ${h.rule} ${h.value}`);
   }
-  for (const s of stale) console.warn(`check:page-layout stale allowlist entry (remove it): ${s}`);
+  for (const s of stale)
+    console.warn(`check:page-layout stale allowlist entry (remove it): ${s}`);
   if (problems.length || unlisted.length) {
-    console.error(`check:page-layout (L5) FAILED — ${unlisted.length} unlisted violation(s)`);
+    console.error(
+      `check:page-layout (L5) FAILED — ${unlisted.length} unlisted violation(s)`,
+    );
     for (const p of problems) console.error(`  ${p}`);
-    for (const h of unlisted) console.error(`  ${h.file}:${h.line} ${h.rule} ${h.value}`);
+    for (const h of unlisted)
+      console.error(`  ${h.file}:${h.line} ${h.rule} ${h.value}`);
     console.error(
       '  Use the layout tokens (--page-max, --page-max-reading, --rail-width, --card-min), CardGrid, FilterBar, or SplitPane/MasterDetail.',
     );

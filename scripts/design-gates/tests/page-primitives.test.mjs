@@ -1,27 +1,42 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { checkHeaderEqualWidths, checkHeaderNavigation, checkIndexPage, scanCss, scanSegments } from '../check-page-primitives.mjs';
+import {
+  checkHeaderEqualWidths,
+  checkHeaderNavigation,
+  checkIndexPage,
+  scanCss,
+  scanSegments,
+} from '../check-page-primitives.mjs';
 
 test('feature CSS cannot redefine shared title typography or primitive dimensions', () => {
-  const hits = scanCss('src/features/quest/quest.module.css', `
+  const hits = scanCss(
+    'src/features/quest/quest.module.css',
+    `
     .page-header__title { font-size: 30px; }
     .segmented-track { height: 42px; padding: 4px; }
     .segmented-pill { padding-inline: 8px; }
     .page-toolbar__icon { height: 36px; }
     .unrelated { height: 36px; padding: 2px; }
-  `);
-  assert.deepEqual(hits.map(({ rule, property }) => [rule, property]), [
-    ['page-title-typography', 'font-size'],
-    ['primitive-dimensions', 'height'],
-    ['primitive-dimensions', 'padding'],
-    ['primitive-dimensions', 'padding-inline'],
-    ['primitive-dimensions', 'height'],
-  ]);
+  `,
+  );
+  assert.deepEqual(
+    hits.map(({ rule, property }) => [rule, property]),
+    [
+      ['page-title-typography', 'font-size'],
+      ['primitive-dimensions', 'height'],
+      ['primitive-dimensions', 'padding'],
+      ['primitive-dimensions', 'padding-inline'],
+      ['primitive-dimensions', 'height'],
+    ],
+  );
 });
 
 test('non-feature title rules and primitive-owned styles remain valid', () => {
   assert.deepEqual(
-    scanCss('src/styles/primitives.css', '.segmented-track { height: 40px; padding: 4px; }'),
+    scanCss(
+      'src/styles/primitives.css',
+      '.segmented-track { height: 40px; padding: 4px; }',
+    ),
     [],
   );
   assert.deepEqual(
@@ -31,7 +46,9 @@ test('non-feature title rules and primitive-owned styles remain valid', () => {
 });
 
 test('feature selectors remain protected through global, pseudo, and contextual selectors', () => {
-  const hits = scanCss('src/features/x/a.module.css', `
+  const hits = scanCss(
+    'src/features/x/a.module.css',
+    `
     :global(.page-header__title) { font-size: 12px; }
     .outer :global(.page-header__title) { line-height: 1; }
     :is(.page-header__title, .other) { font-family: serif; }
@@ -39,17 +56,21 @@ test('feature selectors remain protected through global, pseudo, and contextual 
     :global(.segmented-track) { height: 42px; padding: 4px; }
     .outer :is(.segmented-pill) { padding-inline: 8px; }
     .outer .page-toolbar__icon:hover { height: 36px; }
-  `);
-  assert.deepEqual(hits.map(({ rule, property }) => [rule, property]), [
-    ['page-title-typography', 'font-size'],
-    ['page-title-typography', 'line-height'],
-    ['page-title-typography', 'font-family'],
-    ['page-title-typography', 'font-size'],
-    ['primitive-dimensions', 'height'],
-    ['primitive-dimensions', 'padding'],
-    ['primitive-dimensions', 'padding-inline'],
-    ['primitive-dimensions', 'height'],
-  ]);
+  `,
+  );
+  assert.deepEqual(
+    hits.map(({ rule, property }) => [rule, property]),
+    [
+      ['page-title-typography', 'font-size'],
+      ['page-title-typography', 'line-height'],
+      ['page-title-typography', 'font-family'],
+      ['page-title-typography', 'font-size'],
+      ['primitive-dimensions', 'height'],
+      ['primitive-dimensions', 'padding'],
+      ['primitive-dimensions', 'padding-inline'],
+      ['primitive-dimensions', 'height'],
+    ],
+  );
 });
 
 test('index page source must render the shared toolbar segmented surface', () => {
@@ -57,44 +78,78 @@ test('index page source must render the shared toolbar segmented surface', () =>
     checkIndexPage('index.tsx', '<PageToolbar><PageToolbar.Segments /></PageToolbar>'),
     [],
   );
+  assert.equal(checkIndexPage('index.tsx', '<FilterBar />').length, 2);
   assert.equal(
-    checkIndexPage('index.tsx', '<FilterBar />').length,
-    2,
-  );
-  assert.equal(
-    checkIndexPage('index.tsx', '{/* <PageToolbar><PageToolbar.Segments /></PageToolbar> */}<FilterBar />').length,
+    checkIndexPage(
+      'index.tsx',
+      '{/* <PageToolbar><PageToolbar.Segments /></PageToolbar> */}<FilterBar />',
+    ).length,
     2,
   );
 });
 
 test('header source keeps the shared top segmented navigation mounted in SiteChrome', () => {
-  assert.deepEqual(checkHeaderNavigation(`
+  assert.deepEqual(
+    checkHeaderNavigation(`
     function DestinationLinks() { return <SegmentedNav siteLinksPlacement="top" className="site-chrome__links" />; }
     export function SiteChrome() { return <header><DestinationLinks /></header>; }
-  `), []);
+  `),
+    [],
+  );
   assert.equal(checkHeaderNavigation('<header><nav>Links</nav></header>').length, 3);
 });
 
 test('header links participate in the shared equal-column segment grid', () => {
-  assert.deepEqual(checkHeaderEqualWidths('.segmented-track :is(.segmented-row, .segmented-options) { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }'), []);
-  assert.equal(checkHeaderEqualWidths('.segmented-track:not([data-site-links]) :is(.segmented-row, .segmented-options) { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }').length, 1);
-  assert.equal(checkHeaderEqualWidths('.segmented-track :is(.segmented-row, .segmented-options) { display: flex; }').length, 1);
+  assert.deepEqual(
+    checkHeaderEqualWidths(
+      '.segmented-track :is(.segmented-row, .segmented-options) { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }',
+    ),
+    [],
+  );
+  assert.equal(
+    checkHeaderEqualWidths(
+      '.segmented-track:not([data-site-links]) :is(.segmented-row, .segmented-options) { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }',
+    ).length,
+    1,
+  );
+  assert.equal(
+    checkHeaderEqualWidths(
+      '.segmented-track :is(.segmented-row, .segmented-options) { display: flex; }',
+    ).length,
+    1,
+  );
 });
 
 test('toolbar checks ignore comments and strings that only mention shared components', () => {
-  assert.equal(checkIndexPage('page.tsx', `
+  assert.equal(
+    checkIndexPage(
+      'page.tsx',
+      `
     const example = '<PageToolbar><PageToolbar.Segments /></PageToolbar>';
     // <PageToolbar><PageToolbar.Segments /></PageToolbar>
     export const Page = () => <FilterBar />;
-  `).length, 2);
+  `,
+    ).length,
+    2,
+  );
 });
 
 test('Community and Map toolbars can compose shared panels and navigation', () => {
   for (const segment of ['Tabs', 'SegmentedNav', 'SegmentedControl']) {
-    assert.deepEqual(checkIndexPage('page.tsx', `<PageToolbar segments={<${segment} />} />`, false), []);
+    assert.deepEqual(
+      checkIndexPage('page.tsx', `<PageToolbar segments={<${segment} />} />`, false),
+      [],
+    );
   }
-  assert.equal(checkIndexPage('CommunityPage.tsx', '<Tabs items={tabs} />', false).length, 1);
-  assert.equal(checkIndexPage('MapDirectory.tsx', '<SegmentedControl options={filters} />', false).length, 1);
+  assert.equal(
+    checkIndexPage('CommunityPage.tsx', '<Tabs items={tabs} />', false).length,
+    1,
+  );
+  assert.equal(
+    checkIndexPage('MapDirectory.tsx', '<SegmentedControl options={filters} />', false)
+      .length,
+    1,
+  );
   assert.equal(checkIndexPage('CommunityPage.tsx', '<PageToolbar />', false).length, 1);
 });
 
@@ -108,14 +163,19 @@ test('numeric badges fail for each shared segmented item API', () => {
     ['Tabs.Nav', 'items'],
     ['TabNav', 'items'],
   ]) {
-    const failures = scanSegments('page.tsx', `<${tag} ${prop}={[{ value: 'lore', label: <>Lore <span>12</span></> }]} />`);
+    const failures = scanSegments(
+      'page.tsx',
+      `<${tag} ${prop}={[{ value: 'lore', label: <>Lore <span>12</span></> }]} />`,
+    );
     assert.equal(failures.length, 1, `${tag}.${prop} must reject a numeric badge`);
     assert.match(failures[0], /count badges/);
   }
 });
 
 test('referenced options, spreads and mapped item counts fail', () => {
-  const failures = scanSegments('MapDirectory.tsx', `
+  const failures = scanSegments(
+    'MapDirectory.tsx',
+    `
     const filters = [
       { value: '', label: <>All maps <span>{directory.maps.length}</span></> },
       ...regions.map((region) => ({
@@ -124,7 +184,8 @@ test('referenced options, spreads and mapped item counts fail', () => {
       })),
     ];
     export const Page = () => <PageToolbar segments={<SegmentedControl options={filters} />} count={directory.maps.length} />;
-  `);
+  `,
+  );
   assert.equal(failures.length, 1);
   assert.match(failures[0], /count badges/);
 });
@@ -146,17 +207,26 @@ test('label functions, aliased JSX, shorthand labels and aliased count expressio
 });
 
 test('label scope resolves the nearest binding', () => {
-  assert.deepEqual(scanSegments('page.tsx', `
+  assert.deepEqual(
+    scanSegments(
+      'page.tsx',
+      `
     const label = <span>12</span>;
     function Page() {
       const label = 'Lore';
       return <PageToolbar.Segments options={[{ value: 'lore', label }]} />;
     }
-  `), []);
+  `,
+    ),
+    [],
+  );
 });
 
 test('toolbar result counts, panel contents and unrelated badges remain valid', () => {
-  assert.deepEqual(scanSegments('page.tsx', `
+  assert.deepEqual(
+    scanSegments(
+      'page.tsx',
+      `
     const choices = [{ value: 'lore', label: 'Lore', count: 12 }];
     const account = 'Account';
     const category = { name: 'Lore', count: 12 };
@@ -170,7 +240,10 @@ test('toolbar result counts, panel contents and unrelated badges remain valid', 
       <FilterBar count={12}><FilterBar.Picker options={choices} /></FilterBar>
       <div className="le-toolbar" role="toolbar" aria-label="Text formatting"><button>Bold</button></div>
     </>;
-  `), []);
+  `,
+    ),
+    [],
+  );
 });
 
 test('custom page toolbar wrappers fail while shared PageToolbar passes', () => {
@@ -183,6 +256,18 @@ test('custom page toolbar wrappers fail while shared PageToolbar passes', () => 
   ]) {
     assert.match(scanSegments('page.tsx', source)[0], /shared PageToolbar/);
   }
-  assert.deepEqual(scanSegments('page.tsx', '<PageToolbar segments={<SegmentedControl options={options} />} />'), []);
-  assert.deepEqual(scanSegments('page.tsx', '<div className={styles.toolbar}><PageToolbar segments={<SegmentedControl options={options} />} /></div>'), []);
+  assert.deepEqual(
+    scanSegments(
+      'page.tsx',
+      '<PageToolbar segments={<SegmentedControl options={options} />} />',
+    ),
+    [],
+  );
+  assert.deepEqual(
+    scanSegments(
+      'page.tsx',
+      '<div className={styles.toolbar}><PageToolbar segments={<SegmentedControl options={options} />} /></div>',
+    ),
+    [],
+  );
 });

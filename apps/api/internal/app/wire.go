@@ -60,7 +60,7 @@ func Wire(ctx context.Context, cfg config.Config) API {
 			slog.Error("database required but unavailable", "env", cfg.Env, "error", err)
 			panic("database required: " + err.Error())
 		}
-		if err := cfg.Validate(ctx, nil); err != nil {
+		if _, err := cfg.Validate(ctx, nil, nil); err != nil {
 			slog.Error("startup configuration invalid", "error", err)
 			panic("startup configuration: " + err.Error())
 		}
@@ -84,9 +84,17 @@ func wirePostgres(ctx context.Context, cfg config.Config, pool *db.Pool, base AP
 	})
 	questCmd := quest.NewCommands(questRunner, time.Now)
 
-	memStore, err := member.NewFromDBTX(pgxPool, cfg.PlatformOwnerMemberID)
+	ownerLookup, err := member.NewFromDBTX(pgxPool, "")
+	var ownerID string
 	if err == nil {
-		err = cfg.Validate(ctx, memStore.ResolveAuthority)
+		ownerID, err = cfg.Validate(ctx, ownerLookup.ResolveAuthority, func(ctx context.Context, discordID string) (string, error) {
+			found, err := ownerLookup.GetByDiscordID(ctx, discordID)
+			return found.ID, err
+		})
+	}
+	var memStore *member.PostgresStore
+	if err == nil {
+		memStore, err = member.NewFromDBTX(pgxPool, ownerID)
 	}
 	if err != nil {
 		pool.Close()

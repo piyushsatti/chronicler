@@ -28443,16 +28443,18 @@
       "path": "apps/api/internal/platform/config/config.go",
       "add_fields": {
         "OperatorDiscordWebhookURL": "string",
-        "PlatformOwnerMemberID": "string"
+        "PlatformOwnerMemberID": "string",
+        "PlatformOwnerDiscordID": "string"
       },
       "env_mapping": {
         "OperatorDiscordWebhookURL": "OPERATOR_DISCORD_WEBHOOK_URL",
-        "PlatformOwnerMemberID": "PLATFORM_OWNER_MEMBER_ID"
+        "PlatformOwnerMemberID": "PLATFORM_OWNER_MEMBER_ID",
+        "PlatformOwnerDiscordID": "PLATFORM_OWNER_DISCORD_ID"
       },
       "consumers": ["WD01", "WK04", "W02"],
-      "construction": "Existing FromEnv and existing webhook constructor only; empty valid unconfigured, malformed nonempty rejects, no logging/secret/deploy change; FromEnv snapshots optional PLATFORM_OWNER_MEMBER_ID. Validate checks syntax before lookup, does zero lookups when absent, otherwise requires exactly one matching active Authority. W02 calls Validate once after database connection and before serving. Current request authority still rechecks live membership.",
+      "construction": "Existing FromEnv and existing webhook constructor only; empty valid unconfigured, malformed nonempty rejects, no logging/secret/deploy change; FromEnv snapshots optional PLATFORM_OWNER_MEMBER_ID and PLATFORM_OWNER_DISCORD_ID. Validate checks syntax before lookup, does zero lookups when absent, otherwise requires exactly one matching active Authority. W02 calls Validate once after database connection and before serving. Current request authority still rechecks live membership.",
       "add_methods": [
-        "Validate(ctx context.Context, resolve auth.AuthorityResolver) error"
+        "Validate(ctx context.Context, resolve auth.AuthorityResolver, lookup DiscordOwnerLookup) (string, error)"
       ]
     }
   },

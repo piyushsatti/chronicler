@@ -64,10 +64,10 @@ func TestPhase3TaskP06Acceptance(t *testing.T) {
 		t.Fatalf("absent config owner=%v err=%v", ordinary.IsPlatformOwner(), err)
 	}
 	cfg := config.Config{PlatformOwnerMemberID: owner}
-	if err := cfg.Validate(ctx, store.ResolveAuthority); err != nil {
+	if _, err := cfg.Validate(ctx, store.ResolveAuthority, nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := (config.Config{PlatformOwnerMemberID: missing}).Validate(ctx, store.ResolveAuthority); err == nil {
+	if _, err := (config.Config{PlatformOwnerMemberID: missing}).Validate(ctx, store.ResolveAuthority, nil); err == nil {
 		t.Fatal("missing configured owner accepted at boot")
 	}
 	if _, err := fixture.Pool.Exec(ctx, `UPDATE members SET roles=ARRAY['player'],handle='changed-owner' WHERE public_id=$1`, owner); err != nil {
@@ -126,7 +126,7 @@ func TestPhase3TaskP06Acceptance(t *testing.T) {
 		if err == nil || actor.IsPlatformOwner() {
 			t.Fatalf("inactive owner still authorized status=%s err=%v", status, err)
 		}
-		if err := cfg.Validate(ctx, store.ResolveAuthority); err == nil {
+		if _, err := cfg.Validate(ctx, store.ResolveAuthority, nil); err == nil {
 			t.Fatalf("inactive owner accepted at boot status=%s", status)
 		}
 	}

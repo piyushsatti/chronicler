@@ -10,7 +10,7 @@ Navigation only — themes link to evidence sections in the detailed audit.
 
 ### Three layers: split SDL, merged schema, generated TS
 
-You edit domain SDL under [packages/contracts/graphql/](../../packages/contracts/graphql/) (for example [member/types.graphql](../../packages/contracts/graphql/member/types.graphql)). [scripts/merge-graphql-schema](../../scripts/merge-graphql-schema) produces [schema.graphql](../../packages/contracts/schema.graphql). [codegen.ts](../../packages/contracts/codegen.ts) emits one [graphql.ts](../../packages/contracts/src/generated/graphql.ts). Go gqlgen reads the same recursive split files.
+You edit domain SDL under [packages/contracts/graphql/](../../packages/contracts/graphql/) (for example [member/types.graphql](../../packages/contracts/graphql/member/types.graphql)). [scripts/merge-graphql-schema](../../scripts/merge-graphql-schema) produces [schema.graphql](../../packages/contracts/schema.graphql). [codegen.ts](../../packages/contracts/codegen.ts) emits one `graphql.ts` at `src/generated/graphql.ts`, an ignored artifact absent from a clean checkout. Go gqlgen reads the same recursive split files.
 
 → [Authority layers](interface-contract-audit.md#authority-layers) · [Merge and codegen pipeline](interface-contract-audit.md#merge-and-codegen-pipeline)
 

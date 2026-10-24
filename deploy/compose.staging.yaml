@@ -28,6 +28,7 @@ services:
       INGEST_SECRET: ${INGEST_SECRET}
       CORS_ORIGINS: ${CORS_ORIGINS}
       PLATFORM_OWNER_MEMBER_ID: ${PLATFORM_OWNER_MEMBER_ID:-}
+      PLATFORM_OWNER_DISCORD_ID: ${PLATFORM_OWNER_DISCORD_ID:-}
     depends_on:
       postgres:
         condition: service_healthy

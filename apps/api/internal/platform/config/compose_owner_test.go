@@ -9,9 +9,9 @@ import (
 )
 
 // TestDeployComposePassesPlatformOwner guards the deployed stacks: FromEnv
-// reads PLATFORM_OWNER_MEMBER_ID, so each api service must forward it from the
-// host environment. An unset host value must stay empty (no owner), never a
-// literal default.
+// reads both platform owner identifiers, so each api service must forward them
+// from the host environment. An unset host value must stay empty (no owner),
+// never a literal default.
 func TestDeployComposePassesPlatformOwner(t *testing.T) {
 	for _, name := range []string{"compose.production.yaml", "compose.staging.yaml"} {
 		t.Run(name, func(t *testing.T) {
@@ -31,12 +31,17 @@ func TestDeployComposePassesPlatformOwner(t *testing.T) {
 			if !ok {
 				t.Fatalf("%s has no api service", name)
 			}
-			got, ok := api.Environment["PLATFORM_OWNER_MEMBER_ID"]
-			if !ok {
-				t.Fatalf("%s api service does not forward PLATFORM_OWNER_MEMBER_ID", name)
-			}
-			if want := "${PLATFORM_OWNER_MEMBER_ID:-}"; got != want {
-				t.Fatalf("%s api PLATFORM_OWNER_MEMBER_ID = %q, want %q", name, got, want)
+			for key, want := range map[string]string{
+				"PLATFORM_OWNER_MEMBER_ID":  "${PLATFORM_OWNER_MEMBER_ID:-}",
+				"PLATFORM_OWNER_DISCORD_ID": "${PLATFORM_OWNER_DISCORD_ID:-}",
+			} {
+				got, ok := api.Environment[key]
+				if !ok {
+					t.Fatalf("%s api service does not forward %s", name, key)
+				}
+				if got != want {
+					t.Fatalf("%s api %s = %q, want %q", name, key, got, want)
+				}
 			}
 		})
 	}

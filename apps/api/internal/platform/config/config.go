@@ -13,6 +13,7 @@ import (
 
 type Config struct {
 	PlatformOwnerMemberID     string
+	PlatformOwnerDiscordID    string
 	OperatorDiscordWebhookURL string
 	Addr                      string
 	DatabaseURL               string
@@ -34,6 +35,7 @@ func FromEnv() Config {
 	requireDB := envName == "production" || envTruthy("REQUIRE_DATABASE")
 	return Config{
 		PlatformOwnerMemberID:     os.Getenv("PLATFORM_OWNER_MEMBER_ID"),
+		PlatformOwnerDiscordID:    os.Getenv("PLATFORM_OWNER_DISCORD_ID"),
 		OperatorDiscordWebhookURL: os.Getenv("OPERATOR_DISCORD_WEBHOOK_URL"),
 		Addr:                      env("API_ADDR", ":8080"),
 		DatabaseURL:               env("DATABASE_URL", "postgres://chronicler:chronicler@127.0.0.1:5432/chronicler?sslmode=disable"),
@@ -88,24 +90,54 @@ func durationEnv(key string, fallback time.Duration) time.Duration {
 	return d
 }
 
-// Validate checks trusted startup configuration before production wiring serves requests.
-func (c Config) Validate(ctx context.Context, resolve auth.AuthorityResolver) error {
-	if c.PlatformOwnerMemberID == "" {
-		return nil
+type DiscordOwnerLookup func(context.Context, string) (memberID string, err error)
+
+// Validate checks trusted startup configuration and returns its resolved owner UUID.
+func (c Config) Validate(ctx context.Context, resolve auth.AuthorityResolver, lookup DiscordOwnerLookup) (string, error) {
+	ownerID := c.PlatformOwnerMemberID
+	if ownerID != "" {
+		parsed, err := uuid.Parse(ownerID)
+		if err != nil || parsed.String() != ownerID {
+			return "", fmt.Errorf("invalid PLATFORM_OWNER_MEMBER_ID")
+		}
 	}
-	parsed, err := uuid.Parse(c.PlatformOwnerMemberID)
-	if err != nil || parsed.String() != c.PlatformOwnerMemberID {
-		return fmt.Errorf("invalid PLATFORM_OWNER_MEMBER_ID")
+	if id := c.PlatformOwnerDiscordID; id != "" {
+		if len(id) < 17 || len(id) > 20 {
+			return "", fmt.Errorf("invalid PLATFORM_OWNER_DISCORD_ID")
+		}
+		for i := 0; i < len(id); i++ {
+			if id[i] < '0' || id[i] > '9' {
+				return "", fmt.Errorf("invalid PLATFORM_OWNER_DISCORD_ID")
+			}
+		}
+		if lookup == nil {
+			return "", fmt.Errorf("configured Discord owner requires member lookup")
+		}
+		memberID, err := lookup(ctx, id)
+		if err != nil {
+			return "", fmt.Errorf("configured owner must resolve active: %w", err)
+		}
+		parsed, err := uuid.Parse(memberID)
+		if err != nil || parsed.String() != memberID {
+			return "", fmt.Errorf("configured Discord owner lookup returned invalid member identity")
+		}
+		if ownerID != "" && ownerID != memberID {
+			return "", fmt.Errorf("configured owner identity mismatch")
+		}
+		ownerID = memberID
+	}
+	if ownerID == "" {
+		return "", nil
 	}
 	if resolve == nil {
-		return fmt.Errorf("configured owner requires live authority resolver")
+		return "", fmt.Errorf("configured owner requires live authority resolver")
 	}
-	actor, err := resolve(ctx, c.PlatformOwnerMemberID)
+	actor, err := resolve(ctx, ownerID)
 	if err != nil {
-		return fmt.Errorf("configured owner must resolve active: %w", err)
+		return "", fmt.Errorf("configured owner must resolve active: %w", err)
 	}
-	if actor.Claims().MemberID != c.PlatformOwnerMemberID {
-		return fmt.Errorf("configured owner authority mismatch")
+	if actor.Claims().MemberID != ownerID {
+		return "", fmt.Errorf("configured owner authority mismatch")
 	}
-	return nil
+	return ownerID, nil
 }
