@@ -1,0 +1,88 @@
+import { useEffect, useId, useState } from 'react';
+import type { Pointcrawl } from '../adapters/mapAdapter.js';
+import { humanizeKey } from '../../../utils/format.js';
+import styles from '../pages/map.module.css';
+
+export function MapKey({ edges }: { edges: Pointcrawl['edges'] }) {
+  const listId = useId();
+  const [mode, setMode] = useState<'auto' | 'pinned' | 'dismissed'>('auto');
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const expanded = mode === 'pinned' || (mode === 'auto' && (hovered || focused));
+  useEffect(() => {
+    if (!hovered && !focused && mode === 'dismissed') setMode('auto');
+  }, [hovered, focused, mode]);
+  useEffect(() => {
+    if (!expanded) return;
+    const escape = (event: KeyboardEvent) => {
+      if (
+        event.key !== 'Escape' ||
+        (event.target instanceof Element && event.target.closest('[role="dialog"]'))
+      )
+        return;
+      event.preventDefault();
+      event.stopPropagation();
+      setMode('dismissed');
+    };
+    document.addEventListener('keydown', escape, true);
+    return () => document.removeEventListener('keydown', escape, true);
+  }, [expanded]);
+  const kinds = [...new Set(edges.map((edge) => edge.kind))];
+  return (
+    <div
+      className={styles.mapKey}
+      onPointerEnter={(event) => {
+        if (
+          event.pointerType === 'mouse' &&
+          window.matchMedia?.('(hover: hover) and (pointer: fine)').matches
+        )
+          setHovered(true);
+      }}
+      onPointerLeave={() => setHovered(false)}
+    >
+      <button
+        type="button"
+        className={styles.mapKeyToggle}
+        aria-label="Key to route line styles"
+        aria-expanded={expanded}
+        aria-controls={listId}
+        onFocus={(event) => {
+          if (
+            window.matchMedia?.('(hover: hover) and (pointer: fine)').matches &&
+            event.currentTarget.matches(':focus-visible')
+          )
+            setFocused(true);
+        }}
+        onBlur={() => setFocused(false)}
+        onClick={() =>
+          setMode((current) => (current === 'pinned' ? 'dismissed' : 'pinned'))
+        }
+      >
+        <svg viewBox="0 0 20 20" aria-hidden="true">
+          <circle cx="6.5" cy="7" r="3.5" />
+          <path d="m9 9.5 7 7M12 12.5l2-2M14 14.5l2-2" />
+        </svg>
+        <span>Key</span>
+      </button>
+      <ul
+        className={styles.mapKeyList}
+        id={listId}
+        aria-label="Route line styles"
+        hidden={!expanded}
+      >
+        {kinds.map((kind) => (
+          <li key={kind}>
+            <i data-edge-kind={kind} aria-hidden="true" />
+            {humanizeKey(kind)}
+          </li>
+        ))}
+        {edges.some((edge) => edge.directed) ? (
+          <li>
+            <i className={styles.oneWay} aria-hidden="true" />
+            One-way
+          </li>
+        ) : null}
+      </ul>
+    </div>
+  );
+}

@@ -2,7 +2,8 @@ import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLayoutEffect, useRef } from 'react';
 import { useAuth } from '../../../auth/AuthContext.js';
 import { useMe } from '../../../hooks/useMe.js';
-import { loadMap, loadMapDirectory } from '../adapters/mapAdapter.js';
+import { loadMap, loadMapDirectory, loadMapDocument } from '../adapters/mapAdapter.js';
+import { toAppError } from '../../../errors/toAppError.js';
 import { queryKeys } from '../feature.js';
 import type { MapEdit } from './useMapEdit.js';
 
@@ -55,8 +56,11 @@ export function useMapPage(atlasCode: string) {
     creatableRegions.map((region) => region.id).sort(),
     directory.isError,
   ]);
-  const current = useRef({ token, actorScope, selectedAtlas, map, directory, me });
-  current.current = { token, actorScope, selectedAtlas, map, directory, me };
+  const selectedMap = map.data ?? directoryMaps.find((item) => item.atlasCode === selectedAtlas);
+  const region = directory.data?.regions.find((item) => item.id === selectedMap?.regionId);
+  const regionDocumentId = region?.documentId ?? '';
+  const current = useRef({ token, actorScope, selectedAtlas, regionDocumentId, map, directory, me });
+  current.current = { token, actorScope, selectedAtlas, regionDocumentId, map, directory, me };
   const mounted = useRef(true);
   useLayoutEffect(() => {
     mounted.current = true;
@@ -64,13 +68,16 @@ export function useMapPage(atlasCode: string) {
       mounted.current = false;
     };
   }, []);
-  const isCurrent = () =>
+  const isCurrentActor = () =>
     mounted.current &&
     sessionReady &&
     current.current.token === token &&
     current.current.actorScope === actorScope &&
-    current.current.selectedAtlas === selectedAtlas &&
     (token === null || isCurrentSession(token));
+  const isCurrent = () =>
+    isCurrentActor() && current.current.selectedAtlas === selectedAtlas;
+  const isCurrentDocument = () =>
+    isCurrentActor() && current.current.regionDocumentId === regionDocumentId;
   const admitEdit = (edit: MapEdit, regionId?: string | null) => {
     const live = current.current;
     if (!isCurrent() || token === null || !live.me.data) return false;
@@ -98,6 +105,17 @@ export function useMapPage(atlasCode: string) {
       edit.edge === null || liveMap.edges.some((edge) => edge.id === edit.edge?.id)
     );
   };
+  const regionDocument = useQuery({
+    queryKey: queryKeys.mapDocument(regionDocumentId),
+    queryFn: async () => {
+      if (!isCurrentDocument()) throw toAppError({ failure: 'Unauthorized' }, 'map:session');
+      const document = await loadMapDocument(regionDocumentId);
+      if (!isCurrentDocument()) throw toAppError({ failure: 'Unauthorized' }, 'map:session');
+      return document;
+    },
+    enabled: Boolean(regionDocumentId) && sessionReady,
+    retry: false,
+  });
   return {
     actorScope,
     authorityScope,
@@ -122,6 +140,13 @@ export function useMapPage(atlasCode: string) {
     },
     directory,
     map,
+    region,
+    regionDocument: {
+      ...regionDocument,
+      retry: () => {
+        if (isCurrent()) void regionDocument.refetch();
+      },
+    },
     selectedAtlas,
     siblingMaps,
     creatableRegions,

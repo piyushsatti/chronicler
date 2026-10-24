@@ -12,6 +12,7 @@ import { useMapPage } from '../hooks/useMapPage.js';
 import { MapEditDialog } from '../components/MapEditDialog.js';
 import type { MapEdit } from '../hooks/useMapEdit.js';
 import { MapNodeDetails } from '../components/MapNodeDetails.js';
+import { MapRegionDetails } from '../components/MapRegionDetails.js';
 import { PointcrawlViewport } from '../components/PointcrawlViewport.js';
 import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { Chip } from '../../../components/primitives/Chip.js';
@@ -96,6 +97,23 @@ export function MapPage(): React.JSX.Element {
     );
     if (id) viewport.current?.focusNode(id);
   };
+  useEffect(() => {
+    if (!selected || edit) return;
+    const escape = (event: KeyboardEvent) => {
+      if (
+        event.key !== 'Escape' ||
+        event.defaultPrevented ||
+        (event.target instanceof Element && event.target.closest('[role="dialog"]'))
+      )
+        return;
+      event.preventDefault();
+      closeDetails();
+    };
+    document.addEventListener('keydown', escape);
+    return () => document.removeEventListener('keydown', escape);
+  });
+  const regionName =
+    page.region?.name ?? (map?.regionId === null ? 'Global' : 'Region unavailable');
   const body = (
     <div className={`stack ${styles.page}`}>
       <PageHeader
@@ -226,20 +244,24 @@ export function MapPage(): React.JSX.Element {
                       maps={page.directory.data?.maps ?? []}
                       onEdit={setEdit}
                       onReload={reload}
-                      region={
-                        page.directory.data?.regions.find(
-                          (region) => region.id === map.regionId,
-                        )?.name ??
-                        (map.regionId === null ? 'Global' : 'Region unavailable')
-                      }
+                      region={regionName}
                       onClose={closeDetails}
                       onSelect={select}
                       onShowOnMap={() => viewport.current?.centerNode(selected.id)}
                     />
-                  ) : null}
+                  ) : (
+                    <MapRegionDetails
+                      map={map}
+                      regionName={regionName}
+                      document={page.regionDocument}
+                    />
+                  )}
                 </div>
                 {map.regionId ? (
-                  <Link className="btn btn--secondary" to={`/regions/${map.regionId}`}>
+                  <Link
+                    className={`btn btn--secondary ${styles.start} ${styles.regionOverview}`}
+                    to={`/regions/${map.regionId}`}
+                  >
                     Region overview
                   </Link>
                 ) : null}

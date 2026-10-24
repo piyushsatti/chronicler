@@ -156,10 +156,14 @@ describe('B2 atlas', () => {
         index === 0,
       );
     });
-    const legend = screen.getByRole('group', { name: 'Map legend' });
+    const key = screen.getByRole('button', { name: 'Key to route line styles' });
+    expect(key).toHaveAttribute('aria-expanded', 'false');
+    fireEvent.click(key);
+    const legend = screen.getByRole('list', { name: 'Route line styles' });
     for (const label of ['Road', 'Trail', 'River', 'Pass', 'One-way'])
       expect(within(legend).getByText(label)).toBeVisible();
     expect(within(legend).queryByText('Path')).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Map legend' })).toBeNull();
     expect(graph.querySelector('image')).toBeNull();
   });
 
@@ -180,7 +184,12 @@ describe('B2 atlas', () => {
           map={{
             ...pointcrawl,
             edges: [
-              { ...good.pointcrawlEdges[0]!, kind: 'river_ford', directed: true, label },
+              {
+                ...good.pointcrawlEdges[0]!,
+                kind: 'river_ford',
+                directed: true,
+                label,
+              },
             ],
           }}
           selectedId={null}
@@ -197,12 +206,13 @@ describe('B2 atlas', () => {
     },
   );
 
-  it('keeps the place panel closed until a real node is selected and supports repeated keyboard selection with Escape focus return', async () => {
+  it('keeps the region panel present until a real node is selected and supports repeated keyboard selection with Escape focus return', async () => {
     page();
     const graph = await screen.findByRole('group', {
       name: 'Lightfall pointcrawl graph',
     });
     expect(screen.queryByRole('region', { name: 'Selected location' })).toBeNull();
+    expect(screen.getByRole('region', { name: 'Map region' })).toBeVisible();
     fireEvent.keyDown(within(graph).getByRole('button', { name: first.name }), {
       key: 'Enter',
     });
@@ -221,6 +231,7 @@ describe('B2 atlas', () => {
     );
     fireEvent.keyDown(document.activeElement!, { key: 'Escape' });
     expect(screen.queryByRole('region', { name: 'Selected location' })).toBeNull();
+    expect(screen.getByRole('region', { name: 'Map region' })).toBeVisible();
     expect(within(graph).getByRole('button', { name: 'River Crossing' })).toHaveFocus();
     fireEvent.keyDown(document.activeElement!, { key: 'ArrowLeft' });
     expect(screen.getByRole('region', { name: 'Selected location' })).toHaveTextContent(

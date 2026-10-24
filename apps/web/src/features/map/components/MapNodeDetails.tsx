@@ -10,6 +10,7 @@ import {
 } from '../hooks/useMapNodeDetails.js';
 import { Chip } from '../../../components/primitives/Chip.js';
 import { humanizeKey } from '../../../utils/format.js';
+import { MapPanelBody } from './MapPanelBody.js';
 import styles from '../pages/map.module.css';
 export function MapNodeDetails(props: MapNodeDetailsProps) {
   const { map, node, maps, onEdit, onReload, region, onClose, onShowOnMap, onSelect } =
@@ -17,8 +18,16 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
   const { pending, error, documentIds, documents, submap, unlink } =
     useMapNodeDetails(props);
   const closeButton = useRef<HTMLButtonElement>(null);
+  const panel = useRef<HTMLElement>(null);
   useEffect(() => {
     closeButton.current?.focus({ preventScroll: true });
+    if (window.matchMedia?.('(max-width: 760px)').matches)
+      panel.current?.scrollIntoView({
+        block: 'start',
+        behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+          ? 'auto'
+          : 'smooth',
+      });
   }, [node.id]);
   const locationLink = node.linkedEntries.find((link) => link.relation === 'location');
   const locationIndex = locationLink
@@ -36,15 +45,14 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
   ) : null;
   return (
     <section
+      ref={panel}
       className={styles.details}
       id="map-location-details"
       aria-label="Selected location"
       data-map-selected={node.id}
+      data-map-panel="true"
       onKeyDown={(event) => {
-        if (event.key === 'Escape') {
-          event.preventDefault();
-          onClose();
-        } else if (
+        if (
           ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(
             event.key,
           ) &&
@@ -69,21 +77,23 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
         }
       }}
     >
-      <div className={styles.detailTopline}>
-        <span>Place</span>
-        <button
-          ref={closeButton}
-          type="button"
-          className={styles.detailClose}
-          aria-label="Close place details"
-          onClick={onClose}
-        >
-          ×
-        </button>
-      </div>
-      <h2>{node.name}</h2>
-      <p className={styles.detailLocation}>{region}</p>
-      <div className={styles.detailScroll}>
+      <header className={styles.detailHeader}>
+        <div className={styles.detailTopline}>
+          <span>Place</span>
+          <button
+            ref={closeButton}
+            type="button"
+            className={styles.detailClose}
+            aria-label="Close place details"
+            onClick={onClose}
+          >
+            ×
+          </button>
+        </div>
+        <h2>{node.name}</h2>
+        <p className={styles.detailLocation}>{region}</p>
+      </header>
+      <MapPanelBody>
         {description ? (
           <div className={styles.detailDescription}>
             <ContentRenderer body={description} />
@@ -208,7 +218,7 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
           </Button>
         ) : null}
         {node.linkedEntries.length ? linkAction : null}
-      </div>
+      </MapPanelBody>
       <div className={styles.detailFooter}>
         <span>
           <i />
