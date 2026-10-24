@@ -20,23 +20,6 @@ on:
       - 'CONTRIBUTING.md'
       - 'AGENTS.md'
   pull_request:
-    paths:
-      - '.github/workflows/repo.yml'
-      - '.github/CODEOWNERS'
-      - '.pre-commit-config.yaml'
-      - '.prettierignore'
-      - 'prettier.config.js'
-      - 'eslint.config.js'
-      - 'package.json'
-      - 'pyproject.toml'
-      - 'uv.lock'
-      - 'scripts/**'
-      - 'docs/**'
-      - 'deploy/docs/**'
-      - 'CHANGELOG.md'
-      - 'README.md'
-      - 'CONTRIBUTING.md'
-      - 'AGENTS.md'
 
 jobs:
   tooling:
