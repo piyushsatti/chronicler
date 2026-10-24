@@ -51,8 +51,10 @@ EMBEDDING_DIMENSIONS = 1024
 CHUNK_TOKENS = 256
 CHUNK_OVERLAP_TOKENS = 32
 MAX_INPUT_TOKENS = 32768
-PUBLIC_SITE_URL = "https://chronicler.smokebombstudios.com"
-LITELLM_BASE_URL = "http://127.0.0.1:4000"
+PUBLIC_SITE_URL = os.getenv(
+    "PUBLIC_SITE_URL", "https://chronicler.smokebombstudios.com"
+).rstrip("/")
+LITELLM_BASE_URL = os.getenv("LITELLM_BASE_URL", "http://127.0.0.1:4000").rstrip("/")
 RETRIEVAL_CANDIDATE_LIMIT = 24
 EXPECTED_ORIGINS = {"held_out": 48, "discord_development": 8}
 
@@ -237,9 +239,7 @@ class Embeddings:
         query_prefix: str,
     ) -> None:
         if base_url.rstrip("/") != LITELLM_BASE_URL:
-            raise ValueError(
-                "benchmark LiteLLM base URL must remain the Saturn gateway"
-            )
+            raise ValueError("benchmark LiteLLM base URL must match LITELLM_BASE_URL")
         scoped_key = os.getenv("LITELLM_ARCHIVE_API_KEY", "").strip()
         if not scoped_key:
             raise ValueError("LITELLM_ARCHIVE_API_KEY is required")
@@ -614,7 +614,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--answer-quality", type=Path, required=True)
     parser.add_argument("--discord-gold", type=Path, required=True)
     parser.add_argument("--tokenizer", type=Path, required=True)
-    parser.add_argument("--base-url", required=True)
+    parser.add_argument("--base-url", default=LITELLM_BASE_URL)
     parser.add_argument("--model", default=EMBEDDING_ALIAS)
     parser.add_argument("--revision", default=EMBEDDING_REVISION)
     parser.add_argument("--dimensions", type=int, default=EMBEDDING_DIMENSIONS)

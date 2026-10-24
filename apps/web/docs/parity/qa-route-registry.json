@@ -2081,6 +2081,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -2483,7 +2484,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -2534,6 +2541,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -2936,7 +2944,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -2984,6 +2998,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -3386,7 +3401,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -3438,6 +3459,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -3840,7 +3862,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -3896,6 +3924,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -4298,7 +4327,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -4358,6 +4393,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -4760,7 +4796,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -4819,6 +4861,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -5221,7 +5264,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -5281,6 +5330,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -5683,7 +5733,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -5747,6 +5803,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -6149,7 +6206,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -6207,6 +6270,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -6609,7 +6673,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -6671,6 +6741,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -7073,7 +7144,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -7127,6 +7204,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -7529,7 +7607,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -7587,6 +7671,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -7989,7 +8074,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -8043,6 +8134,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -8445,7 +8537,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -8503,6 +8601,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -8905,7 +9004,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -8969,6 +9074,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -9371,7 +9477,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -9435,6 +9547,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -9837,7 +9950,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -9894,6 +10013,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -10296,7 +10416,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -10348,6 +10474,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -10750,7 +10877,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -10804,6 +10937,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -11206,7 +11340,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -11260,6 +11400,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -11662,7 +11803,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -11715,6 +11862,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -12117,7 +12265,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -12174,6 +12328,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -12576,7 +12731,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -12629,6 +12790,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -13031,7 +13193,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -13088,6 +13256,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -13490,7 +13659,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -13543,6 +13718,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -13945,7 +14121,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -14010,6 +14192,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -14412,7 +14595,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -14478,6 +14667,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -14880,7 +15070,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -14946,6 +15142,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -15348,7 +15545,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -15414,6 +15617,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -15816,7 +16020,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -15874,6 +16084,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -16276,7 +16487,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -16333,6 +16550,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -16735,7 +16953,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -16792,6 +17016,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -17194,7 +17419,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -17251,6 +17482,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -17653,7 +17885,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -17711,6 +17949,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -18113,7 +18352,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -18171,6 +18416,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -18573,7 +18819,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -18631,6 +18883,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -19033,7 +19286,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -19089,6 +19348,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -19491,7 +19751,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -19549,6 +19815,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -19951,7 +20218,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -20009,6 +20282,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -20411,7 +20685,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -20474,6 +20754,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -20876,7 +21157,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -20940,6 +21227,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -21342,7 +21630,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -21400,6 +21694,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -21802,7 +22097,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -21861,6 +22162,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -22263,7 +22565,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -22320,6 +22628,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -22722,7 +23031,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -22786,6 +23101,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -23188,7 +23504,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -23253,6 +23575,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -23655,7 +23978,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -23713,6 +24042,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -24115,7 +24445,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -24171,6 +24507,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -24573,7 +24910,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -24628,6 +24971,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -25030,7 +25374,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -25083,6 +25433,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -25485,7 +25836,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -25540,6 +25897,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -25942,7 +26300,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -25995,6 +26359,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -26397,7 +26762,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -26460,6 +26831,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -26862,7 +27234,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -26926,6 +27304,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -27328,7 +27707,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -27385,6 +27770,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -27787,7 +28173,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -27850,6 +28242,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -28252,7 +28645,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -28316,6 +28715,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -28718,7 +29118,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -28775,6 +29181,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -29177,7 +29584,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -29229,6 +29642,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -29631,7 +30045,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -29686,7 +30106,8 @@
               "changed file: apps/web/tests/features/notifications/NotificationsNavigation.test.tsx",
               "changed file: apps/web/tests/features/notifications/notificationSessions.test.tsx",
               "changed file: apps/web/tests/features/notifications/notificationFeedback.test.tsx",
-              "changed file: apps/web/tests/chrome/NotificationBell.test.tsx"
+              "changed file: apps/web/tests/chrome/NotificationBell.test.tsx",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/notification-frontend/root-focused-tests.log.txt"
             ]
           },
           {
@@ -29702,6 +30123,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -30104,7 +30526,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -30158,6 +30586,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -30560,7 +30989,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -30616,6 +31051,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -31018,7 +31454,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -31154,6 +31596,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -31556,7 +31999,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -31656,7 +32105,8 @@
               "changed file: apps/web/tests/features/notifications/NotificationsNavigation.test.tsx",
               "changed file: apps/web/tests/features/notifications/notificationSessions.test.tsx",
               "changed file: apps/web/tests/features/notifications/notificationFeedback.test.tsx",
-              "changed file: apps/web/tests/chrome/NotificationBell.test.tsx"
+              "changed file: apps/web/tests/chrome/NotificationBell.test.tsx",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/notification-frontend/root-focused-tests.log.txt"
             ]
           },
           {
@@ -31672,6 +32122,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -32074,7 +32525,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -32130,6 +32587,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -32532,7 +32990,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -32587,6 +33051,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -32989,7 +33454,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -33046,6 +33517,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -33448,7 +33920,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -33504,6 +33982,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -33906,7 +34385,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -33963,6 +34448,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -34365,7 +34851,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -34429,6 +34921,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -34831,7 +35324,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -34890,6 +35389,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -35292,7 +35792,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -35349,6 +35855,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -35751,7 +36258,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -35806,6 +36319,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -36208,7 +36722,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -36265,6 +36785,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -36667,7 +37188,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -36724,6 +37251,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -37126,7 +37654,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -37183,6 +37717,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -37585,7 +38120,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -37644,6 +38185,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -38046,7 +38588,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -38105,6 +38653,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -38507,7 +39056,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -38564,6 +39119,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -38966,7 +39522,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -39023,6 +39585,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -39425,7 +39988,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -39482,6 +40051,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -39884,7 +40454,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -39941,6 +40517,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -40343,7 +40920,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -40400,6 +40983,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -40802,7 +41386,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -40857,6 +41447,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -41259,7 +41850,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -41315,6 +41912,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -41717,7 +42315,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -41772,6 +42376,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -42174,7 +42779,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -42229,6 +42840,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -42631,7 +43243,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -42685,6 +43303,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -43087,7 +43706,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -43144,6 +43769,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -43546,7 +44172,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -43603,6 +44235,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -44005,7 +44638,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],
@@ -44059,6 +44698,7 @@
               "changed file: apps/api/docs/design/graphql-product/behavior.md",
               "changed file: apps/api/docs/design/graphql-product/decisions.md",
               "changed file: apps/api/docs/design/graphql-product/go-seams.json",
+              "changed file: apps/api/docs/object-storage.md",
               "changed file: apps/api/gqlgen.yml",
               "changed file: apps/api/internal/agent/agent.go",
               "changed file: apps/api/internal/app/product_wire.go",
@@ -44461,7 +45101,13 @@
               "changed file: apps/web/src/utils/permissions.ts",
               "changed file: apps/web/tests/live/route-acceptance.spec.ts",
               "changed file: bun.lock",
-              "changed file: packages/contracts/src/generated/graphql.ts"
+              "changed file: packages/contracts/src/generated/graphql.ts",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/editor-live/run-10/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/map-final-acceptance/final-32/root-performance-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/admin-browser/continuation/run-10-current/root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/visual-final-legacy-comparison/run-6/root-visual-review.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document14-current35-root-acceptance.json",
+              "changed file: apps/web/docs/parity/receipts/frontend-completion-20261020/document15-current38-root-acceptance.json"
             ]
           }
         ],

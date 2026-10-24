@@ -1,24 +1,19 @@
-# Operations: release authority, backups and recovery
+# Operations: releases, backups, and recovery
 
-**Map:** [systems.md](/docs/systems.md)
+**Map:** [systems map](/docs/systems.md)
 
-## What it is
+## Release authority
 
-Operations releases accepted revisions, protects recoverable data and exposes failure. GitHub Actions is the sole production deployment, promotion and rollback authority; missing workflow controls or Actions unavailability block production change.
+GitHub Actions is the single production release authority. Feature branches squash-merge into up-to-date `staging`; a normal merge through a pull request moves `staging` to `main`. CI runs on pull requests. Direct pushes to `main` and pull requests from other branches to `main` are not part of the branch policy.
 
-The accepted backup policy remains nightly and pre-deployment pull backups to the owner's workstation, separate from release execution. The historical droplet/Caddy, Vercel and Supabase topology needs current evidence; old host capacity, expired billing limits and manual interim releases are not current authority.
+Staging deployment is planned as a manual workflow dispatch on the owner's self-hosted runner. Production deployment is planned from a CalVer tag on `main` to one DigitalOcean droplet and Vercel. These workflows are not implemented. The current image publication workflow does not deploy or roll back.
 
-## Interfaces
+## Backups and recovery
 
-| Interface                                                          | Role                                                              |
-| ------------------------------------------------------------------ | ----------------------------------------------------------------- |
-| [actions-releases](/docs/interfaces/actions-releases.md)           | Release admission, coordinated verification and recovery evidence |
-| [work-queue-durability](/docs/interfaces/work-queue-durability.md) | Durable work and failure boundary                                 |
+[D10](/docs/decisions/D10-Backup-Location-And-Cadence.md) requires nightly and pre-deployment pull backups of the droplet PostgreSQL database to the owner's workstation. Actions must receive current restore-point evidence before migrations. The database, backup mechanism, evidence handoff, and restore path are not yet implemented or verified in the current deployment files.
 
-## Implemented by
+## Interfaces and requirements
 
-[Deploy guidance](/deploy/docs/README.md) separates required controls from available tooling. `deploy-api` currently publishes API/worker images only; production activation, rollback, receipt retention and backup integration remain incomplete.
+[Actions releases](/docs/interfaces/actions-releases.md) defines admission and release evidence. [Work queue durability](/docs/interfaces/work-queue-durability.md) defines durable work and failure boundaries. [Operations requirements](/docs/requirements/by-system/operations.md) records implementation evidence and open gaps.
 
-## Requirements
-
-[Operations requirements](/docs/requirements/by-system/operations.md) preserve R-ids and remaining evidence gaps. [Requirements index](/docs/requirements/index.md) tracks their disposition.
+The [deployment guides](/deploy/docs/README.md) describe the staging and production target. No live host, provider, DNS, tunnel, or release was checked for those guides.

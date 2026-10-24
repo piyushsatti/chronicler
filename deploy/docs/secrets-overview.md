@@ -1,27 +1,11 @@
-# Secrets overview
+# Secrets and owner access
 
-## Verdict
+Secret values do not belong in the repository, documentation, build output, or release receipts.
 
-- Secret **values** never live in this repository or in architecture prose.
-- This page names **where** credentials live and who rotates them — nothing more.
-- Do not ask the owner for raw SSH or on-server file edits for routine secret changes.
+Local development uses ignored environment files or a local secret manager. The planned production release supplies credentials to the protected GitHub Actions job that needs them. The planned staging runner uses the owner's host environment for runtime settings. Frontend build variables are public and must not contain private keys.
 
-## Where secrets live
+`PLATFORM_OWNER_DISCORD_ID` is supplied as a GitHub secret for Actions or through the staging host environment. Never commit it or print its value. Discord application credentials remain in the Discord application settings and the owning runtime secret store.
 
-| Class                        | Typical home                                           | Notes                                   |
-| ---------------------------- | ------------------------------------------------------ | --------------------------------------- |
-| Local development            | Workstation env files / secret manager (not committed) | Never commit `.env` with real values    |
-| Production API / bot / agent | Host vault or Actions secrets used by deploy workflows | Injected at deploy time                 |
-| Frontend public config       | Build-time public env only                             | No private keys in the SPA              |
-| Discord application          | Discord developer portal + vault                       | Bot token is a machine principal secret |
+Production Compose forwards the owner setting. The current local Compose file does not forward it to the API container. The later staging configuration must add that forwarding; setting the host variable alone is insufficient today.
 
-## Rotation and access
-
-- Prefer workflow-driven rotation over manual droplet edits.
-- Production release path remains Actions-only ([D33](/docs/decisions/D33-GitHub-Actions-Owns-Production-Releases.md)).
-- If Actions cannot run, stop — do not bypass with SCP of env files.
-
-## Related
-
-- [Operations system](/docs/systems/operations.md)
-- [Deploy runbook](/deploy/docs/deploy-runbook.md)
+The production release path uses GitHub Actions under [D33](/docs/decisions/D33-GitHub-Actions-Owns-Production-Releases.md). Do not copy production environment files to the droplet or use workstation file transfer as a release path. See the [release runbook](/deploy/docs/deploy-runbook.md) and [operations system](/docs/systems/operations.md).

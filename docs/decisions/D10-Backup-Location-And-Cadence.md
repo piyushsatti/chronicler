@@ -11,12 +11,12 @@ Production lost provider-side backups and CI backup minutes. A durable, operator
 
 ## Decision
 
-The **owner’s workstation** is the durable backup store. Dumps run **nightly** and **before every deployment**.
+The **owner’s workstation** is the durable backup store for the production PostgreSQL database on the DigitalOcean droplet. Dumps run **nightly** and **before every deployment**.
 
-| Question                   | Ruling                                                                                                              |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Where backups durably live | Owner’s Mac, pulled from Supabase — off-provider and off-droplet                                                    |
-| Primary mechanism          | Workstation pull is primary; GitHub Actions backup is a redundant second copy when minutes return, not load-bearing |
+| Question                   | Ruling                                                                                                                       |
+| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Where backups durably live | Owner’s workstation, pulling the production PostgreSQL database from the DigitalOcean droplet — off-provider and off-droplet |
+| Primary mechanism          | Workstation pull is primary; GitHub Actions backup is a redundant second copy when minutes return, not load-bearing          |
 
 **Patterns (minimal):** pull-based backup (workstation initiates; compromised server cannot reach backup target); pre-change checkpoint dump before `migrate` on deploy.
 

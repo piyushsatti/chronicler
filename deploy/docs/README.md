@@ -1,24 +1,19 @@
-# Deploy runbooks
+# Deploy and operations guides
 
-How Chronicler **ships, backs up, and recovers**. Lives next to Compose files in `deploy/`.
+These pages describe the approved deployment plan and distinguish it from the workflows and provider settings that exist today. Production deployment, promotion, and rollback belong to GitHub Actions under [D33](/docs/decisions/D33-GitHub-Actions-Owns-Production-Releases.md) and the [release interface](/docs/interfaces/actions-releases.md).
 
-- Product ops system (intent): [docs/systems/operations.md](/docs/systems/operations.md) (after systems lift)
-- Release policy: [actions-releases](/docs/interfaces/actions-releases.md) · [D33](/docs/decisions/D33-GitHub-Actions-Owns-Production-Releases.md)
+| Guide                                                          | Purpose                                                               |
+| -------------------------------------------------------------- | --------------------------------------------------------------------- |
+| [Deployment runbook](/deploy/docs/deploy-runbook.md)           | Branch flow, staging and production release plan, implementation gaps |
+| [Local stack](/deploy/docs/dev-stack.md)                       | Start the local Docker Compose stack and read its receipts            |
+| [Fresh database bootstrap](/deploy/docs/fresh-db-bootstrap.md) | Start the local database and apply migrations and seed data           |
+| [DigitalOcean droplet](/deploy/docs/digitalocean-droplet.md)   | Production backend target and host setup gaps                         |
+| [Droplet disk hygiene](/deploy/docs/droplet-disk-hygiene.md)   | Read-only disk diagnostics and maintenance boundaries                 |
+| [Database backups](/deploy/docs/supabase-backups.md)           | D10 backup policy for the production droplet PostgreSQL database      |
+| [Vercel frontend](/deploy/docs/vercel-frontend.md)             | Production and staging frontend routing                               |
+| [Vercel promotion](/deploy/docs/vercel-promotion.md)           | Planned Actions-owned production promotion                            |
+| [Secrets overview](/deploy/docs/secrets-overview.md)           | Secret boundaries and owner access configuration                      |
+| [Discord repair](/deploy/docs/discord-repair.md)               | Discord projection repair                                             |
+| [Local agent archive](/deploy/docs/agent-archive-local.md)     | Optional local agent and archive stack                                |
 
-## Runbooks
-
-| Doc                                                             | Use                                           |
-| --------------------------------------------------------------- | --------------------------------------------- |
-| [deploy-runbook.md](/deploy/docs/deploy-runbook.md)             | Topology, bootstrap, routine deploy, rollback |
-| [dev-stack.md](/deploy/docs/dev-stack.md)                       | Fixed local stack startup and log receipts    |
-| [fresh-db-bootstrap.md](/deploy/docs/fresh-db-bootstrap.md)     | Local/QA seed and role tokens                 |
-| [digitalocean-droplet.md](/deploy/docs/digitalocean-droplet.md) | Droplet host notes                            |
-| [droplet-disk-hygiene.md](/deploy/docs/droplet-disk-hygiene.md) | Disk prune                                    |
-| [supabase-backups.md](/deploy/docs/supabase-backups.md)         | Database backups                              |
-| [vercel-frontend.md](/deploy/docs/vercel-frontend.md)           | Frontend hosting                              |
-| [vercel-promotion.md](/deploy/docs/vercel-promotion.md)         | Frontend promotion                            |
-| [discord-repair.md](/deploy/docs/discord-repair.md)             | Discord projection repair                     |
-| [secrets-overview.md](/deploy/docs/secrets-overview.md)         | Where secrets live (no secret values)         |
-| [agent-archive-local.md](/deploy/docs/agent-archive-local.md)   | Agent + Archive local stack (HTTP; no Rabbit) |
-
-**Rule:** production deploy/promote/rollback is GitHub Actions only.
+No live DNS, provider settings, runner, tunnel, host, or release was verified while updating these guides.

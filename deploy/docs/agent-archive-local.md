@@ -30,5 +30,5 @@ Compose: [../compose/agent-archive.yml](/deploy/compose/agent-archive.yml).
 
 ## Related
 
-- [staging-flip-status.md](/deploy/docs/staging-flip-status.md)
+- [deployment runbook](/deploy/docs/deploy-runbook.md)
 - Interface: [agent-qa-http](/docs/interfaces/agent-qa-http.md)

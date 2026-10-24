@@ -1,34 +1,9 @@
-# Vercel frontend configuration
+# Vercel frontend routing
 
-**Verdict:** repository configuration and historical hosting are distinct from verified live deployment. Production frontend assignment and rollback follow [promotion admission](/deploy/docs/vercel-promotion.md) and [actions-releases](/docs/interfaces/actions-releases.md).
+The frontend is a static Vite and React application hosted on Vercel. The production site is `chronicler.smokebombstudios.com`; its API origin is `api.chronicler.smokebombstudios.com`. Staging uses `chronicler.piyushsatti.com` and `chronicler-api.piyushsatti.com`.
 
-## Repository configuration
+[`apps/web/vercel.json`](/apps/web/vercel.json) contains the production API rewrites and SPA fallback. Staging needs a separate build or deployment configuration that routes the same request paths to `https://chronicler-api.piyushsatti.com`. That configuration is deferred to the workflow round. Do not use `vercel.json` unchanged for staging.
 
-The current configuration is [apps/web/vercel.json](/apps/web/vercel.json), not a root-level `vercel.json`. It declares these rewrites in order:
+Production frontend deployment and domain promotion must be part of the same Actions release as the backend. The staging workflow must deploy the same source revision to Vercel and the self-hosted backend. Neither workflow is implemented yet. Provider project settings, DNS, certificates, and deployed revisions have not been verified.
 
-| Source         | Destination                                               |
-| -------------- | --------------------------------------------------------- |
-| `/v1/:path*`   | `https://api.chronicler.smokebombstudios.com/v1/:path*`   |
-| `/auth/:path*` | `https://api.chronicler.smokebombstudios.com/auth/:path*` |
-| `/health`      | `https://api.chronicler.smokebombstudios.com/health`      |
-| `/(.*)`        | `/index.html`                                             |
-
-The SPA fallback is last. This configuration has no legacy `/graphql` rewrite. Deployment admission must verify that the provider uses this config and the rebuilt app's actual build/output paths, API contract and OAuth routes; historical root-directory/build/client-path instructions do not establish them.
-
-## Hosting and identity checks
-
-The recorded product URL is `https://chronicler.smokebombstudios.com`; the configured backend rewrite origin is `https://api.chronicler.smokebombstudios.com`. Their current DNS, certificates, provider project and deployed source identities require evidence. Do not create or rebind project, domain, DNS or OAuth identifiers as part of documentation consolidation.
-
-Before an admitted promotion, verify:
-
-- Provider project/root/build configuration and the exact staged artifact's source revision and public configuration.
-- Production domain assignment remains under Actions control; an automatic assignment from a branch push is not an admitted release.
-- HTTPS, same-origin API forwarding, API identity and OAuth start/callback compatibility under the actual current wire contracts.
-- Authentication, authority-sensitive reads, critical navigation and error recovery against the selected backend.
-- Absence of secret values in SPA configuration, logs and release receipts.
-
-Record actual results rather than inferring success from a successful build, a 200 response or the configuration file's existence. No live/provider verification was performed for this consolidation.
-
-## Remaining implementation
-
-There is no frontend promotion/rollback workflow in this checkout. Integrate the exact frontend target with the coordinated Actions release and its restore-point, backend compatibility, verification and receipt requirements. [Deploy runbook](/deploy/docs/deploy-runbook.md) owns the operation; [droplet guidance](/deploy/docs/digitalocean-droplet.md) owns the backend preparation boundary.
+Keep frontend build variables public. Do not put API secrets in Vercel's client build. See [Vercel promotion](/deploy/docs/vercel-promotion.md) and the [deployment runbook](/deploy/docs/deploy-runbook.md).

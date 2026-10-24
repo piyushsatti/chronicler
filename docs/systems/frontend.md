@@ -1,26 +1,22 @@
-# Round trips, not connections, are what the frontend pays for
+# Frontend
 
-**Map:** [systems.md](/docs/systems.md)
+**Map:** [systems map](/docs/systems.md)
 
-## What it is
+## Role
 
-The frontend is static, built with Vite/React, served from Vercel. It reaches the API only through
+The frontend is a static React and Vite application hosted on Vercel. It sends API requests through same-origin Vercel rewrites. Production requests route to `api.chronicler.smokebombstudios.com`. Staging requests must route to `chronicler-api.piyushsatti.com`.
 
-## Interfaces
+The current [`apps/web/vercel.json`](/apps/web/vercel.json) contains production API routing. Staging needs its own build or deployment configuration. The later workflow round will add that configuration; do not reuse production routing unchanged.
 
-| Interface                                            | Role                 |
-| ---------------------------------------------------- | -------------------- |
-| [scoped-body](/docs/interfaces/scoped-body.md)       | Render scoped bodies |
-| [graphql-schema](/docs/interfaces/graphql-schema.md) | Client contract      |
+## Interfaces and implementation
 
-## Implemented by
+| Interface                                            | Role                                 |
+| ---------------------------------------------------- | ------------------------------------ |
+| [Scoped body](/docs/interfaces/scoped-body.md)       | Render server-scoped document bodies |
+| [GraphQL schema](/docs/interfaces/graphql-schema.md) | Shared client and API contract       |
 
-| App        | Local docs                       |
-| ---------- | -------------------------------- |
-| `apps/web` | [apps/web/docs/](/apps/web/docs) |
+The application implementation and local notes live in [`apps/web/docs`](/apps/web/docs/README.md). The planned staging and production release paths are recorded in [Vercel frontend routing](/deploy/docs/vercel-frontend.md).
 
 ## Requirements
 
-R-ids for this system: [../requirements/by-system/frontend.md](/docs/requirements/by-system/frontend.md) (when present). Index: [../requirements/index.md](/docs/requirements/index.md).
-
-Long-form historical system essay: `.local/docs-quarry/systems-longform/frontend.md` (gitignored).
+See [frontend requirements](/docs/requirements/by-system/frontend.md) and the [requirements index](/docs/requirements/index.md).

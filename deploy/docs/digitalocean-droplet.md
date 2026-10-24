@@ -1,32 +1,19 @@
-# DigitalOcean droplet guidance
+# DigitalOcean production droplet
 
-**Verdict:** historical host notes are not an executable release runbook. Production changes follow [actions-releases](/docs/interfaces/actions-releases.md); [deploy-runbook](/deploy/docs/deploy-runbook.md) owns admission and recovery. There is no workstation or urgent SSH deployment exception.
+## Target
 
-## Current repository boundary
+The approved production backend target is one DigitalOcean droplet. GitHub Actions will deploy the API and worker from GHCR with [`compose.production.yaml`](/deploy/compose.production.yaml), check health, and retain a known-good rollback target. Production changes remain under [D33](/docs/decisions/D33-GitHub-Actions-Owns-Production-Releases.md).
 
-[Production Compose](/deploy/compose.production.yaml) defines `api` and `worker`, immutable image selection to be supplied through `API_IMAGE` and `WORKER_IMAGE`, and external database/secret configuration. The file does not deploy itself and currently has no Actions activation job. It does not declare Caddy, a scheduler, Discord gateway, agent, frontend or migration service.
+The production database target is PostgreSQL on this droplet. The current production Compose file does not define PostgreSQL, ingress, or migrations. It expects an external `DATABASE_URL`. The file therefore does not yet implement the approved complete target.
 
-[Local Compose](/deploy/compose.yaml) is development setup, including local Postgres, seed and permissive development defaults; do not treat it as a production override. The current Go containers listen on API port 8080, not the historical Python port 8000.
+## Access and host setup
 
-The legacy backend/Caddy droplet, Vercel SPA and Supabase database topology is historical evidence. Reconfirm host identity, capacity, ingress/TLS, database target, service inventory and running source/artifact identities before admitting a rebuilt production release. The older `docker-compose.prod.yml`, `scripts/deploy/*`, `deploy.yml` and `cd-deploy.yml` are absent here.
+Live droplet identity, size, operating system, ingress, DNS, certificates, database state, installed services, and credentials have not been verified here. Establish them through the approved operational process before building the Actions deployment. Do not infer live state from old notes.
 
-## Host and credential preparation
+Production release credentials must reach only the protected Actions job that performs the change. `PLATFORM_OWNER_DISCORD_ID` is supplied through a GitHub secret or host environment. Keep its value out of repository files and logs. Do not deploy by copying files, transferring images, or running release commands over workstation SSH.
 
-An operational plan must identify the existing host, required ingress, service/worker identities, database connectivity, private credential delivery and least-privilege workflow access. Do not infer live DNS, SSH access, sudo policy, provider tier or secret placement from archived setup instructions. Registered identifiers and configuration changes require their own authorization.
+## Required deployment behavior
 
-Actions may invoke scoped host/provider primitives inside its admitted mutating job; operators must not clone/pull production `main`, load images, recreate services or run migration commands over raw SSH as a release path. Host/bootstrap maintenance is separately scoped; any resulting production deployment still follows D33.
+The Actions release must select a CalVer tag that points to `main`, deploy exact GHCR artifacts, wait for the API health check, and preserve PostgreSQL data through deploy and rollback. It must admit the current D10 backup and restore evidence before migrations. The present Compose file lacks those database and migration steps, and no release workflow performs them yet.
 
-Database migration connectivity must support the selected Goose transaction/DDL requirements. Verify the actual target, TLS/pooler mode and privileges without logging credentials. Historical asyncpg, Alembic and PGMQ recipes do not establish the rebuilt Go database contract.
-
-## Verification and gaps
-
-The current `deploy-api` / `build-and-push` job builds and publishes API/worker images. Its `environment` dispatch input only selects tags. There are no `api`, `bot`, `full`, `image_tag` or `run_migrate` dispatch inputs, no host promotion job and no rollback operation.
-
-Host activation, protected-job admission, restore-point integration, precise artifact/configuration binding, all-surface identity/behavior verification and rollback remain work. Until implemented, stop before production mutation.
-
-## Supporting guidance
-
-- [Backups and restore](/deploy/docs/supabase-backups.md) — required pull policy and recovery proof.
-- [Frontend configuration](/deploy/docs/vercel-frontend.md) and [promotion](/deploy/docs/vercel-promotion.md).
-- [Disk hygiene](/deploy/docs/droplet-disk-hygiene.md) — read-only discovery and separately scoped maintenance.
-- [Secrets](/deploy/docs/secrets-overview.md) — no secret values in docs or receipts.
+See the [deployment runbook](/deploy/docs/deploy-runbook.md), [backup policy](/deploy/docs/supabase-backups.md), and [disk guidance](/deploy/docs/droplet-disk-hygiene.md).

@@ -1,44 +1,35 @@
-# Monorepo overview (as-built)
+# Chronicler monorepo overview
 
-## Verdict
-
-- This page is the **monorepo map**: what lives in this repository and how pieces connect.
-- Product **intent**: [systems.md](/docs/systems.md) · [interfaces/](/docs/interfaces/README.md).
-- CI and `scripts/verify` are the “implemented” signal.
+This repository contains the Chronicler campaign-management product and its shared contracts. Product intent lives in [systems](/docs/systems.md), [interfaces](/docs/interfaces/README.md), [requirements](/docs/requirements/README.md), and [decisions](/docs/decisions/README.md). App-specific implementation notes live under each app's `docs/` directory.
 
 ## Applications
 
-| App            | Runtime                  | Role                                           | Docs                                               |
-| -------------- | ------------------------ | ---------------------------------------------- | -------------------------------------------------- |
-| `apps/api`     | Go (GraphQL + REST)      | Authoritative API, worker, persistence         | [apps/api/docs/](/apps/api/docs/README.md)         |
-| `apps/web`     | TypeScript (React, Vite) | Member-facing SPA                              | [apps/web/docs/](/apps/web/docs/README.md)         |
-| `apps/discord` | TypeScript (discord.js)  | Guild activity sensor + optional mention agent | [apps/discord/docs/](/apps/discord/docs/README.md) |
-| `apps/agent`   | Python (uv)              | Grounded Q&A worker + Archive stack            | [apps/agent/docs/](/apps/agent/docs/README.md)     |
+| App            | Runtime                   | Role                                               | Docs                                         |
+| -------------- | ------------------------- | -------------------------------------------------- | -------------------------------------------- |
+| `apps/api`     | Go                        | GraphQL and REST API, worker, persistence          | [API docs](/apps/api/docs/README.md)         |
+| `apps/web`     | React and Vite            | Member-facing site                                 | [Web docs](/apps/web/docs/README.md)         |
+| `apps/discord` | TypeScript and discord.js | Discord activity sensor and optional mention agent | [Discord docs](/apps/discord/docs/README.md) |
+| `apps/agent`   | Python                    | Agent service and archive tools                    | [Agent docs](/apps/agent/docs/README.md)     |
 
-## Shared contract
+`packages/contracts` contains the shared GraphQL and OpenAPI contracts.
 
-`packages/contracts` holds the canonical GraphQL schema and OpenAPI. Interfaces: [graphql-schema](/docs/interfaces/graphql-schema.md), [agent-qa-http](/docs/interfaces/agent-qa-http.md).
-
-## How it moves
+## Request and release paths
 
 ```mermaid
 flowchart LR
-    B[Browser] --> V[Vercel_static_web]
-    B --> C[Caddy_TLS]
-    C --> A[API_Go]
-    A --> P[(Postgres)]
-    D[Discord_gateway] --> BO[discord_app]
+    B[Browser] --> V[Vercel frontend]
+    V -->|same-origin rewrite| A[Chronicler API]
+    A --> P[(PostgreSQL)]
+    D[Discord gateway] --> BO[Discord app]
     BO --> A
-    A --> DW[Discord_webhook]
-    BO -->|"optional Q&A HTTP"| A
-    AG[apps_agent] -->|"claim/complete"| A
-    AG --> AR[Archive_MCP]
-    AR -->|"anonymous GraphQL"| A
+    A --> W[Background worker]
+    AG[Agent service] --> A
 ```
 
-Authoring is website-first. The bot is a sensor; the API announces. See [discord-sensor](/docs/interfaces/discord-sensor.md). Agent Q&A: [agent-qa](/docs/systems/agent-qa.md).
+The staging site is `chronicler.piyushsatti.com`, with API `chronicler-api.piyushsatti.com` through Cloudflare Tunnel. Production uses `chronicler.smokebombstudios.com` and API `api.chronicler.smokebombstudios.com`. The production API and worker are targeted for one DigitalOcean droplet with PostgreSQL. Current production Compose does not yet include PostgreSQL, ingress, or migrations. The staging and production release workflows are also not implemented.
 
-## Related
+Production changes follow the single GitHub Actions release authority in [D33](/docs/decisions/D33-GitHub-Actions-Owns-Production-Releases.md). See the [deployment runbooks](/deploy/docs/README.md) for the target and its current gaps.
 
-- [Systems map](/docs/systems.md) · [Interfaces](/docs/interfaces/README.md) · [Requirements](/docs/requirements/README.md) · [Semantics](/docs/semantics/README.md)
-- Runbooks: [deploy/docs/](/deploy/docs/README.md)
+## Related maps
+
+[Systems](/docs/systems.md) · [Interfaces](/docs/interfaces/README.md) · [Requirements](/docs/requirements/README.md) · [Semantics](/docs/semantics/README.md)

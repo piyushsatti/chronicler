@@ -26,7 +26,7 @@ Chronicler is the record-keeping platform for a West Marches D&D community. Memb
 | Discord                     | What the bot may and may not do                         | [systems/discord-bot.md](/docs/systems/discord-bot.md)                                 |
 | Agent Q&A                   | How a mention becomes a grounded public answer          | [systems/agent-qa.md](/docs/systems/agent-qa.md)                                       |
 | Work and scheduling         | What runs without a person asking                       | [systems/work-and-scheduling.md](/docs/systems/work-and-scheduling.md)                 |
-| Operations                  | How it ships, backs up, and tells you it broke          | [systems/operations.md](/docs/systems/operations.md)                                   |
+| Operations                  | How releases, backups, and recovery work                | [systems/operations.md](/docs/systems/operations.md)                                   |
 | Community and social        | How members find, follow, and ask things of each other  | [systems/community-and-social.md](/docs/systems/community-and-social.md)               |
 | Personalization and unlocks | What a member can change, and what they must earn first | [systems/personalization-and-unlocks.md](/docs/systems/personalization-and-unlocks.md) |
 
@@ -47,3 +47,11 @@ Chronicler is the record-keeping platform for a West Marches D&D community. Memb
 - [requirements/](/docs/requirements/README.md) · [semantics/](/docs/semantics/README.md) · [decisions/](/docs/decisions/README.md)
 - [interfaces/](/docs/interfaces/README.md) · [overview.md](/docs/overview.md) (monorepo map)
 - App docs: `apps/*/docs/` · Runbooks: [deploy/docs/](/deploy/docs/README.md)
+
+## Deployment
+
+The release pattern is a deployment pipeline with one production control plane: GitHub Actions. Staging uses a manually dispatched workflow on the owner's self-hosted machine. Production uses a CalVer tag that points to `main`, then deploys the backend and frontend through one Actions release.
+
+Staging targets `chronicler.piyushsatti.com` and `chronicler-api.piyushsatti.com`. Production targets `chronicler.smokebombstudios.com` and `api.chronicler.smokebombstudios.com`. The production backend and PostgreSQL target one DigitalOcean droplet.
+
+The staging and production release workflows are not implemented. Production Compose does not define PostgreSQL, ingress, or migrations. See [operations](/docs/systems/operations.md), [release requirements](/docs/requirements/by-system/operations.md), and the [deployment guides](/deploy/docs/README.md) for the current gaps.

@@ -1,12 +1,12 @@
-# Requirements — Two crons run nightly, unwatched; D23's queue and alert path exist only on paper
+# Requirements: work and scheduling
 
-System: [work-and-scheduling.md](/docs/systems/work-and-scheduling.md)
+System: [work and scheduling](/docs/systems/work-and-scheduling.md)
 
 ## Requirements
 
-| #   | Requirement                                                                                                                                                     | Because                                                                                                                                                                    |
-| --- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| R1  | Every job's last-run outcome (ran / succeeded / failed / never ran) is observable without SSHing in and reading a log stream.                                   | Today the only signal is `docker compose logs scheduler`, read by hand, on demand. Nothing surfaced a stale-scheduler incident until an unrelated audit found it.          |
-| R2  | A job cannot run its stale code against a schema newer than the code understands, silently or loudly, without the mismatch being visible before damage is done. | Today neither job checks anything about the schema it's about to query; a stale image either errors on a removed column or silently ignores an added one. Feeds `SCHED-2`. |
-| R3  | A missed or failed run surfaces on its own, without a human going looking.                                                                                      | Today "log and keep scheduling" is the entire failure story; nobody is subscribed to that log.                                                                             |
-| R4  | At most one instance of a given job's logic runs at a time, enforced, not merely scheduled apart.                                                               | Today's only defence is a 30-minute gap in a crontab comment; nothing stops a second container or a slow run from overlapping the next one.                                |
+| ID  | Requirement                                                                               | Current evidence boundary                                                                                                |
+| --- | ----------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| R1  | Every job's last outcome is observable without reading a live log stream.                 | The Go API has a background worker. Durable, operator-facing run outcomes and alert delivery remain unverified.          |
+| R2  | A job must not run against a schema its code does not understand without visible failure. | Migration and worker compatibility controls require implementation evidence.                                             |
+| R3  | Missed or failed work must raise an alert without a person polling logs.                  | The out-of-band alert boundary is in D23. Current end-to-end delivery is unverified.                                     |
+| R4  | At most one instance of a job's logic runs at a time.                                     | Verify the current lease and worker behavior against [work queue durability](/docs/interfaces/work-queue-durability.md). |

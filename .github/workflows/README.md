@@ -1,13 +1,15 @@
-# Workflows
+# GitHub workflows
 
-| Workflow         | Purpose                                                                                                |
-| ---------------- | ------------------------------------------------------------------------------------------------------ |
-| `api.yml`        | Go vet, generated schema/code drift, unit/contract/integration verification and API/worker build       |
-| `repo.yml`       | Root tooling and documentation verification through `scripts/verify-repo`                              |
-| `agent.yml`      | Frozen root/agent tool sync, Ruff, Pyright and pytest                                                  |
-| `web.yml`        | Web typecheck, lint/design gates, unit tests and mock Playwright coverage                              |
-| `deploy-api.yml` | Dispatch selects staging/production image tags; `build-and-push` tests and publishes API/worker images |
+| Workflow         | Purpose                                                                         |
+| ---------------- | ------------------------------------------------------------------------------- |
+| `api.yml`        | Go checks, schema and code drift checks, tests, and API/worker build            |
+| `repo.yml`       | Repository tooling and documentation verification through `scripts/verify-repo` |
+| `agent.yml`      | Agent lint, type checks, and tests                                              |
+| `web.yml`        | Web type checks, lint, unit tests, and mock browser coverage                    |
+| `deploy-api.yml` | Current API and worker image publication to GHCR                                |
 
-`deploy-api` uses `GITHUB_TOKEN` for GHCR publication. It does not deploy to a droplet, run migrations, promote frontend, roll back or retain a complete release receipt. Its printed manual Compose promotion instruction conflicts with the accepted release authority and must not be followed.
+CI runs on pull requests. Feature branches squash-merge into an up-to-date `staging` branch. A normal merge through a pull request moves `staging` to `main`. Direct pushes to `main` and pull requests from other branches to `main` are outside the approved branch policy.
 
-Production deployments, promotions and rollbacks are Actions-only under [D33](/docs/decisions/D33-GitHub-Actions-Owns-Production-Releases.md). [Actions release contract](/docs/interfaces/actions-releases.md) records required admission/verification/evidence and current enforcement gaps. A workflow file or image push is not release conformance. [Deploy runbook](/deploy/docs/deploy-runbook.md) contains preparation guidance; no implemented production release operation is available to dispatch yet.
+The planned staging workflow is a manual dispatch on the owner's self-hosted machine. It will run the backend with Compose and publish the frontend to Vercel. The planned production workflow starts from a CalVer tag pointing to `main` and deploys the backend and frontend through one Actions release. These workflows are not implemented.
+
+`deploy-api.yml` publishes images only. It does not deploy, migrate, promote Vercel, verify a release, or roll back. Its manual Compose instruction is not an authorized release path. Production deployment, promotion, and rollback follow [D33](/docs/decisions/D33-GitHub-Actions-Owns-Production-Releases.md) and the [Actions release interface](/docs/interfaces/actions-releases.md).

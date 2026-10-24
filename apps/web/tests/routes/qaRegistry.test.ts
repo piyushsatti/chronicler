@@ -128,7 +128,7 @@ describe('QA route coverage', () => {
   it('keeps a staff demo partial until current authority and real API checks are reviewed', () => {
     const parent = path.join(
       root,
-      '.local/workspace-setup/frontend-completion-20261020/route-acceptance',
+      'apps/web/test-results/qa-registry',
     );
     mkdirSync(parent, { recursive: true });
     const directory = mkdtempSync(path.join(parent, 'registry-gallery-test-'));
@@ -191,7 +191,7 @@ describe('QA route coverage', () => {
   it('retains reviewed partial receipts, invalidates changed source and requirements, and reproduces either state', () => {
     const parent = path.join(
       root,
-      '.local/workspace-setup/frontend-completion-20261020/route-acceptance',
+      'apps/web/test-results/qa-registry',
     );
     mkdirSync(parent, { recursive: true });
     const directory = mkdtempSync(path.join(parent, 'registry-test-'));

@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import importlib
 import json
 
 import httpx
 import pytest
 
+from pi.chronicler.archive import benchmark
 from pi.chronicler.archive.benchmark import (
     EMBEDDING_ALIAS,
     EMBEDDING_DIMENSIONS,
@@ -15,6 +17,22 @@ from pi.chronicler.archive.benchmark import (
     _score_row,
     _summary,
 )
+
+
+def test_benchmark_uses_environment_origins_with_safe_defaults(monkeypatch) -> None:
+    monkeypatch.delenv("LITELLM_BASE_URL", raising=False)
+    monkeypatch.delenv("PUBLIC_SITE_URL", raising=False)
+    importlib.reload(benchmark)
+    assert benchmark.LITELLM_BASE_URL == "http://127.0.0.1:4000"
+    assert benchmark.PUBLIC_SITE_URL == "https://chronicler.smokebombstudios.com"
+
+    with monkeypatch.context() as configured:
+        configured.setenv("LITELLM_BASE_URL", "http://gateway.test:4000/")
+        configured.setenv("PUBLIC_SITE_URL", "https://site.test/")
+        importlib.reload(benchmark)
+        assert benchmark.LITELLM_BASE_URL == "http://gateway.test:4000"
+        assert benchmark.PUBLIC_SITE_URL == "https://site.test"
+    importlib.reload(benchmark)
 
 
 @pytest.mark.asyncio
@@ -161,7 +179,7 @@ def test_embedding_runner_requires_scoped_key(chunker, monkeypatch) -> None:
 
 def test_embedding_runner_rejects_untrusted_endpoint(chunker, monkeypatch) -> None:
     monkeypatch.setenv("LITELLM_ARCHIVE_API_KEY", "archive-only-secret")
-    with pytest.raises(ValueError, match="Saturn gateway"):
+    with pytest.raises(ValueError, match="LITELLM_BASE_URL"):
         Embeddings(
             "https://attacker.example",
             EMBEDDING_ALIAS,

@@ -30,7 +30,7 @@ This page records what first-party docs and code claimed before the HTTP-first a
 | [docs/overview.md](/docs/overview.md)                                                   | stale                    | Still describes API as FastAPI Python                                      |
 | [docs/systems.md](/docs/systems.md)                                                     | partial                  | “No queue broker by default” fits HTTP; no Agent Q&A system row            |
 | Discord system page (map)                                                               | stale (fixed in Phase A) | Previously ignored the mention agent path                                  |
-| [deploy/docs/staging-flip-status.md](/deploy/docs/staging-flip-status.md)               | partial                  | Ingest/agent row assumes worker exists; claim not shipped                  |
+| [deployment runbook](/deploy/docs/deploy-runbook.md)                                    | partial                  | Ingest/agent row assumes worker exists; claim not shipped                  |
 | OpenAPI agent paths                                                                     | partial                  | Submit + get present; claim + complete missing from public OpenAPI         |
 | Deploy agent/archive compose                                                            | missing                  | Legacy Rabbit compose not in monorepo `deploy/`                            |
 | [architecture.md](/apps/agent/docs/architecture.md)                                     | was missing              | Added in Phase A                                                           |

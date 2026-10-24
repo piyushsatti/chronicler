@@ -1,4 +1,4 @@
-#!/usr/bin/env -S -i PATH=/usr/bin:/bin /bin/bash
+#!/usr/bin/env -S -i PATH=/usr/bin:/bin CHRONICLER_REPO_ROOT=${CHRONICLER_REPO_ROOT} /bin/bash
 # Fixed-command facade: all Docker inputs live here and in the Compose override.
 set -euo pipefail
 if (( $# != 0 )); then
@@ -6,13 +6,25 @@ if (( $# != 0 )); then
   exit 64
 fi
 
+script_path=${BASH_SOURCE[0]}
+if [[ $script_path != */* ]]; then
+  script_path=$(command -v -- "$script_path")
+fi
+script_dir=${script_path%/*}
+[[ -n $script_dir ]] || script_dir=/
+root=${CHRONICLER_REPO_ROOT:-$(cd -- "$script_dir/.." && pwd -P)}
+if ! root=$(cd -- "$root" 2>/dev/null && pwd -P); then
+  echo 'CHRONICLER_REPO_ROOT must name an existing directory' >&2
+  exit 72
+fi
+
 # Ignore caller Docker contexts, credentials, Compose settings, proxies and shell
-# hooks. No caller environment value becomes a Docker argument.
+# hooks. Pass only the normalized repository root into the isolated process.
 exec /usr/bin/env -i PATH=/usr/bin:/bin HOME=/tmp/chronicler-dev \
-  LANG=C.UTF-8 /bin/bash --noprofile --norc <<'MAIN'
+  CHRONICLER_REPO_ROOT="$root" LANG=C.UTF-8 /bin/bash --noprofile --norc <<'MAIN'
 set -euo pipefail
 umask 077
-readonly root=.
+readonly root=${CHRONICLER_REPO_ROOT:?}
 readonly state=/tmp/chronicler-dev
 if [[ -e $state || -L $state ]]; then
   [[ -d $state && ! -L $state && -O $state ]] || {
@@ -57,7 +69,7 @@ nohup /bin/bash --noprofile --norc -c '
   set -uo pipefail
   exec 9>&-
   state=/tmp/chronicler-dev
-  root=.
+  root=$CHRONICLER_REPO_ROOT
   exec 8>"$state/follower.lock"
   flock -n 8 || exit 0
   printf "%s\n" "$$" > "$state/follower.pid"
