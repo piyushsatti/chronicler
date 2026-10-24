@@ -4,7 +4,7 @@
 
 `main` is the trunk. Every change reaches `main` through a pull request with a squash merge; merge commits and rebase merges are disabled. Pull requests into `main` must pass the `go`, `web`, `agent`, and `tooling` checks. Nobody pushes directly to `main`, and the ruleset has no bypass. Long-lived feature work uses a branch named `integration`, which also squash-merges into `main`. Merged branches are deleted automatically.
 
-A staging release starts from a tag in `staging-YYYY.MM.DD.N` form on a selected commit. There is no staging branch and no manual dispatch. The target staging workflow runs on a self-hosted runner on the owner's machine. It runs the backend with Docker Compose, exposes the API through Cloudflare Tunnel at `chronicler-api.piyushsatti.com`, and deploys the frontend to Vercel at `chronicler.piyushsatti.com`.
+A staging release starts from a tag in `staging-YYYY.MM.DD.N` form on a selected commit. There is no staging branch and no manual dispatch. [`deploy-staging.yml`](/.github/workflows/deploy-staging.yml) runs on a self-hosted runner on the owner's machine. It runs the backend with Docker Compose, exposes the API through Cloudflare Tunnel at `chronicler-api.piyushsatti.com`, and deploys the frontend to Vercel at `chronicler.piyushsatti.com`.
 
 A production release starts from a CalVer tag in `YYYY.MM.DD` or `YYYY.MM.DD.N` form. The tag must point to a commit on `main`. GitHub Actions deploys the backend to one DigitalOcean droplet with [`compose.production.yaml`](/deploy/compose.production.yaml) and GHCR images, checks health, and retains an exact rollback target without deleting the database. The same release deploys the frontend to Vercel at `chronicler.smokebombstudios.com`; its API origin is `api.chronicler.smokebombstudios.com`.
 
@@ -18,7 +18,32 @@ These workflows are not implemented yet. The current [`deploy-api.yml`](/.github
 
 Migrations are not a container and never run at API boot. The API binary embeds the goose migrations and applies them on request with `docker compose -f deploy/compose.production.yaml run --rm chronicler-api migrate` (`migrate status` lists them). [`scripts/backup-db`](/scripts/backup-db) writes a `pg_dump -Fc` file from the running Postgres container. Nothing yet wires the migration, backup admission, health verification, or rollback into a GitHub Actions release workflow, so do not claim this stack is deployed or releasable through Actions today.
 
-The staging API tunnel and staging Vercel routing also remain unimplemented. The current local Compose file does not forward `PLATFORM_OWNER_DISCORD_ID` to the API container; the staging configuration must add it. [`apps/web/vercel.json`](/apps/web/vercel.json) contains production API routing. Do not use it unchanged for staging. The later workflow/configuration change must route the staging site to `chronicler-api.piyushsatti.com` and deploy the same source revision to both services.
+## Staging release
+
+Cut a staging release by tagging the chosen commit and pushing the tag; there is no other trigger:
+
+```bash
+git tag staging-2026.10.25.1 <sha>
+git push origin staging-2026.10.25.1
+```
+
+[`deploy-staging.yml`](/.github/workflows/deploy-staging.yml) rejects any tag that does not match `staging-YYYY.MM.DD.N`, serializes runs in the `staging` concurrency group, and runs two jobs against the GitHub environment `staging`.
+
+The `backend` job runs on the self-hosted runner labelled `chronicler-staging`. It writes the Compose env file to `~/.config/chronicler-staging/staging.env` (mode 600, outside the workspace, rewritten every run), builds the API and bot images locally tagged with the release tag, and records the currently running image tags as the rollback target. It then dumps the database with `scripts/backup-db` into `~/backups/chronicler-staging` (skipped only when Postgres is not yet running), runs `chronicler-api migrate`, and starts Postgres, API and bot with `up -d --wait` under Compose project `chronicler-staging` (API on `127.0.0.1:8081`, no `tls` profile). It then requires `https://chronicler-api.piyushsatti.com/health` to return 204. If anything fails after the services start, it redeploys the previous image tags and the job still fails. Rollback does not restore the database; migrations are forward-only, so restore from the backup by hand only after review. The workflow never runs `down -v` or removes volumes. Missing secrets fail the job before deployment; the Discord bot is never started with defaults.
+
+The `frontend` job runs after `backend` succeeds. It pulls the Vercel project settings, runs `vercel build --prod` and `vercel deploy --prebuilt --prod` with [`apps/web/vercel.staging.json`](/apps/web/vercel.staging.json) (API rewrites to `https://chronicler-api.piyushsatti.com`), and fails if the build output contains the production API origin. The Vercel CLI version is pinned in the workflow. Vercel references: [`--local-config`](https://vercel.com/docs/cli/global-options#local-config), [`vercel build`](https://vercel.com/docs/cli/build), [`vercel deploy --prebuilt`](https://vercel.com/docs/cli/deploy#prebuilt), and the [GitHub Actions guide](https://vercel.com/guides/how-can-i-use-github-actions-with-vercel).
+
+Environment `staging` secrets: `POSTGRES_PASSWORD` (URL-safe characters only), `JWT_SECRET`, `INGEST_SECRET`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `PLATFORM_OWNER_DISCORD_ID`, `DISCORD_BOT_TOKEN` (API worker REST token), `BOT_DISCORD_TOKEN` (gateway bot token), `BOT_CLIENT_ID`, `GUILD_ID`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, and `DISCORD_ANNOUNCE_CHANNEL_ID` (secret or variable). Optional variables `POSTGRES_USER` and `POSTGRES_DB` default to `chronicler`. The domains, CORS origin, redirect URI and port are constants in the workflow. Secret values never appear in the repository, logs or artifacts.
+
+One-time setup the owner performs:
+
+- Install a GitHub Actions runner on the staging host with label `chronicler-staging`; the runner user must be able to use Docker.
+- Run a Cloudflare Tunnel that maps `chronicler-api.piyushsatti.com` to `http://127.0.0.1:8081`.
+- Create the Vercel staging project with Root Directory `apps/web` (include source files outside the root directory), attach `chronicler.piyushsatti.com` as its production domain, and disable its Git auto-deploy.
+- Register `https://chronicler.piyushsatti.com/auth/discord/callback` as a redirect URI on the Discord application.
+- Create the `staging` environment and its secrets.
+
+The workflow has not run yet; provider settings, the tunnel, and the Vercel project are unverified.
 
 ## Release safeguards
 
