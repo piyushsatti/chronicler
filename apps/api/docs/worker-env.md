@@ -1,6 +1,6 @@
 # Go worker environment
 
-The worker binary (`apps/api/cmd/worker`) consumes Postgres-backed jobs when `DATABASE_URL` is set. HTTP client timeout is 30s.
+The worker loop (`apps/api/internal/workerrun`) consumes Postgres-backed jobs when `DATABASE_URL` is set. HTTP client timeout is 30s. In the production stack it runs inside the API process (`cmd/api`, container `chronicler-api`) with the same environment; `cmd/worker` is a thin standalone wrapper kept for the dev Compose stack.
 
 ## Discord delivery (quest loop)
 

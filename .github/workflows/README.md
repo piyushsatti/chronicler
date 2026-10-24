@@ -6,7 +6,7 @@
 | `repo.yml`       | Repository tooling and documentation verification through `scripts/verify-repo` |
 | `agent.yml`      | Agent lint, type checks, and tests                                              |
 | `web.yml`        | Web type checks, lint, unit tests, and mock browser coverage                    |
-| `deploy-api.yml` | Current API and worker image publication to GHCR                                |
+| `deploy-api.yml` | Current API and Discord bot image publication to GHCR                           |
 
 CI runs on every pull request. `main` is the trunk: changes reach it only through a pull request with a squash merge, and the `go`, `web`, `agent`, and `tooling` jobs are required checks. Keep these job names unique across workflows so each required check maps to one job. Direct pushes to `main` are blocked with no bypass.
 

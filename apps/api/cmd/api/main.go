@@ -14,19 +14,33 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/config"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/httpserver"
+	"github.com/piyushsatti/chronicler/apps/api/internal/workerrun"
 )
 
 func main() {
 	slog.SetDefault(slog.New(slog.NewJSONHandler(os.Stdout, nil)))
+	if len(os.Args) > 1 {
+		os.Exit(runSubcommand(os.Args[1:], os.Stdout, os.Stderr))
+	}
 	cfg := config.FromEnv()
 
-	ctx := context.Background()
+	ctx, stopSignals := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stopSignals()
 	runtime := app.Wire(ctx, cfg)
 
 	mux := http.NewServeMux()
 	app.MountFromAPI(mux, runtime, cfg)
 
 	handler := apiHandler(mux, cfg, runtime.Authority)
+
+	// The background-job loop shares this process and its shutdown context.
+	workerDone := make(chan struct{})
+	go func() {
+		defer close(workerDone)
+		if err := workerrun.Run(ctx, cfg); err != nil {
+			slog.Error("worker stopped", "error", err)
+		}
+	}()
 
 	srv := &http.Server{Addr: cfg.Addr, Handler: handler}
 	go func() {
@@ -37,12 +51,15 @@ func main() {
 		}
 	}()
 
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, syscall.SIGINT, syscall.SIGTERM)
-	<-stop
+	<-ctx.Done()
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 	defer cancel()
 	_ = srv.Shutdown(shutdownCtx)
+	select {
+	case <-workerDone:
+	case <-shutdownCtx.Done():
+		slog.Warn("worker did not stop before shutdown timeout")
+	}
 	if runtime.Pool != nil {
 		runtime.Pool.Close()
 	}

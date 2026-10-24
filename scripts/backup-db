@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# Dump the production Postgres (pg_dump -Fc) into a dated file. Read-only on the DB.
+# Usage: scripts/backup-db [-p PROJECT] [DIR]
+#   -p PROJECT  compose project name (default: $COMPOSE_PROJECT_NAME or chronicler-production)
+#   DIR         output directory (default: ./backups)
+set -euo pipefail
+
+root="$(cd "$(dirname "$0")/.." && pwd)"
+project="${COMPOSE_PROJECT_NAME:-chronicler-production}"
+
+while getopts ':p:h' opt; do
+  case "$opt" in
+    p) project="$OPTARG" ;;
+    h) sed -n '2,5p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) echo "usage: scripts/backup-db [-p PROJECT] [DIR]" >&2; exit 2 ;;
+  esac
+done
+shift $((OPTIND - 1))
+
+dir="${1:-./backups}"
+mkdir -p "$dir"
+out="$dir/chronicler-$(date -u +%Y%m%dT%H%M%SZ).dump"
+tmp="$out.partial"
+trap 'rm -f "$tmp"' EXIT
+
+docker compose -p "$project" -f "$root/deploy/compose.production.yaml" \
+  exec -T chronicler-postgres \
+  sh -c 'pg_dump -Fc -U "$POSTGRES_USER" -d "$POSTGRES_DB"' > "$tmp"
+
+if [[ ! -s "$tmp" ]]; then
+  echo "backup-db: dump is empty" >&2
+  exit 1
+fi
+mv "$tmp" "$out"
+echo "$out"
