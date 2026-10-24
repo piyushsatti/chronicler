@@ -9,12 +9,6 @@ on:
       - 'scripts/merge-graphql-schema'
       - '.github/workflows/api.yml'
   pull_request:
-    paths:
-      - 'apps/api/**'
-      - 'apps/web/src/**/*.graphql'
-      - 'packages/contracts/**'
-      - 'scripts/merge-graphql-schema'
-      - '.github/workflows/api.yml'
 
 jobs:
   go:
