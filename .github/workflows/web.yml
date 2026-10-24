@@ -10,13 +10,6 @@ on:
       - 'bun.lock'
       - '.github/workflows/web.yml'
   pull_request:
-    paths:
-      - 'apps/web/**'
-      - 'packages/contracts/**'
-      - 'scripts/design-gates/**'
-      - 'package.json'
-      - 'bun.lock'
-      - '.github/workflows/web.yml'
 
 jobs:
   test:
