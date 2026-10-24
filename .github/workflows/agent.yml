@@ -9,12 +9,6 @@ on:
       - 'apps/agent/**'
       - 'packages/contracts/openapi.yaml'
   pull_request:
-    paths:
-      - '.github/workflows/agent.yml'
-      - 'pyproject.toml'
-      - 'uv.lock'
-      - 'apps/agent/**'
-      - 'packages/contracts/openapi.yaml'
 
 jobs:
   test:
