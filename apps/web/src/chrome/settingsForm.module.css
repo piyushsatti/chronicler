@@ -1,55 +1,140 @@
-.save {
-  align-self: flex-start;
-  inline-size: auto;
-  min-inline-size: 10rem;
+.form {
+  min-width: 0;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 4fr);
+  grid-template-areas: "rail sections";
+  align-items: start;
+  gap: var(--sp-4);
+}
+
+.rail {
+  grid-area: rail;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--sp-4);
+  position: sticky;
+  inset-block-start: calc(var(--site-header-height, var(--sp-8)) + var(--sp-4));
+}
+
+.index {
+  min-width: 0;
+}
+
+.indexCard {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.indexCard > p {
+  margin: 0;
+}
+
+.indexCard a {
+  text-decoration: none;
+}
+
+.sections {
+  grid-area: sections;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+
+.sectionRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  align-items: start;
+  gap: var(--sp-4);
+  scroll-margin-block-start: var(--sp-4);
+}
+
+.sectionHelp {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding-block: var(--sp-2);
+}
+
+.sectionHelp > :where(h2, p, ul) {
+  margin: 0;
 }
 
 .helpList {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-1);
-  margin: var(--sp-2) 0 0;
+  gap: var(--sp-2);
   padding-inline-start: var(--sp-4);
-}
-
-.help {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
-  margin: 0;
-}
-
-.help > div > * {
-  margin: 0;
 }
 
 .footer {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-3);
+  gap: var(--sp-2);
 }
 
 .footer > p {
   margin: 0;
 }
 
-.saveRow {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--sp-3);
+.save {
+  align-self: stretch;
+  inline-size: 100%;
 }
 
-.saveRow > p {
-  margin: 0;
-}
+:global([data-width-class='compact']) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "index" "sections" "save";
+    gap: var(--sp-4);
+  }
 
-.helpCard {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-3);
-}
+  .rail {
+    display: contents;
+    position: static;
+  }
 
-.helpCard > h2 {
-  margin: 0;
+  .index {
+    grid-area: index;
+    min-width: 0;
+  }
+
+  .indexCard {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    max-width: 100%;
+  }
+
+  .indexCard > p {
+    flex: 0 0 100%;
+  }
+
+  .index a {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
+  .sections {
+    grid-area: sections;
+  }
+
+  .footer {
+    grid-area: save;
+  }
+
+  .sectionRow {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--sp-2);
+  }
+
+  .sectionHelp {
+    padding: 0 var(--sp-3) var(--sp-2);
+  }
+
 }

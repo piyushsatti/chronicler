@@ -41,7 +41,7 @@ export const routes: readonly FeatureRoute[] = [
     path: '/notifications',
     element: lazyElement(() =>
       import('./pages/NotificationsPage.js').then((module) => ({
-        default: module.NotificationsPage,
+        default: module.NotificationsRedirect,
       })),
     ),
   },

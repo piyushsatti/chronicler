@@ -36,14 +36,17 @@ export function useMemberHub(memberId: string): MemberHub {
   const hubQ = useQuery({
     queryKey: ['memberHub', memberId],
     queryFn: () => loadMemberHub(memberId),
+    enabled: Boolean(memberId),
   });
   const rosterQ = useQuery({
     queryKey: ['characters', 'mine', memberId],
     queryFn: loadMemberRoster,
+    enabled: Boolean(memberId),
   });
   const upcomingQ = useQuery({
     queryKey: ['quests', 'mine-upcoming', memberId],
     queryFn: () => loadUpcomingSignups(memberId, new Date().toISOString()),
+    enabled: Boolean(memberId),
   });
   return {
     hub: slice(hubQ, 'me:hub'),

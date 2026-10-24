@@ -22,8 +22,10 @@ function notificationLabel(kind: string): string {
 
 export function NotificationRow({
   notification,
+  onActivate,
 }: {
   notification: NotificationView;
+  onActivate?: (id: string) => void;
 }): React.JSX.Element {
   const isUnread = notification.unread;
   const { formatDateTime } = useDateFormatter();
@@ -40,7 +42,7 @@ export function NotificationRow({
     ? formatDateTime(notification.createdAt)
     : null;
   const title = href ? (
-    <Link to={href} data-el="notifications.row.title" className="type-body">
+    <Link to={href} onClick={() => onActivate?.(notification.id)} data-el="notifications.row.title" className="type-body">
       {displayTitle}
     </Link>
   ) : (

@@ -3,7 +3,7 @@ import { ProtectedRoute } from '../../../auth/ProtectedRoute.js';
 import { SingleRegionPage } from '../../../chrome/singleRegion.js';
 import { PageShell } from '../../../components/foundation/PageShell.js';
 import { PageHeader } from '../../../components/primitives/PageHeader.js';
-import { Link } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
 import { Button } from '../../../components/primitives/Button.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { NotificationRow } from '../components/NotificationRow.js';
@@ -92,7 +92,7 @@ function NotificationsBody(): React.JSX.Element {
           }
           emptyMessage="Updates about your characters, quests and documents will show up here."
           action={
-            <Link className="btn btn--secondary" to="/settings">
+            <Link className="btn btn--secondary" to="/me/settings">
               Notification settings
             </Link>
           }
@@ -108,7 +108,7 @@ function NotificationsBody(): React.JSX.Element {
       )}
       {visibleItems.length > 0 ? (
         <div className="row" data-wrap="1">
-          <Link className="btn btn--ghost btn--sm" to="/settings">
+          <Link className="btn btn--ghost btn--sm" to="/me/settings">
             Notification settings
           </Link>
         </div>
@@ -141,6 +141,14 @@ export function NotificationsPage(): React.JSX.Element {
           <NotificationsBody />
         </SingleRegionPage>
       </PageShell>
+    </ProtectedRoute>
+  );
+}
+
+export function NotificationsRedirect(): React.JSX.Element {
+  return (
+    <ProtectedRoute>
+      <Navigate to="/me" replace />
     </ProtectedRoute>
   );
 }

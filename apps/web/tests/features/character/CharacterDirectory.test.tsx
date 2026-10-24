@@ -1,6 +1,7 @@
 import { graphql, HttpResponse } from 'msw';
 import { beforeEach, describe, it, expect } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
+import { within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { CharacterListPage } from '../../../src/features/character/pages/CharacterListPage.js';
 import { CreateCharacterForm } from '../../../src/features/character/components/CreateCharacterForm.js';
@@ -8,8 +9,16 @@ import { server } from '../../../src/mocks/server.js';
 import { renderWithProviders } from '../../test-utils.js';
 import character from '../../fixtures/wire/character/good.json';
 import { signInCharacter } from './characterAuth.js';
-beforeEach(() => signInCharacter());
 const REGION = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee';
+
+beforeEach(() => {
+  signInCharacter();
+  server.use(
+    graphql.query('CharacterRegions', () =>
+      HttpResponse.json({ data: { regions: [{ id: REGION, name: 'Lightfall' }] } }),
+    ),
+  );
+});
 
 describe('Character directory', () => {
   it('uses server totals, offsets and filters rather than filtering the first page', async () => {
@@ -40,7 +49,8 @@ describe('Character directory', () => {
       filters: { status: 'active' },
     });
     expect(screen.getByRole('button', { name: 'Next characters' })).toBeDisabled();
-    await user.type(screen.getByLabelText('Search characters by name'), 'Lyra');
+    await user.click(screen.getByRole('button', { name: 'Search characters' }));
+    await user.type(screen.getByRole('searchbox', { name: 'Search characters' }), 'Lyra');
     await waitFor(() =>
       expect(requests.at(-1)).toMatchObject({
         offset: 0,
@@ -214,8 +224,7 @@ describe('Character directory', () => {
     );
     renderWithProviders(<CharacterListPage />);
     await screen.findByRole('heading', { name: 'Pending hero' });
-    // The default Approved-only list does not repeat "Approved" on every card.
-    expect(screen.queryByText('Approved', { selector: 'p' })).not.toBeInTheDocument();
+    expect(screen.getByText('Approved')).toBeInTheDocument();
     expect(screen.getByText('Awaiting approval')).toBeInTheDocument();
     expect(screen.queryByText('active')).not.toBeInTheDocument();
     expect(screen.queryByText('C-101')).not.toBeInTheDocument();
@@ -223,7 +232,7 @@ describe('Character directory', () => {
       screen.queryByRole('navigation', { name: 'Character pages' }),
     ).not.toBeInTheDocument();
     expect(
-      screen.getByRole('searchbox', { name: 'Search characters by name' }),
+      screen.getByRole('button', { name: 'Search characters' }),
     ).toBeInTheDocument();
   });
   it('counts a single character in the singular', async () => {
@@ -323,6 +332,13 @@ describe('Character directory', () => {
                   name: 'Brann Ironfoot',
                   imageUrl: null,
                 },
+                {
+                  ...character,
+                  id: 'ffffffff-ffff-4fff-8fff-ffffffffffff',
+                  shortCode: 'C-103',
+                  name: 'Est the Younger',
+                  imageUrl: null,
+                },
               ],
               total: 2,
             },
@@ -338,7 +354,9 @@ describe('Character directory', () => {
     );
     const brann = screen.getByRole('link', { name: /Brann Ironfoot/ });
     expect(brann.querySelector('img')).toBeNull();
-    expect(brann).toHaveTextContent('BI');
+    expect(brann.querySelector('[data-testid="avatar"]')).toHaveTextContent('BI');
+    const est = screen.getByRole('link', { name: /Est the Younger/ });
+    expect(est.querySelector('[data-testid="avatar"]')).toHaveTextContent('ET');
     // The decorative avatar does not repeat the name in the link's accessible name.
     expect(brann).toHaveAccessibleName(/^Brann Ironfoot/);
   });
@@ -407,8 +425,88 @@ describe('Character directory', () => {
     const user = userEvent.setup();
     renderWithProviders(<CharacterListPage />);
     await screen.findByRole('heading', { name: character.name });
-    expect(screen.queryByText('Approved', { selector: 'p' })).not.toBeInTheDocument();
+    expect(screen.getByText('Approved')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Active' })).toHaveAttribute('aria-pressed', 'true');
     await user.click(screen.getByRole('button', { name: 'All' }));
-    expect(await screen.findByText('Approved', { selector: 'p' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'All' })).toHaveAttribute('aria-pressed', 'true');
+    expect(await screen.findByText('Approved')).toBeInTheDocument();
+  });
+
+  it('shows region and the listed player, using Player not listed only when ownerId is absent', async () => {
+    server.use(
+      graphql.query('CharacterDirectory', () => HttpResponse.json({
+        data: { characters: { items: [
+          { ...character, regionId: REGION },
+          { ...character, id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', shortCode: 'C-102', name: 'No owner', ownerId: undefined, regionId: REGION },
+        ], total: 2 } },
+      })),
+      graphql.query('CharacterOwner', () => HttpResponse.json({
+        data: { member: { id: character.ownerId, handle: 'owner', displayName: 'Owner One', avatarUrl: null } },
+      })),
+      graphql.query('CharacterRegions', () => HttpResponse.json({
+        data: { regions: [{ id: REGION, name: 'Lightfall Coast' }] },
+      })),
+    );
+    renderWithProviders(<CharacterListPage />);
+    const owned = await screen.findByRole('heading', { name: character.name });
+    expect(owned.closest('a')).toHaveTextContent('Lightfall Coast');
+    expect(await within(owned.closest('a') as HTMLElement).findByText('Owner One')).toBeInTheDocument();
+    const unowned = screen.getByRole('heading', { name: 'No owner' }).closest('a');
+    expect(unowned).toHaveTextContent('Player not listed');
+  });
+
+  it('shows region lookup failure as unavailable and exposes the roster retry', async () => {
+    server.use(
+      graphql.query('CharacterDirectory', () => HttpResponse.json({
+        data: { characters: { items: [{ ...character, regionId: REGION }], total: 1 } },
+      })),
+      graphql.query('CharacterRegions', () => HttpResponse.json({ errors: [{ message: 'Unavailable' }] })),
+    );
+    renderWithProviders(<CharacterListPage />);
+    const card = await screen.findByRole('heading', { name: character.name });
+    expect(card.closest('a')).toHaveTextContent('Region unavailable');
+    expect(screen.getByRole('button', { name: 'Retry roster' })).toBeInTheDocument();
+  });
+
+  it('disambiguates distinct visible owners sharing a display name', async () => {
+    const otherOwnerId = '22222222-2222-4222-8222-222222222222';
+    server.use(
+      graphql.query('CharacterDirectory', () => HttpResponse.json({ data: {
+        characters: { total: 2, items: [character, {
+          ...character, id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+          shortCode: 'C-102', name: 'Second hero', ownerId: otherOwnerId,
+        }] },
+      } })),
+      graphql.query('CharacterOwner', ({ variables }) => HttpResponse.json({ data: {
+        member: {
+          id: variables.id, handle: variables.id === character.ownerId ? 'alex_one' : 'alex_two',
+          displayName: 'Alex Rowan', avatarUrl: null,
+        },
+      } })),
+    );
+    renderWithProviders(<CharacterListPage />);
+
+    expect(await screen.findByText('Alex Rowan (@alex_one)')).toBeVisible();
+    expect(screen.getByText('Alex Rowan (@alex_two)')).toBeVisible();
+    expect(screen.getByRole('link', { name: /Lyra Storm/ })).toHaveTextContent('Alex Rowan (@alex_one)');
+    expect(screen.getByRole('link', { name: /Second hero/ })).toHaveTextContent('Alex Rowan (@alex_two)');
+  });
+
+  it('does not add a handle when multiple visible characters have the same owner', async () => {
+    server.use(
+      graphql.query('CharacterDirectory', () => HttpResponse.json({ data: {
+        characters: { total: 2, items: [character, {
+          ...character, id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+          shortCode: 'C-102', name: 'Second hero',
+        }] },
+      } })),
+      graphql.query('CharacterOwner', () => HttpResponse.json({ data: {
+        member: { id: character.ownerId, handle: 'alex_one', displayName: 'Alex Rowan', avatarUrl: null },
+      } })),
+    );
+    renderWithProviders(<CharacterListPage />);
+
+    expect(await screen.findAllByText('Alex Rowan', { exact: true })).toHaveLength(2);
+    expect(screen.queryByText(/@alex_one/)).not.toBeInTheDocument();
   });
 });

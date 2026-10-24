@@ -6,15 +6,13 @@
 }
 
 .hero {
-  min-width: 0;
-}
-
-.heroBody {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--sp-4) var(--sp-5);
   min-width: 0;
+  padding: var(--sp-4) 0;
+  border-bottom: 1px solid var(--color-border);
 }
 
 .identity {
@@ -23,6 +21,14 @@
   flex-direction: column;
   gap: var(--sp-1);
   min-width: 0;
+}
+
+.identity h1 {
+  font-family: var(--font-title);
+  font-size: var(--page-title-size);
+  font-weight: var(--font-title-weight);
+  line-height: 1.1;
+  letter-spacing: -0.045em;
 }
 
 .identity :is(h1, p) {
@@ -37,40 +43,118 @@
   margin-block-start: var(--sp-1);
 }
 
-.actions {
+.publicActions {
   display: flex;
-  flex-wrap: wrap;
+  flex: 1 1 auto;
   align-items: center;
-  gap: var(--sp-2);
-  inline-size: 100%;
-}
-
-.actions a {
-  white-space: nowrap;
-}
-
-.actionGroup,
-.publicActions {
-  display: flex;
-  align-items: baseline;
-  gap: var(--sp-2);
-}
-
-.publicActions {
+  justify-content: flex-end;
+  gap: var(--sp-3);
   margin-inline-start: auto;
 }
 
+.accountToolbar {
+  min-width: 0;
+}
+
+.subpageHeader {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-block: var(--sp-1);
+}
+
+.subpageHeader > * {
+  margin: 0;
+}
+
 .stats {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 9rem), 1fr));
-  gap: var(--sp-3);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-2) var(--sp-4);
+  margin: 0;
+  color: var(--color-text-2);
+  font-size: 12px;
+}
+
+.stats strong {
+  color: var(--color-text);
 }
 
 .overview {
+  display: grid;
+  grid-template-columns: minmax(0, 2.1fr) minmax(0, 1fr);
+  align-items: start;
+  gap: var(--sp-5);
+  padding-block-start: var(--sp-2);
+}
+
+.rosterOverview {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-6);
-  padding-block-start: var(--sp-4);
+  gap: var(--sp-5);
+  min-width: 0;
+  padding-block-start: var(--sp-2);
+}
+
+.rosterHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+
+.rosterHeader > div > * {
+  margin: 0;
+}
+
+.signupEmpty {
+  display: flex;
+  min-height: 4rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  padding: var(--sp-3) var(--sp-4);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--rad);
+  background: var(--color-bg-panel);
+}
+
+.signupEmpty > p {
+  margin: 0;
+}
+
+.characterSection {
+  min-width: 0;
+}
+
+.characterStrip {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.characterStrip > li {
+  min-width: 0;
+}
+
+.dashboardMain {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-5);
+  min-width: 0;
+}
+
+.notesEntry {
+  min-width: 0;
+}
+
+.notesExcerpt {
+  margin: 0;
+  max-height: 10rem;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  color: var(--color-text-2);
+  line-height: 1.6;
 }
 
 .sectionHead {
@@ -106,6 +190,11 @@
   margin: 0;
 }
 
+.dmDashboardLink {
+  margin: 0;
+  align-self: flex-end;
+}
+
 .dmPanel {
   display: flex;
   flex-wrap: wrap;
@@ -125,6 +214,42 @@
   min-width: 0;
 }
 
-.stats > div {
+.dmActions {
   display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-2);
+}
+
+:global([data-width-class='compact']) {
+  .hero {
+    column-gap: var(--sp-3);
+  }
+
+  .publicActions {
+    flex: 1 1 100%;
+  }
+
+  .overview {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .signupEmpty {
+    align-items: stretch;
+    flex-direction: column;
+    gap: var(--sp-2);
+  }
+
+  .signupEmpty > a {
+    inline-size: 100%;
+  }
+
+  .dashboardMain,
+  .notesEntry {
+    width: 100%;
+  }
+
+  .dmActions {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }

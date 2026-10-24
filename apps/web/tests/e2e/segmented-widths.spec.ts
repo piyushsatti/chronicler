@@ -70,18 +70,11 @@ for (const width of [1440, 390]) {
       expect(track.height).toBe(40);
       expect(track.pillHeight).toBe(32);
       expect(track.inset).toBe(4);
-      if (track.header) {
-        expect(Math.max(...track.widths) - Math.min(...track.widths)).toBeGreaterThan(10);
-        for (const [index, segmentWidth] of track.widths.entries()) {
-          expect(Math.abs(segmentWidth - track.intrinsicWidths[index])).toBeLessThanOrEqual(0.5);
-        }
-      } else {
-        expect(Math.max(...track.widths) - Math.min(...track.widths)).toBeLessThanOrEqual(0.5);
-        for (const segmentWidth of track.widths) {
-          expect(Math.abs(segmentWidth - Math.max(...track.intrinsicWidths))).toBeLessThanOrEqual(0.5);
-        }
-        if (width === 390) expect(track.scrollWidth).toBeGreaterThan(track.clientWidth);
+      expect(Math.max(...track.widths) - Math.min(...track.widths)).toBeLessThanOrEqual(0.5);
+      for (const segmentWidth of track.widths) {
+        expect(Math.abs(segmentWidth - Math.max(...track.intrinsicWidths))).toBeLessThanOrEqual(0.5);
       }
+      if (width === 390) expect(track.scrollWidth).toBeGreaterThan(track.clientWidth);
     }
   });
 }

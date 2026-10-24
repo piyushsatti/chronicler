@@ -1,4 +1,4 @@
-import { act, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { http, HttpResponse } from 'msw';
@@ -13,7 +13,7 @@ import {
 } from '../../../src/context/theme.utils.js';
 import { effectById } from '../../../src/effects/catalog.js';
 import { AmbientLayer } from '../../../src/chrome/AmbientLayer.js';
-import { SettingsForm } from '../../../src/chrome/SettingsForm.js';
+import { SettingsForm, type SettingsSection } from '../../../src/chrome/SettingsForm.js';
 import { PreferencesSync } from '../../../src/features/personalize/components/PreferencesSync.js';
 import { server } from '../../../src/mocks/server.js';
 import playerMe from '../../fixtures/wire/me/admin-good.json';
@@ -51,6 +51,86 @@ describe('settings synchronization', () => {
     localStorage.setItem(TOKEN_KEY, token('member-a'));
   });
   afterEach(() => vi.unstubAllGlobals());
+
+  it.each<SettingsSection>(['settings', 'personalize'])(
+    'blocks clicks and form submission on %s until saved preferences finish loading',
+    async (section) => {
+      const user = userEvent.setup();
+      const persisted = {
+        ...good.settings,
+        theme: 'MIDNIGHT',
+        mode: 'DARK',
+        effectsEnabled: false,
+        colorblindSafe: true,
+        reducedMotion: true,
+        density: 'COMPACT',
+        timezone: 'America/Toronto',
+        notifyCharacterVerification: false,
+        notifyQuestSignup: false,
+        notifyDocumentActivity: false,
+        notifyQuestScheduled: false,
+        notifyDmMentioned: false,
+      };
+      let settings = { ...persisted };
+      const writes: Array<Record<string, unknown>> = [];
+      const readStarted = vi.fn();
+      let releaseRead: (() => void) | undefined;
+      const pendingRead = new Promise<void>((resolve) => {
+        releaseRead = resolve;
+      });
+      server.use(
+        http.post(GRAPHQL_PATH, async ({ request }) => {
+          const body = operationSchema.parse(await request.json());
+          if (body.query.includes('mutation UpdateMySettings')) {
+            const input = body.variables?.input ?? {};
+            writes.push(input);
+            settings = { ...settings, ...input };
+            return HttpResponse.json({ data: { updateMySettings: settings } });
+          }
+          readStarted();
+          await pendingRead;
+          return HttpResponse.json({ data: { myPersonalization: { settings } } });
+        }),
+      );
+      const { queryClient, store } = renderWithProviders(
+        <>
+          <PreferencesSync />
+          <SettingsForm section={section} />
+        </>,
+      );
+      try {
+        await waitFor(() => expect(readStarted).toHaveBeenCalled());
+        const save = screen.getByRole('button', { name: 'Save settings' });
+        const form = save.closest('form');
+        if (!form) throw new Error('Save settings must submit its settings form');
+        await user.click(save);
+        fireEvent.submit(form);
+        await waitFor(() => expect(queryClient.isMutating()).toBe(0));
+        expect(writes).toEqual([]);
+        expect(settings).toEqual(persisted);
+        expect(save).toBeDisabled();
+        await act(async () => releaseRead?.());
+        await waitFor(() => expect(save).toBeEnabled());
+        expect(store.getState().preferences.prefs).toMatchObject({
+          theme: 'midnight', mode: 'dark', density: 'compact',
+          timezone: 'America/Toronto', colorblindSafe: true,
+          reducedMotion: true, notifyQuestSignup: false,
+        });
+        await user.click(save);
+        await screen.findByText('Settings saved.');
+        expect(writes).toEqual([expect.objectContaining({
+          theme: 'MIDNIGHT', mode: 'DARK', effectsEnabled: false,
+          colorblindSafe: true, reducedMotion: true, density: 'COMPACT',
+          timezone: 'America/Toronto', notifyCharacterVerification: false,
+          notifyQuestSignup: false, notifyDocumentActivity: false,
+          notifyQuestScheduled: false, notifyDmMentioned: false,
+        })]);
+        expect(settings).toEqual(persisted);
+      } finally {
+        releaseRead?.();
+      }
+    },
+  );
 
   it('keeps an untouched guest cache isolated after a storage-based switch from a saved account', async () => {
     const user = userEvent.setup();

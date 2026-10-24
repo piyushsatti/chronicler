@@ -71,10 +71,18 @@ export const routes: readonly FeatureRoute[] = [
     ),
   },
   {
-    path: '/settings',
+    path: '/me/settings',
     element: lazyElement(() =>
       import('./pages/SettingsPage.js').then((module) => ({
         default: module.SettingsPage,
+      })),
+    ),
+  },
+  {
+    path: '/settings',
+    element: lazyElement(() =>
+      import('./pages/SettingsPage.js').then((module) => ({
+        default: module.SettingsRedirectPage,
       })),
     ),
   },

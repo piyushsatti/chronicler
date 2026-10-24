@@ -8,16 +8,66 @@ import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { Skeleton } from '../../../components/primitives/Skeleton.js';
 import { CardGrid } from '../../../components/primitives/CardGrid.js';
 import { Chip } from '../../../components/primitives/Chip.js';
-import { FilterBar } from '../../../components/primitives/FilterBar.js';
 import { PageHeader } from '../../../components/primitives/PageHeader.js';
-import { pluralize } from '../../../utils/format.js';
-import { CharacterCard } from '../../../components/domain/CharacterCard.js';
+import { characterStatusLabel, pluralize } from '../../../utils/format.js';
+import { Card } from '../../../components/primitives/Card.js';
+import { Avatar } from '../../../components/primitives/Avatar.js';
+import { PageToolbar } from '../../../components/primitives/PageToolbar.js';
+import { isCharacterImageUrl } from '../../../utils/characterImageUrl.js';
+import type { CharacterViewModel } from '../adapters/characterAdapter.js';
 import { CreateCharacterForm } from '../components/CreateCharacterForm.js';
 import {
   CHARACTER_PAGE_SIZE,
   useCharacterListPage,
 } from '../hooks/useCharacterListPage.js';
 import styles from './characterDetail.module.css';
+
+function DirectoryCharacterCard({
+  character,
+  regionName,
+  regionNamesStatus,
+  playerLabel,
+}: {
+  character: CharacterViewModel;
+  regionName?: string;
+  regionNamesStatus: 'loading' | 'ready' | 'error';
+  playerLabel: string;
+}): React.JSX.Element {
+  const initials = character.name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((word) => word.charAt(0))
+    .join('') || '?';
+  return (
+    <Card variant="clickable" to={`/characters/${character.shortCode}`} pad={4}>
+      <div className={styles.directoryCard}>
+        <span aria-hidden="true">
+          <Avatar name={initials} src={character.imageUrl && isCharacterImageUrl(character.imageUrl) ? character.imageUrl : undefined} size="md" />
+        </span>
+        <div className={styles.directoryCardBody}>
+          <h2 className="type-title">{character.name}</h2>
+          <p className="type-caption">
+            {character.ddbMirror?.classes ?? 'Character'}
+            {character.ddbMirror?.species ? ` · ${character.ddbMirror.species}` : ''}
+            {' · '}{character.regionId === null
+              ? 'No region assigned'
+              : regionName ?? (regionNamesStatus === 'loading'
+                ? 'Loading region…'
+                : regionNamesStatus === 'error'
+                  ? 'Region unavailable'
+                  : 'Region not listed')}
+          </p>
+          <p className="type-caption">
+            <span>{characterStatusLabel(character.status)}</span>
+            <span aria-hidden="true"> · </span>
+            <span>{playerLabel}</span>
+          </p>
+        </div>
+      </div>
+    </Card>
+  );
+}
 const DECLARATION: PageDeclaration = {
   page: 'characters',
   regions: [{ role: 'body', priority: 1 }],
@@ -55,12 +105,25 @@ export function CharacterListPage(): React.JSX.Element {
                   ) : undefined
                 }
               />
-              {creating ? (
-                <CreateCharacterForm onCancel={() => setCreating(false)} />
-              ) : null}
-              <FilterBar
+              <PageToolbar
                 className={styles.filters}
-                label="Filter characters"
+                label="Character roster"
+                segments={
+                  <PageToolbar.Segments
+                    aria-label="Character status"
+                    value={state.statusFilter === 'active' ? 'active' : 'all'}
+                    onValueChange={(value) => state.setStatusFilter(value === 'active' ? 'active' : '')}
+                    options={[
+                      { value: 'active', label: 'Active' },
+                      { value: 'all', label: 'All' },
+                    ]}
+                  />
+                }
+                quickFilters={state.me.data ? (
+                  <Chip className={styles.mineFilter} selected={state.mine} onClick={() => state.setMine(!state.mine)}>
+                    My characters
+                  </Chip>
+                ) : undefined}
                 count={
                   state.status === 'loading' ? (
                     <Skeleton width="6rem" height="1rem" aria-label="Loading roster" />
@@ -68,36 +131,19 @@ export function CharacterListPage(): React.JSX.Element {
                     pluralize(view?.total ?? 0, 'character')
                   )
                 }
-              >
-                <FilterBar.Search
-                  label="Search characters by name"
-                  placeholder="Search characters…"
-                  value={state.name}
-                  onValueChange={state.setName}
-                />
-                <FilterBar.Group label="Show">
-                  <Chip
-                    selected={state.statusFilter === 'active'}
-                    onClick={() => state.setStatusFilter('active')}
-                  >
-                    Approved
-                  </Chip>
-                  <Chip
-                    selected={state.statusFilter === ''}
-                    onClick={() => state.setStatusFilter('')}
-                  >
-                    All
-                  </Chip>
-                  {state.me.data ? (
-                    <Chip
-                      selected={state.mine}
-                      onClick={() => state.setMine(!state.mine)}
-                    >
-                      My characters
-                    </Chip>
-                  ) : null}
-                </FilterBar.Group>
-              </FilterBar>
+                actions={
+                  <PageToolbar.Search
+                    label="Search characters"
+                    placeholder="Search characters…"
+                    value={state.name}
+                    onValueChange={state.setName}
+                  />
+                }
+              />
+              {state.regionNamesStatus === 'error' && state.status !== 'error' ? (
+                <Button onClick={state.retry}>Retry roster</Button>
+              ) : null}
+              {creating ? <CreateCharacterForm onCancel={() => setCreating(false)} /> : null}
               {state.status === 'error' ? (
                 <>
                   <StatePanel status="error" error={state.error} />
@@ -139,10 +185,12 @@ export function CharacterListPage(): React.JSX.Element {
               ) : (
                 <CardGrid>
                   {state.view.items.map((character) => (
-                    <CharacterCard
+                    <DirectoryCharacterCard
                       key={character.id}
                       character={character}
-                      showStatus={state.statusFilter !== 'active'}
+                      regionName={state.regionNames[character.regionId ?? '']}
+                      regionNamesStatus={state.regionNamesStatus}
+                      playerLabel={character.ownerId === null ? 'Player not listed' : state.playerLabels[character.ownerId]}
                     />
                   ))}
                 </CardGrid>

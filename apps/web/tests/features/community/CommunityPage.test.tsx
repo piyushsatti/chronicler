@@ -21,8 +21,7 @@ describe('CommunityPage', () => {
     const tabs = within(toolbar).getByRole('tablist', { name: 'Community sections' });
     expect(within(tabs).getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
       'Free this week',
-      'DMs',
-      'Players',
+      'Members',
       'Characters',
     ]);
     const count = within(toolbar).getByText('1 member');
@@ -45,12 +44,14 @@ describe('CommunityPage', () => {
 
   it('switches to the public character roster without authentication', async () => {
     const user = userEvent.setup();
+    server.use(graphql.query('CommunityRegions', () => HttpResponse.json({ data: { regions: [{ id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', name: 'Northmarch' }] } })));
     renderWithProviders(<CommunityPage />);
     await user.click(await screen.findByRole('tab', { name: 'Characters' }));
     expect(await screen.findByRole('link', { name: /Rook Approved/ })).toHaveAttribute(
       'href',
       '/characters/C-101',
     );
+    expect(screen.getByRole('link', { name: /Northmarch/ })).toHaveTextContent('Alex');
   });
 
   it('uses one shared search action and keeps filtered counts beside the tabs', async () => {
@@ -68,15 +69,16 @@ describe('CommunityPage', () => {
     expect(search).toHaveFocus();
     await user.type(search, 'Alex');
     expect(within(toolbar).getByText('1 member')).toBeVisible();
-    await user.click(within(toolbar).getByRole('tab', { name: 'DMs' }));
-    expect(within(toolbar).getByText('0 DMs')).toBeVisible();
+    await user.click(within(toolbar).getByRole('tab', { name: 'Members' }));
+    await user.click(screen.getByRole('button', { name: 'DMs' }));
+    expect(within(toolbar).getByText('0 members')).toBeVisible();
     expect(screen.getByText('No DMs match.')).toBeVisible();
     await user.click(
       within(toolbar).getByRole('button', {
         name: 'Clear and close search the community',
       }),
     );
-    expect(within(toolbar).getByText('1 DM')).toBeVisible();
+    expect(within(toolbar).getByText('1 member')).toBeVisible();
     expect(screen.getByRole('link', { name: /Mira/ })).toBeVisible();
     expect(screen.queryByRole('searchbox', { name: 'Search the community' })).toBeNull();
   });
@@ -107,29 +109,30 @@ describe('CommunityPage', () => {
     renderWithProviders(<CommunityPage />, { route: '/community?tab=dms' });
     await screen.findByRole('link', { name: /Galen/ });
     const toolbar = screen.getByRole('region', { name: 'Filter community' });
-    expect(within(toolbar).getByText('2 DMs')).toBeVisible();
-    const accepting = within(toolbar).getByRole('button', {
+    expect(within(toolbar).getByText('2 members')).toBeVisible();
+    const accepting = screen.getByRole('button', {
       name: 'Accepting players',
     });
     await user.click(accepting);
     expect(accepting).toHaveAttribute('aria-pressed', 'true');
-    expect(within(toolbar).getByText('1 DM')).toBeVisible();
+    expect(within(toolbar).getByText('1 member')).toBeVisible();
     expect(screen.queryByRole('link', { name: /Galen/ })).toBeNull();
     await user.click(accepting);
     expect(accepting).toHaveAttribute('aria-pressed', 'false');
-    expect(within(toolbar).getByText('2 DMs')).toBeVisible();
+    expect(within(toolbar).getByText('2 members')).toBeVisible();
     expect(screen.getByRole('link', { name: /Galen/ })).toBeVisible();
   });
 
-  it('keeps DM and player profile navigation in their tabs', async () => {
+  it('keeps DM and player profile navigation in the Members role filters', async () => {
     const user = userEvent.setup();
     renderWithProviders(<CommunityPage />);
-    await user.click(await screen.findByRole('tab', { name: 'DMs' }));
+    await user.click(await screen.findByRole('tab', { name: 'Members' }));
+    await user.click(screen.getByRole('button', { name: 'DMs' }));
     expect(screen.getByRole('link', { name: /Mira/ })).toHaveAttribute(
       'href',
       '/dms/@mira',
     );
-    await user.click(screen.getByRole('tab', { name: 'Players' }));
+    await user.click(screen.getByRole('button', { name: 'Players' }));
     expect(screen.getByRole('link', { name: /Alex/ })).toHaveAttribute(
       'href',
       '/players/@player1',
@@ -218,26 +221,27 @@ describe('Community hub complete roster', () => {
     renderWithProviders(<CommunityPage />);
     try {
       await waitFor(() => expect(secondPageStarted).toBe(true));
-      expect(screen.queryByRole('tab', { name: 'DMs' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('tab', { name: 'Members' })).not.toBeInTheDocument();
       expect(
         screen.queryByRole('tab', { name: 'Free this week' }),
       ).not.toBeInTheDocument();
     } finally {
       releaseSecondPage?.();
     }
-    expect(await screen.findByRole('tab', { name: 'DMs' })).toBeInTheDocument();
+    expect(await screen.findByRole('tab', { name: 'Members' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Free this week' })).toBeInTheDocument();
     expect(screen.getByRole('listitem', { name: 'Sun: 1' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Community member 100/ })).toHaveAttribute(
       'href',
       '/dms/@last-page-dm',
     );
-    await user.click(screen.getByRole('tab', { name: 'DMs' }));
+    await user.click(screen.getByRole('tab', { name: 'Members' }));
+    await user.click(screen.getByRole('button', { name: 'DMs' }));
     expect(screen.getByRole('link', { name: /Community member 100/ })).toHaveAttribute(
       'href',
       '/dms/@last-page-dm',
     );
-    await user.click(screen.getByRole('tab', { name: 'Players' }));
+    await user.click(screen.getByRole('button', { name: 'Players' }));
     expect(screen.getByRole('link', { name: /Community member 100/ })).toHaveAttribute(
       'href',
       '/players/@last-page-dm',
@@ -271,7 +275,7 @@ describe('Community hub complete roster', () => {
     ).not.toBeInTheDocument();
     failSecondPage = false;
     await user.click(screen.getByRole('button', { name: 'Retry community' }));
-    expect(await screen.findByRole('tab', { name: 'DMs' })).toBeInTheDocument();
+    expect(await screen.findByRole('tab', { name: 'Members' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Free this week' })).toBeInTheDocument();
     expect(screen.getByRole('listitem', { name: 'Sun: 1' })).toBeInTheDocument();
     expect(
@@ -320,26 +324,25 @@ describe('Community hub complete roster', () => {
   it('keeps the active tab in the URL', async () => {
     const user = userEvent.setup();
     renderWithProviders(<CommunityPage />, { route: '/community?tab=players' });
-    expect(await screen.findByRole('tab', { name: 'Players' })).toHaveAttribute(
+    expect(await screen.findByRole('tab', { name: 'Members' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
-    await user.click(screen.getByRole('tab', { name: 'DMs' }));
-    expect(screen.getByRole('tab', { name: 'DMs' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
+    expect(screen.getByRole('button', { name: 'Players' })).toHaveAttribute('aria-pressed', 'true');
+    await user.click(screen.getByRole('button', { name: 'DMs' }));
+    expect(screen.getByRole('button', { name: 'DMs' })).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('tab', { name: 'Members' })).toHaveAttribute('aria-selected', 'true');
   });
 
   it('links the signed-in viewer to /me instead of their public profile', async () => {
     signInProfile();
     const user = userEvent.setup();
     renderWithProviders(<CommunityPage />, { route: '/community?tab=dms' });
-    await screen.findByRole('tab', { name: 'DMs' });
+    await screen.findByRole('tab', { name: 'Members' });
     await waitFor(() =>
       expect(screen.getByRole('link', { name: /Mira/ })).toHaveAttribute('href', '/me'),
     );
-    await user.click(screen.getByRole('tab', { name: 'Players' }));
+    await user.click(screen.getByRole('button', { name: 'Players' }));
     expect(screen.getByRole('link', { name: /Alex/ })).toHaveAttribute(
       'href',
       '/players/@player1',

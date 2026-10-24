@@ -842,7 +842,7 @@ export type CommunityCharactersQueryVariables = Exact<{
 }>;
 
 
-export type CommunityCharactersQuery = { characters: { total: number, items: Array<{ id: string, shortCode: string, name: string, status: string, displayIcon: string | null }> } };
+export type CommunityCharactersQuery = { characters: { total: number, items: Array<{ id: string, shortCode: string, name: string, status: string, displayIcon: string | null, imageUrl: string | null, ownerId: string, regionId: string | null }> } };
 
 export type CommunityDirectoryQueryVariables = Exact<{
   filters?: CommunityDirectoryFiltersInput | null | undefined;
@@ -866,6 +866,14 @@ export type CommunityEntryRelatedQueryVariables = Exact<{
 
 
 export type CommunityEntryRelatedQuery = { documents: { items: Array<{ id: string, slug: string, title: string, kind: string, category: string | null }> } };
+
+export type CommunityRegionsQueryVariables = Exact<{
+  limit: number;
+  offset: number;
+}>;
+
+
+export type CommunityRegionsQuery = { regions: Array<{ id: string, name: string }> };
 
 export type DocumentQueryVariables = Exact<{
   slug: string;

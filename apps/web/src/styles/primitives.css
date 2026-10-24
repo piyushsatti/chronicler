@@ -47,6 +47,12 @@ a.btn {
   color: revert-layer;
 }
 
+/* Foreground and fill must change together when themes switch. */
+.btn,
+.hf2 .btn {
+  transition-property: border-color, transform;
+}
+
 .btn[data-primitive='button']:disabled,
 .btn[data-primitive='button'][aria-busy='true'],
 .btn[data-primitive='button'][aria-disabled='true'] {
@@ -1047,7 +1053,7 @@ textarea.field-input {
 .segmented-track::-webkit-scrollbar { display: none; }
 .segmented-row { position: relative; width: max-content; min-width: 100%; height: var(--segment-highlight-size); }
 .segmented-options { position: relative; display: flex; width: max-content; min-width: 100%; height: 100%; align-items: stretch; }
-.segmented-track:not([data-site-links]) :is(.segmented-row, .segmented-options) {
+.segmented-track :is(.segmented-row, .segmented-options) {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: 1fr;
@@ -1154,6 +1160,8 @@ textarea.field-input {
 .page-toolbar__search .filter-bar__input { min-width: 0; }
 
 [data-width-class='compact'] .page-toolbar { min-height: 112px; flex-wrap: wrap; gap: var(--sp-2); padding: 11px var(--sp-3); }
+[data-width-class='compact'] .page-toolbar:not(:has(.page-toolbar__count, .page-toolbar__quick-filters, .page-toolbar__actions:not(:empty))) { min-height: 64px; }
+[data-width-class='compact'] .page-toolbar:not(:has(.page-toolbar__count, .page-toolbar__quick-filters, .page-toolbar__actions:not(:empty))) .page-toolbar__actions:empty { display: none; }
 [data-width-class='compact'] .page-toolbar__segments { flex: 1 0 100%; }
 [data-width-class='compact'] .page-toolbar__quick-filters { flex: 1 1 0; width: 100%; margin-left: 0; }
 [data-width-class='compact'] .page-toolbar__actions { flex: 0 0 auto; max-width: 100%; margin-left: auto; }

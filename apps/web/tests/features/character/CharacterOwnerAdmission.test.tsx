@@ -23,9 +23,7 @@ describe('Character owner admission', () => {
       { route: '/characters/C-101' },
     );
     await screen.findByRole('heading', { name: 'Lyra Storm' });
-    expect(
-      screen.queryByRole('heading', { name: 'Owner actions' }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: 'Edit' })).not.toBeInTheDocument();
   });
   it('offers mutations when the live member UUID matches the immutable owner', async () => {
     signInCharacter();
@@ -35,9 +33,10 @@ describe('Character owner admission', () => {
       </Routes>,
       { route: '/characters/C-101' },
     );
-    expect(
-      await screen.findByRole('heading', { name: 'Owner actions' }),
-    ).toBeInTheDocument();
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('tab', { name: 'Edit' }));
+    expect(await screen.findByRole('heading', { name: 'Edit character' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Retire character' })).toBeInTheDocument();
   });
   it('keeps the last-good mirror visible after an acknowledged provider failure and reload', async () => {
     signInCharacter();
@@ -80,18 +79,20 @@ describe('Character owner admission', () => {
       { route: '/characters/C-101' },
     );
     expect(await screen.findByText(/D&D Beyond last synced/)).toBeVisible();
-    expect(screen.getByText(/Wizard · Elf/)).toBeVisible();
-    await userEvent
-      .setup()
-      .click(screen.getByRole('button', { name: 'Sync D&D Beyond' }));
+    expect(screen.getByText('Class and level').nextElementSibling).toHaveTextContent('Wizard');
+    expect(screen.getByText('Species').nextElementSibling).toHaveTextContent('Elf');
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('tab', { name: 'Edit' }));
+    expect(screen.getByRole('textbox', { name: 'Description' })).toHaveValue(wire.description);
+    await user.click(await screen.findByRole('button', { name: 'Sync D&D Beyond' }));
     expect(await screen.findByText(/The provider timed out/)).toHaveTextContent(
       'last synchronized data were kept',
     );
+    expect(screen.getByRole('textbox', { name: 'Description' })).toHaveValue(wire.description);
+    await user.click(screen.getByRole('tab', { name: 'Overview' }));
     expect(await screen.findByText(/D&D Beyond last synced/)).toBeVisible();
-    expect(screen.getByText(/Wizard · Elf/)).toBeVisible();
-    expect(screen.getByRole('textbox', { name: 'Description' })).toHaveValue(
-      wire.description,
-    );
+    expect(screen.getByText('Class and level').nextElementSibling).toHaveTextContent('Wizard');
+    expect(screen.getByText('Species').nextElementSibling).toHaveTextContent('Elf');
     await waitFor(() => expect(reads).toBeGreaterThan(1));
   });
 });

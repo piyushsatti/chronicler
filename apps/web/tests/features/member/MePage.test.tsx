@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { graphql, HttpResponse } from 'msw';
@@ -7,6 +7,10 @@ import { server } from '../../../src/mocks/server.js';
 import { signIn } from '../admin/authority-test-utils.js';
 import { renderWithProviders } from '../../test-utils.js';
 
+async function notesHeading(): Promise<HTMLElement> {
+  return screen.findByRole('heading', { level: 2, name: 'Notes' });
+}
+
 describe('MePage', () => {
   it('is the personal hub: identity, account actions, real stats, tabs', async () => {
     signIn(['player', 'dm']);
@@ -14,14 +18,14 @@ describe('MePage', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: 'Ashwin' }),
     ).toBeVisible();
-    expect(screen.getByText('@ashwin')).toBeVisible();
+    expect(screen.queryByText(/@ashwin/)).toBeNull();
     expect(screen.getByRole('link', { name: 'Personalize' })).toHaveAttribute(
       'href',
       '/me/personalize',
     );
     expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute(
       'href',
-      '/settings',
+      '/me/settings',
     );
     expect(screen.getByRole('link', { name: 'DM dashboard' })).toHaveAttribute(
       'href',
@@ -34,39 +38,168 @@ describe('MePage', () => {
     expect(screen.getByRole('button', { name: 'Sign out' })).toBeVisible();
     // The old bounce-only link cards are gone.
     expect(screen.queryByRole('navigation', { name: 'Your account' })).toBeNull();
-    const stats = await screen.findByRole('list', { name: 'Your stats' });
-    expect(stats).toHaveTextContent('Quests played');
+    const stats = await screen.findByLabelText('Your stats');
+    expect(stats).toHaveTextContent('quests played');
     expect(stats).toHaveTextContent('3');
     expect(stats).not.toHaveTextContent('—');
-    expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
-      'Overview',
-      'Characters',
-      'Notes',
+    const tabs = screen.getByRole('navigation', { name: 'Your account sections' });
+    expect(Array.from(tabs.querySelectorAll('a')).map((tab) => tab.textContent)).toEqual([
+      'Overview', 'Characters', 'Notes', 'Personalize', 'Settings',
     ]);
-    expect(screen.getByRole('link', { name: 'Open DM dashboard' })).toBeVisible();
+    expect(await screen.findByRole('link', { name: 'DM dashboard' })).toBeVisible();
   });
 
   it('opens the tab named in the URL and keeps it there', async () => {
     signIn(['player']);
-    renderWithProviders(<MePage />, { route: '/me?tab=notes' });
+    renderWithProviders(<MePage />, { route: '/me/notes' });
     expect(
-      await screen.findByRole('heading', { level: 2, name: 'Private notes' }),
+      await notesHeading(),
     ).toBeVisible();
-    expect(screen.getByRole('tab', { name: 'Notes' })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
+    expect(screen.getAllByRole('heading', { level: 2, name: 'Notes' })).toHaveLength(1);
+    expect(screen.getByRole('link', { name: 'Notes' })).toHaveAttribute('aria-current', 'page');
     expect(screen.queryByRole('link', { name: 'DM dashboard' })).toBeNull();
-    await userEvent.click(screen.getByRole('tab', { name: 'Overview' }));
+    await userEvent.click(screen.getByRole('link', { name: 'Overview' }));
     expect(
-      await screen.findByRole('heading', { level: 2, name: 'Upcoming sign-ups' }),
+      await screen.findByRole('heading', { level: 2, name: 'Nothing here yet' }),
     ).toBeVisible();
   });
 
-  it('says so when there are no upcoming sign-ups', async () => {
+  it('preserves recent activity from member hub reads', async () => {
+    signIn(['player']);
+    server.use(graphql.query('MemberHub', () => HttpResponse.json({ data: {
+      member: { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', joinedAt: '2026-01-05T10:00:00Z', avatarUrl: null },
+      memberActivityStats: { questsPlayed: 1, summariesAuthored: 0, messages: 0, voiceMinutes: 0, longestSessionHours: null, recentSessions: [{ kind: 'The Salt Stair', occurredAt: '2026-10-22T18:00:00Z', amount: 1 }] },
+    } })));
+    renderWithProviders(<MePage />, { route: '/me' });
+    expect(await screen.findByRole('heading', { name: 'Recent activity' })).toBeVisible();
+    expect(screen.getByText('The Salt Stair')).toBeVisible();
+  });
+
+  it('shows DM tables, series and upcoming quests from the shared dashboard query', async () => {
+    signIn(['dm']);
+    server.use(graphql.query('DmDashboard', () => HttpResponse.json({ data: {
+      dmStats: { sessionCount: 2 },
+      questArcs: { total: 1, items: [{ id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', name: 'Harbor tales', createdBy: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', questCount: 2 }] },
+      quests: { total: 1, items: [{ id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc', shortCode: 'Q-91', status: 'open', scheduledAt: '2098-01-01T19:00:00Z', slotsMax: 5, filledCount: 0, briefDocument: { title: 'The next voyage' } }] },
+      documents: { total: 1, items: [{ id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd', slug: 'harbor-guide', title: 'Harbor guide', status: 'published', authorId: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', canEditMetadata: true, canEditBody: true }] },
+    } })));
+    renderWithProviders(<MePage />, { route: '/me' });
+    expect(await screen.findByRole('link', { name: 'Harbor guide' })).toHaveAttribute('href', '/community/dm-table/harbor-guide');
+    expect(screen.getByRole('link', { name: 'Harbor tales' })).toHaveAttribute('href', '/series/aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa');
+    expect(screen.getByRole('link', { name: 'The next voyage' })).toHaveAttribute('href', '/quests/Q-91');
+    expect(screen.getByRole('link', { name: 'DM dashboard' })).toHaveAttribute('href', '/dm');
+  });
+
+  it.each([1, 27])('discovers and counts all %i runnable DM quests after 25 closed quests', async (runnableCount) => {
+    signIn(['dm']);
+    const quests = Array.from({ length: 25 + runnableCount }, (_, index) => ({
+      id: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
+      shortCode: `Q-${index}`,
+      status: index < 25 ? 'closed' : 'open',
+      scheduledAt: '2098-01-01T19:00:00Z',
+      slotsMax: 5,
+      filledCount: 0,
+      briefDocument: { title: index < 25 ? `Closed ${index}` : `Runnable ${index - 24}` },
+    }));
+    const offsets: number[] = [];
+    server.use(graphql.query('DmDashboard', ({ variables }) => {
+      const offset = Number(variables.questOffset);
+      offsets.push(offset);
+      return HttpResponse.json({ data: {
+        dmStats: { sessionCount: 0 },
+        questArcs: { total: 0, items: [] },
+        quests: { total: quests.length, items: quests.slice(offset, offset + Number(variables.questLimit)) },
+        documents: { total: 0, items: [] },
+      } });
+    }));
+    renderWithProviders(<MePage />, { route: '/me' });
+    expect(await screen.findByRole('link', { name: 'Runnable 1' })).toHaveAttribute('href', '/quests/Q-25');
+    const card = screen.getByRole('heading', { name: 'Quests to run' }).parentElement as HTMLElement;
+    expect(within(card).getByText(`${runnableCount} ${runnableCount === 1 ? 'quest' : 'quests'}`)).toBeVisible();
+    expect(screen.queryByText('Closed 0')).toBeNull();
+    expect(offsets).toEqual(runnableCount === 1 ? [0, 25] : [0, 25, 50]);
+  });
+
+  it.each([['player'], ['dm']])('explains a failed member-hub read and retries stats for %s', async (...roles) => {
+    signIn(roles);
+    let hubReads = 0;
+    server.use(graphql.query('MemberHub', () => {
+      hubReads += 1;
+      return hubReads === 1 ? HttpResponse.error() : HttpResponse.json({ data: {
+        member: { id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', joinedAt: '2026-01-05T10:00:00Z', avatarUrl: null },
+        memberActivityStats: { questsPlayed: 7, summariesAuthored: 0, messages: 0, voiceMinutes: 0, longestSessionHours: null, recentSessions: [] },
+      } });
+    }));
+    renderWithProviders(<MePage />, { route: '/me' });
+    const retry = await screen.findByRole('button', { name: 'Retry your stats' });
+    expect(retry.closest('[role="alert"]')).toHaveTextContent(/could|connect|wrong|network|reach/i);
+    expect(screen.queryByLabelText('Your stats')).toBeNull();
+    await userEvent.click(retry);
+    expect(await screen.findByLabelText('Your stats')).toHaveTextContent('7 quests played');
+    expect(screen.queryByRole('button', { name: 'Retry your stats' })).toBeNull();
+    expect(hubReads).toBe(2);
+  });
+
+  it('keeps DM creation actions and owned characters visible when hosted work is empty', async () => {
+    signIn(['dm']);
+    server.use(
+      graphql.query('DmDashboard', () => HttpResponse.json({ data: {
+        dmStats: { sessionCount: 0 },
+        questArcs: { total: 0, items: [] },
+        quests: { total: 0, items: [] },
+        documents: { total: 0, items: [] },
+      } })),
+      graphql.query('MemberRoster', () => HttpResponse.json({ data: {
+        myCharacters: { total: 1, items: [{ id: 'owned', shortCode: 'C-OWN', name: 'Wren Ashdown', status: 'active', imageUrl: null, ddbMirror: null }] },
+      } })),
+      graphql.query('MemberMyPrivateNotes', () => HttpResponse.json({ data: {
+        myPrivateNotes: { body: '## Lighthouse clue\n\n**Keep the keeper’s secret.**', updatedAt: '2026-10-22T09:00:00Z' },
+      } })),
+    );
+    renderWithProviders(<MePage />, { route: '/me' });
+    expect(await screen.findByRole('heading', { name: 'Your tables, series and quests' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'New DM table' })).toHaveAttribute('href', '/editor/dm-table');
+    expect(screen.getByRole('link', { name: 'Create a series' })).toHaveAttribute('href', '/series/new');
+    const character = await screen.findByRole('link', { name: /Wren Ashdown/ });
+    expect(character).toHaveAttribute('href', '/characters/C-OWN');
+    expect(character.querySelector('[data-component="Avatar"]')).toHaveTextContent('WA');
+    expect(screen.getByRole('heading', { name: 'Lighthouse clue' })).toBeVisible();
+    expect(screen.getByText('Keep the keeper’s secret.').tagName).toBe('STRONG');
+    expect(screen.queryByRole('heading', { name: 'Nothing here yet' })).toBeNull();
+  });
+
+  it('redirects legacy /me tab query variants to their matching route', async () => {
+    signIn(['player']);
+    renderWithProviders(<MePage />, { route: '/me?tab=characters' });
+    expect(await screen.findByRole('heading', { name: 'Characters' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Characters' })).toHaveAttribute('aria-current', 'page');
+  });
+
+  it('collapses empty player sections into one dashboard prompt with relevant actions', async () => {
     signIn(['player']);
     renderWithProviders(<MePage />, { route: '/me' });
-    expect(await screen.findByText('No upcoming sign-ups.')).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Nothing here yet' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Find a quest' })).toHaveAttribute('href', '/quests');
+    expect(screen.getByRole('link', { name: 'Create a character' })).toHaveAttribute('href', '/characters?new=1');
+    expect(screen.getByRole('link', { name: 'Add private notes' })).toHaveAttribute('href', '/me/notes');
+    expect(screen.queryByRole('link', { name: 'DM dashboard' })).toBeNull();
+    expect(screen.queryByText('No upcoming sign-ups.')).toBeNull();
+    expect(screen.queryByText('You have no characters yet.')).toBeNull();
+  });
+
+  it('renders an empty sign-up row with its action beside the message', async () => {
+    signIn(['player']);
+    server.use(graphql.query('MemberRoster', () => HttpResponse.json({ data: {
+      myCharacters: { total: 1, items: [{ id: 'c1', shortCode: 'C-1', name: 'Wren Ashdown', status: 'active', imageUrl: null, ddbMirror: null }] },
+    } })));
+    renderWithProviders(<MePage />, { route: '/me' });
+    const section = await screen.findByRole('region', { name: 'Upcoming sign-ups' });
+    const message = await within(section).findByText('No upcoming sign-ups.');
+    const row = message.parentElement as HTMLElement;
+    expect(row.className).toContain('signupEmpty');
+    expect(within(row).getByRole('link', { name: 'Find a quest' })).toHaveAttribute('href', '/quests');
+    expect(section.querySelector('[data-component="EmptyState"]')).toBeNull();
+    expect(screen.getByLabelText('Your stats')).toHaveTextContent('1 character');
   });
 
   it('lists the roster with a create action on the Characters tab', async () => {
@@ -92,11 +225,32 @@ describe('MePage', () => {
         }),
       ),
     );
-    renderWithProviders(<MePage />, { route: '/me?tab=characters' });
+    renderWithProviders(<MePage />, { route: '/me/characters' });
+    await screen.findByRole('heading', { level: 1, name: 'Ashwin' });
+    expect(screen.queryByRole('banner')).toBeNull();
     const card = await screen.findByRole('link', { name: /Wren Ashdown/ });
     expect(card).toHaveAttribute('href', '/characters/C-1');
     expect(card).toHaveTextContent('Rogue 3 · Elf');
+    expect(card.querySelector('h3')?.nextElementSibling).toHaveTextContent('Approved');
+    expect(card.querySelector('[data-component="Avatar"]')).toHaveTextContent('WA');
+    expect(within(screen.getByRole('region', { name: 'Your account sections' })).getByText('1 character')).toBeVisible();
+    expect(screen.getByText('Your roster')).toBeVisible();
+    expect(screen.getByRole('heading', { level: 2, name: 'Characters' })).toBeVisible();
+    expect(screen.queryByRole('heading', { name: '1 character' })).toBeNull();
+    expect(screen.queryByText('The characters linked to your account.')).toBeNull();
     expect(screen.getByRole('link', { name: 'Create a character' })).toBeVisible();
+    expect(screen.getByRole('link', { name: 'Create a character' })).toHaveAttribute('href', '/characters?new=1');
+  });
+
+  it('omits character detail copy when no mirror details are available', async () => {
+    signIn(['player']);
+    server.use(graphql.query('MemberRoster', () => HttpResponse.json({ data: {
+      myCharacters: { total: 1, items: [{ id: 'c2', shortCode: 'C-2', name: 'Moss Willow', status: 'active', imageUrl: null, ddbMirror: null }] },
+    } })));
+    renderWithProviders(<MePage />, { route: '/me/characters' });
+    const card = await screen.findByRole('link', { name: /Moss Willow/ });
+    expect(card.querySelector('.type-caption')).toBeNull();
+    expect(card).not.toHaveTextContent('Character');
   });
 
   it('lists upcoming sign-ups that link to the quest', async () => {

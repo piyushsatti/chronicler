@@ -105,6 +105,7 @@ export function PrivateNotesPanel({
         <SegmentedControl
           aria-label="Notes view"
           size="sm"
+          className={styles.notesControl}
           value={mode}
           onValueChange={setMode}
           options={[
@@ -183,9 +184,12 @@ export function PrivateNotesPanel({
   return (
     <Card as="section" className="stack" pad={4} aria-labelledby={`${fieldId}-heading`}>
       <div className={styles.heading}>
-        <h2 id={`${fieldId}-heading`} className="type-heading">
-          Private notes
-        </h2>
+        <div className={styles.title}>
+          <p className={`type-label ${styles.kicker}`}>Private to you</p>
+          <h2 id={`${fieldId}-heading`} className="type-heading">
+            Notes
+          </h2>
+        </div>
         <p className={`type-caption ${styles.privacy}`}>
           <LockIcon />
           Only you can see these.

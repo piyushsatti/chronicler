@@ -10,15 +10,19 @@ import { Card } from '../../../components/primitives/Card.js';
 import { Avatar } from '../../../components/primitives/Avatar.js';
 import { DetailLayout } from '../../../components/primitives/DetailLayout.js';
 import { PageHeader } from '../../../components/primitives/PageHeader.js';
+import { PageToolbar } from '../../../components/primitives/PageToolbar.js';
+import { StatTile } from '../../../components/primitives/StatTile.js';
+import { canCreateRecord } from '../../../auth/createRules.js';
 import { Button } from '../../../components/primitives/Button.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import { useMe } from '../../../hooks/useMe.js';
+import { useLiveDm } from '../../../hooks/useLiveDm.js';
 import { useMemberProfile } from '../../../hooks/useMemberProfile.js';
 import { useMemberHref } from '../../../hooks/useMemberHref.js';
 import { useUrlParam } from '../../../hooks/useUrlParam.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
-import { clockLabel, handleLabel, isSentinelDate, personLabels, pluralize, roleLabel, statusLabel, weekdayLabel } from '../../../utils/format.js';
+import { clockLabel, isSentinelDate, personLabels, pluralize, roleLabel, statusLabel, weekdayLabel } from '../../../utils/format.js';
 import type { DmTableSessionView } from '../types.js';
 import { ProfileOwnerActions } from '../components/ProfileOwnerActions.js';
 import { useDmTableDetailPage } from '../hooks/useDmTableDetailPage.js';
@@ -71,10 +75,30 @@ function isPastQuest(quest: DmTableSessionView) {
 function DmInformation({
   state,
   canCreate,
+  canCreateQuest,
 }: {
   state: ReturnType<typeof useProfileDmDetails>;
   canCreate: boolean;
+  canCreateQuest: boolean;
 }) {
+  const details = state.details.data;
+  const schedule = state.schedule.data;
+  if (
+    state.details.isSuccess && state.schedule.isSuccess && details && schedule &&
+    details.documents.total === 0 && details.questArcs.total === 0 && schedule.total === 0
+  ) {
+    return canCreate ? (
+      <Card className="stack" pad={4}>
+        <h2 className="type-heading">Tables, series and quests</h2>
+        <p className="type-caption">Nothing here yet.</p>
+        {canCreate ? <div className={styles.chips}>
+          <Link className="btn btn--secondary btn--sm" to="/editor/dm-table">New DM table</Link>
+          <Link className="btn btn--secondary btn--sm" to="/series/new">Create a series</Link>
+          {canCreateQuest ? <Link className="btn btn--secondary btn--sm" to="/quests/new">Post a quest</Link> : null}
+        </div> : null}
+      </Card>
+    ) : <p className="type-caption">Nothing here yet.</p>;
+  }
   return (
     <div className="stack" data-gap="4">
       <Card className="stack" pad={4}>
@@ -87,12 +111,9 @@ function DmInformation({
           ) : null}
         </div>
         {state.details.isError ? (
-          <StatePanel
-            status="error"
-            error={toAppError(state.details.error, 'profile:tables')}
-          />
+          <StatePanel variant="inline" status="error" error={toAppError(state.details.error, 'profile:tables')} />
         ) : state.details.isPending ? (
-          <StatePanel status="loading" />
+          <StatePanel variant="inline" status="loading" />
         ) : state.details.data ? (
           <>
             {state.details.data.documents.items.length ? (
@@ -168,32 +189,29 @@ function DmInformation({
           <h2 className="type-heading">Series</h2>
           {canCreate ? <Link className="btn btn--secondary btn--sm" to="/series/new">Create a series</Link> : null}
         </div>
-        {state.details.isError ? <StatePanel status="error" error={toAppError(state.details.error, 'profile:series')} /> :
-          state.details.isPending ? <StatePanel status="loading" /> :
+        {state.details.isError ? <StatePanel variant="inline" status="error" error={toAppError(state.details.error, 'profile:series')} /> :
+          state.details.isPending ? <StatePanel variant="inline" status="loading" /> :
           state.details.data?.questArcs.items.length ? <CardGrid>{state.details.data.questArcs.items.map((arc) => <Card key={arc.id} variant="clickable" to={`/series/${arc.id}`} pad={4}><h3 className="type-title">{arc.name}</h3><p className="type-caption">{pluralize(arc.questCount, 'quest')}</p></Card>)}</CardGrid> :
           <EmptyState message="No quest series have been shared yet." action={canCreate ? <Link className="type-link" to="/series/new">Create a series</Link> : <Link className="type-link" to="/quests">Browse quests</Link>} />}
       </Card>
       <Card className="stack" pad={4}>
         <h2 className="type-heading">Quests</h2>
         {state.schedule.isError ? (
-          <StatePanel
-            status="error"
-            error={toAppError(state.schedule.error, 'profile:sessions')}
-          />
+          <StatePanel variant="inline" status="error" error={toAppError(state.schedule.error, 'profile:sessions')} />
         ) : state.schedule.isPending ? (
-          <StatePanel status="loading" />
+          <StatePanel variant="inline" status="loading" />
         ) : state.schedule.data ? (
           <>
             {state.schedule.data.items.length ? <>
               <section className="stack" aria-label="Upcoming quests">
                 <h3 className="type-title">Upcoming quests</h3>
-                <Sessions items={state.schedule.data.items.filter((quest) => !isPastQuest(quest))} emptyMessage="No upcoming quests on this page." action={<Link className="type-link" to={canCreate ? '/quests/new' : '/quests'}>{canCreate ? 'Post a quest' : 'Browse quests'}</Link>} />
+                <Sessions items={state.schedule.data.items.filter((quest) => !isPastQuest(quest))} emptyMessage="No upcoming quests on this page." action={<Link className="type-link" to={canCreateQuest ? '/quests/new' : '/quests'}>{canCreateQuest ? 'Post a quest' : 'Browse quests'}</Link>} />
               </section>
               <section className="stack" aria-label="Past quests">
                 <h3 className="type-title">Past quests</h3>
                 <Sessions items={state.schedule.data.items.filter(isPastQuest)} emptyMessage="No past quests on this page." />
               </section>
-            </> : <Sessions items={[]} action={canCreate ? <Link className="type-link" to="/quests/new">Post a quest</Link> : undefined} />}
+            </> : <Sessions items={[]} action={canCreateQuest ? <Link className="type-link" to="/quests/new">Post a quest</Link> : undefined} />}
 
             {state.schedule.data.total > state.schedulePageSize ? (
               <nav className="row" data-wrap="1" aria-label="DM session pages">
@@ -284,154 +302,109 @@ function ProfileView({
   const owner = me.data?.id === profile.member.id;
   const roles = me.data?.roles ?? [];
   const canDm = roles.includes('dm') || roles.includes('admin');
+  const liveDm = useLiveDm(owner && canDm);
+  const canCreateQuest = owner && canCreateRecord('quest', {
+    roles,
+    liveDm: liveDm.status === 'ready' && liveDm.liveDm,
+  });
+  const availabilityStat = profile.availability.length
+    ? [...new Set(profile.availability.map((slot) => weekdayLabel(slot.day, { plural: true })))].join(', ')
+    : 'Not shared';
+  const sessionsRun = role !== 'dm' ? undefined : dmDetails.details.data
+    ? dmDetails.details.data.dmStats?.sessionCount ?? 0
+    : dmDetails.details.isError ? 'Unavailable' : 'Loading';
   const activity = profile.activitySummary;
   const hasActivity =
     activity.messages + activity.reactions + activity.voiceMinutes > 0;
   const name = personLabels([profile.member])[0];
-  const handle = handleLabel(profile.member.handle);
+  const rail = (
+    <Card className="stack" pad={4}>
+      <h2 className="type-heading">Availability</h2>
+      {profile.availability.length ? <p className="type-caption">Weekly times as supplied by this member; their time zone is not shared.</p> : null}
+      {profile.availability.length ? (
+        <ul className={styles.slots}>
+          {profile.availability.map((slot, index) => (
+            <li key={index}>
+              <Chip size="md" tone="neutral">
+                {weekdayLabel(slot.day, { plural: true })}{' '}
+                {clockLabel(slot.startTime)}–{clockLabel(slot.endTime)}
+              </Chip>
+              {slot.note ? <span className="type-caption">{slot.note}</span> : null}
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <EmptyState
+          message={owner ? 'Add your availability from Edit profile.' : `${name} hasn't set their availability.`}
+          action={owner ? <Button variant="secondary" size="sm" onClick={() => setEdit('profile')}>Set availability</Button> : <Link className="type-link" to="/quests">Find a quest</Link>}
+        />
+      )}
+    </Card>
+  );
+  const editor = owner && editing ? (
+    <Card className={styles.owner} pad={4}>
+      <ProfileOwnerActions
+        key={profile.member.id}
+        profile={profile}
+        canAvailability={roles.includes('player') || roles.includes('admin')}
+        canDm={canDm}
+      />
+    </Card>
+  ) : null;
+  const about = (
+    <div className="stack" data-gap="4">
+      {profile.dmProfile || hasActivity ? <Card className="stack" pad={4}>
+        <h2 className="type-heading">About</h2>
+        {profile.dmProfile?.tagline ? (
+          <p className="type-body">{profile.dmProfile.tagline}</p>
+        ) : owner && canDm ? (
+          <EmptyState message="You have not written a bio yet." action={<Button variant="secondary" size="sm" onClick={() => setEdit('profile')}>Edit profile</Button>} />
+        ) : !profile.dmProfile?.philosophy &&
+          !profile.dmProfile?.houseRules &&
+          !hasActivity ? (
+          <EmptyState message={`${name} hasn’t written a bio yet.`} />
+        ) : null}
+        {profile.dmProfile ? <>
+          {profile.dmProfile.philosophy ? <p className="type-narrative">{profile.dmProfile.philosophy}</p> : null}
+          {profile.dmProfile.houseRules ? <>
+            <h3 className="type-title">House rules</h3>
+            <p className="type-narrative">{profile.dmProfile.houseRules}</p>
+          </> : null}
+        </> : null}
+        {hasActivity ? <p className="type-caption">
+          {pluralize(activity.messages, 'message')}, {pluralize(activity.reactions, 'reaction')} and {pluralize(activity.voiceMinutes, 'voice minute')} on Discord
+        </p> : null}
+      </Card> : <EmptyState message="No Discord activity has been recorded yet." action={owner ? <Link className="type-link" to="/quests">Find a quest</Link> : undefined} />}
+      {showDmInformation ? <DmInformation key={profile.member.id} state={dmDetails} canCreate={owner && canDm} canCreateQuest={canCreateQuest} /> : null}
+    </div>
+  );
   return (
     <div className={styles.body} data-el="profile.body">
-      <PageHeader
-        back={{
-          to: role === 'dm' ? '/dms' : '/players',
-          label: role === 'dm' ? 'DMs' : 'Players',
-        }}
-        title={
-          <span className={styles.titleRow}>
-            <span aria-hidden="true">
-              <Avatar
-                name={name}
-                src={profile.member.avatarUrl ?? undefined}
-                size="lg"
-                online={false}
-              />
-            </span>
-            {name}
-          </span>
-        }
-        actions={
-          owner ? (
-            <Button
-              variant="secondary"
-              aria-expanded={editing}
-              onClick={() => setEdit(editing ? '' : 'profile')}
-            >
-              {editing ? 'Close editor' : 'Edit profile'}
-            </Button>
-          ) : null
-        }
-        meta={
-          <>
-            {handle ? <span>{handle}</span> : null}
-            {profile.member.roles
-              .filter(
-                (value) => value === 'dm' || value === 'player' || value === 'admin',
-              )
-              .map((value) => (
-                <Chip key={value} size="sm" tone="line">
-                  {roleLabel(value)}
-                </Chip>
-              ))}
-            {profile.dmProfile && page.member.isDm ? (
-              <Chip
-                size="sm"
-                tone={profile.dmProfile.acceptingPlayers ? 'accent' : 'line'}
-              >
-                {profile.dmProfile.acceptingPlayers
-                  ? 'Accepting players'
-                  : 'Not accepting players'}
-              </Chip>
-            ) : null}
-          </>
-        }
-      />
-      {owner && editing ? (
-        <Card className={styles.owner} pad={4}>
-          <ProfileOwnerActions
-            key={profile.member.id}
-            profile={profile}
-            canAvailability={roles.includes('player') || roles.includes('admin')}
-            canDm={canDm}
-          />
-        </Card>
-      ) : null}
-      <DetailLayout
-        railLabel="Availability"
-        rail={
-          <Card className="stack" pad={4}>
-            <h2 className="type-heading">Availability</h2>
-            {profile.availability.length ? <p className="type-caption">Weekly times as supplied by this member; their time zone is not shared.</p> : null}
-            {profile.availability.length ? (
-              <ul className={styles.slots}>
-                {profile.availability.map((slot, index) => (
-                  <li key={index}>
-                    <Chip size="md" tone="neutral">
-                      {weekdayLabel(slot.day, { plural: true })}{' '}
-                      {clockLabel(slot.startTime)}–{clockLabel(slot.endTime)}
-                    </Chip>
-                    {slot.note ? (
-                      <span className="type-caption">{slot.note}</span>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <EmptyState
-                message={
-                  owner
-                    ? 'Add your availability from Edit profile.'
-                    : `${name} hasn't set their availability.`
-                }
-                action={owner ? <Button variant="secondary" size="sm" onClick={() => setEdit('profile')}>Set availability</Button> : <Link className="type-link" to="/quests">Find a quest</Link>}
-              />
-            )}
-          </Card>
-        }
-      >
-        <ProfileActivity key={profile.member.id} memberId={profile.member.id} owner={owner} sessionsRun={role === 'dm' ? dmDetails.details.data?.dmStats?.sessionCount : undefined} about={
-        <div className="stack" data-gap="4">
-          {profile.dmProfile || hasActivity ? <Card className="stack" pad={4}>
-            <h2 className="type-heading">About</h2>
-            {profile.dmProfile?.tagline ? (
-              <p className="type-body">{profile.dmProfile.tagline}</p>
-            ) : owner && canDm ? (
-              <EmptyState message="You have not written a bio yet." action={<Button variant="secondary" size="sm" onClick={() => setEdit('profile')}>Edit profile</Button>} />
-            ) : !profile.dmProfile?.philosophy &&
-              !profile.dmProfile?.houseRules &&
-              !hasActivity ? (
-              <EmptyState message={`${name} hasn’t written a bio yet.`} />
-            ) : null}
-            {profile.dmProfile ? (
-              <>
-                {profile.dmProfile.philosophy ? (
-                  <p className="type-narrative">{profile.dmProfile.philosophy}</p>
-                ) : null}
-                {profile.dmProfile.houseRules ? (
-                  <>
-                    <h3 className="type-title">House rules</h3>
-                    <p className="type-narrative">{profile.dmProfile.houseRules}</p>
-                  </>
-                ) : null}
-              </>
-            ) : null}
-            {hasActivity ? (
-              <p className="type-caption">
-                {pluralize(activity.messages, 'message')},{' '}
-                {pluralize(activity.reactions, 'reaction')} and{' '}
-                {pluralize(activity.voiceMinutes, 'voice minute')} on Discord
-              </p>
-            ) : null}
-          </Card> : <EmptyState message="No Discord activity has been recorded yet." action={owner ? <Link className="type-link" to="/quests">Find a quest</Link> : undefined} />}
-          {showDmInformation ? (
-            <DmInformation
-              key={profile.member.id}
-              state={dmDetails}
-              canCreate={owner && canDm}
+      <ProfileActivity
+        key={profile.member.id}
+        memberId={profile.member.id}
+        owner={owner}
+        sessionsRun={sessionsRun}
+        availability={availabilityStat}
+        rail={rail}
+        editor={editor}
+        toolbarActions={<PageToolbar.IconAction label={`Back to ${role === 'dm' ? 'DMs' : 'Players'}`} href={role === 'dm' ? '/dms' : '/players'}>←</PageToolbar.IconAction>}
+        about={about}
+        renderHero={(stats) => (
+          <Card className={styles.hero} pad={4}>
+            <PageHeader
+              title={<span className={styles.titleRow}><span aria-hidden="true"><Avatar name={name} src={profile.member.avatarUrl ?? undefined} size="lg" online={false} /></span>{name}</span>}
+              actions={owner ? <Button variant="secondary" aria-expanded={editing} onClick={() => setEdit(editing ? '' : 'profile')}>{editing ? 'Close editor' : 'Edit profile'}</Button> : null}
+              meta={<>
+                {profile.member.roles.filter((value) => value === 'dm' || value === 'player' || value === 'admin').map((value) => <Chip key={value} size="sm" tone="line">{roleLabel(value)}</Chip>)}
+                {profile.dmProfile && page.member.isDm ? <Chip size="sm" tone={profile.dmProfile.acceptingPlayers ? 'accent' : 'line'}>{profile.dmProfile.acceptingPlayers ? 'Accepting players' : 'Not accepting players'}</Chip> : null}
+                {profile.availability.map((slot, index) => <Chip key={`${slot.day}-${slot.startTime}-${index}`} size="sm" tone="neutral">{weekdayLabel(slot.day, { plural: true })} {clockLabel(slot.startTime)}–{clockLabel(slot.endTime)}</Chip>)}
+              </>}
             />
-          ) : null}
-        </div>
-        } />
-      </DetailLayout>
+            <div className={styles.heroStats} aria-label="Profile statistics">{stats.map((stat) => <StatTile key={stat.label} size="sm" label={stat.label} value={stat.value} />)}</div>
+          </Card>
+        )}
+      />
     </div>
   );
 }
@@ -463,9 +436,9 @@ export function DmTableDetailPage() {
   const authorProfile = useMemberProfile(doc?.authorHandle ?? '');
   const author = doc?.authorHandle ? { ...authorProfile.data?.member, handle: doc.authorHandle } : null;
   const authorName = author ? personLabels([author])[0] : null;
-  const back = { to: '/community?tab=dms', label: 'Community' };
+  const back = { to: '/community?tab=members&role=dm', label: 'Community' };
   const backAction = (
-    <Link className="btn" to="/community?tab=dms">
+    <Link className="btn" to="/community?tab=members&role=dm">
       Back to Community
     </Link>
   );
@@ -579,7 +552,7 @@ export function DmTableDetailPage() {
                 <Card as="article" pad={6}>{doc.body ? (
                   <div className="summary-prose"><ContentRenderer body={doc.body} /></div>
                 ) : (
-                  <EmptyState message="This table has no write-up yet." action={doc.canEdit ? <Link className="btn btn--secondary btn--sm" to={`/editor/dm-table/${doc.id}/edit`}>Write about this table</Link> : <Link className="type-link" to="/community?tab=dms">Find another table</Link>} />
+                  <EmptyState message="This table has no write-up yet." action={doc.canEdit ? <Link className="btn btn--secondary btn--sm" to={`/editor/dm-table/${doc.id}/edit`}>Write about this table</Link> : <Link className="type-link" to="/community?tab=members&role=dm">Find another table</Link>} />
                 )}</Card>
               </DetailLayout.Reading>
             </DetailLayout>

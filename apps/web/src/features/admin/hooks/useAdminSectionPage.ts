@@ -73,4 +73,4 @@ export function useAdminTodayPage() {
   };
 }
 
-export { useDmDashboard as useDmDashboardPage } from './useDmDashboard.js';
+export { useDmDashboard as useDmDashboardPage } from '../../../hooks/useDmDashboard.js';

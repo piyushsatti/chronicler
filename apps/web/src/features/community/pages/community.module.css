@@ -40,6 +40,28 @@
   white-space: normal;
 }
 
+.memberRoles,
+.memberFilters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.character {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.characterBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
 .tagline {
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -89,8 +111,4 @@
 
 .loadMore {
   align-self: flex-start;
-}
-
-.toolbar {
-  margin-bottom: var(--sp-5);
 }

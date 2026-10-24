@@ -5,6 +5,10 @@
       "shortCode": "C-101",
       "name": "Rook",
       "status": "active",
+      "ownerId": "22222222-2222-4222-8222-222222222222",
+      "backstoryId": null,
+      "regionId": "eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee",
+      "imageUrl": null,
       "displayIcon": null
     }
   ],

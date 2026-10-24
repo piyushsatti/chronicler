@@ -1,17 +1,17 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { canCreateRecord } from '../../../auth/createRules.js';
-import { useLiveDm } from '../../../hooks/useLiveDm.js';
-import { useMe } from '../../../hooks/useMe.js';
-import { loadDmDashboard } from '../adapters/dmDashboardAdapter.js';
+import { canCreateRecord } from '../auth/createRules.js';
+import { useLiveDm } from './useLiveDm.js';
+import { useMe } from './useMe.js';
+import { loadDmDashboard } from '../features/admin/adapters/dmDashboardAdapter.js';
 import {
   panelState,
   useAdminAuthority,
   useAuthorityFailures,
-} from './useAdminAuthority.js';
-import type { AdminPaginationState } from './useAdminPage.js';
+} from '../features/admin/hooks/useAdminAuthority.js';
+import type { AdminPaginationState } from '../features/admin/hooks/useAdminPage.js';
 
-export function useDmDashboard() {
+export function useDmDashboard(questScope: 'page' | 'all' = 'page') {
   const authority = useAdminAuthority('dm');
   const me = useMe();
   const liveDm = useLiveDm();
@@ -19,10 +19,10 @@ export function useDmDashboard() {
     [tableOffset, setTableOffset] = useState(0);
   const query = useQuery({
     enabled: authority.allowed && me.isSuccess,
-    queryKey: ['dmDashboard', authority.cacheKey, questOffset, tableOffset],
+    queryKey: ['dmDashboard', authority.cacheKey, questOffset, tableOffset, questScope],
     queryFn: ({ signal }) =>
       authority.read(
-        (request) => loadDmDashboard(me.data!.id, questOffset, tableOffset, request),
+        (request) => loadDmDashboard(me.data!.id, questOffset, tableOffset, request, questScope),
         signal,
       ),
   });

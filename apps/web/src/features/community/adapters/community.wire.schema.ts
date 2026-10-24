@@ -21,10 +21,18 @@ export const communityCharactersWireSchema = z.object({
       name: z.string(),
       status: z.string().min(1),
       displayIcon: z.string().nullable(),
+      imageUrl: z.string().nullable(),
+      ownerId: z.string().uuid(),
+      regionId: z.string().uuid().nullable(),
     }),
   ),
   total: z.number().int().nonnegative(),
 });
+
+export const communityRegionsWireSchema = z.array(z.object({
+  id: z.string().uuid(),
+  name: z.string(),
+}));
 
 export const communityDirectoryWireSchema = z.object({
   entries: z.array(communityEntryWireSchema),

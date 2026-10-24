@@ -1,6 +1,7 @@
 import { graphql, http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
-import { fireEvent, screen } from '@testing-library/react';
+import { fireEvent, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
 import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
 import { CharacterPage } from '../../../src/features/character/pages/CharacterPage.js';
@@ -43,15 +44,25 @@ describe('CharacterPage', () => {
       'href',
       'https://www.dndbeyond.com/characters/101',
     );
+    expect(screen.getByRole('tab', { name: 'Overview' })).toBeInTheDocument();
+    expect(screen.getByLabelText('Character stats')).toHaveTextContent('Chronicler XP');
     expect(screen.getByRole('tab', { name: 'Progression' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Quest history' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Connections' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'Summaries' })).toBeInTheDocument();
+    const profile = document.querySelector('[data-el="character.profile"]');
+    const stats = screen.getByLabelText('Character stats');
+    const tabList = screen.getByRole('tablist', { name: 'Character sections' });
+    const overview = screen.getByRole('tabpanel', { name: 'Overview' });
+    expect(profile?.children[0]).toHaveClass('page-header');
+    expect(profile?.children[2]).toBe(stats);
+    expect(profile?.children[3]?.querySelector('[role="tablist"]')).toBe(tabList);
+    expect((tabList.compareDocumentPosition(overview) & Node.DOCUMENT_POSITION_FOLLOWING) > 0).toBe(true);
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('tab', { name: 'Progression' }));
     expect(await screen.findByText('+100 XP')).toBeInTheDocument();
-    const main = screen.getByRole('heading', { name: 'Backstory' })
-      .closest('.detail-layout__main');
-    expect(main).toContainElement(screen.getByRole('tablist', { name: 'Character sections' }));
-    expect(main).toContainElement(screen.getByRole('tabpanel', { name: 'Progression' }));
+    expect(screen.getByRole('tablist', { name: 'Character sections' })).toBeInTheDocument();
+    expect(screen.getByRole('tabpanel', { name: 'Progression' })).toContainElement(screen.getByText('+100 XP'));
   });
 
   it('links the player card and shows real quick facts without repeating the level in header metadata', async () => {
@@ -64,9 +75,11 @@ describe('CharacterPage', () => {
     expect(player).toHaveAttribute('href', '/players/@holt');
     expect(player.querySelector('img')).toHaveAttribute('src', 'https://cdn.discordapp.com/holt.png');
     const meta = document.querySelector('.page-header__meta');
-    expect(meta).toHaveTextContent('Chronicler 8 · Elf');
+    expect(meta).not.toHaveTextContent('Chronicler 8');
     expect(meta).not.toHaveTextContent('Level 8');
-    expect(screen.getByText('Days active').nextElementSibling).toHaveTextContent('39');
+    expect(screen.getByText('Class and level').nextElementSibling).toHaveTextContent('Chronicler 8');
+    expect(screen.getByText('Species').nextElementSibling).toHaveTextContent('Elf');
+    expect(within(screen.getByLabelText('Character stats')).getByText('Days active').nextElementSibling).toHaveTextContent('39');
   });
 
   it('lists quest history by quest title, linked to the quest, not by the character name', async () => {
@@ -78,6 +91,26 @@ describe('CharacterPage', () => {
     const panel = document.querySelector('[data-el="character.historyReady"]');
     expect(panel).not.toHaveTextContent('Lyra Storm');
     expect(panel).toHaveTextContent('3 Jan 2026');
+  });
+
+  it('keeps overview empties compact and opens their existing section tabs', async () => {
+    server.use(
+      graphql.query('ParticipationsByCharacter', () => HttpResponse.json({ data: { participationsByCharacter: { items: [], total: 0 } } })),
+      graphql.query('CoPlayers', () => HttpResponse.json({ data: { coPlayers: { items: [], total: 0 } } })),
+    );
+    const user = userEvent.setup();
+    renderCharacter();
+    expect(await screen.findByText('No quest history recorded.')).toBeInTheDocument();
+    expect(screen.getByText('No co-players recorded.')).toBeInTheDocument();
+    expect(screen.getByText('No quest history recorded.').closest('[data-el="character.overviewFrame"]')).not.toBeNull();
+    expect(document.querySelectorAll('[data-el="character.overviewFrame"] [data-el="character.historyEmpty"] [data-component="Card"]')).toHaveLength(0);
+    await user.click(screen.getByRole('button', { name: 'View quest history' }));
+    expect(screen.getByRole('tab', { name: 'Quest history' })).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByText('No quest history yet.')).toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: 'Overview' }));
+    await user.click(screen.getByRole('button', { name: 'View connections' }));
+    expect(screen.getByRole('tab', { name: 'Connections' })).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByText('No co-players recorded yet.')).toBeInTheDocument();
   });
 
   it('tolerates missing ddbUrl without inventing a link', async () => {
@@ -205,7 +238,7 @@ describe('CharacterPage', () => {
     expect(reads).toEqual([{ regionId: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee' }, null]);
   });
 
-  it('shows a designed empty line when no backstory was chosen', async () => {
+  it('keeps an empty backstory as quiet text without a redundant section heading', async () => {
     server.use(
       graphql.query('Character', () =>
         HttpResponse.json({
@@ -219,8 +252,10 @@ describe('CharacterPage', () => {
       </Routes>,
       { route: '/characters/C-101' },
     );
-    expect(await screen.findByText('No backstory written yet.')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Backstory' })).toBeInTheDocument();
+    const backstoryEmpty = await screen.findByText((_, node) => node?.getAttribute('data-el') === 'character.backstoryEmpty');
+    expect(backstoryEmpty.textContent?.replace(/\s+/g, ' ').trim()).toBe('No backstory written yet. Browse characters');
+    expect(within(backstoryEmpty).getByRole('link', { name: 'Browse characters' })).toHaveAttribute('href', '/characters');
+    expect(screen.queryByRole('heading', { name: 'Backstory' })).not.toBeInTheDocument();
   });
 
   it('says the backstory is no longer listed only after the whole list is read', async () => {
@@ -234,7 +269,9 @@ describe('CharacterPage', () => {
       }),
     );
     renderCharacter();
-    expect(await screen.findByText('No backstory written yet.')).toBeInTheDocument();
+    const backstoryEmpty = await screen.findByText((_, node) => node?.getAttribute('data-el') === 'character.backstoryEmpty');
+    expect(backstoryEmpty.textContent?.replace(/\s+/g, ' ').trim()).toBe('No backstory written yet. Browse characters');
+    expect(within(backstoryEmpty).getByRole('link', { name: 'Browse characters' })).toHaveAttribute('href', '/characters');
     expect(offsets).toEqual([
       [null, 0],
       [null, 100],

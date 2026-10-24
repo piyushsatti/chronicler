@@ -6,6 +6,7 @@ import type { AppError } from '../../../errors/types.js';
 import {
   loadCommunityHub,
   loadCommunityCharacters,
+  loadCommunityRegionNames,
   type CommunityHubView,
 } from '../adapters/communityAdapter.js';
 
@@ -34,15 +35,21 @@ export function useCommunityPage(): PageData<CommunityHubView> {
 
 export function useCommunityCharacters() {
   const [limit, setLimit] = useState(100);
+  const regions = useQuery({
+    queryKey: ['communityRegions'],
+    queryFn: loadCommunityRegionNames,
+    staleTime: 5 * 60 * 1000,
+  });
   const query = useQuery({
     queryKey: ['communityCharacters', limit],
     queryFn: () => loadCommunityCharacters(limit),
   });
-  const hasMore =
-    query.data !== undefined && query.data.items.length < query.data.total;
+  const hasMore = query.data !== undefined && query.data.items.length < query.data.total;
   return {
     ...query,
     error: query.isError ? toAppError(query.error, 'community:characters') : null,
+    regionNames: regions.data ?? {},
+    regionNamesStatus: regions.isError ? 'error' as const : regions.isPending ? 'loading' as const : 'ready' as const,
     hasMore,
     loadMore: () => {
       if (hasMore && !query.isFetching) setLimit((current) => current + 100);

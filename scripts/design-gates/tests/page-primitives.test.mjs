@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { checkIndexPage, scanCss, scanSegments } from '../check-page-primitives.mjs';
+import { checkHeaderEqualWidths, checkHeaderNavigation, checkIndexPage, scanCss, scanSegments } from '../check-page-primitives.mjs';
 
 test('feature CSS cannot redefine shared title typography or primitive dimensions', () => {
   const hits = scanCss('src/features/quest/quest.module.css', `
@@ -65,6 +65,20 @@ test('index page source must render the shared toolbar segmented surface', () =>
     checkIndexPage('index.tsx', '{/* <PageToolbar><PageToolbar.Segments /></PageToolbar> */}<FilterBar />').length,
     2,
   );
+});
+
+test('header source keeps the shared top segmented navigation mounted in SiteChrome', () => {
+  assert.deepEqual(checkHeaderNavigation(`
+    function DestinationLinks() { return <SegmentedNav siteLinksPlacement="top" className="site-chrome__links" />; }
+    export function SiteChrome() { return <header><DestinationLinks /></header>; }
+  `), []);
+  assert.equal(checkHeaderNavigation('<header><nav>Links</nav></header>').length, 3);
+});
+
+test('header links participate in the shared equal-column segment grid', () => {
+  assert.deepEqual(checkHeaderEqualWidths('.segmented-track :is(.segmented-row, .segmented-options) { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }'), []);
+  assert.equal(checkHeaderEqualWidths('.segmented-track:not([data-site-links]) :is(.segmented-row, .segmented-options) { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; }').length, 1);
+  assert.equal(checkHeaderEqualWidths('.segmented-track :is(.segmented-row, .segmented-options) { display: flex; }').length, 1);
 });
 
 test('toolbar checks ignore comments and strings that only mention shared components', () => {

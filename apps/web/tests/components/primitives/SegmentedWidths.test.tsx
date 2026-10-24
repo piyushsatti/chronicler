@@ -53,14 +53,15 @@ describe('segmented intrinsic widths', () => {
     for (const option of options) expect(option.parentElement).toBe(row);
   });
 
-  it('keeps site header links content sized', () => {
+  it('gives site header links the same widest-label width', () => {
     render(<MemoryRouter><SegmentedNav label="Primary" items={items} siteLinksPlacement="top" /></MemoryRouter>);
     const track = screen.getByRole('navigation', { name: 'Primary' });
     const row = track.querySelector('.segmented-row');
     expect(track).toHaveAttribute('data-site-links');
     expect(row).not.toBeNull();
     if (!row) throw new Error('The site header must render its link row');
-    expect(getComputedStyle(row).display).not.toBe('grid');
-    expect(getComputedStyle(row).gridAutoColumns).not.toBe('1fr');
+    expect(getComputedStyle(row).display).toBe('grid');
+    expect(getComputedStyle(row).gridAutoColumns).toBe('1fr');
+    expect(getComputedStyle(row).gridAutoFlow).toBe('column');
   });
 });

@@ -1,4 +1,5 @@
 .root {
+  --type-display-size: var(--page-title-size);
   display: flex;
   flex-direction: column;
   gap: var(--sp-6);
@@ -13,6 +14,7 @@
 }
 
 .profile {
+  --type-display-size: var(--page-title-size);
   display: flex;
   flex-direction: column;
   gap: var(--sp-5);
@@ -62,6 +64,104 @@
   gap: var(--sp-3);
 }
 
+.directoryCard {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.directoryCardBody {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+
+.directoryCardBody h2,
+.directoryCardBody p {
+  margin: 0;
+}
+
+.root :global(.chip).mineFilter {
+  padding-block-end: 2px;
+}
+
+.ownerLine {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--color-text-2);
+  text-decoration: none;
+}
+
+.ownerLineRow {
+  min-height: 1.5rem;
+  margin-top: calc(-1 * var(--sp-4));
+}
+
+.ownerLine strong {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.ownerLine > span:first-of-type { margin-left: var(--sp-1); }
+
+.ownerLine:hover strong {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.statsStrip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--rad);
+  background: var(--color-bg-panel);
+}
+
+.statsStrip > div {
+  display: grid;
+  gap: var(--sp-1);
+  min-width: 0;
+  padding: var(--sp-4) var(--sp-5);
+  border-right: 1px solid var(--color-border);
+}
+
+.statsStrip > div:last-child { border-right: 0; }
+.statsStrip dt { color: var(--color-text-3); font-size: 0.75rem; }
+.statsStrip dd { margin: 0; overflow-wrap: anywhere; font: 600 0.875rem/1.35 var(--font-title); }
+
+.overview {
+  display: grid;
+  gap: var(--sp-4);
+  min-width: 0;
+}
+
+.overviewFrame {
+  min-width: 0;
+}
+
+.overviewTop {
+  display: grid;
+  grid-template-columns: minmax(0, 2.2fr) minmax(var(--rail-width), 1fr);
+  gap: var(--sp-4);
+  align-items: start;
+}
+
+.overviewRelated {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+  gap: var(--sp-5);
+}
+
+.overviewRelated > section > h2,
+.overviewRelated > section > p { margin: 0; }
+
+.tabsEdge { min-width: 0; }
+
 .narrative {
   display: flex;
   flex-direction: column;
@@ -96,6 +196,12 @@
 }
 
 .emptyNote {
+  margin: 0;
+  color: var(--color-text-3);
+  font-size: 0.84375rem;
+}
+
+.quietEmpty {
   margin: 0;
   color: var(--color-text-3);
   font-size: 0.84375rem;
@@ -199,11 +305,10 @@
   background: transparent;
 }
 
-:global([data-width-class='compact']) .filters {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-}
-
-:global([data-width-class='compact']) .filters :global(.filter-bar__search) {
-  grid-column: 1 / -1;
-}
+:global([data-width-class='compact']) .statsStrip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+:global([data-width-class='compact']) .statsStrip > div { padding: var(--sp-3) var(--sp-4); border-bottom: 1px solid var(--color-border); }
+:global([data-width-class='compact']) .statsStrip > div:nth-child(2n) { border-right: 0; }
+:global([data-width-class='compact']) .statsStrip > div:last-child { grid-column: 1 / -1; border-bottom: 0; }
+:global([data-width-class='compact']) .overviewTop,
+:global([data-width-class='compact']) .overviewRelated { grid-template-columns: minmax(0, 1fr); gap: var(--sp-4); }
+:global([data-width-class='compact']) .ownerLineRow { margin-top: calc(-1 * var(--sp-3)); }

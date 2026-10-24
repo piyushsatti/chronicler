@@ -9,6 +9,7 @@ const repoRoot = join(gateDir, '..', '..');
 const webRoot = join(repoRoot, 'apps', 'web');
 const sourceRoot = join(webRoot, 'src');
 const primitiveStyles = 'src/styles/primitives.css';
+const headerSource = 'src/chrome/SiteChrome.tsx';
 const indexPages = [
   'src/features/quest/components/QuestBoardView.tsx',
   'src/features/chronicle/pages/ChroniclesListPage.tsx',
@@ -94,6 +95,47 @@ export function checkIndexPage(relPath, source, requireSegments = true) {
     failures.push(`${relPath}: index page must render ${requireSegments ? 'PageToolbar.Segments' : 'shared segmented controls'}`);
   }
   return failures;
+}
+
+export function checkHeaderNavigation(source) {
+  const tree = sourceTree(headerSource, source);
+  let topSegmentedNav = false;
+  const linksAreDefined = /const\s+topLinks\s*=\s*\(\s*<DestinationLinks\b/.test(source);
+  const directLinksInHeader = /<header\b[\s\S]*?<DestinationLinks\b/.test(source);
+  let headerRendersLinks = false;
+  walkSyntax(tree, (node) => {
+    const element = opening(node);
+    if (!element) return;
+    const tag = element.tagName.getText();
+    if (tag === 'SegmentedNav') {
+      const placement = element.attributes.properties.find((prop) =>
+        ts.isJsxAttribute(prop) && prop.name.getText() === 'siteLinksPlacement',
+      );
+      topSegmentedNav = topSegmentedNav || Boolean(placement && ts.isJsxAttribute(placement) && placement.initializer && ts.isStringLiteral(placement.initializer) && placement.initializer.text === 'top');
+    }
+    if (tag === 'header' && ts.isJsxElement(node)) {
+      headerRendersLinks = node.children.some((child) => /^\s*topLinks\s*$/.test(child.getText()));
+    }
+  });
+  const failures = [];
+  headerRendersLinks = directLinksInHeader || (linksAreDefined && /<header\b[\s\S]*?\{\s*topLinks\s*\}/.test(source));
+  if (!topSegmentedNav) failures.push(`${headerSource}: header navigation must use the shared SegmentedNav top-link surface`);
+  if (!headerRendersLinks) failures.push(`${headerSource}: site header must render its shared destination links`);
+  if (!source.includes('site-chrome__links')) failures.push(`${headerSource}: header navigation must retain the shared site-link styling hook`);
+  return failures;
+}
+
+export function checkHeaderEqualWidths(source) {
+  const clean = stripComments(source);
+  const baseGrid = clean.match(/\.segmented-track\s*:is\(\.segmented-row,\s*\.segmented-options\)\s*\{([^}]*)\}/);
+  if (!baseGrid || /\.segmented-track\s*:\s*not\s*\(\s*\[data-site-links\]/.test(clean)) {
+    return ['src/styles/primitives.css: shared equal-width segment grid must include site header links'];
+  }
+  const declarations = Object.fromEntries([...baseGrid[1].matchAll(/(?:^|;)\s*([\w-]+)\s*:\s*([^;]+)/g)].map(([, key, value]) => [key, value.trim()]));
+  if (declarations.display !== 'grid' || declarations['grid-auto-flow'] !== 'column' || declarations['grid-auto-columns'] !== '1fr') {
+    return ['src/styles/primitives.css: shared segment grid must give header links equal intrinsic columns'];
+  }
+  return [];
 }
 
 export function scanSegments(relPath, source) {
@@ -188,6 +230,11 @@ export function scanSegments(relPath, source) {
 
 export function runChecks() {
   const failures = [];
+  const headerPath = join(sourceRoot, headerSource.replace(/^src\//, ''));
+  if (!existsSync(headerPath)) failures.push(`${headerSource}: required site header source is missing`);
+  else failures.push(...checkHeaderNavigation(readFileSync(headerPath, 'utf8')));
+  const primitivePath = join(webRoot, primitiveStyles);
+  failures.push(...checkHeaderEqualWidths(readFileSync(primitivePath, 'utf8')));
   for (const relPath of toolbarPages) {
     const path = join(webRoot, relPath);
     if (!existsSync(path)) {

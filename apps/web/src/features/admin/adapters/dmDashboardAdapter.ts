@@ -49,6 +49,7 @@ export async function loadDmDashboard(
   questOffset: number,
   tableOffset: number,
   request: AdminReadRequest,
+  questScope: 'page' | 'all' = 'page',
 ) {
   const data = await adminRead<DmDashboardQuery>(
     QUERY,
@@ -57,6 +58,22 @@ export async function loadDmDashboard(
   );
   const parsed = schema.safeParse(data);
   if (!parsed.success) throw toAppError({ failure: 'InvalidWire' }, 'dm:dashboard');
+  const quests = [...parsed.data.quests.items];
+  if (questScope === 'all') {
+    while (quests.length < parsed.data.quests.total) {
+      const next = await adminRead<DmDashboardQuery>(
+        QUERY,
+        { memberId, questLimit: 25, questOffset: quests.length, tableLimit: 25, tableOffset },
+        request,
+      );
+      const page = schema.shape.quests.safeParse(next.quests);
+      if (!page.success || page.data.total !== parsed.data.quests.total || !page.data.items.length)
+        throw toAppError({ failure: 'InvalidWire' }, 'dm:quests');
+      quests.push(...page.data.items);
+    }
+    if (quests.length !== parsed.data.quests.total || new Set(quests.map((quest) => quest.id)).size !== quests.length)
+      throw toAppError({ failure: 'InvalidWire' }, 'dm:quests');
+  }
   const arcs = [...parsed.data.questArcs.items];
   while (arcs.length < parsed.data.questArcs.total) {
     const next = await adminRead<QuestArcsPageQuery>(ARCS, { offset: arcs.length }, request);
@@ -67,5 +84,5 @@ export async function loadDmDashboard(
   }
   if (arcs.length !== parsed.data.questArcs.total || new Set(arcs.map((arc) => arc.id)).size !== arcs.length)
     throw toAppError({ failure: 'InvalidWire' }, 'dm:series');
-  return { ...parsed.data, series: arcs.filter((arc) => arc.createdBy === memberId) };
+  return { ...parsed.data, quests: { ...parsed.data.quests, items: quests }, series: arcs.filter((arc) => arc.createdBy === memberId) };
 }

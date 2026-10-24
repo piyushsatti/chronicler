@@ -6,6 +6,9 @@ query CommunityCharacters($limit: Int!) {
       name
       status
       displayIcon
+      imageUrl
+      ownerId
+      regionId
     }
     total
   }

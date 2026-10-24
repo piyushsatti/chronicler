@@ -1,9 +1,23 @@
 .heading {
   display: flex;
   flex-wrap: wrap;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--sp-2);
+}
+
+.title {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+}
+
+.title > * {
+  margin: 0;
+}
+
+.kicker {
+  color: var(--color-text-2);
 }
 
 .privacy {
@@ -42,6 +56,10 @@
   padding: var(--sp-4);
   border: 1px solid var(--color-border);
   border-radius: var(--rad-sm);
+}
+
+.notesControl :global(.segmented-option) {
+  padding-block-end: 0;
 }
 
 .footer {

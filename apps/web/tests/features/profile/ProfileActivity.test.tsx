@@ -11,15 +11,15 @@ const memberId = '11111111-1111-4111-8111-111111111111';
 const questId = 'dddddddd-dddd-4ddd-8ddd-dddddddddddd';
 
 describe('Public profile activity', () => {
-  it('shows returned counts, a character card grid, deduplicated quest history and authored writings', async () => {
+  it('shows returned hero counts, a character card grid, deduplicated quest history and authored writings', async () => {
     server.use(
       graphql.query('CharacterDirectory', () => HttpResponse.json({ data: { characters: { items: [character, { ...character, id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', shortCode: 'other', name: 'Other hero' }], total: 2 } } })),
       graphql.query('ProfileActivity', () => HttpResponse.json({ data: { memberActivityStats: { questsPlayed: 7, summariesAuthored: 1 }, documents: { total: 1, items: [{ id: questId, slug: 'salt-stair', title: 'The salt stair journal', publishedAt: '2026-02-01T12:00:00Z' }] } } })),
     );
     const user = userEvent.setup();
-    renderWithProviders(<ProfileActivity memberId={memberId} owner={false} about={<p>About this player</p>} />);
-    expect(await screen.findByText('Quests played')).toBeVisible();
-    expect(screen.getByText('Quests played').closest('[data-component="StatTile"]')).toHaveTextContent('7');
+    renderWithProviders(<ProfileActivity memberId={memberId} owner={false} about={<p>About this player</p>} renderHero={(stats) => <div aria-label="Profile statistics">{stats.map((stat) => <span key={stat.label}>{stat.label} {stat.value}</span>)}</div>} />);
+    expect(await screen.findByText('Quests played 7')).toBeVisible();
+    expect(screen.getByText('Characters 2')).toBeVisible();
     await user.click(screen.getByRole('tab', { name: 'Characters' }));
     expect(await screen.findByRole('link', { name: /Lyra Storm/ })).toHaveAttribute('href', '/characters/C-101');
     expect(screen.getByRole('tabpanel', { name: 'Characters' }).querySelector('[aria-label="Characters"]')).toHaveAttribute('data-component', 'CardGrid');
@@ -28,6 +28,16 @@ describe('Public profile activity', () => {
     expect(screen.getAllByRole('link', { name: 'The Salt Stair' })).toHaveLength(1);
     await user.click(screen.getByRole('tab', { name: 'Writings' }));
     expect(await screen.findByRole('link', { name: /The salt stair journal/ })).toHaveAttribute('href', '/summaries/salt-stair');
+  });
+
+  it('shows unavailable count values after failed reads instead of reporting zero', async () => {
+    server.use(
+      graphql.query('CharacterDirectory', () => HttpResponse.json({ errors: [{ message: 'unavailable', extensions: { code: 'INTERNAL' } }] })),
+      graphql.query('ProfileActivity', () => HttpResponse.json({ errors: [{ message: 'unavailable', extensions: { code: 'INTERNAL' } }] })),
+    );
+    renderWithProviders(<ProfileActivity memberId={memberId} owner={false} about={<p>About</p>} renderHero={(stats) => <div aria-label="Profile statistics">{stats.map((stat) => <span key={stat.label}>{stat.label} {stat.value}</span>)}</div>} />);
+    expect(await screen.findByText('Characters Unavailable')).toBeVisible();
+    expect(await screen.findByText('Quests played Unavailable')).toBeVisible();
   });
 
   it.each([false, true])('uses honest empty tabs with owner actions only when owner=%s', async (owner) => {

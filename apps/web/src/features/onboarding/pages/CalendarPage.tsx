@@ -101,7 +101,7 @@ export function CalendarPage(): React.JSX.Element {
           <div className={`stack ${styles.wrap}`} data-gap="5">
             <p className="type-body">
               Quests by date, set against the campaign calendar. Times follow your{' '}
-              <Link to="/settings">time zone setting</Link>.
+              <Link to="/me/settings">time zone setting</Link>.
             </p>
             <CalendarFilters
               key={state.q}

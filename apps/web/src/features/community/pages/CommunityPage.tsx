@@ -25,9 +25,13 @@ import {
   pluralize,
   weekdayList,
 } from '../../../utils/format.js';
+import { isCharacterImageUrl } from '../../../utils/characterImageUrl.js';
+import type { CommunityCharacterView } from '../adapters/communityAdapter.js';
 import styles from './community.module.css';
 
-const TAB_IDS = ['muster', 'dms', 'players', 'characters'] as const;
+const TAB_IDS = ['muster', 'members', 'characters'] as const;
+const ROLE_FILTERS = ['everyone', 'player', 'dm'] as const;
+type RoleFilter = (typeof ROLE_FILTERS)[number];
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const PAGE_SIZE = 12;
@@ -78,11 +82,11 @@ function MemberList({
             <div className={styles.memberBody}>
               <div className={styles.memberHead}>
                 <span className="type-title">{labelFor(member)}</span>
-                {member.isDm && member.acceptingPlayers ? (
-                  <Chip size="sm" tone="accent">
-                    Accepting
-                  </Chip>
-                ) : null}
+                <div className={styles.memberRoles}>
+                  {member.isDm ? <Chip size="sm" tone="line">DM</Chip> : null}
+                  {member.roles.includes('player') || !member.isDm ? <Chip size="sm" tone="line">Player</Chip> : null}
+                  {member.isDm && member.acceptingPlayers ? <Chip size="sm" tone="accent">Accepting players</Chip> : null}
+                </div>
               </div>
               {member.availableDays.length ? (
                 <span className="type-caption">
@@ -111,23 +115,71 @@ function MemberList({
   );
 }
 
+function CommunityCharacterCard({
+  character,
+  ownerName,
+  regionName,
+  regionNamesStatus,
+}: {
+  character: CommunityCharacterView;
+  ownerName: string;
+  regionName?: string;
+  regionNamesStatus: 'loading' | 'ready' | 'error';
+}): React.JSX.Element {
+  const initials = character.name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join('');
+  const region = character.regionId === null
+    ? 'No region assigned'
+    : regionName ?? (regionNamesStatus === 'loading' ? 'Loading region…' : regionNamesStatus === 'error' ? 'Region unavailable' : 'Region not listed');
+  return (
+    <Card variant="clickable" to={`/characters/${character.shortCode}`} className={styles.character} pad={4}>
+      <Avatar name={initials || '?'} src={character.imageUrl && isCharacterImageUrl(character.imageUrl) ? character.imageUrl : undefined} size="md" />
+      <div className={styles.characterBody}>
+        <h2 className="type-title">{character.name}</h2>
+        <p className="type-caption">{characterStatusLabel(character.status)} · {region}</p>
+        <p className="type-caption">{ownerName}</p>
+      </div>
+    </Card>
+  );
+}
+
 export function CommunityPage(): React.JSX.Element {
   const page = useCommunityPage();
   const { addToast } = useToast();
   const characters = useCommunityCharacters();
   const [params, setParams] = useSearchParams();
   const requestedTab = params.get('tab');
-  const tab = TAB_IDS.find((id) => id === requestedTab) ?? 'muster';
+  const legacyRole: RoleFilter | undefined = requestedTab === 'dms'
+    ? 'dm'
+    : requestedTab === 'players'
+      ? 'player'
+      : undefined;
+  const tab = TAB_IDS.includes(requestedTab as (typeof TAB_IDS)[number])
+    ? requestedTab as (typeof TAB_IDS)[number]
+    : legacyRole ? 'members' : 'muster';
+  const requestedRole = params.get('role');
+  const roleFilter: RoleFilter = ROLE_FILTERS.includes(requestedRole as RoleFilter)
+    ? requestedRole as RoleFilter
+    : legacyRole ?? 'everyone';
   const selectTab = (id: string): void => {
     setParams(
       (prev) => {
         const next = new URLSearchParams(prev);
         if (id === 'muster') next.delete('tab');
         else next.set('tab', id);
+        if (id !== 'members' && id !== 'muster') next.delete('role');
         return next;
       },
       { replace: true },
     );
+  };
+  const selectRole = (role: RoleFilter): void => {
+    setParams((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('tab', 'members');
+      if (role === 'everyone') next.delete('role');
+      else next.set('role', role);
+      return next;
+    }, { replace: true });
   };
   const [query, setQuery] = useUrlParam('q');
   const [acceptingParam, setAcceptingParam] = useUrlParam('accepting');
@@ -140,22 +192,23 @@ export function CommunityPage(): React.JSX.Element {
     member.handle.toLocaleLowerCase().includes(needle);
   const hubAll =
     page.status === 'ready' ? page.view : { dms: [], players: [], memberCount: 0 };
-  const hub = {
-    ...hubAll,
-    dms: hubAll.dms.filter(
-      (member) => matches(member) && (!accepting || member.acceptingPlayers),
-    ),
-    players: hubAll.players.filter(matches),
-  };
-  const members = [
+  const allMembers = [
     ...new Map(
-      [...hub.dms, ...hub.players].map((entry) => [entry.memberId, entry]),
+      [...hubAll.dms, ...hubAll.players].map((entry) => [entry.memberId, entry]),
     ).values(),
   ];
+  const members = allMembers.filter((member) => {
+    const hasRole = roleFilter === 'everyone'
+      || (roleFilter === 'dm' && member.isDm)
+      || (roleFilter === 'player' && (!member.isDm || member.roles.includes('player')));
+    return hasRole && matches(member) && (roleFilter !== 'dm' || !accepting || member.acceptingPlayers);
+  });
+  const searchedMembers = allMembers.filter(matches);
+  const labelForMember = memberLabeler(allMembers);
   const byDay = new Map(
     DAYS.map((day) => [
       day,
-      members.filter((member) =>
+      searchedMembers.filter((member) =>
         member.availableDays.some(
           (value) => value.slice(0, 3).toLocaleLowerCase() === day.toLocaleLowerCase(),
         ),
@@ -165,12 +218,11 @@ export function CommunityPage(): React.JSX.Element {
   const visibleCharacters = (characters.data?.items ?? []).filter(
     (character) => !needle || character.name.toLocaleLowerCase().includes(needle),
   );
-  const available = members.filter((member) => member.availableDays.length > 0);
+  const available = searchedMembers.filter((member) => member.availableDays.length > 0);
 
   const counts = {
     muster: pluralize(available.length, 'member'),
-    dms: pluralize(hub.dms.length, 'DM'),
-    players: pluralize(hub.players.length, 'player'),
+    members: pluralize(members.length, 'member'),
     characters:
       characters.data && !characters.isError
         ? pluralize(visibleCharacters.length, 'character')
@@ -202,36 +254,24 @@ export function CommunityPage(): React.JSX.Element {
           ) : page.status === 'loading' ? (
             <StatePanel status="loading" />
           ) : (
-            <Tabs
+          <Tabs
               aria-label="Community sections"
               value={tab}
               onValueChange={selectTab}
               renderTrack={(track) => (
-                <div className={styles.toolbar}>
-                  <PageToolbar
-                    label="Filter community"
-                    segments={track}
-                    count={counts[tab]}
-                    quickFilters={
-                      tab === 'dms' ? (
-                        <Chip
-                          selected={accepting}
-                          onClick={() => setAccepting(!accepting)}
-                        >
-                          Accepting players
-                        </Chip>
-                      ) : undefined
-                    }
-                    actions={
-                      <PageToolbar.Search
-                        label="Search the community"
-                        placeholder="Search by name"
-                        value={query}
-                        onValueChange={setQuery}
-                      />
-                    }
-                  />
-                </div>
+                <PageToolbar
+                  label="Filter community"
+                  segments={track}
+                  count={counts[tab]}
+                  actions={
+                    <PageToolbar.Search
+                      label="Search the community"
+                      placeholder="Search by name"
+                      value={query}
+                      onValueChange={setQuery}
+                    />
+                  }
+                />
               )}
               items={[
                 {
@@ -281,28 +321,20 @@ export function CommunityPage(): React.JSX.Element {
                   ),
                 },
                 {
-                  id: 'dms',
-                  label: 'DMs',
+                  id: 'members',
+                  label: 'Members',
                   panel: (
                     <div className="stack" data-gap="5">
+                      <div className={styles.memberFilters} role="group" aria-label="Filter members by role">
+                        {ROLE_FILTERS.map((filter) => <Chip key={filter} selected={roleFilter === filter} onClick={() => selectRole(filter)}>
+                          {filter === 'everyone' ? 'Everyone' : filter === 'player' ? 'Players' : 'DMs'}
+                        </Chip>)}
+                        {roleFilter === 'dm' ? <Chip selected={accepting} onClick={() => setAccepting(!accepting)}>Accepting players</Chip> : null}
+                      </div>
                       <MemberList
-                        members={hub.dms}
-                        empty="No DMs match."
-                        profileBase="/dms"
-                        action={clearSearch}
-                      />
-                    </div>
-                  ),
-                },
-                {
-                  id: 'players',
-                  label: 'Players',
-                  panel: (
-                    <div className="stack" data-gap="5">
-                      <MemberList
-                        members={hub.players}
-                        empty="No players match."
-                        profileBase="/players"
+                        members={members}
+                        empty={roleFilter === 'dm' ? 'No DMs match.' : roleFilter === 'player' ? 'No players match.' : 'No members match.'}
+                        profileBase={roleFilter === 'dm' ? '/dms' : roleFilter === 'player' ? '/players' : undefined}
                         action={clearSearch}
                       />
                     </div>
@@ -326,20 +358,19 @@ export function CommunityPage(): React.JSX.Element {
                         />
                       ) : (
                         <CardGrid gap={3}>
-                          {visibleCharacters.map((character) => (
-                            <Card
+                          {visibleCharacters.map((character) => {
+                            const owner = character.ownerId ? allMembers.find((member) => member.memberId === character.ownerId) : undefined;
+                            const ownerName = character.ownerId === null
+                              ? 'Player not listed'
+                              : owner ? labelForMember(owner) : 'Player profile unavailable';
+                            return <CommunityCharacterCard
                               key={character.id}
-                              variant="clickable"
-                              to={`/characters/${character.shortCode}`}
-                              className="stack"
-                              pad={4}
-                            >
-                              <span className="type-title">{character.name}</span>
-                              <span className="type-caption">
-                                {characterStatusLabel(character.status)}
-                              </span>
-                            </Card>
-                          ))}
+                              character={character}
+                              ownerName={ownerName}
+                              regionName={characters.regionNames[character.regionId ?? '']}
+                              regionNamesStatus={characters.regionNamesStatus}
+                            />;
+                          })}
                         </CardGrid>
                       )}
                       {characters.hasMore ? (

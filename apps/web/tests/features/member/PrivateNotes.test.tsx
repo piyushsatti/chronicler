@@ -3,6 +3,8 @@ import { graphql, HttpResponse } from 'msw';
 import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MePage } from '../../../src/features/member/pages/MePage.js';
+import { routes as memberRoutes } from '../../../src/features/member/feature.js';
+import { Route, Routes } from 'react-router-dom';
 import {
   parsePrivateNotes,
   privateNotesLength,
@@ -24,9 +26,9 @@ function notesQuery(payload: unknown) {
 async function notesSection() {
   const heading = await screen.findByRole('heading', {
     level: 2,
-    name: 'Private notes',
+    name: 'Notes',
   });
-  return heading.closest('section') as HTMLElement;
+  return heading.closest('section[data-component="Card"]') as HTMLElement;
 }
 
 describe('parsePrivateNotes', () => {
@@ -68,8 +70,9 @@ describe('Private notes on /me', () => {
         });
       }),
     );
-    renderWithProviders(<MePage />, { route: '/me?tab=notes' });
+    renderWithProviders(<MePage />, { route: '/me/notes' });
     const section = await notesSection();
+    expect(within(section).getByText('Private to you')).toBeVisible();
     expect(within(section).getByText('Only you can see these.')).toBeVisible();
     expect(await within(section).findByText('No notes yet.')).toBeVisible();
 
@@ -94,21 +97,38 @@ describe('Private notes on /me', () => {
   it('keeps an unsaved draft when the member switches tabs and back', async () => {
     signIn(['player']);
     server.use(notesQuery(good));
-    renderWithProviders(<MePage />, { route: '/me?tab=notes' });
+    renderWithProviders(<MePage />, { route: '/me/notes' });
     const section = await notesSection();
     const box = await within(section).findByLabelText('Notes (Markdown)');
     await userEvent.type(box, ' extra line');
-    await userEvent.click(screen.getByRole('tab', { name: 'Overview' }));
-    await userEvent.click(screen.getByRole('tab', { name: 'Notes' }));
+    await userEvent.click(screen.getByRole('link', { name: 'Overview' }));
+    await userEvent.click(screen.getByRole('link', { name: 'Notes' }));
     const again = await within(await notesSection()).findByLabelText('Notes (Markdown)');
     expect(again).toHaveValue(`${good.body} extra line`);
     expect(screen.getByText('Unsaved changes.')).toBeVisible();
   });
 
+  it('keeps the unsaved draft across the real account route elements', async () => {
+    signIn(['player']);
+    server.use(notesQuery(good));
+    const routes = memberRoutes.filter((route) => ['/me', '/me/characters', '/me/notes'].includes(route.path));
+    renderWithProviders(
+      <Routes>{routes.map((route) => <Route key={route.path} path={route.path} element={route.element} />)}</Routes>,
+      { route: '/me/notes' },
+    );
+    const section = await notesSection();
+    const box = await within(section).findByLabelText('Notes (Markdown)');
+    await userEvent.type(box, ' across routes');
+    await userEvent.click(screen.getByRole('link', { name: 'Characters' }));
+    expect(await screen.findByRole('heading', { name: 'Characters' })).toBeVisible();
+    await userEvent.click(screen.getByRole('link', { name: 'Notes' }));
+    expect(await within(await notesSection()).findByLabelText('Notes (Markdown)')).toHaveValue(`${good.body} across routes`);
+  });
+
   it('loads saved notes, previews Markdown and blocks saving over the limit', async () => {
     signIn(['player']);
     server.use(notesQuery(good));
-    renderWithProviders(<MePage />, { route: '/me?tab=notes' });
+    renderWithProviders(<MePage />, { route: '/me/notes' });
     const section = await notesSection();
     const box = await within(section).findByLabelText('Notes (Markdown)');
     expect(box).toHaveValue(good.body);
@@ -135,7 +155,7 @@ describe('Private notes on /me', () => {
         }),
       ),
     );
-    renderWithProviders(<MePage />, { route: '/me?tab=notes' });
+    renderWithProviders(<MePage />, { route: '/me/notes' });
     const section = await notesSection();
     await userEvent.click(
       await within(section).findByRole('button', { name: 'Start writing' }),
@@ -163,7 +183,7 @@ describe('Private notes on /me', () => {
           : HttpResponse.json({ data: { myPrivateNotes: good } });
       }),
     );
-    renderWithProviders(<MePage />, { route: '/me?tab=notes' });
+    renderWithProviders(<MePage />, { route: '/me/notes' });
     const section = await notesSection();
     expect(
       within(section).getAllByLabelText('Loading private notes').length,
@@ -200,7 +220,7 @@ describe('Private notes on /me', () => {
         }),
       ),
     );
-    renderWithProviders(<MePage />, { route: '/me?tab=notes' });
+    renderWithProviders(<MePage />, { route: '/me/notes' });
     const section = await notesSection();
     expect(await within(section).findByRole('alert')).toHaveTextContent(
       'You don’t have access to this.',

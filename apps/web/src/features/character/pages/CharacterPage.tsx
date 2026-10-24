@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import type { PageDeclaration } from '@pi/react-imposition';
 import { PageHost, type PageRegionRenderers } from '@pi/react-imposition/react';
 import { Link, useParams } from 'react-router-dom';
@@ -11,7 +12,6 @@ import {
 } from '../../../components/foundation/StatusBadge.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { Chip } from '../../../components/primitives/Chip.js';
-import { DetailLayout } from '../../../components/primitives/DetailLayout.js';
 import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { Card } from '../../../components/primitives/Card.js';
 import { Avatar } from '../../../components/primitives/Avatar.js';
@@ -80,6 +80,11 @@ function BackstorySection({
   regionId: string | null;
 }): React.JSX.Element {
   const backstory = useCharacterBackstory(backstoryId, regionId);
+  if (backstory.status === 'none' || backstory.status === 'missing') {
+    return <p className={styles.quietEmpty} data-el="character.backstoryEmpty">
+      No backstory written yet. <Link className="type-link" to="/characters">Browse characters</Link>
+    </p>;
+  }
   let body: React.JSX.Element;
   if (backstory.status === 'error') {
     body = (
@@ -104,11 +109,7 @@ function BackstorySection({
       </>
     );
   } else {
-    body = (
-      <div data-el="character.backstoryEmpty">
-        <EmptyState className={styles.backstoryEmpty} message="No backstory written yet." action={<Link className="type-link" to="/characters">Browse characters</Link>} />
-      </div>
-    );
+    body = <StatePanel variant="inline" status="loading" />;
   }
   return (
     <section className={styles.narrative} aria-labelledby="backstory-heading">
@@ -163,7 +164,7 @@ function ProgressionPanel({ characterId }: { characterId: string }): React.JSX.E
   );
 }
 
-function HistoryPanel({ characterId }: { characterId: string }): React.JSX.Element {
+function HistoryPanel({ characterId, limit, onOpenTab }: { characterId: string; limit?: number; onOpenTab?: () => void }): React.JSX.Element {
   const history = useCharacterHistory(characterId);
   const { formatDate } = useDateFormatter();
   if (history.status === 'error') {
@@ -179,6 +180,11 @@ function HistoryPanel({ characterId }: { characterId: string }): React.JSX.Eleme
   if (history.status === 'loading')
     return <StatePanel variant="inline" status="loading" />;
   if (history.status === 'empty') {
+    if (limit !== undefined && onOpenTab) {
+      return <p className={styles.quietEmpty} data-el="character.historyEmpty">
+        No quest history recorded. <button className="type-link" type="button" onClick={onOpenTab}>View quest history</button>
+      </p>;
+    }
     return (
       <div data-el="character.historyEmpty">
         <EmptyState message="No quest history yet." action={<Link className="type-link" to="/quests">Browse quests</Link>} />
@@ -187,7 +193,7 @@ function HistoryPanel({ characterId }: { characterId: string }): React.JSX.Eleme
   }
   return (
     <ul className={styles.tabList} data-el="character.historyReady">
-      {history.items.map((row) => (
+      {history.items.slice(0, limit).map((row) => (
         <li key={row.key} className={styles.tabRow}>
           {row.href ? (
             <Link className="type-title" to={row.href}>
@@ -210,7 +216,7 @@ function HistoryPanel({ characterId }: { characterId: string }): React.JSX.Eleme
   );
 }
 
-function ConnectionsPanel({ characterId }: { characterId: string }): React.JSX.Element {
+function ConnectionsPanel({ characterId, onOpenTab }: { characterId: string; onOpenTab?: () => void }): React.JSX.Element {
   const connections = useCharacterConnections(characterId);
   if (connections.status === 'error') {
     return (
@@ -226,6 +232,11 @@ function ConnectionsPanel({ characterId }: { characterId: string }): React.JSX.E
     return <StatePanel variant="inline" status="loading" />;
   }
   if (connections.status === 'empty') {
+    if (onOpenTab) {
+      return <p className={styles.quietEmpty} data-el="character.connectionsEmpty">
+        No co-players recorded. <button className="type-link" type="button" onClick={onOpenTab}>View connections</button>
+      </p>;
+    }
     return (
       <div data-el="character.connectionsEmpty">
         <EmptyState message="No co-players recorded yet." action={<Link className="type-link" to="/players">Meet the players</Link>} />
@@ -278,38 +289,107 @@ function SummariesPanel({ characterId }: { characterId: string }): React.JSX.Ele
   );
 }
 
-function CharacterOwnerCard({ ownerId }: { ownerId: string | null }) {
+function CharacterOwnerLine({ ownerId }: { ownerId: string | null }): React.JSX.Element {
   const owner = useCharacterOwner(ownerId);
   const memberHref = useMemberHref();
+  if (!ownerId) return <span className="type-caption">Player not listed</span>;
+  if (owner.isError) return <StatePanel variant="inline" status="error" error={toAppError(owner.error, 'character:owner')} onRetry={owner.retry} />;
+  if (!owner.data) return <span className="type-caption">{owner.isSuccess ? 'Player profile unavailable' : 'Loading player…'}</span>;
+  return <Link className={styles.ownerLine} to={memberHref(owner.data, 'player')}>
+    <Avatar name={personName(owner.data)} src={owner.data.avatarUrl ?? undefined} size="sm" />
+    <span>Played by</span><strong>{personLabels([owner.data])[0]}</strong>
+  </Link>;
+}
+
+function CharacterStats({ character }: { character: CharacterViewModel }): React.JSX.Element {
+  const mirror = character.ddbMirror;
+  const stats: [string, string][] = [
+    ['Class and level', mirror?.classes || (mirror?.level != null ? `Level ${mirror.level}` : 'Not synced')],
+    ['Species', mirror?.species ?? 'Not synced'],
+    ['Chronicler XP', `${character.pcxp ?? 0} PCXP`],
+    ['Days active', character.daysActive == null ? 'Not recorded' : String(character.daysActive)],
+    ['Region', character.regionName ?? 'Not assigned'],
+  ];
+  return <dl className={styles.statsStrip} aria-label="Character stats">
+    {stats.map(([label, value]) => <div key={label}><dt>{label}</dt><dd>{value}</dd></div>)}
+  </dl>;
+}
+
+function CharacterQuickFacts({
+  character,
+  timeZone,
+  safeDdb,
+}: {
+  character: CharacterViewModel;
+  timeZone: string | null;
+  safeDdb: string | null;
+}): React.JSX.Element {
+  const mirror = character.ddbMirror;
   return <Card className="stack" pad={5}>
-    <h2 className="type-heading">Played by</h2>
-    {!ownerId || (owner.isSuccess && !owner.data) ? <EmptyState message="The player profile is not available." action={<Link className="type-link" to="/players">Browse players</Link>} /> :
-      owner.isError ? <StatePanel variant="inline" status="error" error={toAppError(owner.error, 'character:owner')} onRetry={owner.retry} /> :
-      !owner.data ? <StatePanel variant="inline" status="loading" /> :
-      <Link className={styles.cardRow} to={memberHref(owner.data, 'player')}>
-        <Avatar name={personName(owner.data)} src={owner.data.avatarUrl ?? undefined} size="md" />
-        <span className="type-title">{personLabels([owner.data])[0]}</span>
-      </Link>}
+    <h2 className="type-heading">Quick facts</h2>
+    <dl className={styles.facts}>
+      <dt>Days active</dt><dd>{character.daysActive ?? 'Not recorded'}</dd>
+      <dt>Region</dt><dd>{character.regionName ?? 'Not assigned'}</dd>
+      <dt>Chronicler XP</dt><dd>{character.pcxp ?? 0} PCXP</dd>
+      {mirror?.level != null ? <><dt>Level</dt><dd>{mirror.level}</dd></> : null}
+      {mirror?.xp != null ? <><dt>D&amp;D Beyond XP</dt><dd>{mirror.xp} XP</dd></> : null}
+    </dl>
+    {mirror ? <p className="type-caption">{mirror.syncedAt
+      ? `D&D Beyond last synced ${formatInstant(mirror.syncedAt, timeZone, 'date')}`
+      : 'Synced from D&D Beyond'}</p> : <p className={styles.emptyNote}>{safeDdb ? 'Not synced from D&D Beyond yet.' : 'No D&D Beyond link on file.'}</p>}
   </Card>;
+}
+
+function CharacterOverview({
+  character,
+  timeZone,
+  safeDdb,
+  onOpenHistory,
+  onOpenConnections,
+}: {
+  character: CharacterViewModel;
+  timeZone: string | null;
+  safeDdb: string | null;
+  onOpenHistory: () => void;
+  onOpenConnections: () => void;
+}): React.JSX.Element {
+  return <Card pad={5} className={styles.overviewFrame} data-el="character.overviewFrame"><div className={styles.overview}>
+    <div className={styles.overviewTop}>
+      <div className={styles.sheetCard}>
+        <BackstorySection backstoryId={character.backstoryId} regionId={character.regionId} />
+        <section className={styles.narrative} aria-labelledby="description-heading">
+          <h2 id="description-heading" className="type-title">Description</h2>
+          {character.description ? <div className="cr-prose" data-el="character.description"><p className={styles.plainProse}>{character.description}</p></div> : <p className={styles.emptyNote}>No description supplied.</p>}
+        </section>
+      </div>
+      <CharacterQuickFacts character={character} timeZone={timeZone} safeDdb={safeDdb} />
+    </div>
+    <div className={styles.overviewRelated}>
+      <section className="stack" aria-labelledby="recent-history-heading">
+        <p className="type-caption">Recent activity</p>
+        <h2 id="recent-history-heading" className="type-title">Quest history</h2>
+        <HistoryPanel characterId={character.id} limit={3} onOpenTab={onOpenHistory} />
+      </section>
+      <section className="stack" aria-labelledby="connections-heading">
+        <p className="type-caption">Shared adventures</p>
+        <h2 id="connections-heading" className="type-title">Connections</h2>
+        <ConnectionsPanel characterId={character.id} onOpenTab={onOpenConnections} />
+      </section>
+    </div>
+  </div></Card>;
 }
 
 function readyRegions(
   character: CharacterViewModel,
   opts: { showOwner: boolean; timeZone: string | null },
+  activeTab: string,
+  setActiveTab: (id: string) => void,
 ): PageRegionRenderers {
   const badge = lifeBadge(character.status);
   const safeDdb = isSafeDdbUrl(character.ddbUrl) ? character.ddbUrl : null;
   const showVerification = ['pending', 'rejected', 'approved'].includes(
     (character.verificationStatus ?? '').toLowerCase(),
   );
-
-  const mirror = character.ddbMirror;
-  const facts = [
-    mirror?.classes || (mirror?.level ? `Level ${mirror.level}` : null),
-    mirror?.species ?? null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
 
   return {
     profile: () => (
@@ -344,7 +424,6 @@ function readyRegions(
           }
           meta={
             <>
-              {facts ? <span>{facts}</span> : null}
               <StatusBadge
                 status={badge}
                 label={characterStatusLabel(character.status)}
@@ -362,65 +441,19 @@ function readyRegions(
             </>
           }
         />
-        <DetailLayout
-          railLabel="Player and character facts"
-          rail={
-            <div className="stack" data-gap="4">
-            <CharacterOwnerCard ownerId={character.ownerId} />
-            <Card className="stack" pad={5}>
-              <h2 className="type-heading">Quick facts</h2>
-              <dl className={styles.facts}>
-                {mirror?.level != null ? <><dt>Level</dt><dd>{mirror.level}</dd></> : null}
-                {character.daysActive != null ? <><dt>Days active</dt><dd>{character.daysActive}</dd></> : null}
-                {character.regionName ? <><dt>Region</dt><dd>{character.regionName}</dd></> : null}
-                <dt>Experience</dt><dd>{character.pcxp ?? 0} XP</dd>
-              </dl>
-              {character.ddbMirror ? (
-                <p className="type-caption">
-                  {character.ddbMirror.syncedAt
-                    ? `D&D Beyond last synced ${formatInstant(character.ddbMirror.syncedAt, opts.timeZone, 'date')}`
-                    : 'Synced from D&D Beyond'}
-                </p>
-              ) : (
-                <p className={styles.emptyNote}>
-                  {safeDdb
-                    ? 'Not synced from D&D Beyond yet.'
-                    : 'No D&D Beyond link on file.'}
-                </p>
-              )}
-            </Card>
-            </div>
-          }
-        >
-          <div className="stack" data-gap="5">
-            <Card pad={5} className={styles.sheetCard}>
-              <BackstorySection
-                backstoryId={character.backstoryId}
-                regionId={character.regionId}
-              />
-              {character.description ? (
-                <section
-                  className={styles.narrative}
-                  aria-labelledby="description-heading"
-                >
-                  <h2 id="description-heading" className="type-title">
-                    Description
-                  </h2>
-                  {/* Same reading style as the backstory lore; plain text, so line breaks are kept. */}
-                  <div className="cr-prose" data-el="character.description">
-                    <p className={styles.plainProse}>{character.description}</p>
-                  </div>
-                </section>
-              ) : null}
-            </Card>
-            {opts.showOwner ? (
-              <Card pad={5} className={styles.ownerShelf}>
-                <OwnerActions key={character.id} character={character} />
-              </Card>
-            ) : null}
-            <Tabs
-              aria-label="Character sections"
-              items={[
+        <div className={styles.ownerLineRow}>
+          <CharacterOwnerLine ownerId={character.ownerId} />
+        </div>
+        <CharacterStats character={character} />
+        <Tabs
+            aria-label="Character sections"
+            renderTrack={(track) => <div className={styles.tabsEdge}>{track}</div>}
+            items={[
+                {
+                  id: 'overview',
+                  label: 'Overview',
+                  panel: <CharacterOverview character={character} timeZone={opts.timeZone} safeDdb={safeDdb} onOpenHistory={() => setActiveTab('history')} onOpenConnections={() => setActiveTab('connections')} />,
+                },
                 {
                   id: 'progression',
                   label: 'Progression',
@@ -452,10 +485,17 @@ function readyRegions(
                   label: 'Summaries',
                   panel: <SummariesPanel characterId={character.id} />,
                 },
+                ...(opts.showOwner ? [{
+                  id: 'edit',
+                  label: 'Edit',
+                  panel: <Card pad={5} className={styles.ownerShelf}>
+                    <OwnerActions key={character.id} character={character} />
+                  </Card>,
+                }] : []),
               ]}
+              value={activeTab}
+              onValueChange={setActiveTab}
             />
-          </div>
-        </DetailLayout>
       </div>
     ),
   };
@@ -498,6 +538,7 @@ export function CharacterPage(): React.JSX.Element {
   const page = useCharacterPage(code);
   const me = useMe();
   const { timeZone } = useDateFormatter();
+  const [activeTab, setActiveTab] = useState('overview');
 
   const regions: PageRegionRenderers =
     page.status === 'error'
@@ -509,7 +550,7 @@ export function CharacterPage(): React.JSX.Element {
           : readyRegions(page.view, {
               showOwner: isCharacterOwner(me.data?.id, page.view.ownerId),
               timeZone,
-            });
+            }, activeTab, setActiveTab);
 
   return (
     <PageShell context="rpg" className="hf2">

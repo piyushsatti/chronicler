@@ -41,9 +41,21 @@
   overflow-wrap: anywhere;
 }
 
+.character {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-3);
+}
+
 .chips,
 .samples {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
   gap: var(--sp-2);
+}
+
+.samples > h3 {
+  margin: 0;
 }

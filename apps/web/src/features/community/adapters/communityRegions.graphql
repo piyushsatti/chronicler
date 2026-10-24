@@ -1,0 +1,6 @@
+query CommunityRegions($limit: Int!, $offset: Int!) {
+  regions(limit: $limit, offset: $offset) {
+    id
+    name
+  }
+}

@@ -12,7 +12,7 @@ import { Table, type Column } from '../../../components/primitives/Table.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
 import { isSentinelDate, pluralize, statusLabel } from '../../../utils/format.js';
 import { AdminPagination } from './AdminPagination.js';
-import type { useDmDashboard } from '../hooks/useDmDashboard.js';
+import type { useDmDashboard } from '../../../hooks/useDmDashboard.js';
 import './DmDashboard.css';
 
 export function DmDashboard({ view }: { view: ReturnType<typeof useDmDashboard> }) {

@@ -1,12 +1,20 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQueries, useQuery } from '@tanstack/react-query';
+import { useAuth } from '../../../auth/AuthContext.js';
 import { useMe } from '../../../hooks/useMe.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { CharacterViewModel } from '../adapters/characterAdapter.js';
-import { loadCharacterDirectory } from '../adapters/characterDirectoryAdapter.js';
+import { loadCharacterDirectory, loadCharacterRegionNames } from '../adapters/characterDirectoryAdapter.js';
 import type { PageData } from './useCharacterPage.js';
+import { loadCharacterOwner } from '../adapters/characterOwnerAdapter.js';
+import { personLabels } from '../../../utils/format.js';
 
 export const CHARACTER_PAGE_SIZE = 24;
+const REGION_QUERY_STATUS = {
+  pending: 'loading',
+  error: 'error',
+  success: 'ready',
+} as const;
 
 export type CharacterRosterView = { items: CharacterViewModel[]; total: number };
 
@@ -15,6 +23,9 @@ export type CharacterListPageData = PageData<CharacterRosterView> & {
   /** A refetch (pager or filter change) is in flight. */
   fetching: boolean;
   me: ReturnType<typeof useMe>;
+  regionNames: Record<string, string>;
+  regionNamesStatus: 'loading' | 'ready' | 'error';
+  playerLabels: Record<string, string>;
   name: string;
   /** Roster status filter ('' = all); `status` is the PageData state. */
   statusFilter: string;
@@ -27,7 +38,13 @@ export type CharacterListPageData = PageData<CharacterRosterView> & {
 };
 
 export function useCharacterListPage(): CharacterListPageData {
+  const { token, sessionReady } = useAuth();
   const me = useMe();
+  const regionNames = useQuery({
+    queryKey: ['characterRegions'],
+    queryFn: loadCharacterRegionNames,
+    staleTime: 5 * 60 * 1000,
+  });
   const [name, setName] = useState('');
   const [statusFilter, setStatusFilter] = useState('active');
   const [mine, setMine] = useState(false);
@@ -47,10 +64,36 @@ export function useCharacterListPage(): CharacterListPageData {
       ),
     enabled: !mine || Boolean(me.data?.id),
   });
+  const ownerIds = [...new Set((query.data?.items ?? []).flatMap((character) =>
+    character.ownerId ? [character.ownerId] : [],
+  ))];
+  const owners = useQueries({
+    queries: ownerIds.map((ownerId) => ({
+      queryKey: ['characterOwner', ownerId],
+      enabled: sessionReady,
+      queryFn: ({ signal }: { signal: AbortSignal }) => loadCharacterOwner(ownerId, { signal, headers: { Authorization: token ? `Bearer ${token}` : '' } }),
+    })),
+  });
+  const loadedOwners = owners.flatMap((owner) => owner.data ? [owner.data] : []);
+  const labels = personLabels(loadedOwners);
+  const namesByOwner = new Map(loadedOwners.map((owner, index) => [owner.id, labels[index]]));
+  const playerLabels = Object.fromEntries(owners.map((owner, index) => [
+    ownerIds[index],
+    namesByOwner.get(ownerIds[index]) ?? (owner.isSuccess || owner.isError
+      ? 'Player profile unavailable'
+      : 'Loading player…'),
+  ]));
+  const regionNamesStatus: CharacterListPageData['regionNamesStatus'] = REGION_QUERY_STATUS[regionNames.status];
   const shared = {
-    retry: () => void query.refetch(),
+    retry: () => {
+      void query.refetch();
+      void regionNames.refetch();
+    },
     fetching: query.isFetching,
     me,
+    regionNames: regionNames.data ?? {},
+    regionNamesStatus,
+    playerLabels,
     name,
     statusFilter,
     mine,

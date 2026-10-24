@@ -12,6 +12,10 @@ const updateMySettings = '/v1/me/settings';
 const authDiscord = '/auth/discord';
 const authCallback = '/auth/discord/callback';
 
+const mePage = lazyElement(() =>
+  import('./pages/MePage.js').then((module) => ({ default: module.MePage })),
+);
+
 export const endpoints = {
   membersMe,
   updateMySettings,
@@ -97,8 +101,14 @@ export const routes: readonly FeatureRoute[] = [
   },
   {
     path: '/me',
-    element: lazyElement(() =>
-      import('./pages/MePage.js').then((module) => ({ default: module.MePage })),
-    ),
+    element: mePage,
+  },
+  {
+    path: '/me/characters',
+    element: mePage,
+  },
+  {
+    path: '/me/notes',
+    element: mePage,
   },
 ];

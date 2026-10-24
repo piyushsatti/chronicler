@@ -20,7 +20,7 @@ describe('DM table reading page', () => {
     const host = screen.getByRole('region', { name: 'Hosted by' });
     expect(await within(host).findByRole('link', { name: 'Mira' })).toHaveAttribute('href', '/dms/@mira');
     expect(screen.getAllByRole('link', { name: 'Mira' })).toHaveLength(1);
-    expect(screen.getByRole('link', { name: 'Community' })).toHaveAttribute('href', '/community?tab=dms');
+    expect(screen.getByRole('link', { name: 'Community' })).toHaveAttribute('href', '/community?tab=members&role=dm');
   });
 
   it.each([false, true])('designs missing write-up and session states with editing capability %s', async (canEdit) => {
@@ -32,7 +32,7 @@ describe('DM table reading page', () => {
     expect(await screen.findByText('This table has no write-up yet.')).toBeVisible();
     expect(await screen.findByText('No sessions are scheduled yet.')).toBeVisible();
     expect(screen.getByRole('link', { name: 'Browse the quest board' })).toHaveAttribute('href', '/quests');
-    expect(screen.getByRole('link', { name: canEdit ? 'Write about this table' : 'Find another table' })).toHaveAttribute('href', canEdit ? `/editor/dm-table/${table.id}/edit` : '/community?tab=dms');
+    expect(screen.getByRole('link', { name: canEdit ? 'Write about this table' : 'Find another table' })).toHaveAttribute('href', canEdit ? `/editor/dm-table/${table.id}/edit` : '/community?tab=members&role=dm');
   });
 
   it('keeps the section header and hides content after access is denied', async () => {
@@ -42,7 +42,7 @@ describe('DM table reading page', () => {
     await act(async () => { await queryClient.refetchQueries({ queryKey: ['dm-table', table.slug] }); });
     expect(await screen.findByRole('alert')).toBeVisible();
     expect(screen.getByRole('heading', { level: 1, name: 'DM table' })).toBeVisible();
-    expect(screen.getByRole('link', { name: 'Community' })).toHaveAttribute('href', '/community?tab=dms');
+    expect(screen.getByRole('link', { name: 'Community' })).toHaveAttribute('href', '/community?tab=members&role=dm');
     expect(screen.queryByText('Weekly sandbox nights.')).not.toBeInTheDocument();
   });
 

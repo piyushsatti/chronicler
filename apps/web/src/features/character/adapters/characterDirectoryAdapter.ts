@@ -68,6 +68,16 @@ export async function loadCharacterDirectory(
   return { items, total: parsed.data.total };
 }
 
+export async function loadCharacterRegionNames(): Promise<Record<string, string>> {
+  const names: Record<string, string> = {};
+  for (let offset = 0; ; offset += 200) {
+    const data = await graphqlRequest<CharacterRegionsQuery>(REGIONS, { limit: 200, offset });
+    const page = z.array(namedOption).parse(data.regions);
+    for (const region of page) names[region.id] = region.name;
+    if (page.length < 200) return names;
+  }
+}
+
 async function allOptions<T>(
   load: (offset: number) => Promise<{ items: T[]; total: number }>,
 ): Promise<T[]> {

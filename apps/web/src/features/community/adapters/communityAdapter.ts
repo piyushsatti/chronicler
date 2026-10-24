@@ -2,15 +2,18 @@ import type { z } from 'zod';
 import type {
   CommunityCharactersQuery,
   CommunityDirectoryQuery,
+  CommunityRegionsQuery,
 } from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import DIRECTORY_QUERY from './communityDirectory.graphql?raw';
 import CHARACTERS_QUERY from './communityCharacters.graphql?raw';
+import REGIONS_QUERY from './communityRegions.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import {
   communityCharactersWireSchema,
   communityDirectoryWireSchema,
+  communityRegionsWireSchema,
 } from './community.wire.schema.js';
 
 export type CommunityMemberView = {
@@ -144,6 +147,7 @@ export async function loadCommunityMembers(
 }
 
 type CommunityCharactersView = z.infer<typeof communityCharactersWireSchema>;
+export type CommunityCharacterView = CommunityCharactersView['items'][number];
 
 export async function loadCommunityCharacters(
   limit: number,
@@ -158,5 +162,25 @@ export async function loadCommunityCharacters(
     return parsed.data;
   } catch (err) {
     throw toAppError(err, 'community:characters');
+  }
+}
+
+export async function loadCommunityRegionNames(): Promise<Record<string, string>> {
+  try {
+    const regions: Array<{ id: string; name: string }> = [];
+    for (;;) {
+      const data = await graphqlRequest<CommunityRegionsQuery>(REGIONS_QUERY, {
+        limit: 200,
+        offset: regions.length,
+      });
+      const parsed = communityRegionsWireSchema.safeParse(data.regions);
+      if (!parsed.success || parsed.data.length > 200)
+        throw toAppError({ failure: 'InvalidWire' }, 'community:regions');
+      regions.push(...parsed.data);
+      if (parsed.data.length < 200) break;
+    }
+    return Object.fromEntries(regions.map(({ id, name }) => [id, name]));
+  } catch (err) {
+    throw toAppError(err, 'community:regions');
   }
 }

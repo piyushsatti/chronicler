@@ -25,7 +25,7 @@ export function OwnerActions({
       aria-labelledby="owner-actions-heading"
     >
       <h2 id="owner-actions-heading" className="type-heading">
-        Owner actions
+        Edit character
       </h2>
       <p className="type-caption">
         Verification: {verificationLabel(character.verificationStatus)}
@@ -125,20 +125,6 @@ export function OwnerActions({
             ? 'Resubmit for verification'
             : 'Submit for verification'}
         </Button>
-        <Button
-          type="button"
-          variant="danger"
-          disabled={
-            actions.pending ||
-            character.status === 'retired' ||
-            character.status === 'dead'
-          }
-          onClick={() => {
-            if (window.confirm(`Retire ${character.name}?`)) actions.retire();
-          }}
-        >
-          Retire
-        </Button>
       </div>
       <p className="type-caption">
         Save profile keeps your description and image. Synchronization separately
@@ -157,6 +143,20 @@ export function OwnerActions({
           </Button>
         </>
       ) : null}
+      <section className="stack" aria-labelledby="retire-character-heading">
+        <h3 id="retire-character-heading" className="type-title">Retire character</h3>
+        <p className="type-caption">Retirement is separate from profile edits and requires confirmation.</p>
+        <Button
+          type="button"
+          variant="danger"
+          disabled={actions.pending || character.status === 'retired' || character.status === 'dead'}
+          onClick={() => {
+            if (window.confirm(`Retire ${character.name}?`)) actions.retire();
+          }}
+        >
+          Retire
+        </Button>
+      </section>
     </section>
   );
 }
