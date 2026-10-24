@@ -130,6 +130,7 @@ describe('QA route coverage', () => {
       root,
       '.local/workspace-setup/frontend-completion-20261020/route-acceptance',
     );
+    mkdirSync(parent, { recursive: true });
     const directory = mkdtempSync(path.join(parent, 'registry-gallery-test-'));
     const output = path.join(directory, 'registry.json');
     const source = path.join(directory, 'source.txt');
