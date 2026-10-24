@@ -54,6 +54,7 @@ services:
       DISCORD_ANNOUNCE_CHANNEL_ID: ${DISCORD_ANNOUNCE_CHANNEL_ID:-}
       DISCORD_DELIVERY_DRY_RUN: ${DISCORD_DELIVERY_DRY_RUN:-}
       AGENT_INLINE_COMPLETE: ${AGENT_INLINE_COMPLETE:-}
+    stop_grace_period: 30s
     ports:
       - '127.0.0.1:${API_PORT:-8080}:8080'
     depends_on:
@@ -95,7 +96,7 @@ services:
     image: caddy:2-alpine
     profiles: ['tls']
     environment:
-      API_DOMAIN: ${API_DOMAIN:-}
+      API_DOMAIN: ${API_DOMAIN:?set API_DOMAIN}
     ports:
       - '80:80'
       - '443:443'

@@ -139,10 +139,11 @@ func MountFromAPI(mux httpserver.Router, runtime API, cfg config.Config) {
 			return runtime.MemberMe(id)
 		},
 		Login: login.New(login.Config{
-			ClientID:     cfg.DiscordClientID,
-			ClientSecret: cfg.DiscordSecret,
-			RedirectURI:  cfg.DiscordRedirect,
-			JWTSecret:    cfg.JWTSecret,
+			ClientID:      cfg.DiscordClientID,
+			ClientSecret:  cfg.DiscordSecret,
+			RedirectURI:   cfg.DiscordRedirect,
+			JWTSecret:     cfg.JWTSecret,
+			AllowDevLogin: cfg.Env != "production",
 		}, memberStore),
 		Ingest:        ingest.New(cfg.IngestSecret, runtime.Ingest),
 		Agent:         runtime.Agent,

@@ -239,6 +239,7 @@ func TestDevCallbackAndMalformedInputPreserveLocalBoundary(t *testing.T) {
 		return nil, errors.New("must not contact provider")
 	}))
 	cfg.ClientSecret = "dev"
+	cfg.AllowDevLogin = true
 	cfg.RedirectURI = ""
 	store := &oauthStore{}
 	service := New(cfg, store)
@@ -276,8 +277,8 @@ func TestCallbackConfigurationAndStoreFailuresDoNotMint(t *testing.T) {
 		{"missing client", func(c *Config) { c.ClientID = "" }, &oauthStore{}, `{"code":"synthetic-code"}`, 422, "INVALID"},
 		{"missing secret", func(c *Config) { c.ClientSecret = "" }, &oauthStore{}, `{"code":"synthetic-code"}`, 422, "INVALID"},
 		{"missing redirect", func(c *Config) { c.RedirectURI = "" }, &oauthStore{}, `{"code":"synthetic-code"}`, 422, "INVALID"},
-		{"missing store", func(c *Config) { c.ClientSecret = "dev" }, nil, `{"code":"dev:local-fixture"}`, 500, "INTERNAL"},
-		{"store failure", func(c *Config) { c.ClientSecret = "dev" }, &oauthStore{err: apierr.New(apierr.Internal, "member store failed")}, `{"code":"dev:local-fixture"}`, 500, "INTERNAL"},
+		{"missing store", func(c *Config) { c.ClientSecret = "dev"; c.AllowDevLogin = true }, nil, `{"code":"dev:local-fixture"}`, 500, "INTERNAL"},
+		{"store failure", func(c *Config) { c.ClientSecret = "dev"; c.AllowDevLogin = true }, &oauthStore{err: apierr.New(apierr.Internal, "member store failed")}, `{"code":"dev:local-fixture"}`, 500, "INTERNAL"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			calls := 0
@@ -290,5 +291,20 @@ func TestCallbackConfigurationAndStoreFailuresDoNotMint(t *testing.T) {
 				t.Fatalf("configuration/store response=%d %s calls=%d err=%v", w.Code, w.Body, calls, err)
 			}
 		})
+	}
+}
+
+func TestDevLoginRefusedWhenNotAllowed(t *testing.T) {
+	calls := 0
+	cfg := oauthConfig(oauthDoFunc(func(*http.Request) (*http.Response, error) {
+		calls++
+		return nil, errors.New("must not contact provider")
+	}))
+	cfg.ClientSecret = "dev"
+	cfg.AllowDevLogin = false
+	store := &oauthStore{}
+	w := oauthCallback(New(cfg, store), context.Background(), `{"code":"dev:attacker"}`)
+	if w.Code != 422 || store.id != "" || calls != 0 {
+		t.Fatalf("code=%d id=%q calls=%d", w.Code, store.id, calls)
 	}
 }

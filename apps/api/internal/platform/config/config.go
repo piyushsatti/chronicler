@@ -51,6 +51,31 @@ func FromEnv() Config {
 	}
 }
 
+// ValidateProduction refuses development defaults when Env is production.
+// Errors name the variable, never its value.
+func (c Config) ValidateProduction() error {
+	if c.Env != "production" {
+		return nil
+	}
+	var bad []string
+	if c.DiscordSecret == "" || c.DiscordSecret == "dev" {
+		bad = append(bad, "DISCORD_CLIENT_SECRET")
+	}
+	if c.DiscordClientID == "" {
+		bad = append(bad, "DISCORD_CLIENT_ID")
+	}
+	if c.JWTSecret == "" || c.JWTSecret == "dev-only-change-me" {
+		bad = append(bad, "JWT_SECRET")
+	}
+	if c.IngestSecret == "" {
+		bad = append(bad, "INGEST_SECRET")
+	}
+	if len(bad) > 0 {
+		return fmt.Errorf("refusing to start in production: unset or development-default %s", strings.Join(bad, ", "))
+	}
+	return nil
+}
+
 func envTruthy(key string) bool {
 	v := os.Getenv(key)
 	return v == "1" || v == "true" || v == "TRUE" || v == "yes"

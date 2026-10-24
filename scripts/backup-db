@@ -4,6 +4,7 @@
 #   -p PROJECT  compose project name (default: $COMPOSE_PROJECT_NAME or chronicler-production)
 #   DIR         output directory (default: ./backups)
 set -euo pipefail
+umask 077
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 project="${COMPOSE_PROJECT_NAME:-chronicler-production}"

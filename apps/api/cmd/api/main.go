@@ -23,6 +23,10 @@ func main() {
 		os.Exit(runSubcommand(os.Args[1:], os.Stdout, os.Stderr))
 	}
 	cfg := config.FromEnv()
+	if err := cfg.ValidateProduction(); err != nil {
+		slog.Error("invalid configuration", "error", err)
+		os.Exit(1)
+	}
 
 	ctx, stopSignals := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stopSignals()
@@ -39,6 +43,10 @@ func main() {
 		defer close(workerDone)
 		if err := workerrun.Run(ctx, cfg); err != nil {
 			slog.Error("worker stopped", "error", err)
+			if ctx.Err() == nil {
+				// Fail the container so Docker restarts it.
+				os.Exit(1)
+			}
 		}
 	}()
 

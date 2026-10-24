@@ -4,6 +4,7 @@ package workerrun
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"os"
@@ -37,7 +38,8 @@ func Run(ctx context.Context, cfg config.Config) error {
 func configureWorker(ctx context.Context, cfg config.Config) (*workerRuntime, error) {
 	runtime := &workerRuntime{store: &delivery.MemoryStore{}}
 	syncClient := delivery.DiscordSync(delivery.NoopSync{})
-	if pool, err := db.Connect(ctx, cfg.DatabaseURL); err == nil {
+	pool, err := db.Connect(ctx, cfg.DatabaseURL)
+	if err == nil {
 		runtime.pool = pool
 		runtime.store = jobs.NewPostgresStore(pool.Pool)
 		applier := delivery.NewPostgresRevisionApplier(pool.Pool)
@@ -52,6 +54,9 @@ func configureWorker(ctx context.Context, cfg config.Config) (*workerRuntime, er
 		)
 		slog.Info("worker using postgres job store", "dry_run", envTruthy("DISCORD_DELIVERY_DRY_RUN"))
 	} else {
+		if cfg.RequireDatabase {
+			return nil, fmt.Errorf("worker requires postgres: %w", err)
+		}
 		slog.Warn("worker using in-memory job store", "error", err)
 		runtime.delivery = delivery.NewHandler(runtime.store, syncClient)
 	}
