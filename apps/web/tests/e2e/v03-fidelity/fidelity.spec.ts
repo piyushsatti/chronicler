@@ -13,7 +13,7 @@ test.describe('v03 fidelity', () => {
     await expect(page.locator('#main')).toBeVisible();
   });
 
-  test.describe('authenticated gallery', () => {
+  test.describe('authenticated gallery @dev', () => {
     test.use({ serviceWorkers: 'block' });
   test('gallery route renders entry sections', async ({ page }) => {
     const assertRequests = await installGallerySession(page);

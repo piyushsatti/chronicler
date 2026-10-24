@@ -64,54 +64,11 @@ func classifyMarkers(lines []string) ([]string, bool) {
 	var firstHandle string
 	var dm, spoiler, malformed bool
 	for _, line := range lines {
-		for start := 0; start < len(line); {
-			opener := strings.Index(line[start:], "[!")
-			if opener < 0 {
-				break
-			}
-			opener += start
-			tail := line[opener+2:]
-			close := strings.IndexByte(tail, ']')
-			if close < 0 {
-				folded := strings.ToLower(strings.TrimSpace(tail))
-				// This reproduces the source's audience-shaped unterminated
-				// opener rule. Ordinary unterminated notes remain prose.
-				if strings.HasPrefix(folded, "dm") || strings.HasPrefix(folded, "audience") {
-					malformed = true
-				}
-				break
-			}
-			inner := strings.TrimSpace(tail[:close])
-			folded := strings.ToLower(inner)
-			switch folded {
-			case "dm":
-				dm = true
-			case "spoiler":
-				spoiler = true
-			default:
-				prefix, _, colon := strings.Cut(inner, ":")
-				if colon && strings.EqualFold(strings.TrimSpace(prefix), "dm") && !strings.EqualFold(prefix, "dm") {
-					// Whitespace inside a known marker's prefix is a malformed
-					// audience attempt, never an ordinary visible callout.
-					malformed = true
-				} else if strings.HasPrefix(folded, "dm:") {
-					// Exact handle case is preserved. The marker grammar has
-					// its own accepted finite charset; DB handles and document
-					// member principals remain more permissive.
-					handle := inner[len("dm:"):]
-					if markerHandlePattern.MatchString(handle) {
-						if firstHandle == "" {
-							firstHandle = "member:" + handle
-						}
-					} else {
-						malformed = true
-					}
-				} else if strings.HasPrefix(folded, "audience") {
-					malformed = true
-				}
-			}
-			start = opener + 2 + close + 1
+		handle, lineDM, lineSpoiler, lineMalformed := classifyMarkerLine(line)
+		if firstHandle == "" && handle != "" {
+			firstHandle = handle
 		}
+		dm, spoiler, malformed = dm || lineDM, spoiler || lineSpoiler, malformed || lineMalformed
 	}
 	if malformed {
 		return []string{}, false
@@ -123,6 +80,58 @@ func classifyMarkers(lines []string) ([]string, bool) {
 		return []string{"role:dm"}, false
 	}
 	return nil, spoiler
+}
+
+func classifyMarkerLine(line string) (string, bool, bool, bool) {
+	var handle string
+	var dm, spoiler, malformed bool
+	for start := 0; start < len(line); {
+		opener := strings.Index(line[start:], "[!")
+		if opener < 0 {
+			break
+		}
+		opener += start
+		tail := line[opener+2:]
+		close := strings.IndexByte(tail, ']')
+		if close < 0 {
+			folded := strings.ToLower(strings.TrimSpace(tail))
+			if strings.HasPrefix(folded, "dm") || strings.HasPrefix(folded, "audience") {
+				malformed = true
+			}
+			break
+		}
+		inner := strings.TrimSpace(tail[:close])
+		folded := strings.ToLower(inner)
+		switch folded {
+		case "dm":
+			dm = true
+		case "spoiler":
+			spoiler = true
+		default:
+			marker, invalid := classifyAudienceMarker(inner, folded)
+			if handle == "" {
+				handle = marker
+			}
+			malformed = malformed || invalid
+		}
+		start = opener + 2 + close + 1
+	}
+	return handle, dm, spoiler, malformed
+}
+
+func classifyAudienceMarker(inner, folded string) (string, bool) {
+	prefix, _, colon := strings.Cut(inner, ":")
+	if colon && strings.EqualFold(strings.TrimSpace(prefix), "dm") && !strings.EqualFold(prefix, "dm") {
+		return "", true
+	}
+	if strings.HasPrefix(folded, "dm:") {
+		handle := inner[len("dm:"):]
+		if markerHandlePattern.MatchString(handle) {
+			return "member:" + handle, false
+		}
+		return "", true
+	}
+	return "", strings.HasPrefix(folded, "audience")
 }
 
 // EffectiveBody is the scoped projection. It applies the outer Specification

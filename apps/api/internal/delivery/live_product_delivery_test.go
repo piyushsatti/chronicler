@@ -146,7 +146,7 @@ func liveGraphQL(t *testing.T, apiURL, bearer, query string) ([]byte, int) {
 	if err != nil {
 		t.Fatalf("live API unreachable at %s: %v", apiURL, err)
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	body, err := io.ReadAll(io.LimitReader(res.Body, 1<<20))
 	if err != nil {
 		t.Fatalf("read body: %v", err)

@@ -63,28 +63,28 @@ func (s Specification) Allows(viewer ViewerScope) bool {
 	if !viewer.Authenticated() {
 		return false
 	}
-	var memberDeny, memberAllow, roleDeny, roleAllow bool
-	for _, p := range s.principals {
-		switch p.kind {
-		case "member":
-			if p.value == viewer.MemberID || (viewer.Handle != "" && p.value == "@"+viewer.Handle) {
-				if p.deny {
-					memberDeny = true
-				} else {
-					memberAllow = true
-				}
-			}
-		case "role":
-			if slices.Contains(viewer.Roles, auth.Role(p.value)) {
-				if p.deny {
-					roleDeny = true
-				} else {
-					roleAllow = true
-				}
-			}
-		}
-	}
+	memberDeny, memberAllow, roleDeny, roleAllow := s.principalMatches(viewer)
 	return !memberDeny && (memberAllow || (!roleDeny && roleAllow))
+}
+
+func (s Specification) principalMatches(viewer ViewerScope) (memberDeny, memberAllow, roleDeny, roleAllow bool) {
+	for _, p := range s.principals {
+		memberDeny, memberAllow, roleDeny, roleAllow = collectPrincipalMatch(p, viewer, memberDeny, memberAllow, roleDeny, roleAllow)
+	}
+	return memberDeny, memberAllow, roleDeny, roleAllow
+}
+
+func collectPrincipalMatch(p principal, viewer ViewerScope, memberDeny, memberAllow, roleDeny, roleAllow bool) (bool, bool, bool, bool) {
+	memberMatch, roleMatch := p.matches(viewer)
+	return memberDeny || memberMatch && p.deny, memberAllow || memberMatch && !p.deny,
+		roleDeny || roleMatch && p.deny, roleAllow || roleMatch && !p.deny
+}
+
+func (p principal) matches(viewer ViewerScope) (bool, bool) {
+	if p.kind == "member" {
+		return p.value == viewer.MemberID || viewer.Handle != "" && p.value == "@"+viewer.Handle, false
+	}
+	return false, p.kind == "role" && slices.Contains(viewer.Roles, auth.Role(p.value))
 }
 
 // compileLegacy preserves approved role-DM and current archon legacy grants. It

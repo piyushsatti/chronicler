@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
@@ -169,65 +170,18 @@ func (p *ProductPostgres) readBatchArcQuests(ctx context.Context, _ auth.Authori
 	lists := make([][]QuestView, len(keys))
 	parentExists := make([]bool, len(keys))
 	for rows.Next() {
-		var (
-			keyOrdinal, slotsMax, filledCount                                          pgtype.Int4
-			parentID, publicID, dmPublicID, arcPublicID, documentPublicID, createdByID pgtype.UUID
-			parentExistsFlag                                                           bool
-			shortCode, status, displayStatus, signupType                               pgtype.Text
-			kinds, tags, genres                                                        []string
-			scheduledAt, createdAt, updatedAt                                          pgtype.Timestamptz
-			durationHours                                                              pgtype.Float8
-			apl                                                                        pgtype.Int4
-		)
-		if err := rows.Scan(
-			&keyOrdinal, &parentID, &parentExistsFlag,
-			&publicID, &shortCode, &kinds, &status, &displayStatus, &dmPublicID, &arcPublicID,
-			&scheduledAt, &durationHours, &slotsMax, &filledCount, &documentPublicID,
-			&tags, &genres, &apl, &signupType, &createdByID, &createdAt, &updatedAt,
-		); err != nil {
+		keyOrdinal, parentExistsFlag, view, err := scanArcQuestBatchRow(rows)
+		if err != nil {
 			return nil, err
 		}
-		idx := int(keyOrdinal.Int32) - 1
+		idx := int(keyOrdinal) - 1
 		if idx < 0 || idx >= len(keys) {
 			continue
 		}
 		parentExists[idx] = parentExistsFlag
-		if !publicID.Valid {
-			continue
+		if view != nil {
+			lists[idx] = append(lists[idx], *view)
 		}
-		view := QuestView{
-			Id:            db.UUIDString(publicID),
-			ShortCode:     shortCode.String,
-			Kinds:         kinds,
-			Status:        status.String,
-			DisplayStatus: strPtr(displayStatus.String),
-			DmId:          db.UUIDString(dmPublicID),
-			ScheduledAt:   scheduledAt.Time,
-			DurationHours: durationHours.Float64,
-			SlotsMax:      slotsMax.Int32,
-			FilledCount:   filledCount.Int32,
-			Tags:          tags,
-			Genres:        genres,
-			CreatedBy:     db.UUIDString(createdByID),
-			CreatedAt:     createdAt.Time,
-			UpdatedAt:     updatedAt.Time,
-			Regions:       []string{},
-		}
-		if arcPublicID.Valid {
-			id := db.UUIDString(arcPublicID)
-			view.ArcId = &id
-		}
-		if documentPublicID.Valid {
-			id := db.UUIDString(documentPublicID)
-			view.DocumentId = &id
-		}
-		if signupType.Valid {
-			view.SignupType = &signupType.String
-		}
-		if apl.Valid {
-			view.Apl = &apl.Int32
-		}
-		lists[idx] = append(lists[idx], view)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
@@ -252,6 +206,53 @@ func (p *ProductPostgres) readBatchArcQuests(ctx context.Context, _ auth.Authori
 		out[i].Value = &QuestList{Items: items}
 	}
 	return out, nil
+}
+
+func scanArcQuestBatchRow(rows pgx.Rows) (int32, bool, *QuestView, error) {
+	var (
+		keyOrdinal, slotsMax, filledCount                                          pgtype.Int4
+		parentID, publicID, dmPublicID, arcPublicID, documentPublicID, createdByID pgtype.UUID
+		parentExistsFlag                                                           bool
+		shortCode, status, displayStatus, signupType                               pgtype.Text
+		kinds, tags, genres                                                        []string
+		scheduledAt, createdAt, updatedAt                                          pgtype.Timestamptz
+		durationHours                                                              pgtype.Float8
+		apl                                                                        pgtype.Int4
+	)
+	if err := rows.Scan(
+		&keyOrdinal, &parentID, &parentExistsFlag,
+		&publicID, &shortCode, &kinds, &status, &displayStatus, &dmPublicID, &arcPublicID,
+		&scheduledAt, &durationHours, &slotsMax, &filledCount, &documentPublicID,
+		&tags, &genres, &apl, &signupType, &createdByID, &createdAt, &updatedAt,
+	); err != nil {
+		return 0, false, nil, err
+	}
+	_ = parentID
+	if !publicID.Valid {
+		return keyOrdinal.Int32, parentExistsFlag, nil, nil
+	}
+	view := QuestView{
+		Id: db.UUIDString(publicID), ShortCode: shortCode.String, Kinds: kinds, Status: status.String,
+		DisplayStatus: strPtr(displayStatus.String), DmId: db.UUIDString(dmPublicID), ScheduledAt: scheduledAt.Time,
+		DurationHours: durationHours.Float64, SlotsMax: slotsMax.Int32, FilledCount: filledCount.Int32,
+		Tags: tags, Genres: genres, CreatedBy: db.UUIDString(createdByID), CreatedAt: createdAt.Time,
+		UpdatedAt: updatedAt.Time, Regions: []string{},
+	}
+	if arcPublicID.Valid {
+		id := db.UUIDString(arcPublicID)
+		view.ArcId = &id
+	}
+	if documentPublicID.Valid {
+		id := db.UUIDString(documentPublicID)
+		view.DocumentId = &id
+	}
+	if signupType.Valid {
+		view.SignupType = &signupType.String
+	}
+	if apl.Valid {
+		view.Apl = &apl.Int32
+	}
+	return keyOrdinal.Int32, parentExistsFlag, &view, nil
 }
 
 const productQuestBatchRegionsSQL = `
@@ -496,14 +497,8 @@ func (p *ProductPostgres) readBatchDelivery(ctx context.Context, _ auth.Authorit
 	}
 	defer rows.Close()
 	for rows.Next() {
-		var (
-			inputIndex                        int32
-			questPublicID, jobPublicID        pgtype.UUID
-			desired, applied                  pgtype.Int4
-			jobState, safeError, errorMessage pgtype.Text
-			nextRetryAt                       pgtype.Timestamptz
-		)
-		if err := rows.Scan(&inputIndex, &questPublicID, &desired, &applied, &jobPublicID, &jobState, &nextRetryAt, &safeError, &errorMessage); err != nil {
+		inputIndex, questPublicID, view, err := scanQuestDeliveryRow(rows)
+		if err != nil {
 			return nil, err
 		}
 		position := int(inputIndex) - 1
@@ -514,39 +509,44 @@ func (p *ProductPostgres) readBatchDelivery(ctx context.Context, _ auth.Authorit
 		if !questPublicID.Valid {
 			continue
 		}
-		view := QuestDiscordDeliveryView{
-			DesiredRevision: desired.Int32,
-			AppliedRevision: applied.Int32,
-			OverallStatus:   deliveryOverallStatus(desired.Int32, applied.Int32, jobState.String),
-		}
-		if jobPublicID.Valid {
-			id := db.UUIDString(jobPublicID)
-			view.JobId = &id
-		}
-		if jobState.Valid {
-			state := jobState.String
-			view.MessageState = &state
-		}
-		if nextRetryAt.Valid {
-			t := nextRetryAt.Time
-			view.NextRetryAt = &t
-		}
-		if safeError.Valid {
-			view.ErrorCode = &safeError.String
-		}
-		if errorMessage.Valid {
-			view.ErrorMessage = &errorMessage.String
-		}
-		out[slot] = product.BatchResult[QuestDiscordDeliveryView]{Value: &view}
+		out[slot] = product.BatchResult[QuestDiscordDeliveryView]{Value: view}
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	for i := range out {
-		if out[i].Value == nil && out[i].Err == nil {
-			// Missing quest → nil success (nullable nested field uses loader miss).
-			continue
-		}
-	}
 	return out, nil
+}
+
+func scanQuestDeliveryRow(rows pgx.Rows) (int32, pgtype.UUID, *QuestDiscordDeliveryView, error) {
+	var (
+		inputIndex                        int32
+		questPublicID, jobPublicID        pgtype.UUID
+		desired, applied                  pgtype.Int4
+		jobState, safeError, errorMessage pgtype.Text
+		nextRetryAt                       pgtype.Timestamptz
+	)
+	if err := rows.Scan(&inputIndex, &questPublicID, &desired, &applied, &jobPublicID, &jobState, &nextRetryAt, &safeError, &errorMessage); err != nil {
+		return 0, pgtype.UUID{}, nil, err
+	}
+	view := QuestDiscordDeliveryView{DesiredRevision: desired.Int32, AppliedRevision: applied.Int32,
+		OverallStatus: deliveryOverallStatus(desired.Int32, applied.Int32, jobState.String)}
+	if jobPublicID.Valid {
+		id := db.UUIDString(jobPublicID)
+		view.JobId = &id
+	}
+	if jobState.Valid {
+		state := jobState.String
+		view.MessageState = &state
+	}
+	if nextRetryAt.Valid {
+		at := nextRetryAt.Time
+		view.NextRetryAt = &at
+	}
+	if safeError.Valid {
+		view.ErrorCode = &safeError.String
+	}
+	if errorMessage.Valid {
+		view.ErrorMessage = &errorMessage.String
+	}
+	return inputIndex, questPublicID, &view, nil
 }

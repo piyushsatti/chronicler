@@ -28,8 +28,8 @@ func TestRunLeasedCancelsAndAwaitsWork(t *testing.T) {
 	cancel()
 	<-observed
 	select {
-	case <-result:
-		t.Fatal("returned before cancelled work joined")
+	case err := <-result:
+		t.Fatalf("returned before cancelled work joined: %v", err)
 	default:
 	}
 	close(release)

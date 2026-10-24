@@ -9,6 +9,7 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/idempotency"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/uow"
 )
@@ -73,88 +74,122 @@ func runDocumentWrite[T any](
 		return result, err
 	}
 	err = s.Runner.Do(ctx, func(repos ProductCommandRepos) error {
-		for _, dependency := range []any{repos.Authority, repos.Policy, repos.Replay} {
-			if commandDependencyMissing(dependency) {
-				return apierr.New(apierr.Internal, "document transaction dependencies required")
-			}
-		}
-		fresh, err := repos.Authority(ctx, actor.Claims().MemberID)
-		if err != nil {
-			return err
-		}
-		if fresh.Claims().MemberID == "" || fresh.Claims().MemberID != actor.Claims().MemberID {
-			return apierr.New(apierr.Forbidden, "member authority changed")
-		}
-		before, err := lock(ctx, repos.Document)
-		if err != nil {
-			return err
-		}
-		if before == nil {
-			return apierr.New(apierr.NotFound, "document not found")
-		}
-		if err := admitDocumentDisclosure(*before, fresh); err != nil {
-			return err
-		}
-		request, err := auth.ForDocumentWrite(operation, documentWriteFacts(before))
-		if err != nil {
-			return err
-		}
-		decision, err := repos.Policy.Decide(ctx, fresh, request)
-		if err != nil {
-			return err
-		}
-		if !decision.Allowed {
-			return apierr.New(apierr.Forbidden, "document command forbidden")
-		}
-		if err := admitDocumentBody(ctx, repos.Document, fresh, spec); err != nil {
-			return err
-		}
-		claim, err := repos.Replay.Claim(ctx, fresh.Claims().MemberID, replayName, meta.IdempotencyKey, fingerprint)
-		if err != nil {
-			return err
-		}
-		if claim.Replay {
-			if err := json.Unmarshal(claim.Receipt, &result); err != nil {
-				return err
-			}
-			if replayed, ok := any(&result).(*DocumentView); ok {
-				current, err := repos.Document.ReadCommandDocument(ctx, fresh, replayed.Id)
-				if err != nil {
-					return err
-				}
-				*replayed = current
-			}
-			return nil
-		}
-		at, err := product.UTCNow(s.Clock)
-		if err != nil {
-			return err
-		}
-		result, err = store(auth.WithAuthority(ctx, fresh), repos, fresh, at)
-		if err != nil {
-			return err
-		}
-		if decision.UsedOverride {
-			if commandDependencyMissing(repos.Audit) {
-				return apierr.New(apierr.Internal, "override recorder required")
-			}
-			if err := repos.Audit.Record(ctx, claim, auth.OverrideFact{
-				ActorID: fresh.Claims().MemberID, Operation: request.Operation(), SubjectType: "document", SubjectID: subjectID, RuleCode: decision.RuleCode, At: at,
-			}); err != nil {
-				return err
-			}
-		}
-		receipt, err := json.Marshal(result)
-		if err != nil {
-			return err
-		}
-		return repos.Replay.Complete(ctx, claim, receipt)
+		var err error
+		result, err = executeDocumentWrite(ctx, repos, s, actor, operation, replayName, spec, meta, subjectID, fingerprint, lock, store)
+		return err
 	})
 	if err != nil {
 		var zero T
 		return zero, err
 	}
 	return result, nil
+}
+
+func executeDocumentWrite[T any](ctx context.Context, repos ProductCommandRepos, s ProductCommands, actor auth.Authority, operation auth.Operation, replayName string, spec any, meta product.CommandMeta, subjectID, fingerprint string, lock func(context.Context, DocumentWriteRepository) (*DocumentView, error), store func(context.Context, ProductCommandRepos, auth.Authority, time.Time) (T, error)) (T, error) {
+	var zero T
+	fresh, request, decision, err := authorizeDocumentWrite(ctx, repos, actor, operation, spec, lock)
+	if err != nil {
+		return zero, err
+	}
+	claim, err := repos.Replay.Claim(ctx, fresh.Claims().MemberID, replayName, meta.IdempotencyKey, fingerprint)
+	if err != nil {
+		return zero, err
+	}
+	if claim.Replay {
+		return replayDocumentWrite[T](ctx, repos.Document, fresh, claim.Receipt)
+	}
+	at, err := product.UTCNow(s.Clock)
+	if err != nil {
+		return zero, err
+	}
+	result, err := store(auth.WithAuthority(ctx, fresh), repos, fresh, at)
+	if err != nil {
+		return zero, err
+	}
+	if err := completeDocumentWrite(ctx, repos, claim, fresh, request, decision, subjectID, at, result); err != nil {
+		return zero, err
+	}
+	return result, nil
+}
+
+func authorizeDocumentWrite(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, operation auth.Operation, spec any, lock func(context.Context, DocumentWriteRepository) (*DocumentView, error)) (auth.Authority, auth.Request, auth.Decision, error) {
+	if err := requireDocumentCommandDependencies(repos); err != nil {
+		return auth.Authority{}, auth.Request{}, auth.Decision{}, err
+	}
+	fresh, err := repos.Authority(ctx, actor.Claims().MemberID)
+	if err != nil {
+		return auth.Authority{}, auth.Request{}, auth.Decision{}, err
+	}
+	if fresh.Claims().MemberID == "" || fresh.Claims().MemberID != actor.Claims().MemberID {
+		return auth.Authority{}, auth.Request{}, auth.Decision{}, apierr.New(apierr.Forbidden, "member authority changed")
+	}
+	before, err := lock(ctx, repos.Document)
+	if err != nil {
+		return auth.Authority{}, auth.Request{}, auth.Decision{}, err
+	}
+	if before == nil {
+		return auth.Authority{}, auth.Request{}, auth.Decision{}, apierr.New(apierr.NotFound, "document not found")
+	}
+	if err := admitDocumentDisclosure(*before, fresh); err != nil {
+		return auth.Authority{}, auth.Request{}, auth.Decision{}, err
+	}
+	request, err := auth.ForDocumentWrite(operation, documentWriteFacts(before))
+	if err != nil {
+		return auth.Authority{}, auth.Request{}, auth.Decision{}, err
+	}
+	decision, err := repos.Policy.Decide(ctx, fresh, request)
+	if err != nil {
+		return auth.Authority{}, auth.Request{}, auth.Decision{}, err
+	}
+	if !decision.Allowed {
+		return auth.Authority{}, auth.Request{}, auth.Decision{}, apierr.New(apierr.Forbidden, "document command forbidden")
+	}
+	if err := admitDocumentBody(ctx, repos.Document, fresh, spec); err != nil {
+		return auth.Authority{}, auth.Request{}, auth.Decision{}, err
+	}
+	return fresh, request, decision, nil
+}
+
+func requireDocumentCommandDependencies(repos ProductCommandRepos) error {
+	for _, dependency := range []any{repos.Authority, repos.Policy, repos.Replay} {
+		if commandDependencyMissing(dependency) {
+			return apierr.New(apierr.Internal, "document transaction dependencies required")
+		}
+	}
+	return nil
+}
+
+func replayDocumentWrite[T any](ctx context.Context, repo DocumentWriteRepository, actor auth.Authority, receipt []byte) (T, error) {
+	var result T
+	if err := json.Unmarshal(receipt, &result); err != nil {
+		return result, err
+	}
+	if replayed, ok := any(&result).(*DocumentView); ok {
+		current, err := repo.ReadCommandDocument(ctx, actor, replayed.Id)
+		if err != nil {
+			return result, err
+		}
+		*replayed = current
+	}
+	return result, nil
+}
+
+func completeDocumentWrite[T any](ctx context.Context, repos ProductCommandRepos, claim idempotency.Claim, actor auth.Authority, request auth.Request, decision auth.Decision, subjectID string, at time.Time, result T) error {
+	if decision.UsedOverride {
+		if commandDependencyMissing(repos.Audit) {
+			return apierr.New(apierr.Internal, "override recorder required")
+		}
+		if err := repos.Audit.Record(ctx, claim, auth.OverrideFact{
+			ActorID: actor.Claims().MemberID, Operation: request.Operation(), SubjectType: "document", SubjectID: subjectID, RuleCode: decision.RuleCode, At: at,
+		}); err != nil {
+			return err
+		}
+	}
+	receipt, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+	return repos.Replay.Complete(ctx, claim, receipt)
 }
 
 func runDocumentOp[T any](
@@ -174,65 +209,73 @@ func runDocumentOp[T any](
 		return result, err
 	}
 	err = s.Runner.Do(ctx, func(repos ProductCommandRepos) error {
-		for _, dependency := range []any{repos.Authority, repos.Policy, repos.Replay} {
-			if commandDependencyMissing(dependency) {
-				return apierr.New(apierr.Internal, "document transaction dependencies required")
-			}
-		}
-		fresh, err := repos.Authority(ctx, actor.Claims().MemberID)
-		if err != nil {
-			return err
-		}
-		if fresh.Claims().MemberID == "" || fresh.Claims().MemberID != actor.Claims().MemberID {
-			return apierr.New(apierr.Forbidden, "member authority changed")
-		}
-		request, err := auth.ForOperation(operation)
-		if err != nil {
-			return err
-		}
-		decision, err := repos.Policy.Decide(ctx, fresh, request)
-		if err != nil {
-			return err
-		}
-		if !decision.Allowed {
-			return apierr.New(apierr.Forbidden, "document command forbidden")
-		}
-		claim, err := repos.Replay.Claim(ctx, fresh.Claims().MemberID, replayName, meta.IdempotencyKey, fingerprint)
-		if err != nil {
-			return err
-		}
-		if claim.Replay {
-			return json.Unmarshal(claim.Receipt, &result)
-		}
-		at, err := product.UTCNow(s.Clock)
-		if err != nil {
-			return err
-		}
-		result, err = store(auth.WithAuthority(ctx, fresh), repos, fresh, at)
-		if err != nil {
-			return err
-		}
-		if decision.UsedOverride {
-			if commandDependencyMissing(repos.Audit) {
-				return apierr.New(apierr.Internal, "override recorder required")
-			}
-			if err := repos.Audit.Record(ctx, claim, auth.OverrideFact{
-				ActorID: fresh.Claims().MemberID, Operation: request.Operation(), SubjectType: "document", SubjectID: subjectID, RuleCode: decision.RuleCode, At: at,
-			}); err != nil {
-				return err
-			}
-		}
-		receipt, err := json.Marshal(result)
-		if err != nil {
-			return err
-		}
-		return repos.Replay.Complete(ctx, claim, receipt)
+		var err error
+		result, err = executeDocumentOperation(ctx, repos, s, actor, operation, replayName, spec, meta, subjectID, fingerprint, store)
+		return err
 	})
 	if err != nil {
 		var zero T
 		return zero, err
 	}
 	return result, nil
+}
+
+func executeDocumentOperation[T any](ctx context.Context, repos ProductCommandRepos, s ProductCommands, actor auth.Authority, operation auth.Operation, replayName string, spec any, meta product.CommandMeta, subjectID, fingerprint string, store func(context.Context, ProductCommandRepos, auth.Authority, time.Time) (T, error)) (T, error) {
+	var zero T
+	fresh, request, decision, err := authorizeDocumentOperation(ctx, repos, actor, operation)
+	if err != nil {
+		return zero, err
+	}
+	claim, err := repos.Replay.Claim(ctx, fresh.Claims().MemberID, replayName, meta.IdempotencyKey, fingerprint)
+	if err != nil {
+		return zero, err
+	}
+	if claim.Replay {
+		return replayCommand[T](claim.Receipt)
+	}
+	at, err := product.UTCNow(s.Clock)
+	if err != nil {
+		return zero, err
+	}
+	result, err := store(auth.WithAuthority(ctx, fresh), repos, fresh, at)
+	if err != nil {
+		return zero, err
+	}
+	if err := completeDocumentWrite(ctx, repos, claim, fresh, request, decision, subjectID, at, result); err != nil {
+		return zero, err
+	}
+	return result, nil
+}
+
+func replayCommand[T any](receipt []byte) (T, error) {
+	var result T
+	err := json.Unmarshal(receipt, &result)
+	return result, err
+}
+
+func authorizeDocumentOperation(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, operation auth.Operation) (auth.Authority, auth.Request, auth.Decision, error) {
+	if err := requireDocumentCommandDependencies(repos); err != nil {
+		return auth.Authority{}, auth.Request{}, auth.Decision{}, err
+	}
+	fresh, err := repos.Authority(ctx, actor.Claims().MemberID)
+	if err != nil {
+		return auth.Authority{}, auth.Request{}, auth.Decision{}, err
+	}
+	if fresh.Claims().MemberID == "" || fresh.Claims().MemberID != actor.Claims().MemberID {
+		return auth.Authority{}, auth.Request{}, auth.Decision{}, apierr.New(apierr.Forbidden, "member authority changed")
+	}
+	request, err := auth.ForOperation(operation)
+	if err != nil {
+		return auth.Authority{}, auth.Request{}, auth.Decision{}, err
+	}
+	decision, err := repos.Policy.Decide(ctx, fresh, request)
+	if err != nil {
+		return auth.Authority{}, auth.Request{}, auth.Decision{}, err
+	}
+	if !decision.Allowed {
+		return auth.Authority{}, auth.Request{}, auth.Decision{}, apierr.New(apierr.Forbidden, "document command forbidden")
+	}
+	return fresh, request, decision, nil
 }
 
 func (s ProductCommands) CreateDocument(ctx context.Context, actor auth.Authority, spec CreateDocumentSpec, meta product.CommandMeta) (DocumentView, error) {
@@ -250,62 +293,56 @@ func (s ProductCommands) CreateDocument(ctx context.Context, actor auth.Authorit
 		return DocumentView{}, err
 	}
 	err = s.Runner.Do(ctx, func(repos ProductCommandRepos) error {
-		fresh, err := repos.Authority(ctx, actor.Claims().MemberID)
-		if err != nil {
-			return err
-		}
-		decision, err := repos.Policy.Decide(ctx, fresh, request)
-		if err != nil {
-			return err
-		}
-		if !decision.Allowed {
-			return apierr.New(apierr.Forbidden, "document command forbidden")
-		}
-		claim, err := repos.Replay.Claim(ctx, fresh.Claims().MemberID, "createDocument", meta.IdempotencyKey, fingerprint)
-		if err != nil {
-			return err
-		}
-		if claim.Replay {
-			if err := json.Unmarshal(claim.Receipt, &result); err != nil {
-				return err
-			}
-			current, err := repos.Document.ReadCommandDocument(ctx, fresh, result.Id)
-			if err != nil {
-				return err
-			}
-			result = current
-			return nil
-		}
-		at, err := product.UTCNow(s.Clock)
-		if err != nil {
-			return err
-		}
-		docID := s.IDs()
-		revID := s.IDs()
-		locked := CreateDocumentState{SubjectID: docID}
-		result, err = repos.Document.StoreCreateDocument(auth.WithAuthority(ctx, fresh), CreateDocumentWrite{
-			ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked, RevisionID: &revID,
-		})
-		if err != nil {
-			return err
-		}
-		if decision.UsedOverride {
-			if commandDependencyMissing(repos.Audit) {
-				return apierr.New(apierr.Internal, "override recorder required")
-			}
-			if err := repos.Audit.Record(ctx, claim, auth.OverrideFact{
-				ActorID: fresh.Claims().MemberID, Operation: request.Operation(), SubjectType: "document", SubjectID: docID, RuleCode: decision.RuleCode, At: at,
-			}); err != nil {
-				return err
-			}
-		}
-		receipt, err := json.Marshal(result)
-		if err != nil {
-			return err
-		}
-		return repos.Replay.Complete(ctx, claim, receipt)
+		var err error
+		result, err = createDocumentInTransaction(ctx, repos, s, actor, request, spec, meta, fingerprint)
+		return err
 	})
 	return result, err
+}
+
+func createDocumentInTransaction(ctx context.Context, repos ProductCommandRepos, s ProductCommands, actor auth.Authority, request auth.Request, spec CreateDocumentSpec, meta product.CommandMeta, fingerprint string) (DocumentView, error) {
+	fresh, decision, err := authorizeCreateDocument(ctx, repos, actor, request)
+	if err != nil {
+		return DocumentView{}, err
+	}
+	claim, err := repos.Replay.Claim(ctx, fresh.Claims().MemberID, "createDocument", meta.IdempotencyKey, fingerprint)
+	if err != nil {
+		return DocumentView{}, err
+	}
+	if claim.Replay {
+		return replayDocumentWrite[DocumentView](ctx, repos.Document, fresh, claim.Receipt)
+	}
+	at, err := product.UTCNow(s.Clock)
+	if err != nil {
+		return DocumentView{}, err
+	}
+	docID, revID := s.IDs(), s.IDs()
+	result, err := repos.Document.StoreCreateDocument(auth.WithAuthority(ctx, fresh), CreateDocumentWrite{
+		ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec,
+		Locked: CreateDocumentState{SubjectID: docID}, RevisionID: &revID,
+	})
+	if err != nil {
+		return DocumentView{}, err
+	}
+	if err := completeDocumentWrite(ctx, repos, claim, fresh, request, decision, docID, at, result); err != nil {
+		return DocumentView{}, err
+	}
+	return result, nil
+}
+
+func authorizeCreateDocument(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, request auth.Request) (auth.Authority, auth.Decision, error) {
+	fresh, err := repos.Authority(ctx, actor.Claims().MemberID)
+	if err != nil {
+		return auth.Authority{}, auth.Decision{}, err
+	}
+	decision, err := repos.Policy.Decide(ctx, fresh, request)
+	if err != nil {
+		return auth.Authority{}, auth.Decision{}, err
+	}
+	if !decision.Allowed {
+		return auth.Authority{}, auth.Decision{}, apierr.New(apierr.Forbidden, "document command forbidden")
+	}
+	return fresh, decision, nil
 }
 
 func (s ProductCommands) UpdateDocument(ctx context.Context, actor auth.Authority, spec UpdateDocumentSpec, meta product.CommandMeta) (DocumentView, error) {

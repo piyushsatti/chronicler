@@ -196,46 +196,62 @@ func validate(row line) error {
 func coerce(raw any) (any, error) {
 	switch v := raw.(type) {
 	case nil, string, bool:
-		if s, ok := v.(string); ok {
-			if t, err := time.Parse(time.RFC3339, s); err == nil {
-				return t, nil
-			}
-		}
-		return v, nil
+		return coercePrimitive(v)
 	case float64:
-		if v == float64(int64(v)) {
-			if v >= math.MinInt32 && v <= math.MaxInt32 {
-				return int32(v), nil
-			}
-			return int64(v), nil
-		}
-		return v, nil
+		return coerceNumber(v), nil
 	case []any:
-		if len(v) == 0 {
-			return []string{}, nil
-		}
-		out := make([]string, len(v))
-		for i, item := range v {
-			s, ok := item.(string)
-			if !ok {
-				b, err := json.Marshal(v)
-				if err != nil {
-					return nil, err
-				}
-				return json.RawMessage(b), nil
-			}
-			out[i] = s
-		}
-		return out, nil
+		return coerceStringArray(v)
 	case map[string]any:
-		b, err := json.Marshal(v)
-		if err != nil {
-			return nil, err
-		}
-		return json.RawMessage(b), nil
+		return coerceObject(v)
 	default:
 		return nil, fmt.Errorf("unsupported %T", raw)
 	}
+}
+
+func coercePrimitive(value any) (any, error) {
+	if text, ok := value.(string); ok {
+		if parsed, err := time.Parse(time.RFC3339, text); err == nil {
+			return parsed, nil
+		}
+	}
+	return value, nil
+}
+
+func coerceNumber(value float64) any {
+	if value != float64(int64(value)) {
+		return value
+	}
+	if value >= math.MinInt32 && value <= math.MaxInt32 {
+		return int32(value)
+	}
+	return int64(value)
+}
+
+func coerceStringArray(values []any) (any, error) {
+	if len(values) == 0 {
+		return []string{}, nil
+	}
+	stringsOnly := make([]string, len(values))
+	for i, value := range values {
+		text, ok := value.(string)
+		if !ok {
+			return encodeRawJSON(values)
+		}
+		stringsOnly[i] = text
+	}
+	return stringsOnly, nil
+}
+
+func coerceObject(value map[string]any) (any, error) {
+	return encodeRawJSON(value)
+}
+
+func encodeRawJSON(value any) (any, error) {
+	encoded, err := json.Marshal(value)
+	if err != nil {
+		return nil, err
+	}
+	return json.RawMessage(encoded), nil
 }
 
 func apply(ctx context.Context, pool *pgxpool.Pool, lines []line) (int, error) {

@@ -53,24 +53,9 @@ func (w *TimeFillWriter) FillFuture(ctx context.Context, scope jobs.ExecutionSco
 		if start.Before(today) {
 			start = today
 		}
-		if start.Before(end) {
-			p, err := NewProductPostgres(tx)
-			if err != nil {
-				return err
-			}
-			first, last := product.Date(start.Format("2006-01-02")), product.Date(end.Format("2006-01-02"))
-			anchors, err := p.LockTimeProjection(ctx, first, last)
-			if err != nil {
-				return err
-			}
-			cells, err := projectTimeCells(first, last, anchors)
-			if err != nil {
-				return err
-			}
-			changed, err = p.StoreTimeProjection(ctx, first, last, cells)
-			if err != nil {
-				return err
-			}
+		changed, err = fillFutureProjection(ctx, tx, start, end)
+		if err != nil {
+			return err
 		}
 		return guard.Recheck(ctx, permit)
 	})
@@ -78,4 +63,24 @@ func (w *TimeFillWriter) FillFuture(ctx context.Context, scope jobs.ExecutionSco
 		return 0, err
 	}
 	return changed, nil
+}
+
+func fillFutureProjection(ctx context.Context, tx pgx.Tx, start, end time.Time) (int32, error) {
+	if !start.Before(end) {
+		return 0, nil
+	}
+	p, err := NewProductPostgres(tx)
+	if err != nil {
+		return 0, err
+	}
+	first, last := product.Date(start.Format("2006-01-02")), product.Date(end.Format("2006-01-02"))
+	anchors, err := p.LockTimeProjection(ctx, first, last)
+	if err != nil {
+		return 0, err
+	}
+	cells, err := projectTimeCells(first, last, anchors)
+	if err != nil {
+		return 0, err
+	}
+	return p.StoreTimeProjection(ctx, first, last, cells)
 }

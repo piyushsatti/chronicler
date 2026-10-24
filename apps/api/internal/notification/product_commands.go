@@ -8,6 +8,7 @@ import (
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/idempotency"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/uow"
 )
@@ -45,30 +46,7 @@ func runNotificationCommand[T any](ctx context.Context, s ProductCommands, actor
 		return result, err
 	}
 	err = s.Runner.Do(ctx, func(repos ProductCommandRepos) error {
-		for _, dependency := range []any{repos.Authority, repos.Policy, repos.Replay} {
-			if commandDependencyMissing(dependency) {
-				return apierr.New(apierr.Internal, "notification transaction dependencies required")
-			}
-		}
-		fresh, err := repos.Authority(ctx, actor.Claims().MemberID)
-		if err != nil {
-			return err
-		}
-		if fresh.Claims().MemberID == "" || fresh.Claims().MemberID != actor.Claims().MemberID {
-			return apierr.New(apierr.Forbidden, "member authority changed")
-		}
-		request, err := auth.ForOperation(auth.Operation("Mutation." + operation))
-		if err != nil {
-			return err
-		}
-		decision, err := repos.Policy.Decide(ctx, fresh, request)
-		if err != nil {
-			return err
-		}
-		if !decision.Allowed {
-			return apierr.New(apierr.Forbidden, "notification command forbidden")
-		}
-		claim, err := repos.Replay.Claim(ctx, fresh.Claims().MemberID, operation, meta.IdempotencyKey, fingerprint)
+		fresh, request, decision, claim, err := admitNotificationCommand(ctx, repos, actor, operation, meta, fingerprint)
 		if err != nil {
 			return err
 		}
@@ -89,25 +67,55 @@ func runNotificationCommand[T any](ctx context.Context, s ProductCommands, actor
 		if err != nil {
 			return err
 		}
-		if decision.UsedOverride {
-			if commandDependencyMissing(repos.Audit) {
-				return apierr.New(apierr.Internal, "override recorder required")
-			}
-			if err := repos.Audit.Record(ctx, claim, auth.OverrideFact{ActorID: fresh.Claims().MemberID, Operation: request.Operation(), SubjectType: "notification", SubjectID: subjectID, RuleCode: decision.RuleCode, At: at}); err != nil {
-				return err
-			}
-		}
-		receipt, err := json.Marshal(result)
-		if err != nil {
-			return err
-		}
-		return repos.Replay.Complete(ctx, claim, receipt)
+		return completeNotificationCommand(ctx, repos, fresh, request, decision, claim, subjectID, at, result)
 	})
 	if err != nil {
 		var zero T
 		return zero, err
 	}
 	return result, nil
+}
+
+func admitNotificationCommand(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, operation string, meta product.CommandMeta, fingerprint string) (auth.Authority, auth.Request, auth.Decision, idempotency.Claim, error) {
+	if commandDependencyMissing(repos.Authority) || commandDependencyMissing(repos.Policy) || commandDependencyMissing(repos.Replay) {
+		return auth.Authority{}, auth.Request{}, auth.Decision{}, idempotency.Claim{}, apierr.New(apierr.Internal, "notification transaction dependencies required")
+	}
+	fresh, err := repos.Authority(ctx, actor.Claims().MemberID)
+	if err != nil {
+		return auth.Authority{}, auth.Request{}, auth.Decision{}, idempotency.Claim{}, err
+	}
+	if fresh.Claims().MemberID == "" || fresh.Claims().MemberID != actor.Claims().MemberID {
+		return auth.Authority{}, auth.Request{}, auth.Decision{}, idempotency.Claim{}, apierr.New(apierr.Forbidden, "member authority changed")
+	}
+	request, err := auth.ForOperation(auth.Operation("Mutation." + operation))
+	if err != nil {
+		return auth.Authority{}, auth.Request{}, auth.Decision{}, idempotency.Claim{}, err
+	}
+	decision, err := repos.Policy.Decide(ctx, fresh, request)
+	if err != nil {
+		return auth.Authority{}, auth.Request{}, auth.Decision{}, idempotency.Claim{}, err
+	}
+	if !decision.Allowed {
+		return auth.Authority{}, auth.Request{}, auth.Decision{}, idempotency.Claim{}, apierr.New(apierr.Forbidden, "notification command forbidden")
+	}
+	claim, err := repos.Replay.Claim(ctx, fresh.Claims().MemberID, operation, meta.IdempotencyKey, fingerprint)
+	return fresh, request, decision, claim, err
+}
+
+func completeNotificationCommand[T any](ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, request auth.Request, decision auth.Decision, claim idempotency.Claim, subjectID string, at time.Time, result T) error {
+	if decision.UsedOverride {
+		if commandDependencyMissing(repos.Audit) {
+			return apierr.New(apierr.Internal, "override recorder required")
+		}
+		if err := repos.Audit.Record(ctx, claim, auth.OverrideFact{ActorID: fresh.Claims().MemberID, Operation: request.Operation(), SubjectType: "notification", SubjectID: subjectID, RuleCode: decision.RuleCode, At: at}); err != nil {
+			return err
+		}
+	}
+	receipt, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+	return repos.Replay.Complete(ctx, claim, receipt)
 }
 
 func (s ProductCommands) MarkNotificationsRead(ctx context.Context, actor auth.Authority, spec MarkNotificationsReadSpec, meta product.CommandMeta) (NotificationWriteReceipt, error) {

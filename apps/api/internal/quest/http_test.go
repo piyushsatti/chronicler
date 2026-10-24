@@ -39,7 +39,7 @@ func post(t *testing.T, srv *httptest.Server, token, body string) (int, map[stri
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer res.Body.Close()
+	defer func() { _ = res.Body.Close() }()
 	var decoded map[string]any
 	if err := json.NewDecoder(res.Body).Decode(&decoded); err != nil {
 		t.Fatal(err)

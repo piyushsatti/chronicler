@@ -103,7 +103,7 @@ func alertCanonicalUUID(s string) bool {
 			}
 			continue
 		}
-		if !(s[i] >= '0' && s[i] <= '9' || s[i] >= 'a' && s[i] <= 'f') {
+		if (s[i] < '0' || s[i] > '9') && (s[i] < 'a' || s[i] > 'f') {
 			return false
 		}
 	}
@@ -125,41 +125,51 @@ func alertKeyMatch(rule alertConditionSpecification, family alertConditionFamily
 			return match, invalidAlert()
 		}
 	case "scheduled":
-		if family.KeyPrefix == nil || !strings.HasPrefix(key, *family.KeyPrefix) {
-			return match, invalidAlert()
-		}
-		rest := strings.TrimPrefix(key, *family.KeyPrefix)
-		kind, slotText, ok := strings.Cut(rest, ":")
-		if !ok {
-			return match, invalidAlert()
-		}
-		registered := false
-		for _, candidate := range rule.RegisteredScheduleKinds {
-			if kind == candidate {
-				registered = true
-				break
-			}
-		}
-		if !registered {
-			return match, invalidAlert()
-		}
-		slot, err := time.Parse("2006-01-02T15:04:05Z", slotText)
-		if err != nil || slot.Format("2006-01-02T15:04:05Z") != slotText {
-			return match, invalidAlert()
-		}
-		match.RegisteredKind, match.Slot = kind, &slot
+		return scheduledAlertKeyMatch(rule, family, key)
 	case "job_uuid":
-		if family.KeyPrefix == nil || !strings.HasPrefix(key, *family.KeyPrefix) {
-			return match, invalidAlert()
-		}
-		id := strings.TrimPrefix(key, *family.KeyPrefix)
-		if !alertCanonicalUUID(id) {
-			return match, invalidAlert()
-		}
-		match.JobID = &id
+		return jobAlertKeyMatch(family, key)
 	default:
 		return match, invalidAlert()
 	}
+	return match, nil
+}
+
+func scheduledAlertKeyMatch(rule alertConditionSpecification, family alertConditionFamily, key string) (alertConditionMatch, error) {
+	match := alertConditionMatch{Family: family}
+	if family.KeyPrefix == nil || !strings.HasPrefix(key, *family.KeyPrefix) {
+		return match, invalidAlert()
+	}
+	kind, slotText, ok := strings.Cut(strings.TrimPrefix(key, *family.KeyPrefix), ":")
+	if !ok || !registeredScheduleKind(rule.RegisteredScheduleKinds, kind) {
+		return match, invalidAlert()
+	}
+	slot, err := time.Parse("2006-01-02T15:04:05Z", slotText)
+	if err != nil || slot.Format("2006-01-02T15:04:05Z") != slotText {
+		return match, invalidAlert()
+	}
+	match.RegisteredKind, match.Slot = kind, &slot
+	return match, nil
+}
+
+func registeredScheduleKind(kinds []string, kind string) bool {
+	for _, candidate := range kinds {
+		if kind == candidate {
+			return true
+		}
+	}
+	return false
+}
+
+func jobAlertKeyMatch(family alertConditionFamily, key string) (alertConditionMatch, error) {
+	match := alertConditionMatch{Family: family}
+	if family.KeyPrefix == nil || !strings.HasPrefix(key, *family.KeyPrefix) {
+		return match, invalidAlert()
+	}
+	id := strings.TrimPrefix(key, *family.KeyPrefix)
+	if !alertCanonicalUUID(id) {
+		return match, invalidAlert()
+	}
+	match.JobID = &id
 	return match, nil
 }
 
@@ -170,45 +180,56 @@ func validateAlertTransition(transition AlertTransition, stage alertValidationSt
 		if family.Kind != transition.Kind {
 			continue
 		}
-		match, err := alertKeyMatch(rule, family, transition.Key)
-		if err != nil {
-			return match, err
-		}
-		summary, ok := family.Summaries[transition.State]
-		if !ok || transition.SafeSummary != strings.ReplaceAll(summary, "{registered-kind}", match.RegisteredKind) || !alertASCII(transition.Key) || !alertASCII(transition.SafeSummary) {
-			return match, invalidAlert()
-		}
-		if _, err := transition.ObservedAt.MarshalJSON(); err != nil {
-			return match, invalidAlert()
-		}
-		durable := false
-		for _, state := range family.DurableStates {
-			if state == transition.State {
-				durable = true
-				break
-			}
-		}
-		switch stage {
-		case alertCandidateStage:
-			if !durable || transition.Version < rule.Limits.CandidateMinVersion {
-				return match, invalidAlert()
-			}
-		case alertPersistedStage:
-			if !durable || transition.Version < rule.Limits.PersistedMinVersion {
-				return match, invalidAlert()
-			}
-		case alertDirectSendStage:
-			direct := family.DirectEphemeral
-			ephemeral := direct != nil && transition.State == direct.State && transition.Version == direct.Version
-			if !ephemeral && (!durable || transition.Version < rule.Limits.PersistedMinVersion) {
-				return match, invalidAlert()
-			}
-		default:
-			return match, invalidAlert()
-		}
-		return match, nil
+		return validateFamilyTransition(rule, family, transition, stage)
 	}
 	return alertConditionMatch{}, invalidAlert()
+}
+
+func validateFamilyTransition(rule alertConditionSpecification, family alertConditionFamily, transition AlertTransition, stage alertValidationStage) (alertConditionMatch, error) {
+	match, err := alertKeyMatch(rule, family, transition.Key)
+	if err != nil {
+		return match, err
+	}
+	if !validAlertSummary(family, transition, match.RegisteredKind) {
+		return match, invalidAlert()
+	}
+	if _, err := transition.ObservedAt.MarshalJSON(); err != nil {
+		return match, invalidAlert()
+	}
+	if !validAlertVersion(rule, family, transition, stage) {
+		return match, invalidAlert()
+	}
+	return match, nil
+}
+
+func validAlertSummary(family alertConditionFamily, transition AlertTransition, registeredKind string) bool {
+	summary, ok := family.Summaries[transition.State]
+	return ok && transition.SafeSummary == strings.ReplaceAll(summary, "{registered-kind}", registeredKind) && alertASCII(transition.Key) && alertASCII(transition.SafeSummary)
+}
+
+func validAlertVersion(rule alertConditionSpecification, family alertConditionFamily, transition AlertTransition, stage alertValidationStage) bool {
+	durable := alertDurableState(family.DurableStates, transition.State)
+	switch stage {
+	case alertCandidateStage:
+		return durable && transition.Version >= rule.Limits.CandidateMinVersion
+	case alertPersistedStage:
+		return durable && transition.Version >= rule.Limits.PersistedMinVersion
+	case alertDirectSendStage:
+		direct := family.DirectEphemeral
+		ephemeral := direct != nil && transition.State == direct.State && transition.Version == direct.Version
+		return ephemeral || durable && transition.Version >= rule.Limits.PersistedMinVersion
+	default:
+		return false
+	}
+}
+
+func alertDurableState(states []string, state string) bool {
+	for _, candidate := range states {
+		if candidate == state {
+			return true
+		}
+	}
+	return false
 }
 func validateAlertMessage(message AlertMessage, stage alertValidationStage) error {
 	match, err := validateAlertTransition(message.Transition, stage)
@@ -325,56 +346,85 @@ func NewDiscordWebhook(endpoint string, client *http.Client) (*DiscordWebhook, e
 		return webhook, nil
 	}
 	parsed, err := url.Parse(endpoint)
-	if err != nil || !strings.EqualFold(parsed.Scheme, "https") || !strings.EqualFold(parsed.Hostname(), "discord.com") || parsed.User != nil || parsed.Fragment != "" || parsed.Opaque != "" || strings.Contains(parsed.EscapedPath(), "%") || strings.Contains(endpoint, "#") {
+	if err != nil || !validDiscordAuthority(parsed, endpoint) {
 		return nil, webhookConfigurationFailure()
 	}
-	if parsed.Port() != "" && parsed.Port() != "443" {
+	if !validDiscordPath(parsed.Path) || !validDiscordQuery(parsed.RawQuery) {
 		return nil, webhookConfigurationFailure()
-	}
-	// An empty explicit port is not the admitted absent-port authority.
-	host := strings.ToLower(parsed.Host)
-	if host != "discord.com" && host != "discord.com:443" {
-		return nil, webhookConfigurationFailure()
-	}
-	segments := strings.Split(parsed.Path, "/")
-	var id, token string
-	switch {
-	case len(segments) == 5 && segments[0] == "" && segments[1] == "api" && segments[2] == "webhooks":
-		id, token = segments[3], segments[4]
-	case len(segments) == 6 && segments[0] == "" && segments[1] == "api" && segments[2] == "v10" && segments[3] == "webhooks":
-		id, token = segments[4], segments[5]
-	default:
-		return nil, webhookConfigurationFailure()
-	}
-	for i := range id {
-		if id[i] < '0' || id[i] > '9' {
-			return nil, webhookConfigurationFailure()
-		}
-	}
-	number, err := strconv.ParseUint(id, 10, 64)
-	if err != nil || number == 0 || token == "" || token == "." || token == ".." {
-		return nil, webhookConfigurationFailure()
-	}
-	for i := range token {
-		c := token[i]
-		if !(c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || c >= '0' && c <= '9' || strings.ContainsRune("._~-", rune(c))) {
-			return nil, webhookConfigurationFailure()
-		}
-	}
-	query, err := url.ParseQuery(parsed.RawQuery)
-	if err != nil || len(query) > 1 {
-		return nil, webhookConfigurationFailure()
-	}
-	if len(query) == 1 {
-		values, ok := query["wait"]
-		if !ok || len(values) != 1 || values[0] != "true" {
-			return nil, webhookConfigurationFailure()
-		}
 	}
 	parsed.RawQuery = "wait=true"
 	parsed.ForceQuery = false
 	webhook.endpoint = parsed.String()
 	return webhook, nil
+}
+
+func validDiscordAuthority(parsed *url.URL, endpoint string) bool {
+	if !strings.EqualFold(parsed.Scheme, "https") || !strings.EqualFold(parsed.Hostname(), "discord.com") || parsed.User != nil || parsed.Fragment != "" || parsed.Opaque != "" || strings.Contains(parsed.EscapedPath(), "%") || strings.Contains(endpoint, "#") {
+		return false
+	}
+	if parsed.Port() != "" && parsed.Port() != "443" {
+		return false
+	}
+	// An empty explicit port is not the admitted absent-port authority.
+	host := strings.ToLower(parsed.Host)
+	return host == "discord.com" || host == "discord.com:443"
+}
+
+func validDiscordPath(path string) bool {
+	id, token, ok := discordWebhookPathParts(path)
+	return ok && validWebhookID(id) && validWebhookToken(token)
+}
+
+func discordWebhookPathParts(path string) (string, string, bool) {
+	segments := strings.Split(path, "/")
+	switch {
+	case len(segments) == 5 && segments[0] == "" && segments[1] == "api" && segments[2] == "webhooks":
+		return segments[3], segments[4], true
+	case len(segments) == 6 && segments[0] == "" && segments[1] == "api" && segments[2] == "v10" && segments[3] == "webhooks":
+		return segments[4], segments[5], true
+	default:
+		return "", "", false
+	}
+}
+
+func validWebhookID(id string) bool {
+	for i := range id {
+		if id[i] < '0' || id[i] > '9' {
+			return false
+		}
+	}
+	number, err := strconv.ParseUint(id, 10, 64)
+	if err != nil || number == 0 {
+		return false
+	}
+	return true
+}
+
+func validWebhookToken(token string) bool {
+	if token == "" || token == "." || token == ".." {
+		return false
+	}
+	for i := range token {
+		c := token[i]
+		if (c < 'A' || c > 'Z') && (c < 'a' || c > 'z') && (c < '0' || c > '9') && !strings.ContainsRune("._~-", rune(c)) {
+			return false
+		}
+	}
+	return true
+}
+
+func validDiscordQuery(rawQuery string) bool {
+	query, err := url.ParseQuery(rawQuery)
+	if err != nil || len(query) > 1 {
+		return false
+	}
+	if len(query) == 1 {
+		values, ok := query["wait"]
+		if !ok || len(values) != 1 || values[0] != "true" {
+			return false
+		}
+	}
+	return true
 }
 func (webhook *DiscordWebhook) Configured() bool { return webhook != nil && webhook.endpoint != "" }
 
@@ -471,11 +521,15 @@ func (webhook *DiscordWebhook) Send(ctx context.Context, message AlertMessage) e
 	if response == nil || response.Body == nil {
 		return &webhookFailure{code: "OPERATOR_ALERT_DELIVERY_FAILED"}
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	raw, readErr := io.ReadAll(io.LimitReader(response.Body, (64<<10)+1))
 	if readErr != nil || len(raw) > 64<<10 {
 		raw = nil
 	}
+	return webhookResponseFailure(response, raw)
+}
+
+func webhookResponseFailure(response *http.Response, raw []byte) error {
 	switch {
 	case response.StatusCode >= 200 && response.StatusCode < 300:
 		return nil

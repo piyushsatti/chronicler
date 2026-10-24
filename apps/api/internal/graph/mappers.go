@@ -15,27 +15,6 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/spatial"
 )
 
-func clockToProductTime(t time.Time) product.Time {
-	return product.Time(t.Format("15:04:05"))
-}
-
-func toDocumentType(d document.Document, body string) *DocumentType {
-	cat := d.Kind
-	return &DocumentType{
-		ID:            d.ID,
-		Slug:          d.Slug,
-		Kind:          d.Kind,
-		Category:      &cat,
-		Status:        string(d.Status),
-		Visibility:    string(d.Visibility),
-		Title:         d.Title,
-		AuthorID:      d.AuthorID,
-		Frontmatter:   json.RawMessage("{}"),
-		UpdatedAt:     time.Now(),
-		EffectiveBody: &body,
-	}
-}
-
 func toQuestFiltersFields(filters *QuestFiltersInput) *quest.QuestFiltersFields {
 	if filters == nil {
 		return nil
@@ -130,17 +109,6 @@ func toQuestArcListResult(v quest.QuestArcListResult) *QuestArcListResult {
 		items = append(items, toQuestArcView(item))
 	}
 	return &QuestArcListResult{Items: items, Total: int(v.Total)}
-}
-
-func toMemberType(m member.Member) *MemberType {
-	return &MemberType{
-		ID:          m.ID,
-		Handle:      m.Handle,
-		DisplayName: m.DisplayName,
-		Status:      string(m.Status),
-		Roles:       m.Roles,
-		JoinedAt:    time.Now(),
-	}
 }
 
 func toMemberViewType(v member.MemberView) *MemberType {
@@ -1645,8 +1613,6 @@ func toHomeBannerType(v site.HomeBannerView) *HomeBannerType {
 		MediaLabel: v.MediaLabel,
 	}
 }
-
-const documentListOrder = "updated_at_desc_id_desc"
 
 func toDocumentSearchHitTypes(items []document.DocumentSearchHitView) []*DocumentSearchHitType {
 	hits := make([]*DocumentSearchHitType, 0, len(items))

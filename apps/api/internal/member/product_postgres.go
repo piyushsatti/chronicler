@@ -224,54 +224,68 @@ func (p *ProductPostgres) AppendAssessment(ctx context.Context, spec AssessmentS
 	var recordedAt pgtype.Timestamptz
 	switch spec.SubjectType {
 	case "character":
-		if spec.ReviewRevision != nil {
-			return VerificationView{}, fmt.Errorf("character assessment cannot carry a DM review revision")
-		}
-		targetID, err := productID(spec.SubjectID)
+		rowID, recordedAt, err = p.appendCharacterAssessment(ctx, spec, verificationID, actorID, verdict)
 		if err != nil {
 			return VerificationView{}, err
 		}
-		if spec.SubmissionToken == "" {
-			return VerificationView{}, fmt.Errorf("character submission token required")
-		}
-		submittedAt, err := time.Parse(time.RFC3339Nano, spec.SubmissionToken)
-		if err != nil {
-			return VerificationView{}, fmt.Errorf("invalid character submission token: %w", err)
-		}
-		if spec.EvidenceAttemptID != nil {
-			return VerificationView{}, fmt.Errorf("character DDB attempt evidence is not stored in squashed schema")
-		}
-		row, err := p.queries().ProductAppendCharacterVerification(ctx, dbgen.ProductAppendCharacterVerificationParams{
-			VerificationID: verificationID, CharacterID: targetID, SubmissionToken: pgtype.Timestamptz{Time: submittedAt, Valid: true},
-			Verdict: verdict, ActorID: actorID, Note: optionalText(spec.Note), At: pgtype.Timestamptz{Time: spec.At, Valid: true},
-		})
-		if err != nil {
-			return VerificationView{}, err
-		}
-		rowID, recordedAt = row.PublicID, row.CreatedAt
 	case "dm_profile":
-		if spec.ReviewRevision == nil || *spec.ReviewRevision < 1 || *spec.ReviewRevision > 2147483647 {
-			return VerificationView{}, fmt.Errorf("positive DM review revision required")
-		}
-		if spec.EvidenceAttemptID != nil || spec.SubmissionToken != "" {
-			return VerificationView{}, fmt.Errorf("DM profile assessment cannot carry character submission fields")
-		}
-		targetID, err := productID(spec.SubjectID)
+		rowID, recordedAt, err = p.appendDmProfileAssessment(ctx, spec, verificationID, actorID, verdict)
 		if err != nil {
 			return VerificationView{}, err
 		}
-		row, err := p.queries().ProductAppendDmVerification(ctx, dbgen.ProductAppendDmVerificationParams{
-			VerificationID: verificationID, MemberID: targetID, Verdict: verdict, ActorID: actorID,
-			Note: optionalText(spec.Note), At: pgtype.Timestamptz{Time: spec.At, Valid: true}, PendingRevision: int32(*spec.ReviewRevision),
-		})
-		if err != nil {
-			return VerificationView{}, err
-		}
-		rowID, recordedAt = row.PublicID, row.CreatedAt
 	default:
 		return VerificationView{}, fmt.Errorf("unsupported assessment subject type %q", spec.SubjectType)
 	}
 	return VerificationView{Id: db.UUIDString(rowID), Note: spec.Note, RecordedAt: recordedAt.Time, TargetId: spec.SubjectID, TargetType: spec.SubjectType, Verdict: verdict, VerifiedBy: db.UUIDString(actorID)}, nil
+}
+
+func (p *ProductPostgres) appendCharacterAssessment(ctx context.Context, spec AssessmentSpec, verificationID, actorID pgtype.UUID, verdict string) (pgtype.UUID, pgtype.Timestamptz, error) {
+	if spec.ReviewRevision != nil {
+		return pgtype.UUID{}, pgtype.Timestamptz{}, fmt.Errorf("character assessment cannot carry a DM review revision")
+	}
+	targetID, err := productID(spec.SubjectID)
+	if err != nil {
+		return pgtype.UUID{}, pgtype.Timestamptz{}, err
+	}
+	if spec.SubmissionToken == "" {
+		return pgtype.UUID{}, pgtype.Timestamptz{}, fmt.Errorf("character submission token required")
+	}
+	submittedAt, err := time.Parse(time.RFC3339Nano, spec.SubmissionToken)
+	if err != nil {
+		return pgtype.UUID{}, pgtype.Timestamptz{}, fmt.Errorf("invalid character submission token: %w", err)
+	}
+	if spec.EvidenceAttemptID != nil {
+		return pgtype.UUID{}, pgtype.Timestamptz{}, fmt.Errorf("character DDB attempt evidence is not stored in squashed schema")
+	}
+	row, err := p.queries().ProductAppendCharacterVerification(ctx, dbgen.ProductAppendCharacterVerificationParams{
+		VerificationID: verificationID, CharacterID: targetID, SubmissionToken: pgtype.Timestamptz{Time: submittedAt, Valid: true},
+		Verdict: verdict, ActorID: actorID, Note: optionalText(spec.Note), At: pgtype.Timestamptz{Time: spec.At, Valid: true},
+	})
+	if err != nil {
+		return pgtype.UUID{}, pgtype.Timestamptz{}, err
+	}
+	return row.PublicID, row.CreatedAt, nil
+}
+
+func (p *ProductPostgres) appendDmProfileAssessment(ctx context.Context, spec AssessmentSpec, verificationID, actorID pgtype.UUID, verdict string) (pgtype.UUID, pgtype.Timestamptz, error) {
+	if spec.ReviewRevision == nil || *spec.ReviewRevision < 1 || *spec.ReviewRevision > 2147483647 {
+		return pgtype.UUID{}, pgtype.Timestamptz{}, fmt.Errorf("positive DM review revision required")
+	}
+	if spec.EvidenceAttemptID != nil || spec.SubmissionToken != "" {
+		return pgtype.UUID{}, pgtype.Timestamptz{}, fmt.Errorf("DM profile assessment cannot carry character submission fields")
+	}
+	targetID, err := productID(spec.SubjectID)
+	if err != nil {
+		return pgtype.UUID{}, pgtype.Timestamptz{}, err
+	}
+	row, err := p.queries().ProductAppendDmVerification(ctx, dbgen.ProductAppendDmVerificationParams{
+		VerificationID: verificationID, MemberID: targetID, Verdict: verdict, ActorID: actorID,
+		Note: optionalText(spec.Note), At: pgtype.Timestamptz{Time: spec.At, Valid: true}, PendingRevision: int32(*spec.ReviewRevision),
+	})
+	if err != nil {
+		return pgtype.UUID{}, pgtype.Timestamptz{}, err
+	}
+	return row.PublicID, row.CreatedAt, nil
 }
 
 func (p *ProductPostgres) LockSetMemberRolesBatch(ctx context.Context, spec SetMemberRolesBatchSpec) (SetMemberRolesBatchState, error) {
@@ -322,6 +336,32 @@ func (p *ProductPostgres) StoreSetMemberRolesBatch(ctx context.Context, write Se
 		}
 		return []MemberRoleBatchResultView{}, nil
 	}
+	changes, err := prepareMemberRoleBatchChanges(write)
+	if err != nil {
+		return nil, err
+	}
+	if len(write.HistoryIDs) != len(changes) {
+		return nil, fmt.Errorf("member role history ID count does not match successful batch members")
+	}
+	if len(changes) == 0 {
+		return missingMemberRoleBatchResults(write.ValidatedInput.Changes), nil
+	}
+	encoded, err := json.Marshal(changes)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := p.queries().ProductSetMemberRolesBatch(ctx, dbgen.ProductSetMemberRolesBatchParams{Changes: encoded, At: pgtype.Timestamptz{Time: write.At, Valid: true}, ActorID: actor})
+	if err != nil {
+		return nil, err
+	}
+	updated, err := updatedMemberRoleBatch(rows, write.HistoryIDs, len(changes))
+	if err != nil {
+		return nil, err
+	}
+	return memberRoleBatchResults(write.ValidatedInput.Changes, updated), nil
+}
+
+func prepareMemberRoleBatchChanges(write SetMemberRolesBatchWrite) ([]map[string]any, error) {
 	locked := make(map[string]LockedMemberState, len(write.Locked.Members))
 	for _, member := range write.Locked.Members {
 		locked[member.ID] = member
@@ -358,38 +398,36 @@ func (p *ProductPostgres) StoreSetMemberRolesBatch(ctx context.Context, write Se
 		seenHistory[historyID] = struct{}{}
 		changes = append(changes, map[string]any{"memberId": change.MemberId, "historyId": historyID, "note": change.Note, "roles": change.Roles})
 	}
-	if len(write.HistoryIDs) != len(changes) {
-		return nil, fmt.Errorf("member role history ID count does not match successful batch members")
+	return changes, nil
+}
+
+func missingMemberRoleBatchResults(changes []MemberRoleBatchFields) []MemberRoleBatchResultView {
+	results := make([]MemberRoleBatchResultView, 0, len(changes))
+	for _, change := range changes {
+		message := "member not found"
+		results = append(results, MemberRoleBatchResultView{MemberId: change.MemberId, Error: &message})
 	}
-	if len(changes) == 0 {
-		results := make([]MemberRoleBatchResultView, 0, len(write.ValidatedInput.Changes))
-		for _, change := range write.ValidatedInput.Changes {
-			message := "member not found"
-			results = append(results, MemberRoleBatchResultView{MemberId: change.MemberId, Error: &message})
-		}
-		return results, nil
-	}
-	encoded, err := json.Marshal(changes)
-	if err != nil {
-		return nil, err
-	}
-	rows, err := p.queries().ProductSetMemberRolesBatch(ctx, dbgen.ProductSetMemberRolesBatchParams{Changes: encoded, At: pgtype.Timestamptz{Time: write.At, Valid: true}, ActorID: actor})
-	if err != nil {
-		return nil, err
-	}
+	return results
+}
+
+func updatedMemberRoleBatch(rows []dbgen.ProductSetMemberRolesBatchRow, historyIDs map[string]string, expectedCount int) (map[string]MemberView, error) {
 	updated := make(map[string]MemberView, len(rows))
 	for _, row := range rows {
 		id := db.UUIDString(row.PublicID)
-		if expected := write.HistoryIDs[id]; expected == "" || db.UUIDString(row.HistoryID) != expected {
+		if expected := historyIDs[id]; expected == "" || db.UUIDString(row.HistoryID) != expected {
 			return nil, fmt.Errorf("role history result did not match the prepared ID for %s", id)
 		}
 		updated[id] = mapProductMember(row.PublicID, row.DiscordID, row.Handle, row.DisplayName, row.AvatarUrl, row.Roles, row.Status, row.JoinedAt)
 	}
-	if len(updated) != len(changes) {
+	if len(updated) != expectedCount {
 		return nil, fmt.Errorf("role batch result did not match the locked members")
 	}
-	results := make([]MemberRoleBatchResultView, 0, len(write.ValidatedInput.Changes))
-	for _, change := range write.ValidatedInput.Changes {
+	return updated, nil
+}
+
+func memberRoleBatchResults(changes []MemberRoleBatchFields, updated map[string]MemberView) []MemberRoleBatchResultView {
+	results := make([]MemberRoleBatchResultView, 0, len(changes))
+	for _, change := range changes {
 		if member, ok := updated[change.MemberId]; ok {
 			results = append(results, MemberRoleBatchResultView{MemberId: change.MemberId, Member: &member, Ok: true})
 			continue
@@ -397,7 +435,7 @@ func (p *ProductPostgres) StoreSetMemberRolesBatch(ctx context.Context, write Se
 		message := "member not found"
 		results = append(results, MemberRoleBatchResultView{MemberId: change.MemberId, Error: &message})
 	}
-	return results, nil
+	return results
 }
 
 func (p *ProductPostgres) LockUpdateMyProfile(ctx context.Context, actorID string, _ UpdateMyProfileSpec) (UpdateMyProfileState, error) {
@@ -741,36 +779,55 @@ func (p *ProductPostgres) StoreSetMyAvailability(ctx context.Context, write SetM
 	if err != nil {
 		return nil, err
 	}
-	arg := dbgen.ProductInsertAvailabilityParams{ActorID: id, Weekdays: make([]int16, 0, len(write.ValidatedInput.Slots)), Starts: make([]int16, 0, len(write.ValidatedInput.Slots)), Ends: make([]int16, 0, len(write.ValidatedInput.Slots)), Notes: make([]string, 0, len(write.ValidatedInput.Slots)), NotesValid: make([]bool, 0, len(write.ValidatedInput.Slots))}
-	keys := make([]availabilityKey, 0, len(write.ValidatedInput.Slots))
-	for _, slot := range write.ValidatedInput.Slots {
-		weekday, err := parseWeekday(slot.Day)
-		if err != nil {
-			return nil, err
-		}
-		start, err := parseMinuteTime(slot.StartTime)
-		if err != nil {
-			return nil, err
-		}
-		end, err := parseMinuteTime(slot.EndTime)
-		if err != nil {
-			return nil, err
-		}
-		arg.Weekdays = append(arg.Weekdays, weekday)
-		arg.Starts = append(arg.Starts, start)
-		arg.Ends = append(arg.Ends, end)
-		note, noteValid := availabilityNoteValue(slot.Note)
-		arg.Notes = append(arg.Notes, note)
-		arg.NotesValid = append(arg.NotesValid, noteValid)
-		keys = append(keys, availabilityKey{weekday: weekday, start: start, end: end, note: note})
+	insert, err := buildAvailabilityInsert(id, write.ValidatedInput.Slots)
+	if err != nil {
+		return nil, err
 	}
 	if _, err := p.queries().ProductDeleteAvailability(ctx, id); err != nil {
 		return nil, err
 	}
-	rows, err := p.queries().ProductInsertAvailability(ctx, arg)
+	rows, err := p.queries().ProductInsertAvailability(ctx, insert.params)
 	if err != nil {
 		return nil, err
 	}
+	return matchAvailabilityInsert(insert.keys, rows)
+}
+
+type availabilityInsert struct {
+	params dbgen.ProductInsertAvailabilityParams
+	keys   []availabilityKey
+}
+
+func buildAvailabilityInsert(id pgtype.UUID, slots []AvailabilitySlotFields) (availabilityInsert, error) {
+	insert := availabilityInsert{params: dbgen.ProductInsertAvailabilityParams{
+		ActorID: id, Weekdays: make([]int16, 0, len(slots)), Starts: make([]int16, 0, len(slots)), Ends: make([]int16, 0, len(slots)),
+		Notes: make([]string, 0, len(slots)), NotesValid: make([]bool, 0, len(slots)),
+	}, keys: make([]availabilityKey, 0, len(slots))}
+	for _, slot := range slots {
+		weekday, err := parseWeekday(slot.Day)
+		if err != nil {
+			return availabilityInsert{}, err
+		}
+		start, err := parseMinuteTime(slot.StartTime)
+		if err != nil {
+			return availabilityInsert{}, err
+		}
+		end, err := parseMinuteTime(slot.EndTime)
+		if err != nil {
+			return availabilityInsert{}, err
+		}
+		insert.params.Weekdays = append(insert.params.Weekdays, weekday)
+		insert.params.Starts = append(insert.params.Starts, start)
+		insert.params.Ends = append(insert.params.Ends, end)
+		note, noteValid := availabilityNoteValue(slot.Note)
+		insert.params.Notes = append(insert.params.Notes, note)
+		insert.params.NotesValid = append(insert.params.NotesValid, noteValid)
+		insert.keys = append(insert.keys, availabilityKey{weekday: weekday, start: start, end: end, note: note})
+	}
+	return insert, nil
+}
+
+func matchAvailabilityInsert(keys []availabilityKey, rows []dbgen.ProductInsertAvailabilityRow) ([]AvailabilitySlotView, error) {
 	matched := make([]bool, len(rows))
 	items := make([]AvailabilitySlotView, 0, len(rows))
 	for _, key := range keys {
@@ -987,29 +1044,7 @@ func (p *ProductPostgres) LockUpsertUnlockable(ctx context.Context, spec UpsertU
 }
 
 func (p *ProductPostgres) StoreUpsertUnlockable(ctx context.Context, write UpsertUnlockableWrite) (UnlockableView, error) {
-	var id pgtype.UUID
-	var err error
-	creating := write.ValidatedInput.Id == nil
-	if creating {
-		if write.Locked.Exists {
-			return UnlockableView{}, fmt.Errorf("catalog create cannot have a locked existing unlockable")
-		}
-		if write.UnlockableID == "" {
-			return UnlockableView{}, fmt.Errorf("unlockable public ID required for create")
-		}
-		id, err = productID(write.UnlockableID)
-	} else {
-		id, err = productID(*write.ValidatedInput.Id)
-		if err == nil && (!write.Locked.Exists || write.Locked.SubjectID != *write.ValidatedInput.Id) {
-			err = fmt.Errorf("unlockable ID does not match the locked catalog item")
-		}
-		if err == nil && write.Input.Id != nil && *write.Input.Id != *write.ValidatedInput.Id {
-			err = fmt.Errorf("validated unlockable ID does not match the requested catalog item")
-		}
-		if err == nil && write.UnlockableID != "" && write.UnlockableID != *write.ValidatedInput.Id {
-			err = fmt.Errorf("unlockable ID does not match the locked catalog item")
-		}
-	}
+	id, creating, err := upsertUnlockableID(write)
 	if err != nil {
 		return UnlockableView{}, err
 	}
@@ -1035,6 +1070,33 @@ func (p *ProductPostgres) StoreUpsertUnlockable(ctx context.Context, write Upser
 		return UnlockableView{}, fmt.Errorf("unlockable result did not match the prepared public ID")
 	}
 	return mapUnlockable(row)
+}
+
+func upsertUnlockableID(write UpsertUnlockableWrite) (pgtype.UUID, bool, error) {
+	if write.ValidatedInput.Id == nil {
+		if write.Locked.Exists {
+			return pgtype.UUID{}, true, fmt.Errorf("catalog create cannot have a locked existing unlockable")
+		}
+		if write.UnlockableID == "" {
+			return pgtype.UUID{}, true, fmt.Errorf("unlockable public ID required for create")
+		}
+		id, err := productID(write.UnlockableID)
+		return id, true, err
+	}
+	id, err := productID(*write.ValidatedInput.Id)
+	if err != nil {
+		return pgtype.UUID{}, false, err
+	}
+	if !write.Locked.Exists || write.Locked.SubjectID != *write.ValidatedInput.Id {
+		return pgtype.UUID{}, false, fmt.Errorf("unlockable ID does not match the locked catalog item")
+	}
+	if write.Input.Id != nil && *write.Input.Id != *write.ValidatedInput.Id {
+		return pgtype.UUID{}, false, fmt.Errorf("validated unlockable ID does not match the requested catalog item")
+	}
+	if write.UnlockableID != "" && write.UnlockableID != *write.ValidatedInput.Id {
+		return pgtype.UUID{}, false, fmt.Errorf("unlockable ID does not match the locked catalog item")
+	}
+	return id, false, nil
 }
 
 func (p *ProductPostgres) ReadMemberRoleHistory(ctx context.Context, _ auth.Authority, spec MemberRoleHistorySpec) (RoleChangePage, error) {

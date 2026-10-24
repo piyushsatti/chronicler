@@ -34,7 +34,7 @@ process.stdout.write(renderToStaticMarkup(createElement(MemoryRouter, null,
 for (const width of [1440, 390]) {
   test(`rendered segments share the widest intrinsic width at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 844 });
-    await page.setContent(`<style>${styles}</style>${markup}`);
+    await page.setContent(`<meta name="viewport" content="width=device-width, initial-scale=1" /><style>${styles}</style>${markup}`);
     const tracks = await page.locator('.segmented-track').evaluateAll((elements) =>
       elements.map((track) => {
         const segments = Array.from(track.querySelectorAll<HTMLElement>('.segmented-option'));

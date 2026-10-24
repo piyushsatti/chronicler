@@ -39,13 +39,17 @@ func TestHTTPLeasedLifecycle(t *testing.T) {
 		send(base+"/claim", body, 422)
 	}
 	var claim ClaimedQuestion
-	json.Unmarshal(send(base+"/claim", `{"lease_protocol":1}`, 200).Body.Bytes(), &claim)
+	if err := json.Unmarshal(send(base+"/claim", `{"lease_protocol":1}`, 200).Body.Bytes(), &claim); err != nil {
+		t.Fatal(err)
+	}
 	if claim.Lease.Token != "1" || claim.Lease.Attempt != 1 || claim.Lease.RenewAfterSeconds != 10 || claim.Lease.RemainingBudgetSeconds != 100 || claim.Lease.AttemptDeadlineAt != claim.QuestionDeadlineAt {
 		t.Fatalf("%+v", claim)
 	}
 	now = now.Add(31 * time.Second)
 	var next ClaimedQuestion
-	json.Unmarshal(send(base+"/claim", `{"lease_protocol":1}`, 200).Body.Bytes(), &next)
+	if err := json.Unmarshal(send(base+"/claim", `{"lease_protocol":1}`, 200).Body.Bytes(), &next); err != nil {
+		t.Fatal(err)
+	}
 	if next.Lease.Token != "2" || next.Lease.Attempt != 2 || next.QuestionDeadlineAt != claim.QuestionDeadlineAt || next.Lease.RemainingBudgetSeconds != 69 {
 		t.Fatal(next)
 	}
@@ -101,7 +105,9 @@ func TestMaximumEscapedClaimResponseFitsConsumerBound(t *testing.T) {
 		}
 		now := time.Now()
 		j := jobs.Job{Kind: "agent_question", State: jobs.Queued, QuestionDeadlineAt: now.Add(jobs.QuestionBudget)}
-		j.Claim(now)
+		if claimed, err := j.Claim(now); err != nil || !claimed {
+			t.Fatalf("claim failed: claimed=%v err=%v", claimed, err)
+		}
 		j.Token = math.MaxInt64
 		j.Attempts = jobs.MaxAttempts
 		raw, e := json.Marshal(ClaimedQuestion{q, j.Lease(now), j.QuestionDeadlineAt})

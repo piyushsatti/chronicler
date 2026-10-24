@@ -16,6 +16,7 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/idempotency"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/uow"
 )
@@ -97,51 +98,13 @@ func runOperationCommand[T any](
 		return result, err
 	}
 	err = s.Runner.Do(ctx, func(repos ProductCommandRepos) error {
-		for _, dependency := range []any{repos.Authority, repos.Policy, repos.Replay} {
-			if commandDependencyMissing(dependency) {
-				return apierr.New(apierr.Internal, "character transaction dependencies required")
-			}
-		}
-		fresh, err := repos.Authority(ctx, actor.Claims().MemberID)
+		admission, err := admitCharacterOperation(ctx, repos, actor, operation, opName, meta, fingerprint)
 		if err != nil {
 			return err
 		}
-		if fresh.Claims().MemberID == "" || fresh.Claims().MemberID != actor.Claims().MemberID {
-			return apierr.New(apierr.Forbidden, "member authority changed")
-		}
-		request, err := auth.ForOperation(operation)
-		if err != nil {
-			return err
-		}
-		decision, err := repos.Policy.Decide(ctx, fresh, request)
-		if err != nil {
-			return err
-		}
-		if !decision.Allowed {
-			return apierr.New(apierr.Forbidden, "character command forbidden")
-		}
-		claim, err := repos.Replay.Claim(ctx, fresh.Claims().MemberID, opName, meta.IdempotencyKey, fingerprint)
-		if err != nil {
-			return err
-		}
-		current, err := repos.Authority(ctx, fresh.Claims().MemberID)
-		if err != nil {
-			return err
-		}
-		currentDecision, err := repos.Policy.Decide(ctx, current, request)
-		if err != nil {
-			return err
-		}
-		if current.Claims().MemberID != fresh.Claims().MemberID || !currentDecision.Allowed || currentDecision.UsedOverride && !decision.UsedOverride {
-			return apierr.New(apierr.Forbidden, "character authority changed")
-		}
-		fresh = current
-		if claim.Replay {
-			if err := json.Unmarshal(claim.Receipt, &result); err != nil {
+		if admission.claim.Replay {
+			if err := restoreCharacterReplay(admission.claim, &result); err != nil {
 				return err
-			}
-			if receipt, ok := any(&result).(*product.CommandReceipt); ok {
-				receipt.Replayed = true
 			}
 			return nil
 		}
@@ -149,57 +112,133 @@ func runOperationCommand[T any](
 		if err != nil {
 			return err
 		}
-		result, err = mutate(repos, fresh, at)
+		result, err = mutate(repos, admission.fresh, at)
 		if err != nil {
 			return err
 		}
-		current, err = repos.Authority(ctx, fresh.Claims().MemberID)
+		admission.fresh, err = recheckCharacterAuthority(ctx, repos, admission.fresh, admission.request, admission.decision)
 		if err != nil {
 			return err
 		}
-		currentDecision, err = repos.Policy.Decide(ctx, current, request)
-		if err != nil {
-			return err
-		}
-		if current.Claims().MemberID != fresh.Claims().MemberID || !currentDecision.Allowed || currentDecision.UsedOverride && !decision.UsedOverride {
-			return apierr.New(apierr.Forbidden, "character authority changed")
-		}
-		if decision.UsedOverride {
-			if commandDependencyMissing(repos.Audit) {
-				return apierr.New(apierr.Internal, "override recorder required")
-			}
-			switch opName {
-			case "upsertCreationCatalogEntry":
-				view, ok := any(result).(CreationCatalogEntryView)
-				if !ok {
-					return apierr.New(apierr.Internal, "catalog audit subject required")
-				}
-				subjectID = view.Id
-			case "createBackstory", "updateBackstory":
-				view, ok := any(result).(BackstoryView)
-				if !ok {
-					return apierr.New(apierr.Internal, "backstory audit subject required")
-				}
-				subjectID = view.Id
-			}
-			if err := repos.Audit.Record(ctx, claim, auth.OverrideFact{
-				ActorID: fresh.Claims().MemberID, Operation: request.Operation(), SubjectType: "character",
-				SubjectID: subjectID, RuleCode: decision.RuleCode, At: at,
-			}); err != nil {
-				return err
-			}
-		}
-		receipt, err := json.Marshal(result)
-		if err != nil {
-			return err
-		}
-		return repos.Replay.Complete(ctx, claim, receipt)
+		return completeCharacterCommand(ctx, repos, admission, opName, subjectID, result, at)
 	})
 	if err != nil {
 		var zero T
 		return zero, err
 	}
 	return result, nil
+}
+
+type characterCommandAdmission struct {
+	fresh    auth.Authority
+	request  auth.Request
+	decision auth.Decision
+	claim    idempotency.Claim
+	ownerID  string
+}
+
+func admitCharacterOperation(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, operation auth.Operation, opName string, meta product.CommandMeta, fingerprint string) (characterCommandAdmission, error) {
+	var admission characterCommandAdmission
+	for _, dependency := range []any{repos.Authority, repos.Policy, repos.Replay} {
+		if commandDependencyMissing(dependency) {
+			return admission, apierr.New(apierr.Internal, "character transaction dependencies required")
+		}
+	}
+	fresh, err := repos.Authority(ctx, actor.Claims().MemberID)
+	if err != nil {
+		return admission, err
+	}
+	if fresh.Claims().MemberID == "" || fresh.Claims().MemberID != actor.Claims().MemberID {
+		return admission, apierr.New(apierr.Forbidden, "member authority changed")
+	}
+	request, err := auth.ForOperation(operation)
+	if err != nil {
+		return admission, err
+	}
+	decision, err := repos.Policy.Decide(ctx, fresh, request)
+	if err != nil {
+		return admission, err
+	}
+	if !decision.Allowed {
+		return admission, apierr.New(apierr.Forbidden, "character command forbidden")
+	}
+	claim, err := repos.Replay.Claim(ctx, fresh.Claims().MemberID, opName, meta.IdempotencyKey, fingerprint)
+	if err != nil {
+		return admission, err
+	}
+	fresh, err = recheckCharacterAuthority(ctx, repos, fresh, request, decision)
+	if err != nil {
+		return admission, err
+	}
+	return characterCommandAdmission{fresh: fresh, request: request, decision: decision, claim: claim}, nil
+}
+
+func recheckCharacterAuthority(ctx context.Context, repos ProductCommandRepos, prior auth.Authority, request auth.Request, original auth.Decision) (auth.Authority, error) {
+	current, err := repos.Authority(ctx, prior.Claims().MemberID)
+	if err != nil {
+		return auth.Authority{}, err
+	}
+	decision, err := repos.Policy.Decide(ctx, current, request)
+	if err != nil {
+		return auth.Authority{}, err
+	}
+	if current.Claims().MemberID != prior.Claims().MemberID || !decision.Allowed || decision.UsedOverride && !original.UsedOverride {
+		return auth.Authority{}, apierr.New(apierr.Forbidden, "character authority changed")
+	}
+	return current, nil
+}
+
+func restoreCharacterReplay[T any](claim idempotency.Claim, result *T) error {
+	if err := json.Unmarshal(claim.Receipt, result); err != nil {
+		return err
+	}
+	if receipt, ok := any(result).(*product.CommandReceipt); ok {
+		receipt.Replayed = true
+	}
+	return nil
+}
+
+func completeCharacterCommand[T any](ctx context.Context, repos ProductCommandRepos, admission characterCommandAdmission, opName, subjectID string, result T, at time.Time) error {
+	if admission.decision.UsedOverride {
+		if commandDependencyMissing(repos.Audit) {
+			return apierr.New(apierr.Internal, "override recorder required")
+		}
+		var err error
+		subjectID, err = characterOverrideSubject(opName, result, subjectID)
+		if err != nil {
+			return err
+		}
+		if err := repos.Audit.Record(ctx, admission.claim, auth.OverrideFact{
+			ActorID: admission.fresh.Claims().MemberID, Operation: admission.request.Operation(), SubjectType: "character",
+			SubjectID: subjectID, RuleCode: admission.decision.RuleCode, At: at,
+		}); err != nil {
+			return err
+		}
+	}
+	receipt, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+	return repos.Replay.Complete(ctx, admission.claim, receipt)
+}
+
+func characterOverrideSubject[T any](opName string, result T, subjectID string) (string, error) {
+	switch opName {
+	case "upsertCreationCatalogEntry":
+		view, ok := any(result).(CreationCatalogEntryView)
+		if !ok {
+			return "", apierr.New(apierr.Internal, "catalog audit subject required")
+		}
+		return view.Id, nil
+	case "createBackstory", "updateBackstory":
+		view, ok := any(result).(BackstoryView)
+		if !ok {
+			return "", apierr.New(apierr.Internal, "backstory audit subject required")
+		}
+		return view.Id, nil
+	default:
+		return subjectID, nil
+	}
 }
 
 func runOwnedCharacterCommand[T any](
@@ -218,58 +257,13 @@ func runOwnedCharacterCommand[T any](
 		return result, err
 	}
 	err = s.Runner.Do(ctx, func(repos ProductCommandRepos) error {
-		for _, dependency := range []any{repos.Authority, repos.Policy, repos.Replay, repos.Admissions} {
-			if commandDependencyMissing(dependency) {
-				return apierr.New(apierr.Internal, "character transaction dependencies required")
-			}
-		}
-		fresh, err := repos.Authority(ctx, actor.Claims().MemberID)
+		admission, err := admitOwnedCharacterCommand(ctx, repos, actor, opName, characterID, meta, fingerprint)
 		if err != nil {
 			return err
 		}
-		if fresh.Claims().MemberID == "" || fresh.Claims().MemberID != actor.Claims().MemberID {
-			return apierr.New(apierr.Forbidden, "member authority changed")
-		}
-		ownerID, err := repos.Admissions.ReadImmutableOwner(ctx, characterID)
-		if err != nil {
-			return err
-		}
-		if ownerID != fresh.Claims().MemberID {
-			return apierr.New(apierr.Forbidden, "character owner required")
-		}
-		request, err := auth.ForCharacter(auth.Operation("Mutation."+opName), auth.CharacterFacts{ID: characterID, OwnerID: ownerID})
-		if err != nil {
-			return err
-		}
-		decision, err := repos.Policy.Decide(ctx, fresh, request)
-		if err != nil {
-			return err
-		}
-		if !decision.Allowed {
-			return apierr.New(apierr.Forbidden, "character command forbidden")
-		}
-		claim, err := repos.Replay.Claim(ctx, fresh.Claims().MemberID, opName, meta.IdempotencyKey, fingerprint)
-		if err != nil {
-			return err
-		}
-		current, err := repos.Authority(ctx, fresh.Claims().MemberID)
-		if err != nil {
-			return err
-		}
-		currentDecision, err := repos.Policy.Decide(ctx, current, request)
-		if err != nil {
-			return err
-		}
-		if current.Claims().MemberID != fresh.Claims().MemberID || !currentDecision.Allowed || currentDecision.UsedOverride && !decision.UsedOverride {
-			return apierr.New(apierr.Forbidden, "character authority changed")
-		}
-		fresh = current
-		if claim.Replay {
-			if err := json.Unmarshal(claim.Receipt, &result); err != nil {
+		if admission.claim.Replay {
+			if err := restoreCharacterReplay(admission.claim, &result); err != nil {
 				return err
-			}
-			if receipt, ok := any(&result).(*product.CommandReceipt); ok {
-				receipt.Replayed = true
 			}
 			return nil
 		}
@@ -277,35 +271,63 @@ func runOwnedCharacterCommand[T any](
 		if err != nil {
 			return err
 		}
-		result, err = mutate(repos, fresh, at)
+		result, err = mutate(repos, admission.fresh, at)
 		if err != nil {
 			return err
 		}
-		if err := admitCharacterWrite(ctx, repos, fresh, request.Operation(), characterID, ownerID); err != nil {
+		if err := admitCharacterWrite(ctx, repos, admission.fresh, admission.request.Operation(), characterID, admission.ownerID); err != nil {
 			return err
 		}
-		if decision.UsedOverride {
-			if commandDependencyMissing(repos.Audit) {
-				return apierr.New(apierr.Internal, "override recorder required")
-			}
-			if err := repos.Audit.Record(ctx, claim, auth.OverrideFact{
-				ActorID: fresh.Claims().MemberID, Operation: request.Operation(), SubjectType: "character",
-				SubjectID: characterID, RuleCode: decision.RuleCode, At: at,
-			}); err != nil {
-				return err
-			}
-		}
-		receipt, err := json.Marshal(result)
-		if err != nil {
-			return err
-		}
-		return repos.Replay.Complete(ctx, claim, receipt)
+		return completeCharacterCommand(ctx, repos, admission, opName, characterID, result, at)
 	})
 	if err != nil {
 		var zero T
 		return zero, err
 	}
 	return result, nil
+}
+
+func admitOwnedCharacterCommand(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, opName, characterID string, meta product.CommandMeta, fingerprint string) (characterCommandAdmission, error) {
+	var admission characterCommandAdmission
+	for _, dependency := range []any{repos.Authority, repos.Policy, repos.Replay, repos.Admissions} {
+		if commandDependencyMissing(dependency) {
+			return admission, apierr.New(apierr.Internal, "character transaction dependencies required")
+		}
+	}
+	fresh, err := repos.Authority(ctx, actor.Claims().MemberID)
+	if err != nil {
+		return admission, err
+	}
+	if fresh.Claims().MemberID == "" || fresh.Claims().MemberID != actor.Claims().MemberID {
+		return admission, apierr.New(apierr.Forbidden, "member authority changed")
+	}
+	ownerID, err := repos.Admissions.ReadImmutableOwner(ctx, characterID)
+	if err != nil {
+		return admission, err
+	}
+	if ownerID != fresh.Claims().MemberID {
+		return admission, apierr.New(apierr.Forbidden, "character owner required")
+	}
+	request, err := auth.ForCharacter(auth.Operation("Mutation."+opName), auth.CharacterFacts{ID: characterID, OwnerID: ownerID})
+	if err != nil {
+		return admission, err
+	}
+	decision, err := repos.Policy.Decide(ctx, fresh, request)
+	if err != nil {
+		return admission, err
+	}
+	if !decision.Allowed {
+		return admission, apierr.New(apierr.Forbidden, "character command forbidden")
+	}
+	claim, err := repos.Replay.Claim(ctx, fresh.Claims().MemberID, opName, meta.IdempotencyKey, fingerprint)
+	if err != nil {
+		return admission, err
+	}
+	fresh, err = recheckCharacterAuthority(ctx, repos, fresh, request, decision)
+	if err != nil {
+		return admission, err
+	}
+	return characterCommandAdmission{fresh: fresh, request: request, decision: decision, claim: claim, ownerID: ownerID}, nil
 }
 
 func admitCharacterWrite(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, operation auth.Operation, characterID, ownerID string) error {
@@ -350,7 +372,14 @@ func validateCreateCharacterInput(spec *CreateCharacterSpec) error {
 			return err
 		}
 	}
-	for _, field := range []*string{spec.Input.BackstoryId, spec.Input.GuildId, spec.Input.RegionId} {
+	if err := validateCreateCharacterIDs(&spec.Input); err != nil {
+		return err
+	}
+	return validateCreateCharacterDetails(&spec.Input)
+}
+
+func validateCreateCharacterIDs(input *CreateCharacterFields) error {
+	for _, field := range []*string{input.BackstoryId, input.GuildId, input.RegionId} {
 		if err := commandPublicID(field); err != nil {
 			return err
 		}
@@ -358,28 +387,32 @@ func validateCreateCharacterInput(spec *CreateCharacterSpec) error {
 	// New characters need a region and a backstory, as both were required
 	// selects in the original create form. Legacy rows without them are untouched
 	// because only the create path checks this.
-	if spec.Input.RegionId == nil {
+	if input.RegionId == nil {
 		return apierr.New(apierr.Invalid, "region required")
 	}
-	if spec.Input.BackstoryId == nil {
+	if input.BackstoryId == nil {
 		return apierr.New(apierr.Invalid, "backstory required")
 	}
-	for i := range spec.Input.CatalogPickIds {
-		if err := commandPublicID(&spec.Input.CatalogPickIds[i]); err != nil {
+	for i := range input.CatalogPickIds {
+		if err := commandPublicID(&input.CatalogPickIds[i]); err != nil {
 			return err
 		}
 	}
-	seen := make(map[string]bool, len(spec.Input.CatalogPickIds))
-	for _, id := range spec.Input.CatalogPickIds {
+	seen := make(map[string]bool, len(input.CatalogPickIds))
+	for _, id := range input.CatalogPickIds {
 		if seen[id] {
 			return apierr.New(apierr.Invalid, "duplicate creation catalog pick")
 		}
 		seen[id] = true
 	}
+	return nil
+}
+
+func validateCreateCharacterDetails(input *CreateCharacterFields) error {
 	for _, value := range []struct {
 		text  *string
 		limit int
-	}{{spec.Input.Description, 4000}, {spec.Input.BackgroundText, 8000}} {
+	}{{input.Description, 4000}, {input.BackgroundText, 8000}} {
 		if value.text != nil {
 			if err := characterQueryText(*value.text, value.limit); err != nil {
 				return err
@@ -388,14 +421,14 @@ func validateCreateCharacterInput(spec *CreateCharacterSpec) error {
 	}
 	// D4: new characters need a D&D Beyond sheet; legacy rows without one are
 	// untouched because only the create path checks this.
-	if spec.Input.DdbUrl == nil || strings.TrimSpace(*spec.Input.DdbUrl) == "" {
+	if input.DdbUrl == nil || strings.TrimSpace(*input.DdbUrl) == "" {
 		return apierr.New(apierr.Invalid, "D&D Beyond character URL required")
 	}
-	if _, err := canonicalDdbCharacterID(*spec.Input.DdbUrl); err != nil {
+	if _, err := canonicalDdbCharacterID(*input.DdbUrl); err != nil {
 		return apierr.New(apierr.Invalid, "invalid DDB character URL")
 	}
-	if spec.Input.ImageUrl != nil {
-		if err := validateCharacterImageURL(*spec.Input.ImageUrl); err != nil {
+	if input.ImageUrl != nil {
+		if err := validateCharacterImageURL(*input.ImageUrl); err != nil {
 			return err
 		}
 	}
@@ -540,58 +573,77 @@ func (s ProductCommands) RetireCharacter(ctx context.Context, actor auth.Authori
 	for range 3 {
 		result, err := runOwnedCharacterCommand(ctx, s, actor, "retireCharacter", spec.CharacterId, spec, meta,
 			func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (CharacterView, error) {
-				if commandDependencyMissing(repos.Withdrawals) || commandDependencyMissing(repos.Producer) {
-					return CharacterView{}, apierr.New(apierr.Internal, "character withdrawal dependencies required")
-				}
-				plan, err := repos.Withdrawals.PlanOwnedCharacterWithdrawal(ctx, spec.CharacterId, nil)
-				if err != nil {
-					return CharacterView{}, err
-				}
-				admissions, err := repos.Admissions.LockAdmissions(ctx, plan.CharacterIDs)
-				if err != nil {
-					return CharacterView{}, err
-				}
-				if len(admissions) != len(plan.CharacterIDs) {
-					return CharacterView{}, ErrWithdrawalPlanChanged
-				}
-				currentPlan, err := repos.Withdrawals.PlanOwnedCharacterWithdrawal(ctx, spec.CharacterId, nil)
-				if err != nil {
-					return CharacterView{}, err
-				}
-				if !reflect.DeepEqual(plan, currentPlan) {
-					return CharacterView{}, ErrWithdrawalPlanChanged
-				}
-				locked, err := repos.Character.LockRetireCharacter(ctx, spec)
-				if err != nil {
-					return CharacterView{}, err
-				}
-				if !locked.Exists {
-					return CharacterView{}, apierr.New(apierr.NotFound, "character not found")
-				}
-				if err := admitCharacterWrite(ctx, repos, fresh, "Mutation.retireCharacter", spec.CharacterId, locked.OwnerID); err != nil {
-					return CharacterView{}, err
-				}
-				if locked.UpdatedAt == nil || !locked.UpdatedAt.Equal(spec.ExpectedUpdatedAt) || locked.Before.Status == "dead" || locked.Before.Status == "retired" {
-					return CharacterView{}, apierr.New(apierr.Conflict, "character retire rejected")
-				}
-				effects, err := repos.Withdrawals.WithdrawOwnedCharacter(ctx, fresh.Claims().MemberID, plan, "retired", at)
-				if err != nil {
-					return CharacterView{}, err
-				}
-				for _, event := range effects.Events {
-					if err := repos.Producer.Record(ctx, repos.Notice, event); err != nil {
-						return CharacterView{}, err
-					}
-				}
-				return repos.Character.StoreRetireCharacter(ctx, RetireCharacterWrite{
-					ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked,
-				})
+				return retireCharacterInTransaction(ctx, repos, fresh, spec, at)
 			})
 		if !errors.Is(err, ErrWithdrawalPlanChanged) {
 			return result, err
 		}
 	}
 	return CharacterView{}, apierr.New(apierr.Conflict, "quest roster kept changing during retirement")
+}
+
+func retireCharacterInTransaction(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, spec RetireCharacterSpec, at time.Time) (CharacterView, error) {
+	if commandDependencyMissing(repos.Withdrawals) || commandDependencyMissing(repos.Producer) {
+		return CharacterView{}, apierr.New(apierr.Internal, "character withdrawal dependencies required")
+	}
+	plan, err := lockCharacterRetirementPlan(ctx, repos, spec.CharacterId)
+	if err != nil {
+		return CharacterView{}, err
+	}
+	locked, err := repos.Character.LockRetireCharacter(ctx, spec)
+	if err != nil {
+		return CharacterView{}, err
+	}
+	if !locked.Exists {
+		return CharacterView{}, apierr.New(apierr.NotFound, "character not found")
+	}
+	if err := admitCharacterWrite(ctx, repos, fresh, "Mutation.retireCharacter", spec.CharacterId, locked.OwnerID); err != nil {
+		return CharacterView{}, err
+	}
+	if locked.UpdatedAt == nil || !locked.UpdatedAt.Equal(spec.ExpectedUpdatedAt) || locked.Before.Status == "dead" || locked.Before.Status == "retired" {
+		return CharacterView{}, apierr.New(apierr.Conflict, "character retire rejected")
+	}
+	effects, err := repos.Withdrawals.WithdrawOwnedCharacter(ctx, fresh.Claims().MemberID, plan, "retired", at)
+	if err != nil {
+		return CharacterView{}, err
+	}
+	if err := recordRetirementEvents(ctx, repos, effects.Events); err != nil {
+		return CharacterView{}, err
+	}
+	return repos.Character.StoreRetireCharacter(ctx, RetireCharacterWrite{
+		ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked,
+	})
+}
+
+func lockCharacterRetirementPlan(ctx context.Context, repos ProductCommandRepos, characterID string) (WithdrawalPlan, error) {
+	plan, err := repos.Withdrawals.PlanOwnedCharacterWithdrawal(ctx, characterID, nil)
+	if err != nil {
+		return WithdrawalPlan{}, err
+	}
+	admissions, err := repos.Admissions.LockAdmissions(ctx, plan.CharacterIDs)
+	if err != nil {
+		return WithdrawalPlan{}, err
+	}
+	if len(admissions) != len(plan.CharacterIDs) {
+		return WithdrawalPlan{}, ErrWithdrawalPlanChanged
+	}
+	currentPlan, err := repos.Withdrawals.PlanOwnedCharacterWithdrawal(ctx, characterID, nil)
+	if err != nil {
+		return WithdrawalPlan{}, err
+	}
+	if !reflect.DeepEqual(plan, currentPlan) {
+		return WithdrawalPlan{}, ErrWithdrawalPlanChanged
+	}
+	return plan, nil
+}
+
+func recordRetirementEvents(ctx context.Context, repos ProductCommandRepos, events []notification.Event) error {
+	for _, event := range events {
+		if err := repos.Producer.Record(ctx, repos.Notice, event); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s ProductCommands) DecideVerification(ctx context.Context, actor auth.Authority, spec DecideVerificationSpec, meta product.CommandMeta) (member.VerificationView, error) {
@@ -609,67 +661,66 @@ func (s ProductCommands) DecideVerification(ctx context.Context, actor auth.Auth
 	}
 	return runOperationCommand(ctx, s, actor, "Mutation.decideVerification", "decideVerification", spec, meta, spec.CharacterId,
 		func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (member.VerificationView, error) {
-			if commandDependencyMissing(repos.Assessments) {
-				return member.VerificationView{}, apierr.New(apierr.Internal, "assessment writer required")
-			}
-			locked, err := repos.Character.LockDecideVerification(ctx, spec)
-			if err != nil {
-				return member.VerificationView{}, err
-			}
-			if !locked.Exists {
-				return member.VerificationView{}, apierr.New(apierr.NotFound, "character not found")
-			}
-			current, err := repos.Authority(ctx, fresh.Claims().MemberID)
-			if err != nil {
-				return member.VerificationView{}, err
-			}
-			request, err := auth.ForOperation("Mutation.decideVerification")
-			if err != nil {
-				return member.VerificationView{}, err
-			}
-			decision, err := repos.Policy.Decide(ctx, current, request)
-			if err != nil {
-				return member.VerificationView{}, err
-			}
-			if current.Claims().MemberID != fresh.Claims().MemberID || !decision.Allowed {
-				return member.VerificationView{}, apierr.New(apierr.Forbidden, "character verification forbidden")
-			}
-			id := s.IDs()
-			if err := commandPublicID(&id); err != nil {
-				return member.VerificationView{}, err
-			}
-			assessment, err := repos.Assessments.AppendAssessment(ctx, member.AssessmentSpec{
-				SubjectType:     "character",
-				SubjectID:       spec.CharacterId,
-				Verdict:         spec.Verdict,
-				ID:              id,
-				SubmissionToken: spec.ExpectedSubmittedAt.UTC().Format(time.RFC3339Nano),
-				ActorID:         fresh.Claims().MemberID,
-				At:              at,
-				Note:            spec.Note,
-			})
-			if err != nil {
-				return member.VerificationView{}, err
-			}
-			result, err := repos.Character.StoreDecideVerification(ctx, DecideVerificationWrite{
-				ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked,
-				DecisionID: &id, Assessment: assessment,
-			})
-			if err != nil {
-				return member.VerificationView{}, err
-			}
-			if commandDependencyMissing(repos.Producer) {
-				return member.VerificationView{}, apierr.New(apierr.Internal, "character notification producer required")
-			}
-			if err := repos.Producer.Record(ctx, repos.Notice, notification.Event{
-				Key: "character-verification:" + assessment.Id, Kind: notification.CharacterVerificationDecided,
-				SubjectType: "character", SubjectID: spec.CharacterId, ActorID: fresh.Claims().MemberID, OccurredAt: at,
-				Facts: notification.Facts{Version: 1, EventKind: notification.CharacterVerificationDecided, CharacterID: &spec.CharacterId, VerificationID: &assessment.Id, Verdict: &assessment.Verdict},
-			}); err != nil {
-				return member.VerificationView{}, err
-			}
-			return result, nil
+			return decideCharacterVerification(ctx, repos, fresh, spec, at, s.IDs)
 		})
+}
+
+func decideCharacterVerification(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, spec DecideVerificationSpec, at time.Time, ids product.IDGenerator) (member.VerificationView, error) {
+	if commandDependencyMissing(repos.Assessments) {
+		return member.VerificationView{}, apierr.New(apierr.Internal, "assessment writer required")
+	}
+	locked, err := repos.Character.LockDecideVerification(ctx, spec)
+	if err != nil {
+		return member.VerificationView{}, err
+	}
+	if !locked.Exists {
+		return member.VerificationView{}, apierr.New(apierr.NotFound, "character not found")
+	}
+	current, err := repos.Authority(ctx, fresh.Claims().MemberID)
+	if err != nil {
+		return member.VerificationView{}, err
+	}
+	request, err := auth.ForOperation("Mutation.decideVerification")
+	if err != nil {
+		return member.VerificationView{}, err
+	}
+	decision, err := repos.Policy.Decide(ctx, current, request)
+	if err != nil {
+		return member.VerificationView{}, err
+	}
+	if current.Claims().MemberID != fresh.Claims().MemberID || !decision.Allowed {
+		return member.VerificationView{}, apierr.New(apierr.Forbidden, "character verification forbidden")
+	}
+	id := ids()
+	if err := commandPublicID(&id); err != nil {
+		return member.VerificationView{}, err
+	}
+	assessment, err := repos.Assessments.AppendAssessment(ctx, member.AssessmentSpec{
+		SubjectType: "character", SubjectID: spec.CharacterId, Verdict: spec.Verdict, ID: id,
+		SubmissionToken: spec.ExpectedSubmittedAt.UTC().Format(time.RFC3339Nano), ActorID: fresh.Claims().MemberID,
+		At: at, Note: spec.Note,
+	})
+	if err != nil {
+		return member.VerificationView{}, err
+	}
+	result, err := repos.Character.StoreDecideVerification(ctx, DecideVerificationWrite{
+		ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked,
+		DecisionID: &id, Assessment: assessment,
+	})
+	if err != nil {
+		return member.VerificationView{}, err
+	}
+	if commandDependencyMissing(repos.Producer) {
+		return member.VerificationView{}, apierr.New(apierr.Internal, "character notification producer required")
+	}
+	if err := repos.Producer.Record(ctx, repos.Notice, notification.Event{
+		Key: "character-verification:" + assessment.Id, Kind: notification.CharacterVerificationDecided,
+		SubjectType: "character", SubjectID: spec.CharacterId, ActorID: fresh.Claims().MemberID, OccurredAt: at,
+		Facts: notification.Facts{Version: 1, EventKind: notification.CharacterVerificationDecided, CharacterID: &spec.CharacterId, VerificationID: &assessment.Id, Verdict: &assessment.Verdict},
+	}); err != nil {
+		return member.VerificationView{}, err
+	}
+	return result, nil
 }
 
 func (s ProductCommands) SetCharacterGuild(ctx context.Context, actor auth.Authority, spec SetCharacterGuildSpec, meta product.CommandMeta) (CharacterView, error) {

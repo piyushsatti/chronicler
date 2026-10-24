@@ -46,6 +46,23 @@ func selectSuppressedNotificationIDs(ctx context.Context, batch ProductBatchRepo
 		return nil, apierr.New(apierr.Internal, "notification subject batch size mismatch")
 	}
 
+	documentIDs, err := notificationDocumentIDs(candidates, results)
+	if err != nil {
+		return nil, err
+	}
+
+	readable := map[string]bool{}
+	if len(documentIDs) > 0 {
+		readable, err = audience.ReadableDocumentIDs(ctx, actor, documentIDs)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return suppressedNotificationIDs(candidates, results, readable)
+}
+
+func notificationDocumentIDs(candidates []NotificationCandidate, results []product.BatchResult[SubjectProjection]) ([]string, error) {
 	documentIDs := make([]string, 0, len(candidates))
 	seenDocs := make(map[string]struct{}, len(candidates))
 	for i, candidate := range candidates {
@@ -69,31 +86,23 @@ func selectSuppressedNotificationIDs(ctx context.Context, batch ProductBatchRepo
 		seenDocs[id] = struct{}{}
 		documentIDs = append(documentIDs, id)
 	}
+	return documentIDs, nil
+}
 
-	readable := map[string]bool{}
-	if len(documentIDs) > 0 {
-		readable, err = audience.ReadableDocumentIDs(ctx, actor, documentIDs)
-		if err != nil {
-			return nil, err
-		}
-	}
-
+func suppressedNotificationIDs(candidates []NotificationCandidate, results []product.BatchResult[SubjectProjection], readable map[string]bool) ([]string, error) {
 	selected := make([]string, 0, len(candidates))
 	for i, candidate := range candidates {
 		projection, err := subjectProjectionOrFail(results[i])
 		if err != nil {
 			return nil, err
 		}
-		switch candidate.Subject.SubjectType {
-		case subjectTypeDocument:
+		if candidate.Subject.SubjectType == subjectTypeDocument {
 			id := strings.TrimSpace(candidate.Subject.SubjectID)
 			if id == "" || !readable[id] {
 				selected = append(selected, candidate.NotificationID)
 			}
-		default:
-			if !projection.Visible {
-				return nil, opaqueNotificationProofError()
-			}
+		} else if !projection.Visible {
+			return nil, opaqueNotificationProofError()
 		}
 	}
 	return selected, nil

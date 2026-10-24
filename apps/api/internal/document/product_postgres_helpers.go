@@ -168,32 +168,9 @@ func frontmatterYAML(raw json.RawMessage) (pgtype.Text, error) {
 func frontmatterNodeValue(node *yaml.Node) (any, error) {
 	switch node.Kind {
 	case yaml.MappingNode:
-		value := make(map[string]any, len(node.Content)/2)
-		for i := 0; i < len(node.Content); i += 2 {
-			key := node.Content[i]
-			if key.Tag != "!!str" {
-				return nil, apierr.New(apierr.Internal, "invalid stored frontmatter key")
-			}
-			if _, exists := value[key.Value]; exists {
-				return nil, apierr.New(apierr.Internal, "duplicate stored frontmatter key")
-			}
-			item, err := frontmatterNodeValue(node.Content[i+1])
-			if err != nil {
-				return nil, err
-			}
-			value[key.Value] = item
-		}
-		return value, nil
+		return frontmatterMappingValue(node)
 	case yaml.SequenceNode:
-		value := make([]any, len(node.Content))
-		for i := range node.Content {
-			item, err := frontmatterNodeValue(node.Content[i])
-			if err != nil {
-				return nil, err
-			}
-			value[i] = item
-		}
-		return value, nil
+		return frontmatterSequenceValue(node)
 	case yaml.ScalarNode:
 		switch node.Tag {
 		case "!!str":
@@ -209,6 +186,37 @@ func frontmatterNodeValue(node *yaml.Node) (any, error) {
 		}
 	}
 	return nil, apierr.New(apierr.Internal, "unsupported stored document frontmatter")
+}
+
+func frontmatterMappingValue(node *yaml.Node) (any, error) {
+	value := make(map[string]any, len(node.Content)/2)
+	for i := 0; i < len(node.Content); i += 2 {
+		key := node.Content[i]
+		if key.Tag != "!!str" {
+			return nil, apierr.New(apierr.Internal, "invalid stored frontmatter key")
+		}
+		if _, exists := value[key.Value]; exists {
+			return nil, apierr.New(apierr.Internal, "duplicate stored frontmatter key")
+		}
+		item, err := frontmatterNodeValue(node.Content[i+1])
+		if err != nil {
+			return nil, err
+		}
+		value[key.Value] = item
+	}
+	return value, nil
+}
+
+func frontmatterSequenceValue(node *yaml.Node) (any, error) {
+	value := make([]any, len(node.Content))
+	for i := range node.Content {
+		item, err := frontmatterNodeValue(node.Content[i])
+		if err != nil {
+			return nil, err
+		}
+		value[i] = item
+	}
+	return value, nil
 }
 
 func bytesEqualJSONNull(raw json.RawMessage) bool {
@@ -367,15 +375,6 @@ func mapLockRow(row dbgen.LockProductDocumentByIDRow) (DocumentView, error) {
 	}
 	view.ReaderIDs, err = uuidStringsFromAny(row.ReaderIds)
 	return view, err
-}
-
-func baseCommandState(view DocumentView, exists bool) (string, string, int64, *time.Time, *DocumentView, []string, []string) {
-	var before *DocumentView
-	if exists {
-		copy := view
-		before = &copy
-	}
-	return view.Id, view.AuthorId, int64(view.Version), &view.UpdatedAt, before, nil, nil
 }
 
 func lieutenantState(row dbgen.LockProductDocumentByIDRow) ([]string, []string, error) {

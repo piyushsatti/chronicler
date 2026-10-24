@@ -22,10 +22,6 @@ func NewProductPostgres(db dbgen.DBTX) (*ProductPostgres, error) {
 	return &ProductPostgres{DB: db}, nil
 }
 
-func (p *ProductPostgres) pending() error {
-	return apierr.New(apierr.Internal, "document product surface pending")
-}
-
 func (p *ProductPostgres) AdmitLocationLink(ctx context.Context, actor auth.Authority, documentID, targetRegionID string) (LocationAdmission, error) {
 	admission := LocationAdmission{DocumentID: documentID, TargetRegionID: targetRegionID}
 	if _, err := productDocumentID(targetRegionID); err != nil {
@@ -68,15 +64,24 @@ func (p *ProductPostgres) AdmitLocationLink(ctx context.Context, actor auth.Auth
 		return LocationAdmission{}, apierr.New(apierr.Forbidden, "location stewardship required")
 	}
 	admission.UsedOverride = decision.UsedOverride
-	for _, regionID := range view.LinkedRegionIDs {
+	usedOverride, err := admitLocationRegions(actor, view.LinkedRegionIDs, targetRegionID, admission.UsedOverride)
+	if err != nil {
+		return LocationAdmission{}, err
+	}
+	admission.UsedOverride = usedOverride
+	return admission, nil
+}
+
+func admitLocationRegions(actor auth.Authority, regions []string, targetRegionID string, usedOverride bool) (bool, error) {
+	for _, regionID := range regions {
 		if regionID != targetRegionID {
 			if !actor.Claims().Has(auth.Admin) && !actor.IsPlatformOwner() {
-				return LocationAdmission{}, apierr.New(apierr.Forbidden, "location belongs to another region")
+				return false, apierr.New(apierr.Forbidden, "location belongs to another region")
 			}
-			admission.UsedOverride = true
+			usedOverride = true
 		}
 	}
-	return admission, nil
+	return usedOverride, nil
 }
 
 func (p *ProductPostgres) loadDocumentView(ctx context.Context, id, actorID string) (DocumentView, error) {

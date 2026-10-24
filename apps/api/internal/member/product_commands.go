@@ -14,6 +14,7 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/idempotency"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/uow"
 )
@@ -109,40 +110,12 @@ func runMemberCommand[T any](ctx context.Context, s ProductCommands, actor auth.
 		return result, err
 	}
 	err = s.Runner.Do(ctx, func(repos ProductCommandRepos) error {
-		for _, dependency := range []any{repos.Authority, repos.Policy, repos.Replay} {
-			if commandDependencyMissing(dependency) {
-				return apierr.New(apierr.Internal, "member transaction dependencies required")
-			}
-		}
-		fresh, err := repos.Authority(ctx, actor.Claims().MemberID)
+		admission, err := admitMemberCommand(ctx, repos, actor, operation, meta, fingerprint)
 		if err != nil {
 			return err
 		}
-		if fresh.Claims().MemberID == "" || fresh.Claims().MemberID != actor.Claims().MemberID {
-			return apierr.New(apierr.Forbidden, "member authority changed")
-		}
-		request, err := auth.ForOperation(auth.Operation("Mutation." + operation))
-		if err != nil {
-			return err
-		}
-		decision, err := repos.Policy.Decide(ctx, fresh, request)
-		if err != nil {
-			return err
-		}
-		if !decision.Allowed {
-			return apierr.New(apierr.Forbidden, "member command forbidden")
-		}
-		claim, err := repos.Replay.Claim(ctx, fresh.Claims().MemberID, operation, meta.IdempotencyKey, fingerprint)
-		if err != nil {
-			return err
-		}
-		if isProfileCommand(operation) {
-			if err := recheckProfileAuthority(ctx, repos, fresh, operation); err != nil {
-				return err
-			}
-		}
-		if claim.Replay {
-			if err := json.Unmarshal(claim.Receipt, &result); err != nil {
+		if admission.claim.Replay {
+			if err := json.Unmarshal(admission.claim.Receipt, &result); err != nil {
 				return err
 			}
 			if receipt, ok := any(&result).(*product.CommandReceipt); ok {
@@ -154,53 +127,114 @@ func runMemberCommand[T any](ctx context.Context, s ProductCommands, actor auth.
 		if err != nil {
 			return err
 		}
-		result, err = mutate(repos, fresh, at)
+		result, err = mutate(repos, admission.fresh, at)
 		if err != nil {
 			return err
 		}
-		if decision.UsedOverride {
-			if commandDependencyMissing(repos.Audit) {
-				return apierr.New(apierr.Internal, "override recorder required")
-			}
-			subjects := []string{subjectID}
-			switch operation {
-			case "upsertUnlockable":
-				view, ok := any(result).(UnlockableView)
-				if !ok {
-					return apierr.New(apierr.Internal, "unlockable audit subject required")
-				}
-				subjects[0] = view.Id
-			case "setMemberRolesBatch":
-				rows, ok := any(result).([]MemberRoleBatchResultView)
-				input, inputOK := spec.(SetMemberRolesBatchSpec)
-				if !ok || !inputOK || len(rows) != len(input.Changes) {
-					return apierr.New(apierr.Internal, "role batch audit subjects required")
-				}
-				subjects = make([]string, len(rows))
-				for i, row := range rows {
-					if !row.Ok || row.Member == nil || row.Error != nil || row.MemberId != row.Member.Id || row.MemberId != input.Changes[i].MemberId {
-						return apierr.New(apierr.Internal, "role batch audit subject differs")
-					}
-					subjects[i] = row.MemberId
-				}
-			}
-			for _, subject := range subjects {
-				if err := repos.Audit.Record(ctx, claim, auth.OverrideFact{ActorID: fresh.Claims().MemberID, Operation: request.Operation(), SubjectType: "member", SubjectID: subject, RuleCode: decision.RuleCode, At: at}); err != nil {
-					return err
-				}
-			}
+		if err := recordMemberCommandOverride(ctx, repos, admission, operation, spec, result, subjectID, at); err != nil {
+			return err
 		}
 		receipt, err := json.Marshal(result)
 		if err != nil {
 			return err
 		}
-		return repos.Replay.Complete(ctx, claim, receipt)
+		return repos.Replay.Complete(ctx, admission.claim, receipt)
 	})
 	if err != nil {
 		var zero T
 		return zero, err
 	}
 	return result, nil
+}
+
+type memberCommandAdmission struct {
+	fresh    auth.Authority
+	request  auth.Request
+	decision auth.Decision
+	claim    idempotency.Claim
+}
+
+func admitMemberCommand(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, operation string, meta product.CommandMeta, fingerprint string) (memberCommandAdmission, error) {
+	var admission memberCommandAdmission
+	for _, dependency := range []any{repos.Authority, repos.Policy, repos.Replay} {
+		if commandDependencyMissing(dependency) {
+			return admission, apierr.New(apierr.Internal, "member transaction dependencies required")
+		}
+	}
+	fresh, err := repos.Authority(ctx, actor.Claims().MemberID)
+	if err != nil {
+		return admission, err
+	}
+	if fresh.Claims().MemberID == "" || fresh.Claims().MemberID != actor.Claims().MemberID {
+		return admission, apierr.New(apierr.Forbidden, "member authority changed")
+	}
+	request, err := auth.ForOperation(auth.Operation("Mutation." + operation))
+	if err != nil {
+		return admission, err
+	}
+	decision, err := repos.Policy.Decide(ctx, fresh, request)
+	if err != nil {
+		return admission, err
+	}
+	if !decision.Allowed {
+		return admission, apierr.New(apierr.Forbidden, "member command forbidden")
+	}
+	claim, err := repos.Replay.Claim(ctx, fresh.Claims().MemberID, operation, meta.IdempotencyKey, fingerprint)
+	if err != nil {
+		return admission, err
+	}
+	if isProfileCommand(operation) {
+		if err := recheckProfileAuthority(ctx, repos, fresh, operation); err != nil {
+			return admission, err
+		}
+	}
+	return memberCommandAdmission{fresh: fresh, request: request, decision: decision, claim: claim}, nil
+}
+
+func recordMemberCommandOverride[T any](ctx context.Context, repos ProductCommandRepos, admission memberCommandAdmission, operation string, spec any, result T, subjectID string, at time.Time) error {
+	if !admission.decision.UsedOverride {
+		return nil
+	}
+	if commandDependencyMissing(repos.Audit) {
+		return apierr.New(apierr.Internal, "override recorder required")
+	}
+	subjects, err := memberOverrideSubjects(operation, spec, result, subjectID)
+	if err != nil {
+		return err
+	}
+	for _, subject := range subjects {
+		if err := repos.Audit.Record(ctx, admission.claim, auth.OverrideFact{ActorID: admission.fresh.Claims().MemberID, Operation: admission.request.Operation(), SubjectType: "member", SubjectID: subject, RuleCode: admission.decision.RuleCode, At: at}); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func memberOverrideSubjects[T any](operation string, spec any, result T, subjectID string) ([]string, error) {
+	switch operation {
+	case "upsertUnlockable":
+		view, ok := any(result).(UnlockableView)
+		if !ok {
+			return nil, apierr.New(apierr.Internal, "unlockable audit subject required")
+		}
+		return []string{view.Id}, nil
+	case "setMemberRolesBatch":
+		rows, ok := any(result).([]MemberRoleBatchResultView)
+		input, inputOK := spec.(SetMemberRolesBatchSpec)
+		if !ok || !inputOK || len(rows) != len(input.Changes) {
+			return nil, apierr.New(apierr.Internal, "role batch audit subjects required")
+		}
+		subjects := make([]string, len(rows))
+		for i, row := range rows {
+			if !row.Ok || row.Member == nil || row.Error != nil || row.MemberId != row.Member.Id || row.MemberId != input.Changes[i].MemberId {
+				return nil, apierr.New(apierr.Internal, "role batch audit subject differs")
+			}
+			subjects[i] = row.MemberId
+		}
+		return subjects, nil
+	default:
+		return []string{subjectID}, nil
+	}
 }
 
 func (s ProductCommands) SetMemberRoles(ctx context.Context, actor auth.Authority, spec SetMemberRolesSpec, meta product.CommandMeta) (MemberView, error) {
@@ -386,32 +420,12 @@ func (s ProductCommands) SetUnlockableActive(ctx context.Context, actor auth.Aut
 }
 
 func (s ProductCommands) UpsertUnlockable(ctx context.Context, actor auth.Authority, spec UpsertUnlockableSpec, meta product.CommandMeta) (UnlockableView, error) {
+	if err := validateUpsertUnlockable(&spec); err != nil {
+		return UnlockableView{}, err
+	}
 	subject := actor.Claims().MemberID
 	if spec.Id != nil {
-		id := *spec.Id
-		if err := commandID(&id); err != nil {
-			return UnlockableView{}, err
-		}
-		spec.Id = &id
-		subject = id
-	}
-	if err := queryText(spec.Input.Name, 200); err != nil {
-		return UnlockableView{}, err
-	}
-	if err := commandNote(spec.Input.Description); err != nil {
-		return UnlockableView{}, err
-	}
-	if _, err := mapAPIUnlockKind(spec.Input.Kind); err != nil {
-		return UnlockableView{}, apierr.New(apierr.Invalid, "invalid unlockable kind")
-	}
-	if !json.Valid(spec.Input.Payload) || string(spec.Input.Payload) == "null" {
-		return UnlockableView{}, apierr.New(apierr.Invalid, "invalid unlockable payload")
-	}
-	if spec.Input.UnlockRule != nil {
-		var rule map[string]any
-		if json.Unmarshal(*spec.Input.UnlockRule, &rule) != nil || len(rule) != 1 || rule["type"] != "admin_grant" {
-			return UnlockableView{}, apierr.New(apierr.Invalid, "invalid unlock rule")
-		}
+		subject = *spec.Id
 	}
 	return runMemberCommand(ctx, s, actor, "upsertUnlockable", spec, meta, subject, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (UnlockableView, error) {
 		locked, err := repos.Reference.LockUpsertUnlockable(ctx, spec)
@@ -434,38 +448,39 @@ func (s ProductCommands) UpsertUnlockable(ctx context.Context, actor auth.Author
 	})
 }
 
-func (s ProductCommands) SetMyAvailability(ctx context.Context, actor auth.Authority, spec SetMyAvailabilitySpec, meta product.CommandMeta) ([]AvailabilitySlotView, error) {
-	if len(spec.Slots) > 28 {
-		return nil, apierr.New(apierr.Invalid, "availability exceeds 28 slots")
+func validateUpsertUnlockable(spec *UpsertUnlockableSpec) error {
+	if spec.Id != nil {
+		if err := commandID(spec.Id); err != nil {
+			return err
+		}
 	}
-	spec.Slots = slices.Clone(spec.Slots)
-	for i, slot := range spec.Slots {
-		day, err := parseWeekday(slot.Day)
-		if err != nil {
-			return nil, apierr.New(apierr.Invalid, "invalid availability day")
-		}
-		start, err := parseMinuteTime(slot.StartTime)
-		if err != nil {
-			return nil, apierr.New(apierr.Invalid, "invalid availability start")
-		}
-		end, err := parseMinuteTime(slot.EndTime)
-		if err != nil || end <= start {
-			return nil, apierr.New(apierr.Invalid, "invalid availability end")
-		}
-		spec.Slots[i].Day = weekdayName(day)
-		spec.Slots[i].StartTime = minuteTime(start)
-		spec.Slots[i].EndTime = minuteTime(end)
-		if slot.Note != nil && (!utf8.ValidString(*slot.Note) || utf8.RuneCountInString(*slot.Note) > 2000) {
-			return nil, apierr.New(apierr.Invalid, "invalid availability note")
-		}
-		for _, prior := range spec.Slots[:i] {
-			pd, _ := parseWeekday(prior.Day)
-			ps, _ := parseMinuteTime(prior.StartTime)
-			pe, _ := parseMinuteTime(prior.EndTime)
-			if day == pd && start < pe && ps < end {
-				return nil, apierr.New(apierr.Invalid, "overlapping availability")
-			}
-		}
+	if err := queryText(spec.Input.Name, 200); err != nil {
+		return err
+	}
+	if err := commandNote(spec.Input.Description); err != nil {
+		return err
+	}
+	if _, err := mapAPIUnlockKind(spec.Input.Kind); err != nil {
+		return apierr.New(apierr.Invalid, "invalid unlockable kind")
+	}
+	if !json.Valid(spec.Input.Payload) || string(spec.Input.Payload) == "null" {
+		return apierr.New(apierr.Invalid, "invalid unlockable payload")
+	}
+	if spec.Input.UnlockRule == nil {
+		return nil
+	}
+	var rule map[string]any
+	if json.Unmarshal(*spec.Input.UnlockRule, &rule) != nil || len(rule) != 1 || rule["type"] != "admin_grant" {
+		return apierr.New(apierr.Invalid, "invalid unlock rule")
+	}
+	return nil
+}
+
+func (s ProductCommands) SetMyAvailability(ctx context.Context, actor auth.Authority, spec SetMyAvailabilitySpec, meta product.CommandMeta) ([]AvailabilitySlotView, error) {
+	var err error
+	spec.Slots, err = normalizeAvailabilitySlots(spec.Slots)
+	if err != nil {
+		return nil, err
 	}
 	return runMemberCommand(ctx, s, actor, "setMyAvailability", spec, meta, actor.Claims().MemberID, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) ([]AvailabilitySlotView, error) {
 		locked, err := repos.Member.LockSetMyAvailability(ctx, fresh.Claims().MemberID, spec)
@@ -482,32 +497,52 @@ func (s ProductCommands) SetMyAvailability(ctx context.Context, actor auth.Autho
 	})
 }
 
+func normalizeAvailabilitySlots(slots []AvailabilitySlotFields) ([]AvailabilitySlotFields, error) {
+	if len(slots) > 28 {
+		return nil, apierr.New(apierr.Invalid, "availability exceeds 28 slots")
+	}
+	slots = slices.Clone(slots)
+	for i, slot := range slots {
+		day, err := parseWeekday(slot.Day)
+		if err != nil {
+			return nil, apierr.New(apierr.Invalid, "invalid availability day")
+		}
+		start, err := parseMinuteTime(slot.StartTime)
+		if err != nil {
+			return nil, apierr.New(apierr.Invalid, "invalid availability start")
+		}
+		end, err := parseMinuteTime(slot.EndTime)
+		if err != nil || end <= start {
+			return nil, apierr.New(apierr.Invalid, "invalid availability end")
+		}
+		slots[i].Day = weekdayName(day)
+		slots[i].StartTime = minuteTime(start)
+		slots[i].EndTime = minuteTime(end)
+		if slot.Note != nil && (!utf8.ValidString(*slot.Note) || utf8.RuneCountInString(*slot.Note) > 2000) {
+			return nil, apierr.New(apierr.Invalid, "invalid availability note")
+		}
+		if availabilityOverlaps(day, start, end, slots[:i]) {
+			return nil, apierr.New(apierr.Invalid, "overlapping availability")
+		}
+	}
+	return slots, nil
+}
+
+func availabilityOverlaps(day, start, end int16, prior []AvailabilitySlotFields) bool {
+	for _, slot := range prior {
+		priorDay, _ := parseWeekday(slot.Day)
+		priorStart, _ := parseMinuteTime(slot.StartTime)
+		priorEnd, _ := parseMinuteTime(slot.EndTime)
+		if day == priorDay && start < priorEnd && priorStart < end {
+			return true
+		}
+	}
+	return false
+}
+
 func (s ProductCommands) UpdateMySettings(ctx context.Context, actor auth.Authority, spec UpdateMySettingsSpec, meta product.CommandMeta) (MemberSettingsView, error) {
-	patch := reflect.ValueOf(&spec.Input).Elem()
-	for i := 0; i < patch.NumField(); i++ {
-		field := patch.Field(i)
-		set := field.FieldByName("Set").Bool()
-		value := field.FieldByName("Value")
-		if !set {
-			value.SetZero()
-		} else if value.IsNil() && patch.Type().Field(i).Name != "Timezone" {
-			return MemberSettingsView{}, apierr.New(apierr.Invalid, "settings value cannot be null")
-		}
-	}
-	p := spec.Input
-	if p.Theme.Set && !slices.Contains([]Theme{ThemeParchment, ThemeMidnight, ThemeEmber, ThemeDracula, ThemeVegan}, *p.Theme.Value) {
-		return MemberSettingsView{}, apierr.New(apierr.Invalid, "invalid theme")
-	}
-	if p.Mode.Set && !slices.Contains([]ColorMode{ColorModeLight, ColorModeDark, ColorModeSystem}, *p.Mode.Value) {
-		return MemberSettingsView{}, apierr.New(apierr.Invalid, "invalid color mode")
-	}
-	if p.Density.Set && !slices.Contains([]Density{DensityComfortable, DensityCompact}, *p.Density.Value) {
-		return MemberSettingsView{}, apierr.New(apierr.Invalid, "invalid density")
-	}
-	if p.Timezone.Set && p.Timezone.Value != nil {
-		if _, err := time.LoadLocation(*p.Timezone.Value); err != nil {
-			return MemberSettingsView{}, apierr.New(apierr.Invalid, "invalid timezone")
-		}
+	if err := validateMemberSettingsPatch(&spec.Input); err != nil {
+		return MemberSettingsView{}, err
 	}
 	return runMemberCommand(ctx, s, actor, "updateMySettings", spec, meta, actor.Claims().MemberID, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (MemberSettingsView, error) {
 		locked, err := repos.Member.LockUpdateMySettings(ctx, fresh.Claims().MemberID, spec)
@@ -519,6 +554,36 @@ func (s ProductCommands) UpdateMySettings(ctx context.Context, actor auth.Author
 		}
 		return repos.Member.StoreUpdateMySettings(ctx, UpdateMySettingsWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked})
 	})
+}
+
+func validateMemberSettingsPatch(input *MemberSettingsPatch) error {
+	patch := reflect.ValueOf(input).Elem()
+	for i := 0; i < patch.NumField(); i++ {
+		field := patch.Field(i)
+		set := field.FieldByName("Set").Bool()
+		value := field.FieldByName("Value")
+		if !set {
+			value.SetZero()
+		} else if value.IsNil() && patch.Type().Field(i).Name != "Timezone" {
+			return apierr.New(apierr.Invalid, "settings value cannot be null")
+		}
+	}
+	p := *input
+	if p.Theme.Set && !slices.Contains([]Theme{ThemeParchment, ThemeMidnight, ThemeEmber, ThemeDracula, ThemeVegan}, *p.Theme.Value) {
+		return apierr.New(apierr.Invalid, "invalid theme")
+	}
+	if p.Mode.Set && !slices.Contains([]ColorMode{ColorModeLight, ColorModeDark, ColorModeSystem}, *p.Mode.Value) {
+		return apierr.New(apierr.Invalid, "invalid color mode")
+	}
+	if p.Density.Set && !slices.Contains([]Density{DensityComfortable, DensityCompact}, *p.Density.Value) {
+		return apierr.New(apierr.Invalid, "invalid density")
+	}
+	if p.Timezone.Set && p.Timezone.Value != nil {
+		if _, err := time.LoadLocation(*p.Timezone.Value); err != nil {
+			return apierr.New(apierr.Invalid, "invalid timezone")
+		}
+	}
+	return nil
 }
 
 func (s ProductCommands) CreateRequest(ctx context.Context, actor auth.Authority, spec CreateRequestSpec, meta product.CommandMeta) (RequestView, error) {
@@ -567,44 +632,14 @@ func (s ProductCommands) DecideRequest(ctx context.Context, actor auth.Authority
 		return result, err
 	}
 	err = s.Runner.Do(ctx, func(repos ProductCommandRepos) error {
-		for _, dependency := range []any{repos.Authority, repos.Policy, repos.Replay, repos.Social, repos.Producer} {
-			if commandDependencyMissing(dependency) {
-				return apierr.New(apierr.Internal, "request transaction dependencies required")
-			}
-		}
-		fresh, err := repos.Authority(ctx, actor.Claims().MemberID)
+		admission, err := admitRequestDecision(ctx, repos, actor, spec, meta, fingerprint)
 		if err != nil {
 			return err
 		}
-		if fresh.Claims().MemberID == "" || fresh.Claims().MemberID != actor.Claims().MemberID {
-			return apierr.New(apierr.Forbidden, "member authority changed")
+		if admission.claim.Replay {
+			return json.Unmarshal(admission.claim.Receipt, &result)
 		}
-		locked, err := repos.Social.LockDecideRequest(ctx, spec)
-		if err != nil {
-			return err
-		}
-		if !locked.Exists || locked.Before == nil {
-			return apierr.New(apierr.NotFound, "request not found")
-		}
-		request, err := auth.ForRequestDecision(auth.RequestDecisionFacts{ID: locked.SubjectID, TargetDMID: locked.Parties.TargetDMID})
-		if err != nil {
-			return err
-		}
-		decision, err := repos.Policy.Decide(ctx, fresh, request)
-		if err != nil {
-			return err
-		}
-		if !decision.Allowed {
-			return apierr.New(apierr.Forbidden, "request decision forbidden")
-		}
-		claim, err := repos.Replay.Claim(ctx, fresh.Claims().MemberID, "decideRequest", meta.IdempotencyKey, fingerprint)
-		if err != nil {
-			return err
-		}
-		if claim.Replay {
-			return json.Unmarshal(claim.Receipt, &result)
-		}
-		if locked.Before.Status != "pending" || locked.PriorDecision != nil {
+		if admission.locked.Before.Status != "pending" || admission.locked.PriorDecision != nil {
 			return apierr.New(apierr.Conflict, "request already decided")
 		}
 		at, err := product.UTCNow(s.Clock)
@@ -615,21 +650,74 @@ func (s ProductCommands) DecideRequest(ctx context.Context, actor auth.Authority
 		if err := commandID(&id); err != nil {
 			return err
 		}
-		key := "request-decision:" + id
-		result, err = repos.Social.StoreDecideRequest(ctx, DecideRequestWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked, DecisionID: &id, EventKey: &key})
-		if err != nil {
-			return err
-		}
-		if err := repos.Producer.Record(ctx, repos.Notice, notification.Event{Key: key, Kind: notification.DMRequestDecided, SubjectType: "request", SubjectID: spec.RequestId, ActorID: fresh.Claims().MemberID, OccurredAt: at, Facts: notification.Facts{Version: 1, EventKind: notification.DMRequestDecided, DecisionID: &id, RequestID: &spec.RequestId, Decision: &spec.Decision}}); err != nil {
-			return err
-		}
-		receipt, err := json.Marshal(result)
-		if err != nil {
-			return err
-		}
-		return repos.Replay.Complete(ctx, claim, receipt)
+		result, err = storeRequestDecision(ctx, repos, admission, spec, id, at)
+		return err
 	})
 	if err != nil {
+		return RequestView{}, err
+	}
+	return result, nil
+}
+
+type requestDecisionAdmission struct {
+	fresh  auth.Authority
+	locked DecideRequestState
+	claim  idempotency.Claim
+}
+
+func admitRequestDecision(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, spec DecideRequestSpec, meta product.CommandMeta, fingerprint string) (requestDecisionAdmission, error) {
+	var admission requestDecisionAdmission
+	for _, dependency := range []any{repos.Authority, repos.Policy, repos.Replay, repos.Social, repos.Producer} {
+		if commandDependencyMissing(dependency) {
+			return admission, apierr.New(apierr.Internal, "request transaction dependencies required")
+		}
+	}
+	fresh, err := repos.Authority(ctx, actor.Claims().MemberID)
+	if err != nil {
+		return admission, err
+	}
+	if fresh.Claims().MemberID == "" || fresh.Claims().MemberID != actor.Claims().MemberID {
+		return admission, apierr.New(apierr.Forbidden, "member authority changed")
+	}
+	locked, err := repos.Social.LockDecideRequest(ctx, spec)
+	if err != nil {
+		return admission, err
+	}
+	if !locked.Exists || locked.Before == nil {
+		return admission, apierr.New(apierr.NotFound, "request not found")
+	}
+	request, err := auth.ForRequestDecision(auth.RequestDecisionFacts{ID: locked.SubjectID, TargetDMID: locked.Parties.TargetDMID})
+	if err != nil {
+		return admission, err
+	}
+	decision, err := repos.Policy.Decide(ctx, fresh, request)
+	if err != nil {
+		return admission, err
+	}
+	if !decision.Allowed {
+		return admission, apierr.New(apierr.Forbidden, "request decision forbidden")
+	}
+	claim, err := repos.Replay.Claim(ctx, fresh.Claims().MemberID, "decideRequest", meta.IdempotencyKey, fingerprint)
+	if err != nil {
+		return admission, err
+	}
+	return requestDecisionAdmission{fresh: fresh, locked: locked, claim: claim}, nil
+}
+
+func storeRequestDecision(ctx context.Context, repos ProductCommandRepos, admission requestDecisionAdmission, spec DecideRequestSpec, id string, at time.Time) (RequestView, error) {
+	key := "request-decision:" + id
+	result, err := repos.Social.StoreDecideRequest(ctx, DecideRequestWrite{ActorID: admission.fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: admission.locked, DecisionID: &id, EventKey: &key})
+	if err != nil {
+		return RequestView{}, err
+	}
+	if err := repos.Producer.Record(ctx, repos.Notice, notification.Event{Key: key, Kind: notification.DMRequestDecided, SubjectType: "request", SubjectID: spec.RequestId, ActorID: admission.fresh.Claims().MemberID, OccurredAt: at, Facts: notification.Facts{Version: 1, EventKind: notification.DMRequestDecided, DecisionID: &id, RequestID: &spec.RequestId, Decision: &spec.Decision}}); err != nil {
+		return RequestView{}, err
+	}
+	receipt, err := json.Marshal(result)
+	if err != nil {
+		return RequestView{}, err
+	}
+	if err := repos.Replay.Complete(ctx, admission.claim, receipt); err != nil {
 		return RequestView{}, err
 	}
 	return result, nil

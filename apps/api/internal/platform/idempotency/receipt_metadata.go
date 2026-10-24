@@ -29,43 +29,61 @@ func ValidateUniqueJSON(raw []byte) error {
 	}
 	decoder := json.NewDecoder(bytes.NewReader(raw))
 	decoder.UseNumber()
-	var value func(int) error
-	value = func(depth int) error {
-		if depth > 16 {
-			return invalidReceiptMetadata()
-		}
-		token, err := decoder.Token()
-		if err != nil {
-			return invalidReceiptMetadata()
-		}
-		delimiter, nested := token.(json.Delim)
-		if !nested {
-			return nil
-		}
-		seen := map[string]bool{}
-		for decoder.More() {
-			if delimiter == '{' {
-				key, err := decoder.Token()
-				name, ok := key.(string)
-				if err != nil || !ok || seen[name] {
-					return invalidReceiptMetadata()
-				}
-				seen[name] = true
-			}
-			if err := value(depth + 1); err != nil {
-				return err
-			}
-		}
-		_, err = decoder.Token()
-		return err
-	}
-	if err := value(0); err != nil {
+	if err := validateUniqueJSONValue(decoder, 0); err != nil {
 		return invalidReceiptMetadata()
 	}
 	if _, err := decoder.Token(); err != io.EOF {
 		return invalidReceiptMetadata()
 	}
 	return nil
+}
+
+func validateUniqueJSONValue(decoder *json.Decoder, depth int) error {
+	if depth > 16 {
+		return invalidReceiptMetadata()
+	}
+	token, err := decoder.Token()
+	if err != nil {
+		return invalidReceiptMetadata()
+	}
+	delimiter, nested := token.(json.Delim)
+	if !nested {
+		return nil
+	}
+	if delimiter == '{' {
+		return validateUniqueJSONObject(decoder, depth)
+	}
+	if delimiter == '[' {
+		return validateUniqueJSONArray(decoder, depth)
+	}
+	return invalidReceiptMetadata()
+}
+
+func validateUniqueJSONObject(decoder *json.Decoder, depth int) error {
+	seen := map[string]bool{}
+	for decoder.More() {
+		key, err := decoder.Token()
+		name, ok := key.(string)
+		if err != nil || !ok || seen[name] {
+			return invalidReceiptMetadata()
+		}
+		seen[name] = true
+		if err := validateUniqueJSONValue(decoder, depth+1); err != nil {
+			return err
+		}
+	}
+	_, err := decoder.Token()
+	return err
+}
+
+func validateUniqueJSONArray(decoder *json.Decoder, depth int) error {
+	for decoder.More() {
+		if err := validateUniqueJSONValue(decoder, depth+1); err != nil {
+			return err
+		}
+	}
+	_, err := decoder.Token()
+	return err
 }
 
 // StrictJSON rejects duplicate, unknown and differently cased nested fields.
@@ -97,35 +115,48 @@ func exactJSONFields(raw []byte, typ reflect.Type) error {
 	}
 	switch typ.Kind() {
 	case reflect.Struct:
-		var fields map[string]json.RawMessage
-		if err := json.Unmarshal(raw, &fields); err != nil {
-			return invalidReceiptMetadata()
-		}
-		for name, value := range fields {
-			found := false
-			for i := 0; i < typ.NumField(); i++ {
-				field := typ.Field(i)
-				if strings.Split(field.Tag.Get("json"), ",")[0] == name {
-					found = true
-					if err := exactJSONFields(value, field.Type); err != nil {
-						return err
-					}
-					break
-				}
-			}
-			if !found {
-				return invalidReceiptMetadata()
-			}
-		}
+		return exactJSONStructFields(raw, typ)
 	case reflect.Slice:
-		var values []json.RawMessage
-		if err := json.Unmarshal(raw, &values); err != nil {
+		return exactJSONSliceFields(raw, typ.Elem())
+	}
+	return nil
+}
+
+func exactJSONStructFields(raw []byte, typ reflect.Type) error {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &fields); err != nil {
+		return invalidReceiptMetadata()
+	}
+	for name, value := range fields {
+		field, found := exactJSONField(typ, name)
+		if !found {
 			return invalidReceiptMetadata()
 		}
-		for _, value := range values {
-			if err := exactJSONFields(value, typ.Elem()); err != nil {
-				return err
-			}
+		if err := exactJSONFields(value, field.Type); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func exactJSONField(typ reflect.Type, name string) (reflect.StructField, bool) {
+	for i := 0; i < typ.NumField(); i++ {
+		field := typ.Field(i)
+		if strings.Split(field.Tag.Get("json"), ",")[0] == name {
+			return field, true
+		}
+	}
+	return reflect.StructField{}, false
+}
+
+func exactJSONSliceFields(raw []byte, elementType reflect.Type) error {
+	var values []json.RawMessage
+	if err := json.Unmarshal(raw, &values); err != nil {
+		return invalidReceiptMetadata()
+	}
+	for _, value := range values {
+		if err := exactJSONFields(value, elementType); err != nil {
+			return err
 		}
 	}
 	return nil
@@ -215,22 +246,46 @@ func PeelNotificationProofs(receipt json.RawMessage) (json.RawMessage, json.RawM
 }
 
 func validateOverrideFact(fact CommandOverrideFact, identity claimIdentity) error {
-	if fact.ActorID != identity.actorID || fact.Operation != "Mutation."+identity.operation || fact.At.IsZero() || !fact.At.Equal(fact.At.Truncate(time.Microsecond)) {
+	if !validOverrideAttribution(fact, identity) || !validOverrideTime(fact.At) {
 		return invalidReceiptMetadata()
 	}
-	if _, offset := fact.At.Zone(); offset != 0 {
+	if !validOverrideRuleCode(fact.RuleCode) || !validOverrideSubjectType(fact.SubjectType) {
 		return invalidReceiptMetadata()
 	}
-	switch fact.RuleCode {
+	return validateOverrideSubjectID(fact)
+}
+
+func validOverrideAttribution(fact CommandOverrideFact, identity claimIdentity) bool {
+	return fact.ActorID == identity.actorID && fact.Operation == "Mutation."+identity.operation
+}
+
+func validOverrideTime(at time.Time) bool {
+	if at.IsZero() || !at.Equal(at.Truncate(time.Microsecond)) {
+		return false
+	}
+	_, offset := at.Zone()
+	return offset == 0
+}
+
+func validOverrideRuleCode(code string) bool {
+	switch code {
 	case "ROLE", "OWNERSHIP", "ASSIGNMENT", "AUDIENCE":
+		return true
 	default:
-		return invalidReceiptMetadata()
+		return false
 	}
-	switch fact.SubjectType {
+}
+
+func validOverrideSubjectType(subjectType string) bool {
+	switch subjectType {
 	case "member", "character", "document", "quest", "spatial", "site", "notification":
+		return true
 	default:
-		return invalidReceiptMetadata()
+		return false
 	}
+}
+
+func validateOverrideSubjectID(fact CommandOverrideFact) error {
 	if fact.SubjectType == "site" && (fact.SubjectID == "home_banner" || fact.SubjectID == "quest_announcement_role") || fact.SubjectType == "spatial" && fact.SubjectID == "game-calendar" {
 		return nil
 	}

@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/idempotency"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/uow"
 	"github.com/piyushsatti/chronicler/apps/api/internal/quest"
@@ -57,28 +58,9 @@ func runSiteCommand[T any](ctx context.Context, s ProductCommands, actor auth.Au
 		return result, err
 	}
 	err = s.Runner.Do(ctx, func(repos ProductCommandRepos) error {
-		for _, dependency := range []any{repos.Authority, repos.Policy, repos.Replay} {
-			if siteCommandDependencyMissing(dependency) {
-				return apierr.New(apierr.Internal, "site transaction dependencies required")
-			}
-		}
-		fresh, err := repos.Authority(ctx, actor.Claims().MemberID)
+		fresh, request, decision, err := admitSiteCommand(ctx, repos, actor, operation)
 		if err != nil {
 			return err
-		}
-		if fresh.Claims().MemberID == "" || fresh.Claims().MemberID != actor.Claims().MemberID {
-			return apierr.New(apierr.Forbidden, "site authority changed")
-		}
-		request, err := auth.ForOperation(auth.Operation("Mutation." + operation))
-		if err != nil {
-			return err
-		}
-		decision, err := repos.Policy.Decide(ctx, fresh, request)
-		if err != nil {
-			return err
-		}
-		if !decision.Allowed {
-			return apierr.New(apierr.Forbidden, "site command forbidden")
 		}
 		claim, err := repos.Replay.Claim(ctx, fresh.Claims().MemberID, operation, meta.IdempotencyKey, fingerprint)
 		if err != nil {
@@ -98,25 +80,57 @@ func runSiteCommand[T any](ctx context.Context, s ProductCommands, actor auth.Au
 		if err != nil {
 			return err
 		}
-		if decision.UsedOverride {
-			if siteCommandDependencyMissing(repos.Audit) {
-				return apierr.New(apierr.Internal, "override recorder required")
-			}
-			if err := repos.Audit.Record(ctx, claim, auth.OverrideFact{ActorID: fresh.Claims().MemberID, Operation: request.Operation(), SubjectType: "site", SubjectID: subjectID, RuleCode: decision.RuleCode, At: at}); err != nil {
-				return err
-			}
-		}
-		receipt, err := json.Marshal(result)
-		if err != nil {
-			return err
-		}
-		return repos.Replay.Complete(ctx, claim, receipt)
+		return completeSiteCommand(ctx, repos, claim, result, decision, fresh, request, subjectID, at)
 	})
 	if err != nil {
 		var zero T
 		return zero, err
 	}
 	return result, nil
+}
+
+func admitSiteCommand(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, operation string) (auth.Authority, auth.Request, auth.Decision, error) {
+	var zero auth.Decision
+	for _, dependency := range []any{repos.Authority, repos.Policy, repos.Replay} {
+		if siteCommandDependencyMissing(dependency) {
+			return auth.Authority{}, auth.Request{}, zero, apierr.New(apierr.Internal, "site transaction dependencies required")
+		}
+	}
+	fresh, err := repos.Authority(ctx, actor.Claims().MemberID)
+	if err != nil {
+		return auth.Authority{}, auth.Request{}, zero, err
+	}
+	if fresh.Claims().MemberID == "" || fresh.Claims().MemberID != actor.Claims().MemberID {
+		return auth.Authority{}, auth.Request{}, zero, apierr.New(apierr.Forbidden, "site authority changed")
+	}
+	request, err := auth.ForOperation(auth.Operation("Mutation." + operation))
+	if err != nil {
+		return auth.Authority{}, auth.Request{}, zero, err
+	}
+	decision, err := repos.Policy.Decide(ctx, fresh, request)
+	if err != nil {
+		return auth.Authority{}, auth.Request{}, zero, err
+	}
+	if !decision.Allowed {
+		return auth.Authority{}, auth.Request{}, zero, apierr.New(apierr.Forbidden, "site command forbidden")
+	}
+	return fresh, request, decision, nil
+}
+
+func completeSiteCommand[T any](ctx context.Context, repos ProductCommandRepos, claim idempotency.Claim, result T, decision auth.Decision, actor auth.Authority, request auth.Request, subjectID string, at time.Time) error {
+	if decision.UsedOverride {
+		if siteCommandDependencyMissing(repos.Audit) {
+			return apierr.New(apierr.Internal, "override recorder required")
+		}
+		if err := repos.Audit.Record(ctx, claim, auth.OverrideFact{ActorID: actor.Claims().MemberID, Operation: request.Operation(), SubjectType: "site", SubjectID: subjectID, RuleCode: decision.RuleCode, At: at}); err != nil {
+			return err
+		}
+	}
+	receipt, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+	return repos.Replay.Complete(ctx, claim, receipt)
 }
 
 func siteCommandID(value *string) error {

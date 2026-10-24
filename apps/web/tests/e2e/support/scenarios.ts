@@ -126,6 +126,7 @@ const graphqlBody = z.object({
   variables: z
     .object({
       shortCode: z.string().nullable().optional(),
+      id: z.string().uuid().nullable().optional(),
       characterId: z.string().uuid().optional(),
       limit: z.number().int().nonnegative().optional(),
       offset: z.number().int().nonnegative().optional(),
@@ -134,6 +135,7 @@ const graphqlBody = z.object({
           status: z.string().optional(),
           displayStatus: z.string().optional(),
         })
+        .nullable()
         .optional(),
     })
     .passthrough()
@@ -283,6 +285,50 @@ async function installRoutes(
                 null,
             },
           },
+        });
+        return;
+      }
+      if (qa && operation === 'CharacterOwner') {
+        await route.fulfill({
+          json: {
+            data: {
+              member: {
+                id: body.variables?.id,
+                handle: 'qa-member',
+                displayName: 'QA Member',
+                avatarUrl: null,
+              },
+            },
+          },
+        });
+        return;
+      }
+      if (qa && operation === 'CharacterBackstory') {
+        await route.fulfill({
+          json: {
+            data: {
+              backstories: {
+                items: goodBackstories,
+                total: goodBackstories.length,
+              },
+            },
+          },
+        });
+        return;
+      }
+      if (qa && operation === 'ParticipationsByCharacter') {
+        await route.fulfill({
+          json: {
+            data: {
+              participationsByCharacter: { items: [], total: 0 },
+            },
+          },
+        });
+        return;
+      }
+      if (qa && operation === 'CoPlayers') {
+        await route.fulfill({
+          json: { data: { coPlayers: { items: [], total: 0 } } },
         });
         return;
       }

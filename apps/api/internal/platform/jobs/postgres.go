@@ -107,39 +107,48 @@ func (s *PostgresStore) mutate(ctx context.Context, r Receipt, fn func(*Job, tim
 	}
 	var outcome error
 	err = s.Transaction(ctx, func(q *dbgen.Queries) error {
-		row, e := q.LockJob(ctx, id)
-		if errors.Is(e, pgx.ErrNoRows) {
-			return ErrMissing
-		}
-		if e != nil {
-			return e
-		}
-		clock, e := q.JobClock(ctx)
-		if e != nil {
-			return e
-		}
-		j := fromRow(row)
-		if j.ExpireQuestion(clock.Time) {
-			outcome = ErrLease
-		} else {
-			if j.Token != token {
-				return ErrLease
-			}
-			if e = fn(&j, clock.Time); e != nil {
-				return e
-			}
-		}
-		out = j
-		if row.State == string(j.State) && j.terminal() && row.CompletionOperation.String == j.CompletionOperation && EqualJSON(row.CompletionPayload, j.CompletionPayload) {
-			return nil
-		}
-		return save(ctx, q, j, clock.Time)
+		var txErr error
+		out, outcome, txErr = s.mutateLocked(ctx, q, id, token, fn)
+		return txErr
 	})
 	if err == nil {
 		err = outcome
 	}
 	return
 }
+
+func (s *PostgresStore) mutateLocked(ctx context.Context, q *dbgen.Queries, id, token int64, fn func(*Job, time.Time) error) (Job, error, error) {
+	row, err := q.LockJob(ctx, id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return Job{}, nil, ErrMissing
+	}
+	if err != nil {
+		return Job{}, nil, err
+	}
+	clock, err := q.JobClock(ctx)
+	if err != nil {
+		return Job{}, nil, err
+	}
+	job := fromRow(row)
+	var outcome error
+	if job.ExpireQuestion(clock.Time) {
+		outcome = ErrLease
+	} else {
+		if job.Token != token {
+			return Job{}, nil, ErrLease
+		}
+		if err := fn(&job, clock.Time); err != nil {
+			return Job{}, nil, err
+		}
+	}
+	if row.State != string(job.State) || !job.terminal() || row.CompletionOperation.String != job.CompletionOperation || !EqualJSON(row.CompletionPayload, job.CompletionPayload) {
+		if err := save(ctx, q, job, clock.Time); err != nil {
+			return job, nil, err
+		}
+	}
+	return job, outcome, nil
+}
+
 func (s *PostgresStore) Renew(ctx context.Context, r Receipt) (Lease, error) {
 	var lease Lease
 	_, err := s.mutate(ctx, r, func(j *Job, now time.Time) error {

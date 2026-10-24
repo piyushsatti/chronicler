@@ -147,13 +147,7 @@ func (p *ProductPostgres) ReadQuestSummaries(ctx context.Context, actor auth.Aut
 		if !row.PublicID.Valid {
 			continue
 		}
-		summaries = append(summaries, mapQuestDmSummaryDocumentRow(dbgen.ProductQuestDmSummariesPageRow{
-			Total: row.Total, ID: row.ID, PublicID: row.PublicID, Kind: row.Kind, Slug: row.Slug,
-			Title: row.Title, Category: row.Category, Status: row.Status, Visibility: row.Visibility,
-			Body: row.Body, Policy: row.Policy, AuthorPublicID: row.AuthorPublicID,
-			PublishedAt: row.PublishedAt, DeletedAt: row.DeletedAt, CreatedAt: row.CreatedAt,
-			UpdatedAt: row.UpdatedAt, AdminOverride: row.AdminOverride,
-		}))
+		summaries = append(summaries, mapQuestDmSummaryDocumentRow(dbgen.ProductQuestDmSummariesPageRow(row)))
 	}
 	_ = total // page total is embedded in document list semantics via summaries length for this surface
 	totals, err := p.questSummaryTotals(ctx, questID)
@@ -228,30 +222,31 @@ func (p *ProductPostgres) ReadBatchParticipants(ctx context.Context, _ auth.Auth
 	if err != nil {
 		return nil, err
 	}
+	grouped := groupQuestBatchParticipants(rows, positions)
+	populateQuestParticipantBatches(keys, grouped, out)
+	return out, nil
+}
+
+func groupQuestBatchParticipants(rows []dbgen.ProductQuestBatchParticipantsRow, positions []int) map[int][]QuestParticipantView {
 	grouped := make(map[int][]QuestParticipantView, len(positions))
 	for _, row := range rows {
 		position := int(row.InputIndex) - 1
-		if position < 0 || position >= len(positions) {
+		if position < 0 || position >= len(positions) || !row.QuestPublicID.Valid || !row.CharacterPublicID.Valid || !row.MemberPublicID.Valid {
 			continue
 		}
 		slot := positions[position]
-		if !row.QuestPublicID.Valid || !row.CharacterPublicID.Valid || !row.MemberPublicID.Valid {
-			continue
-		}
 		grouped[slot] = append(grouped[slot], QuestParticipantView{
-			QuestId:           db.UUIDString(row.QuestPublicID),
-			MemberId:          db.UUIDString(row.MemberPublicID),
-			CharacterId:       db.UUIDString(row.CharacterPublicID),
-			CharacterName:     row.CharacterName.String,
-			MemberHandle:      row.MemberHandle.String,
-			MemberDisplayName: row.MemberDisplayName.String,
-			MemberAvatarUrl:   textPtr(row.MemberAvatarUrl),
-			Status:            row.Status.String,
-			Manual:            row.Manual.Bool,
-			CreatedAt:         row.CreatedAt.Time,
-			UpdatedAt:         row.UpdatedAt.Time,
+			QuestId: db.UUIDString(row.QuestPublicID), MemberId: db.UUIDString(row.MemberPublicID),
+			CharacterId: db.UUIDString(row.CharacterPublicID), CharacterName: row.CharacterName.String,
+			MemberHandle: row.MemberHandle.String, MemberDisplayName: row.MemberDisplayName.String,
+			MemberAvatarUrl: textPtr(row.MemberAvatarUrl), Status: row.Status.String, Manual: row.Manual.Bool,
+			CreatedAt: row.CreatedAt.Time, UpdatedAt: row.UpdatedAt.Time,
 		})
 	}
+	return grouped
+}
+
+func populateQuestParticipantBatches(keys []ParticipantsKey, grouped map[int][]QuestParticipantView, out []product.BatchResult[ParticipantList]) {
 	for i, key := range keys {
 		if out[i].Err != nil {
 			continue
@@ -262,5 +257,4 @@ func (p *ProductPostgres) ReadBatchParticipants(ctx context.Context, _ auth.Auth
 		}
 		out[i] = product.BatchResult[ParticipantList]{Value: &ParticipantList{Items: pageItems(items, key.Limit, key.Offset)}}
 	}
-	return out, nil
 }

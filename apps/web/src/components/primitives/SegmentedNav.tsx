@@ -72,7 +72,21 @@ export function SegmentedNav({
             tabIndex={item.to === focusedKey ? 0 : -1}
             aria-current={item.current ? 'page' : undefined}
             aria-label={item.ariaLabel ?? item.label}
-            onFocus={() => setFocusedKey(item.to)}
+            onFocus={(event) => {
+              setFocusedKey(item.to);
+              const track = trackRef.current;
+              if (!track) return;
+              const trackBounds = track.getBoundingClientRect();
+              const itemBounds = event.currentTarget.getBoundingClientRect();
+              const inset = track.matches('[data-site-links-placement="top"]')
+                ? 24
+                : 4;
+              if (itemBounds.left < trackBounds.left + inset) {
+                track.scrollLeft += itemBounds.left - trackBounds.left - inset;
+              } else if (itemBounds.right > trackBounds.right - inset) {
+                track.scrollLeft += itemBounds.right - trackBounds.right + inset;
+              }
+            }}
           >
             {item.label}
           </Link>

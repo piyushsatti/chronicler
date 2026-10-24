@@ -115,16 +115,14 @@ func DecodeCommandReceipt(receipt json.RawMessage) (json.RawMessage, error) {
 }
 
 func validatePayload(payload inboxPayload) error {
-	if payload.Version != 1 || !canonicalNotificationID(payload.Origin.ActorID) || payload.Origin.ActorID != payload.Event.ActorID || strings.TrimSpace(payload.Origin.Key) == "" || payload.Origin.Operation == "" || len(payload.Origin.Fingerprint) != 64 || len(payload.Recipients) == 0 {
+	if !validNotificationOrigin(payload) {
 		return opaqueNotificationProofError()
 	}
 	if err := validateEvent(payload.Event); err != nil {
 		return opaqueNotificationProofError()
 	}
-	for i, id := range payload.Recipients {
-		if !canonicalNotificationID(id) || i > 0 && payload.Recipients[i-1] >= id {
-			return opaqueNotificationProofError()
-		}
+	if !validNotificationRecipients(payload.Recipients) {
+		return opaqueNotificationProofError()
 	}
 	var addressed []string
 	switch payload.Event.Kind {
@@ -150,6 +148,19 @@ func validatePayload(payload inboxPayload) error {
 		}
 	}
 	return nil
+}
+
+func validNotificationOrigin(payload inboxPayload) bool {
+	return payload.Version == 1 && canonicalNotificationID(payload.Origin.ActorID) && payload.Origin.ActorID == payload.Event.ActorID && strings.TrimSpace(payload.Origin.Key) != "" && payload.Origin.Operation != "" && len(payload.Origin.Fingerprint) == 64 && len(payload.Recipients) > 0
+}
+
+func validNotificationRecipients(recipients []string) bool {
+	for i, id := range recipients {
+		if !canonicalNotificationID(id) || i > 0 && recipients[i-1] >= id {
+			return false
+		}
+	}
+	return true
 }
 
 func strictNotificationJSON(raw []byte, target any) error {

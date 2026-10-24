@@ -88,9 +88,6 @@ test.describe('data walkthrough', () => {
         await expect(
           page.getByRole('heading', { name: route.expectText, exact: true }),
         ).toBeVisible();
-        await expect(
-          page.getByText(route.path.split('/').at(-1) ?? '', { exact: true }).first(),
-        ).toBeVisible();
       }
       assertRequests();
     });

@@ -746,11 +746,8 @@ func (p *Policy) Decide(ctx context.Context, actor Authority, request Request) (
 	if !known {
 		return Decision{}, nil
 	}
-	if request.input == nil {
-		return Decision{}, policyContractError()
-	}
-	if p == nil || missingPolicyDependency(p.providers.Assignments) || missingPolicyDependency(p.providers.Audience) || missingPolicyDependency(p.providers.Identities) || missingPolicyDependency(p.providers.SummaryRelationships) {
-		return Decision{}, policyContractError()
+	if err := validatePolicyRequest(p, request); err != nil {
+		return Decision{}, err
 	}
 	admin := actor.claims.Has(Admin)
 	bypass := !actor.claims.Anonymous() && (admin || actor.IsPlatformOwner())
@@ -759,24 +756,46 @@ func (p *Policy) Decide(ctx context.Context, actor Authority, request Request) (
 	if requiresActor && actor.claims.Anonymous() {
 		return Decision{}, nil
 	}
+	return p.dispatchRule(ctx, actor, request, rule, admin, bypass)
+}
+
+func validatePolicyRequest(p *Policy, request Request) error {
+	if request.input == nil {
+		return policyContractError()
+	}
+	if p == nil || missingPolicyDependency(p.providers.Assignments) || missingPolicyDependency(p.providers.Audience) || missingPolicyDependency(p.providers.Identities) || missingPolicyDependency(p.providers.SummaryRelationships) {
+		return policyContractError()
+	}
+	return nil
+}
+
+func (p *Policy) dispatchRule(ctx context.Context, actor Authority, request Request, rule policyRule, admin, bypass bool) (Decision, error) {
+	switch rule {
+	case rulePublic, ruleSelf, ruleAdmin, ruleStaff, ruleDMSelf, rulePlayerSelf, ruleDMInbox, ruleCharacterCreate, ruleLieutenantWrite, ruleCatalog, ruleBackstory, ruleCharacterHistory:
+		return p.decideBaseRule(ctx, actor, request, rule, admin, bypass)
+	case ruleCharacter, ruleSignup, ruleRequest:
+		return p.decideOwnershipRule(actor, request, rule)
+	case ruleQuestCreate, ruleArc, rulePreview, ruleDiscord, ruleDocumentCreate, ruleDocumentWrite, ruleRevisions:
+		return p.decideContentRule(ctx, actor, request, rule, admin, bypass)
+	case ruleRegion, ruleMap, ruleQuest, ruleLieutenantRead:
+		return p.decideLocationRule(ctx, actor, request, rule, admin, bypass)
+	case ruleAudience:
+		return p.decideAudienceRule(ctx, actor, request, rule, bypass)
+	case ruleSummary:
+		return p.decideSummaryRule(ctx, actor, request, rule, admin, bypass)
+	default:
+		return Decision{}, policyContractError()
+	}
+}
+
+func (p *Policy) decideBaseRule(ctx context.Context, actor Authority, request Request, rule policyRule, admin, bypass bool) (Decision, error) {
 	f := policyFailures{}
 	switch rule {
 	case rulePublic, ruleSelf, ruleAdmin, ruleStaff, ruleDMSelf, rulePlayerSelf, ruleDMInbox, ruleCharacterCreate, ruleLieutenantWrite:
 		if _, ok := request.input.(noPolicyFacts); !ok {
 			return Decision{}, policyContractError()
 		}
-		switch rule {
-		case ruleAdmin, ruleLieutenantWrite:
-			f.role = !admin
-		case ruleStaff:
-			f.role = !admin && !actor.claims.Has(Verifier)
-		case ruleDMSelf:
-			f.role = !admin && !actor.claims.Has(DM)
-		case rulePlayerSelf:
-			f.role = !admin && !actor.claims.Has(Player)
-		case ruleDMInbox:
-			f.role = !actor.LiveDM()
-		}
+		f.role = requiredRoleFailure(rule, actor, admin)
 	case ruleCatalog:
 		facts, ok := request.input.(catalogFacts)
 		if !ok {
@@ -795,6 +814,31 @@ func (p *Policy) Decide(ctx context.Context, actor Authority, request Request) (
 			return Decision{}, policyContractError()
 		}
 		f.ownership = facts.OwnerID != actor.claims.MemberID && !admin && !actor.claims.Has(Verifier)
+	default:
+		return Decision{}, policyContractError()
+	}
+	return policyResult(f, bypass), nil
+}
+
+func requiredRoleFailure(rule policyRule, actor Authority, admin bool) bool {
+	switch rule {
+	case ruleAdmin, ruleLieutenantWrite:
+		return !admin
+	case ruleStaff:
+		return !admin && !actor.claims.Has(Verifier)
+	case ruleDMSelf:
+		return !admin && !actor.claims.Has(DM)
+	case rulePlayerSelf:
+		return !admin && !actor.claims.Has(Player)
+	case ruleDMInbox:
+		return !actor.LiveDM()
+	default:
+		return false
+	}
+}
+
+func (p *Policy) decideOwnershipRule(actor Authority, request Request, rule policyRule) (Decision, error) {
+	switch rule {
 	case ruleCharacter, ruleSignup:
 		facts, ok := request.input.(CharacterFacts)
 		if !ok {
@@ -807,6 +851,25 @@ func (p *Policy) Decide(ctx context.Context, actor Authority, request Request) (
 			return Decision{}, policyContractError()
 		}
 		return policyResult(policyFailures{role: !actor.LiveDM(), ownership: facts.TargetDMID != actor.claims.MemberID}, false), nil
+	default:
+		return Decision{}, policyContractError()
+	}
+}
+
+func (p *Policy) decideContentRule(ctx context.Context, actor Authority, request Request, rule policyRule, admin, bypass bool) (Decision, error) {
+	switch rule {
+	case ruleQuestCreate, ruleArc, rulePreview, ruleDiscord:
+		return p.decideQuestContentRule(ctx, actor, request, rule, admin, bypass)
+	case ruleDocumentCreate, ruleDocumentWrite, ruleRevisions:
+		return p.decideDocumentRule(ctx, actor, request, rule, admin, bypass)
+	default:
+		return Decision{}, policyContractError()
+	}
+}
+
+func (p *Policy) decideQuestContentRule(ctx context.Context, actor Authority, request Request, rule policyRule, admin, bypass bool) (Decision, error) {
+	f := policyFailures{}
+	switch rule {
 	case ruleQuestCreate:
 		if _, ok := request.input.(QuestCreateFacts); !ok {
 			return Decision{}, policyContractError()
@@ -830,204 +893,316 @@ func (p *Policy) Decide(ctx context.Context, actor Authority, request Request) (
 		f.role = facts.Audience == PreviewDM && !actor.claims.Has(DM) && !admin
 		f.ownership = facts.AuthorID != nil && *facts.AuthorID != actor.claims.MemberID
 	case ruleDiscord:
-		facts, ok := request.input.(DiscordLookupFacts)
-		if !ok {
-			return Decision{}, policyContractError()
-		}
-		identity, err := p.providers.Identities.DiscordIdentity(ctx, actor.claims.MemberID)
+		failures, err := p.discordLookupFailures(ctx, actor, request, admin)
 		if err != nil {
 			return Decision{}, err
 		}
-		if identity.MemberID != actor.claims.MemberID || identity.DiscordID == "" {
-			return Decision{}, policyContractError()
-		}
-		f.role = !admin && identity.DiscordID != facts.RequestedDiscordID
-	case ruleDocumentCreate:
-		facts, ok := request.input.(DocumentCreateFacts)
-		if !ok {
-			return Decision{}, policyContractError()
-		}
-		if facts.Kind == "quest_brief" {
-			return Decision{}, apierr.New(apierr.Invalid, "quest brief requires Quest command")
-		}
-		f.ownership = facts.AuthorID != actor.claims.MemberID
-		if facts.Kind == "rule" {
-			f.role = !admin && !actor.claims.Has(Verifier)
-		}
-		if facts.Kind == "codex_entry" && facts.Category != nil && *facts.Category == "Locations" {
-			gates, err := p.locationFailures(ctx, actor, facts.LinkedRegionIDs)
-			if err != nil {
-				return Decision{}, err
-			}
-			f = mergePolicyFailures(f, gates)
-		}
-	case ruleDocumentWrite, ruleRevisions:
-		facts, ok := request.input.(DocumentWriteFacts)
-		if !ok {
-			return Decision{}, policyContractError()
-		}
-		if rule == ruleDocumentWrite && facts.Kind == "quest_brief" {
-			return Decision{}, apierr.New(apierr.Invalid, "quest brief requires Quest command")
-		}
-		f.ownership = facts.AuthorID != actor.claims.MemberID
-		if rule == ruleDocumentWrite && facts.Kind == "rule" {
-			f.role = !admin && !actor.claims.Has(Verifier)
-		}
-		if facts.Kind == "codex_entry" && facts.Category != nil && *facts.Category == "Locations" {
-			gates, err := p.locationFailures(ctx, actor, facts.LinkedRegionIDs)
-			if err != nil {
-				return Decision{}, err
-			}
-			if rule == ruleDocumentWrite {
-				f = gates
-			} else if !f.ownership {
-				f = policyFailures{}
-			} else {
-				f = gates
-			}
-		}
-	case ruleRegion:
-		facts, ok := request.input.(RegionFacts)
-		if !ok {
-			return Decision{}, policyContractError()
-		}
-		gates, err := p.locationFailures(ctx, actor, []string{facts.ID})
-		if err != nil {
-			return Decision{}, err
-		}
-		f = gates
-	case ruleMap:
-		facts, ok := request.input.(MapFacts)
-		if !ok {
-			return Decision{}, policyContractError()
-		}
-		gates, err := p.mapFailures(ctx, actor, facts.RegionID)
-		if err != nil {
-			return Decision{}, err
-		}
-		f = gates
-		if facts.Submap != nil {
-			gates, err = p.mapFailures(ctx, actor, facts.Submap.RegionID)
-			if err != nil {
-				return Decision{}, err
-			}
-			f = mergePolicyFailures(f, gates)
-		}
-		for _, location := range facts.Locations {
-			gates, err = p.locationFailures(ctx, actor, location.LinkedRegionIDs)
-			if err != nil {
-				return Decision{}, err
-			}
-			f = mergePolicyFailures(f, gates)
-		}
-	case ruleQuest:
-		facts, ok := request.input.(QuestFacts)
-		if !ok {
-			return Decision{}, policyContractError()
-		}
-		f.ownership = facts.DMID != actor.claims.MemberID
-		for _, hex := range facts.Hexes {
-			f.audience = f.audience || hex.AdminOverride
-			if hex.Role == "visited" {
-				gates, err := p.mapFailures(ctx, actor, hex.RegionID)
-				if err != nil {
-					return Decision{}, err
-				}
-				f = mergePolicyFailures(f, gates)
-			}
-		}
-	case ruleLieutenantRead:
-		facts, ok := request.input.(LieutenantReadFacts)
-		if !ok {
-			return Decision{}, policyContractError()
-		}
-		for _, document := range facts.Documents {
-			assigned, err := p.providers.Assignments.HasLieutenant(ctx, actor.claims.MemberID, document.ID)
-			if err != nil {
-				return Decision{}, err
-			}
-			if document.AuthorID != actor.claims.MemberID && !assigned && !admin {
-				f.assignment = true
-			}
-		}
-	case ruleAudience:
-		facts, ok := request.input.(documentReadFacts)
-		if !ok {
-			return Decision{}, policyContractError()
-		}
-		assessment, err := p.providers.Audience.Assess(ctx, AudienceContext{actor: actor, bypass: bypass}, slices.Clone(facts.refs))
-		if err != nil {
-			return Decision{}, err
-		}
-		results := assessment.Results
-		if assessment.ScopeOverrideSubjectID != nil {
-			if !bypass || !canonicalPolicyID(*assessment.ScopeOverrideSubjectID) {
-				return Decision{}, policyContractError()
-			}
-			f.audience = true
-		}
-		if len(results) != len(facts.refs) {
-			return Decision{}, policyContractError()
-		}
-		for i, result := range results {
-			if result.SubjectID != facts.refs[i].ID {
-				return Decision{}, policyContractError()
-			}
-			switch result.Outcome {
-			case AudienceDenied:
-				return Decision{RuleCode: "AUDIENCE"}, nil
-			case AudienceOrdinary:
-			case AudienceOverridden:
-				if !bypass {
-					return Decision{}, policyContractError()
-				}
-				f.audience = true
-			default:
-				return Decision{}, policyContractError()
-			}
-		}
-	case ruleSummary:
-		facts, ok := request.input.(SummaryFacts)
-		if !ok {
-			return Decision{}, policyContractError()
-		}
-		evidence, err := p.providers.SummaryRelationships.SummaryRelations(ctx, slices.Clone(facts.QuestIDs), copyPolicyString(facts.CharacterID))
-		if err != nil {
-			return Decision{}, err
-		}
-		if len(evidence.Relations) != len(facts.QuestIDs) {
-			return Decision{}, policyContractError()
-		}
-		if facts.CharacterID != nil {
-			if evidence.Character == nil || evidence.Character.ID != *facts.CharacterID || !canonicalPolicyID(evidence.Character.OwnerID) {
-				return Decision{}, policyContractError()
-			}
-			f.ownership = evidence.Character.OwnerID != actor.claims.MemberID
-		} else if evidence.Character != nil {
-			return Decision{}, policyContractError()
-		}
-		f.role = !actor.claims.Has(Player) && !actor.LiveDM() && !admin
-		f.ownership = f.ownership || (facts.AuthorID != nil && *facts.AuthorID != actor.claims.MemberID)
-		for i, relation := range evidence.Relations {
-			if relation.QuestID != facts.QuestIDs[i] || !canonicalPolicyID(relation.QuestDMID) {
-				return Decision{}, policyContractError()
-			}
-			if (relation.ParticipantOwnerID == nil) != (relation.ParticipantStatus == nil) || !optionalPolicyID(relation.ParticipantOwnerID) {
-				return Decision{}, policyContractError()
-			}
-			if relation.ParticipantStatus != nil {
-				switch *relation.ParticipantStatus {
-				case "signed_up", "waitlisted", "played", "no_show", "withdrawn":
-				default:
-					return Decision{}, policyContractError()
-				}
-			}
-			dm := actor.LiveDM() && relation.QuestDMID == actor.claims.MemberID
-			participant := relation.ParticipantOwnerID != nil && *relation.ParticipantOwnerID == actor.claims.MemberID && *relation.ParticipantStatus != "withdrawn"
-			f.ownership = f.ownership || (!dm && !participant)
-		}
+		f = failures
 	default:
 		return Decision{}, policyContractError()
 	}
 	return policyResult(f, bypass), nil
+}
+
+func (p *Policy) decideDocumentRule(ctx context.Context, actor Authority, request Request, rule policyRule, admin, bypass bool) (Decision, error) {
+	if rule == ruleDocumentCreate {
+		return p.decideDocumentCreateRule(ctx, actor, request, admin, bypass)
+	}
+	if rule == ruleDocumentWrite || rule == ruleRevisions {
+		return p.decideDocumentWriteRule(ctx, actor, request, rule, admin, bypass)
+	}
+	return Decision{}, policyContractError()
+}
+
+func (p *Policy) discordLookupFailures(ctx context.Context, actor Authority, request Request, admin bool) (policyFailures, error) {
+	facts, ok := request.input.(DiscordLookupFacts)
+	if !ok {
+		return policyFailures{}, policyContractError()
+	}
+	identity, err := p.providers.Identities.DiscordIdentity(ctx, actor.claims.MemberID)
+	if err != nil {
+		return policyFailures{}, err
+	}
+	if identity.MemberID != actor.claims.MemberID || identity.DiscordID == "" {
+		return policyFailures{}, policyContractError()
+	}
+	return policyFailures{role: !admin && identity.DiscordID != facts.RequestedDiscordID}, nil
+}
+
+func (p *Policy) decideDocumentCreateRule(ctx context.Context, actor Authority, request Request, admin, bypass bool) (Decision, error) {
+	facts, ok := request.input.(DocumentCreateFacts)
+	if !ok {
+		return Decision{}, policyContractError()
+	}
+	if facts.Kind == "quest_brief" {
+		return Decision{}, apierr.New(apierr.Invalid, "quest brief requires Quest command")
+	}
+	failures := policyFailures{ownership: facts.AuthorID != actor.claims.MemberID}
+	if facts.Kind == "rule" {
+		failures.role = !admin && !actor.claims.Has(Verifier)
+	}
+	if facts.Kind == "codex_entry" && facts.Category != nil && *facts.Category == "Locations" {
+		gates, err := p.locationFailures(ctx, actor, facts.LinkedRegionIDs)
+		if err != nil {
+			return Decision{}, err
+		}
+		failures = mergePolicyFailures(failures, gates)
+	}
+	return policyResult(failures, bypass), nil
+}
+
+func (p *Policy) decideDocumentWriteRule(ctx context.Context, actor Authority, request Request, rule policyRule, admin, bypass bool) (Decision, error) {
+	facts, ok := request.input.(DocumentWriteFacts)
+	if !ok {
+		return Decision{}, policyContractError()
+	}
+	if rule == ruleDocumentWrite && facts.Kind == "quest_brief" {
+		return Decision{}, apierr.New(apierr.Invalid, "quest brief requires Quest command")
+	}
+	failures := policyFailures{ownership: facts.AuthorID != actor.claims.MemberID}
+	if rule == ruleDocumentWrite && facts.Kind == "rule" {
+		failures.role = !admin && !actor.claims.Has(Verifier)
+	}
+	if facts.Kind == "codex_entry" && facts.Category != nil && *facts.Category == "Locations" {
+		gates, err := p.locationFailures(ctx, actor, facts.LinkedRegionIDs)
+		if err != nil {
+			return Decision{}, err
+		}
+		failures = documentWriteLocationFailures(rule, failures, gates)
+	}
+	return policyResult(failures, bypass), nil
+}
+
+func documentWriteLocationFailures(rule policyRule, failures, gates policyFailures) policyFailures {
+	if rule == ruleDocumentWrite || failures.ownership {
+		return gates
+	}
+	return policyFailures{}
+}
+
+func (p *Policy) decideLocationRule(ctx context.Context, actor Authority, request Request, rule policyRule, admin, bypass bool) (Decision, error) {
+	switch rule {
+	case ruleRegion:
+		return p.decideRegionRule(ctx, actor, request, bypass)
+	case ruleMap:
+		return p.decideMapRule(ctx, actor, request, bypass)
+	case ruleQuest:
+		return p.decideQuestReadRule(ctx, actor, request, bypass)
+	case ruleLieutenantRead:
+		return p.decideLieutenantReadRule(ctx, actor, request, admin, bypass)
+	default:
+		return Decision{}, policyContractError()
+	}
+}
+
+func (p *Policy) decideRegionRule(ctx context.Context, actor Authority, request Request, bypass bool) (Decision, error) {
+	facts, ok := request.input.(RegionFacts)
+	if !ok {
+		return Decision{}, policyContractError()
+	}
+	failures, err := p.locationFailures(ctx, actor, []string{facts.ID})
+	if err != nil {
+		return Decision{}, err
+	}
+	return policyResult(failures, bypass), nil
+}
+
+func (p *Policy) decideMapRule(ctx context.Context, actor Authority, request Request, bypass bool) (Decision, error) {
+	facts, ok := request.input.(MapFacts)
+	if !ok {
+		return Decision{}, policyContractError()
+	}
+	failures, err := p.mapFailures(ctx, actor, facts.RegionID)
+	if err != nil {
+		return Decision{}, err
+	}
+	if facts.Submap != nil {
+		more, err := p.mapFailures(ctx, actor, facts.Submap.RegionID)
+		if err != nil {
+			return Decision{}, err
+		}
+		failures = mergePolicyFailures(failures, more)
+	}
+	for _, location := range facts.Locations {
+		more, err := p.locationFailures(ctx, actor, location.LinkedRegionIDs)
+		if err != nil {
+			return Decision{}, err
+		}
+		failures = mergePolicyFailures(failures, more)
+	}
+	return policyResult(failures, bypass), nil
+}
+
+func (p *Policy) decideQuestReadRule(ctx context.Context, actor Authority, request Request, bypass bool) (Decision, error) {
+	facts, ok := request.input.(QuestFacts)
+	if !ok {
+		return Decision{}, policyContractError()
+	}
+	failures := policyFailures{ownership: facts.DMID != actor.claims.MemberID}
+	for _, hex := range facts.Hexes {
+		failures.audience = failures.audience || hex.AdminOverride
+		if hex.Role == "visited" {
+			more, err := p.mapFailures(ctx, actor, hex.RegionID)
+			if err != nil {
+				return Decision{}, err
+			}
+			failures = mergePolicyFailures(failures, more)
+		}
+	}
+	return policyResult(failures, bypass), nil
+}
+
+func (p *Policy) decideLieutenantReadRule(ctx context.Context, actor Authority, request Request, admin, bypass bool) (Decision, error) {
+	facts, ok := request.input.(LieutenantReadFacts)
+	if !ok {
+		return Decision{}, policyContractError()
+	}
+	failures := policyFailures{}
+	for _, document := range facts.Documents {
+		assigned, err := p.providers.Assignments.HasLieutenant(ctx, actor.claims.MemberID, document.ID)
+		if err != nil {
+			return Decision{}, err
+		}
+		if document.AuthorID != actor.claims.MemberID && !assigned && !admin {
+			failures.assignment = true
+		}
+	}
+	return policyResult(failures, bypass), nil
+}
+
+func (p *Policy) decideAudienceRule(ctx context.Context, actor Authority, request Request, rule policyRule, bypass bool) (Decision, error) {
+	facts, ok := request.input.(documentReadFacts)
+	if rule != ruleAudience || !ok {
+		return Decision{}, policyContractError()
+	}
+	assessment, err := p.providers.Audience.Assess(ctx, AudienceContext{actor: actor, bypass: bypass}, slices.Clone(facts.refs))
+	if err != nil {
+		return Decision{}, err
+	}
+	return p.decideAudienceAssessment(assessment, facts, bypass)
+}
+
+func (p *Policy) decideAudienceAssessment(assessment AudienceAssessment, facts documentReadFacts, bypass bool) (Decision, error) {
+	failures, denied, err := validateAudienceAssessment(assessment, facts, bypass)
+	if err != nil {
+		return Decision{}, err
+	}
+	if denied {
+		return Decision{RuleCode: "AUDIENCE"}, nil
+	}
+	return policyResult(failures, bypass), nil
+}
+
+func validateAudienceAssessment(assessment AudienceAssessment, facts documentReadFacts, bypass bool) (policyFailures, bool, error) {
+	failures := policyFailures{}
+	if assessment.ScopeOverrideSubjectID != nil {
+		if !bypass || !canonicalPolicyID(*assessment.ScopeOverrideSubjectID) {
+			return failures, false, policyContractError()
+		}
+		failures.audience = true
+	}
+	if len(assessment.Results) != len(facts.refs) {
+		return failures, false, policyContractError()
+	}
+	for i, result := range assessment.Results {
+		if result.SubjectID != facts.refs[i].ID {
+			return failures, false, policyContractError()
+		}
+		denied, err := validateAudienceOutcome(result.Outcome, bypass)
+		if err != nil || denied {
+			return failures, denied, err
+		}
+		failures.audience = failures.audience || result.Outcome == AudienceOverridden
+	}
+	return failures, false, nil
+}
+
+func validateAudienceOutcome(outcome AudienceOutcome, bypass bool) (bool, error) {
+	switch outcome {
+	case AudienceDenied:
+		return true, nil
+	case AudienceOrdinary:
+		return false, nil
+	case AudienceOverridden:
+		if !bypass {
+			return false, policyContractError()
+		}
+		return false, nil
+	default:
+		return false, policyContractError()
+	}
+}
+
+func (p *Policy) decideSummaryRule(ctx context.Context, actor Authority, request Request, rule policyRule, admin, bypass bool) (Decision, error) {
+	if rule != ruleSummary {
+		return Decision{}, policyContractError()
+	}
+	facts, ok := request.input.(SummaryFacts)
+	if !ok {
+		return Decision{}, policyContractError()
+	}
+	evidence, err := p.providers.SummaryRelationships.SummaryRelations(ctx, slices.Clone(facts.QuestIDs), copyPolicyString(facts.CharacterID))
+	if err != nil {
+		return Decision{}, err
+	}
+	if len(evidence.Relations) != len(facts.QuestIDs) {
+		return Decision{}, policyContractError()
+	}
+	characterOwner, err := summaryCharacterOwner(evidence.Character, facts.CharacterID, actor.claims.MemberID)
+	if err != nil {
+		return Decision{}, err
+	}
+	relationOwnership, err := summaryRelationOwnership(evidence.Relations, facts.QuestIDs, actor)
+	if err != nil {
+		return Decision{}, err
+	}
+	f := policyFailures{
+		role:      !actor.claims.Has(Player) && !actor.LiveDM() && !admin,
+		ownership: characterOwner || relationOwnership || (facts.AuthorID != nil && *facts.AuthorID != actor.claims.MemberID),
+	}
+	return policyResult(f, bypass), nil
+}
+
+func summaryCharacterOwner(evidence *CharacterFacts, characterID *string, actorID string) (bool, error) {
+	if characterID == nil {
+		if evidence != nil {
+			return false, policyContractError()
+		}
+		return false, nil
+	}
+	if evidence == nil || evidence.ID != *characterID || !canonicalPolicyID(evidence.OwnerID) {
+		return false, policyContractError()
+	}
+	return evidence.OwnerID != actorID, nil
+}
+
+func summaryRelationOwnership(relations []SummaryRelation, questIDs []string, actor Authority) (bool, error) {
+	owned := false
+	for i, relation := range relations {
+		if relation.QuestID != questIDs[i] || !canonicalPolicyID(relation.QuestDMID) {
+			return false, policyContractError()
+		}
+		if (relation.ParticipantOwnerID == nil) != (relation.ParticipantStatus == nil) || !optionalPolicyID(relation.ParticipantOwnerID) {
+			return false, policyContractError()
+		}
+		if !validSummaryParticipantStatus(relation.ParticipantStatus) {
+			return false, policyContractError()
+		}
+		dm := actor.LiveDM() && relation.QuestDMID == actor.claims.MemberID
+		participant := relation.ParticipantOwnerID != nil && *relation.ParticipantOwnerID == actor.claims.MemberID && *relation.ParticipantStatus != "withdrawn"
+		owned = owned || (!dm && !participant)
+	}
+	return owned, nil
+}
+
+func validSummaryParticipantStatus(status *string) bool {
+	if status == nil {
+		return true
+	}
+	switch *status {
+	case "signed_up", "waitlisted", "played", "no_show", "withdrawn":
+		return true
+	default:
+		return false
+	}
 }

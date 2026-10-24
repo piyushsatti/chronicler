@@ -30,8 +30,44 @@ func productIDs() product.IDGenerator {
 	return func() string { return uuid.NewString() }
 }
 
+type productReadStores struct {
+	member       *member.ProductPostgres
+	character    *character.ProductPostgres
+	notification *notification.ProductPostgres
+	site         *site.ProductPostgres
+	document     *document.ProductPostgres
+	quest        *quest.ProductPostgres
+	spatial      *spatial.ProductPostgres
+}
+
+func newProductReadStores(pgxPool dbgen.DBTX) (productReadStores, error) {
+	var stores productReadStores
+	var err error
+	if stores.member, err = member.NewProductPostgres(pgxPool); err != nil {
+		return productReadStores{}, err
+	}
+	if stores.character, err = character.NewProductPostgres(pgxPool); err != nil {
+		return productReadStores{}, err
+	}
+	if stores.notification, err = notification.NewProductPostgres(pgxPool); err != nil {
+		return productReadStores{}, err
+	}
+	if stores.site, err = site.NewProductPostgres(pgxPool); err != nil {
+		return productReadStores{}, err
+	}
+	if stores.document, err = document.NewProductPostgres(pgxPool); err != nil {
+		return productReadStores{}, err
+	}
+	if stores.quest, err = quest.NewProductPostgres(pgxPool); err != nil {
+		return productReadStores{}, err
+	}
+	if stores.spatial, err = spatial.NewProductPostgres(pgxPool); err != nil {
+		return productReadStores{}, err
+	}
+	return stores, nil
+}
+
 func wireProductServices(pgxPool dbgen.DBTX, pool *db.Pool, memberPool *member.PostgresStore, jwtSecret []byte, legacy graph.Services) (graph.Services, error) {
-	authority := memberPool.ResolveAuthority
 	policy, err := auth.NewPoolPolicy(pgxPool)
 	if err != nil {
 		return graph.Services{}, err
@@ -40,76 +76,51 @@ func wireProductServices(pgxPool dbgen.DBTX, pool *db.Pool, memberPool *member.P
 	if err != nil {
 		return graph.Services{}, err
 	}
-	clock := productClock()
-	ids := productIDs()
+	clock, ids := productClock(), productIDs()
 
-	memPG, err := member.NewProductPostgres(pgxPool)
-	if err != nil {
-		return graph.Services{}, err
-	}
-	charPG, err := character.NewProductPostgres(pgxPool)
-	if err != nil {
-		return graph.Services{}, err
-	}
-	notifPG, err := notification.NewProductPostgres(pgxPool)
-	if err != nil {
-		return graph.Services{}, err
-	}
-	sitePG, err := site.NewProductPostgres(pgxPool)
-	if err != nil {
-		return graph.Services{}, err
-	}
-	docPG, err := document.NewProductPostgres(pgxPool)
-	if err != nil {
-		return graph.Services{}, err
-	}
-	questPG, err := quest.NewProductPostgres(pgxPool)
-	if err != nil {
-		return graph.Services{}, err
-	}
-	spatialPG, err := spatial.NewProductPostgres(pgxPool)
+	stores, err := newProductReadStores(pgxPool)
 	if err != nil {
 		return graph.Services{}, err
 	}
 
 	memberQueries, err := member.NewProductQueries(
-		member.ProductReadRepos{Member: memPG, Social: memPG, Reference: memPG, Batch: memPG},
+		member.ProductReadRepos{Member: stores.member, Social: stores.member, Reference: stores.member, Batch: stores.member},
 		policy, clock, observer, member.NewGrantReconciler(),
 	)
 	if err != nil {
 		return graph.Services{}, err
 	}
 	characterQueries, err := character.NewProductQueries(
-		character.ProductReadRepos{Character: charPG, Reference: charPG, Batch: charPG, DocumentAudience: docPG},
+		character.ProductReadRepos{Character: stores.character, Reference: stores.character, Batch: stores.character, DocumentAudience: stores.document},
 		policy, clock, observer,
 	)
 	if err != nil {
 		return graph.Services{}, err
 	}
 	documentQueries, err := document.NewProductQueries(
-		document.ProductReadRepos{Document: docPG, Batch: docPG},
+		document.ProductReadRepos{Document: stores.document, Batch: stores.document},
 		policy, clock, observer,
 	)
 	if err != nil {
 		return graph.Services{}, err
 	}
 	questQueries, err := quest.NewProductQueries(
-		quest.ProductReadRepos{Quest: questPG, Arc: questPG, Batch: questPG, DocumentAudience: docPG, RewardCoverage: questPG},
+		quest.ProductReadRepos{Quest: stores.quest, Arc: stores.quest, Batch: stores.quest, DocumentAudience: stores.document, RewardCoverage: stores.quest},
 		policy, clock, observer,
 	)
 	if err != nil {
 		return graph.Services{}, err
 	}
 	spatialQueries, err := spatial.NewProductQueries(
-		spatial.ProductReadRepos{Map: spatialPG, Region: spatialPG, Time: spatialPG, Batch: spatialPG, TimeBatch: spatialPG},
+		spatial.ProductReadRepos{Map: stores.spatial, Region: stores.spatial, Time: stores.spatial, Batch: stores.spatial, TimeBatch: stores.spatial},
 		policy, clock, observer,
 	)
 	if err != nil {
 		return graph.Services{}, err
 	}
 	siteQueries, err := site.NewProductQueries(
-		site.ProductReadRepos{Operations: sitePG, Site: sitePG, Batch: sitePG},
-		policy, clock, observer, docPG,
+		site.ProductReadRepos{Operations: stores.site, Site: stores.site, Batch: stores.site},
+		policy, clock, observer, stores.document,
 	)
 	if err != nil {
 		return graph.Services{}, err
@@ -119,67 +130,9 @@ func wireProductServices(pgxPool dbgen.DBTX, pool *db.Pool, memberPool *member.P
 		return graph.Services{}, err
 	}
 	notificationQueries, err := notification.NewProductQueries(
-		notification.ProductReadRepos{Notification: notifPG, Batch: notifPG, DocumentAudience: docPG},
+		notification.ProductReadRepos{Notification: stores.notification, Batch: stores.notification, DocumentAudience: stores.document},
 		policy, clock, observer, cursorCodec,
 	)
-	if err != nil {
-		return graph.Services{}, err
-	}
-
-	producer := notification.NewProducer()
-	memberRunner := db.NewRunner(pool, func(tx pgx.Tx) member.ProductCommandRepos {
-		return bindMemberCommandRepos(tx, policy, memberPool, producer)
-	})
-	memberCommands, err := member.NewProductCommands(memberRunner, clock, ids)
-	if err != nil {
-		return graph.Services{}, err
-	}
-
-	characterRunner := db.NewRunner(pool, func(tx pgx.Tx) character.ProductCommandRepos {
-		return bindCharacterCommandRepos(tx, policy, memberPool)
-	})
-	characterCommands, err := character.NewProductCommands(characterRunner, clock, ids)
-	if err != nil {
-		return graph.Services{}, err
-	}
-
-	documentRunner := db.NewRunner(pool, func(tx pgx.Tx) document.ProductCommandRepos {
-		return bindDocumentCommandRepos(tx, policy, authority, producer)
-	})
-	documentCommands, err := document.NewProductCommands(documentRunner, clock, ids)
-	if err != nil {
-		return graph.Services{}, err
-	}
-
-	questRunner := db.NewRunner(pool, func(tx pgx.Tx) quest.ProductCommandRepos {
-		return bindQuestCommandRepos(tx, policy, authority, producer)
-	})
-	questCommands, err := quest.NewProductCommands(questRunner, clock, ids)
-	if err != nil {
-		return graph.Services{}, err
-	}
-	questCommands.Queries = questQueries
-
-	spatialRunner := db.NewRunner(pool, func(tx pgx.Tx) spatial.ProductCommandRepos {
-		return bindSpatialCommandRepos(tx, policy, authority, producer)
-	})
-	spatialCommands, err := spatial.NewProductCommands(spatialRunner, clock, ids)
-	if err != nil {
-		return graph.Services{}, err
-	}
-
-	siteRunner := db.NewRunner(pool, func(tx pgx.Tx) site.ProductCommandRepos {
-		return bindSiteCommandRepos(tx, policy, authority, producer)
-	})
-	siteCommands, err := site.NewProductCommands(siteRunner, clock, ids)
-	if err != nil {
-		return graph.Services{}, err
-	}
-
-	notificationRunner := db.NewRunner(pool, func(tx pgx.Tx) notification.ProductCommandRepos {
-		return bindNotificationCommandRepos(tx, policy, memberPool)
-	})
-	notificationCommands, err := notification.NewProductCommands(notificationRunner, clock)
 	if err != nil {
 		return graph.Services{}, err
 	}
@@ -191,6 +144,71 @@ func wireProductServices(pgxPool dbgen.DBTX, pool *db.Pool, memberPool *member.P
 	legacy.QuestQueries = questQueries
 	legacy.SiteQueries = siteQueries
 	legacy.NotificationQueries = notificationQueries
+	if err := wireProductCommands(pool, memberPool, policy, memberPool.ResolveAuthority, clock, ids, questQueries, &legacy); err != nil {
+		return graph.Services{}, err
+	}
+	return legacy, nil
+}
+
+func wireProductCommands(pool *db.Pool, memberPool *member.PostgresStore, policy *auth.Policy, authority auth.AuthorityResolver, clock product.Clock, ids product.IDGenerator, questQueries *quest.ProductQueries, legacy *graph.Services) error {
+	producer := notification.NewProducer()
+	memberRunner := db.NewRunner(pool, func(tx pgx.Tx) member.ProductCommandRepos {
+		return bindMemberCommandRepos(tx, policy, memberPool, producer)
+	})
+	memberCommands, err := member.NewProductCommands(memberRunner, clock, ids)
+	if err != nil {
+		return err
+	}
+
+	characterRunner := db.NewRunner(pool, func(tx pgx.Tx) character.ProductCommandRepos {
+		return bindCharacterCommandRepos(tx, policy, memberPool)
+	})
+	characterCommands, err := character.NewProductCommands(characterRunner, clock, ids)
+	if err != nil {
+		return err
+	}
+
+	documentRunner := db.NewRunner(pool, func(tx pgx.Tx) document.ProductCommandRepos {
+		return bindDocumentCommandRepos(tx, policy, authority, producer)
+	})
+	documentCommands, err := document.NewProductCommands(documentRunner, clock, ids)
+	if err != nil {
+		return err
+	}
+
+	questRunner := db.NewRunner(pool, func(tx pgx.Tx) quest.ProductCommandRepos {
+		return bindQuestCommandRepos(tx, policy, authority, producer)
+	})
+	questCommands, err := quest.NewProductCommands(questRunner, clock, ids)
+	if err != nil {
+		return err
+	}
+	questCommands.Queries = questQueries
+
+	spatialRunner := db.NewRunner(pool, func(tx pgx.Tx) spatial.ProductCommandRepos {
+		return bindSpatialCommandRepos(tx, policy, authority, producer)
+	})
+	spatialCommands, err := spatial.NewProductCommands(spatialRunner, clock, ids)
+	if err != nil {
+		return err
+	}
+
+	siteRunner := db.NewRunner(pool, func(tx pgx.Tx) site.ProductCommandRepos {
+		return bindSiteCommandRepos(tx, policy, authority, producer)
+	})
+	siteCommands, err := site.NewProductCommands(siteRunner, clock, ids)
+	if err != nil {
+		return err
+	}
+
+	notificationRunner := db.NewRunner(pool, func(tx pgx.Tx) notification.ProductCommandRepos {
+		return bindNotificationCommandRepos(tx, policy, memberPool)
+	})
+	notificationCommands, err := notification.NewProductCommands(notificationRunner, clock)
+	if err != nil {
+		return err
+	}
+
 	legacy.MemberCommands = memberCommands
 	legacy.DocumentCommands = documentCommands
 	legacy.SpatialCommands = spatialCommands
@@ -198,7 +216,7 @@ func wireProductServices(pgxPool dbgen.DBTX, pool *db.Pool, memberPool *member.P
 	legacy.QuestCommands = questCommands
 	legacy.SiteCommands = siteCommands
 	legacy.NotificationCommands = notificationCommands
-	return legacy, nil
+	return nil
 }
 
 func bindMemberCommandRepos(tx pgx.Tx, policy *auth.Policy, memberPool *member.PostgresStore, producer *notification.Producer) member.ProductCommandRepos {

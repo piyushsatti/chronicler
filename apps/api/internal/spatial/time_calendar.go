@@ -58,6 +58,24 @@ type calendarDefinition struct {
 	YearLength int64
 }
 
+type calendarInput struct {
+	Epoch  string           `json:"epoch"`
+	Months []calendarPeriod `json:"months"`
+	Era    struct {
+		Name   string `json:"name"`
+		Abbrev string `json:"abbrev"`
+	} `json:"era"`
+	Periods     []calendarPeriod `json:"periods"`
+	DaysPerWeek *int32           `json:"days_per_week"`
+	Weekdays    *[]string        `json:"weekdays"`
+	Leap        json.RawMessage  `json:"leap"`
+	Rate        *float64         `json:"rate_real_days_per_game_day"`
+	Moons       []struct {
+		Name      string `json:"name"`
+		CycleDays int32  `json:"cycle_days"`
+	} `json:"moons"`
+}
+
 func invalidCalendarDefinition() error {
 	return apierr.New(apierr.Invalid, "invalid calendar definition")
 }
@@ -69,33 +87,8 @@ func calendarLabel(value string, maximum int) bool {
 // The anti-corruption layer normalizes the two accepted authored shapes once.
 // It never rewrites the raw definition or calculates a real-to-game trajectory.
 func parseCalendarDefinition(raw json.RawMessage) (calendarDefinition, error) {
-	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &fields); err != nil || fields == nil {
-		return calendarDefinition{}, invalidCalendarDefinition()
-	}
-	var input struct {
-		Epoch  string           `json:"epoch"`
-		Months []calendarPeriod `json:"months"`
-		Era    struct {
-			Name   string `json:"name"`
-			Abbrev string `json:"abbrev"`
-		} `json:"era"`
-		Periods     []calendarPeriod `json:"periods"`
-		DaysPerWeek *int32           `json:"days_per_week"`
-		Weekdays    *[]string        `json:"weekdays"`
-		Leap        json.RawMessage  `json:"leap"`
-		Rate        *float64         `json:"rate_real_days_per_game_day"`
-		Moons       []struct {
-			Name      string `json:"name"`
-			CycleDays int32  `json:"cycle_days"`
-		} `json:"moons"`
-	}
-	if err := json.Unmarshal(raw, &input); err != nil {
-		return calendarDefinition{}, invalidCalendarDefinition()
-	}
-	_, legacy := fields["months"]
-	_, modern := fields["periods"]
-	if legacy == modern {
+	input, legacy, err := decodeCalendarInput(raw)
+	if err != nil {
 		return calendarDefinition{}, invalidCalendarDefinition()
 	}
 	definition := calendarDefinition{Era: input.Era.Abbrev, Periods: input.Periods}
@@ -107,8 +100,32 @@ func parseCalendarDefinition(raw json.RawMessage) (calendarDefinition, error) {
 	} else if !calendarLabel(input.Era.Name, 200) || !calendarLabel(input.Era.Abbrev, 32) {
 		return calendarDefinition{}, invalidCalendarDefinition()
 	}
-	if len(definition.Periods) < 1 || len(definition.Periods) > 36 {
+	if !normalizeCalendarPeriods(&definition, legacy) || !validCalendarOptions(input) {
 		return calendarDefinition{}, invalidCalendarDefinition()
+	}
+	return definition, nil
+}
+
+func decodeCalendarInput(raw json.RawMessage) (calendarInput, bool, error) {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &fields); err != nil || fields == nil {
+		return calendarInput{}, false, invalidCalendarDefinition()
+	}
+	_, legacy := fields["months"]
+	_, modern := fields["periods"]
+	if legacy == modern {
+		return calendarInput{}, false, invalidCalendarDefinition()
+	}
+	var input calendarInput
+	if err := json.Unmarshal(raw, &input); err != nil {
+		return calendarInput{}, false, invalidCalendarDefinition()
+	}
+	return input, legacy, nil
+}
+
+func normalizeCalendarPeriods(definition *calendarDefinition, legacy bool) bool {
+	if len(definition.Periods) < 1 || len(definition.Periods) > 36 {
+		return false
 	}
 	for i := range definition.Periods {
 		period := &definition.Periods[i]
@@ -116,38 +133,54 @@ func parseCalendarDefinition(raw json.RawMessage) (calendarDefinition, error) {
 			period.Type = "month"
 		}
 		if !calendarLabel(period.Name, 200) || period.Days < 1 || period.Days > 366 || period.Type != "month" && period.Type != "festival" {
-			return calendarDefinition{}, invalidCalendarDefinition()
+			return false
 		}
 		definition.YearLength += int64(period.Days)
 	}
-	if definition.YearLength > 3660 || len(input.Leap) > 0 && string(input.Leap) != "null" {
-		return calendarDefinition{}, invalidCalendarDefinition()
+	return definition.YearLength <= 3660
+}
+
+func validCalendarOptions(input calendarInput) bool {
+	if len(input.Leap) > 0 && string(input.Leap) != "null" {
+		return false
 	}
 	if input.DaysPerWeek != nil && (*input.DaysPerWeek < 1 || *input.DaysPerWeek > 32) {
-		return calendarDefinition{}, invalidCalendarDefinition()
-	}
-	if input.Weekdays != nil {
-		if input.DaysPerWeek == nil || len(*input.Weekdays) != int(*input.DaysPerWeek) {
-			return calendarDefinition{}, invalidCalendarDefinition()
-		}
-		for _, day := range *input.Weekdays {
-			if !calendarLabel(day, 200) {
-				return calendarDefinition{}, invalidCalendarDefinition()
-			}
-		}
+		return false
 	}
 	if input.Rate != nil && (math.IsInf(*input.Rate, 0) || math.IsNaN(*input.Rate) || *input.Rate <= 0 || *input.Rate > 100) {
-		return calendarDefinition{}, invalidCalendarDefinition()
+		return false
 	}
-	if len(input.Moons) > 20 {
-		return calendarDefinition{}, invalidCalendarDefinition()
+	return validCalendarWeekdays(input) && validCalendarMoons(input.Moons)
+}
+
+func validCalendarWeekdays(input calendarInput) bool {
+	if input.Weekdays == nil {
+		return true
 	}
-	for _, moon := range input.Moons {
-		if !calendarLabel(moon.Name, 200) || moon.CycleDays < 1 || moon.CycleDays > 3660 {
-			return calendarDefinition{}, invalidCalendarDefinition()
+	if input.DaysPerWeek == nil || len(*input.Weekdays) != int(*input.DaysPerWeek) {
+		return false
+	}
+	for _, day := range *input.Weekdays {
+		if !calendarLabel(day, 200) {
+			return false
 		}
 	}
-	return definition, nil
+	return true
+}
+
+func validCalendarMoons(moons []struct {
+	Name      string `json:"name"`
+	CycleDays int32  `json:"cycle_days"`
+}) bool {
+	if len(moons) > 20 {
+		return false
+	}
+	for _, moon := range moons {
+		if !calendarLabel(moon.Name, 200) || moon.CycleDays < 1 || moon.CycleDays > 3660 {
+			return false
+		}
+	}
+	return true
 }
 
 func renderCalendarDate(gameDay int32, definition calendarDefinition) (product.GameDateView, error) {

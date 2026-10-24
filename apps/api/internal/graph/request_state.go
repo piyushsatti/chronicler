@@ -64,26 +64,30 @@ func (s *RequestState) CurrentAuthority(ctx context.Context) (auth.Authority, er
 		s.flight = pending
 		generation := s.generation
 		s.mu.Unlock()
-		authority, err := s.Resolver(ctx, s.Identity.MemberID)
-		if err == nil && authority.Claims().MemberID != s.Identity.MemberID {
-			err = errors.New("refreshed authority must match identity")
-		}
-		s.mu.Lock()
-		if generation == s.generation {
-			s.CachedAuthority = nil
-			s.cachedErr = err
-			s.cachedGeneration = generation
-			if err == nil {
-				s.CachedAuthority = &authority
-			}
-			if s.Loaders != nil {
-				s.Loaders.clear()
-			}
-		}
-		s.flight = nil
-		close(pending)
-		s.mu.Unlock()
+		s.refreshAuthority(ctx, generation, pending)
 	}
+}
+
+func (s *RequestState) refreshAuthority(ctx context.Context, generation uint64, pending chan struct{}) {
+	authority, err := s.Resolver(ctx, s.Identity.MemberID)
+	if err == nil && authority.Claims().MemberID != s.Identity.MemberID {
+		err = errors.New("refreshed authority must match identity")
+	}
+	s.mu.Lock()
+	if generation == s.generation {
+		s.CachedAuthority = nil
+		s.cachedErr = err
+		s.cachedGeneration = generation
+		if err == nil {
+			s.CachedAuthority = &authority
+		}
+		if s.Loaders != nil {
+			s.Loaders.clear()
+		}
+	}
+	s.flight = nil
+	close(pending)
+	s.mu.Unlock()
 }
 
 func (s *RequestState) InvalidateAuthority() {

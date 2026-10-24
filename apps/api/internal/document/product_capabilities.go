@@ -40,37 +40,10 @@ func (p *ProductPostgres) setDocumentCapabilities(ctx context.Context, actor aut
 	if ctx.Value(deferDocumentCapabilities{}) != nil || actor.Claims().MemberID == "" {
 		return nil
 	}
-	ids := make([]pgtype.UUID, 0, len(views))
-	for _, view := range views {
-		if view != nil && (view.Kind == "quest_brief" || view.Kind == "codex_entry" && view.Category != nil && *view.Category == "Locations") {
-			ids = append(ids, mustProductUUID(view.Id))
-		}
-	}
-	facts := make(map[string]documentCapabilityFacts, len(ids))
-	assignments := documentAssignmentFacts{actorID: actor.Claims().MemberID, archons: map[string]bool{}}
-	if len(ids) > 0 {
-		rows, err := p.queries().LoadProductDocumentWriteFacts(ctx, dbgen.LoadProductDocumentWriteFactsParams{
-			DocumentIds: ids, ActorID: mustProductUUID(actor.Claims().MemberID),
-		})
-		if err != nil {
-			return err
-		}
-		for _, row := range rows {
-			id := db.UUIDString(row.DocumentID)
-			fact := facts[id]
-			if row.RegionID.Valid {
-				regionID := db.UUIDString(row.RegionID)
-				fact.regions = append(fact.regions, regionID)
-				assignments.archons[regionID] = row.AssignedArchon
-			}
-			if row.QuestDmID.Valid {
-				fact.questDM = db.UUIDString(row.QuestDmID)
-			}
-			if row.QuestID.Valid {
-				fact.questID = db.UUIDString(row.QuestID)
-			}
-			facts[id] = fact
-		}
+	ids := documentCapabilityIDs(views)
+	facts, assignments, err := p.loadDocumentCapabilityFacts(ctx, actor.Claims().MemberID, ids)
+	if err != nil {
+		return err
 	}
 	providers := auth.PoolPolicyProviders{DB: p.DB}
 	assignmentProviders, err := auth.NewAssignments(assignments, providers)
@@ -83,6 +56,52 @@ func (p *ProductPostgres) setDocumentCapabilities(ctx context.Context, actor aut
 	if err != nil {
 		return err
 	}
+	return applyDocumentCapabilities(ctx, policy, actor, views, facts)
+}
+
+func documentCapabilityIDs(views []*DocumentView) []pgtype.UUID {
+	ids := make([]pgtype.UUID, 0, len(views))
+	for _, view := range views {
+		if view != nil && (view.Kind == "quest_brief" || view.Kind == "codex_entry" && view.Category != nil && *view.Category == "Locations") {
+			ids = append(ids, mustProductUUID(view.Id))
+		}
+	}
+	return ids
+}
+
+func (p *ProductPostgres) loadDocumentCapabilityFacts(ctx context.Context, actorID string, ids []pgtype.UUID) (map[string]documentCapabilityFacts, documentAssignmentFacts, error) {
+	facts := make(map[string]documentCapabilityFacts, len(ids))
+	assignments := documentAssignmentFacts{actorID: actorID, archons: map[string]bool{}}
+	if len(ids) == 0 {
+		return facts, assignments, nil
+	}
+	rows, err := p.queries().LoadProductDocumentWriteFacts(ctx, dbgen.LoadProductDocumentWriteFactsParams{
+		DocumentIds: ids, ActorID: mustProductUUID(actorID),
+	})
+	if err != nil {
+		return nil, documentAssignmentFacts{}, err
+	}
+	for _, row := range rows {
+		id := db.UUIDString(row.DocumentID)
+		fact := facts[id]
+		if row.RegionID.Valid {
+			regionID := db.UUIDString(row.RegionID)
+			fact.regions = append(fact.regions, regionID)
+			assignments.archons[regionID] = row.AssignedArchon
+		}
+		if row.QuestDmID.Valid {
+			fact.questDM = db.UUIDString(row.QuestDmID)
+		}
+		if row.QuestID.Valid {
+			fact.questID = db.UUIDString(row.QuestID)
+		}
+		facts[id] = fact
+	}
+	return facts, assignments, nil
+}
+
+func applyDocumentCapabilities(ctx context.Context, policy *auth.Policy, actor auth.Authority, views []*DocumentView, facts map[string]documentCapabilityFacts) error {
+	var err error
 	for _, view := range views {
 		if view == nil {
 			continue

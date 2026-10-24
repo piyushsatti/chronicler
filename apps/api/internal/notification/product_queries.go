@@ -52,13 +52,8 @@ func (s ProductQueries) MyNotifications(ctx context.Context, actor auth.Authorit
 	if err := s.admit(ctx, actor, auth.Operation("Query.myNotifications")); err != nil {
 		return NotificationConnection{}, err
 	}
-	if spec.Before != nil && *spec.Before != "" {
-		cur, err := s.Cursor.Decode(*spec.Before, actor.Claims().MemberID, spec.UnreadOnly)
-		if err != nil {
-			return NotificationConnection{}, err
-		}
-		spec.BeforeCreatedAt = &cur.CreatedAt
-		spec.BeforeNotificationID = &cur.NotificationID
+	if err := decodeNotificationCursor(&spec, s.Cursor, actor.Claims().MemberID); err != nil {
+		return NotificationConnection{}, err
 	}
 	conn, err := s.Reads.Notification.ReadMyNotifications(ctx, actor, spec)
 	if err != nil {
@@ -78,29 +73,50 @@ func (s ProductQueries) MyNotifications(ctx context.Context, actor auth.Authorit
 		}
 		conn.NextBefore = &token
 	}
-	documentIDs := make([]string, 0, len(conn.Items))
-	for _, item := range conn.Items {
+	conn.Items, err = visibleNotificationItems(ctx, s.Reads.DocumentAudience, actor, conn.Items)
+	if err != nil {
+		return NotificationConnection{}, err
+	}
+	return conn, nil
+}
+
+func decodeNotificationCursor(spec *MyNotificationsSpec, codec CursorCodec, memberID string) error {
+	if spec.Before == nil || *spec.Before == "" {
+		return nil
+	}
+	cur, err := codec.Decode(*spec.Before, memberID, spec.UnreadOnly)
+	if err != nil {
+		return err
+	}
+	spec.BeforeCreatedAt = &cur.CreatedAt
+	spec.BeforeNotificationID = &cur.NotificationID
+	return nil
+}
+
+func visibleNotificationItems(ctx context.Context, audience DocumentAudienceReader, actor auth.Authority, items []NotificationView) ([]NotificationView, error) {
+	documentIDs := make([]string, 0, len(items))
+	for _, item := range items {
 		if item.SubjectType == subjectTypeDocument {
 			documentIDs = append(documentIDs, item.SubjectId)
 		}
 	}
-	if len(documentIDs) > 0 {
-		if s.Reads.DocumentAudience == nil {
-			return NotificationConnection{}, opaqueNotificationProofError()
-		}
-		readable, err := s.Reads.DocumentAudience.ReadableDocumentIDs(ctx, actor, documentIDs)
-		if err != nil {
-			return NotificationConnection{}, opaqueNotificationProofError()
-		}
-		visible := make([]NotificationView, 0, len(conn.Items))
-		for _, item := range conn.Items {
-			if item.SubjectType != subjectTypeDocument || readable[item.SubjectId] {
-				visible = append(visible, item)
-			}
-		}
-		conn.Items = visible
+	if len(documentIDs) == 0 {
+		return items, nil
 	}
-	return conn, nil
+	if audience == nil {
+		return nil, opaqueNotificationProofError()
+	}
+	readable, err := audience.ReadableDocumentIDs(ctx, actor, documentIDs)
+	if err != nil {
+		return nil, opaqueNotificationProofError()
+	}
+	visible := make([]NotificationView, 0, len(items))
+	for _, item := range items {
+		if item.SubjectType != subjectTypeDocument || readable[item.SubjectId] {
+			visible = append(visible, item)
+		}
+	}
+	return visible, nil
 }
 
 func (s ProductQueries) MyUnreadNotificationCount(ctx context.Context, actor auth.Authority, _ MyUnreadNotificationCountSpec) (int32, error) {

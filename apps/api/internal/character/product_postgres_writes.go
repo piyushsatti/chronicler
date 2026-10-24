@@ -317,9 +317,9 @@ func (p *ProductPostgres) StoreSetCharacterGuild(ctx context.Context, write SetC
 	if write.Input.GuildId == nil {
 		_, err = p.queries().CharacterProductClearGuild(ctx, dbgen.CharacterProductClearGuildParams{At: at, CharacterID: characterID})
 	} else {
-		guildID, err := characterProductID(*write.Input.GuildId)
-		if err != nil {
-			return CharacterView{}, err
+		guildID, idErr := characterProductID(*write.Input.GuildId)
+		if idErr != nil {
+			return CharacterView{}, idErr
 		}
 		_, err = p.queries().CharacterProductSetGuild(ctx, dbgen.CharacterProductSetGuildParams{At: at, CharacterID: characterID, GuildID: guildID})
 	}

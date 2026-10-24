@@ -10,6 +10,14 @@ import (
 )
 
 func (p *ProductPostgres) applySummaryAuthoring(ctx context.Context, actor auth.Authority, keys []IDKey, out []product.BatchResult[SummaryDerivedView], positions []int, rows []dbgen.ProductSummaryDerivedQuestFactsRow) error {
+	sources, views := summaryAuthoringSources(keys, positions, rows)
+	if err := p.setDocumentCapabilities(ctx, actor, views); err != nil {
+		return err
+	}
+	return applySummaryAuthoringRows(out, positions, rows, sources)
+}
+
+func summaryAuthoringSources(keys []IDKey, positions []int, rows []dbgen.ProductSummaryDerivedQuestFactsRow) (map[int]*DocumentView, []*DocumentView) {
 	sources := make(map[int]*DocumentView)
 	views := make([]*DocumentView, 0, len(keys))
 	for _, row := range rows {
@@ -21,9 +29,10 @@ func (p *ProductPostgres) applySummaryAuthoring(ctx context.Context, actor auth.
 		sources[slot] = view
 		views = append(views, view)
 	}
-	if err := p.setDocumentCapabilities(ctx, actor, views); err != nil {
-		return err
-	}
+	return sources, views
+}
+
+func applySummaryAuthoringRows(out []product.BatchResult[SummaryDerivedView], positions []int, rows []dbgen.ProductSummaryDerivedQuestFactsRow, sources map[int]*DocumentView) error {
 	for _, row := range rows {
 		slot := summaryDerivedSlotIndex(positions, row.InputIndex)
 		if slot < 0 || sources[slot] == nil || !sources[slot].CanEditMetadata {
@@ -61,39 +70,46 @@ func applySummaryDerivedQuestFacts(out []product.BatchResult[SummaryDerivedView]
 		if view == nil {
 			continue
 		}
-		if row.QuestID.Valid {
-			view.Quests = append(view.Quests, SummaryQuestRefView{Id: db.UUIDString(row.QuestID), ShortCode: row.ShortCode, Title: productTextPointer(row.QuestTitle)})
+		applySummaryDerivedQuestFact(view, row)
+	}
+}
+
+func applySummaryDerivedQuestFact(view *SummaryDerivedView, row dbgen.ProductSummaryDerivedQuestFactsRow) {
+	if row.QuestID.Valid {
+		view.Quests = append(view.Quests, SummaryQuestRefView{Id: db.UUIDString(row.QuestID), ShortCode: row.ShortCode, Title: productTextPointer(row.QuestTitle)})
+	}
+	if row.DmID.Valid && !summaryHasDm(view, db.UUIDString(row.DmID)) {
+		view.Dms = append(view.Dms, SummaryDmView{Id: db.UUIDString(row.DmID), DisplayName: row.DmDisplayName})
+	}
+	if view.Arc == nil && row.ArcName.Valid && row.ArcName.String != "" {
+		name := row.ArcName.String
+		view.Arc = &name
+	}
+	if row.ScheduledAt.Valid {
+		applySummarySchedule(view, row)
+	}
+}
+
+func summaryHasDm(view *SummaryDerivedView, id string) bool {
+	for _, existing := range view.Dms {
+		if existing.Id == id {
+			return true
 		}
-		if row.DmID.Valid {
-			dmID := db.UUIDString(row.DmID)
-			seen := false
-			for _, existing := range view.Dms {
-				if existing.Id == dmID {
-					seen = true
-					break
-				}
-			}
-			if !seen {
-				view.Dms = append(view.Dms, SummaryDmView{Id: dmID, DisplayName: row.DmDisplayName})
-			}
-		}
-		if view.Arc == nil && row.ArcName.Valid && row.ArcName.String != "" {
-			name := row.ArcName.String
-			view.Arc = &name
-		}
-		if row.ScheduledAt.Valid {
-			at := row.ScheduledAt.Time.UTC()
-			if view.OccurredAt == nil || at.Before(*view.OccurredAt) {
-				occurred := at
-				view.OccurredAt = &occurred
-				if row.GameDay.Valid {
-					day := row.GameDay.Int32
-					view.GameDay = &day
-				} else {
-					view.GameDay = nil
-				}
-			}
-		}
+	}
+	return false
+}
+
+func applySummarySchedule(view *SummaryDerivedView, row dbgen.ProductSummaryDerivedQuestFactsRow) {
+	at := row.ScheduledAt.Time.UTC()
+	if view.OccurredAt != nil && !at.Before(*view.OccurredAt) {
+		return
+	}
+	view.OccurredAt = &at
+	if row.GameDay.Valid {
+		day := row.GameDay.Int32
+		view.GameDay = &day
+	} else {
+		view.GameDay = nil
 	}
 }
 
@@ -138,36 +154,39 @@ func applySummaryDerivedPlaces(out []product.BatchResult[SummaryDerivedView], po
 		}
 		slot := summaryDerivedSlotIndex(positions, row.InputIndex)
 		placeID := db.UUIDString(row.PlaceID)
-		switch row.PlaceKind {
-		case "region":
-			seen := seenRegions[slot]
-			if seen == nil {
-				seen = map[string]bool{}
-				seenRegions[slot] = seen
-			}
-			if seen[placeID] {
-				continue
-			}
-			seen[placeID] = true
-			view.Regions = append(view.Regions, SummaryRegionView{Id: placeID, Name: row.PlaceName})
-		case "node":
-			seen := seenNodes[slot]
-			if seen == nil {
-				seen = map[string]bool{}
-				seenNodes[slot] = seen
-			}
-			if seen[placeID] {
-				continue
-			}
-			seen[placeID] = true
+		applySummaryDerivedPlace(view, row, slot, placeID, seenRegions, seenNodes)
+	}
+}
+
+func applySummaryDerivedPlace(view *SummaryDerivedView, row dbgen.ProductSummaryDerivedPlacesRow, slot int, id string, seenRegions, seenNodes map[int]map[string]bool) {
+	switch row.PlaceKind {
+	case "region":
+		if !markSummaryPlaceSeen(seenRegions, slot, id) {
+			view.Regions = append(view.Regions, SummaryRegionView{Id: id, Name: row.PlaceName})
+		}
+	case "node":
+		if !markSummaryPlaceSeen(seenNodes, slot, id) {
 			mapID := ""
 			if row.MapID.Valid {
 				mapID = db.UUIDString(row.MapID)
 			}
 			name := row.PlaceName
-			view.Hexes = append(view.Hexes, SummaryHexView{Id: placeID, MapId: mapID, Hexcode: &name})
+			view.Hexes = append(view.Hexes, SummaryHexView{Id: id, MapId: mapID, Hexcode: &name})
 		}
 	}
+}
+
+func markSummaryPlaceSeen(seenBySlot map[int]map[string]bool, slot int, id string) bool {
+	seen := seenBySlot[slot]
+	if seen == nil {
+		seen = map[string]bool{}
+		seenBySlot[slot] = seen
+	}
+	if seen[id] {
+		return true
+	}
+	seen[id] = true
+	return false
 }
 
 func summaryDerivedSlot(out []product.BatchResult[SummaryDerivedView], positions []int, inputIndex int32) *SummaryDerivedView {

@@ -611,7 +611,7 @@ const groups = [
     access: 'Tokens stay out of URLs, registry and saved receipts.',
   },
   {
-    paths: ['/me'],
+    paths: ['/me', '/me/characters', '/me/notes'],
     feature: 'member',
     actors: ownerActors,
     actions: [
@@ -636,7 +636,7 @@ const groups = [
     access: 'Inbox belongs to current member; no retired event or delivery ledger.',
   },
   {
-    paths: ['/settings', '/me/personalize'],
+    paths: ['/settings', '/me/personalize', '/me/settings'],
     feature: 'personalize',
     actors: ownerActors,
     actions: [

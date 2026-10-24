@@ -355,7 +355,7 @@ func (p *ProductPostgres) ReadBatchMapNodeEdges(ctx context.Context, actor auth.
 		return nil, err
 	}
 	encoded, err := encodeBatchKeys(keys, func(k MapNodeEdgesKey) batchParentKey {
-		return batchParentKey{ParentID: k.ParentID, Limit: k.Limit, Offset: k.Offset}
+		return batchParentKey(k)
 	})
 	if err != nil {
 		return nil, err
@@ -408,7 +408,7 @@ func (p *ProductPostgres) ReadBatchNodeLinks(ctx context.Context, actor auth.Aut
 		return nil, err
 	}
 	encoded, err := encodeBatchKeys(keys, func(k NodeLinksKey) batchParentKey {
-		return batchParentKey{ParentID: k.ParentID, Limit: k.Limit, Offset: k.Offset}
+		return batchParentKey(k)
 	})
 	if err != nil {
 		return nil, err
@@ -468,7 +468,7 @@ func (p *ProductPostgres) readBatchPointcrawlNodes(ctx context.Context, actor au
 		return nil, err
 	}
 	encoded, err := encodeBatchKeys(keys, func(k MapNodesKey) batchParentKey {
-		return batchParentKey{ParentID: k.ParentID, Limit: k.Limit, Offset: k.Offset}
+		return batchParentKey(k)
 	})
 	if err != nil {
 		return nil, err

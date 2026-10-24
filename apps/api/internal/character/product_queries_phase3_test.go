@@ -15,12 +15,12 @@ const cqSelf = "10000000-0000-4000-8000-000000000001"
 const cqOther = "10000000-0000-4000-8000-000000000002"
 
 type cqRepo struct {
-	calls    int
-	value    *CharacterView
-	err      error
-	batch    []product.BatchResult[CharacterView]
-	keys     []IDKey
-	visible  map[string]bool
+	calls   int
+	value   *CharacterView
+	err     error
+	batch   []product.BatchResult[CharacterView]
+	keys    []IDKey
+	visible map[string]bool
 }
 
 func (r *cqRepo) ReadAdminCharacterDirectory(_ context.Context, _ auth.Authority, _ AdminCharacterDirectorySpec) (AdminCharacterDirectoryView, error) {
@@ -247,7 +247,7 @@ func TestCharacterProductQueryConstructor(t *testing.T) {
 
 func TestCharacterProductQueriesDispatch(t *testing.T) {
 	t.Run("AdminCharacterDirectory", func(t *testing.T) {
-		s, r, _, a := cqService(t)
+		s, r, _, _ := cqService(t)
 		r.value.OwnerId = cqSelf
 		a, err := auth.NewAuthority(cqSelf, []auth.Role{auth.Player, auth.Admin, auth.Verifier}, "active", "")
 		if err != nil {
@@ -261,7 +261,7 @@ func TestCharacterProductQueriesDispatch(t *testing.T) {
 		}
 	})
 	t.Run("Backstories", func(t *testing.T) {
-		s, r, _, a := cqService(t)
+		s, r, _, _ := cqService(t)
 		r.value.OwnerId = cqSelf
 		a, err := auth.NewAuthority(cqSelf, []auth.Role{auth.Player, auth.Admin, auth.Verifier}, "active", "")
 		if err != nil {
@@ -275,7 +275,7 @@ func TestCharacterProductQueriesDispatch(t *testing.T) {
 		}
 	})
 	t.Run("Character", func(t *testing.T) {
-		s, r, _, a := cqService(t)
+		s, r, _, _ := cqService(t)
 		r.value.OwnerId = cqSelf
 		a, err := auth.NewAuthority(cqSelf, []auth.Role{auth.Player, auth.Admin, auth.Verifier}, "active", "")
 		if err != nil {
@@ -289,7 +289,7 @@ func TestCharacterProductQueriesDispatch(t *testing.T) {
 		}
 	})
 	t.Run("CharacterLogs", func(t *testing.T) {
-		s, r, _, a := cqService(t)
+		s, r, _, _ := cqService(t)
 		r.value.OwnerId = cqSelf
 		a, err := auth.NewAuthority(cqSelf, []auth.Role{auth.Player, auth.Admin, auth.Verifier}, "active", "")
 		if err != nil {
@@ -303,7 +303,7 @@ func TestCharacterProductQueriesDispatch(t *testing.T) {
 		}
 	})
 	t.Run("CharacterProgression", func(t *testing.T) {
-		s, r, _, a := cqService(t)
+		s, r, _, _ := cqService(t)
 		r.value.OwnerId = cqSelf
 		a, err := auth.NewAuthority(cqSelf, []auth.Role{auth.Player, auth.Admin, auth.Verifier}, "active", "")
 		if err != nil {
@@ -317,7 +317,7 @@ func TestCharacterProductQueriesDispatch(t *testing.T) {
 		}
 	})
 	t.Run("CharacterSummaries", func(t *testing.T) {
-		s, r, _, a := cqService(t)
+		s, r, _, _ := cqService(t)
 		r.value.OwnerId = cqSelf
 		a, err := auth.NewAuthority(cqSelf, []auth.Role{auth.Player, auth.Admin, auth.Verifier}, "active", "")
 		if err != nil {
@@ -331,7 +331,7 @@ func TestCharacterProductQueriesDispatch(t *testing.T) {
 		}
 	})
 	t.Run("CharacterVerificationHistory", func(t *testing.T) {
-		s, r, _, a := cqService(t)
+		s, r, _, _ := cqService(t)
 		r.value.OwnerId = cqSelf
 		a, err := auth.NewAuthority(cqSelf, []auth.Role{auth.Player, auth.Admin, auth.Verifier}, "active", "")
 		if err != nil {
@@ -345,7 +345,7 @@ func TestCharacterProductQueriesDispatch(t *testing.T) {
 		}
 	})
 	t.Run("Characters", func(t *testing.T) {
-		s, r, _, a := cqService(t)
+		s, r, _, _ := cqService(t)
 		r.value.OwnerId = cqSelf
 		a, err := auth.NewAuthority(cqSelf, []auth.Role{auth.Player, auth.Admin, auth.Verifier}, "active", "")
 		if err != nil {
@@ -359,7 +359,7 @@ func TestCharacterProductQueriesDispatch(t *testing.T) {
 		}
 	})
 	t.Run("CoPlayers", func(t *testing.T) {
-		s, r, _, a := cqService(t)
+		s, r, _, _ := cqService(t)
 		r.value.OwnerId = cqSelf
 		a, err := auth.NewAuthority(cqSelf, []auth.Role{auth.Player, auth.Admin, auth.Verifier}, "active", "")
 		if err != nil {
@@ -373,7 +373,7 @@ func TestCharacterProductQueriesDispatch(t *testing.T) {
 		}
 	})
 	t.Run("CreationCatalog", func(t *testing.T) {
-		s, r, _, a := cqService(t)
+		s, r, _, _ := cqService(t)
 		r.value.OwnerId = cqSelf
 		a, err := auth.NewAuthority(cqSelf, []auth.Role{auth.Player, auth.Admin, auth.Verifier}, "active", "")
 		if err != nil {
@@ -387,7 +387,7 @@ func TestCharacterProductQueriesDispatch(t *testing.T) {
 		}
 	})
 	t.Run("DowntimeProjects", func(t *testing.T) {
-		s, r, _, a := cqService(t)
+		s, r, _, _ := cqService(t)
 		r.value.OwnerId = cqSelf
 		a, err := auth.NewAuthority(cqSelf, []auth.Role{auth.Player, auth.Admin, auth.Verifier}, "active", "")
 		if err != nil {
@@ -401,7 +401,7 @@ func TestCharacterProductQueriesDispatch(t *testing.T) {
 		}
 	})
 	t.Run("MyCharacters", func(t *testing.T) {
-		s, r, _, a := cqService(t)
+		s, r, _, _ := cqService(t)
 		r.value.OwnerId = cqSelf
 		a, err := auth.NewAuthority(cqSelf, []auth.Role{auth.Player, auth.Admin, auth.Verifier}, "active", "")
 		if err != nil {
@@ -415,7 +415,7 @@ func TestCharacterProductQueriesDispatch(t *testing.T) {
 		}
 	})
 	t.Run("ParticipationsByCharacter", func(t *testing.T) {
-		s, r, _, a := cqService(t)
+		s, r, _, _ := cqService(t)
 		r.value.OwnerId = cqSelf
 		a, err := auth.NewAuthority(cqSelf, []auth.Role{auth.Player, auth.Admin, auth.Verifier}, "active", "")
 		if err != nil {
@@ -429,7 +429,7 @@ func TestCharacterProductQueriesDispatch(t *testing.T) {
 		}
 	})
 	t.Run("PendingCharacterVerifications", func(t *testing.T) {
-		s, r, _, a := cqService(t)
+		s, r, _, _ := cqService(t)
 		r.value.OwnerId = cqSelf
 		a, err := auth.NewAuthority(cqSelf, []auth.Role{auth.Player, auth.Admin, auth.Verifier}, "active", "")
 		if err != nil {

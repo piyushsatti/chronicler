@@ -3,7 +3,7 @@ import { installGallerySession } from './support/scenarios.js';
 
 test.use({ serviceWorkers: 'block' });
 
-test.describe('component contracts', () => {
+test.describe('component contracts @dev', () => {
   test('gallery mounts modal demo', async ({ page }) => {
     const assertRequests = await installGallerySession(page);
     await page.setViewportSize({ width: 1280, height: 800 });
@@ -39,9 +39,8 @@ test.describe('component contracts', () => {
         await expect(page.getByRole('heading', { name: 'Sign in', exact: true })).toBeVisible();
       } else {
         await expect(page).toHaveURL(/\/gallery$/);
-        await expect(page.getByRole('alert')).toHaveText(
-          'This design surface requires staff access.',
-        );
+        await expect(page.getByRole('alert')).toHaveAttribute('data-state', 'denied');
+        await expect(page.getByText('The gallery is for staff.', { exact: true })).toBeVisible();
       }
       await expect(page.getByRole('heading', { name: 'Gallery', exact: true })).toHaveCount(0);
       await expect(page.locator('[data-el^="gallery.demo."]')).toHaveCount(0);
@@ -50,4 +49,10 @@ test.describe('component contracts', () => {
       else expect(assertRequests()).toContain('CurrentAdminAccess');
     });
   }
+});
+
+test('production does not serve the developer gallery @prod', async ({ page }) => {
+  await page.goto('/gallery');
+  await expect(page.getByRole('heading', { name: 'Page not found' })).toBeVisible();
+  await expect(page.locator('[data-el^="gallery.demo."]')).toHaveCount(0);
 });

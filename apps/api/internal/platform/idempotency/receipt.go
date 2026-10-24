@@ -109,24 +109,43 @@ func receiptIdentity(actorID, operation, key, fingerprint string) (claimIdentity
 	if err := Require(key); err != nil {
 		return claimIdentity{}, err
 	}
-	actor, err := uuid.Parse(actorID)
-	if err != nil || actor == uuid.Nil {
-		return claimIdentity{}, apierr.New(apierr.Invalid, "valid receipt actor required")
+	actor, err := receiptActor(actorID)
+	if err != nil {
+		return claimIdentity{}, err
 	}
-	if operation == "" {
-		return claimIdentity{}, apierr.New(apierr.Invalid, "receipt operation required")
+	if err := validateReceiptOperation(operation); err != nil {
+		return claimIdentity{}, err
 	}
-	for i, c := range operation {
-		if !(c == '_' || c >= 'A' && c <= 'Z' || c >= 'a' && c <= 'z' || i > 0 && c >= '0' && c <= '9') {
-			return claimIdentity{}, apierr.New(apierr.Invalid, "invalid receipt operation")
-		}
-	}
-	if len(fingerprint) != 64 || strings.IndexFunc(fingerprint, func(c rune) bool {
-		return !(c >= '0' && c <= '9' || c >= 'a' && c <= 'f')
-	}) != -1 {
+	if !validFingerprint(fingerprint) {
 		return claimIdentity{}, apierr.New(apierr.Invalid, "invalid command fingerprint")
 	}
 	return claimIdentity{actor.String(), operation, key, fingerprint}, nil
+}
+
+func receiptActor(actorID string) (uuid.UUID, error) {
+	actor, err := uuid.Parse(actorID)
+	if err != nil || actor == uuid.Nil {
+		return uuid.Nil, apierr.New(apierr.Invalid, "valid receipt actor required")
+	}
+	return actor, nil
+}
+
+func validateReceiptOperation(operation string) error {
+	if operation == "" {
+		return apierr.New(apierr.Invalid, "receipt operation required")
+	}
+	for i, c := range operation {
+		if c != '_' && (c < 'A' || c > 'Z') && (c < 'a' || c > 'z') && (i == 0 || c < '0' || c > '9') {
+			return apierr.New(apierr.Invalid, "invalid receipt operation")
+		}
+	}
+	return nil
+}
+
+func validFingerprint(fingerprint string) bool {
+	return len(fingerprint) == 64 && strings.IndexFunc(fingerprint, func(c rune) bool {
+		return (c < '0' || c > '9') && (c < 'a' || c > 'f')
+	}) == -1
 }
 
 func (i claimIdentity) args() []any {

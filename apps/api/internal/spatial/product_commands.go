@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/idempotency"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/uow"
 )
@@ -95,45 +96,17 @@ func runSpatialAdmittedCommand[T any](
 		return result, err
 	}
 	err = s.Runner.Do(ctx, func(repos ProductCommandRepos) error {
-		for _, dependency := range []any{repos.Authority, repos.Policy, repos.Replay} {
-			if commandDependencyMissing(dependency) {
-				return apierr.New(apierr.Internal, "spatial transaction dependencies required")
-			}
-		}
-		fresh, err := repos.Authority(ctx, actor.Claims().MemberID)
-		if err != nil {
-			return err
-		}
-		if fresh.Claims().MemberID == "" || fresh.Claims().MemberID != actor.Claims().MemberID {
-			return apierr.New(apierr.Forbidden, "member authority changed")
-		}
-		admission, err := admit(repos, fresh)
+		fresh, admission, decision, err := admitSpatialCommand(ctx, repos, actor, admit)
 		if err != nil {
 			return err
 		}
 		request := admission.Request
-		decision, err := repos.Policy.Decide(ctx, fresh, request)
-		if err != nil {
-			return err
-		}
-		if !decision.Allowed {
-			return apierr.New(apierr.Forbidden, "spatial command forbidden")
-		}
-		if admission.UsedOverride {
-			decision.UsedOverride = true
-			if decision.RuleCode == "" {
-				decision.RuleCode = "OWNERSHIP"
-			}
-		}
 		claim, err := repos.Replay.Claim(ctx, fresh.Claims().MemberID, operation, meta.IdempotencyKey, fingerprint)
 		if err != nil {
 			return err
 		}
 		if claim.Replay {
-			if err := json.Unmarshal(claim.Receipt, &result); err != nil {
-				return err
-			}
-			return projectSpatialCommandResult(ctx, repos, fresh, &result)
+			return replaySpatialCommand(ctx, repos, fresh, claim, &result)
 		}
 		at, err := product.UTCNow(s.Clock)
 		if err != nil {
@@ -146,40 +119,79 @@ func runSpatialAdmittedCommand[T any](
 		if err := projectSpatialCommandResult(ctx, repos, fresh, &result); err != nil {
 			return err
 		}
-		if decision.UsedOverride {
-			if commandDependencyMissing(repos.Audit) {
-				return apierr.New(apierr.Internal, "override recorder required")
-			}
-			switch view := any(result).(type) {
-			case MapView:
-				subjectID = view.Id
-			case RegionView:
-				subjectID = view.Id
-			case TimeAnchorView:
-				subjectID = view.Id
-			}
-			if err := repos.Audit.Record(ctx, claim, auth.OverrideFact{
-				ActorID:     fresh.Claims().MemberID,
-				Operation:   request.Operation(),
-				SubjectType: "spatial",
-				SubjectID:   subjectID,
-				RuleCode:    decision.RuleCode,
-				At:          at,
-			}); err != nil {
-				return err
-			}
-		}
-		receipt, err := json.Marshal(result)
-		if err != nil {
-			return err
-		}
-		return repos.Replay.Complete(ctx, claim, receipt)
+		return completeSpatialCommand(ctx, repos, claim, result, decision, fresh, request, subjectID, at)
 	})
 	if err != nil {
 		var zero T
 		return zero, err
 	}
 	return result, nil
+}
+
+func admitSpatialCommand(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, admit func(ProductCommandRepos, auth.Authority) (spatialAdmission, error)) (auth.Authority, spatialAdmission, auth.Decision, error) {
+	var admission spatialAdmission
+	var zero auth.Decision
+	for _, dependency := range []any{repos.Authority, repos.Policy, repos.Replay} {
+		if commandDependencyMissing(dependency) {
+			return auth.Authority{}, admission, zero, apierr.New(apierr.Internal, "spatial transaction dependencies required")
+		}
+	}
+	fresh, err := repos.Authority(ctx, actor.Claims().MemberID)
+	if err != nil {
+		return auth.Authority{}, admission, zero, err
+	}
+	if fresh.Claims().MemberID == "" || fresh.Claims().MemberID != actor.Claims().MemberID {
+		return auth.Authority{}, admission, zero, apierr.New(apierr.Forbidden, "member authority changed")
+	}
+	admission, err = admit(repos, fresh)
+	if err != nil {
+		return auth.Authority{}, admission, zero, err
+	}
+	decision, err := repos.Policy.Decide(ctx, fresh, admission.Request)
+	if err != nil {
+		return auth.Authority{}, admission, zero, err
+	}
+	if !decision.Allowed {
+		return auth.Authority{}, admission, zero, apierr.New(apierr.Forbidden, "spatial command forbidden")
+	}
+	if admission.UsedOverride {
+		decision.UsedOverride = true
+		if decision.RuleCode == "" {
+			decision.RuleCode = "OWNERSHIP"
+		}
+	}
+	return fresh, admission, decision, nil
+}
+
+func replaySpatialCommand[T any](ctx context.Context, repos ProductCommandRepos, actor auth.Authority, claim idempotency.Claim, result *T) error {
+	if err := json.Unmarshal(claim.Receipt, result); err != nil {
+		return err
+	}
+	return projectSpatialCommandResult(ctx, repos, actor, result)
+}
+
+func completeSpatialCommand[T any](ctx context.Context, repos ProductCommandRepos, claim idempotency.Claim, result T, decision auth.Decision, actor auth.Authority, request auth.Request, subjectID string, at time.Time) error {
+	if decision.UsedOverride {
+		if commandDependencyMissing(repos.Audit) {
+			return apierr.New(apierr.Internal, "override recorder required")
+		}
+		switch view := any(result).(type) {
+		case MapView:
+			subjectID = view.Id
+		case RegionView:
+			subjectID = view.Id
+		case TimeAnchorView:
+			subjectID = view.Id
+		}
+		if err := repos.Audit.Record(ctx, claim, auth.OverrideFact{ActorID: actor.Claims().MemberID, Operation: request.Operation(), SubjectType: "spatial", SubjectID: subjectID, RuleCode: decision.RuleCode, At: at}); err != nil {
+			return err
+		}
+	}
+	receipt, err := json.Marshal(result)
+	if err != nil {
+		return err
+	}
+	return repos.Replay.Complete(ctx, claim, receipt)
 }
 
 func (s ProductCommands) CreateMap(ctx context.Context, actor auth.Authority, spec CreateMapSpec, meta product.CommandMeta) (MapView, error) {
@@ -502,43 +514,47 @@ func (s ProductCommands) UpsertPointcrawlNode(ctx context.Context, actor auth.Au
 	}
 	var locked UpsertPointcrawlNodeState
 	return runSpatialAdmittedCommand(ctx, s, actor, "upsertPointcrawlNode", func(repos ProductCommandRepos, fresh auth.Authority) (spatialAdmission, error) {
-		if commandDependencyMissing(repos.Containment) {
-			return spatialAdmission{}, apierr.New(apierr.Internal, "containment writer required")
-		}
-		if err := repos.Containment.LockContainment(ctx); err != nil {
-			return spatialAdmission{}, err
-		}
-		ids := []string{spec.MapId}
-		if spec.Input.SubmapId != nil {
-			ids = append(ids, *spec.Input.SubmapId)
-		}
-		states, err := lockPointcrawlMaps(ctx, repos.Map, ids...)
-		if err != nil {
-			return spatialAdmission{}, err
-		}
-		locked, err = repos.Map.LockUpsertPointcrawlNode(ctx, spec)
-		if err != nil {
-			return spatialAdmission{}, err
-		}
-		if !locked.Exists {
-			return spatialAdmission{}, apierr.New(apierr.NotFound, "pointcrawl node not found")
-		}
-		facts := auth.MapFacts{ID: &spec.MapId, RegionID: locked.RegionID}
-		if spec.Input.SubmapId != nil {
-			submapID := *spec.Input.SubmapId
-			edges, err := repos.Containment.ReadContainmentEdges(ctx)
-			if err != nil {
-				return spatialAdmission{}, err
-			}
-			if containmentCycle(edges, spec.MapId, submapID) {
-				return spatialAdmission{}, apierr.New(apierr.Invalid, "submap containment cycle")
-			}
-			facts.Submap = &auth.MapRef{ID: submapID, RegionID: states[submapID].RegionID}
-		}
-		return mapAdmission("Mutation.upsertPointcrawlNode", facts)
+		return admitPointcrawlNode(ctx, repos, fresh, spec, &locked)
 	}, spec, meta, spec.MapId, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (PointcrawlNodeView, error) {
 		return repos.Map.StoreUpsertPointcrawlNode(ctx, UpsertPointcrawlNodeWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked})
 	})
+}
+
+func admitPointcrawlNode(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, spec UpsertPointcrawlNodeSpec, locked *UpsertPointcrawlNodeState) (spatialAdmission, error) {
+	if commandDependencyMissing(repos.Containment) {
+		return spatialAdmission{}, apierr.New(apierr.Internal, "containment writer required")
+	}
+	if err := repos.Containment.LockContainment(ctx); err != nil {
+		return spatialAdmission{}, err
+	}
+	ids := []string{spec.MapId}
+	if spec.Input.SubmapId != nil {
+		ids = append(ids, *spec.Input.SubmapId)
+	}
+	states, err := lockPointcrawlMaps(ctx, repos.Map, ids...)
+	if err != nil {
+		return spatialAdmission{}, err
+	}
+	*locked, err = repos.Map.LockUpsertPointcrawlNode(ctx, spec)
+	if err != nil {
+		return spatialAdmission{}, err
+	}
+	if !locked.Exists {
+		return spatialAdmission{}, apierr.New(apierr.NotFound, "pointcrawl node not found")
+	}
+	facts := auth.MapFacts{ID: &spec.MapId, RegionID: locked.RegionID}
+	if spec.Input.SubmapId != nil {
+		submapID := *spec.Input.SubmapId
+		edges, err := repos.Containment.ReadContainmentEdges(ctx)
+		if err != nil {
+			return spatialAdmission{}, err
+		}
+		if containmentCycle(edges, spec.MapId, submapID) {
+			return spatialAdmission{}, apierr.New(apierr.Invalid, "submap containment cycle")
+		}
+		facts.Submap = &auth.MapRef{ID: submapID, RegionID: states[submapID].RegionID}
+	}
+	return mapAdmission("Mutation.upsertPointcrawlNode", facts)
 }
 
 func (s ProductCommands) SetPointcrawlEdge(ctx context.Context, actor auth.Authority, spec SetPointcrawlEdgeSpec, meta product.CommandMeta) (PointcrawlEdgeView, error) {

@@ -33,11 +33,10 @@ for (const width of [390, 900, 1920]) {
       await expect(link).toBeFocused();
       const measure = () =>
         link.evaluate((element) => {
-          const label = element.querySelector('.site-chrome__link-label');
           const nav = element.closest('nav');
-          if (!label || !nav) throw new Error('Navigation label or container missing');
+          if (!nav) throw new Error('Navigation container missing');
           const range = document.createRange();
-          range.selectNodeContents(label);
+          range.selectNodeContents(element);
           const text = range.getBoundingClientRect();
           const target = element.getBoundingClientRect();
           const clip = nav.getBoundingClientRect();
@@ -76,11 +75,6 @@ for (const width of [390, 900, 1920]) {
             width: getComputedStyle(element).width,
             minWidth: getComputedStyle(element).minWidth,
             maxWidth: getComputedStyle(element).maxWidth,
-            labelStyle: {
-              position: getComputedStyle(label).position,
-              width: getComputedStyle(label).width,
-              font: getComputedStyle(label).font,
-            },
             svgWidth: element.querySelector('svg')?.getBoundingClientRect().width,
             labelFits:
               text.left >= left - 0.5 &&
@@ -96,11 +90,15 @@ for (const width of [390, 900, 1920]) {
                 ?.closest('a') === element,
           };
         });
+      await testInfo.attach(`navigation-measurement-${width}-${name}`, {
+        body: JSON.stringify(await measure(), null, 2),
+        contentType: 'application/json',
+      });
       await expect
         .poll(measure, { message: `${name} remains painted after keyboard scrolling` })
         .toMatchObject({ labelFits: true, paintedTarget: true });
       measurements.push({ name, ...(await measure()) });
-      if (name !== DESTINATIONS.at(-1)) await page.keyboard.press('Tab');
+      if (name !== DESTINATIONS.at(-1)) await page.keyboard.press('ArrowRight');
     }
     await testInfo.attach(`navigation-measurements-${width}`, {
       body: JSON.stringify(measurements, null, 2),

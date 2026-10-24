@@ -72,16 +72,8 @@ func (p *ProductPostgres) ReadPreferences(ctx context.Context, ids []string) ([]
 }
 
 func (p *ProductPostgres) InsertInbox(ctx context.Context, event Event, ids []string) error {
-	if p.origin == nil || p.origin.ActorID != event.ActorID {
-		return errors.New("notification requires the originating command claim")
-	}
-	if err := validateEvent(event); err != nil {
+	if err := p.validateInboxEvent(event); err != nil {
 		return err
-	}
-	for _, proof := range p.proofs {
-		if proof.Payload.Event.Key == event.Key {
-			return errors.New("duplicate notification key in command")
-		}
 	}
 	at := event.OccurredAt
 	payload := inboxPayload{Version: 1, Origin: *p.origin, Event: event, Recipients: append([]string(nil), ids...)}
@@ -92,10 +84,7 @@ func (p *ProductPostgres) InsertInbox(ctx context.Context, event Event, ids []st
 	if err != nil || len(body) > maxNotificationPayloadBytes {
 		return errors.New("invalid notification payload")
 	}
-	members := make([]pgtype.UUID, len(ids))
-	for i, id := range ids {
-		members[i], _ = db.ParseUUID(id)
-	}
+	members := notificationMemberUUIDs(ids)
 	subject, _ := db.ParseUUID(event.SubjectID)
 	rows, err := p.queries().ProductNotificationInsertInbox(ctx, dbgen.ProductNotificationInsertInboxParams{
 		Kind: string(event.Kind), SubjectType: event.SubjectType, SubjectID: subject,
@@ -132,6 +121,29 @@ func (p *ProductPostgres) InsertInbox(ctx context.Context, event Event, ids []st
 	return nil
 }
 
+func notificationMemberUUIDs(ids []string) []pgtype.UUID {
+	members := make([]pgtype.UUID, len(ids))
+	for i, id := range ids {
+		members[i], _ = db.ParseUUID(id)
+	}
+	return members
+}
+
+func (p *ProductPostgres) validateInboxEvent(event Event) error {
+	if p.origin == nil || p.origin.ActorID != event.ActorID {
+		return errors.New("notification requires the originating command claim")
+	}
+	if err := validateEvent(event); err != nil {
+		return err
+	}
+	for _, proof := range p.proofs {
+		if proof.Payload.Event.Key == event.Key {
+			return errors.New("duplicate notification key in command")
+		}
+	}
+	return nil
+}
+
 func notificationProofRequest(id string, payload inboxPayload) proofRequest {
 	f := payload.Event.Facts
 	return proofRequest{NotificationID: id, ActorID: payload.Origin.ActorID, Operation: payload.Origin.Operation, Key: payload.Origin.Key, Fingerprint: payload.Origin.Fingerprint, CharacterID: f.CharacterID, VerificationID: f.VerificationID, RevisionID: f.RevisionID}
@@ -157,87 +169,131 @@ func (p *ProductPostgres) proveNotifications(ctx context.Context, memberID strin
 	if len(rows) > maxAckLimit {
 		return nil, opaqueNotificationProofError()
 	}
-	payloads := make([]inboxPayload, len(rows))
-	requests := make([]proofRequest, len(rows))
-	for i, row := range rows {
-		payload := &payloads[i]
-		if !canonicalNotificationID(row.ID) || len(row.Body) > maxNotificationPayloadBytes || strictNotificationJSON([]byte(row.Body), payload) != nil || validatePayload(*payload) != nil || row.Kind != payload.Event.Kind || row.SubjectType != payload.Event.SubjectType || (row.SubjectID != "" && row.SubjectID != payload.Event.SubjectID) || !row.CreatedAt.Equal(payload.Event.OccurredAt) || !slices.Contains(payload.Recipients, memberID) {
-			return nil, opaqueNotificationProofError()
-		}
-		requests[i] = notificationProofRequest(row.ID, *payload)
+	payloads, requests, err := notificationProofRequests(memberID, rows)
+	if err != nil {
+		return nil, err
 	}
 	proofRows, err := p.readProofRows(ctx, memberID, requests)
 	if err != nil || len(proofRows) != len(rows) {
 		return nil, opaqueNotificationProofError()
 	}
-	byID := make(map[string]dbgen.ProductNotificationProofsRow, len(proofRows))
-	for _, row := range proofRows {
+	byID, err := uniqueNotificationProofRows(proofRows)
+	if err != nil {
+		return nil, err
+	}
+	for i, row := range rows {
+		projection, err := proveStoredNotification(memberID, row, payloads[i], byID)
+		if err != nil {
+			return nil, err
+		}
+		projections[i] = projection
+	}
+	return projections, nil
+}
+
+func notificationProofRequests(memberID string, rows []storedNotification) ([]inboxPayload, []proofRequest, error) {
+	payloads := make([]inboxPayload, len(rows))
+	requests := make([]proofRequest, len(rows))
+	for i, row := range rows {
+		payload := &payloads[i]
+		if !canonicalNotificationID(row.ID) || len(row.Body) > maxNotificationPayloadBytes || strictNotificationJSON([]byte(row.Body), payload) != nil || validatePayload(*payload) != nil || row.Kind != payload.Event.Kind || row.SubjectType != payload.Event.SubjectType || (row.SubjectID != "" && row.SubjectID != payload.Event.SubjectID) || !row.CreatedAt.Equal(payload.Event.OccurredAt) || !slices.Contains(payload.Recipients, memberID) {
+			return nil, nil, opaqueNotificationProofError()
+		}
+		requests[i] = notificationProofRequest(row.ID, *payload)
+	}
+	return payloads, requests, nil
+}
+
+func uniqueNotificationProofRows(rows []dbgen.ProductNotificationProofsRow) (map[string]dbgen.ProductNotificationProofsRow, error) {
+	byID := make(map[string]dbgen.ProductNotificationProofsRow, len(rows))
+	for _, row := range rows {
 		id := db.UUIDString(row.NotificationID)
 		if _, duplicate := byID[id]; duplicate {
 			return nil, opaqueNotificationProofError()
 		}
 		byID[id] = row
 	}
-	for i, row := range rows {
-		proofRow, ok := byID[row.ID]
-		if !ok {
-			return nil, opaqueNotificationProofError()
-		}
-		var proofs []inboxProof
-		if err := strictNotificationJSON(proofRow.CommandProofs, &proofs); err != nil {
-			return nil, err
-		}
-		found := false
-		for _, proof := range proofs {
-			if proof.NotificationID == row.ID {
-				if found || proof.RecipientID != memberID || !samePayload(proof.Payload, payloads[i]) {
-					return nil, opaqueNotificationProofError()
-				}
-				found = true
-			}
-		}
-		var source sourceProof
-		if !found || strictNotificationJSON(proofRow.SourceProof, &source) != nil || validateSourceProof(payloads[i], source) != nil {
-			return nil, opaqueNotificationProofError()
-		}
-		label := notificationLabel(payloads[i].Event)
-		projections[i] = SubjectProjection{SubjectType: row.SubjectType, SubjectID: payloads[i].Event.SubjectID, Visible: source.SubjectExists, Code: source.SubjectCode, Label: label, Title: &label, Facts: payloads[i].Event.Facts}
+	return byID, nil
+}
+
+func proveStoredNotification(memberID string, row storedNotification, payload inboxPayload, byID map[string]dbgen.ProductNotificationProofsRow) (SubjectProjection, error) {
+	proofRow, ok := byID[row.ID]
+	if !ok {
+		return SubjectProjection{}, opaqueNotificationProofError()
 	}
-	return projections, nil
+	var proofs []inboxProof
+	if err := strictNotificationJSON(proofRow.CommandProofs, &proofs); err != nil {
+		return SubjectProjection{}, err
+	}
+	found := false
+	for _, proof := range proofs {
+		if proof.NotificationID != row.ID {
+			continue
+		}
+		if found || proof.RecipientID != memberID || !samePayload(proof.Payload, payload) {
+			return SubjectProjection{}, opaqueNotificationProofError()
+		}
+		found = true
+	}
+	var source sourceProof
+	if !found || strictNotificationJSON(proofRow.SourceProof, &source) != nil || validateSourceProof(payload, source) != nil {
+		return SubjectProjection{}, opaqueNotificationProofError()
+	}
+	label := notificationLabel(payload.Event)
+	return SubjectProjection{SubjectType: row.SubjectType, SubjectID: payload.Event.SubjectID, Visible: source.SubjectExists, Code: source.SubjectCode, Label: label, Title: &label, Facts: payload.Event.Facts}, nil
 }
 
 func validateSourceProof(payload inboxPayload, source sourceProof) error {
-	event, facts := payload.Event, payload.Event.Facts
+	event := payload.Event
 	same := func(value *string, expected string) bool { return value != nil && *value == expected }
 	at := func(value *time.Time) bool { return value != nil && value.Equal(event.OccurredAt) }
 	switch event.Kind {
 	case CharacterVerificationDecided:
-		if !source.SubjectExists || !same(source.VerificationID, *facts.VerificationID) || !same(source.VerificationCharacterID, event.SubjectID) || !same(source.Verdict, *facts.Verdict) || !same(source.DeciderID, event.ActorID) || !at(source.VerificationAt) || source.CharacterOwnerID == nil || !slices.Equal(payload.Recipients, []string{*source.CharacterOwnerID}) {
-			return opaqueNotificationProofError()
-		}
+		return validateVerificationSourceProof(payload, source, same, at)
 	case QuestSignupConfirmed, QuestWaitlistPromoted:
-		if !source.SubjectExists || !source.ParticipantExists || !same(source.CharacterID, *facts.CharacterID) || source.CharacterOwnerID == nil || !slices.Equal(payload.Recipients, []string{*source.CharacterOwnerID}) {
-			return opaqueNotificationProofError()
-		}
+		return validateQuestSourceProof(payload, source, same)
 	case DocumentEdited, DocumentPublished, DMMentioned:
-		if !same(source.RevisionID, *facts.RevisionID) || !same(source.RevisionDocumentID, event.SubjectID) || !same(source.RevisionActorID, event.ActorID) || !at(source.RevisionAt) {
-			return opaqueNotificationProofError()
-		}
-		if event.Kind == DMMentioned {
-			recorded := slices.Clone(source.RevisionMentionMemberIDs)
-			slices.Sort(recorded)
-			if !slices.Equal(recorded, facts.NewMentionMemberIDs) {
-				return opaqueNotificationProofError()
-			}
-		}
-		if event.Kind != DMMentioned && (source.DocumentAuthorID == nil || !slices.Equal(payload.Recipients, []string{*source.DocumentAuthorID}) || *source.DocumentAuthorID == event.ActorID) {
-			return opaqueNotificationProofError()
-		}
+		return validateDocumentSourceProof(payload, source, same, at)
 	case QuestScheduled:
 		if !source.SubjectExists {
 			return opaqueNotificationProofError()
 		}
 	default:
+		return opaqueNotificationProofError()
+	}
+	return nil
+}
+
+func validateVerificationSourceProof(payload inboxPayload, source sourceProof, same func(*string, string) bool, at func(*time.Time) bool) error {
+	event, facts := payload.Event, payload.Event.Facts
+	if !source.SubjectExists || !same(source.VerificationID, *facts.VerificationID) || !same(source.VerificationCharacterID, event.SubjectID) || !same(source.Verdict, *facts.Verdict) || !same(source.DeciderID, event.ActorID) || !at(source.VerificationAt) || source.CharacterOwnerID == nil || !slices.Equal(payload.Recipients, []string{*source.CharacterOwnerID}) {
+		return opaqueNotificationProofError()
+	}
+	return nil
+}
+
+func validateQuestSourceProof(payload inboxPayload, source sourceProof, same func(*string, string) bool) error {
+	facts := payload.Event.Facts
+	if !source.SubjectExists || !source.ParticipantExists || !same(source.CharacterID, *facts.CharacterID) || source.CharacterOwnerID == nil || !slices.Equal(payload.Recipients, []string{*source.CharacterOwnerID}) {
+		return opaqueNotificationProofError()
+	}
+	return nil
+}
+
+func validateDocumentSourceProof(payload inboxPayload, source sourceProof, same func(*string, string) bool, at func(*time.Time) bool) error {
+	event, facts := payload.Event, payload.Event.Facts
+	if !same(source.RevisionID, *facts.RevisionID) || !same(source.RevisionDocumentID, event.SubjectID) || !same(source.RevisionActorID, event.ActorID) || !at(source.RevisionAt) {
+		return opaqueNotificationProofError()
+	}
+	if event.Kind == DMMentioned {
+		recorded := slices.Clone(source.RevisionMentionMemberIDs)
+		slices.Sort(recorded)
+		if !slices.Equal(recorded, facts.NewMentionMemberIDs) {
+			return opaqueNotificationProofError()
+		}
+		return nil
+	}
+	if source.DocumentAuthorID == nil || !slices.Equal(payload.Recipients, []string{*source.DocumentAuthorID}) || *source.DocumentAuthorID == event.ActorID {
 		return opaqueNotificationProofError()
 	}
 	return nil

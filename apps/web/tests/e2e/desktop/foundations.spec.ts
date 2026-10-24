@@ -37,7 +37,7 @@ async function seedFoundations(
 async function expectRenderedFont(
   page: Page,
   selector: string,
-  family: 'Fraunces Variable' | 'Geist' | 'Geist Mono',
+  family: 'Lexend Variable' | 'Fraunces Variable' | 'Geist' | 'Geist Mono',
 ): Promise<void> {
   const result = await page
     .locator(selector)
@@ -133,7 +133,7 @@ for (const theme of THEMES) {
     expect(typography.bodyBackground).toMatch(/^rgb\(/);
     expect(typography.bodyBackground).not.toBe('rgba(0, 0, 0, 0)');
 
-    await expectRenderedFont(page, 'h1.type-display', 'Fraunces Variable');
+    await expectRenderedFont(page, 'h1.type-display', 'Lexend Variable');
     await expectRenderedFont(page, '.type-caption', 'Geist');
     await expectRenderedFont(page, '.site-chrome__search-kbd', 'Geist Mono');
 

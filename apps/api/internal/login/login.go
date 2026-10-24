@@ -87,7 +87,8 @@ func (s *Service) callback(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Dev path: code "dev:<discordId>" mints a local token when ClientSecret is "dev".
-	discordID, displayName, avatar := body.Code, "dev", ""
+	var discordID, displayName, avatar string
+	displayName = "dev"
 	if s.cfg.ClientSecret == "dev" {
 		if !strings.HasPrefix(body.Code, "dev:") {
 			apierr.Write(w, r, apierr.New(apierr.Invalid, "development code required"))

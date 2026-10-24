@@ -10,14 +10,18 @@ import (
 func RunLeased(ctx context.Context, store Store, job Job, work func(context.Context) error) error {
 	workCtx, cancel := context.WithDeadline(ctx, job.AttemptDeadlineAt)
 	defer cancel()
-	done := make(chan error, 1)
-	go func() { done <- work(workCtx) }()
+	done := make(chan struct{})
+	var workErr error
+	go func() {
+		workErr = work(workCtx)
+		close(done)
+	}()
 	ticker := time.NewTicker(job.leaseDuration() / 3)
 	defer ticker.Stop()
 	for {
 		select {
-		case e := <-done:
-			return e
+		case <-done:
+			return workErr
 		case <-workCtx.Done():
 			cancel()
 			<-done

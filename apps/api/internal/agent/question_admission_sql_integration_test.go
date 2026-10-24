@@ -146,7 +146,7 @@ func TestQuestionAdmissionSQL(t *testing.T) {
 		t.Fatal(err)
 	}
 	var version int64
-	if err := db.QueryRowContext(ctx, `SELECT max(version_id) FROM goose_db_version WHERE is_applied`).Scan(&version); err != nil || version != 4 {
+	if err := db.QueryRowContext(ctx, `SELECT max(version_id) FROM goose_db_version WHERE is_applied`).Scan(&version); err != nil || version != 2 {
 		t.Fatalf("migration version=%d error=%v", version, err)
 	}
 	admit := questionNamedSQL(t, "InsertQuestionJob", ":execrows")

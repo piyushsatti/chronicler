@@ -452,11 +452,7 @@ func mapCommunitySnapshot(rows []dbgen.SiteCommunitySnapshotRow) (CommunityStats
 		MembersByRole: make([]CountByKeyView, 0, len(rows)),
 	}
 	for _, row := range rows {
-		if row.TotalMembers != first.TotalMembers || row.ActiveCharacters != first.ActiveCharacters ||
-			row.TotalMaps != first.TotalMaps || row.TotalPointcrawlNodes != first.TotalPointcrawlNodes ||
-			row.TotalRegions != first.TotalRegions || row.TotalQuests != first.TotalQuests ||
-			row.TotalDms != first.TotalDms || row.VoiceMinutes != first.VoiceMinutes ||
-			row.Messages != first.Messages || row.Reactions != first.Reactions {
+		if !sameCommunitySnapshotTotals(first, row) {
 			return CommunityStatsSnapshot{}, fmt.Errorf("site community snapshot totals differ across role rows")
 		}
 		if row.Role == nil {
@@ -469,6 +465,14 @@ func mapCommunitySnapshot(rows []dbgen.SiteCommunitySnapshotRow) (CommunityStats
 		snapshot.MembersByRole = append(snapshot.MembersByRole, CountByKeyView{Key: role, Count: row.MemberCount.Int32})
 	}
 	return snapshot, nil
+}
+
+func sameCommunitySnapshotTotals(first, row dbgen.SiteCommunitySnapshotRow) bool {
+	return row.TotalMembers == first.TotalMembers && row.ActiveCharacters == first.ActiveCharacters &&
+		row.TotalMaps == first.TotalMaps && row.TotalPointcrawlNodes == first.TotalPointcrawlNodes &&
+		row.TotalRegions == first.TotalRegions && row.TotalQuests == first.TotalQuests &&
+		row.TotalDms == first.TotalDms && row.VoiceMinutes == first.VoiceMinutes &&
+		row.Messages == first.Messages && row.Reactions == first.Reactions
 }
 
 func mapMemberDiscovery(rows []dbgen.SiteMemberDiscoveryRow) (MemberDiscoveryPage, error) {

@@ -80,47 +80,9 @@ func (p *ProductPostgres) StoreCreateQuest(ctx context.Context, write CreateQues
 	if write.RevisionID == nil || strings.TrimSpace(*write.RevisionID) == "" {
 		return QuestView{}, apierr.New(apierr.Internal, "quest brief document required")
 	}
-	publicID, err := questUUID(write.Locked.SubjectID)
+	refs, err := p.resolveCreateQuestReferences(ctx, write)
 	if err != nil {
 		return QuestView{}, err
-	}
-	docPublicID, err := questUUID(strings.TrimSpace(*write.RevisionID))
-	if err != nil {
-		return QuestView{}, err
-	}
-	documentID, err := p.queries().ProductQuestDocumentInternalID(ctx, docPublicID)
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return QuestView{}, apierr.New(apierr.NotFound, "quest brief not found")
-		}
-		return QuestView{}, err
-	}
-	dmPublic := write.ActorID
-	if spec.DmId != nil && strings.TrimSpace(*spec.DmId) != "" {
-		dmPublic = strings.TrimSpace(*spec.DmId)
-	}
-	dmID, err := p.internalMember(ctx, dmPublic)
-	if err != nil {
-		return QuestView{}, err
-	}
-	createdBy, err := p.internalMember(ctx, write.ActorID)
-	if err != nil {
-		return QuestView{}, err
-	}
-	var arcID pgtype.Int8
-	if spec.ArcId != nil && strings.TrimSpace(*spec.ArcId) != "" {
-		arcPublic, err := questUUID(strings.TrimSpace(*spec.ArcId))
-		if err != nil {
-			return QuestView{}, err
-		}
-		internalArc, err := p.queries().ProductQuestArcInternalID(ctx, arcPublic)
-		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return QuestView{}, apierr.New(apierr.NotFound, "quest arc not found")
-			}
-			return QuestView{}, err
-		}
-		arcID = pgtype.Int8{Int64: internalArc, Valid: true}
 	}
 	kinds := spec.Kinds
 	if len(kinds) == 0 {
@@ -137,51 +99,27 @@ func (p *ProductPostgres) StoreCreateQuest(ctx context.Context, write CreateQues
 		signup = pgtype.Text{String: *spec.SignupType, Valid: true}
 	}
 	inserted, err := p.queries().ProductQuestInsert(ctx, dbgen.ProductQuestInsertParams{
-		PublicID:      publicID,
+		PublicID:      refs.PublicID,
 		ShortCode:     shortCode,
 		Kinds:         kinds,
-		DmID:          dmID,
-		ArcID:         arcID,
+		DmID:          refs.DMID,
+		ArcID:         refs.ArcID,
 		ScheduledAt:   pgtype.Timestamptz{Time: spec.ScheduledAt.UTC(), Valid: true},
 		DurationHours: spec.DurationHours,
 		SlotsMax:      spec.SlotsMax,
-		DocumentID:    documentID,
+		DocumentID:    refs.DocumentID,
 		Tags:          spec.Tags,
 		Genres:        spec.Genres,
 		Apl:           apl,
 		SignupType:    signup,
-		CreatedBy:     createdBy,
+		CreatedBy:     refs.CreatedBy,
 		At:            at,
 	})
 	if err != nil {
 		return QuestView{}, err
 	}
-	if len(spec.RegionIds) > 0 {
-		regionUUIDs := make([]pgtype.UUID, 0, len(spec.RegionIds))
-		for _, id := range spec.RegionIds {
-			uid, err := questUUID(id)
-			if err != nil {
-				return QuestView{}, err
-			}
-			regionUUIDs = append(regionUUIDs, uid)
-		}
-		regionRows, err := p.queries().ProductQuestRegionInternalIDs(ctx, regionUUIDs)
-		if err != nil {
-			return QuestView{}, err
-		}
-		if len(regionRows) != len(regionUUIDs) {
-			return QuestView{}, apierr.New(apierr.NotFound, "region not found")
-		}
-		regionIDs := make([]int64, len(regionRows))
-		for i, row := range regionRows {
-			regionIDs[i] = row.ID
-		}
-		if _, err := p.queries().ProductQuestInsertRegions(ctx, dbgen.ProductQuestInsertRegionsParams{
-			QuestID:   inserted.ID,
-			RegionIds: regionIDs,
-		}); err != nil {
-			return QuestView{}, err
-		}
+	if err := p.insertQuestRegions(ctx, inserted.ID, spec.RegionIds); err != nil {
+		return QuestView{}, err
 	}
 	if err := p.enqueueQuestDiscord(ctx, inserted.ID, write.Locked.SubjectID, inserted.DiscordDesiredRevision); err != nil {
 		return QuestView{}, err
@@ -194,6 +132,91 @@ func (p *ProductPostgres) StoreCreateQuest(ctx context.Context, write CreateQues
 		return QuestView{}, fmt.Errorf("quest missing after create")
 	}
 	return *view, nil
+}
+
+type questCreateReferences struct {
+	PublicID                    pgtype.UUID
+	DocumentID, DMID, CreatedBy int64
+	ArcID                       pgtype.Int8
+}
+
+func (p *ProductPostgres) resolveCreateQuestReferences(ctx context.Context, write CreateQuestWrite) (questCreateReferences, error) {
+	var refs questCreateReferences
+	var err error
+	refs.PublicID, err = questUUID(write.Locked.SubjectID)
+	if err != nil {
+		return refs, err
+	}
+	docID, err := questUUID(strings.TrimSpace(*write.RevisionID))
+	if err != nil {
+		return refs, err
+	}
+	refs.DocumentID, err = p.queries().ProductQuestDocumentInternalID(ctx, docID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return refs, apierr.New(apierr.NotFound, "quest brief not found")
+	}
+	if err != nil {
+		return refs, err
+	}
+	dmPublic := write.ActorID
+	if write.ValidatedInput.Input.DmId != nil && strings.TrimSpace(*write.ValidatedInput.Input.DmId) != "" {
+		dmPublic = strings.TrimSpace(*write.ValidatedInput.Input.DmId)
+	}
+	refs.DMID, err = p.internalMember(ctx, dmPublic)
+	if err != nil {
+		return refs, err
+	}
+	refs.CreatedBy, err = p.internalMember(ctx, write.ActorID)
+	if err != nil {
+		return refs, err
+	}
+	refs.ArcID, err = p.internalQuestArcID(ctx, write.ValidatedInput.Input.ArcId)
+	return refs, err
+}
+
+func (p *ProductPostgres) internalQuestArcID(ctx context.Context, publicID *string) (pgtype.Int8, error) {
+	if publicID == nil || strings.TrimSpace(*publicID) == "" {
+		return pgtype.Int8{}, nil
+	}
+	id, err := questUUID(strings.TrimSpace(*publicID))
+	if err != nil {
+		return pgtype.Int8{}, err
+	}
+	internalID, err := p.queries().ProductQuestArcInternalID(ctx, id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return pgtype.Int8{}, apierr.New(apierr.NotFound, "quest arc not found")
+	}
+	if err != nil {
+		return pgtype.Int8{}, err
+	}
+	return pgtype.Int8{Int64: internalID, Valid: true}, nil
+}
+
+func (p *ProductPostgres) insertQuestRegions(ctx context.Context, questID int64, regionIDs []string) error {
+	if len(regionIDs) == 0 {
+		return nil
+	}
+	uuids := make([]pgtype.UUID, 0, len(regionIDs))
+	for _, id := range regionIDs {
+		uid, err := questUUID(id)
+		if err != nil {
+			return err
+		}
+		uuids = append(uuids, uid)
+	}
+	rows, err := p.queries().ProductQuestRegionInternalIDs(ctx, uuids)
+	if err != nil {
+		return err
+	}
+	if len(rows) != len(uuids) {
+		return apierr.New(apierr.NotFound, "region not found")
+	}
+	ids := make([]int64, len(rows))
+	for i, row := range rows {
+		ids[i] = row.ID
+	}
+	_, err = p.queries().ProductQuestInsertRegions(ctx, dbgen.ProductQuestInsertRegionsParams{QuestID: questID, RegionIds: ids})
+	return err
 }
 
 func (p *ProductPostgres) enqueueQuestDiscord(ctx context.Context, internalID int64, publicID string, desired int32) error {
@@ -226,54 +249,108 @@ func (p *ProductPostgres) StoreUpdateQuest(ctx context.Context, write UpdateQues
 	if !write.Locked.Exists || write.Locked.Before == nil {
 		return QuestView{}, apierr.New(apierr.NotFound, "quest not found")
 	}
-	before := write.Locked.Before
 	input := write.ValidatedInput.Input
-	kinds, tags, genres := before.Kinds, before.Tags, before.Genres
-	if input.Kinds.Set && input.Kinds.Value != nil {
-		kinds = *input.Kinds.Value
-	}
-	if input.Tags.Set && input.Tags.Value != nil {
-		tags = *input.Tags.Value
-	}
-	if input.Genres.Set && input.Genres.Value != nil {
-		genres = *input.Genres.Value
-	}
-	scheduledAt := before.ScheduledAt
-	if input.ScheduledAt.Set && input.ScheduledAt.Value != nil {
-		scheduledAt = *input.ScheduledAt.Value
-	}
-	duration := before.DurationHours
-	if input.DurationHours.Set && input.DurationHours.Value != nil {
-		duration = *input.DurationHours.Value
-	}
-	slots := before.SlotsMax
-	if input.SlotsMax.Set && input.SlotsMax.Value != nil {
-		slots = *input.SlotsMax.Value
-	}
-	dmPublic := before.DmId
-	if input.DmId.Set && input.DmId.Value != nil {
-		dmPublic = *input.DmId.Value
-	}
-	dmID, err := p.internalMember(ctx, dmPublic)
+	values := mergeQuestUpdateValues(*write.Locked.Before, input)
+	dmID, err := p.internalMember(ctx, values.dmPublic)
 	if err != nil {
 		return QuestView{}, err
 	}
-	var arcID pgtype.Int8
-	arcPublic := before.ArcId
+	arcID, err := p.internalQuestArcID(ctx, values.arcPublic)
+	if err != nil {
+		return QuestView{}, err
+	}
+	questID, err := questUUID(write.ValidatedInput.Id)
+	if err != nil {
+		return QuestView{}, err
+	}
+	at := pgtype.Timestamptz{Time: write.At.UTC(), Valid: true}
+	updated, err := p.queries().ProductQuestUpdateMetadata(ctx, dbgen.ProductQuestUpdateMetadataParams{
+		Kinds:             values.kinds,
+		DmID:              dmID,
+		ArcID:             arcID,
+		ScheduledAt:       pgtype.Timestamptz{Time: values.scheduledAt.UTC(), Valid: true},
+		DurationHours:     values.duration,
+		SlotsMax:          values.slots,
+		Tags:              values.tags,
+		Genres:            values.genres,
+		Apl:               values.apl,
+		SignupType:        values.signup,
+		At:                at,
+		QuestID:           questID,
+		ExpectedUpdatedAt: pgtype.Timestamptz{Time: input.ExpectedUpdatedAt.UTC(), Valid: true},
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return QuestView{}, apierr.New(apierr.Conflict, "quest version conflict")
+		}
+		return QuestView{}, err
+	}
+	if err := p.replaceQuestRegions(ctx, updated.ID, input.RegionIds); err != nil {
+		return QuestView{}, err
+	}
+	bumped, err := p.queries().ProductQuestBumpDiscordDesired(ctx, dbgen.ProductQuestBumpDiscordDesiredParams{
+		At: at, QuestID: questID,
+	})
+	if err != nil {
+		return QuestView{}, err
+	}
+	if err := p.enqueueQuestDiscord(ctx, bumped.ID, write.ValidatedInput.Id, bumped.DiscordDesiredRevision); err != nil {
+		return QuestView{}, err
+	}
+	return p.readUpdatedQuest(ctx, write.ValidatedInput.Id, write.At)
+}
+
+type questUpdateValues struct {
+	kinds, tags, genres []string
+	dmPublic            string
+	arcPublic           *string
+	scheduledAt         time.Time
+	duration            float64
+	slots               int32
+	apl                 pgtype.Int4
+	signup              pgtype.Text
+}
+
+func mergeQuestUpdateValues(before QuestView, input QuestEditFields) questUpdateValues {
+	values := questUpdateValues{kinds: before.Kinds, tags: before.Tags, genres: before.Genres, dmPublic: before.DmId,
+		arcPublic: before.ArcId, scheduledAt: before.ScheduledAt, duration: before.DurationHours, slots: before.SlotsMax}
+	mergeQuestUpdateLists(&values, input)
+	mergeQuestUpdateSchedule(&values, input)
+	values.apl, values.signup = mergeQuestUpdateFlags(before, input)
+	return values
+}
+
+func mergeQuestUpdateLists(values *questUpdateValues, input QuestEditFields) {
+	if input.Kinds.Set && input.Kinds.Value != nil {
+		values.kinds = *input.Kinds.Value
+	}
+	if input.Tags.Set && input.Tags.Value != nil {
+		values.tags = *input.Tags.Value
+	}
+	if input.Genres.Set && input.Genres.Value != nil {
+		values.genres = *input.Genres.Value
+	}
+	if input.DmId.Set && input.DmId.Value != nil {
+		values.dmPublic = *input.DmId.Value
+	}
 	if input.ArcId.Set {
-		arcPublic = input.ArcId.Value
+		values.arcPublic = input.ArcId.Value
 	}
-	if arcPublic != nil && strings.TrimSpace(*arcPublic) != "" {
-		uid, err := questUUID(strings.TrimSpace(*arcPublic))
-		if err != nil {
-			return QuestView{}, err
-		}
-		internalArc, err := p.queries().ProductQuestArcInternalID(ctx, uid)
-		if err != nil {
-			return QuestView{}, err
-		}
-		arcID = pgtype.Int8{Int64: internalArc, Valid: true}
+}
+
+func mergeQuestUpdateSchedule(values *questUpdateValues, input QuestEditFields) {
+	if input.ScheduledAt.Set && input.ScheduledAt.Value != nil {
+		values.scheduledAt = *input.ScheduledAt.Value
 	}
+	if input.DurationHours.Set && input.DurationHours.Value != nil {
+		values.duration = *input.DurationHours.Value
+	}
+	if input.SlotsMax.Set && input.SlotsMax.Value != nil {
+		values.slots = *input.SlotsMax.Value
+	}
+}
+
+func mergeQuestUpdateFlags(before QuestView, input QuestEditFields) (pgtype.Int4, pgtype.Text) {
 	var apl pgtype.Int4
 	if input.Apl.Set {
 		if input.Apl.Value != nil {
@@ -290,75 +367,41 @@ func (p *ProductPostgres) StoreUpdateQuest(ctx context.Context, write UpdateQues
 	} else if before.SignupType != nil {
 		signup = pgtype.Text{String: *before.SignupType, Valid: true}
 	}
-	questID, err := questUUID(write.ValidatedInput.Id)
+	return apl, signup
+}
+
+func (p *ProductPostgres) replaceQuestRegions(ctx context.Context, questID int64, input product.Optional[[]string]) error {
+	if !input.Set {
+		return nil
+	}
+	if err := p.queries().ProductQuestReplaceRegions(ctx, questID); err != nil {
+		return err
+	}
+	if input.Value == nil || len(*input.Value) == 0 {
+		return nil
+	}
+	uuids := make([]pgtype.UUID, 0, len(*input.Value))
+	for _, id := range *input.Value {
+		uid, err := questUUID(id)
+		if err != nil {
+			return err
+		}
+		uuids = append(uuids, uid)
+	}
+	rows, err := p.queries().ProductQuestRegionInternalIDs(ctx, uuids)
 	if err != nil {
-		return QuestView{}, err
+		return err
 	}
-	at := pgtype.Timestamptz{Time: write.At.UTC(), Valid: true}
-	updated, err := p.queries().ProductQuestUpdateMetadata(ctx, dbgen.ProductQuestUpdateMetadataParams{
-		Kinds:             kinds,
-		DmID:              dmID,
-		ArcID:             arcID,
-		ScheduledAt:       pgtype.Timestamptz{Time: scheduledAt.UTC(), Valid: true},
-		DurationHours:     duration,
-		SlotsMax:          slots,
-		Tags:              tags,
-		Genres:            genres,
-		Apl:               apl,
-		SignupType:        signup,
-		At:                at,
-		QuestID:           questID,
-		ExpectedUpdatedAt: pgtype.Timestamptz{Time: input.ExpectedUpdatedAt.UTC(), Valid: true},
-	})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return QuestView{}, apierr.New(apierr.Conflict, "quest version conflict")
-		}
-		return QuestView{}, err
+	ids := make([]int64, len(rows))
+	for i, row := range rows {
+		ids[i] = row.ID
 	}
-	if input.RegionIds.Set {
-		if err := p.queries().ProductQuestReplaceRegions(ctx, updated.ID); err != nil {
-			return QuestView{}, err
-		}
-		regionValues := []string{}
-		if input.RegionIds.Value != nil {
-			regionValues = *input.RegionIds.Value
-		}
-		if len(regionValues) > 0 {
-			regionUUIDs := make([]pgtype.UUID, 0, len(regionValues))
-			for _, id := range regionValues {
-				uid, err := questUUID(id)
-				if err != nil {
-					return QuestView{}, err
-				}
-				regionUUIDs = append(regionUUIDs, uid)
-			}
-			regionRows, err := p.queries().ProductQuestRegionInternalIDs(ctx, regionUUIDs)
-			if err != nil {
-				return QuestView{}, err
-			}
-			regionIDs := make([]int64, len(regionRows))
-			for i, row := range regionRows {
-				regionIDs[i] = row.ID
-			}
-			if _, err := p.queries().ProductQuestInsertRegions(ctx, dbgen.ProductQuestInsertRegionsParams{
-				QuestID:   updated.ID,
-				RegionIds: regionIDs,
-			}); err != nil {
-				return QuestView{}, err
-			}
-		}
-	}
-	bumped, err := p.queries().ProductQuestBumpDiscordDesired(ctx, dbgen.ProductQuestBumpDiscordDesiredParams{
-		At: at, QuestID: questID,
-	})
-	if err != nil {
-		return QuestView{}, err
-	}
-	if err := p.enqueueQuestDiscord(ctx, bumped.ID, write.ValidatedInput.Id, bumped.DiscordDesiredRevision); err != nil {
-		return QuestView{}, err
-	}
-	view, err := p.ReadQuest(ctx, auth.Authority{}, QuestSpec{Id: &write.ValidatedInput.Id, AsOf: write.At})
+	_, err = p.queries().ProductQuestInsertRegions(ctx, dbgen.ProductQuestInsertRegionsParams{QuestID: questID, RegionIds: ids})
+	return err
+}
+
+func (p *ProductPostgres) readUpdatedQuest(ctx context.Context, id string, at time.Time) (QuestView, error) {
+	view, err := p.ReadQuest(ctx, auth.Authority{}, QuestSpec{Id: &id, AsOf: at})
 	if err != nil {
 		return QuestView{}, err
 	}
@@ -469,19 +512,8 @@ func (p *ProductPostgres) StoreCloseQuest(ctx context.Context, write CloseQuestW
 	if err != nil {
 		return QuestView{}, err
 	}
-	for _, entry := range write.ValidatedInput.Input.Attendance {
-		character, err := p.queries().ProductQuestCharacterInternal(ctx, mustUUID(entry.CharacterId))
-		if err != nil {
-			if errors.Is(err, pgx.ErrNoRows) {
-				return QuestView{}, apierr.New(apierr.NotFound, "participant not found")
-			}
-			return QuestView{}, err
-		}
-		if _, err := p.queries().ProductQuestUpdateParticipant(ctx, dbgen.ProductQuestUpdateParticipantParams{
-			Status: entry.Status, Manual: true, At: at, QuestID: lockedRow.ID, CharacterID: character.ID,
-		}); err != nil {
-			return QuestView{}, err
-		}
+	if err := p.recordQuestAttendance(ctx, write.ValidatedInput.Input.Attendance, lockedRow.ID, at); err != nil {
+		return QuestView{}, err
 	}
 	if lockedRow.FilledCount > 0 {
 		if _, err := p.queries().ProductQuestIncrementCapacity(ctx, dbgen.ProductQuestIncrementCapacityParams{
@@ -512,6 +544,24 @@ func (p *ProductPostgres) StoreCloseQuest(ctx context.Context, write CloseQuestW
 		return QuestView{}, apierr.New(apierr.NotFound, "quest not found")
 	}
 	return *view, nil
+}
+
+func (p *ProductPostgres) recordQuestAttendance(ctx context.Context, entries []ParticipationAttestationFields, questID int64, at pgtype.Timestamptz) error {
+	for _, entry := range entries {
+		character, err := p.queries().ProductQuestCharacterInternal(ctx, mustUUID(entry.CharacterId))
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apierr.New(apierr.NotFound, "participant not found")
+		}
+		if err != nil {
+			return err
+		}
+		if _, err := p.queries().ProductQuestUpdateParticipant(ctx, dbgen.ProductQuestUpdateParticipantParams{
+			Status: entry.Status, Manual: true, At: at, QuestID: questID, CharacterID: character.ID,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func mustUUID(value string) pgtype.UUID {
@@ -612,23 +662,14 @@ func (p *ProductPostgres) LockSignupForQuest(ctx context.Context, spec SignupFor
 }
 
 func (p *ProductPostgres) StoreSignupForQuest(ctx context.Context, write SignupForQuestWrite) (QuestParticipantView, error) {
-	if !write.Locked.Exists || write.Locked.Before == nil {
-		return QuestParticipantView{}, apierr.New(apierr.NotFound, "quest not found")
+	status, previous, err := validateQuestSignup(write)
+	if err != nil {
+		return QuestParticipantView{}, err
 	}
-	if write.Locked.Character == nil || write.Locked.Character.OwnerID != write.ActorID {
-		return QuestParticipantView{}, apierr.New(apierr.Forbidden, "character owner required")
-	}
-	if !eligibleQuestCharacter(*write.Locked.Character) {
-		return QuestParticipantView{}, apierr.New(apierr.Conflict, "active approved character required")
-	}
-	previous := questParticipant(write.Locked.Roster, write.ValidatedInput.CharacterId)
-	if previous != nil && previous.Status != "withdrawn" {
-		return QuestParticipantView{}, apierr.New(apierr.Conflict, "already signed up for this quest")
-	}
-	status := write.Locked.Before.Status
-	if status != "open" && status != "full" {
-		return QuestParticipantView{}, apierr.New(apierr.Conflict, "quest not accepting signups")
-	}
+	return p.storeQuestSignup(ctx, write, status, previous)
+}
+
+func (p *ProductPostgres) storeQuestSignup(ctx context.Context, write SignupForQuestWrite, status string, previous *QuestParticipantView) (QuestParticipantView, error) {
 	questID, err := questUUID(write.ValidatedInput.QuestId)
 	if err != nil {
 		return QuestParticipantView{}, err
@@ -689,6 +730,27 @@ func (p *ProductPostgres) StoreSignupForQuest(ctx context.Context, write SignupF
 	}, nil
 }
 
+func validateQuestSignup(write SignupForQuestWrite) (string, *QuestParticipantView, error) {
+	if !write.Locked.Exists || write.Locked.Before == nil {
+		return "", nil, apierr.New(apierr.NotFound, "quest not found")
+	}
+	if write.Locked.Character == nil || write.Locked.Character.OwnerID != write.ActorID {
+		return "", nil, apierr.New(apierr.Forbidden, "character owner required")
+	}
+	if !eligibleQuestCharacter(*write.Locked.Character) {
+		return "", nil, apierr.New(apierr.Conflict, "active approved character required")
+	}
+	previous := questParticipant(write.Locked.Roster, write.ValidatedInput.CharacterId)
+	if previous != nil && previous.Status != "withdrawn" {
+		return "", nil, apierr.New(apierr.Conflict, "already signed up for this quest")
+	}
+	status := write.Locked.Before.Status
+	if status != "open" && status != "full" {
+		return "", nil, apierr.New(apierr.Conflict, "quest not accepting signups")
+	}
+	return status, previous, nil
+}
+
 func (p *ProductPostgres) LockWithdrawFromQuest(ctx context.Context, spec WithdrawFromQuestSpec) (WithdrawFromQuestState, error) {
 	locked, err := p.lockLiveQuest(ctx, spec.QuestId, spec.AsOf)
 	if err != nil {
@@ -706,24 +768,12 @@ func (p *ProductPostgres) LockWithdrawFromQuest(ctx context.Context, spec Withdr
 }
 
 func (p *ProductPostgres) StoreWithdrawFromQuest(ctx context.Context, write WithdrawFromQuestWrite) (QuestParticipantView, error) {
-	if !write.Locked.Exists || write.Locked.Before == nil {
-		return QuestParticipantView{}, apierr.New(apierr.NotFound, "quest not found")
-	}
-	if write.Locked.Character == nil || write.Locked.Character.OwnerID != write.ActorID {
-		return QuestParticipantView{}, apierr.New(apierr.Forbidden, "character owner required")
-	}
-	if write.Locked.Before.Status != "open" && write.Locked.Before.Status != "full" {
-		return QuestParticipantView{}, apierr.New(apierr.Conflict, "quest is not accepting withdrawals")
-	}
-	previous := questParticipant(write.Locked.Roster, write.ValidatedInput.CharacterId)
-	if previous == nil {
-		return QuestParticipantView{}, apierr.New(apierr.NotFound, "participant not found")
+	previous, err := validateQuestWithdrawalWrite(write)
+	if err != nil {
+		return QuestParticipantView{}, err
 	}
 	if previous.Status == "withdrawn" {
 		return *previous, nil
-	}
-	if previous.Status != "signed_up" && previous.Status != "waitlisted" {
-		return QuestParticipantView{}, apierr.New(apierr.Conflict, "participation is already final")
 	}
 	questID, err := questUUID(write.ValidatedInput.QuestId)
 	if err != nil {
@@ -770,6 +820,26 @@ func (p *ProductPostgres) StoreWithdrawFromQuest(ctx context.Context, write With
 	result.Manual = false
 	result.UpdatedAt = write.At.UTC()
 	return result, nil
+}
+
+func validateQuestWithdrawalWrite(write WithdrawFromQuestWrite) (*QuestParticipantView, error) {
+	if !write.Locked.Exists || write.Locked.Before == nil {
+		return nil, apierr.New(apierr.NotFound, "quest not found")
+	}
+	if write.Locked.Character == nil || write.Locked.Character.OwnerID != write.ActorID {
+		return nil, apierr.New(apierr.Forbidden, "character owner required")
+	}
+	if write.Locked.Before.Status != "open" && write.Locked.Before.Status != "full" {
+		return nil, apierr.New(apierr.Conflict, "quest is not accepting withdrawals")
+	}
+	previous := questParticipant(write.Locked.Roster, write.ValidatedInput.CharacterId)
+	if previous == nil {
+		return nil, apierr.New(apierr.NotFound, "participant not found")
+	}
+	if previous.Status != "withdrawn" && previous.Status != "signed_up" && previous.Status != "waitlisted" {
+		return nil, apierr.New(apierr.Conflict, "participation is already final")
+	}
+	return previous, nil
 }
 
 func (p *ProductPostgres) LockSelectQuestParticipants(ctx context.Context, spec SelectQuestParticipantsSpec) (SelectQuestParticipantsState, error) {
@@ -901,24 +971,9 @@ func (p *ProductPostgres) StoreSetQuestHexes(ctx context.Context, write SetQuest
 	if !write.Locked.Exists {
 		return nil, apierr.New(apierr.NotFound, "quest not found")
 	}
-	if len(write.ValidatedInput.Hexes) > 100 {
-		return nil, apierr.New(apierr.Invalid, "pointcrawl link limit exceeded")
-	}
-	seen := map[string]bool{}
-	nodeUUIDs := make([]pgtype.UUID, 0, len(write.ValidatedInput.Hexes))
-	roles := make([]string, 0, len(write.ValidatedInput.Hexes))
-	for _, link := range write.ValidatedInput.Hexes {
-		key := strings.TrimSpace(link.HexId) + "\x00" + strings.TrimSpace(link.Role)
-		if seen[key] {
-			return nil, apierr.New(apierr.Invalid, "duplicate pointcrawl link")
-		}
-		seen[key] = true
-		uid, err := questUUID(link.HexId)
-		if err != nil {
-			return nil, err
-		}
-		nodeUUIDs = append(nodeUUIDs, uid)
-		roles = append(roles, link.Role)
+	nodeUUIDs, roles, err := questHexWriteValues(write.ValidatedInput.Hexes)
+	if err != nil {
+		return nil, err
 	}
 	questID, err := questUUID(write.ValidatedInput.QuestId)
 	if err != nil {
@@ -928,26 +983,8 @@ func (p *ProductPostgres) StoreSetQuestHexes(ctx context.Context, write SetQuest
 	if err != nil {
 		return nil, err
 	}
-	if err := p.queries().ProductQuestReplacePointcrawlLinks(ctx, lockedRow.ID); err != nil {
+	if err := p.storeQuestHexLinks(ctx, lockedRow.ID, nodeUUIDs, roles); err != nil {
 		return nil, err
-	}
-	if len(nodeUUIDs) > 0 {
-		nodes, err := p.queries().ProductQuestNodeInternalIDs(ctx, nodeUUIDs)
-		if err != nil {
-			return nil, err
-		}
-		if len(nodes) != len(nodeUUIDs) {
-			return nil, apierr.New(apierr.NotFound, "pointcrawl node not found")
-		}
-		nodeIDs := make([]int64, len(nodes))
-		for i, node := range nodes {
-			nodeIDs[i] = node.ID
-		}
-		if _, err := p.queries().ProductQuestInsertPointcrawlLinks(ctx, dbgen.ProductQuestInsertPointcrawlLinksParams{
-			QuestID: lockedRow.ID, NodeIds: nodeIDs, Roles: roles,
-		}); err != nil {
-			return nil, err
-		}
 	}
 	rows, err := p.queries().ProductQuestReadPointcrawlLinks(ctx, questID)
 	if err != nil {
@@ -958,6 +995,54 @@ func (p *ProductPostgres) StoreSetQuestHexes(ctx context.Context, write SetQuest
 		out = append(out, QuestHexView{HexId: row.NodeID, QuestId: row.QuestID, Role: row.Role})
 	}
 	return out, nil
+}
+
+func questHexWriteValues(hexes []QuestHexFields) ([]pgtype.UUID, []string, error) {
+	if len(hexes) > 100 {
+		return nil, nil, apierr.New(apierr.Invalid, "pointcrawl link limit exceeded")
+	}
+	seen := map[string]bool{}
+	nodeUUIDs := make([]pgtype.UUID, 0, len(hexes))
+	roles := make([]string, 0, len(hexes))
+	for _, link := range hexes {
+		key := strings.TrimSpace(link.HexId) + "\x00" + strings.TrimSpace(link.Role)
+		if seen[key] {
+			return nil, nil, apierr.New(apierr.Invalid, "duplicate pointcrawl link")
+		}
+		seen[key] = true
+		uid, err := questUUID(link.HexId)
+		if err != nil {
+			return nil, nil, err
+		}
+		nodeUUIDs = append(nodeUUIDs, uid)
+		roles = append(roles, link.Role)
+	}
+	return nodeUUIDs, roles, nil
+}
+
+func (p *ProductPostgres) storeQuestHexLinks(ctx context.Context, questID int64, nodeUUIDs []pgtype.UUID, roles []string) error {
+	if err := p.queries().ProductQuestReplacePointcrawlLinks(ctx, questID); err != nil {
+		return err
+	}
+	if len(nodeUUIDs) > 0 {
+		nodes, err := p.queries().ProductQuestNodeInternalIDs(ctx, nodeUUIDs)
+		if err != nil {
+			return err
+		}
+		if len(nodes) != len(nodeUUIDs) {
+			return apierr.New(apierr.NotFound, "pointcrawl node not found")
+		}
+		nodeIDs := make([]int64, len(nodes))
+		for i, node := range nodes {
+			nodeIDs[i] = node.ID
+		}
+		if _, err := p.queries().ProductQuestInsertPointcrawlLinks(ctx, dbgen.ProductQuestInsertPointcrawlLinksParams{
+			QuestID: questID, NodeIds: nodeIDs, Roles: roles,
+		}); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (p *ProductPostgres) LockSyncQuestDiscord(ctx context.Context, spec SyncQuestDiscordSpec) (SyncQuestDiscordState, error) {

@@ -43,17 +43,12 @@ type RESTSync struct {
 }
 
 func (r RESTSync) SyncQuest(ctx context.Context, questID string, desiredRevision int) error {
-	if r.DryRun {
-		slog.InfoContext(ctx, "discord delivery dry-run", "quest", questID, "revision", desiredRevision)
-		if r.Apply != nil {
-			return r.Apply.ApplyDiscordRevision(ctx, questID, desiredRevision)
-		}
-		return nil
+	if err := r.syncDryRun(ctx, questID, desiredRevision); err != nil || r.DryRun {
+		return err
 	}
 	if r.Token == "" || r.ChannelID == "" {
 		return ErrDiscordNotConfigured
 	}
-
 	body, err := json.Marshal(map[string]any{
 		"content": fmt.Sprintf("Quest `%s` delivery revision %d", questID, desiredRevision),
 	})
@@ -69,6 +64,42 @@ func (r RESTSync) SyncQuest(ctx context.Context, questID string, desiredRevision
 		}
 	}
 
+	res, err := r.sendQuestMessage(ctx, body, messageID)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = res.Body.Close() }()
+	raw, _ := io.ReadAll(io.LimitReader(res.Body, 1<<20))
+	if res.StatusCode >= 300 {
+		return discordAPIStatusError(res.StatusCode, raw)
+	}
+
+	if messageID == "" {
+		if err := r.recordCreatedMessage(ctx, questID, desiredRevision, raw); err != nil {
+			return err
+		}
+	} else {
+		slog.InfoContext(ctx, "discord message updated", "quest", questID, "revision", desiredRevision, "message", messageID)
+	}
+
+	if r.Apply != nil {
+		return r.Apply.ApplyDiscordRevision(ctx, questID, desiredRevision)
+	}
+	return nil
+}
+
+func (r RESTSync) syncDryRun(ctx context.Context, questID string, revision int) error {
+	if !r.DryRun {
+		return nil
+	}
+	slog.InfoContext(ctx, "discord delivery dry-run", "quest", questID, "revision", revision)
+	if r.Apply != nil {
+		return r.Apply.ApplyDiscordRevision(ctx, questID, revision)
+	}
+	return nil
+}
+
+func (r RESTSync) sendQuestMessage(ctx context.Context, body []byte, messageID string) (*http.Response, error) {
 	client := r.HTTP
 	if client == nil {
 		client = http.DefaultClient
@@ -77,59 +108,35 @@ func (r RESTSync) SyncQuest(ctx context.Context, questID string, desiredRevision
 	if base == "" {
 		base = "https://discord.com/api/v10"
 	}
-
-	var res *http.Response
+	method, path, action := http.MethodPost, fmt.Sprintf("%s/channels/%s/messages", base, r.ChannelID), "create"
 	if messageID != "" {
-		req, err := http.NewRequestWithContext(ctx, http.MethodPatch,
-			fmt.Sprintf("%s/channels/%s/messages/%s", base, r.ChannelID, messageID),
-			bytes.NewReader(body))
-		if err != nil {
-			return err
-		}
-		r.setHeaders(req)
-		res, err = client.Do(req)
-		if err != nil {
-			return fmt.Errorf("discord patch message: %w", err)
-		}
-	} else {
-		req, err := http.NewRequestWithContext(ctx, http.MethodPost,
-			fmt.Sprintf("%s/channels/%s/messages", base, r.ChannelID),
-			bytes.NewReader(body))
-		if err != nil {
-			return err
-		}
-		r.setHeaders(req)
-		res, err = client.Do(req)
-		if err != nil {
-			return fmt.Errorf("discord create message: %w", err)
-		}
+		method, path, action = http.MethodPatch, fmt.Sprintf("%s/channels/%s/messages/%s", base, r.ChannelID, messageID), "patch"
 	}
-	defer res.Body.Close()
-	raw, _ := io.ReadAll(io.LimitReader(res.Body, 1<<20))
-	if res.StatusCode >= 300 {
-		return discordAPIStatusError(res.StatusCode, raw)
+	request, err := http.NewRequestWithContext(ctx, method, path, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
 	}
+	r.setHeaders(request)
+	response, err := client.Do(request)
+	if err != nil {
+		return nil, fmt.Errorf("discord %s message: %w", action, err)
+	}
+	return response, nil
+}
 
-	if messageID == "" {
-		var resp struct {
-			ID string `json:"id"`
-		}
-		if err := json.Unmarshal(raw, &resp); err != nil || resp.ID == "" {
-			return fmt.Errorf("discord api missing message id")
-		}
-		if r.Messages != nil {
-			if err := r.Messages.SetDiscordMessageID(ctx, questID, resp.ID); err != nil {
-				return fmt.Errorf("discord message id persist: %w", err)
-			}
-		}
-		slog.InfoContext(ctx, "discord message created", "quest", questID, "revision", desiredRevision, "message", resp.ID)
-	} else {
-		slog.InfoContext(ctx, "discord message updated", "quest", questID, "revision", desiredRevision, "message", messageID)
+func (r RESTSync) recordCreatedMessage(ctx context.Context, questID string, revision int, raw []byte) error {
+	var response struct {
+		ID string `json:"id"`
 	}
-
-	if r.Apply != nil {
-		return r.Apply.ApplyDiscordRevision(ctx, questID, desiredRevision)
+	if err := json.Unmarshal(raw, &response); err != nil || response.ID == "" {
+		return fmt.Errorf("discord api missing message id")
 	}
+	if r.Messages != nil {
+		if err := r.Messages.SetDiscordMessageID(ctx, questID, response.ID); err != nil {
+			return fmt.Errorf("discord message id persist: %w", err)
+		}
+	}
+	slog.InfoContext(ctx, "discord message created", "quest", questID, "revision", revision, "message", response.ID)
 	return nil
 }
 

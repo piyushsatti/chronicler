@@ -40,9 +40,7 @@ func (h HTTP) revisions(w http.ResponseWriter, r *http.Request) {
 	}
 	out := make([]revisionResponse, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, revisionResponse{
-			ID: row.ID, DocumentID: row.DocumentID, Reason: row.Reason, Title: row.Title, CreatedAt: row.CreatedAt,
-		})
+		out = append(out, revisionResponse(row))
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{"items": out, "total": len(out)})

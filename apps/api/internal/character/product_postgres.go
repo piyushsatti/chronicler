@@ -106,20 +106,43 @@ func characterVerificationStatus(value any) (CharacterReviewStatus, error) {
 }
 
 func decodeStoredCharacterDDBMirror(characterID string, payload []byte, syncedAt pgtype.Timestamptz) (*CharacterDDBMirrorView, []DDBProficiencyView, error) {
-	proficiencies := []DDBProficiencyView{}
 	if payload == nil {
 		if syncedAt.Valid {
 			return nil, nil, errors.New("character DDB mirror timestamp without payload")
 		}
-		return nil, proficiencies, nil
+		return nil, []DDBProficiencyView{}, nil
 	}
 	if !syncedAt.Valid {
 		return nil, nil, errors.New("character DDB mirror payload without timestamp")
 	}
+	fields, err := decodeStoredDDBFields(payload)
+	if err != nil {
+		return nil, nil, err
+	}
+	level, xp, armorClass, maxHP, err := decodeStoredDDBNumbers(fields)
+	if err != nil {
+		return nil, nil, err
+	}
+	species, classes, background, err := decodeStoredDDBText(fields)
+	if err != nil {
+		return nil, nil, err
+	}
+	proficiencies, err := decodeStoredDDBProficiencies(fields["proficiencies"])
+	if err != nil {
+		return nil, nil, err
+	}
+	return &CharacterDDBMirrorView{
+		ArmorClass: armorClass, Background: background, CharacterId: characterID,
+		Classes: classes, Level: level, MaxHp: maxHP, Species: species,
+		SyncedAt: characterTimePointer(syncedAt), Xp: xp,
+	}, proficiencies, nil
+}
+
+func decodeStoredDDBFields(payload []byte) (map[string]json.RawMessage, error) {
 	decoder := json.NewDecoder(bytes.NewReader(payload))
 	var fields map[string]json.RawMessage
 	if err := decoder.Decode(&fields); err != nil || fields == nil || ensureJSONEOF(decoder) != nil {
-		return nil, nil, errors.New("invalid stored character DDB mirror payload")
+		return nil, errors.New("invalid stored character DDB mirror payload")
 	}
 	allowed := map[string]struct{}{
 		"level": {}, "xp": {}, "armorClass": {}, "maxHp": {}, "species": {},
@@ -127,69 +150,77 @@ func decodeStoredCharacterDDBMirror(characterID string, payload []byte, syncedAt
 	}
 	for key := range fields {
 		if _, ok := allowed[key]; !ok {
-			return nil, nil, fmt.Errorf("unknown stored character DDB mirror field %q", key)
+			return nil, fmt.Errorf("unknown stored character DDB mirror field %q", key)
 		}
 	}
 	for key := range allowed {
 		if _, ok := fields[key]; !ok {
-			return nil, nil, fmt.Errorf("missing stored character DDB mirror field %q", key)
+			return nil, fmt.Errorf("missing stored character DDB mirror field %q", key)
 		}
 	}
+	return fields, nil
+}
+
+func decodeStoredDDBNumbers(fields map[string]json.RawMessage) (*int32, *int32, *int32, *int32, error) {
 	level, err := storedDDBInt32(fields["level"], false)
 	if err != nil || level == nil || *level < 1 || *level > 20 {
-		return nil, nil, errors.New("invalid stored character DDB level")
+		return nil, nil, nil, nil, errors.New("invalid stored character DDB level")
 	}
 	xp, err := storedDDBInt32(fields["xp"], false)
 	if err != nil || xp == nil || *xp < 0 {
-		return nil, nil, errors.New("invalid stored character DDB XP")
+		return nil, nil, nil, nil, errors.New("invalid stored character DDB XP")
 	}
 	armorClass, err := storedDDBInt32(fields["armorClass"], true)
 	if err != nil || (armorClass != nil && *armorClass < 0) {
-		return nil, nil, errors.New("invalid stored character DDB armor class")
+		return nil, nil, nil, nil, errors.New("invalid stored character DDB armor class")
 	}
 	maxHP, err := storedDDBInt32(fields["maxHp"], true)
 	if err != nil || (maxHP != nil && *maxHP < 0) {
-		return nil, nil, errors.New("invalid stored character DDB maximum HP")
+		return nil, nil, nil, nil, errors.New("invalid stored character DDB maximum HP")
 	}
+	return level, xp, armorClass, maxHP, nil
+}
+
+func decodeStoredDDBText(fields map[string]json.RawMessage) (*string, *string, *string, error) {
 	species, err := storedDDBString(fields["species"], false)
 	if err != nil {
-		return nil, nil, errors.New("invalid stored character DDB species")
+		return nil, nil, nil, errors.New("invalid stored character DDB species")
 	}
 	classes, err := storedDDBString(fields["classes"], false)
 	if err != nil {
-		return nil, nil, errors.New("invalid stored character DDB classes")
+		return nil, nil, nil, errors.New("invalid stored character DDB classes")
 	}
 	background, err := storedDDBString(fields["background"], true)
 	if err != nil {
-		return nil, nil, errors.New("invalid stored character DDB background")
+		return nil, nil, nil, errors.New("invalid stored character DDB background")
 	}
+	return species, classes, background, nil
+}
+
+func decodeStoredDDBProficiencies(raw json.RawMessage) ([]DDBProficiencyView, error) {
 	var stored []struct {
 		Kind string `json:"kind"`
 		Name string `json:"name"`
 	}
-	proficiencyDecoder := json.NewDecoder(bytes.NewReader(fields["proficiencies"]))
+	proficiencyDecoder := json.NewDecoder(bytes.NewReader(raw))
 	proficiencyDecoder.DisallowUnknownFields()
 	if err := proficiencyDecoder.Decode(&stored); err != nil || stored == nil || ensureJSONEOF(proficiencyDecoder) != nil || len(stored) > ddbMaxProficiencies {
-		return nil, nil, errors.New("invalid stored character DDB proficiencies")
+		return nil, errors.New("invalid stored character DDB proficiencies")
 	}
 	seen := make(map[string]struct{}, len(stored))
-	proficiencies = make([]DDBProficiencyView, 0, len(stored))
+	proficiencies := make([]DDBProficiencyView, 0, len(stored))
 	for _, proficiency := range stored {
 		if (proficiency.Kind != "proficiency" && proficiency.Kind != "language") || strings.TrimSpace(proficiency.Name) == "" || strings.TrimSpace(proficiency.Name) != proficiency.Name {
-			return nil, nil, errors.New("invalid stored character DDB proficiency")
+			return nil, errors.New("invalid stored character DDB proficiency")
 		}
 		key := proficiency.Kind + "\x00" + proficiency.Name
 		if _, ok := seen[key]; ok {
-			return nil, nil, errors.New("duplicate stored character DDB proficiency")
+			return nil, errors.New("duplicate stored character DDB proficiency")
 		}
 		seen[key] = struct{}{}
 		proficiencies = append(proficiencies, DDBProficiencyView{Kind: proficiency.Kind, Name: proficiency.Name})
 	}
-	return &CharacterDDBMirrorView{
-		ArmorClass: armorClass, Background: background, CharacterId: characterID,
-		Classes: classes, Level: level, MaxHp: maxHP, Species: species,
-		SyncedAt: characterTimePointer(syncedAt), Xp: xp,
-	}, proficiencies, nil
+	return proficiencies, nil
 }
 
 func storedDDBInt32(raw json.RawMessage, nullable bool) (*int32, error) {

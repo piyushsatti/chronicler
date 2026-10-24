@@ -7,6 +7,7 @@ package dbtest
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -23,7 +24,7 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
 )
 
-var errNoDocker = fmt.Errorf("Docker is not running. Start Docker Desktop (or Colima), then re-run. Integration tests start Postgres themselves via testcontainers")
+var errNoDocker = errors.New("docker is not running. Start Docker Desktop (or Colima), then re-run. Integration tests start Postgres themselves via testcontainers")
 
 func dockerSocket() error {
 	if os.Getenv("DOCKER_HOST") != "" {

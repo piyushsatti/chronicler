@@ -34,10 +34,6 @@ func NewProductPostgres(db dbgen.DBTX) (*ProductPostgres, error) {
 
 func (p *ProductPostgres) queries() *dbgen.Queries { return dbgen.New(p.DB) }
 
-func (p *ProductPostgres) pending() error {
-	return apierr.New(apierr.Internal, "quest product surface pending")
-}
-
 func questUUID(value string) (pgtype.UUID, error) {
 	id, err := db.ParseUUID(value)
 	if err != nil || db.UUIDString(id) != value {

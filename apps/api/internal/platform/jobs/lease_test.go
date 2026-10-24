@@ -44,7 +44,9 @@ func TestLeaseReclaimFencesAllOldMutations(t *testing.T) {
 func TestTerminalReplayAndRetryRelease(t *testing.T) {
 	now := time.Now()
 	j := questionFixture(now)
-	j.Claim(now)
+	if ok, err := j.Claim(now); !ok || err != nil {
+		t.Fatal(ok, err)
+	}
 	payload := []byte(`{"answer":"ok","sources":[]}`)
 	if e := j.Finish(1, now, "succeed", Succeeded, payload, 0, ""); e != nil {
 		t.Fatal(e)
@@ -65,7 +67,9 @@ func TestTerminalReplayAndRetryRelease(t *testing.T) {
 		t.Fatal(e)
 	}
 	j = questionFixture(now)
-	j.Claim(now)
+	if ok, err := j.Claim(now); !ok || err != nil {
+		t.Fatal(ok, err)
+	}
 	if e := j.Finish(1, now, "retry", RetryWait, nil, time.Second, "transient_error"); e != nil {
 		t.Fatal(e)
 	}
@@ -81,7 +85,9 @@ func TestDeadlineCapsRenewAndTerminalizesQueuedOrRunning(t *testing.T) {
 	for _, claimed := range []bool{false, true} {
 		j := questionFixture(now)
 		if claimed {
-			j.Claim(now.Add(75 * time.Second))
+			if ok, err := j.Claim(now.Add(75 * time.Second)); !ok || err != nil {
+				t.Fatal(ok, err)
+			}
 			if j.LeaseExpiresAt != j.QuestionDeadlineAt {
 				t.Fatal(j)
 			}
@@ -103,7 +109,9 @@ func TestDeadlineCapsRenewAndTerminalizesQueuedOrRunning(t *testing.T) {
 func TestCancellationAndCompletionOrder(t *testing.T) {
 	now := time.Now()
 	j := questionFixture(now)
-	j.Claim(now)
+	if ok, err := j.Claim(now); !ok || err != nil {
+		t.Fatal(ok, err)
+	}
 	if e := j.Cancel(); e != nil {
 		t.Fatal(e)
 	}
@@ -111,8 +119,12 @@ func TestCancellationAndCompletionOrder(t *testing.T) {
 		t.Fatal(e)
 	}
 	j = questionFixture(now)
-	j.Claim(now)
-	j.Finish(1, now, "succeed", Succeeded, []byte(`{}`), 0, "")
+	if ok, err := j.Claim(now); !ok || err != nil {
+		t.Fatal(ok, err)
+	}
+	if err := j.Finish(1, now, "succeed", Succeeded, []byte(`{}`), 0, ""); err != nil {
+		t.Fatal(err)
+	}
 	if e := j.Cancel(); !errors.Is(e, ErrLease) || j.State != Succeeded {
 		t.Fatal(j, e)
 	}

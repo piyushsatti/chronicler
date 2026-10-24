@@ -157,7 +157,7 @@ func (p *ProductPostgres) StoreTransitionRegion(ctx context.Context, write Trans
 		return RegionView{}, apierr.New(apierr.NotFound, "region not found")
 	}
 	spec := write.ValidatedInput
-	if !((write.Locked.Before.Kind == "uncharted" && spec.To == "archon") || (write.Locked.Before.Kind == "archon" && spec.To == "server")) {
+	if (write.Locked.Before.Kind != "uncharted" || spec.To != "archon") && (write.Locked.Before.Kind != "archon" || spec.To != "server") {
 		return RegionView{}, apierr.New(apierr.Conflict, "invalid region transition")
 	}
 	regionID, err := spatialPublicID(spec.Id)
@@ -675,7 +675,7 @@ func (p *ProductPostgres) StoreLinkPointcrawlEntry(ctx context.Context, write Li
 }
 
 func (p *ProductPostgres) LockUnlinkPointcrawlEntry(ctx context.Context, spec UnlinkPointcrawlEntrySpec) (UnlinkPointcrawlEntryState, error) {
-	state, err := p.LockLinkPointcrawlEntry(ctx, LinkPointcrawlEntrySpec{MapId: spec.MapId, NodeId: spec.NodeId, DocumentId: spec.DocumentId, Relation: spec.Relation})
+	state, err := p.LockLinkPointcrawlEntry(ctx, LinkPointcrawlEntrySpec(spec))
 	if err != nil {
 		return UnlinkPointcrawlEntryState{}, err
 	}

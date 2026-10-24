@@ -143,23 +143,40 @@ func (p *ProductPostgres) lockPointcrawlNode(ctx context.Context, nodeID, mapID 
 }
 
 func validateMapCreate(input MapCreateFields) error {
-	if strings.TrimSpace(input.Name) == "" || utf8.RuneCountInString(input.Name) > 200 || strings.TrimSpace(input.AtlasCode) == "" || utf8.RuneCountInString(input.AtlasCode) > 64 || input.MapKind != "pointcrawl" || strings.TrimSpace(input.Family) == "" {
+	if !validMapIdentity(input) {
 		return apierr.New(apierr.Invalid, "invalid map input")
 	}
+	if !validMapDimensions(input) {
+		return apierr.New(apierr.Invalid, "invalid map dimensions")
+	}
+	return validateMapAssetPath(input.AssetPath)
+}
+
+func validMapIdentity(input MapCreateFields) bool {
+	return strings.TrimSpace(input.Name) != "" && utf8.RuneCountInString(input.Name) <= 200 &&
+		strings.TrimSpace(input.AtlasCode) != "" && utf8.RuneCountInString(input.AtlasCode) <= 64 &&
+		input.MapKind == "pointcrawl" && strings.TrimSpace(input.Family) != ""
+}
+
+func validMapDimensions(input MapCreateFields) bool {
 	for _, dimension := range []*int32{input.Cols, input.Rows} {
 		if dimension != nil && (*dimension < 1 || *dimension > 1000) {
-			return apierr.New(apierr.Invalid, "invalid map dimensions")
+			return false
 		}
 	}
-	if input.AssetPath == nil {
+	return true
+}
+
+func validateMapAssetPath(path *string) error {
+	if path == nil {
 		return nil
 	}
-	value := *input.AssetPath
+	value := *path
 	u, err := url.Parse(value)
 	if err != nil || utf8.RuneCountInString(value) > 2048 || strings.Contains(value, "\\") || u.User != nil || u.Opaque != "" {
 		return apierr.New(apierr.Invalid, "invalid map asset path")
 	}
-	if !(strings.HasPrefix(value, "/") && !strings.HasPrefix(value, "//")) && !(u.Scheme == "https" && u.Host != "") {
+	if (!strings.HasPrefix(value, "/") || strings.HasPrefix(value, "//")) && (u.Scheme != "https" || u.Host == "") {
 		return apierr.New(apierr.Invalid, "invalid map asset path")
 	}
 	for _, segment := range strings.Split(u.Path, "/") {

@@ -142,54 +142,58 @@ func (s ProductCommands) CreateQuest(ctx context.Context, actor auth.Authority, 
 		return QuestView{}, err
 	}
 	return runQuestCommand(ctx, s, actor, "createQuest", request, spec, meta, actor.Claims().MemberID, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (QuestView, error) {
-		if commandDependencyMissing(repos.Brief) {
-			return QuestView{}, apierr.New(apierr.Internal, "quest brief writer required")
-		}
-		target, err := repos.Authority(ctx, dmID)
-		if err != nil {
-			return QuestView{}, err
-		}
-		if target.Claims().MemberID != dmID || !target.LiveDM() {
-			return QuestView{}, apierr.New(apierr.Forbidden, "quest DM must be active and approved")
-		}
-		questID := s.IDs()
-		if err := commandPublicID(&questID); err != nil {
-			return QuestView{}, err
-		}
-		locked, err := repos.Quest.LockCreateQuest(ctx, CreateQuestSpec{Input: input, AsOf: at})
-		if err != nil {
-			return QuestView{}, err
-		}
-		locked.SubjectID = questID
-		brief, err := repos.Brief.CreateBrief(ctx, fresh, document.BriefCreate{
-			QuestID:        questID,
-			Title:          title,
-			Body:           input.BriefBody,
-			AdditionalInfo: input.AdditionalInfo,
-			DMID:           dmID,
-			RegionIDs:      input.RegionIds,
-			At:             at,
-		})
-		if err != nil {
-			return QuestView{}, err
-		}
-		docID := brief.Document.Id
-		result, err := repos.Quest.StoreCreateQuest(ctx, CreateQuestWrite{
-			ActorID:        fresh.Claims().MemberID,
-			At:             at,
-			Input:          spec,
-			ValidatedInput: CreateQuestSpec{Input: input, AsOf: at},
-			Locked:         locked,
-			RevisionID:     &docID,
-		})
-		if err != nil {
-			return QuestView{}, err
-		}
-		if err := recordQuestEvents(ctx, repos, brief.Events); err != nil {
-			return QuestView{}, err
-		}
-		return result, nil
+		return createQuest(ctx, s, repos, fresh, at, spec, input, title, dmID)
 	})
+}
+
+func createQuest(ctx context.Context, s ProductCommands, repos ProductCommandRepos, fresh auth.Authority, at time.Time, spec CreateQuestSpec, input CreateQuestFields, title, dmID string) (QuestView, error) {
+	if commandDependencyMissing(repos.Brief) {
+		return QuestView{}, apierr.New(apierr.Internal, "quest brief writer required")
+	}
+	target, err := repos.Authority(ctx, dmID)
+	if err != nil {
+		return QuestView{}, err
+	}
+	if target.Claims().MemberID != dmID || !target.LiveDM() {
+		return QuestView{}, apierr.New(apierr.Forbidden, "quest DM must be active and approved")
+	}
+	questID := s.IDs()
+	if err := commandPublicID(&questID); err != nil {
+		return QuestView{}, err
+	}
+	locked, err := repos.Quest.LockCreateQuest(ctx, CreateQuestSpec{Input: input, AsOf: at})
+	if err != nil {
+		return QuestView{}, err
+	}
+	locked.SubjectID = questID
+	brief, err := repos.Brief.CreateBrief(ctx, fresh, document.BriefCreate{
+		QuestID:        questID,
+		Title:          title,
+		Body:           input.BriefBody,
+		AdditionalInfo: input.AdditionalInfo,
+		DMID:           dmID,
+		RegionIDs:      input.RegionIds,
+		At:             at,
+	})
+	if err != nil {
+		return QuestView{}, err
+	}
+	docID := brief.Document.Id
+	result, err := repos.Quest.StoreCreateQuest(ctx, CreateQuestWrite{
+		ActorID:        fresh.Claims().MemberID,
+		At:             at,
+		Input:          spec,
+		ValidatedInput: CreateQuestSpec{Input: input, AsOf: at},
+		Locked:         locked,
+		RevisionID:     &docID,
+	})
+	if err != nil {
+		return QuestView{}, err
+	}
+	if err := recordQuestEvents(ctx, repos, brief.Events); err != nil {
+		return QuestView{}, err
+	}
+	return result, nil
 }
 
 func (s ProductCommands) UpdateQuest(ctx context.Context, actor auth.Authority, spec UpdateQuestSpec, meta product.CommandMeta) (QuestView, error) {
@@ -208,47 +212,58 @@ func (s ProductCommands) UpdateQuest(ctx context.Context, actor auth.Authority, 
 		return QuestView{}, err
 	}
 	return runQuestCommand(ctx, s, actor, "updateQuest", request, spec, meta, questID, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (QuestView, error) {
-		locked, err := repos.Quest.LockUpdateQuest(ctx, UpdateQuestSpec{Id: questID, Input: spec.Input, AsOf: at})
-		if err != nil {
-			return QuestView{}, err
-		}
-		if !locked.Exists {
-			return QuestView{}, apierr.New(apierr.NotFound, "quest not found")
-		}
-		if err := admitLockedQuest(ctx, repos, fresh, request.Operation(), questID, preview.DmId, locked.OwnerID); err != nil {
-			return QuestView{}, err
-		}
-		var briefEvents []notification.Event
-		if repos.Brief != nil && locked.Before != nil && locked.Before.DocumentId != nil &&
-			(spec.Input.Title.Set || spec.Input.BriefBody.Set || spec.Input.AdditionalInfo.Set) {
-			edit := document.BriefEdit{DocumentID: *locked.Before.DocumentId, At: at}
-			if spec.Input.Title.Set {
-				edit.Title = spec.Input.Title
-			}
-			if spec.Input.BriefBody.Set {
-				edit.Body = spec.Input.BriefBody
-			}
-			if spec.Input.AdditionalInfo.Set {
-				edit.AdditionalInfo = spec.Input.AdditionalInfo
-			}
-			result, err := repos.Brief.EditBrief(ctx, fresh, edit)
-			if err != nil {
-				return QuestView{}, err
-			}
-			briefEvents = result.Events
-		}
-		result, err := repos.Quest.StoreUpdateQuest(ctx, UpdateQuestWrite{
-			ActorID: fresh.Claims().MemberID, At: at, Input: spec,
-			ValidatedInput: UpdateQuestSpec{Id: questID, Input: spec.Input, AsOf: at}, Locked: locked,
-		})
-		if err != nil {
-			return QuestView{}, err
-		}
-		if err := recordQuestEvents(ctx, repos, briefEvents); err != nil {
-			return QuestView{}, err
-		}
-		return result, nil
+		return updateQuest(ctx, repos, fresh, at, spec, questID, request, preview)
 	})
+}
+
+func updateQuest(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time, spec UpdateQuestSpec, questID string, request auth.Request, preview *QuestView) (QuestView, error) {
+	locked, err := repos.Quest.LockUpdateQuest(ctx, UpdateQuestSpec{Id: questID, Input: spec.Input, AsOf: at})
+	if err != nil {
+		return QuestView{}, err
+	}
+	if !locked.Exists {
+		return QuestView{}, apierr.New(apierr.NotFound, "quest not found")
+	}
+	if err := admitLockedQuest(ctx, repos, fresh, request.Operation(), questID, preview.DmId, locked.OwnerID); err != nil {
+		return QuestView{}, err
+	}
+	briefEvents, err := editQuestBrief(ctx, repos, fresh, at, spec.Input, locked)
+	if err != nil {
+		return QuestView{}, err
+	}
+	result, err := repos.Quest.StoreUpdateQuest(ctx, UpdateQuestWrite{
+		ActorID: fresh.Claims().MemberID, At: at, Input: spec,
+		ValidatedInput: UpdateQuestSpec{Id: questID, Input: spec.Input, AsOf: at}, Locked: locked,
+	})
+	if err != nil {
+		return QuestView{}, err
+	}
+	if err := recordQuestEvents(ctx, repos, briefEvents); err != nil {
+		return QuestView{}, err
+	}
+	return result, nil
+}
+
+func editQuestBrief(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time, input QuestEditFields, locked UpdateQuestState) ([]notification.Event, error) {
+	if repos.Brief == nil || locked.Before == nil || locked.Before.DocumentId == nil ||
+		(!input.Title.Set && !input.BriefBody.Set && !input.AdditionalInfo.Set) {
+		return nil, nil
+	}
+	edit := document.BriefEdit{DocumentID: *locked.Before.DocumentId, At: at}
+	if input.Title.Set {
+		edit.Title = input.Title
+	}
+	if input.BriefBody.Set {
+		edit.Body = input.BriefBody
+	}
+	if input.AdditionalInfo.Set {
+		edit.AdditionalInfo = input.AdditionalInfo
+	}
+	result, err := repos.Brief.EditBrief(ctx, fresh, edit)
+	if err != nil {
+		return nil, err
+	}
+	return result.Events, nil
 }
 
 func (s ProductCommands) TransitionQuestStatus(ctx context.Context, actor auth.Authority, spec TransitionQuestStatusSpec, meta product.CommandMeta) (QuestView, error) {
@@ -298,42 +313,46 @@ func (s ProductCommands) CloseQuest(ctx context.Context, actor auth.Authority, s
 		return QuestView{}, err
 	}
 	return runQuestCommand(ctx, s, actor, "closeQuest", request, spec, meta, questID, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (QuestView, error) {
-		if commandDependencyMissing(repos.Rewards) {
-			return QuestView{}, apierr.New(apierr.Internal, "quest reward writer required")
-		}
-		characters, err := repos.Rewards.LockQuestRoster(ctx, questID)
-		if err != nil {
-			return QuestView{}, err
-		}
-		locked, err := repos.Quest.LockCloseQuest(ctx, CloseQuestSpec{Id: questID, Input: spec.Input, AsOf: at})
-		if err != nil {
-			return QuestView{}, err
-		}
-		if !locked.Exists {
-			return QuestView{}, apierr.New(apierr.NotFound, "quest not found")
-		}
-		if err := admitLockedQuest(ctx, repos, fresh, request.Operation(), questID, preview.DmId, locked.OwnerID); err != nil {
-			return QuestView{}, err
-		}
-		if err := validateQuestClosure(locked, characters, spec.Input); err != nil {
-			return QuestView{}, err
-		}
-		result, err := repos.Quest.StoreCloseQuest(ctx, CloseQuestWrite{
-			ActorID: fresh.Claims().MemberID, At: at, Input: spec,
-			ValidatedInput: CloseQuestSpec{Id: questID, Input: spec.Input, AsOf: at}, Locked: locked,
-		})
-		if err != nil {
-			return QuestView{}, err
-		}
-		awards := make([]character.QuestPCXPAward, 0, len(spec.Input.Rewards))
-		for _, reward := range spec.Input.Rewards {
-			awards = append(awards, character.QuestPCXPAward{CharacterID: reward.CharacterId, Amount: reward.Pcxp, Note: reward.Note})
-		}
-		if err := repos.Rewards.AwardQuestPCXP(ctx, questID, fresh.Claims().MemberID, awards, at); err != nil {
-			return QuestView{}, err
-		}
-		return result, nil
+		return closeQuest(ctx, repos, fresh, at, spec, questID, request, preview)
 	})
+}
+
+func closeQuest(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time, spec CloseQuestSpec, questID string, request auth.Request, preview *QuestView) (QuestView, error) {
+	if commandDependencyMissing(repos.Rewards) {
+		return QuestView{}, apierr.New(apierr.Internal, "quest reward writer required")
+	}
+	characters, err := repos.Rewards.LockQuestRoster(ctx, questID)
+	if err != nil {
+		return QuestView{}, err
+	}
+	locked, err := repos.Quest.LockCloseQuest(ctx, CloseQuestSpec{Id: questID, Input: spec.Input, AsOf: at})
+	if err != nil {
+		return QuestView{}, err
+	}
+	if !locked.Exists {
+		return QuestView{}, apierr.New(apierr.NotFound, "quest not found")
+	}
+	if err := admitLockedQuest(ctx, repos, fresh, request.Operation(), questID, preview.DmId, locked.OwnerID); err != nil {
+		return QuestView{}, err
+	}
+	if err := validateQuestClosure(locked, characters, spec.Input); err != nil {
+		return QuestView{}, err
+	}
+	result, err := repos.Quest.StoreCloseQuest(ctx, CloseQuestWrite{
+		ActorID: fresh.Claims().MemberID, At: at, Input: spec,
+		ValidatedInput: CloseQuestSpec{Id: questID, Input: spec.Input, AsOf: at}, Locked: locked,
+	})
+	if err != nil {
+		return QuestView{}, err
+	}
+	awards := make([]character.QuestPCXPAward, 0, len(spec.Input.Rewards))
+	for _, reward := range spec.Input.Rewards {
+		awards = append(awards, character.QuestPCXPAward{CharacterID: reward.CharacterId, Amount: reward.Pcxp, Note: reward.Note})
+	}
+	if err := repos.Rewards.AwardQuestPCXP(ctx, questID, fresh.Claims().MemberID, awards, at); err != nil {
+		return QuestView{}, err
+	}
+	return result, nil
 }
 
 func (s ProductCommands) DeleteQuest(ctx context.Context, actor auth.Authority, spec DeleteQuestSpec, meta product.CommandMeta) (product.CommandReceipt, error) {
@@ -454,79 +473,99 @@ func (s ProductCommands) WithdrawFromQuest(ctx context.Context, actor auth.Autho
 	}
 	for range 3 {
 		result, err := runQuestCommandWithRequest(ctx, s, actor, "withdrawFromQuest", requestFor, spec, meta, questID, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (QuestParticipantView, error) {
-			if commandDependencyMissing(repos.Withdrawals) {
-				return QuestParticipantView{}, apierr.New(apierr.Internal, "character withdrawal writer required")
-			}
-			plan, err := repos.Withdrawals.PlanOwnedCharacterWithdrawal(ctx, characterID, []string{questID})
-			if err != nil {
-				return QuestParticipantView{}, err
-			}
-			admissions, err := repos.Characters.LockAdmissions(ctx, plan.CharacterIDs)
-			if err != nil {
-				return QuestParticipantView{}, err
-			}
-			if len(admissions) != len(plan.CharacterIDs) {
-				return QuestParticipantView{}, character.ErrWithdrawalPlanChanged
-			}
-			currentPlan, err := repos.Withdrawals.PlanOwnedCharacterWithdrawal(ctx, characterID, []string{questID})
-			if err != nil {
-				return QuestParticipantView{}, err
-			}
-			if !reflect.DeepEqual(plan, currentPlan) {
-				return QuestParticipantView{}, character.ErrWithdrawalPlanChanged
-			}
-			var own *character.Admission
-			for i := range admissions {
-				if admissions[i].ID == characterID {
-					own = &admissions[i]
-				}
-			}
-			if own == nil {
-				return QuestParticipantView{}, apierr.New(apierr.NotFound, "character not found")
-			}
-			if own.OwnerID != fresh.Claims().MemberID {
-				return QuestParticipantView{}, apierr.New(apierr.Forbidden, "character owner required")
-			}
-			var effects character.WithdrawalEffects
-			if len(plan.QuestIDs) != 0 {
-				effects, err = repos.Withdrawals.WithdrawOwnedCharacter(ctx, fresh.Claims().MemberID, plan, "withdrawn", at)
-				if err != nil {
-					return QuestParticipantView{}, err
-				}
-			}
-			locked, err := repos.Quest.LockWithdrawFromQuest(ctx, WithdrawFromQuestSpec{QuestId: questID, CharacterId: characterID, AsOf: at})
-			if err != nil {
-				return QuestParticipantView{}, err
-			}
-			if err := admitLockedQuestCharacter(ctx, repos, fresh, "Mutation.withdrawFromQuest", characterID, own.OwnerID); err != nil {
-				return QuestParticipantView{}, err
-			}
-			if !locked.Exists || locked.Before == nil {
-				return QuestParticipantView{}, apierr.New(apierr.NotFound, "quest not found")
-			}
-			if locked.Before.Status != "open" && locked.Before.Status != "full" {
-				return QuestParticipantView{}, apierr.New(apierr.Conflict, "quest is not accepting withdrawals")
-			}
-			result := questParticipant(locked.Roster, characterID)
-			if result == nil {
-				return QuestParticipantView{}, apierr.New(apierr.NotFound, "participant not found")
-			}
-			if result.Status == "signed_up" || result.Status == "waitlisted" {
-				return QuestParticipantView{}, character.ErrWithdrawalPlanChanged
-			}
-			if result.Status != "withdrawn" {
-				return QuestParticipantView{}, apierr.New(apierr.Conflict, "participation is already final")
-			}
-			if err := recordQuestEvents(ctx, repos, effects.Events); err != nil {
-				return QuestParticipantView{}, err
-			}
-			return *result, nil
+			return withdrawFromQuest(ctx, repos, fresh, at, questID, characterID)
 		})
 		if !errors.Is(err, character.ErrWithdrawalPlanChanged) {
 			return result, err
 		}
 	}
 	return QuestParticipantView{}, apierr.New(apierr.Conflict, "quest roster kept changing during withdrawal")
+}
+
+func withdrawFromQuest(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time, questID, characterID string) (QuestParticipantView, error) {
+	plan, _, own, err := prepareQuestCharacterWithdrawal(ctx, repos, fresh, questID, characterID)
+	if err != nil {
+		return QuestParticipantView{}, err
+	}
+	var effects character.WithdrawalEffects
+	if len(plan.QuestIDs) != 0 {
+		effects, err = repos.Withdrawals.WithdrawOwnedCharacter(ctx, fresh.Claims().MemberID, plan, "withdrawn", at)
+		if err != nil {
+			return QuestParticipantView{}, err
+		}
+	}
+	locked, err := repos.Quest.LockWithdrawFromQuest(ctx, WithdrawFromQuestSpec{QuestId: questID, CharacterId: characterID, AsOf: at})
+	if err != nil {
+		return QuestParticipantView{}, err
+	}
+	if err := admitLockedQuestCharacter(ctx, repos, fresh, "Mutation.withdrawFromQuest", characterID, own.OwnerID); err != nil {
+		return QuestParticipantView{}, err
+	}
+	participant, err := validateQuestWithdrawalState(locked, characterID)
+	if err != nil {
+		return QuestParticipantView{}, err
+	}
+	if err := recordQuestEvents(ctx, repos, effects.Events); err != nil {
+		return QuestParticipantView{}, err
+	}
+	return *participant, nil
+}
+
+func prepareQuestCharacterWithdrawal(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, questID, characterID string) (character.WithdrawalPlan, []character.Admission, *character.Admission, error) {
+	if commandDependencyMissing(repos.Withdrawals) {
+		return character.WithdrawalPlan{}, nil, nil, apierr.New(apierr.Internal, "character withdrawal writer required")
+	}
+	plan, err := repos.Withdrawals.PlanOwnedCharacterWithdrawal(ctx, characterID, []string{questID})
+	if err != nil {
+		return character.WithdrawalPlan{}, nil, nil, err
+	}
+	admissions, err := repos.Characters.LockAdmissions(ctx, plan.CharacterIDs)
+	if err != nil {
+		return character.WithdrawalPlan{}, nil, nil, err
+	}
+	if len(admissions) != len(plan.CharacterIDs) {
+		return character.WithdrawalPlan{}, nil, nil, character.ErrWithdrawalPlanChanged
+	}
+	currentPlan, err := repos.Withdrawals.PlanOwnedCharacterWithdrawal(ctx, characterID, []string{questID})
+	if err != nil {
+		return character.WithdrawalPlan{}, nil, nil, err
+	}
+	if !reflect.DeepEqual(plan, currentPlan) {
+		return character.WithdrawalPlan{}, nil, nil, character.ErrWithdrawalPlanChanged
+	}
+	var own *character.Admission
+	for i := range admissions {
+		if admissions[i].ID == characterID {
+			own = &admissions[i]
+		}
+	}
+	if own == nil {
+		return character.WithdrawalPlan{}, nil, nil, apierr.New(apierr.NotFound, "character not found")
+	}
+	if own.OwnerID != fresh.Claims().MemberID {
+		return character.WithdrawalPlan{}, nil, nil, apierr.New(apierr.Forbidden, "character owner required")
+	}
+	return plan, admissions, own, nil
+}
+
+func validateQuestWithdrawalState(locked WithdrawFromQuestState, characterID string) (*QuestParticipantView, error) {
+	if !locked.Exists || locked.Before == nil {
+		return nil, apierr.New(apierr.NotFound, "quest not found")
+	}
+	if locked.Before.Status != "open" && locked.Before.Status != "full" {
+		return nil, apierr.New(apierr.Conflict, "quest is not accepting withdrawals")
+	}
+	participant := questParticipant(locked.Roster, characterID)
+	if participant == nil {
+		return nil, apierr.New(apierr.NotFound, "participant not found")
+	}
+	if participant.Status == "signed_up" || participant.Status == "waitlisted" {
+		return nil, character.ErrWithdrawalPlanChanged
+	}
+	if participant.Status != "withdrawn" {
+		return nil, apierr.New(apierr.Conflict, "participation is already final")
+	}
+	return participant, nil
 }
 
 func (s ProductCommands) SelectQuestParticipants(ctx context.Context, actor auth.Authority, spec SelectQuestParticipantsSpec, meta product.CommandMeta) ([]QuestParticipantView, error) {
@@ -556,40 +595,51 @@ func (s ProductCommands) SelectQuestParticipants(ctx context.Context, actor auth
 		return nil, err
 	}
 	return runQuestCommand(ctx, s, actor, "selectQuestParticipants", request, spec, meta, questID, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) ([]QuestParticipantView, error) {
-		if commandDependencyMissing(repos.Characters) {
-			return nil, apierr.New(apierr.Internal, "character admission reader required")
-		}
-		admissions, err := repos.Characters.LockAdmissions(ctx, ids)
-		if err != nil {
-			return nil, err
-		}
-		locked, err := repos.Quest.LockSelectQuestParticipants(ctx, SelectQuestParticipantsSpec{QuestId: questID, CharacterIds: ids, AsOf: at})
-		if err != nil {
-			return nil, err
-		}
-		if !locked.Exists {
-			return nil, apierr.New(apierr.NotFound, "quest not found")
-		}
-		if err := admitLockedQuest(ctx, repos, fresh, request.Operation(), questID, preview.DmId, locked.OwnerID); err != nil {
-			return nil, err
-		}
-		locked.Candidates = admissions
-		result, err := repos.Quest.StoreSelectQuestParticipants(ctx, SelectQuestParticipantsWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: SelectQuestParticipantsSpec{QuestId: questID, CharacterIds: ids, AsOf: at}, Locked: locked})
-		if err != nil || len(result) == 0 {
-			return result, err
-		}
-		if _, err := repos.Quest.StoreSyncQuestDiscord(ctx, SyncQuestDiscordWrite{ActorID: fresh.Claims().MemberID, At: at, ValidatedInput: SyncQuestDiscordSpec{QuestId: questID, AsOf: at}, Locked: SyncQuestDiscordState{Exists: true}}); err != nil {
-			return nil, err
-		}
-		from := "waitlisted"
-		for _, participant := range result {
-			key := "quest-selection:" + questID + ":" + participant.CharacterId + ":" + meta.IdempotencyKey
-			if err := recordQuestParticipation(ctx, repos, fresh, notification.QuestWaitlistPromoted, key, questID, participant.CharacterId, &from, "signed_up", at); err != nil {
-				return nil, err
-			}
-		}
-		return result, nil
+		return selectQuestParticipants(ctx, repos, fresh, at, spec, questID, ids, request, preview, meta.IdempotencyKey)
 	})
+}
+
+func selectQuestParticipants(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time, spec SelectQuestParticipantsSpec, questID string, ids []string, request auth.Request, preview *QuestView, key string) ([]QuestParticipantView, error) {
+	if commandDependencyMissing(repos.Characters) {
+		return nil, apierr.New(apierr.Internal, "character admission reader required")
+	}
+	admissions, err := repos.Characters.LockAdmissions(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	locked, err := repos.Quest.LockSelectQuestParticipants(ctx, SelectQuestParticipantsSpec{QuestId: questID, CharacterIds: ids, AsOf: at})
+	if err != nil {
+		return nil, err
+	}
+	if !locked.Exists {
+		return nil, apierr.New(apierr.NotFound, "quest not found")
+	}
+	if err := admitLockedQuest(ctx, repos, fresh, request.Operation(), questID, preview.DmId, locked.OwnerID); err != nil {
+		return nil, err
+	}
+	locked.Candidates = admissions
+	result, err := repos.Quest.StoreSelectQuestParticipants(ctx, SelectQuestParticipantsWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: SelectQuestParticipantsSpec{QuestId: questID, CharacterIds: ids, AsOf: at}, Locked: locked})
+	if err != nil || len(result) == 0 {
+		return result, err
+	}
+	if _, err := repos.Quest.StoreSyncQuestDiscord(ctx, SyncQuestDiscordWrite{ActorID: fresh.Claims().MemberID, At: at, ValidatedInput: SyncQuestDiscordSpec{QuestId: questID, AsOf: at}, Locked: SyncQuestDiscordState{Exists: true}}); err != nil {
+		return nil, err
+	}
+	if err := recordQuestPromotions(ctx, repos, fresh, at, questID, result, key); err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+func recordQuestPromotions(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time, questID string, participants []QuestParticipantView, key string) error {
+	from := "waitlisted"
+	for _, participant := range participants {
+		idempotencyKey := "quest-selection:" + questID + ":" + participant.CharacterId + ":" + key
+		if err := recordQuestParticipation(ctx, repos, fresh, notification.QuestWaitlistPromoted, idempotencyKey, questID, participant.CharacterId, &from, "signed_up", at); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (s ProductCommands) AttestQuestParticipation(ctx context.Context, actor auth.Authority, spec AttestQuestParticipationSpec, meta product.CommandMeta) ([]QuestParticipantView, error) {
@@ -633,19 +683,9 @@ func (s ProductCommands) SetQuestHexes(ctx context.Context, actor auth.Authority
 	if err := commandPublicID(&questID); err != nil {
 		return nil, err
 	}
-	hexes := make([]QuestHexFields, 0, len(spec.Hexes))
-	candidates := make([]spatial.QuestPointcrawlCandidate, 0, len(spec.Hexes))
-	for _, link := range spec.Hexes {
-		nodeID := strings.TrimSpace(link.HexId)
-		if err := commandPublicID(&nodeID); err != nil {
-			return nil, err
-		}
-		role := strings.TrimSpace(link.Role)
-		if role != "expected" && role != "visited" {
-			return nil, apierr.New(apierr.Invalid, "invalid pointcrawl link role")
-		}
-		hexes = append(hexes, QuestHexFields{HexId: nodeID, Role: role})
-		candidates = append(candidates, spatial.QuestPointcrawlCandidate{ID: nodeID, Role: role})
+	hexes, candidates, err := normalizeQuestHexes(spec.Hexes)
+	if err != nil {
+		return nil, err
 	}
 	spec.QuestId, spec.Hexes = questID, hexes
 	preview, err := s.previewQuest(ctx, actor, questID)
@@ -653,48 +693,71 @@ func (s ProductCommands) SetQuestHexes(ctx context.Context, actor auth.Authority
 		return nil, err
 	}
 	requestFor := func(repos ProductCommandRepos, fresh auth.Authority) (auth.Request, error) {
-		if commandDependencyMissing(repos.Places) {
-			return auth.Request{}, apierr.New(apierr.Internal, "pointcrawl admission reader required")
-		}
-		if _, err := repos.Places.ResolveQuestPointcrawlNodes(ctx, fresh, candidates); err != nil {
-			return auth.Request{}, err
-		}
-		locked, err := repos.Quest.LockSetQuestHexes(ctx, spec)
-		if err != nil {
-			return auth.Request{}, err
-		}
-		if !locked.Exists {
-			return auth.Request{}, apierr.New(apierr.NotFound, "quest not found")
-		}
-		if err := admitLockedQuest(ctx, repos, fresh, "Mutation.setQuestPointcrawlLinks", questID, preview.DmId, locked.OwnerID); err != nil {
-			return auth.Request{}, err
-		}
-		admissions, err := repos.Places.ResolveQuestPointcrawlNodes(ctx, fresh, candidates)
-		if err != nil {
-			return auth.Request{}, err
-		}
-		facts := make([]auth.QuestHexFacts, 0, len(admissions))
-		for _, node := range admissions {
-			facts = append(facts, auth.QuestHexFacts{ID: node.ID, Role: node.Role, RegionID: node.RegionID, AdminOverride: node.AdminOverride})
-		}
-		return auth.ForQuest("Mutation.setQuestPointcrawlLinks", auth.QuestFacts{ID: questID, DMID: locked.OwnerID, Hexes: facts})
+		return questHexRequest(ctx, repos, fresh, spec, questID, preview, candidates)
 	}
 	return runQuestCommandWithRequest(ctx, s, actor, "setQuestPointcrawlLinks", requestFor, spec, meta, questID, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) ([]QuestHexView, error) {
-		locked, err := repos.Quest.LockSetQuestHexes(ctx, SetQuestHexesSpec{QuestId: questID, Hexes: hexes, AsOf: at})
-		if err != nil {
-			return nil, err
-		}
-		if !locked.Exists {
-			return nil, apierr.New(apierr.NotFound, "quest not found")
-		}
-		if err := admitLockedQuest(ctx, repos, fresh, "Mutation.setQuestPointcrawlLinks", questID, preview.DmId, locked.OwnerID); err != nil {
-			return nil, err
-		}
-		return repos.Quest.StoreSetQuestHexes(ctx, SetQuestHexesWrite{
-			ActorID: fresh.Claims().MemberID, At: at, Input: spec,
-			ValidatedInput: SetQuestHexesSpec{QuestId: questID, Hexes: hexes, AsOf: at}, Locked: locked,
-		})
+		return storeQuestHexes(ctx, repos, fresh, at, spec, questID, preview, hexes)
 	})
+}
+
+func normalizeQuestHexes(input []QuestHexFields) ([]QuestHexFields, []spatial.QuestPointcrawlCandidate, error) {
+	hexes := make([]QuestHexFields, 0, len(input))
+	candidates := make([]spatial.QuestPointcrawlCandidate, 0, len(input))
+	for _, link := range input {
+		nodeID := strings.TrimSpace(link.HexId)
+		if err := commandPublicID(&nodeID); err != nil {
+			return nil, nil, err
+		}
+		role := strings.TrimSpace(link.Role)
+		if role != "expected" && role != "visited" {
+			return nil, nil, apierr.New(apierr.Invalid, "invalid pointcrawl link role")
+		}
+		hexes = append(hexes, QuestHexFields{HexId: nodeID, Role: role})
+		candidates = append(candidates, spatial.QuestPointcrawlCandidate{ID: nodeID, Role: role})
+	}
+	return hexes, candidates, nil
+}
+
+func questHexRequest(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, spec SetQuestHexesSpec, questID string, preview *QuestView, candidates []spatial.QuestPointcrawlCandidate) (auth.Request, error) {
+	if commandDependencyMissing(repos.Places) {
+		return auth.Request{}, apierr.New(apierr.Internal, "pointcrawl admission reader required")
+	}
+	if _, err := repos.Places.ResolveQuestPointcrawlNodes(ctx, fresh, candidates); err != nil {
+		return auth.Request{}, err
+	}
+	locked, err := repos.Quest.LockSetQuestHexes(ctx, spec)
+	if err != nil {
+		return auth.Request{}, err
+	}
+	if !locked.Exists {
+		return auth.Request{}, apierr.New(apierr.NotFound, "quest not found")
+	}
+	if err := admitLockedQuest(ctx, repos, fresh, "Mutation.setQuestPointcrawlLinks", questID, preview.DmId, locked.OwnerID); err != nil {
+		return auth.Request{}, err
+	}
+	admissions, err := repos.Places.ResolveQuestPointcrawlNodes(ctx, fresh, candidates)
+	if err != nil {
+		return auth.Request{}, err
+	}
+	facts := make([]auth.QuestHexFacts, 0, len(admissions))
+	for _, node := range admissions {
+		facts = append(facts, auth.QuestHexFacts{ID: node.ID, Role: node.Role, RegionID: node.RegionID, AdminOverride: node.AdminOverride})
+	}
+	return auth.ForQuest("Mutation.setQuestPointcrawlLinks", auth.QuestFacts{ID: questID, DMID: locked.OwnerID, Hexes: facts})
+}
+
+func storeQuestHexes(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time, spec SetQuestHexesSpec, questID string, preview *QuestView, hexes []QuestHexFields) ([]QuestHexView, error) {
+	locked, err := repos.Quest.LockSetQuestHexes(ctx, SetQuestHexesSpec{QuestId: questID, Hexes: hexes, AsOf: at})
+	if err != nil {
+		return nil, err
+	}
+	if !locked.Exists {
+		return nil, apierr.New(apierr.NotFound, "quest not found")
+	}
+	if err := admitLockedQuest(ctx, repos, fresh, "Mutation.setQuestPointcrawlLinks", questID, preview.DmId, locked.OwnerID); err != nil {
+		return nil, err
+	}
+	return repos.Quest.StoreSetQuestHexes(ctx, SetQuestHexesWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: SetQuestHexesSpec{QuestId: questID, Hexes: hexes, AsOf: at}, Locked: locked})
 }
 
 func (s ProductCommands) SetQuestPointcrawlLinks(ctx context.Context, actor auth.Authority, spec SetQuestHexesSpec, meta product.CommandMeta) ([]QuestHexView, error) {
@@ -730,14 +793,27 @@ func (s ProductCommands) SyncQuestDiscord(ctx context.Context, actor auth.Author
 }
 
 func (s ProductCommands) UpsertQuestSummary(ctx context.Context, actor auth.Authority, spec UpsertQuestSummarySpec, meta product.CommandMeta) (document.DocumentView, error) {
+	spec, questIDs, facts, subject, err := prepareQuestSummary(spec)
+	if err != nil {
+		return document.DocumentView{}, err
+	}
+	requestFor := func(repos ProductCommandRepos, fresh auth.Authority) (auth.Request, error) {
+		return questSummaryRequest(ctx, repos, fresh, spec, facts)
+	}
+	return runQuestCommandWithRequest(ctx, s, actor, "upsertQuestSummary", requestFor, spec, meta, subject, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (document.DocumentView, error) {
+		return storeQuestSummary(ctx, repos, fresh, at, spec, questIDs)
+	})
+}
+
+func prepareQuestSummary(spec UpsertQuestSummarySpec) (UpsertQuestSummarySpec, []string, auth.SummaryFacts, string, error) {
 	if len(spec.Input.QuestIds) == 0 {
-		return document.DocumentView{}, apierr.New(apierr.Invalid, "quest ids required")
+		return spec, nil, auth.SummaryFacts{}, "", apierr.New(apierr.Invalid, "quest ids required")
 	}
 	questIDs := make([]string, 0, len(spec.Input.QuestIds))
 	for _, id := range spec.Input.QuestIds {
 		trimmed := strings.TrimSpace(id)
 		if err := commandPublicID(&trimmed); err != nil {
-			return document.DocumentView{}, err
+			return spec, nil, auth.SummaryFacts{}, "", err
 		}
 		questIDs = append(questIDs, trimmed)
 	}
@@ -745,14 +821,14 @@ func (s ProductCommands) UpsertQuestSummary(ctx context.Context, actor auth.Auth
 	if spec.Input.DocumentId != nil {
 		docID := strings.TrimSpace(*spec.Input.DocumentId)
 		if err := commandPublicID(&docID); err != nil {
-			return document.DocumentView{}, err
+			return spec, nil, auth.SummaryFacts{}, "", err
 		}
 		spec.Input.DocumentId = &docID
 		if spec.Input.ExpectedRevision == nil || *spec.Input.ExpectedRevision <= 0 {
-			return document.DocumentView{}, apierr.New(apierr.Invalid, "expected revision required for summary update")
+			return spec, nil, auth.SummaryFacts{}, "", apierr.New(apierr.Invalid, "expected revision required for summary update")
 		}
 	} else if spec.Input.ExpectedRevision != nil {
-		return document.DocumentView{}, apierr.New(apierr.Invalid, "new summary must omit expected revision")
+		return spec, nil, auth.SummaryFacts{}, "", apierr.New(apierr.Invalid, "new summary must omit expected revision")
 	}
 	facts := auth.SummaryFacts{QuestIDs: questIDs}
 	if spec.Input.DocumentId != nil {
@@ -761,64 +837,61 @@ func (s ProductCommands) UpsertQuestSummary(ctx context.Context, actor auth.Auth
 	if spec.Input.CharacterId != nil {
 		characterID := strings.TrimSpace(*spec.Input.CharacterId)
 		if err := commandPublicID(&characterID); err != nil {
-			return document.DocumentView{}, err
+			return spec, nil, auth.SummaryFacts{}, "", err
 		}
 		spec.Input.CharacterId = &characterID
 		facts.CharacterID = &characterID
 	}
 	subject := questIDs[0]
-	requestFor := func(repos ProductCommandRepos, fresh auth.Authority) (auth.Request, error) {
-		if spec.Input.DocumentId != nil {
-			if commandDependencyMissing(repos.SummaryDocuments) {
-				return auth.Request{}, apierr.New(apierr.Internal, "summary document reader required")
-			}
-			existing, err := repos.SummaryDocuments.ReadDocumentById(ctx, fresh, document.DocumentByIdSpec{Id: *spec.Input.DocumentId})
-			if err != nil {
-				return auth.Request{}, err
-			}
-			if existing == nil {
-				return auth.Request{}, apierr.New(apierr.NotFound, "summary document not found")
-			}
-			if existing.Kind != "summary" {
-				return auth.Request{}, apierr.New(apierr.Invalid, "summary document required")
-			}
-			facts.AuthorID = &existing.AuthorId
+	return spec, questIDs, facts, subject, nil
+}
+
+func questSummaryRequest(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, spec UpsertQuestSummarySpec, facts auth.SummaryFacts) (auth.Request, error) {
+	if spec.Input.DocumentId != nil {
+		if commandDependencyMissing(repos.SummaryDocuments) {
+			return auth.Request{}, apierr.New(apierr.Internal, "summary document reader required")
 		}
-		return auth.ForSummary(facts)
+		existing, err := repos.SummaryDocuments.ReadDocumentById(ctx, fresh, document.DocumentByIdSpec{Id: *spec.Input.DocumentId})
+		if err != nil {
+			return auth.Request{}, err
+		}
+		if existing == nil {
+			return auth.Request{}, apierr.New(apierr.NotFound, "summary document not found")
+		}
+		if existing.Kind != "summary" {
+			return auth.Request{}, apierr.New(apierr.Invalid, "summary document required")
+		}
+		facts.AuthorID = &existing.AuthorId
 	}
-	return runQuestCommandWithRequest(ctx, s, actor, "upsertQuestSummary", requestFor, spec, meta, subject, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (document.DocumentView, error) {
-		if commandDependencyMissing(repos.Summaries) {
-			return document.DocumentView{}, apierr.New(apierr.Internal, "summary writer required")
-		}
-		locked, err := repos.Quest.LockUpsertQuestSummary(ctx, UpsertQuestSummarySpec{Input: spec.Input, AsOf: at})
-		if err != nil {
-			return document.DocumentView{}, err
-		}
-		result, err := repos.Summaries.WriteSummary(ctx, fresh, document.SummaryWrite{
-			DocumentID:       spec.Input.DocumentId,
-			ExpectedRevision: spec.Input.ExpectedRevision,
-			QuestIDs:         questIDs,
-			CharacterID:      spec.Input.CharacterId,
-			Title:            spec.Input.Title,
-			Body:             spec.Input.Body,
-			Visibility:       spec.Input.Visibility,
-			Frontmatter:      spec.Input.Frontmatter,
-			At:               at,
-		})
-		if err != nil {
-			return document.DocumentView{}, err
-		}
-		docID := result.Document.Id
-		spec.Input.DocumentId = &docID
-		if _, err := repos.Quest.StoreUpsertQuestSummary(ctx, UpsertQuestSummaryWrite{
-			ActorID: fresh.Claims().MemberID, At: at, Input: spec,
-			ValidatedInput: UpsertQuestSummarySpec{Input: spec.Input, AsOf: at}, Locked: locked,
-		}); err != nil {
-			return document.DocumentView{}, err
-		}
-		if err := recordQuestEvents(ctx, repos, result.Events); err != nil {
-			return document.DocumentView{}, err
-		}
-		return result.Document, nil
+	return auth.ForSummary(facts)
+}
+
+func storeQuestSummary(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time, spec UpsertQuestSummarySpec, questIDs []string) (document.DocumentView, error) {
+	if commandDependencyMissing(repos.Summaries) {
+		return document.DocumentView{}, apierr.New(apierr.Internal, "summary writer required")
+	}
+	locked, err := repos.Quest.LockUpsertQuestSummary(ctx, UpsertQuestSummarySpec{Input: spec.Input, AsOf: at})
+	if err != nil {
+		return document.DocumentView{}, err
+	}
+	result, err := repos.Summaries.WriteSummary(ctx, fresh, document.SummaryWrite{
+		DocumentID: spec.Input.DocumentId, ExpectedRevision: spec.Input.ExpectedRevision,
+		QuestIDs: questIDs, CharacterID: spec.Input.CharacterId, Title: spec.Input.Title,
+		Body: spec.Input.Body, Visibility: spec.Input.Visibility, Frontmatter: spec.Input.Frontmatter, At: at,
 	})
+	if err != nil {
+		return document.DocumentView{}, err
+	}
+	docID := result.Document.Id
+	spec.Input.DocumentId = &docID
+	if _, err := repos.Quest.StoreUpsertQuestSummary(ctx, UpsertQuestSummaryWrite{
+		ActorID: fresh.Claims().MemberID, At: at, Input: spec,
+		ValidatedInput: UpsertQuestSummarySpec{Input: spec.Input, AsOf: at}, Locked: locked,
+	}); err != nil {
+		return document.DocumentView{}, err
+	}
+	if err := recordQuestEvents(ctx, repos, result.Events); err != nil {
+		return document.DocumentView{}, err
+	}
+	return result.Document, nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
@@ -60,6 +61,21 @@ func (p *ProductPostgres) ReadBatchDmTables(ctx context.Context, actor auth.Auth
 		return nil, err
 	}
 	defer rows.Close()
+	if err := mapDmTableRows(ctx, rows, positions, scope, out); err != nil {
+		return nil, err
+	}
+	rows.Close()
+	views := make([]*DocumentView, len(out))
+	for i := range out {
+		views[i] = out[i].Value
+	}
+	if err := p.setDocumentCapabilities(ctx, actor, views); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func mapDmTableRows(ctx context.Context, rows pgx.Rows, positions []int, scope ViewerScope, out []product.BatchResult[DocumentView]) error {
 	for rows.Next() {
 		var (
 			inputIndex                                  int32
@@ -79,7 +95,7 @@ func (p *ProductPostgres) ReadBatchDmTables(ctx context.Context, actor auth.Auth
 			&publishedAt, &deletedAt, &deletedBy, &updatedAt, &version,
 			&readable, &adminOverride,
 		); err != nil {
-			return nil, err
+			return err
 		}
 		position := int(inputIndex) - 1
 		if position < 0 || position >= len(positions) {
@@ -103,15 +119,7 @@ func (p *ProductPostgres) ReadBatchDmTables(ctx context.Context, actor auth.Auth
 		out[slot] = product.BatchResult[DocumentView]{Value: &view}
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return err
 	}
-	rows.Close()
-	views := make([]*DocumentView, len(out))
-	for i := range out {
-		views[i] = out[i].Value
-	}
-	if err := p.setDocumentCapabilities(ctx, actor, views); err != nil {
-		return nil, err
-	}
-	return out, nil
+	return nil
 }

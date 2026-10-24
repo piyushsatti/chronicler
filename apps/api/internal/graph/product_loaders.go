@@ -53,77 +53,41 @@ func (l *RequestLoaders) clear() {
 	if l == nil {
 		return
 	}
-	clearOne := func(c func()) {
-		if c != nil {
-			c()
+	for _, clear := range []func(){
+		loaderClear(l.Members),
+		loaderClear(l.Documents),
+		loaderClear(l.DmTables),
+		loaderClear(l.Characters),
+		loaderClear(l.Quests),
+		loaderClear(l.Participants),
+		loaderClear(l.QuestPointcrawlLinks),
+		loaderClear(l.QuestRegions),
+		loaderClear(l.Arcs),
+		loaderClear(l.ArcQuests),
+		loaderClear(l.Delivery),
+		loaderClear(l.MapNodes),
+		loaderClear(l.MapNodeEdges),
+		loaderClear(l.NodeLinks),
+		loaderClear(l.SummaryDerived),
+		loaderClear(l.DocumentReaders),
+		loaderClear(l.NotificationSubjects),
+		loaderClear(l.MemberVoiceChannels),
+		loaderClear(l.MemberRecentSessions),
+		loaderClear(l.MemberRecentWeeks),
+		loaderClear(l.DocumentSubjects),
+		loaderClear(l.ActiveAlerts),
+	} {
+		if clear != nil {
+			clear()
 		}
 	}
-	if l.Members != nil {
-		clearOne(l.Members.Clear)
+}
+
+func loaderClear[K comparable, V any](loader *Loader[K, V]) func() {
+	if loader == nil {
+		return nil
 	}
-	if l.Documents != nil {
-		clearOne(l.Documents.Clear)
-	}
-	if l.DmTables != nil {
-		clearOne(l.DmTables.Clear)
-	}
-	if l.Characters != nil {
-		clearOne(l.Characters.Clear)
-	}
-	if l.Quests != nil {
-		clearOne(l.Quests.Clear)
-	}
-	if l.Participants != nil {
-		clearOne(l.Participants.Clear)
-	}
-	if l.QuestPointcrawlLinks != nil {
-		clearOne(l.QuestPointcrawlLinks.Clear)
-	}
-	if l.QuestRegions != nil {
-		clearOne(l.QuestRegions.Clear)
-	}
-	if l.Arcs != nil {
-		clearOne(l.Arcs.Clear)
-	}
-	if l.ArcQuests != nil {
-		clearOne(l.ArcQuests.Clear)
-	}
-	if l.Delivery != nil {
-		clearOne(l.Delivery.Clear)
-	}
-	if l.MapNodes != nil {
-		clearOne(l.MapNodes.Clear)
-	}
-	if l.MapNodeEdges != nil {
-		clearOne(l.MapNodeEdges.Clear)
-	}
-	if l.NodeLinks != nil {
-		clearOne(l.NodeLinks.Clear)
-	}
-	if l.SummaryDerived != nil {
-		clearOne(l.SummaryDerived.Clear)
-	}
-	if l.DocumentReaders != nil {
-		clearOne(l.DocumentReaders.Clear)
-	}
-	if l.NotificationSubjects != nil {
-		clearOne(l.NotificationSubjects.Clear)
-	}
-	if l.MemberVoiceChannels != nil {
-		clearOne(l.MemberVoiceChannels.Clear)
-	}
-	if l.MemberRecentSessions != nil {
-		clearOne(l.MemberRecentSessions.Clear)
-	}
-	if l.MemberRecentWeeks != nil {
-		clearOne(l.MemberRecentWeeks.Clear)
-	}
-	if l.DocumentSubjects != nil {
-		clearOne(l.DocumentSubjects.Clear)
-	}
-	if l.ActiveAlerts != nil {
-		clearOne(l.ActiveAlerts.Clear)
-	}
+	return loader.Clear
 }
 
 // BatchProviders exposes domain batch read entry points for request-scoped loaders (K1).
@@ -230,27 +194,8 @@ func newKeyedLoader[K comparable, V any](state *RequestState, read func(context.
 		if len(missing) == 0 {
 			return out, nil
 		}
-		for start := 0; start < len(missing); start += loaderChunkSize {
-			end := start + loaderChunkSize
-			if end > len(missing) {
-				end = len(missing)
-			}
-			chunk := missing[start:end]
-			chunkIdx := missingIdx[start:end]
-			fetched, err := read(ctx, actor, chunk)
-			if err != nil {
-				return nil, err
-			}
-			if len(fetched) != len(chunk) {
-				return nil, errors.New("batch loader result length mismatch")
-			}
-			mu.Lock()
-			for i, key := range chunk {
-				result := fetched[i]
-				cache[key] = result
-				out[chunkIdx[i]] = result
-			}
-			mu.Unlock()
+		if err := loadMissingKeys(ctx, actor, missing, missingIdx, out, cache, &mu, read); err != nil {
+			return nil, err
 		}
 		return out, nil
 	}
@@ -271,4 +216,26 @@ func newKeyedLoader[K comparable, V any](state *RequestState, read func(context.
 		LoadMany: loadMany,
 		Clear:    clearFn,
 	}
+}
+
+func loadMissingKeys[K comparable, V any](ctx context.Context, actor auth.Authority, missing []K, indexes []int, out []product.BatchResult[V], cache map[K]product.BatchResult[V], mu *sync.Mutex, read func(context.Context, auth.Authority, []K) ([]product.BatchResult[V], error)) error {
+	for start := 0; start < len(missing); start += loaderChunkSize {
+		end := min(start+loaderChunkSize, len(missing))
+		chunk, chunkIndexes := missing[start:end], indexes[start:end]
+		fetched, err := read(ctx, actor, chunk)
+		if err != nil {
+			return err
+		}
+		if len(fetched) != len(chunk) {
+			return errors.New("batch loader result length mismatch")
+		}
+		mu.Lock()
+		for i, key := range chunk {
+			result := fetched[i]
+			cache[key] = result
+			out[chunkIndexes[i]] = result
+		}
+		mu.Unlock()
+	}
+	return nil
 }

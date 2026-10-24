@@ -32,6 +32,7 @@ jobs:
       - run: bun run --filter @pi/web lint
       - run: bun run --filter @pi/web test
       - run: bunx playwright install chromium
+        working-directory: apps/web
       - run: bun run --filter @pi/web test:e2e
         env:
           VITE_API_MODE: mock

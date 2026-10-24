@@ -42,36 +42,9 @@ func (g *AdvisoryExecutionGate) Do(ctx context.Context, kind string, receipt job
 	// A failed acquisition reply cannot establish whether the server took the lock.
 	uncertain := true
 	defer func() {
-		cleanup, done := context.WithTimeout(context.Background(), 3*time.Second)
-		defer done()
-		if uncertain {
-			raw := conn.Hijack()
-			_ = raw.Close(cleanup)
-			select {
-			case <-raw.PgConn().CleanupDone():
-			case <-cleanup.Done():
-				err = errors.Join(err, errors.New("execution gate connection cleanup failed"))
-			}
-			return
+		if cleanupErr := releaseExecutionConnection(conn, key, acquired, uncertain); cleanupErr != nil {
+			err = errors.Join(err, cleanupErr)
 		}
-		if !acquired {
-			conn.Release()
-			return
-		}
-		var unlocked bool
-		unlockErr := conn.QueryRow(cleanup, "SELECT pg_advisory_unlock($1)", key).Scan(&unlocked)
-		if unlockErr != nil || !unlocked {
-			raw := conn.Hijack()
-			_ = raw.Close(cleanup)
-			select {
-			case <-raw.PgConn().CleanupDone():
-			case <-cleanup.Done():
-				err = errors.Join(err, errors.New("execution gate connection cleanup failed"))
-			}
-			err = errors.Join(err, errors.New("execution gate lock cleanup failed"))
-			return
-		}
-		conn.Release()
 	}()
 	if lockErr := conn.QueryRow(budget, "SELECT pg_try_advisory_lock($1)", key).Scan(&acquired); lockErr != nil {
 		return false, errors.Join(errors.New("execution gate lock acquisition failed"), budget.Err())
@@ -85,6 +58,37 @@ func (g *AdvisoryExecutionGate) Do(ctx context.Context, kind string, receipt job
 		err = budget.Err()
 	}
 	return true, err
+}
+
+func releaseExecutionConnection(conn *pgxpool.Conn, key int64, acquired, uncertain bool) error {
+	cleanup, done := context.WithTimeout(context.Background(), 3*time.Second)
+	defer done()
+	if uncertain {
+		return hijackExecutionConnection(conn, cleanup)
+	}
+	if !acquired {
+		conn.Release()
+		return nil
+	}
+	var unlocked bool
+	unlockErr := conn.QueryRow(cleanup, "SELECT pg_advisory_unlock($1)", key).Scan(&unlocked)
+	if unlockErr != nil || !unlocked {
+		cleanupErr := hijackExecutionConnection(conn, cleanup)
+		return errors.Join(cleanupErr, errors.New("execution gate lock cleanup failed"))
+	}
+	conn.Release()
+	return nil
+}
+
+func hijackExecutionConnection(conn *pgxpool.Conn, cleanup context.Context) error {
+	raw := conn.Hijack()
+	_ = raw.Close(cleanup)
+	select {
+	case <-raw.PgConn().CleanupDone():
+		return nil
+	case <-cleanup.Done():
+		return errors.New("execution gate connection cleanup failed")
+	}
 }
 
 func maintenanceLockID(kind string) int64 {

@@ -92,20 +92,8 @@ func (s ProductQueries) SiteStats(ctx context.Context, actor auth.Authority, spe
 }
 
 func (s ProductQueries) Search(ctx context.Context, actor auth.Authority, spec SearchSpec) (SearchResultView, error) {
-	queryLength := utf8.RuneCountInString(spec.Query)
-	if queryLength < 1 || queryLength > 200 {
-		return SearchResultView{}, apierr.New(apierr.Invalid, "search query must contain 1 to 200 characters")
-	}
-	if len(spec.Kinds) > 100 {
-		return SearchResultView{}, apierr.New(apierr.Invalid, "search kinds cannot exceed 100 items")
-	}
-	if spec.Limit <= 0 || spec.Offset < 0 {
-		return SearchResultView{}, apierr.New(apierr.Invalid, "invalid search page")
-	}
-	for _, kind := range spec.Kinds {
-		if !slices.ContainsFunc(SearchableKinds(), func(candidate SearchKind) bool { return candidate.Key == kind && candidate.Searchable }) {
-			return SearchResultView{}, apierr.New(apierr.Invalid, "unknown search kind")
-		}
+	if err := validateSearchSpec(spec); err != nil {
+		return SearchResultView{}, err
 	}
 	if err := s.admit(ctx, actor, auth.Operation("Query.search")); err != nil {
 		return SearchResultView{}, err
@@ -129,6 +117,25 @@ func (s ProductQueries) Search(ctx context.Context, actor auth.Authority, spec S
 		result.Members, result.MemberTotal, result.MemberOrder = members.Items, members.Total, members.Order
 	}
 	return result, nil
+}
+
+func validateSearchSpec(spec SearchSpec) error {
+	queryLength := utf8.RuneCountInString(spec.Query)
+	if queryLength < 1 || queryLength > 200 {
+		return apierr.New(apierr.Invalid, "search query must contain 1 to 200 characters")
+	}
+	if len(spec.Kinds) > 100 {
+		return apierr.New(apierr.Invalid, "search kinds cannot exceed 100 items")
+	}
+	if spec.Limit <= 0 || spec.Offset < 0 {
+		return apierr.New(apierr.Invalid, "invalid search page")
+	}
+	for _, kind := range spec.Kinds {
+		if !slices.ContainsFunc(SearchableKinds(), func(candidate SearchKind) bool { return candidate.Key == kind && candidate.Searchable }) {
+			return apierr.New(apierr.Invalid, "unknown search kind")
+		}
+	}
+	return nil
 }
 
 func (s ProductQueries) BatchActiveAlerts(ctx context.Context, actor auth.Authority, keys []ActiveAlertsKey) ([]product.BatchResult[AlertList], error) {

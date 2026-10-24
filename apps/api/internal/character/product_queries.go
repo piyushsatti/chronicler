@@ -319,34 +319,8 @@ func (s ProductQueries) Characters(ctx context.Context, actor auth.Authority, sp
 	if err := characterQueryPage(spec.Limit, spec.Offset); err != nil {
 		return CharacterListResult{}, err
 	}
-	if spec.Filters != nil {
-		if spec.Filters.RegionId != nil {
-			if err := characterQueryID(*spec.Filters.RegionId); err != nil {
-				return CharacterListResult{}, err
-			}
-		}
-		if spec.Filters.OwnerId != nil {
-			if err := characterQueryID(*spec.Filters.OwnerId); err != nil {
-				return CharacterListResult{}, err
-			}
-		}
-		if spec.Filters.GuildId != nil {
-			if err := characterQueryID(*spec.Filters.GuildId); err != nil {
-				return CharacterListResult{}, err
-			}
-		}
-		if spec.Filters.NamePrefix != nil {
-			if err := characterQueryText(*spec.Filters.NamePrefix, 200); err != nil {
-				return CharacterListResult{}, err
-			}
-		}
-		if spec.Filters.Status != nil {
-			switch *spec.Filters.Status {
-			case "active", "retired", "dead", "pending_approval":
-			default:
-				return CharacterListResult{}, apierr.New(apierr.Invalid, "invalid character status")
-			}
-		}
+	if err := validateCharacterFilters(spec.Filters); err != nil {
+		return CharacterListResult{}, err
 	}
 	observe, err := s.publicRead(ctx, actor, "Query.characters", "")
 	if err != nil {
@@ -362,6 +336,32 @@ func (s ProductQueries) Characters(ctx context.Context, actor auth.Authority, sp
 	}
 	observe()
 	return value, nil
+}
+
+func validateCharacterFilters(filters *CharacterFiltersFields) error {
+	if filters == nil {
+		return nil
+	}
+	for _, id := range []*string{filters.RegionId, filters.OwnerId, filters.GuildId} {
+		if id != nil {
+			if err := characterQueryID(*id); err != nil {
+				return err
+			}
+		}
+	}
+	if filters.NamePrefix != nil {
+		if err := characterQueryText(*filters.NamePrefix, 200); err != nil {
+			return err
+		}
+	}
+	if filters.Status != nil {
+		switch *filters.Status {
+		case "active", "retired", "dead", "pending_approval":
+		default:
+			return apierr.New(apierr.Invalid, "invalid character status")
+		}
+	}
+	return nil
 }
 
 func (s ProductQueries) CoPlayers(ctx context.Context, actor auth.Authority, spec CoPlayersSpec) (CoPlayerPage, error) {

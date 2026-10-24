@@ -173,6 +173,10 @@ func validateRequest(q *QuestionRequested) error {
 	if len(raw) == 0 {
 		return nil
 	}
+	return validateQuestionHistory(raw)
+}
+
+func validateQuestionHistory(raw json.RawMessage) error {
 	var h struct {
 		Messages []struct {
 			Role    string `json:"role"`
@@ -198,23 +202,11 @@ func validateRequest(q *QuestionRequested) error {
 	return nil
 }
 func validateCompletion(c *QuestionCompletion, path string) error {
-	if c.JobID != path || c.JobID == "" {
-		return invalid("job_id must match path")
+	if err := validateCompletionIdentity(c, path); err != nil {
+		return err
 	}
-	if _, e := db.ParseUUID(c.JobID); e != nil {
-		return invalid("job_id must be UUID")
-	}
-	if _, e := jobs.ParseToken(c.LeaseToken); e != nil {
-		return e
-	}
-	if c.Version != 1 || (c.Type != "question.completed" && c.Type != "question.failed") {
-		return invalid("invalid result type/version")
-	}
-	if (c.Type == "question.completed" && strings.TrimSpace(c.Answer) == "") || (c.Type == "question.failed" && strings.TrimSpace(c.Message) == "") {
-		return invalid("answer or failure message required")
-	}
-	if utf8.RuneCountInString(c.Answer) > 16000 || utf8.RuneCountInString(c.Message) > 1000 || utf8.RuneCountInString(c.Error) > 1000 {
-		return invalid("result text exceeds limit")
+	if err := validateCompletionText(c); err != nil {
+		return err
 	}
 	var e error
 	c.Sources, e = normalize(c.Sources)
@@ -224,8 +216,45 @@ func validateCompletion(c *QuestionCompletion, path string) error {
 	if len(c.Sources) == 0 {
 		c.Sources = json.RawMessage(`[]`)
 	}
+	if err := validateCompletionSources(c.Sources); err != nil {
+		return err
+	}
+	c.Diagnostics, e = normalize(c.Diagnostics)
+	if e != nil {
+		return e
+	}
+	return validateCompletionDiagnostics(c.Diagnostics)
+}
+
+func validateCompletionIdentity(c *QuestionCompletion, path string) error {
+	if c.JobID != path || c.JobID == "" {
+		return invalid("job_id must match path")
+	}
+	if _, e := db.ParseUUID(c.JobID); e != nil {
+		return invalid("job_id must be UUID")
+	}
+	if _, e := jobs.ParseToken(c.LeaseToken); e != nil {
+		return e
+	}
+	return nil
+}
+
+func validateCompletionText(c *QuestionCompletion) error {
+	if c.Version != 1 || (c.Type != "question.completed" && c.Type != "question.failed") {
+		return invalid("invalid result type/version")
+	}
+	if (c.Type == "question.completed" && strings.TrimSpace(c.Answer) == "") || (c.Type == "question.failed" && strings.TrimSpace(c.Message) == "") {
+		return invalid("answer or failure message required")
+	}
+	if utf8.RuneCountInString(c.Answer) > 16000 || utf8.RuneCountInString(c.Message) > 1000 || utf8.RuneCountInString(c.Error) > 1000 {
+		return invalid("result text exceeds limit")
+	}
+	return nil
+}
+
+func validateCompletionSources(raw json.RawMessage) error {
 	var sources []map[string]any
-	sourceDecoder := json.NewDecoder(strings.NewReader(string(c.Sources)))
+	sourceDecoder := json.NewDecoder(strings.NewReader(string(raw)))
 	sourceDecoder.UseNumber()
 	if sourceDecoder.Decode(&sources) != nil || len(sources) > 100 {
 		return invalid("invalid sources")
@@ -235,16 +264,16 @@ func validateCompletion(c *QuestionCompletion, path string) error {
 			return invalid("source must be object")
 		}
 	}
-	c.Diagnostics, e = normalize(c.Diagnostics)
-	if e != nil {
-		return e
-	}
-	if len(c.Diagnostics) > 16384 {
+	return nil
+}
+
+func validateCompletionDiagnostics(raw json.RawMessage) error {
+	if len(raw) > 16384 {
 		return invalid("diagnostics exceed byte limit")
 	}
-	if len(c.Diagnostics) > 0 {
+	if len(raw) > 0 {
 		var d map[string]any
-		diagnosticDecoder := json.NewDecoder(strings.NewReader(string(c.Diagnostics)))
+		diagnosticDecoder := json.NewDecoder(strings.NewReader(string(raw)))
 		diagnosticDecoder.UseNumber()
 		if diagnosticDecoder.Decode(&d) != nil {
 			return invalid("diagnostics must be object")

@@ -53,24 +53,7 @@ func (h *MaintenanceHandler) ProcessOne(ctx context.Context) (bool, error) {
 		return false, nil
 	}
 	errRun := jobs.RunLeased(ctx, h.store, job, func(ctx context.Context) error {
-		if job.Kind != "gametime_fill" && job.Kind != "reconcile_dry_run" {
-			return errUnknownMaintenanceKind
-		}
-		acquired, err := h.gate.Do(ctx, job.Kind, job.Receipt(), func(ctx context.Context, scope jobs.ExecutionScope) error {
-			if job.Kind == "reconcile_dry_run" {
-				return h.reconcileDryRun(ctx, scope)
-			}
-			at, err := product.UTCNow(h.clock)
-			if err != nil {
-				return err
-			}
-			_, err = h.timeWriter.FillFuture(ctx, scope, product.Date(at.Format("2006-01-02")), 30)
-			return err
-		})
-		if err == nil && !acquired {
-			return errMaintenanceBusy
-		}
-		return err
+		return h.runMaintenanceJob(ctx, job)
 	})
 	if errRun != nil {
 		if errors.Is(errRun, errUnknownMaintenanceKind) {
@@ -90,6 +73,31 @@ func (h *MaintenanceHandler) ProcessOne(ctx context.Context) (bool, error) {
 	}
 	slog.InfoContext(ctx, "maintenance job succeeded", "kind", job.Kind, "key", job.Key)
 	return true, nil
+}
+
+func (h *MaintenanceHandler) runMaintenanceJob(ctx context.Context, job jobs.Job) error {
+	if job.Kind != "gametime_fill" && job.Kind != "reconcile_dry_run" {
+		return errUnknownMaintenanceKind
+	}
+	acquired, err := h.gate.Do(ctx, job.Kind, job.Receipt(), func(ctx context.Context, scope jobs.ExecutionScope) error {
+		return h.executeMaintenanceJob(ctx, job.Kind, scope)
+	})
+	if err == nil && !acquired {
+		return errMaintenanceBusy
+	}
+	return err
+}
+
+func (h *MaintenanceHandler) executeMaintenanceJob(ctx context.Context, kind string, scope jobs.ExecutionScope) error {
+	if kind == "reconcile_dry_run" {
+		return h.reconcileDryRun(ctx, scope)
+	}
+	at, err := product.UTCNow(h.clock)
+	if err != nil {
+		return err
+	}
+	_, err = h.timeWriter.FillFuture(ctx, scope, product.Date(at.Format("2006-01-02")), 30)
+	return err
 }
 
 func maintenanceFailureCode(err error) string {

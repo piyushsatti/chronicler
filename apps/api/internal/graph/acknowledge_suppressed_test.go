@@ -47,7 +47,7 @@ func TestFrontendOperationsMatchServerGraphQLValidator(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if _, failures := gqlparser.LoadQuery(schema, string(raw)); len(failures) != 0 {
+			if _, failures := gqlparser.LoadQueryWithRules(schema, string(raw), nil); len(failures) != 0 {
 				t.Fatal(failures)
 			}
 		})

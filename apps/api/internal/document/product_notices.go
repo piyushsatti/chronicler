@@ -12,22 +12,26 @@ import (
 
 // Named recipients come from the same closed block classifier as body admission.
 func newDocumentMentions(ctx context.Context, reader MentionMemberReader, before, after, actorID string) ([]string, error) {
-	out := []string{}
 	if before == after {
-		return out, nil
+		return []string{}, nil
 	}
-	handles := func(body string) map[string]bool {
-		found := map[string]bool{}
-		for _, span := range parseBody(body) {
-			for _, principal := range span.Policy {
-				if handle, ok := strings.CutPrefix(principal, "member:@"); ok {
-					found[handle] = true
-				}
+	old, next := mentionHandles(before), mentionHandles(after)
+	return resolveNewDocumentMentions(ctx, reader, old, next, actorID)
+}
+
+func mentionHandles(body string) map[string]bool {
+	found := map[string]bool{}
+	for _, span := range parseBody(body) {
+		for _, principal := range span.Policy {
+			if handle, ok := strings.CutPrefix(principal, "member:@"); ok {
+				found[handle] = true
 			}
 		}
-		return found
 	}
-	old, next := handles(before), handles(after)
+	return found
+}
+
+func resolveNewDocumentMentions(ctx context.Context, reader MentionMemberReader, old, next map[string]bool, actorID string) ([]string, error) {
 	added := false
 	for handle := range next {
 		if !old[handle] {
@@ -35,7 +39,7 @@ func newDocumentMentions(ctx context.Context, reader MentionMemberReader, before
 		}
 	}
 	if !added {
-		return out, nil
+		return []string{}, nil
 	}
 	if commandDependencyMissing(reader) {
 		return nil, apierr.New(apierr.Internal, "mention reader required")
@@ -54,6 +58,13 @@ func newDocumentMentions(ctx context.Context, reader MentionMemberReader, before
 	if err != nil {
 		return nil, err
 	}
+	out := newDocumentMentionIDs(old, next, resolved, actorID)
+	sort.Strings(out)
+	return out, nil
+}
+
+func newDocumentMentionIDs(old, next map[string]bool, resolved map[string]string, actorID string) []string {
+	out := []string{}
 	previousIDs := map[string]bool{}
 	for handle := range old {
 		if id := resolved[handle]; id != "" {
@@ -70,8 +81,7 @@ func newDocumentMentions(ctx context.Context, reader MentionMemberReader, before
 	for id := range newIDs {
 		out = append(out, id)
 	}
-	sort.Strings(out)
-	return out, nil
+	return out
 }
 
 func documentRevisionEvents(kind notification.EventKind, documentID, revisionID, actorID string, at time.Time, mentions []string) []notification.Event {

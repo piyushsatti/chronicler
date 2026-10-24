@@ -76,6 +76,7 @@ describe('AuthProvider session lifecycle', () => {
         `e30.${btoa(JSON.stringify({ member_id: memberId, exp: Date.now() / 1000 + 3600 }))}.sig`;
       const firstToken = session(firstId);
       const secondToken = session(secondId);
+      await import('../../src/features/personalize/pages/PersonalizePage.js');
       localStorage.setItem(TOKEN_KEY, firstToken);
       savePrefs(
         {

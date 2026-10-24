@@ -180,47 +180,79 @@ func equalJSONValue(a, b any) bool {
 		y, ok := b.(string)
 		return ok && x == y
 	case json.Number:
-		y, ok := b.(json.Number)
-		if !ok {
-			return false
-		}
-		xc, xe := decimalParts(x)
-		yc, ye := decimalParts(y)
-		return xc == yc && xe.Cmp(ye) == 0
+		return equalJSONNumber(x, b)
 	case []any:
-		y, ok := b.([]any)
-		if !ok || len(x) != len(y) {
-			return false
-		}
-		for i, v := range x {
-			if !equalJSONValue(v, y[i]) {
-				return false
-			}
-		}
-		return true
+		return equalJSONArray(x, b)
 	case map[string]any:
-		y, ok := b.(map[string]any)
-		if !ok || len(x) != len(y) {
-			return false
-		}
-		for k, v := range x {
-			w, ok := y[k]
-			if !ok || !equalJSONValue(v, w) {
-				return false
-			}
-		}
-		return true
+		return equalJSONObject(x, b)
 	default:
 		return false
 	}
 }
+
+func equalJSONNumber(value json.Number, other any) bool {
+	otherNumber, ok := other.(json.Number)
+	if !ok {
+		return false
+	}
+	coefficient, exponent := decimalParts(value)
+	otherCoefficient, otherExponent := decimalParts(otherNumber)
+	return coefficient == otherCoefficient && exponent.Cmp(otherExponent) == 0
+}
+
+func equalJSONArray(values []any, other any) bool {
+	items, ok := other.([]any)
+	if !ok || len(values) != len(items) {
+		return false
+	}
+	for i, value := range values {
+		if !equalJSONValue(value, items[i]) {
+			return false
+		}
+	}
+	return true
+}
+
+func equalJSONObject(values map[string]any, other any) bool {
+	items, ok := other.(map[string]any)
+	if !ok || len(values) != len(items) {
+		return false
+	}
+	for key, value := range values {
+		item, ok := items[key]
+		if !ok || !equalJSONValue(value, item) {
+			return false
+		}
+	}
+	return true
+}
+
 func (j *Job) Finish(token int64, now time.Time, op string, state State, payload []byte, after time.Duration, reason string) error {
-	if (op == "succeed" || op == "fail") && j.Token == token && j.terminal() && j.State == state && j.CompletionOperation == op && EqualJSON(j.CompletionPayload, payload) {
+	if j.completionReplay(token, op, state, payload) {
 		return nil
 	}
 	if !j.owns(token, now) {
 		return ErrLease
 	}
+	if op == "retry" {
+		return j.retry(now, after, reason)
+	}
+	if err := validateCompletionState(op, state); err != nil {
+		return err
+	}
+	j.State = state
+	j.CompletionOperation = op
+	j.CompletionPayload = payload
+	j.ErrorMessage = reason
+	j.clearLease()
+	return nil
+}
+
+func (j *Job) completionReplay(token int64, op string, state State, payload []byte) bool {
+	return (op == "succeed" || op == "fail") && j.Token == token && j.terminal() && j.State == state && j.CompletionOperation == op && EqualJSON(j.CompletionPayload, payload)
+}
+
+func validateCompletionState(op string, state State) error {
 	switch op {
 	case "succeed":
 		if state != Succeeded {
@@ -230,22 +262,19 @@ func (j *Job) Finish(token int64, now time.Time, op string, state State, payload
 		if state != Dead && state != RepairRequired {
 			return apierr.New(apierr.Invalid, "invalid failure state")
 		}
-	case "retry":
-		if j.Attempts >= MaxAttempts {
-			j.terminate(Dead, "exhausted", "This request could not be completed. Please try again.")
-			return nil
-		}
-		j.State = RetryWait
-		j.NextRunAt = now.Add(after)
-		j.ErrorMessage = reason
-		j.clearLease()
-		return nil
 	default:
 		return apierr.New(apierr.Invalid, "invalid completion operation")
 	}
-	j.State = state
-	j.CompletionOperation = op
-	j.CompletionPayload = payload
+	return nil
+}
+
+func (j *Job) retry(now time.Time, after time.Duration, reason string) error {
+	if j.Attempts >= MaxAttempts {
+		j.terminate(Dead, "exhausted", "This request could not be completed. Please try again.")
+		return nil
+	}
+	j.State = RetryWait
+	j.NextRunAt = now.Add(after)
 	j.ErrorMessage = reason
 	j.clearLease()
 	return nil

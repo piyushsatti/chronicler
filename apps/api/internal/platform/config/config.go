@@ -92,6 +92,33 @@ func durationEnv(key string, fallback time.Duration) time.Duration {
 
 type DiscordOwnerLookup func(context.Context, string) (memberID string, err error)
 
+func validateDiscordOwnerID(id string) error {
+	if len(id) < 17 || len(id) > 20 {
+		return fmt.Errorf("invalid PLATFORM_OWNER_DISCORD_ID")
+	}
+	for i := 0; i < len(id); i++ {
+		if id[i] < '0' || id[i] > '9' {
+			return fmt.Errorf("invalid PLATFORM_OWNER_DISCORD_ID")
+		}
+	}
+	return nil
+}
+
+func lookupConfiguredDiscordOwner(ctx context.Context, id string, lookup DiscordOwnerLookup) (string, error) {
+	if lookup == nil {
+		return "", fmt.Errorf("configured Discord owner requires member lookup")
+	}
+	memberID, err := lookup(ctx, id)
+	if err != nil {
+		return "", fmt.Errorf("configured owner must resolve active: %w", err)
+	}
+	parsed, err := uuid.Parse(memberID)
+	if err != nil || parsed.String() != memberID {
+		return "", fmt.Errorf("configured Discord owner lookup returned invalid member identity")
+	}
+	return memberID, nil
+}
+
 // Validate checks trusted startup configuration and returns its resolved owner UUID.
 func (c Config) Validate(ctx context.Context, resolve auth.AuthorityResolver, lookup DiscordOwnerLookup) (string, error) {
 	ownerID := c.PlatformOwnerMemberID
@@ -102,24 +129,12 @@ func (c Config) Validate(ctx context.Context, resolve auth.AuthorityResolver, lo
 		}
 	}
 	if id := c.PlatformOwnerDiscordID; id != "" {
-		if len(id) < 17 || len(id) > 20 {
-			return "", fmt.Errorf("invalid PLATFORM_OWNER_DISCORD_ID")
+		if err := validateDiscordOwnerID(id); err != nil {
+			return "", err
 		}
-		for i := 0; i < len(id); i++ {
-			if id[i] < '0' || id[i] > '9' {
-				return "", fmt.Errorf("invalid PLATFORM_OWNER_DISCORD_ID")
-			}
-		}
-		if lookup == nil {
-			return "", fmt.Errorf("configured Discord owner requires member lookup")
-		}
-		memberID, err := lookup(ctx, id)
+		memberID, err := lookupConfiguredDiscordOwner(ctx, id, lookup)
 		if err != nil {
-			return "", fmt.Errorf("configured owner must resolve active: %w", err)
-		}
-		parsed, err := uuid.Parse(memberID)
-		if err != nil || parsed.String() != memberID {
-			return "", fmt.Errorf("configured Discord owner lookup returned invalid member identity")
+			return "", err
 		}
 		if ownerID != "" && ownerID != memberID {
 			return "", fmt.Errorf("configured owner identity mismatch")

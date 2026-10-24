@@ -363,20 +363,9 @@ func (r *ReadModel) List(ctx context.Context, filter ListFilter) ([]LegacyQuestV
 	if filter.Order != OldestFirst && filter.Order != NewestFirst {
 		return nil, 0, errors.New("unknown quest list order")
 	}
-	var machine, display pgtype.Text
-	if filter.Status != nil {
-		status := strings.ToLower(*filter.Status)
-		switch Status(status) {
-		case Open, Full, Played, Closed, Cancelled:
-			machine = pgtype.Text{String: status, Valid: true}
-		default:
-			return []LegacyQuestView{}, 0, nil
-		}
-	}
-	if filter.DisplayStatus != nil {
-		display = pgtype.Text{String: strings.ToLower(*filter.DisplayStatus), Valid: true}
-		// Legacy display filtering takes precedence, after machine validation.
-		machine = pgtype.Text{}
+	machine, display, validStatus := questListStatuses(filter)
+	if !validStatus {
+		return []LegacyQuestView{}, 0, nil
 	}
 	var from, to pgtype.Timestamptz
 	if filter.ScheduledFrom != nil {
@@ -394,6 +383,29 @@ func (r *ReadModel) List(ctx context.Context, filter ListFilter) ([]LegacyQuestV
 	if err != nil {
 		return nil, 0, fmt.Errorf("list quests: %w", err)
 	}
+	return mapQuestListRows(rows)
+}
+
+func questListStatuses(filter ListFilter) (pgtype.Text, pgtype.Text, bool) {
+	var machine, display pgtype.Text
+	if filter.Status != nil {
+		status := strings.ToLower(*filter.Status)
+		switch Status(status) {
+		case Open, Full, Played, Closed, Cancelled:
+			machine = pgtype.Text{String: status, Valid: true}
+		default:
+			return machine, display, false
+		}
+	}
+	if filter.DisplayStatus != nil {
+		display = pgtype.Text{String: strings.ToLower(*filter.DisplayStatus), Valid: true}
+		// Legacy display filtering takes precedence, after machine validation.
+		machine = pgtype.Text{}
+	}
+	return machine, display, true
+}
+
+func mapQuestListRows(rows []dbgen.ListQuestsRow) ([]LegacyQuestView, int64, error) {
 	out := make([]LegacyQuestView, 0, len(rows))
 	var total int64
 	for _, row := range rows {

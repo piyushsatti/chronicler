@@ -37,6 +37,7 @@ type world struct {
 	crawlNodes []string
 	region     map[string]string
 	lfc        string
+	underkeep  string
 	chars      []charRow
 	questRows  []questRow
 }
@@ -325,6 +326,13 @@ func (w *world) memberByHandle(handle string) memberRow {
 }
 
 func (w *world) spatial() {
+	w.seedRegions()
+	w.seedMaps()
+	w.seedPointcrawl()
+	w.seedCalendar()
+}
+
+func (w *world) seedRegions() {
 	w.region = map[string]string{}
 	coastDoc := w.docID("Kept Tower")
 	w.region["coast"] = w.id(3)
@@ -340,17 +348,21 @@ func (w *world) spatial() {
 	w.put("regions", []string{"public_id"}, nil, map[string]any{
 		"public_id": w.region["grey"], "name": "Grey Reach", "kind": "uncharted",
 	})
+}
 
+func (w *world) seedMaps() {
 	w.lfc = w.id(4)
 	w.put("maps", []string{"public_id"}, map[string]ref{"region_id": who("regions", w.region["coast"])}, map[string]any{
 		"public_id": w.lfc, "name": "Lightfall Coast", "atlas_code": "LFC",
 		"family": "campaign", "map_kind": "pointcrawl", "asset_path": "atlases/lfc/coast.webp",
 	})
-	underkeep := w.id(4)
+	w.underkeep = w.id(4)
 	w.put("maps", []string{"public_id"}, map[string]ref{"region_id": who("regions", w.region["grey"])}, map[string]any{
-		"public_id": underkeep, "name": "Underkeep", "atlas_code": "LFC-UNDER", "family": "campaign", "map_kind": "pointcrawl",
+		"public_id": w.underkeep, "name": "Underkeep", "atlas_code": "LFC-UNDER", "family": "campaign", "map_kind": "pointcrawl",
 	})
+}
 
+func (w *world) seedPointcrawl() {
 	locIDs := w.byCat["Locations"]
 	feat := w.byCat["Feature"]
 	nodeNames := []string{"Kept Tower", "Salt Stair", "Ferry House", "Charter Gate", "Grey Causeway", "Underkeep Mouth"}
@@ -359,7 +371,7 @@ func (w *world) spatial() {
 		w.crawlNodes = append(w.crawlNodes, id)
 		mapRef := w.lfc
 		if i >= 18 {
-			mapRef = underkeep
+			mapRef = w.underkeep
 		}
 		w.put("pointcrawl_nodes", []string{"public_id"}, map[string]ref{"map_id": who("maps", mapRef)}, map[string]any{
 			"public_id":  id,
@@ -389,7 +401,7 @@ func (w *world) spatial() {
 		edgeN++
 	}
 	for i := lfcNodeCount; i+1 < len(w.crawlNodes); i++ {
-		putEdge(underkeep, w.crawlNodes[i], w.crawlNodes[i+1], edgeN)
+		putEdge(w.underkeep, w.crawlNodes[i], w.crawlNodes[i+1], edgeN)
 		edgeN++
 	}
 	brune := w.memberByHandle("brune").ID
@@ -419,6 +431,9 @@ func (w *world) spatial() {
 		"public_id": w.id(23), "real_utc": qaAnchor.RealUtc.Format(time.RFC3339), "epoch_day": int(qaAnchor.EpochDay), "rate": qaAnchor.Rate,
 		"note": "Campaign clock starts on the first real Thursday of the year. One session is a day and a half on the coast.",
 	})
+}
+
+func (w *world) seedCalendar() {
 	w.put("game_calendar", []string{"id"}, nil, map[string]any{
 		"id": 1,
 		"definition": map[string]any{
@@ -462,6 +477,18 @@ func qaGameDay(midnight time.Time) int {
 }
 
 func (w *world) cast() {
+	w.seedBackstoriesAndCatalog()
+	owners := []string{"holt", "holt", "holt", "holt", "nessa", "brim", "dove", "rusk", "lane", "brune", "cox", "est"}
+	statuses := []string{"active", "active", "retired", "pending_approval", "active", "dead", "active", "active", "pending_approval", "active", "retired", "active"}
+	names := []string{"Bram Holt", "Nell Holt", "Old Bram", "Petition Holt", "Nessa Quill", "Cale Brim", "Dove Rusk", "Ivo Rusk", "Hester Lane", "Brune's Spare", "Cox on Leave", "Est the Younger"}
+	guild := w.byCat["Entities"]
+	backstories := w.backstoryIDs()
+	for i := range names {
+		w.seedCharacter(i, owners[i], statuses[i], names[i], guild, backstories)
+	}
+}
+
+func (w *world) seedBackstoriesAndCatalog() {
 	for _, b := range []struct {
 		name, lore, cohort string
 		retired            bool
@@ -499,77 +526,77 @@ func (w *world) cast() {
 			"payload": map[string]any{"blurb": c.name + " is on the Lightfall sheet.", "edition": "qa"},
 		})
 	}
+}
 
-	owners := []string{"holt", "holt", "holt", "holt", "nessa", "brim", "dove", "rusk", "lane", "brune", "cox", "est"}
-	statuses := []string{"active", "active", "retired", "pending_approval", "active", "dead", "active", "active", "pending_approval", "active", "retired", "active"}
-	names := []string{"Bram Holt", "Nell Holt", "Old Bram", "Petition Holt", "Nessa Quill", "Cale Brim", "Dove Rusk", "Ivo Rusk", "Hester Lane", "Brune's Spare", "Cox on Leave", "Est the Younger"}
-	guild := w.byCat["Entities"]
+func (w *world) backstoryIDs() []string {
 	backstories := []string{}
 	for _, row := range w.lines {
 		if row.Table == "backstories" {
 			backstories = append(backstories, row.Row["public_id"].(string))
 		}
 	}
-	for i := range names {
-		id := w.id(11)
-		owner := w.memberByHandle(owners[i])
-		code := "qa-" + slugify(names[i])
-		w.chars = append(w.chars, charRow{ID: id, Owner: owner.ID, Name: names[i], Code: code, Status: statuses[i]})
-		row := map[string]any{
-			"public_id": id, "short_code": code, "name": names[i], "status": statuses[i],
-			"player_xp": 100 + i*25,
-		}
-		refs := map[string]ref{
-			"owner_id":     who("members", owner.ID),
-			"region_id":    who("regions", w.region["coast"]),
-			"backstory_id": who("backstories", backstories[i%len(backstories)]),
-		}
-		if len(guild) > 0 {
-			refs["guild_document_id"] = who("documents", guild[i%len(guild)])
-		}
-		if statuses[i] == "pending_approval" {
-			row["verification_submitted_at"] = "2026-10-01T12:00:00Z"
-		}
-		w.put("characters", []string{"public_id"}, refs, row)
-		// Stored mirrors must match decodeStoredCharacterDDBMirror (closed field set).
-		classes := []string{"Warden", "Chronicler", "Ferryman"}[i%3]
-		level := 1 + i%8
-		w.put("character_ddb_mirrors", []string{"character_id"}, map[string]ref{"character_id": who("characters", id)}, map[string]any{
-			"payload": map[string]any{
-				"level": level, "xp": level * 100, "armorClass": 12 + i%4, "maxHp": 20 + i,
-				"species": []string{"Human", "Elf", "Dwarf"}[i%3], "classes": fmt.Sprintf("%s %d", classes, level),
-				"background": []string{"Soldier", "Sailor", "Sage"}[i%3],
-				"proficiencies": []map[string]any{
-					{"kind": "language", "name": "Common"},
-					{"kind": "proficiency", "name": "Athletics"},
-				},
+	return backstories
+}
+
+func (w *world) seedCharacter(i int, ownerHandle, status, name string, guild, backstories []string) {
+	id := w.id(11)
+	owner := w.memberByHandle(ownerHandle)
+	code := "qa-" + slugify(name)
+	w.chars = append(w.chars, charRow{ID: id, Owner: owner.ID, Name: name, Code: code, Status: status})
+	row := map[string]any{
+		"public_id": id, "short_code": code, "name": name, "status": status,
+		"player_xp": 100 + i*25,
+	}
+	refs := map[string]ref{
+		"owner_id":     who("members", owner.ID),
+		"region_id":    who("regions", w.region["coast"]),
+		"backstory_id": who("backstories", backstories[i%len(backstories)]),
+	}
+	if len(guild) > 0 {
+		refs["guild_document_id"] = who("documents", guild[i%len(guild)])
+	}
+	if status == "pending_approval" {
+		row["verification_submitted_at"] = "2026-10-01T12:00:00Z"
+	}
+	w.put("characters", []string{"public_id"}, refs, row)
+	// Stored mirrors must match decodeStoredCharacterDDBMirror (closed field set).
+	classes := []string{"Warden", "Chronicler", "Ferryman"}[i%3]
+	level := 1 + i%8
+	w.put("character_ddb_mirrors", []string{"character_id"}, map[string]ref{"character_id": who("characters", id)}, map[string]any{
+		"payload": map[string]any{
+			"level": level, "xp": level * 100, "armorClass": 12 + i%4, "maxHp": 20 + i,
+			"species": []string{"Human", "Elf", "Dwarf"}[i%3], "classes": fmt.Sprintf("%s %d", classes, level),
+			"background": []string{"Soldier", "Sailor", "Sage"}[i%3],
+			"proficiencies": []map[string]any{
+				{"kind": "language", "name": "Common"},
+				{"kind": "proficiency", "name": "Athletics"},
 			},
-			"synced_at": "2026-10-02T12:00:00Z",
-		})
-		w.put("character_progression_ledger", []string{"public_id"}, map[string]ref{"character_id": who("characters", id)}, map[string]any{
-			"public_id": w.id(12), "delta": 100 + i*25, "reason": "Session award for " + names[i] + ".",
-		})
-		downStatus := []string{"active", "completed", "abandoned"}[i%3]
-		w.put("downtime_projects", []string{"public_id"}, map[string]ref{"character_id": who("characters", id)}, map[string]any{
-			"public_id": w.id(13), "name": names[i] + " — winter work",
-			"target": 10, "progress": []int{2, 10, 4}[i%3], "status": downStatus,
-			"goal": "A finished piece of coast-work before Thaw.", "notes": "Logged between sessions. Tools live at the Kept Tower.",
-		})
-		if i < 4 {
-			w.put("verifications", []string{"public_id"}, map[string]ref{
-				"subject_id": who("characters", id),
-				"decided_by": who("members", w.memberByHandle("sable").ID),
-			}, map[string]any{
-				"public_id": w.id(14), "subject_type": "character",
-				"verdict": []string{"approved", "rejected"}[i%2],
-				"note":    names[i] + " reviewed against the coast sheet.",
-			})
-		}
-		w.put("character_logs", []string{"public_id"}, map[string]ref{"character_id": who("characters", id)}, map[string]any{
-			"public_id": w.id(26),
-			"body":      names[i] + " wrote the evening down: weather, who paid for the ferry, and what the tower lamp did at dusk.",
+		},
+		"synced_at": "2026-10-02T12:00:00Z",
+	})
+	w.put("character_progression_ledger", []string{"public_id"}, map[string]ref{"character_id": who("characters", id)}, map[string]any{
+		"public_id": w.id(12), "delta": 100 + i*25, "reason": "Session award for " + name + ".",
+	})
+	downStatus := []string{"active", "completed", "abandoned"}[i%3]
+	w.put("downtime_projects", []string{"public_id"}, map[string]ref{"character_id": who("characters", id)}, map[string]any{
+		"public_id": w.id(13), "name": name + " — winter work",
+		"target": 10, "progress": []int{2, 10, 4}[i%3], "status": downStatus,
+		"goal": "A finished piece of coast-work before Thaw.", "notes": "Logged between sessions. Tools live at the Kept Tower.",
+	})
+	if i < 4 {
+		w.put("verifications", []string{"public_id"}, map[string]ref{
+			"subject_id": who("characters", id),
+			"decided_by": who("members", w.memberByHandle("sable").ID),
+		}, map[string]any{
+			"public_id": w.id(14), "subject_type": "character",
+			"verdict": []string{"approved", "rejected"}[i%2],
+			"note":    name + " reviewed against the coast sheet.",
 		})
 	}
+	w.put("character_logs", []string{"public_id"}, map[string]ref{"character_id": who("characters", id)}, map[string]any{
+		"public_id": w.id(26),
+		"body":      name + " wrote the evening down: weather, who paid for the ferry, and what the tower lamp did at dusk.",
+	})
 }
 
 func (w *world) addQuests() {
@@ -650,30 +677,39 @@ func (w *world) addQuests() {
 				"node_id":  who("pointcrawl_nodes", w.crawlNodes[i%len(w.crawlNodes)]),
 			}, map[string]any{"role": []string{"expected", "visited"}[i%2]})
 		}
-		used := map[string]bool{}
-		for p := 0; p < s.filled && p < len(w.chars); p++ {
-			ch := w.chars[p%len(w.chars)]
-			if used[ch.ID] {
-				continue
-			}
-			used[ch.ID] = true
-			pst := "signed_up"
-			if s.status == "played" {
-				pst = "played"
-			}
-			w.put("quest_participants", []string{"quest_id", "character_id"}, map[string]ref{
-				"quest_id": who("quests", id), "member_id": who("members", ch.Owner), "character_id": who("characters", ch.ID),
-			}, map[string]any{"status": pst, "manual": p == 0})
-		}
-		if s.status == "open" && len(w.chars) > s.filled {
-			ch := w.chars[(s.filled+1)%len(w.chars)]
-			if !used[ch.ID] {
-				w.put("quest_participants", []string{"quest_id", "character_id"}, map[string]ref{
-					"quest_id": who("quests", id), "member_id": who("members", ch.Owner), "character_id": who("characters", ch.ID),
-				}, map[string]any{"status": []string{"waitlisted", "withdrawn", "no_show"}[i%3]})
-			}
-		}
+		w.seedQuestParticipants(i, id, s.status, s.filled)
 	}
+}
+
+func (w *world) seedQuestParticipants(index int, questID, status string, filled int) {
+	used := map[string]bool{}
+	for position := 0; position < filled && position < len(w.chars); position++ {
+		character := w.chars[position%len(w.chars)]
+		if used[character.ID] {
+			continue
+		}
+		used[character.ID] = true
+		participantStatus := "signed_up"
+		if status == "played" {
+			participantStatus = "played"
+		}
+		w.put("quest_participants", []string{"quest_id", "character_id"}, map[string]ref{
+			"quest_id": who("quests", questID), "member_id": who("members", character.Owner), "character_id": who("characters", character.ID),
+		}, map[string]any{"status": participantStatus, "manual": position == 0})
+	}
+	if status == "open" && len(w.chars) > filled {
+		w.addOpenQuestWaitlist(index, questID, filled, used)
+	}
+}
+
+func (w *world) addOpenQuestWaitlist(index int, questID string, filled int, used map[string]bool) {
+	character := w.chars[(filled+1)%len(w.chars)]
+	if used[character.ID] {
+		return
+	}
+	w.put("quest_participants", []string{"quest_id", "character_id"}, map[string]ref{
+		"quest_id": who("quests", questID), "member_id": who("members", character.Owner), "character_id": who("characters", character.ID),
+	}, map[string]any{"status": []string{"waitlisted", "withdrawn", "no_show"}[index%3]})
 }
 
 func (w *world) social() {

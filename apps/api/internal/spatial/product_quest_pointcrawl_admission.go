@@ -20,19 +20,41 @@ func (p *ProductPostgres) ResolveQuestPointcrawlNodes(ctx context.Context, actor
 	if len(nodes) == 0 {
 		return []PointcrawlAdmission{}, nil
 	}
+	nodeIDs, uuids, err := validateQuestPointcrawlCandidates(nodes)
+	if err != nil {
+		return nil, err
+	}
+	planned, err := readQuestPointcrawlNodes(ctx, p, actor, uuids, len(nodeIDs))
+	if err != nil {
+		return nil, err
+	}
+	facts, err := p.lockQuestPointcrawlNodes(ctx, actor, planned, nodeIDs, uuids)
+	if err != nil {
+		return nil, err
+	}
+	result := make([]PointcrawlAdmission, 0, len(nodes))
+	for _, node := range nodes {
+		fact := facts[node.ID]
+		fact.Role = node.Role
+		result = append(result, fact)
+	}
+	return result, nil
+}
+
+func validateQuestPointcrawlCandidates(nodes []QuestPointcrawlCandidate) ([]string, []pgtype.UUID, error) {
 	keys := make(map[string]bool, len(nodes))
 	ids := make(map[string]pgtype.UUID, len(nodes))
 	for _, node := range nodes {
 		id, err := spatialPublicID(node.ID)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if node.ID != db.UUIDString(id) || node.Role != "expected" && node.Role != "visited" {
-			return nil, apierr.New(apierr.Invalid, "invalid pointcrawl link")
+			return nil, nil, apierr.New(apierr.Invalid, "invalid pointcrawl link")
 		}
 		key := node.ID + "\x00" + node.Role
 		if keys[key] {
-			return nil, apierr.New(apierr.Invalid, "duplicate pointcrawl link")
+			return nil, nil, apierr.New(apierr.Invalid, "duplicate pointcrawl link")
 		}
 		keys[key], ids[node.ID] = true, id
 	}
@@ -45,26 +67,30 @@ func (p *ProductPostgres) ResolveQuestPointcrawlNodes(ctx context.Context, actor
 	for _, id := range nodeIDs {
 		uuids = append(uuids, ids[id])
 	}
-	read := func() ([]dbgen.ResolveProductQuestPointcrawlNodesRow, error) {
-		viewer, err := p.documentSQLViewer(ctx, actor)
-		if err != nil {
-			return nil, err
-		}
-		rows, err := p.queries().ResolveProductQuestPointcrawlNodes(ctx, dbgen.ResolveProductQuestPointcrawlNodesParams{
-			NodeIds: uuids, ViewerID: viewer.ID, ViewerRoles: viewer.Roles, ViewerHandle: viewer.Handle,
-			ViewerAdmin: viewer.Admin, ViewerLiveDm: viewer.LiveDM, ReaderIds: viewer.Readers,
-		})
-		if err != nil {
-			return nil, err
-		}
-		if len(rows) != len(nodeIDs) {
-			return nil, apierr.New(apierr.NotFound, "pointcrawl node not found")
-		}
-		return rows, nil
-	}
-	planned, err := read()
+	return nodeIDs, uuids, nil
+}
+
+func readQuestPointcrawlNodes(ctx context.Context, p *ProductPostgres, actor auth.Authority, uuids []pgtype.UUID, expected int) ([]dbgen.ResolveProductQuestPointcrawlNodesRow, error) {
+	viewer, err := p.documentSQLViewer(ctx, actor)
 	if err != nil {
 		return nil, err
+	}
+	rows, err := p.queries().ResolveProductQuestPointcrawlNodes(ctx, dbgen.ResolveProductQuestPointcrawlNodesParams{
+		NodeIds: uuids, ViewerID: viewer.ID, ViewerRoles: viewer.Roles, ViewerHandle: viewer.Handle,
+		ViewerAdmin: viewer.Admin, ViewerLiveDm: viewer.LiveDM, ReaderIds: viewer.Readers,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if len(rows) != expected {
+		return nil, apierr.New(apierr.NotFound, "pointcrawl node not found")
+	}
+	return rows, nil
+}
+
+func (p *ProductPostgres) lockQuestPointcrawlNodes(ctx context.Context, actor auth.Authority, planned []dbgen.ResolveProductQuestPointcrawlNodesRow, nodeIDs []string, uuids []pgtype.UUID) (map[string]PointcrawlAdmission, error) {
+	read := func() ([]dbgen.ResolveProductQuestPointcrawlNodesRow, error) {
+		return readQuestPointcrawlNodes(ctx, p, actor, uuids, len(nodeIDs))
 	}
 	maps := make([]string, 0, len(planned))
 	mapByNode := make(map[string]string, len(planned))
@@ -97,11 +123,5 @@ func (p *ProductPostgres) ResolveQuestPointcrawlNodes(ctx context.Context, actor
 		}
 		facts[id] = PointcrawlAdmission{ID: id, MapID: mapID, RegionID: uuidPtr(row.RegionID), AdminOverride: row.AdminOverride}
 	}
-	result := make([]PointcrawlAdmission, 0, len(nodes))
-	for _, node := range nodes {
-		fact := facts[node.ID]
-		fact.Role = node.Role
-		result = append(result, fact)
-	}
-	return result, nil
+	return facts, nil
 }

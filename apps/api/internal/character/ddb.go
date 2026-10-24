@@ -221,7 +221,7 @@ func classifyDdbFetchError(ctx context.Context, err error) error {
 
 func canonicalDdbCharacterID(raw string) (string, error) {
 	parsed, err := url.Parse(raw)
-	if err != nil || parsed.Scheme != "https" || !strings.EqualFold(parsed.Hostname(), "www.dndbeyond.com") || parsed.Port() != "" || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" || parsed.Opaque != "" {
+	if err != nil || !validDdbCharacterURL(parsed) {
 		return "", errors.New("invalid DDB character URL")
 	}
 	path := strings.TrimSuffix(parsed.Path, "/")
@@ -245,34 +245,15 @@ func canonicalDdbCharacterID(raw string) (string, error) {
 	return strconv.FormatUint(value, 10), nil
 }
 
-func parseDdbPayload(payload []byte, requestedID string) (DdbSnapshot, error) {
-	if len(payload) == 0 || !jsonDepthWithin(payload, ddbMaxJSONDepth) {
-		return DdbSnapshot{}, errors.New("invalid DDB payload")
-	}
-	decoder := json.NewDecoder(bytes.NewReader(payload))
-	decoder.UseNumber()
-	var envelope map[string]json.RawMessage
-	if err := decoder.Decode(&envelope); err != nil || ensureJSONEOF(decoder) != nil {
-		return DdbSnapshot{}, errors.New("invalid DDB payload")
-	}
-	var success bool
-	if raw, ok := envelope["success"]; !ok || json.Unmarshal(raw, &success) != nil || !success {
-		return DdbSnapshot{}, errors.New("invalid DDB envelope")
-	}
-	var data map[string]json.RawMessage
-	if raw, ok := envelope["data"]; !ok || json.Unmarshal(raw, &data) != nil || data == nil {
-		return DdbSnapshot{}, errors.New("invalid DDB data")
-	}
-	var id json.Number
-	if raw, ok := data["id"]; !ok || decodeNumber(raw, &id) != nil {
-		return DdbSnapshot{}, errors.New("invalid DDB identity")
-	}
-	gotID, err := strconv.ParseInt(id.String(), 10, 64)
-	wantedID, wantedErr := strconv.ParseInt(requestedID, 10, 64)
-	if err != nil || wantedErr != nil || gotID <= 0 || gotID != wantedID {
-		return DdbSnapshot{}, errors.New("invalid DDB identity")
-	}
+func validDdbCharacterURL(parsed *url.URL) bool {
+	return parsed.Scheme == "https" && strings.EqualFold(parsed.Hostname(), "www.dndbeyond.com") && parsed.Port() == "" && parsed.User == nil && parsed.RawQuery == "" && parsed.Fragment == "" && parsed.Opaque == ""
+}
 
+func parseDdbPayload(payload []byte, requestedID string) (DdbSnapshot, error) {
+	data, err := parseDdbEnvelope(payload, requestedID)
+	if err != nil {
+		return DdbSnapshot{}, err
+	}
 	currentXP, err := requiredInt32(data, "currentXp", 0, math.MaxInt32)
 	if err != nil {
 		return DdbSnapshot{}, err
@@ -325,6 +306,44 @@ func parseDdbPayload(payload []byte, requestedID string) (DdbSnapshot, error) {
 		ArmorClass: armorClass, MaxHP: maxHP, Species: &species, Classes: &classes,
 		Background: background, Proficiencies: proficiencies,
 	}, nil
+}
+
+func parseDdbEnvelope(payload []byte, requestedID string) (map[string]json.RawMessage, error) {
+	envelope, err := decodeDdbEnvelope(payload)
+	if err != nil {
+		return nil, err
+	}
+	var success bool
+	if raw, ok := envelope["success"]; !ok || json.Unmarshal(raw, &success) != nil || !success {
+		return nil, errors.New("invalid DDB envelope")
+	}
+	var data map[string]json.RawMessage
+	if raw, ok := envelope["data"]; !ok || json.Unmarshal(raw, &data) != nil || data == nil {
+		return nil, errors.New("invalid DDB data")
+	}
+	var id json.Number
+	if raw, ok := data["id"]; !ok || decodeNumber(raw, &id) != nil {
+		return nil, errors.New("invalid DDB identity")
+	}
+	gotID, err := strconv.ParseInt(id.String(), 10, 64)
+	wantedID, wantedErr := strconv.ParseInt(requestedID, 10, 64)
+	if err != nil || wantedErr != nil || gotID <= 0 || gotID != wantedID {
+		return nil, errors.New("invalid DDB identity")
+	}
+	return data, nil
+}
+
+func decodeDdbEnvelope(payload []byte) (map[string]json.RawMessage, error) {
+	if len(payload) == 0 || !jsonDepthWithin(payload, ddbMaxJSONDepth) {
+		return nil, errors.New("invalid DDB payload")
+	}
+	decoder := json.NewDecoder(bytes.NewReader(payload))
+	decoder.UseNumber()
+	var envelope map[string]json.RawMessage
+	if err := decoder.Decode(&envelope); err != nil || ensureJSONEOF(decoder) != nil {
+		return nil, errors.New("invalid DDB payload")
+	}
+	return envelope, nil
 }
 
 func ensureJSONEOF(decoder *json.Decoder) error {
@@ -406,27 +425,10 @@ func parseDdbClasses(raw json.RawMessage) (string, int32, error) {
 	var total int32
 	parts := make([]string, 0, len(classes))
 	for _, classRaw := range classes {
-		var class map[string]json.RawMessage
-		if json.Unmarshal(classRaw, &class) != nil || class == nil {
-			return "", 0, errors.New("invalid class")
+		name, level, err := parseDdbClass(classRaw)
+		if err != nil {
+			return "", 0, err
 		}
-		var definition map[string]json.RawMessage
-		if raw, ok := class["definition"]; !ok || json.Unmarshal(raw, &definition) != nil || definition == nil {
-			return "", 0, errors.New("invalid class definition")
-		}
-		var name string
-		if raw, ok := definition["name"]; !ok || json.Unmarshal(raw, &name) != nil || strings.TrimSpace(name) == "" {
-			return "", 0, errors.New("invalid class name")
-		}
-		var number json.Number
-		if raw, ok := class["level"]; !ok || decodeNumber(raw, &number) != nil {
-			return "", 0, errors.New("invalid class level")
-		}
-		parsedLevel, err := strconv.ParseInt(number.String(), 10, 32)
-		if err != nil || parsedLevel < 1 || parsedLevel > 20 {
-			return "", 0, errors.New("invalid class")
-		}
-		level := int32(parsedLevel)
 		total += level
 		if total > 20 {
 			return "", 0, errors.New("invalid total level")
@@ -434,6 +436,30 @@ func parseDdbClasses(raw json.RawMessage) (string, int32, error) {
 		parts = append(parts, fmt.Sprintf("%s %d", name, level))
 	}
 	return strings.Join(parts, ", "), total, nil
+}
+
+func parseDdbClass(raw json.RawMessage) (string, int32, error) {
+	var class map[string]json.RawMessage
+	if json.Unmarshal(raw, &class) != nil || class == nil {
+		return "", 0, errors.New("invalid class")
+	}
+	var definition map[string]json.RawMessage
+	if raw, ok := class["definition"]; !ok || json.Unmarshal(raw, &definition) != nil || definition == nil {
+		return "", 0, errors.New("invalid class definition")
+	}
+	var name string
+	if raw, ok := definition["name"]; !ok || json.Unmarshal(raw, &name) != nil || strings.TrimSpace(name) == "" {
+		return "", 0, errors.New("invalid class name")
+	}
+	var number json.Number
+	if raw, ok := class["level"]; !ok || decodeNumber(raw, &number) != nil {
+		return "", 0, errors.New("invalid class level")
+	}
+	parsedLevel, err := strconv.ParseInt(number.String(), 10, 32)
+	if err != nil || parsedLevel < 1 || parsedLevel > 20 {
+		return "", 0, errors.New("invalid class")
+	}
+	return name, int32(parsedLevel), nil
 }
 
 func parseDdbSpecies(raw json.RawMessage) (string, error) {
@@ -460,20 +486,8 @@ func parseDdbBackground(raw json.RawMessage) (*string, error) {
 	if len(raw) == 0 || json.Unmarshal(raw, &background) != nil || background == nil {
 		return nil, errors.New("invalid background")
 	}
-	if definitionRaw, ok := background["definition"]; ok && string(definitionRaw) != "null" {
-		var definition map[string]json.RawMessage
-		if json.Unmarshal(definitionRaw, &definition) != nil || definition == nil {
-			return nil, errors.New("invalid background definition")
-		}
-		if value, ok := definition["name"]; ok && string(value) != "null" {
-			var name string
-			if json.Unmarshal(value, &name) != nil {
-				return nil, errors.New("invalid background name")
-			}
-			if strings.TrimSpace(name) != "" {
-				return &name, nil
-			}
-		}
+	if name, err := parseDdbBackgroundDefinition(background["definition"]); err != nil || name != nil {
+		return name, err
 	}
 	var customName *string
 	value, ok := background["customBackground"]
@@ -481,6 +495,28 @@ func parseDdbBackground(raw json.RawMessage) (*string, error) {
 		return nil, errors.New("invalid custom background")
 	}
 	return customName, nil
+}
+
+func parseDdbBackgroundDefinition(raw json.RawMessage) (*string, error) {
+	if len(raw) == 0 || string(raw) == "null" {
+		return nil, nil
+	}
+	var definition map[string]json.RawMessage
+	if json.Unmarshal(raw, &definition) != nil || definition == nil {
+		return nil, errors.New("invalid background definition")
+	}
+	value, ok := definition["name"]
+	if !ok || string(value) == "null" {
+		return nil, nil
+	}
+	var name string
+	if json.Unmarshal(value, &name) != nil {
+		return nil, errors.New("invalid background name")
+	}
+	if strings.TrimSpace(name) == "" {
+		return nil, nil
+	}
+	return &name, nil
 }
 
 func optionalInt32(raw json.RawMessage) *int32 {
@@ -503,9 +539,9 @@ func parseDdbProficiencies(raw json.RawMessage) ([]DDBProficiencyView, error) {
 	if len(raw) == 0 || string(raw) == "null" {
 		return []DDBProficiencyView{}, nil
 	}
-	var groups map[string]json.RawMessage
-	if json.Unmarshal(raw, &groups) != nil || groups == nil {
-		return nil, errors.New("invalid modifiers")
+	groups, err := decodeDdbModifierGroups(raw)
+	if err != nil {
+		return nil, err
 	}
 	rows := 0
 	selected := make(map[string]DDBProficiencyView)
@@ -519,37 +555,31 @@ func parseDdbProficiencies(raw json.RawMessage) ([]DDBProficiencyView, error) {
 			return nil, errors.New("too many modifiers")
 		}
 		for _, valueRaw := range values {
-			var value map[string]json.RawMessage
-			if json.Unmarshal(valueRaw, &value) != nil || value == nil {
-				return nil, errors.New("invalid modifier")
+			item, selectedItem, err := parseDdbProficiency(valueRaw)
+			if err != nil {
+				return nil, err
 			}
-			var kind string
-			if raw, ok := value["type"]; !ok || json.Unmarshal(raw, &kind) != nil {
-				return nil, errors.New("invalid modifier type")
-			}
-			var isGranted bool
-			rawGrant, ok := value["isGranted"]
-			if !ok || (string(bytes.TrimSpace(rawGrant)) != "true" && string(bytes.TrimSpace(rawGrant)) != "false") || json.Unmarshal(rawGrant, &isGranted) != nil {
-				return nil, errors.New("invalid modifier grant")
-			}
-			if !isGranted || (kind != "proficiency" && kind != "language") {
+			if !selectedItem {
 				continue
 			}
-			var friendlyName string
-			if raw, ok := value["friendlySubtypeName"]; !ok || json.Unmarshal(raw, &friendlyName) != nil {
-				return nil, errors.New("invalid proficiency name")
-			}
-			name := strings.TrimSpace(friendlyName)
-			if name == "" {
-				return nil, errors.New("invalid proficiency name")
-			}
-			item := DDBProficiencyView{Kind: kind, Name: name}
 			selected[item.Kind+"\x00"+item.Name] = item
 			if len(selected) > ddbMaxProficiencies {
 				return nil, errors.New("too many proficiencies")
 			}
 		}
 	}
+	return sortedDdbProficiencies(selected), nil
+}
+
+func decodeDdbModifierGroups(raw json.RawMessage) (map[string]json.RawMessage, error) {
+	var groups map[string]json.RawMessage
+	if json.Unmarshal(raw, &groups) != nil || groups == nil {
+		return nil, errors.New("invalid modifiers")
+	}
+	return groups, nil
+}
+
+func sortedDdbProficiencies(selected map[string]DDBProficiencyView) []DDBProficiencyView {
 	result := make([]DDBProficiencyView, 0, len(selected))
 	for _, value := range selected {
 		result = append(result, value)
@@ -560,5 +590,33 @@ func parseDdbProficiencies(raw json.RawMessage) ([]DDBProficiencyView, error) {
 		}
 		return result[i].Kind < result[j].Kind
 	})
-	return result, nil
+	return result
+}
+
+func parseDdbProficiency(raw json.RawMessage) (DDBProficiencyView, bool, error) {
+	var value map[string]json.RawMessage
+	if json.Unmarshal(raw, &value) != nil || value == nil {
+		return DDBProficiencyView{}, false, errors.New("invalid modifier")
+	}
+	var kind string
+	if raw, ok := value["type"]; !ok || json.Unmarshal(raw, &kind) != nil {
+		return DDBProficiencyView{}, false, errors.New("invalid modifier type")
+	}
+	var granted bool
+	rawGrant, ok := value["isGranted"]
+	if !ok || (string(bytes.TrimSpace(rawGrant)) != "true" && string(bytes.TrimSpace(rawGrant)) != "false") || json.Unmarshal(rawGrant, &granted) != nil {
+		return DDBProficiencyView{}, false, errors.New("invalid modifier grant")
+	}
+	if !granted || (kind != "proficiency" && kind != "language") {
+		return DDBProficiencyView{}, false, nil
+	}
+	var name string
+	if raw, ok := value["friendlySubtypeName"]; !ok || json.Unmarshal(raw, &name) != nil {
+		return DDBProficiencyView{}, false, errors.New("invalid proficiency name")
+	}
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return DDBProficiencyView{}, false, errors.New("invalid proficiency name")
+	}
+	return DDBProficiencyView{Kind: kind, Name: name}, true, nil
 }

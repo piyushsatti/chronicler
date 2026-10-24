@@ -103,7 +103,7 @@ func (s *Service) discordJSON(request *http.Request, target any) error {
 	if response == nil || response.Body == nil {
 		return apierr.New(apierr.Internal, "invalid discord response")
 	}
-	defer response.Body.Close()
+	defer func() { _ = response.Body.Close() }()
 	if response.StatusCode != http.StatusOK {
 		if response.StatusCode >= 400 && response.StatusCode < 500 && response.StatusCode != http.StatusTooManyRequests {
 			return apierr.New(apierr.Unauthenticated, "discord authorization rejected")

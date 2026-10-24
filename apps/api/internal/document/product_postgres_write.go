@@ -113,23 +113,8 @@ type insertedDocumentIdentity struct {
 }
 
 func (p *ProductPostgres) insertAllocatedDocument(ctx context.Context, write CreateDocumentWrite, slug, author string) (insertedDocumentIdentity, error) {
-	input := write.ValidatedInput.Input
-	if err := validateDocumentBody(input.Body); err != nil {
-		return insertedDocumentIdentity{}, err
-	}
-	if err := validateDocumentTitle(input.Title); err != nil {
-		return insertedDocumentIdentity{}, err
-	}
-	if err := validateDocumentCategory(input.Kind, input.Category); err != nil {
-		return insertedDocumentIdentity{}, err
-	}
-	if err := validateDocumentVisibility(input.Visibility); err != nil {
-		return insertedDocumentIdentity{}, err
-	}
-	if len(input.Frontmatter) == 0 {
-		input.Frontmatter = json.RawMessage(`{}`)
-	}
-	if err := validateDocumentFrontmatter(input.Frontmatter); err != nil {
+	input, err := validateAllocatedDocumentInput(write.ValidatedInput.Input)
+	if err != nil {
 		return insertedDocumentIdentity{}, err
 	}
 	authorID, err := productDocumentID(author)
@@ -188,6 +173,28 @@ func (p *ProductPostgres) insertAllocatedDocument(ctx context.Context, write Cre
 	return insertedDocumentIdentity{ID: db.UUIDString(created.ID), Version: created.Version}, nil
 }
 
+func validateAllocatedDocumentInput(input DocumentDraftFields) (DocumentDraftFields, error) {
+	if err := validateDocumentBody(input.Body); err != nil {
+		return DocumentDraftFields{}, err
+	}
+	if err := validateDocumentTitle(input.Title); err != nil {
+		return DocumentDraftFields{}, err
+	}
+	if err := validateDocumentCategory(input.Kind, input.Category); err != nil {
+		return DocumentDraftFields{}, err
+	}
+	if err := validateDocumentVisibility(input.Visibility); err != nil {
+		return DocumentDraftFields{}, err
+	}
+	if len(input.Frontmatter) == 0 {
+		input.Frontmatter = json.RawMessage(`{}`)
+	}
+	if err := validateDocumentFrontmatter(input.Frontmatter); err != nil {
+		return DocumentDraftFields{}, err
+	}
+	return input, nil
+}
+
 func (p *ProductPostgres) LockUpdateDocument(ctx context.Context, spec UpdateDocumentSpec) (UpdateDocumentState, error) {
 	row, err := p.lockByID(ctx, spec.Id)
 	if err != nil {
@@ -221,65 +228,27 @@ func (p *ProductPostgres) applyDocumentUpdate(ctx context.Context, write any, id
 		DeletedAt: row.DeletedAt, DeletedBy: row.DeletedBy,
 		ID: mustProductUUID(id), ExpectedVersion: expected,
 	}
-	var actorID string
-	var revisionID *string
-	var mentions []string
-	reason := "updated"
-	switch w := write.(type) {
-	case UpdateDocumentWrite:
-		params.At = pgNow(w.At)
-		actorID = w.ActorID
-		revisionID, mentions = w.RevisionID, w.NewMentionMemberIDs
-	case PublishDocumentWrite:
-		if row.Status != "draft" || row.DeletedAt.Valid {
-			return DocumentView{}, apierr.New(apierr.Conflict, "only a live draft can be published")
-		}
-		params.At = pgNow(w.At)
-		actorID, reason = w.ActorID, "published"
-		revisionID = w.RevisionID
-	case DeleteDocumentWrite:
-		if row.DeletedAt.Valid {
-			return DocumentView{}, apierr.New(apierr.NotFound, "document not found")
-		}
-		params.At = pgNow(w.At)
-		actorID, reason = w.ActorID, "deleted"
-	case RestoreDocumentWrite:
-		if !row.DeletedAt.Valid {
-			return DocumentView{}, apierr.New(apierr.Conflict, "document is not in trash")
-		}
-		params.At = pgNow(w.At)
-		actorID, reason = w.ActorID, "restored"
-	case UnpublishDocumentWrite:
-		if row.Status != "published" || row.DeletedAt.Valid {
-			return DocumentView{}, apierr.New(apierr.Conflict, "only a live published document can be unpublished")
-		}
-		params.At = pgNow(w.At)
-		actorID, reason = w.ActorID, "unpublished"
-	case EditPublishedDocumentWrite:
-		params.At = pgNow(w.At)
-		actorID = w.ActorID
-		revisionID, mentions = w.RevisionID, w.NewMentionMemberIDs
-	case SetDocumentVisibilityWrite:
-		params.At = pgNow(w.At)
-		actorID, reason = w.ActorID, "audience_changed"
+	metadata, err := documentUpdateMetadataFor(&params, row, write)
+	if err != nil {
+		return DocumentView{}, err
 	}
 	if mutate != nil {
 		mutate(&params)
 	}
 	revID := uuid.NewString()
-	if revisionID != nil {
-		revID = *revisionID
+	if metadata.revisionID != nil {
+		revID = *metadata.revisionID
 	}
 	parsedRevisionID, err := productDocumentID(revID)
 	if err != nil {
 		return DocumentView{}, err
 	}
-	if mentions == nil {
-		mentions = []string{}
+	if metadata.mentions == nil {
+		metadata.mentions = []string{}
 	}
 	provenance, err := json.Marshal(struct {
 		NewMentionMemberIDs []string `json:"newMentionMemberIds"`
-	}{mentions})
+	}{metadata.mentions})
 	if err != nil {
 		return DocumentView{}, err
 	}
@@ -291,16 +260,58 @@ func (p *ProductPostgres) applyDocumentUpdate(ctx context.Context, write any, id
 		return DocumentView{}, err
 	}
 	if _, err := p.queries().InsertProductDocumentRevision(ctx, dbgen.InsertProductDocumentRevisionParams{
-		ID: parsedRevisionID, DocumentID: params.ID, Rev: rev, Reason: reason,
+		ID: parsedRevisionID, DocumentID: params.ID, Rev: rev, Reason: metadata.reason,
 		Title: params.Title, Body: params.Body, FrontmatterYaml: params.FrontmatterYaml,
-		RecordedBy: mustProductUUID(actorID), At: params.At, Policy: params.Policy,
+		RecordedBy: mustProductUUID(metadata.actorID), At: params.At, Policy: params.Policy,
 		PublishedAt: params.PublishedAt, PublishedBy: params.PublishedBy,
 		Visibility: pgtype.Text{String: params.Visibility, Valid: true},
 		NewValue:   provenance,
 	}); err != nil {
 		return DocumentView{}, err
 	}
-	return p.loadDocumentView(ctx, id, actorID)
+	return p.loadDocumentView(ctx, id, metadata.actorID)
+}
+
+type documentUpdateMetadata struct {
+	actorID    string
+	revisionID *string
+	mentions   []string
+	reason     string
+}
+
+func documentUpdateMetadataFor(params *dbgen.UpdateProductDocumentParams, row dbgen.LockProductDocumentByIDRow, write any) (documentUpdateMetadata, error) {
+	metadata := documentUpdateMetadata{reason: "updated"}
+	switch w := write.(type) {
+	case UpdateDocumentWrite:
+		params.At, metadata.actorID = pgNow(w.At), w.ActorID
+		metadata.revisionID, metadata.mentions = w.RevisionID, w.NewMentionMemberIDs
+	case PublishDocumentWrite:
+		if row.Status != "draft" || row.DeletedAt.Valid {
+			return documentUpdateMetadata{}, apierr.New(apierr.Conflict, "only a live draft can be published")
+		}
+		params.At, metadata.actorID, metadata.reason, metadata.revisionID = pgNow(w.At), w.ActorID, "published", w.RevisionID
+	case DeleteDocumentWrite:
+		if row.DeletedAt.Valid {
+			return documentUpdateMetadata{}, apierr.New(apierr.NotFound, "document not found")
+		}
+		params.At, metadata.actorID, metadata.reason = pgNow(w.At), w.ActorID, "deleted"
+	case RestoreDocumentWrite:
+		if !row.DeletedAt.Valid {
+			return documentUpdateMetadata{}, apierr.New(apierr.Conflict, "document is not in trash")
+		}
+		params.At, metadata.actorID, metadata.reason = pgNow(w.At), w.ActorID, "restored"
+	case UnpublishDocumentWrite:
+		if row.Status != "published" || row.DeletedAt.Valid {
+			return documentUpdateMetadata{}, apierr.New(apierr.Conflict, "only a live published document can be unpublished")
+		}
+		params.At, metadata.actorID, metadata.reason = pgNow(w.At), w.ActorID, "unpublished"
+	case EditPublishedDocumentWrite:
+		params.At, metadata.actorID = pgNow(w.At), w.ActorID
+		metadata.revisionID, metadata.mentions = w.RevisionID, w.NewMentionMemberIDs
+	case SetDocumentVisibilityWrite:
+		params.At, metadata.actorID, metadata.reason = pgNow(w.At), w.ActorID, "audience_changed"
+	}
+	return metadata, nil
 }
 
 func mustProductUUID(id string) pgtype.UUID {

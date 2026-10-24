@@ -48,16 +48,11 @@ func decodeMarkRead(r *http.Request) ([]string, error) {
 	dec := json.NewDecoder(bytes.NewReader(body))
 	// Token-level shape validation rejects duplicate keys, nulls, unknown
 	// properties and trailing values that ordinary struct decoding can accept.
-	token, err := dec.Token()
-	if err != nil || token != json.Delim('{') {
-		return nil, errInvalidReadRequest
-	}
-	token, err = dec.Token()
-	if err != nil || token != "ids" {
-		return nil, errInvalidReadRequest
-	}
-	token, err = dec.Token()
-	if err != nil || token != json.Delim('[') {
+	return decodeMarkReadIDs(dec)
+}
+
+func decodeMarkReadIDs(dec *json.Decoder) ([]string, error) {
+	if expectMarkReadToken(dec, json.Delim('{')) != nil || expectMarkReadToken(dec, "ids") != nil || expectMarkReadToken(dec, json.Delim('[')) != nil {
 		return nil, errInvalidReadRequest
 	}
 	ids := make([]string, 0)
@@ -71,16 +66,22 @@ func decodeMarkRead(r *http.Request) ([]string, error) {
 		}
 		ids = append(ids, id)
 	}
-	token, err = dec.Token()
-	if err != nil || token != json.Delim(']') || dec.More() {
+	if expectMarkReadToken(dec, json.Delim(']')) != nil || dec.More() {
 		return nil, errInvalidReadRequest
 	}
-	token, err = dec.Token()
-	if err != nil || token != json.Delim('}') {
+	if expectMarkReadToken(dec, json.Delim('}')) != nil {
 		return nil, errInvalidReadRequest
 	}
 	if _, err := dec.Token(); err != io.EOF {
 		return nil, errInvalidReadRequest
 	}
 	return normalizeReadIDs(ids)
+}
+
+func expectMarkReadToken(dec *json.Decoder, expected any) error {
+	token, err := dec.Token()
+	if err != nil || token != expected {
+		return errInvalidReadRequest
+	}
+	return nil
 }

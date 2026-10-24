@@ -47,7 +47,7 @@ test('phone panel tabs stay on one row and reveal every touch or keyboard select
   await page.goto('/community');
   const list = page.getByRole('tablist', { name: 'Community sections' });
   const track = page.locator('.tabs__track');
-  const names = ['Free this week', 'DMs', 'Players', 'Characters'];
+  const names = ['Free this week', 'Members', 'Characters'];
   await expect(list).toBeVisible();
   await expect(list.getByRole('tab')).toHaveCount(names.length);
   await expect.poll(() => track.evaluate((element) => {

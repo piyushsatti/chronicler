@@ -1,7 +1,10 @@
+version: '2'
+
 run:
   timeout: 3m
 
 linters:
+  default: standard
   enable:
     - errcheck
     - govet
@@ -12,24 +15,32 @@ linters:
     - funlen
     - ineffassign
     - unused
-
-linters-settings:
-  gocyclo:
-    min-complexity: 15
-  gocognit:
-    min-complexity: 20
-  funlen:
-    lines: 80
-    statements: 50
-  revive:
+  settings:
+    gocyclo:
+      min-complexity: 15
+    gocognit:
+      min-complexity: 20
+    funlen:
+      lines: 80
+      statements: 50
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
     rules:
-      - name: exported
-        disabled: true
-
-issues:
-  exclude-rules:
-    - path: _test\.go
-      linters:
-        - funlen
-        - gocyclo
-        - gocognit
+      - path: _test\.go
+        linters:
+          - funlen
+          - gocyclo
+          - gocognit
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
