@@ -33,14 +33,14 @@ The `backend` job runs on the self-hosted runner labelled `chronicler-staging`. 
 
 The `frontend` job runs after `backend` succeeds. It pulls the Vercel project settings, runs `vercel build --prod` and `vercel deploy --prebuilt --prod` with [`apps/web/vercel.staging.json`](/apps/web/vercel.staging.json) (API rewrites to `https://chronicler-api.piyushsatti.com`), and fails if the build output contains the production API origin. The Vercel CLI version is pinned in the workflow. Vercel references: [`--local-config`](https://vercel.com/docs/cli/global-options#local-config), [`vercel build`](https://vercel.com/docs/cli/build), [`vercel deploy --prebuilt`](https://vercel.com/docs/cli/deploy#prebuilt), and the [GitHub Actions guide](https://vercel.com/guides/how-can-i-use-github-actions-with-vercel).
 
-Environment `staging` secrets: `POSTGRES_PASSWORD` (URL-safe characters only), `JWT_SECRET`, `INGEST_SECRET`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `PLATFORM_OWNER_DISCORD_ID`, `DISCORD_BOT_TOKEN` (API worker REST token), `BOT_DISCORD_TOKEN` (gateway bot token), `BOT_CLIENT_ID`, `GUILD_ID`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, and `DISCORD_ANNOUNCE_CHANNEL_ID` (secret or variable). Optional variables `POSTGRES_USER` and `POSTGRES_DB` default to `chronicler`. The domains, CORS origin, redirect URI and port are constants in the workflow. Secret values never appear in the repository, logs or artifacts.
+Environment `staging` secrets: `POSTGRES_PASSWORD` (URL-safe characters only), `JWT_SECRET`, `INGEST_SECRET`, `DISCORD_CLIENT_ID`, `DISCORD_CLIENT_SECRET`, `DISCORD_BOT_TOKEN` (API worker REST token), `BOT_DISCORD_TOKEN` (gateway bot token), `BOT_CLIENT_ID`, `GUILD_ID`, `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, and `DISCORD_ANNOUNCE_CHANNEL_ID` (secret or variable). Optional variables `POSTGRES_USER` and `POSTGRES_DB` default to `chronicler`. `PLATFORM_OWNER_DISCORD_ID` is an optional secret: the API refuses to start when the configured owner has no member record, and members are created only by signing in. On a new database, deploy without it, sign in once as the owner, then add the secret and push a new staging tag. The domains, CORS origin, redirect URI and port are constants in the workflow. Secret values never appear in the repository, logs or artifacts.
 
 One-time setup the owner performs:
 
 - Install a GitHub Actions runner on the staging host with label `chronicler-staging`; the runner user must be able to use Docker.
 - Run a Cloudflare Tunnel that maps `chronicler-api.piyushsatti.com` to `http://127.0.0.1:8081`.
 - Create the Vercel staging project with Root Directory `apps/web` (include source files outside the root directory), attach `chronicler.piyushsatti.com` as its production domain, and disable its Git auto-deploy.
-- Register `https://chronicler.piyushsatti.com/auth/discord/callback` as a redirect URI on the Discord application.
+- Register `https://chronicler.piyushsatti.com/auth/callback` (the web callback page) as a redirect URI on the Discord application.
 - Create the `staging` environment and its secrets.
 
 The workflow has not run yet; provider settings, the tunnel, and the Vercel project are unverified.

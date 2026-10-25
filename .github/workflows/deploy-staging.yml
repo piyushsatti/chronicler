@@ -6,10 +6,12 @@ name: deploy-staging
 #
 # Required in GitHub environment `staging`:
 #   Secrets: POSTGRES_PASSWORD (URL-safe), JWT_SECRET, INGEST_SECRET,
-#            DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET, PLATFORM_OWNER_DISCORD_ID,
+#            DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET,
 #            DISCORD_BOT_TOKEN (API worker REST), BOT_DISCORD_TOKEN (gateway bot),
 #            BOT_CLIENT_ID, GUILD_ID, DISCORD_ANNOUNCE_CHANNEL_ID (secret or variable),
 #            VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
+#   Optional secret: PLATFORM_OWNER_DISCORD_ID (set only after the owner has
+#            signed in once; see deploy/docs/deploy-runbook.md)
 #   Optional variables: POSTGRES_USER, POSTGRES_DB (default `chronicler`)
 # Non-secret constants (project, port, domains, CORS) are fixed in `env` below.
 # Missing required values fail the job before anything is deployed.
@@ -30,7 +32,9 @@ env:
   API_PORT: '8081'
   API_DOMAIN: chronicler-api.piyushsatti.com
   CORS_ORIGINS: https://chronicler.piyushsatti.com
-  DISCORD_REDIRECT_URI: https://chronicler.piyushsatti.com/auth/discord/callback
+  # Discord returns the browser to the web callback page, which POSTs the code
+  # to the API's /auth/discord/callback.
+  DISCORD_REDIRECT_URI: https://chronicler.piyushsatti.com/auth/callback
   VERCEL_CLI_VERSION: '65.2.0'
 
 jobs:
@@ -86,11 +90,16 @@ jobs:
             printf "%s='%s'\n" "$name" "$value" >> "$tmp"
           }
           for name in POSTGRES_USER POSTGRES_DB POSTGRES_PASSWORD JWT_SECRET INGEST_SECRET \
-            DISCORD_CLIENT_ID DISCORD_CLIENT_SECRET PLATFORM_OWNER_DISCORD_ID DISCORD_BOT_TOKEN \
+            DISCORD_CLIENT_ID DISCORD_CLIENT_SECRET DISCORD_BOT_TOKEN \
             BOT_DISCORD_TOKEN BOT_CLIENT_ID GUILD_ID DISCORD_ANNOUNCE_CHANNEL_ID \
             API_DOMAIN CORS_ORIGINS DISCORD_REDIRECT_URI API_PORT; do
             write "$name"
           done
+          # Optional: the API refuses to start when the configured owner has no
+          # member record, so leave it unset until the owner has signed in once.
+          if [[ -n "${PLATFORM_OWNER_DISCORD_ID:-}" ]]; then
+            write PLATFORM_OWNER_DISCORD_ID
+          fi
           if (( ${#missing[@]} )); then
             rm -f "$tmp"
             echo "Missing required staging values: ${missing[*]}" >&2
