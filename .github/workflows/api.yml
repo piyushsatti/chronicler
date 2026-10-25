@@ -30,6 +30,9 @@ jobs:
         working-directory: apps/api
     steps:
       - uses: actions/checkout@v4
+      # The container runs as root but the runner owns the workspace, so later
+      # git commands refuse it as dubious ownership without this.
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: actions/setup-go@v7
         with:
           go-version: '1.26.x'
