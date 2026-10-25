@@ -14,6 +14,8 @@ import type { EditorFieldOptions, EditorPreview, EditorTypeKey } from './types.j
 import { StatePanel } from '../../components/foundation/StatePanel.js';
 import type { EntityLinkIndex } from './types.js';
 import { documentHref } from '../../utils/documentHref.js';
+import { relativeDate } from '../../utils/relativeDate.js';
+import type { EditorMode } from './types.js';
 
 export type ShellMode = 'edit' | 'read';
 
@@ -114,8 +116,20 @@ const BODY_PLACEHOLDERS: Record<EditorTypeKey, string> = {
   demo: 'Write something…',
 };
 
+/** "3 days ago", "yesterday"; anything under a minute (or a skewed clock) reads "a moment ago". */
+function draftAge(savedAt: string): string {
+  const age = relativeDate(savedAt);
+  return age && /ago$|^yesterday$|^last /.test(age) ? age : 'a moment ago';
+}
+
 export type EditorShellProps = {
   typeKey: EditorTypeKey;
+  /** Creating a new record or editing a saved one. */
+  editorMode?: EditorMode;
+  /** Why saving is blocked by the Series field (loading or failed options). */
+  seriesNotice?: string | null;
+  /** The form opened from a draft saved on this device. */
+  restoredDraft?: { savedAt: string; startFresh: () => void } | null;
   timeZone: string;
   meta: LoadMeta;
   setMeta: React.Dispatch<React.SetStateAction<LoadMeta>>;
@@ -159,6 +173,9 @@ export type EditorShellProps = {
 
 export function EditorShell({
   typeKey,
+  editorMode = 'edit',
+  restoredDraft = null,
+  seriesNotice = null,
   timeZone,
   meta,
   setMeta,
@@ -194,7 +211,7 @@ export function EditorShell({
   draftRecovery,
 }: EditorShellProps): React.JSX.Element {
   const [mode, setMode] = useState<ShellMode>('edit');
-  const schema = schemaForType(typeKey, meta, schemaAccess);
+  const schema = schemaForType(typeKey, meta, schemaAccess, editorMode);
   // The page address is assigned on create and never typed by the author: new
   // items hide it, saved items show it once, read-only, under Advanced.
   const visibleSchema = schema.filter((field) => field.key !== 'slug');
@@ -345,6 +362,16 @@ export function EditorShell({
       <Link className="btn btn--ghost" to={cancelTo}>
         Cancel
       </Link>
+      {seriesNotice ? (
+        <span className="type-caption" role="status">
+          {seriesNotice}
+        </span>
+      ) : null}
+      {typeKey === 'quest' && editorMode === 'new' ? (
+        <span className="type-caption">
+          Creating the quest posts it to the community Discord.
+        </span>
+      ) : null}
     </div>
   );
   const unavailableBody = (
@@ -394,6 +421,27 @@ export function EditorShell({
               </Button>
             ))}
           </div>
+        </section>
+      ) : null}
+      {restoredDraft ? (
+        <section
+          className="row"
+          data-wrap="1"
+          data-gap="2"
+          role="status"
+          aria-label="Restored draft"
+        >
+          <p className="type-caption">
+            Restored an unsaved draft from {draftAge(restoredDraft.savedAt)}.
+          </p>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={restoredDraft.startFresh}
+          >
+            Start fresh
+          </Button>
         </section>
       ) : null}
       <fieldset

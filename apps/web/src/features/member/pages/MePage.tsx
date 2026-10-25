@@ -218,6 +218,11 @@ function RecentActivity({ recent }: { recent: RecentState }): React.JSX.Element 
   );
 }
 
+/** A card lists its first three items; the DM dashboard lists the rest. */
+function SeeAll({ label }: { label: string }): React.JSX.Element {
+  return <Link className="type-link" to="/dm">{label}</Link>;
+}
+
 function DmWork({ view }: { view: ReturnType<typeof useDmDashboard> }): React.JSX.Element | null {
   const { query } = view;
   if (query.isError) return <StatePanel variant="inline" status="error" error={query.error} onRetry={view.retry} retryLabel="Retry DM work" />;
@@ -229,9 +234,9 @@ function DmWork({ view }: { view: ReturnType<typeof useDmDashboard> }): React.JS
     <Card className="stack" as="section" aria-label="Your tables, series and quests">
       <div className={styles.sectionHead}><h2 className="type-heading">Your tables, series and quests</h2></div>
       {hasHostedWork ? <CardGrid as="ul" gap={3} aria-label="Your hosted work">
-        <li><div className="card stack"><h3 className="type-title">DM tables</h3><p className="type-caption">{pluralize(data.documents.total, 'table')}</p>{data.documents.items.slice(0, 3).map((table) => <Link className="type-link" key={table.id} to={`/community/dm-table/${table.slug}`}>{table.title}</Link>)}{data.documents.total === 0 ? <Link className="type-link" to="/editor/dm-table">New DM table</Link> : null}</div></li>
-        <li><div className="card stack"><h3 className="type-title">Series</h3><p className="type-caption">{pluralize(data.series.length, 'series')}</p>{data.series.slice(0, 3).map((series) => <Link className="type-link" key={series.id} to={`/series/${encodeURIComponent(series.id)}`}>{series.name}</Link>)}<SeriesCreateAction label="Create a series" variant="ghost" size="sm" showAuthorityError={false} /></div></li>
-        <li><div className="card stack"><h3 className="type-title">Quests to run</h3><p className="type-caption">{pluralize(upcoming.length, 'quest')}</p>{upcoming.slice(0, 3).map((quest) => <Link className="type-link" key={quest.id} to={`/quests/${quest.shortCode}`}>{quest.briefDocument?.title ?? 'Untitled quest'}</Link>)}{upcoming.length === 0 && view.canCreateQuest ? <Link className="type-link" to="/quests/new">Post a quest</Link> : null}</div></li>
+        <li><div className="card stack"><h3 className="type-title">DM tables</h3><p className="type-caption">{pluralize(data.documents.total, 'table')}</p>{data.documents.items.slice(0, 3).map((table) => <Link className="type-link" key={table.id} to={`/community/dm-table/${table.slug}`}>{table.title}</Link>)}{data.documents.total > 3 ? <SeeAll label="See all DM tables" /> : null}{data.documents.total === 0 ? <Link className="type-link" to="/editor/dm-table">New DM table</Link> : null}</div></li>
+        <li><div className="card stack"><h3 className="type-title">Series</h3><p className="type-caption">{pluralize(data.series.length, 'series')}</p>{data.series.slice(0, 3).map((series) => <Link className="type-link" key={series.id} to={`/series/${encodeURIComponent(series.id)}`}>{series.name}</Link>)}{data.series.length > 3 ? <SeeAll label="See all series" /> : null}<SeriesCreateAction label="Create a series" variant="ghost" size="sm" showAuthorityError={false} /></div></li>
+        <li><div className="card stack"><h3 className="type-title">Quests to run</h3><p className="type-caption">{pluralize(upcoming.length, 'quest')}</p>{upcoming.slice(0, 3).map((quest) => <Link className="type-link" key={quest.id} to={`/quests/${quest.shortCode}`}>{quest.briefDocument?.title ?? 'Untitled quest'}</Link>)}{upcoming.length > 3 ? <SeeAll label="See all quests to run" /> : null}{upcoming.length === 0 && view.canCreateQuest ? <Link className="type-link" to="/quests/new">Post a quest</Link> : null}</div></li>
       </CardGrid> : <div className={styles.dmActions}>
         <Link className="btn btn--secondary btn--sm" to="/editor/dm-table">New DM table</Link>
         <SeriesCreateAction label="Create a series" size="sm" showAuthorityError={false} />

@@ -136,10 +136,10 @@ describe('ChroniclesListPage', () => {
     expect(screen.queryByText('Vault Delve — Session recap')).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'New entry' })).not.toBeInTheDocument();
     release();
-    expect(await screen.findByRole('link', { name: 'New entry' })).toHaveAttribute(
-      'href',
-      '/summaries/new',
-    );
+    const newEntry = await screen.findByRole('link', { name: 'New entry' });
+    expect(newEntry).toHaveAttribute('href', '/summaries/new');
+    // The small header action keeps the title-to-lede spacing the Rules page has.
+    expect(newEntry).toHaveClass('btn', 'btn--primary', 'btn--sm');
   });
 
   it('offers no new entry to accounts the summary editor would deny', async () => {

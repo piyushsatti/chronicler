@@ -243,3 +243,42 @@ it.each(['guide', 'ruling', 'summary', 'dm-table'] as const)(
     ).toContain('Current revision’s saved draft');
   },
 );
+
+it('asks in the page, not a browser confirm, before reloading over local edits', async () => {
+  const confirm = vi.spyOn(window, 'confirm');
+  const onReload = vi.fn(async () => {});
+  const key = draftStorageKey('guide', source.recordId, 'reloader', 7);
+  const { result } = renderHook(
+    () =>
+      useEditorWorkspace({
+        typeKey: 'guide',
+        mode: 'edit',
+        initial: source,
+        enabled: true,
+        timeZone: 'UTC',
+        actorId: 'reloader',
+        onReload,
+      }),
+    editorHarness('/rules/guides/published-guide/edit', '*'),
+  );
+  act(() => result.current.setBody('Local edit to keep'));
+  await act(async () => {
+    await result.current.onReload();
+  });
+  expect(result.current.confirming).toBe('reload');
+  act(() => result.current.cancelConfirm());
+  expect(result.current.confirming).toBeNull();
+  expect(onReload).not.toHaveBeenCalled();
+  expect(localStorage.getItem(key)).toContain('Local edit to keep');
+  await act(async () => {
+    await result.current.onReload();
+  });
+  await act(async () => {
+    result.current.acceptConfirm();
+  });
+  await waitFor(() => expect(onReload).toHaveBeenCalledTimes(1));
+  expect(localStorage.getItem(key)).toBeNull();
+  expect(result.current.body).toBe('Published source');
+  expect(confirm).not.toHaveBeenCalled();
+  confirm.mockRestore();
+});

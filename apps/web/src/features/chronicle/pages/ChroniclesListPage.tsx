@@ -102,7 +102,7 @@ export function ChroniclesListPage(): React.JSX.Element {
         actions={
           canCreate && (page.status === 'ready' || page.status === 'empty') ? (
             <Link
-              className="btn primary"
+              className="btn btn--primary btn--sm"
               to="/summaries/new"
               data-el="chronicles.newEntryBtn"
             >

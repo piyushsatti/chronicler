@@ -6,6 +6,7 @@ import {
   parseSearch,
   parseSearchKinds,
   loadSearch,
+  snippetText,
 } from '../../../src/features/search/adapters/searchAdapter.js';
 import { searchHitHref } from '../../../src/features/search/searchHit.js';
 import { server } from '../../../src/mocks/server.js';
@@ -119,4 +120,25 @@ it('retains searchable kind labels and rejects the retired catalog', () => {
       { key: 'hex', label: 'Hex', searchable: true, exclusionReason: null },
     ]).ok,
   ).toBe(false);
+});
+
+describe('search snippets', () => {
+  it('ends a snippet cut at the server limit on a whole word with an ellipsis', () => {
+    const raw = `${'Legend says that '.repeat(14)}human`.slice(0, 240);
+    expect([...raw]).toHaveLength(240);
+    const shown = snippetText(raw);
+    expect(raw.endsWith('that hu')).toBe(true);
+    expect(shown.endsWith(' that…')).toBe(true);
+  });
+
+  it('keeps a snippet under the limit whole, without an ellipsis', () => {
+    expect(snippetText('A **short** entry.')).toBe('A short entry.');
+  });
+
+  it('strips Markdown before trimming the partial word', () => {
+    const raw = `## Heading\n\n${'**bold** word '.repeat(30)}`.slice(0, 240);
+    const shown = snippetText(raw);
+    expect(shown).not.toMatch(/[*#]/);
+    expect(shown.endsWith('…')).toBe(true);
+  });
 });

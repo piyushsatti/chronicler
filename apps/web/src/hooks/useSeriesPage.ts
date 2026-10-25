@@ -18,6 +18,23 @@ import {
 } from '../features/onboarding/adapters/seriesAdapter.js';
 import { isSeriesIdentity } from '../features/onboarding/seriesIdentity.js';
 
+export const SERIES_NAME_MAX = 200;
+
+/** Why a series name cannot be saved, as user copy; null when it can. The API
+ * trims the name and counts characters, not UTF-16 units. */
+export function seriesNameError(name: string): string | null {
+  const value = name.trim();
+  if (!value) return 'Enter a series name';
+  if ([...value].length > SERIES_NAME_MAX)
+    return `Keep the series name to ${SERIES_NAME_MAX} characters or fewer`;
+  return null;
+}
+
+function transientAuthorityFailure(error: unknown): boolean {
+  const kind = toAppError(error, 'series:authority').kind;
+  return kind === 'network' || kind === 'upstream' || kind === 'unknown';
+}
+
 type Attempt = {
   token: string | null;
   memberId: string;
@@ -90,13 +107,21 @@ export function useSeriesPage(identity: string) {
     }
     // Starting a series is a DM action: only an active, approved DM may, even
     // when the same member is also an admin or owner. Admins keep rename above.
+    // A refetch keeps the last successful proof until it answers. A refetch that
+    // failed for a transient reason (network, server) keeps it too: the API checks
+    // again on write, and a revoked approval arrives as a successful proof.
     const proof =
       client.getQueryState<Awaited<ReturnType<typeof loadSeriesAuthority>>>(
         authorityKey,
       );
+    const usable =
+      proof?.status === 'success' ||
+      (proof?.status === 'error' &&
+        proof.dataUpdatedAt > 0 &&
+        transientAuthorityFailure(proof.error));
     return Boolean(
-      proof?.status === 'success' &&
-      proof.data?.memberId === attempt.memberId &&
+      usable &&
+      proof?.data?.memberId === attempt.memberId &&
       proof.data.canCreate,
     );
   };
@@ -121,7 +146,11 @@ export function useSeriesPage(identity: string) {
     onError: (error, attempt) => {
       if (!current(attempt)) return;
       const app = toAppError(error, 'series:write');
-      if (app.kind === 'forbidden' || app.kind === 'unauthorized') {
+      if (
+        app.kind === 'forbidden' ||
+        app.kind === 'unauthorized' ||
+        (app.cause instanceof TransportError && app.cause.code === 'FORBIDDEN')
+      ) {
         void client.invalidateQueries({ queryKey: queryKeys.me });
         void client.invalidateQueries({ queryKey: ['seriesAuthority'] });
         void client.invalidateQueries({ queryKey: ['currentAccess'] });
@@ -135,8 +164,7 @@ export function useSeriesPage(identity: string) {
       !current(session) ||
       !admission(session, target) ||
       (pending.current && current(pending.current)) ||
-      !value ||
-      value.length > 200
+      seriesNameError(name) !== null
     )
       return false;
     if (
@@ -169,6 +197,14 @@ export function useSeriesPage(identity: string) {
     validId,
     arc,
     canCreate,
+    /** A DM's create proof has not loaded yet; the create button waits for it. */
+    checkingAuthority: Boolean(
+      !canCreate &&
+      session &&
+      current(session) &&
+      me.data?.roles.includes('dm') &&
+      authority.status === 'pending',
+    ),
     /** The viewer's DM profile review status from the same proof as `canCreate`;
      * undefined until that proof is loaded for the current session. */
     dmStatus:

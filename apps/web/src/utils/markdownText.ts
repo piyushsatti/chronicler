@@ -1,12 +1,52 @@
 /** Leading YAML front matter, as written by the editor. */
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
 
+const ENTITIES: Record<string, string> = {
+  amp: '&',
+  lt: '<',
+  gt: '>',
+  quot: '"',
+  apos: "'",
+  nbsp: ' ',
+  mdash: '—',
+  ndash: '–',
+  hellip: '…',
+};
+
+/** Named and numeric HTML entities as the characters a reader sees. */
+function decodeEntities(text: string): string {
+  return text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (match, name: string) => {
+    if (name[0] === '#') {
+      const code =
+        name[1] === 'x' || name[1] === 'X'
+          ? Number.parseInt(name.slice(2), 16)
+          : Number.parseInt(name.slice(1), 10);
+      return Number.isSafeInteger(code) && code > 0 && code <= 0x10ffff
+        ? String.fromCodePoint(code)
+        : match;
+    }
+    return ENTITIES[name.toLowerCase()] ?? match;
+  });
+}
+
+/** Stand-ins for backslash-escaped punctuation, restored after the syntax is stripped. */
+const ESCAPE_START = 0xe000;
+
 /** Reduces Markdown to the words a reader would see, for one-line previews. */
 export function markdownToPlainText(body: string): string {
-  return body
+  const stripped = body
     .replace(FRONTMATTER, '')
     .replace(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?^\1[ \t]*$/gm, ' ')
+    // `\*` stays a literal asterisk instead of starting emphasis.
+    .replace(/\\([!-/:-@[-`{-~])/g, (_m, char: string) =>
+      String.fromCharCode(ESCAPE_START + char.charCodeAt(0)),
+    )
     .replace(/<[^>\n]+>/g, ' ')
+    // Reference definitions and footnote markers are not reader text.
+    .replace(/^\s{0,3}\[[^\]\n]+\]:\s+\S.*$/gm, ' ')
+    .replace(/\[\^[^\]\s]+\]/g, '')
+    // Setext heading underlines (`===`); `---` lines go with thematic breaks below.
+    .replace(/^\s{0,3}=+\s*$/gm, ' ')
     .replace(/!\[([^\]]*)\]\([^)]*\)/g, '$1')
     .replace(
       /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/g,
@@ -28,6 +68,13 @@ export function markdownToPlainText(body: string): string {
     .replace(/(^|\s)#{1,6}(?=\s|$)/g, '$1')
     .replace(/(^|\s)(?:\*{1,3}|_{1,3})(?=\S)/g, '$1')
     .replace(/(\S)(?:\*{1,3}|_{1,3})(?=\s|$)/g, '$1')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return decodeEntities(
+    stripped.replace(/[\ue000-\ue07f]/g, (char) =>
+      String.fromCharCode(char.charCodeAt(0) - ESCAPE_START),
+    ),
+  )
     .replace(/\s+/g, ' ')
     .trim();
 }

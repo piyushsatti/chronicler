@@ -6,7 +6,7 @@
   --segment-highlight-size: 32px;
   /* One side inset for every segmented option, site nav included. */
   --segment-option-pad-x: var(--sp-4);
-  --font-body:      'Geist', sans-serif;
+  --font-body:      'Lato', 'Geist', sans-serif;
   --font-display:   'Fraunces Variable', serif;
   --font-heading:   'Fraunces Variable', serif;
   --font-narrative: 'Fraunces Variable', serif;

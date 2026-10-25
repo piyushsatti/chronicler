@@ -13,7 +13,7 @@ import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { Modal } from '../../../components/primitives/Modal.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
-import { useSeriesPage } from '../../../hooks/useSeriesPage.js';
+import { seriesNameError, useSeriesPage } from '../../../hooks/useSeriesPage.js';
 import { isSentinelDate, personLabels, pluralize } from '../../../utils/format.js';
 import { toCardStatus } from '../../../view-models/questCard.js';
 import styles from './seriesPage.module.css';
@@ -30,6 +30,7 @@ export function SeriesPage(): React.JSX.Element {
   const page = useSeriesPage(shortCode);
   const dates = useDateFormatter();
   const [renaming, setRenaming] = useState(false);
+  const [nameError, setNameError] = useState<string | null>(null);
   const arc = !page.arc.isError ? page.arc.data : undefined;
   const dms = [
     ...new Map(
@@ -88,7 +89,13 @@ export function SeriesPage(): React.JSX.Element {
                     </Link>
                   ) : null}
                   {page.canRename ? (
-                    <Button variant="secondary" onClick={() => setRenaming(true)}>
+                    <Button
+                      variant="secondary"
+                      onClick={() => {
+                        setNameError(null);
+                        setRenaming(true);
+                      }}
+                    >
                       Rename series
                     </Button>
                   ) : null}
@@ -181,20 +188,22 @@ export function SeriesPage(): React.JSX.Element {
                 key={arc.name}
                 className="stack"
                 data-gap="4"
+                noValidate
                 onSubmit={(event) => {
                   event.preventDefault();
-                  const data = new FormData(event.currentTarget);
-                  void page.save(arc.id, String(data.get('name') ?? ''), () =>
-                    setRenaming(false),
-                  );
+                  const name = String(new FormData(event.currentTarget).get('name') ?? '');
+                  const invalid = seriesNameError(name);
+                  setNameError(invalid);
+                  if (!invalid) void page.save(arc.id, name, () => setRenaming(false));
                 }}
               >
                 <Field
                   label="Series name"
                   name="name"
                   required
-                  maxLength={200}
                   defaultValue={arc.name}
+                  error={nameError ?? undefined}
+                  onChange={() => setNameError(null)}
                 />
                 {page.error ? <StatePanel status="error" error={page.error} /> : null}
                 <div className="row" data-gap="3" data-wrap="1">

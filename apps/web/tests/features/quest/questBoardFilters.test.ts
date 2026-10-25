@@ -29,6 +29,9 @@ function quest(
       appliedRevision: 0,
       overallStatus: 'applied',
       isTerminal: true,
+      nextRetryAt: null,
+      lastAttemptFailed: false,
+      failureReason: null,
     },
   };
 }
@@ -36,18 +39,48 @@ function quest(
 describe('quest board filters', () => {
   it('maps Open to open, filling and scheduled, Live to live, and All to every status', () => {
     const statuses: QuestBoardItemView['cardStatus'][] = [
-      'open', 'filling', 'scheduled', 'live', 'closed', 'cancelled',
+      'open',
+      'filling',
+      'scheduled',
+      'live',
+      'closed',
+      'cancelled',
     ];
     const items = statuses.map((status, index) =>
       quest(status, `2026-10-${String(index + 1).padStart(2, '0')}T12:00:00Z`),
     );
 
     items.push(quest('open', '2026-10-09T12:00:00Z', 'draft'));
-    expect(filterQuestBoardItems(items, 'Open', 'All', '', null, new Date('2026-10-23T12:00:00Z')).map((item) => item.cardStatus)).toEqual([
-      'open', 'filling', 'scheduled',
-    ]);
-    expect(filterQuestBoardItems(items, 'Live', 'All', '', null, new Date('2026-10-23T12:00:00Z')).map((item) => item.cardStatus)).toEqual(['live']);
-    expect(filterQuestBoardItems(items, 'All', 'All', '', null, new Date('2026-10-23T12:00:00Z'))).toHaveLength(7);
+    expect(
+      filterQuestBoardItems(
+        items,
+        'Open',
+        'All',
+        '',
+        null,
+        new Date('2026-10-23T12:00:00Z'),
+      ).map((item) => item.cardStatus),
+    ).toEqual(['open', 'filling', 'scheduled']);
+    expect(
+      filterQuestBoardItems(
+        items,
+        'Live',
+        'All',
+        '',
+        null,
+        new Date('2026-10-23T12:00:00Z'),
+      ).map((item) => item.cardStatus),
+    ).toEqual(['live']);
+    expect(
+      filterQuestBoardItems(
+        items,
+        'All',
+        'All',
+        '',
+        null,
+        new Date('2026-10-23T12:00:00Z'),
+      ),
+    ).toHaveLength(7);
   });
 
   it('uses local calendar days for Today and Tomorrow', () => {
@@ -58,8 +91,12 @@ describe('quest board filters', () => {
       quest('open', new Date(2026, 9, 25, 0).toISOString()),
     ];
 
-    expect(filterQuestBoardItems(items, 'All', 'Today', '', null, reference)).toEqual([items[0]]);
-    expect(filterQuestBoardItems(items, 'All', 'Tomorrow', '', null, reference)).toEqual([items[1]]);
+    expect(filterQuestBoardItems(items, 'All', 'Today', '', null, reference)).toEqual([
+      items[0],
+    ]);
+    expect(
+      filterQuestBoardItems(items, 'All', 'Tomorrow', '', null, reference),
+    ).toEqual([items[1]]);
   });
 
   it('starts This week on Monday and includes Sunday', () => {
@@ -70,7 +107,9 @@ describe('quest board filters', () => {
       quest('open', new Date(2026, 10, 2, 0).toISOString()),
     ];
 
-    expect(filterQuestBoardItems(items, 'All', 'This week', '', null, sunday)).toEqual(items.slice(0, 2));
+    expect(filterQuestBoardItems(items, 'All', 'This week', '', null, sunday)).toEqual(
+      items.slice(0, 2),
+    );
   });
 
   it('uses the viewer zone for Today and Tomorrow across the UTC new year', () => {
@@ -80,9 +119,29 @@ describe('quest board filters', () => {
       quest('open', '2026-01-01T09:00:00Z'),
     ];
 
-    expect(filterQuestBoardItems(items, 'All', 'Today', '', 'America/Los_Angeles', reference)).toEqual([items[0]]);
-    expect(filterQuestBoardItems(items, 'All', 'Tomorrow', '', 'America/Los_Angeles', reference)).toEqual([items[1]]);
-    expect(filterQuestBoardItems(items, 'All', 'Today', '', 'UTC', reference)).toEqual([items[1]]);
+    expect(
+      filterQuestBoardItems(
+        items,
+        'All',
+        'Today',
+        '',
+        'America/Los_Angeles',
+        reference,
+      ),
+    ).toEqual([items[0]]);
+    expect(
+      filterQuestBoardItems(
+        items,
+        'All',
+        'Tomorrow',
+        '',
+        'America/Los_Angeles',
+        reference,
+      ),
+    ).toEqual([items[1]]);
+    expect(filterQuestBoardItems(items, 'All', 'Today', '', 'UTC', reference)).toEqual([
+      items[1],
+    ]);
   });
 
   it('changes weeks at viewer-zone Monday midnight, including the DST Sunday', () => {
@@ -93,9 +152,15 @@ describe('quest board filters', () => {
       quest('open', '2026-03-09T07:00:00Z'),
       quest('open', '2026-03-16T07:00:00Z'),
     ];
-    const filterAt = (reference: string) => filterQuestBoardItems(
-      items, 'All', 'This week', '', 'America/Los_Angeles', new Date(reference),
-    );
+    const filterAt = (reference: string) =>
+      filterQuestBoardItems(
+        items,
+        'All',
+        'This week',
+        '',
+        'America/Los_Angeles',
+        new Date(reference),
+      );
 
     expect(filterAt('2026-03-09T06:59:59Z')).toEqual(items.slice(1, 3));
     expect(filterAt('2026-03-09T07:00:00Z')).toEqual([items[3]]);

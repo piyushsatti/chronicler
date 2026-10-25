@@ -21,6 +21,7 @@ describe('NavDrawer', () => {
       'href',
       '/quests',
     );
+    expect(screen.getByRole('link', { name: 'Map' })).toHaveAttribute('href', '/map');
   });
 
   it('closes on Escape', async () => {

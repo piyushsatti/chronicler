@@ -67,6 +67,8 @@ export const questDetailWireSchema = questBoardItemWireSchema.extend({
   ),
   durationHours: z.number(),
   genres: z.array(z.string()).optional().default([]),
+  kinds: z.array(z.string()).optional().default([]),
+  signupType: z.string().nullable().optional(),
 });
 
 export const questRegionCatalogWireSchema = z.array(

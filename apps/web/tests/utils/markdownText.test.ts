@@ -22,6 +22,15 @@ describe('markdown previews', () => {
     expect(markdownToPlainText('snake_case_name stays')).toBe('snake_case_name stays');
   });
 
+  it('keeps escaped characters and entities as readers see them and drops footnotes', () => {
+    expect(
+      markdownToPlainText(
+        'Kings &amp; Queens\n=================\n\nThe \\*first\\* light[^1] &mdash; 5&#37; &lt;rare&gt;\n\n[^1]: Told by the steward.\n[home]: https://example.com',
+      ),
+    ).toBe('Kings & Queens The *first* light — 5% <rare>');
+    expect(markdownToPlainText('A \\| pipe and a \\[bracket\\]')).toBe('A | pipe and a [bracket]');
+  });
+
   it('strips before truncating so the cut counts visible words', () => {
     const body = `| Type | City |\n|---|---|\n${'word '.repeat(60)}`;
     const excerpt = markdownExcerpt(body, 40);

@@ -134,14 +134,17 @@ describe('shared foundation CSS ownership', () => {
 });
 
 describe('self-hosted font assets', () => {
-  it('declares all four token families against intact local WOFF2 files and carries the licenses', () => {
+  it('declares all five token families against intact local WOFF2 files and carries the licenses', () => {
     const fonts = postcss.parse(css('fonts.css'));
     const families = new Set<string>();
     const files: string[] = [];
     fonts.walkAtRules('font-face', (face) => {
       const values = declarations(face);
       families.add(values['font-family']);
-      expect(values['font-weight']).toBe('100 900');
+      // Lato ships static 400/700 faces (with italics); the others are variable.
+      if (values['font-family'] === "'Lato'")
+        expect(['400', '700']).toContain(values['font-weight']);
+      else expect(values['font-weight']).toBe('100 900');
       expect(values['font-display']).toBe('swap');
       const path = /url\(['"]?([^)'"\s]+)/.exec(values.src)![1];
       expect(path.startsWith('/fonts/')).toBe(true);
@@ -151,12 +154,19 @@ describe('self-hosted font assets', () => {
       files.push(path);
     });
     expect([...families].sort()).toEqual([
-      "'Fraunces Variable'", "'Geist Mono'", "'Geist'", "'Lexend Variable'",
+      "'Fraunces Variable'", "'Geist Mono'", "'Geist'", "'Lato'", "'Lexend Variable'",
     ]);
-    expect(files).toHaveLength(6);
-    for (const name of ['Fraunces-OFL.txt', 'Geist-OFL.txt', 'Lexend-OFL.txt']) {
+    expect(files).toHaveLength(10);
+    for (const name of ['Fraunces-OFL.txt', 'Geist-OFL.txt', 'Lato-OFL.txt', 'Lexend-OFL.txt']) {
       expect(readFileSync(join(__dirname, '../../public/fonts', name), 'utf8')).toContain('SIL OPEN FONT LICENSE Version 1.1');
     }
     expect(imports.indexOf('fonts.css')).toBeLessThan(imports.indexOf('typography.css'));
+  });
+
+  it('sets the body font token to Lato and leaves the title and display fonts alone', () => {
+    const tokens = css('tokens.css');
+    expect(tokens).toMatch(/--font-body:\s*'Lato', 'Geist', sans-serif;/);
+    expect(tokens).toMatch(/--font-display:\s*'Fraunces Variable', serif;/);
+    expect(tokens).toMatch(/--font-title:\s*'Lexend Variable', 'Geist', sans-serif;/);
   });
 });

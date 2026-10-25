@@ -61,6 +61,19 @@ export type SearchHitView =
   z.infer<typeof docHitSchema> | z.infer<typeof memberHitSchema>;
 type SearchKindView = z.infer<typeof kindsWireSchema>[number];
 
+/** The API sends the first 240 codepoints of the body (behavior.md). */
+export const SERVER_SNIPPET_CODEPOINTS = 240;
+
+/** A server snippet as plain text. A snippet at the server's limit was cut, maybe
+ * mid-word: drop the partial last word and end it with an ellipsis. */
+export function snippetText(raw: string): string {
+  const text = markdownToPlainText(raw);
+  if ([...raw].length < SERVER_SNIPPET_CODEPOINTS || !text) return text;
+  const lastSpace = text.lastIndexOf(' ');
+  const kept = lastSpace > text.length / 2 ? text.slice(0, lastSpace) : text;
+  return `${kept.replace(/[\s,;:.\-–—]+$/, '')}…`;
+}
+
 export function parseSearch(wire: unknown): AdapterResult<SearchResultView> {
   const parsed = searchWireSchema.safeParse(wire);
   if (!parsed.success)
@@ -72,7 +85,7 @@ export function parseSearch(wire: unknown): AdapterResult<SearchResultView> {
       ...parsed.data,
       documents: parsed.data.documents.map((hit) => ({
         ...hit,
-        snippet: markdownToPlainText(hit.snippet),
+        snippet: snippetText(hit.snippet),
       })),
     },
   };

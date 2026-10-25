@@ -245,7 +245,8 @@ export function SeriesField({
     ['', 'No series'],
     ...items.map((item): [string, string] => [item.id, item.name]),
   ];
-  return (
+  const foreign = value !== '' && !items.some((item) => item.id === value);
+  const picker = (
     <Picker
       value={value}
       options={choices}
@@ -254,6 +255,16 @@ export function SeriesField({
       renderOption={(o) => (Array.isArray(o) ? o[1] : o)}
       onChange={onChange}
     />
+  );
+  if (!foreign) return picker;
+  // A linked or recovered series the viewer may not use is not sent; say so.
+  return (
+    <div className="stack" data-gap="1">
+      {picker}
+      <p className="pf-err" role="status">
+        You can’t add quests to that series. The quest will be created with no series.
+      </p>
+    </div>
   );
 }
 

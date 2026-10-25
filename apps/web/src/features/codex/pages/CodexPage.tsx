@@ -96,7 +96,8 @@ export function CodexPage(): React.JSX.Element {
             lede="The campaign wiki: people, places, factions and lore, and how they connect."
             actions={
               me ? (
-                <Link className="btn btn--primary" to="/codex/new">
+                // Small, like the Rules header, so the lede sits as close to the title.
+                <Link className="btn btn--primary btn--sm" to="/codex/new">
                   New Codex entry
                 </Link>
               ) : null

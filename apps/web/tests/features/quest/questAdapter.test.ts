@@ -154,6 +154,27 @@ describe('parseQuestDetail', () => {
     }
   });
 
+  it('maps a failed Discord attempt to a plain reason, never the raw error', () => {
+    const result = parseQuestDetail({
+      ...detailGood,
+      discordDelivery: {
+        desiredRevision: 3,
+        appliedRevision: 2,
+        overallStatus: 'pending',
+        nextRetryAt: '2026-10-25T18:00:00Z',
+        errorMessage: 'discord api status 403: {"message": "Missing Access"}',
+      },
+    });
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.data.discordDelivery.lastAttemptFailed).toBe(true);
+      expect(result.data.discordDelivery.failureReason).toBe(
+        'the bot may not post in the quest channel',
+      );
+      expect(JSON.stringify(result.data.discordDelivery)).not.toMatch(/Missing Access/);
+    }
+  });
+
   it('resolves region names from the catalog, joined when several', () => {
     const second = '33333333-3333-4333-8333-333333333333';
     const catalog = new Map([

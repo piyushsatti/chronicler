@@ -11,6 +11,7 @@ import { routes } from '../../../src/features/codex/feature.js';
 import { server } from '../../../src/mocks/server.js';
 import empty from '../../fixtures/wire/codex/empty-list.json';
 import { renderWithProviders } from '../../test-utils.js';
+import { TOKEN_KEY } from '../../../src/auth/storage.js';
 
 const viewport = vi.hoisted(() => ({
   widthClass: 'expanded' as 'compact' | 'expanded',
@@ -57,6 +58,52 @@ describe('CodexPage', () => {
     ).toHaveAttribute('href', '/codex/unpublished-notes');
     expect(screen.getByRole('region', { name: 'DraftOnly' })).toBeInTheDocument();
     expect(screen.getByText('1 entry')).toBeInTheDocument();
+  });
+
+  it.each([1440, 390])(
+    'shows a plain-text preview on each card, not raw markdown (%ipx)',
+    async (width) => {
+      setViewportWidth(width);
+      server.use(
+        graphql.query('CodexDirectory', () =>
+          HttpResponse.json({
+            data: {
+              codexDirectory: {
+                items: [
+                  {
+                    id: '10000000-0000-4000-8000-000000000002',
+                    slug: 'aetos',
+                    title: 'Aetós',
+                    category: 'Lore',
+                    effectiveBody:
+                      '*The steward of plenty*\n## The Second Light\n| Type | City &amp; realm |\n|---|---|\nAfter **Katsík**, see [[katsik|the first light]][^1].\n\n[^1]: Footnote.',
+                  },
+                ],
+                total: 1,
+              },
+              codexCategories: [],
+            },
+          }),
+        ),
+      );
+      renderWithProviders(<CodexPage />);
+      const card = await screen.findByRole('link', { name: /Aetós/ });
+      expect(card).toHaveTextContent(
+        'The steward of plenty The Second Light Type City & realm After Katsík, see the first light.',
+      );
+      expect(card.textContent).not.toMatch(/[*#|[\]]|&amp;/);
+    },
+  );
+
+  it('offers a signed-in member a small New Codex entry action, as the Rules header does', async () => {
+    localStorage.setItem(
+      TOKEN_KEY,
+      `${btoa('{}')}.${btoa(JSON.stringify({ sub: 'discord-one', exp: Date.now() / 1000 + 3600 }))}.test`,
+    );
+    renderWithProviders(<CodexPage />);
+    const action = await screen.findByRole('link', { name: 'New Codex entry' });
+    expect(action).toHaveAttribute('href', '/codex/new');
+    expect(action).toHaveClass('btn', 'btn--primary', 'btn--sm');
   });
 
   it('lists codex entries', async () => {

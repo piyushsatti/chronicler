@@ -27,8 +27,11 @@ import {
   questRegionCatalogWireSchema,
   questParticipantWireSchema,
 } from './quest.wire.schema.js';
+import {
+  discordFailureReason,
+  isDiscordDeliveryTerminal,
+} from '../../../utils/discordDelivery.js';
 
-const TERMINAL_DELIVERY = new Set(['applied', 'failed', 'cancelled', 'skipped']);
 const SEATED = new Set(['signed_up', 'played', 'selected']);
 
 export type DiscordDeliveryView = {
@@ -36,6 +39,12 @@ export type DiscordDeliveryView = {
   appliedRevision: number;
   overallStatus: string;
   isTerminal: boolean;
+  /** When the next attempt runs after a failed one, if one is scheduled. */
+  nextRetryAt: string | null;
+  /** The last attempt failed (the API recorded an error for the current job). */
+  lastAttemptFailed: boolean;
+  /** A short plain reason for that failure; never the raw error text. */
+  failureReason: string | null;
 };
 
 export type QuestBoardParticipantView = {
@@ -99,6 +108,10 @@ export type QuestDetailView = Omit<QuestBoardItemView, 'participants'> & {
   participants: QuestParticipantView[];
   durationHours: number;
   genres: string[];
+  /** Quest kinds in the API vocabulary (`one_shot`, …). */
+  kinds: string[];
+  /** `open`, `application` or `invite`; null when the API has none. */
+  signupType: string | null;
   dmId: string;
   updatedAt: string;
   arc: { id: string; name: string } | null;
@@ -130,7 +143,11 @@ export type MyCharacterRef = {
   shortCode: string;
 };
 
-export type QuestBoardDmView = { id: string; handle: string; displayName: string | null };
+export type QuestBoardDmView = {
+  id: string;
+  handle: string;
+  displayName: string | null;
+};
 
 export type QuestBoardChromeView = {
   dmsAcceptingCount: number;
@@ -142,14 +159,18 @@ function mapDelivery(d: {
   desiredRevision: number;
   appliedRevision: number;
   overallStatus: string;
+  nextRetryAt?: string | null;
+  errorMessage?: string | null;
 }): DiscordDeliveryView {
-  const status = d.overallStatus.toLowerCase();
+  const failureReason = discordFailureReason(d.errorMessage);
   return {
     desiredRevision: d.desiredRevision,
     appliedRevision: d.appliedRevision,
     overallStatus: d.overallStatus,
-    isTerminal:
-      TERMINAL_DELIVERY.has(status) || d.desiredRevision === d.appliedRevision,
+    isTerminal: isDiscordDeliveryTerminal(d),
+    nextRetryAt: d.nextRetryAt ?? null,
+    lastAttemptFailed: failureReason !== null,
+    failureReason,
   };
 }
 
@@ -271,6 +292,8 @@ export function parseQuestDetail(
       })),
       durationHours: parsed.data.durationHours,
       genres: parsed.data.genres,
+      kinds: parsed.data.kinds,
+      signupType: parsed.data.signupType ?? null,
       dmId: parsed.data.dmId,
       updatedAt: parsed.data.updatedAt,
       arc: parsed.data.arc,

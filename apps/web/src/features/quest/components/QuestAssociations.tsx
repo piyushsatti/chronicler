@@ -54,17 +54,17 @@ export function QuestAssociations({
           });
         }}
       >
-        <h3 className="type-title">Quest arc</h3>
+        <h3 className="type-title">Series</h3>
         <div className="stack">
-          <span id={`${labelId}-arc`}>Arc membership</span>
+          <span id={`${labelId}-arc`}>Series</span>
           <Select
-            label="Arc membership"
+            label="Series"
             labelId={`${labelId}-arc`}
             disabled={commands.pending || !arcs.data}
             value={arcId}
             onValueChange={setArcId}
             options={[
-              { value: '', label: 'No arc' },
+              { value: '', label: 'No series' },
               ...(arcs.data ?? []).map((arc) => ({ value: arc.id, label: arc.name })),
             ]}
           />
@@ -75,7 +75,7 @@ export function QuestAssociations({
           </Link>
         ) : null}
         <Button type="submit" disabled={commands.pending || !arcs.data}>
-          Save arc membership
+          Save series
         </Button>
       </form>
       <form

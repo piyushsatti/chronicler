@@ -81,13 +81,24 @@ function currentQuestKinds(kinds: unknown): unknown {
 }
 
 export function restoreEditorDraft(raw: string | null): Snapshot | null {
+  const restored = restoreEditorDraftWithTime(raw);
+  return restored ? restored.snapshot : null;
+}
+
+/** A recovered draft and when it was last saved on this device. */
+export function restoreEditorDraftWithTime(
+  raw: string | null,
+): { snapshot: Snapshot; savedAt: string } | null {
   try {
     const parsed = recovery.safeParse(JSON.parse(raw ?? 'null'));
     if (!parsed.success) return null;
     const meta = parsed.data.meta;
     return {
-      meta: 'kinds' in meta ? { ...meta, kinds: currentQuestKinds(meta.kinds) } : meta,
-      body: parsed.data.body,
+      snapshot: {
+        meta: 'kinds' in meta ? { ...meta, kinds: currentQuestKinds(meta.kinds) } : meta,
+        body: parsed.data.body,
+      },
+      savedAt: parsed.data.savedAt,
     };
   } catch {
     return null;

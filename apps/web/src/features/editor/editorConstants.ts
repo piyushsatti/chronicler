@@ -34,15 +34,8 @@ export const TAG_SUGGESTIONS = [
   'merchant',
 ];
 
-/** Quest kind vocabulary: matches the API boundary and the `quests_kinds_vocab` DB check. */
-export const QUEST_KINDS: [string, string][] = [
-  ['standard', 'Standard'],
-  ['one_shot', 'One-shot'],
-  ['mini_campaign', 'Mini-campaign'],
-  ['hexcrawl', 'Hexcrawl'],
-  ['event', 'Event'],
-  ['lieutenant', 'Lieutenant'],
-];
+/** Quest kind vocabulary, shared with the quest page. */
+export { QUEST_KINDS } from '../../utils/questVocabulary.js';
 
 export { CODEX_CATEGORY_VALUES as CODEX_AUTHORING_CATEGORIES } from '../../utils/codexCategories.js';
 

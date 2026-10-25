@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { useBlocker, useNavigate } from 'react-router-dom';
 import { safeAppError, toAppError } from '../../../errors/toAppError.js';
+import { TransportError, type AppError } from '../../../errors/types.js';
 import type { EditorLoadResult } from '../adapters/editorLoad.js';
 import {
   changeDocumentLifecycle,
@@ -16,7 +17,7 @@ import { useEditorAudience } from './useEditorAudience.js';
 import { useEditorHistory } from './useEditorHistory.js';
 import { useEditorOptions } from './useEditorOptions.js';
 import { useEditorPreview } from './useEditorPreview.js';
-import { useEditorPublish } from './useEditorPublish.js';
+import { editorFormInvalid, useEditorPublish } from './useEditorPublish.js';
 import { useEntityLinkIndex } from './useEntityLinkIndex.js';
 
 function editorEditPath(typeKey: EditorTypeKey, id: string): string {
@@ -49,6 +50,24 @@ export function editorCancelPath(
 }
 
 const NO_SCHEMA_ACCESS: SchemaAccess = {};
+
+/** Messages from the save guards that a reload resolves (a revoked right or an old revision). */
+const RELOAD_MESSAGES = /reload/i;
+
+/**
+ * Only a conflict, a stale revision or a revoked permission is fixed by reloading;
+ * validation and other refusals are not, so they get no recovery-copy prompt.
+ */
+export function errorNeedsReload(error: AppError | null): boolean {
+  if (!error) return false;
+  if (error.kind === 'forbidden' || error.kind === 'unauthorized') return true;
+  const cause = error.cause;
+  if (cause instanceof TransportError && (cause.code === 'CONFLICT' || cause.status === 409))
+    return true;
+  return error.kind === 'safe' && RELOAD_MESSAGES.test(error.userMessage);
+}
+
+export type EditorConfirm = 'discard' | 'reload';
 
 export function useEditorWorkspace({
   typeKey,
@@ -91,6 +110,14 @@ export function useEditorWorkspace({
       actorId,
       version: typeKey === 'quest' ? initial.updatedAt : initial.documentVersion,
       canEditBody: enabled && initial.canEditBody,
+      // A new quest opened from a series link keeps that series over a recovered draft's.
+      pinned:
+        typeKey === 'quest' &&
+        mode === 'new' &&
+        typeof initial.meta.arcId === 'string' &&
+        initial.meta.arcId !== ''
+          ? { arcId: initial.meta.arcId }
+          : undefined,
     },
   );
   const { meta, body, setMeta, setBody, isDirty, isTouched, clearDraft } = draft;
@@ -135,15 +162,29 @@ export function useEditorWorkspace({
     scopeKey: recordScope,
   });
   const options = useEditorOptions(
-    schemaForType(typeKey, meta, schemaAccess),
+    schemaForType(typeKey, meta, schemaAccess, mode),
     enabled,
     viewerMemberId,
     viewerIsAdmin,
   );
-  // A new quest saves only a series the picker shows. An `arcId` from a link (or a
-  // recovered draft) that is not among the viewer's options is not sent, and the
-  // picker shows "No series" for it.
+  // A new quest saves only a series the picker shows. While the viewer's series are
+  // loading or failed to load, a chosen series cannot be checked, so saving waits
+  // instead of dropping it. Once loaded, a series that is not among the options
+  // (another DM's, from a link or a recovered draft) is not sent, and the Series
+  // field says so.
   const seriesOptions = options.series;
+  const arcChosen =
+    typeKey === 'quest' &&
+    mode === 'new' &&
+    typeof meta.arcId === 'string' &&
+    meta.arcId !== '';
+  const seriesWait: 'loading' | 'error' | null = !arcChosen
+    ? null
+    : seriesOptions.status === 'loading'
+      ? 'loading'
+      : seriesOptions.status === 'error'
+        ? 'error'
+        : null;
   const arcShown =
     typeof meta.arcId !== 'string' ||
     meta.arcId === '' ||
@@ -264,15 +305,25 @@ export function useEditorWorkspace({
     window.addEventListener('beforeunload', beforeUnload);
     return () => window.removeEventListener('beforeunload', beforeUnload);
   }, [isTouched]);
-  const reloadLatest = useCallback(async () => {
-    if (
-      isDirty &&
-      !window.confirm('Discard these local edits and load the latest server revision?')
-    )
-      return;
+  const [confirming, setConfirming] = useState<EditorConfirm | null>(null);
+  const reloadNow = useCallback(async () => {
     draft.resetDraft();
     await onReload();
-  }, [isDirty, draft.resetDraft, onReload]);
+  }, [draft.resetDraft, onReload]);
+  const reloadLatest = useCallback(async () => {
+    if (isDirty) {
+      setConfirming('reload');
+      return;
+    }
+    await reloadNow();
+  }, [isDirty, reloadNow]);
+  /** Client-side checks: on failure show the field hints and never call the API. */
+  const formInvalid = () => {
+    if (!editorFormInvalid(typeKey, mode, publishMeta)) return false;
+    setShowPropertyErrors(true);
+    publish.reset();
+    return true;
+  };
   return {
     typeKey,
     timeZone,
@@ -284,14 +335,31 @@ export function useEditorWorkspace({
     setBody,
     isDirty,
     /** A new record's draft can be thrown away, clearing its copy on this device. */
-    onDiscardDraft:
-      mode === 'new'
-        ? () => {
-            if (!window.confirm('Discard this draft? Its copy on this device is deleted.'))
-              return;
-            draft.resetDraft();
+    editorMode: mode,
+    onDiscardDraft: mode === 'new' ? () => setConfirming('discard') : undefined,
+    /** The in-page confirmation for discarding a draft or reloading over local edits. */
+    confirming,
+    cancelConfirm: () => setConfirming(null),
+    acceptConfirm: () => {
+      const action = confirming;
+      setConfirming(null);
+      if (action === 'discard') {
+        publish.reset();
+        draft.resetDraft();
+      } else if (action === 'reload') void reloadNow();
+    },
+    /** The form opened from a draft saved on this device; "Start fresh" drops it. */
+    restoredDraft:
+      draft.restoredAt && !draft.stale
+        ? {
+            savedAt: draft.restoredAt,
+            startFresh: () => {
+              publish.reset();
+              setShowPropertyErrors(false);
+              draft.resetDraft();
+            },
           }
-        : undefined,
+        : null,
     onSaveDraft: () => {
       if (busy || !admit() || trashed || invalidSession) return;
       if (initial.briefPublished && typeKey !== 'quest') {
@@ -300,16 +368,24 @@ export function useEditorWorkspace({
             ? 'Draft saved on this device. Publish to update the live page.'
             : 'Draft could not be saved on this device. Keep this page open to preserve your edits.',
         );
-      } else publish.mutate(false);
+      } else if (!formInvalid()) publish.mutate(false);
     },
     onPublish: () => {
-      if (!busy) publish.mutate(true);
+      if (busy || formInvalid()) return;
+      publish.mutate(true);
     },
     onPreview,
     preview,
     options,
-    publishDisabled: busy || !admit() || trashed || invalidSession,
-    saveDisabled: busy || !admit() || trashed || invalidSession,
+    publishDisabled: busy || !admit() || trashed || invalidSession || seriesWait !== null,
+    saveDisabled: busy || !admit() || trashed || invalidSession || seriesWait !== null,
+    /** Why saving waits on the Series field, shown next to the save button. */
+    seriesNotice:
+      seriesWait === 'loading'
+        ? 'Loading series…'
+        : seriesWait === 'error'
+          ? 'Your series could not be loaded. Retry the Series field before creating the quest.'
+          : null,
     saveLabel:
       typeKey === 'quest'
         ? mode === 'new'
@@ -413,6 +489,14 @@ export function useEditorWorkspace({
     entityIndexError: entityQuery.isError
       ? toAppError(entityQuery.error, 'editor:entity-index')
       : null,
+    /** Only conflicts, stale revisions and revoked rights offer the recovery copy and reload. */
+    mutationNeedsReload: errorNeedsReload(
+      publish.isError
+        ? toAppError(publish.error, 'editor:workspace')
+        : lifecycle.isError
+          ? toAppError(lifecycle.error, 'editor:lifecycle')
+          : null,
+    ),
     mutationError: publish.isError
       ? toAppError(publish.error, 'editor:workspace')
       : lifecycle.isError

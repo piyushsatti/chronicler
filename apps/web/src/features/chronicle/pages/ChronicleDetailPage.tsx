@@ -164,7 +164,7 @@ export function ChronicleDetailPage(): React.JSX.Element {
             ) : null}
             {summary.arc ? (
               <div>
-                <dt className="type-label">Arc</dt>
+                <dt className="type-label">Series</dt>
                 <dd>{summary.arc}</dd>
               </div>
             ) : null}

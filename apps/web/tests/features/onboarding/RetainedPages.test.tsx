@@ -354,6 +354,51 @@ describe('Series ownership and command retry', () => {
       }),
     ]);
   });
+  it('asks for a name on a blank rename and shows the server’s reason for a refusal', async () => {
+    login();
+    me(['dm']);
+    let writes = 0;
+    server.use(
+      graphql.query('RetainedSeriesArc', ({ variables }) =>
+        HttpResponse.json({ data: { questArc: { ...good.arc, id: variables.id } } }),
+      ),
+      graphql.mutation('RetainedUpsertArc', () => {
+        writes++;
+        return HttpResponse.json({
+          errors: [
+            {
+              message: 'you can rename only a series you started',
+              extensions: { code: 'FORBIDDEN' },
+            },
+          ],
+        });
+      }),
+    );
+    renderWithProviders(
+      <Routes>
+        <Route path="/series/:shortCode" element={<SeriesPage />} />
+      </Routes>,
+      { route: `/series/${good.arc.id}` },
+    );
+    const user = userEvent.setup();
+    await user.click(await screen.findByRole('button', { name: 'Rename series' }));
+    const field = await screen.findByRole('textbox', { name: 'Series name' });
+    await user.clear(field);
+    await user.type(field, '   ');
+    await user.click(screen.getByRole('button', { name: 'Save series name' }));
+    expect(await screen.findByText('Enter a series name')).toBeInTheDocument();
+    expect(writes).toBe(0);
+    await user.clear(field);
+    await user.type(field, 'Renamed arc');
+    expect(screen.queryByText('Enter a series name')).toBeNull();
+    await user.click(screen.getByRole('button', { name: 'Save series name' }));
+    expect(
+      await screen.findByText(
+        'The series was not saved: You can rename only a series you started.',
+      ),
+    ).toBeInTheDocument();
+    expect(writes).toBe(1);
+  });
   it('gives historic codes an explanation and only redirects actual UUID identities', async () => {
     const first = renderWithProviders(
       <Routes>

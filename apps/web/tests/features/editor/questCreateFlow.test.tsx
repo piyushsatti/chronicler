@@ -1,6 +1,6 @@
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { graphql, HttpResponse } from 'msw';
+import { delay, graphql, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { server } from '../../../src/mocks/server.js';
 import { EditorRoute } from '../../../src/features/editor/EditorRoute.js';
@@ -37,23 +37,25 @@ function seedQuestDraft(meta: Record<string, unknown> = {}) {
   );
 }
 
+const seriesOptionsData = () => ({
+  data: {
+    questArcs: {
+      total: 2,
+      items: [
+        { id: ownSeries, name: 'Coastal voyages', createdBy: goodMe.id },
+        {
+          id: otherSeries,
+          name: 'Someone else’s series',
+          createdBy: '33333333-3333-4333-8333-333333333333',
+        },
+      ],
+    },
+  },
+});
+
 function seriesOptions() {
   return graphql.query('EditorSeriesOptions', () =>
-    HttpResponse.json({
-      data: {
-        questArcs: {
-          total: 2,
-          items: [
-            { id: ownSeries, name: 'Coastal voyages', createdBy: goodMe.id },
-            {
-              id: otherSeries,
-              name: 'Someone else’s series',
-              createdBy: '33333333-3333-4333-8333-333333333333',
-            },
-          ],
-        },
-      },
-    }),
+    HttpResponse.json(seriesOptionsData()),
   );
 }
 
@@ -126,7 +128,9 @@ describe('creating a quest', () => {
     expect(
       screen.queryByRole('menuitem', { name: 'Someone else’s series' }),
     ).toBeNull();
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Coastal voyages' }));
+    await userEvent.click(
+      await screen.findByRole('menuitem', { name: 'Coastal voyages' }),
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Create quest' }));
     await waitFor(() => expect(inputs).toHaveLength(1));
     expect(inputs[0].arcId).toBe(ownSeries);
@@ -139,14 +143,62 @@ describe('creating a quest', () => {
     ).toBeInTheDocument();
   });
 
-  it('does not send a linked series the viewer cannot pick, and shows No series', async () => {
+  it('warns about a linked series the viewer cannot pick and does not send it', async () => {
     seedQuestDraft({ arcId: otherSeries });
     const inputs = captureCreate();
     renderNewQuest(`/quests/new?series=${otherSeries}`);
-    expect(await screen.findByRole('button', { name: /No series/ })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: /No series/ }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/You can’t add quests to that series/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Create quest' }));
     await waitFor(() => expect(inputs).toHaveLength(1));
     expect(inputs[0]).not.toHaveProperty('arcId');
+  });
+
+  it('waits for the series to load before a linked series can be created', async () => {
+    server.use(
+      graphql.query('EditorSeriesOptions', async () => {
+        await delay('infinite');
+        return HttpResponse.json({ data: null });
+      }),
+    );
+    seedQuestDraft();
+    const inputs = captureCreate();
+    renderNewQuest(`/quests/new?series=${ownSeries}`);
+    const create = await screen.findByRole('button', { name: 'Create quest' });
+    expect(await screen.findByText('Loading series…')).toBeInTheDocument();
+    expect(create).toBeDisabled();
+    await userEvent.click(create);
+    expect(inputs).toHaveLength(0);
+  });
+
+  it('blocks create while the series failed to load, and creates in the series after a retry', async () => {
+    let calls = 0;
+    server.use(
+      graphql.query('EditorSeriesOptions', () => {
+        calls++;
+        return calls === 1
+          ? HttpResponse.json({
+              errors: [{ message: 'down', extensions: { code: 'INTERNAL' } }],
+            })
+          : HttpResponse.json(seriesOptionsData());
+      }),
+    );
+    seedQuestDraft();
+    const inputs = captureCreate();
+    renderNewQuest(`/quests/new?series=${ownSeries}`);
+    expect(
+      await screen.findByText(/Your series could not be loaded/),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Create quest' })).toBeDisabled();
+    await userEvent.click(screen.getByRole('button', { name: /Series unavailable/ }));
+    expect(
+      await screen.findByRole('button', { name: /Coastal voyages/ }),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Create quest' }));
+    await waitFor(() => expect(inputs).toHaveLength(1));
+    expect(inputs[0].arcId).toBe(ownSeries);
   });
 
   it('offers an admin other DMs’ series, labelled, and sends the linked one', async () => {
@@ -218,10 +270,9 @@ describe('creating a quest', () => {
     expect(alert).toHaveTextContent(
       'Your DM profile must be approved before you can post quests.',
     );
-    expect(within(alert).getByRole('link', { name: 'Open your DM profile' })).toHaveAttribute(
-      'href',
-      '/dms/@ashwin?edit=profile',
-    );
+    expect(
+      within(alert).getByRole('link', { name: 'Open your DM profile' }),
+    ).toHaveAttribute('href', '/dms/@ashwin?edit=profile');
     expect(screen.queryByText(/Something went wrong/)).toBeNull();
   });
 
@@ -265,14 +316,206 @@ describe('creating a quest', () => {
     );
   });
 
-  it('discards a recovered draft and its copy on this device', async () => {
+  it('discards a recovered draft and its copy on this device after an in-page confirm', async () => {
     seedQuestDraft({ title: 'Draft from another tab' });
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const confirm = vi.spyOn(window, 'confirm');
     renderNewQuest();
     await userEvent.click(await screen.findByRole('button', { name: 'Discard draft' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Discard this draft?' });
+    await userEvent.click(
+      within(dialog).getByRole('button', { name: 'Discard draft' }),
+    );
+    expect(confirm).not.toHaveBeenCalled();
     expect(localStorage.getItem(draftKey)).toBeNull();
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Discard this draft?' })).toBeNull(),
+    );
     expect(screen.queryByRole('button', { name: 'Discard draft' })).toBeNull();
     expect(screen.queryByDisplayValue('Draft from another tab')).toBeNull();
+  });
+
+  it('keeps the draft when the discard confirm is cancelled', async () => {
+    seedQuestDraft({ title: 'Draft to keep' });
+    renderNewQuest();
+    await userEvent.click(await screen.findByRole('button', { name: 'Discard draft' }));
+    const dialog = await screen.findByRole('dialog', { name: 'Discard this draft?' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Keep editing' }));
+    expect(localStorage.getItem(draftKey)).toContain('Draft to keep');
+    expect(screen.getByDisplayValue('Draft to keep')).toBeInTheDocument();
+  });
+});
+
+describe('a restored draft and the series in the link', () => {
+  beforeEach(() => {
+    seedEditorSession();
+    server.use(seriesOptions(), seriesAuthority(goodMe.id, 'approved'));
+  });
+
+  /** A draft saved before series were offered on the form: no `arcId` at all. */
+  function seedOldDraft() {
+    seedQuestDraft();
+    const stored = JSON.parse(localStorage.getItem(draftKey) ?? '{}');
+    delete stored.meta.arcId;
+    localStorage.setItem(draftKey, JSON.stringify(stored));
+  }
+
+  it('shows the Series field for an old draft and sends the linked series', async () => {
+    seedOldDraft();
+    const inputs = captureCreate();
+    renderNewQuest(`/quests/new?series=${ownSeries}`);
+    expect(
+      await screen.findByRole('button', { name: /Coastal voyages/ }),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Create quest' }));
+    await waitFor(() => expect(inputs).toHaveLength(1));
+    expect(inputs[0].arcId).toBe(ownSeries);
+  });
+
+  it('shows the Series field for an old draft without a link', async () => {
+    seedOldDraft();
+    renderNewQuest();
+    expect(
+      await screen.findByRole('button', { name: /No series/ }),
+    ).toBeInTheDocument();
+  });
+
+  it('lets the linked series win over the draft’s series', async () => {
+    seedQuestDraft({ arcId: otherSeries });
+    server.use(
+      graphql.query('MemberMe', () =>
+        HttpResponse.json({
+          data: { memberMe: { ...goodMe, roles: ['player', 'dm', 'admin'] } },
+        }),
+      ),
+    );
+    const inputs = captureCreate();
+    renderNewQuest(`/quests/new?series=${ownSeries}`);
+    expect(
+      await screen.findByRole('button', { name: /Coastal voyages/ }),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Create quest' }));
+    await waitFor(() => expect(inputs).toHaveLength(1));
+    expect(inputs[0].arcId).toBe(ownSeries);
+  });
+
+  it('keeps the draft’s own series without a link and says the draft was restored', async () => {
+    seedQuestDraft({ arcId: ownSeries });
+    renderNewQuest();
+    expect(
+      await screen.findByRole('button', { name: /Coastal voyages/ }),
+    ).toBeInTheDocument();
+    const notice = screen.getByRole('status', { name: 'Restored draft' });
+    expect(notice).toHaveTextContent(/Restored an unsaved draft from .+\./);
+  });
+
+  it('starts fresh: clears the recovery copy and keeps the linked series', async () => {
+    seedQuestDraft({ title: 'Old title', arcId: otherSeries });
+    renderNewQuest(`/quests/new?series=${ownSeries}`);
+    const notice = await screen.findByRole('status', { name: 'Restored draft' });
+    await userEvent.click(within(notice).getByRole('button', { name: 'Start fresh' }));
+    expect(localStorage.getItem(draftKey)).toBeNull();
+    expect(screen.queryByDisplayValue('Old title')).toBeNull();
+    expect(screen.queryByRole('status', { name: 'Restored draft' })).toBeNull();
+    expect(screen.getByRole('button', { name: /Coastal voyages/ })).toBeInTheDocument();
+  });
+
+  it('shows no restore notice without a draft', async () => {
+    renderNewQuest(`/quests/new?series=${ownSeries}`);
+    await screen.findByRole('button', { name: /Coastal voyages/ });
+    expect(screen.queryByRole('status', { name: 'Restored draft' })).toBeNull();
+  });
+
+  it('says that creating the quest posts it to Discord', async () => {
+    renderNewQuest();
+    await screen.findByRole('button', { name: 'Create quest' });
+    expect(
+      screen.getByText('Creating the quest posts it to the community Discord.'),
+    ).toBeInTheDocument();
+  });
+});
+
+describe('client-side validation on create', () => {
+  beforeEach(() => {
+    seedEditorSession();
+    server.use(seriesOptions(), seriesAuthority(goodMe.id, 'approved'));
+  });
+
+  it('shows field hints without calling the API or the recovery prompt, and clears them as fields become valid', async () => {
+    const inputs = captureCreate();
+    seedQuestDraft({ title: '', regions: [] });
+    renderNewQuest();
+    await userEvent.click(await screen.findByRole('button', { name: 'Create quest' }));
+    expect(await screen.findByText('2 fields need attention')).toBeInTheDocument();
+    expect(inputs).toHaveLength(0);
+    expect(screen.queryByText('Title is required')).toBeNull();
+    expect(screen.queryByText(/recovery copy/)).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'Discard local edits and reload' }),
+    ).toBeNull();
+    expect(screen.queryByRole('alert')).toBeNull();
+    await userEvent.type(screen.getByPlaceholderText('Quest title'), 'Named');
+    expect(await screen.findByText('1 field needs attention')).toBeInTheDocument();
+    expect(inputs).toHaveLength(0);
+  });
+
+  it('keeps the recovery prompt for a conflicting save', async () => {
+    seedQuestDraft();
+    captureCreate(() =>
+      HttpResponse.json({
+        errors: [{ message: 'conflict', extensions: { code: 'CONFLICT' } }],
+      }),
+    );
+    renderNewQuest();
+    await userEvent.click(await screen.findByRole('button', { name: 'Create quest' }));
+    await screen.findByRole('alert');
+    expect(
+      screen.getByRole('button', { name: 'Discard local edits and reload' }),
+    ).toBeInTheDocument();
+  });
+
+  it('shows no recovery prompt for a refused field', async () => {
+    seedQuestDraft();
+    captureCreate(() =>
+      HttpResponse.json({
+        errors: [{ message: 'title too long', extensions: { code: 'INVALID' } }],
+      }),
+    );
+    renderNewQuest();
+    await userEvent.click(await screen.findByRole('button', { name: 'Create quest' }));
+    await screen.findByRole('alert');
+    expect(
+      screen.queryByRole('button', { name: 'Discard local edits and reload' }),
+    ).toBeNull();
+  });
+});
+
+describe('typing quickly into the quest form', () => {
+  beforeEach(() => {
+    seedEditorSession();
+    server.use(seriesOptions(), seriesAuthority(goodMe.id, 'approved'));
+  });
+
+  it('saves every keystroke of the title and the description', async () => {
+    seedQuestDraft({ title: '' });
+    localStorage.setItem(
+      draftKey,
+      JSON.stringify({
+        ...JSON.parse(localStorage.getItem(draftKey) ?? '{}'),
+        body: '',
+      }),
+    );
+    const inputs = captureCreate();
+    const user = userEvent.setup({ delay: null });
+    renderNewQuest();
+    const title = await screen.findByPlaceholderText('Quest title');
+    await user.type(title, 'Edited after posting');
+    fireEvent.mouseDown(screen.getByText('Describe the quest for players…'));
+    const body = await screen.findByRole('textbox', { name: 'Document body' });
+    await user.type(body, 'created from the quest board');
+    await user.click(screen.getByRole('button', { name: 'Create quest' }));
+    await waitFor(() => expect(inputs).toHaveLength(1));
+    expect(inputs[0].title).toBe('Edited after posting');
+    expect(String(inputs[0].briefBody).trim()).toBe('created from the quest board');
   });
 });
 
@@ -283,29 +526,31 @@ describe('the DM approval notice on a new quest', () => {
     ['pending', /pending review/],
     ['rejected', /rejected/],
     ['draft', /not submitted for review yet/],
-  ])('names a %s profile and links to the editor before the form is filled', async (status, copy) => {
-    server.use(
-      seriesAuthority(goodMe.id, status),
-      graphql.query('QuestAuthoringAuthority', () =>
-        HttpResponse.json({
-          data: {
-            memberProfile: {
-              member: { id: goodMe.id, roles: ['dm'], status: 'active' },
-              dmProfile: { status },
+  ])(
+    'names a %s profile and links to the editor before the form is filled',
+    async (status, copy) => {
+      server.use(
+        seriesAuthority(goodMe.id, status),
+        graphql.query('QuestAuthoringAuthority', () =>
+          HttpResponse.json({
+            data: {
+              memberProfile: {
+                member: { id: goodMe.id, roles: ['dm'], status: 'active' },
+                dmProfile: { status },
+              },
             },
-          },
-        }),
-      ),
-    );
-    renderNewQuest();
-    const notice = await screen.findByRole('status', { name: 'DM profile approval' });
-    expect(notice).toHaveTextContent(copy);
-    expect(notice).toHaveTextContent('you can’t post quests or start a series');
-    expect(within(notice).getByRole('link', { name: 'Open your DM profile' })).toHaveAttribute(
-      'href',
-      '/dms/@ashwin?edit=profile',
-    );
-  });
+          }),
+        ),
+      );
+      renderNewQuest();
+      const notice = await screen.findByRole('status', { name: 'DM profile approval' });
+      expect(notice).toHaveTextContent(copy);
+      expect(notice).toHaveTextContent('you can’t post quests or start a series');
+      expect(
+        within(notice).getByRole('link', { name: 'Open your DM profile' }),
+      ).toHaveAttribute('href', '/dms/@ashwin?edit=profile');
+    },
+  );
 
   it('stays hidden for an approved DM', async () => {
     server.use(seriesAuthority(goodMe.id, 'approved'));

@@ -33,6 +33,19 @@ const documentKinds = {
   demo: 'codex_entry',
 } satisfies Record<Exclude<EditorTypeKey, 'quest'>, string>;
 
+/** The form has a missing title or a field error: show the field hints, never call the API. */
+export function editorFormInvalid(
+  typeKey: EditorTypeKey,
+  mode: EditorMode,
+  meta: EditorMeta,
+): boolean {
+  const title = typeof meta.title === 'string' ? meta.title.trim() : '';
+  return (
+    !title ||
+    Object.keys(schemaErrors(schemaForType(typeKey, meta, {}, mode), meta)).length > 0
+  );
+}
+
 export function useEditorPublish({
   typeKey,
   mode,
@@ -102,8 +115,8 @@ export function useEditorPublish({
           );
         const publish = shouldPublish !== false;
         const title = typeof meta.title === 'string' ? meta.title.trim() : '';
-        const errors = schemaErrors(schemaForType(typeKey, meta), meta);
-        if (!title || Object.keys(errors).length > 0) {
+        // Callers check `editorFormInvalid` first, so this guard only catches a direct call.
+        if (editorFormInvalid(typeKey, mode, meta)) {
           onInvalidTitle();
           throw safeAppError(
             !title ? 'Title is required' : 'Check the highlighted properties.',

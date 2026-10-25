@@ -17,7 +17,7 @@ await build({
 });
 const css = readFileSync(`${OUT}/styles.css`, 'utf8').replace(/url\((['"]?)\/fonts\//g, 'url($1./fonts/');
 writeFileSync(`${OUT}/styles.css`, css);
-for (const f of ['Geist-Variable.woff2', 'GeistMono-Variable.woff2', 'fraunces-latin-full-normal.woff2', 'fraunces-latin-ext-full-normal.woff2', 'fraunces-vietnamese-full-normal.woff2']) {
+for (const f of ['Geist-Variable.woff2', 'lato-latin-400-normal.woff2', 'lato-latin-400-italic.woff2', 'lato-latin-700-normal.woff2', 'lato-latin-700-italic.woff2', 'GeistMono-Variable.woff2', 'fraunces-latin-full-normal.woff2', 'fraunces-latin-ext-full-normal.woff2', 'fraunces-vietnamese-full-normal.woff2']) {
   cpSync(`public/fonts/${f}`, `${OUT}/fonts/${f}`);
 }
 console.log(`styles.css ${(css.length / 1024).toFixed(0)} KB`);

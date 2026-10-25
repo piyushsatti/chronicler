@@ -72,7 +72,28 @@ export function EditorDocumentControls({
           </Button>
         </div>
       </Modal>
-      {view.stale || view.mutationError ? (
+      <Modal
+        open={view.confirming !== null}
+        title={
+          view.confirming === 'reload' ? 'Discard your local edits?' : 'Discard this draft?'
+        }
+        onClose={view.cancelConfirm}
+      >
+        <p>
+          {view.confirming === 'reload'
+            ? 'Your local edits are deleted and the latest saved version loads.'
+            : 'Its copy on this device is deleted.'}
+        </p>
+        <div className="row">
+          <Button type="button" onClick={view.cancelConfirm}>
+            Keep editing
+          </Button>
+          <Button type="button" variant="danger" onClick={view.acceptConfirm}>
+            {view.confirming === 'reload' ? 'Discard and reload' : 'Discard draft'}
+          </Button>
+        </div>
+      </Modal>
+      {view.stale || view.mutationNeedsReload ? (
         <div className="stack">
           <p className="type-caption">
             Your edits remain in this account’s recovery copy. Reload before retrying a

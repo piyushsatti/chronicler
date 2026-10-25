@@ -16,7 +16,7 @@
 }
 
 .map-label-body {
-  font-family: var(--font-body); /* Fixed Geist application value. */
+  font-family: var(--font-body); /* Lato body face. */
 }
 
 /* --- Inspector inner panel: neutral content container --- */

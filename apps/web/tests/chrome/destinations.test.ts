@@ -7,22 +7,26 @@ import {
 } from '../../src/chrome/destinations.js';
 
 describe('destinationsForAuth', () => {
-  it('keeps the six live destinations', () => {
-    expect(destinationsForAuth()).toHaveLength(6);
+  it('keeps the seven live destinations', () => {
+    expect(destinationsForAuth()).toHaveLength(7);
     expect(PRIMARY_DESTINATIONS.map((destination) => destination.id)).toEqual([
       'home',
       'quests',
       'chronicles',
       'codex',
+      'map',
       'rules',
       'community',
     ]);
   });
 
-  it('groups the map, regions and calendar under their parents', () => {
+  it('gives the map its own item and groups regions and calendar under their parents', () => {
     const destinations = destinationsForAuth();
-    expect(currentDestinationId('/map', destinations)).toBe('codex');
-    expect(currentDestinationId('/map/lightfall', destinations)).toBe('codex');
+    const map = destinations.find((destination) => destination.id === 'map');
+    expect(map).toMatchObject({ label: 'Map', href: '/map' });
+    expect(currentDestinationId('/map', destinations)).toBe('map');
+    expect(currentDestinationId('/map/lightfall', destinations)).toBe('map');
+    expect(currentDestinationId('/mapping', destinations)).not.toBe('map');
     expect(currentDestinationId('/regions/lightfall-coast', destinations)).toBe('codex');
     expect(currentDestinationId('/calendar', destinations)).toBe('quests');
     expect(currentDestinationId('/measure', destinations)).not.toBe('codex');
@@ -57,6 +61,7 @@ describe('destinationsForAuth', () => {
       'Quests',
       'Chronicles',
       'Codex',
+      'Map',
       'Rules',
       'Community',
       'Admin',
@@ -87,6 +92,7 @@ describe('destinationsForAuth', () => {
       'Quests',
       'Chronicles',
       'Codex',
+      'Map',
       'Rules',
       'Community',
       'DM',
@@ -112,6 +118,7 @@ describe('destinationsForAuth', () => {
       ['Quests', '/quests'],
       ['Chronicles', '/chronicles'],
       ['Codex', '/codex'],
+      ['Map', '/map'],
       ['Rules', '/rules'],
       ['Community', '/community'],
     ]);

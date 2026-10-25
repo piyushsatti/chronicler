@@ -138,7 +138,7 @@ describe('QuestDetailPage', () => {
       </Routes>,
       { route: '/quests/Q-101' },
     );
-    expect(await screen.findByText(/Discord post pending/)).toBeInTheDocument();
+    expect(await screen.findByText('Updating the Discord post…')).toBeInTheDocument();
     const delivery = document.querySelector('[data-el="quest.discordDelivery"]');
     expect(delivery).toHaveAttribute('data-terminal', '0');
     expect(delivery).toHaveAttribute('role', 'status');
@@ -146,6 +146,29 @@ describe('QuestDetailPage', () => {
     await userEvent.click(screen.getByRole('button', { name: /^Your character/ }));
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Lyra Storm' }));
     expect(screen.getByRole('button', { name: 'Sign up' })).toBeEnabled();
+  });
+
+  it('shows the quest kinds and signup type in the details', async () => {
+    server.use(
+      graphql.query('Quest', () =>
+        HttpResponse.json({
+          data: {
+            quest: { ...detailGood, kinds: ['one_shot', 'event'], signupType: 'application' },
+          },
+        }),
+      ),
+    );
+    renderWithProviders(
+      <Routes>
+        <Route path="/quests/:code" element={<QuestDetailPage />} />
+      </Routes>,
+      { route: '/quests/Q-101' },
+    );
+    const details = await screen.findByRole('region', { name: 'Quest details' });
+    const kinds = within(details).getByText('Kinds');
+    expect(kinds.nextElementSibling).toHaveTextContent('One-shot, Event');
+    const signup = within(details).getByText('Signup type');
+    expect(signup.nextElementSibling).toHaveTextContent('Application');
   });
 
   it('shows signup empty-state when authenticated with no characters', async () => {

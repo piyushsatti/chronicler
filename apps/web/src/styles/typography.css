@@ -7,7 +7,7 @@
  * Refined-modern stack:
  *   Display / heading / title      — Lexend Variable 700 (--font-title, D7)
  *   Narrative                      — Fraunces Variable (serif, expressive)
- *   Label / body / caption         — Geist (clean humanist sans)
+ *   Label / body / caption         — Lato (--font-body)
  *   Code / value                   — Geist Mono / Geist tabular-nums
  *
  * Sizes use clamp() for fluid response; contexts.css overrides

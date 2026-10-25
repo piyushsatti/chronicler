@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-const DESTINATIONS = ['Home', 'Quests', 'Chronicles', 'Codex', 'Rules', 'Community'];
+const DESTINATIONS = ['Home', 'Quests', 'Chronicles', 'Codex', 'Map', 'Rules', 'Community'];
 
 for (const width of [390, 900, 1920]) {
   test(`primary navigation remains painted and keyboard reachable at ${width}px`, async ({

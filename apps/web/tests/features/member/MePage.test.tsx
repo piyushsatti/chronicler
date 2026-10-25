@@ -289,6 +289,61 @@ describe('MePage', () => {
     expect(
       await screen.findByRole('button', { name: 'Create a series' }),
     ).toBeVisible();
+    // Every counted item is listed, so there is nothing more to see.
+    expect(screen.queryByRole('link', { name: /^See all/ })).toBeNull();
+  });
+
+  it('links to the DM dashboard when a card lists fewer items than its count', async () => {
+    signIn(['dm']);
+    const uuid = (index: number) => `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`;
+    server.use(
+      seriesAuthority(goodMe.id),
+      graphql.query('DmDashboard', () =>
+        HttpResponse.json({
+          data: {
+            dmStats: { sessionCount: 2 },
+            questArcs: {
+              total: 5,
+              items: Array.from({ length: 5 }, (_, index) => ({
+                id: uuid(100 + index),
+                name: `Series ${index + 1}`,
+                createdBy: goodMe.id,
+                questCount: 0,
+              })),
+            },
+            quests: {
+              total: 4,
+              items: Array.from({ length: 4 }, (_, index) => ({
+                id: uuid(200 + index),
+                shortCode: `Q-${index}`,
+                status: 'open',
+                scheduledAt: '2098-01-01T19:00:00Z',
+                slotsMax: 5,
+                filledCount: 0,
+                briefDocument: { title: `Voyage ${index + 1}` },
+              })),
+            },
+            documents: {
+              total: 4,
+              items: Array.from({ length: 4 }, (_, index) => ({
+                id: uuid(300 + index),
+                slug: `table-${index}`,
+                title: `Table ${index + 1}`,
+                status: 'published',
+                authorId: goodMe.id,
+                canEditMetadata: true,
+                canEditBody: true,
+              })),
+            },
+          },
+        }),
+      ),
+    );
+    renderWithProviders(<MePage />, { route: '/me' });
+    expect(await screen.findByText('5 series')).toBeVisible();
+    expect(screen.queryByRole('link', { name: 'Series 4' })).toBeNull();
+    for (const name of ['See all series', 'See all quests to run', 'See all DM tables'])
+      expect(screen.getByRole('link', { name })).toHaveAttribute('href', '/dm');
   });
 
   it.each([1, 27])(

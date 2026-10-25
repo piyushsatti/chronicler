@@ -185,7 +185,9 @@ export function PropertiesPanel({
       {summary.length > 0 ? (
         <div className="pf-summary">
           <strong>
-            {summary.length} field{summary.length > 1 ? 's' : ''} need attention
+            {summary.length === 1
+              ? '1 field needs attention'
+              : `${summary.length} fields need attention`}
           </strong>
           <ul>
             {summary.map((f) => (

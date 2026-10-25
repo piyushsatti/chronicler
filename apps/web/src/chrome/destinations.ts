@@ -18,7 +18,7 @@ function matchesPath(pathname: string, prefixes: readonly string[]): boolean {
   );
 }
 
-/** Six live bar destinations. Characters and Map are not bar items. */
+/** Seven live bar destinations. Characters is not a bar item. */
 export const PRIMARY_DESTINATIONS: readonly SiteDestination[] = [
   {
     id: 'home',
@@ -44,7 +44,13 @@ export const PRIMARY_DESTINATIONS: readonly SiteDestination[] = [
     label: 'Codex',
     href: '/codex',
     matches: (pathname) =>
-      matchesPath(pathname, ['/codex', '/npcs', '/factions', '/regions', '/map']),
+      matchesPath(pathname, ['/codex', '/npcs', '/factions', '/regions']),
+  },
+  {
+    id: 'map',
+    label: 'Map',
+    href: '/map',
+    matches: (pathname) => matchesPath(pathname, ['/map']),
   },
   {
     id: 'rules',

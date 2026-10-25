@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-const LIVE_LINKS = ['Home', 'Quests', 'Chronicles', 'Codex', 'Rules', 'Community'];
+const LIVE_LINKS = ['Home', 'Quests', 'Chronicles', 'Codex', 'Map', 'Rules', 'Community'];
 
 test('phone home uses only the scrollable header menu and home regions', async ({ page }) => {
   await page.goto('/');
@@ -15,7 +15,7 @@ test('phone home uses only the scrollable header menu and home regions', async (
   await expect(page.getByRole('banner').locator('[data-site-links]')).toHaveCount(1);
   await expect(page.locator('.app-shell__bottomnav, .site-chrome__bottom')).toHaveCount(0);
   await expect(page.locator('[data-shell-main]')).toHaveCSS('padding-bottom', '0px');
-  await expect(links.locator('[data-nav-item]')).toHaveCount(6);
+  await expect(links.locator('[data-nav-item]')).toHaveCount(7);
   for (const name of LIVE_LINKS) {
     await expect(links.getByRole('link', { name })).toBeVisible();
   }

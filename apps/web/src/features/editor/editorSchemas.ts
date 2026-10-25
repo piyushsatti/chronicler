@@ -1,7 +1,8 @@
-import type { EditorMeta, FieldSchema } from './types.js';
+import type { EditorMeta, EditorMode, FieldSchema } from './types.js';
 import { GATED_CODEX_CATEGORY } from '../../utils/codexCategories.js';
 import { CODEX_AUTHORING_CATEGORIES, QUEST_KINDS } from './editorConstants.js';
 import { isEditorInstant } from './editorDateTime.js';
+import { QUEST_SIGNUP_TYPES } from '../../utils/questVocabulary.js';
 
 const QUEST_SCHEMA: FieldSchema[] = [
   {
@@ -83,11 +84,7 @@ const QUEST_SCHEMA: FieldSchema[] = [
     label: 'Signup type',
     type: 'select',
     required: true,
-    options: [
-      ['open', 'Open signup'],
-      ['application', 'Application'],
-      ['invite', 'Invitation'],
-    ],
+    options: QUEST_SIGNUP_TYPES,
     validate: (v) =>
       v === 'open' || v === 'application' || v === 'invite'
         ? null
@@ -186,11 +183,13 @@ export function schemaForType(
   typeKey: string,
   meta: EditorMeta,
   access: SchemaAccess = {},
+  mode: EditorMode = 'edit',
 ): FieldSchema[] {
   switch (typeKey) {
     case 'quest':
-      // Only a new quest's draft carries `arcId`.
-      return typeof meta.arcId === 'string' ? NEW_QUEST_SCHEMA : QUEST_SCHEMA;
+      // The create form always offers a series; a saved quest changes series on its page.
+      // Chosen by mode, not by `arcId`: drafts saved by older builds have no `arcId`.
+      return mode === 'new' ? NEW_QUEST_SCHEMA : QUEST_SCHEMA;
     case 'codex':
       return CODEX_SCHEMA.map((field) => {
         if (field.key !== 'category') return field;

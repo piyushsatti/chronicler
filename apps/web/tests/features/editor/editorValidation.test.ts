@@ -1,4 +1,7 @@
-import { expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { errorNeedsReload } from '../../../src/features/editor/hooks/useEditorWorkspace.js';
+import { safeAppError, toAppError } from '../../../src/errors/toAppError.js';
+import { TransportError } from '../../../src/errors/types.js';
 import { schemaForType } from '../../../src/features/editor/editorSchemas.js';
 import {
   parseQuestMetadata,
@@ -93,3 +96,41 @@ it.each(['2026-03-08T02:30', '2026-11-01T01:30', '', '2026-02-30T12:00:00Z'])(
     expect(parseQuestMetadata(meta).success).toBe(false);
   },
 );
+
+describe('the quest Series field', () => {
+  const keys = (meta: Record<string, unknown>, mode: 'new' | 'edit') =>
+    schemaForType('quest', { title: 'Quest', ...meta }, {}, mode).map((field) => field.key);
+  it('is always on the create form, even for a draft saved without `arcId`', () => {
+    expect(keys({}, 'new')).toContain('arcId');
+    expect(keys({ arcId: '' }, 'new')).toContain('arcId');
+  });
+  it('is never on the edit form', () => {
+    expect(keys({ arcId: '11111111-1111-4111-8111-111111111111' }, 'edit')).not.toContain(
+      'arcId',
+    );
+  });
+});
+
+describe('which save errors offer the recovery copy and reload', () => {
+  it('offers it for conflicts, revoked rights and stale guards only', () => {
+    expect(
+      errorNeedsReload(toAppError(new TransportError('CONFLICT'), 'editor:save')),
+    ).toBe(true);
+    expect(
+      errorNeedsReload(toAppError(new TransportError('FORBIDDEN'), 'editor:save')),
+    ).toBe(true);
+    expect(
+      errorNeedsReload(
+        safeAppError('Reload to check your current permissions and revision.', 'editor:save'),
+      ),
+    ).toBe(true);
+    expect(errorNeedsReload(safeAppError('Title is required', 'editor:save'))).toBe(false);
+    expect(
+      errorNeedsReload(
+        safeAppError('The quest was not saved: Title too long.', 'editor:save'),
+      ),
+    ).toBe(false);
+    expect(errorNeedsReload(toAppError(new Error('boom'), 'editor:save'))).toBe(false);
+    expect(errorNeedsReload(null)).toBe(false);
+  });
+});

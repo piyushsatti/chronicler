@@ -29,6 +29,7 @@ import {
   pluralize,
   statusLabel,
 } from '../../../utils/format.js';
+import { questKindLabel, signupTypeLabel } from '../../../utils/questVocabulary.js';
 
 const DECLARATION: PageDeclaration = {
   page: 'quest-detail',
@@ -126,6 +127,17 @@ export function QuestDetailPage(): React.JSX.Element {
             value: <time dateTime={quest.scheduledAt}>{formatDateTime(quest.scheduledAt)}</time>,
           },
         ]
+      : []),
+    ...(quest.kinds.length
+      ? [
+          {
+            key: quest.kinds.length > 1 ? 'Kinds' : 'Kind',
+            value: quest.kinds.map(questKindLabel).join(', '),
+          },
+        ]
+      : []),
+    ...(quest.signupType
+      ? [{ key: 'Signup type', value: signupTypeLabel(quest.signupType) }]
       : []),
     { key: 'Length', value: pluralize(quest.durationHours, 'hour') },
     {

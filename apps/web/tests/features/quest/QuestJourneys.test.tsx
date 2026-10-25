@@ -328,12 +328,14 @@ describe('retained Quest journeys', () => {
       }),
     );
     renderDetail();
-    const arc = await screen.findByRole('button', { name: /^Arc membership/ });
+    const arc = await screen.findByRole('button', { name: /^Series/ });
     await waitFor(() => expect(arc).toBeEnabled());
     await userEvent.click(arc);
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Coastal voyages' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Save arc membership' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Save series' }));
     await waitFor(() => expect(writes).toHaveLength(1));
+    expect(await screen.findByText('Series saved.')).toBeInTheDocument();
+    expect(screen.queryByText(/\barc\b/i)).toBeNull();
     expect(writes[0]).toMatchObject({ id: detail.id, input: { arcId: otherId } });
     await userEvent.click(screen.getByRole('button', { name: /^Pointcrawl map/ }));
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Harbor map' }));

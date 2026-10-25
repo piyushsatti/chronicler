@@ -5,7 +5,7 @@ import { App } from '../../src/App.js';
 import { useToast } from '../../src/hooks/useToast.js';
 import { renderWithProviders } from '../test-utils.js';
 
-const LIVE_LINKS = ['Home', 'Quests', 'Chronicles', 'Codex', 'Rules', 'Community'];
+const LIVE_LINKS = ['Home', 'Quests', 'Chronicles', 'Codex', 'Map', 'Rules', 'Community'];
 
 describe('SiteChrome', () => {
   it('publishes its actual header border box initially and after resize, then releases the measurement', () => {
@@ -118,7 +118,7 @@ describe('SiteChrome', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Dismiss' }));
     expect(screen.queryByText('Shared action saved.', { exact: true })).toBeNull();
   });
-  it('renders the six live destinations, with search and log in outside that list', () => {
+  it('renders the seven live destinations, with search and log in outside that list', () => {
     renderWithProviders(<App />);
     const nav = screen.getByRole('navigation', { name: 'Primary' });
     expect(nav).toHaveAttribute('data-site-links');
@@ -129,8 +129,8 @@ describe('SiteChrome', () => {
       expect(within(nav).getByRole('link', { name })).toBeInTheDocument();
     }
     expect(screen.queryByRole('link', { name: 'Characters' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'Map' })).not.toBeInTheDocument();
-    expect(nav.querySelectorAll('[data-nav-item]')).toHaveLength(6);
+    expect(within(nav).getByRole('link', { name: 'Map' })).toHaveAttribute('href', '/map');
+    expect(nav.querySelectorAll('[data-nav-item]')).toHaveLength(7);
     expect(within(nav).queryByRole('button', { name: 'Search the chronicle' })).toBeNull();
     expect(within(nav).queryByRole('link', { name: 'Log in' })).toBeNull();
     expect(

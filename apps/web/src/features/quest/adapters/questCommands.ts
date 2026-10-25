@@ -121,7 +121,7 @@ export async function executeQuestCommand(
         z.object({ id: z.string().uuid(), updatedAt: z.string() }).parse(
           data.updateQuest,
         );
-        return 'Quest arc membership saved.';
+        return 'Series saved.';
       }
       default: {
         const exhaustive: never = command;
