@@ -1,6 +1,7 @@
 import { Link, useParams } from 'react-router-dom';
 import { SingleRegionPage } from '../../../chrome/singleRegion.js';
 import { ContentRenderer } from '../../../components/foundation/ContentRenderer.js';
+import { SeriesCreateAction } from '../../../components/domain/SeriesCreateAction.js';
 import { PageShell } from '../../../components/foundation/PageShell.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { Chip } from '../../../components/primitives/Chip.js';
@@ -93,7 +94,7 @@ function DmInformation({
         <p className="type-caption">Nothing here yet.</p>
         {canCreate ? <div className={styles.chips}>
           <Link className="btn btn--secondary btn--sm" to="/editor/dm-table">New DM table</Link>
-          <Link className="btn btn--secondary btn--sm" to="/series/new">Create a series</Link>
+          <SeriesCreateAction label="Create a series" size="sm" showAuthorityError={false} />
           {canCreateQuest ? <Link className="btn btn--secondary btn--sm" to="/quests/new">Post a quest</Link> : null}
         </div> : null}
       </Card>
@@ -187,12 +188,12 @@ function DmInformation({
       <Card className="stack" pad={4}>
         <div className={styles.cardHead}>
           <h2 className="type-heading">Series</h2>
-          {canCreate ? <Link className="btn btn--secondary btn--sm" to="/series/new">Create a series</Link> : null}
+          {canCreate ? <SeriesCreateAction label="Create a series" size="sm" showAuthorityError={false} /> : null}
         </div>
         {state.details.isError ? <StatePanel variant="inline" status="error" error={toAppError(state.details.error, 'profile:series')} /> :
           state.details.isPending ? <StatePanel variant="inline" status="loading" /> :
           state.details.data?.questArcs.items.length ? <CardGrid>{state.details.data.questArcs.items.map((arc) => <Card key={arc.id} variant="clickable" to={`/series/${arc.id}`} pad={4}><h3 className="type-title">{arc.name}</h3><p className="type-caption">{pluralize(arc.questCount, 'quest')}</p></Card>)}</CardGrid> :
-          <EmptyState message="No quest series have been shared yet." action={canCreate ? <Link className="type-link" to="/series/new">Create a series</Link> : <Link className="type-link" to="/quests">Browse quests</Link>} />}
+          <EmptyState message="No quest series have been shared yet." action={canCreate ? <SeriesCreateAction label="Create a series" variant="ghost" size="sm" showAuthorityError={false} /> : <Link className="type-link" to="/quests">Browse quests</Link>} />}
       </Card>
       <Card className="stack" pad={4}>
         <h2 className="type-heading">Quests</h2>

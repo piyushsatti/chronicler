@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { SeriesCreateAction } from '../../../components/domain/SeriesCreateAction.js';
 import { Button } from '../../../components/primitives/Button.js';
 import { Chip } from '../../../components/primitives/Chip.js';
 import { PageHeader } from '../../../components/primitives/PageHeader.js';
@@ -120,7 +121,7 @@ export function DmDashboard({ view }: { view: ReturnType<typeof useDmDashboard> 
             <Link className="type-link" to="/me">Your page and DM profile</Link>
             <Link className="type-link" to="/calendar">Quest calendar</Link>
             <Link className="type-link" to="/quests">Browse all quests</Link>
-            {view.canCreateQuest ? <Link className="type-link" to="/series/new">Create a series</Link> : null}
+            {view.canCreateQuest ? <SeriesCreateAction label="Create a series" variant="ghost" size="sm" showAuthorityError={false} /> : null}
           </Card>
         }
       >
@@ -169,7 +170,7 @@ export function DmDashboard({ view }: { view: ReturnType<typeof useDmDashboard> 
             kind="generic"
             message="You have not created a quest series yet."
             action={view.canCreateQuest
-              ? <Link className="btn btn--secondary btn--sm" to="/series/new">Create a series</Link>
+              ? <SeriesCreateAction label="Create a series" size="sm" showAuthorityError={false} />
               : <Link className="btn btn--secondary btn--sm" to="/me">View your DM profile</Link>}
           />
         ) : (

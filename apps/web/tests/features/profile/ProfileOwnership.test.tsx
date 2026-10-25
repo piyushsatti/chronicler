@@ -107,7 +107,8 @@ describe('Profile ownership and table identity', () => {
     const panel = await screen.findByRole('tabpanel', { name: 'About' });
     expect(await within(panel).findByText('Nothing here yet.')).toBeVisible();
     expect(within(panel).getByRole('link', { name: 'New DM table' })).toHaveAttribute('href', '/editor/dm-table');
-    expect(within(panel).getByRole('link', { name: 'Create a series' })).toHaveAttribute('href', '/series/new');
+    // No dead /series/new link. useMe is mocked here, so the create button's DM check never runs.
+    expect(within(panel).queryByRole('link', { name: 'Create a series' })).not.toBeInTheDocument();
     expect(within(panel).getByRole('link', { name: 'Post a quest' })).toHaveAttribute('href', '/quests/new');
     expect(within(panel).getAllByText('Nothing here yet.')).toHaveLength(1);
   });
@@ -130,7 +131,8 @@ describe('Profile ownership and table identity', () => {
     const panel = await screen.findByRole('tabpanel', { name: 'About' });
     expect(await within(panel).findByText('Nothing here yet.')).toBeVisible();
     expect(within(panel).getByRole('link', { name: 'New DM table' })).toBeVisible();
-    expect(within(panel).getByRole('link', { name: 'Create a series' })).toBeVisible();
+    // No dead /series/new link. useMe is mocked here, so the create button's DM check never runs.
+    expect(within(panel).queryByRole('link', { name: 'Create a series' })).not.toBeInTheDocument();
     expect(within(panel).queryByRole('link', { name: 'Post a quest' })).not.toBeInTheDocument();
   });
   it('uses persisted author UUID for schedule and returned edit capability', async () => {

@@ -1,15 +1,30 @@
 import { useState } from 'react';
 import { Field } from '../foundation/Field.js';
 import { StatePanel } from '../foundation/StatePanel.js';
-import { Button } from '../primitives/Button.js';
+import { Button, type ButtonProps } from '../primitives/Button.js';
 import { Modal } from '../primitives/Modal.js';
 import { useSeriesPage } from '../../hooks/useSeriesPage.js';
 
-export function SeriesCreateAction(): React.JSX.Element | null {
+type SeriesCreateActionProps = {
+  label?: string;
+  variant?: ButtonProps['variant'];
+  size?: ButtonProps['size'];
+  /** False inside a row of other actions, where an error panel would break the row. */
+  showAuthorityError?: boolean;
+};
+
+/** The one way to start a series: a button that opens the create dialog.
+ * Renders nothing unless the viewer is an approved DM. */
+export function SeriesCreateAction({
+  label = 'New series',
+  variant = 'secondary',
+  size = 'md',
+  showAuthorityError = true,
+}: SeriesCreateActionProps = {}): React.JSX.Element | null {
   const page = useSeriesPage('');
   const [open, setOpen] = useState(false);
   if (!page.canCreate)
-    return page.authorityError ? (
+    return showAuthorityError && page.authorityError ? (
       <StatePanel
         status="error"
         error={page.authorityError}
@@ -18,8 +33,8 @@ export function SeriesCreateAction(): React.JSX.Element | null {
     ) : null;
   return (
     <>
-      <Button variant="secondary" onClick={() => setOpen(true)}>
-        New series
+      <Button variant={variant} size={size} onClick={() => setOpen(true)}>
+        {label}
       </Button>
       <Modal
         open={open}

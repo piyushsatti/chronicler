@@ -11,12 +11,12 @@ staging or production waits for an explicit go-ahead.
 
 ## Files
 
-| File | What it is |
-|---|---|
-| `docs/seed/build_weeping_seed.py` | Generator. Reads the extracted archive and writes the JSONL files. Standard library only; run with `python3 -I`. |
-| `apps/api/cmd/seedqa/main.go` | Loader. Gains the `platform_owner` member reference (plus a unit test in `main_test.go`). |
-| `apps/api/db/seed/weeping.jsonl` | Documents, the Lightfall region and the character-creation catalog. |
-| `apps/api/db/seed/weeping-hexmap.jsonl` | The Lightfall hex map as a pointcrawl: one map, its nodes and edges. |
+| File                                    | What it is                                                                                                       |
+| --------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `docs/seed/build_weeping_seed.py`       | Generator. Reads the extracted archive and writes the JSONL files. Standard library only; run with `python3 -I`. |
+| `apps/api/cmd/seedqa/main.go`           | Loader. Gains the `platform_owner` member reference (plus a unit test in `main_test.go`).                        |
+| `apps/api/db/seed/weeping.jsonl`        | Documents, the Lightfall region and the character-creation catalog.                                              |
+| `apps/api/db/seed/weeping-hexmap.jsonl` | The Lightfall hex map as a pointcrawl: one map, its nodes and edges.                                             |
 
 ## Author: the platform owner, resolved at load time
 
@@ -61,20 +61,20 @@ Consequences:
 
 ## Mapping
 
-| Archive content | Target | Conflict key | Count |
-|---|---|---|---:|
-| Codex NPC files | `documents`, kind `codex_entry`, category `NPC` | `slug` | 4 |
-| Codex faction files | `documents`, `codex_entry`, `Faction` | `slug` | 4 |
-| Codex artifact files | `documents`, `codex_entry`, `Artifact` | `slug` | 3 |
-| Codex lore files | `documents`, `codex_entry`, `Lore` | `slug` | 6 |
-| "Notable Locations" bullets in `Lightfall.md` | `documents`, `codex_entry`, `Locations` | `slug` | 9 |
-| Guides | `documents`, kind `rule`, category = guide cluster | `slug` | 18 |
-| Rulings | `documents`, kind `rule`, category `ruling` | `slug` | 4 |
-| Lightfall | `regions`, kind `server`, linked to the Lightfall document | `public_id` | 1 |
-| Species / classes / backgrounds | `creation_catalog`, kinds `species` / `class` / `background`, codes `weeping_<slug>` | `(kind, code)` | 15 / 13 / 17 |
-| Hex map | `maps` (`pointcrawl`, atlas code `WEEPING-LF`) | `atlas_code` | 1 |
-| Hexes | `pointcrawl_nodes`, named by hex code | `public_id` | 161 |
-| Hex adjacency | `pointcrawl_edges`, kind `hex` | `public_id` | 436 |
+| Archive content                               | Target                                                                               | Conflict key   |        Count |
+| --------------------------------------------- | ------------------------------------------------------------------------------------ | -------------- | -----------: |
+| Codex NPC files                               | `documents`, kind `codex_entry`, category `NPC`                                      | `slug`         |            4 |
+| Codex faction files                           | `documents`, `codex_entry`, `Faction`                                                | `slug`         |            4 |
+| Codex artifact files                          | `documents`, `codex_entry`, `Artifact`                                               | `slug`         |            3 |
+| Codex lore files                              | `documents`, `codex_entry`, `Lore`                                                   | `slug`         |            6 |
+| "Notable Locations" bullets in `Lightfall.md` | `documents`, `codex_entry`, `Locations`                                              | `slug`         |            9 |
+| Guides                                        | `documents`, kind `rule`, category = guide cluster                                   | `slug`         |           18 |
+| Rulings                                       | `documents`, kind `rule`, category `ruling`                                          | `slug`         |            4 |
+| Lightfall                                     | `regions`, kind `server`, linked to the Lightfall document                           | `public_id`    |            1 |
+| Species / classes / backgrounds               | `creation_catalog`, kinds `species` / `class` / `background`, codes `weeping_<slug>` | `(kind, code)` | 15 / 13 / 17 |
+| Hex map                                       | `maps` (`pointcrawl`, atlas code `WEEPING-LF`)                                       | `atlas_code`   |            1 |
+| Hexes                                         | `pointcrawl_nodes`, named by hex code                                                | `public_id`    |          161 |
+| Hex adjacency                                 | `pointcrawl_edges`, kind `hex`                                                       | `public_id`    |          436 |
 
 All documents are `published`, `public`, dated 2026-10-25. Frontmatter keys
 other than `title`, `category` and `locked` are kept in `frontmatter_yaml`
@@ -110,9 +110,9 @@ platform-owner build:
 
 An earlier build (dev admin as author) was also run against the API on a
 scratch database: `document(slug: "katsik-i")` returned category
-   `NPC`, parsed frontmatter and an author; `codexCategories` listed the
-   Weeping categories; `map(atlasCode: "WEEPING-LF")` returned 161 nodes and
-   436 edges (with `limit: 500`; the default limit is 200).
+`NPC`, parsed frontmatter and an author; `codexCategories` listed the
+Weeping categories; `map(atlasCode: "WEEPING-LF")` returned 161 nodes and
+436 edges (with `limit: 500`; the default limit is 200).
 
 ## Commands (run only after approval)
 

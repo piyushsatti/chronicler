@@ -12,12 +12,12 @@ Discord CDN URLs.
 
 ## Inventory
 
-| Folder | Files | Bytes |
-|---|---:|---:|
-| `Codex/` | 18 | 71,755 |
-| `Guides/` | 18 | 130,603 |
-| `Rulings/` | 4 | 5,674 |
-| **Total** | **40** | **208,032** |
+| Folder     |  Files |       Bytes |
+| ---------- | -----: | ----------: |
+| `Codex/`   |     18 |      71,755 |
+| `Guides/`  |     18 |     130,603 |
+| `Rulings/` |      4 |       5,674 |
+| **Total**  | **40** | **208,032** |
 
 Each Codex file has YAML frontmatter (`title`, `category`, `region`, `locked`,
 `summary`, plus type-specific keys such as `factionType`). Guides have
@@ -49,23 +49,23 @@ checked by loading them into a disposable database. Counts in the "Named in
 notes" column come from Haiku-model reading notes after merging duplicate
 names by hand; they are a guide, not an exact census.
 
-| Type | Seeded | Named in notes | Notes |
-|---|---:|---:|---|
-| NPC (Lightkeepers) | 4 | ~10 | Seeded: Katsík I, Aetós II, Távros III, Leander IV. Also named: Headpriest Porthila of the Light, Sailas, the Oracle, the apostle of sight. "Ashwin" is the real community manager, not an NPC. |
-| Faction | 4 | ~20 | Seeded: Hierocracy of Lightfall, High Council, Emberwatch, The Metron. Also named: Council of the Light, Inquisition of the Light, Temple of Apollo, Noble Houses, Guilds of the Crafters, Frostmarch, Sol Invictus, Solarii, Rhapsodes, Pallor House, citywatch, oracular college, pilgrim's guild, the southern Band (Anaptir). |
-| Artifact | 3 | 5 | Seeded: Heart of Apollo, Prism of Light, The Crimson Halo. Also named: Divine Tree of Light, Prism of Hope (DM Mechanics). |
-| Lore | 6 | — | Weeping, Lightfall, Laws of the Light, Species in Weeping, Classes, Backgrounds. |
-| Location | 9 | ~25 | Seeded from the "Notable Locations" list in `Lightfall.md`. Also named: Gymnasion, Veil Market, Shadowed Quarter, Cleansing Towers, Snow Eye castle, Divine Roads, Bestiary Hall, and others. |
-| Region | 1 | ~8 | Seeded: Lightfall. Also named: The North / northern wastes, black desert, desert of the far east, eastern volcanic islands. |
-| Deity | 0 | ~10 | Apollo (central), Ares, Demeter, Hades, Hephaestus, the Olympians, the Titans, Old Gods, a silver (moon) goddess. No table for deities. |
-| Event / era | 0 | ~15 | Founding of Lightfall, Raising of the walls, Raising of the Inquisition, Quest for the Heart of Apollo, the divine quests (first to fifth), Conquest of the north, Contact with the Anaptir; eras Age of Heroes and First age of plenty. No dates except one (below). |
-| Species | 15 | — | `creation_catalog` kind `species`, each with "also called" and "today in Lightfall" text. |
-| Class | 13 | — | `creation_catalog` kind `class`, 75 subclasses in payload, each with an in-world touchpoint. |
-| Background | 17 | — | `creation_catalog` kind `background`, 31 variants in payload. One (Sailor) is marked "details to be unlocked" and seeded as unavailable. |
-| Guide | 18 | — | `documents` kind `rule`, category = guide cluster. |
-| Ruling | 4 | — | `documents` kind `rule`, category `ruling`: Hiding, Moving Darkness, Pets, Temp HP & Spells. |
-| Hex | 161 | — | Pointcrawl nodes: LFC1001 plus complete rings 1–6 (6, 12, 18, 24, 30, 36), 30 hexes of ring 7 and 4 of ring 8. |
-| Magic item recipe | 0 | 516 | Common 64, Uncommon 152, Rare 180, Very Rare 120. No table for recipes. |
+| Type               | Seeded | Named in notes | Notes                                                                                                                                                                                                                                                                                                                             |
+| ------------------ | -----: | -------------: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| NPC (Lightkeepers) |      4 |            ~10 | Seeded: Katsík I, Aetós II, Távros III, Leander IV. Also named: Headpriest Porthila of the Light, Sailas, the Oracle, the apostle of sight. "Ashwin" is the real community manager, not an NPC.                                                                                                                                   |
+| Faction            |      4 |            ~20 | Seeded: Hierocracy of Lightfall, High Council, Emberwatch, The Metron. Also named: Council of the Light, Inquisition of the Light, Temple of Apollo, Noble Houses, Guilds of the Crafters, Frostmarch, Sol Invictus, Solarii, Rhapsodes, Pallor House, citywatch, oracular college, pilgrim's guild, the southern Band (Anaptir). |
+| Artifact           |      3 |              5 | Seeded: Heart of Apollo, Prism of Light, The Crimson Halo. Also named: Divine Tree of Light, Prism of Hope (DM Mechanics).                                                                                                                                                                                                        |
+| Lore               |      6 |              — | Weeping, Lightfall, Laws of the Light, Species in Weeping, Classes, Backgrounds.                                                                                                                                                                                                                                                  |
+| Location           |      9 |            ~25 | Seeded from the "Notable Locations" list in `Lightfall.md`. Also named: Gymnasion, Veil Market, Shadowed Quarter, Cleansing Towers, Snow Eye castle, Divine Roads, Bestiary Hall, and others.                                                                                                                                     |
+| Region             |      1 |             ~8 | Seeded: Lightfall. Also named: The North / northern wastes, black desert, desert of the far east, eastern volcanic islands.                                                                                                                                                                                                       |
+| Deity              |      0 |            ~10 | Apollo (central), Ares, Demeter, Hades, Hephaestus, the Olympians, the Titans, Old Gods, a silver (moon) goddess. No table for deities.                                                                                                                                                                                           |
+| Event / era        |      0 |            ~15 | Founding of Lightfall, Raising of the walls, Raising of the Inquisition, Quest for the Heart of Apollo, the divine quests (first to fifth), Conquest of the north, Contact with the Anaptir; eras Age of Heroes and First age of plenty. No dates except one (below).                                                             |
+| Species            |     15 |              — | `creation_catalog` kind `species`, each with "also called" and "today in Lightfall" text.                                                                                                                                                                                                                                         |
+| Class              |     13 |              — | `creation_catalog` kind `class`, 75 subclasses in payload, each with an in-world touchpoint.                                                                                                                                                                                                                                      |
+| Background         |     17 |              — | `creation_catalog` kind `background`, 31 variants in payload. One (Sailor) is marked "details to be unlocked" and seeded as unavailable.                                                                                                                                                                                          |
+| Guide              |     18 |              — | `documents` kind `rule`, category = guide cluster.                                                                                                                                                                                                                                                                                |
+| Ruling             |      4 |              — | `documents` kind `rule`, category `ruling`: Hiding, Moving Darkness, Pets, Temp HP & Spells.                                                                                                                                                                                                                                      |
+| Hex                |    161 |              — | Pointcrawl nodes: LFC1001 plus complete rings 1–6 (6, 12, 18, 24, 30, 36), 30 hexes of ring 7 and 4 of ring 8.                                                                                                                                                                                                                    |
+| Magic item recipe  |      0 |            516 | Common 64, Uncommon 152, Rare 180, Very Rare 120. No table for recipes.                                                                                                                                                                                                                                                           |
 
 ## Systems described in the guides
 

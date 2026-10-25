@@ -7,6 +7,8 @@ import { server } from '../../../src/mocks/server.js';
 import { signIn } from '../admin/authority-test-utils.js';
 import { renderWithProviders } from '../../test-utils.js';
 import character from '../../fixtures/wire/character/good.json';
+import goodMe from '../../fixtures/wire/me/good.json';
+import { seriesAuthority } from '../../seriesAuthority.js';
 
 async function notesHeading(): Promise<HTMLElement> {
   return screen.findByRole('heading', { level: 2, name: 'Notes' });
@@ -379,6 +381,7 @@ describe('MePage', () => {
 
   it('keeps DM creation actions and owned characters visible when hosted work is empty', async () => {
     signIn(['dm']);
+    server.use(seriesAuthority(goodMe.id));
     server.use(
       graphql.query('DmDashboard', () =>
         HttpResponse.json({
@@ -428,10 +431,10 @@ describe('MePage', () => {
       'href',
       '/editor/dm-table',
     );
-    expect(screen.getByRole('link', { name: 'Create a series' })).toHaveAttribute(
-      'href',
-      '/series/new',
-    );
+    // Starting a series opens the create dialog in place; there is no /series/new page.
+    expect(
+      await screen.findByRole('button', { name: 'Create a series' }),
+    ).toBeVisible();
     const character = await screen.findByRole('link', { name: /Wren Ashdown/ });
     expect(character).toHaveAttribute('href', '/characters/C-OWN');
     expect(character.querySelector('[data-component="Avatar"]')).toHaveTextContent(
