@@ -2,6 +2,7 @@ package main
 
 import (
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -144,5 +145,34 @@ func TestGameTimeMapFollowsSeededAnchor(t *testing.T) {
 	// November holds seeded quests, so its calendar month must be mapped too.
 	if _, ok := days["2026-11-20T00:00:00Z"]; !ok {
 		t.Fatal("no game day for a seeded November quest date")
+	}
+}
+
+func TestPlatformOwnerRef(t *testing.T) {
+	ok := []byte(`{"table":"documents","conflict":["slug"],"refs":{"author_id":{"table":"members","platform_owner":true}},"row":{"slug":"x"}}`)
+	lines, err := parseJSONL(ok)
+	if err != nil || !needsPlatformOwner(lines) {
+		t.Fatalf("lines=%+v err=%v", lines, err)
+	}
+	for _, bad := range []string{
+		`{"table":"documents","conflict":["slug"],"refs":{"author_id":{"table":"regions","platform_owner":true}},"row":{}}`,
+		`{"table":"documents","conflict":["slug"],"refs":{"author_id":{"table":"members","platform_owner":true,"public_id":"11111111-1111-4111-8111-111111111111"}},"row":{}}`,
+		`{"table":"documents","conflict":["slug"],"refs":{"author_id":{"table":"members"}},"row":{}}`,
+	} {
+		if _, err := parseJSONL([]byte(bad)); err == nil {
+			t.Fatalf("accepted %s", bad)
+		}
+	}
+	t.Setenv(ownerEnv, "")
+	if _, err := platformOwnerDiscordID(); err == nil {
+		t.Fatal("empty owner accepted")
+	}
+	t.Setenv(ownerEnv, "not-a-snowflake")
+	if _, err := platformOwnerDiscordID(); err == nil || strings.Contains(err.Error(), "not-a-snowflake") {
+		t.Fatalf("err=%v", err)
+	}
+	t.Setenv(ownerEnv, "12345678901234567")
+	if id, err := platformOwnerDiscordID(); err != nil || id != "12345678901234567" {
+		t.Fatalf("id=%q err=%v", id, err)
 	}
 }
