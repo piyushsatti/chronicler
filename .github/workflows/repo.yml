@@ -2,6 +2,9 @@ name: repo
 
 on:
   push:
+    # Only main: PR branches are covered by pull_request, and staging tags point
+    # at commits that already passed.
+    branches: [main]
     paths:
       - '.github/workflows/repo.yml'
       - '.github/CODEOWNERS'
