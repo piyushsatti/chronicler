@@ -16,9 +16,18 @@ on:
 
 jobs:
   web:
-    runs-on: ubuntu-latest
+    # Self-hosted Triton runners (no GitHub minutes). Dependabot PRs stay on
+    # GitHub-hosted runners.
+    runs-on: ${{ github.event.pull_request.user.login == 'dependabot[bot]' && 'ubuntu-latest' || 'triton' }}
+    # Fresh container per job. The image ships Chromium for this exact
+    # @playwright/test version; bump the tag with the package.
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
+      options: --ipc=host
     steps:
       - uses: actions/checkout@v4
+      # setup-bun extracts a zip; the Playwright image has no unzip.
+      - run: apt-get update -qq && apt-get install -y -qq --no-install-recommends unzip
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: 1.3.14
@@ -27,8 +36,6 @@ jobs:
       - run: bun run --filter @pi/web typecheck
       - run: bun run --filter @pi/web lint
       - run: bun run --filter @pi/web test
-      - run: bunx playwright install chromium
-        working-directory: apps/web
       - run: bun run --filter @pi/web test:e2e
         env:
           VITE_API_MODE: mock

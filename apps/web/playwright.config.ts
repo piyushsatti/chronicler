@@ -5,9 +5,6 @@ export default defineConfig({
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
   retries: process.env.CI ? 1 : 0,
-  // Private-repo ubuntu-latest has 2 vCPUs, so the default (half the cores)
-  // is 1 worker. Browser tests are partly wait-bound; 2 workers cut wall time.
-  workers: process.env.CI ? 2 : undefined,
   use: {
     baseURL: 'http://127.0.0.1:4173',
     trace: 'on-first-retry',

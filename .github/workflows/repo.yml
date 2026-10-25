@@ -26,7 +26,11 @@ on:
 
 jobs:
   tooling:
-    runs-on: ubuntu-latest
+    # Self-hosted Triton runners (no GitHub minutes), fresh container per job.
+    # Dependabot PRs stay on GitHub-hosted runners.
+    runs-on: ${{ github.event.pull_request.user.login == 'dependabot[bot]' && 'ubuntu-latest' || 'triton' }}
+    container:
+      image: buildpack-deps:noble
     steps:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2

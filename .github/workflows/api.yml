@@ -15,12 +15,19 @@ on:
 
 jobs:
   go:
-    runs-on: ubuntu-latest
+    # Self-hosted Triton runners (no GitHub minutes). Dependabot PRs stay on
+    # GitHub-hosted runners.
+    runs-on: ${{ github.event.pull_request.user.login == 'dependabot[bot]' && 'ubuntu-latest' || 'triton' }}
+    # Fresh container per job. Integration tests own Postgres via
+    # testcontainers, so the job talks to the host Docker through its socket.
+    # No pre-started DATABASE_URL service.
+    container:
+      image: buildpack-deps:noble
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
     defaults:
       run:
         working-directory: apps/api
-    # Integration tests own Postgres via testcontainers (Docker on the runner).
-    # No pre-started DATABASE_URL service.
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
