@@ -88,17 +88,16 @@ export function useSeriesPage(identity: string) {
         (stored.data.createdBy === attempt.memberId || admin.isCurrentProof())
       );
     }
+    // Starting a series is a DM action: only an active, approved DM may, even
+    // when the same member is also an admin or owner. Admins keep rename above.
     const proof =
       client.getQueryState<Awaited<ReturnType<typeof loadSeriesAuthority>>>(
         authorityKey,
       );
-    return (
-      admin.isCurrentProof() ||
-      Boolean(
-        proof?.status === 'success' &&
-        proof.data?.memberId === attempt.memberId &&
-        proof.data.canCreate,
-      )
+    return Boolean(
+      proof?.status === 'success' &&
+      proof.data?.memberId === attempt.memberId &&
+      proof.data.canCreate,
     );
   };
   const pending = useRef<Attempt | null>(null);

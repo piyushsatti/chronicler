@@ -18,16 +18,17 @@
   margin-bottom: var(--sp-4);
 }
 
-.root [data-el='home.weekStrip'] > [data-el='week-grid.root'] {
-  overflow-x: auto;
-}
-
-.root [data-el='home.weekStrip'] > :global(.cols)[data-n='1'] {
+.schedGrid[data-n='1'] {
   grid-template-columns: minmax(0, 1fr);
 }
 
-.root [data-el='home.weekStrip'] > :global(.cols)[data-n='3'] {
+.schedGrid[data-n='3'] {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+/* A lone trailing card keeps its column instead of centering (wireframe grid). */
+.root .schedGrid[data-n='3'] > :last-child:nth-child(3n + 1) {
+  grid-column: auto;
 }
 
 .root [data-el='schedCard.root'] {
@@ -167,10 +168,6 @@
 
 .cardItem > article {
   flex: 1;
-}
-
-.weekStripCols {
-  margin-top: var(--sp-4);
 }
 
 .dmRow {

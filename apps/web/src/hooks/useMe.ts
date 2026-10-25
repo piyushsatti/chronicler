@@ -25,6 +25,9 @@ export function useMe(): UseQueryResult<MemberViewModel, AppError> {
     },
     enabled: isAuthenticated && sessionReady,
     retry: false,
+    // A failed me query clears the page caches (AuthContext); remounted pages
+    // must not refetch it on mount, or a persistent failure loops forever.
+    retryOnMount: false,
     staleTime: 0,
     refetchOnWindowFocus: true,
   });

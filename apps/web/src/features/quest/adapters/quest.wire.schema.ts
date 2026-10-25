@@ -82,6 +82,7 @@ export const questBoardChromeWireSchema = z.object({
     z.object({
       memberId: z.string().uuid(),
       handle: z.string(),
+      displayName: z.string().nullable().optional(),
       acceptingPlayers: z.boolean().nullable().optional(),
       isDm: z.boolean(),
     }),

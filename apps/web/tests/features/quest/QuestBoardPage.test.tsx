@@ -1,6 +1,6 @@
 import { graphql, http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Route, Routes } from 'react-router-dom';
 import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
@@ -439,6 +439,107 @@ describe('QuestBoardPage', () => {
     expect(document.querySelector('[data-el="quests.liveBand"]')).toBeTruthy();
     expect(screen.getByText(/Gate Watch/)).toBeInTheDocument();
     expect(screen.getByText(/1 DMs accepting/)).toBeInTheDocument();
+  });
+
+  describe('Filter popover', () => {
+    const DM_ID = '22222222-2222-4222-8222-222222222222';
+    function useDirectoryAndRecord() {
+      const requests: Array<{ filters: Record<string, unknown> }> = [];
+      server.use(
+        graphql.query('QuestBoardChrome', () =>
+          HttpResponse.json({
+            data: {
+              communityDirectory: {
+                total: 2,
+                entries: [
+                  { memberId: DM_ID, handle: 'mira', displayName: 'Mira', acceptingPlayers: true, isDm: true },
+                  { memberId: '33333333-3333-4333-8333-333333333333', handle: 'fen', displayName: 'Fen', acceptingPlayers: false, isDm: true },
+                ],
+              },
+            },
+          }),
+        ),
+        graphql.query('QuestList', ({ variables }) => {
+          requests.push({ filters: variables.filters as Record<string, unknown> });
+          return HttpResponse.json({ data: { quests: recruitment } });
+        }),
+      );
+      return requests;
+    }
+
+    it('applies a DM and a specific date to the API read and shows a count badge', async () => {
+      const user = userEvent.setup();
+      const requests = useDirectoryAndRecord();
+      renderWithProviders(<QuestBoardPage />);
+      await screen.findByText('The Hound of Culann');
+      const trigger = screen.getByRole('button', { name: 'Filter' });
+      await user.click(trigger);
+      const panel = await screen.findByRole('dialog', { name: 'Filter quests' });
+      expect(within(panel).getByRole('heading', { name: 'Filter quests' })).toBeInTheDocument();
+      const dm = within(panel).getByLabelText('DM');
+      await waitFor(() =>
+        expect(within(dm).getAllByRole('option').map((o) => o.textContent)).toEqual([
+          'Any DM',
+          'Fen',
+          'Mira',
+        ]),
+      );
+      await user.selectOptions(dm, DM_ID);
+      fireEvent.change(within(panel).getByLabelText('Date'), {
+        target: { value: '2026-10-25' },
+      });
+      await user.click(within(panel).getByRole('button', { name: 'Apply' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      await waitFor(() => {
+        const last = requests.at(-1)!.filters;
+        expect(last.dmId).toBe(DM_ID);
+        expect(typeof last.scheduledFrom).toBe('string');
+        expect(typeof last.scheduledTo).toBe('string');
+        expect(Date.parse(last.scheduledTo as string)).toBeGreaterThan(
+          Date.parse(last.scheduledFrom as string),
+        );
+      });
+      expect(screen.getByRole('button', { name: /Filter\s*2 active/ })).toBeInTheDocument();
+    });
+
+    it('overrides the quick date segment while a specific date is set', async () => {
+      const user = userEvent.setup();
+      useDirectoryAndRecord();
+      renderWithProviders(<QuestBoardPage />);
+      await screen.findByText('The Hound of Culann');
+      await user.click(screen.getByRole('button', { name: 'Today' }));
+      expect(screen.getByRole('button', { name: 'Today' })).toHaveAttribute('aria-pressed', 'true');
+      await user.click(screen.getByRole('button', { name: 'Filter' }));
+      const panel = await screen.findByRole('dialog', { name: 'Filter quests' });
+      fireEvent.change(within(panel).getByLabelText('Date'), { target: { value: '2026-10-25' } });
+      await user.click(within(panel).getByRole('button', { name: 'Apply' }));
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: 'All', pressed: true })).toBeInTheDocument(),
+      );
+      expect(screen.getByRole('button', { name: 'Today' })).toHaveAttribute('aria-pressed', 'false');
+    });
+
+    it('clears filters, and closes on Escape', async () => {
+      const user = userEvent.setup();
+      const requests = useDirectoryAndRecord();
+      renderWithProviders(<QuestBoardPage />);
+      await screen.findByText('The Hound of Culann');
+      await user.click(screen.getByRole('button', { name: 'Filter' }));
+      let panel = await screen.findByRole('dialog', { name: 'Filter quests' });
+      fireEvent.change(within(panel).getByLabelText('Date'), { target: { value: '2026-10-25' } });
+      await user.click(within(panel).getByRole('button', { name: 'Apply' }));
+      await waitFor(() => expect(requests.at(-1)!.filters.scheduledFrom).toBeDefined());
+      await user.click(screen.getByRole('button', { name: /Filter\s*1 active/ }));
+      panel = await screen.findByRole('dialog', { name: 'Filter quests' });
+      expect(within(panel).getByLabelText('Date')).toHaveValue('2026-10-25');
+      await user.keyboard('{Escape}');
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      await user.click(screen.getByRole('button', { name: /Filter/ }));
+      panel = await screen.findByRole('dialog', { name: 'Filter quests' });
+      await user.click(within(panel).getByRole('button', { name: 'Clear' }));
+      await waitFor(() => expect(requests.at(-1)!.filters).toEqual({}));
+      expect(screen.getByRole('button', { name: 'Filter' })).toBeInTheDocument();
+    });
   });
 
   it('shows controlled error even when GraphQL also returns data', async () => {

@@ -73,6 +73,57 @@ describe('Summary and Chronicle reader', () => {
     );
   });
 
+  it('shows the back link, kind chip, game date, author row and Quest details bar', async () => {
+    reader('/chronicles/vault-delve');
+    expect(await screen.findByRole('heading', { name: detail.title })).toBeVisible();
+    expect(screen.getByRole('link', { name: /All chronicles/ })).toHaveAttribute(
+      'href',
+      '/chronicles',
+    );
+    const bar = screen.getByRole('region', { name: 'Quest details' });
+    expect(within(bar).getByText('Quest details')).toBeVisible();
+    expect(within(bar).getByText(/Quests summarized/)).toBeVisible();
+    expect(within(bar).getByRole('link', { name: 'Q-14' })).toHaveAttribute(
+      'href',
+      '/quests/Q-14',
+    );
+    expect(within(bar).getByRole('link', { name: 'Dalmond' })).toHaveAttribute(
+      'href',
+      `/regions/${detail.summaryDerived.regions[0].id}`,
+    );
+    expect(within(bar).getByText(/^DM ·/)).toBeVisible();
+    expect((await screen.findAllByRole('link', { name: 'Mira' })).length).toBeGreaterThan(1);
+    // The sidebar rail and Related entries stay.
+    expect(screen.getByLabelText('Session details')).toBeVisible();
+    expect(screen.getByRole('region', { name: 'Related entries' })).toBeVisible();
+  });
+
+  it('puts the in-game date in the header', async () => {
+    server.use(graphql.query('ChronicleDetail', () => HttpResponse.json({
+      data: { bySlug: {
+        ...detail,
+        summaryDerived: {
+          ...detail.summaryDerived,
+          gameDate: { eraAbbrev: 'Pw', year: 102, periodName: 'Oktavros', periodIndex: 7, periodType: 'month', day: 1 },
+        },
+      } },
+    })));
+    reader('/chronicles/vault-delve');
+    await screen.findByRole('heading', { name: detail.title });
+    expect(document.querySelector('[data-el="chronicle.gameDate"]')).toHaveTextContent(
+      'Pw 102 · Oktavros 1',
+    );
+  });
+
+  it('omits the Quest details bar when there are no quests, regions or DMs', async () => {
+    server.use(graphql.query('ChronicleDetail', () => HttpResponse.json({
+      data: { bySlug: { ...detail, summaryDerived: null } },
+    })));
+    reader('/chronicles/vault-delve');
+    await screen.findByRole('heading', { name: detail.title });
+    expect(screen.queryByRole('region', { name: 'Quest details' })).not.toBeInTheDocument();
+  });
+
   it('shows loading until a server response arrives', async () => {
     let release!: () => void;
     const pending = new Promise<void>((resolve) => {

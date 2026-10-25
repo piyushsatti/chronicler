@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import type { RefObject } from 'react';
+import { useState, type RefObject } from 'react';
 import type { AppError } from '../../../errors/types.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { Button } from '../../../components/primitives/Button.js';
@@ -7,13 +7,19 @@ import { Chip } from '../../../components/primitives/Chip.js';
 import { CardGrid } from '../../../components/primitives/CardGrid.js';
 import { PageToolbar } from '../../../components/primitives/PageToolbar.js';
 import { PageHeader } from '../../../components/primitives/PageHeader.js';
+import { Popover } from '../../../components/primitives/Popover.js';
 import { QuestCard } from '../../../components/domain/QuestCard.js';
 import { SeriesCreateAction } from '../../../components/domain/SeriesCreateAction.js';
 import type {
   QuestBoardItemView,
   QuestBoardCardPropsView,
 } from '../adapters/questAdapter.js';
-import type { BoardSegment as Segment, QuestQuickFilter } from '../hooks/useQuestBoardPage.js';
+import {
+  NO_BOARD_FILTERS,
+  type BoardSegment as Segment,
+  type QuestBoardFilters,
+  type QuestQuickFilter,
+} from '../hooks/useQuestBoardPage.js';
 import { personLabels } from '../../../utils/format.js';
 import styles from './questBoard.module.css';
 
@@ -37,11 +43,119 @@ export type LiveStripItem = {
   dmName: string | null;
 };
 
+export type QuestDmOption = { value: string; label: string };
+
+type QuestBoardFilterPopoverProps = {
+  filters: QuestBoardFilters;
+  dmOptions: readonly QuestDmOption[];
+  onApply: (filters: QuestBoardFilters) => void;
+};
+
+/** Filter button and popover for what the toolbar cannot say: one DM, one specific date. */
+function QuestBoardFilterPopover({
+  filters,
+  dmOptions,
+  onApply,
+}: QuestBoardFilterPopoverProps): React.JSX.Element {
+  const [open, setOpen] = useState(false);
+  const [draft, setDraft] = useState<QuestBoardFilters>(filters);
+  const activeCount = (filters.dmId ? 1 : 0) + (filters.date ? 1 : 0);
+  const apply = (next: QuestBoardFilters) => {
+    onApply(next);
+    setOpen(false);
+  };
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        // Each open starts from what is applied; abandoned edits do not linger.
+        if (next) setDraft(filters);
+        setOpen(next);
+      }}
+      className={styles.filterPanel}
+      ariaLabel="Filter quests"
+      trigger={
+        <span
+          className={styles.filterButton}
+          data-el="quests.filterBtn"
+          data-active={activeCount > 0 || undefined}
+          data-open={open || undefined}
+        >
+          <span>Filter</span>
+          {activeCount > 0 ? (
+            <>
+              <span className={styles.filterBadge} aria-hidden="true">
+                {activeCount}
+              </span>
+              <span className={styles.srOnly}>{activeCount} active</span>
+            </>
+          ) : null}
+        </span>
+      }
+    >
+      <form
+        className={styles.filterForm}
+        data-el="quests.filterPanel"
+        onSubmit={(event) => {
+          event.preventDefault();
+          apply(draft);
+        }}
+      >
+        <h2 className={styles.filterHeading}>Filter quests</h2>
+        <label className={styles.filterField}>
+          <span className={styles.filterLabel}>DM</span>
+          <select
+            className={styles.filterControl}
+            data-el="quests.filterDm"
+            value={draft.dmId}
+            onChange={(event) => setDraft({ ...draft, dmId: event.target.value })}
+          >
+            <option value="">Any DM</option>
+            {dmOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className={styles.filterField}>
+          <span className={styles.filterLabel}>Date</span>
+          <input
+            type="date"
+            className={styles.filterControl}
+            data-el="quests.filterDate"
+            value={draft.date}
+            onChange={(event) => setDraft({ ...draft, date: event.target.value })}
+          />
+        </label>
+        <div className={styles.filterActions}>
+          <Button type="submit" size="sm">
+            Apply
+          </Button>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => {
+              setDraft(NO_BOARD_FILTERS);
+              apply(NO_BOARD_FILTERS);
+            }}
+          >
+            Clear
+          </Button>
+        </div>
+      </form>
+    </Popover>
+  );
+}
+
 type QuestBoardViewProps = {
   segment: Segment;
   setSegment: (segment: Segment) => void;
   quickFilter: QuestQuickFilter;
   setQuickFilter: (filter: QuestQuickFilter) => void;
+  boardFilters: QuestBoardFilters;
+  setBoardFilters: (filters: QuestBoardFilters) => void;
+  dmOptions: readonly QuestDmOption[];
   search: string;
   setSearch: (search: string) => void;
   total: number | null;
@@ -86,6 +200,7 @@ export function QuestBoardView(page: QuestBoardViewProps): React.JSX.Element {
         }))
       : []),
   ]);
+  const filtersActive = page.boardFilters.dmId !== '' || page.boardFilters.date !== '';
   const liveDmLabels = peopleLabels.slice(0, page.liveStrip.length);
   const dmLabels = peopleLabels.slice(page.liveStrip.length);
   return (
@@ -180,6 +295,11 @@ export function QuestBoardView(page: QuestBoardViewProps): React.JSX.Element {
               onValueChange={page.setSearch}
               placeholder="Search quests"
             />
+            <QuestBoardFilterPopover
+              filters={page.boardFilters}
+              dmOptions={page.dmOptions}
+              onApply={page.setBoardFilters}
+            />
             {page.isFetching && page.status !== 'loading' ? (
               <span className="type-caption" role="status" aria-live="polite">
                 Updating…
@@ -228,19 +348,23 @@ export function QuestBoardView(page: QuestBoardViewProps): React.JSX.Element {
             status="empty"
             title="No quests here"
             emptyMessage={
-              page.quickFilter !== 'All' || page.search.trim()
+              page.quickFilter !== 'All' || filtersActive || page.search.trim()
                 ? 'No quests match these filters.'
                 : page.segment === 'All'
                 ? 'There are no quests on the board yet.'
                 : `No ${page.segment.toLowerCase()} quests right now.`
             }
             action={
-              page.segment !== 'All' || page.quickFilter !== 'All' || page.search.trim() ? (
+              page.segment !== 'All' ||
+              page.quickFilter !== 'All' ||
+              filtersActive ||
+              page.search.trim() ? (
                 <Button
                   variant="secondary"
                   onClick={() => {
                     page.setSegment('All');
                     page.setQuickFilter('All');
+                    page.setBoardFilters(NO_BOARD_FILTERS);
                     page.setSearch('');
                   }}
                 >

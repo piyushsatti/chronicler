@@ -1056,7 +1056,8 @@ textarea.field-input {
 .segmented-track :is(.segmented-row, .segmented-options) {
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: 1fr;
+  /* Size each option to its label so every pill keeps the same side padding. */
+  grid-auto-columns: auto;
   min-width: max-content;
 }
 .segmented-pill {
@@ -1085,7 +1086,7 @@ textarea.field-input {
   gap: var(--sp-2);
   height: var(--segment-highlight-size);
   min-height: var(--segment-highlight-size);
-  padding: 0 var(--sp-4);
+  padding: 0 var(--segment-option-pad-x);
   padding-block-end: 1px;
   border: 0;
   border-radius: var(--rad-pill);
@@ -1105,9 +1106,13 @@ textarea.field-input {
 .segmented-more { gap: var(--sp-1); }
 .site-chrome__links .segmented-pill { background: var(--color-text); }
 .site-chrome__links .site-chrome__link[aria-current='page'] { color: var(--color-bg-deep); }
+/* The label inverts on the light pill; fade it with the slide so it never sits dark on the dark track. */
+.site-chrome__links .site-chrome__link { transition: color 260ms cubic-bezier(.65, 0, .35, 1); }
 .segmented-chevron { display: block; width: 12px; height: 12px; overflow: visible; }
 .segmented-menu-item[aria-checked='true'] { background: var(--color-bg-surface); color: var(--color-accent); }
+.segmented-track[data-pill-instant] .segmented-pill { transition: none; }
 @media (prefers-reduced-motion: reduce) { .segmented-pill { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .site-chrome__links .site-chrome__link { transition: none; } }
 
 @container (max-width: 700px) {
   .segmented-track {
@@ -1128,7 +1133,8 @@ textarea.field-input {
   align-items: center;
   flex-wrap: nowrap;
   gap: var(--sp-3);
-  padding: 11px var(--sp-4);
+  /* Even inset on all sides: 11px + 1px border centres the 40px track in 64px. */
+  padding: 11px;
   border: 1px solid var(--color-border);
   border-radius: var(--rad);
   background: var(--color-bg-panel);
@@ -1159,7 +1165,7 @@ textarea.field-input {
 .page-toolbar__search .filter-bar__search { flex: 1 1 auto; width: auto; min-width: 0; }
 .page-toolbar__search .filter-bar__input { min-width: 0; }
 
-[data-width-class='compact'] .page-toolbar { min-height: 112px; flex-wrap: wrap; gap: var(--sp-2); padding: 11px var(--sp-3); }
+[data-width-class='compact'] .page-toolbar { min-height: 112px; flex-wrap: wrap; gap: var(--sp-2); padding: 11px; }
 [data-width-class='compact'] .page-toolbar:not(:has(.page-toolbar__count, .page-toolbar__quick-filters, .page-toolbar__actions:not(:empty))) { min-height: 64px; }
 [data-width-class='compact'] .page-toolbar:not(:has(.page-toolbar__count, .page-toolbar__quick-filters, .page-toolbar__actions:not(:empty))) .page-toolbar__actions:empty { display: none; }
 [data-width-class='compact'] .page-toolbar__segments { flex: 1 0 100%; }
@@ -1169,7 +1175,8 @@ textarea.field-input {
 
 .tabs[data-component='Tabs'] { display: block; min-width: 0; container-type: inline-size; }
 .tabs[data-component='TabNav'] { display: block; min-width: 0; }
-.tabs[data-component='Tabs'] > .tabs__track { margin-bottom: var(--sp-4); }
+/* The track may arrive wrapped (PageToolbar, page edge), so space whatever sits first. */
+.tabs[data-component='Tabs'] > :first-child:not(.tabs__panel) { margin-bottom: var(--sp-4); }
 .tabs[data-component='Tabs'] .tabs__panel { min-width: 0; }
 
 /* Popover / Menu: Base UI portals the positioner to <body> and anchors it to

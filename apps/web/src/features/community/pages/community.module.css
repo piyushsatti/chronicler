@@ -27,13 +27,14 @@
   overflow-wrap: anywhere;
 }
 
+/* Role chips always sit on their own row under the name, so a card with
+   three chips lines up with its one-chip neighbours. */
 .memberHead {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-2);
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--sp-1);
   min-width: 0;
-  flex-wrap: wrap;
 }
 
 .memberHead :global(.chip) {

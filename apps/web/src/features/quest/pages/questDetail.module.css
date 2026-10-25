@@ -5,17 +5,6 @@
   min-width: 0;
 }
 
-.facts {
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-4);
-}
-
-.facts dd {
-  margin: 0;
-}
-
 .roster {
   margin: 0;
   padding: 0;
@@ -58,6 +47,168 @@
   margin: 0;
 }
 
-.facts + p {
-  margin-top: var(--sp-4);
+/* Top row: breadcrumb left, owner actions right. */
+.topRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2) var(--sp-4);
+}
+
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  color: var(--color-text-3);
+}
+
+.breadcrumb a {
+  color: var(--color-text-2);
+}
+
+.topActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+/* Hero: identity stack left, 320px sign-up card right. */
+.hero {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--sp-5);
+}
+
+.hero > :first-child {
+  flex: 1 1 20rem;
+}
+
+.hero > :last-child {
+  flex: 0 1 320px;
+  min-width: min(100%, 16rem);
+}
+
+.heroMain {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1);
+}
+
+.heroStack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+/* Sign-up side card (QuestParticipation). */
+.signup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  min-width: 0;
+}
+
+.signupOwn {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+}
+
+.signupForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+
+.signupForm button[type='submit'],
+.fullWidth {
+  inline-size: 100%;
+  justify-content: center;
+}
+
+/* DM host card. */
+.host {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+}
+
+.hostName {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+  flex: 1;
+}
+
+/* Section gap between the tab group and the cards below it. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.cardHead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-1) var(--sp-3);
+  margin-block-end: var(--sp-3);
+}
+
+.cardGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: var(--sp-4);
+  align-items: start;
+}
+
+/* Quest details key/value grid: two columns of pairs. */
+.kv {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: var(--sp-2) var(--sp-5);
+}
+
+.kvRow {
+  display: flex;
+  gap: var(--sp-3);
+}
+
+.kvRow dt {
+  flex: 0 0 7rem;
+}
+
+.kv dt {
+  color: var(--color-text-2);
+}
+
+.kv dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.cardTitle {
+  margin-block-end: var(--sp-2);
+}
+
+.rules > :first-child {
+  margin-block-start: 0;
 }

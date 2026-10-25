@@ -5,24 +5,26 @@ import { loadCharacterDirectory } from '../features/character/adapters/character
 import { loadCharacterParticipations } from '../features/character/adapters/characterTabsAdapter.js';
 import { loadProfileActivity } from '../features/profile/adapters/profileActivityAdapter.js';
 
-export function useProfileActivity(memberId: string) {
+/** `loadHistory` loads quest history without the profile's own tab state (the /me history route). */
+export function useProfileActivity(memberId: string, { loadHistory = false }: { loadHistory?: boolean } = {}) {
   const { token, sessionReady } = useAuth();
   const headers = { Authorization: token ? `Bearer ${token}` : '' };
   const [tab, setTab] = useState('about');
   const [characterPage, setCharacterPage] = useState(1);
   const characters = useQuery({
     queryKey: ['profileCharacters', memberId, characterPage],
-    enabled: sessionReady,
+    // An empty member id would read the whole directory, not one member's characters.
+    enabled: sessionReady && Boolean(memberId),
     queryFn: ({ signal }) => loadCharacterDirectory({ ownerId: memberId }, 24, (characterPage - 1) * 24, { signal, headers }),
   });
   const activity = useQuery({
     queryKey: ['profileActivity', memberId],
-    enabled: sessionReady,
+    enabled: sessionReady && Boolean(memberId),
     queryFn: ({ signal }) => loadProfileActivity(memberId, { signal, headers }),
   });
   const history = useQuery({
     queryKey: ['profileHistory', memberId],
-    enabled: sessionReady && tab === 'history',
+    enabled: sessionReady && Boolean(memberId) && (loadHistory || tab === 'history'),
     queryFn: async ({ signal }) => {
       const roster = [];
       for (;;) {

@@ -16,6 +16,7 @@ import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
 import { useSeriesPage } from '../../../hooks/useSeriesPage.js';
 import { isSentinelDate, personLabels, pluralize } from '../../../utils/format.js';
 import { toCardStatus } from '../../../view-models/questCard.js';
+import styles from './seriesPage.module.css';
 
 const SEATED = new Set(['signed_up', 'selected', 'played']);
 
@@ -108,7 +109,7 @@ export function SeriesPage(): React.JSX.Element {
             ) : arc.quests.length ? (
               <CardGrid as="ol" aria-label="Quests in this series" gap={5}>
                 {arc.quests.map((quest) => (
-                  <li key={quest.id}>
+                  <li key={quest.id} className={styles.cardItem}>
                     <QuestCard
                       code={quest.shortCode}
                       title={quest.briefDocument?.title ?? 'Untitled quest'}

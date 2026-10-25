@@ -24,7 +24,7 @@ const DECLARATION: PageDeclaration = {
   regions: [{ role: 'body', priority: 1 }],
 };
 
-const BACK = { to: '/chronicles', label: 'Chronicles' } as const;
+const BACK = { to: '/chronicles', label: 'All chronicles' } as const;
 
 export function ChronicleDetailPage(): React.JSX.Element {
   const { formatDate } = useDateFormatter();
@@ -255,16 +255,29 @@ export function ChronicleDetailPage(): React.JSX.Element {
     ),
   };
 
+  const gameDateLabel = summary?.gameDate
+    ? `${summary.gameDate.eraAbbrev} ${summary.gameDate.year} · ${summary.gameDate.periodName} ${summary.gameDate.day}`
+    : summary?.gameDay != null
+      ? `Game day ${summary.gameDay}`
+      : null;
+  const dmNames = summary?.dms?.length ? personLabels(summary.dms) : [];
+  const hasQuestDetails = Boolean(summary?.quests?.length || summary?.regions.length || dmNames.length);
+
   return (
     <PageShell>
       <PageHeader
         className={styles.header}
         back={BACK}
+        eyebrow={
+          <span className={styles.kindRow} data-el="chronicle.kind">
+            <Chip size="sm" tone="line">{category}</Chip>
+            {gameDateLabel ? <span data-el="chronicle.gameDate">{gameDateLabel}</span> : null}
+          </span>
+        }
         title={chronicle.title}
         actions={chronicle.canEdit ? <Link className="btn btn--secondary" to={editHref}>Edit entry</Link> : null}
         meta={
           <>
-            <Chip size="sm" tone="line">{category}</Chip>
             {author && authorHref ? (
               <Link className={`row ${styles.author}`} data-gap="2" to={authorHref} aria-label={author}>
                 <Avatar name={author} src={authorMember?.avatarUrl ?? undefined} size="xs" online={false} />
@@ -272,17 +285,37 @@ export function ChronicleDetailPage(): React.JSX.Element {
               </Link>
             ) : null}
             {when ? <time dateTime={when}>{whenLabel} {formatDate(when)}</time> : null}
-            {summary?.regions.map((region) => (
-              <Link key={region.id} to={`/regions/${encodeURIComponent(region.id)}`}>{region.name}</Link>
-            ))}
-            {summary?.quests?.map((quest) => (
-              <Link key={quest.id} to={`/quests/${encodeURIComponent(quest.shortCode)}`}>
-                {quest.title?.trim() || 'Quest details'}
-              </Link>
-            ))}
           </>
         }
       />
+      {hasQuestDetails && summary ? (
+        <section className={styles.questBar} aria-label="Quest details" data-el="chronicle.questDetails">
+          <h2 className={`type-label ${styles.questBarLabel}`}>Quest details</h2>
+          {summary.quests?.length ? (
+            <Chip size="sm" tone="line">
+              Quests summarized ·{' '}
+              {summary.quests.map((quest, index) => (
+                <span key={quest.id}>
+                  {index > 0 ? ', ' : ''}
+                  <Link to={`/quests/${encodeURIComponent(quest.shortCode)}`}>{quest.shortCode}</Link>
+                </span>
+              ))}
+            </Chip>
+          ) : null}
+          {summary.regions.length ? (
+            <Chip size="sm" tone="line">
+              Region ·{' '}
+              {summary.regions.map((region, index) => (
+                <span key={region.id}>
+                  {index > 0 ? ', ' : ''}
+                  <Link to={`/regions/${encodeURIComponent(region.id)}`}>{region.name}</Link>
+                </span>
+              ))}
+            </Chip>
+          ) : null}
+          {dmNames.length ? <Chip size="sm" tone="line">DM · {dmNames.join(', ')}</Chip> : null}
+        </section>
+      ) : null}
       <PageHost declaration={DECLARATION} regions={regions} />
     </PageShell>
   );

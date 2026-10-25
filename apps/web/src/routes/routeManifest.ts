@@ -68,6 +68,8 @@ export const ROUTE_MANIFEST_PATHS = [
   '/me',
   '/me/characters',
   '/me/notes',
+  '/me/history',
+  '/me/summaries',
   '/me/personalize',
   '/me/settings',
   '/notifications',

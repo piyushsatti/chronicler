@@ -111,4 +111,12 @@ export const routes: readonly FeatureRoute[] = [
     path: '/me/notes',
     element: mePage,
   },
+  {
+    path: '/me/history',
+    element: mePage,
+  },
+  {
+    path: '/me/summaries',
+    element: mePage,
+  },
 ];

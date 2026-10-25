@@ -7,9 +7,14 @@ import { Card } from '../../../components/primitives/Card.js';
 import { CardGrid } from '../../../components/primitives/CardGrid.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { Skeleton } from '../../../components/primitives/Skeleton.js';
+import { toAppError } from '../../../errors/toAppError.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
 import { useDmDashboard } from '../../../hooks/useDmDashboard.js';
-import { characterStatusLabel, pluralize, statusLabel } from '../../../utils/format.js';
+import { useMe } from '../../../hooks/useMe.js';
+import { useProfileActivity } from '../../../hooks/useProfileActivity.js';
+import { characterStatusLabel, isSentinelDate, pluralize, statusLabel } from '../../../utils/format.js';
+import { formatMemberFor, formatVoiceHours } from '../memberFormat.js';
+import { useRecentEntries, type RecentEntry, type RecentState } from '../hooks/useRecentEntries.js';
 import { PrivateNotesPanel } from '../components/PrivateNotes.js';
 import { usePrivateNotes } from '../hooks/usePrivateNotes.js';
 import type { RosterCharacter } from '../adapters/memberHubAdapter.js';
@@ -25,31 +30,57 @@ const LEGACY_ME_TABS: Record<string, string> = {
   settings: '/me/settings',
 };
 
-function formatHours(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const rest = Math.round(minutes % 60);
-  return hours > 0 ? `${hours}h ${rest}m` : `${rest}m`;
-}
-
-function StatRow({ data }: { data: MemberHub }): React.JSX.Element | null {
-  const { formatDate } = useDateFormatter();
+function StatRow({ data }: { data: MemberHub }): React.JSX.Element {
   if (data.hub.status === 'error') return <StatePanel variant="inline" status="error" error={data.hub.error} onRetry={data.retry} retryLabel="Retry your stats" />;
   if (data.hub.status === 'loading') {
     return <Skeleton height="5rem" aria-label="Loading your stats" />;
   }
   const { stats, joinedAt } = data.hub.data;
   const tiles: Array<{ label: string; value: string | number }> = [
+    { label: 'Voice hours', value: formatVoiceHours(stats.voiceMinutes) },
     { label: 'Quests played', value: stats.questsPlayed },
+    { label: 'Messages', value: Math.round(stats.messages) },
+    { label: 'Characters', value: data.roster.status === 'ready' ? data.roster.data.length : '—' },
+    { label: 'Member for', value: formatMemberFor(joinedAt) },
   ];
-  if (data.roster.status === 'ready') tiles.unshift({ label: data.roster.data.length === 1 ? 'Character' : 'Characters', value: data.roster.data.length });
-  if (stats.summariesAuthored > 0) tiles.push({ label: 'Summaries written', value: stats.summariesAuthored });
-  if (stats.voiceMinutes > 0) tiles.push({ label: 'Voice time', value: formatHours(stats.voiceMinutes) });
-  if (stats.messages > 0) tiles.push({ label: 'Messages', value: Math.round(stats.messages) });
-  tiles.push({ label: 'Member since', value: formatDate(joinedAt) });
   return (
-    <p className={styles.stats} aria-label="Your stats">
-      {tiles.map((tile) => <span key={tile.label}>{tile.label === 'Member since' ? <>Member since <strong>{tile.value}</strong></> : <><strong>{tile.value}</strong> {tile.label.toLowerCase()}</>}</span>)}
-    </p>
+    <ul className={styles.statRow} aria-label="Your stats" data-el="me.stats">
+      {tiles.map((tile) => (
+        <li key={tile.label}>
+          <Card pad={4} className={styles.statCard}>
+            <strong className={styles.statValue}>{tile.value}</strong>
+            <span className="type-caption">{tile.label}</span>
+          </Card>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+/** Milestones since joining. Only cards with real data render; the section is omitted when there is nothing beyond the join date. */
+function SinceYouJoined({ data }: { data: MemberHub }): React.JSX.Element | null {
+  const { formatDate } = useDateFormatter();
+  if (data.hub.status !== 'ready') return null;
+  const { stats, joinedAt } = data.hub.data;
+  const cards: Array<{ label: string; value: string | number }> = [];
+  if (stats.summariesAuthored > 0) cards.push({ label: 'Summaries written', value: stats.summariesAuthored });
+  if (stats.longestSessionHours !== null && stats.longestSessionHours > 0) cards.push({ label: 'Longest session', value: `${Math.round(stats.longestSessionHours * 10) / 10}h` });
+  if (cards.length === 0) return null;
+  cards.push({ label: 'Joined', value: formatDate(joinedAt) });
+  return (
+    <section className="stack" data-gap="3" aria-labelledby="me-since" data-el="me.since">
+      <h2 id="me-since" className="type-heading">Since you joined</h2>
+      <ul className={styles.sinceRow}>
+        {cards.map((card) => (
+          <li key={card.label}>
+            <Card pad={4} className={styles.statCard}>
+              <strong className={styles.statValue}>{card.value}</strong>
+              <span className="type-caption">{card.label}</span>
+            </Card>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 
@@ -136,13 +167,15 @@ function CharacterStrip({ data, showEmpty = true }: { data: MemberHub; showEmpty
   );
 }
 
-function PlayerOverview({ data, notes }: { data: MemberHub; notes: ReturnType<typeof usePrivateNotes> }): React.JSX.Element {
-  const sessions = data.hub.status === 'ready' ? data.hub.data.recentSessions : [];
+function PlayerOverview({ data, notes, recent }: { data: MemberHub; notes: ReturnType<typeof usePrivateNotes>; recent: RecentState }): React.JSX.Element {
+  const noRecent = recent.status === 'ready' && recent.entries.length === 0;
   const nothingHere = data.upcoming.status === 'ready' && data.upcoming.data.length === 0 &&
-    data.roster.status === 'ready' && data.roster.data.length === 0 && notes.status === 'empty' && sessions.length === 0;
+    data.roster.status === 'ready' && data.roster.data.length === 0 && notes.status === 'empty' && noRecent;
   return (
     <>
       <StatRow data={data} />
+      <SinceYouJoined data={data} />
+      <RecentActivity recent={recent} />
       <div className={styles.overview}>
         {nothingHere ? (
           <Card className="stack" as="section" aria-label="Your campaign activity">
@@ -152,7 +185,6 @@ function PlayerOverview({ data, notes }: { data: MemberHub; notes: ReturnType<ty
         ) : <div className={styles.dashboardMain}>
           <UpcomingSignups data={data} />
           <CharacterStrip data={data} />
-          {sessions.length > 0 ? <RecentActivity data={data} /> : null}
         </div>}
         {nothingHere ? null : <NotesEntry notes={notes} />}
       </div>
@@ -160,11 +192,29 @@ function PlayerOverview({ data, notes }: { data: MemberHub; notes: ReturnType<ty
   );
 }
 
-function RecentActivity({ data }: { data: MemberHub }): React.JSX.Element | null {
-  const { formatDateTime } = useDateFormatter();
-  const sessions = data.hub.status === 'ready' ? data.hub.data.recentSessions : [];
-  if (sessions.length === 0) return null;
-  return <section className="stack" data-gap="3" aria-labelledby="me-activity"><h2 id="me-activity" className="type-heading">Recent activity</h2><ul className={styles.list}>{sessions.map((session, index) => <li key={`${session.occurredAt}-${index}`}><Card pad={4}><div className={styles.rowCard}><p className="type-body">{session.kind}</p><p className="type-caption">{formatDateTime(session.occurredAt)}</p></div></Card></li>)}</ul></section>;
+function entryBody(entry: RecentEntry): React.JSX.Element {
+  return (
+    <div className="stack" data-gap="1">
+      <h3 className="type-title">{entry.title}{entry.href ? <span aria-hidden="true"> →</span> : null}</h3>
+      {entry.meta ? <p className="type-caption">{entry.meta}</p> : null}
+    </div>
+  );
+}
+
+function RecentActivity({ recent }: { recent: RecentState }): React.JSX.Element | null {
+  if (recent.status === 'ready' && recent.entries.length === 0) return null;
+  return (
+    <section className="stack" data-gap="3" aria-labelledby="me-activity" data-el="me.activity">
+      <h2 id="me-activity" className="type-heading">Recent activity</h2>
+      {recent.status === 'error' ? <StatePanel variant="inline" status="error" error={recent.error} onRetry={recent.retry} retryLabel="Retry recent activity" />
+        : recent.status === 'loading' ? <Skeleton height="4rem" aria-label="Loading recent activity" />
+          : <ul className={styles.list}>{recent.entries.map((entry) => (
+            <li key={entry.key}>
+              {entry.href ? <Card pad={4} variant="clickable" to={entry.href}>{entryBody(entry)}</Card> : <Card pad={4}>{entryBody(entry)}</Card>}
+            </li>
+          ))}</ul>}
+    </section>
+  );
 }
 
 function DmWork({ view }: { view: ReturnType<typeof useDmDashboard> }): React.JSX.Element | null {
@@ -190,18 +240,20 @@ function DmWork({ view }: { view: ReturnType<typeof useDmDashboard> }): React.JS
   );
 }
 
-function DmOverview({ data, notes }: { data: MemberHub; notes: ReturnType<typeof usePrivateNotes> }): React.JSX.Element {
+function DmOverview({ data, notes, recent }: { data: MemberHub; notes: ReturnType<typeof usePrivateNotes>; recent: RecentState }): React.JSX.Element {
   const view = useDmDashboard('all');
   const adminAccess = useCurrentAccess('admin');
   const noSignups = data.upcoming.status === 'ready' && data.upcoming.data.length === 0;
-  const sessions = data.hub.status === 'ready' ? data.hub.data.recentSessions : [];
+  const noRecent = recent.status === 'ready' && recent.entries.length === 0;
   const noDmWork = view.query.isSuccess && view.query.data !== undefined && view.query.data.documents.total === 0 && view.query.data.series.length === 0 && view.query.data.quests.total === 0;
   const noCharacters = data.roster.status === 'ready' && data.roster.data.length === 0;
-  const nothingHere = noSignups && noDmWork && noCharacters && notes.status === 'empty' && sessions.length === 0;
+  const nothingHere = noSignups && noDmWork && noCharacters && notes.status === 'empty' && noRecent;
   return (
     <>
       {nothingHere ? null : <p className={styles.dmDashboardLink}><Link className="type-link" to="/dm">DM dashboard</Link></p>}
       <StatRow data={data} />
+      <SinceYouJoined data={data} />
+      <RecentActivity recent={recent} />
       <div className={styles.overview}>
         {nothingHere ? (
           <Card className="stack" as="section" aria-label="Your campaign activity">
@@ -211,7 +263,6 @@ function DmOverview({ data, notes }: { data: MemberHub; notes: ReturnType<typeof
         ) : <div className={styles.dashboardMain}>
           <DmWork view={view} />
           <UpcomingSignups data={data} />
-          {sessions.length > 0 ? <RecentActivity data={data} /> : null}
           {adminAccess.allowed ? <Card as="section"><Link className="type-link" to="/admin">Admin dashboard</Link></Card> : null}
           <CharacterStrip data={data} showEmpty={false} />
         </div>}
@@ -222,24 +273,107 @@ function DmOverview({ data, notes }: { data: MemberHub; notes: ReturnType<typeof
 }
 
 function OverviewPage({ me, data, notes }: MeShellState & { notes: ReturnType<typeof usePrivateNotes> }): React.JSX.Element {
-  return me.roles.includes('dm') ? <DmOverview data={data} notes={notes} /> : <PlayerOverview data={data} notes={notes} />;
+  const recent = useRecentEntries(me.id, data);
+  return me.roles.includes('dm') ? <DmOverview data={data} notes={notes} recent={recent} /> : <PlayerOverview data={data} notes={notes} recent={recent} />;
 }
 
 function RosterPage({ data }: MeShellState): React.JSX.Element {
   const { roster, retry } = data;
-  const create = <Link className="btn btn--primary" to="/characters?new=1">Create a character</Link>;
   return (
-    <div className={styles.rosterOverview}>
-      <div className={styles.rosterHeader}>
-        <div><p className="type-label">Your roster</p><h2 className="type-heading">Characters</h2></div>
-        {create}
-      </div>
+    <section className={styles.rosterOverview} aria-labelledby="me-roster">
+      <h2 id="me-roster" className={styles.srOnly}>Characters</h2>
       {roster.status === 'error' ? <StatePanel variant="inline" status="error" error={roster.error} onRetry={retry} retryLabel="Retry characters" />
         : roster.status === 'loading' ? <Skeleton height="6rem" aria-label="Loading your characters" />
           : roster.data.length === 0 ? <EmptyState message="You have no characters yet. Create one to sign up for quests." />
             : <CardGrid as="ul" gap={4} aria-label="Your characters">{roster.data.map((character) => <li key={character.id}><CharacterTile character={character} /></li>)}</CardGrid>}
+    </section>
+  );
+}
+
+type Activity = ReturnType<typeof useProfileActivity>;
+
+function HistoryPage({ activity }: { activity: Activity }): React.JSX.Element {
+  const { formatDate } = useDateFormatter();
+  const { history } = activity;
+  return (
+    <section className="stack" data-gap="3" aria-labelledby="me-history">
+      <h2 id="me-history" className={styles.srOnly}>Quest history</h2>
+      {history.isError ? <StatePanel variant="inline" status="error" error={toAppError(history.error, 'me:history')} onRetry={() => void history.refetch()} retryLabel="Retry quest history" />
+        : !history.data ? <Skeleton height="6rem" aria-label="Loading your quest history" />
+          : history.data.length === 0 ? <EmptyState message="You have no quest history yet. Quests you play will appear here." />
+            : <ul className={styles.list} aria-label="Your quests">{history.data.map((quest) => (
+              <li key={quest.key}>
+                {quest.href ? <Card pad={4} variant="clickable" to={quest.href}><HistoryRow quest={quest} formatDate={formatDate} /></Card> : <Card pad={4}><HistoryRow quest={quest} formatDate={formatDate} /></Card>}
+              </li>
+            ))}</ul>}
+    </section>
+  );
+}
+
+function HistoryRow({ quest, formatDate }: { quest: NonNullable<Activity['history']['data']>[number]; formatDate: (value: string) => string }): React.JSX.Element {
+  const when = quest.scheduledAt && !isSentinelDate(quest.scheduledAt) ? formatDate(quest.scheduledAt) : null;
+  return (
+    <div className={styles.rowCard}>
+      <div className={styles.rowMain}>{quest.status ? <p className="type-label">{statusLabel(quest.status)}</p> : null}<h3 className="type-title">{quest.label}</h3></div>
+      {when ? <p className="type-caption">{when}</p> : null}
     </div>
   );
+}
+
+function SummariesPage({ activity }: { activity: Activity }): React.JSX.Element {
+  const { formatDate } = useDateFormatter();
+  const writings = activity.activity;
+  return (
+    <section className="stack" data-gap="3" aria-labelledby="me-summaries">
+      <h2 id="me-summaries" className={styles.srOnly}>Summaries</h2>
+      {writings.isError ? <StatePanel variant="inline" status="error" error={toAppError(writings.error, 'me:summaries')} onRetry={() => void writings.refetch()} retryLabel="Retry summaries" />
+        : !writings.data ? <Skeleton height="6rem" aria-label="Loading your summaries" />
+          : writings.data.writings.length === 0 ? <EmptyState message="You have not written a summary yet. Summaries you write will appear here." />
+            : <CardGrid as="ul" gap={3} aria-label="Your summaries">{writings.data.writings.map((entry) => (
+              <li key={entry.id}>
+                <Card variant="clickable" to={`/summaries/${entry.slug}`} pad={4}>
+                  <h3 className="type-title">{entry.title}</h3>
+                  {entry.publishedAt && !isSentinelDate(entry.publishedAt) ? <p className="type-caption">{formatDate(entry.publishedAt)}</p> : null}
+                </Card>
+              </li>
+            ))}</CardGrid>}
+    </section>
+  );
+}
+
+type Section = 'overview' | 'characters' | 'history' | 'summaries' | 'notes';
+
+const SECTION_BY_PATH: Record<string, Section> = {
+  '/me': 'overview',
+  '/me/characters': 'characters',
+  '/me/history': 'history',
+  '/me/summaries': 'summaries',
+  '/me/notes': 'notes',
+};
+
+const SECTION_ACTIONS: Partial<Record<Section, React.JSX.Element>> = {
+  characters: <Link className="btn btn--primary btn--sm" to="/characters?new=1">Create a character</Link>,
+  history: <Link className="btn btn--secondary btn--sm" to="/quests">Find a quest</Link>,
+  summaries: <Link className="btn btn--primary btn--sm" to="/summaries/new">Write a summary</Link>,
+};
+
+function MeSections({ section, notes }: { section: Section; notes: ReturnType<typeof usePrivateNotes> }): React.JSX.Element {
+  const meQ = useMe();
+  const activity = useProfileActivity(meQ.data?.id ?? '', { loadHistory: section === 'history' });
+  const count = (state: MeShellState): string | undefined => {
+    if (section === 'characters') return state.data.roster.status === 'ready' ? pluralize(state.data.roster.data.length, 'character') : undefined;
+    if (section === 'history') return activity.history.data ? pluralize(activity.history.data.length, 'quest') : undefined;
+    if (section === 'summaries') return activity.activity.data ? pluralize(activity.activity.data.writings.length, 'summary', 'summaries') : undefined;
+    return undefined;
+  };
+  return <MeShell count={count} actions={SECTION_ACTIONS[section]}>{(state) => <>
+    {section === 'characters' ? <RosterPage {...state} />
+      : section === 'history' ? <HistoryPage activity={activity} />
+        : section === 'summaries' ? <SummariesPage activity={activity} />
+          : section === 'notes' ? null
+            : <OverviewPage {...state} notes={notes} />}
+    <div hidden={section !== 'notes'}><PrivateNotesPanel notes={notes} /></div>
+  </>}</MeShell>;
 }
 
 export function MePage(): React.JSX.Element {
@@ -248,11 +382,7 @@ export function MePage(): React.JSX.Element {
   const notes = usePrivateNotes();
   const legacyTab = params.get('tab');
   if (location.pathname === '/me' && legacyTab !== null) return <Navigate replace to={LEGACY_ME_TABS[legacyTab] ?? '/me'} />;
-  const pathname = location.pathname;
-  return <MeShell>{(state) => <>
-    {pathname === '/me/characters' ? <RosterPage {...state} /> : pathname === '/me/notes' ? null : <OverviewPage {...state} notes={notes} />}
-    <div hidden={pathname !== '/me/notes'}><PrivateNotesPanel notes={notes} /></div>
-  </>}</MeShell>;
+  return <MeSections section={SECTION_BY_PATH[location.pathname] ?? 'overview'} notes={notes} />;
 }
 
 export const MeCharactersPage = MePage;

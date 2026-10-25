@@ -70,6 +70,9 @@ export type QuestBoardItemView = {
 export type QuestListFilters = Readonly<{
   status?: string;
   displayStatus?: string;
+  dmId?: string;
+  scheduledFrom?: string;
+  scheduledTo?: string;
 }>;
 
 export type QuestListRequest = {
@@ -127,8 +130,12 @@ export type MyCharacterRef = {
   shortCode: string;
 };
 
+export type QuestBoardDmView = { id: string; handle: string; displayName: string | null };
+
 export type QuestBoardChromeView = {
   dmsAcceptingCount: number;
+  /** Every DM in the community directory, for the board's DM filter. */
+  dms: QuestBoardDmView[];
 };
 
 function mapDelivery(d: {
@@ -236,16 +243,24 @@ export function parseQuestList(
   };
 }
 
-export function parseQuestDetail(wire: unknown): AdapterResult<QuestDetailView> {
+export function parseQuestDetail(
+  wire: unknown,
+  regionNameById: Map<string, string> = new Map(),
+): AdapterResult<QuestDetailView> {
   const parsed = questDetailWireSchema.safeParse(wire);
   if (!parsed.success) {
     return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
   }
-  const item = mapBoardItem(parsed.data);
+  const item = mapBoardItem(parsed.data, regionNameById);
+  // Detail shows every region the quest touches; board cards keep the first only.
+  const regionNames = parsed.data.regions
+    .map((id) => regionNameById.get(id))
+    .filter((name): name is string => Boolean(name));
   return {
     ok: true,
     data: {
       ...item,
+      regionName: regionNames.length > 0 ? regionNames.join(', ') : null,
       participants: parsed.data.participants.map((p) => ({
         memberId: p.memberId,
         characterId: p.characterId,
@@ -290,6 +305,7 @@ export async function loadQuestBoardChrome(): Promise<QuestBoardChromeView> {
   try {
     let offset = 0;
     let dmsAcceptingCount = 0;
+    const dms: QuestBoardDmView[] = [];
     for (;;) {
       const data = await graphqlRequest<QuestBoardChromeQuery>(CHROME_QUERY, {
         offset,
@@ -298,8 +314,16 @@ export async function loadQuestBoardChrome(): Promise<QuestBoardChromeView> {
       dmsAcceptingCount += page.entries.filter(
         (entry) => entry.isDm && entry.acceptingPlayers,
       ).length;
+      for (const entry of page.entries) {
+        if (entry.isDm)
+          dms.push({
+            id: entry.memberId,
+            handle: entry.handle,
+            displayName: entry.displayName ?? null,
+          });
+      }
       offset += page.entries.length;
-      if (offset >= page.total) return { dmsAcceptingCount };
+      if (offset >= page.total) return { dmsAcceptingCount, dms };
       if (page.entries.length === 0)
         throw toAppError({ failure: 'InvalidWire' }, 'quest:board-chrome');
     }
@@ -351,14 +375,18 @@ export async function loadQuest(opts: {
   shortCode?: string;
 }): Promise<QuestDetailView> {
   try {
-    const data = await graphqlRequest<QuestQuery>(DETAIL_QUERY, {
-      id: opts.id ?? null,
-      shortCode: opts.shortCode ?? null,
-    });
+    const [data, regions] = await Promise.all([
+      graphqlRequest<QuestQuery>(DETAIL_QUERY, {
+        id: opts.id ?? null,
+        shortCode: opts.shortCode ?? null,
+      }),
+      // Quest.regions is ids only; a catalog failure must not hide the quest itself.
+      loadQuestRegions().catch(() => new Map<string, string>()),
+    ]);
     if (data.quest == null) {
       throw toAppError({ failure: 'NotFound' }, 'quest:detail');
     }
-    const result = parseQuestDetail(data.quest);
+    const result = parseQuestDetail(data.quest, regions);
     if (!result.ok) throw toAppError({ failure: result.failure }, 'quest:detail');
     return {
       ...result.data,

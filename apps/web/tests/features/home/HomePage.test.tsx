@@ -47,7 +47,7 @@ describe('HomePage', () => {
   });
 
   it('uses the same name cohort across recruiting and upcoming cards', async () => {
-    const scheduledAt = new Date(Date.now() + 3_600_000).toISOString();
+    const scheduledAt = new Date(Date.now() + 3 * 86_400_000).toISOString();
     const scheduledId = '00000000-0000-4000-8000-000000000901';
     const data = {
       ...recruitment,
@@ -88,7 +88,7 @@ describe('HomePage', () => {
   });
 
   it('shows server totals and counts all51 scheduled quests while keeping preview cards capped', async () => {
-    const scheduledAt = new Date(Date.now() + 3_600_000).toISOString();
+    const scheduledAt = new Date(Date.now() + 3 * 86_400_000).toISOString();
     const quests = Array.from({ length: 51 }, (_, index) => ({
       ...goodLanes.questBoard.items[0],
       id: `00000000-0000-4000-8000-${String(index).padStart(12, '0')}`,
@@ -125,12 +125,13 @@ describe('HomePage', () => {
     renderWithProviders(<HomePage />);
     expect(await screen.findByText('See all 51 scheduled')).toBeInTheDocument();
     expect(screen.getByText('27 DMs accepting')).toBeInTheDocument();
-    expect(screen.getByText('42 closed')).toBeInTheDocument();
-    const week = screen.getByRole('list', { name: 'Next 7 days schedule' });
-    expect(within(week).getAllByRole('listitem')).toHaveLength(7);
-    expect(within(week).getByText('51')).toBeVisible();
+    expect(screen.queryByText('42 closed')).not.toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Next 7 days schedule' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Happening today' })).not.toBeInTheDocument();
     expect(screen.getAllByTestId('quest-card')).toHaveLength(3);
-    expect(screen.getAllByTestId('sched-card')).toHaveLength(3);
+    const upcoming = within(screen.getByRole('region', { name: 'Coming up' }));
+    expect(upcoming.getByRole('list', { name: 'Upcoming quests' })).toBeInTheDocument();
+    expect(upcoming.getAllByTestId('sched-card')).toHaveLength(3);
     expect(
       within(screen.getByRole('region', { name: 'DMs accepting' })).getAllByRole(
         'link',
@@ -202,9 +203,7 @@ describe('HomePage', () => {
       /Sign in to see this|You don’t have access to this/,
     );
     expect(screen.queryByText('51 scheduled')).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('list', { name: 'Next 7 days schedule' }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Upcoming quests' })).not.toBeInTheDocument();
   });
 
   it('cancels the old window on logout and cannot replace the guest result with its held page', async () => {
@@ -281,11 +280,45 @@ describe('HomePage', () => {
     expect(
       screen.getByRole('heading', { name: 'Coming up in the next two weeks' }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Vault Delve' })).toBeInTheDocument();
+    const recent = await screen.findByRole('region', { name: 'Recently happened' });
+    expect(
+      within(recent).getByRole('link', { name: 'Vault Delve — Session recap' }),
+    ).toHaveAttribute('href', '/chronicles/vault-delve-summary');
     expect(screen.getByRole('link', { name: 'Mira profile' })).toHaveAttribute(
       'href',
       '/dms/@mira',
     );
+  });
+
+  it('does not repeat a quest from Happening today under Coming up', async () => {
+    const base = goodLanes.quests.items[0];
+    const todayQuest = {
+      ...base,
+      id: '00000000-0000-4000-8000-000000000a01',
+      shortCode: 'Q-TODAY',
+      scheduledAt: new Date().toISOString(),
+      briefDocument: { ...base.briefDocument, title: 'Tonight Table' },
+    };
+    const laterQuest = {
+      ...base,
+      id: '00000000-0000-4000-8000-000000000a02',
+      shortCode: 'Q-LATER',
+      scheduledAt: new Date(Date.now() + 3 * 86_400_000).toISOString(),
+      briefDocument: { ...base.briefDocument, title: 'Later Table' },
+    };
+    server.use(
+      graphql.query('HomeWarRoom', () =>
+        HttpResponse.json({
+          data: { ...goodLanes, quests: { items: [todayQuest, laterQuest], total: 2 } },
+        }),
+      ),
+    );
+    renderWithProviders(<HomePage />);
+    const today = await screen.findByRole('region', { name: 'Happening today' });
+    const upcoming = screen.getByRole('region', { name: 'Coming up' });
+    expect(within(today).getByText('Tonight Table')).toBeInTheDocument();
+    expect(within(upcoming).queryByText('Tonight Table')).not.toBeInTheDocument();
+    expect(within(upcoming).getByText('Later Table')).toBeInTheDocument();
   });
 
   it('shows two cards per lane on phones', async () => {

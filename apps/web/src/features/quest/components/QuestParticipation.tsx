@@ -9,6 +9,7 @@ import { toAppError } from '../../../errors/toAppError.js';
 import type { QuestDetailView, MyCharacterRef } from '../adapters/questAdapter.js';
 import type { QuestCommand } from '../adapters/questCommands.js';
 import type { AppError } from '../../../errors/types.js';
+import styles from '../pages/questDetail.module.css';
 
 export function QuestParticipation({
   quest,
@@ -49,32 +50,39 @@ export function QuestParticipation({
   );
   if (!authenticated)
     return (
-      <Card as="section" pad={5} aria-label="Your participation">
-        <div className="row" data-wrap="1" data-gap="3" data-align="center" data-justify="between">
-          <p className="type-body">Members can claim a seat at this table.</p>
-          <Link className="btn btn--primary" to="/login">
-            Sign in to join this quest
-          </Link>
-        </div>
+      <Card as="section" pad={4} className={styles.signup} aria-label="Your participation">
+        <p className="type-label">Your sign-up</p>
+        <p className="type-body">Members can claim a seat at this table.</p>
+        <Link className={`btn btn--primary ${styles.fullWidth}`} to="/login">
+          Sign in to join this quest
+        </Link>
       </Card>
     );
   if (!preplay)
     return (
-      <Card as="section" pad={5} aria-label="Your participation">
+      <Card as="section" pad={4} className={styles.signup} aria-label="Your participation">
+        <p className="type-label">Your sign-up</p>
         <p className="type-body">Signups and withdrawals are closed for this session.</p>
       </Card>
     );
   return (
     <Card
       as="section"
-      pad={5}
-      className="stack"
+      pad={4}
+      className={styles.signup}
       aria-label="Your participation"
       id="participation"
     >
-      <h2 className="type-title">Your participation</h2>
+      <p className="type-label">Your sign-up</p>
+      <h2 className="type-title">
+        {own.length === 0
+          ? 'Not signed up'
+          : own.every((participant) => participant.status === 'waitlisted')
+            ? 'Waitlisted'
+            : 'Signed up'}
+      </h2>
       {own.map((participant) => (
-        <div className="row" data-gap="2" key={participant.characterId}>
+        <div className={styles.signupOwn} key={participant.characterId}>
           <span>
             {participant.characterName},{' '}
             {participant.status === 'waitlisted' ? 'waitlisted' : 'signed up'}
@@ -111,8 +119,7 @@ export function QuestParticipation({
         </p>
       ) : (
         <form
-          className="row"
-          data-gap="2"
+          className={styles.signupForm}
           onSubmit={(event) => {
             event.preventDefault();
             if (eligible.some((character) => character.id === selected))
@@ -123,7 +130,7 @@ export function QuestParticipation({
               });
           }}
         >
-          <div className="stack">
+          <div className="stack" data-gap="1">
             <span className="type-caption" id={characterLabelId}>Your character</span>
             <Select
               label="Your character"

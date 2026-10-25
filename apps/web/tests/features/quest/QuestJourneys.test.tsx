@@ -328,7 +328,6 @@ describe('retained Quest journeys', () => {
       }),
     );
     renderDetail();
-    await userEvent.click(await screen.findByRole('tab', { name: 'Details' }));
     const arc = await screen.findByRole('button', { name: /^Arc membership/ });
     await waitFor(() => expect(arc).toBeEnabled());
     await userEvent.click(arc);

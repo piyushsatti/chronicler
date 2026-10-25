@@ -1,0 +1,25 @@
+.title {
+  margin: 0 0 var(--sp-3);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.link:hover,
+.link:focus-visible {
+  text-decoration: underline;
+}
+
+.meta {
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.author {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}

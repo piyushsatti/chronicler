@@ -295,7 +295,7 @@ export function QuestCard({
         </div>
 
         <div data-el="boardCard.footer" className={styles.boardCardFooter}>
-          <div className="row" data-justify="between" data-align="start" data-gap="3">
+          <div className="row" data-justify="between" data-align="center" data-gap="3">
             <div
               className={`stack ${styles.boardCardParty}`}
               data-el="boardCard.party"

@@ -154,6 +154,26 @@ describe('parseQuestDetail', () => {
     }
   });
 
+  it('resolves region names from the catalog, joined when several', () => {
+    const second = '33333333-3333-4333-8333-333333333333';
+    const catalog = new Map([
+      ['11111111-1111-4111-8111-111111111111', 'The Marches'],
+      [second, 'Kraghold'],
+    ]);
+    const result = parseQuestDetail(
+      { ...detailGood, regions: [...detailGood.regions, second] },
+      catalog,
+    );
+    expect(result.ok && result.data.regionName).toBe('The Marches, Kraghold');
+  });
+
+  it('leaves regionName null when regions are absent or unresolved', () => {
+    const noRegions = parseQuestDetail({ ...detailGood, regions: [] });
+    expect(noRegions.ok && noRegions.data.regionName).toBeNull();
+    const unresolved = parseQuestDetail(detailGood, new Map());
+    expect(unresolved.ok && unresolved.data.regionName).toBeNull();
+  });
+
   it('rejects bad wire', () => {
     expect(parseQuestDetail(detailBad).ok).toBe(false);
   });

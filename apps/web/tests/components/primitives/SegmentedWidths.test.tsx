@@ -37,7 +37,7 @@ describe('segmented intrinsic widths', () => {
       renderTrack: () => <Tabs aria-label="Panels" items={labels.map((label) => ({ id: label, label, panel: `${label} content` }))} />,
       columns: 3,
     },
-  ])('assigns $name equal intrinsic grid columns', ({ renderTrack, columns }) => {
+  ])('sizes $name grid columns to each label', ({ renderTrack, columns }) => {
     const { container } = render(renderTrack());
     const row = container.querySelector('.segmented-options') ?? container.querySelector('.segmented-row');
     expect(row).not.toBeNull();
@@ -45,7 +45,7 @@ describe('segmented intrinsic widths', () => {
     const style = getComputedStyle(row);
     expect(style.display).toBe('grid');
     expect(style.gridAutoFlow).toBe('column');
-    expect(style.gridAutoColumns).toBe('1fr');
+    expect(style.gridAutoColumns).toBe('auto');
     expect(style.width).toBe('max-content');
     expect(style.minWidth).toBe('max-content');
     const options = row.querySelectorAll('.segmented-option');
@@ -53,7 +53,7 @@ describe('segmented intrinsic widths', () => {
     for (const option of options) expect(option.parentElement).toBe(row);
   });
 
-  it('gives site header links the same widest-label width', () => {
+  it('sizes site header links to each label', () => {
     render(<MemoryRouter><SegmentedNav label="Primary" items={items} siteLinksPlacement="top" /></MemoryRouter>);
     const track = screen.getByRole('navigation', { name: 'Primary' });
     const row = track.querySelector('.segmented-row');
@@ -61,7 +61,7 @@ describe('segmented intrinsic widths', () => {
     expect(row).not.toBeNull();
     if (!row) throw new Error('The site header must render its link row');
     expect(getComputedStyle(row).display).toBe('grid');
-    expect(getComputedStyle(row).gridAutoColumns).toBe('1fr');
+    expect(getComputedStyle(row).gridAutoColumns).toBe('auto');
     expect(getComputedStyle(row).gridAutoFlow).toBe('column');
   });
 });

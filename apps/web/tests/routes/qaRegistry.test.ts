@@ -36,16 +36,16 @@ const digest = (bytes: string) => createHash('sha256').update(bytes).digest('hex
 
 describe('QA route coverage', () => {
   it('keeps the registry reproducible through the owning generator', () => {
-    expect(generate(undefined, true)).toContain('95 manifest coverage entries');
+    expect(generate(undefined, true)).toContain('97 manifest coverage entries');
   });
 
   it('accounts for every registered route without treating registration as acceptance', () => {
     expect(registry.manifestCoverage.map((route) => route.pattern)).toEqual([
       ...ROUTE_MANIFEST_PATHS,
     ]);
-    expect(registry.manifestCoverage).toHaveLength(95);
+    expect(registry.manifestCoverage).toHaveLength(97);
     expect(new Set(registry.manifestCoverage.map((route) => route.pattern)).size).toBe(
-      95,
+      97,
     );
     for (const route of registry.manifestCoverage) {
       expect(route.actors.length, route.pattern).toBeGreaterThan(0);
@@ -182,7 +182,7 @@ describe('QA route coverage', () => {
         status: 'partial',
         remainingEvidence: ['authority', 'live-api'],
       });
-      expect(generate(output, true)).toContain('95 manifest coverage entries');
+      expect(generate(output, true)).toContain('97 manifest coverage entries');
     } finally {
       rmSync(directory, { recursive: true, force: true });
     }
@@ -244,7 +244,7 @@ describe('QA route coverage', () => {
         receipts: [receipt.id],
         invalidatedReceipts: [],
       });
-      expect(generate(output, true)).toContain('95 manifest coverage entries');
+      expect(generate(output, true)).toContain('97 manifest coverage entries');
       generate(output);
       expect(readFileSync(output, 'utf8')).toBe(first);
 
@@ -262,7 +262,7 @@ describe('QA route coverage', () => {
           { id: receipt.id, reasons: [`changed file: ${path.relative(root, source)}`] },
         ],
       });
-      expect(generate(output, true)).toContain('95 manifest coverage entries');
+      expect(generate(output, true)).toContain('97 manifest coverage entries');
 
       writeFileSync(source, 'checked source\n');
       writeFileSync(artifact, 'artifact changed after review\n');

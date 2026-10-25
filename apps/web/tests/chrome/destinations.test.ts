@@ -36,24 +36,22 @@ describe('destinationsForAuth', () => {
     expect(currentDestinationId('/chronicles', destinations)).toBe('chronicles');
   });
 
-  it('inserts verification when the member can review', () => {
+  it('has no Verification item: review is reached through Admin', () => {
     const destinations = destinationsForAuth({
       isAuthenticated: true,
       isAdmin: true,
-      canVerify: true,
     });
-    expect(destinations.map((destination) => destination.href)).toContain(
+    expect(destinations.map((destination) => destination.id)).not.toContain(
+      'verification',
+    );
+    expect(destinations.map((destination) => destination.href)).not.toContain(
       '/admin/review',
     );
-    expect(currentDestinationId('/admin/review', destinations)).toBe('verification');
+    expect(currentDestinationId('/admin/review', destinations)).toBe('admin');
   });
 
-  it('adds an Admin link only for admins, separate from Verification', () => {
-    const admin = destinationsForAuth({
-      isAuthenticated: true,
-      isAdmin: true,
-      canVerify: true,
-    });
+  it('adds an Admin link only for admins', () => {
+    const admin = destinationsForAuth({ isAuthenticated: true, isAdmin: true });
     expect(admin.map((destination) => destination.label)).toEqual([
       'Home',
       'Quests',
@@ -61,29 +59,46 @@ describe('destinationsForAuth', () => {
       'Codex',
       'Rules',
       'Community',
-      'Verification',
       'Admin',
     ]);
     expect(admin.find((destination) => destination.id === 'admin')?.href).toBe(
       '/admin',
     );
     expect(currentDestinationId('/admin/people', admin)).toBe('admin');
-    expect(currentDestinationId('/admin/review', admin)).toBe('verification');
     const adminLink = admin.find((destination) => destination.id === 'admin')!;
-    expect(adminLink.matches('/admin/review')).toBe(false);
     expect(adminLink.matches('/admin')).toBe(true);
     expect(adminLink.matches('/administrator')).toBe(false);
 
     // Site navigation keeps full labels.
     expect(admin.every((destination) => !('shortLabel' in destination))).toBe(true);
 
-    const verifier = destinationsForAuth({
+    const member = destinationsForAuth({ isAuthenticated: true, isAdmin: false });
+    expect(member.map((destination) => destination.id)).not.toContain('admin');
+  });
+
+  it('adds a DM link to the DM dashboard only for DMs', () => {
+    const dm = destinationsForAuth({
       isAuthenticated: true,
       isAdmin: false,
-      canVerify: true,
+      isDm: true,
     });
-    expect(verifier.map((destination) => destination.id)).not.toContain('admin');
-    expect(verifier.map((destination) => destination.id)).toContain('verification');
+    expect(dm.map((destination) => destination.label)).toEqual([
+      'Home',
+      'Quests',
+      'Chronicles',
+      'Codex',
+      'Rules',
+      'Community',
+      'DM',
+    ]);
+    const link = dm.find((destination) => destination.id === 'dm')!;
+    expect(link.href).toBe('/dm');
+    expect(currentDestinationId('/dm', dm)).toBe('dm');
+    // The DM directory and profiles stay under Community.
+    expect(link.matches('/dms')).toBe(false);
+    expect(currentDestinationId('/dms/@pell', dm)).toBe('community');
+    const player = destinationsForAuth({ isAuthenticated: true, isAdmin: false });
+    expect(player.map((destination) => destination.id)).not.toContain('dm');
   });
 
   it('currentDestinationId matches quests and community-owned characters', () => {

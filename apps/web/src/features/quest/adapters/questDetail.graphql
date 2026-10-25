@@ -17,6 +17,7 @@ query Quest($id: ID, $shortCode: String) {
     displayStatus
     genres
     tags
+    regions
     dm {
       handle
       displayName

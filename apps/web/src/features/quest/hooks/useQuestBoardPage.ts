@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { Temporal } from '@js-temporal/polyfill';
 import { useNavigate } from 'react-router-dom';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { queryKeys } from '../../../api/queryKeys.js';
@@ -15,10 +16,12 @@ import {
   mapToBoardCardProps,
   type QuestBoardItemView,
   type QuestBoardCardPropsView,
+  type QuestListFilters,
 } from '../adapters/questAdapter.js';
 import { loadQuestAuthoringAuthority } from '../adapters/questOptionsAdapter.js';
 import { useQuestMutations } from './useQuestMutations.js';
 import { useInfiniteScroll } from '../../../components/primitives/useInfiniteScroll.js';
+import { personLabels } from '../../../utils/format.js';
 import {
   filterQuestBoardItems,
   type BoardSegment,
@@ -33,6 +36,42 @@ type PageData =
   | { status: 'empty' }
   | { status: 'ready'; view: CardRow[] };
 const PAGE_SIZE = 50;
+
+/** Filters from the board's Filter popover: a DM id and a specific civil date (YYYY-MM-DD). */
+export type QuestBoardFilters = { dmId: string; date: string };
+export const NO_BOARD_FILTERS: QuestBoardFilters = { dmId: '', date: '' };
+
+/**
+ * scheduledFrom/scheduledTo for one civil day in a zone: the first instant of
+ * the day through the last millisecond of it. The end is inclusive-safe, so it
+ * holds whether the API compares with < or <=. Null for a malformed date.
+ */
+export function dayRangeInZone(
+  date: string,
+  timeZone: string | null,
+): { scheduledFrom: string; scheduledTo: string } | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  try {
+    const zone = timeZone ?? Temporal.Now.timeZoneId();
+    const day = Temporal.PlainDate.from(date, { overflow: 'reject' });
+    const start = day.toZonedDateTime(zone);
+    const end = day.add({ days: 1 }).toZonedDateTime(zone).subtract({ milliseconds: 1 });
+    return {
+      scheduledFrom: start.toInstant().toString(),
+      scheduledTo: end.toInstant().toString(),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function toServerFilters(filters: QuestBoardFilters, timeZone: string | null): QuestListFilters {
+  const range = filters.date ? dayRangeInZone(filters.date, timeZone) : null;
+  return {
+    ...(filters.dmId ? { dmId: filters.dmId } : {}),
+    ...(range ?? {}),
+  };
+}
 export function useQuestBoardPage() {
   const { timeZone } = useDateFormatter();
   const navigate = useNavigate();
@@ -42,11 +81,13 @@ export function useQuestBoardPage() {
   const [segment, setSegment] = useState<BoardSegment>('Open');
   const [quickFilter, setQuickFilter] = useState<QuestQuickFilter>('All');
   const [search, setSearch] = useState('');
+  const [boardFilters, setBoardFilters] = useState<QuestBoardFilters>(NO_BOARD_FILTERS);
+  const serverFilters = toServerFilters(boardFilters, timeZone);
   const query = useInfiniteQuery({
-    queryKey: ['quests', 'pages', {}],
+    queryKey: ['quests', 'pages', serverFilters],
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>
-      loadQuestList({ filters: {}, limit: PAGE_SIZE, offset: pageParam }),
+      loadQuestList({ filters: serverFilters, limit: PAGE_SIZE, offset: pageParam }),
     getNextPageParam: (last, pages) => {
       const loaded = pages.reduce((total, page) => total + page.items.length, 0);
       return last.items.length && loaded < last.total ? loaded : undefined;
@@ -81,7 +122,24 @@ export function useQuestBoardPage() {
         (participant.status === 'signed_up' || participant.status === 'waitlisted'),
     );
   const items = query.data?.pages.flatMap((page) => page.items) ?? [];
-  const visibleItems = filterQuestBoardItems(items, segment, quickFilter, search, timeZone);
+  // A specific date narrows the API read to that day and overrides the quick date segment.
+  const dateOverrides = boardFilters.date !== '';
+  const effectiveQuickFilter: QuestQuickFilter = dateOverrides ? 'All' : quickFilter;
+  const visibleItems = filterQuestBoardItems(
+    items,
+    segment,
+    effectiveQuickFilter,
+    search,
+    timeZone,
+  );
+  const chromeDms = chrome.data?.dms;
+  const dmOptions = useMemo(() => {
+    const dms = chromeDms ?? [];
+    const labels = personLabels(dms.map((dm) => ({ id: dm.id, displayName: dm.displayName, handle: dm.handle })));
+    return dms
+      .map((dm, index) => ({ value: dm.id, label: labels[index] }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [chromeDms]);
   const sentinelRef = useInfiniteScroll({
     enabled: query.hasNextPage && !query.isFetching,
     onLoadMore: () => {
@@ -91,8 +149,15 @@ export function useQuestBoardPage() {
   const shared = {
     segment,
     setSegment,
-    quickFilter,
-    setQuickFilter,
+    quickFilter: effectiveQuickFilter,
+    // The most recent choice wins: picking a quick date drops the specific date.
+    setQuickFilter: (filter: QuestQuickFilter) => {
+      setQuickFilter(filter);
+      setBoardFilters((current) => (current.date ? { ...current, date: '' } : current));
+    },
+    boardFilters,
+    setBoardFilters,
+    dmOptions,
     search,
     setSearch,
     total: visibleItems.length,

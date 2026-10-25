@@ -41,8 +41,18 @@
 .boardCard .boardCardFooter {
   position: relative;
   z-index: 2;
+  display: flex;
+  align-items: center;
+  /* Fits the party avatars plus one line of names, so an empty party keeps the
+     same divider line as its neighbours in a row. */
+  min-height: 5.25rem;
   border-top: 1px solid var(--color-border);
   padding: var(--sp-4) var(--sp-6);
+}
+
+.boardCard .boardCardFooter > .row {
+  flex: 1;
+  min-width: 0;
 }
 
 .boardCard .boardCardParty {

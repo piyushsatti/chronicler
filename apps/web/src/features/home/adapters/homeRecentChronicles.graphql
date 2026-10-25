@@ -1,0 +1,17 @@
+query HomeRecentChronicles($limit: Int!) {
+  documents(filters: { kind: "summary", status: "published" }, limit: $limit, offset: 0) {
+    items {
+      id
+      slug
+      title
+      visibility
+      author {
+        handle
+      }
+      publishedAt
+      summaryDerived {
+        occurredAt
+      }
+    }
+  }
+}

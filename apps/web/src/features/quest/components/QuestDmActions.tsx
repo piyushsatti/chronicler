@@ -81,7 +81,7 @@ export function QuestDmActions({
       note: '',
     })),
   );
-  const [confirm, setConfirm] = useState<'played' | 'cancelled' | 'close' | null>(null);
+  const [confirm, setConfirm] = useState<'played' | 'close' | null>(null);
   const preplay = quest.machineStatus === 'open' || quest.machineStatus === 'full';
   const input = closeInput(rows);
   const validRows =
@@ -105,13 +105,6 @@ export function QuestDmActions({
               onClick={() => setConfirm('played')}
             >
               Mark played
-            </Button>
-            <Button
-              variant="danger"
-              disabled={pending}
-              onClick={() => setConfirm('cancelled')}
-            >
-              Cancel quest
             </Button>
           </div>
           {quest.participants.some(
@@ -274,9 +267,7 @@ export function QuestDmActions({
         title={
           confirm === 'close'
             ? 'Close quest'
-            : confirm === 'played'
-              ? 'Mark session played'
-              : 'Cancel quest'
+            : 'Mark session played'
         }
         onClose={() => {
           if (!pending) setConfirm(null);
@@ -291,9 +282,7 @@ export function QuestDmActions({
           </p>
         ) : (
           <p>
-            {confirm === 'played'
-              ? 'End signups and move this session to attendance and reward recording?'
-              : 'Cancel this quest and close signups? This action is final.'}
+            End signups and move this session to attendance and reward recording?
           </p>
         )}
         <Button
@@ -306,7 +295,7 @@ export function QuestDmActions({
                   if (success) setConfirm(null);
                 },
               );
-            else if (confirm === 'played' || confirm === 'cancelled')
+            else if (confirm === 'played')
               void execute({ kind: 'transition', questId: quest.id, to: confirm }).then(
                 (success) => {
                   if (success) setConfirm(null);

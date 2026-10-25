@@ -611,7 +611,7 @@ const groups = [
     access: 'Tokens stay out of URLs, registry and saved receipts.',
   },
   {
-    paths: ['/me', '/me/characters', '/me/notes'],
+    paths: ['/me', '/me/characters', '/me/history', '/me/summaries', '/me/notes'],
     feature: 'member',
     actors: ownerActors,
     actions: [
