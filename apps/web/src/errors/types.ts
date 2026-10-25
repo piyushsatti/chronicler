@@ -23,12 +23,19 @@ export type AppError = {
 export class TransportError extends Error {
   readonly code: string;
   readonly status?: number;
+  /** The server's message for an expected failure (GraphQL `errors[0].message`).
+   * Not user copy by default: adapters decide when it is safe to show. */
+  readonly serverMessage?: string;
 
-  constructor(code: string, options?: { status?: number; cause?: unknown }) {
+  constructor(
+    code: string,
+    options?: { status?: number; cause?: unknown; serverMessage?: string },
+  ) {
     super(`transport:${code}`);
     this.name = 'TransportError';
     this.code = code;
     this.status = options?.status;
+    this.serverMessage = options?.serverMessage;
     if (options?.cause !== undefined) {
       (this as Error & { cause?: unknown }).cause = options.cause;
     }

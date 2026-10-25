@@ -13,6 +13,7 @@ import DOCUMENT_BY_ID from './editorDocumentById.graphql?raw';
 import DOCUMENT_BY_SLUG from './editorDocumentBySlug.graphql?raw';
 import { loadSummaryQuest } from './editorSummary.js';
 import { findCodexCategory } from '../../../utils/codexCategories.js';
+import { defaultSessionStart } from '../editorDateTime.js';
 
 const summaryContextSchema = z.object({
   questId: z.string().uuid(),
@@ -218,6 +219,7 @@ export function parseDocumentLoad(wire: unknown): AdapterResult<EditorLoadResult
 function emptyDraft(
   typeKey: EditorTypeKey,
   category?: string | null,
+  context: { timeZone?: string; seriesId?: string } = {},
 ): EditorLoadResult {
   const initialCategory =
     typeKey === 'codex' ? (findCodexCategory(category) ?? category) : category;
@@ -226,7 +228,7 @@ function emptyDraft(
       title: '',
       durationHours: '3',
       slotsMax: '4',
-      scheduledAt: new Date().toISOString(),
+      scheduledAt: defaultSessionStart(new Date(), context.timeZone ?? 'UTC'),
       category:
         initialCategory ??
         (typeKey === 'guide' || typeKey === 'ruling'
@@ -244,6 +246,7 @@ function emptyDraft(
               : typeKey,
       ...(typeKey === 'summary' ? { questIds: [], characterId: null } : {}),
       kinds: ['standard'],
+      ...(typeKey === 'quest' ? { arcId: context.seriesId ?? '' } : {}),
       regions: [],
       genres: [],
       tags: [],
@@ -284,9 +287,17 @@ export async function loadEditorRecord(input: {
   category?: string;
   questId?: string;
   characterId?: string;
+  /** New quests: the viewer's time zone for the default session time. */
+  timeZone?: string;
+  /** New quests: a series to pre-select (`/quests/new?series=<id>`). */
+  seriesId?: string;
 }): Promise<EditorLoadResult> {
   if (input.mode === 'new' || input.typeKey === 'demo') {
-    const draft = emptyDraft(input.typeKey, input.category ?? null);
+    const draft = emptyDraft(input.typeKey, input.category ?? null, {
+      timeZone: input.timeZone,
+      // Only a well-formed series id is pre-selected; anything else starts with no series.
+      seriesId: z.string().uuid().safeParse(input.seriesId).data,
+    });
     if (input.typeKey === 'summary' && input.questId !== undefined) {
       const context = summaryContextSchema.safeParse(input);
       if (!context.success)

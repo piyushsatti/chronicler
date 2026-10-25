@@ -8,6 +8,7 @@ import {
   RegionField,
   RegionMultiField,
   SelectField,
+  SeriesField,
   SlotsField,
   StatusField,
   StubField,
@@ -69,6 +70,14 @@ export function PropertiesPanel({
         return (
           <RegionField
             options={options.regions}
+            value={String(val ?? '')}
+            onChange={setT}
+          />
+        );
+      case 'series':
+        return (
+          <SeriesField
+            options={options.series}
             value={String(val ?? '')}
             onChange={setT}
           />

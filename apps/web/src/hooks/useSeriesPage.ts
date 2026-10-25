@@ -164,10 +164,26 @@ export function useSeriesPage(identity: string) {
       if (pending.current === attempt) pending.current = null;
     }
   };
+  const canCreate = Boolean(session && admission(session, null));
   return {
     validId,
     arc,
-    canCreate: Boolean(session && admission(session, null)),
+    canCreate,
+    /** The viewer's DM profile review status from the same proof as `canCreate`;
+     * undefined until that proof is loaded for the current session. */
+    dmStatus:
+      session && current(session) && authority.isSuccess
+        ? authority.data.dmStatus
+        : undefined,
+    /** Starting a quest in this series needs an active, approved DM (the same proof as
+     * `canCreate`) who either created the series or holds current admin authority. */
+    canAddQuest: Boolean(
+      session &&
+      arc.data &&
+      !arc.isError &&
+      canCreate &&
+      (arc.data.createdBy === session.memberId || admin.isCurrentProof()),
+    ),
     canRename: Boolean(
       session && arc.data && !arc.isError && admission(session, arc.data.id),
     ),

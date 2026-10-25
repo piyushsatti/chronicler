@@ -127,6 +127,8 @@ export type EditorShellProps = {
   saveDisabled?: boolean;
   cancelTo: string;
   isDirty?: boolean;
+  /** New records: discard the draft and its copy on this device. Shown while there is a draft. */
+  onDiscardDraft?: () => void;
   preview: EditorPreview;
   onPreview: () => void;
   options: EditorFieldOptions;
@@ -168,6 +170,7 @@ export function EditorShell({
   saveDisabled,
   cancelTo,
   isDirty,
+  onDiscardDraft,
   preview,
   onPreview,
   options,
@@ -334,6 +337,11 @@ export function EditorShell({
       >
         {saveLabel}
       </Button>
+      {onDiscardDraft && isDirty ? (
+        <Button type="button" variant="ghost" onClick={onDiscardDraft}>
+          Discard draft
+        </Button>
+      ) : null}
       <Link className="btn btn--ghost" to={cancelTo}>
         Cancel
       </Link>

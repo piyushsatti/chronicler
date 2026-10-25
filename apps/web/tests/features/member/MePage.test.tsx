@@ -219,6 +219,7 @@ describe('MePage', () => {
   it('shows DM tables, series and upcoming quests from the shared dashboard query', async () => {
     signIn(['dm']);
     server.use(
+      seriesAuthority(goodMe.id),
       graphql.query('DmDashboard', () =>
         HttpResponse.json({
           data: {
@@ -283,6 +284,11 @@ describe('MePage', () => {
       'href',
       '/dm',
     );
+    // A DM who may start a series is offered one beside the list, not only when it is empty.
+    expect(screen.getByText('1 series')).toBeVisible();
+    expect(
+      await screen.findByRole('button', { name: 'Create a series' }),
+    ).toBeVisible();
   });
 
   it.each([1, 27])(

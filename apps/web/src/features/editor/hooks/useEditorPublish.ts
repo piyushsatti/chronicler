@@ -160,7 +160,12 @@ export function useEditorPublish({
               replayKey('quest-update', [input, initial.updatedAt]),
             );
           } else {
-            const input = { ...payload, scheduledAt: v.scheduledAt, briefBody: body };
+            const input = {
+              ...payload,
+              scheduledAt: v.scheduledAt,
+              briefBody: body,
+              ...(v.arcId ? { arcId: v.arcId } : {}),
+            };
             result = await createQuest(input, replayKey('quest-create', input));
           }
           return { ...result, originScope: scopeKey };

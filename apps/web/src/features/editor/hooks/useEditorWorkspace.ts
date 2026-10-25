@@ -59,6 +59,8 @@ export function useEditorWorkspace({
   enabled,
   timeZone,
   actorId = 'demo',
+  viewerMemberId = null,
+  viewerIsAdmin = false,
   schemaAccess = NO_SCHEMA_ACCESS,
   sessionIsCurrent = () => true,
   onReload = async () => {},
@@ -71,6 +73,10 @@ export function useEditorWorkspace({
   enabled: boolean;
   timeZone: string;
   actorId?: string | null;
+  /** The signed-in member's id (`memberMe.id`), for options limited to their own records. */
+  viewerMemberId?: string | null;
+  /** The viewer's roles include admin; widens options such as the series a quest may join. */
+  viewerIsAdmin?: boolean;
   schemaAccess?: SchemaAccess;
   sessionIsCurrent?: () => boolean;
   onReload?: () => Promise<void>;
@@ -87,7 +93,7 @@ export function useEditorWorkspace({
       canEditBody: enabled && initial.canEditBody,
     },
   );
-  const { meta, body, setMeta, setBody, isDirty, clearDraft } = draft;
+  const { meta, body, setMeta, setBody, isDirty, isTouched, clearDraft } = draft;
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [showPropertyErrors, setShowPropertyErrors] = useState(false);
   const recordScope = JSON.stringify([actorId, typeKey, initial.recordId]);
@@ -128,7 +134,22 @@ export function useEditorWorkspace({
     enabled: enabled && initial.canEditMetadata && typeKey !== 'quest',
     scopeKey: recordScope,
   });
-  const options = useEditorOptions(schemaForType(typeKey, meta, schemaAccess), enabled);
+  const options = useEditorOptions(
+    schemaForType(typeKey, meta, schemaAccess),
+    enabled,
+    viewerMemberId,
+    viewerIsAdmin,
+  );
+  // A new quest saves only a series the picker shows. An `arcId` from a link (or a
+  // recovered draft) that is not among the viewer's options is not sent, and the
+  // picker shows "No series" for it.
+  const seriesOptions = options.series;
+  const arcShown =
+    typeof meta.arcId !== 'string' ||
+    meta.arcId === '' ||
+    (seriesOptions.status === 'ready' &&
+      seriesOptions.items.some((series) => series.id === meta.arcId));
+  const publishMeta = arcShown ? meta : { ...meta, arcId: '' };
   const { preview, onPreview } = useEditorPreview(body);
   const history = useEditorHistory(
     initial.documentId,
@@ -152,7 +173,7 @@ export function useEditorWorkspace({
     typeKey,
     mode,
     initial,
-    meta,
+    meta: publishMeta,
     body,
     category,
     admit,
@@ -227,9 +248,10 @@ export function useEditorWorkspace({
   });
   const busy = publish.isPending || lifecycle.isPending;
   const invalidSession = typeKey === 'quest' && !isEditorInstant(meta.scheduledAt);
-  const blocker = useBlocker(() => isDirty && !leavingAfterSave.current);
+  // Warn on leave only for edits made in this form; a recovered draft stays saved on the device.
+  const blocker = useBlocker(() => isTouched && !leavingAfterSave.current);
   useEffect(() => {
-    if (!isDirty) {
+    if (!isTouched) {
       leavingAfterSave.current = false;
       return;
     }
@@ -241,7 +263,7 @@ export function useEditorWorkspace({
     };
     window.addEventListener('beforeunload', beforeUnload);
     return () => window.removeEventListener('beforeunload', beforeUnload);
-  }, [isDirty]);
+  }, [isTouched]);
   const reloadLatest = useCallback(async () => {
     if (
       isDirty &&
@@ -261,6 +283,15 @@ export function useEditorWorkspace({
     setMeta,
     setBody,
     isDirty,
+    /** A new record's draft can be thrown away, clearing its copy on this device. */
+    onDiscardDraft:
+      mode === 'new'
+        ? () => {
+            if (!window.confirm('Discard this draft? Its copy on this device is deleted.'))
+              return;
+            draft.resetDraft();
+          }
+        : undefined,
     onSaveDraft: () => {
       if (busy || !admit() || trashed || invalidSession) return;
       if (initial.briefPublished && typeKey !== 'quest') {

@@ -101,6 +101,8 @@ export function useEditorDraft(
       identity,
       key,
       baseline: signature,
+      /** What the form showed when it opened: the server copy or a recovered draft. */
+      opened: JSON.stringify(value),
       values: value,
       history: [value],
       cursor: 0,
@@ -110,7 +112,10 @@ export function useEditorDraft(
   const [state, setState] = useState(makeState);
   // Never render a previous account/record's state while waiting for an effect.
   const current = state.identity === identity ? state : makeState();
-  const dirty = JSON.stringify(current.values) !== current.baseline;
+  const valuesSignature = JSON.stringify(current.values);
+  const dirty = valuesSignature !== current.baseline;
+  // A recovered draft differs from the server but loses nothing on leave until it is edited here.
+  const touched = valuesSignature !== current.opened;
   const stale = current.key !== key;
   const values = scope.canEditBody
     ? current.values
@@ -124,6 +129,7 @@ export function useEditorDraft(
         return {
           ...makeState(),
           key: old.key,
+          opened: JSON.stringify(value),
           values: value,
           history: [value],
         };
@@ -176,11 +182,21 @@ export function useEditorDraft(
   };
   const clearDraft = useCallback(() => {
     removeDraft(current.key);
-    setState((old) => ({ ...old, baseline: JSON.stringify(old.values) }));
+    setState((old) => ({
+      ...old,
+      baseline: JSON.stringify(old.values),
+      opened: JSON.stringify(old.values),
+    }));
   }, [current.key]);
   const resetDraft = () => {
     removeDraft(current.key);
-    setState({ ...makeState(), values: server, history: [server], cursor: 0 });
+    setState({
+      ...makeState(),
+      opened: signature,
+      values: server,
+      history: [server],
+      cursor: 0,
+    });
   };
   const recoverableDrafts = loadOlderDrafts(typeKey, recordId, scope);
   return {
@@ -188,6 +204,8 @@ export function useEditorDraft(
     setMeta,
     setBody,
     isDirty: dirty,
+    /** Edited since the form opened; leaving now would lose those edits. */
+    isTouched: dirty && touched,
     stale,
     saveDraft: () => persist(current.key, values),
     recoverableDrafts,
@@ -197,6 +215,7 @@ export function useEditorDraft(
       setState({
         ...makeState(),
         key: saved.key,
+        opened: JSON.stringify(saved.snapshot),
         values: saved.snapshot,
         history: [saved.snapshot],
       });

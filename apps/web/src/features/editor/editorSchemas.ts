@@ -159,6 +159,24 @@ const TITLED_DOCUMENT_SCHEMA: FieldSchema[] = [
   },
 ];
 
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** A new quest may start in one of the viewer's series; existing quests change series on the quest page. */
+const NEW_QUEST_SCHEMA: FieldSchema[] = [
+  ...QUEST_SCHEMA.slice(0, 1),
+  {
+    key: 'arcId',
+    label: 'Series',
+    type: 'series',
+    hint: 'Optional',
+    validate: (v) =>
+      v == null || v === '' || (typeof v === 'string' && UUID.test(v))
+        ? null
+        : 'Choose one of your series',
+  },
+  ...QUEST_SCHEMA.slice(1),
+];
+
 export interface SchemaAccess {
   /** Archons and admins may author Locations entries (the API also checks region assignment). */
   canAuthorLocations?: boolean;
@@ -171,7 +189,8 @@ export function schemaForType(
 ): FieldSchema[] {
   switch (typeKey) {
     case 'quest':
-      return QUEST_SCHEMA;
+      // Only a new quest's draft carries `arcId`.
+      return typeof meta.arcId === 'string' ? NEW_QUEST_SCHEMA : QUEST_SCHEMA;
     case 'codex':
       return CODEX_SCHEMA.map((field) => {
         if (field.key !== 'category') return field;

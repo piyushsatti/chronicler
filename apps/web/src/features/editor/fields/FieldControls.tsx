@@ -224,6 +224,39 @@ export function RegionField({
   );
 }
 
+/** Optional series for a new quest: the viewer's own series, or none. */
+export function SeriesField({
+  value,
+  onChange,
+  options,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: EditorOptions<{ id: string; name: string }>;
+}): React.JSX.Element {
+  if (options.status === 'error' || options.status === 'loading')
+    return (
+      <div>
+        <OptionState options={options} label="Series" />
+      </div>
+    );
+  const items = options.status === 'ready' ? options.items : [];
+  const choices: [string, string][] = [
+    ['', 'No series'],
+    ...items.map((item): [string, string] => [item.id, item.name]),
+  ];
+  return (
+    <Picker
+      value={value}
+      options={choices}
+      placeholder="No series"
+      renderValue={(v) => choices.find(([id]) => id === v)?.[1] ?? 'No series'}
+      renderOption={(o) => (Array.isArray(o) ? o[1] : o)}
+      onChange={onChange}
+    />
+  );
+}
+
 export function SlotsField({
   value,
   onChange,

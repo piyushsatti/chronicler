@@ -5,6 +5,7 @@ import type {
 } from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import { toAppError } from '../../../errors/toAppError.js';
+import { markdownToPlainText } from '../../../utils/markdownText.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import SEARCH_QUERY from './search.graphql?raw';
 import SEARCHABLE_KINDS_QUERY from './searchableKinds.graphql?raw';
@@ -62,9 +63,19 @@ type SearchKindView = z.infer<typeof kindsWireSchema>[number];
 
 export function parseSearch(wire: unknown): AdapterResult<SearchResultView> {
   const parsed = searchWireSchema.safeParse(wire);
-  return parsed.success
-    ? { ok: true, data: parsed.data }
-    : { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
+  if (!parsed.success)
+    return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
+  // The server cuts snippets from the raw Markdown body; show them as plain text.
+  return {
+    ok: true,
+    data: {
+      ...parsed.data,
+      documents: parsed.data.documents.map((hit) => ({
+        ...hit,
+        snippet: markdownToPlainText(hit.snippet),
+      })),
+    },
+  };
 }
 export function parseSearchKinds(wire: unknown): AdapterResult<SearchKindView[]> {
   const parsed = kindsWireSchema.safeParse(wire);

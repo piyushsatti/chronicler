@@ -34,12 +34,18 @@ export const TAG_SUGGESTIONS = [
   'merchant',
 ];
 
+/** Quest kind vocabulary: matches the API boundary and the `quests_kinds_vocab` DB check. */
 export const QUEST_KINDS: [string, string][] = [
   ['standard', 'Standard'],
-  ['oneshot', 'One-shot'],
-  ['series', 'Series'],
-  ['social', 'Social'],
-  ['beginner', 'Beginner'],
+  ['one_shot', 'One-shot'],
+  ['mini_campaign', 'Mini-campaign'],
+  ['hexcrawl', 'Hexcrawl'],
+  ['event', 'Event'],
+  ['lieutenant', 'Lieutenant'],
 ];
 
 export { CODEX_CATEGORY_VALUES as CODEX_AUTHORING_CATEGORIES } from '../../utils/codexCategories.js';
+
+/** `debugId` of the error shown when the API refuses a quest because its DM
+ * profile is not approved; the editor pairs it with a link to the profile. */
+export const QUEST_DM_APPROVAL_ERROR = 'editor:quest:dm-approval';

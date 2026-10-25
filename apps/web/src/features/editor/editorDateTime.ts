@@ -26,6 +26,26 @@ export function editorTimeZone(saved: string | null): string {
   return saved ?? Intl.DateTimeFormat().resolvedOptions().timeZone;
 }
 
+/**
+ * A new quest's default session start: the first whole hour in the viewer's time
+ * zone that is at least 24 hours after `now`.
+ */
+export function defaultSessionStart(now: Date, timeZone: string): string {
+  const earliest = Temporal.Instant.fromEpochMilliseconds(now.getTime()).add({
+    hours: 24,
+  });
+  let zoned: Temporal.ZonedDateTime;
+  try {
+    zoned = earliest.toZonedDateTimeISO(timeZone);
+  } catch {
+    zoned = earliest.toZonedDateTimeISO('UTC');
+  }
+  return zoned
+    .round({ smallestUnit: 'hour', roundingMode: 'ceil' })
+    .toInstant()
+    .toString();
+}
+
 /** The native picker receives civil minutes, never a device-converted ISO value. */
 export function sessionLocalValue(value: string, timeZone: string): string {
   return isEditorInstant(value)

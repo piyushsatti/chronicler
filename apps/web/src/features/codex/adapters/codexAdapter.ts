@@ -18,6 +18,7 @@ import {
   codexDirectoryWireSchema,
   codexReferenceWireSchema,
 } from './codex.wire.schema.js';
+import { markdownExcerpt } from '../../../utils/markdownText.js';
 
 export type CodexEntryView = {
   id: string;
@@ -108,7 +109,7 @@ export function parseCodexDirectory(
         slug: item.slug,
         title: item.title,
         category: item.category ?? null,
-        excerpt: item.effectiveBody?.replace(/\s+/g, ' ').trim().slice(0, 160) || null,
+        excerpt: markdownExcerpt(item.effectiveBody, 160),
       })),
       total: parsed.data.total,
       categories: categories.data,

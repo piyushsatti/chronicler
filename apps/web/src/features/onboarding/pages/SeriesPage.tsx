@@ -20,6 +20,11 @@ import styles from './seriesPage.module.css';
 
 const SEATED = new Set(['signed_up', 'selected', 'played']);
 
+/** The quest create form with this series pre-selected. */
+function newQuestHref(arcId: string): string {
+  return `/quests/new?series=${encodeURIComponent(arcId)}`;
+}
+
 export function SeriesPage(): React.JSX.Element {
   const { shortCode = '' } = useParams();
   const page = useSeriesPage(shortCode);
@@ -75,10 +80,19 @@ export function SeriesPage(): React.JSX.Element {
               ) : undefined
             }
             actions={
-              page.canRename ? (
-                <Button variant="secondary" onClick={() => setRenaming(true)}>
-                  Rename series
-                </Button>
+              page.canRename || (page.canAddQuest && arc) ? (
+                <>
+                  {page.canAddQuest && arc ? (
+                    <Link className="btn btn--primary" to={newQuestHref(arc.id)}>
+                      New quest in this series
+                    </Link>
+                  ) : null}
+                  {page.canRename ? (
+                    <Button variant="secondary" onClick={() => setRenaming(true)}>
+                      Rename series
+                    </Button>
+                  ) : null}
+                </>
               ) : undefined
             }
           />
@@ -143,9 +157,15 @@ export function SeriesPage(): React.JSX.Element {
               <EmptyState
                 message="No quests belong to this series yet."
                 action={
-                  <Link className="btn btn--secondary btn--sm" to="/quests">
-                    Browse the quest board
-                  </Link>
+                  page.canAddQuest ? (
+                    <Link className="btn btn--primary btn--sm" to={newQuestHref(arc.id)}>
+                      New quest in this series
+                    </Link>
+                  ) : (
+                    <Link className="btn btn--secondary btn--sm" to="/quests">
+                      Browse the quest board
+                    </Link>
+                  )
                 }
               />
             )}

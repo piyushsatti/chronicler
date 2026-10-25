@@ -108,6 +108,9 @@ describe('reader-facing labels', () => {
     expect(pluralize(0, 'result')).toBe('0 results');
     expect(pluralize(2, 'available map')).toBe('2 available maps');
     expect(pluralize(3, 'entry', 'entries')).toBe('3 entries');
+    expect(pluralize(2, 'series')).toBe('2 series');
+    expect(pluralize(1, 'series')).toBe('1 series');
+    expect(pluralize(2, 'Series')).toBe('2 Series');
   });
   it('reads character verification states, with anything else as not submitted', () => {
     expect(verificationLabel('PENDING')).toBe('Awaiting verification');

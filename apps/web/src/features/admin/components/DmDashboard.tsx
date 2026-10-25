@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import { DmApprovalNotice } from '../../../components/domain/DmApprovalNotice.js';
 import { SeriesCreateAction } from '../../../components/domain/SeriesCreateAction.js';
 import { Button } from '../../../components/primitives/Button.js';
 import { Chip } from '../../../components/primitives/Chip.js';
@@ -96,7 +97,7 @@ export function DmDashboard({ view }: { view: ReturnType<typeof useDmDashboard> 
         lede="Plan your next session and manage your quests, series and DM tables."
         actions={
           <>
-            <Link className="btn btn--secondary" to="/me">
+            <Link className="btn btn--secondary" to={view.profileHref}>
               Edit DM profile
             </Link>
             {view.canCreateQuest && data.quests.items.length > 0 ? (
@@ -107,6 +108,7 @@ export function DmDashboard({ view }: { view: ReturnType<typeof useDmDashboard> 
           </>
         }
       />
+      <DmApprovalNotice />
       <CardGrid className="dm-dashboard__stats" gap={3} aria-label="Your DM stats">
         <StatTile label="Quests posted" value={data.quests.total} />
         {data.dmStats ? <StatTile label="Sessions run" value={data.dmStats.sessionCount} /> : null}
@@ -164,14 +166,19 @@ export function DmDashboard({ view }: { view: ReturnType<typeof useDmDashboard> 
         </section>
       </Card>
       <Card className="stack" as="section" aria-label="Your series">
-        <h2 className="type-heading">Your series</h2>
+        <div className="row" data-wrap="1" data-justify="between" data-align="center">
+          <h2 className="type-heading">Your series</h2>
+          {data.series.length > 0 ? (
+            <SeriesCreateAction label="Create a series" size="sm" showAuthorityError={false} />
+          ) : null}
+        </div>
         {data.series.length === 0 ? (
           <EmptyState
             kind="generic"
             message="You have not created a quest series yet."
             action={view.canCreateQuest
               ? <SeriesCreateAction label="Create a series" size="sm" showAuthorityError={false} />
-              : <Link className="btn btn--secondary btn--sm" to="/me">View your DM profile</Link>}
+              : <Link className="btn btn--secondary btn--sm" to={view.profileHref}>View your DM profile</Link>}
           />
         ) : (
           <CardGrid as="ul" gap={3}>

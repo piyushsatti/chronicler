@@ -7,6 +7,8 @@ import styles from './editor.module.css';
 import type { EditorWorkspaceView } from './hooks/useEditorWorkspace.js';
 import { Link } from 'react-router-dom';
 import { useMe } from '../../hooks/useMe.js';
+import { DmApprovalNotice } from '../../components/domain/DmApprovalNotice.js';
+import { QUEST_DM_APPROVAL_ERROR } from './editorConstants.js';
 
 const editorLabels = {
   quest: 'quest',
@@ -74,6 +76,20 @@ function DmProfileShortcut(): React.JSX.Element | null {
   );
 }
 
+/** The way out of a refused quest create: the DM profile editor. */
+function DmProfileLink(): React.JSX.Element | null {
+  const me = useMe().data;
+  if (!me) return null;
+  return (
+    <Link
+      className="btn btn--secondary"
+      to={`/dms/@${encodeURIComponent(me.handle)}?edit=profile`}
+    >
+      Open your DM profile
+    </Link>
+  );
+}
+
 /** Props-only view; the page composition hook owns draft and transport state. */
 export function EditorWorkspace({
   view,
@@ -101,6 +117,7 @@ export function EditorWorkspace({
           title={headerTitle(view)}
         />
       )}
+      {view.typeKey === 'quest' && view.mode === 'new' ? <DmApprovalNotice /> : null}
       {!view.denied ? (
         <>
           {view.published && view.typeKey !== 'quest' ? (
@@ -122,7 +139,15 @@ export function EditorWorkspace({
         errorSlot={
           <>
             {view.mutationError ? (
-              <StatePanel status="error" error={view.mutationError} />
+              <StatePanel
+                status="error"
+                error={view.mutationError}
+                action={
+                  view.mutationError.debugId === QUEST_DM_APPROVAL_ERROR ? (
+                    <DmProfileLink />
+                  ) : undefined
+                }
+              />
             ) : null}
             {view.entityIndexError ? (
               <StatePanel status="error" error={view.entityIndexError} />

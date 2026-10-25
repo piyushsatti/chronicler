@@ -13,6 +13,8 @@ export type EditorOptions<T> =
 export type EditorFieldOptions = {
   regions: EditorOptions<EditorRegionRow>;
   genres: EditorOptions<string>;
+  /** The viewer's own series, for a new quest. */
+  series: EditorOptions<{ id: string; name: string }>;
 };
 export type EditorPreview =
   | { status: 'error'; error: AppError }
@@ -30,6 +32,7 @@ export type FieldType =
   | 'tags'
   | 'genretags'
   | 'region'
+  | 'series'
   | 'regionmulti'
   | 'slots'
   | 'datetime'

@@ -3,6 +3,7 @@ import { toAppError } from '../../../errors/toAppError.js';
 import { loadEditorRegions } from '../adapters/editorRegionsAdapter.js';
 import { loadQuestGenreOptions } from '../adapters/questGenreOptionsAdapter.js';
 import { queryKeys } from '../feature.js';
+import { loadEditorSeriesOptions } from '../adapters/editorSeriesOptionsAdapter.js';
 import type { EditorFieldOptions, EditorOptions, FieldSchema } from '../types.js';
 
 function optionsView<T>(
@@ -32,6 +33,10 @@ function optionsView<T>(
 export function useEditorOptions(
   schema: FieldSchema[],
   enabled: boolean,
+  /** The signed-in member's id; series options are limited to the series they created. */
+  viewerMemberId: string | null = null,
+  /** The viewer's roles include admin, so every series is offered (the API decides). */
+  viewerIsAdmin = false,
 ): EditorFieldOptions {
   const regions = useQuery({
     queryKey: queryKeys.regions,
@@ -46,8 +51,14 @@ export function useEditorOptions(
     enabled: enabled && schema.some((field) => field.type === 'genretags'),
     staleTime: 300_000,
   });
+  const series = useQuery({
+    queryKey: [...queryKeys.seriesOptions, viewerMemberId, viewerIsAdmin],
+    queryFn: () => loadEditorSeriesOptions(viewerMemberId ?? '', viewerIsAdmin),
+    enabled: enabled && Boolean(viewerMemberId) && schema.some((field) => field.type === 'series'),
+  });
   return {
     regions: optionsView(regions, 'editor:regions'),
     genres: optionsView(genres, 'editor:genre-options'),
+    series: optionsView(series, 'editor:series-options'),
   };
 }

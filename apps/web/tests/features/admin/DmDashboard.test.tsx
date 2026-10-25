@@ -67,3 +67,43 @@ it('gives players a direct apply link from the denied dashboard', async () => {
   expect(screen.getByRole('link', { name: 'Browse DMs and apply' })).toHaveAttribute('href', '/dms');
   expect(screen.getByRole('button', { name: 'Check access again' })).toBeVisible();
 });
+
+it('links Edit DM profile to the profile editor and explains a pending review', async () => {
+  signIn(['dm']);
+  server.use(
+    graphql.query('DmDashboard', () => HttpResponse.json({ data: empty })),
+    seriesAuthority(me.id, 'pending'),
+  );
+  renderWithProviders(<DMDashboardPage />, { route: '/dm' });
+  expect(await screen.findByRole('link', { name: 'Edit DM profile' })).toHaveAttribute(
+    'href',
+    '/dms/@ashwin?edit=profile',
+  );
+  const notice = await screen.findByRole('status', { name: 'DM profile approval' });
+  expect(notice).toHaveTextContent('Your DM profile is pending review.');
+  expect(notice).toHaveTextContent('you can’t post quests or start a series');
+  expect(within(notice).getByRole('link', { name: 'Open your DM profile' })).toHaveAttribute(
+    'href',
+    '/dms/@ashwin?edit=profile',
+  );
+  // An unapproved DM is not offered a series.
+  const series = screen.getByRole('region', { name: 'Your series' });
+  expect(within(series).queryByRole('button', { name: 'Create a series' })).toBeNull();
+});
+
+it('offers Create a series beside an existing list to an approved DM, with no approval notice', async () => {
+  signIn(['dm']);
+  server.use(
+    graphql.query('DmDashboard', () =>
+      HttpResponse.json({ data: { ...empty, questArcs: { total: 1, items: [ownArc] } } }),
+    ),
+    seriesAuthority(me.id, 'approved'),
+  );
+  renderWithProviders(<DMDashboardPage />, { route: '/dm' });
+  const series = await screen.findByRole('region', { name: 'Your series' });
+  expect(within(series).getByRole('link', { name: ownArc.name })).toBeVisible();
+  expect(
+    await within(series).findByRole('button', { name: 'Create a series' }),
+  ).toBeVisible();
+  expect(screen.queryByRole('status', { name: 'DM profile approval' })).toBeNull();
+});

@@ -100,6 +100,8 @@ export async function loadSeriesAuthority(handle: string) {
       .parse(wire.memberProfile);
     return {
       memberId: profile.member.id,
+      /** DM profile review status: draft, pending, approved or rejected; null when there is none. */
+      dmStatus: profile.dmProfile?.status ?? null,
       canCreate:
         profile.member.status === 'active' &&
         profile.member.roles.includes('dm') &&

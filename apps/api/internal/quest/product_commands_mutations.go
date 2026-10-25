@@ -3,6 +3,7 @@ package quest
 import (
 	"context"
 	"errors"
+	"fmt"
 	"reflect"
 	"slices"
 	"strings"
@@ -91,6 +92,22 @@ func validateQuestSignupType(value *string) error {
 	return nil
 }
 
+// questKinds is the quest kind vocabulary; it matches the quests_kinds_vocab
+// check constraint and schema-v2's quest_kind list.
+var questKinds = []string{"standard", "event", "lieutenant", "hexcrawl", "one_shot", "mini_campaign"}
+
+func validateQuestKinds(kinds []string) error {
+	if len(kinds) == 0 {
+		return apierr.New(apierr.Invalid, "at least one quest kind is required")
+	}
+	for _, kind := range kinds {
+		if !slices.Contains(questKinds, kind) {
+			return apierr.New(apierr.Invalid, fmt.Sprintf("unknown quest kind %q; allowed kinds: %s", kind, strings.Join(questKinds, ", ")))
+		}
+	}
+	return nil
+}
+
 func recordQuestEvents(ctx context.Context, repos ProductCommandRepos, events []notification.Event) error {
 	for _, event := range events {
 		if commandDependencyMissing(repos.Producer) {
@@ -118,8 +135,11 @@ func (s ProductCommands) CreateQuest(ctx context.Context, actor auth.Authority, 
 	if input.SlotsMax <= 0 || input.DurationHours <= 0 || input.ScheduledAt.IsZero() {
 		return QuestView{}, apierr.New(apierr.Invalid, "invalid quest schedule")
 	}
-	if len(input.Kinds) == 0 {
+	if input.Kinds == nil {
 		input.Kinds = []string{"standard"}
+	}
+	if err := validateQuestKinds(input.Kinds); err != nil {
+		return QuestView{}, err
 	}
 	if input.Tags == nil {
 		input.Tags = []string{}
@@ -146,6 +166,46 @@ func (s ProductCommands) CreateQuest(ctx context.Context, actor auth.Authority, 
 	})
 }
 
+// questArcForbiddenMessage explains a refusal to place a quest in a series the actor may not use.
+const questArcForbiddenMessage = "you can add a quest only to a series you started; an admin may use any series"
+
+// admitQuestArc checks that the actor may place a quest in the series arcID. It uses
+// the series rename rule: the series creator, or an actor with current admin (or
+// platform owner) authority. An empty or absent arcID needs no check. An unknown
+// series stays NotFound.
+func admitQuestArc(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, arcID *string) error {
+	if arcID == nil || strings.TrimSpace(*arcID) == "" {
+		return nil
+	}
+	id := strings.TrimSpace(*arcID)
+	if err := commandPublicID(&id); err != nil {
+		return err
+	}
+	if commandDependencyMissing(repos.Arc) || repos.Policy == nil {
+		return apierr.New(apierr.Internal, "quest arc dependencies required")
+	}
+	locked, err := repos.Arc.LockUpsertQuestArc(ctx, UpsertQuestArcSpec{Id: &id})
+	if err != nil {
+		return err
+	}
+	if !locked.Exists || locked.Before == nil {
+		return apierr.New(apierr.NotFound, "quest arc not found")
+	}
+	author := locked.Before.CreatedBy
+	request, err := auth.ForArc(auth.ArcFacts{ID: &id, AuthorID: &author})
+	if err != nil {
+		return err
+	}
+	decision, err := repos.Policy.Decide(ctx, fresh, request)
+	if err != nil {
+		return err
+	}
+	if !decision.Allowed {
+		return apierr.New(apierr.Forbidden, questArcForbiddenMessage)
+	}
+	return nil
+}
+
 func createQuest(ctx context.Context, s ProductCommands, repos ProductCommandRepos, fresh auth.Authority, at time.Time, spec CreateQuestSpec, input CreateQuestFields, title, dmID string) (QuestView, error) {
 	if commandDependencyMissing(repos.Brief) {
 		return QuestView{}, apierr.New(apierr.Internal, "quest brief writer required")
@@ -156,6 +216,9 @@ func createQuest(ctx context.Context, s ProductCommands, repos ProductCommandRep
 	}
 	if target.Claims().MemberID != dmID || !target.LiveDM() {
 		return QuestView{}, apierr.New(apierr.Forbidden, "quest DM must be active and approved")
+	}
+	if err := admitQuestArc(ctx, repos, fresh, input.ArcId); err != nil {
+		return QuestView{}, err
 	}
 	questID := s.IDs()
 	if err := commandPublicID(&questID); err != nil {
@@ -207,6 +270,11 @@ func (s ProductCommands) UpdateQuest(ctx context.Context, actor auth.Authority, 
 			return QuestView{}, err
 		}
 	}
+	if spec.Input.Kinds.Set && spec.Input.Kinds.Value != nil {
+		if err := validateQuestKinds(*spec.Input.Kinds.Value); err != nil {
+			return QuestView{}, err
+		}
+	}
 	request, preview, err := s.questDMRequest(ctx, actor, "Mutation.updateQuest", questID)
 	if err != nil {
 		return QuestView{}, err
@@ -226,6 +294,11 @@ func updateQuest(ctx context.Context, repos ProductCommandRepos, fresh auth.Auth
 	}
 	if err := admitLockedQuest(ctx, repos, fresh, request.Operation(), questID, preview.DmId, locked.OwnerID); err != nil {
 		return QuestView{}, err
+	}
+	if spec.Input.ArcId.Set {
+		if err := admitQuestArc(ctx, repos, fresh, spec.Input.ArcId.Value); err != nil {
+			return QuestView{}, err
+		}
 	}
 	briefEvents, err := editQuestBrief(ctx, repos, fresh, at, spec.Input, locked)
 	if err != nil {

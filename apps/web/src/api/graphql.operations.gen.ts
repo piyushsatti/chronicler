@@ -987,6 +987,13 @@ export type EditorRevisionsQueryVariables = Exact<{
 
 export type EditorRevisionsQuery = { documentRevisions: { total: number, items: Array<{ id: string, rev: number, title: string, body: string, reason: string, recordedAt: string }> } };
 
+export type EditorSeriesOptionsQueryVariables = Exact<{
+  offset?: number;
+}>;
+
+
+export type EditorSeriesOptionsQuery = { questArcs: { total: number, items: Array<{ id: string, name: string, createdBy: string }> } };
+
 export type EditorSummaryCharactersQueryVariables = Exact<{
   offset: number;
 }>;

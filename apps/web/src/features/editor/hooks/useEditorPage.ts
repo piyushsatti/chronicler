@@ -124,6 +124,12 @@ export function useEditorPage(
       id: params.id,
       slug: params.slug,
       category: params.category,
+      ...(typeKey === 'quest' && mode === 'new'
+        ? {
+            timeZone: editorTimeZone(timeZone),
+            seriesId: search.get('series') ?? undefined,
+          }
+        : {}),
       ...(typeKey === 'summary' && mode === 'new'
         ? {
             questId: search.get('questId') ?? undefined,
@@ -142,6 +148,8 @@ export function useEditorPage(
     category: params.category,
     enabled: enabled && query.isSuccess,
     actorId: auth.memberId,
+    viewerMemberId: me?.id ?? null,
+    viewerIsAdmin: isAdmin(me?.roles),
     schemaAccess: canAuthorLocations ? LOCATIONS_ACCESS : NO_ACCESS,
     sessionIsCurrent: () => typeKey === 'demo' || auth.isCurrentSession(auth.token),
     onReload: async () => {

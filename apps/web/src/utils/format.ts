@@ -161,11 +161,14 @@ export function nextCivilDay(value: string): string {
   return date.toISOString().slice(0, 10);
 }
 
-/** "1 result", "2 results". Pass `plural` for irregular nouns. */
+/** Nouns whose plural is the singular ("2 series"). */
+const INVARIANT_PLURALS = new Set(['series']);
+
+/** "1 result", "2 results", "2 series". Pass `plural` for other irregular nouns. */
 export function pluralize(
   count: number,
   singular: string,
-  plural = `${singular}s`,
+  plural = INVARIANT_PLURALS.has(singular.toLowerCase()) ? singular : `${singular}s`,
 ): string {
   return `${count.toLocaleString('en-GB')} ${count === 1 ? singular : plural}`;
 }

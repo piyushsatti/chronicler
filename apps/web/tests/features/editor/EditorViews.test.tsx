@@ -23,6 +23,7 @@ const error = {
 const emptyOptions = {
   regions: { status: 'empty' as const },
   genres: { status: 'empty' as const },
+  series: { status: 'empty' as const },
 };
 function props(): EditorShellProps {
   return {
@@ -317,6 +318,7 @@ describe('editor props-only views', () => {
       setMeta: vi.fn(),
       setBody: vi.fn(),
       isDirty: true,
+      onDiscardDraft: undefined,
       onSaveDraft: vi.fn(),
       onPublish: vi.fn(),
       onPreview: vi.fn(),

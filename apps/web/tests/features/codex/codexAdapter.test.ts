@@ -44,7 +44,9 @@ describe('parseCodexDirectory', () => {
     );
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.data.items[0]?.excerpt).toHaveLength(160);
+      // Cut at a word boundary within 160 characters, marked with an ellipsis.
+      expect(result.data.items[0]?.excerpt?.length).toBeLessThanOrEqual(161);
+      expect(result.data.items[0]?.excerpt).toMatch(/^First word .*word…$/);
       expect(result.data.items[0]?.excerpt).not.toContain('\n');
     }
   });

@@ -9,8 +9,9 @@ import type {
   UpdateQuestMutation,
 } from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
-import { toAppError } from '../../../errors/toAppError.js';
-import type { AdapterResult } from '../../../errors/types.js';
+import { QUEST_DM_APPROVAL_ERROR } from '../editorConstants.js';
+import { safeAppError, toAppError } from '../../../errors/toAppError.js';
+import { TransportError, type AdapterResult, type AppError } from '../../../errors/types.js';
 import { documentHref } from '../../../utils/documentHref.js';
 import CREATE_QUEST from './createQuest.graphql?raw';
 import UPDATE_QUEST from './updateQuest.graphql?raw';
@@ -57,7 +58,40 @@ export type QuestEditorInput = {
   apl: number | null;
   signupType: string | null;
   additionalInfo: string | null;
+  /** Series (quest arc) to put a new quest in; create only. */
+  arcId?: string | null;
 };
+
+
+/**
+ * The reason the API gave for refusing a quest command, as user copy. Expected
+ * refusals (an unapproved DM, a rejected field) say what to fix; anything else
+ * keeps the generic message.
+ */
+export function questCommandError(err: unknown, context: string): AppError {
+  if (err instanceof TransportError) {
+    const message = err.serverMessage?.trim() ?? '';
+    if (err.code === 'FORBIDDEN' && /DM must be active and approved/i.test(message))
+      return safeAppError(
+        'Your DM profile must be approved before you can post quests. Open your DM profile to submit it or check its review status.',
+        QUEST_DM_APPROVAL_ERROR,
+        err,
+      );
+    if (err.code === 'FORBIDDEN' && /only to a series you started/i.test(message))
+      return safeAppError(
+        'The quest was not saved: you can add a quest only to a series you started. Choose one of your series or No series.',
+        context,
+        err,
+      );
+    if (err.code === 'INVALID' && message)
+      return safeAppError(
+        `The quest was not saved: ${message.charAt(0).toUpperCase()}${message.slice(1)}.`,
+        context,
+        err,
+      );
+  }
+  return toAppError(err, context);
+}
 
 export type DocumentEditorInput = {
   title: string;
@@ -117,6 +151,7 @@ export async function createQuest(
         apl: input.apl,
         signupType: input.signupType,
         additionalInfo: input.additionalInfo,
+        ...(input.arcId ? { arcId: input.arcId } : {}),
       },
       meta: commandMeta(idempotencyKey),
     });
@@ -127,7 +162,7 @@ export async function createQuest(
     const code = result.data.shortCode ?? result.data.id;
     return { id: result.data.id, redirectPath: `/quests/${code}` };
   } catch (err) {
-    throw toAppError(err, 'editor:quest:create');
+    throw questCommandError(err, 'editor:quest:create');
   }
 }
 
@@ -165,7 +200,7 @@ export async function updateQuest(
     const code = result.data.shortCode ?? result.data.id;
     return { id: result.data.id, redirectPath: `/quests/${code}` };
   } catch (err) {
-    throw toAppError(err, 'editor:quest:update');
+    throw questCommandError(err, 'editor:quest:update');
   }
 }
 

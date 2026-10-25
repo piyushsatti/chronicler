@@ -20,10 +20,13 @@ export const queryKeys = {
       category?: string;
       questId?: string;
       characterId?: string;
+      timeZone?: string;
+      seriesId?: string;
     },
   ) => ['editor', 'record', input] as const,
   regions: ['editor', 'regions'] as const,
   genres: ['editor', 'questGenreOptions'] as const,
+  seriesOptions: ['editor', 'seriesOptions'] as const,
   entityLinkIndex: ['editor', 'entityLinkIndex'] as const,
 } as const;
 
@@ -135,6 +138,8 @@ export const graphql: FeatureGraphql = {
         },
       },
     }),
+  EditorSeriesOptions: () =>
+    HttpResponse.json({ data: { questArcs: { items: [], total: 0 } } }),
   QuestGenreOptions: () =>
     HttpResponse.json({
       data: {
