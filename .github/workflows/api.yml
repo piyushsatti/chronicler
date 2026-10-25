@@ -29,7 +29,7 @@ jobs:
       run:
         working-directory: apps/api
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       # The container runs as root but the runner owns the workspace, so later
       # git commands refuse it as dubious ownership without this.
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
