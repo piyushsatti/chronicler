@@ -12,7 +12,8 @@ export default defineConfig({
   webServer: [
     {
       name: 'production preview',
-      command: 'bun run build && bun run preview -- --host 127.0.0.1 --port 4173',
+      // CI's earlier typecheck step already ran tsc, so skip it in the build.
+      command: `${process.env.CI ? 'bun run vite build' : 'bun run build'} && bun run preview -- --host 127.0.0.1 --port 4173`,
       url: 'http://127.0.0.1:4173',
       reuseExistingServer: !process.env.CI,
       timeout: 120_000,

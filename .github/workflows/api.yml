@@ -2,6 +2,9 @@ name: api
 
 on:
   push:
+    # Only main: PR branches are covered by pull_request, and staging tags point
+    # at commits that already passed.
+    branches: [main]
     paths:
       - 'apps/api/**'
       - 'apps/web/src/**/*.graphql'
@@ -12,18 +15,33 @@ on:
 
 jobs:
   go:
-    runs-on: ubuntu-latest
+    # Self-hosted Triton runners (no GitHub minutes). Dependabot PRs stay on
+    # GitHub-hosted runners.
+    runs-on: ${{ github.event.pull_request.user.login == 'dependabot[bot]' && 'ubuntu-latest' || 'triton' }}
+    # Fresh container per job. Integration tests own Postgres via
+    # testcontainers, so the job talks to the host Docker through its socket.
+    # No pre-started DATABASE_URL service.
+    container:
+      image: buildpack-deps:noble
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock
     defaults:
       run:
         working-directory: apps/api
-    # Integration tests own Postgres via testcontainers (Docker on the runner).
-    # No pre-started DATABASE_URL service.
     steps:
       - uses: actions/checkout@v4
+      # The container runs as root but the runner owns the workspace, so later
+      # git commands refuse it as dubious ownership without this.
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: actions/setup-go@v7
         with:
           go-version: '1.26.x'
           cache-dependency-path: apps/api/go.sum
+      # The container image has no Node. Without it Bun's node fallback runs
+      # vitest and the discord sensor tests fail.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - uses: oven-sh/setup-bun@v2
         with:
           bun-version: latest
