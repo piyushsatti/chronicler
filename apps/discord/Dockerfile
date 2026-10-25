@@ -4,6 +4,8 @@ WORKDIR /app
 COPY package.json bun.lock ./
 COPY packages/contracts/package.json ./packages/contracts/
 COPY apps/discord/package.json ./apps/discord/
+# Every workspace in the root package.json must exist for a frozen install.
+COPY apps/web/package.json ./apps/web/
 COPY packages/contracts/ ./packages/contracts/
 COPY apps/discord/ ./apps/discord/
 
