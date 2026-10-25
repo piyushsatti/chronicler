@@ -29,3 +29,6 @@ apps/web/.design-sync/.cache/
 apps/web/.design-sync/learnings/
 apps/web/.design-sync/node_modules
 apps/web/.design-sync/*.log
+
+# Database backups (scripts/backup-db)
+backups/

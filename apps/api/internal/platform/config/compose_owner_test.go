@@ -26,9 +26,9 @@ func TestDeployComposePassesPlatformOwner(t *testing.T) {
 	if err := yaml.Unmarshal(raw, &doc); err != nil {
 		t.Fatalf("parse %s: %v", name, err)
 	}
-	api, ok := doc.Services["api"]
+	api, ok := doc.Services["chronicler-api"]
 	if !ok {
-		t.Fatalf("%s has no api service", name)
+		t.Fatalf("%s has no chronicler-api service", name)
 	}
 	for key, want := range map[string]string{
 		"PLATFORM_OWNER_MEMBER_ID":  "${PLATFORM_OWNER_MEMBER_ID:-}",
@@ -36,10 +36,10 @@ func TestDeployComposePassesPlatformOwner(t *testing.T) {
 	} {
 		got, ok := api.Environment[key]
 		if !ok {
-			t.Fatalf("%s api service does not forward %s", name, key)
+			t.Fatalf("%s chronicler-api service does not forward %s", name, key)
 		}
 		if got != want {
-			t.Fatalf("%s api %s = %q, want %q", name, key, got, want)
+			t.Fatalf("%s chronicler-api %s = %q, want %q", name, key, got, want)
 		}
 	}
 }

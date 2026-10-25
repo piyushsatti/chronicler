@@ -4,9 +4,9 @@
 
 ## Release authority
 
-GitHub Actions is the single production release authority. Feature branches squash-merge into up-to-date `staging`; a normal merge through a pull request moves `staging` to `main`. CI runs on pull requests. Direct pushes to `main` and pull requests from other branches to `main` are not part of the branch policy.
+GitHub Actions is the single production release authority. `main` is the trunk: every change reaches it through a squash-merged pull request that passes the required CI checks. Direct pushes to `main` are blocked with no bypass.
 
-Staging deployment is planned as a manual workflow dispatch on the owner's self-hosted runner. Production deployment is planned from a CalVer tag on `main` to one DigitalOcean droplet and Vercel. These workflows are not implemented. The current image publication workflow does not deploy or roll back.
+Staging deployment is planned from a `staging-YYYY.MM.DD.N` tag on the owner's self-hosted runner; there is no staging branch. Production deployment is planned from a CalVer tag on `main` to one DigitalOcean droplet and Vercel. These workflows are not implemented. The current image publication workflow does not deploy or roll back.
 
 ## Backups and recovery
 

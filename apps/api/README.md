@@ -4,16 +4,16 @@ Go GraphQL and REST backend for Chronicler (`github.com/piyushsatti/chronicler/a
 
 ## Layout
 
-| Path                                                                                   | Purpose                                                                            |
-| -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `cmd/api`                                                                              | HTTP process                                                                       |
-| `cmd/worker`                                                                           | Discord delivery and scheduled jobs — see [docs/worker-env.md](docs/worker-env.md) |
-| `internal/platform/`                                                                   | Shared engine (auth, errors, uow, http, graphql, jobs)                             |
-| `internal/{site,member,document,spatial,character,quest,login,ingest,agent,delivery}/` | Slices                                                                             |
-| `internal/graph/`                                                                      | gqlgen output                                                                      |
-| [`db/`](db/)                                                                           | Postgres: goose migrations, seed, [schema docs](db/docs/)                          |
-| `db/queries`                                                                           | sqlc queries                                                                       |
-| `docs/`                                                                                | Design notes and local decisions                                                   |
+| Path                                                                                   | Purpose                                                                                                                                 |
+| -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `cmd/api`                                                                              | HTTP process                                                                                                                            |
+| `cmd/worker`                                                                           | Standalone wrapper for the worker loop (`internal/workerrun`, also run inside `cmd/api`) — see [docs/worker-env.md](docs/worker-env.md) |
+| `internal/platform/`                                                                   | Shared engine (auth, errors, uow, http, graphql, jobs)                                                                                  |
+| `internal/{site,member,document,spatial,character,quest,login,ingest,agent,delivery}/` | Slices                                                                                                                                  |
+| `internal/graph/`                                                                      | gqlgen output                                                                                                                           |
+| [`db/`](db/)                                                                           | Postgres: goose migrations, seed, [schema docs](db/docs/)                                                                               |
+| `db/queries`                                                                           | sqlc queries                                                                                                                            |
+| `docs/`                                                                                | Design notes and local decisions                                                                                                        |
 
 ## Local
 

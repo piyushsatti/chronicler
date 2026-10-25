@@ -24,6 +24,9 @@ type Config struct {
 	RedirectURI  string
 	JWTSecret    string
 	TokenTTL     time.Duration
+	// AllowDevLogin enables the "dev:<discordId>" code path when ClientSecret is
+	// "dev". It must be false in production.
+	AllowDevLogin bool
 	// HTTPClient is a trusted Go-only transport seam for controlled tests and
 	// harnesses. Nil selects the bounded Discord client; no endpoint is configurable.
 	HTTPClient HTTPDoer
@@ -82,7 +85,7 @@ func (s *Service) callback(w http.ResponseWriter, r *http.Request) {
 		apierr.Write(w, r, apierr.New(apierr.Invalid, "code required"))
 		return
 	}
-	if s.cfg.ClientID == "" || s.cfg.ClientSecret == "" {
+	if s.cfg.ClientID == "" || s.cfg.ClientSecret == "" || (s.cfg.ClientSecret == "dev" && !s.cfg.AllowDevLogin) {
 		apierr.Write(w, r, apierr.New(apierr.Invalid, "oauth not configured"))
 		return
 	}
