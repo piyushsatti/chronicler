@@ -28266,9 +28266,7 @@
       "signature": "LockUpdateMap(ctx context.Context, spec spatial.UpdateMapSpec) (spatial.UpdateMapState, error)",
       "interface": "spatial.MapWriteRepository",
       "provider": "SPA04",
-      "callers": [
-        "SPA06"
-      ],
+      "callers": ["SPA06"],
       "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
       "spec_owner": "SPA01"
     },
@@ -28277,9 +28275,7 @@
       "signature": "StoreUpdateMap(ctx context.Context, write spatial.UpdateMapWrite) (spatial.MapView, error)",
       "interface": "spatial.MapWriteRepository",
       "provider": "SPA04",
-      "callers": [
-        "SPA06"
-      ],
+      "callers": ["SPA06"],
       "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
       "spec_owner": "SPA01"
     }
