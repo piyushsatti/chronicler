@@ -9,6 +9,7 @@ import {
   loadCommunityRegionNames,
   type CommunityHubView,
 } from '../adapters/communityAdapter.js';
+import { loadHallOfFame } from '../adapters/communityHallOfFameAdapter.js';
 
 type PageData<T> =
   | { status: 'loading' }
@@ -53,6 +54,28 @@ export function useCommunityCharacters() {
     hasMore,
     loadMore: () => {
       if (hasMore && !query.isFetching) setLimit((current) => current + 100);
+    },
+  };
+}
+
+/** The Hall of Fame page: one shared Document that everyone reads and admins edit. */
+export function useHallOfFame() {
+  const query = useQuery({
+    queryKey: ['communityHallOfFame'],
+    queryFn: loadHallOfFame,
+  });
+  return {
+    status: query.isError
+      ? ('error' as const)
+      : query.isPending
+        ? ('loading' as const)
+        : query.data
+          ? ('ready' as const)
+          : ('missing' as const),
+    page: query.data ?? null,
+    error: query.isError ? toAppError(query.error, 'community:hall-of-fame') : null,
+    retry: () => {
+      void query.refetch();
     },
   };
 }

@@ -867,6 +867,13 @@ export type CommunityEntryRelatedQueryVariables = Exact<{
 
 export type CommunityEntryRelatedQuery = { documents: { items: Array<{ id: string, slug: string, title: string, kind: string, category: string | null }> } };
 
+export type CommunityHallOfFameQueryVariables = Exact<{
+  slug: string;
+}>;
+
+
+export type CommunityHallOfFameQuery = { document: { id: string, slug: string, kind: string, category: string | null, title: string, effectiveBody: string | null, canEditBody: boolean, canEditMetadata: boolean } | null };
+
 export type CommunityRegionsQueryVariables = Exact<{
   limit: number;
   offset: number;

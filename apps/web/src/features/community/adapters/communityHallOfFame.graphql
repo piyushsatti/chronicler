@@ -1,0 +1,12 @@
+query CommunityHallOfFame($slug: String!) {
+  document(slug: $slug) {
+    id
+    slug
+    kind
+    category
+    title
+    effectiveBody
+    canEditBody
+    canEditMetadata
+  }
+}
