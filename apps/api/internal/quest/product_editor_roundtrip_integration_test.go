@@ -146,7 +146,7 @@ func TestFrontendQuestDelegatedCreateRequiresApprovedDM(t *testing.T) {
 func TestFrontendQuestSignupTypeRejectedBeforeAnyWrites(t *testing.T) {
 	f := newQuestCloseFixture(t)
 	ctx := context.Background()
-	for _, value := range []string{"dm_pick", "", "OPEN", "unknown"} {
+	for _, value := range []string{"open", "application", "invite", "", "OPEN", "unknown"} {
 		input := editorQuestInput()
 		input.Input.SignupType = &value
 		before := questStorageSnapshot(t, f)
