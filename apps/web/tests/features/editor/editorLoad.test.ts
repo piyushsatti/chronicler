@@ -32,8 +32,29 @@ describe('qualified Codex category initialization', () => {
   ])('loads %s as the supported %s authoring category', async (category, expected) => {
     const loaded = await loadEditorRecord({ typeKey: 'codex', mode: 'new', category });
     expect(loaded.meta.category).toBe(expected);
-    const meta = { ...loaded.meta, title: 'Qualified Codex draft' };
+    const meta = {
+      ...loaded.meta,
+      title: 'Qualified Codex draft',
+      ...(expected === 'Feature' ? { hex: 'LFR7008' } : {}),
+    };
     expect(schemaErrors(schemaForType('codex', meta), meta)).toEqual({});
+  });
+
+  it('requires a Feature to name its hex and fills it from the map link', async () => {
+    const blank = await loadEditorRecord({
+      typeKey: 'codex',
+      mode: 'new',
+      category: 'Feature',
+    });
+    const meta = { ...blank.meta, title: 'Old Mill' };
+    expect(schemaErrors(schemaForType('codex', meta), meta)).toHaveProperty('hex');
+    const linked = await loadEditorRecord({
+      typeKey: 'codex',
+      mode: 'new',
+      category: 'Feature',
+      hex: 'lfr7008',
+    });
+    expect(linked.meta.hex).toBe('LFR7008');
   });
 
   it.each(['Rules', 'Unknown', '', undefined])(

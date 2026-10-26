@@ -2,6 +2,7 @@ import type { EditorMeta, EditorMode, FieldSchema } from './types.js';
 import { GATED_CODEX_CATEGORY } from '../../utils/codexCategories.js';
 import { CODEX_AUTHORING_CATEGORIES, QUEST_KINDS } from './editorConstants.js';
 import { isEditorInstant } from './editorDateTime.js';
+import { FEATURE_CATEGORY, isHexCode, normalizeHexCode } from '../../utils/hexCode.js';
 import { QUEST_SIGNUP_TYPES } from '../../utils/questVocabulary.js';
 
 const QUEST_SCHEMA: FieldSchema[] = [
@@ -141,6 +142,19 @@ const CODEX_SCHEMA: FieldSchema[] = [
   },
 ];
 
+/** A Feature entry sits on one map hex, so its hex number is required. */
+const FEATURE_HEX_FIELD: FieldSchema = {
+  key: 'hex',
+  label: 'Hex number',
+  type: 'text',
+  required: true,
+  mono: true,
+  placeholder: 'e.g. LFR7008',
+  hint: 'The map hex this Feature sits on. A hex holds up to 4 Features.',
+  normalize: normalizeHexCode,
+  validate: (v) => (isHexCode(v) ? null : 'Enter a hex number like LFR7008'),
+};
+
 /** Guides, rulings, summaries and DM tables share the title and read-only slug fields. */
 const TITLED_DOCUMENT_SCHEMA: FieldSchema[] = [
   {
@@ -193,8 +207,8 @@ export function schemaForType(
       // The create form always offers a series; a saved quest changes series on its page.
       // Chosen by mode, not by `arcId`: drafts saved by older builds have no `arcId`.
       return mode === 'new' ? NEW_QUEST_SCHEMA : QUEST_SCHEMA;
-    case 'codex':
-      return CODEX_SCHEMA.map((field) => {
+    case 'codex': {
+      const fields = CODEX_SCHEMA.map((field): FieldSchema => {
         if (field.key !== 'category') return field;
         // Saved entries keep their category. A Locations draft opened from its scoped
         // route stays Locations for viewers who are not offered it in the select.
@@ -219,6 +233,8 @@ export function schemaForType(
               ),
             };
       });
+      return meta.category === FEATURE_CATEGORY ? [...fields, FEATURE_HEX_FIELD] : fields;
+    }
     case 'guide':
     case 'ruling':
     case 'summary':

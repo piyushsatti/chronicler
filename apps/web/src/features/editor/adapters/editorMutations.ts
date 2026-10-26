@@ -99,6 +99,8 @@ export type DocumentEditorInput = {
   kind: string;
   category?: string | null;
   visibility?: string;
+  /** Whole frontmatter object; an update replaces the stored one, so callers merge first. */
+  frontmatter?: Record<string, unknown>;
 };
 
 export function parseQuestMutationResult(
@@ -216,7 +218,7 @@ export async function createDocument(
         category: input.category ?? null,
         title: input.title,
         body: input.body,
-        frontmatter: {},
+        frontmatter: input.frontmatter ?? {},
         visibility: input.visibility ?? 'public',
       },
       meta: commandMeta(idempotencyKey),
@@ -255,6 +257,7 @@ export async function updateDocument(
         title: input.title,
         body: input.body,
         ...(input.category !== undefined ? { category: input.category } : {}),
+        ...(input.frontmatter !== undefined ? { frontmatter: input.frontmatter } : {}),
       },
       meta: commandMeta(idempotencyKey),
     });
@@ -357,6 +360,7 @@ export async function editPublishedDocument(
     body?: string;
     kind?: string;
     category?: string | null;
+    frontmatter?: Record<string, unknown>;
     expectedRevision: number;
   },
   idempotencyKey?: string,
@@ -369,6 +373,7 @@ export async function editPublishedDocument(
         title: input.title,
         body: input.body,
         ...(input.category !== undefined ? { category: input.category } : {}),
+        ...(input.frontmatter !== undefined ? { frontmatter: input.frontmatter } : {}),
       },
       meta: commandMeta(idempotencyKey),
     });

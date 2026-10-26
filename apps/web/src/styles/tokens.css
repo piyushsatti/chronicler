@@ -970,7 +970,7 @@
   --rad-sm:   9px;
   --rad-xs:   4px;   /* NEW (#452, fork 2): absorbs off-scale 2/3/4/6 */
   --rad-pill: 999px;
-  --rad-btn:  8px;   /* D9: buttons are rounded rectangles; chips/pills keep --rad-pill */
+  --rad-btn:  10px;   /* D9: buttons are rounded rectangles; chips/pills keep --rad-pill */
 
   /* Layout (round 3, L1). One page frame for every route: PageShell's
    * `.page` reads these and nothing else sets a page width. There is no

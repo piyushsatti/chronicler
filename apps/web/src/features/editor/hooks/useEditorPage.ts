@@ -136,6 +136,9 @@ export function useEditorPage(
             characterId: search.get('characterId') ?? undefined,
           }
         : {}),
+      ...(typeKey === 'codex' && mode === 'new'
+        ? { hex: search.get('hex') ?? undefined }
+        : {}),
     },
     enabled,
   );

@@ -77,12 +77,9 @@
 .linkedEmpty {
   padding: var(--sp-3);
 }
-.entryPreview {
-  margin-block: var(--sp-3);
-}
-.entryPreview summary {
+.entrySummary {
+  margin-block: var(--sp-2) var(--sp-3);
   color: var(--color-text-2);
-  cursor: pointer;
 }
 .disclosure {
   padding: 15px 20px;

@@ -54,7 +54,7 @@ describe('Codex editor categories', () => {
 
   it('creates a Feature entry with that category', async () => {
     const initial: EditorLoadResult = {
-      meta: { title: 'Old Mill', category: 'Feature' },
+      meta: { title: 'Old Mill', category: 'Feature', hex: 'LFR7008' },
       body: '',
       canEditBody: true,
       canEditMetadata: true,
@@ -105,6 +105,7 @@ describe('Codex editor categories', () => {
         kind: 'codex_entry',
         category: 'Feature',
         title: 'Old Mill',
+        frontmatter: { hex: 'LFR7008' },
       }),
     ]);
   });

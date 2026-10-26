@@ -14,6 +14,7 @@ import DOCUMENT_BY_SLUG from './editorDocumentBySlug.graphql?raw';
 import { loadSummaryQuest } from './editorSummary.js';
 import { findCodexCategory } from '../../../utils/codexCategories.js';
 import { defaultSessionStart } from '../editorDateTime.js';
+import { isHexCode, normalizeHexCode } from '../../../utils/hexCode.js';
 
 const summaryContextSchema = z.object({
   questId: z.string().uuid(),
@@ -187,6 +188,7 @@ export function parseDocumentLoad(wire: unknown): AdapterResult<EditorLoadResult
         category: d.category ?? null,
         kind: d.kind,
         slug: d.slug,
+        ...(typeof d.frontmatter.hex === 'string' ? { hex: d.frontmatter.hex } : {}),
         ...(d.kind === 'summary' && d.summaryDerived?.authoring
           ? {
               questIds: d.summaryDerived.authoring.questIds,
@@ -219,7 +221,7 @@ export function parseDocumentLoad(wire: unknown): AdapterResult<EditorLoadResult
 function emptyDraft(
   typeKey: EditorTypeKey,
   category?: string | null,
-  context: { timeZone?: string; seriesId?: string } = {},
+  context: { timeZone?: string; seriesId?: string; hex?: string } = {},
 ): EditorLoadResult {
   const initialCategory =
     typeKey === 'codex' ? (findCodexCategory(category) ?? category) : category;
@@ -247,6 +249,7 @@ function emptyDraft(
       ...(typeKey === 'summary' ? { questIds: [], characterId: null } : {}),
       kinds: ['standard'],
       ...(typeKey === 'quest' ? { arcId: context.seriesId ?? '' } : {}),
+      ...(typeKey === 'codex' && context.hex ? { hex: context.hex } : {}),
       regions: [],
       genres: [],
       tags: [],
@@ -291,12 +294,16 @@ export async function loadEditorRecord(input: {
   timeZone?: string;
   /** New quests: a series to pre-select (`/quests/new?series=<id>`). */
   seriesId?: string;
+  /** New Codex Features: the map hex to pre-fill (`/codex/Feature/new?hex=LFR7008`). */
+  hex?: string;
 }): Promise<EditorLoadResult> {
   if (input.mode === 'new' || input.typeKey === 'demo') {
     const draft = emptyDraft(input.typeKey, input.category ?? null, {
       timeZone: input.timeZone,
       // Only a well-formed series id is pre-selected; anything else starts with no series.
       seriesId: z.string().uuid().safeParse(input.seriesId).data,
+      // Only a well-formed hex number is pre-filled.
+      hex: isHexCode(input.hex) ? normalizeHexCode(input.hex) : undefined,
     });
     if (input.typeKey === 'summary' && input.questId !== undefined) {
       const context = summaryContextSchema.safeParse(input);

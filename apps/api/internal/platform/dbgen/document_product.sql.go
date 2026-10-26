@@ -35,6 +35,26 @@ func (q *Queries) AssignProductLieutenant(ctx context.Context, arg AssignProduct
 	return err
 }
 
+const countOtherFeaturesOnHex = `-- name: CountOtherFeaturesOnHex :one
+SELECT count(*) FROM pointcrawl_entry_links pel
+JOIN documents d ON d.id=pel.document_id
+WHERE pel.node_id=$1 AND pel.relation='subject'
+  AND d.kind='codex_entry' AND d.category='Feature' AND d.deleted_at IS NULL
+  AND d.public_id<>$2::uuid
+`
+
+type CountOtherFeaturesOnHexParams struct {
+	NodeID     int64       `json:"node_id"`
+	DocumentID pgtype.UUID `json:"document_id"`
+}
+
+func (q *Queries) CountOtherFeaturesOnHex(ctx context.Context, arg CountOtherFeaturesOnHexParams) (int64, error) {
+	row := q.db.QueryRow(ctx, countOtherFeaturesOnHex, arg.NodeID, arg.DocumentID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countProductCodexDirectory = `-- name: CountProductCodexDirectory :one
 SELECT count(*)::bigint AS total FROM documents d LEFT JOIN members author ON author.id=d.author_id
 WHERE d.kind='codex_entry' AND d.deleted_at IS NULL
@@ -221,6 +241,24 @@ func (q *Queries) CountProductLieutenantAssignments(ctx context.Context, arg Cou
 	var total int64
 	err := row.Scan(&total)
 	return total, err
+}
+
+const deleteFeatureLinksOffHex = `-- name: DeleteFeatureLinksOffHex :exec
+DELETE FROM pointcrawl_entry_links pel
+USING documents d
+WHERE d.id=pel.document_id AND d.public_id=$1::uuid
+  AND pel.relation='subject' AND pel.map_id=$2 AND pel.node_id<>$3
+`
+
+type DeleteFeatureLinksOffHexParams struct {
+	DocumentID pgtype.UUID `json:"document_id"`
+	MapID      int64       `json:"map_id"`
+	NodeID     int64       `json:"node_id"`
+}
+
+func (q *Queries) DeleteFeatureLinksOffHex(ctx context.Context, arg DeleteFeatureLinksOffHexParams) error {
+	_, err := q.db.Exec(ctx, deleteFeatureLinksOffHex, arg.DocumentID, arg.MapID, arg.NodeID)
+	return err
 }
 
 const findProductDocumentSlug = `-- name: FindProductDocumentSlug :one
@@ -616,6 +654,33 @@ func (q *Queries) GetProductDocumentRevisionParent(ctx context.Context, arg GetP
 		&i.LinkedQuestIds,
 	)
 	return i, err
+}
+
+const insertFeatureHexLink = `-- name: InsertFeatureHexLink :exec
+INSERT INTO pointcrawl_entry_links(map_id,node_id,document_id,relation,created_at,created_by)
+SELECT $1,$2,d.id,'subject',$3,actor.id
+FROM documents d JOIN members actor ON actor.public_id=$4::uuid
+WHERE d.public_id=$5::uuid
+ON CONFLICT DO NOTHING
+`
+
+type InsertFeatureHexLinkParams struct {
+	MapID      int64              `json:"map_id"`
+	NodeID     int64              `json:"node_id"`
+	RecordedAt pgtype.Timestamptz `json:"recorded_at"`
+	ActorID    pgtype.UUID        `json:"actor_id"`
+	DocumentID pgtype.UUID        `json:"document_id"`
+}
+
+func (q *Queries) InsertFeatureHexLink(ctx context.Context, arg InsertFeatureHexLinkParams) error {
+	_, err := q.db.Exec(ctx, insertFeatureHexLink,
+		arg.MapID,
+		arg.NodeID,
+		arg.RecordedAt,
+		arg.ActorID,
+		arg.DocumentID,
+	)
+	return err
 }
 
 const insertProductDocument = `-- name: InsertProductDocument :one
@@ -1548,6 +1613,38 @@ func (q *Queries) LoadProductDocumentWriteFacts(ctx context.Context, arg LoadPro
 			&i.QuestDmID,
 			&i.QuestID,
 		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const lockFeatureHexNodes = `-- name: LockFeatureHexNodes :many
+SELECT n.id, n.map_id FROM pointcrawl_nodes n
+WHERE n.name=$1::text
+ORDER BY n.id
+FOR UPDATE
+`
+
+type LockFeatureHexNodesRow struct {
+	ID    int64 `json:"id"`
+	MapID int64 `json:"map_id"`
+}
+
+func (q *Queries) LockFeatureHexNodes(ctx context.Context, hex string) ([]LockFeatureHexNodesRow, error) {
+	rows, err := q.db.Query(ctx, lockFeatureHexNodes, hex)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []LockFeatureHexNodesRow{}
+	for rows.Next() {
+		var i LockFeatureHexNodesRow
+		if err := rows.Scan(&i.ID, &i.MapID); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

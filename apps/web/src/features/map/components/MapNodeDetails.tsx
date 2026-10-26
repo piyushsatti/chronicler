@@ -10,12 +10,22 @@ import {
 } from '../hooks/useMapNodeDetails.js';
 import { Chip } from '../../../components/primitives/Chip.js';
 import { humanizeKey } from '../../../utils/format.js';
+import { cardExcerpt } from '../../../utils/markdownText.js';
+import {
+  FEATURE_CATEGORY,
+  MAX_FEATURES_PER_HEX,
+  isHexCode,
+  normalizeHexCode,
+} from '../../../utils/hexCode.js';
+import { isDm } from '../../../auth/roles.js';
+import { useMe } from '../../../hooks/useMe.js';
 import { MapPanelBody } from './MapPanelBody.js';
 import styles from '../pages/map.module.css';
 export function MapNodeDetails(props: MapNodeDetailsProps) {
   const { map, node, maps, onEdit, onReload, region, onClose, onShowOnMap } = props;
   const { pending, error, documentIds, documents, submap, unlink } =
     useMapNodeDetails(props);
+  const me = useMe();
   const closeButton = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -37,6 +47,27 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
       ? documents[Math.floor(locationIndex / 5)]?.data?.[locationIndex % 5]
           ?.effectiveBody
       : null;
+  const entryAt = (documentId: string) => {
+    const index = documentIds.indexOf(documentId);
+    return documents[Math.floor(index / 5)]?.data?.[index % 5];
+  };
+  // Server enforces the cap; this hides the button once a hex is full.
+  const featureCount = node.linkedEntries.filter(
+    (link) =>
+      link.relation === 'subject' &&
+      entryAt(link.documentId)?.category === FEATURE_CATEGORY,
+  ).length;
+  const newFeature =
+    isDm(me.data?.roles) &&
+    isHexCode(node.name) &&
+    featureCount < MAX_FEATURES_PER_HEX ? (
+      <Link
+        className="btn btn--secondary btn--sm"
+        to={`/codex/${FEATURE_CATEGORY}/new?hex=${encodeURIComponent(normalizeHexCode(node.name))}`}
+      >
+        New entry
+      </Link>
+    ) : null;
   const linkAction = map.canEdit ? (
     <Button variant="secondary" onClick={() => onEdit({ kind: 'link', map, node })}>
       Link a Codex entry
@@ -142,11 +173,10 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
                         {humanizeKey(link.relation)}
                       </span>
                     </div>
-                    {document.effectiveBody && link.relation !== 'location' ? (
-                      <details className={styles.entryPreview}>
-                        <summary>Read entry preview</summary>
-                        <ContentRenderer body={document.effectiveBody} />
-                      </details>
+                    {link.relation !== 'location' ? (
+                      <p className={styles.entrySummary}>
+                        {cardExcerpt(document.effectiveBody, 180)}
+                      </p>
                     ) : null}
                     {map.canEdit ? (
                       <Button
@@ -192,6 +222,7 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
           </Button>
         ) : null}
         {node.linkedEntries.length ? linkAction : null}
+        {newFeature}
       </MapPanelBody>
       <div className={styles.detailFooter}>
         <span>

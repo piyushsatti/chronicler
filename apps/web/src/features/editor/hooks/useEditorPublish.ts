@@ -17,6 +17,7 @@ import {
 } from '../adapters/editorSummary.js';
 import type { EditorLoadResult } from '../adapters/editorLoad.js';
 import { schemaForType } from '../editorSchemas.js';
+import { FEATURE_CATEGORY, normalizeHexCode } from '../../../utils/hexCode.js';
 import {
   parseQuestMetadata,
   parseSummaryRelations,
@@ -87,6 +88,7 @@ export function useEditorPublish({
     input: string;
     body: string | null;
     category: string | null;
+    hex: string | null;
     summaryRelations: SummaryRelations | null;
     result: EditorPublishResult;
   } | null>(null);
@@ -212,6 +214,11 @@ export function useEditorPublish({
                   : typeKey === 'dm-table'
                     ? 'dm_table'
                     : null));
+        // A Feature carries its map hex in frontmatter; other entries keep theirs untouched.
+        const hex =
+          typeKey === 'codex' && docCategory === FEATURE_CATEGORY
+            ? normalizeHexCode(meta.hex)
+            : null;
         const sourceSummary = typeKey === 'summary' ? initial.summary?.authoring : null;
         let summaryRelations: SummaryRelations | null = null;
         if (
@@ -233,6 +240,7 @@ export function useEditorPublish({
           kind,
           docCategory,
           summaryRelations,
+          hex,
         ]);
         const previous =
           persisted.current?.scopeKey === scopeKey &&
@@ -248,6 +256,9 @@ export function useEditorPublish({
           : typeof initial.meta.category === 'string'
             ? initial.meta.category
             : null;
+        const previousHex = previous
+          ? previous.hex
+          : normalizeHexCode(initial.frontmatter.hex) || null;
         const acknowledgedBodyChanged =
           body !== acknowledgedBody && !(acknowledgedBody === null && body === '');
         const acknowledgedRelations =
@@ -307,6 +318,9 @@ export function useEditorPublish({
             title,
             kind,
             ...(docCategory !== acknowledgedCategory ? { category: docCategory } : {}),
+            ...(hex !== null && hex !== previousHex
+              ? { frontmatter: { ...initial.frontmatter, hex } }
+              : {}),
             expectedRevision: version,
             ...(acknowledgedBodyChanged && initial.canEditBody ? { body } : {}),
           };
@@ -327,6 +341,7 @@ export function useEditorPublish({
             kind,
             category: docCategory,
             visibility: 'public',
+            ...(hex !== null ? { frontmatter: { hex } } : {}),
           };
           saved = await createDocument(input, replayKey('document-create', input));
         }
@@ -336,6 +351,7 @@ export function useEditorPublish({
           input: inputSignature,
           body: initial.canEditBody ? body : null,
           category: docCategory,
+          hex,
           summaryRelations,
           result: saved,
         };
@@ -365,6 +381,7 @@ export function useEditorPublish({
             input: inputSignature,
             body: initial.canEditBody ? body : null,
             category: docCategory,
+            hex,
             summaryRelations,
             result: saved,
           };

@@ -117,6 +117,10 @@ func (p *ProductPostgres) insertAllocatedDocument(ctx context.Context, write Cre
 	if err != nil {
 		return insertedDocumentIdentity{}, err
 	}
+	hex, err := featureHexFromFields(input.Kind, input.Category, frontmatterFromJSON(input.Frontmatter))
+	if err != nil {
+		return insertedDocumentIdentity{}, err
+	}
 	authorID, err := productDocumentID(author)
 	if err != nil {
 		return insertedDocumentIdentity{}, err
@@ -168,6 +172,9 @@ func (p *ProductPostgres) insertAllocatedDocument(ctx context.Context, write Cre
 		ID: revID, DocumentID: docID, Rev: 1, Reason: "created", Title: input.Title, Body: input.Body, FrontmatterYaml: fm,
 		RecordedBy: actorID, At: pgNow(write.At), Visibility: pgtype.Text{String: input.Visibility, Valid: true}, Policy: policy,
 	}); err != nil {
+		return insertedDocumentIdentity{}, err
+	}
+	if err := p.placeFeatureOnHex(ctx, publicID, write.ActorID, hex, pgNow(write.At)); err != nil {
 		return insertedDocumentIdentity{}, err
 	}
 	return insertedDocumentIdentity{ID: db.UUIDString(created.ID), Version: created.Version}, nil
@@ -354,7 +361,19 @@ func (p *ProductPostgres) storeDocumentEdit(ctx context.Context, write UpdateDoc
 			return DocumentView{}, err
 		}
 	}
-	return p.applyDocumentUpdate(ctx, write, spec.Id, spec.Input.ExpectedRevision, func(params *dbgen.UpdateProductDocumentParams) {
+	category := productTextPointer(row.Category)
+	if spec.Input.Category.Set {
+		category = spec.Input.Category.Value
+	}
+	frontmatter := frontmatterFromYAML(row.FrontmatterYaml)
+	if spec.Input.Frontmatter.Set {
+		frontmatter = frontmatterFromJSON(*spec.Input.Frontmatter.Value)
+	}
+	hex, err := featureHexFromFields(row.Kind, category, frontmatter)
+	if err != nil {
+		return DocumentView{}, err
+	}
+	view, err := p.applyDocumentUpdate(ctx, write, spec.Id, spec.Input.ExpectedRevision, func(params *dbgen.UpdateProductDocumentParams) {
 		if spec.Input.Title.Set {
 			params.Title = *spec.Input.Title.Value
 		}
@@ -368,6 +387,13 @@ func (p *ProductPostgres) storeDocumentEdit(ctx context.Context, write UpdateDoc
 			params.FrontmatterYaml = fm
 		}
 	})
+	if err != nil {
+		return DocumentView{}, err
+	}
+	if err := p.placeFeatureOnHex(ctx, spec.Id, write.ActorID, hex, pgNow(write.At)); err != nil {
+		return DocumentView{}, err
+	}
+	return view, nil
 }
 
 func (p *ProductPostgres) LockPublishDocument(ctx context.Context, spec PublishDocumentSpec) (PublishDocumentState, error) {
