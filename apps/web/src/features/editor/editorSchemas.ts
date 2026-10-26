@@ -194,6 +194,16 @@ const NEW_QUEST_SCHEMA: FieldSchema[] = [
 export interface SchemaAccess {
   /** Archons and admins may author Locations entries (the API also checks region assignment). */
   canAuthorLocations?: boolean;
+  /** DMs and admins may author Features, which sit on a map hex (the API refuses placement for others). */
+  canAuthorFeatures?: boolean;
+}
+
+/** Codex categories this viewer may not pick in the category select. */
+function gatedCodexCategories(access: SchemaAccess): string[] {
+  return [
+    ...(access.canAuthorLocations ? [] : [GATED_CODEX_CATEGORY]),
+    ...(access.canAuthorFeatures ? [] : [FEATURE_CATEGORY]),
+  ];
 }
 
 export function schemaForType(
@@ -208,13 +218,14 @@ export function schemaForType(
       // Chosen by mode, not by `arcId`: drafts saved by older builds have no `arcId`.
       return mode === 'new' ? NEW_QUEST_SCHEMA : QUEST_SCHEMA;
     case 'codex': {
+      const gated = gatedCodexCategories(access);
       const fields = CODEX_SCHEMA.map((field): FieldSchema => {
         if (field.key !== 'category') return field;
-        // Saved entries keep their category. A Locations draft opened from its scoped
-        // route stays Locations for viewers who are not offered it in the select.
+        // Saved entries keep their category. A gated draft opened from its scoped
+        // route keeps that category for viewers who are not offered it in the select.
         if (
           typeof meta.slug === 'string' ||
-          (meta.category === GATED_CODEX_CATEGORY && !access.canAuthorLocations)
+          (typeof meta.category === 'string' && gated.includes(meta.category))
         )
           return {
             ...field,
@@ -224,16 +235,18 @@ export function schemaForType(
             validate: undefined,
           };
         // Validation keeps the full allow-list; only the offered options are trimmed.
-        return access.canAuthorLocations
+        return gated.length === 0
           ? field
           : {
               ...field,
               options: CODEX_AUTHORING_CATEGORIES.filter(
-                (category) => category !== GATED_CODEX_CATEGORY,
+                (category) => !gated.includes(category),
               ),
             };
       });
-      return meta.category === FEATURE_CATEGORY ? [...fields, FEATURE_HEX_FIELD] : fields;
+      return meta.category === FEATURE_CATEGORY
+        ? [...fields, FEATURE_HEX_FIELD]
+        : fields;
     }
     case 'guide':
     case 'ruling':

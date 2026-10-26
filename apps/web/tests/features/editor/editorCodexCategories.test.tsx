@@ -31,6 +31,9 @@ async function categoryOptions(roles: string[]) {
     expect(result.current.view.schemaAccess.canAuthorLocations).toBe(
       roles.includes('archon') || roles.includes('admin'),
     );
+    expect(result.current.view.schemaAccess.canAuthorFeatures).toBe(
+      roles.includes('dm') || roles.includes('admin'),
+    );
   });
   if (result.current.status !== 'ready') throw new Error('Expected ready');
   const { view } = result.current;
@@ -42,10 +45,25 @@ async function categoryOptions(roles: string[]) {
 describe('Codex editor categories', () => {
   beforeEach(seedEditorSession);
 
-  it('offers Entities and Feature to a player, without Locations', async () => {
+  it('offers Entities to a player, without Locations or Feature', async () => {
     const options = await categoryOptions(['player']);
-    expect(options).toEqual(expect.arrayContaining(['Entities', 'Feature']));
+    expect(options).toContain('Entities');
     expect(options).not.toContain('Locations');
+    expect(options).not.toContain('Feature');
+  });
+
+  it.each([['dm'], ['admin']])('offers Feature to a %s', async (role) => {
+    expect(await categoryOptions(['player', role])).toContain('Feature');
+  });
+
+  it('keeps a Feature draft read-only for a player who opens one', () => {
+    const category = schemaForType(
+      'codex',
+      { title: 'Old Mill', category: 'Feature' },
+      { canAuthorFeatures: false },
+      'new',
+    ).find((field) => field.key === 'category');
+    expect(category?.readOnly).toBe(true);
   });
 
   it.each([['archon'], ['admin']])('offers Locations to an %s', async (role) => {
