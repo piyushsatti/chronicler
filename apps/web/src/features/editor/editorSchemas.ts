@@ -90,7 +90,7 @@ const QUEST_SCHEMA: FieldSchema[] = [
     required: true,
     options: QUEST_SIGNUP_TYPES,
     validate: (v) =>
-      v === 'open' || v === 'application' || v === 'invite'
+      v === 'last_game_played' || v === 'dm_pick'
         ? null
         : 'Choose a supported signup type',
   },

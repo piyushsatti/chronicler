@@ -30,7 +30,7 @@ function seedQuestDraft(
         regions: ['eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'],
         genres: [],
         tags: [],
-        signupType: 'open',
+        signupType: 'dm_pick',
         arcId: '',
         ...meta,
       },

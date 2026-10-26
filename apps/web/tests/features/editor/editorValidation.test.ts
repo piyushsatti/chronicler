@@ -102,7 +102,7 @@ it.each(['2026-03-08T02:30', '2026-11-01T01:30', '', '2026-02-30T12:00:00Z'])(
       regions: ['region'],
       genres: [],
       tags: [],
-      signupType: 'open',
+      signupType: 'dm_pick',
     };
     expect(schemaErrors(schemaForType('quest', meta), meta)).toHaveProperty(
       'scheduledAt',

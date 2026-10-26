@@ -127,6 +127,9 @@ export function QuestDmActions({
               <p className="type-caption">
                 {Math.max(0, quest.slotsMax - quest.filledCount)} seats available.
                 Current character eligibility is checked when you save.
+                {quest.signupType === 'last_game_played'
+                  ? ' The list is ordered for you: new players first, then the players who have waited longest since their last played game.'
+                  : ''}
               </p>
               {quest.participants
                 .filter((participant) => participant.status === 'waitlisted')

@@ -58,7 +58,7 @@ function setup(input: Partial<Parameters<typeof useEditorPublish>[0]> = {}) {
           genres: [],
           tags: [],
           apl: '',
-          signupType: 'open',
+          signupType: 'dm_pick',
           additionalInfo: 'Notes',
         },
         body: ' New body ',
@@ -241,7 +241,7 @@ describe('editor command dispatch', () => {
           scheduledAt: '2026-10-15T18:00:00Z',
           kinds: ['standard'],
           regions: ['region'],
-          signupType: 'open',
+          signupType: 'dm_pick',
         },
       });
       await act(async () => {
@@ -334,7 +334,7 @@ it('reuses the create replay key after a lost response', async () => {
   );
 });
 
-it.each(['open', 'application', 'invite'])(
+it.each(['last_game_played', 'dm_pick'])(
   'creates a Quest using retained signup type %s',
   async (signupType) => {
     const hook = setup({
@@ -358,7 +358,7 @@ it.each(['open', 'application', 'invite'])(
     );
   },
 );
-it.each(['dm_pick', 'last_played'])(
+it.each(['open', 'application', 'invite', 'last_played'])(
   'rejects retired signup type %s before sending a command',
   async (signupType) => {
     const hook = setup({

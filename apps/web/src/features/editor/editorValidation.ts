@@ -43,7 +43,7 @@ const questMeta = z.object({
   scheduledAt: z.string().refine(isEditorInstant),
   durationHours: z.coerce.number().positive().finite(),
   slotsMax: z.coerce.number().int().positive(),
-  signupType: z.enum(['open', 'application', 'invite']),
+  signupType: z.enum(['last_game_played', 'dm_pick']),
   apl: z.union([
     z.literal(''),
     z.null(),
