@@ -227,7 +227,7 @@ function emptyDraft(
     typeKey === 'codex' ? (findCodexCategory(category) ?? category) : category;
   return {
     meta: {
-      title: '',
+      title: typeKey === 'hall-of-fame' ? 'Hall of Fame' : '',
       durationHours: '3',
       slotsMax: '4',
       scheduledAt: defaultSessionStart(new Date(), context.timeZone ?? 'UTC'),
@@ -239,13 +239,15 @@ function emptyDraft(
             ? typeKey
             : typeKey === 'dm-table'
               ? 'dm_table'
-              : null),
+              : typeKey === 'hall-of-fame'
+                ? 'hall_of_fame'
+                : null),
       kind:
         typeKey === 'codex'
           ? 'codex_entry'
           : typeKey === 'guide' || typeKey === 'ruling'
             ? 'rule'
-            : typeKey === 'dm-table'
+            : typeKey === 'dm-table' || typeKey === 'hall-of-fame'
               ? 'community'
               : typeKey,
       ...(typeKey === 'summary' ? { questIds: [], characterId: null } : {}),
@@ -372,7 +374,7 @@ export async function loadEditorRecord(input: {
         ? 'codex_entry'
         : input.typeKey === 'guide' || input.typeKey === 'ruling'
           ? 'rule'
-          : input.typeKey === 'dm-table'
+          : input.typeKey === 'dm-table' || input.typeKey === 'hall-of-fame'
             ? 'community'
             : 'summary';
     const category =
@@ -382,6 +384,7 @@ export async function loadEditorRecord(input: {
     if (
       result.data.meta.kind !== expectedKind ||
       (input.typeKey === 'dm-table' && category !== 'dm_table') ||
+      (input.typeKey === 'hall-of-fame' && category !== 'hall_of_fame') ||
       (input.typeKey === 'ruling' && category !== 'ruling') ||
       (input.typeKey === 'guide' && category === 'ruling')
     )

@@ -32,6 +32,7 @@ const documentKinds = {
   guide: 'rule',
   ruling: 'rule',
   'dm-table': 'community',
+  'hall-of-fame': 'community',
   demo: 'codex_entry',
 } satisfies Record<Exclude<EditorTypeKey, 'quest'>, string>;
 
@@ -230,7 +231,9 @@ export function useEditorPublish({
                   ? typeKey
                   : typeKey === 'dm-table'
                     ? 'dm_table'
-                    : null));
+                    : typeKey === 'hall-of-fame'
+                      ? 'hall_of_fame'
+                      : null));
         // A guide's group is free text; blank files it under "General" as plain "guide".
         const docCategory =
           typeKey === 'guide' ? rawCategory?.trim() || 'guide' : rawCategory;

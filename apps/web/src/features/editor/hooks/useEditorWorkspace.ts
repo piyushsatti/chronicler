@@ -27,6 +27,8 @@ import { useEntityLinkIndex } from './useEntityLinkIndex.js';
 function editorEditPath(typeKey: EditorTypeKey, id: string): string {
   if (typeKey === 'quest') return `/quests/${encodeURIComponent(id)}/edit`;
   if (typeKey === 'dm-table') return `/editor/dm-table/${encodeURIComponent(id)}/edit`;
+  if (typeKey === 'hall-of-fame')
+    return `/editor/hall-of-fame/${encodeURIComponent(id)}/edit`;
   if (typeKey === 'guide' || typeKey === 'ruling')
     return `/rules/${typeKey}s/${encodeURIComponent(id)}/edit`;
   return `/${typeKey === 'codex' ? 'codex' : 'summaries'}/${encodeURIComponent(id)}/edit`;
@@ -48,6 +50,8 @@ export function editorCancelPath(
       return '/codex';
     case 'dm-table':
       return '/dms';
+    case 'hall-of-fame':
+      return '/community?tab=hall-of-fame';
     default:
       return '/';
   }

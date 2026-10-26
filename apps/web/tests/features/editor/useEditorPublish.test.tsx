@@ -214,7 +214,7 @@ describe('editor command dispatch', () => {
     const hook = setup({
       typeKey: 'guide',
       mode: 'new',
-      initial: { ...initial, documentId: undefined, documentVersion: undefined },
+      initial: { ...initial, documentId: null, documentVersion: null },
       meta: { title: 'Fresh guide', category: 'Exploration' },
     });
     await save(hook, false);

@@ -275,6 +275,7 @@ export function schemaForType(
     case 'ruling':
     case 'summary':
     case 'dm-table':
+    case 'hall-of-fame':
       return TITLED_DOCUMENT_SCHEMA;
     default:
       return [

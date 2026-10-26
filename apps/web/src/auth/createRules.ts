@@ -3,6 +3,7 @@ import { canAccessVerify, hasRole, isAdmin, isDm } from './roles.js';
 export type CreateKind =
   | 'quest'
   | 'dm-table'
+  | 'hall-of-fame'
   | 'guide'
   | 'ruling'
   | 'summary'
@@ -27,6 +28,8 @@ export type CreateActor = { roles: readonly string[]; liveDm: boolean };
  *   a community/dm_table document; the web offers it to DMs (role only, admin
  *   included) because a table page is a DM's listing. Open owner decision,
  *   recorded in the night decisions log.
+ * - hall-of-fame: admins only, STRICTER than the API (which lets any member create
+ *   a community document), because the page is one shared page for the server.
  * - codex, demo: open; the server decides by ownership and category.
  *
  * The web reads roles and DM-profile status from the same live member reads
@@ -41,6 +44,8 @@ export function canCreateRecord(kind: CreateKind, actor: CreateActor | undefined
       return isAdmin(roles) || liveDm;
     case 'dm-table':
       return isDm(roles);
+    case 'hall-of-fame':
+      return isAdmin(roles);
     case 'guide':
     case 'ruling':
       return canAccessVerify(roles);

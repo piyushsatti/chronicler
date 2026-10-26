@@ -20,6 +20,8 @@ export const ROUTE_MANIFEST_PATHS = [
   '/dms/:shortCode',
   '/editor/dm-table',
   '/editor/dm-table/:id/edit',
+  '/editor/hall-of-fame',
+  '/editor/hall-of-fame/:id/edit',
   '/community/dm-table/:slug',
   '/community/entries/:slug',
   '/guilds',

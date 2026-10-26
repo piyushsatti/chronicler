@@ -26,6 +26,50 @@ describe('guide group', () => {
   });
 });
 
+describe('Hall of Fame editor', () => {
+  it('starts a new page titled Hall of Fame in its own community category', async () => {
+    const loaded = await loadEditorRecord({ typeKey: 'hall-of-fame', mode: 'new' });
+    expect(loaded.meta).toMatchObject({
+      title: 'Hall of Fame',
+      kind: 'community',
+      category: 'hall_of_fame',
+    });
+  });
+  it('refuses to open a different community document in it', async () => {
+    server.use(
+      graphql.query('EditorDocumentById', () =>
+        HttpResponse.json({
+          data: {
+            documentById: {
+              id: '33333333-3333-4333-8333-333333333333',
+              slug: 'notice',
+              kind: 'community',
+              category: 'notice',
+              title: 'Notice',
+              effectiveBody: 'x',
+              status: 'published',
+              visibility: 'public',
+              authorId: '11111111-1111-4111-8111-111111111111',
+              canEditBody: true,
+              canEditMetadata: true,
+              version: 1,
+              frontmatter: {},
+              policy: [],
+            },
+          },
+        }),
+      ),
+    );
+    await expect(
+      loadEditorRecord({
+        typeKey: 'hall-of-fame',
+        mode: 'edit',
+        id: '33333333-3333-4333-8333-333333333333',
+      }),
+    ).rejects.toMatchObject({ kind: 'not_found' });
+  });
+});
+
 describe('qualified Codex category initialization', () => {
   it.each([
     ['artifact', 'Artifact'],
