@@ -622,7 +622,7 @@ func (w *world) addQuests() {
 	specs := []qspec{}
 	for i, item := range questBriefs {
 		st := "open"
-		signup := []string{"open", "application", "invite"}[i%3]
+		signup := []string{"last_game_played", "dm_pick"}[i%2]
 		filled := i % 4
 		slots := 5
 		switch {

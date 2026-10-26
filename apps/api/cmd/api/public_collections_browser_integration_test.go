@@ -353,7 +353,7 @@ func TestPublicCollectionsBrowser(t *testing.T) {
 			filled, scheduled = 0, activityAt.Add(-time.Hour)
 		}
 		var quest int64
-		if err := fixture.pool.QueryRow(ctx, "INSERT INTO quests(public_id,short_code,kinds,status,dm_id,scheduled_at,duration_hours,slots_max,filled_count,signup_type,document_id,created_by) VALUES($1,$2,ARRAY['standard'],$3,$4,$5,4,$6,$7,'open',$8,$4) RETURNING id", id, code, status, verifier.rowID, scheduled, 2-i%2, filled, brief).Scan(&quest); err != nil {
+		if err := fixture.pool.QueryRow(ctx, "INSERT INTO quests(public_id,short_code,kinds,status,dm_id,scheduled_at,duration_hours,slots_max,filled_count,signup_type,document_id,created_by) VALUES($1,$2,ARRAY['standard'],$3,$4,$5,4,$6,$7,'last_game_played',$8,$4) RETURNING id", id, code, status, verifier.rowID, scheduled, 2-i%2, filled, brief).Scan(&quest); err != nil {
 			t.Fatal(err)
 		}
 		rows.exec(t, "INSERT INTO quest_regions(quest_id,region_id) VALUES($1,$2)", quest, activityRegion)

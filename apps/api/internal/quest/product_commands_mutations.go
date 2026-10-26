@@ -86,7 +86,7 @@ func admitLockedQuest(ctx context.Context, repos ProductCommandRepos, actor auth
 }
 
 func validateQuestSignupType(value *string) error {
-	if value != nil && *value != "open" && *value != "application" && *value != "invite" {
+	if value != nil && *value != "last_game_played" && *value != "dm_pick" {
 		return apierr.New(apierr.Invalid, "invalid quest signup type")
 	}
 	return nil
