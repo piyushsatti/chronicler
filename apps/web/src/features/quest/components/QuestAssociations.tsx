@@ -6,8 +6,8 @@ import { toAppError } from '../../../errors/toAppError.js';
 import type { QuestDetailView } from '../adapters/questAdapter.js';
 import type { PointcrawlLink } from '../adapters/questCommands.js';
 import type { useQuestDetailPage } from '../hooks/useQuestDetailPage.js';
-import { Checkbox } from '../../../components/primitives/Checkbox.js';
 import { Select } from '../../../components/primitives/Select.js';
+import { PointcrawlLinkPicker } from '../../../components/domain/PointcrawlLinkPicker.js';
 
 type Detail = ReturnType<typeof useQuestDetailPage>;
 export function QuestAssociations({
@@ -22,16 +22,6 @@ export function QuestAssociations({
   const [links, setLinks] = useState<PointcrawlLink[]>(quest.pointcrawlLinks);
   const { arcs, maps, nodes, commands } = detail;
   const error = arcs.error ?? maps.error ?? nodes.error;
-  const toggle = (link: PointcrawlLink, checked: boolean) =>
-    setLinks((current) =>
-      checked
-        ? [...current, link]
-        : current.filter(
-            (item) =>
-              item.pointcrawlNodeId !== link.pointcrawlNodeId ||
-              item.role !== link.role,
-          ),
-    );
   return (
     <section className="stack" aria-label="Quest associations">
       {error ? (
@@ -95,52 +85,24 @@ export function QuestAssociations({
       >
         <h3 className="type-title">Pointcrawl associations</h3>
         <p className="type-caption">
-          Choose expected destinations and places visited. Saving replaces this quest’s
-          associations; links from other maps stay selected.
+          Find places by hex or name and mark them as expected destinations or visited.
+          Saving replaces this quest’s associations; places from other maps stay chosen.
         </p>
-        <div className="stack">
-          <span id={`${labelId}-map`}>Pointcrawl map</span>
-          <Select
-            label="Pointcrawl map"
-            labelId={`${labelId}-map`}
-            value={detail.atlasCode}
-            disabled={commands.pending || !maps.data}
-            onValueChange={detail.setAtlasCode}
-            options={[
-              { value: '', label: 'Choose a map' },
-              ...(maps.data ?? []).map((map) => ({ value: map.atlasCode, label: map.name })),
-            ]}
-          />
-        </div>
+        <PointcrawlLinkPicker
+          maps={maps.data}
+          atlasCode={detail.atlasCode}
+          onAtlasChange={detail.setAtlasCode}
+          nodes={nodes.data?.nodes}
+          nodesLoading={nodes.isLoading}
+          links={links}
+          onChange={setLinks}
+          roles={['expected', 'visited']}
+          canMarkVisited={nodes.data?.canEdit ?? false}
+          disabled={commands.pending}
+        />
         {detail.atlasCode ? (
           <Link to={`/map/${encodeURIComponent(detail.atlasCode)}`}>Open map</Link>
         ) : null}
-        {nodes.isLoading && detail.atlasCode ? (
-          <p role="status">Loading map nodes…</p>
-        ) : null}
-        {nodes.data?.nodes.length === 0 ? (
-          <p>This map has no pointcrawl nodes.</p>
-        ) : null}
-        {nodes.data?.nodes.map((node) => (
-          <fieldset key={node.id} disabled={commands.pending} className="card stack">
-            <legend>{node.name}</legend>
-            {(['expected', 'visited'] as const).map((role) => (
-              <Checkbox
-                key={role}
-                label={role === 'expected' ? 'Expected destination' : 'Visited'}
-                checked={links.some(
-                  (link) => link.pointcrawlNodeId === node.id && link.role === role,
-                )}
-                disabled={
-                  commands.pending || (role === 'visited' && !nodes.data?.canEdit)
-                }
-                onCheckedChange={(checked) =>
-                  toggle({ pointcrawlNodeId: node.id, role }, checked)
-                }
-              />
-            ))}
-          </fieldset>
-        ))}
         {nodes.data && !nodes.data.canEdit ? (
           <p className="type-caption">
             Marking visited places requires stewardship of this map.

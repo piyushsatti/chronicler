@@ -53,6 +53,16 @@ const questMeta = z.object({
   additionalInfo: z.string().nullish(),
   /** Optional series for a new quest; '' means none. */
   arcId: z.union([z.literal(''), z.string().uuid()]).nullish(),
+  /** Map places a new quest heads to; saved after the quest is created. */
+  pointcrawlLinks: z
+    .array(
+      z.object({
+        pointcrawlNodeId: z.string().uuid(),
+        role: z.enum(['expected', 'visited']),
+      }),
+    )
+    .max(100)
+    .nullish(),
 });
 
 export function parseQuestMetadata(value: unknown) {

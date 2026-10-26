@@ -25,6 +25,12 @@ import {
 import { MapKey } from './MapKey.js';
 import { Checkbox } from '../../../components/primitives/Checkbox.js';
 
+// Stored asset paths may be absolute URLs or site-relative; both resolve from the site root.
+export function mapAssetHref(assetPath: string | null): string | null {
+  if (!assetPath) return null;
+  return /^(?:[a-z]+:|\/)/i.test(assetPath) ? assetPath : `/${assetPath}`;
+}
+
 export function graphBounds(nodes: readonly { x: number; y: number }[]) {
   let minX = nodes[0]?.x ?? 0,
     minY = nodes[0]?.y ?? 0,
@@ -172,11 +178,7 @@ export function PointcrawlViewport({
   ref?: Ref<MapViewportHandle>;
 }) {
   const marker = useId().replaceAll(':', '');
-  const assetHref = map.assetPath
-    ? /^(?:[a-z]+:|\/)/i.test(map.assetPath)
-      ? map.assetPath
-      : `/${map.assetPath}`
-    : null;
+  const assetHref = mapAssetHref(map.assetPath);
   const [assetFailed, setAssetFailed] = useState(false);
   const [assetSize, setAssetSize] = useState<{ width: number; height: number } | null>(
     null,

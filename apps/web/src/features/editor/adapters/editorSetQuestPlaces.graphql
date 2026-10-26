@@ -1,0 +1,10 @@
+mutation EditorSetQuestPlaces(
+  $questId: ID!
+  $links: [QuestPointcrawlLinkInput!]!
+  $meta: CommandMeta!
+) {
+  setQuestPointcrawlLinks(questId: $questId, links: $links, meta: $meta) {
+    pointcrawlNodeId
+    role
+  }
+}

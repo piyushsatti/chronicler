@@ -5,6 +5,7 @@ import {
   GenreTagsField,
   MultiSelectField,
   PairsField,
+  PointcrawlField,
   RegionField,
   RegionMultiField,
   SelectField,
@@ -19,6 +20,7 @@ import {
   WorldDateField,
 } from './fields/FieldControls.js';
 import type { EditorFieldOptions, EditorMeta, FieldSchema } from './types.js';
+import type { PointcrawlLinkValue } from '../../components/domain/PointcrawlLinkPicker.js';
 
 export function PropertiesPanel({
   schema,
@@ -93,6 +95,14 @@ export function PropertiesPanel({
           <SeriesField
             options={options.series}
             value={String(val ?? '')}
+            onChange={setT}
+          />
+        );
+      case 'pointcrawl':
+        return (
+          <PointcrawlField
+            places={options.places}
+            value={Array.isArray(val) ? (val as PointcrawlLinkValue[]) : []}
             onChange={setT}
           />
         );

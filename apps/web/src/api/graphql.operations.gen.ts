@@ -955,6 +955,21 @@ export type EditorDocumentBySlugQueryVariables = Exact<{
 
 export type EditorDocumentBySlugQuery = { document: { id: string, slug: string, kind: string, category: string | null, title: string, status: string, version: number, canEditMetadata: boolean, canEditBody: boolean, visibility: string, policy: Array<string> | null, readerIds: Array<string> | null, authorId: string, frontmatter: unknown, effectiveBody: string | null, summaryDerived: { authoring: { questIds: Array<string>, characterId: string | null, complete: boolean } | null, quests: Array<{ id: string, shortCode: string, title: string | null }> } | null } | null };
 
+export type EditorMapOptionsQueryVariables = Exact<{
+  offset?: number;
+}>;
+
+
+export type EditorMapOptionsQuery = { maps: Array<{ id: string, atlasCode: string, name: string, canEdit: boolean }> };
+
+export type EditorMapPlacesQueryVariables = Exact<{
+  atlasCode: string;
+  offset?: number;
+}>;
+
+
+export type EditorMapPlacesQuery = { map: { id: string, atlasCode: string, name: string, canEdit: boolean, pointcrawlNodes: Array<{ id: string, name: string }> } | null };
+
 export type EditorQuestLoadQueryVariables = Exact<{
   id?: string | null | undefined;
   shortCode?: string | null | undefined;
@@ -993,6 +1008,15 @@ export type EditorSeriesOptionsQueryVariables = Exact<{
 
 
 export type EditorSeriesOptionsQuery = { questArcs: { total: number, items: Array<{ id: string, name: string, createdBy: string }> } };
+
+export type EditorSetQuestPlacesMutationVariables = Exact<{
+  questId: string;
+  links: Array<QuestPointcrawlLinkInput> | QuestPointcrawlLinkInput;
+  meta: CommandMeta;
+}>;
+
+
+export type EditorSetQuestPlacesMutation = { setQuestPointcrawlLinks: Array<{ pointcrawlNodeId: string, role: string }> };
 
 export type EditorSummaryCharactersQueryVariables = Exact<{
   offset: number;

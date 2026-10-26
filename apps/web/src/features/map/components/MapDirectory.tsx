@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { CardGrid } from '../../../components/primitives/CardGrid.js';
 import { PageToolbar } from '../../../components/primitives/PageToolbar.js';
@@ -8,7 +9,7 @@ import type {
   Pointcrawl,
 } from '../adapters/mapAdapter.js';
 import { useMapCard } from '../hooks/useMapCard.js';
-import { graphBounds } from './PointcrawlViewport.js';
+import { graphBounds, mapAssetHref } from './PointcrawlViewport.js';
 import styles from '../pages/map.module.css';
 
 export function MapSketch({ map }: { map: Pointcrawl }) {
@@ -48,6 +49,25 @@ export function MapSketch({ map }: { map: Pointcrawl }) {
     </svg>
   );
 }
+// The map's own art identifies it at a glance; the node sketch stands in when there is none.
+function MapPreviewArt({ map }: { map: Pointcrawl }) {
+  const href = mapAssetHref(map.assetPath);
+  const [failed, setFailed] = useState(false);
+  if (!href || failed) return <MapSketch map={map} />;
+  return (
+    <img
+      className={styles.previewImage}
+      src={href}
+      alt=""
+      loading="lazy"
+      decoding="async"
+      data-map-art={map.atlasCode}
+      onError={() => {
+        setFailed(true);
+      }}
+    />
+  );
+}
 function MapCard({ map, region }: { map: MapAtlasView; region: string }) {
   const atlas = useMapCard(map.atlasCode);
   return (
@@ -59,7 +79,7 @@ function MapCard({ map, region }: { map: MapAtlasView; region: string }) {
         <div
           className={`${styles.mapPreview} ${atlas.data?.nodes.length ? '' : styles.emptyPreview}`}
         >
-          {atlas.data ? <MapSketch map={atlas.data} /> : null}
+          {atlas.data ? <MapPreviewArt map={atlas.data} /> : null}
           <span className={styles.previewLabel}>
             <i />
             {humanizeKey(map.mapKind)}

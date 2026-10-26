@@ -670,3 +670,120 @@ describe('the DM approval notice on a new quest', () => {
     expect(screen.queryByRole('status', { name: 'DM profile approval' })).toBeNull();
   });
 });
+
+describe('a new quest’s expected destinations', () => {
+  const questId = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa';
+  const hex = '44444444-4444-4444-8444-444444444444';
+  const mapOptions = () =>
+    graphql.query('EditorMapOptions', () =>
+      HttpResponse.json({
+        data: {
+          maps: [
+            {
+              id: '55555555-5555-4555-8555-555555555555',
+              atlasCode: 'LF-HEX',
+              name: 'Lightfall Hexflower',
+              canEdit: false,
+            },
+          ],
+        },
+      }),
+    );
+  const nodeOptions = () =>
+    graphql.query('EditorMapPlaces', () =>
+      HttpResponse.json({
+        data: {
+          map: {
+            id: '55555555-5555-4555-8555-555555555555',
+            atlasCode: 'LF-HEX',
+            name: 'Lightfall Hexflower',
+            canEdit: false,
+            pointcrawlNodes: [
+              { id: hex, name: 'LFR7008' },
+              { id: '66666666-6666-4666-8666-666666666666', name: 'LFR7009' },
+            ],
+          },
+        },
+      }),
+    );
+  function captureLinks(fail = false) {
+    const calls: { questId: unknown; links: unknown; key: unknown }[] = [];
+    server.use(
+      graphql.mutation('EditorSetQuestPlaces', ({ variables }) => {
+        calls.push({
+          questId: variables.questId,
+          links: variables.links,
+          key: (variables.meta as { idempotencyKey?: string }).idempotencyKey,
+        });
+        if (fail) return HttpResponse.json({ errors: [{ message: 'down' }] });
+        return HttpResponse.json({ data: { setQuestPointcrawlLinks: variables.links } });
+      }),
+    );
+    return calls;
+  }
+  beforeEach(() => {
+    seedEditorSession();
+    server.use(
+      seriesOptions(),
+      seriesAuthority(goodMe.id, 'approved'),
+      mapOptions(),
+      nodeOptions(),
+    );
+  });
+
+  it('finds a hex by name and saves it as an expected destination after create', async () => {
+    seedQuestDraft();
+    const inputs = captureCreate();
+    const links = captureLinks();
+    renderNewQuest();
+    await userEvent.click(await screen.findByRole('button', { name: /^Pointcrawl map/ }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Lightfall Hexflower' }));
+    await userEvent.type(await screen.findByLabelText('Find a place'), '7008');
+    expect(screen.queryByText('LFR7009')).toBeNull();
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Expected destination' }));
+    expect(screen.queryByRole('checkbox', { name: 'Visited' })).toBeNull();
+    await userEvent.click(screen.getByRole('button', { name: 'Create quest' }));
+    await waitFor(() => expect(links).toHaveLength(1));
+    expect(inputs).toHaveLength(1);
+    expect(links[0]).toMatchObject({
+      questId,
+      links: [{ pointcrawlNodeId: hex, role: 'expected' }],
+    });
+  });
+
+  it('creates without a places call when none are chosen', async () => {
+    seedQuestDraft();
+    const inputs = captureCreate();
+    const links = captureLinks();
+    renderNewQuest();
+    await userEvent.click(await screen.findByRole('button', { name: 'Create quest' }));
+    await waitFor(() => expect(inputs).toHaveLength(1));
+    expect(links).toHaveLength(0);
+  });
+
+  it('says the quest exists when its places fail, and a retry replays the same create', async () => {
+    seedQuestDraft({ pointcrawlLinks: [{ pointcrawlNodeId: hex, role: 'expected' }] });
+    const keys: unknown[] = [];
+    server.use(
+      graphql.mutation('CreateQuest', ({ variables }) => {
+        keys.push((variables.meta as { idempotencyKey?: string }).idempotencyKey);
+        return HttpResponse.json({
+          data: {
+            createQuest: { id: questId, shortCode: 'Q-NEW', updatedAt: '2026-10-15T18:00:00Z' },
+          },
+        });
+      }),
+    );
+    const links = captureLinks(true);
+    renderNewQuest();
+    await userEvent.click(await screen.findByRole('button', { name: 'Create quest' }));
+    expect(
+      await screen.findByText(/The quest was created, but its expected destinations were not saved/),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Create quest' }));
+    await waitFor(() => expect(links).toHaveLength(2));
+    expect(keys).toHaveLength(2);
+    expect(keys[1]).toBe(keys[0]);
+    expect(links[1]!.key).toBe(links[0]!.key);
+  });
+});

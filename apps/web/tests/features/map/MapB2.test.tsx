@@ -386,6 +386,29 @@ describe('B2 atlas', () => {
     expect(within(navigation).queryByRole('link', { name: 'Unrelated' })).toBeNull();
   });
 
+  it('previews a map card with its art and falls back to the sketch when the art fails', async () => {
+    const painted = { ...good, assetPath: 'atlases/example.webp' };
+    server.use(
+      graphql.query('MapDirectory', () =>
+        HttpResponse.json({ data: { maps: [painted], regions: [region] } }),
+      ),
+      graphql.query('MapAtlas', () => HttpResponse.json({ data: { map: painted } })),
+    );
+    page('/map');
+    const art = await waitFor(() => {
+      const image = document.querySelector(`img[data-map-art="${good.atlasCode}"]`);
+      expect(image).not.toBeNull();
+      return image!;
+    });
+    expect(art).toHaveAttribute('src', '/atlases/example.webp');
+    expect(document.querySelector('[data-map-sketch]')).toBeNull();
+    fireEvent.error(art);
+    await waitFor(() =>
+      expect(document.querySelector(`[data-map-sketch="${good.atlasCode}"]`)).not.toBeNull(),
+    );
+    expect(document.querySelector('img[data-map-art]')).toBeNull();
+  });
+
   it('resolves map assets from the app root and preserves their native coordinate system', async () => {
     class MapImage {
       onload: (() => void) | null = null;
