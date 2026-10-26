@@ -177,7 +177,8 @@ export function SiteChrome({ children }: { children: ReactNode }): React.JSX.Ele
     >
       <header ref={headerRef} className="site-chrome__top">
         <Link className="site-chrome__brand" to="/" aria-label="Chronicler home">
-          <img src={new URL('../assets/chronicler-logo.svg', import.meta.url).href} alt="Chronicler" />
+          {/* 816x856 source: the intrinsic size keeps the aspect ratio; CSS sets the height. */}
+          <img src="/brand/chronicler-logo.webp" width={816} height={856} alt="Chronicler" />
         </Link>
         {showDrawer ? (
           <NavDrawer destinations={destinations} personal={personal} />

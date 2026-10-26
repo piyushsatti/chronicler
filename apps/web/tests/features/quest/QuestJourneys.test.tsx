@@ -334,7 +334,16 @@ describe('retained Quest journeys', () => {
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Coastal voyages' }));
     await userEvent.click(screen.getByRole('button', { name: 'Save series' }));
     await waitFor(() => expect(writes).toHaveLength(1));
-    expect(await screen.findByText('Series saved.')).toBeInTheDocument();
+    expect(await screen.findByRole('status')).toHaveTextContent('Series saved.');
+    // The confirmation also sits beside the Save series button (loop 3 L7).
+    const save = screen.getByRole('button', { name: 'Save series' });
+    const inline = await waitFor(() => {
+      const node = document.querySelector('[data-el="quest.series.saved"]');
+      expect(node).not.toBeNull();
+      return node!;
+    });
+    expect(inline).toHaveTextContent('Series saved.');
+    expect(inline.parentElement).toBe(save.parentElement);
     expect(screen.queryByText(/\barc\b/i)).toBeNull();
     expect(writes[0]).toMatchObject({ id: detail.id, input: { arcId: otherId } });
     await userEvent.click(screen.getByRole('button', { name: /^Pointcrawl map/ }));

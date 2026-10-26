@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import {
   act,
   fireEvent,
@@ -13,9 +13,15 @@ import { Route, Routes } from 'react-router-dom';
 import { server } from '../../../src/mocks/server.js';
 import { MapPage } from '../../../src/features/map/pages/MapPage.js';
 import { MapSketch } from '../../../src/features/map/components/MapDirectory.js';
-import { PointcrawlViewport } from '../../../src/features/map/components/PointcrawlViewport.js';
+import {
+  MAP_ROUTES_STORAGE_KEY,
+  PointcrawlViewport,
+} from '../../../src/features/map/components/PointcrawlViewport.js';
 import { renderWithProviders } from '../../test-utils.js';
 import good from '../../fixtures/wire/map/good.json';
+
+// These suites cover route drawing; routes are hidden by default, so opt in.
+beforeEach(() => localStorage.setItem(MAP_ROUTES_STORAGE_KEY, 'true'));
 
 const first = good.pointcrawlNodes[0]!;
 const pointcrawl = {
@@ -63,9 +69,7 @@ describe('B2 directory', () => {
       ),
     );
     page('/map');
-    expect(
-      await screen.findByRole('heading', { name: 'Maps', level: 1 }),
-    ).toBeVisible();
+    expect(await screen.findByRole('heading', { name: 'Map', level: 1 })).toBeVisible();
     expect(screen.queryByRole('region', { name: 'Pointcrawl viewport' })).toBeNull();
     expect(await screen.findByRole('button', { name: 'All maps' })).toHaveAttribute(
       'aria-pressed',
@@ -124,7 +128,7 @@ describe('B2 directory', () => {
 });
 
 describe('B2 atlas', () => {
-  it('renders numbered pins at unscaled coordinates, all real edge kinds, arrows, present labels, and a data-only legend', () => {
+  it('renders unnumbered pins at unscaled coordinates, all real edge kinds, arrows, present labels, and a data-only legend', () => {
     const kinds = ['road', 'trail', 'river', 'pass'];
     const map = {
       ...pointcrawl,
@@ -144,7 +148,9 @@ describe('B2 atlas', () => {
     const graph = screen.getByRole('group', { name: 'Lightfall pointcrawl graph' });
     const pin = within(graph).getByRole('button', { name: first.name });
     expect(pin).toHaveAttribute('transform', 'translate(1200 100)');
-    expect(pin).toHaveTextContent('01');
+    // Owner feedback: no always-on pin numbers.
+    expect(pin).not.toHaveTextContent('01');
+    expect(graph.querySelector('[data-map-ring]')).toBeNull();
     expect(pin.querySelector('rect')).not.toBeNull();
     const arrow = graph.querySelector('marker');
     expect(Number(arrow?.getAttribute('refX')) - 10).toBeGreaterThan(25);
@@ -206,7 +212,7 @@ describe('B2 atlas', () => {
     },
   );
 
-  it('keeps the region panel present until a real node is selected and supports repeated keyboard selection with Escape focus return', async () => {
+  it('keeps the region panel present until a real node is selected and supports Tab and Enter selection with Escape focus return', async () => {
     page();
     const graph = await screen.findByRole('group', {
       name: 'Lightfall pointcrawl graph',
@@ -220,12 +226,14 @@ describe('B2 atlas', () => {
       await screen.findByRole('region', { name: 'Selected location' }),
     ).toHaveTextContent(first.name);
     expect(screen.getByRole('button', { name: 'Close place details' })).toHaveFocus();
+    // Arrow keys no longer move between places, from the panel or from a pin.
     fireEvent.keyDown(document.activeElement!, { key: 'ArrowRight' });
     expect(screen.getByRole('region', { name: 'Selected location' })).toHaveTextContent(
-      'Old Watchtower',
+      first.name,
     );
-    expect(screen.getByRole('button', { name: 'Close place details' })).toHaveFocus();
-    fireEvent.keyDown(document.activeElement!, { key: 'ArrowRight' });
+    fireEvent.keyDown(within(graph).getByRole('button', { name: 'River Crossing' }), {
+      key: ' ',
+    });
     expect(screen.getByRole('region', { name: 'Selected location' })).toHaveTextContent(
       'River Crossing',
     );
@@ -234,6 +242,10 @@ describe('B2 atlas', () => {
     expect(screen.getByRole('region', { name: 'Map region' })).toBeVisible();
     expect(within(graph).getByRole('button', { name: 'River Crossing' })).toHaveFocus();
     fireEvent.keyDown(document.activeElement!, { key: 'ArrowLeft' });
+    expect(screen.queryByRole('region', { name: 'Selected location' })).toBeNull();
+    fireEvent.keyDown(within(graph).getByRole('button', { name: 'Old Watchtower' }), {
+      key: 'Enter',
+    });
     expect(screen.getByRole('region', { name: 'Selected location' })).toHaveTextContent(
       'Old Watchtower',
     );

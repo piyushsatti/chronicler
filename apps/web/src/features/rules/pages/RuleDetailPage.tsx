@@ -120,15 +120,59 @@ export function RuleDetailPage({ family }: { family: RuleFamily }): React.JSX.El
               ) : null
             }
           />
-          <DetailLayout
-            railLabel={hubLabel}
-            rail={
-              hub.status === 'loading' ? (
+          {/* Full-width body; "More guides" sits below it, not in a side rail
+              (owner item 16). */}
+          <DetailLayout>
+            {rule.body ? (
+              <Card pad={5} className={styles.detailBody}>
+                <ContentRenderer body={rule.body} className={styles.detailProse} />
+              </Card>
+            ) : (
+              <EmptyState
+                message={`No ${noun} text is available for this viewer.`}
+                action={
+                  <Link
+                    className="btn btn--secondary btn--sm"
+                    to={
+                      rule.canEdit
+                        ? `/rules/${family}/${encodeURIComponent(rule.id)}/edit`
+                        : '/rules'
+                    }
+                  >
+                    {rule.canEdit ? `Add ${noun} text` : 'Browse rules'}
+                  </Link>
+                }
+              />
+            )}
+            {previous || next ? (
+              <nav className={styles.pager} aria-label={`More ${family}`}>
+                {previous ? (
+                  <Link
+                    className="btn btn--ghost"
+                    to={documentHref({ kind: 'rule', ...previous }) ?? '/rules'}
+                  >
+                    Previous: {previous.title}
+                  </Link>
+                ) : (
+                  <span />
+                )}
+                {next ? (
+                  <Link
+                    className="btn btn--ghost"
+                    to={documentHref({ kind: 'rule', ...next }) ?? '/rules'}
+                  >
+                    Next: {next.title}
+                  </Link>
+                ) : null}
+              </nav>
+            ) : null}
+            <section className={styles.moreBelow} aria-label={hubLabel}>
+              {hub.status === 'loading' ? (
                 <StatePanel status="loading" variant="inline" />
               ) : hub.status === 'error' ? (
                 <StatePanel status="error" error={hub.error} onRetry={hub.refetch} />
               ) : siblings.length > 0 ? (
-                <Card as="section" pad={4} className="stack" data-gap="3">
+                <Card pad={4} className="stack" data-gap="3">
                   <h2 className="type-heading">{hubLabel}</h2>
                   <ul className={styles.related}>
                     {siblings.map((entry) => (
@@ -156,54 +200,8 @@ export function RuleDetailPage({ family }: { family: RuleFamily }): React.JSX.El
                     </Link>
                   }
                 />
-              )
-            }
-          >
-            <DetailLayout.Reading>
-              {rule.body ? (
-                <Card pad={5} className={styles.detailBody}>
-                  <ContentRenderer body={rule.body} className={styles.detailProse} />
-                </Card>
-              ) : (
-                <EmptyState
-                  message={`No ${noun} text is available for this viewer.`}
-                  action={
-                    <Link
-                      className="btn btn--secondary btn--sm"
-                      to={
-                        rule.canEdit
-                          ? `/rules/${family}/${encodeURIComponent(rule.id)}/edit`
-                          : '/rules'
-                      }
-                    >
-                      {rule.canEdit ? `Add ${noun} text` : 'Browse rules'}
-                    </Link>
-                  }
-                />
               )}
-              {previous || next ? (
-                <nav className={styles.pager} aria-label={`More ${family}`}>
-                  {previous ? (
-                    <Link
-                      className="btn btn--ghost"
-                      to={documentHref({ kind: 'rule', ...previous }) ?? '/rules'}
-                    >
-                      Previous: {previous.title}
-                    </Link>
-                  ) : (
-                    <span />
-                  )}
-                  {next ? (
-                    <Link
-                      className="btn btn--ghost"
-                      to={documentHref({ kind: 'rule', ...next }) ?? '/rules'}
-                    >
-                      Next: {next.title}
-                    </Link>
-                  ) : null}
-                </nav>
-              ) : null}
-            </DetailLayout.Reading>
+            </section>
           </DetailLayout>
         </article>
       ),

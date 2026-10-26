@@ -62,7 +62,10 @@ export function EditorDocumentControls({
         title="Leave with unsaved changes?"
         onClose={view.stay}
       >
-        <p>Your recovery copy stays in this browser for this account and revision.</p>
+        <p>
+          Your unsaved changes are kept as a draft in this browser. You can come back to
+          them.
+        </p>
         <div className="row">
           <Button type="button" onClick={view.stay}>
             Keep editing
@@ -82,7 +85,7 @@ export function EditorDocumentControls({
         <p>
           {view.confirming === 'reload'
             ? 'Your local edits are deleted and the latest saved version loads.'
-            : 'Its copy on this device is deleted.'}
+            : 'This deletes your unsaved draft.'}
         </p>
         <div className="row">
           <Button type="button" onClick={view.cancelConfirm}>

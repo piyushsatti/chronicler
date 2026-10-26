@@ -1,14 +1,22 @@
-.rail h2,
-.rail p {
+/* Owner item 17: author and related entries in one row under the title. */
+.aboutRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  align-items: start;
+  gap: var(--sp-3);
+  min-width: 0;
+}
+
+.aboutRow h2,
+.aboutRow p,
+.sessionDetails h2,
+.sessionDetails p {
   margin: 0;
 }
 
-.header :global(.page-header__heading) {
-  flex: 1 1 0;
-}
-
-.header :global(.page-header__actions) {
-  flex: 0 0 auto;
+/* Full-width body (owner item 17): no reading-column cap on the prose. */
+.body :global(.cr-prose) {
+  max-width: none;
 }
 
 .author {

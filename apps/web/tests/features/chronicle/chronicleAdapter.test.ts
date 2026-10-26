@@ -338,7 +338,7 @@ describe('parseChronicleList', () => {
     },
   );
 
-  it('uses at most160 whitespace-normalized characters of the readable body when excerpt metadata is absent', () => {
+  it('cuts the readable body on a whole word near 160 characters when excerpt metadata is absent', () => {
     const text = 'Public summary '.repeat(20).trim();
     const result = parseChronicleList({
       items: [
@@ -352,8 +352,10 @@ describe('parseChronicleList', () => {
     });
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.data.items[0]?.excerpt).toBe(text.slice(0, 160));
-      expect(result.data.items[0]?.excerpt).toHaveLength(160);
+      const excerpt = result.data.items[0]?.excerpt ?? '';
+      expect(excerpt.length).toBeLessThanOrEqual(161);
+      expect(excerpt).toMatch(/^Public summary .* (Public|summary)…$/);
+      expect(text.startsWith(excerpt.slice(0, -1))).toBe(true);
       expect(result.data.items[0]?.tags).toEqual(['session']);
     }
   });

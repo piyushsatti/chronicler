@@ -11,7 +11,7 @@ export type LabelPlacement = {
 };
 
 const CHAR_PX = 8;
-const LABEL_DY = 41;
+export const MAP_LABEL_DY = 41;
 const LABEL_GAP = 4;
 export const MAP_PIN_RADIUS = 17;
 export const MAP_PIN_TAIL = 25;
@@ -20,9 +20,7 @@ export type LabelBounds = { x1: number; y1: number; x2: number; y2: number };
 
 function shorten(name: string, maxChars: number): string {
   if (maxChars < 1) return '';
-  return name.length > maxChars
-    ? `${name.slice(0, maxChars - 1).trimEnd()}…`
-    : name;
+  return name.length > maxChars ? `${name.slice(0, maxChars - 1).trimEnd()}…` : name;
 }
 
 function labelBox(node: LabelInput, text: string): LabelBounds {
@@ -30,8 +28,8 @@ function labelBox(node: LabelInput, text: string): LabelBounds {
   return {
     x1: node.x - halfWidth,
     x2: node.x + halfWidth,
-    y1: node.y + LABEL_DY - 14,
-    y2: node.y + LABEL_DY + 5,
+    y1: node.y + MAP_LABEL_DY - 14,
+    y2: node.y + MAP_LABEL_DY + 5,
   };
 }
 
@@ -82,7 +80,7 @@ export function placeLabels(
       id: node.id,
       text: fits ? text : '',
       width: fits ? text.length * CHAR_PX : 0,
-      dy: LABEL_DY,
+      dy: MAP_LABEL_DY,
       dx: 0,
       truncated: !fits || text !== node.name,
     };

@@ -1,7 +1,13 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { PointcrawlViewport } from '../../../src/features/map/components/PointcrawlViewport.js';
+import {
+  MAP_ROUTES_STORAGE_KEY,
+  PointcrawlViewport,
+} from '../../../src/features/map/components/PointcrawlViewport.js';
 import good from '../../fixtures/wire/map/good.json';
+
+// These suites cover route drawing; routes are hidden by default, so opt in.
+beforeEach(() => localStorage.setItem(MAP_ROUTES_STORAGE_KEY, 'true'));
 
 const map = { ...good, nodes: good.pointcrawlNodes, edges: good.pointcrawlEdges };
 

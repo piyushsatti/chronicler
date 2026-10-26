@@ -859,11 +859,19 @@ function BlocksLiveEditor({
       return;
     }
     sizeBlockInput(e.target);
-    setLines((ls) => {
-      const n = ls.slice();
-      n[i] = v;
-      return n;
-    });
+    // Report the keystroke to the parent in this same event, not from the
+    // [lines] effect. From the effect, the parent's draft update ran as a
+    // separate, interruptible render; on a slow device React then restored this
+    // textarea to that render's older value and dropped the last character
+    // (loop 3 L2, reproduced in Chromium with tests/e2e/editor-typing.spec.ts).
+    const next = lines.slice();
+    next[i] = v;
+    setLines(next);
+    const joined = leSerialize(next);
+    if (joined !== lastSent.current) {
+      lastSent.current = joined;
+      onChange(joined);
+    }
     const caret = e.target.selectionStart;
     const m = v.slice(0, caret).match(/\[\[([^[\]]*)$/);
     setWikiAC(m ? { query: m[1], at: caret, start: caret - m[1].length - 2 } : null);

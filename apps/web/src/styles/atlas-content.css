@@ -6,7 +6,7 @@
 /* ── prose base ─────────────────────────────────────────────────────── */
 .cr-prose { color: var(--color-text-2); font-family: var(--font-body); font-size: 15px; line-height: 1.8; max-width: var(--page-max-reading); min-width: 0; overflow-wrap: anywhere; }
 /* ── summary adventure prose — design: Fraunces 18px (display) ──────── */
-.summary-prose .cr-prose { font-family: var(--font-display); font-size: 18px; line-height: 1.6; color: var(--color-text); }
+.summary-prose .cr-prose { font-family: var(--font-body); font-size: 18px; line-height: 1.6; color: var(--color-text); }
 .cr-prose.cr-inline { display: inline; font-size: inherit; line-height: inherit; max-width: none; color: inherit; }
 .cr-prose.cr-preview { font-family: inherit; font-size: inherit; line-height: inherit; max-width: none; color: inherit; }
 .cr-prose.cr-preview p { margin: 0; }

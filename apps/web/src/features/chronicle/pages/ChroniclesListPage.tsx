@@ -95,7 +95,7 @@ export function ChroniclesListPage(): React.JSX.Element {
   const showKinds = kinds.size > 1;
 
   const header = (
-    <div data-el="chronicles.eyebrow" className={styles.header}>
+    <div data-el="chronicles.eyebrow">
       <PageHeader
         title="Chronicles"
         lede="Session recaps, player journals and world events from across the campaign."
@@ -113,14 +113,14 @@ export function ChroniclesListPage(): React.JSX.Element {
       />
     </div>
   );
+  // Same toolbar, segment size and spacing as Codex and Rules (owner item 8).
   const toolbar = (
-    <div className={styles.filters}>
+    <div data-el="chronicles.toolbar">
       <PageToolbar
         label="Filter chronicles"
         segments={(
           <PageToolbar.Segments
             aria-label="Chronicle date range"
-            size="sm"
             options={RANGE_OPTIONS}
             value={range}
             onValueChange={(value) => setRange(value)}
@@ -132,7 +132,7 @@ export function ChroniclesListPage(): React.JSX.Element {
             label="Search entries"
             value={searchQuery}
             onValueChange={setSearchQuery}
-            placeholder=""
+            placeholder="Search chronicles…"
           />
         )}
       />
@@ -141,15 +141,15 @@ export function ChroniclesListPage(): React.JSX.Element {
 
   let regions: PageRegionRenderers;
   if (page.status === 'error') {
-    regions = { body: () => <>{header}{toolbar}<ErrorState onRetry={page.refetch} /></> };
+    regions = { body: () => <div className="stack" data-gap="5">{header}{toolbar}<ErrorState onRetry={page.refetch} /></div> };
   } else if (page.status === 'loading') {
-    regions = { body: () => <>{header}{toolbar}<Skeleton height={110} aria-label="Loading chronicles" /></> };
+    regions = { body: () => <div className="stack" data-gap="5">{header}{toolbar}<Skeleton height={110} aria-label="Loading chronicles" /></div> };
   } else if (page.status === 'empty') {
-    regions = { body: () => <>{header}{toolbar}<EmptyState kind="timeline-empty" /></> };
+    regions = { body: () => <div className="stack" data-gap="5">{header}{toolbar}<EmptyState kind="timeline-empty" /></div> };
   } else {
     regions = {
       body: () => (
-        <>
+        <div className="stack" data-gap="5">
           {header}
           {toolbar}
 
@@ -195,7 +195,7 @@ export function ChroniclesListPage(): React.JSX.Element {
               ))
             )}
           </div>
-        </>
+        </div>
       ),
     };
   }

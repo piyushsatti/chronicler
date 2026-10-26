@@ -48,6 +48,20 @@ describe('ChroniclesListPage', () => {
     expect(screen.queryByRole('link', { name: 'New entry' })).not.toBeInTheDocument();
   });
 
+  it('uses the shared toolbar with the same segment size and spacing as Codex and Rules (owner item 8)', async () => {
+    renderWithProviders(<ChroniclesListPage />);
+    await screen.findByText('Vault Delve — Session recap');
+    const toolbar = screen.getByRole('region', { name: 'Filter chronicles' });
+    expect(toolbar).toHaveAttribute('data-component', 'PageToolbar');
+    const segments = within(toolbar).getByRole('toolbar', { name: 'Chronicle date range' });
+    expect(segments).toHaveAttribute('data-size', 'md');
+    const heading = screen.getByRole('heading', { level: 1, name: 'Chronicles' });
+    const stack = toolbar.parentElement?.parentElement;
+    expect(stack).toHaveClass('stack');
+    expect(stack).toHaveAttribute('data-gap', '5');
+    expect(stack).toContainElement(heading);
+  });
+
   it('disambiguates shared author names and keeps author handles searchable', async () => {
     const user = userEvent.setup();
     const seenHandles: string[] = [];

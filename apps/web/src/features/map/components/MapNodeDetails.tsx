@@ -13,8 +13,7 @@ import { humanizeKey } from '../../../utils/format.js';
 import { MapPanelBody } from './MapPanelBody.js';
 import styles from '../pages/map.module.css';
 export function MapNodeDetails(props: MapNodeDetailsProps) {
-  const { map, node, maps, onEdit, onReload, region, onClose, onShowOnMap, onSelect } =
-    props;
+  const { map, node, maps, onEdit, onReload, region, onClose, onShowOnMap } = props;
   const { pending, error, documentIds, documents, submap, unlink } =
     useMapNodeDetails(props);
   const closeButton = useRef<HTMLButtonElement>(null);
@@ -51,31 +50,6 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
       aria-label="Selected location"
       data-map-selected={node.id}
       data-map-panel="true"
-      onKeyDown={(event) => {
-        if (
-          ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(
-            event.key,
-          ) &&
-          !(
-            event.target instanceof HTMLInputElement ||
-            event.target instanceof HTMLTextAreaElement
-          )
-        ) {
-          event.preventDefault();
-          const index = map.nodes.findIndex((item) => item.id === node.id);
-          const next =
-            event.key === 'Home'
-              ? 0
-              : event.key === 'End'
-                ? map.nodes.length - 1
-                : (index +
-                    (event.key === 'ArrowLeft' || event.key === 'ArrowUp' ? -1 : 1) +
-                    map.nodes.length) %
-                  map.nodes.length;
-          const target = map.nodes[next];
-          if (target) onSelect(target.id);
-        }
-      }}
     >
       <header className={styles.detailHeader}>
         <div className={styles.detailTopline}>

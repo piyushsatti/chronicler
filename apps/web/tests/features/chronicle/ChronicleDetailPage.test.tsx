@@ -93,9 +93,24 @@ describe('Summary and Chronicle reader', () => {
     );
     expect(within(bar).getByText(/^DM ·/)).toBeVisible();
     expect((await screen.findAllByRole('link', { name: 'Mira' })).length).toBeGreaterThan(1);
-    // The sidebar rail and Related entries stay.
+    // Session details and Related entries stay.
     expect(screen.getByLabelText('Session details')).toBeVisible();
     expect(screen.getByRole('region', { name: 'Related entries' })).toBeVisible();
+  });
+
+  it('puts Written by and Related entries in one row under the title, body full width (owner item 17)', async () => {
+    reader('/chronicles/vault-delve');
+    const title = await screen.findByRole('heading', { level: 1, name: detail.title });
+    const author = screen.getByRole('region', { name: 'Author' });
+    const related = screen.getByRole('region', { name: 'Related entries' });
+    const row = author.parentElement!;
+    expect(row).toHaveAttribute('data-el', 'chronicle.about');
+    expect(related.parentElement).toBe(row);
+    expect(title.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const body = document.querySelector('.summary-prose')!;
+    expect(row.compareDocumentPosition(body) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(document.querySelector('.detail-layout__rail')).toBeNull();
+    expect(document.querySelector('.reading-column')).toBeNull();
   });
 
   it('puts the in-game date in the header', async () => {

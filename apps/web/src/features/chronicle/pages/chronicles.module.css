@@ -4,23 +4,14 @@
   margin-top: 0;
 }
 
-.header {
-  margin-bottom: var(--sp-5);
-}
-
 .timeline {
   padding-inline-start: calc(var(--sp-6) + var(--sp-1));
-}
-
-.filters {
-  margin-bottom: var(--sp-4);
 }
 
 .legend {
   display: flex;
   flex-wrap: wrap;
   gap: var(--sp-4);
-  margin-bottom: var(--sp-4);
   color: var(--color-text-2);
   font-size: 12px;
 }

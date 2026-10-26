@@ -163,6 +163,26 @@ describe('self-hosted font assets', () => {
     expect(imports.indexOf('fonts.css')).toBeLessThan(imports.indexOf('typography.css'));
   });
 
+  it('sets long-form reading text in Lato too, keeping heading faces (owner font request)', () => {
+    const tokens = css('tokens.css');
+    expect(tokens).toMatch(/--font-narrative:\s*var\(--font-body\);/);
+    expect(tokens).toMatch(/--font-heading:\s*'Fraunces Variable', serif;/);
+    const prose = (file: string, selector: string) =>
+      declarations(rules(postcss.parse(file), selector)[0])['font-family'];
+    expect(prose(css('atlas.css'), '.prose')).toBe('var(--font-body)');
+    expect(prose(css('atlas-vendor/atlas-components.css'), '.hf2 .prose')).toBe('var(--font-body)');
+    expect(prose(css('atlas-content.css'), '.summary-prose .cr-prose')).toBe('var(--font-body)');
+    expect(prose(css('atlas-content.css'), '.cr-prose')).toBe('var(--font-body)');
+    for (const module of [
+      '../features/chronicle/components/chronCard.module.css',
+      '../features/codex/pages/codex.module.css',
+      '../features/rules/pages/rules.module.css',
+    ]) {
+      const source = css(module);
+      expect(source).not.toMatch(/var\(--font-(narrative|display)\)/);
+    }
+  });
+
   it('sets the body font token to Lato and leaves the title and display fonts alone', () => {
     const tokens = css('tokens.css');
     expect(tokens).toMatch(/--font-body:\s*'Lato', 'Geist', sans-serif;/);

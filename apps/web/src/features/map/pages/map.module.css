@@ -416,12 +416,6 @@
   stroke: var(--color-good);
   stroke-width: 5px;
 }
-.pinNumber {
-  fill: var(--color-bg-panel);
-  font-family: var(--font-mono);
-  font-weight: 700;
-  pointer-events: none;
-}
 .labelPlate {
   fill: var(--color-bg-panel);
   stroke: var(--color-border);
@@ -432,6 +426,39 @@
   font-family: var(--font-body);
   font-weight: 500;
   pointer-events: none;
+}
+.hexGrid polygon {
+  fill: none;
+  stroke: color-mix(in srgb, var(--color-text-3) 45%, transparent);
+  stroke-width: 1px;
+}
+.routesToggle {
+  margin-inline-end: 8px;
+  white-space: nowrap;
+}
+.ring {
+  fill: none;
+  stroke: var(--color-accent);
+  stroke-width: 3px;
+}
+[data-map-ring='hover'] .ring {
+  stroke-dasharray: 4 3;
+}
+[data-map-ring='selected'] .ring {
+  stroke: var(--color-good);
+}
+.ringPlate {
+  fill: var(--color-bg-panel);
+  stroke: var(--color-accent);
+  stroke-width: 1px;
+}
+[data-map-ring='selected'] .ringPlate {
+  stroke: var(--color-good);
+}
+.ringLabel {
+  fill: var(--color-text);
+  font-family: var(--font-mono);
+  font-weight: 700;
 }
 .mapMetaRow {
   grid-row: 3;

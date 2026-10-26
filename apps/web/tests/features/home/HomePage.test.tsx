@@ -284,6 +284,15 @@ describe('HomePage', () => {
     expect(
       within(recent).getByRole('link', { name: 'Vault Delve — Session recap' }),
     ).toHaveAttribute('href', '/chronicles/vault-delve-summary');
+    // Owner item 19: the whole card is the one link, with no nested link.
+    const card = within(recent).getAllByTestId('recent-chronicle-card')[0];
+    expect(card.tagName).toBe('A');
+    expect(card).toHaveAttribute('href', '/chronicles/vault-delve-summary');
+    expect(card.querySelector('a')).toBeNull();
+    // The title stays a heading inside the one link, with no other control inside it.
+    const heading = within(card).getByRole('heading', { level: 3 });
+    expect(heading).toHaveTextContent(card.getAttribute('aria-label') ?? '');
+    expect(card.querySelector('button, input, select, textarea, [tabindex]')).toBeNull();
     expect(screen.getByRole('link', { name: 'Mira profile' })).toHaveAttribute(
       'href',
       '/dms/@mira',

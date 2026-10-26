@@ -74,9 +74,17 @@ export function QuestAssociations({
             View {quest.arc.name}
           </Link>
         ) : null}
-        <Button type="submit" disabled={commands.pending || !arcs.data}>
-          Save series
-        </Button>
+        <div className="row" data-wrap="1" data-gap="2">
+          <Button type="submit" disabled={commands.pending || !arcs.data}>
+            Save series
+          </Button>
+          {/* The page-top status announces it; this copy only marks the button visually. */}
+          {commands.succeededKind === 'arc' && commands.message ? (
+            <span className="type-caption" data-el="quest.series.saved" aria-hidden="true">
+              {commands.message}
+            </span>
+          ) : null}
+        </div>
       </form>
       <form
         className="stack"

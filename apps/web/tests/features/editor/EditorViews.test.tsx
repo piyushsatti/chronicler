@@ -125,6 +125,45 @@ describe('editor props-only views', () => {
     expect(screen.getByLabelText('Session')).toHaveAttribute('type', 'datetime-local');
   });
 
+  it.each([
+    ['edit', ['standard', 'one_shot']],
+    ['new', ['one_shot']],
+  ] as const)(
+    'in %s mode, picking another kind beside a lone Standard gives %j',
+    async (editorMode, expected) => {
+      const seen: unknown[] = [];
+      function Quest(): React.JSX.Element {
+        const [meta, setMeta] = useState<EditorShellProps['meta']>({
+          title: 'Saved quest',
+          kinds: ['standard'],
+        });
+        seen.push(meta.kinds);
+        return (
+          <EditorShell
+            {...props()}
+            typeKey="quest"
+            editorMode={editorMode}
+            saveLabel="Save quest"
+            meta={meta}
+            setMeta={setMeta}
+          />
+        );
+      }
+      render(
+        <MemoryRouter>
+          <Quest />
+        </MemoryRouter>,
+      );
+      await userEvent.click(screen.getByRole('button', { name: 'One-shot' }));
+      // A saved quest's Standard was chosen, so only a new quest replaces it (review of L3).
+      expect(seen.at(-1)).toEqual(expected);
+      expect(screen.getByRole('button', { name: 'Standard' })).toHaveAttribute(
+        'aria-pressed',
+        editorMode === 'edit' ? 'true' : 'false',
+      );
+    },
+  );
+
   it('preserves known precision through display changes and requires explicit overlap resolution', () => {
     const changed = vi.fn();
     function Session({ timeZone }: { timeZone: string }): React.JSX.Element {
@@ -330,6 +369,8 @@ describe('editor props-only views', () => {
       cancelTo: '/rules',
       statusMessage: null,
       showPropertyErrors: false,
+      errorFocusRequest: 0,
+      bodyError: null,
       slugLocked: true,
       entityIndex: [],
       entityIndexError: null,

@@ -17,7 +17,7 @@ import { useEditorAudience } from './useEditorAudience.js';
 import { useEditorHistory } from './useEditorHistory.js';
 import { useEditorOptions } from './useEditorOptions.js';
 import { useEditorPreview } from './useEditorPreview.js';
-import { editorFormInvalid, useEditorPublish } from './useEditorPublish.js';
+import { editorBodyError, editorFormInvalid, useEditorPublish } from './useEditorPublish.js';
 import { useEntityLinkIndex } from './useEntityLinkIndex.js';
 
 function editorEditPath(typeKey: EditorTypeKey, id: string): string {
@@ -123,6 +123,12 @@ export function useEditorWorkspace({
   const { meta, body, setMeta, setBody, isDirty, isTouched, clearDraft } = draft;
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [showPropertyErrors, setShowPropertyErrors] = useState(false);
+  /** Bumped on each blocked submit so the error summary takes focus again. */
+  const [errorFocusRequest, setErrorFocusRequest] = useState(0);
+  const showErrorsAndFocus = () => {
+    setShowPropertyErrors(true);
+    setErrorFocusRequest((n) => n + 1);
+  };
   const recordScope = JSON.stringify([actorId, typeKey, initial.recordId]);
   const summaryLinks = useEditorSummaryLinks({
     initial,
@@ -219,7 +225,7 @@ export function useEditorWorkspace({
     category,
     admit,
     scopeKey: `${actorId ?? 'anonymous'}:${typeKey}:${initial.recordId}`,
-    onInvalidTitle: () => setShowPropertyErrors(true),
+    onInvalidTitle: showErrorsAndFocus,
     onSuccess: (result, published) => {
       if (!sessionIsCurrent()) return;
       clearDraft();
@@ -319,8 +325,11 @@ export function useEditorWorkspace({
   }, [isDirty, reloadNow]);
   /** Client-side checks: on failure show the field hints and never call the API. */
   const formInvalid = () => {
-    if (!editorFormInvalid(typeKey, mode, publishMeta)) return false;
-    setShowPropertyErrors(true);
+    if (
+      !editorFormInvalid(typeKey, mode, publishMeta, initial.canEditBody ? body : undefined)
+    )
+      return false;
+    showErrorsAndFocus();
     publish.reset();
     return true;
   };
@@ -353,6 +362,8 @@ export function useEditorWorkspace({
       draft.restoredAt && !draft.stale
         ? {
             savedAt: draft.restoredAt,
+            title: draft.restoredTitle,
+            seriesFromLink: draft.restoredPinned,
             startFresh: () => {
               publish.reset();
               setShowPropertyErrors(false);
@@ -414,6 +425,9 @@ export function useEditorWorkspace({
     ),
     statusMessage,
     showPropertyErrors,
+    errorFocusRequest,
+    /** The quest description is empty; shown with the field errors. */
+    bodyError: enabled && initial.canEditBody ? editorBodyError(typeKey, body) : null,
     slugLocked: mode === 'edit',
     stale: draft.stale,
     draftRecovery:

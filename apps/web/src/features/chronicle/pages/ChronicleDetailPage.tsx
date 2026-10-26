@@ -107,9 +107,11 @@ export function ChronicleDetailPage(): React.JSX.Element {
         .map(({ item }) => item)
     : [];
 
-  const rail = (
-    <div className={`stack ${styles.rail}`} data-gap="3">
-      <Card as="section" pad={5} aria-label="Author">
+  // Owner item 17: "Written by" and "Related entries" sit in one row right
+  // under the title, so the body below can use the full width.
+  const aboutRow = (
+    <div className={styles.aboutRow} data-el="chronicle.about">
+      <Card as="section" pad={4} aria-label="Author">
         {author && authorHref ? (
           <div className="stack" data-gap="3">
             <h2 className="type-heading">Written by</h2>
@@ -130,80 +132,7 @@ export function ChronicleDetailPage(): React.JSX.Element {
           />
         )}
       </Card>
-      {summary && hasSessionDetails ? (
-        <Card as="section" pad={5}>
-          <dl className="stack" data-gap="4" aria-label="Session details">
-            {summary.quests?.length ? (
-              <div>
-                <dt className="type-label">Quests</dt>
-                <dd className="stack" data-gap="3">
-                  {summary.quests.map((quest) => (
-                    <div key={quest.id} className="stack" data-gap="1">
-                      <Link to={`/quests/${encodeURIComponent(quest.shortCode)}`}>
-                        {quest.title?.trim() || 'Quest details'}
-                      </Link>
-                      <Link className="type-caption" to={`/quests/${encodeURIComponent(quest.shortCode)}`}>
-                        View roster
-                      </Link>
-                    </div>
-                  ))}
-                </dd>
-              </div>
-            ) : null}
-            {regionNames.length ? (
-              <div>
-                <dt className="type-label">Regions</dt>
-                <dd className="stack" data-gap="1">
-                  {summary.regions.map((region) => (
-                    <Link key={region.id} to={`/regions/${encodeURIComponent(region.id)}`}>
-                      {region.name}
-                    </Link>
-                  ))}
-                </dd>
-              </div>
-            ) : null}
-            {summary.arc ? (
-              <div>
-                <dt className="type-label">Series</dt>
-                <dd>{summary.arc}</dd>
-              </div>
-            ) : null}
-            {summary.gameDate ? (
-              <div>
-                <dt className="type-label">Game date</dt>
-                <dd>
-                  {summary.gameDate.eraAbbrev} {summary.gameDate.year} ·{' '}
-                  {summary.gameDate.periodName} {summary.gameDate.day}
-                </dd>
-              </div>
-            ) : summary.gameDay != null ? (
-              <div>
-                <dt className="type-label">Game day</dt>
-                <dd>{summary.gameDay}</dd>
-              </div>
-            ) : null}
-            {summary.dms?.length ? (
-              <div>
-                <dt className="type-label">Dungeon masters</dt>
-                <dd>{personLabels(summary.dms).join(', ')}</dd>
-              </div>
-            ) : null}
-            {summary.players?.length ? (
-              <div>
-                <dt className="type-label">Characters</dt>
-                <dd className="stack" data-gap="1">
-                  {summary.players.map((player) => (
-                    <Link key={player.characterId} to={`/characters/${encodeURIComponent(player.characterShortCode)}`}>
-                      {player.characterName}
-                    </Link>
-                  ))}
-                </dd>
-              </div>
-            ) : null}
-          </dl>
-        </Card>
-      ) : null}
-      <Card as="section" pad={5} aria-label="Related entries" className="stack" data-gap="3">
+      <Card as="section" pad={4} aria-label="Related entries" className="stack" data-gap="3">
         <h2 className="type-heading">Related entries</h2>
         {list.status === 'loading' ? (
           <StatePanel status="loading" />
@@ -232,25 +161,98 @@ export function ChronicleDetailPage(): React.JSX.Element {
     </div>
   );
 
+  const sessionDetails = summary && hasSessionDetails ? (
+    <Card as="section" pad={5} className={styles.sessionDetails}>
+      <dl className="stack" data-gap="4" aria-label="Session details">
+        {summary.quests?.length ? (
+          <div>
+            <dt className="type-label">Quests</dt>
+            <dd className="stack" data-gap="3">
+              {summary.quests.map((quest) => (
+                <div key={quest.id} className="stack" data-gap="1">
+                  <Link to={`/quests/${encodeURIComponent(quest.shortCode)}`}>
+                    {quest.title?.trim() || 'Quest details'}
+                  </Link>
+                  <Link className="type-caption" to={`/quests/${encodeURIComponent(quest.shortCode)}`}>
+                    View roster
+                  </Link>
+                </div>
+              ))}
+            </dd>
+          </div>
+        ) : null}
+        {regionNames.length ? (
+          <div>
+            <dt className="type-label">Regions</dt>
+            <dd className="stack" data-gap="1">
+              {summary.regions.map((region) => (
+                <Link key={region.id} to={`/regions/${encodeURIComponent(region.id)}`}>
+                  {region.name}
+                </Link>
+              ))}
+            </dd>
+          </div>
+        ) : null}
+        {summary.arc ? (
+          <div>
+            <dt className="type-label">Series</dt>
+            <dd>{summary.arc}</dd>
+          </div>
+        ) : null}
+        {summary.gameDate ? (
+          <div>
+            <dt className="type-label">Game date</dt>
+            <dd>
+              {summary.gameDate.eraAbbrev} {summary.gameDate.year} ·{' '}
+              {summary.gameDate.periodName} {summary.gameDate.day}
+            </dd>
+          </div>
+        ) : summary.gameDay != null ? (
+          <div>
+            <dt className="type-label">Game day</dt>
+            <dd>{summary.gameDay}</dd>
+          </div>
+        ) : null}
+        {summary.dms?.length ? (
+          <div>
+            <dt className="type-label">Dungeon masters</dt>
+            <dd>{personLabels(summary.dms).join(', ')}</dd>
+          </div>
+        ) : null}
+        {summary.players?.length ? (
+          <div>
+            <dt className="type-label">Characters</dt>
+            <dd className="stack" data-gap="1">
+              {summary.players.map((player) => (
+                <Link key={player.characterId} to={`/characters/${encodeURIComponent(player.characterShortCode)}`}>
+                  {player.characterName}
+                </Link>
+              ))}
+            </dd>
+          </div>
+        ) : null}
+      </dl>
+    </Card>
+  ) : null;
+
   const regions: PageRegionRenderers = {
     body: () => (
-      <DetailLayout rail={rail} railLabel="About this entry">
-        <DetailLayout.Reading>
-          {chronicle.body?.trim() ? (
-            <Card as="article" pad={6}>
-              <div className="summary-prose">
-                <ContentRenderer body={chronicle.body} />
-              </div>
-            </Card>
-          ) : (
-            <EmptyState
-              message="No readable body is available for this entry."
-              action={chronicle.canEdit
-                ? <Link className="btn btn--secondary" to={editHref}>Write this entry</Link>
-                : <Link className="btn btn--secondary" to="/chronicles">Browse Chronicles</Link>}
-            />
-          )}
-        </DetailLayout.Reading>
+      <DetailLayout>
+        {chronicle.body?.trim() ? (
+          <Card as="article" pad={6} className={styles.body}>
+            <div className="summary-prose">
+              <ContentRenderer body={chronicle.body} />
+            </div>
+          </Card>
+        ) : (
+          <EmptyState
+            message="No readable body is available for this entry."
+            action={chronicle.canEdit
+              ? <Link className="btn btn--secondary" to={editHref}>Write this entry</Link>
+              : <Link className="btn btn--secondary" to="/chronicles">Browse Chronicles</Link>}
+          />
+        )}
+        {sessionDetails}
       </DetailLayout>
     ),
   };
@@ -266,7 +268,6 @@ export function ChronicleDetailPage(): React.JSX.Element {
   return (
     <PageShell>
       <PageHeader
-        className={styles.header}
         back={BACK}
         eyebrow={
           <span className={styles.kindRow} data-el="chronicle.kind">
@@ -288,6 +289,7 @@ export function ChronicleDetailPage(): React.JSX.Element {
           </>
         }
       />
+      {aboutRow}
       {hasQuestDetails && summary ? (
         <section className={styles.questBar} aria-label="Quest details" data-el="chronicle.questDetails">
           <h2 className={`type-label ${styles.questBarLabel}`}>Quest details</h2>

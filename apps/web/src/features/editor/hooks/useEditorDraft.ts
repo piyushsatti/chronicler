@@ -139,6 +139,14 @@ export function useEditorDraft(
       /** When the recovered draft was saved, if the form opened from one that differs from the server. */
       restoredAt:
         loaded && JSON.stringify(value) !== signature ? loaded.savedAt : (null as string | null),
+      /** The recovered draft's title, so the notice can say which draft came back. */
+      restoredTitle:
+        saved && typeof saved.meta.title === 'string' ? saved.meta.title.trim() : '',
+      /** Route-pinned values (a new quest's `?series`) replaced the recovered draft's own. */
+      restoredPinned:
+        !!saved &&
+        !!pinned &&
+        Object.entries(pinned).some(([k, v]) => saved.meta[k] !== v),
     };
   };
   const [state, setState] = useState(makeState);
@@ -254,6 +262,10 @@ export function useEditorDraft(
     stale,
     /** When the draft this form opened with was saved on this device; null when it opened fresh. */
     restoredAt: current.restoredAt,
+    /** Title of the recovered draft; empty when it has none. */
+    restoredTitle: current.restoredTitle,
+    /** The link's pinned values overrode the recovered draft's (e.g. its series). */
+    restoredPinned: current.restoredPinned,
     saveDraft: () => persist(current.key, values),
     recoverableDrafts,
     recoverDraft: (savedKey: string) => {

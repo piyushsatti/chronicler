@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import {
   act,
@@ -16,7 +16,10 @@ import { queryKeys } from '../../../src/features/map/feature.js';
 import * as adapter from '../../../src/features/map/adapters/mapAdapter.js';
 import { server } from '../../../src/mocks/server.js';
 import { MapPage } from '../../../src/features/map/pages/MapPage.js';
-import { PointcrawlViewport } from '../../../src/features/map/components/PointcrawlViewport.js';
+import {
+  MAP_ROUTES_STORAGE_KEY,
+  PointcrawlViewport,
+} from '../../../src/features/map/components/PointcrawlViewport.js';
 import {
   RegionHubPage,
   RegionsDirectoryPage,
@@ -24,6 +27,9 @@ import {
 import { renderWithProviders } from '../../test-utils.js';
 import good from '../../fixtures/wire/map/good.json';
 import member from '../../fixtures/wire/me/good.json';
+
+// These suites cover route drawing; routes are hidden by default, so opt in.
+beforeEach(() => localStorage.setItem(MAP_ROUTES_STORAGE_KEY, 'true'));
 
 function token(actor = 'A') {
   return `${btoa('{}')}.${btoa(JSON.stringify({ sub: actor, exp: 4102444800 }))}.test`;
@@ -215,8 +221,8 @@ describe('MapPage', () => {
     const list = screen.getByRole('list', { name: 'Map locations' });
     expect(within(list).getAllByRole('button')).toHaveLength(3);
     const graph = screen.getByRole('group', { name: 'Lightfall pointcrawl graph' });
-    fireEvent.keyDown(within(graph).getByRole('button', { name: 'Lightfall Gate' }), {
-      key: 'ArrowRight',
+    fireEvent.keyDown(within(graph).getByRole('button', { name: 'Old Watchtower' }), {
+      key: 'Enter',
     });
     expect(screen.getByRole('region', { name: 'Selected location' })).toHaveTextContent(
       'Old Watchtower',
@@ -1328,7 +1334,7 @@ describe('MapPage reader presentation', () => {
     );
     renderMap('/map');
     fireEvent.click(await screen.findByRole('button', { name: 'Northern Reach' }));
-    expect(screen.getByRole('heading', { level: 1, name: 'Maps' })).toBeVisible();
+    expect(screen.getByRole('heading', { level: 1, name: 'Map' })).toBeVisible();
     expect(screen.getByRole('button', { name: 'Northern Reach' })).toHaveAttribute(
       'aria-pressed',
       'true',

@@ -174,6 +174,25 @@
   overflow-wrap: anywhere;
 }
 
+/* A selected choice chip is filled, not just tinted, so it never reads like an
+   unselected one. Outranks editor.css's `.hf2 .pf-tag` ground and border. */
+.workspace :global(.pf-tag[aria-pressed='true']) {
+  background: var(--color-accent);
+  border-color: var(--color-accent);
+  color: var(--color-bg-deep);
+  font-weight: 600;
+}
+
+.workspace :global(.pf-tag[aria-pressed='false']) {
+  background: transparent;
+  border-color: var(--color-border-2);
+  color: var(--color-text-2);
+}
+
+.workspace :global(.pf-tag[aria-pressed]) {
+  padding-inline: var(--sp-2);
+}
+
 .workspace :global(.pf-tag-label) {
   min-inline-size: 0;
   overflow-wrap: anywhere;

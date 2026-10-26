@@ -47,6 +47,37 @@ describe('Codex document routes', () => {
     await expectReader();
   });
 
+  it('gives the body the full width and puts More in {category} below it (owner item 18)', async () => {
+    server.use(
+      graphql.query('CodexDirectory', () =>
+        HttpResponse.json({
+          data: {
+            codexDirectory: {
+              items: [
+                {
+                  id: '10000000-0000-4000-8000-0000000000f1',
+                  slug: 'prism-of-light',
+                  title: 'Prism of Light',
+                  category: 'Feature',
+                  effectiveBody: 'A prism.',
+                },
+              ],
+              total: 1,
+            },
+            codexCategories: [],
+          },
+        }),
+      ),
+    );
+    renderReader('/codex/tree-of-light');
+    await expectReader();
+    const more = await screen.findByRole('heading', { name: /^More in / });
+    const body = screen.getByText(entry.document.effectiveBody);
+    expect(body.compareDocumentPosition(more) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(document.querySelector('.detail-layout__rail')).toBeNull();
+    expect(document.querySelector('.reading-column')).toBeNull();
+  });
+
   it('shows the entry author display name from the existing member profile', async () => {
     server.use(
       graphql.query('MemberProfile', () =>

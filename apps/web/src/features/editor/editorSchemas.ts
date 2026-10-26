@@ -19,6 +19,7 @@ const QUEST_SCHEMA: FieldSchema[] = [
     type: 'multiselect',
     required: true,
     options: QUEST_KINDS,
+    defaultOption: 'standard',
     validate: (v) =>
       !Array.isArray(v) || v.length === 0
         ? 'Pick at least one kind'
@@ -53,6 +54,8 @@ const QUEST_SCHEMA: FieldSchema[] = [
     required: true,
     placeholder: 'e.g. 3',
     validate: (v) => {
+      // A recovered draft may hold a number rather than the typed text.
+      if (typeof v === 'number') return v > 0 ? null : 'Must be a positive number';
       if (!v || typeof v !== 'string') return 'Required';
       const n = Number(v.trim());
       return Number.isFinite(n) && n > 0 ? null : 'Must be a positive number';

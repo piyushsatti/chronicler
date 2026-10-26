@@ -33,15 +33,26 @@ const documentKinds = {
   demo: 'codex_entry',
 } satisfies Record<Exclude<EditorTypeKey, 'quest'>, string>;
 
-/** The form has a missing title or a field error: show the field hints, never call the API. */
+/** The quest description the API requires ("Quest brief required."); null when fine.
+ *  Pass `body` only when the form can edit it. */
+export function editorBodyError(typeKey: EditorTypeKey, body?: string): string | null {
+  return typeKey === 'quest' && body !== undefined && body.trim() === ''
+    ? 'Describe the quest for players'
+    : null;
+}
+
+/** The form has a missing title, a field error or an empty quest description: show
+ *  the field hints, never call the API. */
 export function editorFormInvalid(
   typeKey: EditorTypeKey,
   mode: EditorMode,
   meta: EditorMeta,
+  body?: string,
 ): boolean {
   const title = typeof meta.title === 'string' ? meta.title.trim() : '';
   return (
     !title ||
+    editorBodyError(typeKey, body) !== null ||
     Object.keys(schemaErrors(schemaForType(typeKey, meta, {}, mode), meta)).length > 0
   );
 }
@@ -116,7 +127,9 @@ export function useEditorPublish({
         const publish = shouldPublish !== false;
         const title = typeof meta.title === 'string' ? meta.title.trim() : '';
         // Callers check `editorFormInvalid` first, so this guard only catches a direct call.
-        if (editorFormInvalid(typeKey, mode, meta)) {
+        if (
+          editorFormInvalid(typeKey, mode, meta, initial.canEditBody ? body : undefined)
+        ) {
           onInvalidTitle();
           throw safeAppError(
             !title ? 'Title is required' : 'Check the highlighted properties.',

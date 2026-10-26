@@ -85,8 +85,7 @@ export function MapPage(): React.JSX.Element {
     else if (nextNode) select(nextNode);
   }
   const viewport = useRef<MapViewportHandle>(null);
-  const closeDetails = () => {
-    const id = selected?.id;
+  const clearSelection = () =>
     setParams(
       (current) => {
         const next = new URLSearchParams(current);
@@ -95,6 +94,9 @@ export function MapPage(): React.JSX.Element {
       },
       { replace: true },
     );
+  const closeDetails = () => {
+    const id = selected?.id;
+    clearSelection();
     if (id) viewport.current?.focusNode(id);
   };
   useEffect(() => {
@@ -117,7 +119,7 @@ export function MapPage(): React.JSX.Element {
   const body = (
     <div className={`stack ${styles.page}`}>
       <PageHeader
-        title={requestedAtlas ? (map?.name ?? 'Map') : 'Maps'}
+        title={requestedAtlas ? (map?.name ?? 'Map') : 'Map'}
         lede={
           requestedAtlas
             ? 'Campaign map · Follow the roads, then follow the stories.'
@@ -201,6 +203,7 @@ export function MapPage(): React.JSX.Element {
                     map={map}
                     selectedId={selected?.id ?? null}
                     onSelect={select}
+                    onClear={clearSelection}
                     actions={
                       map.canEdit ? (
                         <>
@@ -246,7 +249,6 @@ export function MapPage(): React.JSX.Element {
                       onReload={reload}
                       region={regionName}
                       onClose={closeDetails}
-                      onSelect={select}
                       onShowOnMap={() => viewport.current?.centerNode(selected.id)}
                     />
                   ) : (

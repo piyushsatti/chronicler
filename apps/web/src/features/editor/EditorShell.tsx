@@ -129,7 +129,14 @@ export type EditorShellProps = {
   /** Why saving is blocked by the Series field (loading or failed options). */
   seriesNotice?: string | null;
   /** The form opened from a draft saved on this device. */
-  restoredDraft?: { savedAt: string; startFresh: () => void } | null;
+  restoredDraft?: {
+    savedAt: string;
+    /** The draft's title; empty for an untitled draft. */
+    title?: string;
+    /** The series came from the link, not from the draft. */
+    seriesFromLink?: boolean;
+    startFresh: () => void;
+  } | null;
   timeZone: string;
   meta: LoadMeta;
   setMeta: React.Dispatch<React.SetStateAction<LoadMeta>>;
@@ -149,6 +156,10 @@ export type EditorShellProps = {
   statusMessage?: string | null;
   errorSlot?: React.ReactNode;
   showPropertyErrors?: boolean;
+  /** Changes on each blocked submit; the error summary then takes focus. */
+  errorFocusRequest?: number;
+  /** Why the body cannot be submitted (an empty quest description). */
+  bodyError?: string | null;
   entityIndex?: EntityLinkIndex;
   slugLocked?: boolean;
   canEditBody?: boolean;
@@ -194,6 +205,8 @@ export function EditorShell({
   statusMessage,
   errorSlot,
   showPropertyErrors = false,
+  errorFocusRequest = 0,
+  bodyError = null,
   entityIndex,
   slugLocked = false,
   canEditBody = true,
@@ -432,7 +445,13 @@ export function EditorShell({
           aria-label="Restored draft"
         >
           <p className="type-caption">
-            Restored an unsaved draft from {draftAge(restoredDraft.savedAt)}.
+            {restoredDraft.title
+              ? `Restored your unsaved draft “${restoredDraft.title}” from `
+              : 'Restored an untitled draft from '}
+            {draftAge(restoredDraft.savedAt)}.
+            {restoredDraft.seriesFromLink
+              ? ' The series was set from the link you opened.'
+              : null}
           </p>
           <Button
             type="button"
@@ -455,10 +474,33 @@ export function EditorShell({
           values={meta}
           setValue={(key, val) => setMeta((prev) => ({ ...prev, [key]: val }))}
           showErrors={showPropertyErrors}
+          focusRequest={errorFocusRequest}
+          revealFilled={restoredDraft !== null}
+          createMode={editorMode === 'new'}
+          extraErrors={
+            bodyError ? [{ key: 'body', label: 'Description', message: bodyError }] : []
+          }
           slugLocked={slugLocked || typeKey !== 'quest'}
           options={options}
         />
       </fieldset>
+      {typeKey === 'quest' && canEditBody ? (
+        <div
+          className="pf-row"
+          data-field="body"
+          data-err={showPropertyErrors && bodyError ? 1 : 0}
+        >
+          <div className="pf-label">
+            Description
+            <span className="pf-hint">Required</span>
+          </div>
+          {showPropertyErrors && bodyError ? (
+            <div className="pf-val">
+              <div className="pf-err">{bodyError}</div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
       {slugLocked && pageAddress ? <PageAddress address={pageAddress} /> : null}
       <Tabs
         aria-label="Editor mode"

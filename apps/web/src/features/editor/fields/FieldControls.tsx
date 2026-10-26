@@ -592,29 +592,72 @@ export function MultiSelectField({
   field,
   value,
   onChange,
+  replaceDefault = false,
 }: {
   field: FieldSchema;
   value: string[];
   onChange: (v: string[]) => void;
+  /** Only on a new record: there the default was preselected, not chosen. */
+  replaceDefault?: boolean;
 }): React.JSX.Element {
   const opts = (field.options ?? []) as (string | [string, string])[];
   const selected = value ?? [];
+  // On a new record the preselected default (a quest's "Standard") gives way to
+  // the first other pick, unless the user chose it here; then it stays alongside
+  // the others. A saved record's values were all chosen, so nothing is replaced.
+  const defaultChosen = useRef(false);
   const toggle = (v: string): void => {
-    onChange(selected.includes(v) ? selected.filter((x) => x !== v) : [...selected, v]);
+    const fallback = field.defaultOption;
+    if (v === fallback) defaultChosen.current = !selected.includes(v);
+    if (selected.includes(v)) {
+      onChange(selected.filter((x) => x !== v));
+    } else if (
+      replaceDefault &&
+      fallback &&
+      v !== fallback &&
+      !defaultChosen.current &&
+      selected.length === 1 &&
+      selected[0] === fallback
+    ) {
+      onChange([v]);
+    } else {
+      onChange([...selected, v]);
+    }
   };
   return (
     <div className="pf-tags row" data-wrap="1">
       {opts.map((opt) => {
         const [v, label] = Array.isArray(opt) ? opt : [opt, opt];
+        const on = selected.includes(v);
         return (
           <button
             key={v}
             type="button"
             className="pf-tag chip"
-            data-tone={selected.includes(v) ? 'accent' : 'line'}
-            aria-pressed={selected.includes(v)}
+            data-tone={on ? 'accent' : 'line'}
+            data-selected={on ? '1' : undefined}
+            aria-pressed={on}
             onClick={() => toggle(v)}
           >
+            {on ? (
+              <svg
+                className="pf-tag-check"
+                data-el="editor.chip.check"
+                aria-hidden="true"
+                viewBox="0 0 12 12"
+                width="12"
+                height="12"
+              >
+                <path
+                  d="M2.5 6.5 5 9l4.5-6"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            ) : null}
             {label}
           </button>
         );

@@ -247,7 +247,7 @@ describe('parseRulesList', () => {
     expect(result.ok).toBe(true);
     if (result.ok) {
       expect(result.data.rulings[0]?.excerpt).toBe(
-        'Cover Half cover behind an ally Full cover blocks targeting Ask the DM',
+        'Half cover behind an ally Full cover blocks targeting Ask the DM',
       );
     }
   });

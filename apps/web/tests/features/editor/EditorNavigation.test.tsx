@@ -81,9 +81,14 @@ describe('editor navigation in the production wildcard data-router shape', () =>
       target: { value: 'Unsaved body' },
     });
     fireEvent.click(screen.getByRole('link', { name: 'Go after' }));
-    expect(
-      await screen.findByRole('dialog', { name: 'Leave with unsaved changes?' }),
-    ).toBeInTheDocument();
+    const leave = await screen.findByRole('dialog', {
+      name: 'Leave with unsaved changes?',
+    });
+    // Plain words, no "recovery copy", "revision" or "this device" (loop 3 L8).
+    expect(leave).toHaveTextContent(
+      'Your unsaved changes are kept as a draft in this browser. You can come back to them.',
+    );
+    expect(leave).not.toHaveTextContent(/recovery copy|revision|this device/);
     expect(router.state.location.pathname).toBe('/editor');
     fireEvent.click(screen.getByRole('button', { name: 'Keep editing' }));
     expect(screen.getByLabelText('Body')).toHaveValue('Unsaved body');

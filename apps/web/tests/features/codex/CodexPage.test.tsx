@@ -89,7 +89,8 @@ describe('CodexPage', () => {
       renderWithProviders(<CodexPage />);
       const card = await screen.findByRole('link', { name: /Aetós/ });
       expect(card).toHaveTextContent(
-        'The steward of plenty The Second Light Type City & realm After Katsík, see the first light.',
+        // Owner L6: card previews skip headings and table rows.
+        'The steward of plenty After Katsík, see the first light.',
       );
       expect(card.textContent).not.toMatch(/[*#|[\]]|&amp;/);
     },

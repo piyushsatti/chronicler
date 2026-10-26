@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import { graphql, HttpResponse } from 'msw';
 import { Route, Routes } from 'react-router-dom';
@@ -7,7 +7,11 @@ import { MapPage } from '../../../src/features/map/pages/MapPage.js';
 import { MapKey } from '../../../src/features/map/components/MapKey.js';
 import { MapPanelBody } from '../../../src/features/map/components/MapPanelBody.js';
 import { renderWithProviders } from '../../test-utils.js';
+import { MAP_ROUTES_STORAGE_KEY } from '../../../src/features/map/components/PointcrawlViewport.js';
 import good from '../../fixtures/wire/map/good.json';
+
+// These suites cover route drawing; routes are hidden by default, so opt in.
+beforeEach(() => localStorage.setItem(MAP_ROUTES_STORAGE_KEY, 'true'));
 
 const first = good.pointcrawlNodes[0]!;
 const region = {

@@ -1,4 +1,3 @@
-import { Link } from 'react-router-dom';
 import { Avatar } from '../../../components/primitives/Avatar.js';
 import { Card } from '../../../components/primitives/Card.js';
 import { relativeDate } from '../relativeDate.js';
@@ -20,15 +19,19 @@ export function RecentChronicleCard({
 }: RecentChronicleCardProps): React.JSX.Element {
   const when = relativeDate(date);
   return (
-    <Card as="article" pad={4} data-el="home.recentChronicle" data-testid="recent-chronicle-card">
-      <h3 className={`type-title ${styles.title}`}>
-        <Link
-          className={styles.link}
-          to={`/chronicles/${encodeURIComponent(slug)}`}
-          data-el="home.recentChronicle.link"
-        >
-          {title}
-        </Link>
+    // The whole card is the one link, like every other card (owner item 19).
+    <Card
+      variant="clickable"
+      to={`/chronicles/${encodeURIComponent(slug)}`}
+      aria-label={title}
+      pad={4}
+      className={styles.card}
+      data-el="home.recentChronicle"
+      data-testid="recent-chronicle-card"
+    >
+      {/* A heading, not a nested link, so heading navigation still finds each card. */}
+      <h3 className={`type-title ${styles.title}`} data-el="home.recentChronicle.link">
+        {title}
       </h3>
       <div className={`row ${styles.meta}`} data-justify="between" data-gap="2">
         {author ? (

@@ -13,7 +13,7 @@ import {
   ruleDocumentWireSchema,
   rulesListWireSchema,
 } from './rules.wire.schema.js';
-import { markdownToPlainText, plainExcerpt } from '../../../utils/markdownText.js';
+import { cardExcerpt } from '../../../utils/markdownText.js';
 
 export type RuleListItemView = {
   id: string;
@@ -45,23 +45,13 @@ export type RulesHubView = {
 
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---[ \t]*(?:\r?\n|$)/;
 
-/** A leading YAML block's `summary:` line, unquoted. */
-function frontmatterSummary(body: string): string | null {
-  const block = FRONTMATTER.exec(body)?.[1];
-  const line = block?.split(/\r?\n/).find((entry) => /^summary\s*:/.test(entry));
-  if (!line) return null;
-  const value = line
-    .replace(/^summary\s*:\s*/, '')
-    .trim()
-    .replace(/^(['"])(.*)\1$/, '$2');
-  return value || null;
-}
-
-const EXCERPT_LENGTH = 180;
+/* Short enough that a two-line card clamp rarely cuts it, so the visible
+ * text ends on the whole word and "…" from plainExcerpt. */
+const EXCERPT_LENGTH = 100;
 
 function excerptOf(body: string | null | undefined): string | null {
-  if (!body) return null;
-  return plainExcerpt(frontmatterSummary(body) ?? markdownToPlainText(body), EXCERPT_LENGTH);
+  // The shared card rule: an authored summary first, else the body's prose.
+  return cardExcerpt(body, EXCERPT_LENGTH);
 }
 
 function mapListItem(

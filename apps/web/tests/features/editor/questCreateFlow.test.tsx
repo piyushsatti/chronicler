@@ -14,7 +14,10 @@ const otherSeries = '22222222-2222-4222-8222-222222222222';
 const draftKey = draftStorageKey('quest', 'new', 'discord-editor', 'new');
 
 /** A complete new-quest draft recovered from this device, so the form can be submitted. */
-function seedQuestDraft(meta: Record<string, unknown> = {}) {
+function seedQuestDraft(
+  meta: Record<string, unknown> = {},
+  body = 'Descend the salt stair.',
+) {
   localStorage.setItem(
     draftKey,
     JSON.stringify({
@@ -31,7 +34,7 @@ function seedQuestDraft(meta: Record<string, unknown> = {}) {
         arcId: '',
         ...meta,
       },
-      body: 'Descend the salt stair.',
+      body,
       savedAt: '2026-10-25T10:00:00Z',
     }),
   );
@@ -102,13 +105,100 @@ describe('creating a quest', () => {
     renderNewQuest();
     const standard = await screen.findByRole('button', { name: 'Standard' });
     expect(standard).toHaveAttribute('aria-pressed', 'true');
-    await userEvent.click(screen.getByRole('button', { name: 'One-shot' }));
-    await userEvent.click(standard);
+    const oneShot = screen.getByRole('button', { name: 'One-shot' });
+    await userEvent.click(oneShot);
+    // The preselected Standard gives way to the first other kind (loop 3 L3).
     expect(standard).toHaveAttribute('aria-pressed', 'false');
+    expect(oneShot).toHaveAttribute('aria-pressed', 'true');
     await userEvent.click(screen.getByRole('button', { name: 'Create quest' }));
     await waitFor(() => expect(inputs).toHaveLength(1));
     expect(inputs[0].kinds).toEqual(['one_shot']);
     expect(inputs[0]).not.toHaveProperty('arcId');
+  });
+
+  it('keeps Standard beside other kinds when the user picks it, and marks picks clearly', async () => {
+    seedQuestDraft();
+    const inputs = captureCreate();
+    renderNewQuest();
+    const standard = await screen.findByRole('button', { name: 'Standard' });
+    const oneShot = screen.getByRole('button', { name: 'One-shot' });
+    // Selected chips are filled and carry a check mark; unselected ones do not.
+    expect(standard).toHaveAttribute('data-selected', '1');
+    expect(standard.querySelector('[data-el="editor.chip.check"]')).not.toBeNull();
+    expect(oneShot).not.toHaveAttribute('data-selected');
+    expect(oneShot.querySelector('[data-el="editor.chip.check"]')).toBeNull();
+    await userEvent.click(oneShot);
+    await userEvent.click(standard);
+    expect(standard).toHaveAttribute('aria-pressed', 'true');
+    expect(oneShot).toHaveAttribute('aria-pressed', 'true');
+    await userEvent.click(screen.getByRole('button', { name: 'Create quest' }));
+    await waitFor(() => expect(inputs).toHaveLength(1));
+    expect(inputs[0].kinds).toEqual(['one_shot', 'standard']);
+  });
+
+  it('keeps an explicitly re-picked Standard when another kind is added', async () => {
+    seedQuestDraft();
+    const inputs = captureCreate();
+    renderNewQuest();
+    const standard = await screen.findByRole('button', { name: 'Standard' });
+    await userEvent.click(standard);
+    await userEvent.click(standard);
+    await userEvent.click(screen.getByRole('button', { name: 'One-shot' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Create quest' }));
+    await waitFor(() => expect(inputs).toHaveLength(1));
+    expect(inputs[0].kinds).toEqual(['standard', 'one_shot']);
+  });
+
+  it('requires the description and focuses the error summary on Create quest (loop 3 L4, L5)', async () => {
+    seedQuestDraft({ durationHours: '' }, '   ');
+    const inputs = captureCreate();
+    const scroll = vi.fn();
+    Element.prototype.scrollIntoView = scroll;
+    renderNewQuest();
+    expect(await screen.findByText('Description')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Create quest' }));
+    const summary = await screen.findByRole('group', {
+      name: 'Fields that need attention',
+    });
+    await waitFor(() => expect(summary).toHaveFocus());
+    expect(scroll).toHaveBeenCalled();
+    expect(summary).toHaveTextContent('2 fields need attention');
+    expect(summary).toHaveTextContent('Length (hours) — Required');
+    expect(summary).toHaveTextContent('Description — Describe the quest for players');
+    expect(inputs).toHaveLength(0);
+    // A second blocked attempt takes focus back to the summary.
+    screen.getByRole('button', { name: 'Create quest' }).focus();
+    await userEvent.click(screen.getByRole('button', { name: 'Create quest' }));
+    await waitFor(() =>
+      expect(
+        screen.getByRole('group', { name: 'Fields that need attention' }),
+      ).toHaveFocus(),
+    );
+    expect(inputs).toHaveLength(0);
+    delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+  });
+
+  it('shows field errors for a restored draft with bad numbers (loop 3 L9)', async () => {
+    seedQuestDraft({ durationHours: -2, slotsMax: 0 });
+    const inputs = captureCreate();
+    renderNewQuest();
+    await screen.findByRole('status', { name: 'Restored draft' });
+    const length = document.querySelector('[data-field="durationHours"]')!;
+    const seats = document.querySelector('[data-field="slotsMax"]')!;
+    expect(length).toHaveAttribute('data-err', '1');
+    expect(length).toHaveTextContent('Must be a positive number');
+    expect(seats).toHaveAttribute('data-err', '1');
+    expect(seats).toHaveTextContent('Must be a positive whole number');
+    // Valid restored fields stay quiet.
+    expect(document.querySelector('[data-field="title"]')).toHaveAttribute(
+      'data-err',
+      '0',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Create quest' }));
+    expect(
+      await screen.findByRole('group', { name: 'Fields that need attention' }),
+    ).toHaveTextContent('2 fields need attention');
+    expect(inputs).toHaveLength(0);
   });
 
   it('sends Standard alone when it is the only kind', async () => {
@@ -322,6 +412,8 @@ describe('creating a quest', () => {
     renderNewQuest();
     await userEvent.click(await screen.findByRole('button', { name: 'Discard draft' }));
     const dialog = await screen.findByRole('dialog', { name: 'Discard this draft?' });
+    expect(dialog).toHaveTextContent('This deletes your unsaved draft.');
+    expect(dialog).not.toHaveTextContent(/recovery copy|revision|this device/);
     await userEvent.click(
       within(dialog).getByRole('button', { name: 'Discard draft' }),
     );
@@ -405,7 +497,26 @@ describe('a restored draft and the series in the link', () => {
       await screen.findByRole('button', { name: /Coastal voyages/ }),
     ).toBeInTheDocument();
     const notice = screen.getByRole('status', { name: 'Restored draft' });
-    expect(notice).toHaveTextContent(/Restored an unsaved draft from .+\./);
+    expect(notice).toHaveTextContent(
+      /^Restored your unsaved draft “The Salt Stair” from .+\.Start fresh$/,
+    );
+  });
+
+  it('names an untitled draft and says when the link set the series (loop 3 L1)', async () => {
+    seedQuestDraft({ title: '', arcId: otherSeries });
+    renderNewQuest(`/quests/new?series=${ownSeries}`);
+    const notice = await screen.findByRole('status', { name: 'Restored draft' });
+    expect(notice).toHaveTextContent(
+      /Restored an untitled draft from .+\. The series was set from the link you opened\./,
+    );
+  });
+
+  it('does not mention the link when the draft already has the linked series', async () => {
+    seedQuestDraft({ arcId: ownSeries });
+    renderNewQuest(`/quests/new?series=${ownSeries}`);
+    const notice = await screen.findByRole('status', { name: 'Restored draft' });
+    expect(notice).toHaveTextContent(/“The Salt Stair”/);
+    expect(notice).not.toHaveTextContent(/set from the link/);
   });
 
   it('starts fresh: clears the recovery copy and keeps the linked series', async () => {

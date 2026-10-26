@@ -50,6 +50,9 @@ export type FieldSchema = {
   hint?: string;
   readOnly?: boolean;
   options?: string[] | [string, string][];
+  /** Multiselect: the option preselected for a new record. Picking another option
+   *  while it is the only one selected replaces it, unless the user picked it. */
+  defaultOption?: string;
   mono?: boolean;
   normalize?: (v: string) => string;
   validate?: (v: unknown) => string | null;
