@@ -654,6 +654,7 @@ export type MapCreateInput = {
   assetPath?: InputMaybe<Scalars['String']['input']>;
   atlasCode: Scalars['String']['input'];
   family: Scalars['String']['input'];
+  grid?: Scalars['String']['input'];
   mapKind: Scalars['String']['input'];
   name: Scalars['String']['input'];
   regionId?: InputMaybe<Scalars['ID']['input']>;
@@ -666,6 +667,7 @@ export type MapType = {
   createdAt: Scalars['DateTime']['output'];
   createdBy?: Maybe<Scalars['ID']['output']>;
   family: Scalars['String']['output'];
+  grid: Scalars['String']['output'];
   id: Scalars['ID']['output'];
   mapKind: Scalars['String']['output'];
   name: Scalars['String']['output'];
@@ -684,6 +686,13 @@ export type MapTypePointcrawlEdgesArgs = {
 export type MapTypePointcrawlNodesArgs = {
   limit?: Scalars['Int']['input'];
   offset?: Scalars['Int']['input'];
+};
+
+export type MapUpdateInput = {
+  assetPath?: InputMaybe<Scalars['String']['input']>;
+  family: Scalars['String']['input'];
+  grid: Scalars['String']['input'];
+  name: Scalars['String']['input'];
 };
 
 export type MemberActivityStatsType = {
@@ -884,6 +893,7 @@ export type Mutation = {
   updateDocument: DocumentType;
   updateGameCalendar: GameCalendarType;
   updateHomeBanner: HomeBannerType;
+  updateMap: MapType;
   updateMyDmProfile: DmProfileType;
   updateMyProfile: MemberType;
   updateMySettings: MemberSettingsType;
@@ -1300,6 +1310,13 @@ export type MutationUpdateGameCalendarArgs = {
 
 export type MutationUpdateHomeBannerArgs = {
   input: HomeBannerInput;
+  meta: CommandMeta;
+};
+
+
+export type MutationUpdateMapArgs = {
+  id: Scalars['ID']['input'];
+  input: MapUpdateInput;
   meta: CommandMeta;
 };
 

@@ -101,9 +101,7 @@ export function useMapPage(atlasCode: string) {
       );
     if (edit.kind === 'link')
       return liveMap.nodes.some((node) => node.id === edit.node.id);
-    return (
-      edit.edge === null || liveMap.edges.some((edge) => edge.id === edit.edge?.id)
-    );
+    return true;
   };
   const regionDocument = useQuery({
     queryKey: queryKeys.mapDocument(regionDocumentId),

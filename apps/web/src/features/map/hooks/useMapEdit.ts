@@ -3,26 +3,41 @@ import { useAuth } from '../../../auth/AuthContext.js';
 import { TransportError } from '../../../errors/types.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import { useQuery } from '@tanstack/react-query';
-import type {
-  MapAtlasView,
-  MapEdge,
-  MapNode,
-  MapRegion,
-} from '../adapters/mapAdapter.js';
+import type { MapAtlasView, MapNode, MapRegion } from '../adapters/mapAdapter.js';
 import {
   mapWriteError,
   changeEntry,
   createMap,
   loadLocationDocuments,
-  saveEdge,
   saveNode,
+  updateMap,
 } from '../adapters/mapAdapter.js';
 import { queryKeys } from '../feature.js';
 export type MapEdit =
   | { kind: 'create'; regions: MapRegion[]; global: boolean }
-  | { kind: 'node'; map: MapAtlasView; node: MapNode | null; maps: MapAtlasView[] }
-  | { kind: 'edge'; map: MapAtlasView; edge: MapEdge | null; nodes: MapNode[] }
+  | { kind: 'map'; map: MapAtlasView }
+  | {
+      kind: 'node';
+      map: MapAtlasView;
+      node: MapNode | null;
+      maps: MapAtlasView[];
+      /** Prefilled position when the add form opens from a right-click on the map. */
+      at?: { x: number; y: number };
+    }
   | { kind: 'link'; map: MapAtlasView; node: MapNode };
+
+/**
+ * A map's address when the creator leaves it blank: the name in capitals with dashes,
+ * for example "Lightfall Hexflower" becomes "LIGHTFALL-HEXFLOWER".
+ */
+export function suggestMapAddress(name: string): string {
+  return name
+    .trim()
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 64);
+}
 export function useMapEdit({
   edit,
   onClose,
@@ -47,9 +62,9 @@ export function useMapEdit({
           edit.map.id,
           edit.kind === 'node'
             ? (edit.node?.id ?? null)
-            : edit.kind === 'edge'
-              ? (edit.edge?.id ?? null)
-              : edit.node.id,
+            : edit.kind === 'link'
+              ? edit.node.id
+              : null,
         ],
   );
   const current = useRef({ token, scopeKey, identity, admit });
@@ -93,7 +108,6 @@ export function useMapEdit({
     const text = (name: string) => String(data.get(name) ?? '').trim();
     if (
       (edit.kind === 'create' && !edit.global && !text('regionId')) ||
-      (edit.kind === 'edge' && (!text('nodeA') || !text('nodeB'))) ||
       (edit.kind === 'link' && !text('documentId'))
     ) {
       setError('Please select an item in the list.');
@@ -114,15 +128,30 @@ export function useMapEdit({
         const created = await createMap(
           {
             name: text('name'),
-            atlasCode: text('atlasCode'),
+            atlasCode: text('atlasCode') || suggestMapAddress(text('name')),
             family: text('family'),
+            grid: text('grid') === 'hex' ? 'hex' : 'point',
             mapKind: 'pointcrawl',
             regionId: text('regionId') || null,
+            assetPath: text('assetPath') || null,
           },
           key,
         );
         if (!active()) return;
         await onSaved(created.atlasCode);
+      } else if (edit.kind === 'map') {
+        await updateMap(
+          edit.map.id,
+          {
+            name: text('name'),
+            family: text('family'),
+            grid: text('grid') === 'hex' ? 'hex' : 'point',
+            assetPath: text('assetPath') || null,
+          },
+          key,
+        );
+        if (!active()) return;
+        await onSaved();
       } else if (edit.kind === 'node') {
         const node = await saveNode(
           edit.map.id,
@@ -137,22 +166,6 @@ export function useMapEdit({
         );
         if (!active()) return;
         await onSaved(undefined, node.id);
-      } else if (edit.kind === 'edge') {
-        await saveEdge(
-          edit.map.id,
-          {
-            id: edit.edge?.id,
-            nodeA: text('nodeA'),
-            nodeB: text('nodeB'),
-            directed: data.has('directed'),
-            kind: text('kind'),
-            label: text('label') || null,
-            documentId: edit.edge?.documentId ?? null,
-          },
-          key,
-        );
-        if (!active()) return;
-        await onSaved();
       } else {
         await changeEntry(
           {
@@ -181,7 +194,7 @@ export function useMapEdit({
       }
       setError(
         edit.kind === 'link' && cause instanceof TransportError && cause.code === 'CONFLICT'
-          ? 'This hex already has a Location. Unlink it before linking another.'
+          ? 'That Location is already linked here. Pick a different one.'
           : `${mapWriteError(cause)} Your entries are retained. Retry or close and refresh the map.`,
       );
     } finally {

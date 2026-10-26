@@ -1,0 +1,6 @@
+mutation MapUpdate($id: ID!, $input: MapUpdateInput!, $meta: CommandMeta!) {
+  updateMap(id: $id, input: $input, meta: $meta) {
+    id
+    atlasCode
+  }
+}

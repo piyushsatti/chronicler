@@ -21,7 +21,7 @@ describe('R16b route key availability', () => {
       />,
     );
     expect(
-      screen.getByRole('group', { name: 'Lightfall pointcrawl graph' }),
+      screen.getByRole('group', { name: 'Lightfall map' }),
     ).toBeVisible();
     expect(
       screen.queryByRole('button', { name: 'Key to route line styles' }),
@@ -82,7 +82,7 @@ describe('R16b route key availability', () => {
         onSelect={vi.fn()}
       />,
     );
-    const graph = screen.getByRole('group', { name: 'Lightfall pointcrawl graph' });
+    const graph = screen.getByRole('group', { name: 'Lightfall map' });
     const anchor = graph.querySelector(`[data-node-id="${start.id}"]`);
     const plate = anchor?.querySelector('rect');
     const label = anchor?.querySelector('text:last-child');

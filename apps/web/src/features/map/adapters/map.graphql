@@ -5,6 +5,7 @@ query MapAtlas($atlasCode: String!, $limit: Int! = 200, $offset: Int! = 0) {
     name
     atlasCode
     family
+    grid
     mapKind
     assetPath
     regionId

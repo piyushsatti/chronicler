@@ -72,9 +72,9 @@ describe('B5 always-on map panel', () => {
       'href',
       '/codex/coast-record',
     );
-    expect(panel).toHaveTextContent('3 places');
+    expect(panel).toHaveTextContent('3 locations');
     expect(panel).toHaveTextContent('1 route');
-    expect(within(panel).getByText('Choose a place to see its stories.')).toBeVisible();
+    expect(within(panel).getByText('Choose a location to see its stories.')).toBeVisible();
     expect(screen.getByRole('link', { name: 'Region overview' })).toHaveAttribute(
       'href',
       `/regions/${region.id}`,
@@ -82,9 +82,8 @@ describe('B5 always-on map panel', () => {
     expect(
       screen.getByRole('region', { name: 'Map locations' }).querySelector('details'),
     ).not.toHaveAttribute('open');
-    expect(
-      screen.getByRole('region', { name: 'Map connections' }).querySelector('details'),
-    ).not.toHaveAttribute('open');
+    // Connections are hidden from the map UI (M4-17).
+    expect(screen.queryByRole('region', { name: 'Map connections' })).toBeNull();
   });
 
   it('shows only region name, counts and hint when the region has no document', async () => {
@@ -98,9 +97,9 @@ describe('B5 always-on map panel', () => {
     );
     const panel = await screen.findByRole('region', { name: 'Map region' });
     expect(within(panel).getByRole('heading', { name: region.name })).toBeVisible();
-    expect(panel).toHaveTextContent('3 places');
+    expect(panel).toHaveTextContent('3 locations');
     expect(panel).toHaveTextContent('1 route');
-    expect(within(panel).getByText('Choose a place to see its stories.')).toBeVisible();
+    expect(within(panel).getByText('Choose a location to see its stories.')).toBeVisible();
     expect(within(panel).queryByRole('link', { name: 'Open in Codex' })).toBeNull();
     expect(within(panel).queryByRole('region', { name: 'Region document' })).toBeNull();
     expect(within(panel).queryByRole('alert')).toBeNull();
@@ -110,7 +109,7 @@ describe('B5 always-on map panel', () => {
   it('changes only panel content and returns to the region with pin focus on close or Escape from the map', async () => {
     page();
     const graph = await screen.findByRole('group', {
-      name: 'Lightfall pointcrawl graph',
+      name: 'Lightfall map',
     });
     const frame = graph.parentElement;
     const viewBox = graph.getAttribute('viewBox');
@@ -121,8 +120,8 @@ describe('B5 always-on map panel', () => {
     expect(selected).toHaveTextContent(first.name);
     expect(graph.parentElement).toBe(frame);
     expect(graph).toHaveAttribute('viewBox', viewBox);
-    expect(screen.getByRole('button', { name: 'Close place details' })).toHaveFocus();
-    fireEvent.click(screen.getByRole('button', { name: 'Close place details' }));
+    expect(screen.getByRole('button', { name: 'Close location details' })).toHaveFocus();
+    fireEvent.click(screen.getByRole('button', { name: 'Close location details' }));
     expect(screen.getByRole('region', { name: 'Map region' })).toBeVisible();
     expect(pin).toHaveFocus();
     fireEvent.click(pin);
@@ -146,7 +145,7 @@ describe('B5 always-on map panel', () => {
     try {
       page(null);
       const graph = await screen.findByRole('group', {
-        name: 'Lightfall pointcrawl graph',
+        name: 'Lightfall map',
       });
       const initial = graph.getAttribute('viewBox');
       fireEvent.click(within(graph).getByRole('button', { name: first.name }));
@@ -160,7 +159,7 @@ describe('B5 always-on map panel', () => {
   it('lets an expanded key consume Escape before a selected place closes', async () => {
     page(null);
     const graph = await screen.findByRole('group', {
-      name: 'Lightfall pointcrawl graph',
+      name: 'Lightfall map',
     });
     fireEvent.click(within(graph).getByRole('button', { name: first.name }));
     const key = screen.getByRole('button', { name: 'Key to route line styles' });

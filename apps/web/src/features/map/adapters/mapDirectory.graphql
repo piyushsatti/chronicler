@@ -5,6 +5,7 @@ query MapDirectory($limit: Int! = 50, $offset: Int! = 0) {
     name
     atlasCode
     family
+    grid
     mapKind
     assetPath
     regionId
