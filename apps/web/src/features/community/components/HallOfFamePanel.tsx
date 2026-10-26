@@ -13,9 +13,9 @@ export function HallOfFamePanel(): React.JSX.Element {
   const hall = useHallOfFame();
   const admin = useCurrentAccess('admin');
 
-  if (hall.status === 'loading') return <StatePanel status="loading" />;
   if (hall.status === 'error')
     return <StatePanel status="error" error={hall.error ?? undefined} onRetry={hall.retry} />;
+  if (hall.status === 'loading') return <StatePanel status="loading" />;
 
   if (hall.status === 'missing' || hall.page === null) {
     return (
