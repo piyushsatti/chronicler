@@ -9,12 +9,14 @@
 .summary-prose .cr-prose { font-family: var(--font-body); font-size: 18px; line-height: 1.6; color: var(--color-text); }
 .cr-prose.cr-inline { display: inline; font-size: inherit; line-height: inherit; max-width: none; color: inherit; }
 .cr-prose.cr-preview { font-family: inherit; font-size: inherit; line-height: inherit; max-width: none; color: inherit; }
+/* Page modules reset `.root p`/`.detail h2` margins at one class + one element; the doubled
+   class keeps prose spacing ahead of those resets wherever ContentRenderer is placed. */
+.cr-prose.cr-prose p { margin: 0 0 14px; text-wrap: pretty; }
 .cr-prose.cr-preview p { margin: 0; }
-.cr-prose > .cr-md:last-child > :last-child { margin-bottom: 0; }
-.cr-prose p { margin: 0 0 14px; text-wrap: pretty; }
-.cr-prose h2 { font-family: var(--font-display); font-weight: 600; font-size: 21px; letter-spacing: -.01em; color: var(--color-text); margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--color-border); }
-.cr-prose h3 { font-family: var(--font-display); font-weight: 600; font-size: 17px; color: var(--color-text); margin: 22px 0 8px; }
-.cr-prose h4 { font-family: var(--font-body); font-weight: 700; font-size: 14px; color: var(--color-text-2); margin: 20px 0 6px; }
+.cr-prose.cr-prose > .cr-md:last-child > :last-child { margin-bottom: 0; }
+.cr-prose.cr-prose h2 { font-family: var(--font-display); font-weight: 600; font-size: 21px; letter-spacing: -.01em; color: var(--color-text); margin: 28px 0 10px; padding-bottom: 6px; border-bottom: 1px solid var(--color-border); }
+.cr-prose.cr-prose h3 { font-family: var(--font-display); font-weight: 600; font-size: 17px; color: var(--color-text); margin: 22px 0 8px; }
+.cr-prose.cr-prose h4 { font-family: var(--font-body); font-weight: 700; font-size: 14px; color: var(--color-text-2); margin: 20px 0 6px; }
 .cr-prose strong { color: var(--color-text); font-weight: 600; }
 .cr-prose em { font-style: italic; color: var(--color-text); }
 .cr-prose del { color: var(--color-text-3); }
