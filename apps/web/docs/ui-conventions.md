@@ -254,3 +254,25 @@ What: no caught error, mutation rejection, query failure, or render crash may re
 Why: a raw `ClientError.message` embeds the full GraphQL response body -- for an unhandled backend exception that includes raw SQL or a stack trace. A raw REST `detail` string carries the same risk. Users see noise, not an actionable next step, and backend internals leak.
 
 How: route every caught error through `app/utils/errorCopy.ts`'s `controlledErrorMessage(err, fallback, context)` (app-wide) or `app/features/editor/editorErrors.ts`'s `mapEditorError(err, action, typeKey)` (editor verbs). Both check network failure -> connectivity copy, GraphQL `ClientError` -> the caller's `fallback` (or a mapped `extensions.code`, table currently empty pending backend codes), an explicit opt-in marker (`ControlledError` / `AdapterError`) -> shown verbatim, anything else -> `fallback`. The real error always goes to `console.error` first so debugging never depends on what's safe to show. The root `ErrorBoundary` in `app/App.tsx` follows the same rule for render crashes. `queryClient`'s `QueryCache.onError` in `app/main.tsx` is DEV-console-only logging, never DOM -- that's fine as-is. Never add a new `err.message` / `error.message` interpolation directly into JSX; grep for it before merging any new error-handling code.
+
+### Owner and tester UI rules (2026-10-22 to 2026-10-26)
+
+What: rules the owner and the tester (Mortal bard) set after finding defects on staging. Check new or changed UI against them before asking for review.
+
+Why: each rule below was found on staging after the work was reported done. Paraphrasing feedback, grading one page at a time and checking only the DOM let them through.
+
+How:
+
+- **Choosing from many items.** A picker with more than a screenful of options gets a search box that filters by name (#107). Chip rows over about 5 options show 4-5 chips plus More. Option lists that mix kinds are grouped by kind, for example species, class and background (#114). Long lists load on scroll, with no Load more button; a load-earlier control for past items is allowed.
+- **Lists and filters.** One filter bar above the results, no side rails. A multi-option filter is one segmented bar with a sliding highlight, labels only, and the count once on the right. Time-ordered lists get quick filters (Today, Tomorrow, This week) and a way to reach past items.
+- **Cards.** A card that navigates is clickable across its whole area. Card previews show the real asset (map art), with a sketch only when there is none (#113). Excerpts strip markdown and cut on a word boundary with an ellipsis.
+- **Words on screen.** No raw enum keys, ISO timestamps, internal ids or internal terms ("arc" is "series"; generated "connections" are hidden or plainly named). Counts have zero, one and many forms.
+- **Errors and gates.** Error text names the rule that blocked the action and the next step. A blocked create says why and links to a page that fixes it. Validation moves focus to the error summary, and required fields are marked. This extends the raw-error rule above.
+- **Relations.** A child's create form lets the user pick its parent (quest to series, quest to pointcrawl places), and the parent page has an add action.
+- **Navigation.** Every role-gated page is reachable from that role's nav. Own pages (`/me`, settings) never redirect into or highlight Community. Phone width keeps one navigation surface.
+- **Outside effects.** An action that publishes outside the app (Discord) says so beside the button and links to the result.
+- **Dialogs.** Use in-page dialogs, not `window.confirm`.
+- **Maps.** Selecting a place never resizes the map. The key sits in the map's corner. Hexflower hexes are flat-topped like the source art, and hex codes come from painted cells only.
+- **Consistency across pages.** Grade every page of a type side by side at one width: titles, chips, toolbars, tab strips, page width and header spacing. Use one shared component or token per element, with no per-page width or padding overrides. Keep `scrollbar-gutter: stable` (in `src/styles/shell.css`) so tab switches do not move content. When a sibling page groups items a certain way, match it.
+- **Tester words are the spec.** Keep the tester's exact words beside each requirement and track every clause. An attached image is the spec; compare the result to it element by element. "Everywhere" or a rename covers every surface. A removal touches only the named element.
+- **Done means rendered.** Check the deployed page signed in as each affected role, use the changed controls, and check the default view plus sparse and empty data.
