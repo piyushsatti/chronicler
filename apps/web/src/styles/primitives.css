@@ -1056,8 +1056,7 @@ textarea.field-input {
 .segmented-track :is(.segmented-row, .segmented-options) {
   display: grid;
   grid-auto-flow: column;
-  /* Size each option to its label so every pill keeps the same side padding. */
-  grid-auto-columns: auto;
+  grid-auto-columns: 1fr;
   min-width: max-content;
 }
 .segmented-pill {
@@ -1176,6 +1175,7 @@ textarea.field-input {
 .tabs[data-component='Tabs'] { display: block; min-width: 0; container-type: inline-size; }
 .tabs[data-component='TabNav'] { display: block; min-width: 0; }
 /* The track may arrive wrapped (PageToolbar, page edge), so space whatever sits first. */
+.tabs[data-component='Tabs'] > .tabs__track,
 .tabs[data-component='Tabs'] > :first-child:not(.tabs__panel) { margin-bottom: var(--sp-4); }
 .tabs[data-component='Tabs'] .tabs__panel { min-width: 0; }
 

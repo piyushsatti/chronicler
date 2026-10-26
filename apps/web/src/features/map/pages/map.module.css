@@ -450,7 +450,7 @@
   stroke: none;
 }
 .node:focus-visible .hexTarget {
-  stroke: #fff;
+  stroke: var(--color-map-ring);
   stroke-width: 2px;
   stroke-dasharray: 3 3;
   vector-effect: non-scaling-stroke;
@@ -459,9 +459,9 @@
 .hexRing,
 [data-map-ring='hover'] .hexRing,
 [data-map-ring='selected'] .hexRing {
-  stroke: #fff;
+  stroke: var(--color-map-ring);
   stroke-dasharray: none;
-  filter: drop-shadow(0 0 1.5px rgb(0 0 0 / 0.85));
+  filter: drop-shadow(0 0 1.5px var(--color-map-ring-halo));
 }
 [data-map-ring='hover'] .hexRing {
   stroke-width: 2px;

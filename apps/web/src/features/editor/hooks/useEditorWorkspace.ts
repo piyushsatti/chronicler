@@ -17,7 +17,11 @@ import { useEditorAudience } from './useEditorAudience.js';
 import { useEditorHistory } from './useEditorHistory.js';
 import { useEditorOptions } from './useEditorOptions.js';
 import { useEditorPreview } from './useEditorPreview.js';
-import { editorBodyError, editorFormInvalid, useEditorPublish } from './useEditorPublish.js';
+import {
+  editorBodyError,
+  editorFormInvalid,
+  useEditorPublish,
+} from './useEditorPublish.js';
 import { useEntityLinkIndex } from './useEntityLinkIndex.js';
 
 function editorEditPath(typeKey: EditorTypeKey, id: string): string {
@@ -62,7 +66,10 @@ export function errorNeedsReload(error: AppError | null): boolean {
   if (!error) return false;
   if (error.kind === 'forbidden' || error.kind === 'unauthorized') return true;
   const cause = error.cause;
-  if (cause instanceof TransportError && (cause.code === 'CONFLICT' || cause.status === 409))
+  if (
+    cause instanceof TransportError &&
+    (cause.code === 'CONFLICT' || cause.status === 409)
+  )
     return true;
   return error.kind === 'safe' && RELOAD_MESSAGES.test(error.userMessage);
 }
@@ -186,10 +193,10 @@ export function useEditorWorkspace({
     meta.arcId !== '';
   const seriesWait: 'loading' | 'error' | null = !arcChosen
     ? null
-    : seriesOptions.status === 'loading'
-      ? 'loading'
-      : seriesOptions.status === 'error'
-        ? 'error'
+    : seriesOptions.status === 'error'
+      ? 'error'
+      : seriesOptions.status === 'loading'
+        ? 'loading'
         : null;
   const arcShown =
     typeof meta.arcId !== 'string' ||
@@ -326,7 +333,12 @@ export function useEditorWorkspace({
   /** Client-side checks: on failure show the field hints and never call the API. */
   const formInvalid = () => {
     if (
-      !editorFormInvalid(typeKey, mode, publishMeta, initial.canEditBody ? body : undefined)
+      !editorFormInvalid(
+        typeKey,
+        mode,
+        publishMeta,
+        initial.canEditBody ? body : undefined,
+      )
     )
       return false;
     showErrorsAndFocus();
@@ -388,7 +400,8 @@ export function useEditorWorkspace({
     onPreview,
     preview,
     options,
-    publishDisabled: busy || !admit() || trashed || invalidSession || seriesWait !== null,
+    publishDisabled:
+      busy || !admit() || trashed || invalidSession || seriesWait !== null,
     saveDisabled: busy || !admit() || trashed || invalidSession || seriesWait !== null,
     /** Why saving waits on the Series field, shown next to the save button. */
     seriesNotice:
@@ -431,7 +444,10 @@ export function useEditorWorkspace({
     slugLocked: mode === 'edit',
     stale: draft.stale,
     draftRecovery:
-      enabled && initial.canEditMetadata && !draft.stale && draft.recoverableDrafts.length
+      enabled &&
+      initial.canEditMetadata &&
+      !draft.stale &&
+      draft.recoverableDrafts.length
         ? {
             items: draft.recoverableDrafts,
             recover: (key: string) => {

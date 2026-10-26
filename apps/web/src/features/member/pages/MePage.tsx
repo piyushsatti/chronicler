@@ -304,7 +304,7 @@ function HistoryPage({ activity }: { activity: Activity }): React.JSX.Element {
   return (
     <section className="stack" data-gap="3" aria-labelledby="me-history">
       <h2 id="me-history" className={styles.srOnly}>Quest history</h2>
-      {history.isError ? <StatePanel variant="inline" status="error" error={toAppError(history.error, 'me:history')} onRetry={() => void history.refetch()} retryLabel="Retry quest history" />
+      {history.isError ? <StatePanel variant="inline" status="error" error={toAppError(history.error, 'me:history')} onRetry={activity.retryHistory} retryLabel="Retry quest history" />
         : !history.data ? <Skeleton height="6rem" aria-label="Loading your quest history" />
           : history.data.length === 0 ? <EmptyState message="You have no quest history yet. Quests you play will appear here." />
             : <ul className={styles.list} aria-label="Your quests">{history.data.map((quest) => (
@@ -332,7 +332,7 @@ function SummariesPage({ activity }: { activity: Activity }): React.JSX.Element 
   return (
     <section className="stack" data-gap="3" aria-labelledby="me-summaries">
       <h2 id="me-summaries" className={styles.srOnly}>Summaries</h2>
-      {writings.isError ? <StatePanel variant="inline" status="error" error={toAppError(writings.error, 'me:summaries')} onRetry={() => void writings.refetch()} retryLabel="Retry summaries" />
+      {writings.isError ? <StatePanel variant="inline" status="error" error={toAppError(writings.error, 'me:summaries')} onRetry={activity.retryActivity} retryLabel="Retry summaries" />
         : !writings.data ? <Skeleton height="6rem" aria-label="Loading your summaries" />
           : writings.data.writings.length === 0 ? <EmptyState message="You have not written a summary yet. Summaries you write will appear here." />
             : <CardGrid as="ul" gap={3} aria-label="Your summaries">{writings.data.writings.map((entry) => (

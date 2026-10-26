@@ -246,6 +246,10 @@
   --p-region-mark-pawluck:     #4A6A3D;
   --p-region-mark-viceroc:     #6B4A93;
   --p-region-mark-pelsand:     #8A8273;
+
+  /* Hex-map rings sit on painted art, so they keep one colour in every theme. */
+  --p-map-ring: #fff;
+  --p-map-ring-halo: rgb(0 0 0 / 0.85);
 }
 
 /* ---- Midnight / Ember / Dracula / Vegan x light/dark : B7 (#467) ----
@@ -562,6 +566,8 @@
   --color-good:       var(--color-status-alive);
   --color-warn:       var(--color-status-missing);
   --color-selected-wash: color-mix(in srgb, var(--color-accent) 8%, transparent);
+  --color-map-ring:      var(--p-map-ring);
+  --color-map-ring-halo: var(--p-map-ring-halo);
   --color-hero-bg:    var(--color-bg-panel);
   --color-hero-glow:  var(--color-accent-2);
   --color-hero-ink:   var(--color-text);
