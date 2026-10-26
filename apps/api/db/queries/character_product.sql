@@ -617,13 +617,16 @@ RETURNING backstory.public_id AS id, backstory.name, backstory.lore, backstory.c
 -- name: CharacterProductInsertCharacter :one
 INSERT INTO characters (
     public_id, short_code, name, owner_id, status, backstory_id, guild_document_id,
-    region_id, description, background_text, ddb_url, image_url, created_at, updated_at
+    region_id, description, background_text, ddb_url, image_url, created_at, updated_at,
+    verification_submitted_at
 )
 SELECT sqlc.arg(character_id)::uuid, sqlc.arg(short_code)::text, sqlc.arg(name)::text,
        owner.id, 'pending_approval', backstory.id, guild.id, region.id,
        sqlc.narg(description)::text, sqlc.narg(background_text)::text, sqlc.narg(ddb_url)::text,
        sqlc.narg(image_url)::text,
-       sqlc.arg(at)::timestamptz, sqlc.arg(at)::timestamptz
+       sqlc.arg(at)::timestamptz, sqlc.arg(at)::timestamptz,
+       -- A new character goes straight to the review queue.
+       sqlc.arg(at)::timestamptz
 FROM members owner
 LEFT JOIN backstories backstory ON backstory.public_id = sqlc.narg(backstory_id)::uuid
 LEFT JOIN documents guild ON guild.public_id = sqlc.narg(guild_id)::uuid

@@ -676,7 +676,7 @@ describe('MapPage', () => {
                 ? 'Create map'
                 : kind === 'edge'
                   ? 'Add connection'
-                  : 'Link a Codex entry',
+                  : 'Link a Location',
           }),
         );
         if (kind === 'create') {

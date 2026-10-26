@@ -68,11 +68,13 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
         New entry
       </Link>
     ) : null;
-  const linkAction = map.canEdit ? (
-    <Button variant="secondary" onClick={() => onEdit({ kind: 'link', map, node })}>
-      Link a Codex entry
-    </Button>
-  ) : null;
+  // A hex holds one Location (database rule); Features are placed by their own hex number.
+  const linkAction =
+    map.canEdit && !locationLink ? (
+      <Button variant="secondary" onClick={() => onEdit({ kind: 'link', map, node })}>
+        Link a Location
+      </Button>
+    ) : null;
   return (
     <section
       ref={panel}
@@ -178,7 +180,12 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
                         {cardExcerpt(document.effectiveBody, 180)}
                       </p>
                     ) : null}
-                    {map.canEdit ? (
+                    {document.category === FEATURE_CATEGORY ? (
+                      <p className="type-caption">
+                        A Feature sits on the hex named in its entry. Edit the entry to
+                        move it or take it off the map.
+                      </p>
+                    ) : map.canEdit ? (
                       <Button
                         size="sm"
                         variant="danger"

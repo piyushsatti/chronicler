@@ -972,13 +972,16 @@ func (q *Queries) CharacterProductInsertBackstory(ctx context.Context, arg Chara
 const characterProductInsertCharacter = `-- name: CharacterProductInsertCharacter :one
 INSERT INTO characters (
     public_id, short_code, name, owner_id, status, backstory_id, guild_document_id,
-    region_id, description, background_text, ddb_url, image_url, created_at, updated_at
+    region_id, description, background_text, ddb_url, image_url, created_at, updated_at,
+    verification_submitted_at
 )
 SELECT $1::uuid, $2::text, $3::text,
        owner.id, 'pending_approval', backstory.id, guild.id, region.id,
        $4::text, $5::text, $6::text,
        $7::text,
-       $8::timestamptz, $8::timestamptz
+       $8::timestamptz, $8::timestamptz,
+       -- A new character goes straight to the review queue.
+       $8::timestamptz
 FROM members owner
 LEFT JOIN backstories backstory ON backstory.public_id = $9::uuid
 LEFT JOIN documents guild ON guild.public_id = $10::uuid

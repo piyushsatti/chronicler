@@ -180,7 +180,9 @@ export function useMapEdit({
         if (!active()) return;
       }
       setError(
-        `${mapWriteError(cause)} Your entries are retained. Retry or close and refresh the map.`,
+        edit.kind === 'link' && cause instanceof TransportError && cause.code === 'CONFLICT'
+          ? 'This hex already has a Location. Unlink it before linking another.'
+          : `${mapWriteError(cause)} Your entries are retained. Retry or close and refresh the map.`,
       );
     } finally {
       if (isCurrent()) {

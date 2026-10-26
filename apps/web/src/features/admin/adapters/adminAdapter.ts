@@ -1197,6 +1197,13 @@ export async function updateTimeAnchor(
 }
 
 const calendarSchema = z.object({ definition: z.record(z.string(), z.unknown()) });
+// The contract's definition is nullable: a world with no saved calendar yet reads as empty.
+const calendarReadSchema = z.object({
+  definition: z
+    .record(z.string(), z.unknown())
+    .nullable()
+    .transform((definition) => definition ?? {}),
+});
 export type GameCalendarView = z.infer<typeof calendarSchema> & { form: CalendarForm };
 export async function loadGameCalendar(
   request: AdminReadRequest,
@@ -1206,7 +1213,7 @@ export async function loadGameCalendar(
     calendarWindow(),
     request,
   );
-  const parsed = calendarSchema.safeParse(data.gameCalendar);
+  const parsed = calendarReadSchema.safeParse(data.gameCalendar);
   if (!parsed.success) throw toAppError({ failure: 'InvalidWire' }, 'admin:calendar');
   return { ...parsed.data, form: parseCalendarForm(parsed.data.definition) };
 }

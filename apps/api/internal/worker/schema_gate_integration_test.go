@@ -28,8 +28,8 @@ import (
 func wk03Mismatch(t *testing.T, err error, have int64) {
 	t.Helper()
 	var mismatch *worker.SchemaCompatibilityError
-	if !errors.As(err, &mismatch) || mismatch.Have != have || mismatch.Min != 1 || mismatch.Max != 4 {
-		t.Fatalf("got %v, want typed compatibility failure Have=%d Min=1 Max=4", err, have)
+	if !errors.As(err, &mismatch) || mismatch.Have != have || mismatch.Min != 1 || mismatch.Max != 5 {
+		t.Fatalf("got %v, want typed compatibility failure Have=%d Min=1 Max=5", err, have)
 	}
 	if strings.Contains(err.Error(), "SELECT") || strings.Contains(err.Error(), "password") {
 		t.Fatalf("unsafe compatibility failure %q", err)
@@ -37,8 +37,8 @@ func wk03Mismatch(t *testing.T, err error, have int64) {
 }
 
 func TestPhase3TaskWK03Acceptance(t *testing.T) {
-	// Latest migration is 0004_lightfall_partial_rings.
-	gate, err := worker.NewSchemaGate(1, 4)
+	// Latest migration is 0005_submit_pending_characters.
+	gate, err := worker.NewSchemaGate(1, 5)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,16 +118,16 @@ func TestPhase3TaskWK03Acceptance(t *testing.T) {
 		}
 		wk03Mismatch(t, gate.Check(ctx, tx), 0)
 	})
-	t.Run("WORK-SCHEMA synthetic version five rejects", func(t *testing.T) {
+	t.Run("WORK-SCHEMA synthetic version six rejects", func(t *testing.T) {
 		tx, err := pool.Begin(ctx)
 		if err != nil {
 			t.Fatal(err)
 		}
 		defer tx.Rollback(context.WithoutCancel(ctx)) //nolint:errcheck
-		if _, err := tx.Exec(ctx, `INSERT INTO goose_db_version(version_id,is_applied) VALUES(5,true)`); err != nil {
+		if _, err := tx.Exec(ctx, `INSERT INTO goose_db_version(version_id,is_applied) VALUES(6,true)`); err != nil {
 			t.Fatal(err)
 		}
-		wk03Mismatch(t, gate.Check(ctx, tx), 5)
+		wk03Mismatch(t, gate.Check(ctx, tx), 6)
 	})
 	t.Run("WORK-SCHEMA missing version table fails opaque without creating it", func(t *testing.T) {
 		if _, err := pool.Exec(ctx, `DROP TABLE goose_db_version`); err != nil {
