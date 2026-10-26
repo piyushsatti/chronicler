@@ -3,7 +3,12 @@ import { DateTimePicker } from '../../../components/interactive/DateTimePicker.j
 import { Menu } from '../../../components/primitives/Menu.js';
 import { Skeleton } from '../../../components/primitives/Skeleton.js';
 import { QUEST_STATUSES, TAG_SUGGESTIONS, WORLD_SEASONS } from '../editorConstants.js';
-import type { EditorOptions, FieldSchema } from '../types.js';
+import type { EditorFieldOptions, EditorOptions, FieldSchema } from '../types.js';
+import {
+  PointcrawlLinkPicker,
+  type PointcrawlLinkValue,
+} from '../../../components/domain/PointcrawlLinkPicker.js';
+import { toAppError } from '../../../errors/toAppError.js';
 import type { EditorRegionRow } from '../adapters/editorRegionsAdapter.js';
 import { StubNotice } from '../../../components/foundation/StubNotice.js';
 import styles from '../editor.module.css';
@@ -785,3 +790,37 @@ export function StubField({ field }: { field: FieldSchema }): React.JSX.Element 
 }
 
 export { pfIcon };
+
+/** A new quest's expected destinations, searched by hex or place name. */
+export function PointcrawlField({
+  value,
+  onChange,
+  places,
+}: {
+  value: PointcrawlLinkValue[];
+  onChange: (v: PointcrawlLinkValue[]) => void;
+  places: EditorFieldOptions['places'];
+}): React.JSX.Element {
+  if (places.error)
+    return (
+      <div role="alert">
+        <p>{toAppError(places.error, 'editor:map-places').userMessage}</p>
+        <button type="button" className="pf-input field" onClick={places.onRetry}>
+          Map places unavailable — tap to retry
+        </button>
+      </div>
+    );
+  return (
+    <PointcrawlLinkPicker
+      maps={places.maps}
+      atlasCode={places.atlasCode}
+      onAtlasChange={places.setAtlasCode}
+      nodes={places.nodes}
+      nodesLoading={places.loading}
+      links={value}
+      onChange={onChange}
+      roles={['expected']}
+      canMarkVisited={false}
+    />
+  );
+}

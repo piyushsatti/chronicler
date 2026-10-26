@@ -17,6 +17,7 @@ import {
 } from '../adapters/editorSummary.js';
 import type { EditorLoadResult } from '../adapters/editorLoad.js';
 import { schemaForType } from '../editorSchemas.js';
+import { saveNewQuestPlaces } from '../adapters/editorPointcrawlOptionsAdapter.js';
 import { FEATURE_CATEGORY, normalizeHexCode } from '../../../utils/hexCode.js';
 import {
   parseQuestMetadata,
@@ -195,6 +196,22 @@ export function useEditorPublish({
               ...(v.arcId ? { arcId: v.arcId } : {}),
             };
             result = await createQuest(input, replayKey('quest-create', input));
+            const places = v.pointcrawlLinks ?? [];
+            if (places.length > 0) {
+              try {
+                await saveNewQuestPlaces(
+                  result.id,
+                  places,
+                  replayKey('quest-create-places', [result.id, places]),
+                );
+              } catch {
+                // Saving again replays the same create, so it retries only the places.
+                throw safeAppError(
+                  'The quest was created, but its expected destinations were not saved. Save again to retry them.',
+                  'editor:quest:places',
+                );
+              }
+            }
           }
           return { ...result, originScope: scopeKey };
         }

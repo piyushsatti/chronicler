@@ -140,6 +140,7 @@ export const graphql: FeatureGraphql = {
     }),
   EditorSeriesOptions: () =>
     HttpResponse.json({ data: { questArcs: { items: [], total: 0 } } }),
+  EditorMapOptions: () => HttpResponse.json({ data: { maps: [] } }),
   QuestGenreOptions: () =>
     HttpResponse.json({
       data: {

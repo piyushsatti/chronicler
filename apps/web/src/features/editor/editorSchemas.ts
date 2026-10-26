@@ -188,6 +188,12 @@ const NEW_QUEST_SCHEMA: FieldSchema[] = [
         ? null
         : 'Choose one of your series',
   },
+  {
+    key: 'pointcrawlLinks',
+    label: 'Expected destinations',
+    type: 'pointcrawl',
+    hint: 'Optional. Mark places visited on the quest page after play.',
+  },
   ...QUEST_SCHEMA.slice(1),
 ];
 

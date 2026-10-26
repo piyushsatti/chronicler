@@ -15,6 +15,16 @@ export type EditorFieldOptions = {
   genres: EditorOptions<string>;
   /** The viewer's own series, for a new quest. */
   series: EditorOptions<{ id: string; name: string }>;
+  /** Map places a new quest may head to: the chosen map and its searchable places. */
+  places: {
+    maps: { atlasCode: string; name: string }[] | undefined;
+    atlasCode: string;
+    setAtlasCode: (atlasCode: string) => void;
+    nodes: { id: string; name: string }[] | undefined;
+    loading: boolean;
+    error: unknown;
+    onRetry: () => void;
+  };
 };
 export type EditorPreview =
   | { status: 'error'; error: AppError }
@@ -33,6 +43,7 @@ export type FieldType =
   | 'genretags'
   | 'region'
   | 'series'
+  | 'pointcrawl'
   | 'regionmulti'
   | 'slots'
   | 'datetime'

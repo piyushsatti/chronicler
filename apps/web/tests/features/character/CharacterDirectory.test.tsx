@@ -125,6 +125,12 @@ describe('Character directory', () => {
       'field-group',
     );
     expect(screen.queryByLabelText('Background')).not.toBeInTheDocument();
+    // Options are grouped by kind, not one mixed list.
+    expect(
+      within(screen.getByRole('group', { name: 'Background' })).getByRole('checkbox', {
+        name: 'Soldier',
+      }),
+    ).toBeChecked();
     await user.type(
       screen.getByLabelText('D&D Beyond URL'),
       'https://www.dndbeyond.com/characters/4242',

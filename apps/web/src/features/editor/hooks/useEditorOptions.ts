@@ -1,4 +1,9 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import {
+  loadEditorMapOptions,
+  loadEditorMapPlaces,
+} from '../adapters/editorPointcrawlOptionsAdapter.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import { loadEditorRegions } from '../adapters/editorRegionsAdapter.js';
 import { loadQuestGenreOptions } from '../adapters/questGenreOptionsAdapter.js';
@@ -56,9 +61,33 @@ export function useEditorOptions(
     queryFn: () => loadEditorSeriesOptions(viewerMemberId ?? '', viewerIsAdmin),
     enabled: enabled && Boolean(viewerMemberId) && schema.some((field) => field.type === 'series'),
   });
+  const wantsPlaces = enabled && schema.some((field) => field.type === 'pointcrawl');
+  const [atlasCode, setAtlasCode] = useState('');
+  const maps = useQuery({
+    queryKey: ['questOptions', 'maps'],
+    queryFn: loadEditorMapOptions,
+    enabled: wantsPlaces,
+  });
+  const places = useQuery({
+    queryKey: ['questOptions', 'nodes', atlasCode],
+    queryFn: () => loadEditorMapPlaces(atlasCode),
+    enabled: wantsPlaces && atlasCode !== '',
+  });
   return {
     regions: optionsView(regions, 'editor:regions'),
     genres: optionsView(genres, 'editor:genre-options'),
     series: optionsView(series, 'editor:series-options'),
+    places: {
+      maps: maps.data,
+      atlasCode,
+      setAtlasCode,
+      nodes: places.data?.nodes,
+      loading: places.isLoading,
+      error: maps.error ?? places.error,
+      onRetry: () => {
+        void maps.refetch();
+        if (atlasCode) void places.refetch();
+      },
+    },
   };
 }
