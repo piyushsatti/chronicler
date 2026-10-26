@@ -103,4 +103,13 @@ func TestFeatureEntriesSitOnOneLightfallHexAndAHexHoldsFour(t *testing.T) {
 	if got := onHex("LFR1001"); got != 3 {
 		t.Fatalf("trashed Feature still on the map: LFR1001 holds %d, want 3", got)
 	}
+	lore := "Lore"
+	if _, err := commands.EditPublishedDocument(ctx, dm, EditPublishedDocumentSpec{Id: published[2].Id, Input: DocumentEditFields{
+		ExpectedRevision: int32(published[2].Version), Category: product.Optional[string]{Set: true, Value: &lore},
+	}}, meta()); err != nil {
+		t.Fatal(err)
+	}
+	if got := onHex("LFR1001"); got != 2 {
+		t.Fatalf("former Feature still on the map: LFR1001 holds %d, want 2", got)
+	}
 }

@@ -73,6 +73,9 @@ func pointcrawlLinkAdmission(ctx context.Context, repos ProductCommandRepos, act
 	if err != nil {
 		return spatialAdmission{}, err
 	}
+	if relation == "subject" && document.IsFeature(view) {
+		return spatialAdmission{}, apierr.New(apierr.Invalid, "a Feature is placed on the map by its hex number")
+	}
 	facts := auth.MapFacts{ID: &ref.ID, RegionID: ref.RegionID}
 	var override bool
 	if relation == "location" {

@@ -25,6 +25,12 @@ const (
 // LFC1001, LFR7008.
 var featureHexPattern = regexp.MustCompile(`^[A-Z]{2}[CR][0-9]{4}$`)
 
+// IsFeature reports whether a document is a Feature, whose map link only
+// syncFeatureHex may write; the generic map link command refuses it.
+func IsFeature(view *DocumentView) bool {
+	return view != nil && view.Kind == "codex_entry" && view.Category != nil && *view.Category == featureCategory
+}
+
 // featureHexFromFields returns the hex code a Feature must carry, or "" when the
 // entry is not a Feature. Kind and category gate it so other entries keep any
 // `hex` key untouched.
@@ -52,12 +58,15 @@ func frontmatterFromYAML(text pgtype.Text) map[string]any {
 }
 
 // syncFeatureHex keeps a Feature's map link in step with the document after
-// every write, inside the document write transaction. Hexes are looked up on
+// every write, inside the document write transaction. previous is the category
+// before the write, so an entry that stops being a Feature leaves the map. Hexes are looked up on
 // the Lightfall hexflower map only. Drafts and trashed Features are not on the
 // map and do not count toward the cap; only a DM or admin may put a Feature on
 // a hex. The node row lock serialises concurrent placements on one hex.
-func (p *ProductPostgres) syncFeatureHex(ctx context.Context, documentID, actorID, kind string, category pgtype.Text, frontmatterYAML pgtype.Text, status string, deleted bool, write pgtype.Timestamptz) error {
-	if kind != "codex_entry" || category.String != featureCategory {
+func (p *ProductPostgres) syncFeatureHex(ctx context.Context, documentID, actorID, kind string, previous, category pgtype.Text, frontmatterYAML pgtype.Text, status string, deleted bool, write pgtype.Timestamptz) error {
+	isFeature := kind == "codex_entry" && category.String == featureCategory
+	wasFeature := kind == "codex_entry" && previous.String == featureCategory
+	if !isFeature && !wasFeature {
 		return nil
 	}
 	docID, err := productDocumentID(documentID)
@@ -65,7 +74,7 @@ func (p *ProductPostgres) syncFeatureHex(ctx context.Context, documentID, actorI
 		return err
 	}
 	unplace := dbgen.DeleteFeatureLinksOffHexParams{DocumentID: docID, AtlasCode: featureHexAtlasCode}
-	if deleted {
+	if deleted || !isFeature {
 		return p.queries().DeleteFeatureLinksOffHex(ctx, unplace)
 	}
 	hex, err := featureHexFromFields(kind, productTextPointer(category), frontmatterFromYAML(frontmatterYAML))

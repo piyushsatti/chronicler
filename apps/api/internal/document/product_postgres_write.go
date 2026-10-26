@@ -170,7 +170,7 @@ func (p *ProductPostgres) insertAllocatedDocument(ctx context.Context, write Cre
 	}); err != nil {
 		return insertedDocumentIdentity{}, err
 	}
-	if err := p.syncFeatureHex(ctx, publicID, write.ActorID, input.Kind, optionalProductText(input.Category), fm, "draft", false, pgNow(write.At)); err != nil {
+	if err := p.syncFeatureHex(ctx, publicID, write.ActorID, input.Kind, pgtype.Text{}, optionalProductText(input.Category), fm, "draft", false, pgNow(write.At)); err != nil {
 		return insertedDocumentIdentity{}, err
 	}
 	return insertedDocumentIdentity{ID: db.UUIDString(created.ID), Version: created.Version}, nil
@@ -258,7 +258,7 @@ func (p *ProductPostgres) applyDocumentUpdate(ctx context.Context, write any, id
 	if _, err := p.queries().UpdateProductDocument(ctx, params); err != nil {
 		return DocumentView{}, mapDocumentWriteError(mapStaleUpdate(err))
 	}
-	if err := p.syncFeatureHex(ctx, id, metadata.actorID, row.Kind, params.Category, params.FrontmatterYaml, params.Status, params.DeletedAt.Valid, params.At); err != nil {
+	if err := p.syncFeatureHex(ctx, id, metadata.actorID, row.Kind, row.Category, params.Category, params.FrontmatterYaml, params.Status, params.DeletedAt.Valid, params.At); err != nil {
 		return DocumentView{}, err
 	}
 	rev, err := p.queries().NextProductDocumentRevision(ctx, params.ID)
