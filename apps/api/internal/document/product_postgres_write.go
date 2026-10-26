@@ -129,16 +129,8 @@ func (p *ProductPostgres) insertAllocatedDocument(ctx context.Context, write Cre
 	if err != nil {
 		return insertedDocumentIdentity{}, err
 	}
-	base := SlugBase(input.Title)
-	// Keep the canonical Codex reader distinct from the /codex/new editor.
-	if input.Kind == "codex_entry" && base == "new" {
-		base = "new-entry"
-	}
-	if slug == "" {
-		slug, err = p.FindAvailableSlug(ctx, base)
-		if err != nil {
-			return insertedDocumentIdentity{}, err
-		}
+	if slug, err = p.allocatedDocumentSlug(ctx, input, slug); err != nil {
+		return insertedDocumentIdentity{}, err
 	}
 	policy, err := policyBytes(input.Policy)
 	if err != nil {
@@ -174,6 +166,19 @@ func (p *ProductPostgres) insertAllocatedDocument(ctx context.Context, write Cre
 		return insertedDocumentIdentity{}, err
 	}
 	return insertedDocumentIdentity{ID: db.UUIDString(created.ID), Version: created.Version}, nil
+}
+
+// allocatedDocumentSlug returns slug, or a free slug from the title when slug is empty.
+func (p *ProductPostgres) allocatedDocumentSlug(ctx context.Context, input DocumentDraftFields, slug string) (string, error) {
+	if slug != "" {
+		return slug, nil
+	}
+	base := SlugBase(input.Title)
+	// Keep the canonical Codex reader distinct from the /codex/new editor.
+	if input.Kind == "codex_entry" && base == "new" {
+		base = "new-entry"
+	}
+	return p.FindAvailableSlug(ctx, base)
 }
 
 func validateAllocatedDocumentInput(input DocumentDraftFields) (DocumentDraftFields, error) {

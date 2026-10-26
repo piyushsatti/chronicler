@@ -121,31 +121,9 @@ func recordQuestEvents(ctx context.Context, repos ProductCommandRepos, events []
 }
 
 func (s ProductCommands) CreateQuest(ctx context.Context, actor auth.Authority, spec CreateQuestSpec, meta product.CommandMeta) (QuestView, error) {
-	input := spec.Input
-	if err := validateQuestSignupType(input.SignupType); err != nil {
+	input, title, err := normalizeCreateQuestInput(spec.Input)
+	if err != nil {
 		return QuestView{}, err
-	}
-	title := strings.TrimSpace(input.Title)
-	if title == "" || utf8.RuneCountInString(title) > 200 {
-		return QuestView{}, apierr.New(apierr.Invalid, "invalid quest title")
-	}
-	if strings.TrimSpace(input.BriefBody) == "" {
-		return QuestView{}, apierr.New(apierr.Invalid, "quest brief required")
-	}
-	if input.SlotsMax <= 0 || input.DurationHours <= 0 || input.ScheduledAt.IsZero() {
-		return QuestView{}, apierr.New(apierr.Invalid, "invalid quest schedule")
-	}
-	if input.Kinds == nil {
-		input.Kinds = []string{"standard"}
-	}
-	if err := validateQuestKinds(input.Kinds); err != nil {
-		return QuestView{}, err
-	}
-	if input.Tags == nil {
-		input.Tags = []string{}
-	}
-	if input.Genres == nil {
-		input.Genres = []string{}
 	}
 	dmID := actor.Claims().MemberID
 	if input.DmId != nil && strings.TrimSpace(*input.DmId) != "" {
@@ -164,6 +142,37 @@ func (s ProductCommands) CreateQuest(ctx context.Context, actor auth.Authority, 
 	return runQuestCommand(ctx, s, actor, "createQuest", request, spec, meta, actor.Claims().MemberID, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (QuestView, error) {
 		return createQuest(ctx, s, repos, fresh, at, spec, input, title, dmID)
 	})
+}
+
+// normalizeCreateQuestInput validates a new quest's fields and fills the default
+// kinds, tags and genres. It returns the trimmed title.
+func normalizeCreateQuestInput(input CreateQuestFields) (CreateQuestFields, string, error) {
+	if err := validateQuestSignupType(input.SignupType); err != nil {
+		return input, "", err
+	}
+	title := strings.TrimSpace(input.Title)
+	if title == "" || utf8.RuneCountInString(title) > 200 {
+		return input, "", apierr.New(apierr.Invalid, "invalid quest title")
+	}
+	if strings.TrimSpace(input.BriefBody) == "" {
+		return input, "", apierr.New(apierr.Invalid, "quest brief required")
+	}
+	if input.SlotsMax <= 0 || input.DurationHours <= 0 || input.ScheduledAt.IsZero() {
+		return input, "", apierr.New(apierr.Invalid, "invalid quest schedule")
+	}
+	if input.Kinds == nil {
+		input.Kinds = []string{"standard"}
+	}
+	if err := validateQuestKinds(input.Kinds); err != nil {
+		return input, "", err
+	}
+	if input.Tags == nil {
+		input.Tags = []string{}
+	}
+	if input.Genres == nil {
+		input.Genres = []string{}
+	}
+	return input, title, nil
 }
 
 // questArcForbiddenMessage explains a refusal to place a quest in a series the actor may not use.

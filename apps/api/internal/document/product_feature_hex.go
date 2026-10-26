@@ -88,10 +88,16 @@ func (p *ProductPostgres) syncFeatureHex(ctx context.Context, documentID, actorI
 	if len(nodes) != 1 {
 		return apierr.New(apierr.Invalid, "the Lightfall map has no hex "+hex)
 	}
-	node := nodes[0]
 	if status != "published" {
 		return p.queries().DeleteFeatureLinksOffHex(ctx, unplace)
 	}
+	return p.placeFeatureOnHex(ctx, unplace, actorID, nodes[0], write)
+}
+
+// placeFeatureOnHex links a published Feature to node, moving it off any other
+// hex. It checks the actor's role and the per-hex cap only when the link is new.
+func (p *ProductPostgres) placeFeatureOnHex(ctx context.Context, unplace dbgen.DeleteFeatureLinksOffHexParams, actorID string, node dbgen.LockFeatureHexNodeRow, write pgtype.Timestamptz) error {
+	docID := unplace.DocumentID
 	linked, err := p.queries().FeatureLinkedToHexNode(ctx, dbgen.FeatureLinkedToHexNodeParams{DocumentID: docID, NodeID: node.ID})
 	if err != nil || linked {
 		return err
