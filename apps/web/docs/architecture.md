@@ -61,7 +61,7 @@ Each adapter PR adds at least one bad-wire test.
 
 Shell allocation and page arrangement come from [`@pi/react-imposition`](https://github.com/piyushsatti/imposition) (`github:piyushsatti/imposition#v0.1.0`): `ImpositionShell`, `PageHost`, `useContainerToken`, `navPatternFor`. Pages author a `PageDeclaration` and region renderers only. Nav pattern is never chosen in a page. No `@media` layout breakpoints in `apps/web/src`. No temporary breakpoint table.
 
-Map composes the pointcrawl SVG, equivalent location list and selected location details through `PageHost`. Compact layouts retain keyboard selection and the list. A hexflower map is a pointcrawl map whose nodes are named by hex number (for example `LFR7008`); a Codex Feature names its hex in frontmatter `hex` and the API links it to that node, at most four per hex. Hex-grid cell storage and a separate discovery model stay retired; see [Map guidance](/apps/web/docs/map-authoring.md).
+Map composes the pointcrawl SVG, equivalent location list and selected location details through `PageHost`. Compact layouts retain keyboard selection and the list. A hexflower map is a pointcrawl map whose nodes are named by hex number (for example `LFR7008`); a Codex Feature names its hex in frontmatter `hex`, and when a DM or admin publishes it the API links it to that node on the Lightfall map, at most four published Features per hex. Hex-grid cell storage and a separate discovery model stay retired; see [Map guidance](/apps/web/docs/map-authoring.md).
 
 Color and type stay Chronicler tokens. Skin Imposition chrome via `--imposition-*` overrides in `base.css`.
 

@@ -39,7 +39,7 @@ const countOtherFeaturesOnHex = `-- name: CountOtherFeaturesOnHex :one
 SELECT count(*) FROM pointcrawl_entry_links pel
 JOIN documents d ON d.id=pel.document_id
 WHERE pel.node_id=$1 AND pel.relation='subject'
-  AND d.kind='codex_entry' AND d.category='Feature' AND d.deleted_at IS NULL
+  AND d.kind='codex_entry' AND d.category='Feature' AND d.status='published' AND d.deleted_at IS NULL
   AND d.public_id<>$2::uuid
 `
 
@@ -247,18 +247,38 @@ const deleteFeatureLinksOffHex = `-- name: DeleteFeatureLinksOffHex :exec
 DELETE FROM pointcrawl_entry_links pel
 USING documents d
 WHERE d.id=pel.document_id AND d.public_id=$1::uuid
-  AND pel.relation='subject' AND pel.map_id=$2 AND pel.node_id<>$3
+  AND pel.relation='subject' AND pel.map_id=(SELECT id FROM maps WHERE atlas_code=$2::text)
+  AND pel.node_id<>$3::bigint
 `
 
 type DeleteFeatureLinksOffHexParams struct {
 	DocumentID pgtype.UUID `json:"document_id"`
-	MapID      int64       `json:"map_id"`
+	AtlasCode  string      `json:"atlas_code"`
+	KeepNodeID int64       `json:"keep_node_id"`
+}
+
+// keep_node_id 0 removes every subject link of the document on that map.
+func (q *Queries) DeleteFeatureLinksOffHex(ctx context.Context, arg DeleteFeatureLinksOffHexParams) error {
+	_, err := q.db.Exec(ctx, deleteFeatureLinksOffHex, arg.DocumentID, arg.AtlasCode, arg.KeepNodeID)
+	return err
+}
+
+const featureLinkedToHexNode = `-- name: FeatureLinkedToHexNode :one
+SELECT EXISTS(
+  SELECT 1 FROM pointcrawl_entry_links pel JOIN documents d ON d.id=pel.document_id
+  WHERE d.public_id=$1::uuid AND pel.node_id=$2 AND pel.relation='subject')
+`
+
+type FeatureLinkedToHexNodeParams struct {
+	DocumentID pgtype.UUID `json:"document_id"`
 	NodeID     int64       `json:"node_id"`
 }
 
-func (q *Queries) DeleteFeatureLinksOffHex(ctx context.Context, arg DeleteFeatureLinksOffHexParams) error {
-	_, err := q.db.Exec(ctx, deleteFeatureLinksOffHex, arg.DocumentID, arg.MapID, arg.NodeID)
-	return err
+func (q *Queries) FeatureLinkedToHexNode(ctx context.Context, arg FeatureLinkedToHexNodeParams) (bool, error) {
+	row := q.db.QueryRow(ctx, featureLinkedToHexNode, arg.DocumentID, arg.NodeID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }
 
 const findProductDocumentSlug = `-- name: FindProductDocumentSlug :one
@@ -1623,27 +1643,33 @@ func (q *Queries) LoadProductDocumentWriteFacts(ctx context.Context, arg LoadPro
 	return items, nil
 }
 
-const lockFeatureHexNodes = `-- name: LockFeatureHexNodes :many
+const lockFeatureHexNode = `-- name: LockFeatureHexNode :many
 SELECT n.id, n.map_id FROM pointcrawl_nodes n
-WHERE n.name=$1::text
+JOIN maps m ON m.id=n.map_id
+WHERE m.atlas_code=$1::text AND n.name=$2::text
 ORDER BY n.id
-FOR UPDATE
+FOR UPDATE OF n
 `
 
-type LockFeatureHexNodesRow struct {
+type LockFeatureHexNodeParams struct {
+	AtlasCode string `json:"atlas_code"`
+	Hex       string `json:"hex"`
+}
+
+type LockFeatureHexNodeRow struct {
 	ID    int64 `json:"id"`
 	MapID int64 `json:"map_id"`
 }
 
-func (q *Queries) LockFeatureHexNodes(ctx context.Context, hex string) ([]LockFeatureHexNodesRow, error) {
-	rows, err := q.db.Query(ctx, lockFeatureHexNodes, hex)
+func (q *Queries) LockFeatureHexNode(ctx context.Context, arg LockFeatureHexNodeParams) ([]LockFeatureHexNodeRow, error) {
+	rows, err := q.db.Query(ctx, lockFeatureHexNode, arg.AtlasCode, arg.Hex)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []LockFeatureHexNodesRow{}
+	items := []LockFeatureHexNodeRow{}
 	for rows.Next() {
-		var i LockFeatureHexNodesRow
+		var i LockFeatureHexNodeRow
 		if err := rows.Scan(&i.ID, &i.MapID); err != nil {
 			return nil, err
 		}
@@ -1764,6 +1790,19 @@ func (q *Queries) LockProductSummaryQuests(ctx context.Context, arg LockProductS
 		return nil, err
 	}
 	return items, nil
+}
+
+const memberMayPlaceFeatures = `-- name: MemberMayPlaceFeatures :one
+SELECT EXISTS(
+  SELECT 1 FROM members
+  WHERE public_id=$1::uuid AND status='active' AND roles && ARRAY['dm','admin']::text[])
+`
+
+func (q *Queries) MemberMayPlaceFeatures(ctx context.Context, memberID pgtype.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, memberMayPlaceFeatures, memberID)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
 }
 
 const nextProductDocumentRevision = `-- name: NextProductDocumentRevision :one

@@ -672,24 +672,37 @@ SELECT author.public_id AS id FROM documents d
 JOIN members author ON author.id=d.author_id
 WHERE d.public_id=sqlc.arg(document_id)::uuid;
 
--- name: LockFeatureHexNodes :many
+-- name: LockFeatureHexNode :many
 SELECT n.id, n.map_id FROM pointcrawl_nodes n
-WHERE n.name=sqlc.arg(hex)::text
+JOIN maps m ON m.id=n.map_id
+WHERE m.atlas_code=sqlc.arg(atlas_code)::text AND n.name=sqlc.arg(hex)::text
 ORDER BY n.id
-FOR UPDATE;
+FOR UPDATE OF n;
+
+-- name: FeatureLinkedToHexNode :one
+SELECT EXISTS(
+  SELECT 1 FROM pointcrawl_entry_links pel JOIN documents d ON d.id=pel.document_id
+  WHERE d.public_id=sqlc.arg(document_id)::uuid AND pel.node_id=sqlc.arg(node_id) AND pel.relation='subject');
+
+-- name: MemberMayPlaceFeatures :one
+SELECT EXISTS(
+  SELECT 1 FROM members
+  WHERE public_id=sqlc.arg(member_id)::uuid AND status='active' AND roles && ARRAY['dm','admin']::text[]);
 
 -- name: CountOtherFeaturesOnHex :one
 SELECT count(*) FROM pointcrawl_entry_links pel
 JOIN documents d ON d.id=pel.document_id
 WHERE pel.node_id=sqlc.arg(node_id) AND pel.relation='subject'
-  AND d.kind='codex_entry' AND d.category='Feature' AND d.deleted_at IS NULL
+  AND d.kind='codex_entry' AND d.category='Feature' AND d.status='published' AND d.deleted_at IS NULL
   AND d.public_id<>sqlc.arg(document_id)::uuid;
 
 -- name: DeleteFeatureLinksOffHex :exec
+-- keep_node_id 0 removes every subject link of the document on that map.
 DELETE FROM pointcrawl_entry_links pel
 USING documents d
 WHERE d.id=pel.document_id AND d.public_id=sqlc.arg(document_id)::uuid
-  AND pel.relation='subject' AND pel.map_id=sqlc.arg(map_id) AND pel.node_id<>sqlc.arg(node_id);
+  AND pel.relation='subject' AND pel.map_id=(SELECT id FROM maps WHERE atlas_code=sqlc.arg(atlas_code)::text)
+  AND pel.node_id<>sqlc.arg(keep_node_id)::bigint;
 
 -- name: InsertFeatureHexLink :exec
 INSERT INTO pointcrawl_entry_links(map_id,node_id,document_id,relation,created_at,created_by)
