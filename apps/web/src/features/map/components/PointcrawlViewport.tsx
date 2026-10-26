@@ -149,6 +149,20 @@ export function flatTopHexagon(radius: number): string {
   }).join(' ');
 }
 
+/**
+ * Map units per pin pixel. On hex maps the pin shrinks so the whole teardrop fits
+ * inside its hex (75% of the cell's height) and only grows to full size once the
+ * cells are big enough when zoomed in.
+ */
+export function pinUnit(pixelsPerUnit: number, hexRadius?: number): number {
+  const full = 1 / pixelsPerUnit;
+  if (!hexRadius) return full;
+  return Math.min(
+    full,
+    (0.75 * Math.sqrt(3) * hexRadius) / (MAP_PIN_RADIUS + MAP_PIN_TAIL),
+  );
+}
+
 export type MapViewportHandle = {
   focusNode: (id: string) => void;
   centerNode: (id: string) => void;
@@ -287,9 +301,13 @@ export function PointcrawlViewport({
     [map.nodes, graphView.y, graphView.verticalScale, bounds.y],
   );
   const radii = useMemo(
-    () => hoverRadii(points, MAP_PIN_RADIUS / pixelsPerUnit, hexMap),
+    // Hex cells keep their true size so they tile; other maps grow to the pin size.
+    () => hoverRadii(points, hexMap ? 0 : MAP_PIN_RADIUS / pixelsPerUnit, hexMap),
     [points, pixelsPerUnit, hexMap],
   );
+  const unit = pinUnit(pixelsPerUnit, hexMap ? radii.values().next().value : undefined);
+  // On hex maps the teardrop is centred in its hex instead of pointing at the centre.
+  const pinShift = hexMap ? (-(MAP_PIN_TAIL - MAP_PIN_RADIUS) / 2) * unit : 0;
   /** The place under a client point, using the viewBox's default xMidYMid meet fit. */
   const placeUnder = (svg: SVGSVGElement, clientX: number, clientY: number) => {
     const rect = svg.getBoundingClientRect();
@@ -613,12 +631,13 @@ export function PointcrawlViewport({
                 >
                   <title>{node.name}</title>
                   <circle
-                    r={MAP_PIN_RADIUS / pixelsPerUnit}
+                    cy={pinShift}
+                    r={MAP_PIN_RADIUS * unit}
                     vectorEffect="non-scaling-stroke"
                   />
                   <path
                     className={styles.pinTail}
-                    d={`M ${-11 / pixelsPerUnit} ${11 / pixelsPerUnit} L 0 ${MAP_PIN_TAIL / pixelsPerUnit} L ${11 / pixelsPerUnit} ${11 / pixelsPerUnit}`}
+                    d={`M ${-11 * unit} ${11 * unit + pinShift} L 0 ${MAP_PIN_TAIL * unit + pinShift} L ${11 * unit} ${11 * unit + pinShift}`}
                   />
                   <rect
                     visibility={hidden ? 'hidden' : undefined}

@@ -7,9 +7,11 @@ import {
   hoverRadii,
   isHexMap,
   MAP_ROUTES_STORAGE_KEY,
+  pinUnit,
   placeAt,
   PointcrawlViewport,
 } from '../../../src/features/map/components/PointcrawlViewport.js';
+import { MAP_PIN_RADIUS, MAP_PIN_TAIL } from '../../../src/features/map/labelLayout.js';
 import { renderWithProviders } from '../../test-utils.js';
 import good from '../../fixtures/wire/map/good.json';
 
@@ -415,6 +417,19 @@ describe('Hex map review fixes', () => {
     // Per-node radii would give the isolated tile a huge cell.
     expect(hoverRadii(nodes, 5).get('n4')!).toBeGreaterThan(500);
     expect(hoverRadii([{ id: 'alone', x: 0, y: 0 }], 17, true).get('alone')).toBe(17);
+  });
+
+  it('shrinks hex-map pins to fit inside their hex, and caps them at full size', () => {
+    const fits = (0.75 * Math.sqrt(3) * 10) / (MAP_PIN_RADIUS + MAP_PIN_TAIL);
+    // Zoomed out: 1 map unit is 0.5px, so a full pin (84 units tall) would spill over.
+    expect(pinUnit(0.5, 10)).toBeCloseTo(fits);
+    expect((MAP_PIN_RADIUS + MAP_PIN_TAIL) * pinUnit(0.5, 10)).toBeLessThan(
+      Math.sqrt(3) * 10,
+    );
+    // Zoomed in far enough, the pin stays at its normal pixel size.
+    expect(pinUnit(10, 10)).toBeCloseTo(1 / 10);
+    // Ordinary maps keep fixed-size pins.
+    expect(pinUnit(0.5)).toBeCloseTo(2);
   });
 
   it('does not stretch hex maps vertically, so the hexes tile; ordinary maps still stretch', () => {
