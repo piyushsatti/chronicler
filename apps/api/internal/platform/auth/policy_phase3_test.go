@@ -658,6 +658,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 		"Mutation.setMyPrivateNotes":                  "SELF",
 		"Mutation.updateQuest":                        "QUEST_DM",
 		"Mutation.updateQuestAnnouncementRoleSetting": "ADMIN",
+		"Mutation.updateMap":                          "MAP_STEWARD",
 		"Mutation.updateRegion":                       "REGION_STEWARD",
 		"Mutation.updateTimeAnchor":                   "ADMIN",
 		"Mutation.upsertCreationCatalogEntry":         "ADMIN",
@@ -758,7 +759,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 			}
 		}
 	}
-	if len(expected) != 147 || len(actual) != len(expected) || len(operationRules) != len(expected) {
+	if len(expected) != 148 || len(actual) != len(expected) || len(operationRules) != len(expected) {
 		t.Fatalf("coverage expected%d SDL%d registry%d", len(expected), len(actual), len(operationRules))
 	}
 	p, _, facts := policyTestProvider(t)

@@ -145,6 +145,19 @@ func (p *ProductPostgres) lockPointcrawlNode(ctx context.Context, nodeID, mapID 
 	return mapPointcrawlNodeRow(row.PublicID, row.MapPublicID, row.Name, row.X, row.Y, row.SubmapPublicID, row.CreatedAt), nil
 }
 
+func validMapGrid(grid string) bool {
+	return grid == "point" || grid == "hex"
+}
+
+func validateMapUpdate(input MapUpdateFields) error {
+	if strings.TrimSpace(input.Name) == "" || utf8.RuneCountInString(input.Name) > 200 ||
+		strings.TrimSpace(input.Family) == "" || utf8.RuneCountInString(input.Family) > 200 ||
+		!validMapGrid(input.Grid) {
+		return apierr.New(apierr.Invalid, "invalid map input")
+	}
+	return validateMapAssetPath(input.AssetPath)
+}
+
 func validateMapCreate(input MapCreateFields) error {
 	if !validMapIdentity(input) {
 		return apierr.New(apierr.Invalid, "invalid map input")
@@ -158,7 +171,7 @@ func validateMapCreate(input MapCreateFields) error {
 func validMapIdentity(input MapCreateFields) bool {
 	return strings.TrimSpace(input.Name) != "" && utf8.RuneCountInString(input.Name) <= 200 &&
 		strings.TrimSpace(input.AtlasCode) != "" && utf8.RuneCountInString(input.AtlasCode) <= 64 &&
-		input.MapKind == "pointcrawl" && strings.TrimSpace(input.Family) != ""
+		input.MapKind == "pointcrawl" && validMapGrid(input.Grid) && strings.TrimSpace(input.Family) != ""
 }
 
 func validMapDimensions(input MapCreateFields) bool {

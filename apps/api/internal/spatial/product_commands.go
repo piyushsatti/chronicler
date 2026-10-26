@@ -195,6 +195,9 @@ func completeSpatialCommand[T any](ctx context.Context, repos ProductCommandRepo
 }
 
 func (s ProductCommands) CreateMap(ctx context.Context, actor auth.Authority, spec CreateMapSpec, meta product.CommandMeta) (MapView, error) {
+	if spec.Input.Grid == "" {
+		spec.Input.Grid = "point"
+	}
 	if err := validateMapCreate(spec.Input); err != nil {
 		return MapView{}, err
 	}
@@ -219,6 +222,29 @@ func (s ProductCommands) CreateMap(ctx context.Context, actor auth.Authority, sp
 			ValidatedInput: spec,
 			Locked:         locked,
 		})
+	})
+}
+
+func (s ProductCommands) UpdateMap(ctx context.Context, actor auth.Authority, spec UpdateMapSpec, meta product.CommandMeta) (MapView, error) {
+	if err := validateMapUpdate(spec.Input); err != nil {
+		return MapView{}, err
+	}
+	if err := commandPublicID(&spec.MapId); err != nil {
+		return MapView{}, err
+	}
+	var locked UpdateMapState
+	return runSpatialAdmittedCommand(ctx, s, actor, "updateMap", func(repos ProductCommandRepos, fresh auth.Authority) (spatialAdmission, error) {
+		var err error
+		locked, err = repos.Map.LockUpdateMap(ctx, spec)
+		if err != nil {
+			return spatialAdmission{}, err
+		}
+		if !locked.Exists {
+			return spatialAdmission{}, apierr.New(apierr.NotFound, "map not found")
+		}
+		return mapAdmission("Mutation.updateMap", auth.MapFacts{ID: &spec.MapId, RegionID: locked.RegionID})
+	}, spec, meta, spec.MapId, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (MapView, error) {
+		return repos.Map.StoreUpdateMap(ctx, UpdateMapWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked})
 	})
 }
 

@@ -51,8 +51,11 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 		reflect.TypeFor[ContainmentWriter](),
 		reflect.TypeFor[DocumentReferenceReader](),
 		reflect.TypeFor[CreateMapSpec](),
+		reflect.TypeFor[UpdateMapSpec](),
 		reflect.TypeFor[CreateMapState](),
+		reflect.TypeFor[UpdateMapState](),
 		reflect.TypeFor[CreateMapWrite](),
+		reflect.TypeFor[UpdateMapWrite](),
 		reflect.TypeFor[CreateRegionSpec](),
 		reflect.TypeFor[CreateRegionState](),
 		reflect.TypeFor[CreateRegionWrite](),
@@ -255,7 +258,7 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 			methodCount int
 		}{
 			{"MapReadRepository", []int{28}, false, 7},
-			{"MapWriteRepository", []int{29}, false, 21},
+			{"MapWriteRepository", []int{29}, false, 23},
 			{"ProductBatchRepository", []int{30}, false, 7},
 			{"RegionReadRepository", []int{31}, false, 4},
 			{"RegionWriteRepository", []int{32}, false, 14},
@@ -320,8 +323,8 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 				total += typ.NumMethod()
 			})
 		}
-		if total != 70 {
-			t.Errorf("compiled methods=%d, want 70", total)
+		if total != 72 {
+			t.Errorf("compiled methods=%d, want 72", total)
 		}
 	})
 

@@ -30,6 +30,7 @@ func TestPhase3TaskSPA01Acceptance(t *testing.T) {
 			reflect.TypeFor[HexEntryLinkView](),
 			reflect.TypeFor[HexView](),
 			reflect.TypeFor[MapCreateFields](),
+			reflect.TypeFor[MapUpdateFields](),
 			reflect.TypeFor[MapPlaceView](),
 			reflect.TypeFor[MapView](),
 			reflect.TypeFor[MapViewView](),
@@ -52,6 +53,7 @@ func TestPhase3TaskSPA01Acceptance(t *testing.T) {
 			reflect.TypeFor[TimeAnchorView](),
 			reflect.TypeFor[AssignArchonSpec](),
 			reflect.TypeFor[CreateMapSpec](),
+			reflect.TypeFor[UpdateMapSpec](),
 			reflect.TypeFor[CreateRegionSpec](),
 			reflect.TypeFor[CreateTimeAnchorSpec](),
 			reflect.TypeFor[DeleteRegionSpec](),
@@ -87,6 +89,7 @@ func TestPhase3TaskSPA01Acceptance(t *testing.T) {
 			reflect.TypeFor[TimeAnchorsSpec](),
 			reflect.TypeFor[AssignArchonState](),
 			reflect.TypeFor[CreateMapState](),
+			reflect.TypeFor[UpdateMapState](),
 			reflect.TypeFor[CreateRegionState](),
 			reflect.TypeFor[CreateTimeAnchorState](),
 			reflect.TypeFor[DeleteRegionState](),
@@ -107,6 +110,7 @@ func TestPhase3TaskSPA01Acceptance(t *testing.T) {
 			reflect.TypeFor[UpsertPointcrawlNodeState](),
 			reflect.TypeFor[AssignArchonWrite](),
 			reflect.TypeFor[CreateMapWrite](),
+			reflect.TypeFor[UpdateMapWrite](),
 			reflect.TypeFor[CreateRegionWrite](),
 			reflect.TypeFor[CreateTimeAnchorWrite](),
 			reflect.TypeFor[DeleteRegionWrite](),
@@ -194,7 +198,7 @@ func TestPhase3TaskSPA01Acceptance(t *testing.T) {
 			return nil
 		}
 		seen := make(map[string]bool)
-		expectedCounts := map[string]int{"dto_registry": 32, "specs": 35, "command_states": 20, "command_writes": 20}
+		expectedCounts := map[string]int{"dto_registry": 33, "specs": 36, "command_states": 21, "command_writes": 21}
 		for section, declarations := range contract {
 			count := 0
 			for _, declaration := range declarations {
@@ -260,7 +264,7 @@ func TestPhase3TaskSPA01Acceptance(t *testing.T) {
 				t.Errorf("PointcrawlAdmission field %d is %s %s, contract requires %s %s", i, actual.Name, actual.Type, field.name, field.typ)
 			}
 		}
-		if len(seen) != 107 || len(types) != 108 {
+		if len(seen) != 111 || len(types) != 112 {
 			t.Fatalf("contract=%d compiled=%d declarations, want 107 owned plus one additional type", len(seen), len(types))
 		}
 		for name := range types {

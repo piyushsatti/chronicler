@@ -1363,6 +1363,7 @@ func toMapViewType(v spatial.MapView) *MapType {
 		Name:      v.Name,
 		AtlasCode: v.AtlasCode,
 		Family:    v.Family,
+		Grid:      v.Grid,
 		MapKind:   v.MapKind,
 		AssetPath: v.AssetPath,
 		RegionID:  v.RegionId,
@@ -1542,8 +1543,18 @@ func toMapCreateFields(in MapCreateInput) spatial.MapCreateFields {
 		Name:      in.Name,
 		AtlasCode: in.AtlasCode,
 		Family:    in.Family,
+		Grid:      in.Grid,
 		MapKind:   in.MapKind,
 		RegionId:  in.RegionID,
+		AssetPath: in.AssetPath,
+	}
+}
+
+func toMapUpdateFields(in MapUpdateInput) spatial.MapUpdateFields {
+	return spatial.MapUpdateFields{
+		Name:      in.Name,
+		Family:    in.Family,
+		Grid:      in.Grid,
 		AssetPath: in.AssetPath,
 	}
 }

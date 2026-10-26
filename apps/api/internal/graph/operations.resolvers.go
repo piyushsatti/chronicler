@@ -1205,6 +1205,26 @@ func (r *mutationResolver) CreateMap(ctx context.Context, input MapCreateInput, 
 	return toMapViewType(view), nil
 }
 
+// UpdateMap is the resolver for the updateMap field.
+func (r *mutationResolver) UpdateMap(ctx context.Context, id string, input MapUpdateInput, meta CommandMeta) (*MapType, error) {
+	if r.Services.SpatialCommands == nil {
+		return nil, fmt.Errorf("spatial commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SpatialCommands.UpdateMap(ctx, actor, spatial.UpdateMapSpec{
+		MapId: id,
+		Input: toMapUpdateFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toMapViewType(view), nil
+}
+
 // CreateRegion is the resolver for the createRegion field.
 func (r *mutationResolver) CreateRegion(ctx context.Context, input RegionInput, meta CommandMeta) (*RegionType, error) {
 	if r.Services.SpatialCommands == nil {

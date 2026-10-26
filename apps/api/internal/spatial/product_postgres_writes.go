@@ -55,6 +55,7 @@ func (p *ProductPostgres) StoreCreateMap(ctx context.Context, write CreateMapWri
 		AtlasCode: spec.AtlasCode,
 		MapKind:   spec.MapKind,
 		Family:    spec.Family,
+		Grid:      spec.Grid,
 		RegionID:  regionID,
 		AssetPath: optionalText(spec.AssetPath),
 		ActorID:   actorID,
@@ -62,7 +63,37 @@ func (p *ProductPostgres) StoreCreateMap(ctx context.Context, write CreateMapWri
 	if err != nil {
 		return MapView{}, err
 	}
-	return mapProductMapRow(row.ID, row.Name, row.AtlasCode, row.MapKind, row.Family, row.RegionID, row.AssetPath, row.CreatedAt, row.CreatedBy), nil
+	return mapProductMapRow(row.ID, row.Name, row.AtlasCode, row.MapKind, row.Family, row.Grid, row.RegionID, row.AssetPath, row.CreatedAt, row.CreatedBy), nil
+}
+
+func (p *ProductPostgres) LockUpdateMap(ctx context.Context, spec UpdateMapSpec) (UpdateMapState, error) {
+	view, err := p.lockPointcrawlMap(ctx, spec.MapId)
+	if err != nil {
+		return UpdateMapState{}, err
+	}
+	return UpdateMapState{Exists: true, SubjectID: spec.MapId, MapKind: view.MapKind, RegionID: view.RegionId, Before: view}, nil
+}
+
+func (p *ProductPostgres) StoreUpdateMap(ctx context.Context, write UpdateMapWrite) (MapView, error) {
+	if !write.Locked.Exists {
+		return MapView{}, apierr.New(apierr.NotFound, "map not found")
+	}
+	spec := write.ValidatedInput
+	mapID, err := spatialPublicID(spec.MapId)
+	if err != nil {
+		return MapView{}, err
+	}
+	row, err := p.queries().UpdateProductMap(ctx, dbgen.UpdateProductMapParams{
+		Name:      spec.Input.Name,
+		Family:    spec.Input.Family,
+		Grid:      spec.Input.Grid,
+		AssetPath: optionalText(spec.Input.AssetPath),
+		MapID:     mapID,
+	})
+	if err != nil {
+		return MapView{}, err
+	}
+	return mapProductMapRow(row.ID, row.Name, row.AtlasCode, row.MapKind, row.Family, row.Grid, row.RegionID, row.AssetPath, row.CreatedAt, row.CreatedBy), nil
 }
 
 func (p *ProductPostgres) LockCreateRegion(_ context.Context, _ CreateRegionSpec) (CreateRegionState, error) {

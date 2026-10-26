@@ -107,14 +107,14 @@ func (q *Queries) CountProductTimeAnchors(ctx context.Context) (int32, error) {
 
 const createProductMap = `-- name: CreateProductMap :one
 WITH inserted AS (
-  INSERT INTO maps(name,atlas_code,map_kind,family,region_id,asset_path,created_by)
-  VALUES ($1,$2,$3,$4,
-          (SELECT r.id FROM regions r WHERE r.public_id=$5::uuid),
-          $6,
-          (SELECT actor.id FROM members actor WHERE actor.public_id=$7::uuid))
-  RETURNING id, public_id, name, atlas_code, map_kind, region_id, asset_path, created_at, created_by, family
+  INSERT INTO maps(name,atlas_code,map_kind,family,grid,region_id,asset_path,created_by)
+  VALUES ($1,$2,$3,$4,$5,
+          (SELECT r.id FROM regions r WHERE r.public_id=$6::uuid),
+          $7,
+          (SELECT actor.id FROM members actor WHERE actor.public_id=$8::uuid))
+  RETURNING id, public_id, name, atlas_code, map_kind, region_id, asset_path, created_at, created_by, family, grid
 )
-SELECT i.public_id AS id,i.name,i.atlas_code,i.map_kind,i.family,
+SELECT i.public_id AS id,i.name,i.atlas_code,i.map_kind,i.family,i.grid,
        r.public_id AS region_id,i.asset_path,i.created_at,
        a.public_id AS created_by
 FROM inserted i LEFT JOIN regions r ON r.id=i.region_id
@@ -126,6 +126,7 @@ type CreateProductMapParams struct {
 	AtlasCode string      `json:"atlas_code"`
 	MapKind   string      `json:"map_kind"`
 	Family    string      `json:"family"`
+	Grid      string      `json:"grid"`
 	RegionID  pgtype.UUID `json:"region_id"`
 	AssetPath pgtype.Text `json:"asset_path"`
 	ActorID   pgtype.UUID `json:"actor_id"`
@@ -137,6 +138,7 @@ type CreateProductMapRow struct {
 	AtlasCode string             `json:"atlas_code"`
 	MapKind   string             `json:"map_kind"`
 	Family    string             `json:"family"`
+	Grid      string             `json:"grid"`
 	RegionID  pgtype.UUID        `json:"region_id"`
 	AssetPath pgtype.Text        `json:"asset_path"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
@@ -149,6 +151,7 @@ func (q *Queries) CreateProductMap(ctx context.Context, arg CreateProductMapPara
 		arg.AtlasCode,
 		arg.MapKind,
 		arg.Family,
+		arg.Grid,
 		arg.RegionID,
 		arg.AssetPath,
 		arg.ActorID,
@@ -160,6 +163,7 @@ func (q *Queries) CreateProductMap(ctx context.Context, arg CreateProductMapPara
 		&i.AtlasCode,
 		&i.MapKind,
 		&i.Family,
+		&i.Grid,
 		&i.RegionID,
 		&i.AssetPath,
 		&i.CreatedAt,
@@ -256,7 +260,7 @@ func (q *Queries) CreateProductTimeAnchor(ctx context.Context, arg CreateProduct
 }
 
 const getProductMap = `-- name: GetProductMap :one
-SELECT m.public_id AS id, m.name, m.atlas_code, m.map_kind, m.family,
+SELECT m.public_id AS id, m.name, m.atlas_code, m.map_kind, m.family, m.grid,
        r.public_id AS region_id, m.asset_path, m.created_at,
        author.public_id AS created_by
 FROM maps m
@@ -271,6 +275,7 @@ type GetProductMapRow struct {
 	AtlasCode string             `json:"atlas_code"`
 	MapKind   string             `json:"map_kind"`
 	Family    string             `json:"family"`
+	Grid      string             `json:"grid"`
 	RegionID  pgtype.UUID        `json:"region_id"`
 	AssetPath pgtype.Text        `json:"asset_path"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
@@ -286,6 +291,7 @@ func (q *Queries) GetProductMap(ctx context.Context, atlasCode string) (GetProdu
 		&i.AtlasCode,
 		&i.MapKind,
 		&i.Family,
+		&i.Grid,
 		&i.RegionID,
 		&i.AssetPath,
 		&i.CreatedAt,
@@ -515,7 +521,7 @@ func (q *Queries) ListProductCalendarCells(ctx context.Context, arg ListProductC
 }
 
 const listProductMaps = `-- name: ListProductMaps :many
-SELECT m.public_id AS id, m.name, m.atlas_code, m.map_kind, m.family,
+SELECT m.public_id AS id, m.name, m.atlas_code, m.map_kind, m.family, m.grid,
        r.public_id AS region_id, m.asset_path, m.created_at,
        author.public_id AS created_by
 FROM maps m
@@ -540,6 +546,7 @@ type ListProductMapsRow struct {
 	AtlasCode string             `json:"atlas_code"`
 	MapKind   string             `json:"map_kind"`
 	Family    string             `json:"family"`
+	Grid      string             `json:"grid"`
 	RegionID  pgtype.UUID        `json:"region_id"`
 	AssetPath pgtype.Text        `json:"asset_path"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
@@ -566,6 +573,7 @@ func (q *Queries) ListProductMaps(ctx context.Context, arg ListProductMapsParams
 			&i.AtlasCode,
 			&i.MapKind,
 			&i.Family,
+			&i.Grid,
 			&i.RegionID,
 			&i.AssetPath,
 			&i.CreatedAt,
@@ -1177,7 +1185,7 @@ func (q *Queries) LockProductContainmentGraph(ctx context.Context) error {
 }
 
 const lockProductMap = `-- name: LockProductMap :one
-SELECT m.id,m.public_id AS map_id,m.name,m.atlas_code,m.map_kind,m.family,
+SELECT m.id,m.public_id AS map_id,m.name,m.atlas_code,m.map_kind,m.family,m.grid,
        r.public_id AS region_id,m.asset_path,m.created_at,
        creator.public_id AS created_by
 FROM maps m LEFT JOIN regions r ON r.id=m.region_id
@@ -1192,6 +1200,7 @@ type LockProductMapRow struct {
 	AtlasCode string             `json:"atlas_code"`
 	MapKind   string             `json:"map_kind"`
 	Family    string             `json:"family"`
+	Grid      string             `json:"grid"`
 	RegionID  pgtype.UUID        `json:"region_id"`
 	AssetPath pgtype.Text        `json:"asset_path"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
@@ -1208,6 +1217,7 @@ func (q *Queries) LockProductMap(ctx context.Context, mapID pgtype.UUID) (LockPr
 		&i.AtlasCode,
 		&i.MapKind,
 		&i.Family,
+		&i.Grid,
 		&i.RegionID,
 		&i.AssetPath,
 		&i.CreatedAt,
@@ -1217,7 +1227,7 @@ func (q *Queries) LockProductMap(ctx context.Context, mapID pgtype.UUID) (LockPr
 }
 
 const lockProductMapByAtlasCode = `-- name: LockProductMapByAtlasCode :one
-SELECT m.id, m.public_id, m.name, m.atlas_code, m.map_kind, m.family,
+SELECT m.id, m.public_id, m.name, m.atlas_code, m.map_kind, m.family, m.grid,
        m.region_id, m.asset_path, m.created_at, m.created_by
 FROM maps m WHERE m.atlas_code=$1 FOR UPDATE
 `
@@ -1229,6 +1239,7 @@ type LockProductMapByAtlasCodeRow struct {
 	AtlasCode string             `json:"atlas_code"`
 	MapKind   string             `json:"map_kind"`
 	Family    string             `json:"family"`
+	Grid      string             `json:"grid"`
 	RegionID  pgtype.Int8        `json:"region_id"`
 	AssetPath pgtype.Text        `json:"asset_path"`
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
@@ -1245,6 +1256,7 @@ func (q *Queries) LockProductMapByAtlasCode(ctx context.Context, atlasCode strin
 		&i.AtlasCode,
 		&i.MapKind,
 		&i.Family,
+		&i.Grid,
 		&i.RegionID,
 		&i.AssetPath,
 		&i.CreatedAt,
@@ -2101,6 +2113,65 @@ func (q *Queries) UpdateProductCalendar(ctx context.Context, arg UpdateProductCa
 	row := q.db.QueryRow(ctx, updateProductCalendar, arg.Definition, arg.RecordedAt)
 	var i UpdateProductCalendarRow
 	err := row.Scan(&i.ID, &i.Definition, &i.UpdatedAt)
+	return i, err
+}
+
+const updateProductMap = `-- name: UpdateProductMap :one
+WITH updated AS (
+  UPDATE maps SET name=$1,family=$2,grid=$3,
+         asset_path=$4
+  WHERE public_id=$5::uuid
+  RETURNING id, public_id, name, atlas_code, map_kind, region_id, asset_path, created_at, created_by, family, grid
+)
+SELECT u.public_id AS id,u.name,u.atlas_code,u.map_kind,u.family,u.grid,
+       r.public_id AS region_id,u.asset_path,u.created_at,
+       a.public_id AS created_by
+FROM updated u LEFT JOIN regions r ON r.id=u.region_id
+LEFT JOIN members a ON a.id=u.created_by
+`
+
+type UpdateProductMapParams struct {
+	Name      string      `json:"name"`
+	Family    string      `json:"family"`
+	Grid      string      `json:"grid"`
+	AssetPath pgtype.Text `json:"asset_path"`
+	MapID     pgtype.UUID `json:"map_id"`
+}
+
+type UpdateProductMapRow struct {
+	ID        pgtype.UUID        `json:"id"`
+	Name      string             `json:"name"`
+	AtlasCode string             `json:"atlas_code"`
+	MapKind   string             `json:"map_kind"`
+	Family    string             `json:"family"`
+	Grid      string             `json:"grid"`
+	RegionID  pgtype.UUID        `json:"region_id"`
+	AssetPath pgtype.Text        `json:"asset_path"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	CreatedBy pgtype.UUID        `json:"created_by"`
+}
+
+func (q *Queries) UpdateProductMap(ctx context.Context, arg UpdateProductMapParams) (UpdateProductMapRow, error) {
+	row := q.db.QueryRow(ctx, updateProductMap,
+		arg.Name,
+		arg.Family,
+		arg.Grid,
+		arg.AssetPath,
+		arg.MapID,
+	)
+	var i UpdateProductMapRow
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.AtlasCode,
+		&i.MapKind,
+		&i.Family,
+		&i.Grid,
+		&i.RegionID,
+		&i.AssetPath,
+		&i.CreatedAt,
+		&i.CreatedBy,
+	)
 	return i, err
 }
 

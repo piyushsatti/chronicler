@@ -412,6 +412,7 @@ var operationRules = map[Operation]policyRule{
 	"Mutation.setMyPrivateNotes":                  ruleSelf,
 	"Mutation.updateQuest":                        ruleQuest,
 	"Mutation.updateQuestAnnouncementRoleSetting": ruleAdmin,
+	"Mutation.updateMap":                          ruleMap,
 	"Mutation.updateRegion":                       ruleRegion,
 	"Mutation.updateTimeAnchor":                   ruleAdmin,
 	"Mutation.upsertCreationCatalogEntry":         ruleAdmin,

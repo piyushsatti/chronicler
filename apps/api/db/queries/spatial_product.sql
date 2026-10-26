@@ -1,5 +1,5 @@
 -- name: GetProductMap :one
-SELECT m.public_id AS id, m.name, m.atlas_code, m.map_kind, m.family,
+SELECT m.public_id AS id, m.name, m.atlas_code, m.map_kind, m.family, m.grid,
        r.public_id AS region_id, m.asset_path, m.created_at,
        author.public_id AS created_by
 FROM maps m
@@ -7,7 +7,7 @@ LEFT JOIN regions r ON r.id = m.region_id
 LEFT JOIN members author ON author.id = m.created_by
 WHERE m.atlas_code = sqlc.arg(atlas_code);
 -- name: ListProductMaps :many
-SELECT m.public_id AS id, m.name, m.atlas_code, m.map_kind, m.family,
+SELECT m.public_id AS id, m.name, m.atlas_code, m.map_kind, m.family, m.grid,
        r.public_id AS region_id, m.asset_path, m.created_at,
        author.public_id AS created_by
 FROM maps m
@@ -338,7 +338,7 @@ WITH predecessor AS (
 SELECT * FROM predecessor UNION ALL SELECT * FROM future
 ORDER BY real_utc,id;
 -- name: LockProductMapByAtlasCode :one
-SELECT m.id, m.public_id, m.name, m.atlas_code, m.map_kind, m.family,
+SELECT m.id, m.public_id, m.name, m.atlas_code, m.map_kind, m.family, m.grid,
        m.region_id, m.asset_path, m.created_at, m.created_by
 FROM maps m WHERE m.atlas_code=sqlc.arg(atlas_code) FOR UPDATE;
 -- name: ReadProductMapReference :one
@@ -347,7 +347,7 @@ FROM maps m LEFT JOIN regions r ON r.id=m.region_id
 WHERE m.public_id=sqlc.arg(map_id)::uuid
   AND (m.region_id IS NULL OR r.deleted_at IS NULL);
 -- name: LockProductMap :one
-SELECT m.id,m.public_id AS map_id,m.name,m.atlas_code,m.map_kind,m.family,
+SELECT m.id,m.public_id AS map_id,m.name,m.atlas_code,m.map_kind,m.family,m.grid,
        r.public_id AS region_id,m.asset_path,m.created_at,
        creator.public_id AS created_by
 FROM maps m LEFT JOIN regions r ON r.id=m.region_id
@@ -386,14 +386,14 @@ WHERE m.public_id=sqlc.arg(member_id) AND r.public_id=sqlc.arg(region_id)
 FOR UPDATE OF a;
 -- name: CreateProductMap :one
 WITH inserted AS (
-  INSERT INTO maps(name,atlas_code,map_kind,family,region_id,asset_path,created_by)
-  VALUES (sqlc.arg(name),sqlc.arg(atlas_code),sqlc.arg(map_kind),sqlc.arg(family),
+  INSERT INTO maps(name,atlas_code,map_kind,family,grid,region_id,asset_path,created_by)
+  VALUES (sqlc.arg(name),sqlc.arg(atlas_code),sqlc.arg(map_kind),sqlc.arg(family),sqlc.arg(grid),
           (SELECT r.id FROM regions r WHERE r.public_id=sqlc.narg(region_id)::uuid),
           sqlc.narg(asset_path),
           (SELECT actor.id FROM members actor WHERE actor.public_id=sqlc.arg(actor_id)::uuid))
   RETURNING *
 )
-SELECT i.public_id AS id,i.name,i.atlas_code,i.map_kind,i.family,
+SELECT i.public_id AS id,i.name,i.atlas_code,i.map_kind,i.family,i.grid,
        r.public_id AS region_id,i.asset_path,i.created_at,
        a.public_id AS created_by
 FROM inserted i LEFT JOIN regions r ON r.id=i.region_id
@@ -619,3 +619,15 @@ WHERE r.public_id=sqlc.arg(region_id)::uuid AND r.deleted_at IS NULL
                   AND c.deleted_at IS NULL AND c.status='active')
   AND NOT EXISTS (SELECT 1 FROM quest_regions qr JOIN quests q ON q.id=qr.quest_id
                   WHERE qr.region_id=r.id AND q.deleted_at IS NULL AND q.status IN ('open','full'));
+-- name: UpdateProductMap :one
+WITH updated AS (
+  UPDATE maps SET name=sqlc.arg(name),family=sqlc.arg(family),grid=sqlc.arg(grid),
+         asset_path=sqlc.narg(asset_path)
+  WHERE public_id=sqlc.arg(map_id)::uuid
+  RETURNING *
+)
+SELECT u.public_id AS id,u.name,u.atlas_code,u.map_kind,u.family,u.grid,
+       r.public_id AS region_id,u.asset_path,u.created_at,
+       a.public_id AS created_by
+FROM updated u LEFT JOIN regions r ON r.id=u.region_id
+LEFT JOIN members a ON a.id=u.created_by;

@@ -302,7 +302,7 @@ func (p *ProductPostgres) ReadMap(ctx context.Context, _ auth.Authority, spec Ma
 	if err != nil {
 		return nil, err
 	}
-	view := mapProductMapRow(row.ID, row.Name, row.AtlasCode, row.MapKind, row.Family, row.RegionID, row.AssetPath, row.CreatedAt, row.CreatedBy)
+	view := mapProductMapRow(row.ID, row.Name, row.AtlasCode, row.MapKind, row.Family, row.Grid, row.RegionID, row.AssetPath, row.CreatedAt, row.CreatedBy)
 	return &view, nil
 }
 
@@ -320,7 +320,7 @@ func (p *ProductPostgres) ReadMaps(ctx context.Context, _ auth.Authority, spec M
 	}
 	out := make([]MapView, 0, len(rows))
 	for _, row := range rows {
-		out = append(out, mapProductMapRow(row.ID, row.Name, row.AtlasCode, row.MapKind, row.Family, row.RegionID, row.AssetPath, row.CreatedAt, row.CreatedBy))
+		out = append(out, mapProductMapRow(row.ID, row.Name, row.AtlasCode, row.MapKind, row.Family, row.Grid, row.RegionID, row.AssetPath, row.CreatedAt, row.CreatedBy))
 	}
 	return out, nil
 }
