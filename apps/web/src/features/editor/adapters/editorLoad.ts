@@ -233,11 +233,13 @@ function emptyDraft(
       scheduledAt: defaultSessionStart(new Date(), context.timeZone ?? 'UTC'),
       category:
         initialCategory ??
-        (typeKey === 'guide' || typeKey === 'ruling'
-          ? typeKey
-          : typeKey === 'dm-table'
-            ? 'dm_table'
-            : null),
+        (typeKey === 'guide'
+          ? ''
+          : typeKey === 'ruling'
+            ? typeKey
+            : typeKey === 'dm-table'
+              ? 'dm_table'
+              : null),
       kind:
         typeKey === 'codex'
           ? 'codex_entry'
@@ -384,6 +386,9 @@ export async function loadEditorRecord(input: {
       (input.typeKey === 'guide' && category === 'ruling')
     )
       throw toAppError({ failure: 'NotFound' }, 'editor:kind');
+    // A guide with no group is stored as "guide"; the form shows it as blank.
+    if (input.typeKey === 'guide' && (category === 'guide' || category === 'guides'))
+      return { ...result.data, meta: { ...result.data.meta, category: '' } };
     return result.data;
   } catch (err) {
     throw toAppError(err, 'editor:load');

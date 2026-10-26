@@ -10,6 +10,22 @@ import { server } from '../../../src/mocks/server.js';
 import { schemaForType } from '../../../src/features/editor/editorSchemas.js';
 import { schemaErrors } from '../../../src/features/editor/editorValidation.js';
 
+describe('guide group', () => {
+  it('starts a new guide with a blank group the form can fill in', async () => {
+    const loaded = await loadEditorRecord({ typeKey: 'guide', mode: 'new' });
+    expect(loaded.meta.category).toBe('');
+    const fields = schemaForType('guide', loaded.meta, {}, 'new');
+    expect(fields.map((field) => field.label)).toContain('Group');
+    expect(schemaForType('ruling', loaded.meta).map((field) => field.label)).not.toContain(
+      'Group',
+    );
+  });
+  it('rejects a group over 60 characters', () => {
+    const meta = { title: 'Guide', category: 'x'.repeat(61) };
+    expect(schemaErrors(schemaForType('guide', meta), meta)).toHaveProperty('category');
+  });
+});
+
 describe('qualified Codex category initialization', () => {
   it.each([
     ['artifact', 'Artifact'],

@@ -185,6 +185,44 @@ describe('editor command dispatch', () => {
     );
     expect(adapters.publishDocument).not.toHaveBeenCalled();
   });
+  it('saves the group a guide is moved to', async () => {
+    const hook = setup({
+      typeKey: 'guide',
+      body: initial.body ?? '',
+      meta: { title: 'New title', category: '  Combat ' },
+    });
+    await save(hook);
+    expect(adapters.editPublishedDocument).toHaveBeenCalledWith(
+      expect.objectContaining({ category: 'Combat', kind: 'rule' }),
+      expect.any(String),
+    );
+  });
+  it('files a guide with a blank group back under plain guide', async () => {
+    const hook = setup({
+      typeKey: 'guide',
+      body: initial.body ?? '',
+      initial: { ...initial, meta: { ...initial.meta, category: 'Combat' } },
+      meta: { title: 'New title', category: '   ' },
+    });
+    await save(hook);
+    expect(adapters.editPublishedDocument).toHaveBeenCalledWith(
+      expect.objectContaining({ category: 'guide' }),
+      expect.any(String),
+    );
+  });
+  it('creates a new guide in the group typed in the form', async () => {
+    const hook = setup({
+      typeKey: 'guide',
+      mode: 'new',
+      initial: { ...initial, documentId: undefined, documentVersion: undefined },
+      meta: { title: 'Fresh guide', category: 'Exploration' },
+    });
+    await save(hook, false);
+    expect(adapters.createDocument).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'rule', category: 'Exploration' }),
+      expect.any(String),
+    );
+  });
   it('preserves body whitespace and omits an unchanged body', async () => {
     const hook = setup({ typeKey: 'guide', body: initial.body ?? '' });
     await save(hook);

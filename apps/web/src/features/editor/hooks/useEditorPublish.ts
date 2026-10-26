@@ -216,7 +216,7 @@ export function useEditorPublish({
           return { ...result, originScope: scopeKey };
         }
         const kind = documentKinds[typeKey];
-        const docCategory =
+        const rawCategory =
           mode === 'edit'
             ? typeof meta.category === 'string'
               ? meta.category
@@ -231,6 +231,9 @@ export function useEditorPublish({
                   : typeKey === 'dm-table'
                     ? 'dm_table'
                     : null));
+        // A guide's group is free text; blank files it under "General" as plain "guide".
+        const docCategory =
+          typeKey === 'guide' ? rawCategory?.trim() || 'guide' : rawCategory;
         // A Feature carries its map hex in frontmatter; other entries keep theirs untouched.
         const hex =
           typeKey === 'codex' && docCategory === FEATURE_CATEGORY
@@ -271,7 +274,9 @@ export function useEditorPublish({
         const acknowledgedCategory = previous
           ? previous.category
           : typeof initial.meta.category === 'string'
-            ? initial.meta.category
+            ? typeKey === 'guide'
+              ? initial.meta.category.trim() || 'guide'
+              : initial.meta.category
             : null;
         const previousHex = previous
           ? previous.hex

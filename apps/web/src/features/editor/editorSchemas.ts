@@ -173,6 +173,22 @@ const TITLED_DOCUMENT_SCHEMA: FieldSchema[] = [
   },
 ];
 
+/** A guide also names its group: guides with the same group are listed together on Rules. */
+const GUIDE_SCHEMA: FieldSchema[] = [
+  ...TITLED_DOCUMENT_SCHEMA,
+  {
+    key: 'category',
+    label: 'Group',
+    type: 'text',
+    placeholder: 'For example Combat or Exploration',
+    hint: 'Guides with the same group are listed together on the Rules page. Leave it blank for General.',
+    validate: (v) =>
+      typeof v === 'string' && v.trim().length > 60
+        ? 'Use 60 characters or fewer'
+        : null,
+  },
+];
+
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** A new quest may start in one of the viewer's series; existing quests change series on the quest page. */
@@ -255,6 +271,7 @@ export function schemaForType(
         : fields;
     }
     case 'guide':
+      return GUIDE_SCHEMA;
     case 'ruling':
     case 'summary':
     case 'dm-table':
