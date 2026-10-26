@@ -9,7 +9,7 @@ import { PageShell } from '../../../components/foundation/PageShell.js';
 import { PageHeader } from '../../../components/primitives/PageHeader.js';
 import { PageToolbar } from '../../../components/primitives/PageToolbar.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
-import { ErrorState } from '../../../components/primitives/ErrorState.js';
+import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { Skeleton } from '../../../components/primitives/Skeleton.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
 import { personLabels } from '../../../utils/format.js';
@@ -141,7 +141,12 @@ export function ChroniclesListPage(): React.JSX.Element {
 
   let regions: PageRegionRenderers;
   if (page.status === 'error') {
-    regions = { body: () => <div className="stack" data-gap="5">{header}{toolbar}<ErrorState onRetry={page.refetch} /></div> };
+    regions = { body: () => <div className="stack" data-gap="5">{header}{toolbar}<StatePanel
+        status="error"
+        error={page.error}
+        title="Something went wrong"
+        onRetry={page.refetch}
+      /></div> };
   } else if (page.status === 'loading') {
     regions = { body: () => <div className="stack" data-gap="5">{header}{toolbar}<Skeleton height={110} aria-label="Loading chronicles" /></div> };
   } else if (page.status === 'empty') {
