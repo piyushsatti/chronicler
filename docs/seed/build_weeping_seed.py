@@ -408,7 +408,9 @@ def hexmap(author: dict, root: Path, region_id: str) -> list[dict]:
             )
         )
     )
-    size = 60.0
+    # Places sit on the hexflower artwork (maps/DRK/v1/hexmap-master.png, 1075x1212):
+    # hex size 46.5px, centre hex LFC1001 at image pixel (539.2, 607.8).
+    size, origin_x, origin_y = 46.5, 539.2, 607.8
 
     # Flat-top axial grid (y grows downward): axial (0, -ring) is due north of the centre.
     def ring_hexes(r: int) -> list[tuple[int, int]]:
@@ -424,8 +426,8 @@ def hexmap(author: dict, root: Path, region_id: str) -> list[dict]:
 
     def pixel(q: int, r: int) -> tuple[float, float]:
         # Flat-top layout: column q, so axial (0, -ring) sits straight above the centre.
-        x = size * 1.5 * q
-        y = size * math.sqrt(3) * (r + q / 2)
+        x = origin_x + size * 1.5 * q
+        y = origin_y + size * math.sqrt(3) * (r + q / 2)
         return round(x, 2), round(y, 2)
 
     axial: dict[str, tuple[int, int]] = {}
@@ -456,7 +458,7 @@ def hexmap(author: dict, root: Path, region_id: str) -> list[dict]:
                 "atlas_code": "WEEPING-LF",
                 "map_kind": "pointcrawl",
                 "family": "campaign",
-                "asset_path": None,
+                "asset_path": "maps/DRK/v1/hexmap-master.png",
             },
         }
     ]

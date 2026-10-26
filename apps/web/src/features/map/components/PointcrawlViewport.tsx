@@ -149,20 +149,6 @@ export function flatTopHexagon(radius: number): string {
   }).join(' ');
 }
 
-/**
- * Map units per pin pixel. On hex maps the pin shrinks so the whole teardrop fits
- * inside its hex (75% of the cell's height) and only grows to full size once the
- * cells are big enough when zoomed in.
- */
-export function pinUnit(pixelsPerUnit: number, hexRadius?: number): number {
-  const full = 1 / pixelsPerUnit;
-  if (!hexRadius) return full;
-  return Math.min(
-    full,
-    (0.75 * Math.sqrt(3) * hexRadius) / (MAP_PIN_RADIUS + MAP_PIN_TAIL),
-  );
-}
-
 export type MapViewportHandle = {
   focusNode: (id: string) => void;
   centerNode: (id: string) => void;
@@ -305,9 +291,8 @@ export function PointcrawlViewport({
     () => hoverRadii(points, hexMap ? 0 : MAP_PIN_RADIUS / pixelsPerUnit, hexMap),
     [points, pixelsPerUnit, hexMap],
   );
-  const unit = pinUnit(pixelsPerUnit, hexMap ? radii.values().next().value : undefined);
-  // On hex maps the teardrop is centred in its hex instead of pointing at the centre.
-  const pinShift = hexMap ? (-(MAP_PIN_TAIL - MAP_PIN_RADIUS) / 2) * unit : 0;
+  const unit = 1 / pixelsPerUnit;
+  const showArt = Boolean(assetHref && !assetFailed);
   /** The place under a client point, using the viewBox's default xMidYMid meet fit. */
   const placeUnder = (svg: SVGSVGElement, clientX: number, clientY: number) => {
     const rect = svg.getBoundingClientRect();
@@ -541,7 +526,7 @@ export function PointcrawlViewport({
                 <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke" />
               </marker>
             </defs>
-            {assetHref && !assetFailed ? (
+            {assetHref && showArt ? (
               <image
                 href={assetHref}
                 x="0"
@@ -551,7 +536,8 @@ export function PointcrawlViewport({
                 preserveAspectRatio="xMinYMin meet"
               />
             ) : null}
-            {hexMap ? (
+            {/* Painted hex art already shows the cells; outline them only on a bare grid. */}
+            {hexMap && !showArt ? (
               <g className={styles.hexGrid} aria-hidden="true" pointerEvents="none">
                 {points.map((point) => (
                   <polygon
@@ -630,15 +616,21 @@ export function PointcrawlViewport({
                   }
                 >
                   <title>{node.name}</title>
-                  <circle
-                    cy={pinShift}
-                    r={MAP_PIN_RADIUS * unit}
-                    vectorEffect="non-scaling-stroke"
-                  />
-                  <path
-                    className={styles.pinTail}
-                    d={`M ${-11 * unit} ${11 * unit + pinShift} L 0 ${MAP_PIN_TAIL * unit + pinShift} L ${11 * unit} ${11 * unit + pinShift}`}
-                  />
+                  {/* A hex map is clicked by its whole cell; the ring marks the place. */}
+                  {hexMap ? (
+                    <polygon
+                      className={styles.hexTarget}
+                      points={flatTopHexagon(radii.get(node.id) ?? 0)}
+                    />
+                  ) : (
+                    <>
+                      <circle r={MAP_PIN_RADIUS * unit} vectorEffect="non-scaling-stroke" />
+                      <path
+                        className={styles.pinTail}
+                        d={`M ${-11 * unit} ${11 * unit} L 0 ${MAP_PIN_TAIL * unit} L ${11 * unit} ${11 * unit}`}
+                      />
+                    </>
+                  )}
                   <rect
                     visibility={hidden ? 'hidden' : undefined}
                     className={styles.labelPlate}
@@ -673,6 +665,10 @@ export function PointcrawlViewport({
               ].map(({ node, kind }) => {
                 if (!node) return null;
                 const labelWidth = node.name.length * 8;
+                // On hex maps the code sits just below the cell's bottom edge.
+                const labelDy = hexMap
+                  ? ((radii.get(node.id) ?? 0) * Math.sqrt(3)) / 2 + 18 * unit
+                  : MAP_LABEL_DY * unit;
                 return (
                   <g
                     key={kind}
@@ -682,7 +678,7 @@ export function PointcrawlViewport({
                   >
                     {hexMap ? (
                       <polygon
-                        className={styles.ring}
+                        className={`${styles.ring} ${styles.hexRing}`}
                         points={flatTopHexagon(radii.get(node.id) ?? 0)}
                         vectorEffect="non-scaling-stroke"
                       />
@@ -697,7 +693,7 @@ export function PointcrawlViewport({
                       className={styles.ringPlate}
                       vectorEffect="non-scaling-stroke"
                       x={(-labelWidth / 2 - 5) / pixelsPerUnit}
-                      y={(MAP_LABEL_DY - 14) / pixelsPerUnit}
+                      y={labelDy - 14 * unit}
                       width={(labelWidth + 10) / pixelsPerUnit}
                       height={19 / pixelsPerUnit}
                       rx={4 / pixelsPerUnit}
@@ -705,7 +701,7 @@ export function PointcrawlViewport({
                     <text
                       className={styles.ringLabel}
                       data-map-place-number={node.id}
-                      y={MAP_LABEL_DY / pixelsPerUnit}
+                      y={labelDy}
                       fontSize={12 / pixelsPerUnit}
                       textAnchor="middle"
                     >

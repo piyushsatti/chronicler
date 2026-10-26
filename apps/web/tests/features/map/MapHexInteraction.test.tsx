@@ -7,11 +7,9 @@ import {
   hoverRadii,
   isHexMap,
   MAP_ROUTES_STORAGE_KEY,
-  pinUnit,
   placeAt,
   PointcrawlViewport,
 } from '../../../src/features/map/components/PointcrawlViewport.js';
-import { MAP_PIN_RADIUS, MAP_PIN_TAIL } from '../../../src/features/map/labelLayout.js';
 import { renderWithProviders } from '../../test-utils.js';
 import good from '../../fixtures/wire/map/good.json';
 
@@ -419,17 +417,33 @@ describe('Hex map review fixes', () => {
     expect(hoverRadii([{ id: 'alone', x: 0, y: 0 }], 17, true).get('alone')).toBe(17);
   });
 
-  it('shrinks hex-map pins to fit inside their hex, and caps them at full size', () => {
-    const fits = (0.75 * Math.sqrt(3) * 10) / (MAP_PIN_RADIUS + MAP_PIN_TAIL);
-    // Zoomed out: 1 map unit is 0.5px, so a full pin (84 units tall) would spill over.
-    expect(pinUnit(0.5, 10)).toBeCloseTo(fits);
-    expect((MAP_PIN_RADIUS + MAP_PIN_TAIL) * pinUnit(0.5, 10)).toBeLessThan(
-      Math.sqrt(3) * 10,
+  it('draws no pins on hex maps: each place is its whole hex cell, ringed in white', () => {
+    render(
+      <PointcrawlViewport map={hexMap} selectedId={hexNodes[0]!.id} onSelect={vi.fn()} />,
     );
-    // Zoomed in far enough, the pin stays at its normal pixel size.
-    expect(pinUnit(10, 10)).toBeCloseTo(1 / 10);
-    // Ordinary maps keep fixed-size pins.
-    expect(pinUnit(0.5)).toBeCloseTo(2);
+    for (const place of within(graph()).getAllByRole('button')) {
+      expect(place.querySelector('circle')).toBeNull();
+      expect(place.querySelector('path')).toBeNull();
+      expect(place.querySelector('polygon')).toHaveAttribute('points', flatTopHexagon(size));
+    }
+    const ring = graph().querySelector('[data-map-ring="selected"] polygon')!;
+    expect(ring.getAttribute('class')).toMatch(/hexRing/);
+  });
+
+  it('hides the hex outlines when the map has painted art underneath', () => {
+    render(
+      <PointcrawlViewport
+        map={{ ...hexMap, assetPath: 'maps/DRK/v1/hexmap-master.png' }}
+        selectedId={null}
+        onSelect={vi.fn()}
+      />,
+    );
+    expect(graph().querySelector('image')).toHaveAttribute(
+      'href',
+      '/maps/DRK/v1/hexmap-master.png',
+    );
+    expect(graph().querySelector('[data-hex-cell]')).toBeNull();
+    expect(within(graph()).getAllByRole('button')).toHaveLength(hexNodes.length);
   });
 
   it('does not stretch hex maps vertically, so the hexes tile; ordinary maps still stretch', () => {

@@ -447,6 +447,32 @@
 [data-map-ring='selected'] .ring {
   stroke: var(--color-good);
 }
+/* Hex cells: the whole cell is the click target; it stays invisible over the art. */
+.hexTarget {
+  fill: transparent;
+  stroke: none;
+}
+.node:focus-visible .hexTarget {
+  stroke: #fff;
+  stroke-width: 2px;
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+}
+/* White rings read on painted art in both themes; the dark halo keeps them on pale tiles. */
+.hexRing,
+[data-map-ring='hover'] .hexRing,
+[data-map-ring='selected'] .hexRing {
+  stroke: #fff;
+  stroke-dasharray: none;
+  filter: drop-shadow(0 0 1.5px rgb(0 0 0 / 0.85));
+}
+[data-map-ring='hover'] .hexRing {
+  stroke-width: 2px;
+  opacity: 0.85;
+}
+[data-map-ring='selected'] .hexRing {
+  stroke-width: 4px;
+}
 .ringPlate {
   fill: var(--color-bg-panel);
   stroke: var(--color-accent);
