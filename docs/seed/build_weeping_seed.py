@@ -400,6 +400,8 @@ def hexmap(author: dict, root: Path, region_id: str) -> list[dict]:
 
     Source of the convention: Guides/DM Mechanics.md ("Hex Numbering Convention").
     Hex codes come from the tile list in Codex/Untitled.md. Only codes with a tile are seeded.
+    The outer rings are partial: numbering counts only hexes painted on the artwork, so
+    LFR7005 is the fifth painted hex of ring 7 (checked against the per-code tile images).
     """
     codes = sorted(
         set(
@@ -411,6 +413,22 @@ def hexmap(author: dict, root: Path, region_id: str) -> list[dict]:
     # Places sit on the hexflower artwork (maps/DRK/v1/hexmap-master.png, 1075x1212):
     # hex size 46.5px, centre hex LFC1001 at image pixel (539.2, 607.8).
     size, origin_x, origin_y = 46.5, 539.2, 607.8
+    manifest = (
+        Path(__file__).resolve().parents[2]
+        / "apps/web/public/maps/DRK/v1/manifest.json"
+    )
+    # 1403 is a transparent sliver at the art's edge, not a playable hex.
+    painted = {
+        (
+            round((cell["cx"] - origin_x) / (size * 1.5)),
+            round(
+                (cell["cy"] - origin_y) / (size * math.sqrt(3))
+                - round((cell["cx"] - origin_x) / (size * 1.5)) / 2
+            ),
+        )
+        for cell in json.loads(manifest.read_text("utf-8"))["hexes"]
+        if cell["code"] != "1403"
+    }
 
     # Flat-top axial grid (y grows downward): axial (0, -ring) is due north of the centre.
     def ring_hexes(r: int) -> list[tuple[int, int]]:
@@ -436,7 +454,7 @@ def hexmap(author: dict, root: Path, region_id: str) -> list[dict]:
             axial[code] = (0, 0)
             continue
         ring, idx = int(code[3]), int(code[4:])
-        hexes = ring_hexes(ring)
+        hexes = [cell for cell in ring_hexes(ring) if cell in painted]
         if not 1 <= idx <= len(hexes):
             raise SystemExit(
                 f"{code}: hex index outside ring {ring} ({len(hexes)} hexes)"
