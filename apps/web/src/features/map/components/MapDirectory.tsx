@@ -2,7 +2,8 @@ import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { CardGrid } from '../../../components/primitives/CardGrid.js';
 import { PageToolbar } from '../../../components/primitives/PageToolbar.js';
-import { humanizeKey, pluralize } from '../../../utils/format.js';
+import { pluralize } from '../../../utils/format.js';
+import { countPlaces, mapKindLabel, placeWords } from '../mapWords.js';
 import type {
   MapDirectory as Directory,
   MapAtlasView,
@@ -82,7 +83,7 @@ function MapCard({ map, region }: { map: MapAtlasView; region: string }) {
           {atlas.data ? <MapPreviewArt map={atlas.data} /> : null}
           <span className={styles.previewLabel}>
             <i />
-            {humanizeKey(map.mapKind)}
+            {mapKindLabel(map)}
           </span>
         </div>
         <div className={styles.mapCardBody}>
@@ -94,10 +95,10 @@ function MapCard({ map, region }: { map: MapAtlasView; region: string }) {
             {atlas.isError
               ? 'This map could not load.'
               : !atlas.data
-                ? 'Loading locations and connections…'
+                ? `Loading ${placeWords(map).many}…`
                 : atlas.data.nodes.length
-                  ? `${pluralize(atlas.data.nodes.length, 'location')} · ${pluralize(atlas.data.edges.length, 'connection')}`
-                  : 'No locations have been added yet.'}
+                  ? countPlaces(atlas.data, atlas.data.nodes.length)
+                  : `No ${placeWords(atlas.data).many} have been added yet.`}
           </p>
           <div className={styles.mapCardFoot}>
             <span>

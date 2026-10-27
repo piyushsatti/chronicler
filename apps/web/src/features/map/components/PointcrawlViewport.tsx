@@ -23,6 +23,7 @@ import {
   placeLabels,
 } from '../labelLayout.js';
 import { MapKey } from './MapKey.js';
+import { countPlaces, isHexMap, placeWords } from '../mapWords.js';
 import { Checkbox } from '../../../components/primitives/Checkbox.js';
 
 // Stored asset paths may be absolute URLs or site-relative; both resolve from the site root.
@@ -142,9 +143,11 @@ function writeShowRoutes(value: boolean): void {
   }
 }
 
-/** A hex map is one whose routes are hex adjacency links (the seeded hexflower). */
-export function isHexMap(map: { edges: readonly { kind: string }[] }): boolean {
-  return map.edges.some((edge) => edge.kind === 'hex');
+export { isHexMap };
+
+/** Round a map coordinate for display and for the add-location form. */
+export function roundCoordinate(value: number): number {
+  return Math.round(value * 100) / 100;
 }
 
 /** Flat-top hexagon vertices around the origin, matching the flat-top source maps. */
@@ -166,6 +169,7 @@ export function PointcrawlViewport({
   onClear,
   actions,
   siblings,
+  onAddAt,
   ref,
 }: {
   map: Pointcrawl;
@@ -175,6 +179,8 @@ export function PointcrawlViewport({
   onClear?: () => void;
   actions?: React.ReactNode;
   siblings?: SegmentedNavItem[];
+  /** Right-clicking an empty spot on an editable point map asks to add a location there. */
+  onAddAt?: (point: { x: number; y: number }) => void;
   ref?: Ref<MapViewportHandle>;
 }) {
   const marker = useId().replaceAll(':', '');
@@ -207,6 +213,7 @@ export function PointcrawlViewport({
   const graph = useRef<SVGSVGElement>(null);
   const [size, setSize] = useState({ width: 0, height: 0 });
   const hexMap = isHexMap(map);
+  const words = placeWords(map);
   // Hex maps keep their aspect ratio so the hexes tile.
   const graphView = fitGraphView(bounds, size, (!assetHref || assetFailed) && !hexMap);
   useEffect(() => {
@@ -232,6 +239,7 @@ export function PointcrawlViewport({
   const pinch = useRef<{ distance: number; zoom: number } | null>(null);
   const press = useRef<{ x: number; y: number; moved: boolean } | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
+  const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
   const [showRoutes, setShowRoutes] = useState(readShowRoutes);
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const byId = useMemo(
@@ -296,16 +304,29 @@ export function PointcrawlViewport({
   const unit = 1 / pixelsPerUnit;
   const showArt = Boolean(assetHref && !assetFailed);
   /** The place under a client point, using the viewBox's default xMidYMid meet fit. */
-  const placeUnder = (svg: SVGSVGElement, clientX: number, clientY: number) => {
+  const svgPointAt = (svg: SVGSVGElement, clientX: number, clientY: number) => {
     const rect = svg.getBoundingClientRect();
     if (rect.width <= 0 || rect.height <= 0) return null;
     const scale = Math.min(rect.width / width, rect.height / viewHeight);
-    return placeAt(points, radii, {
+    return {
       x: viewX + (clientX - rect.left - (rect.width - width * scale) / 2) / scale,
       y:
         viewBoxY +
         (clientY - rect.top - (rect.height - viewHeight * scale) / 2) / scale,
-    });
+    };
+  };
+  const placeUnder = (svg: SVGSVGElement, clientX: number, clientY: number) => {
+    const point = svgPointAt(svg, clientX, clientY);
+    return point ? placeAt(points, radii, point) : null;
+  };
+  /** Map coordinates (the x,y a location is stored with) under a client point. */
+  const mapPointAt = (svg: SVGSVGElement, clientX: number, clientY: number) => {
+    const point = svgPointAt(svg, clientX, clientY);
+    if (!point) return null;
+    return {
+      x: roundCoordinate(point.x),
+      y: roundCoordinate(bounds.y + (point.y - graphView.y) / graphView.verticalScale),
+    };
   };
   const zoom = (factor: number) =>
     setCamera((value) => ({
@@ -357,7 +378,7 @@ export function PointcrawlViewport({
     pinch.current = null;
   };
   return (
-    <section className={styles.viewport} aria-label="Pointcrawl viewport">
+    <section className={styles.viewport} aria-label="Map viewport">
       <PageToolbar
         className={styles.atlasToolbar}
         label="Map controls"
@@ -366,8 +387,8 @@ export function PointcrawlViewport({
         }
         count={
           showRoutes
-            ? `${pluralize(map.nodes.length, 'place')} · ${pluralize(map.edges.length, 'route')}`
-            : pluralize(map.nodes.length, 'place')
+            ? `${countPlaces(map, map.nodes.length)} · ${pluralize(map.edges.length, 'route')}`
+            : countPlaces(map, map.nodes.length)
         }
         actions={
           <>
@@ -417,7 +438,7 @@ export function PointcrawlViewport({
             ref={graph}
             className={styles.graph}
             role="group"
-            aria-label={`${map.name} pointcrawl graph`}
+            aria-label={`${map.name} map`}
             viewBox={`${viewX} ${viewBoxY} ${width} ${viewHeight}`}
             onPointerDown={(event) => {
               press.current = null;
@@ -457,6 +478,10 @@ export function PointcrawlViewport({
                 pin?.dataset.nodeId ??
                   placeUnder(event.currentTarget, event.clientX, event.clientY),
               );
+              if (!hexMap)
+                setCursor(
+                  mapPointAt(event.currentTarget, event.clientX, event.clientY),
+                );
               if (
                 press.current &&
                 Math.hypot(
@@ -495,7 +520,23 @@ export function PointcrawlViewport({
             }}
             onPointerUp={(event) => endPointer(event.pointerId)}
             onPointerCancel={(event) => endPointer(event.pointerId)}
-            onPointerLeave={() => setHoveredId(null)}
+            onPointerLeave={() => {
+              setHoveredId(null);
+              setCursor(null);
+            }}
+            onContextMenu={(event) => {
+              if (hexMap || !onAddAt) return;
+              if (
+                event.target instanceof Element &&
+                event.target.closest('[data-node-id]')
+              )
+                return;
+              if (placeUnder(event.currentTarget, event.clientX, event.clientY)) return;
+              const point = mapPointAt(event.currentTarget, event.clientX, event.clientY);
+              if (!point) return;
+              event.preventDefault();
+              onAddAt(point);
+            }}
             onClick={(event) => {
               const start = press.current;
               press.current = null;
@@ -512,7 +553,7 @@ export function PointcrawlViewport({
             }}
           >
             <title>
-              {map.name}. Use Tab to move between places and Enter to select one.
+              {map.name}. Use Tab to move between {words.many} and Enter to select one.
             </title>
             <defs>
               <marker
@@ -715,13 +756,22 @@ export function PointcrawlViewport({
             </g>
           </svg>
           {!map.nodes.length ? (
-            <p className={styles.emptyCanvas}>No locations have been added yet.</p>
+            <p className={styles.emptyCanvas}>No {words.many} have been added yet.</p>
+          ) : null}
+          {cursor && !hexMap ? (
+            <output
+              className={styles.cursorReadout}
+              aria-label="Cursor position on the map"
+              data-map-cursor="true"
+            >
+              x {cursor.x}, y {cursor.y}
+            </output>
           ) : null}
           {showRoutes && map.edges.length ? <MapKey edges={map.edges} /> : null}
         </div>
         <div className={styles.mapMetaRow}>
           <p className={styles.canvasHint}>
-            Click a place to explore it. Click empty map or press Escape to clear.
+            Click a {words.one} to explore it. Click empty map or press Escape to clear.
           </p>
         </div>
         {actions ? <div className={styles.canvasActions}>{actions}</div> : null}

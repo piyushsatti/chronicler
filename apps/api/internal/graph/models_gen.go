@@ -625,6 +625,7 @@ type MapCreateInput struct {
 	Name      string  `json:"name"`
 	AtlasCode string  `json:"atlasCode"`
 	Family    string  `json:"family"`
+	Grid      string  `json:"grid"`
 	MapKind   string  `json:"mapKind"`
 	RegionID  *string `json:"regionId,omitempty"`
 	AssetPath *string `json:"assetPath,omitempty"`
@@ -636,6 +637,7 @@ type MapType struct {
 	Name            string                `json:"name"`
 	AtlasCode       string                `json:"atlasCode"`
 	Family          string                `json:"family"`
+	Grid            string                `json:"grid"`
 	MapKind         string                `json:"mapKind"`
 	AssetPath       *string               `json:"assetPath,omitempty"`
 	RegionID        *string               `json:"regionId,omitempty"`
@@ -643,6 +645,13 @@ type MapType struct {
 	CreatedAt       time.Time             `json:"createdAt"`
 	PointcrawlNodes []*PointcrawlNodeType `json:"pointcrawlNodes"`
 	PointcrawlEdges []*PointcrawlEdgeType `json:"pointcrawlEdges"`
+}
+
+type MapUpdateInput struct {
+	Name      string  `json:"name"`
+	Family    string  `json:"family"`
+	Grid      string  `json:"grid"`
+	AssetPath *string `json:"assetPath,omitempty"`
 }
 
 type MemberActivityStatsType struct {

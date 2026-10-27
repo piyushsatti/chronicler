@@ -5062,6 +5062,15 @@
           "owner": "SPA01"
         },
         {
+          "name": "Grid",
+          "wire_name": "grid",
+          "go_type": "string",
+          "wire_type": "String!",
+          "resolver_args": [],
+          "kind": "INPUT_OBJECT",
+          "owner": "SPA01"
+        },
+        {
           "name": "MapKind",
           "wire_name": "mapKind",
           "go_type": "string",
@@ -5230,6 +5239,15 @@
         {
           "name": "Family",
           "wire_name": "family",
+          "go_type": "string",
+          "wire_type": "String!",
+          "resolver_args": [],
+          "kind": "OBJECT",
+          "owner": "SPA01"
+        },
+        {
+          "name": "Grid",
+          "wire_name": "grid",
           "go_type": "string",
           "wire_type": "String!",
           "resolver_args": [],
@@ -10371,6 +10389,53 @@
       "primary_task": "DOC01",
       "meaning": "current canonical Summary relationship projection for permitted metadata writers; explicit completeness prevents lossy replacement",
       "wire_name": "SummaryAuthoringType"
+    },
+    {
+      "name": "MapUpdateFields",
+      "package": "spatial",
+      "kind": "INPUT_OBJECT",
+      "fields": [
+        {
+          "name": "AssetPath",
+          "wire_name": "assetPath",
+          "go_type": "*string",
+          "wire_type": "String",
+          "resolver_args": [],
+          "kind": "INPUT_OBJECT",
+          "owner": "SPA01"
+        },
+        {
+          "name": "Family",
+          "wire_name": "family",
+          "go_type": "string",
+          "wire_type": "String!",
+          "resolver_args": [],
+          "kind": "INPUT_OBJECT",
+          "owner": "SPA01"
+        },
+        {
+          "name": "Grid",
+          "wire_name": "grid",
+          "go_type": "string",
+          "wire_type": "String!",
+          "resolver_args": [],
+          "kind": "INPUT_OBJECT",
+          "owner": "SPA01"
+        },
+        {
+          "name": "Name",
+          "wire_name": "name",
+          "go_type": "string",
+          "wire_type": "String!",
+          "resolver_args": [],
+          "kind": "INPUT_OBJECT",
+          "owner": "SPA01"
+        }
+      ],
+      "enum_values": [],
+      "primary_task": "SPA01",
+      "meaning": "immutable query/command DTO; repository inner rows never cross aggregate; nested fields resolved by mapped loader when selected",
+      "wire_name": "MapUpdateInput"
     }
   ],
   "history_id_flow": {
@@ -14353,6 +14418,29 @@
         }
       ],
       "owner": "MEM01"
+    },
+    {
+      "name": "UpdateMapSpec",
+      "package": "spatial",
+      "fields": [
+        {
+          "name": "MapId",
+          "wire_name": "id",
+          "go_type": "string",
+          "sdl_type": "ID!",
+          "default": "",
+          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
+        },
+        {
+          "name": "Input",
+          "wire_name": "input",
+          "go_type": "spatial.MapUpdateFields",
+          "sdl_type": "MapUpdateInput!",
+          "default": "",
+          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
+        }
+      ],
+      "owner": "SPA01"
     }
   ],
   "command_states": [
@@ -18082,6 +18170,35 @@
       "owner": "MEM01",
       "lock_order": "Character UUIDs ascending first then Quest UUIDs ascending for signup/withdraw/retire/delete/selection; candidate plans revalidate under locks, bounded whole-action retry; all other primary aggregate lock then own children orderedUUID",
       "policy": "owner/current row and state invariant checked by command, never bypassed by repository"
+    },
+    {
+      "name": "UpdateMapState",
+      "package": "spatial",
+      "fields": [
+        {
+          "name": "Exists",
+          "go_type": "bool"
+        },
+        {
+          "name": "SubjectID",
+          "go_type": "string"
+        },
+        {
+          "name": "MapKind",
+          "go_type": "string"
+        },
+        {
+          "name": "RegionID",
+          "go_type": "*string"
+        },
+        {
+          "name": "Before",
+          "go_type": "*spatial.MapView"
+        }
+      ],
+      "owner": "SPA01",
+      "lock_order": "Character UUIDs ascending first then Quest UUIDs ascending for signup/withdraw/retire/delete/selection; candidate plans revalidate under locks, bounded whole-action retry; all other primary aggregate lock then own children orderedUUID",
+      "policy": "owner/current row and state invariant checked by command, never bypassed by repository"
     }
   ],
   "command_writes": [
@@ -21744,6 +21861,34 @@
       ],
       "owner": "QUE01",
       "meaning": "command validates andnormalizes Spec intoValidatedInput; repository applies onlyownaggregate writes andreturns actualINSERT/UPDATE IDs/times. No guessed generatedID, no foreignwrite orcommit"
+    },
+    {
+      "name": "UpdateMapWrite",
+      "package": "spatial",
+      "fields": [
+        {
+          "name": "ActorID",
+          "go_type": "string"
+        },
+        {
+          "name": "At",
+          "go_type": "time.Time"
+        },
+        {
+          "name": "Input",
+          "go_type": "spatial.UpdateMapSpec"
+        },
+        {
+          "name": "Locked",
+          "go_type": "spatial.UpdateMapState"
+        },
+        {
+          "name": "ValidatedInput",
+          "go_type": "spatial.UpdateMapSpec"
+        }
+      ],
+      "owner": "SPA01",
+      "meaning": "command validates andnormalizes Spec intoValidatedInput; repository applies onlyownaggregate writes andreturns actualINSERT/UPDATE IDs/times. No guessed generatedID, no foreignwrite orcommit"
     }
   ],
   "additional_types": {
@@ -23511,6 +23656,8 @@
       "methods": [
         "LockCreateMap(ctx context.Context, spec spatial.CreateMapSpec) (spatial.CreateMapState, error)",
         "StoreCreateMap(ctx context.Context, write spatial.CreateMapWrite) (spatial.MapView, error)",
+        "LockUpdateMap(ctx context.Context, spec spatial.UpdateMapSpec) (spatial.UpdateMapState, error)",
+        "StoreUpdateMap(ctx context.Context, write spatial.UpdateMapWrite) (spatial.MapView, error)",
         "LockLinkHexEntry(ctx context.Context, spec spatial.LinkHexEntrySpec) (spatial.LinkHexEntryState, error)",
         "StoreLinkHexEntry(ctx context.Context, write spatial.LinkHexEntryWrite) (spatial.HexEntryLinkView, error)",
         "LockLinkPointcrawlEntry(ctx context.Context, spec spatial.LinkPointcrawlEntrySpec) (spatial.LinkPointcrawlEntryState, error)",
@@ -28113,6 +28260,24 @@
       "provider": "P03",
       "callers": ["P02"],
       "transaction": "transaction-local exact claim map; no SQL during staging; Complete writes the ordered _authorizationOverrides metadata beside the command result in its existing single conditional UPDATE; no separate audit table or transaction"
+    },
+    {
+      "id": "LOCK-spatial-UpdateMap",
+      "signature": "LockUpdateMap(ctx context.Context, spec spatial.UpdateMapSpec) (spatial.UpdateMapState, error)",
+      "interface": "spatial.MapWriteRepository",
+      "provider": "SPA04",
+      "callers": ["SPA06"],
+      "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
+      "spec_owner": "SPA01"
+    },
+    {
+      "id": "STORE-spatial-UpdateMap",
+      "signature": "StoreUpdateMap(ctx context.Context, write spatial.UpdateMapWrite) (spatial.MapView, error)",
+      "interface": "spatial.MapWriteRepository",
+      "provider": "SPA04",
+      "callers": ["SPA06"],
+      "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
+      "spec_owner": "SPA01"
     }
   ],
   "loaders": [

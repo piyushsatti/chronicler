@@ -3,6 +3,7 @@
   "name": "Lightfall",
   "atlasCode": "LFC",
   "family": "lightfall",
+  "grid": "point",
   "mapKind": "pointcrawl",
   "assetPath": null,
   "regionId": null,

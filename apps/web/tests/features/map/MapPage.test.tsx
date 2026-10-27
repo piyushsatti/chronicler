@@ -178,9 +178,9 @@ describe('MapPage', () => {
     renderMap();
     fireEvent.click(await screen.findByText('Locations (3)', { selector: 'summary' }));
     const list = screen.getByRole('list', { name: 'Map locations' });
-    const viewport = screen.getByRole('region', { name: 'Pointcrawl viewport' });
+    const viewport = screen.getByRole('region', { name: 'Map viewport' });
     const graph = within(viewport).getByRole('group', {
-      name: 'Lightfall pointcrawl graph',
+      name: 'Lightfall map',
     });
     nodes.forEach((node) => {
       expect(within(list).getByRole('button', { name: node.name })).toBeVisible();
@@ -203,9 +203,9 @@ describe('MapPage', () => {
     expect(
       [...graph.querySelectorAll('title')].map((title) => title.textContent),
     ).toContain('The full name of the directed connection (one way)');
-    expect(screen.getByRole('region', { name: 'Map connections' })).toHaveTextContent(
-      'The full name of the directed connection',
-    );
+    // Connections are hidden from the map UI (M4-17); the route names stay on the canvas.
+    expect(screen.queryByRole('region', { name: 'Map connections' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Add connection' })).toBeNull();
     const caption = screen.getByRole('status');
     expect(caption).toHaveTextContent(names[0]!);
     fireEvent.click(within(list).getByRole('button', { name: names[2] }));
@@ -220,7 +220,7 @@ describe('MapPage', () => {
     fireEvent.click(await screen.findByText('Locations (3)', { selector: 'summary' }));
     const list = screen.getByRole('list', { name: 'Map locations' });
     expect(within(list).getAllByRole('button')).toHaveLength(3);
-    const graph = screen.getByRole('group', { name: 'Lightfall pointcrawl graph' });
+    const graph = screen.getByRole('group', { name: 'Lightfall map' });
     fireEvent.keyDown(within(graph).getByRole('button', { name: 'Old Watchtower' }), {
       key: 'Enter',
     });
@@ -363,7 +363,7 @@ describe('MapPage', () => {
           if (outcome === 'success') held.resolve({ id: good.pointcrawlNodes[1]!.id });
           else held.reject(new Error('A failed'));
         });
-        expect(screen.getByRole('dialog')).toHaveTextContent('Save location');
+        expect(screen.getByRole('dialog')).toHaveTextContent('Add location');
         expect(screen.getByRole('textbox', { name: 'Location name' })).toHaveValue(
           'B draft',
         );
@@ -637,13 +637,12 @@ describe('MapPage', () => {
       save.mockRestore();
     }
   });
-  it.each(['create', 'edge', 'link'] as const)(
+  it.each(['create', 'link'] as const)(
     'ignores an old account’s %s completion while the new account edits',
     async (kind) => {
       session();
       const held = deferred<{ id: string; atlasCode: string }>();
       const create = vi.spyOn(adapter, 'createMap').mockReturnValueOnce(held.promise);
-      const edge = vi.spyOn(adapter, 'saveEdge').mockReturnValueOnce(held.promise);
       const link = vi
         .spyOn(adapter, 'changeEntry')
         .mockReturnValueOnce(held.promise.then(() => undefined));
@@ -671,31 +670,24 @@ describe('MapPage', () => {
         await screen.findByRole('button', { name: 'Add location' });
         fireEvent.click(
           screen.getByRole('button', {
-            name:
-              kind === 'create'
-                ? 'Create map'
-                : kind === 'edge'
-                  ? 'Add connection'
-                  : 'Link a Location',
+            name: kind === 'create' ? 'Create map' : 'Link a Location',
           }),
         );
         if (kind === 'create') {
-          for (const name of ['Map name', 'Atlas code', 'Family'])
-            fireEvent.change(screen.getByRole('textbox', { name }), {
+          for (const name of ['Map name', 'Map address', 'Map group'])
+            fireEvent.change(screen.getByRole('textbox', { name: new RegExp(`^${name}`) }), {
               target: { value: 'A map' },
             });
         } else if (kind === 'link') {
           await userEvent.click(
-            await screen.findByRole('button', { name: /^Location document/ }),
+            await screen.findByRole('button', { name: /^Location/ }),
           );
           await userEvent.click(
             await screen.findByRole('menuitem', { name: locationDocument.title }),
           );
         }
         fireEvent.submit(screen.getByRole('button', { name: 'Save' }).closest('form')!);
-        expect(
-          kind === 'create' ? create : kind === 'edge' ? edge : link,
-        ).toHaveBeenCalledTimes(1);
+        expect(kind === 'create' ? create : link).toHaveBeenCalledTimes(1);
         fireEvent.click(screen.getByText('Account B', { selector: 'button' }));
         await waitFor(() =>
           expect(screen.queryByRole('dialog')).not.toBeInTheDocument(),
@@ -715,7 +707,6 @@ describe('MapPage', () => {
         ).toBeInTheDocument();
       } finally {
         create.mockRestore();
-        edge.mockRestore();
         link.mockRestore();
       }
     },
@@ -899,7 +890,7 @@ describe('PointcrawlViewport marker allocation', () => {
         onSelect={vi.fn()}
       />,
     );
-    const graph = screen.getByRole('group', { name: 'Lightfall pointcrawl graph' });
+    const graph = screen.getByRole('group', { name: 'Lightfall map' });
     const rectangle = vi
       .spyOn(graph, 'getBoundingClientRect')
       .mockReturnValue(new DOMRect(0, 0, width, height));
@@ -963,7 +954,7 @@ describe('PointcrawlViewport marker allocation', () => {
       />,
     );
     try {
-      const graph = screen.getByRole('group', { name: 'Lightfall pointcrawl graph' });
+      const graph = screen.getByRole('group', { name: 'Lightfall map' });
       const circle = graph.querySelector('circle');
       const connector = graph.querySelector('polyline');
       expect(connector).not.toBeNull();
@@ -1286,12 +1277,11 @@ describe('MapPage reader presentation', () => {
   it('keeps details anchored directly to the canvas and discloses the complete location list on request', async () => {
     renderMap();
     const selected = await screen.findByRole('region', { name: 'Selected location' });
-    const viewport = screen.getByRole('region', { name: 'Pointcrawl viewport' });
+    const viewport = screen.getByRole('region', { name: 'Map viewport' });
     expect(viewport.nextElementSibling).toBe(selected);
     const locations = screen.getByRole('region', { name: 'Map locations' });
-    const connections = screen.getByRole('region', { name: 'Map connections' });
+    expect(screen.queryByRole('region', { name: 'Map connections' })).toBeNull();
     expect(locations.querySelector('details')).not.toHaveAttribute('open');
-    expect(connections.querySelector('details')).not.toHaveAttribute('open');
     fireEvent.click(
       within(locations).getByText('Locations (3)', { selector: 'summary' }),
     );
@@ -1353,7 +1343,7 @@ describe('MapPage reader presentation', () => {
     );
   });
 
-  it('names import-id connections by their route kind and hides canvas positions from readers', async () => {
+  it('hides the Connections list and names routes by kind; hides canvas positions from readers', async () => {
     server.use(
       graphql.query('MapAtlas', () =>
         HttpResponse.json({
@@ -1372,9 +1362,12 @@ describe('MapPage reader presentation', () => {
       ),
     );
     renderMap();
-    const connections = await screen.findByRole('region', { name: 'Map connections' });
-    expect(connections).toHaveTextContent('River ford');
-    expect(connections).not.toHaveTextContent('leg-7');
+    await screen.findByRole('region', { name: 'Map viewport' });
+    expect(screen.queryByRole('region', { name: 'Map connections' })).toBeNull();
+    expect(screen.getByLabelText('Route line styles', { selector: 'ul' })).toHaveTextContent(
+      'River ford',
+    );
+    expect(screen.queryByText('leg-7')).toBeNull();
     expect(
       screen.getByRole('region', { name: 'Selected location' }),
     ).not.toHaveTextContent(/Canvas position|Coordinates/);
@@ -1382,7 +1375,7 @@ describe('MapPage reader presentation', () => {
 
   it('uses sibling navigation links instead of a native select', async () => {
     renderMap();
-    await screen.findByRole('region', { name: 'Map connections' });
+    await screen.findByRole('region', { name: 'Map viewport' });
     expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
     const navigation = screen.getByRole('navigation', { name: 'Choose a map' });
     expect(within(navigation).getByRole('link', { name: 'Lightfall' })).toHaveAttribute(

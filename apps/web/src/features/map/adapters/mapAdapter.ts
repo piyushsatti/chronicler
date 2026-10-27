@@ -10,6 +10,8 @@ import type {
   MapDocumentQuery,
   MapLocationDocumentsQuery,
   MapCreateMutation,
+  MapUpdateMutation,
+  MapUpdateMutationVariables,
   MapCreateMutationVariables,
   MapSaveNodeMutation,
   MapSaveNodeMutationVariables,
@@ -34,6 +36,7 @@ import DOCUMENT from './mapDocument.graphql?raw';
 import DOCUMENTS from './mapDocuments.graphql?raw';
 import LOCATIONS from './mapLocationDocuments.graphql?raw';
 import CREATE from './mapCreate.graphql?raw';
+import UPDATE from './mapUpdate.graphql?raw';
 import NODE from './mapSaveNode.graphql?raw';
 import EDGE from './mapSaveEdge.graphql?raw';
 import LINK from './mapLinkEntry.graphql?raw';
@@ -47,6 +50,7 @@ const mapSchema = z.object({
   name: z.string(),
   atlasCode: z.string(),
   family: z.string(),
+  grid: z.string(),
   mapKind: z.string(),
   assetPath: z.string().nullable(),
   regionId: id.nullable(),
@@ -286,6 +290,18 @@ export async function createMap(
     meta: { idempotencyKey },
   });
   return parse(z.object({ id, atlasCode: z.string() }), data.createMap);
+}
+export async function updateMap(
+  mapId: string,
+  input: MapUpdateMutationVariables['input'],
+  idempotencyKey: string,
+) {
+  const data = await graphqlRequest<MapUpdateMutation>(UPDATE, {
+    id: mapId,
+    input,
+    meta: { idempotencyKey },
+  });
+  return parse(z.object({ id, atlasCode: z.string() }), data.updateMap);
 }
 export async function saveNode(
   mapId: string,

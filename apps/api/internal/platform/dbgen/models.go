@@ -268,6 +268,7 @@ type Map struct {
 	CreatedAt pgtype.Timestamptz `json:"created_at"`
 	CreatedBy pgtype.Int8        `json:"created_by"`
 	Family    string             `json:"family"`
+	Grid      string             `json:"grid"`
 }
 
 type Member struct {

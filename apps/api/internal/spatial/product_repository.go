@@ -24,6 +24,8 @@ type MapReadRepository interface {
 type MapWriteRepository interface {
 	LockCreateMap(ctx context.Context, spec CreateMapSpec) (CreateMapState, error)
 	StoreCreateMap(ctx context.Context, write CreateMapWrite) (MapView, error)
+	LockUpdateMap(ctx context.Context, spec UpdateMapSpec) (UpdateMapState, error)
+	StoreUpdateMap(ctx context.Context, write UpdateMapWrite) (MapView, error)
 	LockLinkHexEntry(ctx context.Context, spec LinkHexEntrySpec) (LinkHexEntryState, error)
 	StoreLinkHexEntry(ctx context.Context, write LinkHexEntryWrite) (HexEntryLinkView, error)
 	LockLinkPointcrawlEntry(ctx context.Context, spec LinkPointcrawlEntrySpec) (LinkPointcrawlEntryState, error)

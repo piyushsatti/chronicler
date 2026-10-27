@@ -149,9 +149,17 @@ export type MapCreateInput = {
   assetPath?: string | null | undefined;
   atlasCode: string;
   family: string;
+  grid?: string;
   mapKind: string;
   name: string;
   regionId?: string | null | undefined;
+};
+
+export type MapUpdateInput = {
+  assetPath?: string | null | undefined;
+  family: string;
+  grid: string;
+  name: string;
 };
 
 export type MemberRoleBatchInput = {
@@ -1184,7 +1192,7 @@ export type MapAtlasQueryVariables = Exact<{
 }>;
 
 
-export type MapAtlasQuery = { map: { id: string, canEdit: boolean, name: string, atlasCode: string, family: string, mapKind: string, assetPath: string | null, regionId: string | null, createdAt: string, pointcrawlNodes: Array<{ id: string, mapId: string, x: number, y: number, name: string, submapId: string | null, createdAt: string, linkedEntries: Array<{ mapId: string, nodeId: string, documentId: string, relation: string, createdAt: string, createdBy: string }> }>, pointcrawlEdges: Array<{ id: string, mapId: string, nodeA: string, nodeB: string, directed: boolean, kind: string, label: string | null, documentId: string | null }> } | null };
+export type MapAtlasQuery = { map: { id: string, canEdit: boolean, name: string, atlasCode: string, family: string, grid: string, mapKind: string, assetPath: string | null, regionId: string | null, createdAt: string, pointcrawlNodes: Array<{ id: string, mapId: string, x: number, y: number, name: string, submapId: string | null, createdAt: string, linkedEntries: Array<{ mapId: string, nodeId: string, documentId: string, relation: string, createdAt: string, createdBy: string }> }>, pointcrawlEdges: Array<{ id: string, mapId: string, nodeA: string, nodeB: string, directed: boolean, kind: string, label: string | null, documentId: string | null }> } | null };
 
 export type MapAssignmentsQueryVariables = Exact<{
   memberId?: string | null | undefined;
@@ -1209,7 +1217,7 @@ export type MapDirectoryQueryVariables = Exact<{
 }>;
 
 
-export type MapDirectoryQuery = { maps: Array<{ id: string, canEdit: boolean, name: string, atlasCode: string, family: string, mapKind: string, assetPath: string | null, regionId: string | null, createdAt: string }>, regions: Array<{ canCreateMap: boolean, id: string, name: string, kind: string, charterDeadline: string | null, documentId: string | null, createdAt: string }> };
+export type MapDirectoryQuery = { maps: Array<{ id: string, canEdit: boolean, name: string, atlasCode: string, family: string, grid: string, mapKind: string, assetPath: string | null, regionId: string | null, createdAt: string }>, regions: Array<{ canCreateMap: boolean, id: string, name: string, kind: string, charterDeadline: string | null, documentId: string | null, createdAt: string }> };
 
 export type MapDocumentQueryVariables = Exact<{
   id: string;
@@ -1308,6 +1316,15 @@ export type MapUnlinkEntryMutationVariables = Exact<{
 
 
 export type MapUnlinkEntryMutation = { unlinkPointcrawlEntry: { replayed: boolean } };
+
+export type MapUpdateMutationVariables = Exact<{
+  id: string;
+  input: MapUpdateInput;
+  meta: CommandMeta;
+}>;
+
+
+export type MapUpdateMutation = { updateMap: { id: string, atlasCode: string } };
 
 export type MemberHubQueryVariables = Exact<{
   memberId: string;

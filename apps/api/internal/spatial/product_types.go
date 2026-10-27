@@ -97,10 +97,20 @@ type MapCreateFields struct {
 	AtlasCode string
 	Cols      *int32
 	Family    string
+	Grid      string
 	MapKind   string
 	Name      string
 	RegionId  *string
 	Rows      *int32
+}
+
+// MapUpdateFields are the editable map fields. The atlas code (the map's address) and the
+// map kind never change after creation.
+type MapUpdateFields struct {
+	AssetPath *string
+	Family    string
+	Grid      string
+	Name      string
 }
 
 type MapPlaceView struct {
@@ -120,6 +130,7 @@ type MapView struct {
 	CreatedAt time.Time
 	CreatedBy *string
 	Family    string
+	Grid      string
 	Id        string
 	MapKind   string
 	Name      string
@@ -281,6 +292,11 @@ type AssignArchonSpec struct {
 
 type CreateMapSpec struct {
 	Input MapCreateFields
+}
+
+type UpdateMapSpec struct {
+	MapId string
+	Input MapUpdateFields
 }
 
 type CreateRegionSpec struct {
@@ -735,6 +751,22 @@ type AssignArchonWrite struct {
 	DecisionID     *string
 	RevisionID     *string
 	EventKey       *string
+}
+
+type UpdateMapState struct {
+	Exists    bool
+	SubjectID string
+	MapKind   string
+	RegionID  *string
+	Before    *MapView
+}
+
+type UpdateMapWrite struct {
+	ActorID        string
+	At             time.Time
+	Input          UpdateMapSpec
+	Locked         UpdateMapState
+	ValidatedInput UpdateMapSpec
 }
 
 type CreateMapWrite struct {

@@ -7,7 +7,7 @@ import (
 )
 
 func TestPointcrawlInputBoundaries(t *testing.T) {
-	input := MapCreateFields{Name: "Atlas", AtlasCode: "atlas", Family: "campaign", MapKind: "pointcrawl"}
+	input := MapCreateFields{Name: "Atlas", AtlasCode: "atlas", Family: "campaign", Grid: "point", MapKind: "pointcrawl"}
 	for _, asset := range []string{"/atlas.webp", "https://example.com/atlas.webp", "/nested/a%20b.webp"} {
 		input.AssetPath = &asset
 		if err := validateMapCreate(input); err != nil {
@@ -47,7 +47,7 @@ func TestPointcrawlContainmentCycle(t *testing.T) {
 func TestPointcrawlNameAndCodeRuneBoundaries(t *testing.T) {
 	for _, size := range []int{200, 201} {
 		name := strings.Repeat("界", size)
-		input := MapCreateFields{Name: name, AtlasCode: "atlas", Family: "campaign", MapKind: "pointcrawl"}
+		input := MapCreateFields{Name: name, AtlasCode: "atlas", Family: "campaign", Grid: "point", MapKind: "pointcrawl"}
 		if got := validateMapCreate(input) == nil; got != (size == 200) {
 			t.Fatalf("map name runes=%d accepted=%v", size, got)
 		}
@@ -56,9 +56,41 @@ func TestPointcrawlNameAndCodeRuneBoundaries(t *testing.T) {
 		}
 	}
 	for _, size := range []int{64, 65} {
-		input := MapCreateFields{Name: "Atlas", AtlasCode: strings.Repeat("界", size), Family: "campaign", MapKind: "pointcrawl"}
+		input := MapCreateFields{Name: "Atlas", AtlasCode: strings.Repeat("界", size), Family: "campaign", Grid: "point", MapKind: "pointcrawl"}
 		if got := validateMapCreate(input) == nil; got != (size == 64) {
 			t.Fatalf("atlas code runes=%d accepted=%v", size, got)
+		}
+	}
+}
+
+func TestMapGridAndUpdateValidation(t *testing.T) {
+	create := MapCreateFields{Name: "Atlas", AtlasCode: "atlas", Family: "campaign", MapKind: "pointcrawl"}
+	for _, grid := range []string{"point", "hex"} {
+		create.Grid = grid
+		if err := validateMapCreate(create); err != nil {
+			t.Fatalf("grid %q rejected: %v", grid, err)
+		}
+	}
+	for _, grid := range []string{"", "square", "HEX"} {
+		create.Grid = grid
+		if validateMapCreate(create) == nil {
+			t.Fatalf("grid %q accepted", grid)
+		}
+	}
+	asset := "/maps/atlas.png"
+	update := MapUpdateFields{Name: "Renamed", Family: "campaign", Grid: "hex", AssetPath: &asset}
+	if err := validateMapUpdate(update); err != nil {
+		t.Fatalf("valid update rejected: %v", err)
+	}
+	for name, bad := range map[string]MapUpdateFields{
+		"blank name":   {Name: " ", Family: "campaign", Grid: "point"},
+		"long name":    {Name: strings.Repeat("a", 201), Family: "campaign", Grid: "point"},
+		"blank family": {Name: "Atlas", Family: "", Grid: "point"},
+		"bad grid":     {Name: "Atlas", Family: "campaign", Grid: "square"},
+		"bad asset":    {Name: "Atlas", Family: "campaign", Grid: "point", AssetPath: func() *string { v := "/a/../x"; return &v }()},
+	} {
+		if validateMapUpdate(bad) == nil {
+			t.Fatalf("%s accepted", name)
 		}
 	}
 }

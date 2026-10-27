@@ -521,6 +521,7 @@ type ComplexityRoot struct {
 		CreatedAt       func(childComplexity int) int
 		CreatedBy       func(childComplexity int) int
 		Family          func(childComplexity int) int
+		Grid            func(childComplexity int) int
 		ID              func(childComplexity int) int
 		MapKind         func(childComplexity int) int
 		Name            func(childComplexity int) int
@@ -672,6 +673,7 @@ type ComplexityRoot struct {
 		UpdateDocument                     func(childComplexity int, id string, input DocumentEditInput, meta CommandMeta) int
 		UpdateGameCalendar                 func(childComplexity int, definition json.RawMessage, meta CommandMeta) int
 		UpdateHomeBanner                   func(childComplexity int, input HomeBannerInput, meta CommandMeta) int
+		UpdateMap                          func(childComplexity int, id string, input MapUpdateInput, meta CommandMeta) int
 		UpdateMyDmProfile                  func(childComplexity int, input UpdateDmProfileInput, meta CommandMeta) int
 		UpdateMyProfile                    func(childComplexity int, input UpdateMyProfileInput, meta CommandMeta) int
 		UpdateMySettings                   func(childComplexity int, input MemberSettingsPatch, meta CommandMeta) int
@@ -1270,6 +1272,7 @@ type MutationResolver interface {
 	UpdateQuestAnnouncementRoleSetting(ctx context.Context, input AnnouncementRoleInput, meta CommandMeta) (*QuestAnnouncementRoleSettingType, error)
 	RedriveDiscordDelivery(ctx context.Context, jobID string, reason string, meta CommandMeta) (*DeliveryReceipt, error)
 	CreateMap(ctx context.Context, input MapCreateInput, meta CommandMeta) (*MapType, error)
+	UpdateMap(ctx context.Context, id string, input MapUpdateInput, meta CommandMeta) (*MapType, error)
 	CreateRegion(ctx context.Context, input RegionInput, meta CommandMeta) (*RegionType, error)
 	UpdateRegion(ctx context.Context, id string, input RegionInput, meta CommandMeta) (*RegionType, error)
 	TransitionRegion(ctx context.Context, id string, to string, note string, meta CommandMeta) (*RegionType, error)
@@ -3443,6 +3446,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.MapType.Family(childComplexity), true
 
+	case "MapType.grid":
+		if e.complexity.MapType.Grid == nil {
+			break
+		}
+
+		return e.complexity.MapType.Grid(childComplexity), true
+
 	case "MapType.id":
 		if e.complexity.MapType.ID == nil {
 			break
@@ -4609,6 +4619,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.Mutation.UpdateHomeBanner(childComplexity, args["input"].(HomeBannerInput), args["meta"].(CommandMeta)), true
+
+	case "Mutation.updateMap":
+		if e.complexity.Mutation.UpdateMap == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_updateMap_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.UpdateMap(childComplexity, args["id"].(string), args["input"].(MapUpdateInput), args["meta"].(CommandMeta)), true
 
 	case "Mutation.updateMyDmProfile":
 		if e.complexity.Mutation.UpdateMyDmProfile == nil {
@@ -7462,6 +7484,7 @@ func (e *executableSchema) Exec(ctx context.Context) graphql.ResponseHandler {
 		ec.unmarshalInputDowntimeInput,
 		ec.unmarshalInputHomeBannerInput,
 		ec.unmarshalInputMapCreateInput,
+		ec.unmarshalInputMapUpdateInput,
 		ec.unmarshalInputMemberFiltersInput,
 		ec.unmarshalInputMemberRoleBatchInput,
 		ec.unmarshalInputMemberSettingsPatch,
@@ -7994,8 +8017,15 @@ input MapCreateInput {
   name: String!
   atlasCode: String!
   family: String!
+  grid: String! = "point"
   mapKind: String!
   regionId: ID
+  assetPath: String
+}
+input MapUpdateInput {
+  name: String!
+  family: String!
+  grid: String!
   assetPath: String
 }
 input QuestPointcrawlLinkInput {
@@ -9211,6 +9241,7 @@ type ScheduledWorkStatusType {
 }
 extend type Mutation {
   createMap(input: MapCreateInput!, meta: CommandMeta!): MapType!
+  updateMap(id: ID!, input: MapUpdateInput!, meta: CommandMeta!): MapType!
   createRegion(input: RegionInput!, meta: CommandMeta!): RegionType!
   updateRegion(id: ID!, input: RegionInput!, meta: CommandMeta!): RegionType!
   transitionRegion(id: ID!, to: String!, note: String!, meta: CommandMeta!): RegionType!
@@ -9297,6 +9328,7 @@ type MapType {
   name: String!
   atlasCode: String!
   family: String!
+  grid: String!
   mapKind: String!
   assetPath: String
   regionId: ID
@@ -10677,6 +10709,27 @@ func (ec *executionContext) field_Mutation_updateHomeBanner_args(ctx context.Con
 		return nil, err
 	}
 	args["meta"] = arg1
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_updateMap_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "id", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["id"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "input", ec.unmarshalNMapUpdateInput2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐMapUpdateInput)
+	if err != nil {
+		return nil, err
+	}
+	args["input"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "meta", ec.unmarshalNCommandMeta2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐCommandMeta)
+	if err != nil {
+		return nil, err
+	}
+	args["meta"] = arg2
 	return args, nil
 }
 
@@ -25437,6 +25490,50 @@ func (ec *executionContext) fieldContext_MapType_family(_ context.Context, field
 	return fc, nil
 }
 
+func (ec *executionContext) _MapType_grid(ctx context.Context, field graphql.CollectedField, obj *MapType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_MapType_grid(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Grid, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(string)
+	fc.Result = res
+	return ec.marshalNString2string(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_MapType_grid(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "MapType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _MapType_mapKind(ctx context.Context, field graphql.CollectedField, obj *MapType) (ret graphql.Marshaler) {
 	fc, err := ec.fieldContext_MapType_mapKind(ctx, field)
 	if err != nil {
@@ -33161,6 +33258,8 @@ func (ec *executionContext) fieldContext_Mutation_createMap(ctx context.Context,
 				return ec.fieldContext_MapType_atlasCode(ctx, field)
 			case "family":
 				return ec.fieldContext_MapType_family(ctx, field)
+			case "grid":
+				return ec.fieldContext_MapType_grid(ctx, field)
 			case "mapKind":
 				return ec.fieldContext_MapType_mapKind(ctx, field)
 			case "assetPath":
@@ -33187,6 +33286,89 @@ func (ec *executionContext) fieldContext_Mutation_createMap(ctx context.Context,
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_createMap_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_updateMap(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_updateMap(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().UpdateMap(rctx, fc.Args["id"].(string), fc.Args["input"].(MapUpdateInput), fc.Args["meta"].(CommandMeta))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*MapType)
+	fc.Result = res
+	return ec.marshalNMapType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐMapType(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_updateMap(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_MapType_id(ctx, field)
+			case "canEdit":
+				return ec.fieldContext_MapType_canEdit(ctx, field)
+			case "name":
+				return ec.fieldContext_MapType_name(ctx, field)
+			case "atlasCode":
+				return ec.fieldContext_MapType_atlasCode(ctx, field)
+			case "family":
+				return ec.fieldContext_MapType_family(ctx, field)
+			case "grid":
+				return ec.fieldContext_MapType_grid(ctx, field)
+			case "mapKind":
+				return ec.fieldContext_MapType_mapKind(ctx, field)
+			case "assetPath":
+				return ec.fieldContext_MapType_assetPath(ctx, field)
+			case "regionId":
+				return ec.fieldContext_MapType_regionId(ctx, field)
+			case "createdBy":
+				return ec.fieldContext_MapType_createdBy(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_MapType_createdAt(ctx, field)
+			case "pointcrawlNodes":
+				return ec.fieldContext_MapType_pointcrawlNodes(ctx, field)
+			case "pointcrawlEdges":
+				return ec.fieldContext_MapType_pointcrawlEdges(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type MapType", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_updateMap_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -41103,6 +41285,8 @@ func (ec *executionContext) fieldContext_Query_map(ctx context.Context, field gr
 				return ec.fieldContext_MapType_atlasCode(ctx, field)
 			case "family":
 				return ec.fieldContext_MapType_family(ctx, field)
+			case "grid":
+				return ec.fieldContext_MapType_grid(ctx, field)
 			case "mapKind":
 				return ec.fieldContext_MapType_mapKind(ctx, field)
 			case "assetPath":
@@ -41184,6 +41368,8 @@ func (ec *executionContext) fieldContext_Query_maps(ctx context.Context, field g
 				return ec.fieldContext_MapType_atlasCode(ctx, field)
 			case "family":
 				return ec.fieldContext_MapType_family(ctx, field)
+			case "grid":
+				return ec.fieldContext_MapType_grid(ctx, field)
 			case "mapKind":
 				return ec.fieldContext_MapType_mapKind(ctx, field)
 			case "assetPath":
@@ -53932,7 +54118,11 @@ func (ec *executionContext) unmarshalInputMapCreateInput(ctx context.Context, ob
 		asMap[k] = v
 	}
 
-	fieldsInOrder := [...]string{"name", "atlasCode", "family", "mapKind", "regionId", "assetPath"}
+	if _, present := asMap["grid"]; !present {
+		asMap["grid"] = "point"
+	}
+
+	fieldsInOrder := [...]string{"name", "atlasCode", "family", "grid", "mapKind", "regionId", "assetPath"}
 	for _, k := range fieldsInOrder {
 		v, ok := asMap[k]
 		if !ok {
@@ -53960,6 +54150,13 @@ func (ec *executionContext) unmarshalInputMapCreateInput(ctx context.Context, ob
 				return it, err
 			}
 			it.Family = data
+		case "grid":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("grid"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Grid = data
 		case "mapKind":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("mapKind"))
 			data, err := ec.unmarshalNString2string(ctx, v)
@@ -53974,6 +54171,54 @@ func (ec *executionContext) unmarshalInputMapCreateInput(ctx context.Context, ob
 				return it, err
 			}
 			it.RegionID = data
+		case "assetPath":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("assetPath"))
+			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.AssetPath = data
+		}
+	}
+
+	return it, nil
+}
+
+func (ec *executionContext) unmarshalInputMapUpdateInput(ctx context.Context, obj any) (MapUpdateInput, error) {
+	var it MapUpdateInput
+	asMap := map[string]any{}
+	for k, v := range obj.(map[string]any) {
+		asMap[k] = v
+	}
+
+	fieldsInOrder := [...]string{"name", "family", "grid", "assetPath"}
+	for _, k := range fieldsInOrder {
+		v, ok := asMap[k]
+		if !ok {
+			continue
+		}
+		switch k {
+		case "name":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("name"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Name = data
+		case "family":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("family"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Family = data
+		case "grid":
+			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("grid"))
+			data, err := ec.unmarshalNString2string(ctx, v)
+			if err != nil {
+				return it, err
+			}
+			it.Grid = data
 		case "assetPath":
 			ctx := graphql.WithPathContext(ctx, graphql.NewPathWithField("assetPath"))
 			data, err := ec.unmarshalOString2ᚖstring(ctx, v)
@@ -58477,6 +58722,11 @@ func (ec *executionContext) _MapType(ctx context.Context, sel ast.SelectionSet, 
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
+		case "grid":
+			out.Values[i] = ec._MapType_grid(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
 		case "mapKind":
 			out.Values[i] = ec._MapType_mapKind(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
@@ -59695,6 +59945,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 		case "createMap":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_createMap(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "updateMap":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_updateMap(ctx, field)
 			})
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
@@ -67028,6 +67285,11 @@ func (ec *executionContext) marshalNMapType2ᚖgithubᚗcomᚋpiyushsattiᚋchro
 		return graphql.Null
 	}
 	return ec._MapType(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNMapUpdateInput2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐMapUpdateInput(ctx context.Context, v any) (MapUpdateInput, error) {
+	res, err := ec.unmarshalInputMapUpdateInput(ctx, v)
+	return res, graphql.ErrorOnPath(ctx, err)
 }
 
 func (ec *executionContext) marshalNMemberListResult2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐMemberListResult(ctx context.Context, sel ast.SelectionSet, v MemberListResult) graphql.Marshaler {

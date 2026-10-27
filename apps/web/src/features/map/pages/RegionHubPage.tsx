@@ -199,7 +199,7 @@ function RegionDetails({ region, maps }: { region: MapRegion; maps: MapAtlasView
               <>
                 <span>{pluralize(counts.data.questCount, 'quest')} overall</span>
                 <span>
-                  {pluralize(counts.data.pointcrawlNodeCount, 'map location')}
+                  {pluralize(counts.data.pointcrawlNodeCount, 'mapped place')}
                 </span>
               </>
             ) : null}

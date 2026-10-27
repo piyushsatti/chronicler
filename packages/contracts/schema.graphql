@@ -421,8 +421,15 @@ input MapCreateInput {
   name: String!
   atlasCode: String!
   family: String!
+  grid: String! = "point"
   mapKind: String!
   regionId: ID
+  assetPath: String
+}
+input MapUpdateInput {
+  name: String!
+  family: String!
+  grid: String!
   assetPath: String
 }
 input QuestPointcrawlLinkInput {
@@ -1651,6 +1658,7 @@ extend type Query {
 }
 extend type Mutation {
   createMap(input: MapCreateInput!, meta: CommandMeta!): MapType!
+  updateMap(id: ID!, input: MapUpdateInput!, meta: CommandMeta!): MapType!
   createRegion(input: RegionInput!, meta: CommandMeta!): RegionType!
   updateRegion(id: ID!, input: RegionInput!, meta: CommandMeta!): RegionType!
   transitionRegion(id: ID!, to: String!, note: String!, meta: CommandMeta!): RegionType!
@@ -1738,6 +1746,7 @@ type MapType {
   name: String!
   atlasCode: String!
   family: String!
+  grid: String!
   mapKind: String!
   assetPath: String
   regionId: ID

@@ -35,7 +35,7 @@ function viewport(selectedId: string | null = null) {
       onClear={onClear}
     />,
   );
-  const graph = screen.getByRole('group', { name: 'Lightfall pointcrawl graph' });
+  const graph = screen.getByRole('group', { name: 'Lightfall map' });
   expect(graph).toHaveAttribute('viewBox', '40 -80 400 260');
   vi.spyOn(graph, 'getBoundingClientRect').mockReturnValue(new DOMRect(0, 0, 400, 260));
   Object.defineProperty(graph, 'setPointerCapture', { value: vi.fn() });
@@ -185,7 +185,7 @@ describe('MapPage selection clearing', () => {
       { route: `/map/LFC?node=${gate.id}` },
     );
     const graph = await screen.findByRole('group', {
-      name: 'Lightfall pointcrawl graph',
+      name: 'Lightfall map',
     });
     expect(
       await screen.findByRole('region', { name: 'Selected location' }),
@@ -216,7 +216,7 @@ describe('MapPage selection clearing', () => {
 describe('Route lines toggle', () => {
   const routes = () =>
     screen
-      .getByRole('group', { name: 'Lightfall pointcrawl graph' })
+      .getByRole('group', { name: 'Lightfall map' })
       .querySelectorAll('[data-edge-kind]');
   it('hides route lines and their key by default and shows them on request, remembering the choice', () => {
     const view = render(
@@ -229,11 +229,11 @@ describe('Route lines toggle', () => {
       screen.queryByRole('button', { name: 'Key to route line styles' }),
     ).toBeNull();
     // The count line leaves out routes while they are hidden.
-    expect(screen.getByText('3 places')).toBeVisible();
+    expect(screen.getByText('3 locations')).toBeVisible();
     expect(screen.queryByText(/places · /)).toBeNull();
     fireEvent.click(toggle);
     expect(toggle).toBeChecked();
-    expect(screen.getByText('3 places · 1 route')).toBeVisible();
+    expect(screen.getByText('3 locations · 1 route')).toBeVisible();
     expect(routes()).toHaveLength(map.edges.length);
     expect(
       screen.getByRole('button', { name: 'Key to route line styles' }),
@@ -305,7 +305,7 @@ describe('Hex maps', () => {
     edges: hexEdges,
   };
   const graph = () =>
-    screen.getByRole('group', { name: 'Lightfall Hexflower pointcrawl graph' });
+    screen.getByRole('group', { name: 'Lightfall Hexflower map' });
 
   it('identifies hex maps by hex adjacency routes only', () => {
     expect(isHexMap(hexMap)).toBe(true);
@@ -365,7 +365,7 @@ describe('Hex maps', () => {
 
   it('leaves ordinary pointcrawl maps without hex outlines and with circular rings', () => {
     render(<PointcrawlViewport map={map} selectedId={gate.id} onSelect={vi.fn()} />);
-    const ordinary = screen.getByRole('group', { name: 'Lightfall pointcrawl graph' });
+    const ordinary = screen.getByRole('group', { name: 'Lightfall map' });
     expect(ordinary.querySelector('[data-hex-cell]')).toBeNull();
     expect(ordinary.querySelector('[data-map-ring="selected"] circle')).not.toBeNull();
     const labels = [...ordinary.querySelectorAll('g[role="button"] text')];
@@ -403,7 +403,7 @@ describe('Hex map review fixes', () => {
     ],
   };
   const graph = (name = 'Hexflower') =>
-    screen.getByRole('group', { name: `${name} pointcrawl graph` });
+    screen.getByRole('group', { name: `${name} map` });
 
   it('uses one cell radius from the median spacing, so isolated tiles are not oversized', () => {
     const nodes = [...cells, { x: 1000, y: 1000 }].map((point, index) => ({

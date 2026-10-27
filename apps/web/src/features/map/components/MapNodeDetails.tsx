@@ -1,6 +1,5 @@
 import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { ContentRenderer } from '../../../components/foundation/ContentRenderer.js';
 import { Button } from '../../../components/primitives/Button.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
 import { documentHref } from '../../../utils/documentHref.js';
@@ -8,8 +7,7 @@ import {
   useMapNodeDetails,
   type MapNodeDetailsProps,
 } from '../hooks/useMapNodeDetails.js';
-import { Chip } from '../../../components/primitives/Chip.js';
-import { humanizeKey } from '../../../utils/format.js';
+import { placeWords } from '../mapWords.js';
 import { cardExcerpt } from '../../../utils/markdownText.js';
 import {
   FEATURE_CATEGORY,
@@ -38,15 +36,7 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
           : 'smooth',
       });
   }, [node.id]);
-  const locationLink = node.linkedEntries.find((link) => link.relation === 'location');
-  const locationIndex = locationLink
-    ? documentIds.indexOf(locationLink.documentId)
-    : -1;
-  const description =
-    locationIndex >= 0
-      ? documents[Math.floor(locationIndex / 5)]?.data?.[locationIndex % 5]
-          ?.effectiveBody
-      : null;
+  const words = placeWords(map);
   const entryAt = (documentId: string) => {
     const index = documentIds.indexOf(documentId);
     return documents[Math.floor(index / 5)]?.data?.[index % 5];
@@ -68,9 +58,8 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
         New entry
       </Link>
     ) : null;
-  // A hex holds one Location (database rule); Features are placed by their own hex number.
-  const linkAction =
-    map.canEdit && !locationLink ? (
+  // A hex or location may hold many Locations; Features are placed by their own hex number.
+  const linkAction = map.canEdit ? (
       <Button variant="secondary" onClick={() => onEdit({ kind: 'link', map, node })}>
         Link a Location
       </Button>
@@ -80,18 +69,18 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
       ref={panel}
       className={styles.details}
       id="map-location-details"
-      aria-label="Selected location"
+      aria-label={`Selected ${words.one}`}
       data-map-selected={node.id}
       data-map-panel="true"
     >
       <header className={styles.detailHeader}>
         <div className={styles.detailTopline}>
-          <span>Place</span>
+          <span>{words.One}</span>
           <button
             ref={closeButton}
             type="button"
             className={styles.detailClose}
-            aria-label="Close place details"
+            aria-label={`Close ${words.one} details`}
             onClick={onClose}
           >
             ×
@@ -101,11 +90,6 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
         <p className={styles.detailLocation}>{region}</p>
       </header>
       <MapPanelBody>
-        {description ? (
-          <div className={styles.detailDescription}>
-            <ContentRenderer body={description} />
-          </div>
-        ) : null}
         <h3 className={styles.linkedHeading}>
           Linked documents <span>{node.linkedEntries.length}</span>
         </h3>
@@ -122,7 +106,7 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
         {node.linkedEntries.length === 0 ? (
           <EmptyState
             className={styles.linkedEmpty}
-            message="No Codex entries are linked to this location yet."
+            message={`No Codex entries are linked to this ${words.one} yet.`}
             action={
               linkAction ?? (
                 <Link className="btn btn--secondary btn--sm" to="/codex">
@@ -162,29 +146,18 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
                         document.title
                       )}
                     </h4>
-                    <div className={styles.docMeta}>
-                      <Chip size="sm" tone="category">
-                        {document.kind === 'codex_entry'
-                          ? 'Codex'
-                          : humanizeKey(document.kind)}
-                        {document.category
-                          ? ` · ${humanizeKey(document.category)}`
-                          : ''}
-                      </Chip>
-                      <span className={styles.relationChip}>
-                        {humanizeKey(link.relation)}
-                      </span>
-                    </div>
-                    {link.relation !== 'location' ? (
+                    {cardExcerpt(document.effectiveBody, 180) ? (
                       <p className={styles.entrySummary}>
                         {cardExcerpt(document.effectiveBody, 180)}
                       </p>
                     ) : null}
                     {document.category === FEATURE_CATEGORY ? (
-                      <p className="type-caption">
-                        A Feature sits on the hex named in its entry. Edit the entry to
-                        move it or take it off the map.
-                      </p>
+                      map.canEdit ? (
+                        <p className="type-caption">
+                          A Feature sits on the hex named in its entry. Edit the entry
+                          to move it or take it off the map.
+                        </p>
+                      ) : null
                     ) : map.canEdit ? (
                       <Button
                         size="sm"
@@ -225,7 +198,7 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
             size="sm"
             onClick={() => onEdit({ kind: 'node', map, node, maps })}
           >
-            Edit location
+            Edit {words.one}
           </Button>
         ) : null}
         {node.linkedEntries.length ? linkAction : null}

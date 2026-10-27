@@ -244,6 +244,7 @@ The following164 roots are the accepted business API. Introspection fields are e
 | Mutation.updateGameCalendar                 | spatial-operations.graphql      |
 | Mutation.updateHex                          | spatial-operations.graphql      |
 | Mutation.updateHomeBanner                   | site-operations.graphql         |
+| Mutation.updateMap                          | spatial-operations.graphql      |
 | Mutation.updateMyDmProfile                  | member-operations.graphql       |
 | Mutation.updateMyProfile                    | member-operations.graphql       |
 | Mutation.updateMySettings                   | member-operations.graphql       |

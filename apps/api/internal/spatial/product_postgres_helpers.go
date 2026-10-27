@@ -119,13 +119,14 @@ func (p *ProductPostgres) documentSQLViewer(ctx context.Context, actor auth.Auth
 	return document.SQLScope(scope), nil
 }
 
-func mapProductMapRow(id pgtype.UUID, name, atlasCode, mapKind, family string, regionID pgtype.UUID, assetPath pgtype.Text, createdAt pgtype.Timestamptz, createdBy pgtype.UUID) MapView {
+func mapProductMapRow(id pgtype.UUID, name, atlasCode, mapKind, family, grid string, regionID pgtype.UUID, assetPath pgtype.Text, createdAt pgtype.Timestamptz, createdBy pgtype.UUID) MapView {
 	view := MapView{
 		Id:        db.UUIDString(id),
 		Name:      name,
 		AtlasCode: atlasCode,
 		MapKind:   mapKind,
 		Family:    family,
+		Grid:      grid,
 		CreatedAt: createdAt.Time,
 		RegionId:  uuidPtr(regionID),
 	}
@@ -264,6 +265,6 @@ func readMapByPublicID(ctx context.Context, q *dbgen.Queries, mapID pgtype.UUID)
 	if err != nil {
 		return nil, err
 	}
-	view := mapProductMapRow(row.MapID, row.Name, row.AtlasCode, row.MapKind, row.Family, row.RegionID, row.AssetPath, row.CreatedAt, row.CreatedBy)
+	view := mapProductMapRow(row.MapID, row.Name, row.AtlasCode, row.MapKind, row.Family, row.Grid, row.RegionID, row.AssetPath, row.CreatedAt, row.CreatedBy)
 	return &view, nil
 }

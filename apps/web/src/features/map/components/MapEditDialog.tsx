@@ -3,14 +3,24 @@ import { Modal } from '../../../components/primitives/Modal.js';
 import { Button } from '../../../components/primitives/Button.js';
 import { useMapEdit, type MapEdit } from '../hooks/useMapEdit.js';
 import styles from '../pages/map.module.css';
-import { Checkbox } from '../../../components/primitives/Checkbox.js';
 import { Select } from '../../../components/primitives/Select.js';
-const titles = {
-  create: 'Create map',
-  node: 'Save location',
-  edge: 'Save connection',
-  link: 'Link Location document',
+import { SegmentedControl } from '../../../components/primitives/SegmentedControl.js';
+import { placeWords, type MapGrid } from '../mapWords.js';
+const GRID_OPTIONS = [
+  { value: 'point', label: 'Point map' },
+  { value: 'hex', label: 'Hex map' },
+] as const;
+const GRID_HELP: Record<MapGrid, string> = {
+  point: 'A point map pins Locations at spots on the picture, like towns on a regional map.',
+  hex: 'A hex map is a grid of numbered hexes. Features sit in hexes, like the Lightfall Hexflower.',
 };
+function titleFor(edit: MapEdit): string {
+  if (edit.kind === 'create') return 'Create map';
+  if (edit.kind === 'map') return 'Edit map';
+  if (edit.kind === 'link') return 'Link a Location';
+  const words = placeWords(edit.map);
+  return edit.node ? `Edit ${words.one}` : `Add ${words.one}`;
+}
 export function MapEditDialog(props: {
   edit: MapEdit;
   onClose: () => void;
@@ -25,8 +35,9 @@ export function MapEditDialog(props: {
     edit.kind === 'create' && !edit.global ? (edit.regions[0]?.id ?? '') : '',
   );
   const [submapId, setSubmapId] = useState(edit.kind === 'node' ? (edit.node?.submapId ?? '') : '');
-  const [nodeA, setNodeA] = useState(edit.kind === 'edge' ? (edit.edge?.nodeA ?? edit.nodes[0]?.id ?? '') : '');
-  const [nodeB, setNodeB] = useState(edit.kind === 'edge' ? (edit.edge?.nodeB ?? edit.nodes[1]?.id ?? edit.nodes[0]?.id ?? '') : '');
+  const [grid, setGrid] = useState<MapGrid>(
+    edit.kind === 'map' && edit.map.grid === 'hex' ? 'hex' : 'point',
+  );
   const [documentId, setDocumentId] = useState('');
   const {
     pending,
@@ -46,27 +57,74 @@ export function MapEditDialog(props: {
       .map((document) => ({ value: document.id, label: document.title }))
     : [];
   return (
-    <Modal open title={titles[edit.kind]} onClose={close}>
+    <Modal open title={titleFor(edit)} onClose={close}>
       <form
         className={`stack ${styles.form}`}
         onSubmit={(event) => {
           void submit(event);
         }}
       >
-        {edit.kind === 'create' ? (
+        {edit.kind === 'create' || edit.kind === 'map' ? (
           <>
             <label>
               Map name
-              <input name="name" required maxLength={200} />
+              <input
+                name="name"
+                required
+                maxLength={200}
+                defaultValue={edit.kind === 'map' ? edit.map.name : ''}
+              />
+            </label>
+            <div className="stack">
+              <span id={`${labelId}-grid`}>Type of map</span>
+              <SegmentedControl
+                aria-label="Type of map"
+                options={GRID_OPTIONS}
+                value={grid}
+                onValueChange={setGrid}
+              />
+              <input type="hidden" name="grid" value={grid} />
+              <p className="type-caption">{GRID_HELP[grid]}</p>
+            </div>
+            {edit.kind === 'create' ? (
+              <label>
+                Map address
+                <input name="atlasCode" maxLength={64} placeholder="Made from the name" />
+                <span className="type-caption">
+                  The short code in the map’s web address, such as WEEPING-LF. Leave it
+                  blank to make one from the name. It cannot be changed later.
+                </span>
+              </label>
+            ) : null}
+            <label>
+              Map group
+              <input
+                name="family"
+                required
+                maxLength={200}
+                defaultValue={edit.kind === 'map' ? edit.map.family : 'campaign'}
+              />
+              <span className="type-caption">
+                Maps in the same group are listed together, for example “campaign”.
+              </span>
             </label>
             <label>
-              Atlas code
-              <input name="atlasCode" required maxLength={64} />
+              Map image address
+              <input
+                name="assetPath"
+                maxLength={2048}
+                placeholder="/maps/my-map.png or https://…"
+                defaultValue={edit.kind === 'map' ? (edit.map.assetPath ?? '') : ''}
+              />
+              <span className="type-caption">
+                The web address of the map picture. Leave it blank to show the places on
+                a plain background.
+              </span>
             </label>
-            <label>
-              Family
-              <input name="family" required maxLength={200} />
-            </label>
+          </>
+        ) : null}
+        {edit.kind === 'create' ? (
+          <>
             <div className="stack">
               <span id={`${labelId}-region`}>Region</span>
               <Select
@@ -87,7 +145,7 @@ export function MapEditDialog(props: {
         {edit.kind === 'node' ? (
           <>
             <label>
-              Location name
+              {placeWords(edit.map).one === 'hex' ? 'Hex number' : 'Location name'}
               <input
                 name="name"
                 required
@@ -103,7 +161,7 @@ export function MapEditDialog(props: {
                   type="number"
                   step="any"
                   required
-                  defaultValue={edit.node?.x ?? 0}
+                  defaultValue={edit.node?.x ?? edit.at?.x ?? 0}
                 />
               </label>
               <label>
@@ -113,7 +171,7 @@ export function MapEditDialog(props: {
                   type="number"
                   step="any"
                   required
-                  defaultValue={edit.node?.y ?? 0}
+                  defaultValue={edit.node?.y ?? edit.at?.y ?? 0}
                 />
               </label>
             </div>
@@ -135,60 +193,10 @@ export function MapEditDialog(props: {
             </div>
           </>
         ) : null}
-        {edit.kind === 'edge' ? (
-          <>
-            <div className="stack">
-              <span id={`${labelId}-from`}>From location</span>
-              <Select
-                label="From location"
-                labelId={`${labelId}-from`}
-                name="nodeA"
-                aria-required
-                value={nodeA}
-                onValueChange={setNodeA}
-                options={edit.nodes.map((node) => ({ value: node.id, label: node.name }))}
-              />
-            </div>
-            <div className="stack">
-              <span id={`${labelId}-to`}>To location</span>
-              <Select
-                label="To location"
-                labelId={`${labelId}-to`}
-                name="nodeB"
-                aria-required
-                value={nodeB}
-                onValueChange={setNodeB}
-                options={edit.nodes.map((node) => ({ value: node.id, label: node.name }))}
-              />
-            </div>
-            <label>
-              Connection kind
-              <input
-                name="kind"
-                required
-                maxLength={100}
-                defaultValue={edit.edge?.kind ?? 'path'}
-              />
-            </label>
-            <label>
-              Connection label
-              <input
-                name="label"
-                maxLength={200}
-                defaultValue={edit.edge?.label ?? ''}
-              />
-            </label>
-            <Checkbox
-              label="One way"
-              name="directed"
-              defaultChecked={edit.edge?.directed ?? false}
-            />
-          </>
-        ) : null}
         {edit.kind === 'link' ? (
           <>
             <label>
-              Find Location documents
+              Find Locations
               <input
                 value={search}
                 onChange={(event) => {
@@ -200,25 +208,25 @@ export function MapEditDialog(props: {
             </label>
             {locations.isError ? (
               <p role="alert">
-                Location documents could not load.{' '}
+                Locations could not load.{' '}
                 <Button variant="ghost" onClick={retryLocations}>
                   Retry
                 </Button>
               </p>
             ) : locations.isPending ? (
-              <p role="status">Loading Location documents…</p>
+              <p role="status">Loading Locations…</p>
             ) : (
               <>
                 <div className="stack">
-                  <span id={`${labelId}-document`}>Location document</span>
+                  <span id={`${labelId}-document`}>Location</span>
                   <Select
-                    label="Location document"
+                    label="Location"
                     labelId={`${labelId}-document`}
                     name="documentId"
                     value={locationOptions.some((option) => option.value === documentId) ? documentId : ''}
                     onValueChange={setDocumentId}
                     aria-required
-                    placeholder="Choose a readable Location document"
+                    placeholder="Choose a Location"
                     options={locationOptions}
                   />
                 </div>
@@ -234,7 +242,7 @@ export function MapEditDialog(props: {
                     Previous
                   </Button>
                   <span className="type-caption">
-                    {locations.data.total} readable documents
+                    {locations.data.total} to choose from
                   </span>
                   <Button
                     variant="ghost"
@@ -250,7 +258,8 @@ export function MapEditDialog(props: {
               </>
             )}
             <p className="type-caption">
-              Location admission and map authority are checked when you save.
+              A {placeWords(edit.map).one} can hold many Locations. Saving checks that you
+              may edit this map.
             </p>
           </>
         ) : null}
