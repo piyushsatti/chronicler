@@ -40,7 +40,7 @@ function questMeta(scheduledAt: string) {
     regions: ['region-id'],
     genres: [],
     tags: [],
-    signupType: 'open',
+    signupType: 'dm_pick',
     additionalInfo: 'Retained note',
   };
 }

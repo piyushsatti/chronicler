@@ -570,9 +570,9 @@ func runQuestBrowserJourneys(t *testing.T, withComposition bool) {
 		if err := fixture.pool.QueryRow(ctx, `INSERT INTO documents(public_id,kind,slug,title,body,status,visibility,author_id,version) VALUES($1,'quest_brief',$2,$3,'Fixture supplemental brief','published','public',$4,1) RETURNING id`, docID, code, "Quest fixture "+name, dm.rowID).Scan(&doc); err != nil {
 			t.Fatal(err)
 		}
-		signup := "open"
+		signup := "last_game_played"
 		if name == "application" {
-			signup = "application"
+			signup = "dm_pick"
 		}
 		if err := fixture.pool.QueryRow(ctx, `INSERT INTO quests(public_id,short_code,dm_id,created_by,kinds,status,scheduled_at,slots_max,signup_type,document_id) VALUES($1,$2,$3,$3,ARRAY['standard'],'open',$4,1,$5,$6) RETURNING id`, id, code, dm.rowID, scheduled, signup, doc).Scan(&quest); err != nil {
 			t.Fatal(err)

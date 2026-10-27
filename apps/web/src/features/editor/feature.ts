@@ -40,7 +40,7 @@ const editorQuestWire = {
   genres: ['exploration'],
   tags: [],
   apl: 3,
-  signupType: 'open',
+  signupType: 'dm_pick',
   regions: [],
   updatedAt: '2026-10-15T17:00:00Z',
   briefDocument: {

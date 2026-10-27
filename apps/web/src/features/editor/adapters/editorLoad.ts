@@ -253,7 +253,7 @@ function emptyDraft(
       regions: [],
       genres: [],
       tags: [],
-      signupType: 'open',
+      signupType: 'dm_pick',
     },
     body: '',
     canEditBody: true,

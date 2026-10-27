@@ -76,7 +76,7 @@ func TestFrontendQuestAssembledGraphRegionsAndQueuedSync(t *testing.T) {
 	if _, err := f.db.Pool.Exec(ctx, `INSERT INTO regions(public_id,name,kind) VALUES($1,'Quest Graph region','server')`, regionID); err != nil {
 		t.Fatal(err)
 	}
-	created := questGraphCall(t, handler, actor, `mutation CreateQuest($input:CreateQuestInput!,$meta:CommandMeta!){createQuest(input:$input,meta:$meta){id shortCode updatedAt regions}}`, map[string]any{"input": map[string]any{"title": "Graph Quest", "briefBody": "Initial body", "scheduledAt": "2030-02-01T18:00:00Z", "durationHours": 3, "slotsMax": 4, "kinds": []string{"standard"}, "regionIds": []string{regionID}, "genres": []string{}, "tags": []string{}, "signupType": "open"}, "meta": map[string]any{"idempotencyKey": uuid.NewString()}})
+	created := questGraphCall(t, handler, actor, `mutation CreateQuest($input:CreateQuestInput!,$meta:CommandMeta!){createQuest(input:$input,meta:$meta){id shortCode updatedAt regions}}`, map[string]any{"input": map[string]any{"title": "Graph Quest", "briefBody": "Initial body", "scheduledAt": "2030-02-01T18:00:00Z", "durationHours": 3, "slotsMax": 4, "kinds": []string{"standard"}, "regionIds": []string{regionID}, "genres": []string{}, "tags": []string{}, "signupType": "last_game_played"}, "meta": map[string]any{"idempotencyKey": uuid.NewString()}})
 	if len(created.Errors) > 0 {
 		t.Fatalf("create errors=%+v", created.Errors)
 	}

@@ -278,7 +278,17 @@ LEFT JOIN quests q ON q.public_id = input.quest_id AND q.deleted_at IS NULL
 LEFT JOIN quest_participants qp ON qp.quest_id = q.id AND (status_input.status IS NULL OR status_input.status = '' OR qp.status = status_input.status)
 LEFT JOIN members m ON m.id = qp.member_id
 LEFT JOIN characters c ON c.id = qp.character_id
-ORDER BY input.ordinality, qp.created_at, c.public_id
+LEFT JOIN LATERAL (
+    -- When this member last played another quest. No row means they have never played.
+    SELECT max(prior.scheduled_at) AS last_played_at
+    FROM quest_participants played
+    JOIN quests prior ON prior.id = played.quest_id AND prior.deleted_at IS NULL
+    WHERE played.member_id = qp.member_id AND played.status = 'played' AND prior.id <> q.id
+) last_game ON q.signup_type = 'last_game_played'
+ORDER BY input.ordinality,
+         (last_game.last_played_at IS NOT NULL),
+         last_game.last_played_at,
+         qp.created_at, c.public_id
 `
 
 type ProductQuestBatchParticipantsParams struct {
@@ -304,6 +314,7 @@ type ProductQuestBatchParticipantsRow struct {
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
 
+// Last Game Played quests list new players first, then the longest wait since a played game.
 func (q *Queries) ProductQuestBatchParticipants(ctx context.Context, arg ProductQuestBatchParticipantsParams) ([]ProductQuestBatchParticipantsRow, error) {
 	rows, err := q.db.Query(ctx, productQuestBatchParticipants, arg.QuestIds, arg.Statuses)
 	if err != nil {

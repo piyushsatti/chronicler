@@ -10,9 +10,8 @@ export const QUEST_KINDS: [string, string][] = [
 
 /** How players join a quest (`quests.signup_type`). */
 export const QUEST_SIGNUP_TYPES: [string, string][] = [
-  ['open', 'Open signup'],
-  ['application', 'Application'],
-  ['invite', 'Invitation'],
+  ['last_game_played', 'Last Game Played'],
+  ['dm_pick', 'DM pick'],
 ];
 
 function labelFrom(vocabulary: [string, string][], value: string): string {

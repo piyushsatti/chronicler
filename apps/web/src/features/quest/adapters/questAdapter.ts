@@ -110,7 +110,7 @@ export type QuestDetailView = Omit<QuestBoardItemView, 'participants'> & {
   genres: string[];
   /** Quest kinds in the API vocabulary (`one_shot`, …). */
   kinds: string[];
-  /** `open`, `application` or `invite`; null when the API has none. */
+  /** `last_game_played` or `dm_pick`; null when the API has none. */
   signupType: string | null;
   dmId: string;
   updatedAt: string;

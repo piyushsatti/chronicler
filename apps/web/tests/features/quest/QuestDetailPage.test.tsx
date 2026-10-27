@@ -153,7 +153,7 @@ describe('QuestDetailPage', () => {
       graphql.query('Quest', () =>
         HttpResponse.json({
           data: {
-            quest: { ...detailGood, kinds: ['one_shot', 'event'], signupType: 'application' },
+            quest: { ...detailGood, kinds: ['one_shot', 'event'], signupType: 'dm_pick' },
           },
         }),
       ),
@@ -168,7 +168,7 @@ describe('QuestDetailPage', () => {
     const kinds = within(details).getByText('Kinds');
     expect(kinds.nextElementSibling).toHaveTextContent('One-shot, Event');
     const signup = within(details).getByText('Signup type');
-    expect(signup.nextElementSibling).toHaveTextContent('Application');
+    expect(signup.nextElementSibling).toHaveTextContent('DM pick');
   });
 
   it('shows signup empty-state when authenticated with no characters', async () => {
@@ -319,6 +319,43 @@ describe('QuestDetailPage', () => {
       within(screen.getByRole('region', { name: 'Waitlist' })).getByText('Rook Vale'),
     ).toBeInTheDocument();
     expect(screen.getByText('Waitlist · 1 waiting')).toBeInTheDocument();
+  });
+
+  it.each([
+    ['last_game_played', true],
+    ['dm_pick', false],
+  ])('explains the waitlist order for signup type %s', async (signupType, explained) => {
+    server.use(
+      graphql.query('Quest', () =>
+        HttpResponse.json({
+          data: {
+            quest: {
+              ...detailGood,
+              signupType,
+              participants: [
+                {
+                  ...detailGood.participants[0],
+                  characterId: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+                  characterName: 'Rook Vale',
+                  status: 'waitlisted',
+                },
+              ],
+            },
+          },
+        }),
+      ),
+    );
+    renderWithProviders(
+      <Routes>
+        <Route path="/quests/:code" element={<QuestDetailPage />} />
+      </Routes>,
+      { route: '/quests/Q-101' },
+    );
+    await userEvent.click(await screen.findByRole('tab', { name: 'Cast' }));
+    const waitlist = screen.getByRole('region', { name: 'Waitlist' });
+    const note = within(waitlist).queryByText(/Ordered automatically/);
+    if (explained) expect(note).toBeInTheDocument();
+    else expect(note).not.toBeInTheDocument();
   });
 
   it('shows the DM house rules from their profile in the Table Rules tab', async () => {

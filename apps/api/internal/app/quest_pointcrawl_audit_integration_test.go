@@ -41,7 +41,7 @@ func TestQuestPointcrawlBoundAudienceAuditRollbackReplayAndRevocation(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	signup := "open"
+	signup := "last_game_played"
 	created, err := f.services.QuestCommands.CreateQuest(ctx, actor, quest.CreateQuestSpec{Input: quest.CreateQuestFields{Title: "Bound pointcrawl audience", BriefBody: "Public brief", ScheduledAt: time.Date(2032, 1, 1, 18, 0, 0, 0, time.UTC), DurationHours: 3, SlotsMax: 4, Kinds: []string{"standard"}, SignupType: &signup}}, product.CommandMeta{IdempotencyKey: uuid.NewString()})
 	if err != nil {
 		t.Fatal(err)

@@ -204,6 +204,13 @@ export function QuestDetailPage(): React.JSX.Element {
         {waiting.length === 0 ? (
           <p className="type-caption">No one is waiting.</p>
         ) : (
+          <>
+          {quest.signupType === 'last_game_played' ? (
+            <p className="type-caption">
+              Ordered automatically: new players first, then the players who have waited
+              longest since their last played game.
+            </p>
+          ) : null}
           <ul className={styles.roster}>
             {waiting.map(({ participant, label }) => (
               <li key={participant.characterId} className={styles.rosterRow}>
@@ -221,6 +228,7 @@ export function QuestDetailPage(): React.JSX.Element {
               </li>
             ))}
           </ul>
+          </>
         )}
       </Card>
     </div>
