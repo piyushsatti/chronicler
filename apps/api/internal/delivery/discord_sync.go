@@ -152,13 +152,15 @@ func (s *syncRun) execute(ctx context.Context, revision int) error {
 	} else if err := s.editMessage(ctx); err != nil {
 		return err
 	}
-	// The thread is opened on the first post only, never again.
+	// The thread is opened on the first post only, never again. It is best
+	// effort: a missing thread permission must not hold back the event or
+	// leave the delivery failing, so the error is logged and the sync goes on.
 	if firstPost && q.ThreadID == "" {
-		id, err := s.startThread(ctx)
-		if err != nil {
-			return err
+		if id, err := s.startThread(ctx); err != nil {
+			slog.WarnContext(ctx, "discord thread not opened", "quest", s.questID, "message", q.MessageID, "error", err)
+		} else {
+			q.ThreadID = id
 		}
-		q.ThreadID = id
 	}
 	eventChanged, err := s.syncEvent(ctx)
 	if err != nil {

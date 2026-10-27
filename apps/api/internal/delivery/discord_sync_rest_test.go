@@ -277,6 +277,37 @@ func TestRetryOfFirstPostStillOpensTheThreadOnce(t *testing.T) {
 	}
 }
 
+func TestThreadFailureDoesNotBlockEventOrRevision(t *testing.T) {
+	f := newFakeDiscord(t)
+	quests := &fakeQuests{quest: baseQuest(testVoice)}
+	applier := &fakeApplier{}
+	f.fail = func(c discordCall) bool { return strings.HasSuffix(c.Path, "/threads") }
+	if err := newSync(f, quests, fullSettings, applier).SyncQuest(context.Background(), testQuestID, 1); err != nil {
+		t.Fatalf("a thread failure must not fail the delivery: %v", err)
+	}
+	if quests.quest.ThreadID != "" || quests.thread != 0 {
+		t.Fatalf("no thread should be stored: %+v threads=%d", quests.quest, quests.thread)
+	}
+	if quests.quest.EventID == "" || quests.events != 1 {
+		t.Fatalf("event should still be created: %+v events=%d", quests.quest, quests.events)
+	}
+	if n := len(f.find(http.MethodPatch, "/messages/777777777777777777")); n != 1 {
+		t.Fatalf("event line edits=%d want 1", n)
+	}
+	if len(applier.revisions) != 1 || applier.revisions[0] != 1 {
+		t.Fatalf("revisions=%v", applier.revisions)
+	}
+	// Later syncs do not retry the thread once the first post is applied.
+	quests.quest.AppliedRevision = 1
+	f.fail = nil
+	if err := newSync(f, quests, fullSettings, nil).SyncQuest(context.Background(), testQuestID, 2); err != nil {
+		t.Fatal(err)
+	}
+	if n := len(f.find(http.MethodPost, "/threads")); n != 1 {
+		t.Fatalf("thread attempts=%d want only the first", n)
+	}
+}
+
 func TestEventDetails(t *testing.T) {
 	f := newFakeDiscord(t)
 	quest := baseQuest(testVoice)
