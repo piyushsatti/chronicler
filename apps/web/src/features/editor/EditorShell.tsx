@@ -74,6 +74,7 @@ const DENIED_NOUNS: Record<EditorTypeKey, string> = {
   guide: 'guide',
   ruling: 'ruling',
   'dm-table': 'DM table',
+  'hall-of-fame': 'Hall of Fame page',
   demo: 'example',
 };
 
@@ -103,6 +104,10 @@ const CREATE_DENIAL: Record<EditorTypeKey, { title: string; body: string }> = {
     title: 'You can’t create a DM table',
     body: 'A DM table describes how a DM runs games. Once you have the DM role, you can set yours up here.',
   },
+  'hall-of-fame': {
+    title: 'You can’t write the Hall of Fame',
+    body: 'The Hall of Fame page is written by admins. Ask an admin to add your name or make a change.',
+  },
   demo: { title: 'You can’t use this editor', body: 'Your account can’t write here.' },
 };
 
@@ -113,6 +118,7 @@ const BODY_PLACEHOLDERS: Record<EditorTypeKey, string> = {
   guide: 'Explain how this works…',
   ruling: 'State the ruling and the reason for it…',
   'dm-table': 'Describe your table…',
+  'hall-of-fame': 'Thank the people who helped…',
   demo: 'Write something…',
 };
 
@@ -236,7 +242,7 @@ export function EditorShell({
             ? meta.kind
             : typeKey === 'guide' || typeKey === 'ruling'
               ? 'rule'
-              : typeKey === 'dm-table'
+              : typeKey === 'dm-table' || typeKey === 'hall-of-fame'
                 ? 'community'
                 : typeKey === 'codex'
                   ? 'codex_entry'
@@ -246,7 +252,9 @@ export function EditorShell({
             ? meta.category
             : typeKey === 'dm-table'
               ? 'dm_table'
-              : typeKey,
+              : typeKey === 'hall-of-fame'
+                ? 'hall_of_fame'
+                : typeKey,
         slug,
       })
     : null;

@@ -19,6 +19,7 @@ export function documentHref(document: {
     case 'summary':
       return `/chronicles/${slug}`;
     case 'community':
+      if (document.category === 'hall_of_fame') return '/community?tab=hall-of-fame';
       return document.category === 'dm_table'
         ? `/community/dm-table/${slug}`
         : `/community/entries/${slug}`;

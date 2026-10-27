@@ -126,7 +126,7 @@
   "coverageVersion": 2,
   "coverageSource": {
     "path": "apps/web/src/routes/routeManifest.ts",
-    "sha256": "36f430230dd6a57d80e301be6c801e6af4a5c18f7bc3783b2bfb4529b46b1fbf",
+    "sha256": "15ee14aacbf1cd9970d400a8f53006f2b5db42c1a4d911ba719cbfdde336ec1c",
     "generator": "apps/web/scripts/gen-qa-route-registry.mjs"
   },
   "completionPolicy": {
@@ -10385,6 +10385,100 @@
             ]
           }
         ],
+        "remainingEvidence": [
+          "live-api",
+          "authority",
+          "persistence",
+          "responsive",
+          "visual-review"
+        ]
+      }
+    },
+    {
+      "pattern": "/editor/hall-of-fame",
+      "feature": "editor",
+      "disposition": "retained",
+      "current": "page",
+      "actors": [
+        "guest",
+        "author",
+        "delegated-editor",
+        "foreign-member",
+        "admin",
+        "configured-owner-without-staff-role",
+        "revoked-editor"
+      ],
+      "access": "Document-owned community content in hall_of_fame category; the web offers creation to admins, edit by actual Document UUID.",
+      "actions": [
+        "load current record",
+        "save draft and reload",
+        "preview",
+        "resolve version conflict",
+        "read revisions",
+        "publish permitted content",
+        "change permitted audience",
+        "trash and restore permitted content",
+        "preserve omitted fields and hidden blocks"
+      ],
+      "requiredEvidence": [
+        "live-api",
+        "authority",
+        "persistence",
+        "responsive",
+        "visual-review"
+      ],
+      "requirementsSha256": "19dd9b4f1e7d2d74c5e3aa588aa052ea46adecf946f44c13686208194b8b6a9a",
+      "verification": {
+        "status": "pending",
+        "receipts": [],
+        "invalidatedReceipts": [],
+        "remainingEvidence": [
+          "live-api",
+          "authority",
+          "persistence",
+          "responsive",
+          "visual-review"
+        ]
+      }
+    },
+    {
+      "pattern": "/editor/hall-of-fame/:id/edit",
+      "feature": "editor",
+      "disposition": "retained",
+      "current": "page",
+      "actors": [
+        "guest",
+        "author",
+        "delegated-editor",
+        "foreign-member",
+        "admin",
+        "configured-owner-without-staff-role",
+        "revoked-editor"
+      ],
+      "access": "Document-owned community content in hall_of_fame category; the web offers creation to admins, edit by actual Document UUID.",
+      "actions": [
+        "load current record",
+        "save draft and reload",
+        "preview",
+        "resolve version conflict",
+        "read revisions",
+        "publish permitted content",
+        "change permitted audience",
+        "trash and restore permitted content",
+        "preserve omitted fields and hidden blocks"
+      ],
+      "requiredEvidence": [
+        "live-api",
+        "authority",
+        "persistence",
+        "responsive",
+        "visual-review"
+      ],
+      "requirementsSha256": "41d0fc73ee1d42fdf49b1ab74a8e9963ebb3710128ea8c67ccb2cd1bb5a868bf",
+      "verification": {
+        "status": "pending",
+        "receipts": [],
+        "invalidatedReceipts": [],
         "remainingEvidence": [
           "live-api",
           "authority",

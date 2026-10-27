@@ -17,6 +17,7 @@ const editorLabels = {
   guide: 'guide',
   ruling: 'ruling',
   'dm-table': 'DM table',
+  'hall-of-fame': 'Hall of Fame page',
   demo: 'editor example',
 } as const;
 
@@ -27,6 +28,7 @@ const PARENT_LABELS = {
   guide: 'Rules',
   ruling: 'Rules',
   'dm-table': 'DMs',
+  'hall-of-fame': 'Community',
   demo: 'Home',
 } as const;
 

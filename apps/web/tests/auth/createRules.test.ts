@@ -11,6 +11,15 @@ const member = { roles: [], liveDm: false };
 describe('canCreateRecord', () => {
   it.each([
     ['guest', guest, false],
+    ['player', player, false],
+    ['live DM', liveDm, false],
+    ['admin', admin, true],
+  ])('hall-of-fame is for admins only: %s → %s', (_name, actor, allowed) => {
+    expect(canCreateRecord('hall-of-fame', actor)).toBe(allowed);
+  });
+
+  it.each([
+    ['guest', guest, false],
     ['member without a role', member, false],
     ['player', player, true],
     ['DM whose profile is not approved', pendingDm, false],

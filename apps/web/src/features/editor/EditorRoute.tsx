@@ -25,6 +25,7 @@ const NOT_FOUND_NOUNS: Record<EditorTypeKey, string> = {
   guide: 'guide',
   ruling: 'ruling',
   'dm-table': 'DM table',
+  'hall-of-fame': 'Hall of Fame page',
   demo: 'example',
 };
 

@@ -112,6 +112,23 @@ describe('ChroniclesListPage', () => {
     ).toBeInTheDocument();
   });
 
+  it('asks a signed-out visitor to sign in when the server answers 403', async () => {
+    server.use(
+      graphql.query('ChronicleList', () =>
+        HttpResponse.json(
+          { errors: [{ message: 'forbidden', extensions: { code: 'FORBIDDEN' } }] },
+          { status: 403 },
+        ),
+      ),
+    );
+    renderWithProviders(<ChroniclesListPage />);
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Sign in to see this');
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login');
+    expect(screen.queryByRole('heading', { name: 'Something went wrong' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
+  });
+
   it('shows the empty timeline state with a configured era', async () => {
     server.use(
       graphql.query('ChronicleList', () =>

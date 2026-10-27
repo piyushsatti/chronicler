@@ -2,7 +2,7 @@ import type { AppError } from '../../errors/types.js';
 import type { EditorRegionRow } from './adapters/editorRegionsAdapter.js';
 
 export type EditorTypeKey =
-  'quest' | 'codex' | 'summary' | 'guide' | 'ruling' | 'dm-table' | 'demo';
+  'quest' | 'codex' | 'summary' | 'guide' | 'ruling' | 'dm-table' | 'hall-of-fame' | 'demo';
 export type EditorMode = 'new' | 'edit';
 export type EditorRouteProps = { typeKey: EditorTypeKey; mode: EditorMode };
 export type EditorOptions<T> =

@@ -166,7 +166,8 @@
   min-width: 0;
 }
 
-.cardItem > article {
+.cardItem > article,
+.cardItem > a {
   flex: 1;
 }
 

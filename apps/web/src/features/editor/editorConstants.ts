@@ -6,6 +6,7 @@ export const EDITOR_BACK_LABELS = {
   guide: 'Back to rules',
   ruling: 'Back to rules',
   'dm-table': 'Back to DMs',
+  'hall-of-fame': 'Back to Community',
   demo: 'Back to home',
 } as const;
 

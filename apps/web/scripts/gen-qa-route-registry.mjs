@@ -332,6 +332,14 @@ const groups = [
       'Document-owned community content in dm_table category; edit by actual Document UUID.',
   },
   {
+    paths: ['/editor/hall-of-fame', '/editor/hall-of-fame/:id/edit'],
+    feature: 'editor',
+    actors: editorActors,
+    actions: editorActions,
+    access:
+      'Document-owned community content in hall_of_fame category; the web offers creation to admins, edit by actual Document UUID.',
+  },
+  {
     paths: ['/community/entries/:slug'],
     feature: 'community',
     actors: publicActors,
