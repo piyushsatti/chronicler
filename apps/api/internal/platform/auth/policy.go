@@ -185,6 +185,8 @@ type DocumentWriteFacts struct {
 	ID, AuthorID, Kind string
 	Category           *string
 	LinkedRegionIDs    []string
+	// NewCategory is the category an edit sets, when it sets one.
+	NewCategory *string
 }
 
 func (DocumentWriteFacts) policyInput() {}
@@ -513,6 +515,7 @@ func copyPolicyString(value *string) *string {
 }
 func copyDocumentFacts(f DocumentWriteFacts) DocumentWriteFacts {
 	f.Category = copyPolicyString(f.Category)
+	f.NewCategory = copyPolicyString(f.NewCategory)
 	f.LinkedRegionIDs = slices.Clone(f.LinkedRegionIDs)
 	return f
 }
@@ -967,7 +970,7 @@ func (p *Policy) decideDocumentWriteRule(ctx context.Context, actor Authority, r
 	if rule == ruleDocumentWrite && facts.Kind == "rule" {
 		failures.role = !admin && !actor.claims.Has(Verifier)
 	}
-	if rule == ruleDocumentWrite && isHallOfFame(facts.Kind, facts.Category) {
+	if rule == ruleDocumentWrite && (isHallOfFame(facts.Kind, facts.Category) || isHallOfFame(facts.Kind, facts.NewCategory)) {
 		failures.role = !admin
 	}
 	if facts.Kind == "codex_entry" && facts.Category != nil && *facts.Category == "Locations" {

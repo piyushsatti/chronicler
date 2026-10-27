@@ -300,7 +300,7 @@ func testPolicyRequestBoundary(t *testing.T) {
 		owner := policyActor
 		category := "Locations"
 		regions := []string{policyRegion}
-		req, err := ForDocumentWrite("Mutation.updateDocument", DocumentWriteFacts{policySubject, owner, "codex_entry", &category, regions})
+		req, err := ForDocumentWrite("Mutation.updateDocument", DocumentWriteFacts{policySubject, owner, "codex_entry", &category, regions, nil})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -388,6 +388,15 @@ func testPolicyAuthorizationContrasts(t *testing.T) {
 			req = policyMustRequest(t, req, e)
 			policyExpect(t, p, player, req, Decision{Allowed: true})
 		}
+		for _, op := range []Operation{"Mutation.updateDocument", "Mutation.editPublishedDocument"} {
+			into, e := ForDocumentWrite(op, DocumentWriteFacts{ID: policySubject, AuthorID: policyActor, Kind: "community", Category: other, NewCategory: hall})
+			into = policyMustRequest(t, into, e)
+			policyExpect(t, p, player, into, Decision{RuleCode: "ROLE"})
+			policyExpect(t, p, admin, into, Decision{true, true, "OWNERSHIP"})
+			out, e := ForDocumentWrite(op, DocumentWriteFacts{ID: policySubject, AuthorID: policyActor, Kind: "community", Category: hall, NewCategory: other})
+			out = policyMustRequest(t, out, e)
+			policyExpect(t, p, player, out, Decision{RuleCode: "ROLE"})
+		}
 		req, e := ForDocumentCreate(DocumentCreateFacts{AuthorID: policyActor, Kind: "community", Category: hall})
 		req = policyMustRequest(t, req, e)
 		policyExpect(t, p, player, req, Decision{RuleCode: "ROLE"})
@@ -453,7 +462,7 @@ func testPolicyAuthorizationContrasts(t *testing.T) {
 		facts.identity = DiscordIdentity{policyActor, "111111111111111111"}
 	})
 	t.Run("locations use every current assignment and failure", func(t *testing.T) {
-		req, e := ForDocumentWrite("Mutation.setDocumentVisibility", DocumentWriteFacts{policySubject, policyOther, "codex_entry", policyPointer("Locations"), []string{policyRegion, policySecondRegion}})
+		req, e := ForDocumentWrite("Mutation.setDocumentVisibility", DocumentWriteFacts{policySubject, policyOther, "codex_entry", policyPointer("Locations"), []string{policyRegion, policySecondRegion}, nil})
 		req = policyMustRequest(t, req, e)
 		archon := policyAuthority(t, policyActor, []Role{Role("archon")}, false, false)
 		policyExpect(t, p, archon, req, Decision{Allowed: true})
@@ -543,7 +552,7 @@ func testPolicyOwningProviderContrasts(t *testing.T) {
 		policyExpect(t, p, steward, req, Decision{Allowed: true})
 	})
 	t.Run("NPC assignments do not grant edit rights", func(t *testing.T) {
-		req, e := ForLieutenantAssignments(LieutenantReadFacts{Documents: []DocumentWriteFacts{{policySubject, policyOther, "codex_entry", policyPointer("NPC"), nil}}, MemberFilter: policyPointer(policyActor)})
+		req, e := ForLieutenantAssignments(LieutenantReadFacts{Documents: []DocumentWriteFacts{{policySubject, policyOther, "codex_entry", policyPointer("NPC"), nil, nil}}, MemberFilter: policyPointer(policyActor)})
 		req = policyMustRequest(t, req, e)
 		policyExpect(t, p, player, req, Decision{Allowed: true})
 		assignments.lieutenant = false
@@ -817,7 +826,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 			case "DOC_REVISIONS", "DOC_WRITE":
 				request, err = ForDocumentWrite(op, DocumentWriteFacts{ID: policySubject, AuthorID: policyActor, Kind: "codex_entry", Category: policyPointer("Lore")})
 			case "LIEUTENANT_READ":
-				request, err = ForLieutenantAssignments(LieutenantReadFacts{Documents: []DocumentWriteFacts{{policySubject, policyActor, "codex_entry", policyPointer("NPC"), nil}}})
+				request, err = ForLieutenantAssignments(LieutenantReadFacts{Documents: []DocumentWriteFacts{{policySubject, policyActor, "codex_entry", policyPointer("NPC"), nil, nil}}})
 			case "PREVIEW":
 				request, err = ForPreview(PreviewFacts{Audience: PreviewPlayer})
 			case "CHAR_OWNER", "CHAR_SIGNUP", "CHAR_HISTORY":

@@ -133,7 +133,9 @@ func authorizeDocumentWrite(ctx context.Context, repos ProductCommandRepos, acto
 	if err := admitDocumentDisclosure(*before, fresh); err != nil {
 		return auth.Authority{}, auth.Request{}, auth.Decision{}, err
 	}
-	request, err := auth.ForDocumentWrite(operation, documentWriteFacts(before))
+	facts := documentWriteFacts(before)
+	facts.NewCategory = editedCategory(spec)
+	request, err := auth.ForDocumentWrite(operation, facts)
 	if err != nil {
 		return auth.Authority{}, auth.Request{}, auth.Decision{}, err
 	}
@@ -148,6 +150,22 @@ func authorizeDocumentWrite(ctx context.Context, repos ProductCommandRepos, acto
 		return auth.Authority{}, auth.Request{}, auth.Decision{}, err
 	}
 	return fresh, request, decision, nil
+}
+
+// editedCategory returns the category an edit command sets, so policy can gate
+// moves into a restricted category as well as edits of one.
+func editedCategory(spec any) *string {
+	switch v := spec.(type) {
+	case UpdateDocumentSpec:
+		if v.Input.Category.Set {
+			return v.Input.Category.Value
+		}
+	case EditPublishedDocumentSpec:
+		if v.Input.Category.Set {
+			return v.Input.Category.Value
+		}
+	}
+	return nil
 }
 
 func requireDocumentCommandDependencies(repos ProductCommandRepos) error {
