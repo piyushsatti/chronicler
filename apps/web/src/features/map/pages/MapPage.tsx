@@ -157,17 +157,13 @@ export function MapPage(): React.JSX.Element {
         <p role="alert">{notice.message}</p>
       ) : null}
       {page.directory.isError ? (
-        <div role="alert">
-          Map directory could not load.{' '}
-          <Button
-            variant="ghost"
-            onClick={() => {
-              page.retryDirectory();
-            }}
-          >
-            Retry directory
-          </Button>
-        </div>
+        <StatePanel
+          status="error"
+          error={toAppError(page.directory.error, 'map:directory')}
+          title="Map directory could not load."
+          onRetry={page.retryDirectory}
+          retryLabel="Retry directory"
+        />
       ) : null}
       {!requestedAtlas && page.directory.isPending ? (
         <StatePanel status="loading" />

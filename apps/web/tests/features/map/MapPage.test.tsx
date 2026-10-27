@@ -298,6 +298,21 @@ describe('MapPage', () => {
     expect(batches).toHaveLength(2);
     expect(screen.queryByText(ids[5]!)).not.toBeInTheDocument();
   });
+  it('asks a signed-out visitor to sign in when the directory answers 403', async () => {
+    server.use(
+      graphql.query('MapDirectory', () =>
+        HttpResponse.json(
+          { errors: [{ message: 'forbidden', extensions: { code: 'FORBIDDEN' } }] },
+          { status: 403 },
+        ),
+      ),
+    );
+    renderMap('/map');
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Sign in to see this');
+    expect(screen.getByRole('link', { name: 'Sign in' })).toHaveAttribute('href', '/login');
+    expect(screen.queryByText('Map directory could not load.')).toBeNull();
+  });
   it('restores node selection from the URL and reports unavailable maps', async () => {
     renderMap(`/map/LFC?node=${good.pointcrawlNodes[2]?.id}`);
     expect(
