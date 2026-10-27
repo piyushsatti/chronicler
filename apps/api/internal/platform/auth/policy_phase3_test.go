@@ -377,6 +377,25 @@ func testPolicyAuthorizationContrasts(t *testing.T) {
 			policyExpect(t, p, nonauthor, req, Decision{RuleCode: "OWNERSHIP"})
 		}
 	})
+	t.Run("hall of fame community document is admin only", func(t *testing.T) {
+		hall, other := policyPointer("hall_of_fame"), policyPointer("lore")
+		for _, op := range []Operation{"Mutation.updateDocument", "Mutation.publishDocument", "Mutation.deleteDocument"} {
+			req, e := ForDocumentWrite(op, DocumentWriteFacts{ID: policySubject, AuthorID: policyActor, Kind: "community", Category: hall})
+			req = policyMustRequest(t, req, e)
+			policyExpect(t, p, player, req, Decision{RuleCode: "ROLE"})
+			policyExpect(t, p, admin, req, Decision{true, true, "OWNERSHIP"})
+			req, e = ForDocumentWrite(op, DocumentWriteFacts{ID: policySubject, AuthorID: policyActor, Kind: "community", Category: other})
+			req = policyMustRequest(t, req, e)
+			policyExpect(t, p, player, req, Decision{Allowed: true})
+		}
+		req, e := ForDocumentCreate(DocumentCreateFacts{AuthorID: policyActor, Kind: "community", Category: hall})
+		req = policyMustRequest(t, req, e)
+		policyExpect(t, p, player, req, Decision{RuleCode: "ROLE"})
+		policyExpect(t, p, admin, req, Decision{true, true, "OWNERSHIP"})
+		req, e = ForDocumentCreate(DocumentCreateFacts{AuthorID: policyActor, Kind: "community", Category: other})
+		req = policyMustRequest(t, req, e)
+		policyExpect(t, p, player, req, Decision{Allowed: true})
+	})
 	t.Run("quest briefs structurally refuse every generic path", func(t *testing.T) {
 		for _, a := range []Authority{player, admin, owner} {
 			req, e := ForDocumentCreate(DocumentCreateFacts{AuthorID: policyActor, Kind: "quest_brief"})

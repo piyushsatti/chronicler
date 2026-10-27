@@ -942,6 +942,9 @@ func (p *Policy) decideDocumentCreateRule(ctx context.Context, actor Authority, 
 	if facts.Kind == "rule" {
 		failures.role = !admin && !actor.claims.Has(Verifier)
 	}
+	if isHallOfFame(facts.Kind, facts.Category) {
+		failures.role = !admin
+	}
 	if facts.Kind == "codex_entry" && facts.Category != nil && *facts.Category == "Locations" {
 		gates, err := p.locationFailures(ctx, actor, facts.LinkedRegionIDs)
 		if err != nil {
@@ -964,6 +967,9 @@ func (p *Policy) decideDocumentWriteRule(ctx context.Context, actor Authority, r
 	if rule == ruleDocumentWrite && facts.Kind == "rule" {
 		failures.role = !admin && !actor.claims.Has(Verifier)
 	}
+	if rule == ruleDocumentWrite && isHallOfFame(facts.Kind, facts.Category) {
+		failures.role = !admin
+	}
 	if facts.Kind == "codex_entry" && facts.Category != nil && *facts.Category == "Locations" {
 		gates, err := p.locationFailures(ctx, actor, facts.LinkedRegionIDs)
 		if err != nil {
@@ -972,6 +978,12 @@ func (p *Policy) decideDocumentWriteRule(ctx context.Context, actor Authority, r
 		failures = documentWriteLocationFailures(rule, failures, gates)
 	}
 	return policyResult(failures, bypass), nil
+}
+
+// isHallOfFame reports the community Document that renders as the site Hall of
+// Fame; the category is matched exactly, as the web adapter does.
+func isHallOfFame(kind string, category *string) bool {
+	return kind == "community" && category != nil && *category == "hall_of_fame"
 }
 
 func documentWriteLocationFailures(rule policyRule, failures, gates policyFailures) policyFailures {
