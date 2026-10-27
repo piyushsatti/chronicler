@@ -31,9 +31,11 @@ const POINT: MapPlaceWords = {
   Many: 'Locations',
 };
 
-/** A hex map is one marked `hex`, or one whose routes are hex adjacency links. */
+/** A hex map is one marked `hex`. Only a map with no `grid` value falls back to
+ * its routes, so an admin's switch to "Point map" always takes effect. */
 export function isHexMap(map: MapShape): boolean {
-  return map.grid === 'hex' || (map.edges ?? []).some((edge) => edge.kind === 'hex');
+  if (map.grid) return map.grid === 'hex';
+  return (map.edges ?? []).some((edge) => edge.kind === 'hex');
 }
 
 export function placeWords(map: MapShape): MapPlaceWords {

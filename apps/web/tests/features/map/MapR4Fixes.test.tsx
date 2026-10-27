@@ -75,8 +75,9 @@ describe('M4-16 hexes are hexes, locations are locations', () => {
     expect(countPlaces(map, 3)).toBe('3 locations');
     expect(mapKindLabel(hexMap)).toBe('Hex map');
     expect(mapKindLabel(map)).toBe('Point map');
-    // Hex adjacency routes still mark a hex map for maps created before the grid field.
-    expect(isHexMap({ grid: 'point', edges: [{ kind: 'hex' }] })).toBe(true);
+    // The saved grid wins; hex routes only decide when no grid is set.
+    expect(isHexMap({ grid: 'point', edges: [{ kind: 'hex' }] })).toBe(false);
+    expect(isHexMap({ edges: [{ kind: 'hex' }] })).toBe(true);
   });
 
   it('says hexes in the toolbar, the empty canvas and the hint on a hex map', () => {
