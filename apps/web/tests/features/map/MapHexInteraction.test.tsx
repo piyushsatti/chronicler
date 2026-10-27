@@ -301,14 +301,16 @@ describe('Hex maps', () => {
   const hexMap = {
     ...map,
     name: 'Lightfall Hexflower',
+    grid: 'hex',
     nodes: hexNodes,
     edges: hexEdges,
   };
   const graph = () =>
     screen.getByRole('group', { name: 'Lightfall Hexflower map' });
 
-  it('identifies hex maps by hex adjacency routes only', () => {
+  it('identifies hex maps by their saved grid, falling back to hex routes', () => {
     expect(isHexMap(hexMap)).toBe(true);
+    expect(isHexMap({ edges: hexEdges })).toBe(true);
     expect(isHexMap(map)).toBe(false);
     expect(isHexMap({ edges: [] })).toBe(false);
   });
@@ -389,6 +391,7 @@ describe('Hex map review fixes', () => {
   const hexMap = {
     ...map,
     name: 'Hexflower',
+    grid: 'hex',
     nodes: hexNodes,
     edges: [
       {
