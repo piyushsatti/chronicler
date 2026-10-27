@@ -92,6 +92,9 @@ func mapQuestBatchRow(row dbgen.ProductQuestBatchReadRow) *QuestView {
 	if row.EventUrl.Valid {
 		view.EventUrl = &row.EventUrl.String
 	}
+	if row.DiscordVoiceChannelID.Valid {
+		view.VoiceChannelId = &row.DiscordVoiceChannelID.String
+	}
 	return view
 }
 
@@ -225,6 +228,9 @@ func mapQuestReadByIDRow(row dbgen.ProductQuestReadByIDRow) *QuestView {
 	}
 	if row.EventUrl.Valid {
 		view.EventUrl = &row.EventUrl.String
+	}
+	if row.DiscordVoiceChannelID.Valid {
+		view.VoiceChannelId = &row.DiscordVoiceChannelID.String
 	}
 	return view
 }

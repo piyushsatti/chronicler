@@ -345,6 +345,7 @@ export type CreateQuestInput = {
   slotsMax?: Scalars['Int']['input'];
   tags?: Array<Scalars['String']['input']>;
   title: Scalars['String']['input'];
+  voiceChannelId?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type CreationCatalogEntryType = {
@@ -415,6 +416,28 @@ export type DirectoryEntryType = {
   status: Scalars['String']['output'];
   tableInfo?: Maybe<Scalars['JSON']['output']>;
   tagline?: Maybe<Scalars['String']['output']>;
+};
+
+export type DiscordSettingsInput = {
+  announceChannelId?: InputMaybe<Scalars['String']['input']>;
+  roleId?: InputMaybe<Scalars['String']['input']>;
+  voiceChannels: Array<DiscordVoiceChannelInput>;
+};
+
+export type DiscordSettingsType = {
+  announceChannelId?: Maybe<Scalars['String']['output']>;
+  roleId?: Maybe<Scalars['String']['output']>;
+  voiceChannels: Array<DiscordVoiceChannelType>;
+};
+
+export type DiscordVoiceChannelInput = {
+  channelId: Scalars['String']['input'];
+  name: Scalars['String']['input'];
+};
+
+export type DiscordVoiceChannelType = {
+  channelId: Scalars['String']['output'];
+  name: Scalars['String']['output'];
 };
 
 export type DmLastSessionType = {
@@ -890,6 +913,7 @@ export type Mutation = {
   unpublishDocument: DocumentType;
   updateBackstory: BackstoryType;
   updateCharacterProfile: CharacterType;
+  updateDiscordSettings: DiscordSettingsType;
   updateDocument: DocumentType;
   updateGameCalendar: GameCalendarType;
   updateHomeBanner: HomeBannerType;
@@ -1295,6 +1319,12 @@ export type MutationUpdateCharacterProfileArgs = {
 };
 
 
+export type MutationUpdateDiscordSettingsArgs = {
+  input: DiscordSettingsInput;
+  meta: CommandMeta;
+};
+
+
 export type MutationUpdateDocumentArgs = {
   id: Scalars['ID']['input'];
   input: DocumentEditInput;
@@ -1576,6 +1606,7 @@ export type Query = {
   communityDirectory: CommunityDirectoryResult;
   creationCatalog: CreationCatalogPage;
   discordDeliveryMode: Scalars['String']['output'];
+  discordSettings: DiscordSettingsType;
   dmSessionHistory: DmSessionHistoryResult;
   dmStats?: Maybe<DmStatsType>;
   dmSummaries: DocumentListResult;
@@ -1622,6 +1653,7 @@ export type Query = {
   questGenreOptions: Array<Scalars['String']['output']>;
   questStateCounts: Array<QuestStateCountType>;
   questSummaries: QuestSummariesResult;
+  questVoiceChannels: Array<DiscordVoiceChannelType>;
   quests: QuestListResult;
   realDates: RealDatePage;
   recentlyClosedQuests: QuestListResult;
@@ -2090,6 +2122,7 @@ export type QuestEditInput = {
   slotsMax?: InputMaybe<Scalars['Int']['input']>;
   tags?: InputMaybe<Array<Scalars['String']['input']>>;
   title?: InputMaybe<Scalars['String']['input']>;
+  voiceChannelId?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type QuestFiltersInput = {
@@ -2209,6 +2242,7 @@ export type QuestType = {
   status: Scalars['String']['output'];
   tags: Array<Scalars['String']['output']>;
   updatedAt: Scalars['DateTime']['output'];
+  voiceChannelId?: Maybe<Scalars['String']['output']>;
 };
 
 

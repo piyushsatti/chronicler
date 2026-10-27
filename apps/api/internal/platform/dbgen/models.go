@@ -395,6 +395,8 @@ type Quest struct {
 	ClosedAt               pgtype.Timestamptz `json:"closed_at"`
 	DeletedAt              pgtype.Timestamptz `json:"deleted_at"`
 	DeletedBy              pgtype.Int8        `json:"deleted_by"`
+	DiscordVoiceChannelID  pgtype.Text        `json:"discord_voice_channel_id"`
+	DiscordThreadID        pgtype.Text        `json:"discord_thread_id"`
 }
 
 type QuestArc struct {

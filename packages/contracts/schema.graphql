@@ -480,6 +480,7 @@ input QuestEditInput {
   apl: Int
   signupType: String
   additionalInfo: String
+  voiceChannelId: String
 }
 input QuestSummaryInput {
   documentId: ID
@@ -504,6 +505,15 @@ input HomeBannerInput {
   mediaKind: String
   mediaUrl: String
   mediaLabel: String
+}
+input DiscordVoiceChannelInput {
+  name: String!
+  channelId: String!
+}
+input DiscordSettingsInput {
+  announceChannelId: String
+  roleId: String
+  voiceChannels: [DiscordVoiceChannelInput!]!
 }
 input AnnouncementRoleInput {
   enabled: Boolean!
@@ -1262,6 +1272,7 @@ input CreateQuestInput {
   apl: Int = null
   signupType: String = null
   additionalInfo: String = null
+  voiceChannelId: String = null
 }
 
 type OpenQuestSeatType {
@@ -1279,6 +1290,17 @@ type OpenQuestSeatType {
 type OpenQuestSeatsResult {
   entries: [OpenQuestSeatType!]!
   total: Int!
+}
+
+type DiscordVoiceChannelType {
+  name: String!
+  channelId: String!
+}
+
+type DiscordSettingsType {
+  announceChannelId: String
+  roleId: String
+  voiceChannels: [DiscordVoiceChannelType!]!
 }
 
 type QuestAnnouncementRoleSettingType {
@@ -1402,6 +1424,7 @@ type QuestType {
   genres: [String!]!
   apl: Int
   signupType: String
+  voiceChannelId: String
   createdBy: ID!
   createdAt: DateTime!
   updatedAt: DateTime!
@@ -1468,6 +1491,8 @@ extend type Query {
   discordDeliveryMode: String!
   homeBanner: HomeBannerType!
   questAnnouncementRoleSetting: QuestAnnouncementRoleSettingType!
+  discordSettings: DiscordSettingsType!
+  questVoiceChannels: [DiscordVoiceChannelType!]!
 }
 extend type Mutation {
   updateHomeBanner(input: HomeBannerInput!, meta: CommandMeta!): HomeBannerType!
@@ -1475,6 +1500,10 @@ extend type Mutation {
     input: AnnouncementRoleInput!
     meta: CommandMeta!
   ): QuestAnnouncementRoleSettingType!
+  updateDiscordSettings(
+    input: DiscordSettingsInput!
+    meta: CommandMeta!
+  ): DiscordSettingsType!
   redriveDiscordDelivery(
     jobId: ID!
     reason: String!

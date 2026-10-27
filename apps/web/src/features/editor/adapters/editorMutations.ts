@@ -58,6 +58,8 @@ export type QuestEditorInput = {
   apl: number | null;
   signupType: string | null;
   additionalInfo: string | null;
+  /** Discord voice channel id from the admin list; null or '' means none. */
+  voiceChannelId?: string | null;
   /** Series (quest arc) to put a new quest in; create only. */
   arcId?: string | null;
 };
@@ -153,6 +155,7 @@ export async function createQuest(
         apl: input.apl,
         signupType: input.signupType,
         additionalInfo: input.additionalInfo,
+        voiceChannelId: input.voiceChannelId || null,
         ...(input.arcId ? { arcId: input.arcId } : {}),
       },
       meta: commandMeta(idempotencyKey),
@@ -192,6 +195,9 @@ export async function updateQuest(
         apl: input.apl,
         signupType: input.signupType,
         additionalInfo: input.additionalInfo,
+        ...(input.voiceChannelId !== undefined
+          ? { voiceChannelId: input.voiceChannelId || null }
+          : {}),
       },
       meta: commandMeta(idempotencyKey),
     });

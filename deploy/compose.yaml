@@ -61,6 +61,7 @@ services:
       DATABASE_URL: postgres://chronicler:chronicler@postgres:5432/chronicler?sslmode=disable
       DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
       DISCORD_ANNOUNCE_CHANNEL_ID: ${DISCORD_ANNOUNCE_CHANNEL_ID:-}
+      GUILD_ID: ${GUILD_ID:-}
       DISCORD_DELIVERY_DRY_RUN: ${DISCORD_DELIVERY_DRY_RUN:-1}
     depends_on:
       migrate:

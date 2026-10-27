@@ -429,7 +429,7 @@ SELECT input.ordinality::integer AS input_index, input.public_id::uuid AS reques
        q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
        doc.public_id AS document_public_id, q.tags, q.genres, q.avg_party_level AS apl,
        q.signup_type, q.discord_desired_revision, q.discord_applied_revision,
-       q.discord_message_id, q.discord_event_id, q.event_url,
+       q.discord_message_id, q.discord_event_id, q.event_url, q.discord_voice_channel_id,
        creator.public_id AS created_by_public_id, q.created_at, q.updated_at
 FROM unnest($2::uuid[]) WITH ORDINALITY AS input(public_id, ordinality)
 LEFT JOIN quests q ON q.public_id = input.public_id AND q.deleted_at IS NULL
@@ -470,6 +470,7 @@ type ProductQuestBatchReadRow struct {
 	DiscordMessageID       pgtype.Text        `json:"discord_message_id"`
 	DiscordEventID         pgtype.Text        `json:"discord_event_id"`
 	EventUrl               pgtype.Text        `json:"event_url"`
+	DiscordVoiceChannelID  pgtype.Text        `json:"discord_voice_channel_id"`
 	CreatedByPublicID      pgtype.UUID        `json:"created_by_public_id"`
 	CreatedAt              pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
@@ -509,6 +510,7 @@ func (q *Queries) ProductQuestBatchRead(ctx context.Context, arg ProductQuestBat
 			&i.DiscordMessageID,
 			&i.DiscordEventID,
 			&i.EventUrl,
+			&i.DiscordVoiceChannelID,
 			&i.CreatedByPublicID,
 			&i.CreatedAt,
 			&i.UpdatedAt,
@@ -1312,34 +1314,35 @@ const productQuestInsert = `-- name: ProductQuestInsert :one
 INSERT INTO quests (
     public_id, short_code, kinds, dm_id, arc_id, scheduled_at, duration_hours, slots_max,
     document_id, tags, genres, avg_party_level, signup_type, created_by,
-    created_at, updated_at, discord_desired_revision
+    created_at, updated_at, discord_desired_revision, discord_voice_channel_id
 ) VALUES (
     $1::uuid, $2::text, $3::text[], $4::bigint, $5::bigint,
     $6::timestamptz, $7::double precision,
     $8::integer, $9::bigint, $10::text[], $11::text[],
     $12::integer, $13::text, $14::bigint,
-    $15::timestamptz, $15::timestamptz, 1
+    $15::timestamptz, $15::timestamptz, 1, $16::text
 )
 RETURNING id, public_id, short_code, status, scheduled_at, duration_hours,
           slots_max, filled_count, created_at, updated_at, discord_desired_revision
 `
 
 type ProductQuestInsertParams struct {
-	PublicID      pgtype.UUID        `json:"public_id"`
-	ShortCode     string             `json:"short_code"`
-	Kinds         []string           `json:"kinds"`
-	DmID          int64              `json:"dm_id"`
-	ArcID         pgtype.Int8        `json:"arc_id"`
-	ScheduledAt   pgtype.Timestamptz `json:"scheduled_at"`
-	DurationHours float64            `json:"duration_hours"`
-	SlotsMax      int32              `json:"slots_max"`
-	DocumentID    int64              `json:"document_id"`
-	Tags          []string           `json:"tags"`
-	Genres        []string           `json:"genres"`
-	Apl           pgtype.Int4        `json:"apl"`
-	SignupType    pgtype.Text        `json:"signup_type"`
-	CreatedBy     int64              `json:"created_by"`
-	At            pgtype.Timestamptz `json:"at"`
+	PublicID       pgtype.UUID        `json:"public_id"`
+	ShortCode      string             `json:"short_code"`
+	Kinds          []string           `json:"kinds"`
+	DmID           int64              `json:"dm_id"`
+	ArcID          pgtype.Int8        `json:"arc_id"`
+	ScheduledAt    pgtype.Timestamptz `json:"scheduled_at"`
+	DurationHours  float64            `json:"duration_hours"`
+	SlotsMax       int32              `json:"slots_max"`
+	DocumentID     int64              `json:"document_id"`
+	Tags           []string           `json:"tags"`
+	Genres         []string           `json:"genres"`
+	Apl            pgtype.Int4        `json:"apl"`
+	SignupType     pgtype.Text        `json:"signup_type"`
+	CreatedBy      int64              `json:"created_by"`
+	At             pgtype.Timestamptz `json:"at"`
+	VoiceChannelID pgtype.Text        `json:"voice_channel_id"`
 }
 
 type ProductQuestInsertRow struct {
@@ -1373,6 +1376,7 @@ func (q *Queries) ProductQuestInsert(ctx context.Context, arg ProductQuestInsert
 		arg.SignupType,
 		arg.CreatedBy,
 		arg.At,
+		arg.VoiceChannelID,
 	)
 	var i ProductQuestInsertRow
 	err := row.Scan(
@@ -1794,7 +1798,7 @@ SELECT q.id, q.public_id, q.short_code, q.kinds, q.status, q.dm_id,
        q.discord_desired_revision, q.discord_applied_revision,
        q.discord_message_id, q.discord_event_id, q.event_url,
        q.created_by, q.created_at, q.updated_at, q.closed_at, q.deleted_at,
-       q.deleted_by
+       q.deleted_by, q.discord_voice_channel_id, q.discord_thread_id
 FROM quests q
 WHERE q.public_id = $1::uuid
 FOR UPDATE OF q
@@ -1831,6 +1835,8 @@ func (q *Queries) ProductQuestLockByID(ctx context.Context, questID pgtype.UUID)
 		&i.ClosedAt,
 		&i.DeletedAt,
 		&i.DeletedBy,
+		&i.DiscordVoiceChannelID,
+		&i.DiscordThreadID,
 	)
 	return i, err
 }
@@ -2282,7 +2288,7 @@ SELECT q.id, q.public_id, q.short_code, q.kinds, q.status,
        q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
        doc.public_id AS document_public_id, q.tags, q.genres, q.avg_party_level AS apl,
        q.signup_type, q.discord_desired_revision, q.discord_applied_revision,
-       q.discord_message_id, q.discord_event_id, q.event_url,
+       q.discord_message_id, q.discord_event_id, q.event_url, q.discord_voice_channel_id,
        creator.public_id AS created_by_public_id, q.created_at, q.updated_at,
        q.closed_at, q.deleted_at, deleted_by.public_id AS deleted_by_public_id
 FROM quests q
@@ -2323,6 +2329,7 @@ type ProductQuestReadByIDRow struct {
 	DiscordMessageID       pgtype.Text        `json:"discord_message_id"`
 	DiscordEventID         pgtype.Text        `json:"discord_event_id"`
 	EventUrl               pgtype.Text        `json:"event_url"`
+	DiscordVoiceChannelID  pgtype.Text        `json:"discord_voice_channel_id"`
 	CreatedByPublicID      pgtype.UUID        `json:"created_by_public_id"`
 	CreatedAt              pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
@@ -2358,6 +2365,7 @@ func (q *Queries) ProductQuestReadByID(ctx context.Context, arg ProductQuestRead
 		&i.DiscordMessageID,
 		&i.DiscordEventID,
 		&i.EventUrl,
+		&i.DiscordVoiceChannelID,
 		&i.CreatedByPublicID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -2375,7 +2383,7 @@ SELECT q.id, q.public_id, q.short_code, q.kinds, q.status,
        q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
        doc.public_id AS document_public_id, q.tags, q.genres, q.avg_party_level AS apl,
        q.signup_type, q.discord_desired_revision, q.discord_applied_revision,
-       q.discord_message_id, q.discord_event_id, q.event_url,
+       q.discord_message_id, q.discord_event_id, q.event_url, q.discord_voice_channel_id,
        creator.public_id AS created_by_public_id, q.created_at, q.updated_at,
        q.closed_at, q.deleted_at, deleted_by.public_id AS deleted_by_public_id
 FROM quests q
@@ -2416,6 +2424,7 @@ type ProductQuestReadByShortCodeRow struct {
 	DiscordMessageID       pgtype.Text        `json:"discord_message_id"`
 	DiscordEventID         pgtype.Text        `json:"discord_event_id"`
 	EventUrl               pgtype.Text        `json:"event_url"`
+	DiscordVoiceChannelID  pgtype.Text        `json:"discord_voice_channel_id"`
 	CreatedByPublicID      pgtype.UUID        `json:"created_by_public_id"`
 	CreatedAt              pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt              pgtype.Timestamptz `json:"updated_at"`
@@ -2451,6 +2460,7 @@ func (q *Queries) ProductQuestReadByShortCode(ctx context.Context, arg ProductQu
 		&i.DiscordMessageID,
 		&i.DiscordEventID,
 		&i.EventUrl,
+		&i.DiscordVoiceChannelID,
 		&i.CreatedByPublicID,
 		&i.CreatedAt,
 		&i.UpdatedAt,
@@ -3297,8 +3307,9 @@ UPDATE quests q SET
     duration_hours = $5::double precision,
     slots_max = $6::integer, tags = $7::text[], genres = $8::text[],
     avg_party_level = $9::integer, signup_type = $10::text,
-    updated_at = $11::timestamptz
-WHERE q.public_id = $12::uuid AND q.updated_at = $13::timestamptz
+    discord_voice_channel_id = $11::text,
+    updated_at = $12::timestamptz
+WHERE q.public_id = $13::uuid AND q.updated_at = $14::timestamptz
 RETURNING q.id, q.public_id, q.short_code, q.status, q.scheduled_at,
           q.duration_hours, q.slots_max, q.filled_count, q.updated_at
 `
@@ -3314,6 +3325,7 @@ type ProductQuestUpdateMetadataParams struct {
 	Genres            []string           `json:"genres"`
 	Apl               pgtype.Int4        `json:"apl"`
 	SignupType        pgtype.Text        `json:"signup_type"`
+	VoiceChannelID    pgtype.Text        `json:"voice_channel_id"`
 	At                pgtype.Timestamptz `json:"at"`
 	QuestID           pgtype.UUID        `json:"quest_id"`
 	ExpectedUpdatedAt pgtype.Timestamptz `json:"expected_updated_at"`
@@ -3343,6 +3355,7 @@ func (q *Queries) ProductQuestUpdateMetadata(ctx context.Context, arg ProductQue
 		arg.Genres,
 		arg.Apl,
 		arg.SignupType,
+		arg.VoiceChannelID,
 		arg.At,
 		arg.QuestID,
 		arg.ExpectedUpdatedAt,

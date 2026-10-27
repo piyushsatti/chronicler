@@ -4,6 +4,7 @@ import type {
   AdminBackstoriesQuery,
   AdminCharactersQuery,
   AdminCreationCatalogQuery,
+  AdminDiscordSettingsQuery,
   AdminGameCalendarQuery,
   AdminHomeBannerQuery,
   AdminMembersQuery,
@@ -24,6 +25,7 @@ import type {
   SetMemberRolesMutation,
   TransitionRegionMutation,
   UpdateBackstoryMutation,
+  UpdateDiscordSettingsMutation,
   UpdateGameCalendarMutation,
   UpdateHomeBannerMutation,
   UpdateRegionMutation,
@@ -46,6 +48,8 @@ import PENDING_CHAR_VERIFICATIONS from './pendingCharacterVerifications.graphql?
 import ADMIN_MEMBERS from './adminMembers.graphql?raw';
 import ADMIN_HOME_BANNER from './adminHomeBanner.graphql?raw';
 import UPDATE_HOME_BANNER from './updateHomeBanner.graphql?raw';
+import ADMIN_DISCORD_SETTINGS from './adminDiscordSettings.graphql?raw';
+import UPDATE_DISCORD_SETTINGS from './updateDiscordSettings.graphql?raw';
 import SET_MEMBER_ROLES from './setMemberRoles.graphql?raw';
 import SET_MEMBER_ROLES_BATCH from './setMemberRolesBatch.graphql?raw';
 import DECIDE_VERIFICATION from './decideVerification.graphql?raw';
@@ -512,6 +516,71 @@ export async function upsertHomeBanner(
     requireAcknowledgement(homeBannerSchema, data.updateHomeBanner);
   } catch (err) {
     throw toAppError(err, 'admin:home-banner:save');
+  }
+}
+
+const discordSettingsSchema = z.object({
+  announceChannelId: z.string().nullable().optional(),
+  roleId: z.string().nullable().optional(),
+  voiceChannels: z.array(z.object({ name: z.string(), channelId: z.string() })),
+});
+
+export type DiscordSettingsView = {
+  announceChannelId: string | null;
+  roleId: string | null;
+  voiceChannels: { name: string; channelId: string }[];
+};
+
+function toDiscordSettings(
+  wire: z.infer<typeof discordSettingsSchema>,
+): DiscordSettingsView {
+  return {
+    announceChannelId: wire.announceChannelId ?? null,
+    roleId: wire.roleId ?? null,
+    voiceChannels: wire.voiceChannels.map(({ name, channelId }) => ({ name, channelId })),
+  };
+}
+
+/** field-routing: discordSettings (admin only) */
+export async function loadDiscordSettings(
+  request: AdminReadRequest,
+): Promise<DiscordSettingsView> {
+  try {
+    const data = await adminRead<AdminDiscordSettingsQuery>(
+      ADMIN_DISCORD_SETTINGS,
+      undefined,
+      request,
+    );
+    const parsed = discordSettingsSchema.safeParse(data.discordSettings);
+    if (!parsed.success) throw toAppError({ failure: 'InvalidWire' }, 'admin:discord');
+    return toDiscordSettings(parsed.data);
+  } catch (err) {
+    throw toAppError(err, 'admin:discord');
+  }
+}
+
+/** field-routing: updateDiscordSettings (admin only) */
+export async function saveDiscordSettings(
+  settings: DiscordSettingsView,
+  command: AdminCommand,
+): Promise<DiscordSettingsView> {
+  try {
+    const data = await adminCommand<UpdateDiscordSettingsMutation>(
+      UPDATE_DISCORD_SETTINGS,
+      {
+        input: {
+          announceChannelId: settings.announceChannelId,
+          roleId: settings.roleId,
+          voiceChannels: settings.voiceChannels,
+        },
+      },
+      command,
+    );
+    const parsed = discordSettingsSchema.safeParse(data.updateDiscordSettings);
+    if (!parsed.success) throw toAppError({ failure: 'InvalidWire' }, 'admin:discord:save');
+    return toDiscordSettings(parsed.data);
+  } catch (err) {
+    throw toAppError(err, 'admin:discord:save');
   }
 }
 

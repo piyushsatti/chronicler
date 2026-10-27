@@ -240,6 +240,7 @@ The following164 roots are the accepted business API. Introspection fields are e
 | Mutation.unpublishDocument                  | document-operations.graphql     |
 | Mutation.updateBackstory                    | character-operations.graphql    |
 | Mutation.updateCharacterProfile             | character-operations.graphql    |
+| Mutation.updateDiscordSettings              | site-operations.graphql         |
 | Mutation.updateDocument                     | document-operations.graphql     |
 | Mutation.updateGameCalendar                 | spatial-operations.graphql      |
 | Mutation.updateHex                          | spatial-operations.graphql      |
@@ -278,6 +279,7 @@ The following164 roots are the accepted business API. Introspection fields are e
 | Query.creationCatalog                       | character-operations.graphql    |
 | Query.discordDeliveryMode                   | site-operations.graphql         |
 | ~~Query.dmRequests~~                        | **DROP** (N3)                   |
+| Query.discordSettings                       | site-operations.graphql         |
 | Query.dmSessionHistory                      | quest-operations.graphql        |
 | Query.dmStats                               | quest-operations.graphql        |
 | Query.dmSummaries                           | quest-operations.graphql        |
@@ -330,6 +332,7 @@ The following164 roots are the accepted business API. Introspection fields are e
 | Query.questGenreOptions                     | quest-operations.graphql        |
 | Query.questStateCounts                      | quest-operations.graphql        |
 | Query.questSummaries                        | quest-operations.graphql        |
+| Query.questVoiceChannels                    | site-operations.graphql         |
 | Query.quests                                | quest-operations.graphql        |
 | Query.realDates                             | spatial-operations.graphql      |
 | Query.recentHexChanges                      | spatial-operations.graphql      |

@@ -93,11 +93,9 @@ func (c Commands) SignUp(ctx context.Context, actor auth.Claims, questID, charac
 	if actor.Anonymous() {
 		return apierr.New(apierr.Unauthenticated, "sign in required")
 	}
+	// Signups never touch Discord: the announcement is not re-edited for them.
 	return c.tx.Do(ctx, func(repo Repository) error {
-		if err := repo.SignUp(ctx, questID, actor.MemberID, characterID); err != nil {
-			return err
-		}
-		return repo.RecordDesiredRevision(ctx, questID)
+		return repo.SignUp(ctx, questID, actor.MemberID, characterID)
 	})
 }
 

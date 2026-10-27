@@ -1,0 +1,10 @@
+query AdminDiscordSettings {
+  discordSettings {
+    announceChannelId
+    roleId
+    voiceChannels {
+      name
+      channelId
+    }
+  }
+}

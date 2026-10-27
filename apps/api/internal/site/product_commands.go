@@ -9,6 +9,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/google/uuid"
+	"github.com/piyushsatti/chronicler/apps/api/internal/delivery"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/idempotency"
@@ -196,8 +197,8 @@ func (s ProductCommands) UpdateHomeBanner(ctx context.Context, actor auth.Author
 func (s ProductCommands) UpdateQuestAnnouncementRoleSetting(ctx context.Context, actor auth.Authority, spec UpdateQuestAnnouncementRoleSettingSpec, meta product.CommandMeta) (QuestAnnouncementRoleSettingView, error) {
 	if spec.Input.RoleId != nil {
 		roleID := strings.TrimSpace(*spec.Input.RoleId)
-		if roleID == "" || len(roleID) > 64 {
-			return QuestAnnouncementRoleSettingView{}, apierr.New(apierr.Invalid, "invalid announcement role id")
+		if !delivery.ValidSnowflake(roleID) {
+			return QuestAnnouncementRoleSettingView{}, apierr.New(apierr.Invalid, "announcement role ID must be a Discord ID of 17 to 20 digits")
 		}
 		spec.Input.RoleId = &roleID
 	}

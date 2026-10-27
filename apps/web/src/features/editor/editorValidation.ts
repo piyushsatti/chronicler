@@ -51,6 +51,8 @@ const questMeta = z.object({
     z.coerce.number().int().positive(),
   ]),
   additionalInfo: z.string().nullish(),
+  /** Optional Discord voice channel from the admin list; '' means none. */
+  voiceChannelId: z.union([z.literal(''), z.string().regex(/^[0-9]{17,20}$/)]).nullish(),
   /** Optional series for a new quest; '' means none. */
   arcId: z.union([z.literal(''), z.string().uuid()]).nullish(),
   /** Map places a new quest heads to; saved after the quest is created. */

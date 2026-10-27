@@ -357,7 +357,7 @@ func TestFrontendCharacterRetirementMultipleQuestsAtomicReplay(t *testing.T) {
 			if err := f.db.Pool.QueryRow(ctx, `SELECT p.status FROM quest_participants p JOIN characters c ON c.id=p.character_id WHERE c.public_id=$1`, invalid).Scan(&skipped); err != nil {
 				t.Fatal(err)
 			}
-			if withdrawn != 2 || notices != 1 || jobs != 2 || receipts != 2 || promoted != "signed_up" || skipped != "waitlisted" {
+			if withdrawn != 2 || notices != 1 || jobs != 0 || receipts != 2 || promoted != "signed_up" || skipped != "waitlisted" {
 				t.Fatalf("withdrawn=%d notices=%d jobs=%d receipts=%d promoted=%s skipped=%s", withdrawn, notices, jobs, receipts, promoted, skipped)
 			}
 			var filled int

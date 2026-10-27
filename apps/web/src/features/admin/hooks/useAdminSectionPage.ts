@@ -7,12 +7,14 @@ import { useBackstoriesPanel } from './useBackstoriesPanel.js';
 import { useCharacterDirectoryPanel } from './useCharacterDirectoryPanel.js';
 import { useCreationCatalogPanel } from './useCreationCatalogPanel.js';
 import { useGameCalendarPanel } from './useGameCalendarPanel.js';
+import { useDiscordSettingsPanel } from './useDiscordSettingsPanel.js';
 import { useHomeBannerPanel } from './useHomeBannerPanel.js';
 import { useMembersPanel } from './useMembersPanel.js';
 import { useRegionsPanel } from './useRegionsPanel.js';
 import { useTimeAnchorPanel } from './useTimeAnchorPanel.js';
 export const useAdminCharactersPage = useCharacterDirectoryPanel;
 export const useAdminDeliveryPage = useAdminOperations;
+export const useDiscordSettingsPage = useDiscordSettingsPanel;
 export const useAdminDataHealthPage = useAdminOperations;
 
 export function useAdminPeoplePage() {

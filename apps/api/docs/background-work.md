@@ -27,6 +27,12 @@ Python claims agent questions over [HTTP](/docs/interfaces/agent-qa-http.md). Ag
 
 These budgets require a running API/database/worker. They do not establish production throughput or guarantee recovery under an outage. A queue backlog can expire a question before a model starts.
 
+## Quest Discord announcement
+
+The `quest_discord_delivery` job ([RESTSync](/apps/api/internal/delivery/discord_sync.go)) posts one plain message (no embed) per quest, then edits it on later syncs. The post is laid out by [BuildAnnouncement](/apps/api/internal/delivery/announce.go): an optional role ping, `# title (code)`, the brief body, then date, hours, DM, optional voice channel, optional event link and the sign-up link. The brief is `document.EffectiveBody` for an ordinary member who is neither author nor named in a marker, so `[!dm]` and `[!dm:@handle]` blocks never leave the API. If the post would pass Discord's 2000-character message limit ([Create Message](https://docs.discord.com/developers/resources/message#create-message)), only the body is cut, on a word boundary, with an ellipsis.
+
+Settings come from the admin panel (`site_settings`: `discord_announce_channel`, `quest_announcement_role`, `discord_voice_channels`; `public_origin` for links) and are read on every sync. `DISCORD_ANNOUNCE_CHANNEL_ID` applies only while the announce channel setting is empty; `DISCORD_BOT_TOKEN` and `GUILD_ID` stay deploy secrets. A quest with a voice channel also gets a voice-channel [scheduled event](https://docs.discord.com/developers/resources/guild-scheduled-event#create-guild-scheduled-event) (`entity_type` 2) starting at its scheduled time and ending after `duration_hours`; its description links the announcement and the quest page. A thread named after the quest code is opened from the first post only ([Start Thread from Message](https://docs.discord.com/developers/resources/channel#start-thread-from-message)). Message, event and thread ids are stored as soon as Discord returns them, so a retry resumes instead of posting twice. Signups and withdrawals never enqueue this job.
+
 ## Schema and verification
 
 The consolidated [initial schema](/apps/api/db/migrations/0001_init.sql) enforces nonnegative non-null tokens, running/non-running lease timestamps, completion pairs and agent-question deadlines. It defines the partial expiry/deadline indexes and omits duplicate question state. It provides a fresh-database baseline, not the former incremental migration's lock/preflight refusal or rollback guard.

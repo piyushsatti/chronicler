@@ -88,6 +88,7 @@ export type CreateQuestInput = {
   slotsMax?: number;
   tags?: Array<string>;
   title: string;
+  voiceChannelId?: string | null | undefined;
 };
 
 export type CreationCatalogFiltersInput = {
@@ -99,6 +100,17 @@ export type CreationCatalogFiltersInput = {
 export type Density =
   | 'COMFORTABLE'
   | 'COMPACT';
+
+export type DiscordSettingsInput = {
+  announceChannelId?: string | null | undefined;
+  roleId?: string | null | undefined;
+  voiceChannels: Array<DiscordVoiceChannelInput>;
+};
+
+export type DiscordVoiceChannelInput = {
+  channelId: string;
+  name: string;
+};
 
 export type DocumentAudienceInput = {
   policy?: Array<string> | null | undefined;
@@ -226,6 +238,7 @@ export type QuestEditInput = {
   slotsMax?: number | null | undefined;
   tags?: Array<string> | null | undefined;
   title?: string | null | undefined;
+  voiceChannelId?: string | null | undefined;
 };
 
 export type QuestFiltersInput = {
@@ -372,6 +385,11 @@ export type AdminCreationCatalogQueryVariables = Exact<{
 
 
 export type AdminCreationCatalogQuery = { creationCatalog: { total: number, items: Array<{ id: string, kind: string, name: string, description: string | null, available: boolean, retired: boolean, introducedByRegionId: string | null }> } };
+
+export type AdminDiscordSettingsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type AdminDiscordSettingsQuery = { discordSettings: { announceChannelId: string | null, roleId: string | null, voiceChannels: Array<{ name: string, channelId: string }> } };
 
 export type AdminGameCalendarQueryVariables = Exact<{
   realFrom: string;
@@ -561,6 +579,14 @@ export type UpdateBackstoryMutationVariables = Exact<{
 
 
 export type UpdateBackstoryMutation = { updateBackstory: { id: string, name: string, retired: boolean } };
+
+export type UpdateDiscordSettingsMutationVariables = Exact<{
+  input: DiscordSettingsInput;
+  meta: CommandMeta;
+}>;
+
+
+export type UpdateDiscordSettingsMutation = { updateDiscordSettings: { announceChannelId: string | null, roleId: string | null, voiceChannels: Array<{ name: string, channelId: string }> } };
 
 export type UpdateGameCalendarMutationVariables = Exact<{
   definition: unknown;
@@ -991,7 +1017,7 @@ export type EditorQuestLoadQueryVariables = Exact<{
 }>;
 
 
-export type EditorQuestLoadQuery = { quest: { id: string, shortCode: string, scheduledAt: string, durationHours: number, slotsMax: number, kinds: Array<string>, genres: Array<string>, tags: Array<string>, apl: number | null, signupType: string | null, regions: Array<string>, updatedAt: string, briefDocument: { id: string, slug: string, title: string, status: string, version: number, canEditMetadata: boolean, canEditBody: boolean, frontmatter: unknown, effectiveBody: string | null } | null } | null };
+export type EditorQuestLoadQuery = { quest: { id: string, shortCode: string, scheduledAt: string, durationHours: number, slotsMax: number, kinds: Array<string>, genres: Array<string>, tags: Array<string>, apl: number | null, signupType: string | null, voiceChannelId: string | null, regions: Array<string>, updatedAt: string, briefDocument: { id: string, slug: string, title: string, status: string, version: number, canEditMetadata: boolean, canEditBody: boolean, frontmatter: unknown, effectiveBody: string | null } | null } | null };
 
 export type EditorRegionsQueryVariables = Exact<{
   kind?: string | null | undefined;
@@ -1071,6 +1097,11 @@ export type EditorUpsertQuestSummaryMutationVariables = Exact<{
 
 
 export type EditorUpsertQuestSummaryMutation = { upsertQuestSummary: { id: string, slug: string, version: number } };
+
+export type EditorVoiceChannelsQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type EditorVoiceChannelsQuery = { questVoiceChannels: Array<{ name: string, channelId: string }> };
 
 export type EntityLinkCodexDirectoryQueryVariables = Exact<{ [key: string]: never; }>;
 

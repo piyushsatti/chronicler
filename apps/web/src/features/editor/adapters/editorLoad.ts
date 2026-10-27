@@ -74,6 +74,7 @@ const questLoadSchema = z.object({
   tags: z.array(z.string()).optional().default([]),
   apl: z.number().nullable().optional(),
   signupType: z.string().nullable().optional(),
+  voiceChannelId: z.string().nullable().optional(),
   regions: z.array(z.string()).optional().default([]),
   updatedAt: z.string(),
   briefDocument: z
@@ -150,6 +151,7 @@ export function parseQuestLoad(wire: unknown): AdapterResult<EditorLoadResult> {
         tags: q.tags,
         apl: q.apl ?? null,
         signupType: q.signupType ?? null,
+        voiceChannelId: q.voiceChannelId ?? '',
         regions: q.regions,
         additionalInfo: brief?.frontmatter.additional_info ?? '',
       },
@@ -258,6 +260,7 @@ function emptyDraft(
       genres: [],
       tags: [],
       signupType: 'dm_pick',
+      ...(typeKey === 'quest' ? { voiceChannelId: '' } : {}),
     },
     body: '',
     canEditBody: true,

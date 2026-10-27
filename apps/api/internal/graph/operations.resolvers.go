@@ -1166,6 +1166,25 @@ func (r *mutationResolver) UpdateQuestAnnouncementRoleSetting(ctx context.Contex
 	return toQuestAnnouncementRoleSettingType(view), nil
 }
 
+// UpdateDiscordSettings is the resolver for the updateDiscordSettings field.
+func (r *mutationResolver) UpdateDiscordSettings(ctx context.Context, input DiscordSettingsInput, meta CommandMeta) (*DiscordSettingsType, error) {
+	if r.Services.SiteCommands == nil {
+		return nil, fmt.Errorf("site commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SiteCommands.UpdateDiscordSettings(ctx, actor, site.UpdateDiscordSettingsSpec{
+		Input: toDiscordSettingsFields(input),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toDiscordSettingsType(view), nil
+}
+
 // RedriveDiscordDelivery is the resolver for the redriveDiscordDelivery field.
 func (r *mutationResolver) RedriveDiscordDelivery(ctx context.Context, jobID string, reason string, meta CommandMeta) (*DeliveryReceipt, error) {
 	if r.Services.SiteCommands == nil {
@@ -2699,6 +2718,38 @@ func (r *queryResolver) QuestAnnouncementRoleSetting(ctx context.Context) (*Ques
 		return nil, err
 	}
 	return toQuestAnnouncementRoleSettingType(view), nil
+}
+
+// DiscordSettings is the resolver for the discordSettings field.
+func (r *queryResolver) DiscordSettings(ctx context.Context) (*DiscordSettingsType, error) {
+	if r.Services.SiteQueries == nil {
+		return nil, fmt.Errorf("site queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SiteQueries.DiscordSettings(ctx, actor, site.DiscordSettingsSpec{})
+	if err != nil {
+		return nil, err
+	}
+	return toDiscordSettingsType(view), nil
+}
+
+// QuestVoiceChannels is the resolver for the questVoiceChannels field.
+func (r *queryResolver) QuestVoiceChannels(ctx context.Context) ([]*DiscordVoiceChannelType, error) {
+	if r.Services.SiteQueries == nil {
+		return nil, fmt.Errorf("site queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	channels, err := r.Services.SiteQueries.QuestVoiceChannels(ctx, actor, site.QuestVoiceChannelsSpec{})
+	if err != nil {
+		return nil, err
+	}
+	return toDiscordVoiceChannelTypes(channels), nil
 }
 
 // Map is the resolver for the map field.

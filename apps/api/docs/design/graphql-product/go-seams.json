@@ -2476,6 +2476,15 @@
           "resolver_args": [],
           "kind": "INPUT_OBJECT",
           "owner": "QUE01"
+        },
+        {
+          "name": "VoiceChannelId",
+          "wire_name": "voiceChannelId",
+          "go_type": "*string",
+          "wire_type": "String",
+          "resolver_args": [],
+          "kind": "INPUT_OBJECT",
+          "owner": "QUE01"
         }
       ],
       "enum_values": [],
@@ -7560,6 +7569,15 @@
           "resolver_args": [],
           "kind": "INPUT_OBJECT",
           "owner": "QUE01"
+        },
+        {
+          "name": "VoiceChannelId",
+          "wire_name": "voiceChannelId",
+          "go_type": "product.Optional[string]",
+          "wire_type": "String",
+          "resolver_args": [],
+          "kind": "INPUT_OBJECT",
+          "owner": "QUE01"
         }
       ],
       "enum_values": [],
@@ -8466,6 +8484,15 @@
           "wire_name": "updatedAt",
           "go_type": "time.Time",
           "wire_type": "DateTime!",
+          "resolver_args": [],
+          "kind": "OBJECT",
+          "owner": "QUE01"
+        },
+        {
+          "name": "VoiceChannelId",
+          "wire_name": "voiceChannelId",
+          "go_type": "*string",
+          "wire_type": "String",
           "resolver_args": [],
           "kind": "OBJECT",
           "owner": "QUE01"
@@ -23619,6 +23646,7 @@
         "ReadHomeCommunity(ctx context.Context, actor auth.Authority, spec site.HomeSpec) (site.CommunityStatsSnapshot, error)",
         "ReadHomeBanner(ctx context.Context, actor auth.Authority, spec site.HomeBannerSpec) (site.HomeBannerView, error)",
         "ReadQuestAnnouncementRoleSetting(ctx context.Context, actor auth.Authority, spec site.QuestAnnouncementRoleSettingSpec) (site.QuestAnnouncementRoleSettingView, error)",
+        "ReadDiscordSettings(ctx context.Context, actor auth.Authority, spec site.DiscordSettingsSpec) (site.DiscordSettingsView, error)",
         "ReadMemberSearch(ctx context.Context, actor auth.Authority, spec site.SearchSpec) (site.MemberDiscoveryPage, error)",
         "ReadSearchableKinds(ctx context.Context, actor auth.Authority, spec site.SearchableKindsSpec) ([]site.SearchKindView, error)",
         "ReadSiteStats(ctx context.Context, actor auth.Authority, spec site.SiteStatsSpec) (site.CommunityStatsSnapshot, error)"
@@ -23632,7 +23660,9 @@
         "LockUpdateHomeBanner(ctx context.Context, spec site.UpdateHomeBannerSpec) (site.UpdateHomeBannerState, error)",
         "StoreUpdateHomeBanner(ctx context.Context, write site.UpdateHomeBannerWrite) (site.HomeBannerView, error)",
         "LockUpdateQuestAnnouncementRoleSetting(ctx context.Context, spec site.UpdateQuestAnnouncementRoleSettingSpec) (site.UpdateQuestAnnouncementRoleSettingState, error)",
-        "StoreUpdateQuestAnnouncementRoleSetting(ctx context.Context, write site.UpdateQuestAnnouncementRoleSettingWrite) (site.QuestAnnouncementRoleSettingView, error)"
+        "StoreUpdateQuestAnnouncementRoleSetting(ctx context.Context, write site.UpdateQuestAnnouncementRoleSettingWrite) (site.QuestAnnouncementRoleSettingView, error)",
+        "LockUpdateDiscordSettings(ctx context.Context, spec site.UpdateDiscordSettingsSpec) (site.UpdateDiscordSettingsState, error)",
+        "StoreUpdateDiscordSettings(ctx context.Context, write site.UpdateDiscordSettingsWrite) (site.DiscordSettingsView, error)"
       ],
       "owner": "SIT02",
       "provider": "SIT04"

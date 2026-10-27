@@ -679,6 +679,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 		"Mutation.updateCharacterProfile":             "CHAR_OWNER",
 		"Mutation.updateDocument":                     "DOC_WRITE",
 		"Mutation.updateGameCalendar":                 "ADMIN",
+		"Mutation.updateDiscordSettings":              "ADMIN",
 		"Mutation.updateHomeBanner":                   "ADMIN",
 		"Mutation.updateMyDmProfile":                  "DM_SELF",
 		"Mutation.updateMyProfile":                    "SELF",
@@ -713,6 +714,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 		"Query.communityDirectory":                    "PUBLIC",
 		"Query.creationCatalog":                       "CATALOG_PUBLIC_OR_ADMIN",
 		"Query.discordDeliveryMode":                   "ADMIN",
+		"Query.discordSettings":                       "ADMIN",
 		"Query.dmSessionHistory":                      "PUBLIC",
 		"Query.dmStats":                               "PUBLIC",
 		"Query.dmSummaries":                           "PUBLIC",
@@ -753,6 +755,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 		"Query.previewBody":                           "PREVIEW",
 		"Query.quest":                                 "PUBLIC",
 		"Query.questAnnouncementRoleSetting":          "PUBLIC",
+		"Query.questVoiceChannels":                    "DM_SELF",
 		"Query.questArc":                              "PUBLIC",
 		"Query.questArcs":                             "PUBLIC",
 		"Query.questBoard":                            "PUBLIC",
@@ -787,7 +790,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 			}
 		}
 	}
-	if len(expected) != 148 || len(actual) != len(expected) || len(operationRules) != len(expected) {
+	if len(expected) != 151 || len(actual) != len(expected) || len(operationRules) != len(expected) {
 		t.Fatalf("coverage expected%d SDL%d registry%d", len(expected), len(actual), len(operationRules))
 	}
 	p, _, facts := policyTestProvider(t)

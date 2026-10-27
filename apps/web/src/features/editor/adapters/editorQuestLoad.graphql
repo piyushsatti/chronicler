@@ -10,6 +10,7 @@ query EditorQuestLoad($id: ID, $shortCode: String) {
     tags
     apl
     signupType
+    voiceChannelId
     regions
     updatedAt
     briefDocument {

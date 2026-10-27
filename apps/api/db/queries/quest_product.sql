@@ -46,7 +46,7 @@ SELECT q.id, q.public_id, q.short_code, q.kinds, q.status,
        q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
        doc.public_id AS document_public_id, q.tags, q.genres, q.avg_party_level AS apl,
        q.signup_type, q.discord_desired_revision, q.discord_applied_revision,
-       q.discord_message_id, q.discord_event_id, q.event_url,
+       q.discord_message_id, q.discord_event_id, q.event_url, q.discord_voice_channel_id,
        creator.public_id AS created_by_public_id, q.created_at, q.updated_at,
        q.closed_at, q.deleted_at, deleted_by.public_id AS deleted_by_public_id
 FROM quests q
@@ -63,7 +63,7 @@ SELECT q.id, q.public_id, q.short_code, q.kinds, q.status,
        q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
        doc.public_id AS document_public_id, q.tags, q.genres, q.avg_party_level AS apl,
        q.signup_type, q.discord_desired_revision, q.discord_applied_revision,
-       q.discord_message_id, q.discord_event_id, q.event_url,
+       q.discord_message_id, q.discord_event_id, q.event_url, q.discord_voice_channel_id,
        creator.public_id AS created_by_public_id, q.created_at, q.updated_at,
        q.closed_at, q.deleted_at, deleted_by.public_id AS deleted_by_public_id
 FROM quests q
@@ -80,7 +80,7 @@ SELECT q.id, q.public_id, q.short_code, q.kinds, q.status, q.dm_id,
        q.discord_desired_revision, q.discord_applied_revision,
        q.discord_message_id, q.discord_event_id, q.event_url,
        q.created_by, q.created_at, q.updated_at, q.closed_at, q.deleted_at,
-       q.deleted_by
+       q.deleted_by, q.discord_voice_channel_id, q.discord_thread_id
 FROM quests q
 WHERE q.public_id = @quest_id::uuid
 FOR UPDATE OF q;
@@ -350,7 +350,7 @@ SELECT input.ordinality::integer AS input_index, input.public_id::uuid AS reques
        q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
        doc.public_id AS document_public_id, q.tags, q.genres, q.avg_party_level AS apl,
        q.signup_type, q.discord_desired_revision, q.discord_applied_revision,
-       q.discord_message_id, q.discord_event_id, q.event_url,
+       q.discord_message_id, q.discord_event_id, q.event_url, q.discord_voice_channel_id,
        creator.public_id AS created_by_public_id, q.created_at, q.updated_at
 FROM unnest(@quest_ids::uuid[]) WITH ORDINALITY AS input(public_id, ordinality)
 LEFT JOIN quests q ON q.public_id = input.public_id AND q.deleted_at IS NULL
@@ -401,13 +401,13 @@ FROM quests q WHERE q.short_code = @short_code::text FOR UPDATE OF q;
 INSERT INTO quests (
     public_id, short_code, kinds, dm_id, arc_id, scheduled_at, duration_hours, slots_max,
     document_id, tags, genres, avg_party_level, signup_type, created_by,
-    created_at, updated_at, discord_desired_revision
+    created_at, updated_at, discord_desired_revision, discord_voice_channel_id
 ) VALUES (
     @public_id::uuid, @short_code::text, @kinds::text[], @dm_id::bigint, sqlc.narg(arc_id)::bigint,
     @scheduled_at::timestamptz, @duration_hours::double precision,
     @slots_max::integer, @document_id::bigint, @tags::text[], @genres::text[],
     sqlc.narg(apl)::integer, sqlc.narg(signup_type)::text, @created_by::bigint,
-    @at::timestamptz, @at::timestamptz, 1
+    @at::timestamptz, @at::timestamptz, 1, sqlc.narg(voice_channel_id)::text
 )
 RETURNING id, public_id, short_code, status, scheduled_at, duration_hours,
           slots_max, filled_count, created_at, updated_at, discord_desired_revision;
@@ -418,6 +418,7 @@ UPDATE quests q SET
     duration_hours = @duration_hours::double precision,
     slots_max = @slots_max::integer, tags = @tags::text[], genres = @genres::text[],
     avg_party_level = sqlc.narg(apl)::integer, signup_type = sqlc.narg(signup_type)::text,
+    discord_voice_channel_id = sqlc.narg(voice_channel_id)::text,
     updated_at = @at::timestamptz
 WHERE q.public_id = @quest_id::uuid AND q.updated_at = @expected_updated_at::timestamptz
 RETURNING q.id, q.public_id, q.short_code, q.status, q.scheduled_at,

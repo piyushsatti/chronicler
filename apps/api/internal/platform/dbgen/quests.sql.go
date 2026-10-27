@@ -92,6 +92,17 @@ func (q *Queries) CountQuestParticipants(ctx context.Context, questID int64) (in
 	return column_1, err
 }
 
+const deliverySettingPayload = `-- name: DeliverySettingPayload :one
+SELECT payload FROM site_settings WHERE key = $1::text
+`
+
+func (q *Queries) DeliverySettingPayload(ctx context.Context, settingKey string) ([]byte, error) {
+	row := q.db.QueryRow(ctx, deliverySettingPayload, settingKey)
+	var payload []byte
+	err := row.Scan(&payload)
+	return payload, err
+}
+
 const documentInternalID = `-- name: DocumentInternalID :one
 SELECT id FROM documents WHERE public_id = $1
 `
@@ -505,6 +516,78 @@ func (q *Queries) MemberInternalID(ctx context.Context, publicID pgtype.UUID) (i
 	return id, err
 }
 
+const questDiscordAnnounceSnapshot = `-- name: QuestDiscordAnnounceSnapshot :one
+SELECT q.id, q.public_id, q.short_code, q.status, q.scheduled_at, q.duration_hours,
+       q.discord_applied_revision,
+       q.discord_message_id, q.discord_event_id, q.discord_thread_id,
+       q.discord_voice_channel_id,
+       dm.discord_id AS dm_discord_id,
+       d.public_id AS document_public_id, d.kind AS document_kind, d.slug AS document_slug,
+       d.title AS document_title, d.status AS document_status,
+       d.visibility AS document_visibility, d.body AS document_body,
+       d.policy AS document_policy, author.public_id AS document_author_public_id
+FROM quests q
+JOIN members dm ON dm.id = q.dm_id
+JOIN documents d ON d.id = q.document_id
+JOIN members author ON author.id = d.author_id
+WHERE q.public_id = $1
+`
+
+type QuestDiscordAnnounceSnapshotRow struct {
+	ID                     int64              `json:"id"`
+	PublicID               pgtype.UUID        `json:"public_id"`
+	ShortCode              string             `json:"short_code"`
+	Status                 string             `json:"status"`
+	ScheduledAt            pgtype.Timestamptz `json:"scheduled_at"`
+	DurationHours          float64            `json:"duration_hours"`
+	DiscordAppliedRevision int32              `json:"discord_applied_revision"`
+	DiscordMessageID       pgtype.Text        `json:"discord_message_id"`
+	DiscordEventID         pgtype.Text        `json:"discord_event_id"`
+	DiscordThreadID        pgtype.Text        `json:"discord_thread_id"`
+	DiscordVoiceChannelID  pgtype.Text        `json:"discord_voice_channel_id"`
+	DmDiscordID            string             `json:"dm_discord_id"`
+	DocumentPublicID       pgtype.UUID        `json:"document_public_id"`
+	DocumentKind           string             `json:"document_kind"`
+	DocumentSlug           string             `json:"document_slug"`
+	DocumentTitle          string             `json:"document_title"`
+	DocumentStatus         string             `json:"document_status"`
+	DocumentVisibility     string             `json:"document_visibility"`
+	DocumentBody           string             `json:"document_body"`
+	DocumentPolicy         []byte             `json:"document_policy"`
+	DocumentAuthorPublicID pgtype.UUID        `json:"document_author_public_id"`
+}
+
+// Everything the announcement post needs. The brief is returned raw; the worker
+// projects it for an ordinary member before use.
+func (q *Queries) QuestDiscordAnnounceSnapshot(ctx context.Context, publicID pgtype.UUID) (QuestDiscordAnnounceSnapshotRow, error) {
+	row := q.db.QueryRow(ctx, questDiscordAnnounceSnapshot, publicID)
+	var i QuestDiscordAnnounceSnapshotRow
+	err := row.Scan(
+		&i.ID,
+		&i.PublicID,
+		&i.ShortCode,
+		&i.Status,
+		&i.ScheduledAt,
+		&i.DurationHours,
+		&i.DiscordAppliedRevision,
+		&i.DiscordMessageID,
+		&i.DiscordEventID,
+		&i.DiscordThreadID,
+		&i.DiscordVoiceChannelID,
+		&i.DmDiscordID,
+		&i.DocumentPublicID,
+		&i.DocumentKind,
+		&i.DocumentSlug,
+		&i.DocumentTitle,
+		&i.DocumentStatus,
+		&i.DocumentVisibility,
+		&i.DocumentBody,
+		&i.DocumentPolicy,
+		&i.DocumentAuthorPublicID,
+	)
+	return i, err
+}
+
 const questDiscordRevisions = `-- name: QuestDiscordRevisions :one
 SELECT id, public_id, discord_desired_revision, discord_applied_revision, discord_message_id
 FROM quests
@@ -548,6 +631,25 @@ func (q *Queries) SaveQuestStatus(ctx context.Context, arg SaveQuestStatusParams
 	return err
 }
 
+const setQuestDiscordEvent = `-- name: SetQuestDiscordEvent :exec
+UPDATE quests
+SET discord_event_id = $1, event_url = $2
+WHERE public_id = $3
+`
+
+type SetQuestDiscordEventParams struct {
+	DiscordEventID pgtype.Text `json:"discord_event_id"`
+	EventUrl       pgtype.Text `json:"event_url"`
+	PublicID       pgtype.UUID `json:"public_id"`
+}
+
+// Delivery bookkeeping must not move updated_at: the editor uses it as its
+// optimistic-lock token.
+func (q *Queries) SetQuestDiscordEvent(ctx context.Context, arg SetQuestDiscordEventParams) error {
+	_, err := q.db.Exec(ctx, setQuestDiscordEvent, arg.DiscordEventID, arg.EventUrl, arg.PublicID)
+	return err
+}
+
 const setQuestDiscordMessageID = `-- name: SetQuestDiscordMessageID :exec
 UPDATE quests
 SET discord_message_id = $1, updated_at = now()
@@ -561,5 +663,21 @@ type SetQuestDiscordMessageIDParams struct {
 
 func (q *Queries) SetQuestDiscordMessageID(ctx context.Context, arg SetQuestDiscordMessageIDParams) error {
 	_, err := q.db.Exec(ctx, setQuestDiscordMessageID, arg.DiscordMessageID, arg.PublicID)
+	return err
+}
+
+const setQuestDiscordThread = `-- name: SetQuestDiscordThread :exec
+UPDATE quests
+SET discord_thread_id = $1
+WHERE public_id = $2
+`
+
+type SetQuestDiscordThreadParams struct {
+	DiscordThreadID pgtype.Text `json:"discord_thread_id"`
+	PublicID        pgtype.UUID `json:"public_id"`
+}
+
+func (q *Queries) SetQuestDiscordThread(ctx context.Context, arg SetQuestDiscordThreadParams) error {
+	_, err := q.db.Exec(ctx, setQuestDiscordThread, arg.DiscordThreadID, arg.PublicID)
 	return err
 }

@@ -17,6 +17,7 @@ import {
   TextAreaField,
   TextField,
   ToggleField,
+  VoiceChannelField,
   WorldDateField,
 } from './fields/FieldControls.js';
 import type { EditorFieldOptions, EditorMeta, FieldSchema } from './types.js';
@@ -94,6 +95,14 @@ export function PropertiesPanel({
         return (
           <SeriesField
             options={options.series}
+            value={String(val ?? '')}
+            onChange={setT}
+          />
+        );
+      case 'voicechannel':
+        return (
+          <VoiceChannelField
+            options={options.voiceChannels}
             value={String(val ?? '')}
             onChange={setT}
           />

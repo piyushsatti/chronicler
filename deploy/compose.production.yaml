@@ -52,6 +52,7 @@ services:
       # Background-job worker (runs inside this process): Discord REST delivery.
       DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN:-}
       DISCORD_ANNOUNCE_CHANNEL_ID: ${DISCORD_ANNOUNCE_CHANNEL_ID:-}
+      GUILD_ID: ${GUILD_ID:-}
       DISCORD_DELIVERY_DRY_RUN: ${DISCORD_DELIVERY_DRY_RUN:-}
       AGENT_INLINE_COMPLETE: ${AGENT_INLINE_COMPLETE:-}
     stop_grace_period: 30s

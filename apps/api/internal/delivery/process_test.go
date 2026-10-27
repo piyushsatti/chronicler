@@ -77,10 +77,10 @@ func TestProcessOneDryRunWorkerAdvancesAppliedRevision(t *testing.T) {
 	store := &delivery.MemoryStore{Jobs: []jobs.Job{queuedDiscordJob(t, "quest-dry", 3, 0)}}
 	applier := &fakeApplier{}
 	sync := delivery.RESTSync{
-		Token:     "tok",
-		ChannelID: "chan",
-		DryRun:    true,
-		Apply:     applier,
+		Token:   "tok",
+		GuildID: testGuild,
+		DryRun:  true,
+		Apply:   applier,
 	}
 	ok, err := delivery.NewHandler(store, sync).ProcessOne(context.Background())
 	if err != nil || !ok {

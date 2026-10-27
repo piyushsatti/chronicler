@@ -30,6 +30,7 @@ type CreateQuestFields struct {
 	SlotsMax       int32
 	Tags           []string
 	Title          string
+	VoiceChannelId *string
 }
 
 type DeliveryReceipt struct {
@@ -134,6 +135,7 @@ type QuestEditFields struct {
 	SlotsMax          product.Optional[int32]
 	Tags              product.Optional[[]string]
 	Title             product.Optional[string]
+	VoiceChannelId    product.Optional[string]
 }
 
 type QuestHexFields struct {
@@ -264,6 +266,7 @@ type QuestView struct {
 	Status           string
 	Tags             []string
 	UpdatedAt        time.Time
+	VoiceChannelId   *string
 }
 
 type RewardCoverage string
