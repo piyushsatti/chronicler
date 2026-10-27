@@ -98,22 +98,27 @@ func (p *ProductPostgres) StoreCreateQuest(ctx context.Context, write CreateQues
 	if spec.SignupType != nil {
 		signup = pgtype.Text{String: *spec.SignupType, Valid: true}
 	}
+	voice, err := p.voiceChannelValue(ctx, spec.VoiceChannelId, nil)
+	if err != nil {
+		return QuestView{}, err
+	}
 	inserted, err := p.queries().ProductQuestInsert(ctx, dbgen.ProductQuestInsertParams{
-		PublicID:      refs.PublicID,
-		ShortCode:     shortCode,
-		Kinds:         kinds,
-		DmID:          refs.DMID,
-		ArcID:         refs.ArcID,
-		ScheduledAt:   pgtype.Timestamptz{Time: spec.ScheduledAt.UTC(), Valid: true},
-		DurationHours: spec.DurationHours,
-		SlotsMax:      spec.SlotsMax,
-		DocumentID:    refs.DocumentID,
-		Tags:          spec.Tags,
-		Genres:        spec.Genres,
-		Apl:           apl,
-		SignupType:    signup,
-		CreatedBy:     refs.CreatedBy,
-		At:            at,
+		VoiceChannelID: voice,
+		PublicID:       refs.PublicID,
+		ShortCode:      shortCode,
+		Kinds:          kinds,
+		DmID:           refs.DMID,
+		ArcID:          refs.ArcID,
+		ScheduledAt:    pgtype.Timestamptz{Time: spec.ScheduledAt.UTC(), Valid: true},
+		DurationHours:  spec.DurationHours,
+		SlotsMax:       spec.SlotsMax,
+		DocumentID:     refs.DocumentID,
+		Tags:           spec.Tags,
+		Genres:         spec.Genres,
+		Apl:            apl,
+		SignupType:     signup,
+		CreatedBy:      refs.CreatedBy,
+		At:             at,
 	})
 	if err != nil {
 		return QuestView{}, err
@@ -172,6 +177,33 @@ func (p *ProductPostgres) resolveCreateQuestReferences(ctx context.Context, writ
 	}
 	refs.ArcID, err = p.internalQuestArcID(ctx, write.ValidatedInput.Input.ArcId)
 	return refs, err
+}
+
+// voiceChannelValue checks a DM's voice channel pick against the admin list
+// (site_settings discord_voice_channels). Clearing is always allowed, and so is
+// keeping the value the quest already has, even if an admin has since removed
+// it from the list.
+func (p *ProductPostgres) voiceChannelValue(ctx context.Context, picked, current *string) (pgtype.Text, error) {
+	if picked == nil || strings.TrimSpace(*picked) == "" {
+		return pgtype.Text{}, nil
+	}
+	id := strings.TrimSpace(*picked)
+	if current != nil && *current == id {
+		return pgtype.Text{String: id, Valid: true}, nil
+	}
+	if !delivery.ValidSnowflake(id) {
+		return pgtype.Text{}, apierr.New(apierr.Invalid, "voice channel must come from the Discord voice channel list")
+	}
+	payload, err := p.queries().DeliverySettingPayload(ctx, delivery.SettingVoiceChannels)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return pgtype.Text{}, err
+	}
+	for _, channel := range delivery.ParseVoiceChannels(payload) {
+		if channel.ChannelID == id {
+			return pgtype.Text{String: id, Valid: true}, nil
+		}
+	}
+	return pgtype.Text{}, apierr.New(apierr.Invalid, "voice channel is not in the Discord voice channel list; ask an admin to add it")
 }
 
 func (p *ProductPostgres) internalQuestArcID(ctx context.Context, publicID *string) (pgtype.Int8, error) {
@@ -263,8 +295,19 @@ func (p *ProductPostgres) StoreUpdateQuest(ctx context.Context, write UpdateQues
 	if err != nil {
 		return QuestView{}, err
 	}
+	voice := pgtype.Text{}
+	if before := write.Locked.Before.VoiceChannelId; before != nil {
+		voice = pgtype.Text{String: *before, Valid: true}
+	}
+	if input.VoiceChannelId.Set {
+		voice, err = p.voiceChannelValue(ctx, input.VoiceChannelId.Value, write.Locked.Before.VoiceChannelId)
+		if err != nil {
+			return QuestView{}, err
+		}
+	}
 	at := pgtype.Timestamptz{Time: write.At.UTC(), Valid: true}
 	updated, err := p.queries().ProductQuestUpdateMetadata(ctx, dbgen.ProductQuestUpdateMetadataParams{
+		VoiceChannelID:    voice,
 		Kinds:             values.kinds,
 		DmID:              dmID,
 		ArcID:             arcID,
@@ -711,15 +754,7 @@ func (p *ProductPostgres) storeQuestSignup(ctx context.Context, write SignupForQ
 			return QuestParticipantView{}, err
 		}
 	}
-	bumped, err := p.queries().ProductQuestBumpDiscordDesired(ctx, dbgen.ProductQuestBumpDiscordDesiredParams{
-		At: at, QuestID: questID,
-	})
-	if err != nil {
-		return QuestParticipantView{}, err
-	}
-	if err := p.enqueueQuestDiscord(ctx, bumped.ID, write.ValidatedInput.QuestId, bumped.DiscordDesiredRevision); err != nil {
-		return QuestParticipantView{}, err
-	}
+	// Signups never touch Discord: no desired-revision bump, no delivery job.
 	return QuestParticipantView{
 		QuestId:     write.ValidatedInput.QuestId,
 		MemberId:    db.UUIDString(character.OwnerPublicID),
@@ -808,13 +843,7 @@ func (p *ProductPostgres) StoreWithdrawFromQuest(ctx context.Context, write With
 			return QuestParticipantView{}, err
 		}
 	}
-	bumped, err := p.queries().ProductQuestBumpDiscordDesired(ctx, dbgen.ProductQuestBumpDiscordDesiredParams{At: at, QuestID: questID})
-	if err != nil {
-		return QuestParticipantView{}, err
-	}
-	if err := p.enqueueQuestDiscord(ctx, bumped.ID, write.ValidatedInput.QuestId, bumped.DiscordDesiredRevision); err != nil {
-		return QuestParticipantView{}, err
-	}
+	// Withdrawals never touch Discord either.
 	result := *previous
 	result.Status = "withdrawn"
 	result.Manual = false

@@ -77,6 +77,7 @@ func toQuestView(v quest.QuestView) *QuestType {
 		Genres:           v.Genres,
 		Apl:              apl,
 		SignupType:       v.SignupType,
+		VoiceChannelID:   v.VoiceChannelId,
 		CreatedBy:        v.CreatedBy,
 		CreatedAt:        v.CreatedAt,
 		UpdatedAt:        v.UpdatedAt,
@@ -1752,6 +1753,7 @@ func toCreateQuestFields(in CreateQuestInput) quest.CreateQuestFields {
 		Apl:            apl,
 		SignupType:     in.SignupType,
 		AdditionalInfo: in.AdditionalInfo,
+		VoiceChannelId: in.VoiceChannelID,
 	}
 }
 
@@ -1772,6 +1774,7 @@ func toQuestEditFields(in QuestEditInput) quest.QuestEditFields {
 		Apl:               optionalInt32(in.Apl),
 		SignupType:        optionalString(in.SignupType),
 		AdditionalInfo:    optionalString(in.AdditionalInfo),
+		VoiceChannelId:    optionalString(in.VoiceChannelID),
 	}
 }
 
@@ -1983,4 +1986,31 @@ func toSummaryDerivedType(v document.SummaryDerivedView) *SummaryDerivedType {
 		GameDay:         gameDay,
 		GameDate:        toGameDateType(v.GameDate),
 	}
+}
+
+func toDiscordSettingsType(v site.DiscordSettingsView) *DiscordSettingsType {
+	return &DiscordSettingsType{
+		AnnounceChannelID: v.AnnounceChannelId,
+		RoleID:            v.RoleId,
+		VoiceChannels:     toDiscordVoiceChannelTypes(v.VoiceChannels),
+	}
+}
+
+func toDiscordVoiceChannelTypes(in []site.DiscordVoiceChannelView) []*DiscordVoiceChannelType {
+	out := make([]*DiscordVoiceChannelType, len(in))
+	for i, channel := range in {
+		out[i] = &DiscordVoiceChannelType{Name: channel.Name, ChannelID: channel.ChannelId}
+	}
+	return out
+}
+
+func toDiscordSettingsFields(in DiscordSettingsInput) site.DiscordSettingsFields {
+	channels := make([]site.DiscordVoiceChannelFields, 0, len(in.VoiceChannels))
+	for _, channel := range in.VoiceChannels {
+		if channel == nil {
+			continue
+		}
+		channels = append(channels, site.DiscordVoiceChannelFields{Name: channel.Name, ChannelId: channel.ChannelID})
+	}
+	return site.DiscordSettingsFields{AnnounceChannelId: in.AnnounceChannelID, RoleId: in.RoleID, VoiceChannels: channels}
 }

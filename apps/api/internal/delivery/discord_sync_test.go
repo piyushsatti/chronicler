@@ -41,13 +41,13 @@ func TestRESTSyncRequiresConfigUnlessDryRun(t *testing.T) {
 
 func TestRESTSyncDryRunSkipsDiscordWhenConfigured(t *testing.T) {
 	applier := &fakeApplier{}
-	msgs := &memoryMessages{}
+	quests := &fakeQuests{}
 	sync := delivery.RESTSync{
-		Token:     "tok",
-		ChannelID: "chan",
-		DryRun:    true,
-		Apply:     applier,
-		Messages:  msgs,
+		Token:   "tok",
+		GuildID: testGuild,
+		DryRun:  true,
+		Apply:   applier,
+		Quests:  quests,
 		HTTP: &http.Client{Transport: roundTripFunc(func(*http.Request) (*http.Response, error) {
 			t.Fatal("dry-run must not call Discord")
 			return nil, nil
@@ -59,8 +59,8 @@ func TestRESTSyncDryRunSkipsDiscordWhenConfigured(t *testing.T) {
 	if len(applier.revisions) != 1 || applier.revisions[0] != 9 {
 		t.Fatalf("revisions=%v", applier.revisions)
 	}
-	if msgs.set != 0 || msgs.id != "" {
-		t.Fatalf("dry-run must not touch message store id=%q set=%d", msgs.id, msgs.set)
+	if quests.msgs != 0 || quests.thread != 0 || quests.events != 0 {
+		t.Fatalf("dry-run must not touch the quest store: %+v", quests)
 	}
 }
 

@@ -146,6 +146,7 @@
               'slotsMax': { 'omittable': true },
               'tags': { 'omittable': true },
               'title': { 'omittable': true },
+              'voiceChannelId': { 'omittable': true },
             },
         },
       'UpdateCharacterProfileInput':

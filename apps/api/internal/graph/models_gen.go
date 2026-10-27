@@ -321,6 +321,7 @@ type CreateQuestInput struct {
 	Apl            *int      `json:"apl,omitempty"`
 	SignupType     *string   `json:"signupType,omitempty"`
 	AdditionalInfo *string   `json:"additionalInfo,omitempty"`
+	VoiceChannelID *string   `json:"voiceChannelId,omitempty"`
 }
 
 type CreationCatalogEntryType struct {
@@ -386,6 +387,28 @@ type DirectoryEntryType struct {
 	DmProfileReviewRevision *int            `json:"dmProfileReviewRevision,omitempty"`
 	TableInfo               json.RawMessage `json:"tableInfo,omitempty"`
 	AvailableDays           []string        `json:"availableDays"`
+}
+
+type DiscordSettingsInput struct {
+	AnnounceChannelID *string                     `json:"announceChannelId,omitempty"`
+	RoleID            *string                     `json:"roleId,omitempty"`
+	VoiceChannels     []*DiscordVoiceChannelInput `json:"voiceChannels"`
+}
+
+type DiscordSettingsType struct {
+	AnnounceChannelID *string                    `json:"announceChannelId,omitempty"`
+	RoleID            *string                    `json:"roleId,omitempty"`
+	VoiceChannels     []*DiscordVoiceChannelType `json:"voiceChannels"`
+}
+
+type DiscordVoiceChannelInput struct {
+	Name      string `json:"name"`
+	ChannelID string `json:"channelId"`
+}
+
+type DiscordVoiceChannelType struct {
+	Name      string `json:"name"`
+	ChannelID string `json:"channelId"`
 }
 
 type DmLastSessionType struct {
@@ -952,6 +975,7 @@ type QuestEditInput struct {
 	Apl               graphql.Omittable[*int]       `json:"apl,omitempty"`
 	SignupType        graphql.Omittable[*string]    `json:"signupType,omitempty"`
 	AdditionalInfo    graphql.Omittable[*string]    `json:"additionalInfo,omitempty"`
+	VoiceChannelID    graphql.Omittable[*string]    `json:"voiceChannelId,omitempty"`
 }
 
 type QuestFiltersInput struct {
@@ -1059,6 +1083,7 @@ type QuestType struct {
 	Genres           []string                   `json:"genres"`
 	Apl              *int                       `json:"apl,omitempty"`
 	SignupType       *string                    `json:"signupType,omitempty"`
+	VoiceChannelID   *string                    `json:"voiceChannelId,omitempty"`
 	CreatedBy        string                     `json:"createdBy"`
 	CreatedAt        time.Time                  `json:"createdAt"`
 	UpdatedAt        time.Time                  `json:"updatedAt"`

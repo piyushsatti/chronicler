@@ -13,6 +13,7 @@ input CreateQuestInput {
   apl: Int = null
   signupType: String = null
   additionalInfo: String = null
+  voiceChannelId: String = null
 }
 
 type OpenQuestSeatType {
@@ -30,6 +31,17 @@ type OpenQuestSeatType {
 type OpenQuestSeatsResult {
   entries: [OpenQuestSeatType!]!
   total: Int!
+}
+
+type DiscordVoiceChannelType {
+  name: String!
+  channelId: String!
+}
+
+type DiscordSettingsType {
+  announceChannelId: String
+  roleId: String
+  voiceChannels: [DiscordVoiceChannelType!]!
 }
 
 type QuestAnnouncementRoleSettingType {
@@ -153,6 +165,7 @@ type QuestType {
   genres: [String!]!
   apl: Int
   signupType: String
+  voiceChannelId: String
   createdBy: ID!
   createdAt: DateTime!
   updatedAt: DateTime!

@@ -111,6 +111,7 @@ input QuestEditInput {
   apl: Int
   signupType: String
   additionalInfo: String
+  voiceChannelId: String
 }
 input QuestSummaryInput {
   documentId: ID
@@ -135,6 +136,15 @@ input HomeBannerInput {
   mediaKind: String
   mediaUrl: String
   mediaLabel: String
+}
+input DiscordVoiceChannelInput {
+  name: String!
+  channelId: String!
+}
+input DiscordSettingsInput {
+  announceChannelId: String
+  roleId: String
+  voiceChannels: [DiscordVoiceChannelInput!]!
 }
 input AnnouncementRoleInput {
   enabled: Boolean!

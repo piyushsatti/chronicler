@@ -152,7 +152,7 @@ func TestFrontendQuestWaitlistedWithdrawalDoesNotReleaseCapacity(t *testing.T) {
 	if err := f.fixture.Pool.QueryRow(ctx, `SELECT filled_count,status,discord_desired_revision,(SELECT count(*) FROM notifications),(SELECT count(*) FROM idempotency_keys) FROM quests WHERE public_id=$1`, f.questID).Scan(&filled, &status, &revision, &notices, &receipts); err != nil {
 		t.Fatal(err)
 	}
-	if filled != 1 || status != "full" || revision != 1 || notices != 0 || receipts != 2 {
+	if filled != 1 || status != "full" || revision != 0 || notices != 0 || receipts != 2 {
 		t.Fatalf("filled=%d status=%s revision=%d notices=%d receipts=%d", filled, status, revision, notices, receipts)
 	}
 }

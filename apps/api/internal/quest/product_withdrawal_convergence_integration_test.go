@@ -56,7 +56,7 @@ func TestFrontendQuestWithdrawalKeepsExplicitScopeAndNoop(t *testing.T) {
 		FROM quests q,quests other JOIN quest_participants p ON p.quest_id=other.id WHERE q.public_id=$1 AND other.public_id=$2`, f.questID, otherQuest).Scan(&ownFilled, &revision, &otherFilled, &otherStatus, &jobs, &notices, &receipts); err != nil {
 		t.Fatal(err)
 	}
-	if ownFilled != 0 || revision != 1 || otherFilled != 1 || otherStatus != "signed_up" || jobs != 1 || notices != 0 || receipts != 2 {
+	if ownFilled != 0 || revision != 0 || otherFilled != 1 || otherStatus != "signed_up" || jobs != 0 || notices != 0 || receipts != 2 {
 		t.Fatalf("own=%d revision=%d other=%d/%s jobs=%d notices=%d receipts=%d", ownFilled, revision, otherFilled, otherStatus, jobs, notices, receipts)
 	}
 }
@@ -155,7 +155,7 @@ func TestFrontendQuestWithdrawalAndRetirementShareOrderedInterpreter(t *testing.
 		(SELECT count(*) FROM notifications),(SELECT count(*) FROM idempotency_keys) FROM quests q WHERE q.public_id=$1`, f.questID, retiring, waiting).Scan(&filled, &revision, &signed, &withdrawn, &retired, &promoted, &notices, &receipts); err != nil {
 		t.Fatal(err)
 	}
-	if filled != 1 || revision != 2 || signed != 1 || withdrawn != 2 || retired != "retired" || promoted != "signed_up" || notices != 1 || receipts != 2 {
+	if filled != 1 || revision != 0 || signed != 1 || withdrawn != 2 || retired != "retired" || promoted != "signed_up" || notices != 1 || receipts != 2 {
 		t.Fatalf("filled=%d revision=%d signed=%d withdrawn=%d retired=%s promoted=%s notices=%d receipts=%d", filled, revision, signed, withdrawn, retired, promoted, notices, receipts)
 	}
 }

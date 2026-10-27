@@ -179,3 +179,36 @@ WHERE c.public_id = sqlc.arg(public_id)
 
 -- name: DocumentInternalID :one
 SELECT id FROM documents WHERE public_id = sqlc.arg(public_id);
+
+-- name: QuestDiscordAnnounceSnapshot :one
+-- Everything the announcement post needs. The brief is returned raw; the worker
+-- projects it for an ordinary member before use.
+SELECT q.id, q.public_id, q.short_code, q.status, q.scheduled_at, q.duration_hours,
+       q.discord_applied_revision,
+       q.discord_message_id, q.discord_event_id, q.discord_thread_id,
+       q.discord_voice_channel_id,
+       dm.discord_id AS dm_discord_id,
+       d.public_id AS document_public_id, d.kind AS document_kind, d.slug AS document_slug,
+       d.title AS document_title, d.status AS document_status,
+       d.visibility AS document_visibility, d.body AS document_body,
+       d.policy AS document_policy, author.public_id AS document_author_public_id
+FROM quests q
+JOIN members dm ON dm.id = q.dm_id
+JOIN documents d ON d.id = q.document_id
+JOIN members author ON author.id = d.author_id
+WHERE q.public_id = sqlc.arg(public_id);
+
+-- name: SetQuestDiscordEvent :exec
+-- Delivery bookkeeping must not move updated_at: the editor uses it as its
+-- optimistic-lock token.
+UPDATE quests
+SET discord_event_id = sqlc.arg(discord_event_id), event_url = sqlc.arg(event_url)
+WHERE public_id = sqlc.arg(public_id);
+
+-- name: SetQuestDiscordThread :exec
+UPDATE quests
+SET discord_thread_id = sqlc.arg(discord_thread_id)
+WHERE public_id = sqlc.arg(public_id);
+
+-- name: DeliverySettingPayload :one
+SELECT payload FROM site_settings WHERE key = sqlc.arg(setting_key)::text;

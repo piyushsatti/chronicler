@@ -28,6 +28,7 @@ type SiteReadRepository interface {
 	ReadHomeCommunity(ctx context.Context, actor auth.Authority, spec HomeSpec) (CommunityStatsSnapshot, error)
 	ReadHomeBanner(ctx context.Context, actor auth.Authority, spec HomeBannerSpec) (HomeBannerView, error)
 	ReadQuestAnnouncementRoleSetting(ctx context.Context, actor auth.Authority, spec QuestAnnouncementRoleSettingSpec) (QuestAnnouncementRoleSettingView, error)
+	ReadDiscordSettings(ctx context.Context, actor auth.Authority, spec DiscordSettingsSpec) (DiscordSettingsView, error)
 	ReadMemberSearch(ctx context.Context, actor auth.Authority, spec SearchSpec) (MemberDiscoveryPage, error)
 	ReadSearchableKinds(ctx context.Context, actor auth.Authority, spec SearchableKindsSpec) ([]SearchKindView, error)
 	ReadSiteStats(ctx context.Context, actor auth.Authority, spec SiteStatsSpec) (CommunityStatsSnapshot, error)
@@ -38,6 +39,8 @@ type SiteWriteRepository interface {
 	StoreUpdateHomeBanner(ctx context.Context, write UpdateHomeBannerWrite) (HomeBannerView, error)
 	LockUpdateQuestAnnouncementRoleSetting(ctx context.Context, spec UpdateQuestAnnouncementRoleSettingSpec) (UpdateQuestAnnouncementRoleSettingState, error)
 	StoreUpdateQuestAnnouncementRoleSetting(ctx context.Context, write UpdateQuestAnnouncementRoleSettingWrite) (QuestAnnouncementRoleSettingView, error)
+	LockUpdateDiscordSettings(ctx context.Context, spec UpdateDiscordSettingsSpec) (UpdateDiscordSettingsState, error)
+	StoreUpdateDiscordSettings(ctx context.Context, write UpdateDiscordSettingsWrite) (DiscordSettingsView, error)
 }
 
 type ProductReadRepos struct {

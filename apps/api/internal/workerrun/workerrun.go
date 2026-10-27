@@ -44,8 +44,13 @@ func configureWorker(ctx context.Context, cfg config.Config) (*workerRuntime, er
 		runtime.store = jobs.NewPostgresStore(pool.Pool)
 		applier := delivery.NewPostgresRevisionApplier(pool.Pool)
 		syncClient = delivery.RESTSync{
-			Token: os.Getenv("DISCORD_BOT_TOKEN"), ChannelID: os.Getenv("DISCORD_ANNOUNCE_CHANNEL_ID"),
-			HTTP: &http.Client{Timeout: 30 * time.Second}, Apply: applier, Messages: applier,
+			// Token and guild are deploy secrets. The announce channel comes from
+			// the admin panel; the env var is only the fallback while it is empty.
+			Token: os.Getenv("DISCORD_BOT_TOKEN"), GuildID: os.Getenv("GUILD_ID"),
+			FallbackChannelID: os.Getenv("DISCORD_ANNOUNCE_CHANNEL_ID"),
+			FallbackOrigin:    firstOrigin(cfg.CORSOrigins),
+			Settings:          applier, Quests: applier,
+			HTTP: &http.Client{Timeout: 30 * time.Second}, Apply: applier,
 			DryRun: envTruthy("DISCORD_DELIVERY_DRY_RUN"),
 		}
 		enqueuer := jobs.NewEnqueuer(runtime.store)
@@ -149,6 +154,17 @@ func processWorkerLane(ctx context.Context, lane workerLane, name string) {
 	if !ok {
 		return
 	}
+}
+
+// firstOrigin is the site origin used in announcement links until an admin
+// sets public_origin: the first CORS origin, which deploys set to the web origin.
+func firstOrigin(origins []string) string {
+	for _, origin := range origins {
+		if origin != "" {
+			return origin
+		}
+	}
+	return ""
 }
 
 func envTruthy(key string) bool {
