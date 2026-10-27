@@ -168,6 +168,7 @@ export function useEditorPublish({
             apl: typeof v.apl === 'number' ? v.apl : null,
             signupType: v.signupType,
             additionalInfo: v.additionalInfo ?? null,
+            voiceChannelId: v.voiceChannelId || null,
           };
           let result: EditorPublishResult;
           if (mode === 'edit') {

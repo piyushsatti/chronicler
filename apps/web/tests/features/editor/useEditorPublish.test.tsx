@@ -421,3 +421,65 @@ it.each(['open', 'application', 'invite', 'last_played'])(
     expect(adapters.createQuest).not.toHaveBeenCalled();
   },
 );
+
+const VOICE = '444444444444444444';
+const voiceQuestMeta = {
+  title: 'Quest',
+  durationHours: '3',
+  slotsMax: '4',
+  scheduledAt: '2026-10-15T18:00:00Z',
+  kinds: ['standard'],
+  regions: ['region'],
+  genres: [],
+  tags: [],
+  signupType: 'dm_pick',
+};
+
+describe('quest voice channel', () => {
+  it('creates a Quest with the voice channel the DM picked', async () => {
+    const hook = setup({ mode: 'new', meta: { ...voiceQuestMeta, voiceChannelId: VOICE } });
+    await save(hook);
+    expect(adapters.createQuest).toHaveBeenCalledWith(
+      expect.objectContaining({ voiceChannelId: VOICE }),
+      expect.any(String),
+    );
+  });
+
+  it('sends no voice channel when none is picked', async () => {
+    const hook = setup({ mode: 'new', meta: { ...voiceQuestMeta, voiceChannelId: '' } });
+    await save(hook);
+    expect(adapters.createQuest).toHaveBeenCalledWith(
+      expect.objectContaining({ voiceChannelId: null }),
+      expect.any(String),
+    );
+  });
+
+  it('sends the voice channel when a Quest is saved, and null when it is cleared', async () => {
+    const edit = setup({ meta: { ...voiceQuestMeta, voiceChannelId: VOICE } });
+    await save(edit);
+    expect(adapters.updateQuest).toHaveBeenLastCalledWith(
+      'quest-id',
+      expect.objectContaining({ voiceChannelId: VOICE }),
+      expect.any(String),
+      expect.any(String),
+    );
+    const cleared = setup({ meta: { ...voiceQuestMeta, voiceChannelId: '' } });
+    await save(cleared);
+    expect(adapters.updateQuest).toHaveBeenLastCalledWith(
+      'quest-id',
+      expect.objectContaining({ voiceChannelId: null }),
+      expect.any(String),
+      expect.any(String),
+    );
+  });
+
+  it('rejects an id that is not a Discord id before sending a command', async () => {
+    const hook = setup({ mode: 'new', meta: { ...voiceQuestMeta, voiceChannelId: 'general' } });
+    await act(async () => {
+      await expect(hook.result.current.mutateAsync()).rejects.toMatchObject({
+        kind: 'safe',
+      });
+    });
+    expect(adapters.createQuest).not.toHaveBeenCalled();
+  });
+});

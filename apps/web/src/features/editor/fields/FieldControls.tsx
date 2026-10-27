@@ -273,6 +273,51 @@ export function SeriesField({
   );
 }
 
+/** Optional Discord voice channel for a quest, picked from the admin's list. */
+export function VoiceChannelField({
+  value,
+  onChange,
+  options,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  options: EditorOptions<{ name: string; channelId: string }>;
+}): React.JSX.Element {
+  if (options.status === 'error' || options.status === 'loading')
+    return (
+      <div>
+        <OptionState options={options} label="Voice channels" />
+      </div>
+    );
+  const items = options.status === 'ready' ? options.items : [];
+  const unlisted = value !== '' && !items.some((item) => item.channelId === value);
+  const choices: [string, string][] = [
+    ['', 'No voice channel'],
+    ...items.map((item): [string, string] => [item.channelId, item.name]),
+    ...(unlisted
+      ? [[value, 'Saved channel (no longer in the list)'] as [string, string]]
+      : []),
+  ];
+  return (
+    <div className="stack" data-gap="1">
+      <Picker
+        value={value}
+        options={choices}
+        placeholder="No voice channel"
+        renderValue={(v) => choices.find(([id]) => id === v)?.[1] ?? 'No voice channel'}
+        renderOption={(o) => (Array.isArray(o) ? o[1] : o)}
+        onChange={onChange}
+      />
+      {options.status === 'empty' ? (
+        <p className="type-caption">
+          No voice channels are listed yet. An admin adds them under Admin, Delivery,
+          Discord settings.
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 export function SlotsField({
   value,
   onChange,

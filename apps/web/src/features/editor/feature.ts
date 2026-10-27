@@ -27,6 +27,7 @@ export const queryKeys = {
   regions: ['editor', 'regions'] as const,
   genres: ['editor', 'questGenreOptions'] as const,
   seriesOptions: ['editor', 'seriesOptions'] as const,
+  voiceChannels: ['editor', 'voiceChannels'] as const,
   entityLinkIndex: ['editor', 'entityLinkIndex'] as const,
 } as const;
 
@@ -41,6 +42,7 @@ const editorQuestWire = {
   tags: [],
   apl: 3,
   signupType: 'dm_pick',
+  voiceChannelId: null,
   regions: [],
   updatedAt: '2026-10-15T17:00:00Z',
   briefDocument: {
@@ -140,6 +142,8 @@ export const graphql: FeatureGraphql = {
     }),
   EditorSeriesOptions: () =>
     HttpResponse.json({ data: { questArcs: { items: [], total: 0 } } }),
+  EditorVoiceChannels: () =>
+    HttpResponse.json({ data: { questVoiceChannels: [] } }),
   EditorMapOptions: () => HttpResponse.json({ data: { maps: [] } }),
   QuestGenreOptions: () =>
     HttpResponse.json({

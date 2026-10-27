@@ -9,6 +9,7 @@ import { loadEditorRegions } from '../adapters/editorRegionsAdapter.js';
 import { loadQuestGenreOptions } from '../adapters/questGenreOptionsAdapter.js';
 import { queryKeys } from '../feature.js';
 import { loadEditorSeriesOptions } from '../adapters/editorSeriesOptionsAdapter.js';
+import { loadEditorVoiceChannels } from '../adapters/editorVoiceChannelsAdapter.js';
 import type { EditorFieldOptions, EditorOptions, FieldSchema } from '../types.js';
 
 function optionsView<T>(
@@ -61,6 +62,11 @@ export function useEditorOptions(
     queryFn: () => loadEditorSeriesOptions(viewerMemberId ?? '', viewerIsAdmin),
     enabled: enabled && Boolean(viewerMemberId) && schema.some((field) => field.type === 'series'),
   });
+  const voiceChannels = useQuery({
+    queryKey: queryKeys.voiceChannels,
+    queryFn: loadEditorVoiceChannels,
+    enabled: enabled && schema.some((field) => field.type === 'voicechannel'),
+  });
   const wantsPlaces = enabled && schema.some((field) => field.type === 'pointcrawl');
   const [atlasCode, setAtlasCode] = useState('');
   const maps = useQuery({
@@ -77,6 +83,7 @@ export function useEditorOptions(
     regions: optionsView(regions, 'editor:regions'),
     genres: optionsView(genres, 'editor:genre-options'),
     series: optionsView(series, 'editor:series-options'),
+    voiceChannels: optionsView(voiceChannels, 'editor:voice-channels'),
     places: {
       maps: maps.data,
       atlasCode,

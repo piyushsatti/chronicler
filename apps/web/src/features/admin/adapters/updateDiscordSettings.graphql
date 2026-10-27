@@ -1,0 +1,10 @@
+mutation UpdateDiscordSettings($input: DiscordSettingsInput!, $meta: CommandMeta!) {
+  updateDiscordSettings(input: $input, meta: $meta) {
+    announceChannelId
+    roleId
+    voiceChannels {
+      name
+      channelId
+    }
+  }
+}

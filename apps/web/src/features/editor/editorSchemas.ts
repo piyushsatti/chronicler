@@ -84,6 +84,16 @@ const QUEST_SCHEMA: FieldSchema[] = [
         : 'Choose a valid session time and resolve any timezone choice',
   },
   {
+    key: 'voiceChannelId',
+    label: 'Voice channel',
+    type: 'voicechannel',
+    hint: 'Optional. Picking one also creates a Discord event for the session.',
+    validate: (v) =>
+      v == null || v === '' || (typeof v === 'string' && /^[0-9]{17,20}$/.test(v))
+        ? null
+        : 'Choose a voice channel from the list',
+  },
+  {
     key: 'signupType',
     label: 'Signup type',
     type: 'select',

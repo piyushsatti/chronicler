@@ -148,6 +148,22 @@ export const graphql: FeatureGraphql = {
         ],
       },
     }),
+  AdminDiscordSettings: () =>
+    HttpResponse.json({
+      data: {
+        discordSettings: { announceChannelId: null, roleId: null, voiceChannels: [] },
+      },
+    }),
+  UpdateDiscordSettings: (body) =>
+    HttpResponse.json({
+      data: {
+        updateDiscordSettings: (body.variables?.['input'] as object | undefined) ?? {
+          announceChannelId: null,
+          roleId: null,
+          voiceChannels: [],
+        },
+      },
+    }),
   UpdateHomeBanner: () =>
     HttpResponse.json({ data: { updateHomeBanner: goodHomeBanner } }),
   DecideVerification: ({ variables }) =>

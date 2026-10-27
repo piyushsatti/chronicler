@@ -15,6 +15,8 @@ export type EditorFieldOptions = {
   genres: EditorOptions<string>;
   /** The viewer's own series, for a new quest. */
   series: EditorOptions<{ id: string; name: string }>;
+  /** The Discord voice channels an admin listed, for a quest's voice channel. */
+  voiceChannels: EditorOptions<{ name: string; channelId: string }>;
   /** Map places a new quest may head to: the chosen map and its searchable places. */
   places: {
     maps: { atlasCode: string; name: string }[] | undefined;
@@ -43,6 +45,7 @@ export type FieldType =
   | 'genretags'
   | 'region'
   | 'series'
+  | 'voicechannel'
   | 'pointcrawl'
   | 'regionmulti'
   | 'slots'

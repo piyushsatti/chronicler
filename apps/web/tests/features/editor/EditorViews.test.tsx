@@ -24,6 +24,7 @@ const emptyOptions = {
   regions: { status: 'empty' as const },
   genres: { status: 'empty' as const },
   series: { status: 'empty' as const },
+  voiceChannels: { status: 'empty' as const },
   places: {
     maps: [],
     atlasCode: '',

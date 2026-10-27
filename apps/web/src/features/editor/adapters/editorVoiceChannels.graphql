@@ -1,0 +1,6 @@
+query EditorVoiceChannels {
+  questVoiceChannels {
+    name
+    channelId
+  }
+}
