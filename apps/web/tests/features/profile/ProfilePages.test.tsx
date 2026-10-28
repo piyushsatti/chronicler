@@ -30,9 +30,10 @@ describe('DMProfilePage', () => {
     expect(screen.getByText('Horror & heists')).toBeInTheDocument();
     expect(screen.getByText('Accepting players')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Back to DMs' })).toHaveAttribute('href', '/dms');
+    expect(screen.queryByRole('complementary', { name: 'Availability' })).not.toBeInTheDocument();
   });
 
-  it('offers visitors a quest link when public availability is empty', async () => {
+  it('shows no availability rail when public availability is empty', async () => {
     server.use(
       graphql.query('MemberProfile', () =>
         HttpResponse.json({ data: { memberProfile: { ...profile, availability: [] } } }),
@@ -45,10 +46,10 @@ describe('DMProfilePage', () => {
       { route: '/dms/@mira' },
     );
 
-    const availability = await screen.findByRole('complementary', { name: 'Availability' });
-    expect(within(availability).getByText(/hasn't set their availability\./)).toBeVisible();
-    expect(within(availability).getByRole('link', { name: 'Find a quest' })).toHaveAttribute('href', '/quests');
-    expect(within(availability).queryByRole('button', { name: 'Set availability' })).not.toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Mira' })).toBeInTheDocument();
+    expect(screen.queryByRole('complementary', { name: 'Availability' })).not.toBeInTheDocument();
+    expect(screen.queryByText(/hasn't set their availability\./)).not.toBeInTheDocument();
+    expect(screen.getByText('Not shared')).toBeVisible();
   });
 
   it('lists the DM’s series and separates played future quests from upcoming quests', async () => {

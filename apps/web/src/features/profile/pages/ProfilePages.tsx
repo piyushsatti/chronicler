@@ -318,30 +318,6 @@ function ProfileView({
   const hasActivity =
     activity.messages + activity.reactions + activity.voiceMinutes > 0;
   const name = personLabels([profile.member])[0];
-  const rail = (
-    <Card className="stack" pad={4}>
-      <h2 className="type-heading">Availability</h2>
-      {profile.availability.length ? <p className="type-caption">Weekly times as supplied by this member; their time zone is not shared.</p> : null}
-      {profile.availability.length ? (
-        <ul className={styles.slots}>
-          {profile.availability.map((slot, index) => (
-            <li key={index}>
-              <Chip size="md" tone="neutral">
-                {weekdayLabel(slot.day, { plural: true })}{' '}
-                {clockLabel(slot.startTime)}–{clockLabel(slot.endTime)}
-              </Chip>
-              {slot.note ? <span className="type-caption">{slot.note}</span> : null}
-            </li>
-          ))}
-        </ul>
-      ) : owner && editing ? null : (
-        <EmptyState
-          message={owner ? 'Add your availability from Edit profile.' : `${name} hasn't set their availability.`}
-          action={owner ? <Button variant="secondary" size="sm" onClick={() => setEdit('profile')}>Set availability</Button> : <Link className="type-link" to="/quests">Find a quest</Link>}
-        />
-      )}
-    </Card>
-  );
   const editor = owner && editing ? (
     <Card className={styles.owner} pad={4}>
       <ProfileOwnerActions
@@ -388,7 +364,6 @@ function ProfileView({
         owner={owner}
         sessionsRun={sessionsRun}
         availability={availabilityStat}
-        rail={rail}
         editor={editor}
         toolbarActions={<PageToolbar.IconAction label={`Back to ${role === 'dm' ? 'DMs' : 'Players'}`} href={role === 'dm' ? '/dms' : '/players'}>←</PageToolbar.IconAction>}
         about={about}

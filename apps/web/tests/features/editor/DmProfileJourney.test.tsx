@@ -68,7 +68,6 @@ describe('DM profile editing journey', () => {
   });
 
   it.each([
-    { message: 'Add your availability from Edit profile.', action: 'Set availability' },
     { message: 'You have not written a bio yet.', action: 'Edit profile' },
   ])('opens profile controls from the existing owner $action empty-state action', async ({ message, action }) => {
     server.use(
@@ -90,6 +89,7 @@ describe('DM profile editing journey', () => {
     const user = userEvent.setup();
     renderJourney('/dms/@mira');
     const emptyState = (await screen.findByText(message)).closest('[data-component="EmptyState"]');
+    expect(screen.queryByRole('complementary', { name: 'Availability' })).not.toBeInTheDocument();
     if (!(emptyState instanceof HTMLElement)) throw new Error('Missing owner empty state');
     await user.click(within(emptyState).getByRole('button', { name: action }));
     expect(await screen.findByRole('heading', { name: 'Your profile' })).toBeVisible();
