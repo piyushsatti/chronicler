@@ -26,6 +26,7 @@ export const queryKeys = {
   ) => ['editor', 'record', input] as const,
   regions: ['editor', 'regions'] as const,
   genres: ['editor', 'questGenreOptions'] as const,
+  guideGroups: ['editor', 'guideGroups'] as const,
   seriesOptions: ['editor', 'seriesOptions'] as const,
   voiceChannels: ['editor', 'voiceChannels'] as const,
   entityLinkIndex: ['editor', 'entityLinkIndex'] as const,

@@ -17,6 +17,8 @@ export type EditorFieldOptions = {
   series: EditorOptions<{ id: string; name: string }>;
   /** The Discord voice channels an admin listed, for a quest's voice channel. */
   voiceChannels: EditorOptions<{ name: string; channelId: string }>;
+  /** Groups the existing guides use, offered as suggestions on a guide's Group field. */
+  guideGroups: string[];
   /** Map places a new quest may head to: the chosen map and its searchable places. */
   places: {
     maps: { atlasCode: string; name: string }[] | undefined;
@@ -64,6 +66,8 @@ export type FieldSchema = {
   required?: boolean;
   placeholder?: string;
   hint?: string;
+  /** Text field: names a list in the field options to offer as suggestions; free text stays allowed. */
+  suggestions?: 'guideGroups';
   readOnly?: boolean;
   options?: string[] | [string, string][];
   /** Multiselect: the option preselected for a new record. Picking another option

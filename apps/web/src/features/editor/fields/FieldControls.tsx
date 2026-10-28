@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import { DateTimePicker } from '../../../components/interactive/DateTimePicker.js';
 import { Menu } from '../../../components/primitives/Menu.js';
 import { Skeleton } from '../../../components/primitives/Skeleton.js';
@@ -96,30 +96,44 @@ export function TextField({
   onChange,
   onCommit,
   bad,
+  suggestions,
 }: {
   field: FieldSchema & { mono?: boolean };
   value: string;
   onChange: (v: string) => void;
   onCommit?: () => void;
   bad?: boolean;
+  /** Offered by the browser as the user types; any other text is still accepted. */
+  suggestions?: string[];
 }): React.JSX.Element {
+  const listId = useId();
   return (
-    <input
-      aria-label={field.label}
-      aria-required={field.required || undefined}
-      aria-invalid={bad || undefined}
-      className={`pf-input field${field.mono || field.type === 'code' ? ' pf-mono' : ''}${bad ? ' pf-bad' : ''}`}
-      value={value ?? ''}
-      readOnly={field.readOnly}
-      placeholder={field.placeholder ?? ''}
-      style={
-        field.mono || field.type === 'code'
-          ? { fontFamily: 'var(--font-mono)' }
-          : undefined
-      }
-      onChange={(e) => onChange(e.target.value)}
-      onBlur={() => onCommit?.()}
-    />
+    <>
+      <input
+        list={suggestions?.length ? listId : undefined}
+        aria-label={field.label}
+        aria-required={field.required || undefined}
+        aria-invalid={bad || undefined}
+        className={`pf-input field${field.mono || field.type === 'code' ? ' pf-mono' : ''}${bad ? ' pf-bad' : ''}`}
+        value={value ?? ''}
+        readOnly={field.readOnly}
+        placeholder={field.placeholder ?? ''}
+        style={
+          field.mono || field.type === 'code'
+            ? { fontFamily: 'var(--font-mono)' }
+            : undefined
+        }
+        onChange={(e) => onChange(e.target.value)}
+        onBlur={() => onCommit?.()}
+      />
+      {suggestions?.length ? (
+        <datalist id={listId}>
+          {suggestions.map((name) => (
+            <option key={name} value={name} />
+          ))}
+        </datalist>
+      ) : null}
+    </>
   );
 }
 

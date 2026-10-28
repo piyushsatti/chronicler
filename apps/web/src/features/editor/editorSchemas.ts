@@ -190,7 +190,8 @@ const GUIDE_SCHEMA: FieldSchema[] = [
     key: 'category',
     label: 'Group',
     type: 'text',
-    placeholder: 'For example Combat or Exploration',
+    placeholder: 'Pick a group or type a new one',
+    suggestions: 'guideGroups',
     hint: 'Guides with the same group are listed together on the Rules page. Leave it blank for General.',
     validate: (v) =>
       typeof v === 'string' && v.trim().length > 60

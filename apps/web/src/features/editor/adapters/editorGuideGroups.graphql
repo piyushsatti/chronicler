@@ -1,0 +1,12 @@
+query EditorGuideGroups($limit: Int!, $offset: Int!) {
+  documents(
+    filters: { kind: "rule", status: "published" }
+    limit: $limit
+    offset: $offset
+  ) {
+    items {
+      category
+    }
+    total
+  }
+}

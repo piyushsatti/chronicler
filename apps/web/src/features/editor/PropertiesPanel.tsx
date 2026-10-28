@@ -209,6 +209,7 @@ export function PropertiesPanel({
         return (
           <TextField
             field={field}
+            suggestions={field.suggestions ? options[field.suggestions] : undefined}
             value={String(val ?? '')}
             onChange={setRaw}
             onCommit={() => commit(field)}

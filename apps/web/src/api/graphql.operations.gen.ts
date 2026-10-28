@@ -996,6 +996,14 @@ export type EditorDocumentBySlugQueryVariables = Exact<{
 
 export type EditorDocumentBySlugQuery = { document: { id: string, slug: string, kind: string, category: string | null, title: string, status: string, version: number, canEditMetadata: boolean, canEditBody: boolean, visibility: string, policy: Array<string> | null, readerIds: Array<string> | null, authorId: string, frontmatter: unknown, effectiveBody: string | null, summaryDerived: { authoring: { questIds: Array<string>, characterId: string | null, complete: boolean } | null, quests: Array<{ id: string, shortCode: string, title: string | null }> } | null } | null };
 
+export type EditorGuideGroupsQueryVariables = Exact<{
+  limit: number;
+  offset: number;
+}>;
+
+
+export type EditorGuideGroupsQuery = { documents: { total: number, items: Array<{ category: string | null }> } };
+
 export type EditorMapOptionsQueryVariables = Exact<{
   offset?: number;
 }>;

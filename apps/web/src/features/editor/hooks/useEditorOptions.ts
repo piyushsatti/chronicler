@@ -8,6 +8,7 @@ import { toAppError } from '../../../errors/toAppError.js';
 import { loadEditorRegions } from '../adapters/editorRegionsAdapter.js';
 import { loadQuestGenreOptions } from '../adapters/questGenreOptionsAdapter.js';
 import { queryKeys } from '../feature.js';
+import { loadEditorGuideGroups } from '../adapters/editorGuideGroupsAdapter.js';
 import { loadEditorSeriesOptions } from '../adapters/editorSeriesOptionsAdapter.js';
 import { loadEditorVoiceChannels } from '../adapters/editorVoiceChannelsAdapter.js';
 import type { EditorFieldOptions, EditorOptions, FieldSchema } from '../types.js';
@@ -67,6 +68,13 @@ export function useEditorOptions(
     queryFn: loadEditorVoiceChannels,
     enabled: enabled && schema.some((field) => field.type === 'voicechannel'),
   });
+  // The groups the Rules page already lists; a failed lookup just leaves no suggestions.
+  const guideGroups = useQuery({
+    queryKey: queryKeys.guideGroups,
+    queryFn: loadEditorGuideGroups,
+    enabled: enabled && schema.some((field) => field.suggestions === 'guideGroups'),
+    staleTime: 300_000,
+  });
   const wantsPlaces = enabled && schema.some((field) => field.type === 'pointcrawl');
   const [atlasCode, setAtlasCode] = useState('');
   const maps = useQuery({
@@ -84,6 +92,7 @@ export function useEditorOptions(
     genres: optionsView(genres, 'editor:genre-options'),
     series: optionsView(series, 'editor:series-options'),
     voiceChannels: optionsView(voiceChannels, 'editor:voice-channels'),
+    guideGroups: guideGroups.data ?? [],
     places: {
       maps: maps.data,
       atlasCode,
