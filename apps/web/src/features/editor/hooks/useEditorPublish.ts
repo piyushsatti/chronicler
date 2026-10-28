@@ -123,6 +123,17 @@ export function useEditorPublish({
     }
     return key;
   };
+  // A succeeded request's key is retired so a later return to the same input writes again.
+  const retireReplayKey = (operation: string, input: unknown) => {
+    replayKeys.current.delete(JSON.stringify([operation, scopeKey, input]));
+  };
+  // Places the server acknowledged for the loaded quest, which may differ from `initial`
+  // when the quest update after them failed.
+  const acknowledgedPlaces = useRef<{
+    scopeKey: string;
+    updatedAt: string;
+    places: PlaceLink[];
+  } | null>(null);
   return useMutation({
     mutationFn: async (shouldPublish: boolean | undefined) => {
       if (writing.current)
@@ -191,18 +202,32 @@ export function useEditorPublish({
               typeof initial.meta.arcId === 'string' ? initial.meta.arcId : '';
             const arcChanged = typeof v.arcId === 'string' && v.arcId !== savedArcId;
             const places = v.pointcrawlLinks ?? null;
-            const savedPlaces = Array.isArray(initial.meta.pointcrawlLinks)
-              ? (initial.meta.pointcrawlLinks as PlaceLink[])
-              : [];
+            const acknowledged =
+              acknowledgedPlaces.current?.scopeKey === scopeKey &&
+              acknowledgedPlaces.current.updatedAt === initial.updatedAt
+                ? acknowledgedPlaces.current.places
+                : null;
+            const savedPlaces =
+              acknowledged ??
+              (Array.isArray(initial.meta.pointcrawlLinks)
+                ? (initial.meta.pointcrawlLinks as PlaceLink[])
+                : []);
             // Places need no update token, so they save first; a failed quest save then
             // retries the same places harmlessly.
             if (places && placeKey(places) !== placeKey(savedPlaces)) {
+              const placesInput = [initial.recordId, places];
               try {
                 await saveNewQuestPlaces(
                   initial.recordId,
                   places,
-                  replayKey('quest-update-places', [initial.recordId, places]),
+                  replayKey('quest-update-places', placesInput),
                 );
+                retireReplayKey('quest-update-places', placesInput);
+                acknowledgedPlaces.current = {
+                  scopeKey,
+                  updatedAt: initial.updatedAt,
+                  places,
+                };
               } catch {
                 throw safeAppError(
                   'The expected destinations were not saved, and the quest was not changed. Save again to retry.',
@@ -224,6 +249,7 @@ export function useEditorPublish({
               initial.updatedAt,
               replayKey('quest-update', [input, initial.updatedAt]),
             );
+            retireReplayKey('quest-update', [input, initial.updatedAt]);
           } else {
             const input = {
               ...payload,

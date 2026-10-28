@@ -247,6 +247,71 @@ it('takes an edited Quest out of its series when the series is cleared', async (
   expect(inputs.UpdateQuest.input.arcId).toBeNull();
 });
 
+/** Saves one edited Quest repeatedly while every quest update fails, recording each places write. */
+function failingQuestUpdates() {
+  const placeWrites: { links: unknown; key: string }[] = [];
+  server.use(
+    graphql.operation(({ operationName, variables }) => {
+      if (operationName === 'EditorSetQuestPlaces') {
+        placeWrites.push({
+          links: variables.links,
+          key: (variables.meta as { idempotencyKey: string }).idempotencyKey,
+        });
+        return HttpResponse.json({ data: { setQuestPointcrawlLinks: [] } });
+      }
+      return HttpResponse.json({ errors: [{ message: 'Temporary failure' }] });
+    }),
+  );
+  const initial = initialQuest('edit');
+  initial.meta = { ...initial.meta, pointcrawlLinks: [] };
+  const client = createTestQueryClient();
+  const { result, rerender } = renderHook(
+    ({ links }: { links: { pointcrawlNodeId: string; role: string }[] }) =>
+      useEditorPublish({
+        typeKey: 'quest',
+        mode: 'edit',
+        initial,
+        meta: { ...questMeta(sourceTime), pointcrawlLinks: links },
+        body: 'Edited brief',
+        onInvalidTitle: () => {},
+        onSuccess: () => {},
+      }),
+    {
+      initialProps: { links: [] as { pointcrawlNodeId: string; role: string }[] },
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(QueryClientProvider, { client }, children),
+    },
+  );
+  const save = async (links: { pointcrawlNodeId: string; role: string }[]) => {
+    rerender({ links });
+    await act(async () => {
+      await expect(result.current.mutateAsync(false)).rejects.toBeDefined();
+    });
+  };
+  return { placeWrites, save };
+}
+
+it('clears destinations the server stored before a failed quest update, though the loaded Quest had none', async () => {
+  const { placeWrites, save } = failingQuestUpdates();
+  await save([{ pointcrawlNodeId: nodeA, role: 'expected' }]);
+  await save([]);
+  expect(placeWrites.map((write) => write.links)).toEqual([
+    [{ pointcrawlNodeId: nodeA, role: 'expected' }],
+    [],
+  ]);
+});
+
+it('writes destinations A, B, then A again with a fresh key each time', async () => {
+  const a = [{ pointcrawlNodeId: nodeA, role: 'expected' }];
+  const b = [{ pointcrawlNodeId: nodeB, role: 'expected' }];
+  const { placeWrites, save } = failingQuestUpdates();
+  await save(a);
+  await save(b);
+  await save(a);
+  expect(placeWrites.map((write) => write.links)).toEqual([a, b, a]);
+  expect(new Set(placeWrites.map((write) => write.key)).size).toBe(3);
+});
+
 it('leaves series and destinations alone when an edited Quest did not change them', async () => {
   const link = { pointcrawlNodeId: nodeA, role: 'expected' };
   const { operations, inputs } = await saveEdit(
