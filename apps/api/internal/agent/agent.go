@@ -2,7 +2,6 @@ package agent
 
 import (
 	"context"
-	"crypto/subtle"
 	"encoding/json"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
@@ -64,13 +63,7 @@ func (s *Service) Routes(mux httpserver.Router) {
 	mux.HandleFunc("POST /v1/agent/questions/{id}/retry", s.retry)
 }
 func (s *Service) authorize(r *http.Request) error {
-	if s.secret == "" {
-		return apierr.New(apierr.Forbidden, "ingest not configured")
-	}
-	if subtle.ConstantTimeCompare([]byte(r.Header.Get("X-Ingest-Secret")), []byte(s.secret)) != 1 {
-		return apierr.New(apierr.Unauthenticated, "invalid ingest secret")
-	}
-	return nil
+	return httpserver.AuthorizeIngestSecret(r, s.secret)
 }
 func invalid(message string) error { return apierr.New(apierr.Invalid, message) }
 func decode(r *http.Request, v any, limit int64) error {

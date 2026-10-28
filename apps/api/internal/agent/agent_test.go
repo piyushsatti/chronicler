@@ -66,6 +66,35 @@ func TestSubmitClaimCompleteGet(t *testing.T) {
 	}
 }
 
+func TestRoutesRejectMissingOrWrongSecret(t *testing.T) {
+	for _, tc := range []struct {
+		name, configured, header string
+		status                   int
+		code                     string
+	}{
+		{name: "missing", configured: "secret", status: http.StatusUnauthorized, code: "UNAUTHENTICATED"},
+		{name: "wrong", configured: "secret", header: "secreT", status: http.StatusUnauthorized, code: "UNAUTHENTICATED"},
+		{name: "unconfigured", header: "secret", status: http.StatusForbidden, code: "FORBIDDEN"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			mux := http.NewServeMux()
+			agent.New(tc.configured, nil).Routes(mux)
+			claim := httptest.NewRequest(http.MethodPost, "/v1/agent/questions/claim", strings.NewReader(`{"lease_protocol":1}`))
+			if tc.header != "" {
+				claim.Header.Set("X-Ingest-Secret", tc.header)
+			}
+			rec := httptest.NewRecorder()
+			mux.ServeHTTP(rec, claim)
+			var problem struct {
+				Code string `json:"code"`
+			}
+			if err := json.Unmarshal(rec.Body.Bytes(), &problem); err != nil || rec.Code != tc.status || problem.Code != tc.code {
+				t.Fatalf("status=%d body=%s err=%v", rec.Code, rec.Body.String(), err)
+			}
+		})
+	}
+}
+
 func TestClaimEmptyReturns204(t *testing.T) {
 	svc := agent.New("secret", nil)
 	mux := http.NewServeMux()
