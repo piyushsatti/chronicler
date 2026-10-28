@@ -564,3 +564,44 @@ func TestFrontendForeignDocumentWritersKeepBriefSourceAndSummaryOrder(t *testing
 		t.Fatalf("failed summary left %d documents", residue)
 	}
 }
+
+// Seeded and imported rows are inserted without an explicit version; the column default must give
+// them the same first revision (1) that CreateDocument writes, or every edit is rejected as
+// "document version required".
+func TestFrontendDocumentDefaultVersionRowsAreEditable(t *testing.T) {
+	fixture, ctx, commands, resolve := frontendDocumentFixture(t)
+	// Seeded rules are maintained by admins, as on staging.
+	editor, _ := resolve(ctx, frontendAdmin)
+	draft, published := uuid.NewString(), uuid.NewString()
+	for _, row := range [][2]string{{draft, "draft"}, {published, "published"}} {
+		if _, err := fixture.Pool.Exec(ctx, `INSERT INTO documents(public_id,kind,slug,title,category,status,visibility,body,author_id)
+			SELECT $1,'rule','seeded-'||$2::text,'Seeded '||$2::text,'Rules',$2::text,'public','Seeded body',id FROM members WHERE public_id=$3`, row[0], row[1], frontendAuthor); err != nil {
+			t.Fatal(err)
+		}
+	}
+	reader, _ := NewProductPostgres(fixture.Pool)
+	title := "Edited"
+	for _, item := range []struct {
+		id   string
+		edit func(DocumentEditFields) (DocumentView, error)
+	}{
+		{draft, func(input DocumentEditFields) (DocumentView, error) {
+			return commands.UpdateDocument(ctx, editor, UpdateDocumentSpec{Id: draft, Input: input}, product.CommandMeta{IdempotencyKey: uuid.NewString()})
+		}},
+		{published, func(input DocumentEditFields) (DocumentView, error) {
+			return commands.EditPublishedDocument(ctx, editor, EditPublishedDocumentSpec{Id: published, Input: input}, product.CommandMeta{IdempotencyKey: uuid.NewString()})
+		}},
+	} {
+		loaded, err := reader.ReadDocumentById(ctx, editor, DocumentByIdSpec{Id: item.id})
+		if err != nil || loaded == nil {
+			t.Fatalf("seeded read=%+v err=%v", loaded, err)
+		}
+		view, err := item.edit(DocumentEditFields{ExpectedRevision: loaded.Version, Title: product.Optional[string]{Set: true, Value: &title}})
+		if err != nil {
+			t.Fatalf("edit of seeded %s at read version %d: %v", loaded.Status, loaded.Version, err)
+		}
+		if loaded.Version != 1 || view.Title != title || view.Version != 2 {
+			t.Fatalf("seeded %s read version=%d, edited=%+v; want read 1, edited 2", loaded.Status, loaded.Version, view)
+		}
+	}
+}

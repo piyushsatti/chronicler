@@ -228,7 +228,7 @@ class Seed:
             "status": "published",
             "visibility": "public",
             "published_at": PUBLISHED_AT,
-            "version": 0,
+            "version": 1,
         }
         if fm:
             row["frontmatter_yaml"] = fm
