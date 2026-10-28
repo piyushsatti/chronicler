@@ -120,7 +120,7 @@ func TestProductionChainAudienceDirectDenialIsDistinctFromMissing(t *testing.T) 
 	// NULL-policy outer access stays public, while the same direct boundaries
 	// now return only the approved per-viewer body projection.
 	f.exec(t, `UPDATE documents SET policy='null'::jsonb,body=$2 WHERE id=$1`, d.rowID, "PUBLIC-INTRO\n> [!DM]\n> DIRECT-RAW-SECRET\n\nPUBLIC-END")
-	d.body = "PUBLIC-INTRO\n> [!redacted]\n\nPUBLIC-END"
+	d.body = "PUBLIC-INTRO\n> [!redacted]\n> ████████████████████\n\nPUBLIC-END"
 	f.assertDocument(t, "", d, true)
 	data, response := audienceGraph(t, f, "", `query($id:ID!,$slug:String!){documentById(id:$id){effectiveBody} document(slug:$slug){effectiveBody}}`, map[string]any{"id": d.publicID, "slug": d.slug})
 	if bodies := bodyProjectionStrings(t, data); len(bodies) != 2 || bodies[0] != d.body || bodies[1] != d.body || bytes.Contains(response, []byte("DIRECT-RAW-SECRET")) {

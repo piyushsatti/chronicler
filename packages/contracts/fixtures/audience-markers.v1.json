@@ -68,9 +68,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "Public\n> [!redacted]\n\nAfter",
+      "public_body": "Public\n> [!redacted]\n> ████████████████████\n\nAfter",
       "dm_body": "Public\n> [!dm]\n> DM-SECRET\n\nAfter",
-      "member_body": "Public\n> [!redacted]\n\nAfter"
+      "member_body": "Public\n> [!redacted]\n> ████████████████████\n\nAfter"
     },
     {
       "name": "normalized '[!DM]'",
@@ -92,9 +92,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "Public\n> [!redacted]\n\nAfter",
+      "public_body": "Public\n> [!redacted]\n> ████████████████████\n\nAfter",
       "dm_body": "Public\n> [!DM]\n> DM-SECRET\n\nAfter",
-      "member_body": "Public\n> [!redacted]\n\nAfter"
+      "member_body": "Public\n> [!redacted]\n> ████████████████████\n\nAfter"
     },
     {
       "name": "normalized '[!Dm]'",
@@ -116,9 +116,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "Public\n> [!redacted]\n\nAfter",
+      "public_body": "Public\n> [!redacted]\n> ████████████████████\n\nAfter",
       "dm_body": "Public\n> [!Dm]\n> DM-SECRET\n\nAfter",
-      "member_body": "Public\n> [!redacted]\n\nAfter"
+      "member_body": "Public\n> [!redacted]\n> ████████████████████\n\nAfter"
     },
     {
       "name": "normalized '[! dm ]'",
@@ -140,9 +140,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "Public\n> [!redacted]\n\nAfter",
+      "public_body": "Public\n> [!redacted]\n> ████████████████████\n\nAfter",
       "dm_body": "Public\n> [! dm ]\n> DM-SECRET\n\nAfter",
-      "member_body": "Public\n> [!redacted]\n\nAfter"
+      "member_body": "Public\n> [!redacted]\n> ████████████████████\n\nAfter"
     },
     {
       "name": "normalized '[!\\tDM\\t]'",
@@ -164,9 +164,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "Public\n> [!redacted]\n\nAfter",
+      "public_body": "Public\n> [!redacted]\n> ████████████████████\n\nAfter",
       "dm_body": "Public\n> [!\tDM\t]\n> DM-SECRET\n\nAfter",
-      "member_body": "Public\n> [!redacted]\n\nAfter"
+      "member_body": "Public\n> [!redacted]\n> ████████████████████\n\nAfter"
     },
     {
       "name": "exact handle '[!dm:@Exact-Handle]'",
@@ -178,8 +178,8 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
+      "public_body": "> [!redacted]\n> ████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████",
       "member_body": "> [!dm:@Exact-Handle]\n> HANDLE-SECRET"
     },
     {
@@ -192,8 +192,8 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
+      "public_body": "> [!redacted]\n> ████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████",
       "member_body": "> [!DM:@Exact-Handle]\n> HANDLE-SECRET"
     },
     {
@@ -206,8 +206,8 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
+      "public_body": "> [!redacted]\n> ████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████",
       "member_body": "> [! dm:@Exact-Handle ]\n> HANDLE-SECRET"
     },
     {
@@ -220,9 +220,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
-      "member_body": "> [!redacted]"
+      "public_body": "> [!redacted]\n> ████████████████████████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████████████████████████",
+      "member_body": "> [!redacted]\n> ████████████████████████████████████████"
     },
     {
       "name": "unsupported marker charset colon:handle",
@@ -234,9 +234,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
-      "member_body": "> [!redacted]"
+      "public_body": "> [!redacted]\n> ████████████████████████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████████████████████████",
+      "member_body": "> [!redacted]\n> ████████████████████████████████████████"
     },
     {
       "name": "unsupported marker charset éxact",
@@ -248,9 +248,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
-      "member_body": "> [!redacted]"
+      "public_body": "> [!redacted]\n> ████████████████████████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████████████████████████",
+      "member_body": "> [!redacted]\n> ████████████████████████████████████████"
     },
     {
       "name": "unsupported marker charset emoji🐉",
@@ -262,9 +262,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
-      "member_body": "> [!redacted]"
+      "public_body": "> [!redacted]\n> ████████████████████████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████████████████████████",
+      "member_body": "> [!redacted]\n> ████████████████████████████████████████"
     },
     {
       "name": "unsupported marker charset with/slash",
@@ -276,9 +276,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
-      "member_body": "> [!redacted]"
+      "public_body": "> [!redacted]\n> ████████████████████████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████████████████████████",
+      "member_body": "> [!redacted]\n> ████████████████████████████████████████"
     },
     {
       "name": "unsupported marker charset quoted\"handle",
@@ -290,9 +290,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
-      "member_body": "> [!redacted]"
+      "public_body": "> [!redacted]\n> ████████████████████████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████████████████████████",
+      "member_body": "> [!redacted]\n> ████████████████████████████████████████"
     },
     {
       "name": "malformed '[!dm:]'",
@@ -304,9 +304,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
-      "member_body": "> [!redacted]"
+      "public_body": "> [!redacted]\n> ████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████",
+      "member_body": "> [!redacted]\n> ████████████████████"
     },
     {
       "name": "malformed '[!dm:@]'",
@@ -318,9 +318,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
-      "member_body": "> [!redacted]"
+      "public_body": "> [!redacted]\n> ████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████",
+      "member_body": "> [!redacted]\n> ████████████████████"
     },
     {
       "name": "malformed '[!dm:no-at]'",
@@ -332,9 +332,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
-      "member_body": "> [!redacted]"
+      "public_body": "> [!redacted]\n> ████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████",
+      "member_body": "> [!redacted]\n> ████████████████████"
     },
     {
       "name": "malformed '[!dm: @Exact-Handle]'",
@@ -346,9 +346,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
-      "member_body": "> [!redacted]"
+      "public_body": "> [!redacted]\n> ████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████",
+      "member_body": "> [!redacted]\n> ████████████████████"
     },
     {
       "name": "malformed '[! dm :@Exact-Handle]'",
@@ -360,9 +360,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
-      "member_body": "> [!redacted]"
+      "public_body": "> [!redacted]\n> ████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████",
+      "member_body": "> [!redacted]\n> ████████████████████"
     },
     {
       "name": "malformed '[!audience role:player]'",
@@ -374,9 +374,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
-      "member_body": "> [!redacted]"
+      "public_body": "> [!redacted]\n> ████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████",
+      "member_body": "> [!redacted]\n> ████████████████████"
     },
     {
       "name": "malformed '[!AUDIENCE]'",
@@ -388,9 +388,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
-      "member_body": "> [!redacted]"
+      "public_body": "> [!redacted]\n> ████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████",
+      "member_body": "> [!redacted]\n> ████████████████████"
     },
     {
       "name": "malformed '[!Dm:'",
@@ -402,9 +402,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
-      "member_body": "> [!redacted]"
+      "public_body": "> [!redacted]\n> ████████████████████\n> ████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████\n> ████████████████████",
+      "member_body": "> [!redacted]\n> ████████████████████\n> ████████████████████"
     },
     {
       "name": "malformed '[! DM'",
@@ -416,9 +416,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
-      "member_body": "> [!redacted]"
+      "public_body": "> [!redacted]\n> ████████████████████\n> ████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████\n> ████████████████████",
+      "member_body": "> [!redacted]\n> ████████████████████\n> ████████████████████"
     },
     {
       "name": "malformed '[!audience'",
@@ -430,9 +430,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
-      "member_body": "> [!redacted]"
+      "public_body": "> [!redacted]\n> ████████████████████\n> ████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████\n> ████████████████████",
+      "member_body": "> [!redacted]\n> ████████████████████\n> ████████████████████"
     },
     {
       "name": "nested marker narrows whole maximal quote",
@@ -444,9 +444,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
+      "public_body": "> [!redacted]\n> ████████████████████████████████████████\n> ████████████████████\n> ████████████████████",
       "dm_body": "> ordinary surrounding quote\n>> [!DM]\n>> NESTED-SECRET\n> surrounding tail",
-      "member_body": "> [!redacted]"
+      "member_body": "> [!redacted]\n> ████████████████████████████████████████\n> ████████████████████\n> ████████████████████"
     },
     {
       "name": "malformed outranks valid handle",
@@ -458,9 +458,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
-      "member_body": "> [!redacted]"
+      "public_body": "> [!redacted]\n> ████████████████████\n> ████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████\n> ████████████████████",
+      "member_body": "> [!redacted]\n> ████████████████████\n> ████████████████████"
     },
     {
       "name": "dm outranks spoiler",
@@ -472,9 +472,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
+      "public_body": "> [!redacted]\n> ████████████████████",
       "dm_body": "> [!spoiler]\n> [!dm]\n> DM-SPOILER-SECRET",
-      "member_body": "> [!redacted]"
+      "member_body": "> [!redacted]\n> ████████████████████"
     },
     {
       "name": "handle outranks DM",
@@ -486,8 +486,8 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
+      "public_body": "> [!redacted]\n> ████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████",
       "member_body": "> [!dm]\n> [!dm:@Exact-Handle]\n> MEMBER-WINS-SECRET"
     },
     {
@@ -500,8 +500,8 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
+      "public_body": "> [!redacted]\n> ████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████",
       "member_body": "> [!dm:@Exact-Handle]\n> [!dm:@Second]\n> FIRST-HANDLE-SECRET"
     },
     {
@@ -519,9 +519,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]\nOrdinary following line",
+      "public_body": "> [!redacted]\n> ████████████████████\n\nOrdinary following line",
       "dm_body": "Bare [!DM] BARE-SECRET\nOrdinary following line",
-      "member_body": "> [!redacted]\nOrdinary following line"
+      "member_body": "> [!redacted]\n> ████████████████████\n\nOrdinary following line"
     },
     {
       "name": "marker inside code fence retains bare-line source behavior",
@@ -543,9 +543,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "```md\n> [!redacted]\n```\nAfter",
+      "public_body": "```md\n> [!redacted]\n> ████████████████████\n\n```\nAfter",
       "dm_body": "```md\n[!DM] FENCE-SECRET\n```\nAfter",
-      "member_body": "```md\n> [!redacted]\n```\nAfter"
+      "member_body": "```md\n> [!redacted]\n> ████████████████████\n\n```\nAfter"
     },
     {
       "name": "blank line ends quote scope",
@@ -562,9 +562,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]\n\n> [!note]\n> Visible note",
+      "public_body": "> [!redacted]\n> ████████████████████\n\n> [!note]\n> Visible note",
       "dm_body": "> [!dm]\n> FIRST-SECRET\n\n> [!note]\n> Visible note",
-      "member_body": "> [!redacted]\n\n> [!note]\n> Visible note"
+      "member_body": "> [!redacted]\n> ████████████████████\n\n> [!note]\n> Visible note"
     },
     {
       "name": "spoiler presentation only",
@@ -660,9 +660,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
+      "public_body": "> [!redacted]\n> ████████████████████",
       "dm_body": "  > [!DM]\n\t> INDENTED-SECRET",
-      "member_body": "> [!redacted]"
+      "member_body": "> [!redacted]\n> ████████████████████"
     },
     {
       "name": "four-space prefix is bare marker line",
@@ -679,9 +679,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]\n    > Visible next line",
+      "public_body": "> [!redacted]\n> ████████████████████\n\n    > Visible next line",
       "dm_body": "    > [!dm] INDENTED-BARE-SECRET\n    > Visible next line",
-      "member_body": "> [!redacted]\n    > Visible next line"
+      "member_body": "> [!redacted]\n> ████████████████████\n\n    > Visible next line"
     },
     {
       "name": "handle case is not folded",
@@ -693,8 +693,8 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
+      "public_body": "> [!redacted]\n> ████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████",
       "member_body": "[!dm:@Exact-Handle] CASE-SECRET"
     },
     {
@@ -707,9 +707,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
-      "member_body": "> [!redacted]"
+      "public_body": "> [!redacted]\n> ████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████",
+      "member_body": "> [!redacted]\n> ████████████████████"
     },
     {
       "name": "accepted marker charset dot.handle",
@@ -721,9 +721,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
-      "member_body": "> [!redacted]"
+      "public_body": "> [!redacted]\n> ████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████",
+      "member_body": "> [!redacted]\n> ████████████████████"
     },
     {
       "name": "accepted marker charset ALPHA09",
@@ -735,9 +735,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
-      "member_body": "> [!redacted]"
+      "public_body": "> [!redacted]\n> ████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████",
+      "member_body": "> [!redacted]\n> ████████████████████"
     },
     {
       "name": "accepted marker charset hyphen-handle",
@@ -749,9 +749,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
-      "member_body": "> [!redacted]"
+      "public_body": "> [!redacted]\n> ████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████",
+      "member_body": "> [!redacted]\n> ████████████████████"
     },
     {
       "name": "closing delimiter cannot encode a longer DB handle",
@@ -763,9 +763,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
-      "member_body": "> [!redacted]"
+      "public_body": "> [!redacted]\n> ████████████████████\n> ████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████\n> ████████████████████",
+      "member_body": "> [!redacted]\n> ████████████████████\n> ████████████████████"
     },
     {
       "name": "unsupported marker delimiter '> [!dm:@Bad\\n> Handle]\\n> BAD-NEWLINE-SECRET'",
@@ -777,9 +777,9 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
-      "member_body": "> [!redacted]"
+      "public_body": "> [!redacted]\n> ████████████████████\n> ████████████████████\n> ████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████\n> ████████████████████\n> ████████████████████",
+      "member_body": "> [!redacted]\n> ████████████████████\n> ████████████████████\n> ████████████████████"
     },
     {
       "name": "unsupported inner bracket charset",
@@ -791,9 +791,28 @@
           "spoiler": false
         }
       ],
-      "public_body": "> [!redacted]",
-      "dm_body": "> [!redacted]",
-      "member_body": "> [!redacted]"
+      "public_body": "> [!redacted]\n> ████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████",
+      "member_body": "> [!redacted]\n> ████████████████████"
+    },
+    {
+      "name": "hidden bare line before public quote ends its placeholder",
+      "body": "Bare [!dm] BARE-SECRET\n> [!note]\n> Public note",
+      "spans": [
+        {
+          "text": "Bare [!dm] BARE-SECRET",
+          "policy": ["role:dm"],
+          "spoiler": false
+        },
+        {
+          "text": "> [!note]\n> Public note",
+          "policy": null,
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]\n> ████████████████████\n\n> [!note]\n> Public note",
+      "dm_body": "Bare [!dm] BARE-SECRET\n> [!note]\n> Public note",
+      "member_body": "> [!redacted]\n> ████████████████████\n\n> [!note]\n> Public note"
     }
   ],
   "handle_charset": "[A-Za-z0-9_.-]+"

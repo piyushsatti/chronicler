@@ -22,7 +22,7 @@ Renderers never learn who the viewer is. The document body arrives already scope
 
 ## Provider
 
-API applies audience policy and marker rules before returning body content. Repositories hold raw body text; `Queries.ByID`, `BySlug` and `List` overwrite the returned value with request-scoped bytes. Outer denial returns no body, and an inner marker cannot re-grant that document. Hidden spans become the fixed `> [!redacted]` placeholder without a secret-length hint. Author/admin bypass retains the raw source; actual administrator override is logged without protected body, policy or handle principals.
+API applies audience policy and marker rules before returning body content. Repositories hold raw body text; `Queries.ByID`, `BySlug` and `List` overwrite the returned value with request-scoped bytes. Outer denial returns no body, and an inner marker cannot re-grant that document. Each hidden span becomes the `> [!redacted]` line followed by its rough shape, per [D45](/docs/decisions/D45-Redaction-Keeps-Rough-Size.md) (owner decision 2026-10-28, superseding the earlier no-length-hint rule). The text-line count is exact, and marker-only lines add none. Each hidden text line becomes one `> █…` line, its rune length rounded up to the next multiple of 20 and capped at 200 bars. Blank lines stay `>`. Past 100 shape lines, one `> +N more lines` count replaces the rest. One projection draws at most 10,000 bar runes, in span order; after that, hidden spans show only the marker and their line count. When the next span starts with content, a blank line ends the placeholder, so the content never joins the redaction's quote. The server generates the shape. Renderers draw it as bars and never receive the hidden text. Author/admin bypass retains the raw source; actual administrator override is logged without protected body, policy or handle principals.
 
 The closed grammar is recorded in [D20](/docs/decisions/D20-One-Closed-Marker-Set.md), including the accepted July 30 lexical amendment, and the shared `audience-markers.v1.json` vectors. The closed forms are `[!dm]`, `[!dm:@handle]` and `[!spoiler]`, with case/outer whitespace folding, exact handle case and marker charset `[A-Za-z0-9_.-]+`. Spoiler is presentation only. The shared vectors record malformed-attempt denial, ordinary-callout visibility and preserved maximal quote-run/bare-line classification; editor validation must consume those vectors before claiming conformance.
 
@@ -40,6 +40,7 @@ Web renderers consume scoped bodies only. Local notes: `apps/web/docs/` (when pr
 - [D4](/docs/decisions/D4-Scoped-Body-Cache.md)
 - [D20](/docs/decisions/D20-One-Closed-Marker-Set.md)
 - [D22](/docs/decisions/D22-Renderers-Never-Know-The-Viewer.md)
+- [D45](/docs/decisions/D45-Redaction-Keeps-Rough-Size.md)
 
 ## Reopen
 

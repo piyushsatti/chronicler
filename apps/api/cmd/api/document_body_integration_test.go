@@ -110,7 +110,7 @@ func TestProductionChainBodyRedactionEveryDocumentProjection(t *testing.T) {
 					}
 				} else {
 					if !strings.Contains(body, "> [!redacted]") {
-						t.Fatalf("missing fixed redaction body=%q", body)
+						t.Fatalf("missing redaction placeholder body=%q", body)
 					}
 					if tc.name == "matching member" && !strings.Contains(body, "HANDLE-SECRET") {
 						t.Fatalf("matching handle lost entitled block: %q", body)
@@ -172,9 +172,9 @@ func TestProductionChainLegacyBodyScopesEveryProjection(t *testing.T) {
 	d := f.doc(t, "", &author, document.StatusPublished, document.VisibilityPublic)
 	prefix := "legacy-body-projection-" + uuid.NewString()
 	raw := "PUBLIC\n> [!DM]\n> DM-SECRET\n\n> [!dm:@Exact-Handle]\n> HANDLE-SECRET\n\n> [!dm:]\n> MALFORMED-SECRET\n\n> [!spoiler]\n> SPOILER-VISIBLE"
-	redacted := "PUBLIC\n> [!redacted]\n\n> [!redacted]\n\n> [!redacted]\n\n> [!spoiler]\n> SPOILER-VISIBLE"
-	dmBody := "PUBLIC\n> [!DM]\n> DM-SECRET\n\n> [!redacted]\n\n> [!redacted]\n\n> [!spoiler]\n> SPOILER-VISIBLE"
-	memberBody := "PUBLIC\n> [!redacted]\n\n> [!dm:@Exact-Handle]\n> HANDLE-SECRET\n\n> [!redacted]\n\n> [!spoiler]\n> SPOILER-VISIBLE"
+	redacted := "PUBLIC\n> [!redacted]\n> ████████████████████\n\n> [!redacted]\n> ████████████████████\n\n> [!redacted]\n> ████████████████████\n\n> [!spoiler]\n> SPOILER-VISIBLE"
+	dmBody := "PUBLIC\n> [!DM]\n> DM-SECRET\n\n> [!redacted]\n> ████████████████████\n\n> [!redacted]\n> ████████████████████\n\n> [!spoiler]\n> SPOILER-VISIBLE"
+	memberBody := "PUBLIC\n> [!redacted]\n> ████████████████████\n\n> [!dm:@Exact-Handle]\n> HANDLE-SECRET\n\n> [!redacted]\n> ████████████████████\n\n> [!spoiler]\n> SPOILER-VISIBLE"
 	f.exec(t, `UPDATE documents SET kind='codex_entry',title=$2,body=$3 WHERE id=$1`, d.rowID, prefix, raw)
 	d.body = raw
 	f.exec(t, `INSERT INTO document_readers(document_id,member_id) VALUES($1,$2),($1,$3)`, d.rowID, dm.rowID, archon.rowID)

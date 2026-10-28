@@ -1,4 +1,5 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 import {
@@ -83,6 +84,114 @@ describe('shared Markdown reader', () => {
     expect(callouts[0]).toHaveTextContent('Watch your step');
     expect(within(callouts[0]).getByText('steep').tagName).toBe('STRONG');
     expect(callouts[1]).toHaveTextContent('Server supplied prose.');
+  });
+
+  it('draws a server redaction as labelled bars with a spoken size summary', () => {
+    const bar = (n: number) => '█'.repeat(n);
+    const { container } = markdown(
+      `Before\n\n> [!redacted]\n> ${bar(20)}\n>\n> ${bar(40)}\n\nAfter`,
+    );
+    const callout = container.querySelector<HTMLElement>(
+      'aside.cr-callout[data-variant="redacted"]',
+    );
+    expect(callout).not.toBeNull();
+    expect(within(callout!).getByText('Hidden')).toBeInTheDocument();
+    expect(within(callout!).getByText('🔒')).toHaveAttribute('aria-hidden', 'true');
+    expect(within(callout!).getByText('Hidden content, about 3 lines')).toHaveClass(
+      'cr-visually-hidden',
+    );
+    const bars = callout!.querySelector('.cr-redacted-bars');
+    expect(bars).toHaveAttribute('aria-hidden', 'true');
+    const lines = [...bars!.querySelectorAll('.cr-redacted-line')];
+    expect(lines).toHaveLength(3);
+    expect(lines.map((line) => line.textContent?.length)).toEqual([20, 0, 40]);
+    expect(screen.getByText('After')).toBeVisible();
+  });
+
+  it('keeps an unquoted line after a redaction visible outside the bars', () => {
+    const { container } = markdown(
+      `> [!redacted]\n> ${'█'.repeat(20)}\nOrdinary following line`,
+    );
+    const callout = container.querySelector<HTMLElement>(
+      'aside[data-variant="redacted"]',
+    )!;
+    expect(within(callout).getByText('Hidden content, about 1 line')).toBeInTheDocument();
+    expect(callout).not.toHaveTextContent('Ordinary following line');
+    expect(screen.getByText('Ordinary following line')).toBeVisible();
+  });
+
+  it.each([
+    ['URL', 'See https://example.com/a now', 'https://example.com/a'],
+    ['www', 'See www.example.com now', 'www.example.com'],
+    ['email', 'Mail me@example.com now', 'me@example.com'],
+    // gfm's find-and-replace pass makes these links without source positions.
+    ['quoted www', 'Visit "www.example.com" now', 'www.example.com'],
+    ['quoted URL', 'Visit "https://example.com/q" now', 'https://example.com/q'],
+    ['quoted email', 'Mail "me@example.com" now', 'me@example.com'],
+  ])('keeps a %s autolink in the line after a redaction', (_kind, tail, link) => {
+    const { container } = markdown(`> [!redacted]\n> ${'█'.repeat(20)}\n${tail}`);
+    const callout = container.querySelector<HTMLElement>(
+      'aside[data-variant="redacted"]',
+    )!;
+    expect(callout).not.toHaveTextContent(link);
+    expect(screen.getByRole('link', { name: link })).toBeVisible();
+    expect(container.querySelector('.cr-prose')).toHaveTextContent(tail);
+  });
+
+  it('stops the bars at the first quoted line that is not a bar', () => {
+    const { container } = markdown(
+      `> [!redacted]\n> ${'█'.repeat(20)}\n>\n> [!note]\n> Public **note**`,
+    );
+    const callout = container.querySelector<HTMLElement>(
+      'aside[data-variant="redacted"]',
+    )!;
+    expect(within(callout).getByText('Hidden content, about 2 lines')).toBeInTheDocument();
+    expect(callout).not.toHaveTextContent('Public');
+    const note = container.querySelector<HTMLElement>('aside[data-variant="note"]')!;
+    expect(note).toHaveTextContent('Public note');
+    expect(within(note).getByText('note').tagName).toBe('STRONG');
+  });
+
+  it('shows a capped redaction count under the bars', () => {
+    const { container } = markdown(
+      `> [!redacted]\n> ${'█'.repeat(20)}\n> +5 more lines`,
+    );
+    const callout = container.querySelector<HTMLElement>(
+      'aside[data-variant="redacted"]',
+    )!;
+    expect(within(callout).getByText('Hidden content, about 6 lines')).toBeInTheDocument();
+    expect(within(callout).getByText('+5 more lines')).toBeVisible();
+    expect(callout.querySelectorAll('.cr-redacted-line')).toHaveLength(1);
+  });
+
+  it('blurs a spoiler until its button is clicked', async () => {
+    const user = userEvent.setup();
+    const { container } = markdown('> [!spoiler]\n> The **king** is dead.');
+    const callout = container.querySelector<HTMLElement>(
+      'aside.cr-callout[data-variant="spoiler"]',
+    )!;
+    const toggle = within(callout).getByRole('button', { name: 'Reveal spoiler' });
+    const body = document.getElementById(toggle.getAttribute('aria-controls') ?? '')!;
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(body).toHaveAttribute('aria-hidden', 'true');
+    expect(body).toHaveAttribute('inert');
+    expect(body).toHaveTextContent('The king is dead.');
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    expect(toggle).toHaveAccessibleName('Hide spoiler');
+    expect(body).not.toHaveAttribute('aria-hidden');
+    expect(body).not.toHaveAttribute('inert');
+    expect(within(body).getByText('king').tagName).toBe('STRONG');
+  });
+
+  it.each(['{Enter}', ' '])('reveals a spoiler from the keyboard with %j', async (key) => {
+    const user = userEvent.setup();
+    markdown('> [!spoiler]\n> Hidden twist.');
+    await user.tab();
+    const toggle = screen.getByRole('button', { name: 'Reveal spoiler' });
+    expect(toggle).toHaveFocus();
+    await user.keyboard(key);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
   });
 
   it('renders explicit media only for supported safe URLs and leaves prose links intact', () => {

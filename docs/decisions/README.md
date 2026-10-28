@@ -15,11 +15,11 @@ Long-form historical text (gitignored): `.local/docs-quarry/decisions-longform/`
 
 ## Classification
 
-| Kind                   | Records                                             |
-| ---------------------- | --------------------------------------------------- |
-| Boundary (this folder) | D1, D3, D4, D10–D15, D18–D20, D22–D24, D27–D31, D33 |
-| Local → API            | D2, D5–D9, D16, D17, D25, D26, D32                  |
-| Local → Web            | D21                                                 |
+| Kind                   | Records                                                  |
+| ---------------------- | -------------------------------------------------------- |
+| Boundary (this folder) | D1, D3, D4, D10–D15, D18–D20, D22–D24, D27–D31, D33, D45 |
+| Local → API            | D2, D5–D9, D16, D17, D25, D26, D32                       |
+| Local → Web            | D21                                                      |
 
 ## Index (boundary)
 
@@ -46,3 +46,4 @@ Long-form historical text (gitignored): `.local/docs-quarry/decisions-longform/`
 | [D30](/docs/decisions/D30-Deletion-Is-Named-Per-Entity.md)               | Deletion named per entity                   | [live-authority](/docs/interfaces/live-authority.md)               |
 | [D31](/docs/decisions/D31-No-Erasure-Anonymize-In-Place.md)              | Anonymize in place (provisional)            | [live-authority](/docs/interfaces/live-authority.md)               |
 | [D33](/docs/decisions/D33-GitHub-Actions-Owns-Production-Releases.md)    | Actions-only production releases            | [actions-releases](/docs/interfaces/actions-releases.md)           |
+| [D45](/docs/decisions/D45-Redaction-Keeps-Rough-Size.md)                 | Redaction keeps line count and rough size   | [scoped-body](/docs/interfaces/scoped-body.md)                     |

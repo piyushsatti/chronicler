@@ -92,10 +92,10 @@ func TestBodyProjectionUsesCurrentAuthorityAcrossRequests(t *testing.T) {
 			name, handle, want string
 			roles              []auth.Role
 		}{
-			{"exact current handle", "Exact-Handle", "Visible\n> [!dm:@Exact-Handle]\n> HANDLE-SECRET\n\n> [!redacted]", []auth.Role{auth.Player}},
-			{"renamed current handle", "Renamed-Handle", "Visible\n> [!redacted]\n\n> [!redacted]", []auth.Role{auth.Player}},
-			{"current DM role", "Other", "Visible\n> [!redacted]\n\n> [!DM]\n> DM-SECRET", []auth.Role{auth.DM}},
-			{"current archon role", "Other", "Visible\n> [!redacted]\n\n> [!redacted]", []auth.Role{auth.Role("archon")}},
+			{"exact current handle", "Exact-Handle", "Visible\n> [!dm:@Exact-Handle]\n> HANDLE-SECRET\n\n> [!redacted]\n> ████████████████████", []auth.Role{auth.Player}},
+			{"renamed current handle", "Renamed-Handle", "Visible\n> [!redacted]\n> ████████████████████\n\n> [!redacted]\n> ████████████████████", []auth.Role{auth.Player}},
+			{"current DM role", "Other", "Visible\n> [!redacted]\n> ████████████████████\n\n> [!DM]\n> DM-SECRET", []auth.Role{auth.DM}},
+			{"current archon role", "Other", "Visible\n> [!redacted]\n> ████████████████████\n\n> [!redacted]\n> ████████████████████", []auth.Role{auth.Role("archon")}},
 		} {
 			t.Run(string(policy)+"/"+tc.name, func(t *testing.T) {
 				a, err := auth.NewAuthorityWithHandle("viewer", tc.roles, "active", "approved", tc.handle)

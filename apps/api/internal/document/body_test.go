@@ -95,7 +95,7 @@ func TestMemberMarkerPreservesExactAcceptedCharsetHandle(t *testing.T) {
 			t.Fatalf("current handle %q did not match: %q %v", handle, body, err)
 		}
 		match.Handle = "Other"
-		if body, err := d.EffectiveBody(match); err != nil || body != redactedBlock {
+		if body, err := d.EffectiveBody(match); err != nil || body != "> [!redacted]\n"+redactedBars(20) {
 			t.Fatalf("other handle admitted %q: %q %v", handle, body, err)
 		}
 	}
@@ -103,7 +103,7 @@ func TestMemberMarkerPreservesExactAcceptedCharsetHandle(t *testing.T) {
 
 func TestFirstMultipleHandleSourceBehaviorPreserved(t *testing.T) {
 	d := Document{ID: "doc", Status: StatusPublished, Policy: json.RawMessage(`["role:player"]`), Body: "> [!dm:@First]\n> [!dm:@Second]\n> SECRET"}
-	for _, tc := range []struct{ handle, want string }{{"First", d.Body}, {"Second", redactedBlock}} {
+	for _, tc := range []struct{ handle, want string }{{"First", d.Body}, {"Second", "> [!redacted]\n" + redactedBars(20)}} {
 		body, err := d.EffectiveBody(ViewerScope{MemberID: "member", Handle: tc.handle, Roles: []auth.Role{auth.Player}})
 		if err != nil || body != tc.want {
 			t.Fatalf("handle=%s body=%q err=%v", tc.handle, body, err)
@@ -114,7 +114,7 @@ func TestFirstMultipleHandleSourceBehaviorPreserved(t *testing.T) {
 func TestBodyProjectionOccursAtEveryDocumentQueryBoundary(t *testing.T) {
 	raw := Document{ID: "doc", Slug: "fixture", AuthorID: "author", Status: StatusPublished, Visibility: VisibilityPublic, Body: "Visible\n> [!DM]\n> RAW-SECRET\n\n> [!note]\n> Visible note"}
 	q := Queries{Repo: policyReadRepo{document: raw}}
-	expected := "Visible\n> [!redacted]\n\n> [!note]\n> Visible note"
+	expected := "Visible\n> [!redacted]\n" + redactedBars(20) + "\n\n> [!note]\n> Visible note"
 	id, err := q.ByID(context.Background(), "doc")
 	if err != nil || id.Body != expected {
 		t.Fatalf("ByID=%q err=%v", id.Body, err)
@@ -156,20 +156,112 @@ func TestAdminBlockOverrideAuditOmitsProtectedBytes(t *testing.T) {
 	}
 }
 
-func TestHiddenSpanShapeDoesNotRevealSecretLength(t *testing.T) {
-	for _, secret := range []string{"x", strings.Repeat("long secret", 1000), "one\n> two\n> three"} {
-		d := Document{ID: "doc", Status: StatusPublished, Visibility: VisibilityPublic, Body: "> [!DM]\n> " + secret}
-		body, err := d.EffectiveBody(ViewerScope{Anonymous: true})
-		if err != nil || body != redactedBlock {
-			t.Fatalf("redacted shape=%q err=%v", body, err)
+// redactedBars spells one expected D45 bar line literally, independent of the
+// implementation's helper.
+func redactedBars(n int) string { return "> " + strings.Repeat("█", n) }
+
+// D45: a hidden span keeps its exact line count and each line's length rounded
+// up to the next multiple of 20 runes; the marker-only line and secret bytes
+// never appear.
+func TestHiddenSpanKeepsRoughSizeOnly(t *testing.T) {
+	for _, tc := range []struct{ name, body, want string }{
+		{"3 runes", "> [!DM]\n> abc", "> [!redacted]\n" + redactedBars(20)},
+		{"19 runes", "> [!DM]\n> " + strings.Repeat("s", 19), "> [!redacted]\n" + redactedBars(20)},
+		{"20 runes", "> [!DM]\n> " + strings.Repeat("s", 20), "> [!redacted]\n" + redactedBars(20)},
+		{"21 runes", "> [!DM]\n> " + strings.Repeat("s", 21), "> [!redacted]\n" + redactedBars(40)},
+		{"multi-line keeps line count", "> [!dm]\n> one\n> " + strings.Repeat("t", 25) + "\n> three", "> [!redacted]\n" + redactedBars(20) + "\n" + redactedBars(40) + "\n" + redactedBars(20)},
+		{"blank line stays blank", "> [!dm]\n> one\n>\n> two", "> [!redacted]\n" + redactedBars(20) + "\n>\n" + redactedBars(20)},
+		{"unicode counts runes not bytes", "> [!dm]\n> " + strings.Repeat("é", 19) + "\n> " + strings.Repeat("🐉", 21), "> [!redacted]\n" + redactedBars(20) + "\n" + redactedBars(40)},
+		{"marker line with title counts its text", "> [!DM] Secret title\n> body", "> [!redacted]\n" + redactedBars(20) + "\n" + redactedBars(20)},
+		{"bare marker counts text beside marker", "[!dm] hello", "> [!redacted]\n" + redactedBars(20)},
+		{"marker only", "> [!dm]", "> [!redacted]"},
+		{"long line caps at 200 bars", "> [!DM]\n> " + strings.Repeat("long secret", 100), "> [!redacted]\n" + redactedBars(200)},
+		{"200-rune line is not cut", "> [!DM]\n> " + strings.Repeat("s", 200), "> [!redacted]\n" + redactedBars(200)},
+		{"100 lines are not cut", "> [!DM]" + strings.Repeat("\n> x", 100), "> [!redacted]" + strings.Repeat("\n"+redactedBars(20), 100)},
+		{"101st line becomes a count", "> [!DM]" + strings.Repeat("\n> x", 101), "> [!redacted]" + strings.Repeat("\n"+redactedBars(20), 100) + "\n> +1 more line"},
+		{"cut lines include blanks", "> [!DM]" + strings.Repeat("\n> x", 100) + "\n>\n> x\n> x", "> [!redacted]" + strings.Repeat("\n"+redactedBars(20), 100) + "\n> +3 more lines"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d := Document{ID: "doc", Status: StatusPublished, Visibility: VisibilityPublic, Body: tc.body}
+			body, err := d.EffectiveBody(ViewerScope{Anonymous: true})
+			if err != nil || body != tc.want {
+				t.Fatalf("redacted shape=%q want=%q err=%v", body, tc.want, err)
+			}
+		})
+	}
+	short, _ := Document{ID: "doc", Status: StatusPublished, Visibility: VisibilityPublic, Body: "> [!DM]\n> yes"}.EffectiveBody(ViewerScope{Anonymous: true})
+	name, _ := Document{ID: "doc", Status: StatusPublished, Visibility: VisibilityPublic, Body: "> [!DM]\n> " + strings.Repeat("n", 19)}.EffectiveBody(ViewerScope{Anonymous: true})
+	if short == "" || short != name {
+		t.Fatalf("3-rune and 19-rune secrets are distinguishable: %q vs %q", short, name)
+	}
+	if strings.ContainsAny(strings.ReplaceAll(strings.ReplaceAll(short, "[!redacted]", ""), "█", ""), "yesn") {
+		t.Fatalf("secret bytes escaped: %q", short)
+	}
+}
+
+// D45 document budget: 10,000 bar runes per projection. Spans spend it in
+// order; afterwards a hidden span is its marker plus a line count, no bars.
+func TestRedactionBarBudgetBoundsWholeBody(t *testing.T) {
+	const spans = 128 * 1024 / 8
+	raw := strings.Repeat("[!dm] x\n", spans)
+	body, err := Document{ID: "doc", Status: StatusPublished, Visibility: VisibilityPublic, Body: raw}.EffectiveBody(ViewerScope{Anonymous: true})
+	blocks := make([]string, spans)
+	for i := range blocks {
+		blocks[i] = "> [!redacted]\n> +1 more line"
+		if i < 500 { // 500 spans × 20 bars spend the budget exactly
+			blocks[i] = "> [!redacted]\n" + redactedBars(20)
 		}
+	}
+	if want := strings.Join(blocks, "\n\n") + "\n"; err != nil || body != want {
+		t.Fatalf("bytes=%d want=%d head=%q err=%v", len(body), len(want), body[:min(len(body), 80)], err)
+	}
+	// The per-span placeholder text itself (~30 bytes for 8 input bytes) is
+	// the floor once bars stop; bars no longer grow with the body.
+	if len(body) > 4*len(raw) || strings.Count(body, "█") != 10000 {
+		t.Fatalf("bytes=%d input=%d bars=%d", len(body), len(raw), strings.Count(body, "█"))
+	}
+	crossing := "> [!DM]" + strings.Repeat("\n> "+strings.Repeat("s", 200), 100) + "\n\n[!dm] later"
+	body, err = Document{ID: "doc", Status: StatusPublished, Visibility: VisibilityPublic, Body: crossing}.EffectiveBody(ViewerScope{Anonymous: true})
+	want := "> [!redacted]" + strings.Repeat("\n"+redactedBars(200), 50) + "\n> +50 more lines\n\n> [!redacted]\n> +1 more line"
+	if err != nil || body != want {
+		t.Fatalf("crossing span body tail=%q err=%v", body[max(0, len(body)-60):], err)
+	}
+}
+
+// D45 caps: a 128 KiB run of one-rune hidden lines must not amplify into
+// megabytes of bars.
+func TestHiddenSpanShapeAmplificationIsBounded(t *testing.T) {
+	raw := "> [!DM]" + strings.Repeat("\n> x", 128*1024/4)
+	body, err := Document{ID: "doc", Status: StatusPublished, Visibility: VisibilityPublic, Body: raw}.EffectiveBody(ViewerScope{Anonymous: true})
+	if err != nil || strings.Count(body, "\n") != 101 || len(body) > 8*1024 || !strings.HasSuffix(body, "\n> +32668 more lines") {
+		t.Fatalf("lines=%d bytes=%d tail=%q err=%v", strings.Count(body, "\n"), len(body), body[max(0, len(body)-24):], err)
+	}
+}
+
+// D45: a placeholder never shares a blockquote or paragraph with the next
+// span, so every consumer sees the redaction end where the hidden span ended.
+func TestRedactionPlaceholderEndsBeforeFollowingContent(t *testing.T) {
+	bar := "> [!redacted]\n" + redactedBars(20)
+	for _, tc := range []struct{ name, body, want string }{
+		{"bare line before public quote", "Bare [!dm] SECRET\n> [!note]\n> Public note", bar + "\n\n> [!note]\n> Public note"},
+		{"bare line before prose", "[!dm] SECRET\nOrdinary line", bar + "\n\nOrdinary line"},
+		{"adjacent hidden bare lines", "[!dm] one\n[!dm] two", bar + "\n\n" + bar},
+		{"existing blank separator kept single", "> [!dm]\n> SECRET\n\nAfter", bar + "\n\nAfter"},
+		{"visible text before stays adjacent", "Before\n> [!dm]\n> SECRET", "Before\n" + bar},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			body, err := Document{ID: "doc", Status: StatusPublished, Visibility: VisibilityPublic, Body: tc.body}.EffectiveBody(ViewerScope{Anonymous: true})
+			if err != nil || body != tc.want {
+				t.Fatalf("body=%q want=%q err=%v", body, tc.want, err)
+			}
+		})
 	}
 }
 
 func TestExplicitDMBlockHasNoArchonHierarchy(t *testing.T) {
 	d := Document{ID: "doc", Status: StatusPublished, Policy: json.RawMessage(`["role:archon"]`), Body: "> [!DM]\n> DM-SECRET"}
 	body, err := d.EffectiveBody(ViewerScope{MemberID: "archon", Roles: []auth.Role{auth.Role("archon")}})
-	if err != nil || body != redactedBlock {
+	if err != nil || body != "> [!redacted]\n"+redactedBars(20) {
 		t.Fatalf("archon gained explicit DM block: %q %v", body, err)
 	}
 }

@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { type ReactNode, useId, useState } from 'react';
 import ReactMarkdown, { type Components, defaultUrlTransform } from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Link } from 'react-router-dom';
@@ -28,6 +28,87 @@ export function safeContentUrl(value: string): string {
   )
     return '';
   return defaultUrlTransform(value);
+}
+
+/** D45 server redaction: rough-size bars only; the hidden text never arrives. */
+function RedactedCallout({
+  lines,
+  more,
+}: {
+  lines: number[];
+  more: number;
+}): React.JSX.Element {
+  const total = lines.length + more;
+  const summary =
+    total === 0
+      ? 'Hidden content'
+      : `Hidden content, about ${total} ${total === 1 ? 'line' : 'lines'}`;
+  return (
+    <aside className="cr-callout" data-variant="redacted">
+      <span className="cr-callout-ic" aria-hidden="true">
+        🔒
+      </span>
+      <div>
+        <p className="cr-callout-title" aria-hidden="true">
+          Hidden
+        </p>
+        <p className="cr-visually-hidden">{summary}</p>
+        <div className="cr-redacted-bars" aria-hidden="true">
+          {lines.map((length, index) => (
+            <span key={index} className="cr-redacted-line">
+              {length > 0 && <span className="cr-redacted-bar">{'█'.repeat(length)}</span>}
+            </span>
+          ))}
+        </div>
+        {more > 0 && (
+          <p className="cr-redacted-more" aria-hidden="true">
+            {`+${more} more ${more === 1 ? 'line' : 'lines'}`}
+          </p>
+        )}
+      </div>
+    </aside>
+  );
+}
+
+/** `[!spoiler]` is presentation only (D20): blurred until the reader reveals it. */
+function SpoilerCallout({
+  title,
+  children,
+}: {
+  title: string;
+  children: ReactNode;
+}): React.JSX.Element {
+  const [open, setOpen] = useState(false);
+  const bodyId = useId();
+  return (
+    <aside className="cr-callout" data-variant="spoiler" data-open={open}>
+      <span className="cr-callout-ic" aria-hidden="true">
+        ◐
+      </span>
+      <div>
+        <p className="cr-callout-title">{title}</p>
+        <div className="cr-spoiler">
+          <div
+            id={bodyId}
+            className="cr-callout-body cr-spoiler-body"
+            aria-hidden={open ? undefined : true}
+            inert={!open}
+          >
+            {children}
+          </div>
+          <button
+            type="button"
+            className="cr-spoiler-toggle"
+            aria-expanded={open}
+            aria-controls={bodyId}
+            onClick={() => setOpen((value) => !value)}
+          >
+            {open ? 'Hide spoiler' : 'Reveal spoiler'}
+          </button>
+        </div>
+      </div>
+    </aside>
+  );
 }
 
 const components: Components = {
@@ -65,6 +146,20 @@ const components: Components = {
   blockquote: ({ node, children }) => {
     const variant = node?.properties.calloutVariant;
     if (typeof variant !== 'string') return <blockquote>{children}</blockquote>;
+    if (variant === 'redacted') {
+      const lines = String(node?.properties.redactedLines ?? '')
+        .split(' ')
+        .filter(Boolean)
+        .map(Number);
+      const more = Number(node?.properties.redactedMore ?? 0) || 0;
+      return <RedactedCallout lines={lines} more={more} />;
+    }
+    if (variant === 'spoiler')
+      return (
+        <SpoilerCallout title={String(node?.properties.calloutTitle ?? 'Spoiler')}>
+          {children}
+        </SpoilerCallout>
+      );
     return (
       <aside className="cr-callout" data-variant={variant}>
         <span className="cr-callout-ic" aria-hidden="true">
