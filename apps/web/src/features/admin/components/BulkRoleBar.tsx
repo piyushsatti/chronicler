@@ -2,7 +2,7 @@ import { useId } from 'react';
 import { Button } from '../../../components/primitives/Button.js';
 import { Card } from '../../../components/primitives/Card.js';
 import type { useBulkRoleBar } from '../hooks/useBulkRoleBar.js';
-import { memberLabeler } from '../memberLabels.js';
+import { memberLabeler } from '../../../utils/format.js';
 import { Checkbox } from '../../../components/primitives/Checkbox.js';
 import { Select } from '../../../components/primitives/Select.js';
 
