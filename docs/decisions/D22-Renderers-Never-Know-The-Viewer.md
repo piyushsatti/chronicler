@@ -14,6 +14,7 @@ R6 and `HANDOFF-EDITING.md` §2 disagreed on whether redaction keys off renderer
 **Redaction completes before markdown reaches any renderer.** The renderer takes text, never an identity — so missing checks are correct-by-design, not accidental.
 
 - **`effective_body` on the server is the only enforcement point.** Client marker parsing is for authoring only, never access control.
+- Exception: [D46](/docs/decisions/D46-Hide-Action-Reads-Markers-Client-Side.md).
 - **`SummaryDetailPage` must not re-parse an already-redacted body** client-side; correct output from two accidents is not a design.
 - **One classifier keyed on `(kind, category)`** in one module (`pipeline` / `_CATEGORY_SCHEMAS` dispatch). Delete frontend `isRulingDocument`; classification ships as a document field ([D17](/apps/api/docs/decisions/D17-Lowest-Layer-Not-A-Utils-Package.md) placement).
 - **Slugs are server-allocated in Python only** (`documents_repo` canonical). Delete both TypeScript slug helpers; region route fallback is not a document slug.

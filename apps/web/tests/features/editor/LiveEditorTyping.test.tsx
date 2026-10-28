@@ -31,7 +31,7 @@ describe('LiveEditor typing', () => {
     }
     render(<Host />);
     fireEvent.mouseDown(
-      screen.getByText(/./, { selector: '[data-component="LiveEditor"] *' }),
+      screen.getByText(/./, { selector: '[data-component="LiveEditor"] .le-doc *' }),
     );
     const typed = [
       'f',

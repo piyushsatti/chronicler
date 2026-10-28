@@ -36,6 +36,8 @@ export type MenuProps = {
   emptyLabel?: ReactNode;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** Where focus goes when the menu closes (Base UI `finalFocus`); default: the trigger. */
+  finalFocus?: React.ComponentProps<typeof BaseMenu.Popup>['finalFocus'];
 };
 
 /**
@@ -61,6 +63,7 @@ export function Menu({
   emptyLabel,
   open,
   onOpenChange,
+  finalFocus,
 }: MenuProps): React.JSX.Element {
   const content = (
     <>
@@ -107,6 +110,7 @@ export function Menu({
             data-component="Menu"
             data-variant="menu"
             aria-label={ariaLabel}
+            finalFocus={finalFocus}
           >
             {listClassName ? <div className={listClassName}>{content}</div> : content}
           </BaseMenu.Popup>

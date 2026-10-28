@@ -1,7 +1,17 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  Fragment,
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Button } from '../../components/primitives/Button.js';
 import { useScrollEdges } from '../../components/primitives/useScrollEdges.js';
 import type { EntityLinkIndex } from './types.js';
+import { HideMenu, type HidePlan } from './HideMenu.js';
+import { hideLines, type HideMarker } from './hideMarkers.js';
 import styles from './editor.module.css';
 
 /** Shown in an empty document; says what the editor does with typed text. */
@@ -369,6 +379,44 @@ function PlainLiveEditor({
     [onChange],
   );
 
+  /** Selection kept when the Hide menu opens; focus then leaves the textarea. */
+  const hideRange = useRef<{ start: number; end: number } | null>(null);
+  const captureHideRange = (): void => {
+    const el = ref.current;
+    hideRange.current = {
+      start: el?.selectionStart ?? value.length,
+      end: el?.selectionEnd ?? value.length,
+    };
+  };
+  /** Where the last Hide edit left the selection; the closing menu returns focus there. */
+  const hideSelection = useRef<{ start: number; end: number } | null>(null);
+  const restoreHideFocus = (): void => {
+    const el = ref.current;
+    const selection = hideSelection.current;
+    if (!el || !selection) return;
+    el.focus();
+    el.setSelectionRange(selection.start, selection.end);
+    setCaret(selection.end);
+  };
+  const planHide = (marker: HideMarker): HidePlan | null => {
+    if (!hideRange.current) captureHideRange();
+    const range = hideRange.current ?? { start: value.length, end: value.length };
+    const result = hideLines(value, range.start, range.end, marker);
+    if (!result) return null;
+    return {
+      replaces: result.replaces,
+      commit: () => {
+        hideRange.current = null;
+        onChange(result.next);
+        hideSelection.current = {
+          start: result.selectionStart,
+          end: result.selectionEnd,
+        };
+        requestAnimationFrame(restoreHideFocus);
+      },
+    };
+  };
+
   const run = useCallback(
     (command: LiveEditorCommand) => {
       const el = ref.current;
@@ -574,30 +622,38 @@ function PlainLiveEditor({
           >
             {toolbarStart}
             {COMMANDS.map((cmd) => (
-              <Button
-                key={cmd.id}
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => run(cmd.id)}
-                aria-label={cmd.title}
-                title={cmd.title}
-              >
-                <svg
-                  width={16}
-                  height={16}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                  focusable="false"
+              <Fragment key={cmd.id}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => run(cmd.id)}
+                  aria-label={cmd.title}
+                  title={cmd.title}
                 >
-                  <path d={cmd.path} />
-                </svg>
-              </Button>
+                  <svg
+                    width={16}
+                    height={16}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <path d={cmd.path} />
+                  </svg>
+                </Button>
+                {cmd.id === 'ordered' ? (
+                  <HideMenu
+                    onOpen={captureHideRange}
+                    plan={planHide}
+                    restoreFocus={restoreHideFocus}
+                  />
+                ) : null}
+              </Fragment>
             ))}
             <Button
               type="button"
@@ -756,7 +812,9 @@ function BlocksLiveEditor({
     observer.observe(input);
   }, []);
   const lastSent = useRef(value);
+  const seenValue = useRef(value);
   const pendingCaret = useRef<number | null>(null);
+  const pendingSelection = useRef<{ start: number; end: number } | null>(null);
   const lastActive = useRef(0);
 
   useEffect(() => {
@@ -768,7 +826,13 @@ function BlocksLiveEditor({
   }, [lines, onChange]);
 
   useEffect(() => {
-    if (active != null) return;
+    // A new value from the parent that this editor did not send (undo, redo)
+    // replaces the lines even mid-edit; otherwise the next keystroke would
+    // send the stale lines back over it. An unchanged prop never does, so a
+    // parent still rendering the previous value cannot undo a local edit.
+    const external = value !== seenValue.current;
+    seenValue.current = value;
+    if (active != null && !external) return;
     if (value !== lastSent.current) {
       lastSent.current = value;
       setLines(leDeserialize(value));
@@ -801,6 +865,17 @@ function BlocksLiveEditor({
       inputRef.current.focus();
       try {
         inputRef.current.setSelectionRange(p, p);
+      } catch {
+        /* ignore */
+      }
+      sizeBlockInput(inputRef.current);
+    }
+    if (pendingSelection.current != null && inputRef.current) {
+      const { start, end } = pendingSelection.current;
+      pendingSelection.current = null;
+      inputRef.current.focus();
+      try {
+        inputRef.current.setSelectionRange(start, end);
       } catch {
         /* ignore */
       }
@@ -1008,6 +1083,9 @@ function BlocksLiveEditor({
   const handleContainerMouseDown = (e: React.MouseEvent<HTMLDivElement>): void => {
     if (e.button !== 0) return;
     const target = e.target as HTMLElement;
+    // Portaled menus and dialogs (the Hide menu's member picker) bubble here
+    // through React; they are not part of the document surface.
+    if (!e.currentTarget.contains(target)) return;
     if (target.closest(LE_FOCUSABLE_SEL)) return;
     e.preventDefault();
     ensureActive();
@@ -1048,6 +1126,54 @@ function BlocksLiveEditor({
     const focusLine = at + 1 + sep + 1;
     caretRef.current = { idx: focusLine, pos: 0 };
     setActive(focusLine);
+  };
+
+  /** Selection kept when the Hide menu opens, as offsets into the whole body. */
+  const hideRange = useRef<{ start: number; end: number } | null>(null);
+  const captureHideRange = (): void => {
+    const idx = Math.min(active ?? lastActive.current, lines.length - 1);
+    const lineStart = lines
+      .slice(0, idx)
+      .reduce((sum, line) => sum + line.length + 1, 0);
+    const el = active != null ? inputRef.current : null;
+    const lineEnd = lines[idx].length;
+    hideRange.current = {
+      start: lineStart + (el ? el.selectionStart : lineEnd),
+      end: lineStart + (el ? el.selectionEnd : lineEnd),
+    };
+  };
+  /** Where the last Hide edit left the selection in its line. */
+  const hideSelection = useRef<{ start: number; end: number } | null>(null);
+  const restoreHideFocus = (): void => {
+    const el = inputRef.current;
+    const selection = hideSelection.current;
+    if (!el || !selection) return;
+    el.focus();
+    el.setSelectionRange(selection.start, selection.end);
+  };
+  const planHide = (marker: HideMarker): HidePlan | null => {
+    if (!hideRange.current) captureHideRange();
+    const range = hideRange.current;
+    if (!range) return null;
+    const result = hideLines(leSerialize(lines), range.start, range.end, marker);
+    if (!result) return null;
+    return {
+      replaces: result.replaces,
+      commit: () => {
+        hideRange.current = null;
+        const next = leDeserialize(result.next);
+        const { idx, col } = leLocateInParts(next, result.selectionStart);
+        const selection = {
+          start: col,
+          end: col + result.selectionEnd - result.selectionStart,
+        };
+        setLines(next);
+        caretRef.current = { idx, pos: col };
+        pendingSelection.current = selection;
+        hideSelection.current = selection;
+        setActive(idx);
+      },
+    };
   };
 
   const run = (command: LiveEditorCommand): void => {
@@ -1228,31 +1354,39 @@ function BlocksLiveEditor({
           >
             {toolbarStart}
             {COMMANDS.map((cmd) => (
-              <Button
-                key={cmd.id}
-                type="button"
-                variant="ghost"
-                size="sm"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => run(cmd.id)}
-                aria-label={cmd.title}
-                title={cmd.title}
-              >
-                <svg
-                  width={16}
-                  height={16}
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  aria-hidden="true"
-                  focusable="false"
+              <Fragment key={cmd.id}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => run(cmd.id)}
+                  aria-label={cmd.title}
+                  title={cmd.title}
                 >
-                  <path d={cmd.path} />
-                </svg>
-              </Button>
+                  <svg
+                    width={16}
+                    height={16}
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="1.8"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    focusable="false"
+                  >
+                    <path d={cmd.path} />
+                  </svg>
+                </Button>
+                {cmd.id === 'ordered' ? (
+                  <HideMenu
+                    onOpen={captureHideRange}
+                    plan={planHide}
+                    restoreFocus={restoreHideFocus}
+                  />
+                ) : null}
+              </Fragment>
             ))}
           </div>
           {toolbarEnd}
