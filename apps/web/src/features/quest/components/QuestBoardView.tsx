@@ -392,6 +392,7 @@ export function QuestBoardView(page: QuestBoardViewProps): React.JSX.Element {
                     waitlistCount={card.waitlistCount}
                     totalSlots={card.totalSlots}
                     when={card.when}
+                    whenShort={card.whenShort}
                     mine={page.isMine(quest)}
                     isMutating={page.isBoardMutating}
                     onSignUpClick={() => page.onSignUp(quest)}

@@ -11,7 +11,8 @@
   margin: 0;
 }
 
-.member {
+/* :global(.card) lifts these above the unlayered .card--clickable display:block. */
+.member:global(.card) {
   display: flex;
   align-items: flex-start;
   gap: var(--sp-3);
@@ -49,18 +50,25 @@
   gap: var(--sp-2);
 }
 
-.character {
+.character:global(.card) {
   display: flex;
   align-items: flex-start;
   gap: var(--sp-3);
   min-width: 0;
 }
 
+/* Stretches to the card height; the status and owner captions pin to the
+   bottom so they line up across the row when a name wraps. */
 .characterBody {
   display: flex;
   flex-direction: column;
+  align-self: stretch;
   gap: var(--sp-1);
   min-width: 0;
+}
+
+.root .characterBody > h2 + p {
+  margin-block-start: auto;
 }
 
 .tagline {

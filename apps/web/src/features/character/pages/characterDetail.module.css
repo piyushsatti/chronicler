@@ -64,16 +64,20 @@
   gap: var(--sp-3);
 }
 
+/* Fills the stretched card; the captions pin to the bottom so they line up
+   across the row when a name wraps. */
 .directoryCard {
   display: flex;
   align-items: flex-start;
   gap: var(--sp-3);
+  block-size: 100%;
   min-width: 0;
 }
 
 .directoryCardBody {
   display: flex;
   flex-direction: column;
+  align-self: stretch;
   gap: var(--sp-1);
   min-width: 0;
 }
@@ -81,6 +85,10 @@
 .directoryCardBody h2,
 .directoryCardBody p {
   margin: 0;
+}
+
+.directoryCardBody > h2 + p {
+  margin-block-start: auto;
 }
 
 .root :global(.chip).mineFilter {

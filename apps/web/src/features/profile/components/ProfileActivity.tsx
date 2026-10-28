@@ -13,6 +13,7 @@ import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
 import { isSentinelDate, pluralize, statusLabel } from '../../../utils/format.js';
 import { CharacterCard } from '../../../components/domain/CharacterCard.js';
 import { useProfileActivity } from '../../../hooks/useProfileActivity.js';
+import styles from '../pages/profile.module.css';
 
 export function ProfileActivity({ memberId, owner, about, sessionsRun, availability = 'Not shared', editor, toolbarActions, renderHero }: {
   memberId: string;
@@ -83,9 +84,9 @@ export function ProfileActivity({ memberId, owner, about, sessionsRun, availabil
           { id: 'writings', label: 'Writings', panel: (
             withEditor(state.activity.isError ? <StatePanel status="error" error={toAppError(state.activity.error, 'profile:writings')} /> :
             !state.activity.data ? <StatePanel status="loading" /> :
-            state.activity.data.writings.length ? <CardGrid>{state.activity.data.writings.map((entry) => <Card key={entry.id} variant="clickable" to={`/summaries/${entry.slug}`} pad={4}>
+            state.activity.data.writings.length ? <CardGrid>{state.activity.data.writings.map((entry) => <Card key={entry.id} variant="clickable" to={`/summaries/${entry.slug}`} className={`stack ${styles.pinCard}`} pad={4}>
               <h2 className="type-title">{entry.title}</h2>
-              {entry.publishedAt && !isSentinelDate(entry.publishedAt) ? <p className="type-caption">{formatDate(entry.publishedAt)}</p> : null}
+              {entry.publishedAt && !isSentinelDate(entry.publishedAt) ? <p className={`type-caption ${styles.pinEnd}`}>{formatDate(entry.publishedAt)}</p> : null}
             </Card>)}</CardGrid> : <EmptyState message={owner ? 'You have not published any writings yet.' : 'This player has no shared writings yet.'} action={owner ? <Link className="btn btn--secondary btn--sm" to="/summaries/new">Write a summary</Link> : undefined} />)
           ) },
         ]}

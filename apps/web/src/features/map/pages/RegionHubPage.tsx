@@ -177,7 +177,7 @@ function MapActivity({ map }: { map: MapAtlasView }) {
         <p className="type-caption">No regional activity is available.</p>
       )}
       <Link
-        className="btn btn--secondary btn--sm"
+        className={`btn btn--secondary btn--sm ${styles.pinEnd}`}
         to={`/map/${encodeURIComponent(map.atlasCode)}`}
       >
         Open map
@@ -315,14 +315,14 @@ function RegionCard({
     <Card
       variant="clickable"
       to={`/regions/${region.id}`}
-      className="stack"
+      className={`stack ${styles.pinCard}`}
       aria-labelledby={`${id}-name`}
       aria-describedby={`${id}-meta`}
     >
       <h2 className="type-title" id={`${id}-name`}>
         {region.name}
       </h2>
-      <p className="type-caption" id={`${id}-meta`}>
+      <p className={`type-caption ${styles.pinEnd}`} id={`${id}-meta`}>
         {humanizeKey(region.kind)} ·{' '}
         {pluralize(mapCount, 'map')}
       </p>

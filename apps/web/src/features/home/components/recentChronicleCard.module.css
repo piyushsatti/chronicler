@@ -1,4 +1,6 @@
-.card {
+/* :global(.card) lifts this above the unlayered .card--clickable display:block,
+   so the column (and the pinned meta row) never depends on load order. */
+.card:global(.card) {
   display: flex;
   flex-direction: column;
   min-width: 0;
@@ -18,9 +20,11 @@
   text-decoration: underline;
 }
 
+/* Pinned to the bottom so author and date line up across the row. */
 .meta {
   min-width: 0;
   flex-wrap: wrap;
+  margin-block-start: auto;
 }
 
 .author {

@@ -127,7 +127,7 @@ function DmInformation({
                     >
                       {table.title}
                     </Link>
-                    <Chip size="sm" tone="status">
+                    <Chip size="sm" tone="status" className={styles.pinEnd}>
                       {statusLabel(table.status)}
                     </Chip>
                     {table.canEditBody || table.canEditMetadata ? (
@@ -192,7 +192,7 @@ function DmInformation({
         </div>
         {state.details.isError ? <StatePanel variant="inline" status="error" error={toAppError(state.details.error, 'profile:series')} /> :
           state.details.isPending ? <StatePanel variant="inline" status="loading" /> :
-          state.details.data?.questArcs.items.length ? <CardGrid>{state.details.data.questArcs.items.map((arc) => <Card key={arc.id} variant="clickable" to={`/series/${arc.id}`} pad={4}><h3 className="type-title">{arc.name}</h3><p className="type-caption">{pluralize(arc.questCount, 'quest')}</p></Card>)}</CardGrid> :
+          state.details.data?.questArcs.items.length ? <CardGrid>{state.details.data.questArcs.items.map((arc) => <Card key={arc.id} variant="clickable" to={`/series/${arc.id}`} className={`stack ${styles.pinCard}`} pad={4}><h3 className="type-title">{arc.name}</h3><p className={`type-caption ${styles.pinEnd}`}>{pluralize(arc.questCount, 'quest')}</p></Card>)}</CardGrid> :
           <EmptyState message="No quest series have been shared yet." action={canCreate ? <SeriesCreateAction label="Create a series" variant="ghost" size="sm" showAuthorityError={false} /> : <Link className="type-link" to="/quests">Browse quests</Link>} />}
       </Card>
       <Card className="stack" pad={4}>

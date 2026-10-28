@@ -137,6 +137,7 @@ export function SeriesPage(): React.JSX.Element {
                       description={quest.briefDocument?.effectiveBody}
                       status={toCardStatus(quest.displayStatus, quest.status)}
                       when={dates.formatScheduled(quest.scheduledAt)}
+                      whenShort={dates.formatScheduledShort(quest.scheduledAt)}
                       dmUsername={quest.dm?.handle}
                       dmName={
                         quest.dm

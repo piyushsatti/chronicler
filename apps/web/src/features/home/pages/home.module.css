@@ -31,9 +31,17 @@
   grid-column: auto;
 }
 
+/* Column so the region/DM/seats row pins to the bottom and lines up across
+   the row of tiles. */
 .root [data-el='schedCard.root'] {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   max-width: 100%;
+}
+
+.root [data-el='schedCard.bottomRow'] {
+  margin-block-start: auto;
 }
 
 .root [data-el='schedCard.topRow']:global(.row),
@@ -166,8 +174,10 @@
   min-width: 0;
 }
 
+/* Stretch the card (article, link card, or button card) to the row height. */
 .cardItem > article,
-.cardItem > a {
+.cardItem > a,
+.cardItem > button {
   flex: 1;
 }
 

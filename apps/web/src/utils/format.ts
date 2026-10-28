@@ -1,4 +1,4 @@
-export type InstantStyle = 'date' | 'dateTime';
+export type InstantStyle = 'date' | 'dateTime' | 'shortDateTime';
 type Timestamp = string | null | undefined;
 const CIVIL_DATE = /^\d{4}-\d{2}-\d{2}$/;
 /** Placeholder dates far in the future (year >= 2099) mean "no date"; never display them. */
@@ -35,7 +35,8 @@ function zonedParts(
 }
 /**
  * Display instants in the viewer's zone (`timeZone`, else the device zone).
- * `date` reads "7 Mar 2026"; `dateTime` reads "Sat 7 Mar 2026, 23:30". No zone
+ * `date` reads "7 Mar 2026"; `dateTime` reads "Sat 7 Mar 2026, 23:30";
+ * `shortDateTime` drops the year for compact chips: "Sat 7 Mar · 23:30". No zone
  * name is shown, except " UTC" when the viewer chose UTC and the short zone
  * name inside the repeated autumn DST hour. Civil dates
  * ("2026-03-08") keep their calendar day in every zone. Absent or invalid
@@ -71,6 +72,9 @@ export function formatInstant(
     : repeatedWallTime(date, timeZone)
       ? ` ${zonedParts(date, timeZone, { timeZoneName: 'short' }).timeZoneName ?? ''}`.trimEnd()
       : '';
+  if (style === 'shortDateTime') {
+    return `${p.weekday} ${p.day} ${p.month} \u00b7 ${p.hour}:${p.minute}${zone}`;
+  }
   return `${p.weekday} ${day}, ${p.hour}:${p.minute}${zone}`;
 }
 /** The autumn DST hour happens twice; only then does a time need its zone name. */
@@ -101,6 +105,15 @@ export function formatScheduled(
   timeZone: string | null = null,
 ): string {
   const formatted = formatInstant(value, timeZone);
+  return formatted === '—' ? 'TBA' : formatted;
+}
+/** Compact schedule chip label without the year ("Tue 20 Oct · 19:00"); pair it
+ * with `formatScheduled` as the full, accessible date. */
+export function formatScheduledShort(
+  value: Timestamp,
+  timeZone: string | null = null,
+): string {
+  const formatted = formatInstant(value, timeZone, 'shortDateTime');
   return formatted === '—' ? 'TBA' : formatted;
 }
 export function civilDateInZone(

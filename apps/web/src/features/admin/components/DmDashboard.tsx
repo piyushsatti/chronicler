@@ -185,7 +185,7 @@ export function DmDashboard({ view }: { view: ReturnType<typeof useDmDashboard> 
             {data.series.map((series) => (
               <li className="card stack" key={series.id}>
                 <Link className="type-title" to={`/series/${encodeURIComponent(series.id)}`}>{series.name}</Link>
-                <p className="type-caption">{pluralize(series.questCount, 'quest')}</p>
+                <p className="type-caption dm-dashboard__pin">{pluralize(series.questCount, 'quest')}</p>
               </li>
             ))}
           </CardGrid>
@@ -218,7 +218,7 @@ export function DmDashboard({ view }: { view: ReturnType<typeof useDmDashboard> 
                 <Link className="type-title" to={`/community/dm-table/${table.slug}`}>
                   {table.title}
                 </Link>
-                <p className="type-caption">{statusLabel(table.status)}</p>
+                <p className="type-caption dm-dashboard__pin">{statusLabel(table.status)}</p>
                 {table.canEditMetadata ? (
                   <Link className="type-link" to={`/editor/dm-table/${table.id}/edit`}>
                     Edit table

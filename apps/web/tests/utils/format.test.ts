@@ -3,6 +3,7 @@ import {
   civilDateInZone,
   formatInstant,
   formatScheduled,
+  formatScheduledShort,
   humanizeKey,
   labelFor,
   nextCivilDay,
@@ -21,6 +22,13 @@ import {
   isMachineId,
 } from '../../src/utils/format.js';
 describe('timestamp presentation', () => {
+  it('drops the year for compact schedule chips and keeps TBA for absent dates', () => {
+    expect(formatScheduledShort('2026-10-20T19:00:00Z', 'UTC')).toBe('Tue 20 Oct \u00b7 19:00 UTC');
+    expect(formatScheduledShort('2026-10-20T19:00:00Z', 'Europe/Paris')).toBe('Tue 20 Oct \u00b7 21:00');
+    expect(formatScheduled('2026-10-20T19:00:00Z', 'Europe/Paris')).toBe('Tue 20 Oct 2026, 21:00');
+    expect(formatScheduledShort(null)).toBe('TBA');
+    expect(formatScheduledShort('2099-01-01T00:00:00Z')).toBe('TBA');
+  });
   it('uses selected zones across midnight and accepts equivalent explicit offsets', () => {
     expect(formatInstant('2026-03-08T04:30:00Z', 'America/New_York', 'date')).toBe(
       '7 Mar 2026',

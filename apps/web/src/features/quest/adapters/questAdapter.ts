@@ -17,7 +17,7 @@ import { z } from 'zod';
 import { toAppError } from '../../../errors/toAppError.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import { toCardStatus, type QuestCardStatus } from '../../../view-models/questCard.js';
-import { formatScheduled } from '../../../utils/format.js';
+import { formatScheduled, formatScheduledShort } from '../../../utils/format.js';
 import {
   questBoardChromeWireSchema,
   questBoardWireSchema,
@@ -126,6 +126,8 @@ export type QuestBoardCardPropsView = {
   dmName: string | null;
   totalSlots: number;
   when: string;
+  /** Year-less chip label; `when` stays the full, accessible date. */
+  whenShort: string;
   party: Array<{
     characterName: string | null;
     characterId: string | null;
@@ -221,6 +223,7 @@ export function mapToBoardCardProps(
     dmName: quest.dmName,
     totalSlots: quest.slotsMax,
     when: formatScheduled(quest.scheduledAt, timeZone),
+    whenShort: formatScheduledShort(quest.scheduledAt, timeZone),
     party: seated.map((p) => ({
       characterName: p.characterName,
       characterId: p.characterId,

@@ -11,7 +11,8 @@
   margin: 0;
 }
 
-.card {
+/* :global(.card) lifts this above the unlayered .card--clickable display:block. */
+.card:global(.card) {
   display: flex;
   align-items: flex-start;
   gap: var(--sp-3);
@@ -19,9 +20,12 @@
   text-decoration: none;
 }
 
+/* Stretches to the card height so the chips pin to the bottom and line up
+   across the row whatever the tagline length. */
 .cardBody {
   display: flex;
   flex-direction: column;
+  align-self: stretch;
   gap: var(--sp-1);
   min-width: 0;
   flex: 1;
@@ -49,7 +53,8 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--sp-1) var(--sp-2);
-  margin-top: var(--sp-1);
+  margin-top: auto;
+  padding-top: var(--sp-1);
 }
 
 .start {

@@ -16,7 +16,8 @@ import type { QuestCardStatus } from '../../view-models/questCard.js';
 import { personName } from '../../utils/format.js';
 import styles from './questCard.module.css';
 
-const PARTY_NAMES_CAP = 8;
+/** Names shown in the one-line footer caption; the rest read "+N more". */
+const PARTY_NAMES_CAP = 3;
 /** Above this many seats the pip row stops being countable at a glance. */
 const SEAT_PIPS_CAP = 12;
 const QUEST_CARD_STAGGER = motionEntry('quest-card-stagger-in');
@@ -62,7 +63,11 @@ export type QuestCardProps = {
   totalSlots?: number | null;
   waitlistCount?: number | null;
   level?: string | null;
+  /** Full schedule label ("Tue 20 Oct 2026, 19:00"). */
   when?: string | null;
+  /** Compact chip label without the year ("Tue 20 Oct · 19:00"); `when` stays
+   * available as the chip's tooltip and accessible text. */
+  whenShort?: string | null;
   /** Guild-quest marker, shown beside the lifecycle badge. */
   gw?: boolean;
   mine?: boolean;
@@ -89,6 +94,7 @@ export function QuestCard({
   waitlistCount,
   level,
   when,
+  whenShort,
   gw = false,
   mine = false,
   waitlisted = false,
@@ -229,11 +235,19 @@ export function QuestCard({
             </div>
           ) : null}
 
-          <div className="row" data-el="boardCard.dmStrip" data-gap="3">
-            <Avatar name={dmLabel} size="md" />
-            <div>
-              <div className="type-label">Loremaster</div>
-              <div className="row" data-gap="2" data-wrap="1" data-align="baseline">
+          {/* Pinned to the body's bottom edge so the Loremaster and chips line
+              up across sibling cards whatever the description length. Two
+              columns when both fit; the chips wrap under the Loremaster
+              otherwise. */}
+          <div className={styles.boardCardMeta} data-el="boardCard.meta">
+            <div
+              className={`row ${styles.boardCardDm}`}
+              data-el="boardCard.dmStrip"
+              data-gap="3"
+            >
+              <Avatar name={dmLabel} size="md" />
+              <div className={styles.boardCardDmText}>
+                <div className="type-label">Loremaster</div>
                 {(() => {
                   const dmPath = dmUsername
                     ? memberHref({ handle: dmUsername }, 'dm')
@@ -241,6 +255,7 @@ export function QuestCard({
                   return (
                     <a
                       href={dmPath}
+                      title={dmLabel}
                       data-el="boardCard.dmLink"
                       onClick={(e) => {
                         e.preventDefault();
@@ -255,42 +270,54 @@ export function QuestCard({
                 })()}
               </div>
             </div>
-          </div>
 
-          <div className="row" data-el="boardCard.chips" data-gap="2" data-wrap="1">
-            <StatusBadge status={status} />
-            {gw ? (
-              <span className="chip" data-tone="line">
-                Guild quest
-              </span>
-            ) : null}
-            {region ? <RegionLabel region={region} /> : null}
-            {level ? (
-              <span className="chip" data-el="boardCard.level">
-                Level {level}
-              </span>
-            ) : null}
-            {status === 'live' ? (
-              <span
-                className={`chip row ${styles.boardCardWhen}`}
-                data-el="boardCard.when"
-              >
-                <IcCal />
-                Now
-              </span>
-            ) : when && when !== 'TBA' && when !== '—' ? (
-              <span
-                className={`chip row ${styles.boardCardWhen}`}
-                data-el="boardCard.when"
-              >
-                <IcCal />
-                {when}
-              </span>
-            ) : (
-              <span className="chip" data-el="boardCard.when" data-tone="line">
-                Time TBA
-              </span>
-            )}
+            <div className={`stack ${styles.boardCardChips}`} data-el="boardCard.chips" data-gap="2">
+              <div className="row" data-gap="2" data-wrap="1">
+                <StatusBadge status={status} />
+                {gw ? (
+                  <span className="chip" data-tone="line">
+                    Guild quest
+                  </span>
+                ) : null}
+                {region ? <RegionLabel region={region} /> : null}
+              </div>
+              <div className="row" data-gap="2" data-wrap="1">
+                {status === 'live' ? (
+                  <span
+                    className={`chip row ${styles.boardCardWhen}`}
+                    data-el="boardCard.when"
+                  >
+                    <IcCal />
+                    Now
+                  </span>
+                ) : when && when !== 'TBA' && when !== '—' ? (
+                  <span
+                    className={`chip row ${styles.boardCardWhen}`}
+                    data-el="boardCard.when"
+                    title={whenShort && whenShort !== when ? when : undefined}
+                  >
+                    <IcCal />
+                    {whenShort && whenShort !== when ? (
+                      <>
+                        <span aria-hidden="true">{whenShort}</span>
+                        <span className={styles.srOnly}>{when}</span>
+                      </>
+                    ) : (
+                      when
+                    )}
+                  </span>
+                ) : (
+                  <span className="chip" data-el="boardCard.when" data-tone="line">
+                    Time TBA
+                  </span>
+                )}
+                {level ? (
+                  <span className="chip" data-el="boardCard.level">
+                    Level {level}
+                  </span>
+                ) : null}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -308,17 +335,37 @@ export function QuestCard({
                 }))}
                 total={filled}
               />
-              <div className="type-caption">
-                {partyNames.slice(0, PARTY_NAMES_CAP).join(', ')}
-                {partyNames.length > PARTY_NAMES_CAP ? (
-                  <span className={styles.boardCardMuted}>
-                    {' '}
-                    +{partyNames.length - PARTY_NAMES_CAP} more
-                  </span>
-                ) : null}
+              {/* One line, so the footer keeps its height: at most
+                  PARTY_NAMES_CAP names, then an honest "+N more". The full list
+                  is the row's tooltip and its screen-reader text. */}
+              <div
+                className={`type-caption row ${styles.boardCardNames}`}
+                data-el="boardCard.partyNames"
+                data-gap="1"
+                data-wrap="0"
+                title={party.length > 0 ? partyNames.join(', ') : undefined}
+              >
                 {party.length === 0 ? (
                   <span className={styles.boardCardMuted}>No one seated yet</span>
-                ) : null}
+                ) : partyNames.length > PARTY_NAMES_CAP ? (
+                  <>
+                    <span className={styles.boardCardNamesList} aria-hidden="true">
+                      {partyNames.slice(0, PARTY_NAMES_CAP).join(', ')}
+                    </span>
+                    <span
+                      className={styles.boardCardMuted}
+                      data-shrink="0"
+                      aria-hidden="true"
+                    >
+                      +{partyNames.length - PARTY_NAMES_CAP} more
+                    </span>
+                    <span className={styles.srOnly}>{partyNames.join(', ')}</span>
+                  </>
+                ) : (
+                  <span className={styles.boardCardNamesList}>
+                    {partyNames.join(', ')}
+                  </span>
+                )}
               </div>
             </div>
             <div data-shrink="0">

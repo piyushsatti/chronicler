@@ -152,4 +152,49 @@ describe('QuestCard', () => {
     await user.click(confirm!);
     expect(onWithdrawConfirm).toHaveBeenCalledOnce();
   });
+
+  it('groups the Loremaster and chips in one bottom block: status and region, then the date', () => {
+    renderWithProviders(<QuestCard {...baseProps} dmName="Mortal bard" />);
+    const card = screen.getByRole('article', { name: /Siege of Kraghold/i });
+    const meta = card.querySelector('[data-el="boardCard.meta"]');
+    expect(meta).not.toBeNull();
+    // The block follows the description, so CSS can pin it to the body's bottom edge.
+    const hook = within(card).getByTestId('qboard-hook');
+    expect(hook.compareDocumentPosition(meta!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const [dm, chips] = Array.from(meta!.children);
+    expect(dm).toHaveAttribute('data-el', 'boardCard.dmStrip');
+    expect(within(dm as HTMLElement).getByText('Loremaster')).toBeInTheDocument();
+    expect(within(dm as HTMLElement).getByText('Mortal bard')).toBeInTheDocument();
+    expect(chips).toHaveAttribute('data-el', 'boardCard.chips');
+    const [first, second] = Array.from(chips!.children) as HTMLElement[];
+    expect(within(first!).getByText('Filling')).toBeInTheDocument();
+    expect(within(first!).getByText('The Marches')).toBeInTheDocument();
+    expect(within(second!).getByText('Sat 20 Oct 2026, 20:00 BST')).toBeInTheDocument();
+  });
+
+  it('shows at most three party names with an honest overflow count and the full list as tooltip', () => {
+    const party = Array.from({ length: 10 }, (_, i) => ({ characterName: `Hero ${i + 1}` }));
+    renderWithProviders(<QuestCard {...baseProps} totalSlots={10} party={party} />);
+    const caption = screen
+      .getByRole('article', { name: /Siege of Kraghold/i })
+      .querySelector('[data-el="boardCard.partyNames"]') as HTMLElement;
+    const full = party.map((p) => p.characterName).join(', ');
+    expect(caption).toHaveAttribute('title', full);
+    const [names, more, spoken] = Array.from(caption.children);
+    expect(names).toHaveTextContent(/^Hero 1, Hero 2, Hero 3$/);
+    expect(names).toHaveAttribute('aria-hidden', 'true');
+    expect(more).toHaveTextContent('+7 more');
+    expect(spoken).toHaveTextContent(full);
+  });
+
+  it('shows the year-less date on the chip and keeps the full date as tooltip and accessible text', () => {
+    renderWithProviders(
+      <QuestCard {...baseProps} when="Tue 20 Oct 2026, 19:00" whenShort={"Tue 20 Oct \u00b7 19:00"} />,
+    );
+    const card = screen.getByRole('article', { name: /Siege of Kraghold/i });
+    const chip = card.querySelector('[data-el="boardCard.when"]') as HTMLElement;
+    expect(chip).toHaveAttribute('title', 'Tue 20 Oct 2026, 19:00');
+    expect(within(chip).getByText('Tue 20 Oct \u00b7 19:00')).toHaveAttribute('aria-hidden', 'true');
+    expect(within(chip).getByText('Tue 20 Oct 2026, 19:00')).toBeInTheDocument();
+  });
 });

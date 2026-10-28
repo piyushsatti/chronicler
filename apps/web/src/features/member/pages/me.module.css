@@ -91,11 +91,18 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+/* Fills its list item so every tile in the row is the same height; the label
+   pins to the bottom and lines up even when a value wraps. */
 .statCard {
   display: flex;
   flex-direction: column;
   gap: var(--sp-2);
+  block-size: 100%;
   min-width: 0;
+}
+
+.statCard > :last-child {
+  margin-block-start: auto;
 }
 
 .statValue {
@@ -235,7 +242,41 @@
   display: flex;
   align-items: center;
   gap: var(--sp-3);
+  block-size: 100%;
   min-width: 0;
+}
+
+/* Side-by-side cards in a CardGrid of list items: the card fills its item so
+   the row is one height, and the trailing line pins to the bottom so it lines
+   up when a title wraps. */
+.fillCard {
+  block-size: 100%;
+}
+
+.pinEnd {
+  margin-block-start: auto;
+}
+
+/* Clickable cards are `display:block` from the unlayered .card--clickable
+   rule, which beats the layered .stack utility; restore the column here. */
+.pinCard:global(.card) {
+  display: flex;
+  flex-direction: column;
+}
+
+.charRow .rowMain {
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+  min-width: 0;
+}
+
+.charRow .rowMain > h3 + p {
+  margin-block-start: auto;
+}
+
+.hostedGrid > li > :global(.card) {
+  block-size: 100%;
 }
 
 .dmActions {

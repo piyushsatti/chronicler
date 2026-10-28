@@ -152,7 +152,11 @@
 .questTitle:hover {
   color: var(--color-accent);
 }
+/* Column chain (card > link > body) so the region / Open atlas foot pins to
+   the bottom and lines up across the row. */
 .mapCard {
+  display: flex;
+  flex-direction: column;
   min-width: 0;
   overflow: hidden;
   border: 1px solid var(--color-border);
@@ -160,7 +164,9 @@
   background: var(--color-bg-panel);
 }
 .mapCardLink {
-  display: block;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   color: inherit;
   text-decoration: none;
 }
@@ -229,6 +235,9 @@
   background: var(--color-good);
 }
 .mapCardBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
   padding: 17px 18px 15px;
 }
 .mapCardTop {
@@ -248,7 +257,7 @@
 }
 .mapDescription {
   min-height: 40px;
-  margin: 0;
+  margin: 0 0 16px;
   color: var(--color-text-2);
   font-size: 13px;
   line-height: 1.55;
@@ -258,7 +267,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  margin-top: 16px;
+  margin-top: auto;
   padding-top: 12px;
   border-top: 1px solid var(--color-border-2);
   color: var(--color-text-2);
@@ -282,6 +291,7 @@
   stroke-width: 1.3;
 }
 .cardRetry {
+  align-self: flex-start;
   margin: 0 18px 14px;
   color: var(--color-accent);
   background: transparent;
@@ -865,6 +875,15 @@
   }
 }
 
-.regionGrid {
-  align-items: start;
+/* Region hub cards stretch to the row height; their last line (Open map, the
+   kind and map count) pins to the bottom. */
+.regionGrid .pinEnd {
+  margin-block-start: auto;
+}
+
+/* RegionCard is a clickable Card: the unlayered .card--clickable
+   `display:block` beats the layered .stack, so restore the column here. */
+.regionGrid .pinCard {
+  display: flex;
+  flex-direction: column;
 }

@@ -95,7 +95,7 @@ function characterInitials(name: string): string {
 
 function CharacterTile({ character }: { character: RosterCharacter }): React.JSX.Element {
   return (
-    <Card variant="clickable" to={`/characters/${character.shortCode}`} pad={4}>
+    <Card variant="clickable" to={`/characters/${character.shortCode}`} className={styles.fillCard} pad={4}>
       <div className={styles.charRow}>
         <span aria-hidden><Avatar name={characterInitials(character.name)} src={character.imageUrl ?? undefined} size="md" /></span>
         <div className={styles.rowMain}>
@@ -235,7 +235,7 @@ function DmWork({ view }: { view: ReturnType<typeof useDmDashboard> }): React.JS
   return (
     <Card className="stack" as="section" aria-label="Your tables, series and quests">
       <div className={styles.sectionHead}><h2 className="type-heading">Your tables, series and quests</h2></div>
-      {hasHostedWork ? <CardGrid as="ul" gap={3} aria-label="Your hosted work">
+      {hasHostedWork ? <CardGrid as="ul" gap={3} aria-label="Your hosted work" className={styles.hostedGrid}>
         <li><div className="card stack"><h3 className="type-title">DM tables</h3><p className="type-caption">{pluralize(data.documents.total, 'table')}</p>{data.documents.items.slice(0, 3).map((table) => <Link className="type-link" key={table.id} to={`/community/dm-table/${table.slug}`}>{table.title}</Link>)}{data.documents.total > 3 ? <SeeAll label="See all DM tables" /> : null}{data.documents.total === 0 ? <Link className="type-link" to="/editor/dm-table">New DM table</Link> : null}</div></li>
         <li><div className="card stack"><h3 className="type-title">Series</h3><p className="type-caption">{pluralize(data.series.length, 'series')}</p>{data.series.slice(0, 3).map((series) => <Link className="type-link" key={series.id} to={`/series/${encodeURIComponent(series.id)}`}>{series.name}</Link>)}{data.series.length > 3 ? <SeeAll label="See all series" /> : null}<SeriesCreateAction label="Create a series" variant="ghost" size="sm" showAuthorityError={false} /></div></li>
         <li><div className="card stack"><h3 className="type-title">Quests to run</h3><p className="type-caption">{pluralize(upcoming.length, 'quest')}</p>{upcoming.slice(0, 3).map((quest) => <Link className="type-link" key={quest.id} to={`/quests/${quest.shortCode}`}>{quest.briefDocument?.title ?? 'Untitled quest'}</Link>)}{upcoming.length > 3 ? <SeeAll label="See all quests to run" /> : null}{upcoming.length === 0 && view.canCreateQuest ? <Link className="type-link" to="/quests/new">Post a quest</Link> : null}</div></li>
@@ -339,9 +339,9 @@ function SummariesPage({ activity }: { activity: Activity }): React.JSX.Element 
           : writings.data.writings.length === 0 ? <EmptyState message="You have not written a summary yet. Summaries you write will appear here." />
             : <CardGrid as="ul" gap={3} aria-label="Your summaries">{writings.data.writings.map((entry) => (
               <li key={entry.id}>
-                <Card variant="clickable" to={`/summaries/${entry.slug}`} pad={4}>
+                <Card variant="clickable" to={`/summaries/${entry.slug}`} className={`stack ${styles.fillCard} ${styles.pinCard}`} pad={4}>
                   <h3 className="type-title">{entry.title}</h3>
-                  {entry.publishedAt && !isSentinelDate(entry.publishedAt) ? <p className="type-caption">{formatDate(entry.publishedAt)}</p> : null}
+                  {entry.publishedAt && !isSentinelDate(entry.publishedAt) ? <p className={`type-caption ${styles.pinEnd}`}>{formatDate(entry.publishedAt)}</p> : null}
                 </Card>
               </li>
             ))}</CardGrid>}

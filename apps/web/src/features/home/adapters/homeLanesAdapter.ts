@@ -23,7 +23,7 @@ import {
 } from './homeLanes.wire.schema.js';
 import type { QuestCardStatus } from '../../../view-models/questCard.js';
 import { toCardStatus } from '../../../view-models/questCard.js';
-import { formatScheduled } from '../../../utils/format.js';
+import { formatScheduled, formatScheduledShort } from '../../../utils/format.js';
 import { isDiscordDeliveryTerminal } from '../../../utils/discordDelivery.js';
 import type { QuestCardProps } from '../../../components/domain/QuestCard.js';
 
@@ -293,6 +293,7 @@ export function mapToQuestCardProps(
     waitlistCount: quest.waitlistCount,
     totalSlots: quest.slotsMax,
     when: formatScheduled(quest.scheduledAt, opts.timeZone),
+    whenShort: formatScheduledShort(quest.scheduledAt, opts.timeZone),
   };
 }
 
