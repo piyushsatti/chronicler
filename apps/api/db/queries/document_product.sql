@@ -418,12 +418,6 @@ JOIN locked_quests q ON TRUE
 WHERE d.public_id=sqlc.arg(document_id)::uuid
 ON CONFLICT DO NOTHING;
 
--- name: InsertProductSummaryCharacterLink :exec
-INSERT INTO document_links(source_id,character_target_id,relation)
-SELECT d.id,c.id,'subject' FROM documents d JOIN characters c ON c.public_id=sqlc.arg(character_id)::uuid
-WHERE d.public_id=sqlc.arg(document_id)::uuid AND sqlc.narg(character_id)::uuid IS NOT NULL
-ON CONFLICT DO NOTHING;
-
 -- name: InsertProductDocumentLink :exec
 INSERT INTO document_links(source_id,document_target_id,relation)
 VALUES((SELECT id FROM documents WHERE public_id=sqlc.arg(document_id)::uuid),
@@ -441,25 +435,6 @@ WHERE member.public_id=sqlc.arg(member_id)::uuid ON CONFLICT(member_id,npc_docum
 DELETE FROM lieutenant_assignments la USING members member,documents d
 WHERE la.member_id=member.id AND la.npc_document_id=d.id
 AND member.public_id=sqlc.arg(member_id)::uuid AND d.public_id=sqlc.arg(npc_document_id)::uuid;
-
--- name: ListProductDmTablesForMembers :many
-SELECT input.ordinality::integer AS input_index,
-       input.public_id AS member_public_id,
-       d.public_id AS id, d.kind, d.slug, d.title, d.category, d.status, d.visibility,
-       d.policy, d.body, d.frontmatter_yaml, author.public_id AS author_id,
-       d.published_at, d.deleted_at, deleter.public_id AS deleted_by, d.updated_at, d.version,
-       document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,sqlc.narg(viewer_id)::uuid,
-         sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,sqlc.arg(viewer_admin)::boolean,
-         sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[])) AS readable,
-       COALESCE(sqlc.arg(viewer_admin)::boolean AND NOT document_readable(d.public_id,author.public_id,d.status,d.visibility,d.policy,sqlc.narg(viewer_id)::uuid,
-         sqlc.arg(viewer_roles)::text[],sqlc.arg(viewer_handle)::text,FALSE,
-         sqlc.arg(viewer_live_dm)::boolean,COALESCE(ARRAY(SELECT d.public_id FROM document_readers dr JOIN members reader ON reader.id=dr.member_id WHERE dr.document_id=d.id AND reader.public_id=sqlc.narg(viewer_id)::uuid),ARRAY[]::uuid[])),FALSE) AS admin_override
-FROM unnest(sqlc.arg(member_ids)::uuid[]) WITH ORDINALITY AS input(public_id, ordinality)
-LEFT JOIN members m ON m.public_id = input.public_id
-LEFT JOIN documents d ON d.author_id = m.id AND d.kind = 'community' AND d.category = 'dm_table' AND d.deleted_at IS NULL
-LEFT JOIN members author ON author.id = d.author_id
-LEFT JOIN members deleter ON deleter.id = d.deleted_by
-ORDER BY input.ordinality;
 
 -- name: ProductBatchDocumentReaderIds :many
 SELECT input.ordinality::integer AS input_index,

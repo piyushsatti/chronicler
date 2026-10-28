@@ -482,14 +482,6 @@ SELECT count(*)::int AS total
 FROM downtime_projects project
 JOIN characters character ON character.id = project.character_id
 WHERE character.public_id = $1;
--- name: CharacterProductLockDowntimeProject :one
-SELECT project.id, project.public_id, project.character_id, project.name,
-       project.target, project.goal, project.notes, project.progress,
-       project.status, project.updated_at
-FROM downtime_projects project
-JOIN characters character ON character.id = project.character_id
-WHERE character.public_id = $1 AND project.public_id = $2
-FOR UPDATE OF project;
 -- name: CharacterProductInsertDowntimeProject :one
 WITH inserted AS (
     INSERT INTO downtime_projects (character_id, name, target, goal, notes, progress, status, updated_at)
@@ -547,11 +539,6 @@ WHERE public_id = sqlc.arg(character_id)::uuid
   AND status = 'pending_approval'
   AND updated_at = sqlc.arg(expected_updated_at)::timestamptz
 RETURNING public_id AS id, verification_submitted_at, updated_at;
--- name: CharacterProductLockClaimCharacter :one
-SELECT character.id, character.public_id, character.owner_id, character.player_xp
-FROM characters character
-WHERE character.public_id = sqlc.arg(character_id)::uuid
-FOR UPDATE;
 -- name: CharacterProductListLogs :many
 SELECT log.public_id AS id, character.public_id AS character_id, quest.public_id AS quest_id,
        log.body, log.created_at, creator.public_id AS created_by
@@ -680,13 +667,6 @@ WHERE character.public_id = sqlc.arg(character_id)::uuid
   AND character.deleted_at IS NULL
   AND (sqlc.narg(quest_id)::uuid IS NULL OR quest.id IS NOT NULL)
 RETURNING public_id AS id, body, created_at;
--- name: CharacterProductLockCharacterLog :one
-SELECT log.id, log.public_id, log.character_id, log.quest_id, log.body, log.created_at, log.created_by
-FROM character_logs log
-JOIN characters character ON character.id = log.character_id
-WHERE character.public_id = sqlc.arg(character_id)::uuid
-  AND log.public_id = sqlc.arg(log_id)::uuid
-FOR UPDATE OF log;
 -- name: CharacterProductDeleteCharacterLog :one
 DELETE FROM character_logs log
 USING characters character
@@ -725,13 +705,6 @@ SELECT COALESCE(sum(ledger.delta), 0)::int AS total
 FROM character_progression_ledger ledger
 JOIN characters character ON character.id = ledger.character_id
 WHERE character.public_id = sqlc.arg(character_id)::uuid;
--- name: CharacterProductListCatalogPickIds :many
-SELECT catalog.public_id AS id
-FROM character_catalog_picks pick
-JOIN characters character ON character.id = pick.character_id
-JOIN creation_catalog catalog ON catalog.id = pick.catalog_id
-WHERE character.public_id = sqlc.arg(character_id)::uuid
-ORDER BY catalog.public_id ASC;
 
 -- name: CharacterProductValidateCreationReferences :one
 SELECT

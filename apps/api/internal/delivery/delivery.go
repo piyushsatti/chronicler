@@ -29,11 +29,6 @@ func parseQuestPayload(payload []byte) (string, int, error) {
 const LaneDiscord = "discord"
 const KindQuestDiscord = "quest_discord_delivery"
 
-// DesiredStateWriter bumps discord_desired_revision and enqueues a coalesce job.
-type DesiredStateWriter interface {
-	RecordDesiredRevision(ctx context.Context, questID string) error
-}
-
 // DiscordSync applies the current desired Discord state for one quest.
 type DiscordSync interface {
 	SyncQuest(ctx context.Context, questID string, desiredRevision int) error

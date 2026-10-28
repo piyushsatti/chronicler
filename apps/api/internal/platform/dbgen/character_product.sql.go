@@ -1311,35 +1311,6 @@ func (q *Queries) CharacterProductListBackstories(ctx context.Context, arg Chara
 	return items, nil
 }
 
-const characterProductListCatalogPickIds = `-- name: CharacterProductListCatalogPickIds :many
-SELECT catalog.public_id AS id
-FROM character_catalog_picks pick
-JOIN characters character ON character.id = pick.character_id
-JOIN creation_catalog catalog ON catalog.id = pick.catalog_id
-WHERE character.public_id = $1::uuid
-ORDER BY catalog.public_id ASC
-`
-
-func (q *Queries) CharacterProductListCatalogPickIds(ctx context.Context, characterID pgtype.UUID) ([]pgtype.UUID, error) {
-	rows, err := q.db.Query(ctx, characterProductListCatalogPickIds, characterID)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []pgtype.UUID{}
-	for rows.Next() {
-		var id pgtype.UUID
-		if err := rows.Scan(&id); err != nil {
-			return nil, err
-		}
-		items = append(items, id)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const characterProductListCoPlayers = `-- name: CharacterProductListCoPlayers :many
 SELECT character.public_id AS character_id, member.public_id AS member_id,
        count(DISTINCT participant.quest_id)::int AS quest_count
@@ -1876,61 +1847,6 @@ func (q *Queries) CharacterProductLockByID(ctx context.Context, publicID pgtype.
 	return i, err
 }
 
-const characterProductLockCharacterLog = `-- name: CharacterProductLockCharacterLog :one
-SELECT log.id, log.public_id, log.character_id, log.quest_id, log.body, log.created_at, log.created_by
-FROM character_logs log
-JOIN characters character ON character.id = log.character_id
-WHERE character.public_id = $1::uuid
-  AND log.public_id = $2::uuid
-FOR UPDATE OF log
-`
-
-type CharacterProductLockCharacterLogParams struct {
-	CharacterID pgtype.UUID `json:"character_id"`
-	LogID       pgtype.UUID `json:"log_id"`
-}
-
-func (q *Queries) CharacterProductLockCharacterLog(ctx context.Context, arg CharacterProductLockCharacterLogParams) (CharacterLog, error) {
-	row := q.db.QueryRow(ctx, characterProductLockCharacterLog, arg.CharacterID, arg.LogID)
-	var i CharacterLog
-	err := row.Scan(
-		&i.ID,
-		&i.PublicID,
-		&i.CharacterID,
-		&i.QuestID,
-		&i.Body,
-		&i.CreatedAt,
-		&i.CreatedBy,
-	)
-	return i, err
-}
-
-const characterProductLockClaimCharacter = `-- name: CharacterProductLockClaimCharacter :one
-SELECT character.id, character.public_id, character.owner_id, character.player_xp
-FROM characters character
-WHERE character.public_id = $1::uuid
-FOR UPDATE
-`
-
-type CharacterProductLockClaimCharacterRow struct {
-	ID       int64       `json:"id"`
-	PublicID pgtype.UUID `json:"public_id"`
-	OwnerID  int64       `json:"owner_id"`
-	PlayerXp int32       `json:"player_xp"`
-}
-
-func (q *Queries) CharacterProductLockClaimCharacter(ctx context.Context, characterID pgtype.UUID) (CharacterProductLockClaimCharacterRow, error) {
-	row := q.db.QueryRow(ctx, characterProductLockClaimCharacter, characterID)
-	var i CharacterProductLockClaimCharacterRow
-	err := row.Scan(
-		&i.ID,
-		&i.PublicID,
-		&i.OwnerID,
-		&i.PlayerXp,
-	)
-	return i, err
-}
-
 const characterProductLockCreationCatalogEntry = `-- name: CharacterProductLockCreationCatalogEntry :one
 SELECT entry.id, entry.public_id, entry.kind, entry.code, entry.name,
        entry.available, entry.description, entry.introduced_by_region_id, entry.retired
@@ -1964,39 +1880,6 @@ func (q *Queries) CharacterProductLockCreationCatalogEntry(ctx context.Context, 
 		&i.Description,
 		&i.IntroducedByRegionID,
 		&i.Retired,
-	)
-	return i, err
-}
-
-const characterProductLockDowntimeProject = `-- name: CharacterProductLockDowntimeProject :one
-SELECT project.id, project.public_id, project.character_id, project.name,
-       project.target, project.goal, project.notes, project.progress,
-       project.status, project.updated_at
-FROM downtime_projects project
-JOIN characters character ON character.id = project.character_id
-WHERE character.public_id = $1 AND project.public_id = $2
-FOR UPDATE OF project
-`
-
-type CharacterProductLockDowntimeProjectParams struct {
-	PublicID   pgtype.UUID `json:"public_id"`
-	PublicID_2 pgtype.UUID `json:"public_id_2"`
-}
-
-func (q *Queries) CharacterProductLockDowntimeProject(ctx context.Context, arg CharacterProductLockDowntimeProjectParams) (DowntimeProject, error) {
-	row := q.db.QueryRow(ctx, characterProductLockDowntimeProject, arg.PublicID, arg.PublicID_2)
-	var i DowntimeProject
-	err := row.Scan(
-		&i.ID,
-		&i.PublicID,
-		&i.CharacterID,
-		&i.Name,
-		&i.Target,
-		&i.Goal,
-		&i.Notes,
-		&i.Progress,
-		&i.Status,
-		&i.UpdatedAt,
 	)
 	return i, err
 }

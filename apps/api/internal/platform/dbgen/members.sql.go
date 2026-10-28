@@ -94,37 +94,6 @@ func (q *Queries) GetMemberByDiscordID(ctx context.Context, discordID string) (G
 	return i, err
 }
 
-const getMemberByHandle = `-- name: GetMemberByHandle :one
-SELECT public_id AS id, discord_id, handle, display_name, avatar_url, roles, status
-FROM members
-WHERE handle = $1
-`
-
-type GetMemberByHandleRow struct {
-	ID          pgtype.UUID `json:"id"`
-	DiscordID   string      `json:"discord_id"`
-	Handle      string      `json:"handle"`
-	DisplayName string      `json:"display_name"`
-	AvatarUrl   pgtype.Text `json:"avatar_url"`
-	Roles       []string    `json:"roles"`
-	Status      string      `json:"status"`
-}
-
-func (q *Queries) GetMemberByHandle(ctx context.Context, handle string) (GetMemberByHandleRow, error) {
-	row := q.db.QueryRow(ctx, getMemberByHandle, handle)
-	var i GetMemberByHandleRow
-	err := row.Scan(
-		&i.ID,
-		&i.DiscordID,
-		&i.Handle,
-		&i.DisplayName,
-		&i.AvatarUrl,
-		&i.Roles,
-		&i.Status,
-	)
-	return i, err
-}
-
 const getMemberByID = `-- name: GetMemberByID :one
 SELECT public_id AS id, discord_id, handle, display_name, avatar_url, roles, status
 FROM members

@@ -84,13 +84,6 @@ SELECT q.id, q.public_id, q.short_code, q.kinds, q.status, q.dm_id,
 FROM quests q
 WHERE q.public_id = @quest_id::uuid
 FOR UPDATE OF q;
--- name: ProductQuestReadRegions :many
-SELECT r.public_id::text AS region_id
-FROM quest_regions qr
-JOIN quests q ON q.id = qr.quest_id
-JOIN regions r ON r.id = qr.region_id
-WHERE q.public_id = @quest_id::uuid
-ORDER BY r.public_id;
 -- name: ProductQuestReadParticipants :many
 SELECT q.public_id::text AS quest_id, m.public_id::text AS member_id,
        c.public_id::text AS character_id, c.name AS character_name,
@@ -388,15 +381,6 @@ ORDER BY input.ordinality,
          qp.created_at, c.public_id;
 
 -- Command locks and writes remain bound to the caller's existing transaction.
--- name: ProductQuestLockByShortCode :one
-SELECT q.id, q.public_id, q.short_code, q.status, q.dm_id, q.arc_id,
-       q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
-       q.document_id, q.tags, q.genres, q.avg_party_level, q.signup_type,
-       q.discord_desired_revision, q.discord_applied_revision,
-       q.discord_message_id, q.discord_event_id, q.event_url,
-       q.created_by, q.created_at, q.updated_at, q.closed_at, q.deleted_at,
-       q.deleted_by
-FROM quests q WHERE q.short_code = @short_code::text FOR UPDATE OF q;
 -- name: ProductQuestInsert :one
 INSERT INTO quests (
     public_id, short_code, kinds, dm_id, arc_id, scheduled_at, duration_hours, slots_max,
@@ -434,10 +418,6 @@ UPDATE quests q SET deleted_at = @deleted_at::timestamptz,
     deleted_by = @deleted_by::bigint, updated_at = @at::timestamptz
 WHERE q.public_id = @quest_id::uuid
 RETURNING q.id, q.public_id, q.deleted_at, q.deleted_by, q.updated_at;
--- name: ProductQuestSetArc :one
-UPDATE quests q SET arc_id = @arc_id::bigint, updated_at = @at::timestamptz
-WHERE q.public_id = @quest_id::uuid
-RETURNING q.id, q.public_id, q.arc_id, q.updated_at;
 -- name: ProductQuestClearArc :one
 UPDATE quests q SET arc_id = NULL, updated_at = @at::timestamptz
 WHERE q.public_id = @quest_id::uuid AND q.deleted_at IS NULL
@@ -503,9 +483,6 @@ RETURNING q.public_id AS quest_id, c.public_id AS character_id, owner.public_id 
           c.name AS character_name, owner.handle AS member_handle, owner.display_name AS member_display_name,
           owner.avatar_url AS member_avatar_url, participant.status, participant.manual, participant.dm_picked,
           participant.created_at, participant.updated_at;
--- name: ProductQuestDeleteParticipant :execrows
-DELETE FROM quest_participants
-WHERE quest_id = @quest_id::bigint AND character_id = @character_id::bigint;
 -- name: ProductQuestLockCapacity :one
 SELECT q.id, q.public_id, q.status, q.slots_max, q.filled_count
 FROM quests q WHERE q.id = @quest_id::bigint FOR UPDATE OF q;
@@ -751,144 +728,3 @@ SELECT public_id FROM members WHERE id = @member_id::bigint;
 
 -- name: ProductQuestArcInternalID :one
 SELECT arc.id FROM quest_arcs arc WHERE arc.public_id = @arc_id::uuid;
-
-
--- Nested loaders (K1): batch slot order matches unnest ordinality / jsonb key ordinality.
--- name: ProductQuestBatchArcs :many
-SELECT input.ordinality::integer AS input_index,
-       arc.public_id, arc.name, creator.public_id AS created_by_public_id,
-       arc.created_at, count(q.id)::integer AS quest_count
-FROM unnest(@arc_ids::uuid[]) WITH ORDINALITY AS input(public_id, ordinality)
-LEFT JOIN quest_arcs arc ON arc.public_id = input.public_id
-LEFT JOIN members creator ON creator.id = arc.created_by
-LEFT JOIN quests q ON q.arc_id = arc.id AND q.deleted_at IS NULL
-GROUP BY input.ordinality, arc.public_id, arc.name, creator.public_id, arc.created_at
-ORDER BY input.ordinality;
-
--- name: ProductQuestBatchArcQuests :many
-WITH requested AS (
-    SELECT k.ordinality::int AS key_ordinal,
-           (k.value->>'parent_id')::uuid AS parent_id,
-           (k.value->>'limit')::int AS row_limit,
-           (k.value->>'offset')::int AS row_offset
-    FROM jsonb_array_elements(@keys::jsonb) WITH ORDINALITY AS k(value, ordinality)
-), ranked AS (
-    SELECT r.key_ordinal, r.parent_id, r.row_limit, r.row_offset,
-           q.public_id, q.short_code, q.kinds, q.status,
-           quest_display_status_at(q.status, q.filled_count, q.scheduled_at, q.duration_hours, @as_of::timestamptz) AS display_status,
-           dm.public_id AS dm_public_id, arc.public_id AS arc_public_id,
-           q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
-           doc.public_id AS document_public_id, q.tags, q.genres, q.avg_party_level AS apl,
-           q.signup_type, q.discord_desired_revision, q.discord_applied_revision,
-           q.discord_message_id, q.discord_event_id, q.event_url,
-           creator.public_id AS created_by_public_id, q.created_at, q.updated_at,
-           row_number() OVER (PARTITION BY r.key_ordinal ORDER BY q.scheduled_at, q.public_id) AS rn
-    FROM requested r
-    JOIN quest_arcs arc ON arc.public_id = r.parent_id
-    JOIN quests q ON q.arc_id = arc.id AND q.deleted_at IS NULL
-    JOIN members dm ON dm.id = q.dm_id
-    JOIN members creator ON creator.id = q.created_by
-    LEFT JOIN documents doc ON doc.id = q.document_id
-)
-SELECT key_ordinal, parent_id, true AS parent_exists,
-       public_id, short_code, kinds, status, display_status, dm_public_id, arc_public_id,
-       scheduled_at, duration_hours, slots_max, filled_count, document_public_id,
-       tags, genres, apl, signup_type, discord_desired_revision, discord_applied_revision,
-       discord_message_id, discord_event_id, event_url, created_by_public_id, created_at, updated_at
-FROM ranked
-WHERE rn > row_offset AND rn <= row_offset + row_limit
-UNION ALL
-SELECT r.key_ordinal, r.parent_id, (arc.id IS NOT NULL) AS parent_exists,
-       NULL::uuid, NULL::text, NULL::text[], NULL::text, NULL::text, NULL::uuid, NULL::uuid,
-       NULL::timestamptz, NULL::double precision, NULL::integer, NULL::integer, NULL::uuid,
-       NULL::text[], NULL::text[], NULL::integer, NULL::text, NULL::integer, NULL::integer,
-       NULL::text, NULL::text, NULL::text, NULL::uuid, NULL::timestamptz, NULL::timestamptz
-FROM requested r
-LEFT JOIN quest_arcs arc ON arc.public_id = r.parent_id
-WHERE NOT EXISTS (
-    SELECT 1 FROM ranked x
-    WHERE x.key_ordinal = r.key_ordinal
-      AND x.rn > r.row_offset AND x.rn <= r.row_offset + r.row_limit
-)
-ORDER BY key_ordinal, scheduled_at NULLS LAST, public_id NULLS LAST;
-
--- name: ProductQuestBatchRegions :many
-WITH requested AS (
-    SELECT k.ordinality::int AS key_ordinal,
-           (k.value->>'parent_id')::uuid AS parent_id,
-           (k.value->>'limit')::int AS row_limit,
-           (k.value->>'offset')::int AS row_offset
-    FROM jsonb_array_elements(@keys::jsonb) WITH ORDINALITY AS k(value, ordinality)
-), ranked AS (
-    SELECT r.key_ordinal, r.parent_id, r.row_limit, r.row_offset,
-           reg.public_id::text AS region_id,
-           row_number() OVER (PARTITION BY r.key_ordinal ORDER BY reg.public_id) AS rn
-    FROM requested r
-    JOIN quests q ON q.public_id = r.parent_id AND q.deleted_at IS NULL
-    JOIN quest_regions qr ON qr.quest_id = q.id
-    JOIN regions reg ON reg.id = qr.region_id
-)
-SELECT key_ordinal, parent_id, true AS parent_exists, region_id
-FROM ranked
-WHERE rn > row_offset AND rn <= row_offset + row_limit
-UNION ALL
-SELECT r.key_ordinal, r.parent_id, (q.id IS NOT NULL) AS parent_exists, NULL::text
-FROM requested r
-LEFT JOIN quests q ON q.public_id = r.parent_id AND q.deleted_at IS NULL
-WHERE NOT EXISTS (
-    SELECT 1 FROM ranked x
-    WHERE x.key_ordinal = r.key_ordinal
-      AND x.rn > r.row_offset AND x.rn <= r.row_offset + r.row_limit
-)
-ORDER BY key_ordinal, region_id NULLS LAST;
-
--- name: ProductQuestBatchPointcrawlLinks :many
-WITH requested AS (
-    SELECT k.ordinality::int AS key_ordinal,
-           (k.value->>'parent_id')::uuid AS parent_id,
-           (k.value->>'limit')::int AS row_limit,
-           (k.value->>'offset')::int AS row_offset,
-           NULLIF(k.value->>'role', '') AS role_filter
-    FROM jsonb_array_elements(@keys::jsonb) WITH ORDINALITY AS k(value, ordinality)
-), ranked AS (
-    SELECT r.key_ordinal, r.parent_id, r.row_limit, r.row_offset,
-           q.public_id::text AS quest_id, n.public_id::text AS node_id, qpn.role,
-           row_number() OVER (PARTITION BY r.key_ordinal ORDER BY n.public_id, qpn.role) AS rn
-    FROM requested r
-    JOIN quests q ON q.public_id = r.parent_id AND q.deleted_at IS NULL
-    JOIN quest_pointcrawl_nodes qpn ON qpn.quest_id = q.id
-    JOIN pointcrawl_nodes n ON n.id = qpn.node_id
-    WHERE r.role_filter IS NULL OR qpn.role = r.role_filter
-)
-SELECT key_ordinal, parent_id, true AS parent_exists, quest_id, node_id, role
-FROM ranked
-WHERE rn > row_offset AND rn <= row_offset + row_limit
-UNION ALL
-SELECT r.key_ordinal, r.parent_id, (q.id IS NOT NULL) AS parent_exists,
-       NULL::text, NULL::text, NULL::text
-FROM requested r
-LEFT JOIN quests q ON q.public_id = r.parent_id AND q.deleted_at IS NULL
-WHERE NOT EXISTS (
-    SELECT 1 FROM ranked x
-    WHERE x.key_ordinal = r.key_ordinal
-      AND x.rn > r.row_offset AND x.rn <= r.row_offset + r.row_limit
-)
-ORDER BY key_ordinal, node_id NULLS LAST, role NULLS LAST;
-
--- name: ProductQuestBatchDelivery :many
-SELECT input.ordinality::integer AS input_index,
-       q.public_id AS quest_public_id,
-       q.discord_desired_revision, q.discord_applied_revision,
-       job.public_id AS job_public_id, job.state AS job_state,
-       job.next_run_at, job.safe_error_code, job.error_message
-FROM unnest(@quest_ids::uuid[]) WITH ORDINALITY AS input(public_id, ordinality)
-LEFT JOIN quests q ON q.public_id = input.public_id AND q.deleted_at IS NULL
-LEFT JOIN LATERAL (
-    SELECT b.public_id, b.state, b.next_run_at, b.safe_error_code, b.error_message
-    FROM background_jobs b
-    WHERE b.kind IN ('quest_discord_delivery','quest_discord')
-      AND b.payload->>'public_id' = q.public_id::text
-    ORDER BY b.updated_at DESC, b.public_id DESC
-    LIMIT 1
-) job ON TRUE
-ORDER BY input.ordinality;

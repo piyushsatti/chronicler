@@ -42,21 +42,6 @@ func (p *PostgresRevisionApplier) ApplyDiscordRevision(ctx context.Context, ques
 	})
 }
 
-func (p *PostgresRevisionApplier) GetDiscordMessageID(ctx context.Context, questID string) (string, error) {
-	uid, err := parseQuestPublicID(questID)
-	if err != nil {
-		return "", err
-	}
-	row, err := p.q.QuestDiscordRevisions(ctx, uid)
-	if err != nil {
-		return "", err
-	}
-	if !row.DiscordMessageID.Valid {
-		return "", nil
-	}
-	return row.DiscordMessageID.String, nil
-}
-
 func (p *PostgresRevisionApplier) SetDiscordMessageID(ctx context.Context, questID string, messageID string) error {
 	uid, err := parseQuestPublicID(questID)
 	if err != nil {

@@ -24,12 +24,6 @@ type RevisionApplier interface {
 	ApplyDiscordRevision(ctx context.Context, questID string, desired int) error
 }
 
-// MessageStore loads and persists quests.discord_message_id for idempotent posts.
-type MessageStore interface {
-	GetDiscordMessageID(ctx context.Context, questID string) (string, error)
-	SetDiscordMessageID(ctx context.Context, questID string, messageID string) error
-}
-
 // QuestStore reads the quest to announce and records the Discord ids that
 // delivery creates, each as soon as it exists so a retry resumes where it left
 // off instead of posting twice.
