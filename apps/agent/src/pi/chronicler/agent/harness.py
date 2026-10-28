@@ -12,7 +12,7 @@ from dataclasses import dataclass, field, replace
 from typing import Literal, NamedTuple, Protocol, cast
 
 from pi.chronicler.agent.budget import ContextBudget
-from pi.chronicler.agent.model import ModelTurn, ToolCall
+from pi.chronicler.agent.model import GROUNDED_ANSWER_SCHEMA, ModelTurn, ToolCall
 from pi.chronicler.agent.trace import Outcome, TraceRecorder, is_timeout_error
 
 logger = logging.getLogger(__name__)
@@ -131,20 +131,7 @@ FINISH_TOOL: dict[str, object] = {
             "or report unsupported after investigating. For numerical questions "
             "include the number and conditions."
         ),
-        "parameters": {
-            "type": "object",
-            "properties": {
-                "status": {"type": "string", "enum": ["answered", "unsupported"]},
-                "answer": {"type": "string", "maxLength": 1_200},
-                "source_ids": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "maxItems": 3,
-                },
-            },
-            "required": ["status", "answer", "source_ids"],
-            "additionalProperties": False,
-        },
+        "parameters": GROUNDED_ANSWER_SCHEMA,
     },
 }
 RESEARCH_TOOLS = [*TOOLS, FINISH_TOOL]

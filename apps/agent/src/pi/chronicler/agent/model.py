@@ -9,25 +9,27 @@ import httpx
 
 from pi.chronicler.agent.budget import ContextBudget
 
+GROUNDED_ANSWER_SCHEMA: dict[str, object] = {
+    "type": "object",
+    "properties": {
+        "status": {"type": "string", "enum": ["answered", "unsupported"]},
+        "answer": {"type": "string", "maxLength": 1_200},
+        "source_ids": {
+            "type": "array",
+            "items": {"type": "string"},
+            "maxItems": 3,
+        },
+    },
+    "required": ["status", "answer", "source_ids"],
+    "additionalProperties": False,
+}
+
 GROUNDED_RESPONSE_FORMAT: dict[str, object] = {
     "type": "json_schema",
     "json_schema": {
         "name": "grounded_answer",
         "strict": True,
-        "schema": {
-            "type": "object",
-            "properties": {
-                "status": {"type": "string", "enum": ["answered", "unsupported"]},
-                "answer": {"type": "string", "maxLength": 1_200},
-                "source_ids": {
-                    "type": "array",
-                    "items": {"type": "string"},
-                    "maxItems": 3,
-                },
-            },
-            "required": ["status", "answer", "source_ids"],
-            "additionalProperties": False,
-        },
+        "schema": GROUNDED_ANSWER_SCHEMA,
     },
 }
 
