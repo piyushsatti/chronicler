@@ -396,17 +396,11 @@
   width: 72px;
   height: 32px;
   border-radius: 4px;
-  background: var(--color-accent);
 }
 
-.motion-demo-box > span.skeleton-shimmer {
-  background: linear-gradient(
-    90deg,
-    var(--color-bg-panel) 25%,
-    color-mix(in srgb, var(--color-bg-panel) 85%, var(--color-text-muted)) 50%,
-    var(--color-bg-panel) 75%
-  );
-  background-size: 200% 100%;
+/* The shimmer demo keeps the shared .skeleton-shimmer gradient. */
+.motion-demo-box > span:not(.skeleton-shimmer) {
+  background: var(--color-accent);
 }
 
 /* ---- reduced-motion: static override for every launch entry -------------- */
