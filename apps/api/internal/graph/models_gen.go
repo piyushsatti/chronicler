@@ -596,8 +596,9 @@ type GameDateType struct {
 }
 
 type GameDayCellType struct {
-	RealDate product.Date `json:"realDate"`
-	GameDay  *int         `json:"gameDay,omitempty"`
+	RealDate product.Date  `json:"realDate"`
+	GameDay  *int          `json:"gameDay,omitempty"`
+	GameDate *GameDateType `json:"gameDate,omitempty"`
 }
 
 type HomeBannerInput struct {

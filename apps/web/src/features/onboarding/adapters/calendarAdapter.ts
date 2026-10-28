@@ -27,6 +27,7 @@ const calendarSchema = z.object({
       z.object({
         realDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
         gameDay: z.number().int().nullable(),
+        gameDate: namedDate.nullable(),
       }),
     ),
   }),

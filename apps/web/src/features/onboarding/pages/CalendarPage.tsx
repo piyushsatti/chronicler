@@ -31,6 +31,30 @@ function namedDate(date: CalendarView['gameDate']): string | null {
   return date ? `${date.day} ${date.periodName}, ${date.year} ${date.eraAbbrev}` : null;
 }
 
+type GameDate = NonNullable<CalendarView['gameDate']>;
+
+/** The in-world months a real-month grid spans, as the server dated each cell. */
+function gameMonths(grid: CalendarView['gameCalendar']['monthGrid']): string | null {
+  const spans: GameDate[] = [];
+  for (const { gameDate } of grid) {
+    const last = spans[spans.length - 1];
+    if (
+      gameDate &&
+      (!last ||
+        last.periodIndex !== gameDate.periodIndex ||
+        last.year !== gameDate.year ||
+        last.eraAbbrev !== gameDate.eraAbbrev)
+    )
+      spans.push(gameDate);
+  }
+  const first = spans[0];
+  if (!first) return null;
+  const ends = spans.length > 3 ? [first, spans[spans.length - 1]!] : spans;
+  return ends.every((d) => d.year === first.year && d.eraAbbrev === first.eraAbbrev)
+    ? `${ends.map((d) => d.periodName).join(' – ')}, ${first.year} ${first.eraAbbrev}`
+    : ends.map((d) => `${d.periodName}, ${d.year} ${d.eraAbbrev}`).join(' – ');
+}
+
 /** Search and status filters above the calendar; Enter in the search box applies it. */
 function CalendarFilters({
   page,
@@ -84,6 +108,7 @@ export function CalendarPage(): React.JSX.Element {
   const state = page.state;
   const grid = page.calendar.data?.gameCalendar.monthGrid ?? [];
   const unmapped = grid.filter((cell) => cell.gameDay === null).length;
+  const inWorldMonths = gameMonths(grid);
   const selectedCell = state?.day
     ? grid.find((cell) => cell.realDate === state.day)
     : undefined;
@@ -115,9 +140,16 @@ export function CalendarPage(): React.JSX.Element {
                 aria-label="Campaign calendar"
               >
                 <div className={styles.monthHead}>
-                  <h2 className="type-heading" aria-live="polite">
-                    {monthLabel}
-                  </h2>
+                  <div className="stack" data-gap="1">
+                    <h2 className="type-heading" aria-live="polite">
+                      {monthLabel}
+                    </h2>
+                    {inWorldMonths ? (
+                      <p className={`type-caption ${styles.gameTime}`}>
+                        In-world: {inWorldMonths}
+                      </p>
+                    ) : null}
+                  </div>
                   <div className="row" data-gap="2" data-align="center">
                     <Button
                       variant="secondary"
@@ -218,7 +250,9 @@ export function CalendarPage(): React.JSX.Element {
                                 aria-label={
                                   cell.gameDay === null
                                     ? `${label}, no game day recorded`
-                                    : `${label}, game day ${cell.gameDay}`
+                                    : `${label}, game day ${cell.gameDay}${
+                                        cell.gameDate ? `, ${namedDate(cell.gameDate)}` : ''
+                                      }`
                                 }
                                 data-today={
                                   cell.realDate === page.today ? '1' : undefined
@@ -237,6 +271,13 @@ export function CalendarPage(): React.JSX.Element {
                                 >
                                   {Number(cell.realDate.slice(8, 10))}
                                 </time>
+                                {cell.gameDate ? (
+                                  <span
+                                    className={`type-caption ${styles.gameTime} ${styles.dayGame}`}
+                                  >
+                                    {`${cell.gameDate.day} ${cell.gameDate.periodName}`}
+                                  </span>
+                                ) : null}
                               </button>
                             </div>
                           );
@@ -244,6 +285,12 @@ export function CalendarPage(): React.JSX.Element {
                       </div>
                     </div>
                     <p className={`type-caption ${styles.legend}`}>
+                      {inWorldMonths ? (
+                        <span>
+                          Each day shows its real date, with the in-world date below in
+                          italics.
+                        </span>
+                      ) : null}
                       {unmapped > 0 ? (
                         <span>
                           Dashed days have no recorded game day

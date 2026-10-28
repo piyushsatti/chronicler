@@ -10,8 +10,19 @@
       "day": 24
     },
     "monthGrid": [
-      { "realDate": "2026-10-14", "gameDay": 113 },
-      { "realDate": "2026-10-15", "gameDay": null }
+      {
+        "realDate": "2026-10-14",
+        "gameDay": 113,
+        "gameDate": {
+          "eraAbbrev": "PI",
+          "year": 4,
+          "periodName": "River",
+          "periodIndex": 0,
+          "periodType": "month",
+          "day": 24
+        }
+      },
+      { "realDate": "2026-10-15", "gameDay": null, "gameDate": null }
     ]
   },
   "arc": {

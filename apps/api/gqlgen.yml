@@ -60,7 +60,14 @@
               'readerIds': { 'resolver': true },
             },
         },
-      'GameCalendarType': { 'fields': { 'currentGameDate': { 'resolver': true } } },
+      'GameCalendarType':
+        {
+          'fields':
+            {
+              'currentGameDate': { 'resolver': true },
+              'monthGrid': { 'resolver': true },
+            },
+        },
       'MapType':
         {
           'fields':

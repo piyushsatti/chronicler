@@ -488,6 +488,7 @@ type ComplexityRoot struct {
 	}
 
 	GameDayCellType struct {
+		GameDate func(childComplexity int) int
 		GameDay  func(childComplexity int) int
 		RealDate func(childComplexity int) int
 	}
@@ -1211,6 +1212,7 @@ type DocumentTypeResolver interface {
 }
 type GameCalendarTypeResolver interface {
 	CurrentGameDate(ctx context.Context, obj *GameCalendarType) (*GameDateType, error)
+	MonthGrid(ctx context.Context, obj *GameCalendarType) ([]*GameDayCellType, error)
 }
 type MapTypeResolver interface {
 	PointcrawlNodes(ctx context.Context, obj *MapType, limit int, offset int) ([]*PointcrawlNodeType, error)
@@ -3316,6 +3318,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.GameDateType.Year(childComplexity), true
+
+	case "GameDayCellType.gameDate":
+		if e.complexity.GameDayCellType.GameDate == nil {
+			break
+		}
+
+		return e.complexity.GameDayCellType.GameDate(childComplexity), true
 
 	case "GameDayCellType.gameDay":
 		if e.complexity.GameDayCellType.GameDay == nil {
@@ -9271,6 +9280,7 @@ input DmSummaryFiltersInput {
 type GameDayCellType {
   realDate: Date!
   gameDay: Int
+  gameDate: GameDateType
 }
 
 type HomeBannerType {
@@ -24393,7 +24403,7 @@ func (ec *executionContext) _GameCalendarType_monthGrid(ctx context.Context, fie
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return obj.MonthGrid, nil
+		return ec.resolvers.GameCalendarType().MonthGrid(rctx, obj)
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -24414,14 +24424,16 @@ func (ec *executionContext) fieldContext_GameCalendarType_monthGrid(_ context.Co
 	fc = &graphql.FieldContext{
 		Object:     "GameCalendarType",
 		Field:      field,
-		IsMethod:   false,
-		IsResolver: false,
+		IsMethod:   true,
+		IsResolver: true,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			switch field.Name {
 			case "realDate":
 				return ec.fieldContext_GameDayCellType_realDate(ctx, field)
 			case "gameDay":
 				return ec.fieldContext_GameDayCellType_gameDay(ctx, field)
+			case "gameDate":
+				return ec.fieldContext_GameDayCellType_gameDate(ctx, field)
 			}
 			return nil, fmt.Errorf("no field named %q was found under type GameDayCellType", field.Name)
 		},
@@ -24773,6 +24785,61 @@ func (ec *executionContext) fieldContext_GameDayCellType_gameDay(_ context.Conte
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _GameDayCellType_gameDate(ctx context.Context, field graphql.CollectedField, obj *GameDayCellType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_GameDayCellType_gameDate(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.GameDate, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*GameDateType)
+	fc.Result = res
+	return ec.marshalOGameDateType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐGameDateType(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_GameDayCellType_gameDate(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "GameDayCellType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "eraAbbrev":
+				return ec.fieldContext_GameDateType_eraAbbrev(ctx, field)
+			case "year":
+				return ec.fieldContext_GameDateType_year(ctx, field)
+			case "periodName":
+				return ec.fieldContext_GameDateType_periodName(ctx, field)
+			case "periodIndex":
+				return ec.fieldContext_GameDateType_periodIndex(ctx, field)
+			case "periodType":
+				return ec.fieldContext_GameDateType_periodType(ctx, field)
+			case "day":
+				return ec.fieldContext_GameDateType_day(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type GameDateType", field.Name)
 		},
 	}
 	return fc, nil
@@ -59076,10 +59143,41 @@ func (ec *executionContext) _GameCalendarType(ctx context.Context, sel ast.Selec
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		case "monthGrid":
-			out.Values[i] = ec._GameCalendarType_monthGrid(ctx, field, obj)
-			if out.Values[i] == graphql.Null {
-				atomic.AddUint32(&out.Invalids, 1)
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._GameCalendarType_monthGrid(ctx, field, obj)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
 			}
+
+			if field.Deferrable != nil {
+				dfs, ok := deferred[field.Deferrable.Label]
+				di := 0
+				if ok {
+					dfs.AddField(field)
+					di = len(dfs.Values) - 1
+				} else {
+					dfs = graphql.NewFieldSet([]graphql.CollectedField{field})
+					deferred[field.Deferrable.Label] = dfs
+				}
+				dfs.Concurrently(di, func(ctx context.Context) graphql.Marshaler {
+					return innerFunc(ctx, dfs)
+				})
+
+				// don't run the out.Concurrently() call below
+				out.Values[i] = graphql.Null
+				continue
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}
@@ -59185,6 +59283,8 @@ func (ec *executionContext) _GameDayCellType(ctx context.Context, sel ast.Select
 			}
 		case "gameDay":
 			out.Values[i] = ec._GameDayCellType_gameDay(ctx, field, obj)
+		case "gameDate":
+			out.Values[i] = ec._GameDayCellType_gameDate(ctx, field, obj)
 		default:
 			panic("unknown field " + strconv.Quote(field.Name))
 		}

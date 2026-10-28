@@ -1599,6 +1599,7 @@ input DmSummaryFiltersInput {
 type GameDayCellType {
   realDate: Date!
   gameDay: Int
+  gameDate: GameDateType
 }
 
 type HomeBannerType {

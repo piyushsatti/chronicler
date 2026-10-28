@@ -182,6 +182,32 @@ func (r *gameCalendarTypeResolver) CurrentGameDate(ctx context.Context, obj *Gam
 	return toGameDateType(view), nil
 }
 
+// MonthGrid is the resolver for the monthGrid field.
+func (r *gameCalendarTypeResolver) MonthGrid(ctx context.Context, obj *GameCalendarType) ([]*GameDayCellType, error) {
+	if obj == nil {
+		return []*GameDayCellType{}, nil
+	}
+	if len(obj.Definition) == 0 || r.Services.SpatialQueries == nil {
+		return obj.MonthGrid, nil
+	}
+	// Each cell is rendered by the same interpreter as currentGameDate. A definition
+	// that cannot render leaves the cell undated: monthGrid stays factual and readable,
+	// and the failure surfaces at the nullable currentGameDate field (time-contract.md).
+	definition := obj.Definition
+	grid := make([]*GameDayCellType, len(obj.MonthGrid))
+	for i, cell := range obj.MonthGrid {
+		next := *cell
+		if cell.GameDay != nil {
+			day := int32(*cell.GameDay)
+			if view, err := r.Services.SpatialQueries.RenderStoredGameDate(&day, &definition); err == nil {
+				next.GameDate = toGameDateType(view)
+			}
+		}
+		grid[i] = &next
+	}
+	return grid, nil
+}
+
 // PointcrawlNodes is the resolver for the pointcrawlNodes field.
 func (r *mapTypeResolver) PointcrawlNodes(ctx context.Context, obj *MapType, limit int, offset int) ([]*PointcrawlNodeType, error) {
 	if obj == nil || obj.ID == "" {

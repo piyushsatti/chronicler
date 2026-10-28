@@ -625,6 +625,7 @@ export type GameDateType = {
 };
 
 export type GameDayCellType = {
+  gameDate?: Maybe<GameDateType>;
   gameDay?: Maybe<Scalars['Int']['output']>;
   realDate: Scalars['Date']['output'];
 };

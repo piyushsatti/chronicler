@@ -1459,7 +1459,7 @@ export type RetainedCalendarQueryVariables = Exact<{
 }>;
 
 
-export type RetainedCalendarQuery = { gameCalendar: { currentGameDay: number | null, currentGameDate: { eraAbbrev: string, year: number, periodName: string, periodIndex: number, periodType: string, day: number } | null, monthGrid: Array<{ realDate: string, gameDay: number | null }> }, gameDate: { eraAbbrev: string, year: number, periodName: string, periodIndex: number, periodType: string, day: number } | null };
+export type RetainedCalendarQuery = { gameCalendar: { currentGameDay: number | null, currentGameDate: { eraAbbrev: string, year: number, periodName: string, periodIndex: number, periodType: string, day: number } | null, monthGrid: Array<{ realDate: string, gameDay: number | null, gameDate: { eraAbbrev: string, year: number, periodName: string, periodIndex: number, periodType: string, day: number } | null }> }, gameDate: { eraAbbrev: string, year: number, periodName: string, periodIndex: number, periodType: string, day: number } | null };
 
 export type RetainedCalendarQuestsQueryVariables = Exact<{
   filters: QuestFiltersInput;
