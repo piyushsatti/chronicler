@@ -1177,6 +1177,7 @@ textarea.field-input {
 /* The track may arrive wrapped (PageToolbar, page edge), so space whatever sits first. */
 .tabs[data-component='Tabs'] > .tabs__track,
 .tabs[data-component='Tabs'] > :first-child:not(.tabs__panel) { margin-bottom: var(--sp-4); }
+.tabs[data-component='Tabs'] > .page-toolbar:first-child { margin-bottom: var(--sp-5); }
 .tabs[data-component='Tabs'] .tabs__panel { min-width: 0; }
 
 /* Popover / Menu: Base UI portals the positioner to <body> and anchors it to
