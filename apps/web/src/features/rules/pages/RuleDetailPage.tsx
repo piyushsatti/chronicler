@@ -174,7 +174,7 @@ export function RuleDetailPage({ family }: { family: RuleFamily }): React.JSX.El
               ) : siblings.length > 0 ? (
                 <Card pad={4} className="stack" data-gap="3">
                   <h2 className="type-heading">{hubLabel}</h2>
-                  <ul className={styles.related}>
+                  <ul className="stack" data-gap="2">
                     {siblings.map((entry) => (
                       <li key={entry.id}>
                         <Link

@@ -84,7 +84,7 @@ export function PointcrawlLinkPicker({
         />
       </div>
       {links.length > 0 ? (
-        <ul className={styles.selected} aria-label="Chosen places">
+        <ul className="stack" data-gap="2" aria-label="Chosen places">
           {links
             .filter((link) => names.has(link.pointcrawlNodeId))
             .map((link) => {
@@ -138,7 +138,7 @@ export function PointcrawlLinkPicker({
         <p className="type-caption">No places on this map match “{search.trim()}”.</p>
       ) : null}
       {matches.length > 0 ? (
-        <ul className={styles.matches} aria-label="Matching places">
+        <ul className="stack" data-gap="2" aria-label="Matching places">
           {matches.slice(0, MATCH_LIMIT).map((node) => (
             <li key={node.id} className={styles.match}>
               <span className={styles.matchName}>{node.name}</span>

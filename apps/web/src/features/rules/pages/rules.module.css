@@ -56,15 +56,6 @@
   padding-block: var(--sp-4);
 }
 
-.related {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
 /* Reading contrast: full text colour, narrative face, larger than default prose. */
 .detailBody .detailProse {
   color: var(--color-text);

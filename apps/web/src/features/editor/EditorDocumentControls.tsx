@@ -222,7 +222,7 @@ export function EditorDocumentControls({
                   onChange={(event) => view.audience.setSearch(event.target.value)}
                 />
               </label>
-              <ul className={styles.items} aria-label="Selected readers">
+              <ul className={`stack ${styles.items}`} data-gap="2" aria-label="Selected readers">
                 {view.audience.selected.map((reader) => (
                   <li key={reader.id}>
                     {reader.label}{' '}
@@ -244,7 +244,7 @@ export function EditorDocumentControls({
                 />
               ) : null}
               {view.audience.loading ? <StatePanel status="loading" /> : null}
-              <ul className={styles.items} aria-label="Matching members">
+              <ul className={`stack ${styles.items}`} data-gap="2" aria-label="Matching members">
                 {view.audience.matches.map((member, index) => (
                   <li key={member.memberId}>
                     {memberNames[index]}{' '}

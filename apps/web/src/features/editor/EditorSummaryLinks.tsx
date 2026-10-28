@@ -22,7 +22,7 @@ export function EditorSummaryLinks({
   return (
     <Card as="section" className={`stack ${styles.panel}`} aria-label="Summary links">
       <h2 className="type-heading">Quests and character</h2>
-      <ul className={styles.items} aria-label="Linked quests">
+      <ul className={`stack ${styles.items}`} data-gap="2" aria-label="Linked quests">
         {view.selected.map((quest) => (
           <li key={quest.id}>
             {quest.shortCode ? (
@@ -117,7 +117,8 @@ export function EditorSummaryLinks({
                 />
               ) : (
                 <ul
-                  className={`${styles.items} ${styles.questChoices}`}
+                  className={`stack ${styles.items} ${styles.questChoices}`}
+                  data-gap="2"
                   aria-label="Available quests"
                 >
                   {view.quests.items.map((quest) => (

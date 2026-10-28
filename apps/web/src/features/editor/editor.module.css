@@ -342,15 +342,6 @@
   background: var(--color-bg-panel);
 }
 
-.items {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-2);
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
 .items > li {
   display: flex;
   flex-wrap: wrap;
