@@ -25,6 +25,9 @@ func (r *recStore) Retry(context.Context, jobs.Receipt, time.Duration, string) e
 	return nil
 }
 func (r *recStore) Fail(context.Context, jobs.Receipt, jobs.State, string) error { return nil }
+func (r *recStore) FailWithCode(context.Context, jobs.Receipt, jobs.State, string, string) error {
+	return nil
+}
 
 func TestWriterEnqueueDesiredMatchesGoSeam(t *testing.T) {
 	var contract struct {

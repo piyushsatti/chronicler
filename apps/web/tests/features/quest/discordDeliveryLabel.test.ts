@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { discordDeliveryLabel } from '../../../src/features/quest/components/DiscordDeliveryStatus.js';
 import type { DiscordDeliveryView } from '../../../src/features/quest/adapters/questAdapter.js';
+import { DISCORD_PERMISSION_REASON } from '../../../src/utils/discordDelivery.js';
 
 function delivery(overrides: Partial<DiscordDeliveryView>): DiscordDeliveryView {
   return {
@@ -60,13 +61,13 @@ describe('discordDeliveryLabel', () => {
       discordDeliveryLabel(
         delivery({
           lastAttemptFailed: true,
-          failureReason: 'the bot may not post in the quest channel',
+          failureReason: 'the quest channel or its post was not found',
           nextRetryAt: '2026-10-25T18:00:00Z',
         }),
         (value) => `at ${value}`,
       ),
     ).toBe(
-      'Discord post failed: the bot may not post in the quest channel. Next try at 2026-10-25T18:00:00Z.',
+      'Discord post failed: the quest channel or its post was not found. Next try at 2026-10-25T18:00:00Z.',
     );
     expect(
       discordDeliveryLabel(
@@ -78,6 +79,24 @@ describe('discordDeliveryLabel', () => {
         }),
       ),
     ).toBe('Discord post failed: Discord rejected the post. Attempts have stopped.');
+  });
+
+  it('tells the viewer a missing bot permission needs an admin, not a wait', () => {
+    const parked = delivery({
+      overallStatus: 'error',
+      isTerminal: true,
+      lastAttemptFailed: true,
+      failureReason: DISCORD_PERMISSION_REASON,
+    });
+    expect(discordDeliveryLabel(parked)).toBe(
+      'Discord post failed. The bot is missing a Discord permission in the quest channel. An admin must fix it, then retry.',
+    );
+    expect(
+      discordDeliveryLabel(
+        { ...parked, overallStatus: 'pending', isTerminal: false, nextRetryAt: '2026-10-25T18:00:00Z' },
+        (value) => `at ${value}`,
+      ),
+    ).toBe('Discord post failed. The bot is missing a Discord permission in the quest channel. An admin must fix it, then retry.');
   });
 
   it('says when attempts have stopped', () => {

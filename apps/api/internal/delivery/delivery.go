@@ -3,6 +3,7 @@ package delivery
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 
@@ -68,6 +69,11 @@ func (h *Handler) ProcessOne(ctx context.Context) (bool, error) {
 		return true, h.store.Fail(ctx, job.Receipt(), jobs.Dead, err.Error())
 	}
 	if err := jobs.RunLeased(ctx, h.store, job, func(work context.Context) error { return h.sync.SyncQuest(work, questID, desired) }); err != nil {
+		// A Discord 403 is a missing bot permission; no retry can fix it.
+		// Park it until an admin repairs the permission and redrives.
+		if errors.Is(err, ErrDiscordForbidden) {
+			return true, h.store.FailWithCode(ctx, job.Receipt(), jobs.RepairRequired, err.Error(), SafeCodeDiscordPermission)
+		}
 		if job.Attempts >= jobs.MaxAttempts {
 			return true, h.store.Fail(ctx, job.Receipt(), jobs.Dead, err.Error())
 		}

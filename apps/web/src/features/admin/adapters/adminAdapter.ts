@@ -20,6 +20,7 @@ import type {
   DecideVerificationMutation,
   PendingCharacterVerificationsQuery,
   PendingDmProfilesQuery,
+  RedriveDiscordDeliveryMutation,
   RevokeArchonMutation,
   SetMemberRolesBatchMutation,
   SetMemberRolesMutation,
@@ -40,6 +41,7 @@ import {
 } from './adminRequest.js';
 import { adminPage, type AdminPage, type AdminPageRequest } from './adminPage.js';
 import { toAppError } from '../../../errors/toAppError.js';
+import { discordSafeErrorReason } from '../../../utils/discordDelivery.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import PENDING_DM_PROFILES from './pendingDmProfiles.graphql?raw';
 import ADMIN_OPS from './adminOperations.graphql?raw';
@@ -71,6 +73,7 @@ import CREATE_TIME_ANCHOR from './createTimeAnchor.graphql?raw';
 import UPDATE_TIME_ANCHOR from './updateTimeAnchor.graphql?raw';
 import ADMIN_GAME_CALENDAR from './adminGameCalendar.graphql?raw';
 import UPDATE_GAME_CALENDAR from './updateGameCalendar.graphql?raw';
+import REDRIVE_DISCORD_DELIVERY from './redriveDiscordDelivery.graphql?raw';
 
 function requireAcknowledgement(schema: z.ZodTypeAny, value: unknown): void {
   if (!schema.safeParse(value).success)
@@ -171,7 +174,11 @@ const adminOpsSchema = z.object({
       failureStreak: z.number().int(),
       maxAttempts: z.number().int(),
       nextAttemptAt: z.string().nullable(),
-      safeError: z.string().nullable(),
+      // The API sends the job's safe error code; known codes become a sentence.
+      safeError: z
+        .string()
+        .nullable()
+        .transform((code) => discordSafeErrorReason(code) ?? code),
       redriveCount: z.number().int(),
       createdAt: z.string(),
       updatedAt: z.string(),
@@ -323,6 +330,39 @@ export async function loadAdminOperations(
   const result = parseAdminOps(data.adminOperations);
   if (!result.ok) throw toAppError({ failure: result.failure }, 'admin:ops');
   return result.data;
+}
+
+/** Recorded on the redrive as its audit reason (1–2000 characters). */
+export const REDRIVE_DELIVERY_REASON = 'Admin retry from delivery panel';
+
+const deliveryReceiptSchema = z.object({
+  jobId: z.string().min(1),
+  deliveryStatus: z.string().min(1),
+});
+
+export type DeliveryReceiptView = z.infer<typeof deliveryReceiptSchema>;
+
+/**
+ * field-routing: redriveDiscordDelivery (admin only). Requeues a `dead` or
+ * `repair_required` quest Discord delivery; the API rejects other states.
+ */
+export async function redriveDiscordDelivery(
+  input: { jobId: string },
+  command: AdminCommand,
+): Promise<DeliveryReceiptView> {
+  try {
+    const data = await adminCommand<RedriveDiscordDeliveryMutation>(
+      REDRIVE_DISCORD_DELIVERY,
+      { jobId: input.jobId, reason: REDRIVE_DELIVERY_REASON },
+      command,
+    );
+    const parsed = deliveryReceiptSchema.safeParse(data.redriveDiscordDelivery);
+    if (!parsed.success)
+      throw toAppError({ failure: 'InvalidWire' }, 'admin:delivery:redrive');
+    return parsed.data;
+  } catch (err) {
+    throw toAppError(err, 'admin:delivery:redrive');
+  }
 }
 
 export async function loadAdminCharacters(

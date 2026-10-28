@@ -534,6 +534,15 @@ export type PendingDmProfilesQueryVariables = Exact<{
 
 export type PendingDmProfilesQuery = { pendingDmProfileVerifications: { total: number, entries: Array<{ memberId: string, handle: string, displayName: string, dmProfileStatus: string | null, dmProfileReviewRevision: number | null }> } };
 
+export type RedriveDiscordDeliveryMutationVariables = Exact<{
+  jobId: string;
+  reason: string;
+  meta: CommandMeta;
+}>;
+
+
+export type RedriveDiscordDeliveryMutation = { redriveDiscordDelivery: { jobId: string, desiredRevision: number, appliedRevision: number, deliveryStatus: string } };
+
 export type RevokeArchonMutationVariables = Exact<{
   memberId: string;
   regionId: string;

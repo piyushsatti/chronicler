@@ -119,7 +119,7 @@ SELECT b.public_id, b.state, b.attempts, b.redrive_count, b.lease_token, b.next_
        b.completion_operation, b.completion_payload, b.error_message, b.safe_error_code,
        q.public_id AS quest_public_id, q.discord_desired_revision, q.discord_applied_revision
 FROM background_jobs b
-LEFT JOIN quests q ON q.public_id::text = b.payload ->> 'questId'
+LEFT JOIN quests q ON q.public_id::text = b.payload ->> 'public_id'
 WHERE b.public_id = sqlc.arg(job_id)::uuid AND b.kind = 'quest_discord_delivery'
 FOR UPDATE OF b;
 -- name: SiteRedriveDiscordDeliveryJob :one

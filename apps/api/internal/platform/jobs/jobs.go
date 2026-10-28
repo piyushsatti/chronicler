@@ -35,6 +35,9 @@ type Job struct {
 	CompletionOperation string
 	CompletionPayload   []byte
 	ErrorMessage        string
+	// SafeErrorCode is a stable, display-safe failure code (no provider text).
+	// Empty means none; only FailWithCode sets it.
+	SafeErrorCode string
 }
 
 type Writer interface {
@@ -49,6 +52,8 @@ type Store interface {
 	Succeed(ctx context.Context, receipt Receipt) error
 	Retry(ctx context.Context, receipt Receipt, after time.Duration, reason string) error
 	Fail(ctx context.Context, receipt Receipt, state State, reason string) error
+	// FailWithCode is Fail that also records a safe error code for operators.
+	FailWithCode(ctx context.Context, receipt Receipt, state State, reason, safeCode string) error
 }
 
 // QuestDiscordPayload is the discord-lane body. ID is the internal quest

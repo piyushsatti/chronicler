@@ -108,6 +108,7 @@ func (j *Job) Claim(now time.Time) (bool, error) {
 	j.CompletionOperation = ""
 	j.CompletionPayload = nil
 	j.ErrorMessage = ""
+	j.SafeErrorCode = ""
 	return true, nil
 }
 func minTime(a, b time.Time) time.Time {
@@ -245,6 +246,21 @@ func (j *Job) Finish(token int64, now time.Time, op string, state State, payload
 	j.CompletionPayload = payload
 	j.ErrorMessage = reason
 	j.clearLease()
+	return nil
+}
+
+// FailWithCode is the "fail" completion plus a safe error code. An empty code
+// leaves SafeErrorCode as it was, so plain failures behave exactly as Finish.
+func (j *Job) FailWithCode(token int64, now time.Time, state State, payload []byte, reason, safeCode string) error {
+	if j.completionReplay(token, "fail", state, payload) {
+		return nil
+	}
+	if err := j.Finish(token, now, "fail", state, payload, 0, reason); err != nil {
+		return err
+	}
+	if safeCode != "" {
+		j.SafeErrorCode = safeCode
+	}
 	return nil
 }
 

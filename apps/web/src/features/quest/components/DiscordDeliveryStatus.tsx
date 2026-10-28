@@ -1,12 +1,14 @@
 import type { DiscordDeliveryView } from '../adapters/questAdapter.js';
 import { humanizeKey } from '../../../utils/format.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
+import { DISCORD_PERMISSION_REASON } from '../../../utils/discordDelivery.js';
 
 /**
  * What happened to the quest's Discord post, in plain words. The API reports
- * `synced`, `pending`, `error` or `idle` (quest `deliveryOverallStatus`); the
- * revisions say whether this is the first post (applied 0) or an update.
- * Unknown statuses keep the generic label.
+ * `synced`, `pending`, `error` (dead or repair_required jobs) or `idle`
+ * (quest `deliveryOverallStatus`); the revisions say whether this is the
+ * first post (applied 0) or an update. Unknown statuses keep the generic
+ * label.
  */
 export function discordDeliveryLabel(
   delivery: DiscordDeliveryView,
@@ -15,6 +17,13 @@ export function discordDeliveryLabel(
   const status = delivery.overallStatus.toLowerCase();
   const posted = delivery.appliedRevision > 0;
   const reason = delivery.failureReason ?? 'the last attempt did not go through';
+  // A missing bot permission is parked for repair (API `error`); no retry is
+  // coming until an admin fixes it, so neither "Next try" nor "stopped" fits.
+  if (
+    delivery.failureReason === DISCORD_PERMISSION_REASON &&
+    (status === 'pending' || status === 'error')
+  )
+    return `Discord post failed. ${DISCORD_PERMISSION_REASON}`;
   switch (status) {
     case 'synced':
       return delivery.appliedRevision > 1

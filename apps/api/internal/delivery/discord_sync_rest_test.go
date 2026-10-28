@@ -83,7 +83,9 @@ type fakeDiscord struct {
 	mu    sync.Mutex
 	calls []discordCall
 	fail  func(discordCall) bool
-	srv   *httptest.Server
+	// failStatus is the status a failed call answers with; zero means 400.
+	failStatus int
+	srv        *httptest.Server
 }
 
 func newFakeDiscord(t *testing.T) *fakeDiscord {
@@ -95,13 +97,16 @@ func newFakeDiscord(t *testing.T) *fakeDiscord {
 		_ = json.Unmarshal(raw, &call.Body)
 		f.mu.Lock()
 		f.calls = append(f.calls, call)
-		fail := f.fail
+		fail, status := f.fail, f.failStatus
 		f.mu.Unlock()
 		if r.Header.Get("Authorization") != "Bot tok" {
 			t.Errorf("authorization=%q", r.Header.Get("Authorization"))
 		}
 		if fail != nil && fail(call) {
-			w.WriteHeader(http.StatusBadRequest)
+			if status == 0 {
+				status = http.StatusBadRequest
+			}
+			w.WriteHeader(status)
 			_, _ = w.Write([]byte(`{"message":"boom"}`))
 			return
 		}

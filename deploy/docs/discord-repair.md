@@ -18,6 +18,32 @@ role before creating another quest. Retrying an already stored message updates
 it without sending a backfill ping and retains the historical warning for
 operator review.
 
+## Required bot permissions
+
+The delivery worker ([discord_sync.go](/apps/api/internal/delivery/discord_sync.go))
+needs these permissions. Check the effective permissions on each channel, not
+only the bot's role. A channel overwrite can deny a permission that the role
+allows, and a denied View Channel implicitly denies everything else on that
+channel.
+
+| Where                  | Permission                                                                                                     | Used for                                                                                                                                                   |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Quest announce channel | View Channel, Send Messages                                                                                    | Posting the announcement. Editing the bot's own post needs nothing more.                                                                                   |
+| Quest announce channel | Create Public Threads                                                                                          | Opening the discussion thread on the first post. This step is best effort: a refusal is logged, the delivery still succeeds and the thread is not retried. |
+| Quest voice channel    | Create Events (or Manage Events), View Channel, Connect                                                        | Creating and updating the scheduled event. Only quests with a voice channel and a future start time get an event.                                          |
+| Quest role or bot role | The role allows "Allow anyone to @mention this role", or the bot has "Mention @everyone, @here, and All Roles" | Pinging the quest announcement role. Without either, the post goes out but the role is not notified.                                                       |
+
+The worker posts plain message content without embeds and never writes inside
+the thread, so it does not need Embed Links or Send Messages in Threads.
+
+A Discord `403` (for example `50013 Missing Permissions` or `50001 Missing
+Access`) on the message or event step is not retried. The worker parks the job
+as `repair_required` with safe error code `DISCORD_PERMISSION` on the first
+attempt. The admin delivery panel shows it as **Needs repair** with a
+missing-permission reason. Grant the missing permission, then click **Retry
+delivery** on that row. Other failures still retry with backoff and end as
+`dead` (**Gave up**) after the attempt limit; the same button requeues those.
+
 ## First response
 
 1. Record the Chronicler quest ID, short code, current status, build ID, stored

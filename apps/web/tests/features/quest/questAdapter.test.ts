@@ -168,7 +168,7 @@ describe('parseQuestDetail', () => {
     if (result.ok) {
       expect(result.data.discordDelivery.lastAttemptFailed).toBe(true);
       expect(result.data.discordDelivery.failureReason).toBe(
-        'the bot may not post in the quest channel',
+        'The bot is missing a Discord permission in the quest channel. An admin must fix it, then retry.',
       );
       expect(JSON.stringify(result.data.discordDelivery)).not.toMatch(/Missing Access/);
     }

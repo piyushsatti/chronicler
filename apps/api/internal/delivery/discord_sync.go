@@ -353,10 +353,7 @@ func discordAPIStatusError(status int, raw []byte) error {
 	if len(snippet) > 200 {
 		snippet = snippet[:200]
 	}
-	if snippet == "" {
-		return fmt.Errorf("discord api status %d", status)
-	}
-	return fmt.Errorf("discord api status %d: %s", status, snippet)
+	return &DiscordAPIError{Status: status, Snippet: snippet}
 }
 
 // RecordingSync is a test fake that records sync calls.

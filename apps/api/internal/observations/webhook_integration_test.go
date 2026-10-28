@@ -419,6 +419,9 @@ func (s *ob05UnitStore) Retry(_ context.Context, r jobs.Receipt, d time.Duration
 func (s *ob05UnitStore) Fail(_ context.Context, r jobs.Receipt, state jobs.State, reason string) error {
 	return s.complete(r, "fail", state, 0, reason)
 }
+func (s *ob05UnitStore) FailWithCode(ctx context.Context, r jobs.Receipt, state jobs.State, reason, _ string) error {
+	return s.Fail(ctx, r, state, reason)
+}
 func ob05Store(t *testing.T) *ob05UnitStore {
 	return &ob05UnitStore{now: time.Now(), job: jobs.Job{ID: "150", PublicID: "10000000-0000-4000-8000-000000000150", Key: "operator-alert:worker:heartbeat:1", Kind: "operator_alert", Lane: "operator_alert", State: jobs.Queued, Payload: ob05Raw(t, ob05Message())}}
 }

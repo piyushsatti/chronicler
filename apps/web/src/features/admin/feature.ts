@@ -164,6 +164,17 @@ export const graphql: FeatureGraphql = {
         },
       },
     }),
+  RedriveDiscordDelivery: ({ variables }) =>
+    HttpResponse.json({
+      data: {
+        redriveDiscordDelivery: {
+          jobId: typeof variables?.jobId === 'string' ? variables.jobId : '',
+          desiredRevision: 1,
+          appliedRevision: 0,
+          deliveryStatus: 'queued',
+        },
+      },
+    }),
   UpdateHomeBanner: () =>
     HttpResponse.json({ data: { updateHomeBanner: goodHomeBanner } }),
   DecideVerification: ({ variables }) =>

@@ -1,9 +1,19 @@
 import { describe, expect, it } from 'vitest';
 import {
   DISCORD_GENERIC_REASON,
+  DISCORD_PERMISSION_REASON,
   discordFailureReason,
+  discordSafeErrorReason,
   isDiscordDeliveryTerminal,
 } from '../../src/utils/discordDelivery.js';
+
+describe('discordSafeErrorReason', () => {
+  it('maps the permission code to the shared sentence and leaves other codes alone', () => {
+    expect(discordSafeErrorReason('DISCORD_PERMISSION')).toBe(DISCORD_PERMISSION_REASON);
+    expect(discordSafeErrorReason('SOMETHING_ELSE')).toBeNull();
+    expect(discordSafeErrorReason(null)).toBeNull();
+  });
+});
 
 describe('discordFailureReason', () => {
   it('is null when nothing failed', () => {
@@ -15,7 +25,10 @@ describe('discordFailureReason', () => {
   it('maps known Discord statuses to plain reasons and never shows the raw text', () => {
     const raw = 'discord api status 403: {"message": "Missing Access", "code": 50001}';
     const reason = discordFailureReason(raw);
-    expect(reason).toBe('the bot may not post in the quest channel');
+    expect(reason).toBe(DISCORD_PERMISSION_REASON);
+    expect(reason).toBe(
+      'The bot is missing a Discord permission in the quest channel. An admin must fix it, then retry.',
+    );
     expect(reason).not.toMatch(/Missing Access|50001|discord api/);
     expect(discordFailureReason('discord api status 404')).toBe(
       'the quest channel or its post was not found',

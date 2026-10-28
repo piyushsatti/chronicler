@@ -1,7 +1,7 @@
 -- name: EnqueueJob :exec
 INSERT INTO background_jobs (job_key,kind,lane,state,payload,next_run_at)
 VALUES ($1,$2,$3,'queued',$4,clock_timestamp())
-ON CONFLICT(job_key) DO UPDATE SET state='queued',payload=EXCLUDED.payload,attempts=0,error_message=NULL,
+ON CONFLICT(job_key) DO UPDATE SET state='queued',payload=EXCLUDED.payload,attempts=0,error_message=NULL,safe_error_code=NULL,
  next_run_at=clock_timestamp(),updated_at=clock_timestamp(),completion_operation=NULL,completion_payload=NULL
 WHERE background_jobs.state<>'running' AND background_jobs.kind<>'agent_question';
 
@@ -23,7 +23,7 @@ SELECT clock_timestamp()::timestamptz AS now;
 UPDATE background_jobs SET state=sqlc.arg(state),attempts=sqlc.arg(attempts),lease_token=sqlc.arg(lease_token),
  lease_expires_at=sqlc.narg(lease_expires_at),claimed_at=sqlc.narg(claimed_at),attempt_deadline_at=sqlc.narg(attempt_deadline_at),
  next_run_at=sqlc.arg(next_run_at),completion_operation=sqlc.narg(completion_operation),completion_payload=sqlc.narg(completion_payload),
- error_message=sqlc.narg(error_message),updated_at=sqlc.arg(updated_at)
+ error_message=sqlc.narg(error_message),safe_error_code=sqlc.narg(safe_error_code),updated_at=sqlc.arg(updated_at)
 WHERE id=sqlc.arg(id);
 
 -- name: LockExpiredQuestion :one

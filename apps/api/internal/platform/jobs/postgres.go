@@ -37,7 +37,7 @@ func (s *PostgresStore) Enqueue(ctx context.Context, j Job) error {
 	return s.q.EnqueueJob(ctx, dbgen.EnqueueJobParams{JobKey: j.Key, Kind: j.Kind, Lane: j.Lane, Payload: p})
 }
 func fromRow(r dbgen.BackgroundJob) Job {
-	return Job{ID: strconv.FormatInt(r.ID, 10), PublicID: db.UUIDString(r.PublicID), Key: r.JobKey, Kind: r.Kind, Lane: r.Lane, State: State(r.State), Attempts: int(r.Attempts), Payload: r.Payload, NextRunAt: r.NextRunAt.Time, Token: r.LeaseToken, LeaseExpiresAt: r.LeaseExpiresAt.Time, ClaimedAt: r.ClaimedAt.Time, AttemptDeadlineAt: r.AttemptDeadlineAt.Time, QuestionDeadlineAt: r.QuestionDeadlineAt.Time, CompletionOperation: r.CompletionOperation.String, CompletionPayload: r.CompletionPayload, ErrorMessage: r.ErrorMessage.String}
+	return Job{ID: strconv.FormatInt(r.ID, 10), PublicID: db.UUIDString(r.PublicID), Key: r.JobKey, Kind: r.Kind, Lane: r.Lane, State: State(r.State), Attempts: int(r.Attempts), Payload: r.Payload, NextRunAt: r.NextRunAt.Time, Token: r.LeaseToken, LeaseExpiresAt: r.LeaseExpiresAt.Time, ClaimedAt: r.ClaimedAt.Time, AttemptDeadlineAt: r.AttemptDeadlineAt.Time, QuestionDeadlineAt: r.QuestionDeadlineAt.Time, CompletionOperation: r.CompletionOperation.String, CompletionPayload: r.CompletionPayload, ErrorMessage: r.ErrorMessage.String, SafeErrorCode: r.SafeErrorCode.String}
 }
 func ts(t time.Time) pgtype.Timestamptz { return pgtype.Timestamptz{Time: t, Valid: !t.IsZero()} }
 func txt(s string) pgtype.Text          { return pgtype.Text{String: s, Valid: s != ""} }
@@ -46,7 +46,7 @@ func save(ctx context.Context, q *dbgen.Queries, j Job, now time.Time) error {
 	if err != nil {
 		return err
 	}
-	n, err := q.SaveLeasedJob(ctx, dbgen.SaveLeasedJobParams{ID: id, State: string(j.State), Attempts: int32(j.Attempts), LeaseToken: j.Token, LeaseExpiresAt: ts(j.LeaseExpiresAt), ClaimedAt: ts(j.ClaimedAt), AttemptDeadlineAt: ts(j.AttemptDeadlineAt), NextRunAt: ts(j.NextRunAt), CompletionOperation: txt(j.CompletionOperation), CompletionPayload: j.CompletionPayload, ErrorMessage: txt(j.ErrorMessage), UpdatedAt: ts(now)})
+	n, err := q.SaveLeasedJob(ctx, dbgen.SaveLeasedJobParams{ID: id, State: string(j.State), Attempts: int32(j.Attempts), LeaseToken: j.Token, LeaseExpiresAt: ts(j.LeaseExpiresAt), ClaimedAt: ts(j.ClaimedAt), AttemptDeadlineAt: ts(j.AttemptDeadlineAt), NextRunAt: ts(j.NextRunAt), CompletionOperation: txt(j.CompletionOperation), CompletionPayload: j.CompletionPayload, ErrorMessage: txt(j.ErrorMessage), SafeErrorCode: txt(j.SafeErrorCode), UpdatedAt: ts(now)})
 	if err != nil {
 		return err
 	}
@@ -179,8 +179,15 @@ func (s *PostgresStore) Retry(ctx context.Context, r Receipt, after time.Duratio
 	return s.Complete(ctx, r, "retry", RetryWait, nil, after, reason)
 }
 func (s *PostgresStore) Fail(ctx context.Context, r Receipt, state State, reason string) error {
+	return s.FailWithCode(ctx, r, state, reason, "")
+}
+func (s *PostgresStore) FailWithCode(ctx context.Context, r Receipt, state State, reason, safeCode string) error {
 	p, _ := json.Marshal(map[string]string{"reason": reason})
-	return s.Complete(ctx, r, "fail", state, p, 0, reason)
+	_, err := s.mutate(ctx, r, func(j *Job, now time.Time) error {
+		t, _ := ParseToken(r.Token)
+		return j.FailWithCode(t, now, state, p, reason, safeCode)
+	})
+	return err
 }
 
 // CancelByID is an internal operator command using the public job UUID. It
