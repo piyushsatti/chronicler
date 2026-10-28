@@ -12,6 +12,7 @@ import {
   saveNode,
   updateMap,
 } from '../adapters/mapAdapter.js';
+import { mapAssetHref } from '../assetHref.js';
 import { queryKeys } from '../feature.js';
 export type MapEdit =
   | { kind: 'create'; regions: MapRegion[]; global: boolean }
@@ -133,7 +134,7 @@ export function useMapEdit({
             grid: text('grid') === 'hex' ? 'hex' : 'point',
             mapKind: 'pointcrawl',
             regionId: text('regionId') || null,
-            assetPath: text('assetPath') || null,
+            assetPath: mapAssetHref(text('assetPath')),
           },
           key,
         );
@@ -146,7 +147,7 @@ export function useMapEdit({
             name: text('name'),
             family: text('family'),
             grid: text('grid') === 'hex' ? 'hex' : 'point',
-            assetPath: text('assetPath') || null,
+            assetPath: mapAssetHref(text('assetPath')),
           },
           key,
         );

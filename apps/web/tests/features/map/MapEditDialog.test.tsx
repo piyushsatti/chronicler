@@ -14,7 +14,7 @@ const map = { ...good, canEdit: true };
 const region = { id: 'ffffffff-ffff-4fff-8fff-ffffffffffff', name: 'Coast', canCreateMap: true, kind: 'charter', charterDeadline: null, documentId: null, createdAt: good.createdAt };
 const location = { id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee', title: 'Harbor', slug: 'harbor', kind: 'codex_entry', category: 'Locations', effectiveBody: '' };
 function show(edit: MapEdit) {
-  renderWithProviders(<MapEditDialog edit={edit} scopeKey="test" admit={() => true} onClose={vi.fn()} onSaved={async () => {}} onDenied={async () => {}} />);
+  return renderWithProviders(<MapEditDialog edit={edit} scopeKey="test" admit={() => true} onClose={vi.fn()} onSaved={async () => {}} onDenied={async () => {}} />);
 }
 function form() {
   const value = screen.getByRole('button', { name: 'Save' }).closest('form');
@@ -146,4 +146,32 @@ it('blocks an empty required region choice before saving', async () => {
   fireEvent.submit(form());
   expect(await screen.findByRole('alert')).toHaveTextContent('Please select an item in the list.');
   expect(create).not.toHaveBeenCalled();
+});
+
+it('saves a bare site path from the image hint as a site-root path', async () => {
+  const create = vi.spyOn(adapter, 'createMap').mockResolvedValue({ id: good.id, atlasCode: 'X' });
+  const created = show({ kind: 'create', global: false, regions: [region] });
+  await userEvent.type(screen.getByRole('textbox', { name: /^Map name/ }), 'X');
+  await userEvent.type(screen.getByRole('textbox', { name: /^Map image/ }), 'maps/x.png');
+  fireEvent.submit(form());
+  await waitFor(() => expect(create).toHaveBeenCalledWith(expect.objectContaining({ assetPath: '/maps/x.png' }), expect.any(String)));
+  created.unmount();
+  const update = vi.spyOn(adapter, 'updateMap').mockResolvedValue({ id: map.id, atlasCode: map.atlasCode });
+  show({ kind: 'map', map: { ...map, assetPath: 'maps/x.png' } });
+  fireEvent.submit(form());
+  await waitFor(() => expect(update).toHaveBeenCalledWith(map.id, expect.objectContaining({ assetPath: '/maps/x.png' }), expect.any(String)));
+});
+
+it('keeps Previous when the list shrinks to one page while on the second page', async () => {
+  server.use(graphql.query('MapLocationDocuments', ({ variables }) => HttpResponse.json({
+    data: { documents: variables.offset ? { total: 50, items: [] } : { total: 51, items: [location] } },
+  })));
+  show({ kind: 'link', map, node: good.pointcrawlNodes[0]! });
+  await screen.findByRole('button', { name: /^Location/ });
+  await userEvent.click(screen.getByRole('button', { name: 'Next' }));
+  await screen.findByText('50 to choose from');
+  await userEvent.click(screen.getByRole('button', { name: 'Previous' }));
+  await screen.findByText('51 to choose from');
+  await choose('Location', 'Harbor');
+  expect(new FormData(form()).get('documentId')).toBe(location.id);
 });

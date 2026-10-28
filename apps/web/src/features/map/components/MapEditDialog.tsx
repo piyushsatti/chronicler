@@ -243,7 +243,7 @@ export function MapEditDialog(props: {
                   />
                 </div>
                 <div className={styles.toolbar}>
-                  {locations.data.total > 50 ? (
+                  {locations.data.total > 50 || offset > 0 ? (
                     <Button
                       variant="ghost"
                       disabled={offset === 0}
