@@ -38,16 +38,6 @@ func (q Queries) Scope(ctx context.Context) (ViewerScope, error) {
 	return q.resolveScope(ctx)
 }
 
-// ScopeFromContext is retained for legacy visibility-only callers. Query paths
-// use Scope so a failed grant read propagates as an error instead of widening.
-func (q Queries) ScopeFromContext(ctx context.Context) ViewerScope {
-	scope, err := q.Scope(ctx)
-	if err != nil {
-		return ScopeFromClaims(auth.Claims{})
-	}
-	return scope
-}
-
 func (q Queries) resolveScope(ctx context.Context) (ViewerScope, error) {
 	a, ok := auth.AuthorityFromContext(ctx)
 	if !ok {

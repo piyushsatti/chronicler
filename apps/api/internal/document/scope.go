@@ -57,9 +57,3 @@ func (s ViewerScope) LegacyDMTier() bool {
 func (s ViewerScope) IsAuthor(id string) bool {
 	return s.Authenticated() && id != "" && id == s.MemberID
 }
-
-// Allows is the compatibility entry point for the legacy visibility compiler.
-// New reads always specify the full Document, including its nullable policy.
-func (s ViewerScope) Allows(visibility Visibility, documentID, authorID string, _ []string) bool {
-	return Specify(Document{ID: documentID, AuthorID: authorID, Status: StatusPublished, Visibility: visibility}).Allows(s)
-}
