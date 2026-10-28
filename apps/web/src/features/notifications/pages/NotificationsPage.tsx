@@ -7,7 +7,7 @@ import { Link, Navigate } from 'react-router-dom';
 import { Button } from '../../../components/primitives/Button.js';
 import { StatePanel } from '../../../components/foundation/StatePanel.js';
 import { NotificationRow } from '../components/NotificationRow.js';
-import { NotificationsLoadMoreSentinel } from '../components/NotificationsLoadMoreSentinel.js';
+import { useInfiniteScroll } from '../../../components/primitives/useInfiniteScroll.js';
 import { useNotificationsPage } from '../hooks/useNotificationsPage.js';
 import { pluralize } from '../../../utils/format.js';
 import { Chip } from '../../../components/primitives/Chip.js';
@@ -16,6 +16,15 @@ import { FilterBar } from '../../../components/primitives/FilterBar.js';
 function NotificationsBody(): React.JSX.Element {
   const page = useNotificationsPage();
   const [readState, setReadState] = useState<'All' | 'Unread'>('All');
+  const sentinelRef = useInfiniteScroll({
+    enabled:
+      page.status === 'ready' &&
+      page.hasNextPage &&
+      !page.isFetchingNextPage &&
+      page.loadMoreError === null,
+    onLoadMore: page.status === 'ready' ? page.fetchNextPage : () => {},
+    rootMargin: '200px',
+  });
 
   if (page.status === 'error') {
     return (
@@ -113,10 +122,7 @@ function NotificationsBody(): React.JSX.Element {
           </Link>
         </div>
       ) : null}
-      <NotificationsLoadMoreSentinel
-        enabled={hasNextPage && !isFetchingNextPage && loadMoreError === null}
-        onLoadMore={fetchNextPage}
-      />
+      <div ref={sentinelRef} aria-hidden="true" />
       {isFetchingNextPage ? (
         <StatePanel status="loading" variant="inline" />
       ) : null}

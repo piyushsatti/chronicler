@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { graphql, http, HttpResponse } from 'msw';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -31,6 +31,10 @@ describe('NotificationsPage', () => {
   beforeEach(() => {
     localStorage.clear();
     seedToken();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('renders inbox heading and notification rows', async () => {
@@ -264,6 +268,49 @@ describe('NotificationsPage', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Unread' }));
     expect(screen.getByText('No unread notifications')).toBeVisible();
     expect(screen.getAllByRole('link', { name: 'Notification settings' })).toHaveLength(1);
+  });
+
+  it('loads the next page when the observed sentinel intersects', async () => {
+    let callback: IntersectionObserverCallback | undefined;
+    let options: IntersectionObserverInit | undefined;
+    const observe = vi.fn();
+    class TestObserver implements IntersectionObserver {
+      readonly root = null;
+      readonly rootMargin = '200px';
+      readonly thresholds = [0];
+      constructor(next: IntersectionObserverCallback, init?: IntersectionObserverInit) {
+        callback = next;
+        options = init;
+      }
+      observe = observe;
+      disconnect = vi.fn();
+      takeRecords = () => [];
+      unobserve = vi.fn();
+    }
+    vi.stubGlobal('IntersectionObserver', TestObserver);
+    server.use(
+      graphql.query('MyNotifications', ({ variables }) => HttpResponse.json({ data: {
+        myNotifications: variables.before ? {
+          hasMore: false,
+          items: [{ ...notifications.items[0], id: 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', title: 'Older notice', readAt: READ_AT }],
+        } : {
+          hasMore: true,
+          nextBefore: '2026-10-21T12:00:00Z',
+          items: notifications.items.map((item) => ({ ...item, readAt: READ_AT })),
+        },
+      } })),
+    );
+    renderWithProviders(<NotificationsPage />, { route: '/notifications' });
+    await screen.findByText('Seat confirmed');
+    await waitFor(() => expect(observe).toHaveBeenCalledOnce());
+    expect(options?.rootMargin).toBe('200px');
+    act(() => {
+      callback?.(
+        [{ isIntersecting: true } as IntersectionObserverEntry],
+        {} as IntersectionObserver,
+      );
+    });
+    expect(await screen.findByText('Older notice')).toBeVisible();
   });
 
   it('does not import adapters from the page module', () => {
