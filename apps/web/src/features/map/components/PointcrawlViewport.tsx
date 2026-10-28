@@ -23,14 +23,11 @@ import {
   placeLabels,
 } from '../labelLayout.js';
 import { MapKey } from './MapKey.js';
+import { mapAssetHref } from '../assetHref.js';
 import { countPlaces, isHexMap, placeWords } from '../mapWords.js';
 import { Checkbox } from '../../../components/primitives/Checkbox.js';
 
-// Stored asset paths may be absolute URLs or site-relative; both resolve from the site root.
-export function mapAssetHref(assetPath: string | null): string | null {
-  if (!assetPath) return null;
-  return /^(?:[a-z]+:|\/)/i.test(assetPath) ? assetPath : `/${assetPath}`;
-}
+export { mapAssetHref };
 
 export function graphBounds(nodes: readonly { x: number; y: number }[]) {
   let minX = nodes[0]?.x ?? 0,
@@ -240,7 +237,9 @@ export function PointcrawlViewport({
   const press = useRef<{ x: number; y: number; moved: boolean } | null>(null);
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
-  const [showRoutes, setShowRoutes] = useState(readShowRoutes);
+  const [routesChoice, setShowRoutes] = useState(readShowRoutes);
+  // Hex-map routes are only hex adjacency, so a hex map never draws them.
+  const showRoutes = routesChoice && !hexMap;
   const [focusedId, setFocusedId] = useState<string | null>(null);
   const byId = useMemo(
     () => new Map(map.nodes.map((node) => [node.id, node])),
@@ -392,7 +391,7 @@ export function PointcrawlViewport({
         }
         actions={
           <>
-            {map.edges.length ? (
+            {map.edges.length && !hexMap ? (
               <Checkbox
                 className={styles.routesToggle}
                 label="Show routes"

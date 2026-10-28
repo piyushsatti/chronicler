@@ -64,7 +64,7 @@ it('creates a hex map with a plain-word address, group and image address', async
   await userEvent.click(screen.getByRole('button', { name: 'Hex map' }));
   expect(new FormData(form()).get('grid')).toBe('hex');
   await userEvent.type(screen.getByRole('textbox', { name: /^Map name/ }), 'Lightfall Hexflower');
-  await userEvent.type(screen.getByRole('textbox', { name: /^Map image address/ }), '/maps/hexflower.png');
+  await userEvent.type(screen.getByRole('textbox', { name: /^Map image/ }), '/maps/hexflower.png');
   fireEvent.submit(form());
   await waitFor(() => expect(create).toHaveBeenCalledWith(
     expect.objectContaining({ name: 'Lightfall Hexflower', atlasCode: 'LIGHTFALL-HEXFLOWER', family: 'campaign', grid: 'hex', mapKind: 'pointcrawl', assetPath: '/maps/hexflower.png' }),
@@ -77,12 +77,12 @@ it('edits a map: shows its current values and saves name, type, group and image'
   show({ kind: 'map', map: { ...map, assetPath: '/maps/old.png' } });
   expect(screen.getByRole('dialog', { name: 'Edit map' })).toBeVisible();
   expect(screen.getByRole('textbox', { name: /^Map name/ })).toHaveValue(map.name);
-  expect(screen.getByRole('textbox', { name: /^Map image address/ })).toHaveValue('/maps/old.png');
+  expect(screen.getByRole('textbox', { name: /^Map image/ })).toHaveValue('/maps/old.png');
   expect(screen.queryByText('Map address')).toBeNull();
   await userEvent.clear(screen.getByRole('textbox', { name: /^Map name/ }));
   await userEvent.type(screen.getByRole('textbox', { name: /^Map name/ }), 'Renamed map');
   await userEvent.click(screen.getByRole('button', { name: 'Hex map' }));
-  await userEvent.clear(screen.getByRole('textbox', { name: /^Map image address/ }));
+  await userEvent.clear(screen.getByRole('textbox', { name: /^Map image/ }));
   fireEvent.submit(form());
   await waitFor(() => expect(update).toHaveBeenCalledWith(
     map.id,

@@ -6,6 +6,7 @@ import styles from '../pages/map.module.css';
 import { Select } from '../../../components/primitives/Select.js';
 import { SegmentedControl } from '../../../components/primitives/SegmentedControl.js';
 import { placeWords, type MapGrid } from '../mapWords.js';
+import { mapAssetHref } from '../assetHref.js';
 const GRID_OPTIONS = [
   { value: 'point', label: 'Point map' },
   { value: 'hex', label: 'Hex map' },
@@ -39,6 +40,9 @@ export function MapEditDialog(props: {
     edit.kind === 'map' && edit.map.grid === 'hex' ? 'hex' : 'point',
   );
   const [documentId, setDocumentId] = useState('');
+  const [assetPath, setAssetPath] = useState(
+    edit.kind === 'map' ? (edit.map.assetPath ?? '') : '',
+  );
   const {
     pending,
     error,
@@ -109,17 +113,25 @@ export function MapEditDialog(props: {
               </span>
             </label>
             <label>
-              Map image address
+              Map image
               <input
                 name="assetPath"
                 maxLength={2048}
                 placeholder="/maps/my-map.png or https://…"
-                defaultValue={edit.kind === 'map' ? (edit.map.assetPath ?? '') : ''}
+                value={assetPath}
+                onChange={(event) => setAssetPath(event.target.value)}
               />
               <span className="type-caption">
-                The web address of the map picture. Leave it blank to show the places on
-                a plain background.
+                A path on this site, like maps/my-map.png, or a full https:// link. Leave
+                it blank to show the places on a plain background.
               </span>
+              {mapAssetHref(assetPath.trim()) ? (
+                <img
+                  src={mapAssetHref(assetPath.trim()) ?? undefined}
+                  alt="Map image preview"
+                  style={{ maxHeight: 96, borderRadius: 'var(--rad-sm)', alignSelf: 'start' }}
+                />
+              ) : null}
             </label>
           </>
         ) : null}
@@ -231,29 +243,33 @@ export function MapEditDialog(props: {
                   />
                 </div>
                 <div className={styles.toolbar}>
-                  <Button
-                    variant="ghost"
-                    disabled={offset === 0}
-                    onClick={() => {
-                      setDocumentId('');
-                      setOffset((value) => Math.max(0, value - 50));
-                    }}
-                  >
-                    Previous
-                  </Button>
+                  {locations.data.total > 50 ? (
+                    <Button
+                      variant="ghost"
+                      disabled={offset === 0}
+                      onClick={() => {
+                        setDocumentId('');
+                        setOffset((value) => Math.max(0, value - 50));
+                      }}
+                    >
+                      Previous
+                    </Button>
+                  ) : null}
                   <span className="type-caption">
                     {locations.data.total} to choose from
                   </span>
-                  <Button
-                    variant="ghost"
-                    disabled={offset + 50 >= locations.data.total}
-                    onClick={() => {
-                      setDocumentId('');
-                      setOffset((value) => value + 50);
-                    }}
-                  >
-                    Next
-                  </Button>
+                  {locations.data.total > 50 ? (
+                    <Button
+                      variant="ghost"
+                      disabled={offset + 50 >= locations.data.total}
+                      onClick={() => {
+                        setDocumentId('');
+                        setOffset((value) => value + 50);
+                      }}
+                    >
+                      Next
+                    </Button>
+                  ) : null}
                 </div>
               </>
             )}

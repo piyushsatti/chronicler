@@ -3,7 +3,7 @@ import { ContentRenderer } from '../../../components/foundation/ContentRenderer.
 import { Button } from '../../../components/primitives/Button.js';
 import { documentHref } from '../../../utils/documentHref.js';
 import { humanizeKey } from '../../../utils/format.js';
-import { placeWords } from '../mapWords.js';
+import { isHexMap, placeWords } from '../mapWords.js';
 import type { useMapPage } from '../hooks/useMapPage.js';
 import type { Pointcrawl } from '../adapters/mapAdapter.js';
 import { MapPanelBody } from './MapPanelBody.js';
@@ -74,10 +74,12 @@ export function MapRegionDetails({
             <strong>{map.nodes.length}</strong>{' '}
             {map.nodes.length === 1 ? placeWords(map).one : placeWords(map).many}
           </span>
-          <span>
-            <strong>{map.edges.length}</strong>{' '}
-            {map.edges.length === 1 ? 'route' : 'routes'}
-          </span>
+          {isHexMap(map) ? null : (
+            <span>
+              <strong>{map.edges.length}</strong>{' '}
+              {map.edges.length === 1 ? 'route' : 'routes'}
+            </span>
+          )}
         </div>
         <p>Choose a {placeWords(map).one} to see its stories.</p>
       </footer>

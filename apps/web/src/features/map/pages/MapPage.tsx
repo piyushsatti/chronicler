@@ -117,7 +117,7 @@ export function MapPage(): React.JSX.Element {
   const regionName =
     page.region?.name ?? (map?.regionId === null ? 'Global' : 'Region unavailable');
   const body = (
-    <div className={`stack ${styles.page}`}>
+    <div className={`stack ${styles.page}`} data-gap="5">
       <PageHeader
         title={requestedAtlas ? (map?.name ?? 'Map') : 'Map'}
         lede={

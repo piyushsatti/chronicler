@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../../components/primitives/Button.js';
 import { EmptyState } from '../../../components/primitives/EmptyState.js';
+import { Modal } from '../../../components/primitives/Modal.js';
 import { documentHref } from '../../../utils/documentHref.js';
 import {
   useMapNodeDetails,
@@ -24,6 +25,11 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
   const { pending, error, documentIds, documents, submap, unlink } =
     useMapNodeDetails(props);
   const me = useMe();
+  const [confirming, setConfirming] = useState<{
+    documentId: string;
+    relation: string;
+    title: string;
+  } | null>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
   const panel = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -161,14 +167,19 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
                     ) : map.canEdit ? (
                       <Button
                         size="sm"
-                        variant="danger"
+                        variant="ghost"
+                        aria-label={`Unlink ${document.title}`}
                         pending={pending === `${link.documentId}:${link.relation}`}
                         disabled={Boolean(pending)}
-                        onClick={() => {
-                          void unlink(link.documentId, link.relation);
-                        }}
+                        onClick={() =>
+                          setConfirming({
+                            documentId: link.documentId,
+                            relation: link.relation,
+                            title: document.title,
+                          })
+                        }
                       >
-                        Unlink {document.title}
+                        Unlink
                       </Button>
                     ) : null}
                   </>
@@ -204,6 +215,32 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
         {node.linkedEntries.length ? linkAction : null}
         {newFeature}
       </MapPanelBody>
+      {confirming ? (
+        <Modal open title={`Unlink ${confirming.title}?`} onClose={() => setConfirming(null)}>
+          <div className="stack">
+            <p className="type-body">
+              {confirming.title} stays in the Codex. It is only removed from {words.one}{' '}
+              {node.name}.
+            </p>
+            <div className="row">
+              <Button type="button" variant="ghost" onClick={() => setConfirming(null)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                onClick={() => {
+                  const { documentId, relation } = confirming;
+                  setConfirming(null);
+                  void unlink(documentId, relation);
+                }}
+              >
+                Unlink
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      ) : null}
       <div className={styles.detailFooter}>
         <span>
           <i />

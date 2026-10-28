@@ -780,6 +780,7 @@ describe('MapPage', () => {
         fireEvent.click(
           await screen.findByRole('button', { name: 'Unlink Private location' }),
         );
+        fireEvent.click(await screen.findByRole('button', { name: 'Unlink' }));
         expect(unlink).toHaveBeenCalledTimes(1);
         fireEvent.click(screen.getByRole('button', { name: 'Account B' }));
         fireEvent.click(await screen.findByRole('button', { name: 'Add location' }));
@@ -822,6 +823,7 @@ describe('MapPage', () => {
       fireEvent.click(
         await screen.findByRole('button', { name: 'Unlink Private location' }),
       );
+      fireEvent.click(await screen.findByRole('button', { name: 'Unlink' }));
       const map = queryClient.getQueryData<adapter.Pointcrawl>(queryKeys.map('LFC'));
       expect(map).toBeDefined();
       await act(async () => {
@@ -838,6 +840,7 @@ describe('MapPage', () => {
       fireEvent.click(
         await screen.findByRole('button', { name: 'Unlink Private location' }),
       );
+      fireEvent.click(await screen.findByRole('button', { name: 'Unlink' }));
       expect(unlink).toHaveBeenCalledTimes(2);
       await act(async () => {
         first.resolve();

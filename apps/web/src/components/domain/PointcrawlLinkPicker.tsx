@@ -2,6 +2,7 @@ import { useId, useState } from 'react';
 import { Button } from '../primitives/Button.js';
 import { Checkbox } from '../primitives/Checkbox.js';
 import { Select } from '../primitives/Select.js';
+import { isHexCode } from '../../utils/hexCode.js';
 import styles from './PointcrawlLinkPicker.module.css';
 
 export type PointcrawlRole = 'expected' | 'visited';
@@ -58,6 +59,8 @@ export function PointcrawlLinkPicker({
   const matches = query
     ? (nodes ?? []).filter((node) => node.name.toLowerCase().includes(query))
     : [];
+  // The search matches the place's code, so name the code the map's places use.
+  const hexPlaces = Boolean(nodes?.length) && (nodes ?? []).every((node) => isHexCode(node.name));
   const elsewhere = links.filter((link) => !names.has(link.pointcrawlNodeId)).length;
   const roleDisabled = (role: PointcrawlRole) =>
     disabled || (role === 'visited' && !canMarkVisited);
@@ -122,7 +125,9 @@ export function PointcrawlLinkPicker({
           <input
             className="field-input"
             type="search"
-            placeholder="Hex or place name, e.g. LFR7008"
+            placeholder={
+              hexPlaces ? 'Hex code, e.g. LFR7008' : 'Hex or location code, e.g. LFR7008'
+            }
             value={search}
             disabled={disabled}
             onChange={(event) => setSearch(event.target.value)}
