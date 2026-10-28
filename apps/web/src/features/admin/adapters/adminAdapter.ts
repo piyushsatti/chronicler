@@ -779,6 +779,24 @@ export async function transitionRegion(
   }
 }
 
+/** A bare array or an `{ items }` envelope; a malformed envelope reads "expected array". */
+function parseArrayOrItems<S extends z.ZodTypeAny>(
+  schema: S,
+  wire: unknown,
+): AdapterResult<z.infer<S>[]> {
+  const list = Array.isArray(wire)
+    ? wire
+    : z.object({ items: z.array(schema) }).safeParse(wire).success
+      ? (wire as { items: unknown[] }).items
+      : null;
+  if (!list) return { ok: false, failure: 'InvalidWire', detail: 'expected array' };
+  const parsed = z.array(schema).safeParse(list);
+  if (!parsed.success) {
+    return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
+  }
+  return { ok: true, data: parsed.data };
+}
+
 const backstorySchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -800,16 +818,8 @@ export type AdminBackstoryRow = {
 export function parseAdminBackstories(
   wire: unknown,
 ): AdapterResult<AdminBackstoryRow[]> {
-  const list = Array.isArray(wire)
-    ? wire
-    : z.object({ items: z.array(backstorySchema) }).safeParse(wire).success
-      ? (wire as { items: unknown[] }).items
-      : null;
-  if (!list) return { ok: false, failure: 'InvalidWire', detail: 'expected array' };
-  const parsed = z.array(backstorySchema).safeParse(list);
-  if (!parsed.success) {
-    return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
-  }
+  const parsed = parseArrayOrItems(backstorySchema, wire);
+  if (!parsed.ok) return parsed;
   return {
     ok: true,
     data: parsed.data.map((b) => ({
@@ -942,16 +952,8 @@ export type AdminCatalogEntry = {
 export function parseCreationCatalog(
   wire: unknown,
 ): AdapterResult<AdminCatalogEntry[]> {
-  const list = Array.isArray(wire)
-    ? wire
-    : z.object({ items: z.array(catalogEntrySchema) }).safeParse(wire).success
-      ? (wire as { items: unknown[] }).items
-      : null;
-  if (!list) return { ok: false, failure: 'InvalidWire', detail: 'expected array' };
-  const parsed = z.array(catalogEntrySchema).safeParse(list);
-  if (!parsed.success) {
-    return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
-  }
+  const parsed = parseArrayOrItems(catalogEntrySchema, wire);
+  if (!parsed.ok) return parsed;
   return {
     ok: true,
     data: parsed.data.map((e) => ({
@@ -1152,16 +1154,8 @@ export type AdminTimeAnchorView = {
 };
 
 export function parseTimeAnchors(wire: unknown): AdapterResult<AdminTimeAnchorView[]> {
-  const list = Array.isArray(wire)
-    ? wire
-    : z.object({ items: z.array(timeAnchorSchema) }).safeParse(wire).success
-      ? (wire as { items: unknown[] }).items
-      : null;
-  if (!list) return { ok: false, failure: 'InvalidWire', detail: 'expected array' };
-  const parsed = z.array(timeAnchorSchema).safeParse(list);
-  if (!parsed.success) {
-    return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
-  }
+  const parsed = parseArrayOrItems(timeAnchorSchema, wire);
+  if (!parsed.ok) return parsed;
   return {
     ok: true,
     data: parsed.data.map((a) => ({

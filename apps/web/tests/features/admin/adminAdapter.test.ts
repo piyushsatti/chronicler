@@ -2,11 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { graphql, HttpResponse } from 'msw';
 import {
   decideCharacterVerification,
+  parseAdminBackstories,
   parseAdminChars,
   parseAdminMembers,
   parseAdminOps,
   parseCharPending,
+  parseCreationCatalog,
   parseDmQueue,
+  parseTimeAnchors,
 } from '../../../src/features/admin/adapters/adminAdapter.js';
 import type { AdminCommand } from '../../../src/features/admin/adapters/adminRequest.js';
 import { server } from '../../../src/mocks/server.js';
@@ -247,5 +250,40 @@ describe('Character decision acknowledgement', () => {
         command,
       ),
     ).rejects.toMatchObject({ kind: 'invalid' });
+  });
+});
+
+describe('admin array-or-items parsers', () => {
+  const cases = [
+    {
+      name: 'parseAdminBackstories',
+      parse: parseAdminBackstories,
+      row: { id: 'b1', name: 'Exile', lore: 'Lore', cohort: 'c1', sourceRegionId: null, retired: false },
+    },
+    {
+      name: 'parseCreationCatalog',
+      parse: parseCreationCatalog,
+      row: { id: 'e1', kind: 'race', name: 'Elf', description: null, available: true, retired: false, introducedByRegionId: null },
+    },
+    {
+      name: 'parseTimeAnchors',
+      parse: parseTimeAnchors,
+      row: { id: 'a1', realUtc: '2026-10-01T00:00:00Z', epochDay: 12, rate: 1, note: null },
+    },
+  ] as const;
+
+  it.each(cases)('$name accepts a bare array and an items envelope alike', ({ parse, row }) => {
+    const bare = parse([row]);
+    expect(bare.ok).toBe(true);
+    expect(parse({ items: [row] })).toEqual(bare);
+  });
+
+  it.each(cases)('$name keeps its failure detail', ({ parse, row }) => {
+    const bad = { ...row, id: 7 };
+    expect(parse({ items: [bad] })).toEqual({ ok: false, failure: 'InvalidWire', detail: 'expected array' });
+    expect(parse(null)).toEqual({ ok: false, failure: 'InvalidWire', detail: 'expected array' });
+    const rawArray = parse([bad]);
+    expect(rawArray).toMatchObject({ ok: false, failure: 'InvalidWire' });
+    expect(rawArray.ok ? '' : rawArray.detail).toContain('Expected string');
   });
 });
