@@ -180,6 +180,17 @@ type ComplexityRoot struct {
 		SourceRegionID func(childComplexity int) int
 	}
 
+	BodySpanAudit struct {
+		EndLine     func(childComplexity int) int
+		Handle      func(childComplexity int) int
+		Kind        func(childComplexity int) int
+		StartLine   func(childComplexity int) int
+		Suggestion  func(childComplexity int) int
+		Token       func(childComplexity int) int
+		TokenColumn func(childComplexity int) int
+		TokenLine   func(childComplexity int) int
+	}
+
 	CategoryCountType struct {
 		Category func(childComplexity int) int
 		Count    func(childComplexity int) int
@@ -811,6 +822,7 @@ type ComplexityRoot struct {
 		AdminCharacterDirectory       func(childComplexity int, filters *AdminCharacterDirectoryFiltersInput, limit int, offset int) int
 		AdminOperations               func(childComplexity int, deliveryState *string, limit int, offset int) int
 		ArchonAssignments             func(childComplexity int, regionID *string, memberID *string, limit int, offset int) int
+		AuditBody                     func(childComplexity int, body string) int
 		Backstories                   func(childComplexity int, filters *BackstoryFiltersInput, limit int, offset int) int
 		Character                     func(childComplexity int, id *string, shortCode *string) int
 		CharacterLogs                 func(childComplexity int, characterID string, limit int, offset int) int
@@ -864,7 +876,7 @@ type ComplexityRoot struct {
 		ParticipationsByCharacter     func(childComplexity int, characterID string, limit int, offset int) int
 		PendingCharacterVerifications func(childComplexity int, limit int, offset int) int
 		PendingDmProfileVerifications func(childComplexity int, limit int, offset int) int
-		PreviewBody                   func(childComplexity int, body string, audience PreviewAudience, authorID *string) int
+		PreviewBody                   func(childComplexity int, body string, audience PreviewAudience, authorID *string, memberHandle *string) int
 		Quest                         func(childComplexity int, id *string, shortCode *string) int
 		QuestAnnouncementRoleSetting  func(childComplexity int) int
 		QuestArc                      func(childComplexity int, id string) int
@@ -1337,7 +1349,8 @@ type QueryResolver interface {
 	CodexCategories(ctx context.Context) ([]*CategoryCountType, error)
 	DocumentRevisions(ctx context.Context, documentID string, limit int, offset int) (*DocumentRevisionPage, error)
 	DocumentsTrash(ctx context.Context, limit int, offset int) (*DocumentListResult, error)
-	PreviewBody(ctx context.Context, body string, audience PreviewAudience, authorID *string) (string, error)
+	PreviewBody(ctx context.Context, body string, audience PreviewAudience, authorID *string, memberHandle *string) (string, error)
+	AuditBody(ctx context.Context, body string) ([]*BodySpanAudit, error)
 	LieutenantAssignments(ctx context.Context, memberID *string, npcDocumentID *string, limit int, offset int) (*LieutenantPage, error)
 	MyUnlocks(ctx context.Context, limit int, offset int) (*MemberUnlockPage, error)
 	Member(ctx context.Context, id *string, handle *string) (*MemberType, error)
@@ -1986,6 +1999,62 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.BackstoryType.SourceRegionID(childComplexity), true
+
+	case "BodySpanAudit.endLine":
+		if e.complexity.BodySpanAudit.EndLine == nil {
+			break
+		}
+
+		return e.complexity.BodySpanAudit.EndLine(childComplexity), true
+
+	case "BodySpanAudit.handle":
+		if e.complexity.BodySpanAudit.Handle == nil {
+			break
+		}
+
+		return e.complexity.BodySpanAudit.Handle(childComplexity), true
+
+	case "BodySpanAudit.kind":
+		if e.complexity.BodySpanAudit.Kind == nil {
+			break
+		}
+
+		return e.complexity.BodySpanAudit.Kind(childComplexity), true
+
+	case "BodySpanAudit.startLine":
+		if e.complexity.BodySpanAudit.StartLine == nil {
+			break
+		}
+
+		return e.complexity.BodySpanAudit.StartLine(childComplexity), true
+
+	case "BodySpanAudit.suggestion":
+		if e.complexity.BodySpanAudit.Suggestion == nil {
+			break
+		}
+
+		return e.complexity.BodySpanAudit.Suggestion(childComplexity), true
+
+	case "BodySpanAudit.token":
+		if e.complexity.BodySpanAudit.Token == nil {
+			break
+		}
+
+		return e.complexity.BodySpanAudit.Token(childComplexity), true
+
+	case "BodySpanAudit.tokenColumn":
+		if e.complexity.BodySpanAudit.TokenColumn == nil {
+			break
+		}
+
+		return e.complexity.BodySpanAudit.TokenColumn(childComplexity), true
+
+	case "BodySpanAudit.tokenLine":
+		if e.complexity.BodySpanAudit.TokenLine == nil {
+			break
+		}
+
+		return e.complexity.BodySpanAudit.TokenLine(childComplexity), true
 
 	case "CategoryCountType.category":
 		if e.complexity.CategoryCountType.Category == nil {
@@ -5378,6 +5447,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Query.ArchonAssignments(childComplexity, args["regionId"].(*string), args["memberId"].(*string), args["limit"].(int), args["offset"].(int)), true
 
+	case "Query.auditBody":
+		if e.complexity.Query.AuditBody == nil {
+			break
+		}
+
+		args, err := ec.field_Query_auditBody_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Query.AuditBody(childComplexity, args["body"].(string)), true
+
 	case "Query.backstories":
 		if e.complexity.Query.Backstories == nil {
 			break
@@ -5969,7 +6050,7 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 			return 0, false
 		}
 
-		return e.complexity.Query.PreviewBody(childComplexity, args["body"].(string), args["audience"].(PreviewAudience), args["authorId"].(*string)), true
+		return e.complexity.Query.PreviewBody(childComplexity, args["body"].(string), args["audience"].(PreviewAudience), args["authorId"].(*string), args["memberHandle"].(*string)), true
 
 	case "Query.quest":
 		if e.complexity.Query.Quest == nil {
@@ -8285,7 +8366,13 @@ type DeliveryReceipt {
     offset: Int! = 0
   ): DocumentRevisionPage!
   documentsTrash(limit: Int! = 50, offset: Int! = 0): DocumentListResult!
-  previewBody(body: String!, audience: PreviewAudience!, authorId: ID): String!
+  previewBody(
+    body: String!
+    audience: PreviewAudience!
+    authorId: ID
+    memberHandle: String
+  ): String!
+  auditBody(body: String!): [BodySpanAudit!]!
   lieutenantAssignments(
     memberId: ID
     npcDocumentId: ID
@@ -8419,6 +8506,41 @@ type LieutenantAssignmentType {
 enum PreviewAudience {
   PLAYER
   DM
+}
+
+"""
+Why an audited body span matters: DM and MEMBER spans are hidden from other
+readers, MALFORMED spans from everyone; SPOILER spans are visible but blurred;
+LOOKALIKE spans are visible text whose callout looks like a marker but is not.
+"""
+enum BodySpanKind {
+  DM
+  MEMBER
+  SPOILER
+  MALFORMED
+  LOOKALIKE
+}
+
+"""
+One marked span of an unsaved body, from the server's own marker parser.
+Lines are 1-based and inclusive. handle is the member a MEMBER span addresses;
+suggestion is a best-effort corrected marker for MALFORMED and LOOKALIKE spans.
+token is the exact source text of the marker defining the span (the offending
+token for MALFORMED and LOOKALIKE): ` + "`" + `[!` + "`" + ` through the first ` + "`" + `]` + "`" + `, or, when
+unclosed, ` + "`" + `[!` + "`" + ` and its first word only, so replacing it with suggestion keeps
+the prose after it. tokenLine is 1-based; tokenColumn is 1-based and
+counted in UTF-16 code units, so an editor can replace exactly that range with
+suggestion without parsing marker grammar.
+"""
+type BodySpanAudit {
+  startLine: Int!
+  endLine: Int!
+  kind: BodySpanKind!
+  handle: String
+  suggestion: String
+  token: String
+  tokenLine: Int
+  tokenColumn: Int
 }
 
 type SummaryDerivedType {
@@ -11299,6 +11421,17 @@ func (ec *executionContext) field_Query_archonAssignments_args(ctx context.Conte
 	return args, nil
 }
 
+func (ec *executionContext) field_Query_auditBody_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "body", ec.unmarshalNString2string)
+	if err != nil {
+		return nil, err
+	}
+	args["body"] = arg0
+	return args, nil
+}
+
 func (ec *executionContext) field_Query_backstories_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
 	var err error
 	args := map[string]any{}
@@ -12079,6 +12212,11 @@ func (ec *executionContext) field_Query_previewBody_args(ctx context.Context, ra
 		return nil, err
 	}
 	args["authorId"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "memberHandle", ec.unmarshalOString2ᚖstring)
+	if err != nil {
+		return nil, err
+	}
+	args["memberHandle"] = arg3
 	return args, nil
 }
 
@@ -16011,6 +16149,343 @@ func (ec *executionContext) fieldContext_BackstoryType_retired(_ context.Context
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type Boolean does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BodySpanAudit_startLine(ctx context.Context, field graphql.CollectedField, obj *BodySpanAudit) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BodySpanAudit_startLine(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.StartLine, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BodySpanAudit_startLine(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BodySpanAudit",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BodySpanAudit_endLine(ctx context.Context, field graphql.CollectedField, obj *BodySpanAudit) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BodySpanAudit_endLine(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.EndLine, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(int)
+	fc.Result = res
+	return ec.marshalNInt2int(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BodySpanAudit_endLine(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BodySpanAudit",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BodySpanAudit_kind(ctx context.Context, field graphql.CollectedField, obj *BodySpanAudit) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BodySpanAudit_kind(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Kind, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(BodySpanKind)
+	fc.Result = res
+	return ec.marshalNBodySpanKind2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐBodySpanKind(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BodySpanAudit_kind(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BodySpanAudit",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type BodySpanKind does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BodySpanAudit_handle(ctx context.Context, field graphql.CollectedField, obj *BodySpanAudit) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BodySpanAudit_handle(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Handle, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BodySpanAudit_handle(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BodySpanAudit",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BodySpanAudit_suggestion(ctx context.Context, field graphql.CollectedField, obj *BodySpanAudit) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BodySpanAudit_suggestion(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Suggestion, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BodySpanAudit_suggestion(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BodySpanAudit",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BodySpanAudit_token(ctx context.Context, field graphql.CollectedField, obj *BodySpanAudit) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BodySpanAudit_token(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.Token, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*string)
+	fc.Result = res
+	return ec.marshalOString2ᚖstring(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BodySpanAudit_token(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BodySpanAudit",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BodySpanAudit_tokenLine(ctx context.Context, field graphql.CollectedField, obj *BodySpanAudit) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BodySpanAudit_tokenLine(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TokenLine, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*int)
+	fc.Result = res
+	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BodySpanAudit_tokenLine(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BodySpanAudit",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _BodySpanAudit_tokenColumn(ctx context.Context, field graphql.CollectedField, obj *BodySpanAudit) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_BodySpanAudit_tokenColumn(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.TokenColumn, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		return graphql.Null
+	}
+	res := resTmp.(*int)
+	fc.Result = res
+	return ec.marshalOInt2ᚖint(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_BodySpanAudit_tokenColumn(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "BodySpanAudit",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
 		},
 	}
 	return fc, nil
@@ -39428,7 +39903,7 @@ func (ec *executionContext) _Query_previewBody(ctx context.Context, field graphq
 	}()
 	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
 		ctx = rctx // use context from middleware stack in children
-		return ec.resolvers.Query().PreviewBody(rctx, fc.Args["body"].(string), fc.Args["audience"].(PreviewAudience), fc.Args["authorId"].(*string))
+		return ec.resolvers.Query().PreviewBody(rctx, fc.Args["body"].(string), fc.Args["audience"].(PreviewAudience), fc.Args["authorId"].(*string), fc.Args["memberHandle"].(*string))
 	})
 	if err != nil {
 		ec.Error(ctx, err)
@@ -39463,6 +39938,79 @@ func (ec *executionContext) fieldContext_Query_previewBody(ctx context.Context, 
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Query_previewBody_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Query_auditBody(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Query_auditBody(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Query().AuditBody(rctx, fc.Args["body"].(string))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.([]*BodySpanAudit)
+	fc.Result = res
+	return ec.marshalNBodySpanAudit2ᚕᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐBodySpanAuditᚄ(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Query_auditBody(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Query",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "startLine":
+				return ec.fieldContext_BodySpanAudit_startLine(ctx, field)
+			case "endLine":
+				return ec.fieldContext_BodySpanAudit_endLine(ctx, field)
+			case "kind":
+				return ec.fieldContext_BodySpanAudit_kind(ctx, field)
+			case "handle":
+				return ec.fieldContext_BodySpanAudit_handle(ctx, field)
+			case "suggestion":
+				return ec.fieldContext_BodySpanAudit_suggestion(ctx, field)
+			case "token":
+				return ec.fieldContext_BodySpanAudit_token(ctx, field)
+			case "tokenLine":
+				return ec.fieldContext_BodySpanAudit_tokenLine(ctx, field)
+			case "tokenColumn":
+				return ec.fieldContext_BodySpanAudit_tokenColumn(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type BodySpanAudit", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Query_auditBody_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -57108,6 +57656,65 @@ func (ec *executionContext) _BackstoryType(ctx context.Context, sel ast.Selectio
 	return out
 }
 
+var bodySpanAuditImplementors = []string{"BodySpanAudit"}
+
+func (ec *executionContext) _BodySpanAudit(ctx context.Context, sel ast.SelectionSet, obj *BodySpanAudit) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, bodySpanAuditImplementors)
+
+	out := graphql.NewFieldSet(fields)
+	deferred := make(map[string]*graphql.FieldSet)
+	for i, field := range fields {
+		switch field.Name {
+		case "__typename":
+			out.Values[i] = graphql.MarshalString("BodySpanAudit")
+		case "startLine":
+			out.Values[i] = ec._BodySpanAudit_startLine(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "endLine":
+			out.Values[i] = ec._BodySpanAudit_endLine(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "kind":
+			out.Values[i] = ec._BodySpanAudit_kind(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
+		case "handle":
+			out.Values[i] = ec._BodySpanAudit_handle(ctx, field, obj)
+		case "suggestion":
+			out.Values[i] = ec._BodySpanAudit_suggestion(ctx, field, obj)
+		case "token":
+			out.Values[i] = ec._BodySpanAudit_token(ctx, field, obj)
+		case "tokenLine":
+			out.Values[i] = ec._BodySpanAudit_tokenLine(ctx, field, obj)
+		case "tokenColumn":
+			out.Values[i] = ec._BodySpanAudit_tokenColumn(ctx, field, obj)
+		default:
+			panic("unknown field " + strconv.Quote(field.Name))
+		}
+	}
+	out.Dispatch(ctx)
+	if out.Invalids > 0 {
+		return graphql.Null
+	}
+
+	atomic.AddInt32(&ec.deferred, int32(len(deferred)))
+
+	for label, dfs := range deferred {
+		ec.processDeferredGroup(graphql.DeferredGroup{
+			Label:    label,
+			Path:     graphql.GetPath(ctx),
+			FieldSet: dfs,
+			Context:  ctx,
+		})
+	}
+
+	return out
+}
+
 var categoryCountTypeImplementors = []string{"CategoryCountType"}
 
 func (ec *executionContext) _CategoryCountType(ctx context.Context, sel ast.SelectionSet, obj *CategoryCountType) graphql.Marshaler {
@@ -62441,6 +63048,28 @@ func (ec *executionContext) _Query(ctx context.Context, sel ast.SelectionSet) gr
 			}
 
 			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
+		case "auditBody":
+			field := field
+
+			innerFunc := func(ctx context.Context, fs *graphql.FieldSet) (res graphql.Marshaler) {
+				defer func() {
+					if r := recover(); r != nil {
+						ec.Error(ctx, ec.Recover(ctx, r))
+					}
+				}()
+				res = ec._Query_auditBody(ctx, field)
+				if res == graphql.Null {
+					atomic.AddUint32(&fs.Invalids, 1)
+				}
+				return res
+			}
+
+			rrm := func(ctx context.Context) graphql.Marshaler {
+				return ec.OperationContext.RootResolverMiddleware(ctx,
+					func(ctx context.Context) graphql.Marshaler { return innerFunc(ctx, out) })
+			}
+
+			out.Concurrently(i, func(ctx context.Context) graphql.Marshaler { return rrm(innerCtx) })
 		case "lieutenantAssignments":
 			field := field
 
@@ -66818,6 +67447,70 @@ func (ec *executionContext) marshalNBackstoryType2ᚖgithubᚗcomᚋpiyushsatti�
 		return graphql.Null
 	}
 	return ec._BackstoryType(ctx, sel, v)
+}
+
+func (ec *executionContext) marshalNBodySpanAudit2ᚕᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐBodySpanAuditᚄ(ctx context.Context, sel ast.SelectionSet, v []*BodySpanAudit) graphql.Marshaler {
+	ret := make(graphql.Array, len(v))
+	var wg sync.WaitGroup
+	isLen1 := len(v) == 1
+	if !isLen1 {
+		wg.Add(len(v))
+	}
+	for i := range v {
+		i := i
+		fc := &graphql.FieldContext{
+			Index:  &i,
+			Result: &v[i],
+		}
+		ctx := graphql.WithFieldContext(ctx, fc)
+		f := func(i int) {
+			defer func() {
+				if r := recover(); r != nil {
+					ec.Error(ctx, ec.Recover(ctx, r))
+					ret = nil
+				}
+			}()
+			if !isLen1 {
+				defer wg.Done()
+			}
+			ret[i] = ec.marshalNBodySpanAudit2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐBodySpanAudit(ctx, sel, v[i])
+		}
+		if isLen1 {
+			f(i)
+		} else {
+			go f(i)
+		}
+
+	}
+	wg.Wait()
+
+	for _, e := range ret {
+		if e == graphql.Null {
+			return graphql.Null
+		}
+	}
+
+	return ret
+}
+
+func (ec *executionContext) marshalNBodySpanAudit2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐBodySpanAudit(ctx context.Context, sel ast.SelectionSet, v *BodySpanAudit) graphql.Marshaler {
+	if v == nil {
+		if !graphql.HasFieldError(ctx, graphql.GetFieldContext(ctx)) {
+			ec.Errorf(ctx, "the requested element is null which the schema does not allow")
+		}
+		return graphql.Null
+	}
+	return ec._BodySpanAudit(ctx, sel, v)
+}
+
+func (ec *executionContext) unmarshalNBodySpanKind2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐBodySpanKind(ctx context.Context, v any) (BodySpanKind, error) {
+	var res BodySpanKind
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNBodySpanKind2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐBodySpanKind(ctx context.Context, sel ast.SelectionSet, v BodySpanKind) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) unmarshalNBoolean2bool(ctx context.Context, v any) (bool, error) {

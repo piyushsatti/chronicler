@@ -1357,6 +1357,23 @@ func toPreviewAudience(v PreviewAudience) document.PreviewAudience {
 	return document.PreviewAudience(v)
 }
 
+func toBodySpanAudits(records []document.BodySpanAudit) []*BodySpanAudit {
+	out := make([]*BodySpanAudit, len(records))
+	for i, v := range records {
+		out[i] = &BodySpanAudit{
+			StartLine:   v.StartLine,
+			EndLine:     v.EndLine,
+			Kind:        BodySpanKind(v.Kind),
+			Handle:      v.Handle,
+			Suggestion:  v.Suggestion,
+			Token:       v.Token,
+			TokenLine:   v.TokenLine,
+			TokenColumn: v.TokenColumn,
+		}
+	}
+	return out
+}
+
 func toMapViewType(v spatial.MapView) *MapType {
 	return &MapType{
 		ID:        v.Id,

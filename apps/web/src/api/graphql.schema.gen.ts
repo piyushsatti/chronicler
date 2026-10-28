@@ -169,6 +169,41 @@ export type BackstoryType = {
   sourceRegionId?: Maybe<Scalars['ID']['output']>;
 };
 
+/**
+ * One marked span of an unsaved body, from the server's own marker parser.
+ * Lines are 1-based and inclusive. handle is the member a MEMBER span addresses;
+ * suggestion is a best-effort corrected marker for MALFORMED and LOOKALIKE spans.
+ * token is the exact source text of the marker defining the span (the offending
+ * token for MALFORMED and LOOKALIKE): `[!` through the first `]`, or, when
+ * unclosed, `[!` and its first word only, so replacing it with suggestion keeps
+ * the prose after it. tokenLine is 1-based; tokenColumn is 1-based and
+ * counted in UTF-16 code units, so an editor can replace exactly that range with
+ * suggestion without parsing marker grammar.
+ */
+export type BodySpanAudit = {
+  endLine: Scalars['Int']['output'];
+  handle?: Maybe<Scalars['String']['output']>;
+  kind: BodySpanKind;
+  startLine: Scalars['Int']['output'];
+  suggestion?: Maybe<Scalars['String']['output']>;
+  token?: Maybe<Scalars['String']['output']>;
+  tokenColumn?: Maybe<Scalars['Int']['output']>;
+  tokenLine?: Maybe<Scalars['Int']['output']>;
+};
+
+/**
+ * Why an audited body span matters: DM and MEMBER spans are hidden from other
+ * readers, MALFORMED spans from everyone; SPOILER spans are visible but blurred;
+ * LOOKALIKE spans are visible text whose callout looks like a marker but is not.
+ */
+export enum BodySpanKind {
+  Dm = 'DM',
+  Lookalike = 'LOOKALIKE',
+  Malformed = 'MALFORMED',
+  Member = 'MEMBER',
+  Spoiler = 'SPOILER'
+}
+
 export type CategoryCountType = {
   category: Scalars['String']['output'];
   count: Scalars['Int']['output'];
@@ -1610,6 +1645,7 @@ export type Query = {
   adminCharacterDirectory: AdminCharacterDirectoryType;
   adminOperations: AdminOperationsType;
   archonAssignments: ArchonPage;
+  auditBody: Array<BodySpanAudit>;
   backstories: BackstoryPage;
   character?: Maybe<CharacterType>;
   characterLogs: CharacterLogListResult;
@@ -1705,6 +1741,11 @@ export type QueryArchonAssignmentsArgs = {
   memberId?: InputMaybe<Scalars['ID']['input']>;
   offset?: Scalars['Int']['input'];
   regionId?: InputMaybe<Scalars['ID']['input']>;
+};
+
+
+export type QueryAuditBodyArgs = {
+  body: Scalars['String']['input'];
 };
 
 
@@ -1982,6 +2023,7 @@ export type QueryPreviewBodyArgs = {
   audience: PreviewAudience;
   authorId?: InputMaybe<Scalars['ID']['input']>;
   body: Scalars['String']['input'];
+  memberHandle?: InputMaybe<Scalars['String']['input']>;
 };
 
 

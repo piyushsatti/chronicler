@@ -469,6 +469,7 @@ var operationRules = map[Operation]policyRule{
 	"Query.pendingCharacterVerifications":         ruleStaff,
 	"Query.pendingDmProfileVerifications":         ruleStaff,
 	"Query.previewBody":                           rulePreview,
+	"Query.auditBody":                             rulePreview,
 	"Query.quest":                                 rulePublic,
 	"Query.questAnnouncementRoleSetting":          rulePublic,
 	"Query.questVoiceChannels":                    ruleDMSelf,
@@ -634,6 +635,12 @@ func ForPreview(facts PreviewFacts) (Request, error) {
 	}
 	facts.AuthorID = copyPolicyString(facts.AuthorID)
 	return policyRequest("Query.previewBody", facts, rulePreview)
+}
+
+// ForAuditBody admits exactly whom a PLAYER previewBody without authorId
+// admits: auditing an unsaved body reveals nothing a preview would not.
+func ForAuditBody() (Request, error) {
+	return policyRequest("Query.auditBody", PreviewFacts{Audience: PreviewPlayer}, rulePreview)
 }
 func ForDiscordLookup(facts DiscordLookupFacts) (Request, error) {
 	if facts.RequestedDiscordID == "" {

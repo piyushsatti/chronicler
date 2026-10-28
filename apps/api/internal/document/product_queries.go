@@ -211,12 +211,41 @@ func (s ProductQueries) PreviewBody(ctx context.Context, actor auth.Authority, s
 	if err := validateDocumentBody(spec.Body); err != nil {
 		return "", err
 	}
+	if spec.MemberHandle != nil && !previewHandleValid(*spec.MemberHandle) {
+		return "", apierr.New(apierr.Invalid, "member handle must be 1-64 characters of A-Z a-z 0-9 _ . - without @")
+	}
 	value, err := s.Reads.Document.ReadPreviewBody(ctx, actor, spec)
 	if err != nil {
 		return "", err
 	}
 	observe()
 	return value, nil
+}
+
+// previewHandleValid admits exactly the handles a `[!dm:@handle]` marker can
+// address (the marker charset, written without the `@`), capped at the 64
+// bytes member handle queries accept. Anything else is INVALID before SQL.
+func previewHandleValid(handle string) bool {
+	return len(handle) <= 64 && markerHandlePattern.MatchString("@"+handle)
+}
+
+// AuditBody reports the marked spans of an unsaved body for its author. It
+// shares previewBody's authorization and size bound and reads no storage.
+func (s ProductQueries) AuditBody(ctx context.Context, actor auth.Authority, body string) ([]BodySpanAudit, error) {
+	request, err := auth.ForAuditBody()
+	if err != nil {
+		return nil, err
+	}
+	observe, err := s.authorizeRead(ctx, actor, request, "")
+	if err != nil {
+		return nil, err
+	}
+	if err := validateDocumentBody(body); err != nil {
+		return nil, err
+	}
+	records := AuditBody(body)
+	observe()
+	return records, nil
 }
 
 func (s ProductQueries) LieutenantAssignments(ctx context.Context, actor auth.Authority, spec LieutenantAssignmentsSpec) (LieutenantPage, error) {

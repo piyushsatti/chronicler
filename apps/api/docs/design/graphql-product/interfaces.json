@@ -4417,6 +4417,14 @@
         "sdl_type": "ID",
         "default": "",
         "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
+      },
+      {
+        "name": "MemberHandle",
+        "wire_name": "memberHandle",
+        "go_type": "*string",
+        "sdl_type": "String",
+        "default": "",
+        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
       }
     ],
     "result_go_type": "string",

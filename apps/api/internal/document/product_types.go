@@ -296,9 +296,10 @@ type LieutenantAssignmentsSpec struct {
 }
 
 type PreviewBodySpec struct {
-	Body     string
-	Audience PreviewAudience
-	AuthorId *string
+	Body         string
+	Audience     PreviewAudience
+	AuthorId     *string
+	MemberHandle *string
 }
 
 type AssignLieutenantState struct {

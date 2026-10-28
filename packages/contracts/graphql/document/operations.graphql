@@ -25,7 +25,13 @@ extend type Query {
     offset: Int! = 0
   ): DocumentRevisionPage!
   documentsTrash(limit: Int! = 50, offset: Int! = 0): DocumentListResult!
-  previewBody(body: String!, audience: PreviewAudience!, authorId: ID): String!
+  previewBody(
+    body: String!
+    audience: PreviewAudience!
+    authorId: ID
+    memberHandle: String
+  ): String!
+  auditBody(body: String!): [BodySpanAudit!]!
   lieutenantAssignments(
     memberId: ID
     npcDocumentId: ID

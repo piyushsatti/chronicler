@@ -265,6 +265,7 @@ The following164 roots are the accepted business API. Introspection fields are e
 | Query.adminCharacterDirectory               | character-operations.graphql    |
 | Query.adminOperations                       | site-operations.graphql         |
 | Query.archonAssignments                     | spatial-operations.graphql      |
+| Query.auditBody                             | document-operations.graphql     |
 | Query.backstories                           | character-operations.graphql    |
 | Query.character                             | character-operations.graphql    |
 | Query.characterLogs                         | character-operations.graphql    |

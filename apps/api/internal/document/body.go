@@ -98,11 +98,38 @@ type bodySpan struct {
 	Spoiler bool     `json:"spoiler"`
 }
 
+// bodyGroup is one classification unit of parseBody: a maximal blockquote run
+// or one bare line. Start is the 0-based index of its first source line.
+type bodyGroup struct {
+	Start   int
+	Lines   []string
+	Policy  []string // nil: unscoped; empty: impossible audience
+	Spoiler bool
+}
+
+// scanBodyGroups is the single marker walk. parseBody merges its unscoped
+// groups into spans; AuditBody reports its scoped groups with line numbers.
+func scanBodyGroups(body string) []bodyGroup {
+	lines := strings.Split(body, "\n")
+	groups := []bodyGroup{}
+	for i := 0; i < len(lines); {
+		end := i + 1
+		if isBlockquote(lines[i]) {
+			for end < len(lines) && isBlockquote(lines[end]) {
+				end++
+			}
+		}
+		policy, spoiler := classifyMarkers(lines[i:end])
+		groups = append(groups, bodyGroup{Start: i, Lines: lines[i:end], Policy: policy, Spoiler: spoiler})
+		i = end
+	}
+	return groups
+}
+
 // parseBody preserves the accepted maximal blockquote-run and bare-line
 // granularity. It is deliberately a closed marker classifier, not a second
 // markdown renderer or a general audience grammar.
 func parseBody(body string) []bodySpan {
-	lines := strings.Split(body, "\n")
 	spans := []bodySpan{}
 	pending := []string{}
 	flush := func() {
@@ -111,22 +138,13 @@ func parseBody(body string) []bodySpan {
 			pending = nil
 		}
 	}
-	for i := 0; i < len(lines); {
-		end := i + 1
-		if isBlockquote(lines[i]) {
-			for end < len(lines) && isBlockquote(lines[end]) {
-				end++
-			}
-		}
-		group := lines[i:end]
-		policy, spoiler := classifyMarkers(group)
-		if policy == nil && !spoiler {
-			pending = append(pending, group...)
+	for _, group := range scanBodyGroups(body) {
+		if group.Policy == nil && !group.Spoiler {
+			pending = append(pending, group.Lines...)
 		} else {
 			flush()
-			spans = append(spans, bodySpan{Text: strings.Join(group, "\n"), Policy: policy, Spoiler: spoiler})
+			spans = append(spans, bodySpan{Text: strings.Join(group.Lines, "\n"), Policy: group.Policy, Spoiler: group.Spoiler})
 		}
-		i = end
 	}
 	flush()
 	return spans
@@ -165,6 +183,38 @@ func classifyMarkers(lines []string) ([]string, bool) {
 func classifyMarkerLine(line string) (string, bool, bool, bool) {
 	var handle string
 	var dm, spoiler, malformed bool
+	for _, token := range markerTokens(line) {
+		tokenHandle, tokenDM, tokenSpoiler, tokenMalformed := classifyMarkerToken(token)
+		if handle == "" {
+			handle = tokenHandle
+		}
+		dm, spoiler, malformed = dm || tokenDM, spoiler || tokenSpoiler, malformed || tokenMalformed
+	}
+	return handle, dm, spoiler, malformed
+}
+
+// markerToken is one `[!` opener on a line: its inner text up to the first
+// `]`, or the rest of the line when no `]` closes it (always the last token).
+type markerToken struct {
+	Inner  string
+	Closed bool
+	Offset int    // byte offset of `[!` in the line
+	Text   string // source text: `[!` through `]`; unclosed, `[!` and its name
+}
+
+// unclosedMarkerName is the name of an unclosed token: leading blanks, then
+// the first run of non-blank bytes. The text after it is prose, not marker.
+func unclosedMarkerName(tail string) string {
+	start := len(tail) - len(strings.TrimLeft(tail, " \t"))
+	end := strings.IndexAny(tail[start:], " \t")
+	if end < 0 {
+		return tail
+	}
+	return tail[:start+end]
+}
+
+func markerTokens(line string) []markerToken {
+	var tokens []markerToken
 	for start := 0; start < len(line); {
 		opener := strings.Index(line[start:], "[!")
 		if opener < 0 {
@@ -174,29 +224,33 @@ func classifyMarkerLine(line string) (string, bool, bool, bool) {
 		tail := line[opener+2:]
 		close := strings.IndexByte(tail, ']')
 		if close < 0 {
-			folded := strings.ToLower(strings.TrimSpace(tail))
-			if strings.HasPrefix(folded, "dm") || strings.HasPrefix(folded, "audience") {
-				malformed = true
-			}
+			tokens = append(tokens, markerToken{Inner: tail, Offset: opener, Text: "[!" + unclosedMarkerName(tail)})
 			break
 		}
-		inner := strings.TrimSpace(tail[:close])
-		folded := strings.ToLower(inner)
-		switch folded {
-		case "dm":
-			dm = true
-		case "spoiler":
-			spoiler = true
-		default:
-			marker, invalid := classifyAudienceMarker(inner, folded)
-			if handle == "" {
-				handle = marker
-			}
-			malformed = malformed || invalid
-		}
+		tokens = append(tokens, markerToken{Inner: tail[:close], Closed: true, Offset: opener, Text: line[opener : opener+2+close+1]})
 		start = opener + 2 + close + 1
 	}
-	return handle, dm, spoiler, malformed
+	return tokens
+}
+
+// classifyMarkerToken returns a member principal, or whether the token is the
+// DM marker, the spoiler marker or a malformed known marker. An unclosed token
+// is malformed only when it starts like a DM or audience marker.
+func classifyMarkerToken(token markerToken) (string, bool, bool, bool) {
+	if !token.Closed {
+		folded := strings.ToLower(strings.TrimSpace(token.Inner))
+		return "", false, false, strings.HasPrefix(folded, "dm") || strings.HasPrefix(folded, "audience")
+	}
+	inner := strings.TrimSpace(token.Inner)
+	folded := strings.ToLower(inner)
+	switch folded {
+	case "dm":
+		return "", true, false, false
+	case "spoiler":
+		return "", false, true, false
+	}
+	handle, malformed := classifyAudienceMarker(inner, folded)
+	return handle, false, false, malformed
 }
 
 func classifyAudienceMarker(inner, folded string) (string, bool) {

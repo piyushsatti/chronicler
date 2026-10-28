@@ -1996,7 +1996,7 @@ func (r *queryResolver) DocumentsTrash(ctx context.Context, limit int, offset in
 }
 
 // PreviewBody is the resolver for the previewBody field.
-func (r *queryResolver) PreviewBody(ctx context.Context, body string, audience PreviewAudience, authorID *string) (string, error) {
+func (r *queryResolver) PreviewBody(ctx context.Context, body string, audience PreviewAudience, authorID *string, memberHandle *string) (string, error) {
 	if r.Services.DocumentQueries == nil {
 		return "", fmt.Errorf("document queries unavailable")
 	}
@@ -2005,10 +2005,27 @@ func (r *queryResolver) PreviewBody(ctx context.Context, body string, audience P
 		return "", err
 	}
 	return r.Services.DocumentQueries.PreviewBody(ctx, actor, document.PreviewBodySpec{
-		Body:     body,
-		Audience: toPreviewAudience(audience),
-		AuthorId: authorID,
+		Body:         body,
+		Audience:     toPreviewAudience(audience),
+		AuthorId:     authorID,
+		MemberHandle: memberHandle,
 	})
+}
+
+// AuditBody is the resolver for the auditBody field.
+func (r *queryResolver) AuditBody(ctx context.Context, body string) ([]*BodySpanAudit, error) {
+	if r.Services.DocumentQueries == nil {
+		return nil, fmt.Errorf("document queries unavailable")
+	}
+	actor, err := LiveAuthority(ctx)
+	if err != nil {
+		return nil, err
+	}
+	records, err := r.Services.DocumentQueries.AuditBody(ctx, actor, body)
+	if err != nil {
+		return nil, err
+	}
+	return toBodySpanAudits(records), nil
 }
 
 // LieutenantAssignments is the resolver for the lieutenantAssignments field.

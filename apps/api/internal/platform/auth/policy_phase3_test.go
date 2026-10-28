@@ -754,6 +754,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 		"Query.pendingCharacterVerifications":         "STAFF",
 		"Query.pendingDmProfileVerifications":         "STAFF",
 		"Query.previewBody":                           "PREVIEW",
+		"Query.auditBody":                             "PREVIEW",
 		"Query.quest":                                 "PUBLIC",
 		"Query.questAnnouncementRoleSetting":          "PUBLIC",
 		"Query.questVoiceChannels":                    "DM_SELF",
@@ -791,7 +792,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 			}
 		}
 	}
-	if len(expected) != 152 || len(actual) != len(expected) || len(operationRules) != len(expected) {
+	if len(expected) != 153 || len(actual) != len(expected) || len(operationRules) != len(expected) {
 		t.Fatalf("coverage expected%d SDL%d registry%d", len(expected), len(actual), len(operationRules))
 	}
 	p, _, facts := policyTestProvider(t)
@@ -833,6 +834,9 @@ func testPolicyExactSDLInventory(t *testing.T) {
 				request, err = ForLieutenantAssignments(LieutenantReadFacts{Documents: []DocumentWriteFacts{{policySubject, policyActor, "codex_entry", policyPointer("NPC"), nil, nil}}})
 			case "PREVIEW":
 				request, err = ForPreview(PreviewFacts{Audience: PreviewPlayer})
+				if op == "Query.auditBody" {
+					request, err = ForAuditBody()
+				}
 			case "CHAR_OWNER", "CHAR_SIGNUP", "CHAR_HISTORY":
 				request, err = ForCharacter(op, CharacterFacts{policySubject, policyActor})
 			case "DOC_CREATE":
