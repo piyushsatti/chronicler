@@ -17,6 +17,14 @@ import { useEditorAudience } from './useEditorAudience.js';
 import { useEditorHistory } from './useEditorHistory.js';
 import { useEditorOptions } from './useEditorOptions.js';
 import { useEditorPreview } from './useEditorPreview.js';
+import { useBodyAudit } from './useBodyAudit.js';
+import type { BodySpanAudit } from '../adapters/bodyAudit.js';
+import {
+  auditLine,
+  auditTypos,
+  previewHiddenSummary,
+  typoSummary,
+} from '../bodyAuditCopy.js';
 import {
   editorBodyError,
   editorFormInvalid,
@@ -211,7 +219,25 @@ export function useEditorWorkspace({
     (seriesOptions.status === 'ready' &&
       seriesOptions.items.some((series) => series.id === meta.arcId));
   const publishMeta = arcShown ? meta : { ...meta, arcId: '' };
-  const { preview, onPreview } = useEditorPreview(body);
+  const {
+    preview,
+    onPreview,
+    viewer: previewViewer,
+    setViewer: setPreviewViewer,
+  } = useEditorPreview(body);
+  const bodyAudit = useBodyAudit(body, enabled && initial.canEditBody);
+  /** Marker typos found when the author asked to publish; they choose to fix or go on. */
+  const [typoCheck, setTypoCheck] = useState<{
+    spans: BodySpanAudit[];
+    body: string;
+    proceed: () => void;
+  } | null>(null);
+  const checkingTypos = useRef(false);
+  /** A publish check is waiting for the audit: saving and publishing wait with it. */
+  const [checkingMarkers, setCheckingMarkers] = useState(false);
+  /** The body as last rendered, to tell whether the checked text is still the text. */
+  const liveBody = useRef(body);
+  liveBody.current = body;
   const history = useEditorHistory(
     initial.documentId,
     enabled && initial.canEditMetadata && typeKey !== 'quest',
@@ -337,6 +363,35 @@ export function useEditorWorkspace({
     }
     await reloadNow();
   }, [isDirty, reloadNow]);
+  /**
+   * Publishing with a marker the server reads as a lookalike or a malformed
+   * marker asks first; it never blocks. The audit of the exact body decides,
+   * waiting for one in flight; without an audit (failed or timed out),
+   * publishing goes ahead. The editor is locked while the check runs, and a
+   * body that still changed is checked again, so the text checked is the text
+   * published.
+   */
+  const checkTyposThen = (submit: () => void) => {
+    if (checkingTypos.current) return;
+    checkingTypos.current = true;
+    setCheckingMarkers(true);
+    void (async () => {
+      let source = liveBody.current;
+      let spans = await bodyAudit.latest(source);
+      while (mounted.current && liveBody.current !== source) {
+        source = liveBody.current;
+        spans = await bodyAudit.latest(source);
+      }
+      checkingTypos.current = false;
+      if (!mounted.current) return;
+      setCheckingMarkers(false);
+      const typos = spans ? auditTypos(spans) : [];
+      if (typos.length === 0) submit();
+      else setTypoCheck({ spans: typos, body: source, proceed: submit });
+    })();
+  };
+  /** Saving and publishing wait while markers are checked or the typo dialog is open. */
+  const submitBusy = busy || checkingMarkers || typoCheck !== null;
   /** Client-side checks: on failure show the field hints and never call the API. */
   const formInvalid = () => {
     if (
@@ -393,25 +448,65 @@ export function useEditorWorkspace({
           }
         : null,
     onSaveDraft: () => {
-      if (busy || !admit() || trashed || invalidSession) return;
+      if (submitBusy || !admit() || trashed || invalidSession) return;
       if (initial.briefPublished && typeKey !== 'quest') {
         setStatusMessage(
           draft.saveDraft()
             ? 'Draft saved on this device. Publish to update the live page.'
             : 'Draft could not be saved on this device. Keep this page open to preserve your edits.',
         );
-      } else if (!formInvalid()) publish.mutate(false);
+      } else if (!formInvalid()) {
+        // Saving a quest posts it; a document's draft stays private until Publish.
+        if (typeKey === 'quest') checkTyposThen(() => publish.mutate(false));
+        else publish.mutate(false);
+      }
     },
     onPublish: () => {
-      if (busy || formInvalid()) return;
-      publish.mutate(true);
+      if (submitBusy || formInvalid()) return;
+      checkTyposThen(() => publish.mutate(true));
     },
+    /** A publish check is waiting for the server's audit; the body is read-only meanwhile. */
+    checkingMarkers,
     onPreview,
     preview,
+    previewViewer,
+    onPreviewViewer: setPreviewViewer,
+    /** What the current viewer cannot read: counted in the server's preview, broken
+     *  down by the audit of this exact body where it applies. */
+    previewSummary:
+      preview.status === 'ready'
+        ? previewHiddenSummary(
+            preview.body,
+            previewViewer,
+            bodyAudit.audit && bodyAudit.audit.body === body ? bodyAudit.audit.spans : null,
+            body,
+          )
+        : null,
+    bodyAudit: bodyAudit.audit,
+    typoCheck: typoCheck
+      ? {
+          items: typoCheck.spans
+            .map((span) => ({
+              line: auditLine(span),
+              text: typoSummary(span, typoCheck.body),
+            }))
+            .sort((a, b) => a.line - b.line),
+        }
+      : null,
+    onTypoClose: () => setTypoCheck(null),
+    onTypoPublish: () => {
+      if (!typoCheck) return;
+      const { proceed, body: checked } = typoCheck;
+      setTypoCheck(null);
+      // Text that changed since the dialog opened is checked again first.
+      if (liveBody.current === checked) proceed();
+      else checkTyposThen(proceed);
+    },
     options,
     publishDisabled:
-      busy || !admit() || trashed || invalidSession || seriesWait !== null,
-    saveDisabled: busy || !admit() || trashed || invalidSession || seriesWait !== null,
+      submitBusy || !admit() || trashed || invalidSession || seriesWait !== null,
+    saveDisabled:
+      submitBusy || !admit() || trashed || invalidSession || seriesWait !== null,
     /** Why saving waits on the Series field, shown next to the save button. */
     seriesNotice:
       seriesWait === 'loading'

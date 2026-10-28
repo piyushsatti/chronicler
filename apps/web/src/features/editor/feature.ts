@@ -32,6 +32,51 @@ export const queryKeys = {
   entityLinkIndex: ['editor', 'entityLinkIndex'] as const,
 } as const;
 
+/**
+ * Mock mode only: canned server answers (auditBody, previewBody as a player)
+ * for one sample body, so the editor's audit badges, lookalike warning and
+ * redacted preview can be seen without an API. Every other body audits clean
+ * and previews unchanged; the mock never reads markers itself.
+ */
+const AUDIT_SAMPLE_BODY = [
+  'The harbour bell rings at dusk.',
+  '',
+  '> [!dm]',
+  '> The mayor leads the cult.',
+  '',
+  '> [!dm@mortal] Only Mortal should read this.',
+].join('\n');
+const AUDIT_SAMPLE_SPANS = [
+  {
+    startLine: 3,
+    endLine: 4,
+    kind: 'DM',
+    handle: null,
+    suggestion: null,
+    token: '[!dm]',
+    tokenLine: 3,
+    tokenColumn: 3,
+  },
+  {
+    startLine: 6,
+    endLine: 6,
+    kind: 'LOOKALIKE',
+    handle: null,
+    suggestion: '[!dm:@mortal]',
+    token: '[!dm@mortal]',
+    tokenLine: 6,
+    tokenColumn: 3,
+  },
+];
+const AUDIT_SAMPLE_PLAYER = [
+  'The harbour bell rings at dusk.',
+  '',
+  '> [!redacted]',
+  `> ${'█'.repeat(40)}`,
+  '',
+  '> [!dm@mortal] Only Mortal should read this.',
+].join('\n');
+
 const editorQuestWire = {
   id: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
   shortCode: 'qa-the-salt-stair',
@@ -155,8 +200,20 @@ export const graphql: FeatureGraphql = {
   PreviewBody: (body) => {
     const text =
       typeof body.variables?.['body'] === 'string' ? body.variables['body'] : '';
-    return HttpResponse.json({ data: { previewBody: text } });
+    const asPlayer =
+      body.variables?.['audience'] === 'PLAYER' && !body.variables?.['memberHandle'];
+    return HttpResponse.json({
+      data: {
+        previewBody: text === AUDIT_SAMPLE_BODY && asPlayer ? AUDIT_SAMPLE_PLAYER : text,
+      },
+    });
   },
+  AuditBody: (body) =>
+    HttpResponse.json({
+      data: {
+        auditBody: body.variables?.['body'] === AUDIT_SAMPLE_BODY ? AUDIT_SAMPLE_SPANS : [],
+      },
+    }),
   CreateQuest: () =>
     HttpResponse.json({
       data: {

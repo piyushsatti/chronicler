@@ -337,16 +337,21 @@ function toPreviewAudience(audience: string): 'PLAYER' | 'DM' {
   return 'PLAYER';
 }
 
-/** field-routing: previewBody → GraphQL Query.previewBody */
+/**
+ * field-routing: previewBody → GraphQL Query.previewBody
+ * `memberHandle` (written without `@`) previews the body as that member reads it.
+ */
 export async function previewBodyAs(input: {
   body: string;
   audience: string;
+  memberHandle?: string;
 }): Promise<string> {
   try {
     const data = await graphqlRequest<PreviewBodyQuery>(PREVIEW_BODY, {
       body: input.body,
       audience: toPreviewAudience(input.audience),
       authorId: null,
+      ...(input.memberHandle !== undefined ? { memberHandle: input.memberHandle } : {}),
     });
     const result = parseEditorPreview(data.previewBody);
     if (!result.ok) throw toAppError({ failure: result.failure }, 'editor:preview');

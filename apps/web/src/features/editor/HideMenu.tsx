@@ -31,14 +31,22 @@ function EyeOffGlyph(): React.JSX.Element {
   );
 }
 
-function MemberPicker({
+/**
+ * Member search dialog; picks a handle a marker can address. The Hide menu
+ * uses it for "Only for a member…" and the preview for "View as @member".
+ */
+export function MemberPicker({
   onPick,
   onClose,
   finalFocus,
+  title = 'Only for a member',
+  description = 'Only the member you choose can read the hidden text.',
 }: {
   onPick: (handle: string) => void;
   onClose: () => void;
-  finalFocus: () => boolean;
+  finalFocus?: () => boolean;
+  title?: string;
+  description?: string;
 }): React.JSX.Element {
   const [search, setSearch] = useState('');
   const members = useMarkerMemberSearch(search);
@@ -47,8 +55,8 @@ function MemberPicker({
     <Modal
       open
       size="sm"
-      title="Only for a member"
-      description="Only the member you choose can read the hidden text."
+      title={title}
+      description={description}
       onClose={onClose}
       finalFocus={finalFocus}
     >
@@ -224,6 +232,10 @@ export function HideMenu({
         <pre className={`type-caption ${styles.widgetSource}`}>
           {'> [!dm]\n> The mayor leads the cult.'}
         </pre>
+        <p className="type-caption">
+          Hidden blocks get a badge; Preview shows the page as a player, a DM or one
+          member reads it.
+        </p>
       </Popover>
       {picking ? (
         <MemberPicker

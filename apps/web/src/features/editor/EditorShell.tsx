@@ -1,10 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../../components/primitives/Button.js';
 import { Tabs } from '../../components/primitives/Tabs.js';
 import { Card } from '../../components/primitives/Card.js';
+import { Modal } from '../../components/primitives/Modal.js';
+import { SegmentedControl } from '../../components/primitives/SegmentedControl.js';
 import { ContentRenderer } from '../../components/foundation/ContentRenderer.js';
 import { LiveEditor } from './LiveEditor.js';
+import { MemberPicker } from './HideMenu.js';
+import type { BodyAudit, PreviewViewer } from './bodyAuditCopy.js';
 import { PropertiesPanel } from './PropertiesPanel.js';
 import { schemaForType, type SchemaAccess } from './editorSchemas.js';
 import styles from './editor.module.css';
@@ -18,6 +22,57 @@ import { relativeDate } from '../../utils/relativeDate.js';
 import type { EditorMode } from './types.js';
 
 export type ShellMode = 'edit' | 'read';
+
+/** "View as" above the preview: a player, a DM, or a member chosen by search. */
+function PreviewViewerBar({
+  viewer,
+  onChange,
+}: {
+  viewer: PreviewViewer;
+  onChange: (viewer: PreviewViewer) => void;
+}): React.JSX.Element {
+  const [picking, setPicking] = useState(false);
+  return (
+    <div className={`row ${styles.previewViewer}`} data-gap="2" data-wrap="1">
+      <span className="type-label" aria-hidden="true">
+        View as
+      </span>
+      <SegmentedControl
+        aria-label="View as"
+        size="sm"
+        value={viewer.kind}
+        onValueChange={(kind) => {
+          if (kind === 'member') setPicking(true);
+          else onChange({ kind });
+        }}
+        options={[
+          { value: 'player', label: 'Player' },
+          { value: 'dm', label: 'DM' },
+          {
+            value: 'member',
+            label: viewer.kind === 'member' ? `@${viewer.handle}` : '@member…',
+          },
+        ]}
+      />
+      {viewer.kind === 'member' ? (
+        <Button type="button" size="sm" variant="ghost" onClick={() => setPicking(true)}>
+          Change member
+        </Button>
+      ) : null}
+      {picking ? (
+        <MemberPicker
+          title="View as a member"
+          description="Preview the page as the member you choose reads it."
+          onClose={() => setPicking(false)}
+          onPick={(handle) => {
+            setPicking(false);
+            onChange({ kind: 'member', handle });
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
 
 function HistoryIcon({ direction }: { direction: 'undo' | 'redo' }): React.JSX.Element {
   return (
@@ -186,6 +241,19 @@ export type EditorShellProps = {
     items: { key: string; revision: number }[];
     recover: (key: string) => void;
   };
+  /** The server's audit of the body; the editor badges what it reports. */
+  bodyAudit?: BodyAudit | null;
+  /** Who the preview shows the body to; with `onPreviewViewer`, a switcher appears. */
+  previewViewer?: PreviewViewer;
+  onPreviewViewer?: (viewer: PreviewViewer) => void;
+  /** "Hidden from players: …" for the current viewer, from the audit. */
+  previewSummary?: string | null;
+  /** Marker typos found on publish: the author fixes them or publishes anyway. */
+  typoCheck?: { items: { line: number; text: string }[] } | null;
+  onTypoClose?: () => void;
+  onTypoPublish?: () => void;
+  /** A publish check is waiting for the audit; the body is read-only meanwhile. */
+  checkingMarkers?: boolean;
 };
 
 export function EditorShell({
@@ -228,8 +296,30 @@ export function EditorShell({
   canUndo,
   canRedo,
   draftRecovery,
+  bodyAudit = null,
+  previewViewer = { kind: 'player' },
+  onPreviewViewer,
+  previewSummary = null,
+  typoCheck = null,
+  onTypoClose = () => {},
+  onTypoPublish = () => {},
+  checkingMarkers = false,
 }: EditorShellProps): React.JSX.Element {
   const [mode, setMode] = useState<ShellMode>('edit');
+  /** The line "Fix" sends the author to, once the typo dialog has closed. */
+  const [focusLine, setFocusLine] = useState<{ line: number; request: number } | null>(
+    null,
+  );
+  const fixLine = useRef<number | null>(null);
+  const typoOpen = typoCheck !== null;
+  const typoFinalFocus = (): boolean => {
+    const line = fixLine.current;
+    if (line === null) return true;
+    fixLine.current = null;
+    setMode('edit');
+    setFocusLine((old) => ({ line, request: (old?.request ?? 0) + 1 }));
+    return false;
+  };
   const schema = schemaForType(typeKey, meta, schemaAccess, editorMode);
   // The page address is assigned on create and never typed by the author: new
   // items hide it, saved items show it once, read-only, under Advanced.
@@ -261,6 +351,11 @@ export function EditorShell({
 
   useEffect(() => {
     const h = (e: KeyboardEvent): void => {
+      // No shortcut acts on the form behind the typo dialog.
+      if (typoOpen) {
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 's') e.preventDefault();
+        return;
+      }
       if (
         (e.metaKey || e.ctrlKey) &&
         undo &&
@@ -281,7 +376,7 @@ export function EditorShell({
     };
     window.addEventListener('keydown', h);
     return () => window.removeEventListener('keydown', h);
-  }, [onSaveDraft, saveDisabled, undo, redo, canUndo, canRedo, canEditMetadata]);
+  }, [onSaveDraft, saveDisabled, undo, redo, canUndo, canRedo, canEditMetadata, typoOpen]);
 
   if (denied) {
     const noun = DENIED_NOUNS[typeKey];
@@ -406,8 +501,21 @@ export function EditorShell({
   );
   const previewBody = (
     <section className="stack" aria-label="Read preview">
+      {onPreviewViewer ? (
+        <PreviewViewerBar viewer={previewViewer} onChange={onPreviewViewer} />
+      ) : null}
+      {onPreviewViewer ? (
+        // Kept in place so a new viewer's summary is announced when it arrives.
+        <p className="type-caption" data-el="editor.preview.summary" aria-live="polite">
+          {previewSummary ?? ''}
+        </p>
+      ) : null}
       {preview.status === 'error' ? (
-        <StatePanel status="error" error={preview.error} />
+        <StatePanel
+          status="error"
+          variant={preview.error.debugId === 'editor:preview:member' ? 'inline' : 'page'}
+          error={preview.error}
+        />
       ) : preview.status === 'loading' || preview.status === 'idle' ? (
         <StatePanel status="loading" />
       ) : (
@@ -514,7 +622,10 @@ export function EditorShell({
         aria-label="Editor mode"
         value={mode}
         onValueChange={(value) => {
-          if (value === 'read') onPreview();
+          if (value === 'read') {
+            onPreview();
+            setFocusLine(null);
+          }
           if (value === 'read' || value === 'edit') setMode(value);
         }}
         items={[
@@ -522,6 +633,7 @@ export function EditorShell({
             id: 'edit',
             label: 'Write',
             panel: canEditBody ? (
+              <div inert={checkingMarkers} data-el="editor.body.lock">
               <LiveEditor
                 value={body}
                 onChange={setBody}
@@ -529,7 +641,10 @@ export function EditorShell({
                 entityIndex={entityIndex}
                 toolbarStart={historyTools}
                 toolbarEnd={actions}
+                audit={bodyAudit}
+                focusLine={focusLine}
               />
+              </div>
             ) : (
               <div className="stack">
                 <div className={`row ${styles.toolbar}`} data-wrap="1">
@@ -555,6 +670,11 @@ export function EditorShell({
           },
         ]}
       />
+      {checkingMarkers ? (
+        <p className="type-caption" role="status" data-el="editor.checking">
+          Checking markers…
+        </p>
+      ) : null}
       {isDirty ? (
         <p className="type-caption" role="status">
           Unsaved draft
@@ -566,6 +686,39 @@ export function EditorShell({
         </p>
       ) : null}
       {errorSlot}
+      {typoCheck ? (
+        <Modal
+          open
+          size="sm"
+          title="Check hidden text"
+          description="These markers may not hide what you meant to hide."
+          onClose={onTypoClose}
+          finalFocus={typoFinalFocus}
+        >
+          <ul className="stack" data-gap="1" aria-label="Markers to check">
+            {typoCheck.items.map((item) => (
+              <li key={`${item.line}:${item.text}`} className="type-caption">
+                {item.text}
+              </li>
+            ))}
+          </ul>
+          <div className="row" data-wrap="1">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                fixLine.current = typoCheck.items[0]?.line ?? null;
+                onTypoClose();
+              }}
+            >
+              Fix
+            </Button>
+            <Button type="button" onClick={onTypoPublish}>
+              Publish anyway
+            </Button>
+          </div>
+        </Modal>
+      ) : null}
     </Card>
   );
 }

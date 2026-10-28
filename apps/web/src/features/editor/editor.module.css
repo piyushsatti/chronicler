@@ -436,3 +436,47 @@
   flex-wrap: wrap;
   column-gap: var(--sp-2);
 }
+
+/* Blocks the server's body audit marks (auditBody). A tinted edge and a text
+   badge name who can read the block, so the colour is never the only signal. */
+.auditBlock {
+  background: color-mix(in srgb, var(--color-accent) 6%, transparent);
+  box-shadow: inset 2px 0 0 var(--color-accent);
+}
+
+.auditBlock[data-audit='SPOILER'] {
+  background: color-mix(in srgb, var(--color-text-2) 6%, transparent);
+  box-shadow: inset 2px 0 0 var(--color-text-2);
+}
+
+.auditBlock[data-audit='MALFORMED'] {
+  background: color-mix(in srgb, var(--color-danger) 8%, transparent);
+  box-shadow: inset 2px 0 0 var(--color-danger);
+}
+
+.auditBadge {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-1);
+  margin: var(--sp-2) var(--sp-2) 0;
+  color: var(--color-text-2);
+  font-weight: 600;
+}
+
+.auditWarning {
+  align-items: center;
+  margin: 0 var(--sp-2) var(--sp-1);
+  padding: var(--sp-1) var(--sp-2);
+  border-inline-start: 2px solid var(--color-warn);
+  background: color-mix(in srgb, var(--color-warn) 8%, transparent);
+}
+
+.auditWarning > p {
+  margin: 0;
+  flex: 1 1 16rem;
+  min-inline-size: 0;
+}
+
+.previewViewer {
+  align-items: center;
+}

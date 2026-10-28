@@ -23,6 +23,18 @@ export type BackstoryInput = {
   sourceRegionId?: string | null | undefined;
 };
 
+/**
+ * Why an audited body span matters: DM and MEMBER spans are hidden from other
+ * readers, MALFORMED spans from everyone; SPOILER spans are visible but blurred;
+ * LOOKALIKE spans are visible text whose callout looks like a marker but is not.
+ */
+export type BodySpanKind =
+  | 'DM'
+  | 'LOOKALIKE'
+  | 'MALFORMED'
+  | 'MEMBER'
+  | 'SPOILER';
+
 export type CharacterFiltersInput = {
   guildId?: string | null | undefined;
   namePrefix?: string | null | undefined;
@@ -938,6 +950,13 @@ export type DocumentQueryVariables = Exact<{
 
 export type DocumentQuery = { document: { id: string, slug: string, kind: string, category: string | null, status: string, visibility: string, title: string, effectiveBody: string | null, author: { handle: string } | null } | null };
 
+export type AuditBodyQueryVariables = Exact<{
+  body: string;
+}>;
+
+
+export type AuditBodyQuery = { auditBody: Array<{ startLine: number, endLine: number, kind: BodySpanKind, handle: string | null, suggestion: string | null, token: string | null, tokenLine: number | null, tokenColumn: number | null }> };
+
 export type CreateDocumentMutationVariables = Exact<{
   input: DocumentDraftInput;
   meta: CommandMeta;
@@ -1150,6 +1169,7 @@ export type PreviewBodyQueryVariables = Exact<{
   body: string;
   audience: PreviewAudience;
   authorId?: string | null | undefined;
+  memberHandle?: string | null | undefined;
 }>;
 
 

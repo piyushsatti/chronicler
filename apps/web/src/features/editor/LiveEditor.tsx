@@ -3,6 +3,7 @@ import {
   memo,
   useCallback,
   useEffect,
+  useId,
   useMemo,
   useRef,
   useState,
@@ -12,6 +13,14 @@ import { useScrollEdges } from '../../components/primitives/useScrollEdges.js';
 import type { EntityLinkIndex } from './types.js';
 import { HideMenu, type HidePlan } from './HideMenu.js';
 import { hideLines, type HideMarker } from './hideMarkers.js';
+import type { BodySpanAudit } from './adapters/bodyAudit.js';
+import {
+  auditBadgeIcon,
+  auditBadgeLabel,
+  auditLine,
+  LOOKALIKE_WARNING,
+  type BodyAudit,
+} from './bodyAuditCopy.js';
 import styles from './editor.module.css';
 
 /** Shown in an empty document; says what the editor does with typed text. */
@@ -101,6 +110,14 @@ export type LiveEditorProps = {
   entityIndex?: EntityLinkIndex;
   /** `blocks` = legacy per-line read/edit; `plain` = single textarea. */
   variant?: 'blocks' | 'plain';
+  /**
+   * The server's audit of the body (`auditBody`). The blocks editor badges the
+   * blocks it reports and warns on marker lookalikes; it never reads markers
+   * itself (D46). Ignored by the plain variant.
+   */
+  audit?: BodyAudit | null;
+  /** Open this 1-based line for editing; a new `request` number asks again. */
+  focusLine?: { line: number; request: number } | null;
 };
 
 /** Pure serialize/deserialize helpers (legacy LiveEditor contract). */
@@ -749,6 +766,14 @@ function sizeBlockInput(input: HTMLTextAreaElement): void {
   input.style.height = `${input.scrollHeight}px`;
 }
 
+/** Whether the audited marker token still sits exactly where the server saw it. */
+function tokenInPlace(lines: readonly string[], span: BodySpanAudit): boolean {
+  if (!span.token || span.tokenLine === null || span.tokenColumn === null) return false;
+  const line = lines[span.tokenLine - 1];
+  const at = span.tokenColumn - 1;
+  return line !== undefined && line.slice(at, at + span.token.length) === span.token;
+}
+
 function BlocksLiveEditor({
   value,
   onChange,
@@ -758,10 +783,12 @@ function BlocksLiveEditor({
   placeholder,
   compact,
   entityIndex,
+  audit,
+  focusLine,
 }: Required<
   Pick<LiveEditorProps, 'value' | 'onChange' | 'toolbar' | 'placeholder' | 'compact'>
 > &
-  Pick<LiveEditorProps, 'toolbarStart' | 'toolbarEnd'> & {
+  Pick<LiveEditorProps, 'toolbarStart' | 'toolbarEnd' | 'audit' | 'focusLine'> & {
     entityIndex: EntityLinkIndex;
   }): React.JSX.Element {
   const [lines, setLines] = useState(() => leDeserialize(value));
@@ -1075,6 +1102,108 @@ function BlocksLiveEditor({
     }
   };
 
+  const focusRequest = focusLine?.request;
+  useEffect(() => {
+    if (focusRequest === undefined || !focusLine) return;
+    const idx = Math.min(Math.max(focusLine.line - 1, 0), lines.length - 1);
+    caretRef.current = { idx, pos: 0 };
+    if (active === idx && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.setSelectionRange(0, 0);
+    } else setActive(idx);
+    // Only a new request moves the caret; later edits keep it where the author put it.
+  }, [focusRequest]);
+
+  // Audit spans are the server's (D46). They are shown only while the body still
+  // has the audited line count, so a badge never lands on a shifted block.
+  const auditId = useId();
+  const spans = useMemo(
+    () =>
+      audit && leDeserialize(audit.body).length === lines.length ? audit.spans : [],
+    [audit, lines.length],
+  );
+  const blockSpans = spans.filter((span) => span.kind !== 'LOOKALIKE');
+  const lookalikes = spans.filter((span) => span.kind === 'LOOKALIKE');
+  const badgeId = (span: BodySpanAudit): string => `${auditId}-span-${span.startLine}`;
+  const warningId = (span: BodySpanAudit): string =>
+    `${auditId}-lookalike-${auditLine(span)}-${span.tokenColumn ?? 0}`;
+  /** Lines a..b (0-based, inclusive): the block span over them and the lookalikes on them. */
+  const auditFor = (a: number, b: number) => {
+    const covering = blockSpans.filter(
+      (span) => span.startLine - 1 <= b && span.endLine - 1 >= a,
+    );
+    const warnings = lookalikes.filter((span) => {
+      const line = auditLine(span) - 1;
+      return line >= a && line <= b;
+    });
+    const ids = [...covering.map(badgeId), ...warnings.map(warningId)].join(' ');
+    return {
+      span: covering[0] as BodySpanAudit | undefined,
+      warnings,
+      // Only the line being typed takes focus, so only it carries the description.
+      describedBy: ids || undefined,
+    };
+  };
+  /** Replaces exactly the lookalike token with the server's suggestion: one edit, one undo step. */
+  const fixLookalike = (span: BodySpanAudit): void => {
+    if (!span.suggestion || !tokenInPlace(lines, span)) return;
+    const idx = (span.tokenLine as number) - 1;
+    const at = (span.tokenColumn as number) - 1;
+    const line = lines[idx];
+    const next = lines.slice();
+    next[idx] =
+      line.slice(0, at) + span.suggestion + line.slice(at + (span.token as string).length);
+    setLines(next);
+  };
+  const badge = (span: BodySpanAudit): React.ReactNode => {
+    const icon = auditBadgeIcon(span.kind);
+    return (
+      <p
+        key="badge"
+        id={badgeId(span)}
+        className={`type-caption ${styles.auditBadge}`}
+        data-kind={span.kind}
+        data-el="editor.audit.badge"
+      >
+        {icon ? <span aria-hidden="true">{icon}</span> : null}
+        <span>{auditBadgeLabel(span)}</span>
+      </p>
+    );
+  };
+  const warnings = (found: BodySpanAudit[]): React.ReactNode[] =>
+    found.map((span) => (
+      <div
+        key={`lookalike${auditLine(span)}-${span.tokenColumn ?? 0}`}
+        className={`row ${styles.auditWarning}`}
+        data-el="editor.audit.lookalike"
+        data-gap="2"
+        data-wrap="1"
+      >
+        <p id={warningId(span)} className="type-caption" role="status" aria-live="polite">
+          <span aria-hidden="true">⚠️ </span>
+          {LOOKALIKE_WARNING}
+          {span.suggestion ? (
+            <>
+              {' '}
+              Did you mean <code>{span.suggestion}</code>?
+            </>
+          ) : null}
+        </p>
+        {span.suggestion && tokenInPlace(lines, span) ? (
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            aria-describedby={warningId(span)}
+            onMouseDown={(event) => event.preventDefault()}
+            onClick={() => fixLookalike(span)}
+          >
+            Fix
+          </Button>
+        ) : null}
+      </div>
+    ));
+
   const blankDoc = lines.length === 1 && lines[0].trim() === '';
   const regs = leRegions(lines);
   const regAt = (idx: number): LeRegion | undefined =>
@@ -1237,6 +1366,7 @@ function BlocksLiveEditor({
     <textarea
       ref={setInputRef}
       aria-label="Document body"
+      aria-describedby={auditFor(i, i).describedBy}
       className={`le-input ${mono ? 'le-mono type-code' : leTypeClass(lines[i])}`}
       rows={1}
       spellCheck={!mono}
@@ -1248,12 +1378,45 @@ function BlocksLiveEditor({
     />
   );
 
+  // A block the audit marks is one labelled group: its badge, then its lines,
+  // so the badge is part of the block's own content for assistive technology.
   const rows: React.ReactNode[] = [];
+  let group: { span: BodySpanAudit; nodes: React.ReactNode[] } | null = null;
+  const flushGroup = (): void => {
+    if (!group) return;
+    const { span, nodes } = group;
+    rows.push(
+      <div
+        key={`audit${span.startLine}`}
+        role="group"
+        aria-labelledby={badgeId(span)}
+        className={styles.auditBlock}
+        data-audit={span.kind}
+        data-el="editor.audit.block"
+      >
+        {badge(span)}
+        {nodes}
+      </div>,
+    );
+    group = null;
+  };
+  const place = (span: BodySpanAudit | undefined, nodes: React.ReactNode[]): void => {
+    if (group && group.span !== span) flushGroup();
+    if (!span) {
+      rows.push(...nodes);
+      return;
+    }
+    if (!group) group = { span, nodes: [] };
+    group.nodes.push(...nodes);
+  };
   let i = 0;
   while (i < lines.length) {
     const r = regAt(i);
+    const marks = r ? auditFor(r.start, r.end) : auditFor(i, i);
+    const kind = marks.span?.kind;
     if (r) {
       const inside = active != null && active >= r.start && active <= r.end;
+      let block: React.ReactNode;
       if (inside) {
         const inner: React.ReactNode[] = [];
         for (let k = r.start; k <= r.end; k++) {
@@ -1275,17 +1438,18 @@ function BlocksLiveEditor({
             </div>,
           );
         }
-        rows.push(
-          <div key={`reg${r.start}`} className="le-rawbox">
+        block = (
+          <div key={`reg${r.start}`} className="le-rawbox" data-audit={kind}>
             {inner}
-          </div>,
+          </div>
         );
       } else {
         const md = lines.slice(r.start, r.end + 1).join('\n');
-        rows.push(
+        block = (
           <div
             key={`reg${r.start}`}
             className="le-widget"
+            data-audit={kind}
             onMouseDown={(e) => {
               e.preventDefault();
               enter(r.kind === 'callout' ? r.start : r.start + 1);
@@ -1297,14 +1461,19 @@ function BlocksLiveEditor({
                 : `${r.kind} · click to edit`}
             </span>
             <pre className={`type-caption ${styles.widgetSource}`}>{md}</pre>
-          </div>,
+          </div>
         );
       }
+      place(marks.span, [block, ...warnings(marks.warnings)]);
       i = r.end + 1;
     } else {
       const idx = i;
-      rows.push(
-        <div key={idx} className={`le-row ${idx === active ? 'le-active' : ''}`}>
+      place(marks.span, [
+        <div
+          key={idx}
+          className={`le-row ${idx === active ? 'le-active' : ''}`}
+          data-audit={kind}
+        >
           {idx === active ? (
             inputFor(idx, false)
           ) : (
@@ -1319,10 +1488,12 @@ function BlocksLiveEditor({
             </div>
           )}
         </div>,
-      );
+        ...warnings(marks.warnings),
+      ]);
       i++;
     }
   }
+  flushGroup();
 
   const wikiList = useMemo(() => {
     if (!wikiAC) return [];
@@ -1455,6 +1626,8 @@ export function LiveEditor({
   compact = false,
   entityIndex = [],
   variant = 'blocks',
+  audit = null,
+  focusLine = null,
 }: LiveEditorProps): React.JSX.Element {
   if (variant === 'plain') {
     return (
@@ -1480,6 +1653,8 @@ export function LiveEditor({
       placeholder={placeholder}
       compact={compact}
       entityIndex={entityIndex}
+      audit={audit}
+      focusLine={focusLine}
     />
   );
 }

@@ -45,6 +45,8 @@ Convergence: one grammar with two interpreters checked against one vector set. T
 
 `apps/web/tests/features/editor/hideMarkers.test.ts` classifies every span of every case in `packages/contracts/fixtures/audience-markers.v1.json` and must match the server's policy. It also checks that every Hide output carries exactly one audience token, on its header. The API's `TestSharedAudienceMarkerConformance` runs the same vectors.
 
+The server-only surfaces this record keeps off the client reader are tested with a mocked server: `apps/web/tests/features/editor/bodyAudit.test.tsx` (badges, lookalike Fix, preview summary from the projected `> [!redacted]` blocks), `bodyAuditGuard.test.tsx` (publish check) and `previewViewAs.test.tsx` (preview audience and member handle). The audit modules (`adapters/bodyAudit.ts`, `bodyAuditCopy.ts`, `hooks/useBodyAudit.ts`) do not import `hideMarkers.ts`.
+
 ## Reopen triggers
 
 - The client reader is used for anything other than the Hide action's writes.
