@@ -733,6 +733,7 @@ type SelectQuestParticipantsWrite struct {
 	Input          SelectQuestParticipantsSpec
 	Locked         SelectQuestParticipantsState
 	ValidatedInput SelectQuestParticipantsSpec
+	DMPicked       bool
 	HistoryID      *string
 	DecisionID     *string
 	RevisionID     *string

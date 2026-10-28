@@ -1436,7 +1436,17 @@ type ProductQuestInsertParticipantParams struct {
 	At          pgtype.Timestamptz `json:"at"`
 }
 
-func (q *Queries) ProductQuestInsertParticipant(ctx context.Context, arg ProductQuestInsertParticipantParams) (QuestParticipant, error) {
+type ProductQuestInsertParticipantRow struct {
+	QuestID     int64              `json:"quest_id"`
+	MemberID    int64              `json:"member_id"`
+	CharacterID int64              `json:"character_id"`
+	Status      string             `json:"status"`
+	Manual      bool               `json:"manual"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) ProductQuestInsertParticipant(ctx context.Context, arg ProductQuestInsertParticipantParams) (ProductQuestInsertParticipantRow, error) {
 	row := q.db.QueryRow(ctx, productQuestInsertParticipant,
 		arg.QuestID,
 		arg.MemberID,
@@ -1445,7 +1455,7 @@ func (q *Queries) ProductQuestInsertParticipant(ctx context.Context, arg Product
 		arg.Manual,
 		arg.At,
 	)
-	var i QuestParticipant
+	var i ProductQuestInsertParticipantRow
 	err := row.Scan(
 		&i.QuestID,
 		&i.MemberID,
@@ -2174,18 +2184,19 @@ func (q *Queries) ProductQuestOpenSeatsPage(ctx context.Context, arg ProductQues
 
 const productQuestPromoteParticipants = `-- name: ProductQuestPromoteParticipants :many
 UPDATE quest_participants participant
-SET status = 'signed_up', manual = false, updated_at = $1::timestamptz
+SET status = 'signed_up', manual = false, dm_picked = $1::boolean, updated_at = $2::timestamptz
 FROM quests q, characters c, members owner
 WHERE participant.quest_id = q.id AND participant.character_id = c.id AND participant.member_id = owner.id
-  AND q.public_id = $2::uuid AND c.public_id = ANY($3::uuid[])
+  AND q.public_id = $3::uuid AND c.public_id = ANY($4::uuid[])
   AND participant.status = 'waitlisted'
 RETURNING q.public_id AS quest_id, c.public_id AS character_id, owner.public_id AS member_id,
           c.name AS character_name, owner.handle AS member_handle, owner.display_name AS member_display_name,
-          owner.avatar_url AS member_avatar_url, participant.status, participant.manual,
+          owner.avatar_url AS member_avatar_url, participant.status, participant.manual, participant.dm_picked,
           participant.created_at, participant.updated_at
 `
 
 type ProductQuestPromoteParticipantsParams struct {
+	DmPicked     bool               `json:"dm_picked"`
 	At           pgtype.Timestamptz `json:"at"`
 	QuestID      pgtype.UUID        `json:"quest_id"`
 	CharacterIds []pgtype.UUID      `json:"character_ids"`
@@ -2201,12 +2212,18 @@ type ProductQuestPromoteParticipantsRow struct {
 	MemberAvatarUrl   pgtype.Text        `json:"member_avatar_url"`
 	Status            string             `json:"status"`
 	Manual            bool               `json:"manual"`
+	DmPicked          bool               `json:"dm_picked"`
 	CreatedAt         pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt         pgtype.Timestamptz `json:"updated_at"`
 }
 
 func (q *Queries) ProductQuestPromoteParticipants(ctx context.Context, arg ProductQuestPromoteParticipantsParams) ([]ProductQuestPromoteParticipantsRow, error) {
-	rows, err := q.db.Query(ctx, productQuestPromoteParticipants, arg.At, arg.QuestID, arg.CharacterIds)
+	rows, err := q.db.Query(ctx, productQuestPromoteParticipants,
+		arg.DmPicked,
+		arg.At,
+		arg.QuestID,
+		arg.CharacterIds,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -2224,6 +2241,7 @@ func (q *Queries) ProductQuestPromoteParticipants(ctx context.Context, arg Produ
 			&i.MemberAvatarUrl,
 			&i.Status,
 			&i.Manual,
+			&i.DmPicked,
 			&i.CreatedAt,
 			&i.UpdatedAt,
 		); err != nil {
@@ -2808,14 +2826,24 @@ type ProductQuestRejoinParticipantParams struct {
 	CharacterID int64              `json:"character_id"`
 }
 
-func (q *Queries) ProductQuestRejoinParticipant(ctx context.Context, arg ProductQuestRejoinParticipantParams) (QuestParticipant, error) {
+type ProductQuestRejoinParticipantRow struct {
+	QuestID     int64              `json:"quest_id"`
+	MemberID    int64              `json:"member_id"`
+	CharacterID int64              `json:"character_id"`
+	Status      string             `json:"status"`
+	Manual      bool               `json:"manual"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) ProductQuestRejoinParticipant(ctx context.Context, arg ProductQuestRejoinParticipantParams) (ProductQuestRejoinParticipantRow, error) {
 	row := q.db.QueryRow(ctx, productQuestRejoinParticipant,
 		arg.Status,
 		arg.At,
 		arg.QuestID,
 		arg.CharacterID,
 	)
-	var i QuestParticipant
+	var i ProductQuestRejoinParticipantRow
 	err := row.Scan(
 		&i.QuestID,
 		&i.MemberID,
@@ -2884,6 +2912,63 @@ func (q *Queries) ProductQuestRewardCoverage(ctx context.Context, questIds []pgt
 			&i.LiveQuestID,
 			&i.Closed,
 			&i.Complete,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const productQuestSeatPriority = `-- name: ProductQuestSeatPriority :many
+SELECT qp.character_id, c.public_id AS character_public_id, qp.status, qp.manual, qp.dm_picked,
+       qp.created_at, last_game.last_played_at
+FROM quest_participants qp
+JOIN quests q ON q.id = qp.quest_id
+JOIN characters c ON c.id = qp.character_id
+LEFT JOIN LATERAL (
+    SELECT max(prior.scheduled_at)::timestamptz AS last_played_at
+    FROM quest_participants played
+    JOIN quests prior ON prior.id = played.quest_id AND prior.deleted_at IS NULL
+    WHERE played.member_id = qp.member_id AND played.status = 'played' AND prior.id <> q.id
+) last_game ON TRUE
+WHERE q.public_id = $1::uuid AND qp.status IN ('signed_up', 'waitlisted')
+ORDER BY (last_game.last_played_at IS NOT NULL), last_game.last_played_at,
+         qp.created_at, c.public_id
+`
+
+type ProductQuestSeatPriorityRow struct {
+	CharacterID       int64              `json:"character_id"`
+	CharacterPublicID pgtype.UUID        `json:"character_public_id"`
+	Status            string             `json:"status"`
+	Manual            bool               `json:"manual"`
+	DmPicked          bool               `json:"dm_picked"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	LastPlayedAt      pgtype.Timestamptz `json:"last_played_at"`
+}
+
+// Seated and waitlisted participants in Last Game Played seat order: players who have never
+// played another quest first, then the oldest last played game, then the earlier signup.
+func (q *Queries) ProductQuestSeatPriority(ctx context.Context, questID pgtype.UUID) ([]ProductQuestSeatPriorityRow, error) {
+	rows, err := q.db.Query(ctx, productQuestSeatPriority, questID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []ProductQuestSeatPriorityRow{}
+	for rows.Next() {
+		var i ProductQuestSeatPriorityRow
+		if err := rows.Scan(
+			&i.CharacterID,
+			&i.CharacterPublicID,
+			&i.Status,
+			&i.Manual,
+			&i.DmPicked,
+			&i.CreatedAt,
+			&i.LastPlayedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -3390,7 +3475,17 @@ type ProductQuestUpdateParticipantParams struct {
 	CharacterID int64              `json:"character_id"`
 }
 
-func (q *Queries) ProductQuestUpdateParticipant(ctx context.Context, arg ProductQuestUpdateParticipantParams) (QuestParticipant, error) {
+type ProductQuestUpdateParticipantRow struct {
+	QuestID     int64              `json:"quest_id"`
+	MemberID    int64              `json:"member_id"`
+	CharacterID int64              `json:"character_id"`
+	Status      string             `json:"status"`
+	Manual      bool               `json:"manual"`
+	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+}
+
+func (q *Queries) ProductQuestUpdateParticipant(ctx context.Context, arg ProductQuestUpdateParticipantParams) (ProductQuestUpdateParticipantRow, error) {
 	row := q.db.QueryRow(ctx, productQuestUpdateParticipant,
 		arg.Status,
 		arg.Manual,
@@ -3398,7 +3493,7 @@ func (q *Queries) ProductQuestUpdateParticipant(ctx context.Context, arg Product
 		arg.QuestID,
 		arg.CharacterID,
 	)
-	var i QuestParticipant
+	var i ProductQuestUpdateParticipantRow
 	err := row.Scan(
 		&i.QuestID,
 		&i.MemberID,

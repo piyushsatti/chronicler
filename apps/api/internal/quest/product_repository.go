@@ -63,7 +63,7 @@ type QuestWriteRepository interface {
 	LockSetQuestHexes(ctx context.Context, spec SetQuestHexesSpec) (SetQuestHexesState, error)
 	StoreSetQuestHexes(ctx context.Context, write SetQuestHexesWrite) ([]QuestHexView, error)
 	LockSignupForQuest(ctx context.Context, spec SignupForQuestSpec) (SignupForQuestState, error)
-	StoreSignupForQuest(ctx context.Context, write SignupForQuestWrite) (QuestParticipantView, error)
+	StoreSignupForQuest(ctx context.Context, write SignupForQuestWrite) (QuestParticipantView, string, error)
 	LockSyncQuestDiscord(ctx context.Context, spec SyncQuestDiscordSpec) (SyncQuestDiscordState, error)
 	StoreSyncQuestDiscord(ctx context.Context, write SyncQuestDiscordWrite) (DeliveryReceipt, error)
 	LockTransitionQuestStatus(ctx context.Context, spec TransitionQuestStatusSpec) (TransitionQuestStatusState, error)

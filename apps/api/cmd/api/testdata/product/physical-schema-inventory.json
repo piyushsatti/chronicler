@@ -1549,6 +1549,11 @@
           "source": "apps/api/db/migrations/0001_init.sql",
           "stage": "squash_a1"
         },
+        "dm_picked": {
+          "declaration": "BOOLEAN DEFAULT FALSE NOT NULL",
+          "source": "apps/api/db/migrations/0009_quest_participant_dm_picked.sql",
+          "stage": "m9_quest_participant_dm_picked"
+        },
         "created_at": {
           "declaration": "TIMESTAMPTZ DEFAULT NOW() NOT NULL",
           "source": "apps/api/db/migrations/0001_init.sql",

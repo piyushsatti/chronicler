@@ -137,7 +137,15 @@ func (p *ProductPostgres) withdrawQuestParticipant(ctx context.Context, effects 
 }
 
 func (p *ProductPostgres) promoteQuestWaitlist(ctx context.Context, effects *character.WithdrawalEffects, actorID string, plan character.WithdrawalPlan, admissions []character.Admission, at time.Time, questID string, locked WithdrawFromQuestState, previous *QuestParticipantView) error {
-	for _, candidate := range locked.Roster {
+	candidates := locked.Roster
+	if locked.Before != nil && locked.Before.SignupType != nil && *locked.Before.SignupType == lastGamePlayedSignup {
+		ordered, err := p.waitlistBySeatPriority(ctx, questID, locked.Roster)
+		if err != nil {
+			return err
+		}
+		candidates = ordered
+	}
+	for _, candidate := range candidates {
 		if candidate.Status != "waitlisted" || candidate.CharacterId == plan.OwnedCharacterID || !eligibleWithdrawalCandidate(admissions, candidate.CharacterId) {
 			continue
 		}

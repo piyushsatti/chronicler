@@ -525,7 +525,7 @@ func (s ProductCommands) SignupForQuest(ctx context.Context, actor auth.Authorit
 			return QuestParticipantView{}, apierr.New(apierr.NotFound, "quest not found")
 		}
 		locked.Character = &admission
-		result, err := repos.Quest.StoreSignupForQuest(ctx, SignupForQuestWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: SignupForQuestSpec{QuestId: questID, CharacterId: characterID, AsOf: at}, Locked: locked})
+		result, bumpedCharacterID, err := repos.Quest.StoreSignupForQuest(ctx, SignupForQuestWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: SignupForQuestSpec{QuestId: questID, CharacterId: characterID, AsOf: at}, Locked: locked})
 		if err != nil {
 			return QuestParticipantView{}, err
 		}
@@ -536,6 +536,13 @@ func (s ProductCommands) SignupForQuest(ctx context.Context, actor auth.Authorit
 		key := "quest-signup:" + questID + ":" + characterID + ":" + meta.IdempotencyKey
 		if err := recordQuestParticipation(ctx, repos, fresh, notification.QuestSignupConfirmed, key, questID, characterID, from, result.Status, at); err != nil {
 			return QuestParticipantView{}, err
+		}
+		if bumpedCharacterID != "" {
+			fromStatus := "signed_up"
+			bumpKey := "quest-bump:" + questID + ":" + bumpedCharacterID + ":" + meta.IdempotencyKey
+			if err := recordQuestParticipation(ctx, repos, fresh, notification.QuestWaitlistPromoted, bumpKey, questID, bumpedCharacterID, &fromStatus, "waitlisted", at); err != nil {
+				return QuestParticipantView{}, err
+			}
 		}
 		return result, nil
 	})
@@ -700,7 +707,7 @@ func selectQuestParticipants(ctx context.Context, repos ProductCommandRepos, fre
 		return nil, err
 	}
 	locked.Candidates = admissions
-	result, err := repos.Quest.StoreSelectQuestParticipants(ctx, SelectQuestParticipantsWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: SelectQuestParticipantsSpec{QuestId: questID, CharacterIds: ids, AsOf: at}, Locked: locked})
+	result, err := repos.Quest.StoreSelectQuestParticipants(ctx, SelectQuestParticipantsWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: SelectQuestParticipantsSpec{QuestId: questID, CharacterIds: ids, AsOf: at}, Locked: locked, DMPicked: true})
 	if err != nil || len(result) == 0 {
 		return result, err
 	}

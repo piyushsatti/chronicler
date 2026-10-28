@@ -420,6 +420,7 @@ type QuestParticipant struct {
 	Manual      bool               `json:"manual"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	DmPicked    bool               `json:"dm_picked"`
 }
 
 type QuestPointcrawlNode struct {

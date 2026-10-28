@@ -473,16 +473,33 @@ UPDATE quest_participants SET status = @status::text, manual = false,
 WHERE quest_id = @quest_id::bigint AND character_id = @character_id::bigint AND status = 'withdrawn'
 RETURNING quest_id, member_id, character_id, status, manual, created_at, updated_at;
 
+-- name: ProductQuestSeatPriority :many
+-- Seated and waitlisted participants in Last Game Played seat order: players who have never
+-- played another quest first, then the oldest last played game, then the earlier signup.
+SELECT qp.character_id, c.public_id AS character_public_id, qp.status, qp.manual, qp.dm_picked,
+       qp.created_at, last_game.last_played_at
+FROM quest_participants qp
+JOIN quests q ON q.id = qp.quest_id
+JOIN characters c ON c.id = qp.character_id
+LEFT JOIN LATERAL (
+    SELECT max(prior.scheduled_at)::timestamptz AS last_played_at
+    FROM quest_participants played
+    JOIN quests prior ON prior.id = played.quest_id AND prior.deleted_at IS NULL
+    WHERE played.member_id = qp.member_id AND played.status = 'played' AND prior.id <> q.id
+) last_game ON TRUE
+WHERE q.public_id = @quest_id::uuid AND qp.status IN ('signed_up', 'waitlisted')
+ORDER BY (last_game.last_played_at IS NOT NULL), last_game.last_played_at,
+         qp.created_at, c.public_id;
 -- name: ProductQuestPromoteParticipants :many
 UPDATE quest_participants participant
-SET status = 'signed_up', manual = false, updated_at = @at::timestamptz
+SET status = 'signed_up', manual = false, dm_picked = @dm_picked::boolean, updated_at = @at::timestamptz
 FROM quests q, characters c, members owner
 WHERE participant.quest_id = q.id AND participant.character_id = c.id AND participant.member_id = owner.id
   AND q.public_id = @quest_id::uuid AND c.public_id = ANY(@character_ids::uuid[])
   AND participant.status = 'waitlisted'
 RETURNING q.public_id AS quest_id, c.public_id AS character_id, owner.public_id AS member_id,
           c.name AS character_name, owner.handle AS member_handle, owner.display_name AS member_display_name,
-          owner.avatar_url AS member_avatar_url, participant.status, participant.manual,
+          owner.avatar_url AS member_avatar_url, participant.status, participant.manual, participant.dm_picked,
           participant.created_at, participant.updated_at;
 -- name: ProductQuestDeleteParticipant :execrows
 DELETE FROM quest_participants

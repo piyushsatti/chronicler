@@ -20033,6 +20033,10 @@
           "go_type": "quest.SelectQuestParticipantsSpec"
         },
         {
+          "name": "DMPicked",
+          "go_type": "bool"
+        },
+        {
           "name": "HistoryID",
           "go_type": "*string"
         },
@@ -23599,7 +23603,7 @@
         "LockSetQuestHexes(ctx context.Context, spec quest.SetQuestHexesSpec) (quest.SetQuestHexesState, error)",
         "StoreSetQuestHexes(ctx context.Context, write quest.SetQuestHexesWrite) ([]quest.QuestHexView, error)",
         "LockSignupForQuest(ctx context.Context, spec quest.SignupForQuestSpec) (quest.SignupForQuestState, error)",
-        "StoreSignupForQuest(ctx context.Context, write quest.SignupForQuestWrite) (quest.QuestParticipantView, error)",
+        "StoreSignupForQuest(ctx context.Context, write quest.SignupForQuestWrite) (quest.QuestParticipantView, string, error)",
         "LockSyncQuestDiscord(ctx context.Context, spec quest.SyncQuestDiscordSpec) (quest.SyncQuestDiscordState, error)",
         "StoreSyncQuestDiscord(ctx context.Context, write quest.SyncQuestDiscordWrite) (quest.DeliveryReceipt, error)",
         "LockTransitionQuestStatus(ctx context.Context, spec quest.TransitionQuestStatusSpec) (quest.TransitionQuestStatusState, error)",
@@ -25354,7 +25358,7 @@
     },
     {
       "id": "STORE-quest-SignupForQuest",
-      "signature": "StoreSignupForQuest(ctx context.Context, write quest.SignupForQuestWrite) (quest.QuestParticipantView, error)",
+      "signature": "StoreSignupForQuest(ctx context.Context, write quest.SignupForQuestWrite) (quest.QuestParticipantView, string, error)",
       "interface": "quest.QuestWriteRepository",
       "provider": "QUE04",
       "callers": ["QUE06"],
