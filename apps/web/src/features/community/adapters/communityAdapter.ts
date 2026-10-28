@@ -9,7 +9,6 @@ import DIRECTORY_QUERY from './communityDirectory.graphql?raw';
 import CHARACTERS_QUERY from './communityCharacters.graphql?raw';
 import REGIONS_QUERY from './communityRegions.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
-import type { AdapterResult } from '../../../errors/types.js';
 import {
   communityCharactersWireSchema,
   communityDirectoryWireSchema,
@@ -47,19 +46,6 @@ function mapEntry(
     avatarUrl: entry.avatarUrl ?? null,
     availableDays: entry.availableDays,
     roles: entry.roles,
-  };
-}
-
-export function parseCommunityDirectory(
-  wire: unknown,
-): AdapterResult<CommunityHubView> {
-  const parsed = communityDirectoryWireSchema.safeParse(wire);
-  if (!parsed.success) {
-    return { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
-  }
-  return {
-    ok: true,
-    data: hubFromEntries(parsed.data.entries.map(mapEntry), parsed.data.total),
   };
 }
 

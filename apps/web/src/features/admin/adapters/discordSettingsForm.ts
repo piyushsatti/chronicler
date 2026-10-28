@@ -21,10 +21,6 @@ const SNOWFLAKE = /^[0-9]{17,20}$/;
 const ID_RULE = 'must be a Discord ID: 17 to 20 digits';
 const MAX_CHANNELS = 100;
 
-export function isSnowflake(value: string): boolean {
-  return SNOWFLAKE.test(value.trim());
-}
-
 export function validateDiscordSettings(form: DiscordSettingsForm): DiscordSettingsErrors {
   const errors: DiscordSettingsErrors = { voiceChannels: {}, summary: [] };
   const announce = form.announceChannelId.trim();

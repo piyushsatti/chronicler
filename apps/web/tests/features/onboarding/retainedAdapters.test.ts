@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest';
 import { server } from '../../../src/mocks/server.js';
 import {
   calendarWindow,
-  lastCivilDay,
   moveCivilMonth,
   parseCalendarState,
 } from '../../../src/features/onboarding/calendarState.js';
@@ -79,7 +78,17 @@ describe('Calendar URL and server reads', () => {
     );
   });
   it('uses civil leap/month transitions without computing game dates', () => {
-    expect(lastCivilDay('2024-02')).toBe('2024-02-29');
+    const leapDay = parseCalendarState(
+      new URLSearchParams('day=2024-02-29'),
+      '2024-01-01',
+    );
+    if (!leapDay.success) throw leapDay.error;
+    expect(calendarWindow(leapDay.data)).toMatchObject({
+      realFrom: '2024-02-01',
+      realTo: '2024-03-01',
+      scheduledFrom: '2024-02-29T00:00:00Z',
+      scheduledTo: '2024-03-01T00:00:00Z',
+    });
     expect(moveCivilMonth('2026-01', -1)).toBe('2025-12');
     const state = parseCalendarState(
       new URLSearchParams('month=2026-12'),

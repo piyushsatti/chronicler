@@ -1,23 +1,25 @@
 import { describe, expect, it } from 'vitest';
 import { graphql, HttpResponse } from 'msw';
 import { server } from '../../../src/mocks/server.js';
-import {
-  loadMap,
-  loadMapDirectory,
-  parseMap,
-} from '../../../src/features/map/adapters/mapAdapter.js';
+import { loadMap, loadMapDirectory } from '../../../src/features/map/adapters/mapAdapter.js';
 import { graphBounds } from '../../../src/features/map/components/PointcrawlViewport.js';
 import bad from '../../fixtures/wire/map/bad-missing-field.json';
 import good from '../../fixtures/wire/map/good.json';
 
 describe('pointcrawl reads', () => {
-  it('validates current atlas metadata and server capability', () => {
-    expect(parseMap(good)).toMatchObject({
-      ok: true,
-      data: { atlasCode: 'LFC', canEdit: false },
+  it('validates current atlas metadata and server capability', async () => {
+    let map: unknown = good;
+    server.use(
+      graphql.query('MapAtlas', () => HttpResponse.json({ data: { map } })),
+    );
+    await expect(loadMap('LFC')).resolves.toMatchObject({
+      atlasCode: 'LFC',
+      canEdit: false,
     });
-    expect(parseMap(bad).ok).toBe(false);
-    expect(parseMap({ ...good, canEdit: 'yes' }).ok).toBe(false);
+    map = bad;
+    await expect(loadMap('LFC')).rejects.toMatchObject({ kind: 'invalid' });
+    map = { ...good, canEdit: 'yes' };
+    await expect(loadMap('LFC')).rejects.toMatchObject({ kind: 'invalid' });
   });
   it('reads later node, edge and linked-entry pages without imposing a feature limit', async () => {
     const node = good.pointcrawlNodes[0]!;

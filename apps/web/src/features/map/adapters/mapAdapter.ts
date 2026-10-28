@@ -25,7 +25,6 @@ import type {
 import { graphqlRequest } from '../../../api/graphql.js';
 import { safeAppError, toAppError } from '../../../errors/toAppError.js';
 import { TransportError } from '../../../errors/types.js';
-import type { AdapterResult } from '../../../errors/types.js';
 import ATLAS from './map.graphql?raw';
 import LINKS from './mapNodeLinks.graphql?raw';
 import DIRECTORY from './mapDirectory.graphql?raw';
@@ -134,12 +133,6 @@ export type MapDocument = z.infer<typeof documentSchema>;
 export type Pointcrawl = MapAtlasView & { nodes: MapNode[]; edges: MapEdge[] };
 export type MapDirectory = { maps: MapAtlasView[]; regions: MapRegion[] };
 
-export function parseMap(wire: unknown): AdapterResult<MapAtlasView> {
-  const parsed = mapSchema.safeParse(wire);
-  return parsed.success
-    ? { ok: true, data: parsed.data }
-    : { ok: false, failure: 'InvalidWire', detail: parsed.error.message };
-}
 function parse<T>(schema: z.ZodType<T>, wire: unknown): T {
   const parsed = schema.safeParse(wire);
   if (!parsed.success) throw toAppError({ failure: 'InvalidWire' }, 'map:wire');

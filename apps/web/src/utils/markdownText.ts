@@ -95,14 +95,6 @@ export function plainExcerpt(text: string, length: number): string | null {
   return `${words.replace(/[\s,;:.\-–—]+$/u, '')}…`;
 }
 
-/** A one-line preview of a Markdown body: syntax stripped first, then cut. */
-export function markdownExcerpt(
-  body: string | null | undefined,
-  length: number,
-): string | null {
-  return body ? plainExcerpt(markdownToPlainText(body), length) : null;
-}
-
 /** A leading YAML block's `summary:` line, unquoted. */
 export function frontmatterSummary(body: string): string | null {
   const block = FRONTMATTER.exec(body)?.[1];

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   cardExcerpt,
-  markdownExcerpt,
   markdownToPlainText,
   plainExcerpt,
 } from '../../src/utils/markdownText.js';
@@ -37,12 +36,12 @@ describe('markdown previews', () => {
   });
 
   it('strips before truncating so the cut counts visible words', () => {
-    const body = `| Type | City |\n|---|---|\n${'word '.repeat(60)}`;
-    const excerpt = markdownExcerpt(body, 40);
+    const body = `| Type | City |\n|---|---|\n\n**Lead** ${'word '.repeat(60)}`;
+    const excerpt = cardExcerpt(body, 40);
     expect(excerpt).not.toMatch(/[|#*]/);
-    expect(excerpt?.startsWith('Type City word')).toBe(true);
+    expect(excerpt?.startsWith('Lead word')).toBe(true);
     expect(excerpt?.endsWith('…')).toBe(true);
-    expect(markdownExcerpt(null, 40)).toBeNull();
+    expect(cardExcerpt(null, 40)).toBeNull();
   });
 
   it('codex cards and search hits show plain-text previews', () => {

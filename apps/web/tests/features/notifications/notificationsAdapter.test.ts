@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { http, HttpResponse } from 'msw';
 import {
   markNotificationsRead,
-  parseNotifications,
+  parseNotificationPage,
   parseUnreadCount,
 } from '../../../src/features/notifications/adapters/notificationsAdapter.js';
 import { GRAPHQL_PATH } from '../../../src/api/endpoints.js';
@@ -13,16 +13,16 @@ import good from '../../fixtures/wire/notifications/list-good.json';
 
 describe('notifications adapters', () => {
   it('parses list', () => {
-    const result = parseNotifications(good);
+    const result = parseNotificationPage(good);
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.data[0]?.label).toBe('Quest signup');
-      expect(result.data[0]?.unread).toBe(true);
+      expect(result.data.items[0]?.label).toBe('Quest signup');
+      expect(result.data.items[0]?.unread).toBe(true);
     }
   });
 
   it('rejects bad list', () => {
-    expect(parseNotifications(bad).ok).toBe(false);
+    expect(parseNotificationPage(bad).ok).toBe(false);
   });
 
   it('parses unread count', () => {

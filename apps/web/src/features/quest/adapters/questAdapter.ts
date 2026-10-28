@@ -1,7 +1,6 @@
 import type {
   MyCharactersQuery,
   QuestBoardChromeQuery,
-  QuestBoardQuery,
   QuestListQuery,
   QuestQuery,
   QuestRegionsQuery,
@@ -9,7 +8,6 @@ import type {
 } from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import MY_CHARACTERS_QUERY from './myCharacters.graphql?raw';
-import BOARD_QUERY from './questBoard.graphql?raw';
 import CHROME_QUERY from './questBoardChrome.graphql?raw';
 import DETAIL_QUERY from './questDetail.graphql?raw';
 import LIST_QUERY from './questList.graphql?raw';
@@ -352,20 +350,6 @@ export async function loadQuestBoardChrome(): Promise<QuestBoardChromeView> {
     }
   } catch (err) {
     throw toAppError(err, 'quest:board-chrome');
-  }
-}
-
-export async function loadQuestBoard(): Promise<QuestBoardItemView[]> {
-  try {
-    const [data, regions] = await Promise.all([
-      graphqlRequest<QuestBoardQuery>(BOARD_QUERY, { limit: 50 }),
-      loadQuestRegions(),
-    ]);
-    const result = parseQuestBoard(data.questBoard, regions);
-    if (!result.ok) throw toAppError({ failure: result.failure }, 'quest:board');
-    return completeRosterPages(result.data);
-  } catch (err) {
-    throw toAppError(err, 'quest:board');
   }
 }
 

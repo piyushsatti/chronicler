@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
   discordSettingsInput,
-  isSnowflake,
   validateDiscordSettings,
 } from '../../../src/features/admin/adapters/discordSettingsForm.js';
 
@@ -21,7 +20,10 @@ describe('Discord settings form', () => {
     ['1234567890123456x8', false],
     ['', false],
   ])('treats %s as a snowflake: %s', (value, ok) => {
-    expect(isSnowflake(value)).toBe(ok);
+    const errors = validateDiscordSettings(
+      form({ voiceChannels: [{ key: 1, name: 'Table', channelId: value }] }),
+    );
+    expect(errors.voiceChannels[1]?.channelId === undefined).toBe(ok);
   });
 
   it('accepts an empty form (everything optional)', () => {

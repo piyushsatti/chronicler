@@ -53,12 +53,6 @@ export function moveCivilMonth(value: string, delta: number): string {
   return date.toISOString().slice(0, 7);
 }
 
-export function lastCivilDay(value: string): string {
-  const date = new Date(`${moveCivilMonth(value, 1)}-01T00:00:00Z`);
-  date.setUTCDate(date.getUTCDate() - 1);
-  return date.toISOString().slice(0, 10);
-}
-
 export function calendarWindow(state: CalendarState) {
   const realFrom = `${state.month}-01`;
   const realTo = `${moveCivilMonth(state.month, 1)}-01`;

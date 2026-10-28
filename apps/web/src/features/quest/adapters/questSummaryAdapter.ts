@@ -3,8 +3,7 @@ import type { QuestSummaryPageQuery } from '../../../api/graphql.operations.gen.
 import { graphqlRequest } from '../../../api/graphql.js';
 import SUMMARY_PAGE_QUERY from './questSummary.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
-import type { AdapterResult } from '../../../errors/types.js';
-import { loadQuest, parseQuestDetail, type QuestDetailView } from './questAdapter.js';
+import { loadQuest, type QuestDetailView } from './questAdapter.js';
 
 const summaryDocSchema = z.object({
   id: z.string().uuid(),
@@ -30,25 +29,6 @@ export type QuestSummaryPageView = {
   documents: QuestSummaryDocumentView[];
   totals: z.infer<typeof summaryPageSchema>['totals'];
 };
-
-export function parseQuestSummaryPage(wire: {
-  quest: unknown;
-  summaries: unknown;
-}): AdapterResult<QuestSummaryPageView> {
-  const quest = parseQuestDetail(wire.quest);
-  if (!quest.ok) return quest;
-  const result = summaryPageSchema.safeParse(wire.summaries);
-  if (!result.success)
-    return { ok: false, failure: 'InvalidWire', detail: result.error.message };
-  return {
-    ok: true,
-    data: {
-      quest: quest.data,
-      documents: result.data.summaries,
-      totals: result.data.totals,
-    },
-  };
-}
 
 export async function loadQuestSummaryPage(
   shortCode: string,

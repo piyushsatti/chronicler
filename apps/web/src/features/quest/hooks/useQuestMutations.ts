@@ -63,9 +63,5 @@ export function useQuestMutations(shortCode: string, questId: string) {
     pending: mutation.isPending,
     error: mutation.error ? toAppError(mutation.error, 'quest:command') : null,
     message: mutation.data ?? null,
-    /** The kind of the last command that succeeded, for a status beside its button. */
-    succeededKind: mutation.isSuccess
-      ? (mutation.variables?.command.kind ?? null)
-      : null,
   };
 }

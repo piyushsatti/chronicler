@@ -7,7 +7,6 @@ import {
   parseQuestBoard,
   parseQuestList,
   loadQuestList,
-  loadQuestBoard,
   parseQuestDetail,
 } from '../../../src/features/quest/adapters/questAdapter.js';
 import boardBad from '../../fixtures/wire/quest/board-bad.json';
@@ -271,21 +270,6 @@ describe('generic quest list', () => {
       ),
     );
     await expect(loadQuestList(request)).resolves.toEqual({ items: [], total: 3 });
-  });
-
-  it('retains the old board operation for its other consumers', async () => {
-    let variables: unknown;
-    server.use(
-      graphql.query('QuestBoard', ({ variables: received }) => {
-        variables = received;
-        return HttpResponse.json({ data: { questBoard: boardGood } });
-      }),
-    );
-    const board = await loadQuestBoard();
-    expect(variables).toEqual({ limit: 50 });
-    expect(board.map((item) => item.shortCode)).toEqual(
-      boardGood.items.map((item) => item.shortCode),
-    );
   });
 
   it('keys canonical filters and both page arguments independently from the old board', () => {
