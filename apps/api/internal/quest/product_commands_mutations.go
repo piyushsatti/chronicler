@@ -110,7 +110,7 @@ func validateQuestKinds(kinds []string) error {
 
 func recordQuestEvents(ctx context.Context, repos ProductCommandRepos, events []notification.Event) error {
 	for _, event := range events {
-		if commandDependencyMissing(repos.Producer) {
+		if product.MissingDependency(repos.Producer) {
 			return apierr.New(apierr.Internal, "quest notification producer required")
 		}
 		if err := repos.Producer.Record(ctx, repos.Notice, event); err != nil {
@@ -190,7 +190,7 @@ func admitQuestArc(ctx context.Context, repos ProductCommandRepos, fresh auth.Au
 	if err := commandPublicID(&id); err != nil {
 		return err
 	}
-	if commandDependencyMissing(repos.Arc) || repos.Policy == nil {
+	if product.MissingDependency(repos.Arc) || repos.Policy == nil {
 		return apierr.New(apierr.Internal, "quest arc dependencies required")
 	}
 	locked, err := repos.Arc.LockUpsertQuestArc(ctx, UpsertQuestArcSpec{Id: &id})
@@ -216,7 +216,7 @@ func admitQuestArc(ctx context.Context, repos ProductCommandRepos, fresh auth.Au
 }
 
 func createQuest(ctx context.Context, s ProductCommands, repos ProductCommandRepos, fresh auth.Authority, at time.Time, spec CreateQuestSpec, input CreateQuestFields, title, dmID string) (QuestView, error) {
-	if commandDependencyMissing(repos.Brief) {
+	if product.MissingDependency(repos.Brief) {
 		return QuestView{}, apierr.New(apierr.Internal, "quest brief writer required")
 	}
 	target, err := repos.Authority(ctx, dmID)
@@ -400,7 +400,7 @@ func (s ProductCommands) CloseQuest(ctx context.Context, actor auth.Authority, s
 }
 
 func closeQuest(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time, spec CloseQuestSpec, questID string, request auth.Request, preview *QuestView) (QuestView, error) {
-	if commandDependencyMissing(repos.Rewards) {
+	if product.MissingDependency(repos.Rewards) {
 		return QuestView{}, apierr.New(apierr.Internal, "quest reward writer required")
 	}
 	characters, err := repos.Rewards.LockQuestRoster(ctx, questID)
@@ -601,7 +601,7 @@ func withdrawFromQuest(ctx context.Context, repos ProductCommandRepos, fresh aut
 }
 
 func prepareQuestCharacterWithdrawal(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, questID, characterID string) (character.WithdrawalPlan, []character.Admission, *character.Admission, error) {
-	if commandDependencyMissing(repos.Withdrawals) {
+	if product.MissingDependency(repos.Withdrawals) {
 		return character.WithdrawalPlan{}, nil, nil, apierr.New(apierr.Internal, "character withdrawal writer required")
 	}
 	plan, err := repos.Withdrawals.PlanOwnedCharacterWithdrawal(ctx, characterID, []string{questID})
@@ -689,7 +689,7 @@ func (s ProductCommands) SelectQuestParticipants(ctx context.Context, actor auth
 }
 
 func selectQuestParticipants(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time, spec SelectQuestParticipantsSpec, questID string, ids []string, request auth.Request, preview *QuestView, key string) ([]QuestParticipantView, error) {
-	if commandDependencyMissing(repos.Characters) {
+	if product.MissingDependency(repos.Characters) {
 		return nil, apierr.New(apierr.Internal, "character admission reader required")
 	}
 	admissions, err := repos.Characters.LockAdmissions(ctx, ids)
@@ -808,7 +808,7 @@ func normalizeQuestHexes(input []QuestHexFields) ([]QuestHexFields, []spatial.Qu
 }
 
 func questHexRequest(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, spec SetQuestHexesSpec, questID string, preview *QuestView, candidates []spatial.QuestPointcrawlCandidate) (auth.Request, error) {
-	if commandDependencyMissing(repos.Places) {
+	if product.MissingDependency(repos.Places) {
 		return auth.Request{}, apierr.New(apierr.Internal, "pointcrawl admission reader required")
 	}
 	if _, err := repos.Places.ResolveQuestPointcrawlNodes(ctx, fresh, candidates); err != nil {
@@ -937,7 +937,7 @@ func prepareQuestSummary(spec UpsertQuestSummarySpec) (UpsertQuestSummarySpec, [
 
 func questSummaryRequest(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, spec UpsertQuestSummarySpec, facts auth.SummaryFacts) (auth.Request, error) {
 	if spec.Input.DocumentId != nil {
-		if commandDependencyMissing(repos.SummaryDocuments) {
+		if product.MissingDependency(repos.SummaryDocuments) {
 			return auth.Request{}, apierr.New(apierr.Internal, "summary document reader required")
 		}
 		existing, err := repos.SummaryDocuments.ReadDocumentById(ctx, fresh, document.DocumentByIdSpec{Id: *spec.Input.DocumentId})
@@ -956,7 +956,7 @@ func questSummaryRequest(ctx context.Context, repos ProductCommandRepos, fresh a
 }
 
 func storeQuestSummary(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, at time.Time, spec UpsertQuestSummarySpec, questIDs []string) (document.DocumentView, error) {
-	if commandDependencyMissing(repos.Summaries) {
+	if product.MissingDependency(repos.Summaries) {
 		return document.DocumentView{}, apierr.New(apierr.Internal, "summary writer required")
 	}
 	locked, err := repos.Quest.LockUpsertQuestSummary(ctx, UpsertQuestSummarySpec{Input: spec.Input, AsOf: at})

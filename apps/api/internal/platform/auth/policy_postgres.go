@@ -7,6 +7,7 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbgen"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 )
 
 // PoolPolicyProviders binds read-only policy fact lookups to the shared pool.
@@ -115,7 +116,7 @@ func (p PoolPolicyProviders) SummaryRelations(ctx context.Context, questIDs []st
 }
 
 func NewPoolPolicy(db dbgen.DBTX) (*Policy, error) {
-	if missingPolicyDependency(db) {
+	if product.MissingDependency(db) {
 		return nil, apierr.New(apierr.Internal, "policy database required")
 	}
 	providers := PoolPolicyProviders{DB: db}

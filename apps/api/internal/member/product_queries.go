@@ -2,7 +2,6 @@ package member
 
 import (
 	"context"
-	"reflect"
 	"strings"
 	"unicode/utf8"
 
@@ -22,15 +21,8 @@ type ProductQueries struct {
 
 func NewProductQueries(reads ProductReadRepos, policy *auth.Policy, clock product.Clock, overrideReads auth.OverrideReadObserver, reconciler GrantReconciler) (*ProductQueries, error) {
 	for _, dependency := range []any{reads.Member, reads.Reference, reads.Social, reads.Batch, policy, clock, overrideReads, reconciler} {
-		if dependency == nil {
+		if product.MissingDependency(dependency) {
 			return nil, apierr.New(apierr.Internal, "member query dependencies required")
-		}
-		value := reflect.ValueOf(dependency)
-		switch value.Kind() {
-		case reflect.Pointer, reflect.Func, reflect.Interface, reflect.Map, reflect.Slice, reflect.Chan:
-			if value.IsNil() {
-				return nil, apierr.New(apierr.Internal, "member query dependencies required")
-			}
 		}
 	}
 	return &ProductQueries{Reads: reads, Policy: policy, Clock: clock, OverrideReads: overrideReads, Reconciler: reconciler}, nil

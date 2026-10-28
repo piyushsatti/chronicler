@@ -3,7 +3,6 @@ package document
 import (
 	"context"
 	"encoding/json"
-	"reflect"
 	"time"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
@@ -20,21 +19,9 @@ type ProductCommands struct {
 	IDs    product.IDGenerator
 }
 
-func commandDependencyMissing(value any) bool {
-	if value == nil {
-		return true
-	}
-	v := reflect.ValueOf(value)
-	switch v.Kind() {
-	case reflect.Pointer, reflect.Interface, reflect.Func, reflect.Map, reflect.Slice, reflect.Chan:
-		return v.IsNil()
-	}
-	return false
-}
-
 func NewProductCommands(runner uow.Runner[ProductCommandRepos], clock product.Clock, ids product.IDGenerator) (*ProductCommands, error) {
 	for _, dep := range []any{runner, clock, ids} {
-		if commandDependencyMissing(dep) {
+		if product.MissingDependency(dep) {
 			return nil, apierr.New(apierr.Internal, "document command dependencies required")
 		}
 	}
@@ -170,7 +157,7 @@ func editedCategory(spec any) *string {
 
 func requireDocumentCommandDependencies(repos ProductCommandRepos) error {
 	for _, dependency := range []any{repos.Authority, repos.Policy, repos.Replay} {
-		if commandDependencyMissing(dependency) {
+		if product.MissingDependency(dependency) {
 			return apierr.New(apierr.Internal, "document transaction dependencies required")
 		}
 	}
@@ -194,7 +181,7 @@ func replayDocumentWrite[T any](ctx context.Context, repo DocumentWriteRepositor
 
 func completeDocumentWrite[T any](ctx context.Context, repos ProductCommandRepos, claim idempotency.Claim, actor auth.Authority, request auth.Request, decision auth.Decision, subjectID string, at time.Time, result T) error {
 	if decision.UsedOverride {
-		if commandDependencyMissing(repos.Audit) {
+		if product.MissingDependency(repos.Audit) {
 			return apierr.New(apierr.Internal, "override recorder required")
 		}
 		if err := repos.Audit.Record(ctx, claim, auth.OverrideFact{

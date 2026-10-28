@@ -4,12 +4,12 @@ import (
 	"context"
 	"github.com/google/uuid"
 	"log/slog"
-	"reflect"
 	"slices"
 	"time"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/idempotency"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 )
 
 // Operation is the exact case-sensitive SDL Query or Mutation wire identity.
@@ -49,7 +49,7 @@ type Assignments struct {
 }
 
 func NewAssignments(archons ArchonReader, lieutenants LieutenantReader) (*Assignments, error) {
-	if missingPolicyDependency(archons) || missingPolicyDependency(lieutenants) {
+	if product.MissingDependency(archons) || product.MissingDependency(lieutenants) {
 		return nil, apierr.New(apierr.Internal, "assignment providers required")
 	}
 	return &Assignments{Archons: archons, Lieutenants: lieutenants}, nil
@@ -83,23 +83,10 @@ func NewSafeOverrideObserver(logger *slog.Logger) (*SafeOverrideObserver, error)
 type ReceiptOverrideRecorder struct{ Replay idempotency.Repository }
 
 func NewOverrideRecorder(replay idempotency.Repository) (*ReceiptOverrideRecorder, error) {
-	if missingPolicyDependency(replay) {
+	if product.MissingDependency(replay) {
 		return nil, apierr.New(apierr.Internal, "override receipt repository required")
 	}
 	return &ReceiptOverrideRecorder{Replay: replay}, nil
-}
-
-func missingPolicyDependency(value any) bool {
-	if value == nil {
-		return true
-	}
-	v := reflect.ValueOf(value)
-	switch v.Kind() {
-	case reflect.Chan, reflect.Func, reflect.Interface, reflect.Map, reflect.Pointer, reflect.Slice:
-		return v.IsNil()
-	default:
-		return false
-	}
 }
 
 // Observe receives only safe factual metadata, after the caller has established
@@ -309,7 +296,7 @@ type Policy struct{ providers PolicyProviders }
 
 func NewPolicy(providers PolicyProviders) (*Policy, error) {
 	for _, dependency := range []any{providers.Assignments, providers.Audience, providers.Identities, providers.SummaryRelationships} {
-		if missingPolicyDependency(dependency) {
+		if product.MissingDependency(dependency) {
 			return nil, apierr.New(apierr.Internal, "policy providers required")
 		}
 	}
@@ -770,7 +757,7 @@ func validatePolicyRequest(p *Policy, request Request) error {
 	if request.input == nil {
 		return policyContractError()
 	}
-	if p == nil || missingPolicyDependency(p.providers.Assignments) || missingPolicyDependency(p.providers.Audience) || missingPolicyDependency(p.providers.Identities) || missingPolicyDependency(p.providers.SummaryRelationships) {
+	if p == nil || product.MissingDependency(p.providers.Assignments) || product.MissingDependency(p.providers.Audience) || product.MissingDependency(p.providers.Identities) || product.MissingDependency(p.providers.SummaryRelationships) {
 		return policyContractError()
 	}
 	return nil

@@ -14,6 +14,7 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 )
 
 type spatialAdmission struct {
@@ -51,7 +52,7 @@ func pointcrawlDocument(ctx context.Context, repos ProductCommandRepos, actor au
 	if documentID == nil {
 		return nil, nil
 	}
-	if commandDependencyMissing(repos.Documents) {
+	if product.MissingDependency(repos.Documents) {
 		return nil, apierr.New(apierr.Internal, "document reference reader required")
 	}
 	view, err := repos.Documents.ReadCommandDocument(ctx, actor, *documentID)
@@ -82,7 +83,7 @@ func pointcrawlLinkAdmission(ctx context.Context, repos ProductCommandRepos, act
 		if ref.RegionID == nil {
 			return spatialAdmission{}, apierr.New(apierr.Invalid, "location links require a region")
 		}
-		if commandDependencyMissing(repos.Locations) {
+		if product.MissingDependency(repos.Locations) {
 			return spatialAdmission{}, apierr.New(apierr.Internal, "location admission required")
 		}
 		location, err := repos.Locations.AdmitLocationLink(ctx, actor, documentID, *ref.RegionID)

@@ -11,7 +11,6 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/google/uuid"
 	"github.com/piyushsatti/chronicler/apps/api/internal/member"
 	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
@@ -27,21 +26,9 @@ type ProductCommands struct {
 	IDs    product.IDGenerator
 }
 
-func commandDependencyMissing(value any) bool {
-	if value == nil {
-		return true
-	}
-	v := reflect.ValueOf(value)
-	switch v.Kind() {
-	case reflect.Pointer, reflect.Interface, reflect.Func, reflect.Map, reflect.Slice, reflect.Chan:
-		return v.IsNil()
-	}
-	return false
-}
-
 func NewProductCommands(runner uow.Runner[ProductCommandRepos], clock product.Clock, ids product.IDGenerator) (*ProductCommands, error) {
 	for _, dependency := range []any{runner, clock, ids} {
-		if commandDependencyMissing(dependency) {
+		if product.MissingDependency(dependency) {
 			return nil, apierr.New(apierr.Internal, "character command dependencies required")
 		}
 	}
@@ -52,11 +39,11 @@ func commandPublicID(value *string) error {
 	if value == nil {
 		return nil
 	}
-	parsed, err := uuid.Parse(*value)
-	if err != nil || parsed == uuid.Nil || !strings.EqualFold(parsed.String(), *value) {
+	canonical, ok := product.CanonicalPublicID(*value)
+	if !ok {
 		return apierr.New(apierr.Invalid, "invalid public id")
 	}
-	*value = parsed.String()
+	*value = canonical
 	return nil
 }
 
@@ -140,7 +127,7 @@ type characterCommandAdmission struct {
 func admitCharacterOperation(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, operation auth.Operation, opName string, meta product.CommandMeta, fingerprint string) (characterCommandAdmission, error) {
 	var admission characterCommandAdmission
 	for _, dependency := range []any{repos.Authority, repos.Policy, repos.Replay} {
-		if commandDependencyMissing(dependency) {
+		if product.MissingDependency(dependency) {
 			return admission, apierr.New(apierr.Internal, "character transaction dependencies required")
 		}
 	}
@@ -200,7 +187,7 @@ func restoreCharacterReplay[T any](claim idempotency.Claim, result *T) error {
 
 func completeCharacterCommand[T any](ctx context.Context, repos ProductCommandRepos, admission characterCommandAdmission, opName, subjectID string, result T, at time.Time) error {
 	if admission.decision.UsedOverride {
-		if commandDependencyMissing(repos.Audit) {
+		if product.MissingDependency(repos.Audit) {
 			return apierr.New(apierr.Internal, "override recorder required")
 		}
 		var err error
@@ -290,7 +277,7 @@ func runOwnedCharacterCommand[T any](
 func admitOwnedCharacterCommand(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, opName, characterID string, meta product.CommandMeta, fingerprint string) (characterCommandAdmission, error) {
 	var admission characterCommandAdmission
 	for _, dependency := range []any{repos.Authority, repos.Policy, repos.Replay, repos.Admissions} {
-		if commandDependencyMissing(dependency) {
+		if product.MissingDependency(dependency) {
 			return admission, apierr.New(apierr.Internal, "character transaction dependencies required")
 		}
 	}
@@ -356,7 +343,7 @@ func validateCharacterGuild(ctx context.Context, repos ProductCommandRepos, acto
 	if guildID == nil {
 		return nil
 	}
-	if commandDependencyMissing(repos.Guilds) {
+	if product.MissingDependency(repos.Guilds) {
 		return apierr.New(apierr.Internal, "guild reader required")
 	}
 	_, err := repos.Guilds.ValidateGuild(ctx, actor, *guildID)
@@ -583,7 +570,7 @@ func (s ProductCommands) RetireCharacter(ctx context.Context, actor auth.Authori
 }
 
 func retireCharacterInTransaction(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, spec RetireCharacterSpec, at time.Time) (CharacterView, error) {
-	if commandDependencyMissing(repos.Withdrawals) || commandDependencyMissing(repos.Producer) {
+	if product.MissingDependency(repos.Withdrawals) || product.MissingDependency(repos.Producer) {
 		return CharacterView{}, apierr.New(apierr.Internal, "character withdrawal dependencies required")
 	}
 	plan, err := lockCharacterRetirementPlan(ctx, repos, spec.CharacterId)
@@ -666,7 +653,7 @@ func (s ProductCommands) DecideVerification(ctx context.Context, actor auth.Auth
 }
 
 func decideCharacterVerification(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, spec DecideVerificationSpec, at time.Time, ids product.IDGenerator) (member.VerificationView, error) {
-	if commandDependencyMissing(repos.Assessments) {
+	if product.MissingDependency(repos.Assessments) {
 		return member.VerificationView{}, apierr.New(apierr.Internal, "assessment writer required")
 	}
 	locked, err := repos.Character.LockDecideVerification(ctx, spec)
@@ -710,7 +697,7 @@ func decideCharacterVerification(ctx context.Context, repos ProductCommandRepos,
 	if err != nil {
 		return member.VerificationView{}, err
 	}
-	if commandDependencyMissing(repos.Producer) {
+	if product.MissingDependency(repos.Producer) {
 		return member.VerificationView{}, apierr.New(apierr.Internal, "character notification producer required")
 	}
 	if err := repos.Producer.Record(ctx, repos.Notice, notification.Event{

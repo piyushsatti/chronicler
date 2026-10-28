@@ -2,7 +2,6 @@ package quest
 
 import (
 	"context"
-	"reflect"
 	"time"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
@@ -20,15 +19,8 @@ type ProductQueries struct {
 
 func NewProductQueries(reads ProductReadRepos, policy *auth.Policy, clock product.Clock, overrideReads auth.OverrideReadObserver) (*ProductQueries, error) {
 	for _, dep := range []any{reads.Quest, reads.Arc, reads.Batch, policy, clock, overrideReads} {
-		if dep == nil {
+		if product.MissingDependency(dep) {
 			return nil, apierr.New(apierr.Internal, "quest query dependencies required")
-		}
-		v := reflect.ValueOf(dep)
-		switch v.Kind() {
-		case reflect.Pointer, reflect.Interface, reflect.Func, reflect.Map, reflect.Slice, reflect.Chan:
-			if v.IsNil() {
-				return nil, apierr.New(apierr.Internal, "quest query dependencies required")
-			}
 		}
 	}
 	return &ProductQueries{Reads: reads, Policy: policy, Clock: clock, OverrideReads: overrideReads}, nil

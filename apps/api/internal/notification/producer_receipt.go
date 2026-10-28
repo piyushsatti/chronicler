@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/idempotency"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 )
 
 const maxNotificationPayloadBytes = 256 << 10
@@ -41,7 +42,7 @@ type producerReceipt struct {
 
 // NewCommandProducer binds the proof buffer and replay repository to one UOW.
 func NewCommandProducer(tx pgx.Tx, replay idempotency.Repository, recipients RecipientComposition) (ProducerRepos, idempotency.Repository, error) {
-	if commandDependencyMissing(tx) || commandDependencyMissing(replay) {
+	if product.MissingDependency(tx) || product.MissingDependency(replay) {
 		return ProducerRepos{}, nil, errors.New("notification command transaction and replay required")
 	}
 	store, err := NewProductPostgres(tx)

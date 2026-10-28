@@ -10,7 +10,6 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/google/uuid"
 	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
@@ -26,21 +25,9 @@ type ProductCommands struct {
 	IDs    product.IDGenerator
 }
 
-func commandDependencyMissing(value any) bool {
-	if value == nil {
-		return true
-	}
-	v := reflect.ValueOf(value)
-	switch v.Kind() {
-	case reflect.Pointer, reflect.Interface, reflect.Func, reflect.Map, reflect.Slice, reflect.Chan:
-		return v.IsNil()
-	}
-	return false
-}
-
 func NewProductCommands(runner uow.Runner[ProductCommandRepos], clock product.Clock, ids product.IDGenerator) (*ProductCommands, error) {
 	for _, dependency := range []any{runner, clock, ids} {
-		if commandDependencyMissing(dependency) {
+		if product.MissingDependency(dependency) {
 			return nil, apierr.New(apierr.Internal, "member command dependencies required")
 		}
 	}
@@ -48,11 +35,11 @@ func NewProductCommands(runner uow.Runner[ProductCommandRepos], clock product.Cl
 }
 
 func commandID(value *string) error {
-	parsed, err := uuid.Parse(*value)
-	if err != nil || parsed == uuid.Nil || !strings.EqualFold(parsed.String(), *value) {
+	canonical, ok := product.CanonicalPublicID(*value)
+	if !ok {
 		return apierr.New(apierr.Invalid, "invalid public id")
 	}
-	*value = parsed.String()
+	*value = canonical
 	return nil
 }
 
@@ -157,7 +144,7 @@ type memberCommandAdmission struct {
 func admitMemberCommand(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, operation string, meta product.CommandMeta, fingerprint string) (memberCommandAdmission, error) {
 	var admission memberCommandAdmission
 	for _, dependency := range []any{repos.Authority, repos.Policy, repos.Replay} {
-		if commandDependencyMissing(dependency) {
+		if product.MissingDependency(dependency) {
 			return admission, apierr.New(apierr.Internal, "member transaction dependencies required")
 		}
 	}
@@ -195,7 +182,7 @@ func recordMemberCommandOverride[T any](ctx context.Context, repos ProductComman
 	if !admission.decision.UsedOverride {
 		return nil
 	}
-	if commandDependencyMissing(repos.Audit) {
+	if product.MissingDependency(repos.Audit) {
 		return apierr.New(apierr.Internal, "override recorder required")
 	}
 	subjects, err := memberOverrideSubjects(operation, spec, result, subjectID)
@@ -668,7 +655,7 @@ type requestDecisionAdmission struct {
 func admitRequestDecision(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, spec DecideRequestSpec, meta product.CommandMeta, fingerprint string) (requestDecisionAdmission, error) {
 	var admission requestDecisionAdmission
 	for _, dependency := range []any{repos.Authority, repos.Policy, repos.Replay, repos.Social, repos.Producer} {
-		if commandDependencyMissing(dependency) {
+		if product.MissingDependency(dependency) {
 			return admission, apierr.New(apierr.Internal, "request transaction dependencies required")
 		}
 	}

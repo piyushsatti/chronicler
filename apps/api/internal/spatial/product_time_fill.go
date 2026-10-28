@@ -17,7 +17,7 @@ type TimeFillWriter struct {
 }
 
 func NewTimeFillWriter(clock product.Clock, connectionRunner db.ConnectionRunnerFactory) (*TimeFillWriter, error) {
-	if clock == nil || commandDependencyMissing(connectionRunner) {
+	if clock == nil || product.MissingDependency(connectionRunner) {
 		return nil, apierr.New(apierr.Internal, "time fill dependencies required")
 	}
 	return &TimeFillWriter{Clock: clock, ConnectionRunner: connectionRunner}, nil
@@ -28,7 +28,7 @@ func (w *TimeFillWriter) FillFuture(ctx context.Context, scope jobs.ExecutionSco
 	if err != nil || days < 1 || days > 366 {
 		return 0, apierr.New(apierr.Invalid, "invalid time fill range")
 	}
-	if w == nil || w.Clock == nil || commandDependencyMissing(w.ConnectionRunner) || scope.Connection == nil {
+	if w == nil || w.Clock == nil || product.MissingDependency(w.ConnectionRunner) || scope.Connection == nil {
 		return 0, apierr.New(apierr.Internal, "time fill dependencies required")
 	}
 	end := start.AddDate(0, 0, int(days))

@@ -4,12 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"reflect"
 	"strings"
 	"time"
 	"unicode/utf8"
 
-	"github.com/google/uuid"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/idempotency"
@@ -25,41 +23,22 @@ type ProductCommands struct {
 
 func NewProductCommands(runner uow.Runner[ProductCommandRepos], clock product.Clock, ids product.IDGenerator) (*ProductCommands, error) {
 	for _, dep := range []any{runner, clock, ids} {
-		if dep == nil {
+		if product.MissingDependency(dep) {
 			return nil, apierr.New(apierr.Internal, "spatial command dependencies required")
-		}
-		v := reflect.ValueOf(dep)
-		switch v.Kind() {
-		case reflect.Pointer, reflect.Interface, reflect.Func, reflect.Map, reflect.Slice, reflect.Chan:
-			if v.IsNil() {
-				return nil, apierr.New(apierr.Internal, "spatial command dependencies required")
-			}
 		}
 	}
 	return &ProductCommands{Runner: runner, Clock: clock, IDs: ids}, nil
-}
-
-func commandDependencyMissing(value any) bool {
-	if value == nil {
-		return true
-	}
-	v := reflect.ValueOf(value)
-	switch v.Kind() {
-	case reflect.Pointer, reflect.Interface, reflect.Func, reflect.Map, reflect.Slice, reflect.Chan:
-		return v.IsNil()
-	}
-	return false
 }
 
 func commandPublicID(value *string) error {
 	if value == nil {
 		return nil
 	}
-	parsed, err := uuid.Parse(*value)
-	if err != nil || parsed == uuid.Nil || !strings.EqualFold(parsed.String(), *value) {
+	canonical, ok := product.CanonicalPublicID(*value)
+	if !ok {
 		return apierr.New(apierr.Invalid, "invalid public id")
 	}
-	*value = parsed.String()
+	*value = canonical
 	return nil
 }
 
@@ -132,7 +111,7 @@ func admitSpatialCommand(ctx context.Context, repos ProductCommandRepos, actor a
 	var admission spatialAdmission
 	var zero auth.Decision
 	for _, dependency := range []any{repos.Authority, repos.Policy, repos.Replay} {
-		if commandDependencyMissing(dependency) {
+		if product.MissingDependency(dependency) {
 			return auth.Authority{}, admission, zero, apierr.New(apierr.Internal, "spatial transaction dependencies required")
 		}
 	}
@@ -172,7 +151,7 @@ func replaySpatialCommand[T any](ctx context.Context, repos ProductCommandRepos,
 
 func completeSpatialCommand[T any](ctx context.Context, repos ProductCommandRepos, claim idempotency.Claim, result T, decision auth.Decision, actor auth.Authority, request auth.Request, subjectID string, at time.Time) error {
 	if decision.UsedOverride {
-		if commandDependencyMissing(repos.Audit) {
+		if product.MissingDependency(repos.Audit) {
 			return apierr.New(apierr.Internal, "override recorder required")
 		}
 		switch view := any(result).(type) {
@@ -547,7 +526,7 @@ func (s ProductCommands) UpsertPointcrawlNode(ctx context.Context, actor auth.Au
 }
 
 func admitPointcrawlNode(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, spec UpsertPointcrawlNodeSpec, locked *UpsertPointcrawlNodeState) (spatialAdmission, error) {
-	if commandDependencyMissing(repos.Containment) {
+	if product.MissingDependency(repos.Containment) {
 		return spatialAdmission{}, apierr.New(apierr.Internal, "containment writer required")
 	}
 	if err := repos.Containment.LockContainment(ctx); err != nil {

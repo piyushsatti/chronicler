@@ -2,7 +2,6 @@ package character
 
 import (
 	"context"
-	"reflect"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -23,15 +22,8 @@ type ProductQueries struct {
 
 func NewProductQueries(reads ProductReadRepos, policy *auth.Policy, clock product.Clock, overrideReads auth.OverrideReadObserver) (*ProductQueries, error) {
 	for _, dependency := range []any{reads.Character, reads.Reference, reads.Batch, reads.DocumentAudience, policy, clock, overrideReads} {
-		if dependency == nil {
+		if product.MissingDependency(dependency) {
 			return nil, apierr.New(apierr.Internal, "character query dependencies required")
-		}
-		value := reflect.ValueOf(dependency)
-		switch value.Kind() {
-		case reflect.Pointer, reflect.Func, reflect.Interface, reflect.Map, reflect.Slice, reflect.Chan:
-			if value.IsNil() {
-				return nil, apierr.New(apierr.Internal, "character query dependencies required")
-			}
 		}
 	}
 	return &ProductQueries{Reads: reads, Policy: policy, Clock: clock, OverrideReads: overrideReads}, nil
