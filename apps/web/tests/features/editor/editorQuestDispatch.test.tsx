@@ -321,3 +321,63 @@ it('leaves series and destinations alone when an edited Quest did not change the
   expect(operations).toEqual(['UpdateQuest']);
   expect(inputs.UpdateQuest.input).not.toHaveProperty('arcId');
 });
+
+it('never creates a second Quest when a save after a failed places write changes or keeps the form', async () => {
+  const operations: string[] = [];
+  let failPlaces = true;
+  server.use(
+    graphql.operation(({ operationName }) => {
+      operations.push(operationName);
+      if (operationName === 'EditorSetQuestPlaces' && failPlaces)
+        return HttpResponse.json({ errors: [{ message: 'Temporary failure' }] });
+      return HttpResponse.json({
+        data: {
+          createQuest: { id, shortCode: 'Q-ONE', updatedAt: '2030-01-01T00:00:00Z' },
+          setQuestPointcrawlLinks: [],
+        },
+      });
+    }),
+  );
+  const initial = initialQuest('new');
+  const client = createTestQueryClient();
+  const { result, rerender } = renderHook(
+    ({ title }: { title: string }) =>
+      useEditorPublish({
+        typeKey: 'quest',
+        mode: 'new',
+        initial,
+        meta: {
+          ...questMeta(sourceTime),
+          title,
+          pointcrawlLinks: [{ pointcrawlNodeId: nodeA, role: 'expected' }],
+        },
+        body: 'Edited brief',
+        onInvalidTitle: () => {},
+        onSuccess: () => {},
+      }),
+    {
+      initialProps: { title: 'Quest' },
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(QueryClientProvider, { client }, children),
+    },
+  );
+  await act(async () => {
+    await expect(result.current.mutateAsync(false)).rejects.toMatchObject({
+      userMessage:
+        'The quest was created, but its expected destinations were not saved. Save again to retry them.',
+    });
+  });
+  rerender({ title: 'Renamed quest' });
+  await act(async () => {
+    await expect(result.current.mutateAsync(false)).rejects.toMatchObject({
+      userMessage: 'The quest was already created. Open it to make further changes.',
+    });
+  });
+  expect(operations.filter((name) => name === 'CreateQuest')).toHaveLength(1);
+  failPlaces = false;
+  rerender({ title: 'Quest' });
+  await act(async () => {
+    await result.current.mutateAsync(false);
+  });
+  expect(operations).toEqual(['CreateQuest', 'EditorSetQuestPlaces', 'EditorSetQuestPlaces']);
+});

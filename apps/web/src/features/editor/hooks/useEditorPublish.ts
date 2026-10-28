@@ -134,7 +134,13 @@ export function useEditorPublish({
     updatedAt: string;
     places: PlaceLink[];
   } | null>(null);
-  return useMutation({
+  // The quest a new-mode save created, so a retry after its places failed never creates another.
+  const createdQuest = useRef<{
+    scopeKey: string;
+    input: string;
+    result: EditorPublishResult;
+  } | null>(null);
+  const mutation = useMutation({
     mutationFn: async (shouldPublish: boolean | undefined) => {
       if (writing.current)
         throw safeAppError('A save is already in progress.', 'editor:save');
@@ -257,7 +263,21 @@ export function useEditorPublish({
               briefBody: body,
               ...(v.arcId ? { arcId: v.arcId } : {}),
             };
-            result = await createQuest(input, replayKey('quest-create', input));
+            const inputSignature = JSON.stringify(input);
+            const created =
+              createdQuest.current?.scopeKey === scopeKey ? createdQuest.current : null;
+            if (created) {
+              if (created.input !== inputSignature)
+                throw safeAppError(
+                  'The quest was already created. Open it to make further changes.',
+                  'editor:quest:places',
+                );
+              result = created.result;
+            } else {
+              result = await createQuest(input, replayKey('quest-create', input));
+              retireReplayKey('quest-create', input);
+              createdQuest.current = { scopeKey, input: inputSignature, result };
+            }
             const places = v.pointcrawlLinks ?? [];
             if (places.length > 0) {
               try {
@@ -267,7 +287,7 @@ export function useEditorPublish({
                   replayKey('quest-create-places', [result.id, places]),
                 );
               } catch {
-                // Saving again replays the same create, so it retries only the places.
+                // Saving again reuses the created quest, so it retries only the places.
                 throw safeAppError(
                   'The quest was created, but its expected destinations were not saved. Save again to retry them.',
                   'editor:quest:places',
@@ -491,4 +511,11 @@ export function useEditorPublish({
         onSuccess(result, publish !== false);
     },
   });
+  return {
+    ...mutation,
+    /** A reset form starts a new quest, which must not reuse the one created before. */
+    forgetCreatedQuest: () => {
+      createdQuest.current = null;
+    },
+  };
 }

@@ -373,6 +373,7 @@ export function useEditorWorkspace({
       setConfirming(null);
       if (action === 'discard') {
         publish.reset();
+        publish.forgetCreatedQuest();
         draft.resetDraft();
       } else if (action === 'reload') void reloadNow();
     },
@@ -385,6 +386,7 @@ export function useEditorWorkspace({
             seriesFromLink: draft.restoredPinned,
             startFresh: () => {
               publish.reset();
+              publish.forgetCreatedQuest();
               setShowPropertyErrors(false);
               draft.resetDraft();
             },
@@ -466,6 +468,7 @@ export function useEditorWorkspace({
                 )
               )
                 return;
+              publish.forgetCreatedQuest();
               draft.recoverDraft(key);
               setStatusMessage(
                 'Recovered an older draft. Copy its title and body before discarding local edits and reloading the live page. Publishing this draft is blocked.',

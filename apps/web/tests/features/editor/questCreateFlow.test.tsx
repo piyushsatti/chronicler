@@ -1,9 +1,18 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import {
+  act,
+  fireEvent,
+  render,
+  renderHook,
+  screen,
+  waitFor,
+  within,
+} from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { delay, graphql, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { server } from '../../../src/mocks/server.js';
 import { EditorRoute } from '../../../src/features/editor/EditorRoute.js';
+import { useEditorPage } from '../../../src/features/editor/hooks/useEditorPage.js';
 import { draftStorageKey } from '../../../src/features/editor/hooks/useEditorDraft.js';
 import { editorHarness, seedEditorSession } from './editor-test-utils.js';
 import { seriesAuthority } from '../../seriesAuthority.js';
@@ -818,7 +827,7 @@ describe('a new quest’s expected destinations', () => {
     expect(links).toHaveLength(0);
   });
 
-  it('says the quest exists when its places fail, and a retry replays the same create', async () => {
+  it('says the quest exists when its places fail, and a retry sends only the same places', async () => {
     seedQuestDraft({ pointcrawlLinks: [{ pointcrawlNodeId: hex, role: 'expected' }] });
     const keys: unknown[] = [];
     server.use(
@@ -839,8 +848,51 @@ describe('a new quest’s expected destinations', () => {
     ).toBeInTheDocument();
     await userEvent.click(screen.getByRole('button', { name: 'Create quest' }));
     await waitFor(() => expect(links).toHaveLength(2));
-    expect(keys).toHaveLength(2);
-    expect(keys[1]).toBe(keys[0]);
+    expect(keys).toHaveLength(1);
     expect(links[1]!.key).toBe(links[0]!.key);
+  });
+
+  it.each([
+    ['a different', 'A different quest', 'Climb the bell tower.'],
+    ['an identical', 'The Salt Stair', 'Descend the salt stair.'],
+  ])('creates %s new quest after a discarded draft whose places failed', async (_, title, body) => {
+    seedQuestDraft({ pointcrawlLinks: [{ pointcrawlNodeId: hex, role: 'expected' }] });
+    const keys: unknown[] = [];
+    server.use(
+      graphql.mutation('CreateQuest', ({ variables }) => {
+        keys.push((variables.meta as { idempotencyKey?: string }).idempotencyKey);
+        return HttpResponse.json({
+          data: {
+            createQuest: { id: questId, shortCode: 'Q-NEW', updatedAt: '2026-10-15T18:00:00Z' },
+          },
+        });
+      }),
+    );
+    captureLinks(true);
+    const { result } = renderHook(
+      () => useEditorPage({ typeKey: 'quest', mode: 'new' }),
+      editorHarness('/quests/new', '/quests/new'),
+    );
+    const view = () => {
+      if (result.current.status !== 'ready') throw new Error('Expected ready');
+      return result.current.view;
+    };
+    await waitFor(() => expect(view().saveDisabled).toBe(false));
+    const startingMeta = view().meta;
+    act(() => view().onPublish());
+    await waitFor(() =>
+      expect(view().mutationError?.userMessage).toMatch(
+        /The quest was created, but its expected destinations were not saved/,
+      ),
+    );
+    act(() => view().onDiscardDraft?.());
+    act(() => view().acceptConfirm());
+    act(() => {
+      view().setMeta({ ...startingMeta, title });
+      view().setBody(body);
+    });
+    act(() => view().onPublish());
+    await waitFor(() => expect(keys).toHaveLength(2));
+    expect(keys[1]).not.toBe(keys[0]);
   });
 });
