@@ -665,6 +665,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 		"Mutation.setMyAvailability":                  "PLAYER_SELF",
 		"Mutation.setQuestPointcrawlLinks":            "QUEST_DM",
 		"Mutation.setPointcrawlEdge":                  "MAP_STEWARD",
+		"Mutation.setPointcrawlNodeState":             "ADMIN",
 		"Mutation.setUnlockableActive":                "ADMIN",
 		"Mutation.signupForQuest":                     "CHAR_SIGNUP",
 		"Mutation.submitDmProfileForVerification":     "DM_SELF",
@@ -790,7 +791,7 @@ func testPolicyExactSDLInventory(t *testing.T) {
 			}
 		}
 	}
-	if len(expected) != 151 || len(actual) != len(expected) || len(operationRules) != len(expected) {
+	if len(expected) != 152 || len(actual) != len(expected) || len(operationRules) != len(expected) {
 		t.Fatalf("coverage expected%d SDL%d registry%d", len(expected), len(actual), len(operationRules))
 	}
 	p, _, facts := policyTestProvider(t)

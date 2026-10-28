@@ -1460,6 +1460,27 @@ func (r *mutationResolver) UpsertPointcrawlNode(ctx context.Context, mapID strin
 	return toPointcrawlNodeType(view), nil
 }
 
+// SetPointcrawlNodeState is the resolver for the setPointcrawlNodeState field.
+func (r *mutationResolver) SetPointcrawlNodeState(ctx context.Context, mapID string, nodeID string, state PointcrawlNodeState, meta CommandMeta) (*PointcrawlNodeType, error) {
+	if r.Services.SpatialCommands == nil {
+		return nil, fmt.Errorf("spatial commands unavailable")
+	}
+	actor, commandMeta, err := r.mutationActor(ctx, meta)
+	if err != nil {
+		return nil, err
+	}
+	view, err := r.Services.SpatialCommands.SetPointcrawlNodeState(ctx, actor, spatial.SetPointcrawlNodeStateSpec{
+		MapId:  mapID,
+		NodeId: nodeID,
+		State:  toSpatialPointcrawlNodeState(state),
+	}, commandMeta)
+	if err != nil {
+		return nil, err
+	}
+	clearMutationLoaders(ctx)
+	return toPointcrawlNodeType(view), nil
+}
+
 // SetPointcrawlEdge is the resolver for the setPointcrawlEdge field.
 func (r *mutationResolver) SetPointcrawlEdge(ctx context.Context, mapID string, input PointcrawlEdgeInput, meta CommandMeta) (*PointcrawlEdgeType, error) {
 	if r.Services.SpatialCommands == nil {

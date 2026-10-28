@@ -1,0 +1,11 @@
+mutation MapSetNodeState(
+  $mapId: ID!
+  $nodeId: ID!
+  $state: PointcrawlNodeState!
+  $meta: CommandMeta!
+) {
+  setPointcrawlNodeState(mapId: $mapId, nodeId: $nodeId, state: $state, meta: $meta) {
+    id
+    state
+  }
+}

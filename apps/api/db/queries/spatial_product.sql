@@ -20,7 +20,7 @@ LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 -- name: ListProductPointcrawlNodesForMaps :many
 WITH ranked AS (
 SELECT k.ordinality::int AS key_ordinal,(k.value->>'parent_id')::uuid AS parent_id,m.public_id AS map_id,n.public_id AS id,n.name,n.x,n.y,
-       n.created_at,submap.public_id AS submap_id,
+       n.created_at,submap.public_id AS submap_id,n.state,
        COALESCE(sqlc.arg(viewer_admin)::boolean
          AND EXISTS (SELECT 1 FROM pointcrawl_entry_links loc WHERE loc.node_id=n.id AND loc.relation='location')
          AND NOT EXISTS (
@@ -47,11 +47,11 @@ WHERE NOT EXISTS (SELECT 1 FROM pointcrawl_entry_links loc
          sqlc.arg(viewer_admin)::boolean,sqlc.arg(viewer_live_dm)::boolean,sqlc.arg(reader_ids)::uuid[])
    )
 )
-SELECT key_ordinal,parent_id,map_id,true AS parent_exists,id,name,x,y,created_at,submap_id,admin_override
+SELECT key_ordinal,parent_id,map_id,true AS parent_exists,id,name,x,y,created_at,submap_id,state,admin_override
 FROM ranked WHERE rn>row_offset AND rn<=row_offset+row_limit
 UNION ALL
 SELECT k.ordinality::int,(k.value->>'parent_id')::uuid,m.public_id,(m.id IS NOT NULL),
-       NULL::uuid,''::text,0::double precision,0::double precision,NULL::timestamptz,NULL::uuid,false::boolean
+       NULL::uuid,''::text,0::double precision,0::double precision,NULL::timestamptz,NULL::uuid,''::text,false::boolean
 FROM jsonb_array_elements(sqlc.arg(keys)::jsonb) WITH ORDINALITY k(value,ordinality)
 LEFT JOIN maps m ON m.public_id=(k.value->>'parent_id')::uuid
 WHERE NOT EXISTS (SELECT 1 FROM ranked r WHERE r.key_ordinal=k.ordinality AND r.rn>(k.value->>'offset')::int AND r.rn<=((k.value->>'offset')::int+(k.value->>'limit')::int))
@@ -359,7 +359,7 @@ SELECT r.id, r.public_id, r.name, r.kind, r.charter_deadline, r.document_id,
 FROM regions r LEFT JOIN documents d ON d.id=r.document_id
 WHERE r.public_id=sqlc.arg(region_id) FOR UPDATE OF r;
 -- name: LockProductPointcrawlNode :one
-SELECT n.id, n.public_id, n.map_id, n.name, n.x, n.y, n.submap_id, n.created_at,
+SELECT n.id, n.public_id, n.map_id, n.name, n.x, n.y, n.submap_id, n.created_at, n.state,
        m.public_id AS map_public_id,submap.public_id AS submap_public_id
 FROM pointcrawl_nodes n JOIN maps m ON m.id=n.map_id
 LEFT JOIN maps submap ON submap.id=n.submap_id
@@ -422,8 +422,17 @@ WITH input AS (
 ), result_rows AS (
  SELECT * FROM changed UNION ALL SELECT p.* FROM prior p WHERE NOT EXISTS(SELECT 1 FROM changed)
 )
-SELECT r.public_id AS id,m.public_id AS map_id,r.name,r.x,r.y,submap.public_id AS submap_id,r.created_at
+SELECT r.public_id AS id,m.public_id AS map_id,r.name,r.x,r.y,submap.public_id AS submap_id,r.created_at,r.state
 FROM result_rows r JOIN maps m ON m.id=r.map_id LEFT JOIN maps submap ON submap.id=r.submap_id;
+-- name: SetProductPointcrawlNodeState :one
+WITH changed AS (
+ UPDATE pointcrawl_nodes n SET state=sqlc.arg(state)::text
+ FROM maps m
+ WHERE n.public_id=sqlc.arg(node_id)::uuid AND m.id=n.map_id AND m.public_id=sqlc.arg(map_id)::uuid
+ RETURNING n.*
+)
+SELECT c.public_id AS id,m.public_id AS map_id,c.name,c.x,c.y,submap.public_id AS submap_id,c.created_at,c.state
+FROM changed c JOIN maps m ON m.id=c.map_id LEFT JOIN maps submap ON submap.id=c.submap_id;
 -- name: SetProductPointcrawlEdge :one
 WITH input AS (
  SELECT COALESCE(sqlc.narg(edge_id)::uuid,gen_random_uuid()) AS edge_public_id,m.id AS map_internal_id,

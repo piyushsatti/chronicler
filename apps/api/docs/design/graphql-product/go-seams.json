@@ -7023,6 +7023,15 @@
           "owner": "SPA01"
         },
         {
+          "name": "State",
+          "wire_name": "state",
+          "go_type": "string",
+          "wire_type": "PointcrawlNodeState!",
+          "resolver_args": [],
+          "kind": "OBJECT",
+          "owner": "SPA01"
+        },
+        {
           "name": "SubmapId",
           "wire_name": "submapId",
           "go_type": "*string",
@@ -14468,6 +14477,37 @@
         }
       ],
       "owner": "SPA01"
+    },
+    {
+      "name": "SetPointcrawlNodeStateSpec",
+      "package": "spatial",
+      "fields": [
+        {
+          "name": "MapId",
+          "wire_name": "mapId",
+          "go_type": "string",
+          "sdl_type": "ID!",
+          "default": "",
+          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
+        },
+        {
+          "name": "NodeId",
+          "wire_name": "nodeId",
+          "go_type": "string",
+          "sdl_type": "ID!",
+          "default": "",
+          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
+        },
+        {
+          "name": "State",
+          "wire_name": "state",
+          "go_type": "string",
+          "sdl_type": "PointcrawlNodeState!",
+          "default": "",
+          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
+        }
+      ],
+      "owner": "SPA01"
     }
   ],
   "command_states": [
@@ -18226,6 +18266,31 @@
       "owner": "SPA01",
       "lock_order": "Character UUIDs ascending first then Quest UUIDs ascending for signup/withdraw/retire/delete/selection; candidate plans revalidate under locks, bounded whole-action retry; all other primary aggregate lock then own children orderedUUID",
       "policy": "owner/current row and state invariant checked by command, never bypassed by repository"
+    },
+    {
+      "name": "SetPointcrawlNodeStateState",
+      "package": "spatial",
+      "fields": [
+        {
+          "name": "Exists",
+          "go_type": "bool"
+        },
+        {
+          "name": "MapKind",
+          "go_type": "string"
+        },
+        {
+          "name": "RegionID",
+          "go_type": "*string"
+        },
+        {
+          "name": "Node",
+          "go_type": "*spatial.PointcrawlNodeView"
+        }
+      ],
+      "owner": "SPA01",
+      "lock_order": "Character UUIDs ascending first then Quest UUIDs ascending for signup/withdraw/retire/delete/selection; candidate plans revalidate under locks, bounded whole-action retry; all other primary aggregate lock then own children orderedUUID",
+      "policy": "owner/current row and state invariant checked by command, never bypassed by repository"
     }
   ],
   "command_writes": [
@@ -21920,6 +21985,34 @@
       ],
       "owner": "SPA01",
       "meaning": "command validates andnormalizes Spec intoValidatedInput; repository applies onlyownaggregate writes andreturns actualINSERT/UPDATE IDs/times. No guessed generatedID, no foreignwrite orcommit"
+    },
+    {
+      "name": "SetPointcrawlNodeStateWrite",
+      "package": "spatial",
+      "fields": [
+        {
+          "name": "ActorID",
+          "go_type": "string"
+        },
+        {
+          "name": "At",
+          "go_type": "time.Time"
+        },
+        {
+          "name": "Input",
+          "go_type": "spatial.SetPointcrawlNodeStateSpec"
+        },
+        {
+          "name": "Locked",
+          "go_type": "spatial.SetPointcrawlNodeStateState"
+        },
+        {
+          "name": "ValidatedInput",
+          "go_type": "spatial.SetPointcrawlNodeStateSpec"
+        }
+      ],
+      "owner": "SPA01",
+      "meaning": "command validates andnormalizes Spec intoValidatedInput; repository applies onlyownaggregate writes andreturns actualINSERT/UPDATE IDs/times. No guessed generatedID, no foreignwrite orcommit"
     }
   ],
   "additional_types": {
@@ -23710,6 +23803,8 @@
         "StoreUpsertPoi(ctx context.Context, write spatial.UpsertPoiWrite) (spatial.PoiView, error)",
         "LockUpsertPointcrawlNode(ctx context.Context, spec spatial.UpsertPointcrawlNodeSpec) (spatial.UpsertPointcrawlNodeState, error)",
         "StoreUpsertPointcrawlNode(ctx context.Context, write spatial.UpsertPointcrawlNodeWrite) (spatial.PointcrawlNodeView, error)",
+        "LockSetPointcrawlNodeState(ctx context.Context, spec spatial.SetPointcrawlNodeStateSpec) (spatial.SetPointcrawlNodeStateState, error)",
+        "StoreSetPointcrawlNodeState(ctx context.Context, write spatial.SetPointcrawlNodeStateWrite) (spatial.PointcrawlNodeView, error)",
         "ReadMapReference(ctx context.Context, mapID string) (auth.MapRef, error)"
       ],
       "owner": "SPA02",
@@ -28307,6 +28402,24 @@
     {
       "id": "STORE-spatial-UpdateMap",
       "signature": "StoreUpdateMap(ctx context.Context, write spatial.UpdateMapWrite) (spatial.MapView, error)",
+      "interface": "spatial.MapWriteRepository",
+      "provider": "SPA04",
+      "callers": ["SPA06"],
+      "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
+      "spec_owner": "SPA01"
+    },
+    {
+      "id": "LOCK-spatial-SetPointcrawlNodeState",
+      "signature": "LockSetPointcrawlNodeState(ctx context.Context, spec spatial.SetPointcrawlNodeStateSpec) (spatial.SetPointcrawlNodeStateState, error)",
+      "interface": "spatial.MapWriteRepository",
+      "provider": "SPA04",
+      "callers": ["SPA06"],
+      "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
+      "spec_owner": "SPA01"
+    },
+    {
+      "id": "STORE-spatial-SetPointcrawlNodeState",
+      "signature": "StoreSetPointcrawlNodeState(ctx context.Context, write spatial.SetPointcrawlNodeStateWrite) (spatial.PointcrawlNodeView, error)",
       "interface": "spatial.MapWriteRepository",
       "provider": "SPA04",
       "callers": ["SPA06"],

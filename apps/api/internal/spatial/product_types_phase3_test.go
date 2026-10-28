@@ -72,6 +72,7 @@ func TestPhase3TaskSPA01Acceptance(t *testing.T) {
 			reflect.TypeFor[UpdateTimeAnchorSpec](),
 			reflect.TypeFor[UpsertPoiSpec](),
 			reflect.TypeFor[UpsertPointcrawlNodeSpec](),
+			reflect.TypeFor[SetPointcrawlNodeStateSpec](),
 			reflect.TypeFor[ArchonAssignmentsSpec](),
 			reflect.TypeFor[GameCalendarSpec](),
 			reflect.TypeFor[GameDateSpec](),
@@ -108,6 +109,7 @@ func TestPhase3TaskSPA01Acceptance(t *testing.T) {
 			reflect.TypeFor[UpdateTimeAnchorState](),
 			reflect.TypeFor[UpsertPoiState](),
 			reflect.TypeFor[UpsertPointcrawlNodeState](),
+			reflect.TypeFor[SetPointcrawlNodeStateState](),
 			reflect.TypeFor[AssignArchonWrite](),
 			reflect.TypeFor[CreateMapWrite](),
 			reflect.TypeFor[UpdateMapWrite](),
@@ -129,6 +131,7 @@ func TestPhase3TaskSPA01Acceptance(t *testing.T) {
 			reflect.TypeFor[UpdateTimeAnchorWrite](),
 			reflect.TypeFor[UpsertPoiWrite](),
 			reflect.TypeFor[UpsertPointcrawlNodeWrite](),
+			reflect.TypeFor[SetPointcrawlNodeStateWrite](),
 		}
 		types := make(map[string]reflect.Type, len(registered))
 		for _, typ := range registered {
@@ -198,7 +201,7 @@ func TestPhase3TaskSPA01Acceptance(t *testing.T) {
 			return nil
 		}
 		seen := make(map[string]bool)
-		expectedCounts := map[string]int{"dto_registry": 33, "specs": 36, "command_states": 21, "command_writes": 21}
+		expectedCounts := map[string]int{"dto_registry": 33, "specs": 37, "command_states": 22, "command_writes": 22}
 		for section, declarations := range contract {
 			count := 0
 			for _, declaration := range declarations {
@@ -264,7 +267,7 @@ func TestPhase3TaskSPA01Acceptance(t *testing.T) {
 				t.Errorf("PointcrawlAdmission field %d is %s %s, contract requires %s %s", i, actual.Name, actual.Type, field.name, field.typ)
 			}
 		}
-		if len(seen) != 111 || len(types) != 112 {
+		if len(seen) != 114 || len(types) != 115 {
 			t.Fatalf("contract=%d compiled=%d declarations, want 107 owned plus one additional type", len(seen), len(types))
 		}
 		for name := range types {

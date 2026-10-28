@@ -1,0 +1,56 @@
+/*
+ * Hex state (owner decision 2026-10-28): display only. Each state has a shape cue as well
+ * as a colour cue: Locked is hatched and dimmed, Unlocked is left plain, Mapped is outlined.
+ */
+.lockedWash {
+  fill: color-mix(in srgb, var(--color-bg-deep) 55%, transparent);
+}
+.lockedHatch {
+  stroke: color-mix(in srgb, var(--color-text-3) 75%, transparent);
+  stroke-width: 1.5px;
+  vector-effect: non-scaling-stroke;
+}
+/* Locked cells take their hatch from the pattern named in the fill attribute. */
+.stateCell {
+  pointer-events: none;
+}
+.stateCell[data-node-state='UNLOCKED'] {
+  fill: none;
+  stroke: none;
+}
+.stateCell[data-node-state='MAPPED'] {
+  fill: color-mix(in srgb, var(--color-accent) 16%, transparent);
+  stroke: var(--color-accent);
+  stroke-width: 3px;
+}
+.stateRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0;
+}
+.stateName {
+  color: var(--color-text-2);
+  font-size: 12px;
+}
+.stateValue {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--color-text);
+  font-weight: 600;
+}
+.swatch {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  overflow: visible;
+}
+.swatch .stateCell:not([data-node-state='MAPPED']) {
+  stroke: var(--color-text-3);
+  stroke-width: 1px;
+}
+.swatch .stateCell[data-node-state='MAPPED'] {
+  stroke-width: 2px;
+}

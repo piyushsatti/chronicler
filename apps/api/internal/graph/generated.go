@@ -669,6 +669,7 @@ type ComplexityRoot struct {
 		SetMyAvailability                  func(childComplexity int, slots []*AvailabilitySlotInput, meta CommandMeta) int
 		SetMyPrivateNotes                  func(childComplexity int, body string, meta CommandMeta) int
 		SetPointcrawlEdge                  func(childComplexity int, mapID string, input PointcrawlEdgeInput, meta CommandMeta) int
+		SetPointcrawlNodeState             func(childComplexity int, mapID string, nodeID string, state PointcrawlNodeState, meta CommandMeta) int
 		SetQuestPointcrawlLinks            func(childComplexity int, questID string, links []*QuestPointcrawlLinkInput, meta CommandMeta) int
 		SetUnlockableActive                func(childComplexity int, id string, active bool, meta CommandMeta) int
 		SignupForQuest                     func(childComplexity int, questID string, characterID string, meta CommandMeta) int
@@ -784,6 +785,7 @@ type ComplexityRoot struct {
 		LinkedEntries func(childComplexity int, limit int, offset int) int
 		MapID         func(childComplexity int) int
 		Name          func(childComplexity int) int
+		State         func(childComplexity int) int
 		SubmapID      func(childComplexity int) int
 		X             func(childComplexity int) int
 		Y             func(childComplexity int) int
@@ -1302,6 +1304,7 @@ type MutationResolver interface {
 	DeleteRegion(ctx context.Context, regionID string, meta CommandMeta) (*CommandReceipt, error)
 	RestoreRegion(ctx context.Context, regionID string, meta CommandMeta) (*RegionType, error)
 	UpsertPointcrawlNode(ctx context.Context, mapID string, input PointcrawlNodeInput, meta CommandMeta) (*PointcrawlNodeType, error)
+	SetPointcrawlNodeState(ctx context.Context, mapID string, nodeID string, state PointcrawlNodeState, meta CommandMeta) (*PointcrawlNodeType, error)
 	SetPointcrawlEdge(ctx context.Context, mapID string, input PointcrawlEdgeInput, meta CommandMeta) (*PointcrawlEdgeType, error)
 	LinkPointcrawlEntry(ctx context.Context, mapID string, nodeID string, documentID string, relation string, meta CommandMeta) (*PointcrawlEntryLinkType, error)
 	UnlinkPointcrawlEntry(ctx context.Context, mapID string, nodeID string, documentID string, relation string, meta CommandMeta) (*CommandReceipt, error)
@@ -4490,6 +4493,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Mutation.SetPointcrawlEdge(childComplexity, args["mapId"].(string), args["input"].(PointcrawlEdgeInput), args["meta"].(CommandMeta)), true
 
+	case "Mutation.setPointcrawlNodeState":
+		if e.complexity.Mutation.SetPointcrawlNodeState == nil {
+			break
+		}
+
+		args, err := ec.field_Mutation_setPointcrawlNodeState_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Mutation.SetPointcrawlNodeState(childComplexity, args["mapId"].(string), args["nodeId"].(string), args["state"].(PointcrawlNodeState), args["meta"].(CommandMeta)), true
+
 	case "Mutation.setQuestPointcrawlLinks":
 		if e.complexity.Mutation.SetQuestPointcrawlLinks == nil {
 			break
@@ -5228,6 +5243,13 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.PointcrawlNodeType.Name(childComplexity), true
+
+	case "PointcrawlNodeType.state":
+		if e.complexity.PointcrawlNodeType.State == nil {
+			break
+		}
+
+		return e.complexity.PointcrawlNodeType.State(childComplexity), true
 
 	case "PointcrawlNodeType.submapId":
 		if e.complexity.PointcrawlNodeType.SubmapID == nil {
@@ -9388,6 +9410,12 @@ extend type Mutation {
     input: PointcrawlNodeInput!
     meta: CommandMeta!
   ): PointcrawlNodeType!
+  setPointcrawlNodeState(
+    mapId: ID!
+    nodeId: ID!
+    state: PointcrawlNodeState!
+    meta: CommandMeta!
+  ): PointcrawlNodeType!
   setPointcrawlEdge(
     mapId: ID!
     input: PointcrawlEdgeInput!
@@ -9465,6 +9493,15 @@ type MapType {
   pointcrawlEdges(limit: Int! = 200, offset: Int! = 0): [PointcrawlEdgeType!]!
 }
 
+"""
+Admin-set exploration label on a hex. Display only: it does not change who can see or reach the hex.
+"""
+enum PointcrawlNodeState {
+  LOCKED
+  UNLOCKED
+  MAPPED
+}
+
 type PointcrawlEdgeType {
   id: ID!
   mapId: ID!
@@ -9482,6 +9519,7 @@ type PointcrawlNodeType {
   x: Float!
   y: Float!
   name: String!
+  state: PointcrawlNodeState!
   linkedEntries(limit: Int! = 50, offset: Int! = 0): [PointcrawlEntryLinkType!]!
   submapId: ID
   createdAt: DateTime!
@@ -10505,6 +10543,32 @@ func (ec *executionContext) field_Mutation_setPointcrawlEdge_args(ctx context.Co
 		return nil, err
 	}
 	args["meta"] = arg2
+	return args, nil
+}
+
+func (ec *executionContext) field_Mutation_setPointcrawlNodeState_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "mapId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["mapId"] = arg0
+	arg1, err := graphql.ProcessArgField(ctx, rawArgs, "nodeId", ec.unmarshalNID2string)
+	if err != nil {
+		return nil, err
+	}
+	args["nodeId"] = arg1
+	arg2, err := graphql.ProcessArgField(ctx, rawArgs, "state", ec.unmarshalNPointcrawlNodeState2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐPointcrawlNodeState)
+	if err != nil {
+		return nil, err
+	}
+	args["state"] = arg2
+	arg3, err := graphql.ProcessArgField(ctx, rawArgs, "meta", ec.unmarshalNCommandMeta2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐCommandMeta)
+	if err != nil {
+		return nil, err
+	}
+	args["meta"] = arg3
 	return args, nil
 }
 
@@ -26216,6 +26280,8 @@ func (ec *executionContext) fieldContext_MapType_pointcrawlNodes(ctx context.Con
 				return ec.fieldContext_PointcrawlNodeType_y(ctx, field)
 			case "name":
 				return ec.fieldContext_PointcrawlNodeType_name(ctx, field)
+			case "state":
+				return ec.fieldContext_PointcrawlNodeType_state(ctx, field)
 			case "linkedEntries":
 				return ec.fieldContext_PointcrawlNodeType_linkedEntries(ctx, field)
 			case "submapId":
@@ -34587,6 +34653,8 @@ func (ec *executionContext) fieldContext_Mutation_upsertPointcrawlNode(ctx conte
 				return ec.fieldContext_PointcrawlNodeType_y(ctx, field)
 			case "name":
 				return ec.fieldContext_PointcrawlNodeType_name(ctx, field)
+			case "state":
+				return ec.fieldContext_PointcrawlNodeType_state(ctx, field)
 			case "linkedEntries":
 				return ec.fieldContext_PointcrawlNodeType_linkedEntries(ctx, field)
 			case "submapId":
@@ -34605,6 +34673,81 @@ func (ec *executionContext) fieldContext_Mutation_upsertPointcrawlNode(ctx conte
 	}()
 	ctx = graphql.WithFieldContext(ctx, fc)
 	if fc.Args, err = ec.field_Mutation_upsertPointcrawlNode_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _Mutation_setPointcrawlNodeState(ctx context.Context, field graphql.CollectedField) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_Mutation_setPointcrawlNodeState(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return ec.resolvers.Mutation().SetPointcrawlNodeState(rctx, fc.Args["mapId"].(string), fc.Args["nodeId"].(string), fc.Args["state"].(PointcrawlNodeState), fc.Args["meta"].(CommandMeta))
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(*PointcrawlNodeType)
+	fc.Result = res
+	return ec.marshalNPointcrawlNodeType2ᚖgithubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐPointcrawlNodeType(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_Mutation_setPointcrawlNodeState(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Mutation",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			switch field.Name {
+			case "id":
+				return ec.fieldContext_PointcrawlNodeType_id(ctx, field)
+			case "mapId":
+				return ec.fieldContext_PointcrawlNodeType_mapId(ctx, field)
+			case "x":
+				return ec.fieldContext_PointcrawlNodeType_x(ctx, field)
+			case "y":
+				return ec.fieldContext_PointcrawlNodeType_y(ctx, field)
+			case "name":
+				return ec.fieldContext_PointcrawlNodeType_name(ctx, field)
+			case "state":
+				return ec.fieldContext_PointcrawlNodeType_state(ctx, field)
+			case "linkedEntries":
+				return ec.fieldContext_PointcrawlNodeType_linkedEntries(ctx, field)
+			case "submapId":
+				return ec.fieldContext_PointcrawlNodeType_submapId(ctx, field)
+			case "createdAt":
+				return ec.fieldContext_PointcrawlNodeType_createdAt(ctx, field)
+			}
+			return nil, fmt.Errorf("no field named %q was found under type PointcrawlNodeType", field.Name)
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Mutation_setPointcrawlNodeState_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
 		ec.Error(ctx, err)
 		return fc, err
 	}
@@ -37076,6 +37219,50 @@ func (ec *executionContext) fieldContext_PointcrawlNodeType_name(_ context.Conte
 		IsResolver: false,
 		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
 			return nil, errors.New("field of type String does not have child fields")
+		},
+	}
+	return fc, nil
+}
+
+func (ec *executionContext) _PointcrawlNodeType_state(ctx context.Context, field graphql.CollectedField, obj *PointcrawlNodeType) (ret graphql.Marshaler) {
+	fc, err := ec.fieldContext_PointcrawlNodeType_state(ctx, field)
+	if err != nil {
+		return graphql.Null
+	}
+	ctx = graphql.WithFieldContext(ctx, fc)
+	defer func() {
+		if r := recover(); r != nil {
+			ec.Error(ctx, ec.Recover(ctx, r))
+			ret = graphql.Null
+		}
+	}()
+	resTmp, err := ec.ResolverMiddleware(ctx, func(rctx context.Context) (any, error) {
+		ctx = rctx // use context from middleware stack in children
+		return obj.State, nil
+	})
+	if err != nil {
+		ec.Error(ctx, err)
+		return graphql.Null
+	}
+	if resTmp == nil {
+		if !graphql.HasFieldError(ctx, fc) {
+			ec.Errorf(ctx, "must not be null")
+		}
+		return graphql.Null
+	}
+	res := resTmp.(PointcrawlNodeState)
+	fc.Result = res
+	return ec.marshalNPointcrawlNodeState2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐPointcrawlNodeState(ctx, field.Selections, res)
+}
+
+func (ec *executionContext) fieldContext_PointcrawlNodeType_state(_ context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "PointcrawlNodeType",
+		Field:      field,
+		IsMethod:   false,
+		IsResolver: false,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type PointcrawlNodeState does not have child fields")
 		},
 	}
 	return fc, nil
@@ -60895,6 +61082,13 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 			if out.Values[i] == graphql.Null {
 				out.Invalids++
 			}
+		case "setPointcrawlNodeState":
+			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
+				return ec._Mutation_setPointcrawlNodeState(ctx, field)
+			})
+			if out.Values[i] == graphql.Null {
+				out.Invalids++
+			}
 		case "setPointcrawlEdge":
 			out.Values[i] = ec.OperationContext.RootResolverMiddleware(innerCtx, func(ctx context.Context) (res graphql.Marshaler) {
 				return ec._Mutation_setPointcrawlEdge(ctx, field)
@@ -61510,6 +61704,11 @@ func (ec *executionContext) _PointcrawlNodeType(ctx context.Context, sel ast.Sel
 			}
 		case "name":
 			out.Values[i] = ec._PointcrawlNodeType_name(ctx, field, obj)
+			if out.Values[i] == graphql.Null {
+				atomic.AddUint32(&out.Invalids, 1)
+			}
+		case "state":
+			out.Values[i] = ec._PointcrawlNodeType_state(ctx, field, obj)
 			if out.Values[i] == graphql.Null {
 				atomic.AddUint32(&out.Invalids, 1)
 			}
@@ -68906,6 +69105,16 @@ func (ec *executionContext) marshalNPointcrawlEntryLinkType2ᚖgithubᚗcomᚋpi
 func (ec *executionContext) unmarshalNPointcrawlNodeInput2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐPointcrawlNodeInput(ctx context.Context, v any) (PointcrawlNodeInput, error) {
 	res, err := ec.unmarshalInputPointcrawlNodeInput(ctx, v)
 	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) unmarshalNPointcrawlNodeState2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐPointcrawlNodeState(ctx context.Context, v any) (PointcrawlNodeState, error) {
+	var res PointcrawlNodeState
+	err := res.UnmarshalGQL(v)
+	return res, graphql.ErrorOnPath(ctx, err)
+}
+
+func (ec *executionContext) marshalNPointcrawlNodeState2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐPointcrawlNodeState(ctx context.Context, sel ast.SelectionSet, v PointcrawlNodeState) graphql.Marshaler {
+	return v
 }
 
 func (ec *executionContext) marshalNPointcrawlNodeType2githubᚗcomᚋpiyushsattiᚋchroniclerᚋappsᚋapiᚋinternalᚋgraphᚐPointcrawlNodeType(ctx context.Context, sel ast.SelectionSet, v PointcrawlNodeType) graphql.Marshaler {

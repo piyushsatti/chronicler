@@ -19,12 +19,17 @@ import {
 import { isDm } from '../../../auth/roles.js';
 import { useMe } from '../../../hooks/useMe.js';
 import { MapPanelBody } from './MapPanelBody.js';
+import { NodeStateSwatch } from './NodeStateSwatch.js';
+import { useNodeState } from '../hooks/useNodeState.js';
+import { nodeStateLabel, nodeStateMeaning } from '../nodeState.js';
 import styles from '../pages/map.module.css';
+import stateStyles from './nodeState.module.css';
 export function MapNodeDetails(props: MapNodeDetailsProps) {
   const { map, node, maps, onEdit, onReload, region, onClose, onShowOnMap } = props;
   const { pending, error, documentIds, documents, submap, unlink } =
     useMapNodeDetails(props);
   const me = useMe();
+  const hexState = useNodeState(props);
   const [confirming, setConfirming] = useState<{
     documentId: string;
     relation: string;
@@ -96,6 +101,33 @@ export function MapNodeDetails(props: MapNodeDetailsProps) {
         <p className={styles.detailLocation}>{region}</p>
       </header>
       <MapPanelBody>
+        {hexState.hexMap ? (
+          <>
+            <p className={stateStyles.stateRow} data-node-state={hexState.state}>
+              <span className={stateStyles.stateName}>Hex state</span>
+              <span
+                className={stateStyles.stateValue}
+                title={nodeStateMeaning(hexState.state)}
+              >
+                <NodeStateSwatch state={hexState.state} />
+                {nodeStateLabel(hexState.state)}
+              </span>
+              {hexState.canSet ? (
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  pending={hexState.pending}
+                  onClick={() => {
+                    void hexState.cycle();
+                  }}
+                >
+                  Change to {nodeStateLabel(hexState.next)}
+                </Button>
+              ) : null}
+            </p>
+            {hexState.error ? <p role="alert">{hexState.error}</p> : null}
+          </>
+        ) : null}
         <h3 className={styles.linkedHeading}>
           Linked documents <span>{node.linkedEntries.length}</span>
         </h3>

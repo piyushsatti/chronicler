@@ -898,6 +898,7 @@ type PointcrawlNodeType struct {
 	X             float64                    `json:"x"`
 	Y             float64                    `json:"y"`
 	Name          string                     `json:"name"`
+	State         PointcrawlNodeState        `json:"state"`
 	LinkedEntries []*PointcrawlEntryLinkType `json:"linkedEntries"`
 	SubmapID      *string                    `json:"submapId,omitempty"`
 	CreatedAt     time.Time                  `json:"createdAt"`
@@ -1569,6 +1570,64 @@ func (e *MemberSortInput) UnmarshalJSON(b []byte) error {
 }
 
 func (e MemberSortInput) MarshalJSON() ([]byte, error) {
+	var buf bytes.Buffer
+	e.MarshalGQL(&buf)
+	return buf.Bytes(), nil
+}
+
+// Admin-set exploration label on a hex. Display only: it does not change who can see or reach the hex.
+type PointcrawlNodeState string
+
+const (
+	PointcrawlNodeStateLocked   PointcrawlNodeState = "LOCKED"
+	PointcrawlNodeStateUnlocked PointcrawlNodeState = "UNLOCKED"
+	PointcrawlNodeStateMapped   PointcrawlNodeState = "MAPPED"
+)
+
+var AllPointcrawlNodeState = []PointcrawlNodeState{
+	PointcrawlNodeStateLocked,
+	PointcrawlNodeStateUnlocked,
+	PointcrawlNodeStateMapped,
+}
+
+func (e PointcrawlNodeState) IsValid() bool {
+	switch e {
+	case PointcrawlNodeStateLocked, PointcrawlNodeStateUnlocked, PointcrawlNodeStateMapped:
+		return true
+	}
+	return false
+}
+
+func (e PointcrawlNodeState) String() string {
+	return string(e)
+}
+
+func (e *PointcrawlNodeState) UnmarshalGQL(v any) error {
+	str, ok := v.(string)
+	if !ok {
+		return fmt.Errorf("enums must be strings")
+	}
+
+	*e = PointcrawlNodeState(str)
+	if !e.IsValid() {
+		return fmt.Errorf("%s is not a valid PointcrawlNodeState", str)
+	}
+	return nil
+}
+
+func (e PointcrawlNodeState) MarshalGQL(w io.Writer) {
+	fmt.Fprint(w, strconv.Quote(e.String()))
+}
+
+func (e *PointcrawlNodeState) UnmarshalJSON(b []byte) error {
+	s, err := strconv.Unquote(string(b))
+	if err != nil {
+		return err
+	}
+	return e.UnmarshalGQL(s)
+}
+
+func (e PointcrawlNodeState) MarshalJSON() ([]byte, error) {
 	var buf bytes.Buffer
 	e.MarshalGQL(&buf)
 	return buf.Bytes(), nil

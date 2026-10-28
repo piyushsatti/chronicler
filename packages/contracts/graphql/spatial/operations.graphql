@@ -42,6 +42,12 @@ extend type Mutation {
     input: PointcrawlNodeInput!
     meta: CommandMeta!
   ): PointcrawlNodeType!
+  setPointcrawlNodeState(
+    mapId: ID!
+    nodeId: ID!
+    state: PointcrawlNodeState!
+    meta: CommandMeta!
+  ): PointcrawlNodeType!
   setPointcrawlEdge(
     mapId: ID!
     input: PointcrawlEdgeInput!

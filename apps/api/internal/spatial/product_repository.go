@@ -44,6 +44,8 @@ type MapWriteRepository interface {
 	StoreUpsertPoi(ctx context.Context, write UpsertPoiWrite) (PoiView, error)
 	LockUpsertPointcrawlNode(ctx context.Context, spec UpsertPointcrawlNodeSpec) (UpsertPointcrawlNodeState, error)
 	StoreUpsertPointcrawlNode(ctx context.Context, write UpsertPointcrawlNodeWrite) (PointcrawlNodeView, error)
+	LockSetPointcrawlNodeState(ctx context.Context, spec SetPointcrawlNodeStateSpec) (SetPointcrawlNodeStateState, error)
+	StoreSetPointcrawlNodeState(ctx context.Context, write SetPointcrawlNodeStateWrite) (PointcrawlNodeView, error)
 	ReadMapReference(ctx context.Context, mapID string) (auth.MapRef, error)
 }
 

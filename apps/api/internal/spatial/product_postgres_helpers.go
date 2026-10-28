@@ -183,11 +183,12 @@ func mapArchonRow(regionID, memberID pgtype.UUID, grantedAt pgtype.Timestamptz, 
 	return view
 }
 
-func mapPointcrawlNodeRow(id, mapID pgtype.UUID, name string, x, y float64, submapID pgtype.UUID, createdAt pgtype.Timestamptz) PointcrawlNodeView {
+func mapPointcrawlNodeRow(id, mapID pgtype.UUID, name string, x, y float64, submapID pgtype.UUID, createdAt pgtype.Timestamptz, state string) PointcrawlNodeView {
 	view := PointcrawlNodeView{
 		Id:        db.UUIDString(id),
 		MapId:     db.UUIDString(mapID),
 		Name:      name,
+		State:     state,
 		X:         x,
 		Y:         y,
 		CreatedAt: createdAt.Time,

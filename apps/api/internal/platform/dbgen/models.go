@@ -365,6 +365,7 @@ type PointcrawlNode struct {
 	SubmapID  pgtype.Int8        `json:"submap_id"`
 	X         float64            `json:"x"`
 	Y         float64            `json:"y"`
+	State     string             `json:"state"`
 }
 
 type Quest struct {

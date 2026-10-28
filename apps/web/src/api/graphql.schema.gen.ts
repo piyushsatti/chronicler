@@ -901,6 +901,7 @@ export type Mutation = {
   setMyAvailability: Array<AvailabilitySlotType>;
   setMyPrivateNotes: MyPrivateNotesType;
   setPointcrawlEdge: PointcrawlEdgeType;
+  setPointcrawlNodeState: PointcrawlNodeType;
   setQuestPointcrawlLinks: Array<QuestPointcrawlLinkType>;
   setUnlockableActive: UnlockableType;
   signupForQuest: QuestParticipantType;
@@ -1228,6 +1229,14 @@ export type MutationSetPointcrawlEdgeArgs = {
 };
 
 
+export type MutationSetPointcrawlNodeStateArgs = {
+  mapId: Scalars['ID']['input'];
+  meta: CommandMeta;
+  nodeId: Scalars['ID']['input'];
+  state: PointcrawlNodeState;
+};
+
+
 export type MutationSetQuestPointcrawlLinksArgs = {
   links: Array<QuestPointcrawlLinkInput>;
   meta: CommandMeta;
@@ -1546,12 +1555,20 @@ export type PointcrawlNodeInput = {
   y: Scalars['Float']['input'];
 };
 
+/** Admin-set exploration label on a hex. Display only: it does not change who can see or reach the hex. */
+export enum PointcrawlNodeState {
+  Locked = 'LOCKED',
+  Mapped = 'MAPPED',
+  Unlocked = 'UNLOCKED'
+}
+
 export type PointcrawlNodeType = {
   createdAt: Scalars['DateTime']['output'];
   id: Scalars['ID']['output'];
   linkedEntries: Array<PointcrawlEntryLinkType>;
   mapId: Scalars['ID']['output'];
   name: Scalars['String']['output'];
+  state: PointcrawlNodeState;
   submapId?: Maybe<Scalars['ID']['output']>;
   x: Scalars['Float']['output'];
   y: Scalars['Float']['output'];

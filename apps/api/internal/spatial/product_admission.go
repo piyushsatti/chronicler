@@ -143,7 +143,19 @@ func (p *ProductPostgres) lockPointcrawlNode(ctx context.Context, nodeID, mapID 
 	if db.UUIDString(row.MapPublicID) != mapID {
 		return PointcrawlNodeView{}, apierr.New(apierr.Invalid, "node belongs to another map")
 	}
-	return mapPointcrawlNodeRow(row.PublicID, row.MapPublicID, row.Name, row.X, row.Y, row.SubmapPublicID, row.CreatedAt), nil
+	return mapPointcrawlNodeRow(row.PublicID, row.MapPublicID, row.Name, row.X, row.Y, row.SubmapPublicID, row.CreatedAt, row.State), nil
+}
+
+// Pointcrawl node states are admin-set exploration labels on a hex. They are display only: a state
+// never changes who can read or reach the node. The column check in migration 0011 holds the same set.
+const (
+	PointcrawlNodeLocked   = "locked"
+	PointcrawlNodeUnlocked = "unlocked"
+	PointcrawlNodeMapped   = "mapped"
+)
+
+func validPointcrawlNodeState(state string) bool {
+	return state == PointcrawlNodeLocked || state == PointcrawlNodeUnlocked || state == PointcrawlNodeMapped
 }
 
 func validMapGrid(grid string) bool {

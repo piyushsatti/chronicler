@@ -4,7 +4,7 @@ import {
   MAP_ROUTES_STORAGE_KEY,
   PointcrawlViewport,
 } from '../../../src/features/map/components/PointcrawlViewport.js';
-import good from '../../fixtures/wire/map/good.json';
+import good from '../../fixtures/wire/map/goodMap.js';
 
 // These suites cover route drawing; routes are hidden by default, so opt in.
 beforeEach(() => localStorage.setItem(MAP_ROUTES_STORAGE_KEY, 'true'));

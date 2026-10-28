@@ -218,6 +218,12 @@ export type PointcrawlNodeInput = {
   y: number;
 };
 
+/** Admin-set exploration label on a hex. Display only: it does not change who can see or reach the hex. */
+export type PointcrawlNodeState =
+  | 'LOCKED'
+  | 'MAPPED'
+  | 'UNLOCKED';
+
 export type PreviewAudience =
   | 'DM'
   | 'PLAYER';
@@ -1247,7 +1253,7 @@ export type MapAtlasQueryVariables = Exact<{
 }>;
 
 
-export type MapAtlasQuery = { map: { id: string, canEdit: boolean, name: string, atlasCode: string, family: string, grid: string, mapKind: string, assetPath: string | null, regionId: string | null, createdAt: string, pointcrawlNodes: Array<{ id: string, mapId: string, x: number, y: number, name: string, submapId: string | null, createdAt: string, linkedEntries: Array<{ mapId: string, nodeId: string, documentId: string, relation: string, createdAt: string, createdBy: string }> }>, pointcrawlEdges: Array<{ id: string, mapId: string, nodeA: string, nodeB: string, directed: boolean, kind: string, label: string | null, documentId: string | null }> } | null };
+export type MapAtlasQuery = { map: { id: string, canEdit: boolean, name: string, atlasCode: string, family: string, grid: string, mapKind: string, assetPath: string | null, regionId: string | null, createdAt: string, pointcrawlNodes: Array<{ id: string, mapId: string, x: number, y: number, name: string, state: PointcrawlNodeState, submapId: string | null, createdAt: string, linkedEntries: Array<{ mapId: string, nodeId: string, documentId: string, relation: string, createdAt: string, createdBy: string }> }>, pointcrawlEdges: Array<{ id: string, mapId: string, nodeA: string, nodeB: string, directed: boolean, kind: string, label: string | null, documentId: string | null }> } | null };
 
 export type MapAssignmentsQueryVariables = Exact<{
   memberId?: string | null | undefined;
@@ -1360,6 +1366,16 @@ export type MapSaveNodeMutationVariables = Exact<{
 
 
 export type MapSaveNodeMutation = { upsertPointcrawlNode: { id: string } };
+
+export type MapSetNodeStateMutationVariables = Exact<{
+  mapId: string;
+  nodeId: string;
+  state: PointcrawlNodeState;
+  meta: CommandMeta;
+}>;
+
+
+export type MapSetNodeStateMutation = { setPointcrawlNodeState: { id: string, state: PointcrawlNodeState } };
 
 export type MapUnlinkEntryMutationVariables = Exact<{
   mapId: string;

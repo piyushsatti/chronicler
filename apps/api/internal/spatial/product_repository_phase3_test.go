@@ -172,6 +172,9 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 		reflect.TypeFor[UpsertPointcrawlNodeSpec](),
 		reflect.TypeFor[UpsertPointcrawlNodeState](),
 		reflect.TypeFor[UpsertPointcrawlNodeWrite](),
+		reflect.TypeFor[SetPointcrawlNodeStateSpec](),
+		reflect.TypeFor[SetPointcrawlNodeStateState](),
+		reflect.TypeFor[SetPointcrawlNodeStateWrite](),
 	}
 	types := map[string]reflect.Type{
 		"string":                                        reflect.TypeFor[string](),
@@ -258,7 +261,7 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 			methodCount int
 		}{
 			{"MapReadRepository", []int{28}, false, 7},
-			{"MapWriteRepository", []int{29}, false, 23},
+			{"MapWriteRepository", []int{29}, false, 25},
 			{"ProductBatchRepository", []int{30}, false, 7},
 			{"RegionReadRepository", []int{31}, false, 4},
 			{"RegionWriteRepository", []int{32}, false, 14},
@@ -323,8 +326,8 @@ func TestPhase3TaskSPA02Acceptance(t *testing.T) {
 				total += typ.NumMethod()
 			})
 		}
-		if total != 72 {
-			t.Errorf("compiled methods=%d, want 72", total)
+		if total != 74 {
+			t.Errorf("compiled methods=%d, want 74", total)
 		}
 	})
 

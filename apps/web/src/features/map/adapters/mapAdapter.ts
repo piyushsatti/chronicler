@@ -21,6 +21,7 @@ import type {
   MapLinkEntryMutationVariables,
   MapQuestTitlesQuery,
   MapUnlinkEntryMutation,
+  MapSetNodeStateMutation,
 } from '../../../api/graphql.operations.gen.js';
 import { graphqlRequest } from '../../../api/graphql.js';
 import { safeAppError, toAppError } from '../../../errors/toAppError.js';
@@ -41,8 +42,11 @@ import EDGE from './mapSaveEdge.graphql?raw';
 import LINK from './mapLinkEntry.graphql?raw';
 import UNLINK from './mapUnlinkEntry.graphql?raw';
 import QUEST_TITLES from './mapQuestTitles.graphql?raw';
+import NODE_STATE from './mapSetNodeState.graphql?raw';
+import { NODE_STATES, type NodeState } from '../nodeState.js';
 
 const id = z.string().uuid();
+const nodeState = z.enum(NODE_STATES);
 const mapSchema = z.object({
   id,
   canEdit: z.boolean(),
@@ -69,6 +73,7 @@ const nodeSchema = z.object({
   x: z.number().finite(),
   y: z.number().finite(),
   name: z.string(),
+  state: nodeState,
   submapId: id.nullable(),
   createdAt: z.string(),
   linkedEntries: z.array(entrySchema),
@@ -319,6 +324,21 @@ export async function saveEdge(
     meta: { idempotencyKey },
   });
   return parse(z.object({ id }), data.setPointcrawlEdge);
+}
+/** Admin-only: records a hex's display state. The server rejects every other caller. */
+export async function setNodeState(
+  mapId: string,
+  nodeId: string,
+  state: NodeState,
+  idempotencyKey: string,
+) {
+  const data = await graphqlRequest<MapSetNodeStateMutation>(NODE_STATE, {
+    mapId,
+    nodeId,
+    state,
+    meta: { idempotencyKey },
+  });
+  return parse(z.object({ id, state: nodeState }), data.setPointcrawlNodeState);
 }
 export async function changeEntry(
   input: Omit<MapLinkEntryMutationVariables, 'meta'>,

@@ -4,7 +4,7 @@ import { server } from '../../../src/mocks/server.js';
 import { loadMap, loadMapDirectory } from '../../../src/features/map/adapters/mapAdapter.js';
 import { graphBounds } from '../../../src/features/map/components/PointcrawlViewport.js';
 import bad from '../../fixtures/wire/map/bad-missing-field.json';
-import good from '../../fixtures/wire/map/good.json';
+import good from '../../fixtures/wire/map/goodMap.js';
 
 describe('pointcrawl reads', () => {
   it('validates current atlas metadata and server capability', async () => {

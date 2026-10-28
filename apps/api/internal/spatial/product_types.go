@@ -213,6 +213,7 @@ type PointcrawlNodeView struct {
 	Id        string
 	MapId     string
 	Name      string
+	State     string
 	SubmapId  *string
 	X         float64
 	Y         float64
@@ -389,6 +390,12 @@ type UpsertPoiSpec struct {
 type UpsertPointcrawlNodeSpec struct {
 	MapId string
 	Input PointcrawlNodeFields
+}
+
+type SetPointcrawlNodeStateSpec struct {
+	MapId  string
+	NodeId string
+	State  string
 }
 
 type ArchonAssignmentsSpec struct {
@@ -983,6 +990,21 @@ type UpsertPoiWrite struct {
 	DecisionID     *string
 	RevisionID     *string
 	EventKey       *string
+}
+
+type SetPointcrawlNodeStateState struct {
+	Exists   bool
+	MapKind  string
+	RegionID *string
+	Node     *PointcrawlNodeView
+}
+
+type SetPointcrawlNodeStateWrite struct {
+	ActorID        string
+	At             time.Time
+	Input          SetPointcrawlNodeStateSpec
+	Locked         SetPointcrawlNodeStateState
+	ValidatedInput SetPointcrawlNodeStateSpec
 }
 
 type UpsertPointcrawlNodeWrite struct {

@@ -574,7 +574,57 @@ func (p *ProductPostgres) StoreUpsertPointcrawlNode(ctx context.Context, write U
 	if err != nil {
 		return PointcrawlNodeView{}, spatialWriteError(err)
 	}
-	return mapPointcrawlNodeRow(row.ID, row.MapID, row.Name, row.X, row.Y, row.SubmapID, row.CreatedAt), nil
+	return mapPointcrawlNodeRow(row.ID, row.MapID, row.Name, row.X, row.Y, row.SubmapID, row.CreatedAt, row.State), nil
+}
+
+func (p *ProductPostgres) LockSetPointcrawlNodeState(ctx context.Context, spec SetPointcrawlNodeStateSpec) (SetPointcrawlNodeStateState, error) {
+	view, err := p.lockPointcrawlMap(ctx, spec.MapId)
+	if err != nil {
+		return SetPointcrawlNodeStateState{}, err
+	}
+	id, err := spatialPublicID(spec.NodeId)
+	if err != nil {
+		return SetPointcrawlNodeStateState{}, err
+	}
+	row, err := p.queries().LockProductPointcrawlNode(ctx, id)
+	if isNotFound(err) {
+		return SetPointcrawlNodeStateState{}, apierr.New(apierr.NotFound, "pointcrawl node not found")
+	}
+	if err != nil {
+		return SetPointcrawlNodeStateState{}, err
+	}
+	if db.UUIDString(row.MapPublicID) != spec.MapId {
+		return SetPointcrawlNodeStateState{}, apierr.New(apierr.NotFound, "pointcrawl node not found")
+	}
+	node := mapPointcrawlNodeRow(row.PublicID, row.MapPublicID, row.Name, row.X, row.Y, row.SubmapPublicID, row.CreatedAt, row.State)
+	return SetPointcrawlNodeStateState{Exists: true, MapKind: view.MapKind, RegionID: view.RegionId, Node: &node}, nil
+}
+
+func (p *ProductPostgres) StoreSetPointcrawlNodeState(ctx context.Context, write SetPointcrawlNodeStateWrite) (PointcrawlNodeView, error) {
+	if !write.Locked.Exists || write.Locked.Node == nil {
+		return PointcrawlNodeView{}, apierr.New(apierr.NotFound, "pointcrawl node not found")
+	}
+	spec := write.ValidatedInput
+	mapID, err := spatialPublicID(spec.MapId)
+	if err != nil {
+		return PointcrawlNodeView{}, spatialWriteError(err)
+	}
+	nodeID, err := spatialPublicID(spec.NodeId)
+	if err != nil {
+		return PointcrawlNodeView{}, spatialWriteError(err)
+	}
+	row, err := p.queries().SetProductPointcrawlNodeState(ctx, dbgen.SetProductPointcrawlNodeStateParams{
+		State:  spec.State,
+		NodeID: nodeID,
+		MapID:  mapID,
+	})
+	if isNotFound(err) {
+		return PointcrawlNodeView{}, apierr.New(apierr.NotFound, "pointcrawl node not found")
+	}
+	if err != nil {
+		return PointcrawlNodeView{}, spatialWriteError(err)
+	}
+	return mapPointcrawlNodeRow(row.ID, row.MapID, row.Name, row.X, row.Y, row.SubmapID, row.CreatedAt, row.State), nil
 }
 
 func (p *ProductPostgres) LockSetPointcrawlEdge(ctx context.Context, spec SetPointcrawlEdgeSpec) (SetPointcrawlEdgeState, error) {

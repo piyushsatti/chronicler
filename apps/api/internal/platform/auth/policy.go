@@ -379,6 +379,7 @@ var operationRules = map[Operation]policyRule{
 	"Mutation.setMemberRolesBatch":                ruleAdmin,
 	"Mutation.setMyAvailability":                  rulePlayerSelf,
 	"Mutation.setPointcrawlEdge":                  ruleMap,
+	"Mutation.setPointcrawlNodeState":             ruleAdmin,
 	"Mutation.setQuestPointcrawlLinks":            ruleQuest,
 	"Mutation.setUnlockableActive":                ruleAdmin,
 	"Mutation.signupForQuest":                     ruleSignup,

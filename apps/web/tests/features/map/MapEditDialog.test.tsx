@@ -8,7 +8,7 @@ import type { MapEdit } from '../../../src/features/map/hooks/useMapEdit.js';
 import * as adapter from '../../../src/features/map/adapters/mapAdapter.js';
 import { server } from '../../../src/mocks/server.js';
 import { renderWithProviders } from '../../test-utils.js';
-import good from '../../fixtures/wire/map/good.json';
+import good from '../../fixtures/wire/map/goodMap.js';
 
 const map = { ...good, canEdit: true };
 const region = { id: 'ffffffff-ffff-4fff-8fff-ffffffffffff', name: 'Coast', canCreateMap: true, kind: 'charter', charterDeadline: null, documentId: null, createdAt: good.createdAt };

@@ -498,7 +498,7 @@ func (p *ProductPostgres) readBatchPointcrawlNodes(ctx context.Context, actor au
 			continue
 		}
 		overridden = overridden || row.AdminOverride
-		lists[idx] = append(lists[idx], mapPointcrawlNodeRow(row.ID, row.MapID, row.Name, row.X, row.Y, row.SubmapID, row.CreatedAt))
+		lists[idx] = append(lists[idx], mapPointcrawlNodeRow(row.ID, row.MapID, row.Name, row.X, row.Y, row.SubmapID, row.CreatedAt, row.State))
 	}
 	for i := range out {
 		if !parentExists[i] {

@@ -525,6 +525,33 @@ func (s ProductCommands) UpsertPointcrawlNode(ctx context.Context, actor auth.Au
 	})
 }
 
+// SetPointcrawlNodeState records an admin-set display state on one hex. Authority is admin-only
+// (ruleAdmin), decided before the node is looked up so non-admins cannot probe node existence.
+func (s ProductCommands) SetPointcrawlNodeState(ctx context.Context, actor auth.Authority, spec SetPointcrawlNodeStateSpec, meta product.CommandMeta) (PointcrawlNodeView, error) {
+	if !validPointcrawlNodeState(spec.State) {
+		return PointcrawlNodeView{}, apierr.New(apierr.Invalid, "invalid pointcrawl node state")
+	}
+	for _, id := range []*string{&spec.MapId, &spec.NodeId} {
+		if err := commandPublicID(id); err != nil {
+			return PointcrawlNodeView{}, err
+		}
+	}
+	request, err := auth.ForOperation("Mutation.setPointcrawlNodeState")
+	if err != nil {
+		return PointcrawlNodeView{}, err
+	}
+	return runSpatialCommand(ctx, s, actor, "setPointcrawlNodeState", request, spec, meta, spec.NodeId, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (PointcrawlNodeView, error) {
+		locked, err := repos.Map.LockSetPointcrawlNodeState(ctx, spec)
+		if err != nil {
+			return PointcrawlNodeView{}, err
+		}
+		if !locked.Exists {
+			return PointcrawlNodeView{}, apierr.New(apierr.NotFound, "pointcrawl node not found")
+		}
+		return repos.Map.StoreSetPointcrawlNodeState(ctx, SetPointcrawlNodeStateWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked})
+	})
+}
+
 func admitPointcrawlNode(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority, spec UpsertPointcrawlNodeSpec, locked *UpsertPointcrawlNodeState) (spatialAdmission, error) {
 	if product.MissingDependency(repos.Containment) {
 		return spatialAdmission{}, apierr.New(apierr.Internal, "containment writer required")

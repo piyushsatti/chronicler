@@ -1488,6 +1488,11 @@
           "declaration": "DOUBLE PRECISION NOT NULL",
           "source": "apps/api/db/migrations/0001_init.sql",
           "stage": "squash_a1"
+        },
+        "state": {
+          "declaration": "TEXT DEFAULT 'LOCKED'::TEXT NOT NULL CHECK (state IN ('locked', 'unlocked', 'mapped'))",
+          "source": "apps/api/db/migrations/0011_pointcrawl_node_state.sql",
+          "stage": "m11_pointcrawl_node_state"
         }
       },
       "baseline_ddl": "\n\n    created_at timestamp with time zone NOT NULL,\n    id bigint NOT NULL,\n    map_id bigint NOT NULL,\n    name text NOT NULL,\n    public_id uuid DEFAULT gen_random_uuid() NOT NULL,\n    submap_id bigint,\n    x double precision NOT NULL,\n    y double precision NOT NULL\n"

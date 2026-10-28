@@ -11,7 +11,7 @@ import {
   PointcrawlViewport,
 } from '../../../src/features/map/components/PointcrawlViewport.js';
 import { renderWithProviders } from '../../test-utils.js';
-import good from '../../fixtures/wire/map/good.json';
+import good from '../../fixtures/wire/map/goodMap.js';
 
 const [gate, tower, river] = good.pointcrawlNodes as [
   (typeof good.pointcrawlNodes)[number],
@@ -355,7 +355,7 @@ describe('Hex maps', () => {
     expect(graph().querySelector('[data-map-place-number]')).toHaveTextContent(
       'LFC1001',
     );
-    fireEvent.pointerMove(within(graph()).getByRole('button', { name: 'LFC1102' }));
+    fireEvent.pointerMove(within(graph()).getByRole('button', { name: 'LFC1102, Locked' }));
     const hover = graph().querySelector('[data-map-ring="hover"]')!;
     expect(hover.querySelector('polygon')).not.toBeNull();
     expect(
@@ -488,7 +488,7 @@ describe('Hex map review fixes', () => {
 
   it('shows the ring and code of a keyboard-focused hex and clears them on blur', () => {
     render(<PointcrawlViewport map={hexMap} selectedId={null} onSelect={vi.fn()} />);
-    const pin = within(graph()).getByRole('button', { name: 'LFC102' });
+    const pin = within(graph()).getByRole('button', { name: 'LFC102, Locked' });
     expect(graph().querySelector('[data-map-ring]')).toBeNull();
     fireEvent.focus(pin);
     expect(graph().querySelector('[data-map-ring="hover"]')).toHaveAttribute(

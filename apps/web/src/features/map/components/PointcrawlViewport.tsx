@@ -26,6 +26,8 @@ import { MapKey } from './MapKey.js';
 import { mapAssetHref } from '../assetHref.js';
 import { countPlaces, isHexMap, placeWords } from '../mapWords.js';
 import { Checkbox } from '../../../components/primitives/Checkbox.js';
+import { LockedHatchPattern, NodeStateCell } from './NodeStateSwatch.js';
+import { nodeStateLabel } from '../nodeState.js';
 
 export { mapAssetHref };
 
@@ -301,6 +303,9 @@ export function PointcrawlViewport({
     [points, pixelsPerUnit, hexMap],
   );
   const unit = 1 / pixelsPerUnit;
+  // Locked hexes are hatched; the stripes scale with the cell so they read at any zoom.
+  const hatchId = `${marker}-locked`;
+  const hatchSize = Math.max(1, (radii.values().next().value ?? 16) / 3);
   const showArt = Boolean(assetHref && !assetFailed);
   /** The place under a client point, using the viewBox's default xMidYMid meet fit. */
   const svgPointAt = (svg: SVGSVGElement, clientX: number, clientY: number) => {
@@ -567,6 +572,7 @@ export function PointcrawlViewport({
               >
                 <path d="M 0 0 L 10 5 L 0 10 z" fill="context-stroke" />
               </marker>
+              {hexMap ? <LockedHatchPattern id={hatchId} size={hatchSize} /> : null}
             </defs>
             {assetHref && showArt ? (
               <image
@@ -643,11 +649,14 @@ export function PointcrawlViewport({
                 <g
                   key={node.id}
                   role="button"
-                  aria-label={node.name}
+                  aria-label={
+                    hexMap ? `${node.name}, ${nodeStateLabel(node.state)}` : node.name
+                  }
                   aria-pressed={node.id === selectedId}
                   tabIndex={0}
                   data-node-id={node.id}
                   data-node-index={index}
+                  data-node-state={hexMap ? node.state : undefined}
                   className={styles.node}
                   transform={`translate(${node.x} ${mapY(node.y)})`}
                   onClick={() => onSelect(node.id)}
@@ -657,13 +666,22 @@ export function PointcrawlViewport({
                     setFocusedId((current) => (current === node.id ? null : current))
                   }
                 >
-                  <title>{node.name}</title>
+                  <title>
+                    {hexMap ? `${node.name} (${nodeStateLabel(node.state)})` : node.name}
+                  </title>
                   {/* A hex map is clicked by its whole cell; the ring marks the place. */}
                   {hexMap ? (
-                    <polygon
-                      className={styles.hexTarget}
-                      points={flatTopHexagon(radii.get(node.id) ?? 0)}
-                    />
+                    <>
+                      <NodeStateCell
+                        state={node.state}
+                        points={flatTopHexagon(radii.get(node.id) ?? 0)}
+                        hatchId={hatchId}
+                      />
+                      <polygon
+                        className={styles.hexTarget}
+                        points={flatTopHexagon(radii.get(node.id) ?? 0)}
+                      />
+                    </>
                   ) : (
                     <>
                       <circle r={MAP_PIN_RADIUS * unit} vectorEffect="non-scaling-stroke" />
@@ -766,7 +784,9 @@ export function PointcrawlViewport({
               x {cursor.x}, y {cursor.y}
             </output>
           ) : null}
-          {showRoutes && map.edges.length ? <MapKey edges={map.edges} /> : null}
+          {(showRoutes && map.edges.length) || hexMap ? (
+            <MapKey edges={showRoutes ? map.edges : []} hexStates={hexMap} />
+          ) : null}
         </div>
         <div className={styles.mapMetaRow}>
           <p className={styles.canvasHint}>

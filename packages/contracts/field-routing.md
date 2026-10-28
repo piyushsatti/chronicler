@@ -225,6 +225,7 @@ The following164 roots are the accepted business API. Introspection fields are e
 | Mutation.setMemberRolesBatch                | member-operations.graphql       |
 | Mutation.setMyAvailability                  | member-operations.graphql       |
 | Mutation.setPointcrawlEdge                  | spatial-operations.graphql      |
+| Mutation.setPointcrawlNodeState             | spatial-operations.graphql      |
 | Mutation.setQuestPointcrawlLinks            | quest/operations.graphql        |
 | Mutation.setUnlockableActive                | member-operations.graphql       |
 | Mutation.signupForQuest                     | quest-operations.graphql        |

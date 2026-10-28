@@ -13,7 +13,7 @@ import {
 } from '../../../src/features/map/mapWords.js';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
 import { renderWithProviders } from '../../test-utils.js';
-import good from '../../fixtures/wire/map/good.json';
+import good from '../../fixtures/wire/map/goodMap.js';
 import member from '../../fixtures/wire/me/good.json';
 
 const first = good.pointcrawlNodes[0]!;

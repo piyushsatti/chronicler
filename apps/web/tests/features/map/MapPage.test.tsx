@@ -25,7 +25,7 @@ import {
   RegionsDirectoryPage,
 } from '../../../src/features/map/pages/RegionHubPage.js';
 import { renderWithProviders } from '../../test-utils.js';
-import good from '../../fixtures/wire/map/good.json';
+import good from '../../fixtures/wire/map/goodMap.js';
 import member from '../../fixtures/wire/me/good.json';
 
 // These suites cover route drawing; routes are hidden by default, so opt in.

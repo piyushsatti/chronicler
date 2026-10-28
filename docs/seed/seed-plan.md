@@ -154,8 +154,10 @@ default `DATABASE_URL`, can be added if wanted.
 1. **Calendar.** The archive has no calendar. `game_calendar` is a singleton
    row already inserted by `local.sql`, so a seed insert would be skipped
    anyway; a calendar would be set with the `updateGameCalendar` mutation.
-2. **Hex state.** Locked / Unlocked / Mapped has no column. Day zero should
-   have only LFC1001 and ring 1 unlocked.
+2. **Hex state.** Migration 0011 adds `pointcrawl_nodes.state` (locked /
+   unlocked / mapped, default locked) and admins set it with
+   `setPointcrawlNodeState`. The seed does not set it yet, so every seeded hex
+   starts locked. Day zero should have only LFC1001 and ring 1 unlocked.
 3. **Hex tile images.** 161 tile image URLs exist (in `Untitled.md`) but nodes
    have no per-node image column, and the map has no background image yet.
 4. **Magic item recipes and relics.** 516 recipes and the relic economy have no

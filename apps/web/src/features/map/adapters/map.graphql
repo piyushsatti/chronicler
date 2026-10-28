@@ -16,6 +16,7 @@ query MapAtlas($atlasCode: String!, $limit: Int! = 200, $offset: Int! = 0) {
       x
       y
       name
+      state
       submapId
       createdAt
       linkedEntries(limit: 50, offset: 0) {

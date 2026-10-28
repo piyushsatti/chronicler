@@ -16,6 +16,7 @@
       "x": 120,
       "y": 100,
       "name": "Lightfall Gate",
+      "state": "UNLOCKED",
       "submapId": null,
       "createdAt": "2024-01-01T00:00:00Z",
       "linkedEntries": []
@@ -26,6 +27,7 @@
       "x": 240,
       "y": 0,
       "name": "Old Watchtower",
+      "state": "MAPPED",
       "submapId": null,
       "createdAt": "2024-01-01T00:00:00Z",
       "linkedEntries": []
@@ -36,6 +38,7 @@
       "x": 360,
       "y": 100,
       "name": "River Crossing",
+      "state": "LOCKED",
       "submapId": null,
       "createdAt": "2024-01-01T00:00:00Z",
       "linkedEntries": []

@@ -1510,8 +1510,37 @@ func toPointcrawlNodeType(v spatial.PointcrawlNodeView) *PointcrawlNodeType {
 		X:         v.X,
 		Y:         v.Y,
 		Name:      v.Name,
+		State:     toPointcrawlNodeState(v.State),
 		SubmapID:  v.SubmapId,
 		CreatedAt: v.CreatedAt,
+	}
+}
+
+// toPointcrawlNodeState maps the stored lower-case state onto the wire enum. An unrecognized
+// stored value cannot pass the column check, so it falls back to the column default.
+func toPointcrawlNodeState(v string) PointcrawlNodeState {
+	switch v {
+	case spatial.PointcrawlNodeUnlocked:
+		return PointcrawlNodeStateUnlocked
+	case spatial.PointcrawlNodeMapped:
+		return PointcrawlNodeStateMapped
+	default:
+		return PointcrawlNodeStateLocked
+	}
+}
+
+// toSpatialPointcrawlNodeState maps the wire enum onto the stored value. gqlgen has already
+// rejected values outside the enum; anything else maps to "" and the command rejects it.
+func toSpatialPointcrawlNodeState(v PointcrawlNodeState) string {
+	switch v {
+	case PointcrawlNodeStateLocked:
+		return spatial.PointcrawlNodeLocked
+	case PointcrawlNodeStateUnlocked:
+		return spatial.PointcrawlNodeUnlocked
+	case PointcrawlNodeStateMapped:
+		return spatial.PointcrawlNodeMapped
+	default:
+		return ""
 	}
 }
 
