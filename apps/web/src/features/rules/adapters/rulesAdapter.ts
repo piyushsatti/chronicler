@@ -14,6 +14,7 @@ import {
   rulesListWireSchema,
 } from './rules.wire.schema.js';
 import { cardExcerpt } from '../../../utils/markdownText.js';
+import { acceptCompletePage } from '../../../utils/completePages.js';
 
 export type RuleListItemView = {
   id: string;
@@ -142,20 +143,9 @@ export async function loadRulesHub(session: RulesReadSession): Promise<RulesHubV
       if (!result.ok) throw toAppError({ failure: result.failure }, 'rules:list');
       const page = result.data;
       const items = [...page.guides, ...page.rulings];
-      if (
-        page.total > 2_147_483_647 ||
-        (total !== undefined && page.total !== total) ||
-        items.length > 100 ||
-        ids.size + items.length > page.total ||
-        (items.length < 100 && ids.size + items.length < page.total)
-      )
+      const pageIds = items.map((item) => item.id);
+      if (!acceptCompletePage(ids, total, { total: page.total, ids: pageIds }))
         throw toAppError({ failure: 'InvalidWire' }, 'rules:list-pages');
-      for (const item of items) {
-        const id = item.id.toLowerCase();
-        if (ids.has(id))
-          throw toAppError({ failure: 'InvalidWire' }, 'rules:list-pages');
-        ids.add(id);
-      }
       guides.push(...page.guides);
       rulings.push(...page.rulings);
       total = page.total;

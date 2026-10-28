@@ -10,6 +10,7 @@ import AUTHOR_NAME_QUERY from './chronicleAuthorName.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
 import { nextCivilDay } from '../../../utils/format.js';
 import { cardExcerpt } from '../../../utils/markdownText.js';
+import { acceptCompletePage } from '../../../utils/completePages.js';
 import type { AdapterResult } from '../../../errors/types.js';
 import {
   chronicleDetailWireSchema,
@@ -210,21 +211,10 @@ export async function loadChronicleList(
       const result = parseChronicleList(data.documents, data.gameCalendar.definition);
       if (!result.ok) throw toAppError({ failure: result.failure }, 'chronicle:list');
       const page = result.data;
-      if (
-        page.total > 2_147_483_647 ||
-        (total !== undefined && page.total !== total) ||
-        page.items.length > 100 ||
-        items.length + page.items.length > page.total ||
-        (page.items.length < 100 && items.length + page.items.length < page.total)
-      )
+      const pageIds = page.items.map((item) => item.id);
+      if (!acceptCompletePage(ids, total, { total: page.total, ids: pageIds }))
         throw toAppError({ failure: 'InvalidWire' }, 'chronicle:list-pages');
-      for (const item of page.items) {
-        const id = item.id.toLowerCase();
-        if (ids.has(id))
-          throw toAppError({ failure: 'InvalidWire' }, 'chronicle:list-pages');
-        ids.add(id);
-        items.push(item);
-      }
+      items.push(...page.items);
       total = page.total;
       eraAbbrev = page.eraAbbrev;
     } while (items.length < total);

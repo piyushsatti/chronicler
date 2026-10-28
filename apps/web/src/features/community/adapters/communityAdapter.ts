@@ -9,6 +9,7 @@ import DIRECTORY_QUERY from './communityDirectory.graphql?raw';
 import CHARACTERS_QUERY from './communityCharacters.graphql?raw';
 import REGIONS_QUERY from './communityRegions.graphql?raw';
 import { toAppError } from '../../../errors/toAppError.js';
+import { acceptCompletePage } from '../../../utils/completePages.js';
 import {
   communityCharactersWireSchema,
   communityDirectoryWireSchema,
@@ -79,21 +80,10 @@ export async function loadCommunityHub(
       if (!parsed.success)
         throw toAppError({ failure: 'InvalidWire' }, 'community:hub');
       const page = parsed.data;
-      if (
-        page.total > 2_147_483_647 ||
-        (total !== undefined && page.total !== total) ||
-        page.entries.length > 100 ||
-        entries.length + page.entries.length > page.total ||
-        (page.entries.length < 100 && entries.length + page.entries.length < page.total)
-      )
+      const pageIds = page.entries.map((entry) => entry.memberId);
+      if (!acceptCompletePage(ids, total, { total: page.total, ids: pageIds }))
         throw toAppError({ failure: 'InvalidWire' }, 'community:hub-pages');
-      for (const entry of page.entries) {
-        const id = entry.memberId.toLowerCase();
-        if (ids.has(id))
-          throw toAppError({ failure: 'InvalidWire' }, 'community:hub-pages');
-        ids.add(id);
-        entries.push(mapEntry(entry));
-      }
+      entries.push(...page.entries.map(mapEntry));
       total = page.total;
     } while (entries.length < total);
     return hubFromEntries(entries, total);
