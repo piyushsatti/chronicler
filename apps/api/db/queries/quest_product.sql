@@ -468,7 +468,9 @@ WHERE quest_id = @quest_id::bigint AND character_id = @character_id::bigint
 RETURNING quest_id, member_id, character_id, status, manual, created_at, updated_at;
 
 -- name: ProductQuestRejoinParticipant :one
-UPDATE quest_participants SET status = @status::text, manual = false,
+-- Rejoining is always an ordinary signup, never a DM pick: clear any dm_picked left over
+-- from a prior DM selection of this same character, or it would wrongly stay bump-immune.
+UPDATE quest_participants SET status = @status::text, manual = false, dm_picked = false,
        created_at = @at::timestamptz, updated_at = @at::timestamptz
 WHERE quest_id = @quest_id::bigint AND character_id = @character_id::bigint AND status = 'withdrawn'
 RETURNING quest_id, member_id, character_id, status, manual, created_at, updated_at;

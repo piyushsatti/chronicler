@@ -315,3 +315,38 @@ func TestDMPickedSeatNeverBumped(t *testing.T) {
 	}
 	bumpCapacityAfterDMPick(t, f, 2, "full")
 }
+
+// TestDMPickedSeatRejoinClearsImmunity checks that bump immunity does not survive a
+// withdrawal and rejoin: rejoining is always an ordinary signup, never a DM pick.
+func TestDMPickedSeatRejoinClearsImmunity(t *testing.T) {
+	f := bumpQuest(t, "last_game_played", 1)
+	picked, newcomer := bumpPlayer(t, f), bumpPlayer(t, f)
+	bumpPlayed(t, f, picked, 2)
+
+	if _, err := f.fixture.Pool.Exec(context.Background(), `INSERT INTO quest_participants(quest_id,character_id,member_id,status)
+		SELECT q.id,c.id,c.owner_id,'waitlisted' FROM quests q,characters c WHERE q.public_id=$1::uuid AND c.public_id=$2::uuid`, f.questID, picked); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.commands.SelectQuestParticipants(context.Background(), f.actor, SelectQuestParticipantsSpec{QuestId: f.questID, CharacterIds: []string{picked}}, product.CommandMeta{IdempotencyKey: uuid.NewString()}); err != nil {
+		t.Fatal(err)
+	}
+	if got := bumpStatus(t, f, picked); got != "signed_up" {
+		t.Fatalf("picked status=%s want signed_up", got)
+	}
+
+	if _, err := f.commands.WithdrawFromQuest(context.Background(), questCharacterActor(t, f, picked), WithdrawFromQuestSpec{QuestId: f.questID, CharacterId: picked}, product.CommandMeta{IdempotencyKey: uuid.NewString()}); err != nil {
+		t.Fatal(err)
+	}
+	if got := bumpSignup(t, f, picked).Status; got != "signed_up" {
+		t.Fatalf("rejoin returned %s, want signed_up", got)
+	}
+
+	if got := bumpSignup(t, f, newcomer).Status; got != "signed_up" {
+		t.Fatalf("newcomer signup returned %s, want signed_up", got)
+	}
+	if got := bumpStatus(t, f, picked); got != "waitlisted" {
+		t.Fatalf("rejoined seat status=%s, want waitlisted (immunity must not survive a rejoin)", got)
+	}
+	// The real DM pick earlier synced Discord (revision bumps to 1, see bumpCapacityAfterDMPick).
+	bumpCapacityAfterDMPick(t, f, 1, "full")
+}

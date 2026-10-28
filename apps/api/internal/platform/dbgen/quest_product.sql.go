@@ -2813,7 +2813,7 @@ func (q *Queries) ProductQuestRegionInternalIDs(ctx context.Context, regionIds [
 }
 
 const productQuestRejoinParticipant = `-- name: ProductQuestRejoinParticipant :one
-UPDATE quest_participants SET status = $1::text, manual = false,
+UPDATE quest_participants SET status = $1::text, manual = false, dm_picked = false,
        created_at = $2::timestamptz, updated_at = $2::timestamptz
 WHERE quest_id = $3::bigint AND character_id = $4::bigint AND status = 'withdrawn'
 RETURNING quest_id, member_id, character_id, status, manual, created_at, updated_at
@@ -2836,6 +2836,8 @@ type ProductQuestRejoinParticipantRow struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
+// Rejoining is always an ordinary signup, never a DM pick: clear any dm_picked left over
+// from a prior DM selection of this same character, or it would wrongly stay bump-immune.
 func (q *Queries) ProductQuestRejoinParticipant(ctx context.Context, arg ProductQuestRejoinParticipantParams) (ProductQuestRejoinParticipantRow, error) {
 	row := q.db.QueryRow(ctx, productQuestRejoinParticipant,
 		arg.Status,
