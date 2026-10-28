@@ -157,7 +157,6 @@ export function QuestDetailPage(): React.JSX.Element {
     ...(quest.genres.length ? [{ key: 'Genres', value: quest.genres.join(', ') }] : []),
   ];
 
-
   const castPanel = (
     <div className={styles.cardGrid}>
       <Card as="section" pad={4} aria-label="Roster">
@@ -282,12 +281,26 @@ export function QuestDetailPage(): React.JSX.Element {
           ))}
         </dl>
       </Card>
-      {quest.hookText ? (
+      {quest.hookText || quest.tags.length > 0 ? (
         <div className={styles.cardGrid}>
-          <Card as="section" pad={5} aria-label="Quest description">
-            <h2 className={`type-title ${styles.cardTitle}`}>Quest description</h2>
-            <ContentRenderer body={quest.hookText} />
-          </Card>
+          {quest.hookText ? (
+            <Card as="section" pad={5} aria-label="Quest description">
+              <h2 className={`type-title ${styles.cardTitle}`}>Quest description</h2>
+              <ContentRenderer body={quest.hookText} />
+            </Card>
+          ) : null}
+          {quest.tags.length > 0 ? (
+            <Card as="section" pad={5} className="stack" aria-label="Additional information">
+              <h2 className="type-title">Additional information</h2>
+              <div className="row" data-wrap="1" data-gap="2">
+                {quest.tags.map((label) => (
+                  <Chip key={label} size="sm" tone="line">
+                    {label}
+                  </Chip>
+                ))}
+              </div>
+            </Card>
+          ) : null}
         </div>
       ) : null}
     </div>

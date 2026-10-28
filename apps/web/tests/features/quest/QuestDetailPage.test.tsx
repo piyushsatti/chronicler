@@ -171,6 +171,36 @@ describe('QuestDetailPage', () => {
     expect(signup.nextElementSibling).toHaveTextContent('DM pick');
   });
 
+  it('shows the quest tags under Additional information', async () => {
+    renderWithProviders(
+      <Routes>
+        <Route path="/quests/:code" element={<QuestDetailPage />} />
+      </Routes>,
+      { route: '/quests/Q-101' },
+    );
+    const extra = await screen.findByRole('region', { name: 'Additional information' });
+    expect(within(extra).getByText('lightfall')).toBeInTheDocument();
+  });
+
+  it('omits Additional information for an untagged quest', async () => {
+    server.use(
+      graphql.query('Quest', () =>
+        HttpResponse.json({ data: { quest: { ...detailGood, tags: [] } } }),
+      ),
+    );
+    renderWithProviders(
+      <Routes>
+        <Route path="/quests/:code" element={<QuestDetailPage />} />
+      </Routes>,
+      { route: '/quests/Q-101' },
+    );
+    expect(await screen.findByRole('region', { name: 'Quest details' })).toBeInTheDocument();
+    expect(
+      screen.queryByRole('region', { name: 'Additional information' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText('lightfall')).not.toBeInTheDocument();
+  });
+
   it('shows signup empty-state when authenticated with no characters', async () => {
     seedToken();
     server.use(
