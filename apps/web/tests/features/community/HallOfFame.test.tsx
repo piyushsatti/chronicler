@@ -90,7 +90,7 @@ describe('Free this week page', () => {
     renderWithProviders(<CommunityPage />);
     expect(await screen.findByRole('link', { name: 'Mark yourself free' })).toHaveAttribute(
       'href',
-      '/players/@mira?edit=profile',
+      '/me?edit=availability',
     );
   });
 

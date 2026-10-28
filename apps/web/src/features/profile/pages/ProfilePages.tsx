@@ -296,7 +296,7 @@ function ProfileView({
   me: ReturnType<typeof useMe>;
 }) {
   const [edit, setEdit] = useUrlParam('edit');
-  const editing = edit === 'profile';
+  const editing = edit === 'profile' || edit === 'availability';
   const profile = page.profile;
   const showDmInformation = role === 'dm' || profile.member.roles.includes('dm');
   const dmDetails = useProfileDmDetails(profile.member.id, showDmInformation);
@@ -334,7 +334,7 @@ function ProfileView({
             </li>
           ))}
         </ul>
-      ) : (
+      ) : owner && editing ? null : (
         <EmptyState
           message={owner ? 'Add your availability from Edit profile.' : `${name} hasn't set their availability.`}
           action={owner ? <Button variant="secondary" size="sm" onClick={() => setEdit('profile')}>Set availability</Button> : <Link className="type-link" to="/quests">Find a quest</Link>}
@@ -349,6 +349,7 @@ function ProfileView({
         profile={profile}
         canAvailability={roles.includes('player') || roles.includes('admin')}
         canDm={canDm}
+        focusAvailability={edit === 'availability'}
       />
     </Card>
   ) : null;

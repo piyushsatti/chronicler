@@ -21,6 +21,8 @@ import { usePrivateNotes } from '../hooks/usePrivateNotes.js';
 import type { RosterCharacter } from '../adapters/memberHubAdapter.js';
 import type { MemberHub } from '../hooks/useMemberHub.js';
 import { MeShell, type MeShellState } from '../../../chrome/MeShell.js';
+import { MeAvailabilityEditor } from '../../../chrome/MeAvailabilityEditor.js';
+import { useUrlParam } from '../../../hooks/useUrlParam.js';
 import styles from './me.module.css';
 
 const LEGACY_ME_TABS: Record<string, string> = {
@@ -365,6 +367,7 @@ const SECTION_ACTIONS: Partial<Record<Section, React.JSX.Element>> = {
 
 function MeSections({ section, notes }: { section: Section; notes: ReturnType<typeof usePrivateNotes> }): React.JSX.Element {
   const meQ = useMe();
+  const [edit] = useUrlParam('edit');
   const activity = useProfileActivity(meQ.data?.id ?? '', { loadHistory: section === 'history' });
   const count = (state: MeShellState): string | undefined => {
     if (section === 'characters') return state.data.roster.status === 'ready' ? pluralize(state.data.roster.data.length, 'character') : undefined;
@@ -377,7 +380,7 @@ function MeSections({ section, notes }: { section: Section; notes: ReturnType<ty
       : section === 'history' ? <HistoryPage activity={activity} />
         : section === 'summaries' ? <SummariesPage activity={activity} />
           : section === 'notes' ? null
-            : <OverviewPage {...state} notes={notes} />}
+            : <>{edit === 'availability' ? <MeAvailabilityEditor me={state.me} /> : null}<OverviewPage {...state} notes={notes} /></>}
     <div hidden={section !== 'notes'}><PrivateNotesPanel notes={notes} /></div>
   </>}</MeShell>;
 }

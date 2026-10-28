@@ -292,7 +292,7 @@ export function CommunityPage(): React.JSX.Element {
                           {ownHandle ? (
                             <Link
                               className="btn btn--primary btn--sm"
-                              to={`/players/@${encodeURIComponent(ownHandle)}?edit=profile`}
+                              to="/me?edit=availability"
                             >
                               Mark yourself free
                             </Link>

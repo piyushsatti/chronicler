@@ -1,12 +1,13 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { graphql, HttpResponse } from 'msw';
 import { MePage } from '../../../src/features/member/pages/MePage.js';
 import { server } from '../../../src/mocks/server.js';
 import { signIn } from '../admin/authority-test-utils.js';
 import { renderWithProviders } from '../../test-utils.js';
 import character from '../../fixtures/wire/character/good.json';
+import profile from '../../fixtures/wire/profile/member-profile-good.json';
 import goodMe from '../../fixtures/wire/me/good.json';
 import { seriesAuthority } from '../../seriesAuthority.js';
 
@@ -831,5 +832,32 @@ describe('MePage', () => {
     expect(await screen.findByRole('link', { name: /Late table/ })).toBeVisible();
     expect(screen.queryByText('Cancelled table')).toBeNull();
     expect(offsets).toEqual([0, 100]);
+  });
+});
+
+describe('MePage availability editor', () => {
+  const scroll = vi.fn();
+  beforeEach(() => { Element.prototype.scrollIntoView = scroll; });
+  afterEach(() => { delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView; scroll.mockClear(); });
+
+  it('opens the availability form focused for ?edit=availability and closes it', async () => {
+    const user = userEvent.setup();
+    signIn(['player']);
+    server.use(graphql.query('MemberProfile', () => HttpResponse.json({ data: { memberProfile: profile } })));
+    renderWithProviders(<MePage />, { route: '/me?edit=availability' });
+    expect(await screen.findByRole('heading', { name: 'Your availability' })).toBeVisible();
+    const form = document.getElementById('availability');
+    await waitFor(() => expect(form?.contains(document.activeElement)).toBe(true));
+    expect(scroll).toHaveBeenCalled();
+    await user.click(screen.getByRole('button', { name: 'Close editor' }));
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Your availability' })).toBeNull());
+  });
+
+  it('shows no editor without the param', async () => {
+    signIn(['player']);
+    renderWithProviders(<MePage />, { route: '/me' });
+    await screen.findByRole('heading', { level: 1, name: 'Ashwin' });
+    expect(screen.queryByRole('heading', { name: 'Your availability' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Close editor' })).toBeNull();
   });
 });
