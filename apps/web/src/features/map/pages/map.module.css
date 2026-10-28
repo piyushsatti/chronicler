@@ -41,12 +41,6 @@
   clip-path: inset(50%);
   white-space: nowrap;
 }
-.connection {
-  display: inline-flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--sp-2);
-}
 .nodeList {
   list-style: none;
   padding: 0;
@@ -87,19 +81,6 @@
 .disclosure summary {
   cursor: pointer;
   font: 550 13px/1.5 var(--font-title);
-}
-.connections {
-  list-style: none;
-  padding: 0;
-  display: grid;
-  gap: var(--sp-3);
-}
-.connections li {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-2);
 }
 .coordinates {
   display: grid;
@@ -694,15 +675,6 @@
 .detailBody {
   min-width: 0;
   padding: 24px 20px 20px;
-}
-.detailDescription {
-  margin: 0 0 17px;
-  color: var(--color-text);
-  font: 400 15px/1.65 var(--font-narrative);
-}
-.detailDescription :global(.cr-prose) {
-  color: inherit;
-  font: inherit;
 }
 .linkedHeading {
   display: flex;

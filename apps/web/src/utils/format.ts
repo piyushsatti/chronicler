@@ -354,14 +354,6 @@ export function personName(
   return personLabels([person], fallback)[0];
 }
 
-/** A person known only by handle still gets a readable name before the handle. */
-export function handleOnlyName(
-  handle: string | null | undefined,
-  fallback = 'Unnamed member',
-): string {
-  return personName({ handle }, fallback);
-}
-
 const GENERIC_NAMES = new Set(['member', 'user', 'player', 'unknown', 'unnamed', 'unnamed member', 'anonymous', 'dev']);
 
 /**

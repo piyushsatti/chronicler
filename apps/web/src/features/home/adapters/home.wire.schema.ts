@@ -5,8 +5,6 @@ export const siteStatsWireSchema = z.object({
   activeCharacters: z.number().int().nonnegative(),
 });
 
-export type SiteStatsWire = z.infer<typeof siteStatsWireSchema>;
-
 export const recentChroniclesWireSchema = z.object({
   items: z.array(
     z.object({

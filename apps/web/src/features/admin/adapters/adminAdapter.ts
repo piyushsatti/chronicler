@@ -213,15 +213,6 @@ export type CharVerifyRow = {
   verificationSubmittedAt: string | null;
 };
 
-export type AdminHealthAlert = {
-  key: string;
-  label: string;
-  severity: string;
-  remediationHref: string;
-  firstSeenAt: string | null;
-  lastSeenAt: string | null;
-};
-
 export type AdminOpsView = z.infer<typeof adminOpsSchema>;
 
 export type AdminCharRow = {
