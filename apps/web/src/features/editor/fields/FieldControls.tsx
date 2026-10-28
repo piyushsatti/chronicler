@@ -234,10 +234,13 @@ export function SeriesField({
   value,
   onChange,
   options,
+  current,
 }: {
   value: string;
   onChange: (v: string) => void;
   options: EditorOptions<{ id: string; name: string }>;
+  /** A saved quest's series, kept as a choice even when the viewer's own list lacks it. */
+  current?: { id: string; name: string };
 }): React.JSX.Element {
   if (options.status === 'error' || options.status === 'loading')
     return (
@@ -245,7 +248,8 @@ export function SeriesField({
         <OptionState options={options} label="Series" />
       </div>
     );
-  const items = options.status === 'ready' ? options.items : [];
+  const listed = options.status === 'ready' ? options.items : [];
+  const items = current?.id && !listed.some((item) => item.id === current.id) ? [current, ...listed] : listed;
   const choices: [string, string][] = [
     ['', 'No series'],
     ...items.map((item): [string, string] => [item.id, item.name]),
@@ -464,7 +468,9 @@ export function DateTimeField({
         }}
         ariaLabel={label}
       />
-      <span className="type-caption">Shown in your time zone ({timeZone.replace(/_/g, ' ')})</span>
+      <span className="type-caption">
+        Shown in your time zone ({timeZone.replace(/_/g, ' ')})
+      </span>
       {unresolved?.status === 'gap' ? (
         <p role="alert">This time does not exist in {timeZone}. Choose another time.</p>
       ) : unresolved?.status === 'invalid' ? (
@@ -836,15 +842,18 @@ export function StubField({ field }: { field: FieldSchema }): React.JSX.Element 
 
 export { pfIcon };
 
-/** A new quest's expected destinations, searched by hex or place name. */
+/** A quest's expected destinations, searched by hex or location code. A saved quest
+ *  also marks places visited. */
 export function PointcrawlField({
   value,
   onChange,
   places,
+  markVisited = false,
 }: {
   value: PointcrawlLinkValue[];
   onChange: (v: PointcrawlLinkValue[]) => void;
   places: EditorFieldOptions['places'];
+  markVisited?: boolean;
 }): React.JSX.Element {
   if (places.error)
     return (
@@ -864,8 +873,8 @@ export function PointcrawlField({
       nodesLoading={places.loading}
       links={value}
       onChange={onChange}
-      roles={['expected']}
-      canMarkVisited={false}
+      roles={markVisited ? ['expected', 'visited'] : ['expected']}
+      canMarkVisited={markVisited && places.canEdit}
     />
   );
 }

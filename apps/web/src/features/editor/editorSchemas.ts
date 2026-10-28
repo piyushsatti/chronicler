@@ -201,24 +201,39 @@ const GUIDE_SCHEMA: FieldSchema[] = [
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** A new quest may start in one of the viewer's series; existing quests change series on the quest page. */
+const SERIES_FIELD: FieldSchema = {
+  key: 'arcId',
+  label: 'Series',
+  type: 'series',
+  hint: 'Optional',
+  validate: (v) =>
+    v == null || v === '' || (typeof v === 'string' && UUID.test(v))
+      ? null
+      : 'Choose one of your series',
+};
+
+/** A quest may start in one of the viewer's series and head to map places. */
 const NEW_QUEST_SCHEMA: FieldSchema[] = [
   ...QUEST_SCHEMA.slice(0, 1),
-  {
-    key: 'arcId',
-    label: 'Series',
-    type: 'series',
-    hint: 'Optional',
-    validate: (v) =>
-      v == null || v === '' || (typeof v === 'string' && UUID.test(v))
-        ? null
-        : 'Choose one of your series',
-  },
+  SERIES_FIELD,
   {
     key: 'pointcrawlLinks',
     label: 'Expected destinations',
     type: 'pointcrawl',
-    hint: 'Optional. Mark places visited on the quest page after play.',
+    hint: 'Optional. Mark places visited after play.',
+  },
+  ...QUEST_SCHEMA.slice(1),
+];
+
+/** A saved quest changes its series and destinations here too, and marks places visited. */
+const EDIT_QUEST_SCHEMA: FieldSchema[] = [
+  ...QUEST_SCHEMA.slice(0, 1),
+  SERIES_FIELD,
+  {
+    key: 'pointcrawlLinks',
+    label: 'Expected destinations',
+    type: 'pointcrawl',
+    hint: 'Optional. Mark places visited after play.',
   },
   ...QUEST_SCHEMA.slice(1),
 ];
@@ -246,9 +261,8 @@ export function schemaForType(
 ): FieldSchema[] {
   switch (typeKey) {
     case 'quest':
-      // The create form always offers a series; a saved quest changes series on its page.
       // Chosen by mode, not by `arcId`: drafts saved by older builds have no `arcId`.
-      return mode === 'new' ? NEW_QUEST_SCHEMA : QUEST_SCHEMA;
+      return mode === 'new' ? NEW_QUEST_SCHEMA : EDIT_QUEST_SCHEMA;
     case 'codex': {
       const gated = gatedCodexCategories(access);
       const fields = CODEX_SCHEMA.map((field): FieldSchema => {

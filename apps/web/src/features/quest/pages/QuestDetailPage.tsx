@@ -14,7 +14,6 @@ import { Avatar } from '../../../components/primitives/Avatar.js';
 import { DiscordDeliveryStatus } from '../components/DiscordDeliveryStatus.js';
 import { QuestParticipation } from '../components/QuestParticipation.js';
 import { QuestDmActions } from '../components/QuestDmActions.js';
-import { QuestAssociations } from '../components/QuestAssociations.js';
 import { QuestOwnerActions } from '../components/QuestOwnerActions.js';
 import { useQuestDetailPage } from '../hooks/useQuestDetailPage.js';
 import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
@@ -158,7 +157,6 @@ export function QuestDetailPage(): React.JSX.Element {
     ...(quest.genres.length ? [{ key: 'Genres', value: quest.genres.join(', ') }] : []),
   ];
 
-  const hasExtra = quest.tags.length > 0 || detail.canManage;
 
   const castPanel = (
     <div className={styles.cardGrid}>
@@ -284,35 +282,12 @@ export function QuestDetailPage(): React.JSX.Element {
           ))}
         </dl>
       </Card>
-      {quest.hookText || hasExtra ? (
+      {quest.hookText ? (
         <div className={styles.cardGrid}>
-          {quest.hookText ? (
-            <Card as="section" pad={5} aria-label="Quest description">
-              <h2 className={`type-title ${styles.cardTitle}`}>Quest description</h2>
-              <ContentRenderer body={quest.hookText} />
-            </Card>
-          ) : null}
-          {hasExtra ? (
-            <Card as="section" pad={5} className="stack" aria-label="Additional information">
-              <h2 className="type-title">Additional information</h2>
-              {quest.tags.length ? (
-                <div className="row" data-wrap="1" data-gap="2">
-                  {quest.tags.map((label) => (
-                    <Chip key={label} size="sm" tone="line">
-                      {label}
-                    </Chip>
-                  ))}
-                </div>
-              ) : null}
-              {detail.canManage ? (
-                <QuestAssociations
-                  key={`${quest.id}:${quest.updatedAt}`}
-                  quest={quest}
-                  detail={detail}
-                />
-              ) : null}
-            </Card>
-          ) : null}
+          <Card as="section" pad={5} aria-label="Quest description">
+            <h2 className={`type-title ${styles.cardTitle}`}>Quest description</h2>
+            <ContentRenderer body={quest.hookText} />
+          </Card>
         </div>
       ) : null}
     </div>

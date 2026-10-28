@@ -77,6 +77,12 @@ const questLoadSchema = z.object({
   voiceChannelId: z.string().nullable().optional(),
   regions: z.array(z.string()).optional().default([]),
   updatedAt: z.string(),
+  arcId: z.string().nullable().optional(),
+  arc: z.object({ id: z.string(), name: z.string() }).nullable().optional(),
+  pointcrawlLinks: z
+    .array(z.object({ pointcrawlNodeId: z.string(), role: z.enum(['expected', 'visited']) }))
+    .optional()
+    .default([]),
   briefDocument: z
     .object({
       id: z.string(),
@@ -154,6 +160,9 @@ export function parseQuestLoad(wire: unknown): AdapterResult<EditorLoadResult> {
         voiceChannelId: q.voiceChannelId ?? '',
         regions: q.regions,
         additionalInfo: brief?.frontmatter.additional_info ?? '',
+        arcId: q.arcId ?? '',
+        arc: q.arc ?? null,
+        pointcrawlLinks: q.pointcrawlLinks,
       },
       body: brief?.effectiveBody ?? null,
       canEditMetadata: brief?.canEditMetadata === true,

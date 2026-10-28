@@ -120,10 +120,8 @@ describe('the quest Series field', () => {
     expect(keys({}, 'new')).toContain('arcId');
     expect(keys({ arcId: '' }, 'new')).toContain('arcId');
   });
-  it('is never on the edit form', () => {
-    expect(
-      keys({ arcId: '11111111-1111-4111-8111-111111111111' }, 'edit'),
-    ).not.toContain('arcId');
+  it('is on the edit form too, with the expected destinations', () => {
+    expect(keys({}, 'edit')).toEqual(expect.arrayContaining(['arcId', 'pointcrawlLinks']));
   });
 });
 

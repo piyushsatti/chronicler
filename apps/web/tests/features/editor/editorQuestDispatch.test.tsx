@@ -134,3 +134,125 @@ it.each(['2026-03-08T02:30', '2026-11-01T01:30', '', '2026-02-30T12:00:00Z'])(
     expect(operations).toEqual([]);
   },
 );
+
+const nodeA = '22222222-2222-4222-8222-222222222222';
+const nodeB = '33333333-3333-4333-8333-333333333333';
+const arcA = '44444444-4444-4444-8444-444444444444';
+const arcB = '55555555-5555-4555-8555-555555555555';
+
+async function saveEdit(
+  saved: Record<string, unknown>,
+  changed: Record<string, unknown>,
+) {
+  const operations: string[] = [];
+  const inputs: Record<string, { input: Record<string, unknown> }> = {};
+  server.use(
+    graphql.operation(({ operationName, variables }) => {
+      operations.push(operationName);
+      inputs[operationName] = variables as { input: Record<string, unknown> };
+      return HttpResponse.json({
+        data: {
+          updateQuest: { id, shortCode: 'Q-ONE', updatedAt: '2030-01-01T00:00:00Z' },
+          setQuestPointcrawlLinks: [],
+        },
+      });
+    }),
+  );
+  const initial = { ...initialQuest('edit'), meta: { ...initialQuest('edit').meta, ...saved } };
+  const client = createTestQueryClient();
+  const { result } = renderHook(
+    () =>
+      useEditorPublish({
+        typeKey: 'quest',
+        mode: 'edit',
+        initial,
+        meta: { ...questMeta(sourceTime), ...changed },
+        body: 'Edited brief',
+        onInvalidTitle: () => {},
+        onSuccess: () => {},
+      }),
+    {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(QueryClientProvider, { client }, children),
+    },
+  );
+  await act(async () => {
+    await result.current.mutateAsync(true);
+  });
+  return { operations, inputs };
+}
+
+it('saves a changed series and destinations of an edited Quest, places first', async () => {
+  const { operations, inputs } = await saveEdit(
+    { arcId: arcA, pointcrawlLinks: [{ pointcrawlNodeId: nodeA, role: 'visited' }] },
+    {
+      arcId: arcB,
+      pointcrawlLinks: [
+        { pointcrawlNodeId: nodeA, role: 'visited' },
+        { pointcrawlNodeId: nodeB, role: 'expected' },
+      ],
+    },
+  );
+  expect(operations).toEqual(['EditorSetQuestPlaces', 'UpdateQuest']);
+  expect(inputs.UpdateQuest.input.arcId).toBe(arcB);
+});
+
+it('saves a visited destination for a newly created Quest, places after creation', async () => {
+  const operations: string[] = [];
+  const inputs: Record<string, Record<string, unknown>> = {};
+  server.use(
+    graphql.operation(({ operationName, variables }) => {
+      operations.push(operationName);
+      inputs[operationName] = variables as Record<string, unknown>;
+      return HttpResponse.json({
+        data: {
+          createQuest: { id, shortCode: 'Q-ONE', updatedAt: '2030-01-01T00:00:00Z' },
+          setQuestPointcrawlLinks: [],
+        },
+      });
+    }),
+  );
+  const initial = initialQuest('new');
+  const client = createTestQueryClient();
+  const { result } = renderHook(
+    () =>
+      useEditorPublish({
+        typeKey: 'quest',
+        mode: 'new',
+        initial,
+        meta: {
+          ...questMeta(sourceTime),
+          pointcrawlLinks: [{ pointcrawlNodeId: nodeA, role: 'visited' }],
+        },
+        body: 'Edited brief',
+        onInvalidTitle: () => {},
+        onSuccess: () => {},
+      }),
+    {
+      wrapper: ({ children }: { children: ReactNode }) =>
+        createElement(QueryClientProvider, { client }, children),
+    },
+  );
+  await act(async () => {
+    await result.current.mutateAsync(true);
+  });
+  expect(operations).toEqual(['CreateQuest', 'EditorSetQuestPlaces']);
+  expect(inputs.EditorSetQuestPlaces.links).toEqual([
+    { pointcrawlNodeId: nodeA, role: 'visited' },
+  ]);
+});
+
+it('takes an edited Quest out of its series when the series is cleared', async () => {
+  const { inputs } = await saveEdit({ arcId: arcA }, { arcId: '' });
+  expect(inputs.UpdateQuest.input.arcId).toBeNull();
+});
+
+it('leaves series and destinations alone when an edited Quest did not change them', async () => {
+  const link = { pointcrawlNodeId: nodeA, role: 'expected' };
+  const { operations, inputs } = await saveEdit(
+    { arcId: arcA, pointcrawlLinks: [link] },
+    { arcId: arcA, pointcrawlLinks: [link] },
+  );
+  expect(operations).toEqual(['UpdateQuest']);
+  expect(inputs.UpdateQuest.input).not.toHaveProperty('arcId');
+});

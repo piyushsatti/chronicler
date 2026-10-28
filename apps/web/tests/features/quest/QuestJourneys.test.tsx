@@ -315,39 +315,4 @@ describe('retained Quest journeys', () => {
     }
   });
 
-  it('keeps quest arc and pointcrawl menu selections connected to their existing actions', async () => {
-    login();
-    const writes: unknown[] = [];
-    server.use(
-      graphql.query('QuestArcOptions', () => HttpResponse.json({ data: { questArcs: { total: 1, items: [{ id: otherId, name: 'Coastal voyages' }] } } })),
-      graphql.query('QuestMapOptions', () => HttpResponse.json({ data: { maps: [{ id: otherId, name: 'Harbor map', atlasCode: 'HARBOR', canEdit: true }] } })),
-      graphql.query('QuestNodeOptions', () => HttpResponse.json({ data: { map: { canEdit: true, pointcrawlNodes: [] } } })),
-      graphql.mutation('QuestSetArc', ({ variables }) => {
-        writes.push(variables);
-        return HttpResponse.json({ data: { updateQuest: { id: detail.id, updatedAt: detail.updatedAt, arcId: otherId } } });
-      }),
-    );
-    renderDetail();
-    const arc = await screen.findByRole('button', { name: /^Series/ });
-    await waitFor(() => expect(arc).toBeEnabled());
-    await userEvent.click(arc);
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Coastal voyages' }));
-    await userEvent.click(screen.getByRole('button', { name: 'Save series' }));
-    await waitFor(() => expect(writes).toHaveLength(1));
-    expect(await screen.findByRole('status')).toHaveTextContent('Series saved.');
-    // The confirmation also sits beside the Save series button (loop 3 L7).
-    const save = screen.getByRole('button', { name: 'Save series' });
-    const inline = await waitFor(() => {
-      const node = document.querySelector('[data-el="quest.series.saved"]');
-      expect(node).not.toBeNull();
-      return node!;
-    });
-    expect(inline).toHaveTextContent('Series saved.');
-    expect(inline.parentElement).toBe(save.parentElement);
-    expect(screen.queryByText(/\barc\b/i)).toBeNull();
-    expect(writes[0]).toMatchObject({ id: detail.id, input: { arcId: otherId } });
-    await userEvent.click(screen.getByRole('button', { name: /^Pointcrawl map/ }));
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Harbor map' }));
-    expect(screen.getByRole('link', { name: 'Open map' })).toHaveAttribute('href', '/map/HARBOR');
-  });
 });

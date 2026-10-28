@@ -1017,7 +1017,7 @@ export type EditorQuestLoadQueryVariables = Exact<{
 }>;
 
 
-export type EditorQuestLoadQuery = { quest: { id: string, shortCode: string, scheduledAt: string, durationHours: number, slotsMax: number, kinds: Array<string>, genres: Array<string>, tags: Array<string>, apl: number | null, signupType: string | null, voiceChannelId: string | null, regions: Array<string>, updatedAt: string, briefDocument: { id: string, slug: string, title: string, status: string, version: number, canEditMetadata: boolean, canEditBody: boolean, frontmatter: unknown, effectiveBody: string | null } | null } | null };
+export type EditorQuestLoadQuery = { quest: { id: string, shortCode: string, scheduledAt: string, durationHours: number, slotsMax: number, kinds: Array<string>, genres: Array<string>, tags: Array<string>, apl: number | null, signupType: string | null, voiceChannelId: string | null, regions: Array<string>, updatedAt: string, arcId: string | null, arc: { id: string, name: string } | null, pointcrawlLinks: Array<{ pointcrawlNodeId: string, role: string }>, briefDocument: { id: string, slug: string, title: string, status: string, version: number, canEditMetadata: boolean, canEditBody: boolean, frontmatter: unknown, effectiveBody: string | null } | null } | null };
 
 export type EditorRegionsQueryVariables = Exact<{
   kind?: string | null | undefined;

@@ -741,13 +741,70 @@ describe('a new quest’s expected destinations', () => {
     await userEvent.type(await screen.findByLabelText('Find a place'), '7008');
     expect(screen.queryByText('LFR7009')).toBeNull();
     await userEvent.click(screen.getByRole('checkbox', { name: 'Expected destination' }));
-    expect(screen.queryByRole('checkbox', { name: 'Visited' })).toBeNull();
+    // The map in this fixture isn't one this DM owns (canEdit: false), so Visited is
+    // offered (a new quest may mark places visited, same as an edited one) but disabled.
+    expect(screen.getByRole('checkbox', { name: 'Visited' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
     await userEvent.click(screen.getByRole('button', { name: 'Create quest' }));
     await waitFor(() => expect(links).toHaveLength(1));
     expect(inputs).toHaveLength(1);
     expect(links[0]).toMatchObject({
       questId,
       links: [{ pointcrawlNodeId: hex, role: 'expected' }],
+    });
+  });
+
+  it('lets a DM who owns the map mark a new quest’s destination visited', async () => {
+    seedQuestDraft();
+    const inputs = captureCreate();
+    const links = captureLinks();
+    server.use(
+      graphql.query('EditorMapOptions', () =>
+        HttpResponse.json({
+          data: {
+            maps: [
+              {
+                id: '55555555-5555-4555-8555-555555555555',
+                atlasCode: 'LF-HEX',
+                name: 'Lightfall Hexflower',
+                canEdit: true,
+              },
+            ],
+          },
+        }),
+      ),
+      graphql.query('EditorMapPlaces', () =>
+        HttpResponse.json({
+          data: {
+            map: {
+              id: '55555555-5555-4555-8555-555555555555',
+              atlasCode: 'LF-HEX',
+              name: 'Lightfall Hexflower',
+              canEdit: true,
+              pointcrawlNodes: [
+                { id: hex, name: 'LFR7008' },
+                { id: '66666666-6666-4666-8666-666666666666', name: 'LFR7009' },
+              ],
+            },
+          },
+        }),
+      ),
+    );
+    renderNewQuest();
+    await userEvent.click(await screen.findByRole('button', { name: /^Pointcrawl map/ }));
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Lightfall Hexflower' }));
+    await userEvent.type(await screen.findByLabelText('Find a place'), '7008');
+    const visited = screen.getByRole('checkbox', { name: 'Visited' });
+    expect(visited).not.toBeDisabled();
+    await userEvent.click(visited);
+    await userEvent.click(screen.getByRole('button', { name: 'Create quest' }));
+    await waitFor(() => expect(links).toHaveLength(1));
+    expect(inputs).toHaveLength(1);
+    expect(links[0]).toMatchObject({
+      questId,
+      links: [{ pointcrawlNodeId: hex, role: 'visited' }],
     });
   });
 

@@ -38,6 +38,15 @@ const documentKinds = {
 
 /** The quest description the API requires ("Quest brief required."); null when fine.
  *  Pass `body` only when the form can edit it. */
+type PlaceLink = { pointcrawlNodeId: string; role: string };
+/** Order-free identity of a set of places, to tell whether the list changed. */
+function placeKey(links: readonly PlaceLink[]): string {
+  return links
+    .map((link) => `${link.pointcrawlNodeId}:${link.role}`)
+    .sort()
+    .join('|');
+}
+
 export function editorBodyError(typeKey: EditorTypeKey, body?: string): string | null {
   return typeKey === 'quest' && body !== undefined && body.trim() === ''
     ? 'Describe the quest for players'
@@ -177,8 +186,33 @@ export function useEditorPublish({
                 'Quest is missing an update token. Reload and try again.',
                 'editor:save',
               );
+            // Meta without these keys (a draft saved by an older build) leaves them untouched.
+            const savedArcId =
+              typeof initial.meta.arcId === 'string' ? initial.meta.arcId : '';
+            const arcChanged = typeof v.arcId === 'string' && v.arcId !== savedArcId;
+            const places = v.pointcrawlLinks ?? null;
+            const savedPlaces = Array.isArray(initial.meta.pointcrawlLinks)
+              ? (initial.meta.pointcrawlLinks as PlaceLink[])
+              : [];
+            // Places need no update token, so they save first; a failed quest save then
+            // retries the same places harmlessly.
+            if (places && placeKey(places) !== placeKey(savedPlaces)) {
+              try {
+                await saveNewQuestPlaces(
+                  initial.recordId,
+                  places,
+                  replayKey('quest-update-places', [initial.recordId, places]),
+                );
+              } catch {
+                throw safeAppError(
+                  'The expected destinations were not saved, and the quest was not changed. Save again to retry.',
+                  'editor:quest:places',
+                );
+              }
+            }
             const input = {
               ...payload,
+              ...(arcChanged ? { arcId: v.arcId || null } : {}),
               ...(v.scheduledAt !== initial.meta.scheduledAt
                 ? { scheduledAt: v.scheduledAt }
                 : {}),

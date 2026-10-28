@@ -13,6 +13,15 @@ query EditorQuestLoad($id: ID, $shortCode: String) {
     voiceChannelId
     regions
     updatedAt
+    arcId
+    arc {
+      id
+      name
+    }
+    pointcrawlLinks(limit: 100) {
+      pointcrawlNodeId
+      role
+    }
     briefDocument {
       id
       slug

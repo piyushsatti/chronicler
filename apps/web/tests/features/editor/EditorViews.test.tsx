@@ -25,11 +25,13 @@ const emptyOptions = {
   genres: { status: 'empty' as const },
   series: { status: 'empty' as const },
   voiceChannels: { status: 'empty' as const },
+  guideGroups: [],
   places: {
     maps: [],
     atlasCode: '',
     setAtlasCode: () => {},
     nodes: undefined,
+    canEdit: false,
     loading: false,
     error: null,
     onRetry: () => {},

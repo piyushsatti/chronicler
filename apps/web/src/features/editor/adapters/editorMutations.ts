@@ -60,7 +60,7 @@ export type QuestEditorInput = {
   additionalInfo: string | null;
   /** Discord voice channel id from the admin list; null or '' means none. */
   voiceChannelId?: string | null;
-  /** Series (quest arc) to put a new quest in; create only. */
+  /** Series (quest arc) for the quest; null takes it out of its series. */
   arcId?: string | null;
 };
 
@@ -198,6 +198,7 @@ export async function updateQuest(
         ...(input.voiceChannelId !== undefined
           ? { voiceChannelId: input.voiceChannelId || null }
           : {}),
+        ...(input.arcId !== undefined ? { arcId: input.arcId } : {}),
       },
       meta: commandMeta(idempotencyKey),
     });

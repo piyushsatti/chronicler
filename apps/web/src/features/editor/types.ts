@@ -23,6 +23,8 @@ export type EditorFieldOptions = {
     atlasCode: string;
     setAtlasCode: (atlasCode: string) => void;
     nodes: { id: string; name: string }[] | undefined;
+    /** The viewer may mark places on this map visited. */
+    canEdit: boolean;
     loading: boolean;
     error: unknown;
     onRetry: () => void;

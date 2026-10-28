@@ -190,11 +190,13 @@ export function useEditorWorkspace({
   // (another DM's, from a link or a recovered draft) is not sent, and the Series
   // field says so.
   const seriesOptions = options.series;
+  // A saved quest keeps its current series without checking it: only a change is checked.
+  const arcUnchanged = mode === 'edit' && meta.arcId === initial.meta.arcId;
   const arcChosen =
     typeKey === 'quest' &&
-    mode === 'new' &&
     typeof meta.arcId === 'string' &&
-    meta.arcId !== '';
+    meta.arcId !== '' &&
+    !arcUnchanged;
   const seriesWait: 'loading' | 'error' | null = !arcChosen
     ? null
     : seriesOptions.status === 'error'
@@ -205,6 +207,7 @@ export function useEditorWorkspace({
   const arcShown =
     typeof meta.arcId !== 'string' ||
     meta.arcId === '' ||
+    arcUnchanged ||
     (seriesOptions.status === 'ready' &&
       seriesOptions.items.some((series) => series.id === meta.arcId));
   const publishMeta = arcShown ? meta : { ...meta, arcId: '' };

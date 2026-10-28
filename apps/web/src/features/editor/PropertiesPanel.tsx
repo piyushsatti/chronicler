@@ -95,6 +95,11 @@ export function PropertiesPanel({
         return (
           <SeriesField
             options={options.series}
+            current={
+              values.arc && typeof values.arc === 'object'
+                ? (values.arc as { id: string; name: string })
+                : undefined
+            }
             value={String(val ?? '')}
             onChange={setT}
           />
@@ -111,6 +116,7 @@ export function PropertiesPanel({
         return (
           <PointcrawlField
             places={options.places}
+            markVisited={true}
             value={Array.isArray(val) ? (val as PointcrawlLinkValue[]) : []}
             onChange={setT}
           />

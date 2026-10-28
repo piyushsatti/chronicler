@@ -89,6 +89,7 @@ export function useEditorOptions(
       atlasCode,
       setAtlasCode,
       nodes: places.data?.nodes,
+      canEdit: places.data?.canEdit ?? false,
       loading: places.isLoading,
       error: maps.error ?? places.error,
       onRetry: () => {
