@@ -158,6 +158,11 @@ default `DATABASE_URL`, can be added if wanted.
    unlocked / mapped, default locked) and admins set it with
    `setPointcrawlNodeState`. The seed does not set it yet, so every seeded hex
    starts locked. Day zero should have only LFC1001 and ring 1 unlocked.
+   Setting a hex to mapped now unlocks its locked neighbours joined by `hex`
+   edges on the same map, in the same transaction (owner decision 2026-10-29).
+   Unlocked and mapped neighbours stay unchanged, and later state changes
+   re-lock nothing. The seeded DM Mechanics guide's three-game mapping trigger
+   remains manual.
 3. **Hex tile images.** 161 tile image URLs exist (in `Untitled.md`) but nodes
    have no per-node image column, and the map has no background image yet.
 4. **Magic item recipes and relics.** 516 recipes and the relic economy have no

@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Restore the Discord quest announcement layout, create scheduled events for quests without voice channels, and unlock locked hex neighbours when a hex is mapped. Mapped hexes now draw like unlocked hexes on the map.
 - Paginate Codex autocomplete and limit editor undo history to 100 snapshots. Map navigation reads paginated containment metadata for other maps.
 - GraphQL loaders batch concurrent reads and deduplicate keys within each request. Maintained API DSNs default to a maximum of 10 database connections per pool.
 - Read Discord activity totals only when selected in GraphQL, and batch region and map assignment facts through the existing authorization policy.

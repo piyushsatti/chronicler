@@ -87,13 +87,13 @@ type fakeDiscord struct {
 	// failStatus is the status a failed call answers with; zero means 400.
 	failStatus    int
 	eventResponse string
-	srv           *httptest.Server
+	client        *http.Client
 }
 
 func newFakeDiscord(t *testing.T) *fakeDiscord {
 	t.Helper()
 	f := &fakeDiscord{}
-	f.srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	handler := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		raw, _ := io.ReadAll(r.Body)
 		call := discordCall{Method: r.Method, Path: r.URL.Path}
 		_ = json.Unmarshal(raw, &call.Body)
@@ -128,8 +128,12 @@ func newFakeDiscord(t *testing.T) *fakeDiscord {
 		default:
 			_, _ = w.Write([]byte(`{"id":"ok"}`))
 		}
-	}))
-	t.Cleanup(f.srv.Close)
+	})
+	f.client = &http.Client{Transport: discordTransport(func(r *http.Request) (*http.Response, error) {
+		response := httptest.NewRecorder()
+		handler.ServeHTTP(response, r)
+		return response.Result(), nil
+	})}
 	return f
 }
 
@@ -175,7 +179,7 @@ func baseQuest(voice string) delivery.AnnounceQuest {
 func newSync(f *fakeDiscord, quests *fakeQuests, settings delivery.DeliverySettings, applier delivery.RevisionApplier) delivery.RESTSync {
 	return delivery.RESTSync{
 		Token: "tok", GuildID: testGuild, Settings: fakeSettings{settings}, Quests: quests,
-		HTTP: f.srv.Client(), APIBase: f.srv.URL, Apply: applier,
+		HTTP: f.client, APIBase: testOrigin, Apply: applier,
 		Now: func() time.Time { return testStart.Add(-48 * time.Hour) },
 	}
 }
@@ -199,14 +203,14 @@ func TestFirstPostMessageThreadEventThenEventLine(t *testing.T) {
 		t.Fatalf("calls=%v\nwant=%v", got, want)
 	}
 	post := f.find(http.MethodPost, "/messages")[0].Body["content"].(string)
-	if strings.Contains(post, "Event:") {
-		t.Fatalf("first post is sent before the event exists: %q", post)
+	if !strings.HasSuffix(post, "- **Event Link** - Pending") {
+		t.Fatalf("first post must show Pending before the event exists: %q", post)
 	}
 	edited := f.find(http.MethodPatch, "/messages/777777777777777777")[0].Body["content"].(string)
-	wantEdited := "<@&" + testRole + ">\n# The Sunken Bell (Q1a2b3c4d)\nA bell rings under the harbour.\n\n" +
-		"<t:" + itoa(testStart.Unix()) + ":F> · 4 hours · DM <@" + testDM + "> · Voice: <#" + testVoice + ">\n" +
-		"Event: https://discord.com/events/" + testGuild + "/666666666666666666\n" +
-		"Sign up: " + testOrigin + "/quests/Q1a2b3c4d"
+	wantEdited := "# [The Sunken Bell](<" + testOrigin + "/quests/Q1a2b3c4d>)\n\nA bell rings under the harbour.\n\n-# <@&" + testRole + ">\n\n" +
+		"## Game Information\n- **Scheduling & Duration** - <t:" + itoa(testStart.Unix()) + ":f> · 4h\n- **DM** - <@" + testDM + ">\n" +
+		"- **Status** - Open\n- **APL** - Any\n- **Quest Link** - " + testOrigin + "/quests/Q1a2b3c4d\n" +
+		"- **Event Link** - https://discord.com/events/" + testGuild + "/666666666666666666"
 	if edited != wantEdited {
 		t.Fatalf("edited post:\n%s\nwant:\n%s", edited, wantEdited)
 	}
@@ -347,36 +351,46 @@ func TestEventDetails(t *testing.T) {
 	if !strings.Contains(desc, testOrigin+"/quests/Q1a2b3c4d") {
 		t.Errorf("description lacks the quest page link: %q", desc)
 	}
-	if _, has := body["entity_metadata"]; has {
-		t.Errorf("voice events carry no entity_metadata: %v", body)
+	if metadata, has := body["entity_metadata"]; !has || metadata != nil {
+		t.Errorf("voice events carry null entity_metadata: %v", body)
 	}
 }
 
-func TestNoVoiceChannelMeansNoEventAndNoVoicePart(t *testing.T) {
+func TestNoVoiceChannelCreatesEventAndShowsPendingFirst(t *testing.T) {
 	f := newFakeDiscord(t)
 	quests := &fakeQuests{quest: baseQuest("")}
 	if err := newSync(f, quests, fullSettings, nil).SyncQuest(context.Background(), testQuestID, 1); err != nil {
 		t.Fatal(err)
 	}
-	if got := f.find(http.MethodPost, "/scheduled-events"); len(got) != 0 {
-		t.Fatalf("event created without a voice channel: %v", got)
+	if got := f.find(http.MethodPost, "/scheduled-events"); len(got) != 1 {
+		t.Fatalf("external event missing without a voice channel: %v", got)
 	}
 	content := f.find(http.MethodPost, "/messages")[0].Body["content"].(string)
-	if strings.Contains(content, "Voice:") || strings.Contains(content, "Event:") {
+	if strings.Contains(content, "Voice:") || !strings.HasSuffix(content, "- **Event Link** - Pending") {
 		t.Fatalf("content=%q", content)
 	}
 }
 
 func TestPastQuestGetsNoEvent(t *testing.T) {
-	f := newFakeDiscord(t)
-	quests := &fakeQuests{quest: baseQuest(testVoice)}
-	sync := newSync(f, quests, fullSettings, nil)
-	sync.Now = func() time.Time { return testStart.Add(time.Hour) }
-	if err := sync.SyncQuest(context.Background(), testQuestID, 1); err != nil {
-		t.Fatal(err)
-	}
-	if got := f.find(http.MethodPost, "/scheduled-events"); len(got) != 0 {
-		t.Fatalf("discord rejects past start times; got %v", got)
+	for _, voice := range []string{"", testVoice} {
+		for _, eventID := range []string{"", "existing-event"} {
+			t.Run(voice+"/"+eventID, func(t *testing.T) {
+				f := newFakeDiscord(t)
+				q := baseQuest(voice)
+				q.EventID = eventID
+				sync := newSync(f, &fakeQuests{quest: q}, fullSettings, nil)
+				sync.Now = func() time.Time { return testStart.Add(time.Hour) }
+				if err := sync.SyncQuest(context.Background(), testQuestID, 1); err != nil {
+					t.Fatal(err)
+				}
+				if got := f.find(http.MethodPost, "/scheduled-events"); len(got) != 0 {
+					t.Fatalf("discord rejects past start times; got %v", got)
+				}
+				if got := f.find(http.MethodPatch, "/scheduled-events/existing-event"); len(got) != 0 {
+					t.Fatalf("existing past event must stay untouched; got %v", got)
+				}
+			})
+		}
 	}
 }
 
@@ -397,7 +411,7 @@ func TestCancelledQuestUpdatesAnnouncementAndTerminatesExistingEvent(t *testing.
 					t.Fatal(err)
 				}
 				messages := f.find(http.MethodPatch, "/messages/existing-message")
-				if len(messages) != 1 || !strings.Contains(messages[0].Body["content"].(string), "Status: CANCELLED") {
+				if len(messages) != 1 || !strings.Contains(messages[0].Body["content"].(string), "- **Status** - Cancelled") {
 					t.Fatalf("cancelled announcement=%v", messages)
 				}
 				events := f.find(http.MethodPatch, "/scheduled-events/existing-event")
@@ -444,7 +458,7 @@ func TestCancelledOrDeletedQuestDoesNotCreateMissingDiscordObjects(t *testing.T)
 				}
 				if message != "" {
 					messages := f.find(http.MethodPatch, "/messages/existing-message")
-					if len(messages) != 1 || !strings.Contains(messages[0].Body["content"].(string), "Status: "+strings.ToUpper(state)) {
+					if len(messages) != 1 || !strings.Contains(messages[0].Body["content"].(string), "- **Status** - "+strings.ToUpper(state[:1])+state[1:]) {
 						t.Fatalf("terminal announcement=%v", messages)
 					}
 				}
@@ -490,8 +504,8 @@ func TestRolePingAndAllowedMentions(t *testing.T) {
 		t.Fatal(err)
 	}
 	body := f.find(http.MethodPost, "/messages")[0].Body
-	if !strings.HasPrefix(body["content"].(string), "<@&"+testRole+">\n# ") {
-		t.Fatalf("role line must lead the post: %q", body["content"])
+	if !strings.Contains(body["content"].(string), "\n\n-# <@&"+testRole+">\n\n## Game Information\n") {
+		t.Fatalf("role line must separate brief and game information: %q", body["content"])
 	}
 	mentions := body["allowed_mentions"].(map[string]any)
 	roles := mentions["roles"].([]any)
@@ -509,7 +523,7 @@ func TestNoRoleMeansNoRoleLineAndNoPings(t *testing.T) {
 		t.Fatal(err)
 	}
 	body := f.find(http.MethodPost, "/messages")[0].Body
-	if !strings.HasPrefix(body["content"].(string), "# The Sunken Bell") {
+	if !strings.HasPrefix(body["content"].(string), "# [The Sunken Bell](<") {
 		t.Fatalf("content=%q", body["content"])
 	}
 	mentions := body["allowed_mentions"].(map[string]any)
@@ -584,12 +598,12 @@ func TestAPIErrorDoesNotApplyRevision(t *testing.T) {
 }
 
 func TestMissingMessageIDDoesNotApply(t *testing.T) {
-	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { _, _ = w.Write([]byte(`{}`)) }))
-	defer srv.Close()
 	applier := &fakeApplier{}
 	err := delivery.RESTSync{
 		Token: "tok", GuildID: testGuild, Settings: fakeSettings{fullSettings}, Quests: &fakeQuests{quest: baseQuest("")},
-		HTTP: srv.Client(), APIBase: srv.URL, Apply: applier,
+		HTTP: &http.Client{Transport: discordTransport(func(*http.Request) (*http.Response, error) {
+			return &http.Response{StatusCode: http.StatusOK, Body: io.NopCloser(strings.NewReader(`{}`))}, nil
+		})}, Apply: applier,
 	}.SyncQuest(context.Background(), testQuestID, 2)
 	if err == nil || !strings.Contains(err.Error(), "missing message id") {
 		t.Fatalf("want missing message id, got %v", err)
@@ -646,27 +660,27 @@ func TestMemberBriefBodyEmptyWhenMembersCannotReadTheBrief(t *testing.T) {
 
 func TestBuildAnnouncementLayoutWithEverything(t *testing.T) {
 	got, cut, err := delivery.BuildAnnouncement(delivery.AnnouncementInput{
-		RoleID: testRole, Title: "T", ShortCode: "Q1", Body: "Body line.", ScheduledAt: testStart, DurationHours: 3,
+		RoleID: testRole, Title: "T", Status: "open", ShortCode: "Q1", Body: "Body line.", ScheduledAt: testStart, DurationHours: 3,
 		DMDiscordID: testDM, VoiceChannelID: testVoice, EventURL: "https://discord.com/events/1/2", SignupURL: "https://s/quests/Q1",
 	})
 	if err != nil || cut {
 		t.Fatalf("err=%v cut=%v", err, cut)
 	}
-	want := "<@&" + testRole + ">\n# T (Q1)\nBody line.\n\n<t:" + itoa(testStart.Unix()) + ":F> · 3 hours · DM <@" + testDM +
-		"> · Voice: <#" + testVoice + ">\nEvent: https://discord.com/events/1/2\nSign up: https://s/quests/Q1"
+	want := "# [T](<https://s/quests/Q1>)\n\nBody line.\n\n-# <@&" + testRole + ">\n\n## Game Information\n- **Scheduling & Duration** - <t:" + itoa(testStart.Unix()) + ":f> · 3h\n- **DM** - <@" + testDM +
+		">\n- **Status** - Open\n- **APL** - Any\n- **Quest Link** - https://s/quests/Q1\n- **Event Link** - https://discord.com/events/1/2"
 	if got != want {
 		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
 	}
 }
 
-func TestBuildAnnouncementOmitsRoleVoiceAndEvent(t *testing.T) {
+func TestBuildAnnouncementOmitsRoleAndShowsPendingEvent(t *testing.T) {
 	got, _, err := delivery.BuildAnnouncement(delivery.AnnouncementInput{
-		Title: "T", ShortCode: "Q1", Body: "B", ScheduledAt: testStart, DurationHours: 2.5, DMDiscordID: testDM, SignupURL: "https://s/quests/Q1",
+		Title: "T", Status: "open", ShortCode: "Q1", Body: "B", ScheduledAt: testStart, DurationHours: 2.5, DMDiscordID: testDM, SignupURL: "https://s/quests/Q1",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "# T (Q1)\nB\n\n<t:" + itoa(testStart.Unix()) + ":F> · 2.5 hours · DM <@" + testDM + ">\nSign up: https://s/quests/Q1"
+	want := "# [T](<https://s/quests/Q1>)\n\nB\n\n## Game Information\n- **Scheduling & Duration** - <t:" + itoa(testStart.Unix()) + ":f> · 2.5h\n- **DM** - <@" + testDM + ">\n- **Status** - Open\n- **APL** - Any\n- **Quest Link** - https://s/quests/Q1\n- **Event Link** - Pending"
 	if got != want {
 		t.Fatalf("got:\n%s\nwant:\n%s", got, want)
 	}
@@ -675,7 +689,7 @@ func TestBuildAnnouncementOmitsRoleVoiceAndEvent(t *testing.T) {
 func TestBuildAnnouncementCutsOnlyTheBodyAtTheLimit(t *testing.T) {
 	long := strings.Repeat("alpha beta gamma ", 300)
 	in := delivery.AnnouncementInput{
-		RoleID: testRole, Title: "Long", ShortCode: "Q1", Body: long, ScheduledAt: testStart, DurationHours: 4,
+		RoleID: testRole, Title: "Long", Status: "open", ShortCode: "Q1", Body: long, ScheduledAt: testStart, DurationHours: 4,
 		DMDiscordID: testDM, VoiceChannelID: testVoice, EventURL: "https://discord.com/events/1/2", SignupURL: "https://s/quests/Q1",
 	}
 	got, cut, err := delivery.BuildAnnouncement(in)
@@ -686,12 +700,12 @@ func TestBuildAnnouncementCutsOnlyTheBodyAtTheLimit(t *testing.T) {
 		t.Fatalf("post is %d long", discordLen(got))
 	}
 	lines := strings.Split(got, "\n")
-	if lines[0] != "<@&"+testRole+">" || lines[1] != "# Long (Q1)" {
+	if lines[0] != "# [Long](<https://s/quests/Q1>)" || lines[1] != "" {
 		t.Fatalf("head changed: %q", lines[:2])
 	}
-	tail := lines[len(lines)-4:]
-	if tail[0] != "" || !strings.Contains(tail[1], "· 4 hours · DM") || !strings.HasPrefix(tail[2], "Event: ") || tail[3] != "Sign up: https://s/quests/Q1" {
-		t.Fatalf("tail changed: %q", tail)
+	wantTail := "\n\n-# <@&" + testRole + ">\n\n## Game Information\n- **Scheduling & Duration** - <t:" + itoa(testStart.Unix()) + ":f> · 4h\n- **DM** - <@" + testDM + ">\n- **Status** - Open\n- **APL** - Any\n- **Quest Link** - https://s/quests/Q1\n- **Event Link** - https://discord.com/events/1/2"
+	if !strings.HasSuffix(got, wantTail) {
+		t.Fatalf("tail changed: %q", got)
 	}
 	body := lines[2]
 	if !strings.HasSuffix(body, "…") || !strings.HasPrefix(long, strings.TrimSuffix(body, "…")) {

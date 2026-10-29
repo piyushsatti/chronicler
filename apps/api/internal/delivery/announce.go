@@ -27,6 +27,7 @@ type AnnounceQuest struct {
 	Title           string
 	ScheduledAt     time.Time
 	DurationHours   float64
+	AvgPartyLevel   *int
 	AppliedRevision int
 	MessageID       string
 	EventID         string
@@ -66,6 +67,7 @@ type AnnouncementInput struct {
 	Body           string
 	ScheduledAt    time.Time
 	DurationHours  float64
+	AvgPartyLevel  *int
 	DMDiscordID    string
 	VoiceChannelID string
 	EventURL       string
@@ -75,7 +77,7 @@ type AnnouncementInput struct {
 func discordLen(s string) int { return len(utf16.Encode([]rune(s))) }
 
 // BuildAnnouncement renders the plain-text post. When the whole post would pass
-// the Discord limit, only the body is cut (on a word boundary, with "…");
+// the Discord limit, only the body is cut (on a word boundary when possible, with "…");
 // every other line stays intact. The second result reports whether it was cut.
 func BuildAnnouncement(in AnnouncementInput) (string, bool, error) {
 	fixed := announcementLines(in, "")
@@ -87,34 +89,43 @@ func BuildAnnouncement(in AnnouncementInput) (string, bool, error) {
 	if body == "" || discordLen(full) <= DiscordMessageLimit {
 		return full, false, nil
 	}
-	room := DiscordMessageLimit - discordLen(strings.Join(fixed, "\n")) - 1 // body line's newline
+	room := DiscordMessageLimit - discordLen(strings.Join(fixed, "\n")) - 2 // body and blank line
+	if room < 1 {
+		return "", false, fmt.Errorf("announcement leaves no room for brief ellipsis within %d characters", DiscordMessageLimit)
+	}
 	cut := cutOnWord(body, room)
 	return strings.Join(announcementLines(in, cut), "\n"), true, nil
 }
 
 func announcementLines(in AnnouncementInput, body string) []string {
-	lines := make([]string, 0, 8)
-	if in.RoleID != "" {
-		lines = append(lines, "<@&"+in.RoleID+">")
-	}
-	lines = append(lines, fmt.Sprintf("# %s (%s)", in.Title, in.ShortCode))
-	if in.Status == "cancelled" || in.Status == "deleted" {
-		lines = append(lines, "Status: "+strings.ToUpper(in.Status))
-	}
+	lines := []string{fmt.Sprintf("# [%s](<%s>)", in.Title, in.SignupURL), ""}
 	if body != "" {
-		lines = append(lines, body)
+		lines = append(lines, body, "")
 	}
-	lines = append(lines, "")
-	details := fmt.Sprintf("<t:%d:F> · %s hours · DM <@%s>", in.ScheduledAt.Unix(), formatHours(in.DurationHours), in.DMDiscordID)
-	if in.VoiceChannelID != "" {
-		details += " · Voice: <#" + in.VoiceChannelID + ">"
+	if in.RoleID != "" {
+		lines = append(lines, "-# <@&"+in.RoleID+">", "")
 	}
-	lines = append(lines, details)
-	if in.EventURL != "" {
-		lines = append(lines, "Event: "+in.EventURL)
+	status := in.Status
+	if status != "" {
+		status = strings.ToUpper(status[:1]) + status[1:]
 	}
-	lines = append(lines, "Sign up: "+in.SignupURL)
-	return lines
+	apl := "Any"
+	if in.AvgPartyLevel != nil {
+		apl = fmt.Sprint(*in.AvgPartyLevel)
+	}
+	event := in.EventURL
+	if event == "" {
+		event = "Pending"
+	}
+	return append(lines,
+		"## Game Information",
+		fmt.Sprintf("- **Scheduling & Duration** - <t:%d:f> · %sh", in.ScheduledAt.Unix(), formatHours(in.DurationHours)),
+		"- **DM** - <@"+in.DMDiscordID+">",
+		"- **Status** - "+status,
+		"- **APL** - "+apl,
+		"- **Quest Link** - "+in.SignupURL,
+		"- **Event Link** - "+event,
+	)
 }
 
 func formatHours(h float64) string {
@@ -122,11 +133,11 @@ func formatHours(h float64) string {
 }
 
 // cutOnWord shortens text to at most limit UTF-16 units including a closing
-// "…", ending at a word boundary. It returns "" when nothing fits.
+// "…", ending at a word boundary when possible. It returns "" when nothing fits.
 func cutOnWord(text string, limit int) string {
 	const ellipsis = "…"
 	budget := limit - discordLen(ellipsis)
-	if budget <= 0 {
+	if budget < 0 {
 		return ""
 	}
 	used, end := 0, 0
@@ -149,14 +160,9 @@ func cutOnWord(text string, limit int) string {
 		if !unicode.IsSpace(next) {
 			if idx := strings.LastIndexFunc(head, unicode.IsSpace); idx >= 0 {
 				head = head[:idx]
-			} else {
-				return ""
 			}
 		}
 	}
 	head = strings.TrimRightFunc(head, unicode.IsSpace)
-	if head == "" {
-		return ""
-	}
 	return head + ellipsis
 }

@@ -438,6 +438,16 @@ WITH changed AS (
  FROM maps m
  WHERE n.public_id=sqlc.arg(node_id)::uuid AND m.id=n.map_id AND m.public_id=sqlc.arg(map_id)::uuid
  RETURNING n.*
+), unlocked_neighbours AS (
+ UPDATE pointcrawl_nodes n SET state='unlocked'
+ FROM changed c
+ WHERE c.state='mapped' AND n.map_id=c.map_id AND n.state='locked'
+   AND EXISTS (
+     SELECT 1 FROM pointcrawl_edges e
+     WHERE e.map_id=c.map_id AND e.kind='hex'
+       AND ((e.node_a=c.id AND e.node_b=n.id) OR (e.node_b=c.id AND e.node_a=n.id))
+   )
+ RETURNING n.id
 )
 SELECT c.public_id AS id,m.public_id AS map_id,c.name,c.x,c.y,submap.public_id AS submap_id,c.created_at,c.state
 FROM changed c JOIN maps m ON m.id=c.map_id LEFT JOIN maps submap ON submap.id=c.submap_id;

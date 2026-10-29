@@ -182,7 +182,7 @@ SELECT id FROM documents WHERE public_id = sqlc.arg(public_id);
 -- name: QuestDiscordAnnounceSnapshot :one
 -- Everything the announcement post needs. The brief is returned raw; the worker
 -- projects it for an ordinary member before use.
-SELECT q.id, q.public_id, q.short_code, q.status, q.deleted_at, q.scheduled_at, q.duration_hours,
+SELECT q.id, q.public_id, q.short_code, q.status, q.deleted_at, q.scheduled_at, q.duration_hours, q.avg_party_level,
        q.discord_applied_revision,
        q.discord_message_id, q.discord_event_id, q.discord_thread_id,
        q.discord_voice_channel_id,

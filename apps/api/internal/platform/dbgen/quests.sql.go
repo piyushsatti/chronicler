@@ -516,7 +516,7 @@ func (q *Queries) MemberInternalID(ctx context.Context, publicID pgtype.UUID) (i
 }
 
 const questDiscordAnnounceSnapshot = `-- name: QuestDiscordAnnounceSnapshot :one
-SELECT q.id, q.public_id, q.short_code, q.status, q.deleted_at, q.scheduled_at, q.duration_hours,
+SELECT q.id, q.public_id, q.short_code, q.status, q.deleted_at, q.scheduled_at, q.duration_hours, q.avg_party_level,
        q.discord_applied_revision,
        q.discord_message_id, q.discord_event_id, q.discord_thread_id,
        q.discord_voice_channel_id,
@@ -540,6 +540,7 @@ type QuestDiscordAnnounceSnapshotRow struct {
 	DeletedAt              pgtype.Timestamptz `json:"deleted_at"`
 	ScheduledAt            pgtype.Timestamptz `json:"scheduled_at"`
 	DurationHours          float64            `json:"duration_hours"`
+	AvgPartyLevel          pgtype.Int4        `json:"avg_party_level"`
 	DiscordAppliedRevision int32              `json:"discord_applied_revision"`
 	DiscordMessageID       pgtype.Text        `json:"discord_message_id"`
 	DiscordEventID         pgtype.Text        `json:"discord_event_id"`
@@ -570,6 +571,7 @@ func (q *Queries) QuestDiscordAnnounceSnapshot(ctx context.Context, publicID pgt
 		&i.DeletedAt,
 		&i.ScheduledAt,
 		&i.DurationHours,
+		&i.AvgPartyLevel,
 		&i.DiscordAppliedRevision,
 		&i.DiscordMessageID,
 		&i.DiscordEventID,

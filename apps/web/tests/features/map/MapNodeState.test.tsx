@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -7,6 +9,7 @@ import { server } from '../../../src/mocks/server.js';
 import { MapPage } from '../../../src/features/map/pages/MapPage.js';
 import { PointcrawlViewport } from '../../../src/features/map/components/PointcrawlViewport.js';
 import { MapKey } from '../../../src/features/map/components/MapKey.js';
+import nodeStateStyles from '../../../src/features/map/components/nodeState.module.css';
 import { setNodeState } from '../../../src/features/map/adapters/mapAdapter.js';
 import {
   NODE_STATES,
@@ -123,6 +126,31 @@ describe('hex state', () => {
     expect(new Set(keys).size).toBe(3);
   });
 
+  it('refreshes neighbouring hex states after mapping a hex', async () => {
+    const states: Record<string, NodeState> = {
+      [gate.id]: 'LOCKED',
+      [river.id]: 'UNLOCKED',
+    };
+    serve(['admin'], states);
+    server.use(
+      graphql.mutation('MapSetNodeState', ({ variables }) => {
+        states[river.id] = 'MAPPED';
+        states[gate.id] = 'UNLOCKED';
+        return HttpResponse.json({
+          data: { setPointcrawlNodeState: { id: variables.nodeId, state: 'MAPPED' } },
+        });
+      }),
+    );
+    page(river.id);
+    const panel = await screen.findByRole('region', { name: 'Selected hex' });
+    await userEvent.click(await within(panel).findByRole('button', { name: 'Change to Mapped' }));
+    const graph = screen.getByRole('group', { name: 'Lightfall map' });
+    await waitFor(() => {
+      expect(within(graph).getByRole('button', { name: `${river.name}, Mapped` })).toBeVisible();
+      expect(within(graph).getByRole('button', { name: `${gate.name}, Unlocked` })).toBeVisible();
+    });
+  });
+
   it.each([
     ['player', ['player']],
     ['DM', ['dm', 'player']],
@@ -177,6 +205,32 @@ describe('hex state', () => {
       'Unlocked: open to play',
       'Mapped: explored and charted',
     ]);
+  });
+
+  it('draws mapped hexes without an outline or tint, like unlocked hexes', () => {
+    const css = readFileSync(
+      join(process.cwd(), 'src/features/map/components/nodeState.module.css'),
+      'utf8',
+    ).replace(/\.([A-Za-z]\w*)/g, (_selector: string, name: string) =>
+      `.${nodeStateStyles[name] ?? name}`,
+    );
+    render(
+      <>
+        <style>{css}</style>
+        <PointcrawlViewport map={hexMap} selectedId={null} onSelect={vi.fn()} />
+      </>,
+    );
+    const graph = screen.getByRole('group', { name: 'Lightfall map' });
+    const mapped = graph.querySelector('polygon[data-node-state="MAPPED"]');
+    const unlocked = graph.querySelector('polygon[data-node-state="UNLOCKED"]');
+    expect(mapped).not.toBeNull();
+    expect(unlocked).not.toBeNull();
+    if (!mapped || !unlocked) throw new Error('Both hex states must be drawn');
+    for (const cell of [mapped, unlocked]) {
+      const style = getComputedStyle(cell);
+      expect(style.stroke).toBe('none');
+      expect(style.fill).toBe('none');
+    }
   });
 
   it('names each hex with its state for screen readers, but not point-map pins', () => {

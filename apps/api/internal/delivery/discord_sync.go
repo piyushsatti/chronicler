@@ -168,7 +168,7 @@ func (s *syncRun) execute(ctx context.Context, revision int) error {
 		return err
 	}
 	if created || eventChanged {
-		// The first post goes out before the event exists; add the Event line.
+		// The first post goes out before the event exists; replace Pending.
 		if q.EventID != "" {
 			return s.editMessage(ctx)
 		}
@@ -204,6 +204,7 @@ func (s *syncRun) messageBody() (map[string]any, error) {
 	content, cut, err := BuildAnnouncement(AnnouncementInput{
 		RoleID: s.roleID, Title: q.Title, Status: status, ShortCode: q.ShortCode, Body: MemberBriefBody(q.Brief),
 		ScheduledAt: q.ScheduledAt, DurationHours: q.DurationHours, DMDiscordID: q.DMDiscordID,
+		AvgPartyLevel:  q.AvgPartyLevel,
 		VoiceChannelID: q.VoiceChannelID, EventURL: s.eventURL(), SignupURL: s.questURL(),
 	})
 	if err != nil {
@@ -274,7 +275,7 @@ func (s *syncRun) startThread(ctx context.Context) (string, error) {
 	return id, ctx.Err()
 }
 
-// syncEvent reconciles stored state first; only future voice quests create events.
+// syncEvent reconciles stored state first; only future quests create events.
 func (s *syncRun) syncEvent(ctx context.Context) (bool, error) {
 	q := &s.quest
 	if q.EventID != "" {
@@ -310,7 +311,7 @@ func (s *syncRun) syncEvent(ctx context.Context) (bool, error) {
 	if s.terminal() {
 		return false, nil
 	}
-	if q.VoiceChannelID == "" || !q.ScheduledAt.After(s.now()) {
+	if !q.ScheduledAt.After(s.now()) {
 		return false, nil
 	}
 	name := q.Title
@@ -324,7 +325,16 @@ func (s *syncRun) syncEvent(ctx context.Context) (bool, error) {
 		"scheduled_end_time":   q.ScheduledAt.Add(time.Duration(q.DurationHours * float64(time.Hour))).UTC().Format(time.RFC3339),
 		"entity_type":          2, // VOICE
 		"channel_id":           q.VoiceChannelID,
+		"entity_metadata":      nil,
 		"description":          fmt.Sprintf("Announcement: %s\nQuest page: %s", s.messageLink(), s.questURL()),
+	}
+	if q.VoiceChannelID == "" {
+		location := []rune(s.questURL())
+		if len(location) > 100 {
+			location = location[:100]
+		}
+		body["entity_type"], body["channel_id"] = 3, nil // EXTERNAL
+		body["entity_metadata"] = map[string]any{"location": string(location)}
 	}
 	if q.EventID != "" {
 		if _, err := s.call(ctx, http.MethodPatch, fmt.Sprintf("/guilds/%s/scheduled-events/%s", s.GuildID, q.EventID), body); err != nil {

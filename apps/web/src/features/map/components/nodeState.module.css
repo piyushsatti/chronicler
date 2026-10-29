@@ -1,6 +1,6 @@
 /*
- * Hex state (owner decision 2026-10-28): display only. Each state has a shape cue as well
- * as a colour cue: Locked is hatched and dimmed, Unlocked is left plain, Mapped is outlined.
+ * Hex state (owner decision 2026-10-29): Locked is hatched and dimmed.
+ * Unlocked and Mapped leave the map plain; the sidebar, aria-label and key name the state.
  */
 .lockedWash {
   fill: color-mix(in srgb, var(--color-bg-deep) 55%, transparent);
@@ -14,14 +14,10 @@
 .stateCell {
   pointer-events: none;
 }
-.stateCell[data-node-state='UNLOCKED'] {
+.stateCell[data-node-state='UNLOCKED'],
+.stateCell[data-node-state='MAPPED'] {
   fill: none;
   stroke: none;
-}
-.stateCell[data-node-state='MAPPED'] {
-  fill: color-mix(in srgb, var(--color-accent) 16%, transparent);
-  stroke: var(--color-accent);
-  stroke-width: 3px;
 }
 .stateRow {
   display: flex;
@@ -47,10 +43,7 @@
   flex: none;
   overflow: visible;
 }
-.swatch .stateCell:not([data-node-state='MAPPED']) {
+.swatch .stateCell {
   stroke: var(--color-text-3);
   stroke-width: 1px;
-}
-.swatch .stateCell[data-node-state='MAPPED'] {
-  stroke-width: 2px;
 }

@@ -93,3 +93,96 @@ func TestPointcrawlNodeStateIsAdminSetAndDefaultsLocked(t *testing.T) {
 		t.Fatalf("upsert after state view=%+v err=%v", moved, err)
 	}
 }
+
+func TestMappingPointcrawlNodeUnlocksOnlyLockedHexNeighbours(t *testing.T) {
+	f, ctx, commands, resolve := pointcrawlFixture(t)
+	admin, err := resolve(ctx, mapAdmin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	north, south := mapNorth, mapSouth
+	m := pointcrawlCreateMap(t, ctx, commands, admin, &north)
+	other := pointcrawlCreateMap(t, ctx, commands, admin, &south)
+	if _, err := f.Pool.Exec(ctx, `UPDATE maps SET grid='hex' WHERE public_id IN ($1,$2)`, m.Id, other.Id); err != nil {
+		t.Fatal(err)
+	}
+	centre := pointcrawlCreateNode(t, ctx, commands, admin, m.Id)
+	forward := pointcrawlCreateNode(t, ctx, commands, admin, m.Id)
+	reverse := pointcrawlCreateNode(t, ctx, commands, admin, m.Id)
+	unlocked := pointcrawlCreateNode(t, ctx, commands, admin, m.Id)
+	mapped := pointcrawlCreateNode(t, ctx, commands, admin, m.Id)
+	path := pointcrawlCreateNode(t, ctx, commands, admin, m.Id)
+	nonNeighbour := pointcrawlCreateNode(t, ctx, commands, admin, m.Id)
+	otherCentre := pointcrawlCreateNode(t, ctx, commands, admin, other.Id)
+	otherNeighbour := pointcrawlCreateNode(t, ctx, commands, admin, other.Id)
+	for _, item := range []struct {
+		node  PointcrawlNodeView
+		state string
+	}{{unlocked, PointcrawlNodeUnlocked}, {mapped, PointcrawlNodeMapped}} {
+		if _, err := f.Pool.Exec(ctx, `UPDATE pointcrawl_nodes SET state=$2 WHERE public_id=$1`, item.node.Id, item.state); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, edge := range []struct {
+		mapID, a, b, kind string
+	}{
+		{m.Id, centre.Id, forward.Id, "hex"},
+		{m.Id, reverse.Id, centre.Id, "hex"},
+		{m.Id, centre.Id, unlocked.Id, "hex"},
+		{m.Id, centre.Id, mapped.Id, "hex"},
+		{m.Id, centre.Id, path.Id, "path"},
+		{other.Id, otherCentre.Id, otherNeighbour.Id, "hex"},
+	} {
+		if _, err := f.Pool.Exec(ctx, `
+			INSERT INTO pointcrawl_edges(map_id,node_a,node_b,directed,kind)
+			SELECT m.id,a.id,b.id,true,$4
+			FROM maps m JOIN pointcrawl_nodes a ON a.map_id=m.id
+			JOIN pointcrawl_nodes b ON b.map_id=m.id
+			WHERE m.public_id=$1 AND a.public_id=$2 AND b.public_id=$3`, edge.mapID, edge.a, edge.b, edge.kind); err != nil {
+			t.Fatal(err)
+		}
+	}
+	key := pointcrawlMeta()
+	spec := SetPointcrawlNodeStateSpec{MapId: m.Id, NodeId: centre.Id, State: PointcrawlNodeMapped}
+	first, err := commands.SetPointcrawlNodeState(ctx, admin, spec, key)
+	if err != nil || first.State != PointcrawlNodeMapped {
+		t.Fatalf("map centre=%+v err=%v", first, err)
+	}
+	assertStates := func(centreState string) {
+		t.Helper()
+		for _, item := range []struct {
+			node  PointcrawlNodeView
+			state string
+		}{
+			{centre, centreState},
+			{forward, PointcrawlNodeUnlocked},
+			{reverse, PointcrawlNodeUnlocked},
+			{unlocked, PointcrawlNodeUnlocked},
+			{mapped, PointcrawlNodeMapped},
+			{path, PointcrawlNodeLocked},
+			{nonNeighbour, PointcrawlNodeLocked},
+			{otherCentre, PointcrawlNodeLocked},
+			{otherNeighbour, PointcrawlNodeLocked},
+		} {
+			var state string
+			if err := f.Pool.QueryRow(ctx, `SELECT state FROM pointcrawl_nodes WHERE public_id=$1`, item.node.Id).Scan(&state); err != nil {
+				t.Fatal(err)
+			}
+			if state != item.state {
+				t.Errorf("node %s state=%q, want %q", item.node.Id, state, item.state)
+			}
+		}
+	}
+	assertStates(PointcrawlNodeMapped)
+	replay, err := commands.SetPointcrawlNodeState(ctx, admin, spec, key)
+	if err != nil || replay.Id != first.Id || replay.State != first.State {
+		t.Fatalf("replay=%+v err=%v, want %+v", replay, err, first)
+	}
+	assertStates(PointcrawlNodeMapped)
+	for _, state := range []string{PointcrawlNodeUnlocked, PointcrawlNodeLocked} {
+		if _, err := commands.SetPointcrawlNodeState(ctx, admin, SetPointcrawlNodeStateSpec{MapId: m.Id, NodeId: centre.Id, State: state}, pointcrawlMeta()); err != nil {
+			t.Fatal(err)
+		}
+		assertStates(state)
+	}
+}

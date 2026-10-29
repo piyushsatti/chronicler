@@ -525,8 +525,8 @@ func (s ProductCommands) UpsertPointcrawlNode(ctx context.Context, actor auth.Au
 	})
 }
 
-// SetPointcrawlNodeState records an admin-set display state on one hex. Authority is admin-only
-// (ruleAdmin), decided before the node is looked up so non-admins cannot probe node existence.
+// SetPointcrawlNodeState records an admin-set hex state and unlocks locked hex neighbours when mapped.
+// Authority is admin-only (ruleAdmin), checked before lookup so non-admins cannot probe node existence.
 func (s ProductCommands) SetPointcrawlNodeState(ctx context.Context, actor auth.Authority, spec SetPointcrawlNodeStateSpec, meta product.CommandMeta) (PointcrawlNodeView, error) {
 	if !validPointcrawlNodeState(spec.State) {
 		return PointcrawlNodeView{}, apierr.New(apierr.Invalid, "invalid pointcrawl node state")

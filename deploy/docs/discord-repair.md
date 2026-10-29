@@ -26,15 +26,58 @@ only the bot's role. A channel overwrite can deny a permission that the role
 allows, and a denied View Channel implicitly denies everything else on that
 channel.
 
-| Where                  | Permission                                                                                                     | Used for                                                                                                                                                                                                            |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Quest announce channel | View Channel, Send Messages                                                                                    | Posting the announcement. Editing the bot's own post needs nothing more.                                                                                                                                            |
-| Quest announce channel | Create Public Threads                                                                                          | Opening the discussion thread on the first post. This step is best effort: a refusal is logged, the delivery still succeeds and the thread is not retried.                                                          |
-| Quest voice channel    | Create Events (or Manage Events), View Channel, Connect                                                        | Creating and updating the scheduled event. New events require a voice channel, a future start, and a quest that is neither cancelled nor deleted. Terminal synchronization also handles existing past-start events. |
-| Quest role or bot role | The role allows "Allow anyone to @mention this role", or the bot has "Mention @everyone, @here, and All Roles" | Pinging the quest announcement role. Without either, the post goes out but the role is not notified.                                                                                                                |
+| Where                  | Permission                                                                                                     | Used for                                                                                                                                                   |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Quest announce channel | View Channel, Send Messages                                                                                    | Posting the announcement. Editing the bot's own post needs nothing more.                                                                                   |
+| Quest announce channel | Create Public Threads                                                                                          | Opening the discussion thread on the first post. This step is best effort: a refusal is logged, the delivery still succeeds and the thread is not retried. |
+| Guild                  | Create Events                                                                                                  | Creating an EXTERNAL scheduled event when the quest has no voice channel.                                                                                  |
+| Quest voice channel    | Create Events, View Channel, Connect                                                                           | Creating a VOICE scheduled event when the quest has a voice channel.                                                                                       |
+| Quest role or bot role | The role allows "Allow anyone to @mention this role", or the bot has "Mention @everyone, @here, and All Roles" | Pinging the quest announcement role. Without either, the post goes out but the role is not notified.                                                       |
 
 The worker posts plain message content without embeds and never writes inside
 the thread, so it does not need Embed Links or Send Messages in Threads.
+
+Updating or terminating the bot's own events requires either Create Events or
+Manage Events. VOICE events also require View Channel and Connect on the voice
+channel ([Discord event permissions](https://docs.discord.com/developers/resources/guild-scheduled-event#guild-scheduled-event-permissions-requirements)).
+
+New events require a future start and a quest that is neither cancelled nor
+deleted. Without a voice channel, the worker uses an EXTERNAL event with a null
+channel and the Chronicler quest URL as its location, capped at 100 characters.
+With a voice channel, it uses a VOICE event and clears the external metadata.
+Both end at the quest start plus duration. Changing the quest's voice channel
+updates the existing event's type, channel, and location. Ordinary event updates
+leave past-start quests alone. Terminal synchronization still handles their
+existing events. Field requirements are recorded in [D49](/docs/decisions/D49-Quest-Discord-Terminal-Synchronization.md).
+
+## Announcement format
+
+The announcement uses this layout. Angle brackets around the title's URL are
+literal. Braced values and other angle-bracketed values are placeholders.
+
+```text
+# [<Title>](<https://{public-origin}/quests/{short-code}>)
+
+<member-projected brief body>
+
+-# <@&<role id>>
+
+## Game Information
+- **Scheduling & Duration** - <t:<start unix>:f> · <hours>h
+- **DM** - <@<dm discord id>>
+- **Status** - <Status>
+- **APL** - <average party level, or Any when unset>
+- **Quest Link** - https://{public-origin}/quests/{short-code}
+- **Event Link** - <event url, or Pending>
+```
+
+The title and Quest Link use the same Chronicler quest URL. The role line is
+omitted when no role is configured. Only that role may notify through
+`allowed_mentions`. Status is `Open`, `Full`, `Played`, `Closed`, or `Cancelled`.
+A tombstone shows `Deleted`. Duration uses hours without trailing zeroes, such
+as `4h` or `2.5h`. The brief is projected for an ordinary member and shortened
+with an ellipsis before any Game Information line is cut. The post stays within
+2,000 UTF-16 code units. Event Link shows `Pending` until an event ID is stored.
 
 A Discord `403` (for example `50013 Missing Permissions` or `50001 Missing
 Access`) on the message or event step is not retried. The worker parks the job
@@ -83,9 +126,9 @@ After a successful creation response, the worker persists each returned message,
 event, or thread ID with a detached five-second context. This permits ID storage
 after work cancellation; subsequent remote operations still stop on cancellation.
 
-Cancellation and deletion edit existing announcements with `Status: CANCELLED`
-or `Status: DELETED`. They create no missing message, scheduled event, or thread.
-The worker reads a stored event before checking start time or voice channel.
+Cancellation and deletion edit the Game Information status row to `Cancelled`
+or `Deleted`. They create no missing message, scheduled event, or thread.
+The worker reads a stored event before checking start time.
 A scheduled event becomes canceled; an active event becomes completed, which is
 Discord's valid terminal transition from active. An already terminal event is
 unchanged ([scheduled-event status transitions](https://docs.discord.com/developers/resources/guild-scheduled-event)).

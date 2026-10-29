@@ -131,6 +131,10 @@ func (p *PostgresRevisionApplier) LoadAnnounceQuest(ctx context.Context, questID
 	if row.DeletedAt.Valid {
 		quest.DeletedAt = &row.DeletedAt.Time
 	}
+	if row.AvgPartyLevel.Valid {
+		level := int(row.AvgPartyLevel.Int32)
+		quest.AvgPartyLevel = &level
+	}
 	return quest, nil
 }
 

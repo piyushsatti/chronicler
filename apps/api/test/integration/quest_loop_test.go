@@ -174,8 +174,10 @@ func TestQuestCommandJobAndMockDiscord(t *testing.T) {
 	if err := json.Unmarshal([]byte(posted), &post); err != nil {
 		t.Fatal(err)
 	}
-	if !strings.HasPrefix(post.Content, "<@&"+role+">\n# ") || !strings.Contains(post.Content, "Voice: <#"+voice+">") ||
-		!strings.Contains(post.Content, "Sign up: https://chronicler.example/quests/loop-eeeeeeee") {
+	// Owner format D8: linked title, brief, role subtext, Game Information list.
+	if !strings.HasPrefix(post.Content, "# [") || !strings.Contains(post.Content, "\n-# <@&"+role+">\n") ||
+		!strings.Contains(post.Content, "## Game Information") ||
+		!strings.Contains(post.Content, "- **Quest Link** - https://chronicler.example/quests/loop-eeeeeeee") {
 		t.Fatalf("post=%q", post.Content)
 	}
 	for _, leak := range []string{"abbot", "lich", "one player only", "[!dm"} {
