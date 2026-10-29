@@ -22,8 +22,8 @@
     }
   },
   "preserved_source_behavior": [
-    "Maximal consecutive blockquote run is one span; nested marker scopes entire run",
-    "Bare marker scopes its own line, including code-fence text",
+    "A blockquote run includes nonblank lazy lines until a blank separator or new block, including inside lists; classify the whole run once",
+    "Bare marker scopes its own line, including code-fence text; list-nested markers warn without changing projection",
     "Malformed outranks handle, then DM, then spoiler; first of multiple valid handle markers is retained",
     "Ordinary unknown callouts remain visible; spoiler is presentation only",
     "A closing bracket terminates the marker token; it cannot encode a longer member identity containing that delimiter"
@@ -813,6 +813,191 @@
       "public_body": "> [!redacted]\n> ████████████████████\n\n> [!note]\n> Public note",
       "dm_body": "Bare [!dm] BARE-SECRET\n> [!note]\n> Public note",
       "member_body": "> [!redacted]\n> ████████████████████\n\n> [!note]\n> Public note"
+    },
+    {
+      "name": "quoted DM lazy continuation",
+      "body": "> [!dm]\n> one\ntwo\n\nPublic",
+      "spans": [
+        {
+          "text": "> [!dm]\n> one\ntwo",
+          "policy": ["role:dm"],
+          "spoiler": false
+        },
+        {
+          "text": "\nPublic",
+          "policy": null,
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]\n> ████████████████████\n> ████████████████████\n\nPublic",
+      "dm_body": "> [!dm]\n> one\ntwo\n\nPublic",
+      "member_body": "> [!redacted]\n> ████████████████████\n> ████████████████████\n\nPublic"
+    },
+    {
+      "name": "HTML-looking lazy line stays in the quote",
+      "body": "> [!dm]\n> one\n<span>two</span>\n\nPublic",
+      "spans": [
+        {
+          "text": "> [!dm]\n> one\n<span>two</span>",
+          "policy": ["role:dm"],
+          "spoiler": false
+        },
+        {
+          "text": "\nPublic",
+          "policy": null,
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]\n> ████████████████████\n> ████████████████████\n\nPublic",
+      "dm_body": "> [!dm]\n> one\n<span>two</span>\n\nPublic",
+      "member_body": "> [!redacted]\n> ████████████████████\n> ████████████████████\n\nPublic"
+    },
+    {
+      "name": "quoted member lazy continuation",
+      "body": "> [!dm:@Exact-Handle]\n> one\ntwo\n\nPublic",
+      "spans": [
+        {
+          "text": "> [!dm:@Exact-Handle]\n> one\ntwo",
+          "policy": ["member:@Exact-Handle"],
+          "spoiler": false
+        },
+        {
+          "text": "\nPublic",
+          "policy": null,
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]\n> ████████████████████\n> ████████████████████\n\nPublic",
+      "dm_body": "> [!redacted]\n> ████████████████████\n> ████████████████████\n\nPublic",
+      "member_body": "> [!dm:@Exact-Handle]\n> one\ntwo\n\nPublic"
+    },
+    {
+      "name": "quoted malformed lazy continuation",
+      "body": "> [!dm:]\n> one\ntwo\n\nPublic",
+      "spans": [
+        {
+          "text": "> [!dm:]\n> one\ntwo",
+          "policy": [],
+          "spoiler": false
+        },
+        {
+          "text": "\nPublic",
+          "policy": null,
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]\n> ████████████████████\n> ████████████████████\n\nPublic",
+      "dm_body": "> [!redacted]\n> ████████████████████\n> ████████████████████\n\nPublic",
+      "member_body": "> [!redacted]\n> ████████████████████\n> ████████████████████\n\nPublic"
+    },
+    {
+      "name": "list-nested direct marker preserves projection",
+      "body": "- > [!dm]\n  > secret",
+      "spans": [
+        {
+          "text": "- > [!dm]",
+          "policy": ["role:dm"],
+          "spoiler": false
+        },
+        {
+          "text": "  > secret",
+          "policy": null,
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]\n> ████████████████████\n\n  > secret",
+      "dm_body": "- > [!dm]\n  > secret",
+      "member_body": "> [!redacted]\n> ████████████████████\n\n  > secret"
+    },
+    {
+      "name": "list-nested numbered continuation preserves projection",
+      "body": "10. item\n    > [!dm]\n    > secret",
+      "spans": [
+        {
+          "text": "10. item",
+          "policy": null,
+          "spoiler": false
+        },
+        {
+          "text": "    > [!dm]",
+          "policy": ["role:dm"],
+          "spoiler": false
+        },
+        {
+          "text": "    > secret",
+          "policy": null,
+          "spoiler": false
+        }
+      ],
+      "public_body": "10. item\n> [!redacted]\n\n    > secret",
+      "dm_body": "10. item\n    > [!dm]\n    > secret",
+      "member_body": "10. item\n> [!redacted]\n\n    > secret"
+    },
+    {
+      "name": "list-nested quote hides lazy continuation",
+      "body": "- item\n  > [!dm]\n  > one\n  two",
+      "spans": [
+        {
+          "text": "- item",
+          "policy": null,
+          "spoiler": false
+        },
+        {
+          "text": "  > [!dm]\n  > one\n  two",
+          "policy": ["role:dm"],
+          "spoiler": false
+        }
+      ],
+      "public_body": "- item\n> [!redacted]\n> ████████████████████\n> ████████████████████",
+      "dm_body": "- item\n  > [!dm]\n  > one\n  two",
+      "member_body": "- item\n> [!redacted]\n> ████████████████████\n> ████████████████████"
+    },
+    {
+      "name": "lazy member marker outranks quoted DM marker",
+      "body": "> [!dm]\n> ORIGINAL_SECRET\n[!dm:@Exact-Handle] LAZY_SECRET",
+      "spans": [
+        {
+          "text": "> [!dm]\n> ORIGINAL_SECRET\n[!dm:@Exact-Handle] LAZY_SECRET",
+          "policy": ["member:@Exact-Handle"],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]\n> ████████████████████\n> ████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████\n> ████████████████████",
+      "member_body": "> [!dm]\n> ORIGINAL_SECRET\n[!dm:@Exact-Handle] LAZY_SECRET"
+    },
+    {
+      "name": "quoted member marker outranks lazy DM marker",
+      "body": "> [!dm:@Exact-Handle]\n> ORIGINAL_SECRET\n[!dm] LAZY_SECRET",
+      "spans": [
+        {
+          "text": "> [!dm:@Exact-Handle]\n> ORIGINAL_SECRET\n[!dm] LAZY_SECRET",
+          "policy": ["member:@Exact-Handle"],
+          "spoiler": false
+        }
+      ],
+      "public_body": "> [!redacted]\n> ████████████████████\n> ████████████████████",
+      "dm_body": "> [!redacted]\n> ████████████████████\n> ████████████████████",
+      "member_body": "> [!dm:@Exact-Handle]\n> ORIGINAL_SECRET\n[!dm] LAZY_SECRET"
+    },
+    {
+      "name": "lazy list paragraph hides quote lazy continuation",
+      "body": "- item\nlazy list continuation\n  > [!dm]\n  > SECRET\npublic-looking lazy continuation",
+      "spans": [
+        {
+          "text": "- item\nlazy list continuation",
+          "policy": null,
+          "spoiler": false
+        },
+        {
+          "text": "  > [!dm]\n  > SECRET\npublic-looking lazy continuation",
+          "policy": ["role:dm"],
+          "spoiler": false
+        }
+      ],
+      "public_body": "- item\nlazy list continuation\n> [!redacted]\n> ████████████████████\n> ████████████████████████████████████████",
+      "dm_body": "- item\nlazy list continuation\n  > [!dm]\n  > SECRET\npublic-looking lazy continuation",
+      "member_body": "- item\nlazy list continuation\n> [!redacted]\n> ████████████████████\n> ████████████████████████████████████████"
     }
   ],
   "handle_charset": "[A-Za-z0-9_.-]+"

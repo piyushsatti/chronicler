@@ -114,6 +114,39 @@ beforeEach(() => {
 });
 
 describe('publishing with marker typos', () => {
+  it('requires confirmation for list-nested marker warnings', async () => {
+    const body = '- > [!dm]\n  > secret';
+    auditBody.mockResolvedValue([
+      {
+        startLine: 1,
+        endLine: 1,
+        kind: 'LIST_NESTED',
+        handle: null,
+        suggestion: null,
+        token: '[!dm]',
+        tokenLine: 1,
+        tokenColumn: 5,
+      } satisfies BodySpanAudit,
+    ]);
+    const writes = countWrites();
+    renderGuide({ ...source, body: 'Old body' });
+    renderGuideBody(body);
+    await userEvent.click(screen.getByRole('button', { name: 'Publish' }));
+    let dialog = await screen.findByRole('dialog', { name: 'Check hidden text' });
+    expect(within(dialog).getByRole('listitem')).toHaveTextContent(
+      'does not protect the whole list item',
+    );
+    expect(writes).toHaveLength(0);
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(screen.queryByRole('dialog', { name: 'Check hidden text' })).not.toBeInTheDocument();
+    expect(writes).toHaveLength(0);
+    await userEvent.click(screen.getByRole('button', { name: 'Publish' }));
+    dialog = await screen.findByRole('dialog', { name: 'Check hidden text' });
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Publish anyway' }));
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(writes[0]).toMatchObject({ body });
+  });
+
   it('asks first, listing each offending line, and "Publish anyway" publishes', async () => {
     const writes = countWrites();
     renderGuide({ ...source, body: 'Old body' });

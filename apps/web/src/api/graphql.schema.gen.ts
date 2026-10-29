@@ -173,6 +173,8 @@ export type BackstoryType = {
  * One marked span of an unsaved body, from the server's own marker parser.
  * Lines are 1-based and inclusive. handle is the member a MEMBER span addresses;
  * suggestion is a best-effort corrected marker for MALFORMED and LOOKALIKE spans.
+ * LIST_NESTED records locate accepted markers inside lists, separately from
+ * projection spans; they have no token replacement suggestion.
  * token is the exact source text of the marker defining the span (the offending
  * token for MALFORMED and LOOKALIKE): `[!` through the first `]`, or, when
  * unclosed, `[!` and its first word only, so replacing it with suggestion keeps
@@ -195,9 +197,11 @@ export type BodySpanAudit = {
  * Why an audited body span matters: DM and MEMBER spans are hidden from other
  * readers, MALFORMED spans from everyone; SPOILER spans are visible but blurred;
  * LOOKALIKE spans are visible text whose callout looks like a marker but is not.
+ * LIST_NESTED is a diagnostic: a marker does not protect the whole list item.
  */
 export enum BodySpanKind {
   Dm = 'DM',
+  ListNested = 'LIST_NESTED',
   Lookalike = 'LOOKALIKE',
   Malformed = 'MALFORMED',
   Member = 'MEMBER',

@@ -150,6 +150,26 @@ function isBlank(line: string): boolean {
   return line.trim() === '';
 }
 
+function quotes(lines: readonly string[]): [number, number][] {
+  const out: [number, number][] = [];
+  // Mirrors the server's bodyBlockStartPattern; HTML never ends a lazy run.
+  const blockStart = /^ {0,3}(?:#{1,6}(?:[ \t]|$)|(?:[-+*]|[0-9]{1,9}[.)])(?:[ \t]|$)|`{3,}|~{3,}|(?:[*][ \t]*){3,}$|(?:[-][ \t]*){3,}$|(?:[_][ \t]*){3,}$)/;
+  for (let i = 0; i < lines.length; i++) {
+    if (!isQuote(lines[i])) continue;
+    let j = i + 1;
+    while (
+      j < lines.length &&
+      !isBlank(lines[j]) &&
+      (isQuote(lines[j]) || !blockStart.test(lines[j]))
+    ) {
+      j++;
+    }
+    out.push([i, j - 1]);
+    i = j - 1;
+  }
+  return out;
+}
+
 function quoteContent(line: string): string {
   return line.replace(/^[ \t]{0,3}(?:>[ \t]?)*/, '');
 }
@@ -218,40 +238,39 @@ export function hideLines(
   let last = lineAt(to);
   if (to > from && last > first && to === starts[last]) last--;
   const codeBlocks = fences(lines);
+  const quoteBlocks = quotes(lines);
   const inFence = (idx: number) => codeBlocks.some(([a, b]) => idx >= a && idx <= b);
 
   if (from === to && (!isBlank(lines[first]) || inFence(first))) {
-    const inQuote = isQuote(lines[first]);
-    const sameBlock = (line: string) => !isBlank(line) && isQuote(line) === inQuote;
-    while (first > 0 && sameBlock(lines[first - 1])) first--;
-    while (last + 1 < lines.length && sameBlock(lines[last + 1])) last++;
+    const quote = quoteBlocks.find(([a, b]) => first >= a && first <= b);
+    if (quote) {
+      [first, last] = quote;
+    } else {
+      const sameBlock = (idx: number) =>
+        !isBlank(lines[idx]) &&
+        !quoteBlocks.some(([a, b]) => idx >= a && idx <= b);
+      while (first > 0 && sameBlock(first - 1)) first--;
+      while (last + 1 < lines.length && sameBlock(last + 1)) last++;
+    }
   }
   while (first < last && isBlank(lines[first]) && !inFence(first)) first++;
   while (last > first && isBlank(lines[last]) && !inFence(last)) last--;
   for (let grew = true; grew;) {
     grew = false;
-    for (const [a, b] of codeBlocks) {
+    for (const [a, b] of [...codeBlocks, ...quoteBlocks]) {
       if (a <= last && b >= first && (a < first || b > last)) {
         first = Math.min(first, a);
         last = Math.max(last, b);
         grew = true;
       }
     }
-    if (isQuote(lines[first]) && first > 0 && isQuote(lines[first - 1])) {
-      while (first > 0 && isQuote(lines[first - 1])) first--;
-      grew = true;
-    }
-    if (isQuote(lines[last]) && last + 1 < lines.length && isQuote(lines[last + 1])) {
-      while (last + 1 < lines.length && isQuote(lines[last + 1])) last++;
-      grew = true;
-    }
   }
 
   const range = lines.slice(first, last + 1);
   let replaces: HideScope | null = null;
   for (let i = 0; i < range.length && !replaces;) {
-    let j = i + 1;
-    if (isQuote(range[i])) while (j < range.length && isQuote(range[j])) j++;
+    const quote = quoteBlocks.find(([a]) => a === first + i);
+    const j = quote ? quote[1] - first + 1 : i + 1;
     const scope = classifyGroup(range.slice(i, j));
     if (scope && scope.kind !== 'spoiler' && !sameScope(scope, marker))
       replaces = scope;

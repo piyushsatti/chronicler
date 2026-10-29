@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 
@@ -84,6 +85,90 @@ func TestBodyCannotRegrantDeniedOuterDocument(t *testing.T) {
 		if err != ErrForbidden || body != "" {
 			t.Fatalf("outer policy %s regranted: %q err=%v", policy, body, err)
 		}
+	}
+}
+
+func TestScopedQuoteHidesLazyContinuation(t *testing.T) {
+	d := Document{ID: "doc", AuthorID: "author", Status: StatusPublished, Visibility: VisibilityPublic, Body: "> [!dm]\n> one\ntwo\n\nPublic"}
+	want := "> [!redacted]\n" + redactedBars(20) + "\n" + redactedBars(20) + "\n\nPublic"
+	for _, tc := range []struct {
+		name  string
+		scope ViewerScope
+		want  string
+	}{
+		{"anonymous", ViewerScope{Anonymous: true}, want},
+		{"player", ViewerScope{MemberID: "player", Roles: []auth.Role{auth.Player}}, want},
+		{"DM", ViewerScope{MemberID: "dm", Roles: []auth.Role{auth.DM}}, d.Body},
+		{"author", ViewerScope{MemberID: "author", Roles: []auth.Role{auth.Player}}, d.Body},
+		{"admin", ViewerScope{MemberID: "admin", Roles: []auth.Role{auth.Admin}, IsAdmin: true}, d.Body},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if body, err := d.EffectiveBody(tc.scope); err != nil || body != tc.want {
+				t.Fatalf("body=%q want=%q err=%v", body, tc.want, err)
+			}
+		})
+	}
+}
+
+func TestScopedQuoteLazyMarkersUseExistingPrecedence(t *testing.T) {
+	for _, tc := range []struct {
+		name, body string
+		kind       BodySpanKind
+		handle     string
+	}{
+		{"lazy member outranks DM", "> [!dm]\n> ORIGINAL_SECRET\n[!dm:@Exact-Handle] LAZY_SECRET", BodySpanMember, "Exact-Handle"},
+		{"member outranks lazy DM", "> [!dm:@Exact-Handle]\n> ORIGINAL_SECRET\n[!dm] LAZY_SECRET", BodySpanMember, "Exact-Handle"},
+		{"first handle wins", "> [!dm:@Exact-Handle]\n> ORIGINAL_SECRET\n[!dm:@Other] LAZY_SECRET", BodySpanMember, "Exact-Handle"},
+		{"malformed still denies", "> [!dm]\n> ORIGINAL_SECRET\n[!dm:] LAZY_SECRET", BodySpanMalformed, ""},
+		{"lazy marker scopes ordinary quote", "> Ordinary quote\n> ORIGINAL_SECRET\n[!dm] LAZY_SECRET", BodySpanDM, ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d := Document{ID: "doc", AuthorID: "author", Status: StatusPublished, Visibility: VisibilityPublic, Body: tc.body}
+			for _, scope := range []ViewerScope{
+				{Anonymous: true},
+				{MemberID: "dm", Roles: []auth.Role{auth.DM}},
+				{MemberID: "member", Handle: "Exact-Handle", Roles: []auth.Role{auth.Player}},
+				{MemberID: "other", Handle: "Other", Roles: []auth.Role{auth.Player}},
+			} {
+				allowed := tc.kind == BodySpanMember && scope.Handle == tc.handle || tc.kind == BodySpanDM && slices.Contains(scope.Roles, auth.DM)
+				projected, err := d.EffectiveBody(scope)
+				if err != nil || strings.Contains(projected, "ORIGINAL_SECRET") != allowed || strings.Contains(projected, "LAZY_SECRET") != allowed {
+					t.Fatalf("body=%q scope=%+v projected=%q allowed=%v err=%v", tc.body, scope, projected, allowed, err)
+				}
+			}
+			records := AuditBody(tc.body)
+			if len(records) != 1 || records[0].Kind != tc.kind || records[0].EndLine != 3 || tc.handle != "" && (records[0].Handle == nil || *records[0].Handle != tc.handle) {
+				t.Fatalf("audit=%s, want %s handle %q through line 3", describeAudit(records), tc.kind, tc.handle)
+			}
+			checkTokenRange(t, strings.Split(tc.body, "\n"), records[0])
+		})
+	}
+}
+
+func TestScopedQuoteLazyContinuationStopsAtNewBlock(t *testing.T) {
+	for _, block := range []string{
+		"# Heading", "###### Heading", "#", "  # Heading",
+		"- item", "+ item", "* item", "-", "1. item", "123456789) item", "  2. item",
+		"```go", "~~~", "---", "***", "___", " * * * ", "  - - -",
+	} {
+		t.Run(block, func(t *testing.T) {
+			body := "> [!dm]\n> one\n" + block + "\nPublic"
+			want := "> [!redacted]\n" + redactedBars(20) + "\n\n" + block + "\nPublic"
+			projected, err := (Document{ID: "doc", Status: StatusPublished, Visibility: VisibilityPublic, Body: body}).EffectiveBody(ViewerScope{Anonymous: true})
+			if err != nil || projected != want {
+				t.Fatalf("body=%q want=%q err=%v", projected, want, err)
+			}
+		})
+	}
+	for _, continuation := range []string{"ordinary prose", "####### prose", "#no-space", "1234567890. prose", "-no-space", "__", "inline <i>x</i>", "    # indented prose", "    - indented prose", "    ```code", "\t# indented prose", "<3 love", "<b>lazy</b> text", "<div>block</div>"} {
+		t.Run(continuation, func(t *testing.T) {
+			body := "> [!dm]\n> one\n" + continuation + "\n> two"
+			projected, err := (Document{ID: "doc", Status: StatusPublished, Visibility: VisibilityPublic, Body: body}).EffectiveBody(ViewerScope{Anonymous: true})
+			want := "> [!redacted]\n" + redactedBars(20) + "\n" + redactedBars(20) + "\n" + redactedBars(20)
+			if err != nil || projected != want {
+				t.Fatalf("body=%q want=%q err=%v", projected, want, err)
+			}
+		})
 	}
 }
 
@@ -274,8 +359,7 @@ func TestUnsupportedMarkerHandlesFailClosedWithoutRestrictingDocumentPolicy(t *t
 		if body, err := d.EffectiveBody(scope); err != nil || body != d.Body {
 			t.Fatalf("DB/document principal handle %q was restricted: %q %v", handle, body, err)
 		}
-		// Quote-prefixed continuation keeps the attempted multiline marker
-		// within one maximal callout span; unquoted prose starts a new span.
+		// Keep the attempted multiline marker within one quote run.
 		d.Body = "> [!DM:@" + strings.ReplaceAll(handle, "\n", "\n> ") + "]\n> UNSUPPORTED-HANDLE-SECRET"
 		if body, err := d.EffectiveBody(scope); err != nil || strings.Contains(body, "UNSUPPORTED-HANDLE-SECRET") {
 			t.Fatalf("unsupported marker handle %q leaked: %q %v", handle, body, err)

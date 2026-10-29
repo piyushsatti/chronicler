@@ -207,7 +207,7 @@ func (p *ProductPostgres) ReadDocumentRevisions(ctx context.Context, actor auth.
 		if err != nil {
 			return DocumentRevisionPage{}, err
 		}
-		projected, err := projectDocumentView(ctx, scope, *parent, row.Body)
+		projected, err := ProjectDocumentView(ctx, scope, *parent, row.Body)
 		if err != nil {
 			return DocumentRevisionPage{}, err
 		}
@@ -296,7 +296,7 @@ func (p *ProductPostgres) ReadCodexDirectory(ctx context.Context, actor auth.Aut
 		if err != nil {
 			return CodexDirectoryResult{}, err
 		}
-		projected, err := projectDocumentView(ctx, scope, view, row.Body)
+		projected, err := ProjectDocumentView(ctx, scope, view, row.Body)
 		if err != nil {
 			return CodexDirectoryResult{}, err
 		}
@@ -331,7 +331,7 @@ func (p *ProductPostgres) ReadCodexEntry(ctx context.Context, actor auth.Authori
 	if err != nil {
 		return nil, err
 	}
-	projected, err := projectDocumentView(ctx, scope, view, row.Body)
+	projected, err := ProjectDocumentView(ctx, scope, view, row.Body)
 	if err != nil {
 		return nil, err
 	}

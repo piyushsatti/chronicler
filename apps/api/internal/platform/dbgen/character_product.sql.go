@@ -767,14 +767,36 @@ SELECT count(*)::int AS total
 FROM document_links link
 JOIN documents document ON document.id = link.source_id
 JOIN characters character ON character.id = link.character_target_id
+JOIN members author ON author.id = document.author_id
 WHERE character.public_id = $1::uuid
   AND link.relation = 'summarizes'
   AND document.kind = 'summary'
   AND document.deleted_at IS NULL
+  AND document_readable(document.public_id, author.public_id, document.status, document.visibility, document.policy,
+      $2::uuid, $3::text[], $4::text,
+      $5::boolean, $6::boolean, $7::uuid[])
 `
 
-func (q *Queries) CharacterProductCountSummaries(ctx context.Context, characterID pgtype.UUID) (int32, error) {
-	row := q.db.QueryRow(ctx, characterProductCountSummaries, characterID)
+type CharacterProductCountSummariesParams struct {
+	CharacterID  pgtype.UUID   `json:"character_id"`
+	ViewerID     pgtype.UUID   `json:"viewer_id"`
+	ViewerRoles  []string      `json:"viewer_roles"`
+	ViewerHandle string        `json:"viewer_handle"`
+	ViewerAdmin  bool          `json:"viewer_admin"`
+	ViewerLiveDm bool          `json:"viewer_live_dm"`
+	ReaderIds    []pgtype.UUID `json:"reader_ids"`
+}
+
+func (q *Queries) CharacterProductCountSummaries(ctx context.Context, arg CharacterProductCountSummariesParams) (int32, error) {
+	row := q.db.QueryRow(ctx, characterProductCountSummaries,
+		arg.CharacterID,
+		arg.ViewerID,
+		arg.ViewerRoles,
+		arg.ViewerHandle,
+		arg.ViewerAdmin,
+		arg.ViewerLiveDm,
+		arg.ReaderIds,
+	)
 	var total int32
 	err := row.Scan(&total)
 	return total, err
@@ -1605,7 +1627,7 @@ SELECT document.public_id AS id, document.kind, document.slug, document.title,
        document.category, document.status, document.visibility, document.policy,
        document.frontmatter_yaml, author.public_id AS author_id, document.published_at,
        document.deleted_at, deleted_by.public_id AS deleted_by, document.updated_at,
-       document.version, document.body
+       document.version
 FROM document_links link
 JOIN documents document ON document.id = link.source_id
 JOIN characters character ON character.id = link.character_target_id
@@ -1615,14 +1637,23 @@ WHERE character.public_id = $1::uuid
   AND link.relation = 'summarizes'
   AND document.kind = 'summary'
   AND document.deleted_at IS NULL
+  AND document_readable(document.public_id, author.public_id, document.status, document.visibility, document.policy,
+      $2::uuid, $3::text[], $4::text,
+      $5::boolean, $6::boolean, $7::uuid[])
 ORDER BY link.summary_append_order ASC, document.public_id ASC
-LIMIT $3::int OFFSET $2::int
+LIMIT $9::int OFFSET $8::int
 `
 
 type CharacterProductListSummariesParams struct {
-	CharacterID pgtype.UUID `json:"character_id"`
-	RowOffset   int32       `json:"row_offset"`
-	RowLimit    int32       `json:"row_limit"`
+	CharacterID  pgtype.UUID   `json:"character_id"`
+	ViewerID     pgtype.UUID   `json:"viewer_id"`
+	ViewerRoles  []string      `json:"viewer_roles"`
+	ViewerHandle string        `json:"viewer_handle"`
+	ViewerAdmin  bool          `json:"viewer_admin"`
+	ViewerLiveDm bool          `json:"viewer_live_dm"`
+	ReaderIds    []pgtype.UUID `json:"reader_ids"`
+	RowOffset    int32         `json:"row_offset"`
+	RowLimit     int32         `json:"row_limit"`
 }
 
 type CharacterProductListSummariesRow struct {
@@ -1641,11 +1672,20 @@ type CharacterProductListSummariesRow struct {
 	DeletedBy       pgtype.UUID        `json:"deleted_by"`
 	UpdatedAt       pgtype.Timestamptz `json:"updated_at"`
 	Version         int32              `json:"version"`
-	Body            string             `json:"body"`
 }
 
 func (q *Queries) CharacterProductListSummaries(ctx context.Context, arg CharacterProductListSummariesParams) ([]CharacterProductListSummariesRow, error) {
-	rows, err := q.db.Query(ctx, characterProductListSummaries, arg.CharacterID, arg.RowOffset, arg.RowLimit)
+	rows, err := q.db.Query(ctx, characterProductListSummaries,
+		arg.CharacterID,
+		arg.ViewerID,
+		arg.ViewerRoles,
+		arg.ViewerHandle,
+		arg.ViewerAdmin,
+		arg.ViewerLiveDm,
+		arg.ReaderIds,
+		arg.RowOffset,
+		arg.RowLimit,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -1669,7 +1709,6 @@ func (q *Queries) CharacterProductListSummaries(ctx context.Context, arg Charact
 			&i.DeletedBy,
 			&i.UpdatedAt,
 			&i.Version,
-			&i.Body,
 		); err != nil {
 			return nil, err
 		}

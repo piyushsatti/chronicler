@@ -17,6 +17,87 @@ import (
 
 func auditText(s string) *string { return &s }
 
+func TestAuditBodyIncludesLazyContinuationLines(t *testing.T) {
+	body := "> [!dm]\n> one\ntwo\n\nPublic"
+	records := AuditBody(body)
+	if len(records) != 1 || records[0].Kind != BodySpanDM || records[0].StartLine != 1 || records[0].EndLine != 3 {
+		t.Fatalf("audit=%s, want DM span covering lines 1-3", describeAudit(records))
+	}
+	checkTokenRange(t, strings.Split(body, "\n"), records[0])
+}
+
+func TestAuditBodyWarnsForListNestedAudienceMarkers(t *testing.T) {
+	bars := "> [!redacted]\n" + redactedBars(20)
+	for _, tc := range []struct {
+		name, body, projected string
+		line, column          int
+	}{
+		{"direct bullet", "- > [!dm]\n  > secret", bars + "\n\n  > secret", 1, 5},
+		{"plus bullet", "+ > [!dm]\n  > secret", bars + "\n\n  > secret", 1, 5},
+		{"star bullet", "* > [!dm]\n  > secret", bars + "\n\n  > secret", 1, 5},
+		{"numbered continuation", "10. item\n    > [!dm]\n    > secret", "10. item\n> [!redacted]\n\n    > secret", 2, 7},
+		{"numbered direct marker", "10) > [!dm]\n    > secret", bars + "\n\n    > secret", 1, 7},
+		{"member marker", "- > [!dm:@Exact-Handle]\n  > secret", bars + "\n\n  > secret", 1, 5},
+		{"nested list", "- item\n  1. > [!dm]\n     > secret", "- item\n" + bars + "\n\n     > secret", 2, 8},
+		{"indented marker without list context", "    > [!dm]\n    > secret", "> [!redacted]\n\n    > secret", 1, 7},
+		{"nine digit list prefix", "123456789. > [!dm]\n            > secret", bars + "\n\n            > secret", 1, 14},
+		{"spoiler marker", "- > [!spoiler]\n  > secret", "- > [!spoiler]\n  > secret", 1, 5},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var warnings []BodySpanAudit
+			for _, record := range AuditBody(tc.body) {
+				if record.Kind == BodySpanKind("LIST_NESTED") {
+					warnings = append(warnings, record)
+				}
+			}
+			if len(warnings) != 1 {
+				t.Fatalf("warnings=%s, want one list-nested diagnostic", describeAudit(warnings))
+			}
+			warning := warnings[0]
+			checkTokenRange(t, strings.Split(tc.body, "\n"), warning)
+			if warning.StartLine != tc.line || warning.EndLine != tc.line || *warning.TokenLine != tc.line || *warning.TokenColumn != tc.column || warning.Suggestion != nil {
+				t.Fatalf("warning=%+v, want line %d column %d without a token replacement", warning, tc.line, tc.column)
+			}
+			d := Document{ID: "doc", Status: StatusPublished, Visibility: VisibilityPublic, Body: tc.body}
+			if body, err := d.EffectiveBody(ViewerScope{Anonymous: true}); err != nil || body != tc.projected {
+				t.Fatalf("list projection=%q want %q err=%v", body, tc.projected, err)
+			}
+		})
+	}
+	for _, body := range []string{
+		"`- > [!dm]`",
+		`\- > [!dm]`,
+		"- item\n\n> [!dm]\n> secret",
+		"- item\n  > [!dm@typo]",
+		"- item\n  > [!note]",
+		"- item\n  > [!dm]\n  > one\n  two",
+		"- item\nlazy list continuation\n  > [!dm]\n  > SECRET\npublic-looking lazy continuation",
+		"> - item\n>   > [!dm]\n>   > SECRET\npublic-looking lazy continuation",
+		"- [!dm]",
+		"1234567890. > [!dm]",
+		"- > [!dm:]",
+		"- item\n\nPublic paragraph\n  > [!dm]",
+		"- item\n# New heading\n  > [!dm]",
+		"- item\n---\n  > [!dm]",
+		"- item\n```\n  > [!dm]",
+	} {
+		for _, record := range AuditBody(body) {
+			if record.Kind == BodySpanKind("LIST_NESTED") {
+				t.Errorf("non-list or unaccepted marker %q produced list warning %+v", body, record)
+			}
+		}
+	}
+	for _, body := range []string{"```\n- > [!dm]\n```", "- > \\[!dm]"} {
+		found := false
+		for _, record := range AuditBody(body) {
+			found = found || record.Kind == BodySpanKind("LIST_NESTED")
+		}
+		if !found {
+			t.Errorf("raw-lexer list marker %q lost its diagnostic", body)
+		}
+	}
+}
+
 // Every shared fixture span that is hidden or special must appear in the audit
 // with its kind, handle and exact source lines; public spans never appear.
 func TestAuditBodyMapsSharedFixtureSpans(t *testing.T) {
@@ -33,7 +114,7 @@ func TestAuditBodyMapsSharedFixtureSpans(t *testing.T) {
 				checkTokenRange(t, lines, record)
 				if record.Kind == BodySpanLookalike {
 					lookalikes = append(lookalikes, record)
-				} else {
+				} else if record.Kind != BodySpanKind("LIST_NESTED") {
 					spans = append(spans, record)
 				}
 			}

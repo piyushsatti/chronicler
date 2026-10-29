@@ -1,6 +1,7 @@
 package document
 
 import (
+	"regexp"
 	"strings"
 	"unicode/utf16"
 )
@@ -9,14 +10,15 @@ import (
 type BodySpanKind string
 
 const (
-	BodySpanDM        BodySpanKind = "DM"        // hidden except from DMs
-	BodySpanMember    BodySpanKind = "MEMBER"    // hidden except from one member
-	BodySpanSpoiler   BodySpanKind = "SPOILER"   // visible, blurred by clients
-	BodySpanMalformed BodySpanKind = "MALFORMED" // hidden from everyone
-	BodySpanLookalike BodySpanKind = "LOOKALIKE" // visible, but written like a marker
+	BodySpanDM         BodySpanKind = "DM"          // hidden except from DMs
+	BodySpanMember     BodySpanKind = "MEMBER"      // hidden except from one member
+	BodySpanSpoiler    BodySpanKind = "SPOILER"     // visible, blurred by clients
+	BodySpanMalformed  BodySpanKind = "MALFORMED"   // hidden from everyone
+	BodySpanLookalike  BodySpanKind = "LOOKALIKE"   // visible, but written like a marker
+	BodySpanListNested BodySpanKind = "LIST_NESTED" // marker does not protect the whole list item
 )
 
-// BodySpanAudit is one hidden, special or marker-like span with 1-based
+// BodySpanAudit is one hidden, special or diagnostic span with 1-based
 // inclusive source lines. Handle is set for MEMBER; Suggestion is a
 // best-effort corrected marker token for MALFORMED and LOOKALIKE.
 //
@@ -36,6 +38,8 @@ type BodySpanAudit struct {
 	TokenLine   *int
 	TokenColumn *int
 }
+
+var listNestedQuotePattern = regexp.MustCompile(`^[ \t]*(([-+*]|[0-9]{1,9}[.)])[ \t]+)?>`)
 
 // AuditBody reports what the projection would do with each marked span. It
 // reads the same groups and tokens parseBody projects (scanBodyGroups,
@@ -81,6 +85,14 @@ func AuditBody(body string) []BodySpanAudit {
 			handle := strings.TrimPrefix(principal, "member:@")
 			member.Handle = &handle
 			records = append(records, member)
+		}
+		for i, token := range tokens {
+			handle, dm, spoiler, _ := classifyMarkerToken(token.markerToken)
+			line := group.Lines[token.Line-group.Start-1]
+			if !isBlockquote(line) && listNestedQuotePattern.MatchString(line) && (handle != "" || dm || spoiler) {
+				warning := BodySpanAudit{StartLine: token.Line, EndLine: token.Line}
+				records = append(records, warning.at(BodySpanListNested, &tokens[i]))
+			}
 		}
 	}
 	return records

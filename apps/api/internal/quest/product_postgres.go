@@ -436,10 +436,6 @@ func mapQuestDmSummaryDocumentRow(row dbgen.ProductQuestDmSummariesPageRow) docu
 	if row.Category.Valid {
 		view.Category = &row.Category.String
 	}
-	if row.Body.Valid {
-		body := row.Body.String
-		view.EffectiveBody = &body
-	}
 	if row.PublishedAt.Valid {
 		t := row.PublishedAt.Time
 		view.PublishedAt = &t
@@ -449,26 +445,6 @@ func mapQuestDmSummaryDocumentRow(row dbgen.ProductQuestDmSummariesPageRow) docu
 		view.DeletedAt = &t
 	}
 	return view
-}
-
-func (p *ProductPostgres) documentSQLViewer(ctx context.Context, actor auth.Authority) (document.SQLViewer, error) {
-	scope := document.ScopeFromAuthority(actor)
-	if !scope.Authenticated() {
-		return document.SQLScope(scope), nil
-	}
-	memberID, err := db.ParseUUID(scope.MemberID)
-	if err != nil {
-		return document.SQLScope(scope), nil
-	}
-	readerIDs, err := p.queries().ListDocumentReaders(ctx, memberID)
-	if err != nil {
-		return document.SQLViewer{}, err
-	}
-	scope.ReaderOf = make(map[string]struct{}, len(readerIDs))
-	for _, id := range readerIDs {
-		scope.ReaderOf[db.UUIDString(id)] = struct{}{}
-	}
-	return document.SQLScope(scope), nil
 }
 
 func (p *ProductPostgres) dmSummariesTargetIDs(ctx context.Context, actor auth.Authority, spec DmSummariesSpec) (pgtype.UUID, pgtype.UUID, error) {
@@ -631,7 +607,7 @@ func (p *ProductPostgres) ReadRewardDecisionCoverage(ctx context.Context, questI
 }
 
 func (p *ProductPostgres) ReadDmSummaries(ctx context.Context, actor auth.Authority, spec DmSummariesSpec) (document.DocumentListResult, error) {
-	viewer, err := p.documentSQLViewer(ctx, actor)
+	scope, err := document.ViewerScopeWithReaders(ctx, p.queries(), actor)
 	if err != nil {
 		return document.DocumentListResult{}, err
 	}
@@ -646,6 +622,7 @@ func (p *ProductPostgres) ReadDmSummaries(ctx context.Context, actor auth.Author
 	if spec.Filters != nil && spec.Filters.Search != nil {
 		search = *spec.Filters.Search
 	}
+	viewer := document.SQLScope(scope)
 	rows, err := p.queries().ProductQuestDmSummariesPage(ctx, dbgen.ProductQuestDmSummariesPageParams{
 		ViewerAdmin:  viewer.Admin,
 		ViewerID:     viewer.ID,
@@ -662,7 +639,6 @@ func (p *ProductPostgres) ReadDmSummaries(ctx context.Context, actor auth.Author
 	if err != nil {
 		return document.DocumentListResult{}, err
 	}
-	scope := document.ScopeFromAuthority(actor)
 	var total int32
 	items := make([]document.DocumentView, 0, len(rows))
 	for i, row := range rows {
@@ -675,7 +651,11 @@ func (p *ProductPostgres) ReadDmSummaries(ctx context.Context, actor auth.Author
 		if !row.PublicID.Valid {
 			continue
 		}
-		items = append(items, mapQuestDmSummaryDocumentRow(row))
+		view, err := document.ProjectDocumentView(ctx, scope, mapQuestDmSummaryDocumentRow(row), row.Body.String)
+		if err != nil {
+			return document.DocumentListResult{}, err
+		}
+		items = append(items, view)
 	}
 	return document.DocumentListResult{Items: items, Total: total}, nil
 }

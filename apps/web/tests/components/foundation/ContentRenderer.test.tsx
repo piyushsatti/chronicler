@@ -86,6 +86,32 @@ describe('shared Markdown reader', () => {
     expect(callouts[1]).toHaveTextContent('Server supplied prose.');
   });
 
+  it('renders a member-scoped DM callout', () => {
+    const { container } = markdown(
+      '> [!dm:@Exact-Handle]\n> For the GM\n\n> [! DM:@Exact-Handle ] Authored title\n> Other prose\n\n> [! dm ]\n> DM prose\n\n> [!dm:@_foo_]\n> Underscore prose\n\n> [!\u00a0dm:@Foo\u00a0]\n> Unicode whitespace prose',
+    );
+    const callouts = container.querySelectorAll<HTMLElement>('aside.cr-callout');
+    expect(callouts).toHaveLength(5);
+    expect(callouts[0]).toHaveAttribute('data-variant', 'dm');
+    expect(callouts[0].querySelector('.cr-callout-title')).toHaveTextContent(
+      'For @Exact-Handle',
+    );
+    expect(callouts[0]).toHaveTextContent('For the GM');
+    expect(callouts[1]).toHaveAttribute('data-variant', 'dm');
+    expect(callouts[1].querySelector('.cr-callout-title')).toHaveTextContent(
+      'Authored title',
+    );
+    expect(callouts[2]).toHaveAttribute('data-variant', 'dm');
+    expect(callouts[2].querySelector('.cr-callout-title')).toHaveTextContent('DM only');
+    expect(callouts[3]).toHaveAttribute('data-variant', 'dm');
+    expect(callouts[3].querySelector('.cr-callout-title')).toHaveTextContent('For @_foo_');
+    expect(callouts[3]).toHaveTextContent('Underscore prose');
+    expect(callouts[4]).toHaveAttribute('data-variant', 'dm');
+    expect(callouts[4].querySelector('.cr-callout-title')).toHaveTextContent('For @Foo');
+    expect(callouts[4]).toHaveTextContent('Unicode whitespace prose');
+    expect(container).not.toHaveTextContent('[!');
+  });
+
   it('draws a server redaction as labelled bars with a spoken size summary', () => {
     const bar = (n: number) => '█'.repeat(n);
     const { container } = markdown(

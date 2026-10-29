@@ -239,6 +239,24 @@ describe('lookalike markers', () => {
   });
 });
 
+describe('list-nested markers', () => {
+  it('shows the server warning without offering a token replacement', () => {
+    renderEditor('- > [!dm]\n  > secret', [
+      span({
+        kind: 'LIST_NESTED',
+        token: '[!dm]',
+        tokenLine: 1,
+        tokenColumn: 5,
+      }),
+    ]);
+    expect(
+      screen.getByText('This marker does not protect the whole list item.'),
+    ).toHaveAttribute('role', 'status');
+    expect(screen.queryByRole('button', { name: 'Fix' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('group', { name: 'DMs only' })).not.toBeInTheDocument();
+  });
+});
+
 describe('preview summary line', () => {
   const bars = `> ${'█'.repeat(20)}`;
   /** A server preview body (D45 shape) with `count` redacted placeholders. */

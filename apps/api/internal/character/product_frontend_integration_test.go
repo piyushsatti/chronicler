@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"slices"
 
 	"testing"
 	"time"
@@ -676,5 +677,104 @@ func TestFrontendCharacterImageURLAndRequiredDdb(t *testing.T) {
 	}
 	if _, err := f.db.Pool.Exec(ctx, `UPDATE characters SET image_url='http://x.example/a.png' WHERE public_id=$1`, hero.Id); err == nil {
 		t.Fatal("characters_image_url_check accepted a non-https URL")
+	}
+}
+
+func TestCharacterSummariesFilterItemsAndTotalByViewer(t *testing.T) {
+	f := newFrontendCharacterFixture(t)
+	ctx := context.Background()
+	hero := f.create(t)
+	seedDM := func(handle string) auth.Authority {
+		t.Helper()
+		id := uuid.NewString()
+		if _, err := f.db.Pool.Exec(ctx, `INSERT INTO members(public_id,discord_id,handle,display_name,roles)
+			VALUES($1,$2,$2,$2,ARRAY['dm'])`, id, handle); err != nil {
+			t.Fatal(err)
+		}
+		actor, err := auth.NewAuthorityWithHandle(id, []auth.Role{auth.DM}, "active", "approved", handle)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return actor
+	}
+	dm := seedDM("character-summary-dm")
+	readerDM := seedDM("character-summary-reader")
+	titles := []string{"Public SQL null", "Public JSON null", "Draft", "DM only", "Restricted", "Empty audience"}
+	ids := make([]string, len(titles))
+	for i, title := range titles {
+		ids[i] = uuid.NewString()
+		status, visibility := "published", "public"
+		var policy any
+		switch title {
+		case "Public JSON null":
+			policy = "null"
+		case "Draft":
+			status = "draft"
+		case "DM only":
+			visibility = "dm_only"
+		case "Restricted":
+			visibility = "restricted"
+		case "Empty audience":
+			policy = "[]"
+		}
+		if _, err := f.db.Pool.Exec(ctx, `INSERT INTO documents(public_id,kind,slug,title,status,visibility,policy,body,author_id)
+			SELECT $1::uuid,'summary',$7::text,$2,$3,$4,$5::jsonb,'Metadata-only summary body',id FROM members WHERE public_id=$6`, ids[i], title, status, visibility, policy, f.verifier.Claims().MemberID, ids[i]); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := f.db.Pool.Exec(ctx, `INSERT INTO document_links(source_id,character_target_id,relation)
+			SELECT d.id,c.id,'summarizes' FROM documents d,characters c WHERE d.public_id=$1 AND c.public_id=$2`, ids[i], hero.Id); err != nil {
+			t.Fatal(err)
+		}
+		if title == "Restricted" {
+			if _, err := f.db.Pool.Exec(ctx, `INSERT INTO document_readers(document_id,member_id)
+				SELECT d.id,m.id FROM documents d,members m WHERE d.public_id=$1 AND m.public_id=ANY($2::uuid[])`, ids[i], []string{readerDM.Claims().MemberID, f.owner.Claims().MemberID}); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+	reader, err := character.NewProductPostgres(f.db.Pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, viewer := range []struct {
+		name  string
+		actor auth.Authority
+		want  []string
+	}{
+		{"anonymous", auth.Authority{}, titles[:2]},
+		{"player with reader grant", f.owner, titles[:2]},
+		{"approved DM", dm, []string{titles[0], titles[1], titles[3]}},
+		{"approved DM with reader grant", readerDM, []string{titles[0], titles[1], titles[3], titles[4]}},
+		{"author", f.verifier, titles},
+		{"admin", f.admin, titles},
+	} {
+		t.Run(viewer.name, func(t *testing.T) {
+			for _, offset := range []int32{0, 100} {
+				page, err := reader.ReadCharacterSummaries(ctx, viewer.actor, character.CharacterSummariesSpec{CharacterId: hero.Id, Limit: 50, Offset: offset})
+				if err != nil {
+					t.Fatal(err)
+				}
+				if page.Total != int32(len(viewer.want)) {
+					t.Fatalf("offset=%d total=%d want=%d", offset, page.Total, len(viewer.want))
+				}
+				var got []string
+				for _, item := range page.Items {
+					got = append(got, item.Title)
+					if item.EffectiveBody != nil {
+						t.Fatalf("metadata-only summary returned body=%q", *item.EffectiveBody)
+					}
+					if (item.Title == titles[0] || item.Title == titles[1]) && item.Policy != nil {
+						t.Fatalf("legacy policy=%v want nil", item.Policy)
+					}
+				}
+				want := viewer.want
+				if offset > 0 {
+					want = nil
+				}
+				if !slices.Equal(got, want) {
+					t.Fatalf("offset=%d titles=%v want=%v", offset, got, want)
+				}
+			}
+		})
 	}
 }

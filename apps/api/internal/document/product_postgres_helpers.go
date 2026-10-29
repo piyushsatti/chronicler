@@ -225,6 +225,11 @@ func bytesEqualJSONNull(raw json.RawMessage) bool {
 }
 
 func (p *ProductPostgres) viewerScope(ctx context.Context, actor auth.Authority) (ViewerScope, error) {
+	return ViewerScopeWithReaders(ctx, p.queries(), actor)
+}
+
+// ViewerScopeWithReaders hydrates the audience Specification's reader grants.
+func ViewerScopeWithReaders(ctx context.Context, queries *dbgen.Queries, actor auth.Authority) (ViewerScope, error) {
 	scope := ScopeFromAuthority(actor)
 	if scope.Anonymous || scope.MemberID == "" {
 		return scope, nil
@@ -233,7 +238,7 @@ func (p *ProductPostgres) viewerScope(ctx context.Context, actor auth.Authority)
 	if err != nil {
 		return ViewerScope{}, err
 	}
-	readerDocIDs, err := p.queries().ListDocumentReaders(ctx, memberID)
+	readerDocIDs, err := queries.ListDocumentReaders(ctx, memberID)
 	if err != nil {
 		return ViewerScope{}, err
 	}
@@ -290,7 +295,8 @@ func documentFromParts(
 	}, nil
 }
 
-func projectDocumentView(ctx context.Context, scope ViewerScope, view DocumentView, rawBody string) (DocumentView, error) {
+// ProjectDocumentView applies the shared audience Specification and body projection.
+func ProjectDocumentView(ctx context.Context, scope ViewerScope, view DocumentView, rawBody string) (DocumentView, error) {
 	policyJSON, err := json.Marshal(view.Policy)
 	if err != nil {
 		return DocumentView{}, err
@@ -346,7 +352,7 @@ func mapReadableDocumentRow(
 	if override, _ := adminOverride.(bool); override {
 		AuditSQLOverride(ctx, scope, true, surface, "read")
 	}
-	return projectDocumentView(ctx, scope, view, body)
+	return ProjectDocumentView(ctx, scope, view, body)
 }
 
 func mapGetProductDocumentRow(row dbgen.GetProductDocumentByIDRow, scope ViewerScope, ctx context.Context) (DocumentView, error) {
@@ -365,7 +371,7 @@ func mapListProductDocumentRow(row dbgen.ListProductDocumentsRow, scope ViewerSc
 	if adminOverride, _ := row.AdminOverride.(bool); adminOverride {
 		AuditSQLOverride(ctx, scope, true, "documents", "list")
 	}
-	return projectDocumentView(ctx, scope, view, row.Body)
+	return ProjectDocumentView(ctx, scope, view, row.Body)
 }
 
 func mapLockRow(row dbgen.LockProductDocumentByIDRow) (DocumentView, error) {

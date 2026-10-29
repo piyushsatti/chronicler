@@ -23,6 +23,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Docs refactor: links flow map → interfaces → app docs; boundary decisions shortened; long-form essays quarantined to gitignored `.local/docs-quarry/`. See [docs/start-here.md](docs/start-here.md).
 - Project license set to GNU GPL version 2 (same as the Linux kernel).
 
+### Fixed
+
+- Quest and DM summaries apply the Document body projection, and character summary lists and totals omit unreadable documents.
+- Scoped quotes protect unquoted continuation lines until a blank separator or new Markdown block. The editor warns about audience markers inside lists and asks for confirmation before publishing them.
+- Member-addressed DM callouts use DM styling and an exact-handle title while retaining authored titles.
+- Card and search excerpts omit spoiler text and callout header tokens while retaining visible prose and redaction bars.
+
 ## [0.0.0] - TBD
 
 Initial tagged release of the monorepo layout will be recorded here when versioning starts.

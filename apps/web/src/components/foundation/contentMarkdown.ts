@@ -129,14 +129,19 @@ export function remarkContent() {
         const paragraph = node.children[0];
         const marker =
           paragraph?.type === 'paragraph' ? paragraph.children[0] : undefined;
-        if (marker?.type === 'text') {
-          const match = marker.value.match(
-            /^\[!(note|info|tip|warn|warning|dm|redacted|spoiler)\](?:[ \t]+([^\n]*))?(?:\n|$)/i,
+        if (paragraph?.type === 'paragraph' && marker?.type === 'text') {
+          const source = typeof file?.value === 'string' ? file.value : '';
+          const offset = paragraph.position?.start.offset;
+          const firstLine =
+            source && offset !== undefined
+              ? source.slice(offset).split('\n')[0]
+              : marker.value.split('\n')[0];
+          const match = firstLine.match(
+            /^\[![^\S\r\n]*(note|info|tip|warn|warning|dm(?::@[A-Za-z0-9_.-]+)?|redacted|spoiler)[^\S\r\n]*\](?:[ \t]+([^\n]*))?$/i,
           );
           if (match?.[1].toLowerCase() === 'redacted') {
             // The server already removed the hidden text; only its shape
             // remains, so the bars are presentation and never re-scope.
-            const source = typeof file?.value === 'string' ? file.value : '';
             const shape = redactedShape(node, source);
             const after = contentAfterShape(node, shape.lastLine);
             node.data = {
@@ -156,7 +161,8 @@ export function remarkContent() {
             return SKIP;
           }
           if (match) {
-            const variant = match[1]
+            const [kind, handle] = match[1].split(':');
+            const variant = kind
               .toLowerCase()
               .replace('warning', 'warn')
               .replace('info', 'note');
@@ -170,16 +176,13 @@ export function remarkContent() {
             node.data = {
               hProperties: {
                 calloutVariant: variant,
-                calloutTitle: match[2]?.trim() || titles[variant],
+                calloutTitle:
+                  match[2]?.trim() || (handle ? `For ${handle}` : titles[variant]),
               },
             };
-            marker.value = marker.value.slice(match[0].length);
-            if (
-              !marker.value &&
-              paragraph?.type === 'paragraph' &&
-              paragraph.children.length === 1
-            )
-              node.children.shift();
+            const below = paragraphBelow(paragraph, paragraph.position?.start.line ?? 1);
+            if (below) node.children[0] = below;
+            else node.children.shift();
           }
         }
       }

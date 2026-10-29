@@ -703,6 +703,9 @@ export function EditorShell({
             ))}
           </ul>
           <div className="row" data-wrap="1">
+            <Button type="button" variant="secondary" onClick={onTypoClose}>
+              Cancel
+            </Button>
             <Button
               type="button"
               variant="secondary"

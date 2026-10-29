@@ -36,6 +36,8 @@ export function auditBadgeLabel(span: BodySpanAudit): string {
       return 'Spoiler — everyone sees it blurred';
     case 'MALFORMED':
       return 'Hidden from everyone (marker not recognised)';
+    case 'LIST_NESTED':
+      return LIST_NESTED_WARNING;
     default:
       return 'Not a hiding marker';
   }
@@ -44,9 +46,16 @@ export function auditBadgeLabel(span: BodySpanAudit): string {
 /** The warning on a line whose callout looks like a marker but is not one. */
 export const LOOKALIKE_WARNING = 'Not a hiding marker — players will see this.';
 
-/** Spans that are probably typos: the author meant to hide text and did not, or hid it from everyone. */
+export const LIST_NESTED_WARNING = 'This marker does not protect the whole list item.';
+
+/** Marker diagnostics the author must confirm before publishing. */
 export function auditTypos(spans: readonly BodySpanAudit[]): BodySpanAudit[] {
-  return spans.filter((span) => span.kind === 'LOOKALIKE' || span.kind === 'MALFORMED');
+  return spans.filter(
+    (span) =>
+      span.kind === 'LOOKALIKE' ||
+      span.kind === 'MALFORMED' ||
+      span.kind === 'LIST_NESTED',
+  );
 }
 
 /** The line a span's marker sits on, falling back to its first line. */
@@ -63,7 +72,11 @@ export function typoSummary(span: BodySpanAudit, body: string): string {
   const text =
     source.length > SHORT_TEXT ? `${source.slice(0, SHORT_TEXT - 1)}…` : source;
   const effect =
-    span.kind === 'LOOKALIKE' ? 'players will see this' : 'hidden from everyone';
+    span.kind === 'LIST_NESTED'
+      ? 'does not protect the whole list item'
+      : span.kind === 'LOOKALIKE'
+        ? 'players will see this'
+        : 'hidden from everyone';
   return `Line ${line}: ${text} — ${effect}`;
 }
 

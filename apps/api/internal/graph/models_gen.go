@@ -167,6 +167,8 @@ type BackstoryType struct {
 // One marked span of an unsaved body, from the server's own marker parser.
 // Lines are 1-based and inclusive. handle is the member a MEMBER span addresses;
 // suggestion is a best-effort corrected marker for MALFORMED and LOOKALIKE spans.
+// LIST_NESTED records locate accepted markers inside lists, separately from
+// projection spans; they have no token replacement suggestion.
 // token is the exact source text of the marker defining the span (the offending
 // token for MALFORMED and LOOKALIKE): `[!` through the first `]`, or, when
 // unclosed, `[!` and its first word only, so replacing it with suggestion keeps
@@ -1370,14 +1372,16 @@ type WeekActivityType struct {
 // Why an audited body span matters: DM and MEMBER spans are hidden from other
 // readers, MALFORMED spans from everyone; SPOILER spans are visible but blurred;
 // LOOKALIKE spans are visible text whose callout looks like a marker but is not.
+// LIST_NESTED is a diagnostic: a marker does not protect the whole list item.
 type BodySpanKind string
 
 const (
-	BodySpanKindDm        BodySpanKind = "DM"
-	BodySpanKindMember    BodySpanKind = "MEMBER"
-	BodySpanKindSpoiler   BodySpanKind = "SPOILER"
-	BodySpanKindMalformed BodySpanKind = "MALFORMED"
-	BodySpanKindLookalike BodySpanKind = "LOOKALIKE"
+	BodySpanKindDm         BodySpanKind = "DM"
+	BodySpanKindMember     BodySpanKind = "MEMBER"
+	BodySpanKindSpoiler    BodySpanKind = "SPOILER"
+	BodySpanKindMalformed  BodySpanKind = "MALFORMED"
+	BodySpanKindLookalike  BodySpanKind = "LOOKALIKE"
+	BodySpanKindListNested BodySpanKind = "LIST_NESTED"
 )
 
 var AllBodySpanKind = []BodySpanKind{
@@ -1386,11 +1390,12 @@ var AllBodySpanKind = []BodySpanKind{
 	BodySpanKindSpoiler,
 	BodySpanKindMalformed,
 	BodySpanKindLookalike,
+	BodySpanKindListNested,
 }
 
 func (e BodySpanKind) IsValid() bool {
 	switch e {
-	case BodySpanKindDm, BodySpanKindMember, BodySpanKindSpoiler, BodySpanKindMalformed, BodySpanKindLookalike:
+	case BodySpanKindDm, BodySpanKindMember, BodySpanKindSpoiler, BodySpanKindMalformed, BodySpanKindLookalike, BodySpanKindListNested:
 		return true
 	}
 	return false

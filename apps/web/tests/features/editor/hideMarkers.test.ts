@@ -209,6 +209,43 @@ describe('hideLines', () => {
     );
   });
 
+  it('takes the whole quote when editing a lazy continuation', () => {
+    const value = 'Intro\n\n> [!dm]\n> Secret\nlazy detail\n\nOutro';
+    for (const text of ['Secret', 'lazy']) {
+      const caret = at(value, text);
+      const result = hideLines(value, caret, caret, SPOILER);
+      expect(result?.next).toBe(
+        'Intro\n\n> [!spoiler]\n> Secret\n> lazy detail\n\nOutro',
+      );
+      expect(result?.replaces).toEqual(DM);
+    }
+  });
+
+  it('uses a lazy member marker when confirming a quote scope change', () => {
+    const value = '> [!dm]\n> Secret\n[!dm:@Exact-Handle] lazy detail';
+    const caret = at(value, 'Secret');
+    const result = hideLines(value, caret, caret, MEMBER);
+    expect(result?.next).toBe(
+      '> [!dm:@Exact-Handle]\n> Secret\n> lazy detail',
+    );
+    expect(result?.replaces).toBeNull();
+  });
+
+  it.each([
+    '# Heading',
+    '- list item',
+    '123456789) list item',
+    '```code',
+    '~~~code',
+    '* * *',
+  ])('keeps a new block outside the lazy quote: %s', (block) => {
+    const value = `> [!dm]\n> Secret\nlazy detail\n${block}`;
+    const caret = at(value, 'Secret');
+    expect(hideLines(value, caret, caret, SPOILER)?.next).toBe(
+      `> [!spoiler]\n> Secret\n> lazy detail\n\n${block}`,
+    );
+  });
+
   it('keeps a marker-only selection usable by inserting the placeholder', () => {
     const value = '> [!spoiler]';
     const result = hideLines(value, 0, 0, DM);

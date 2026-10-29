@@ -679,7 +679,7 @@ SELECT document.public_id AS id, document.kind, document.slug, document.title,
        document.category, document.status, document.visibility, document.policy,
        document.frontmatter_yaml, author.public_id AS author_id, document.published_at,
        document.deleted_at, deleted_by.public_id AS deleted_by, document.updated_at,
-       document.version, document.body
+       document.version
 FROM document_links link
 JOIN documents document ON document.id = link.source_id
 JOIN characters character ON character.id = link.character_target_id
@@ -689,6 +689,9 @@ WHERE character.public_id = sqlc.arg(character_id)::uuid
   AND link.relation = 'summarizes'
   AND document.kind = 'summary'
   AND document.deleted_at IS NULL
+  AND document_readable(document.public_id, author.public_id, document.status, document.visibility, document.policy,
+      sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
+      sqlc.arg(viewer_admin)::boolean, sqlc.arg(viewer_live_dm)::boolean, sqlc.arg(reader_ids)::uuid[])
 ORDER BY link.summary_append_order ASC, document.public_id ASC
 LIMIT sqlc.arg(row_limit)::int OFFSET sqlc.arg(row_offset)::int;
 -- name: CharacterProductCountSummaries :one
@@ -696,10 +699,14 @@ SELECT count(*)::int AS total
 FROM document_links link
 JOIN documents document ON document.id = link.source_id
 JOIN characters character ON character.id = link.character_target_id
+JOIN members author ON author.id = document.author_id
 WHERE character.public_id = sqlc.arg(character_id)::uuid
   AND link.relation = 'summarizes'
   AND document.kind = 'summary'
-  AND document.deleted_at IS NULL;
+  AND document.deleted_at IS NULL
+  AND document_readable(document.public_id, author.public_id, document.status, document.visibility, document.policy,
+      sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
+      sqlc.arg(viewer_admin)::boolean, sqlc.arg(viewer_live_dm)::boolean, sqlc.arg(reader_ids)::uuid[]);
 -- name: CharacterProductSumProgression :one
 SELECT COALESCE(sum(ledger.delta), 0)::int AS total
 FROM character_progression_ledger ledger

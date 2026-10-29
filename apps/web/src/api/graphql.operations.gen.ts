@@ -27,9 +27,11 @@ export type BackstoryInput = {
  * Why an audited body span matters: DM and MEMBER spans are hidden from other
  * readers, MALFORMED spans from everyone; SPOILER spans are visible but blurred;
  * LOOKALIKE spans are visible text whose callout looks like a marker but is not.
+ * LIST_NESTED is a diagnostic: a marker does not protect the whole list item.
  */
 export type BodySpanKind =
   | 'DM'
+  | 'LIST_NESTED'
   | 'LOOKALIKE'
   | 'MALFORMED'
   | 'MEMBER'

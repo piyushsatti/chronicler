@@ -19,6 +19,7 @@ import {
   auditBadgeLabel,
   auditLine,
   LOOKALIKE_WARNING,
+  LIST_NESTED_WARNING,
   type BodyAudit,
 } from './bodyAuditCopy.js';
 import styles from './editor.module.css';
@@ -1122,17 +1123,21 @@ function BlocksLiveEditor({
       audit && leDeserialize(audit.body).length === lines.length ? audit.spans : [],
     [audit, lines.length],
   );
-  const blockSpans = spans.filter((span) => span.kind !== 'LOOKALIKE');
-  const lookalikes = spans.filter((span) => span.kind === 'LOOKALIKE');
+  const blockSpans = spans.filter(
+    (span) => span.kind !== 'LOOKALIKE' && span.kind !== 'LIST_NESTED',
+  );
+  const diagnostics = spans.filter(
+    (span) => span.kind === 'LOOKALIKE' || span.kind === 'LIST_NESTED',
+  );
   const badgeId = (span: BodySpanAudit): string => `${auditId}-span-${span.startLine}`;
   const warningId = (span: BodySpanAudit): string =>
     `${auditId}-lookalike-${auditLine(span)}-${span.tokenColumn ?? 0}`;
-  /** Lines a..b (0-based, inclusive): the block span over them and the lookalikes on them. */
+  /** Lines a..b (0-based, inclusive): projection spans and marker diagnostics. */
   const auditFor = (a: number, b: number) => {
     const covering = blockSpans.filter(
       (span) => span.startLine - 1 <= b && span.endLine - 1 >= a,
     );
-    const warnings = lookalikes.filter((span) => {
+    const warnings = diagnostics.filter((span) => {
       const line = auditLine(span) - 1;
       return line >= a && line <= b;
     });
@@ -1181,15 +1186,15 @@ function BlocksLiveEditor({
       >
         <p id={warningId(span)} className="type-caption" role="status" aria-live="polite">
           <span aria-hidden="true">⚠️ </span>
-          {LOOKALIKE_WARNING}
-          {span.suggestion ? (
+          {span.kind === 'LIST_NESTED' ? LIST_NESTED_WARNING : LOOKALIKE_WARNING}
+          {span.kind === 'LOOKALIKE' && span.suggestion ? (
             <>
               {' '}
               Did you mean <code>{span.suggestion}</code>?
             </>
           ) : null}
         </p>
-        {span.suggestion && tokenInPlace(lines, span) ? (
+        {span.kind === 'LOOKALIKE' && span.suggestion && tokenInPlace(lines, span) ? (
           <Button
             type="button"
             size="sm"

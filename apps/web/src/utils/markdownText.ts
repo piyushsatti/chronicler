@@ -32,15 +32,58 @@ function decodeEntities(text: string): string {
 /** Stand-ins for backslash-escaped punctuation, restored after the syntax is stripped. */
 const ESCAPE_START = 0xe000;
 
+/** Filter presentation callouts while their quote boundaries are still intact. */
+// shortcut: numbered-list continuations and quote/list/quote containers keep spoiler text in excerpts; if real content hits this, parse with remark instead of regexes.
+function excerptCallouts(text: string): string {
+  let spoiler = false;
+  let fence = '';
+  return text
+    .split('\n')
+    .map((line) => {
+      const content = line.replace(
+        /^[ \t]{0,3}(?:(?:[-*+]|\d+[.)])[ \t]+)?(?:>[ \t]?)+/,
+        '',
+      );
+      const interruptsQuote =
+        content === line &&
+        /^[ \t]{0,3}(?:#{1,6}(?:[ \t]+|$)|(?:[-*+]|1[.)])[ \t]+|`{3,}|~{3,}|(?:[-*_][ \t]*){3,}$|<)/.test(
+          line,
+        );
+      if (!line.trim() || interruptsQuote) spoiler = false;
+      if (spoiler) return '';
+      const codeFence = /^[ \t]{0,3}(`{3,}|~{3,})/.exec(content)?.[1];
+      if (fence) {
+        if (codeFence?.[0] === fence[0] && codeFence.length >= fence.length) fence = '';
+        return line;
+      }
+      if (codeFence) {
+        fence = codeFence;
+        return line;
+      }
+      const marker =
+        /^\[![^\S\r\n]*(note|info|tip|warn|warning|dm(?::@[A-Za-z0-9_.-]+)?|redacted|spoiler)[^\S\r\n]*\]/i.exec(
+          content,
+        );
+      if (!marker) return line;
+      if (marker[1].toLowerCase() === 'spoiler') {
+        spoiler = content !== line;
+        return '';
+      }
+      return line.replace(marker[0], '');
+    })
+    .join('\n');
+}
+
 /** Reduces Markdown to the words a reader would see, for one-line previews. */
 export function markdownToPlainText(body: string): string {
-  const stripped = body
+  const prepared = body
     .replace(FRONTMATTER, '')
     .replace(/^(`{3,}|~{3,})[^\n]*\n[\s\S]*?^\1[ \t]*$/gm, ' ')
     // `\*` stays a literal asterisk instead of starting emphasis.
     .replace(/\\([!-/:-@[-`{-~])/g, (_m, char: string) =>
       String.fromCharCode(ESCAPE_START + char.charCodeAt(0)),
-    )
+    );
+  const stripped = excerptCallouts(prepared)
     .replace(/<[^>\n]+>/g, ' ')
     // Reference definitions and footnote markers are not reader text.
     .replace(/^\s{0,3}\[[^\]\n]+\]:\s+\S.*$/gm, ' ')

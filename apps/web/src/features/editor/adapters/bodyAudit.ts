@@ -7,7 +7,7 @@ import AUDIT_BODY from './auditBody.graphql?raw';
 const span = z.object({
   startLine: z.number().int().positive(),
   endLine: z.number().int().positive(),
-  kind: z.enum(['DM', 'MEMBER', 'SPOILER', 'MALFORMED', 'LOOKALIKE']),
+  kind: z.enum(['DM', 'MEMBER', 'SPOILER', 'MALFORMED', 'LOOKALIKE', 'LIST_NESTED']),
   handle: z.string().nullable(),
   suggestion: z.string().nullable(),
   token: z.string().nullable(),

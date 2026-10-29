@@ -98,8 +98,8 @@ type bodySpan struct {
 	Spoiler bool     `json:"spoiler"`
 }
 
-// bodyGroup is one classification unit of parseBody: a maximal blockquote run
-// or one bare line. Start is the 0-based index of its first source line.
+// bodyGroup is one classification unit of parseBody: a blockquote run with
+// lazy continuation lines, or one bare line. Start is its 0-based source line.
 type bodyGroup struct {
 	Start   int
 	Lines   []string
@@ -115,7 +115,7 @@ func scanBodyGroups(body string) []bodyGroup {
 	for i := 0; i < len(lines); {
 		end := i + 1
 		if isBlockquote(lines[i]) {
-			for end < len(lines) && isBlockquote(lines[end]) {
+			for end < len(lines) && strings.TrimSpace(lines[end]) != "" && (isBlockquote(lines[end]) || !bodyBlockStartPattern.MatchString(lines[end])) {
 				end++
 			}
 		}
@@ -126,9 +126,8 @@ func scanBodyGroups(body string) []bodyGroup {
 	return groups
 }
 
-// parseBody preserves the accepted maximal blockquote-run and bare-line
-// granularity. It is deliberately a closed marker classifier, not a second
-// markdown renderer or a general audience grammar.
+// parseBody classifies each quote and its lazy lines once. Bare markers
+// scope only their own line. It is a closed marker classifier, not a renderer.
 func parseBody(body string) []bodySpan {
 	spans := []bodySpan{}
 	pending := []string{}
@@ -157,6 +156,10 @@ func isBlockquote(line string) bool {
 	}
 	return i < len(line) && line[i] == '>'
 }
+
+// HTML never ends a run: renderers skip HTML, and inline tags or "<3" are lazy
+// text the author sees inside the quote, so stopping there would leak them.
+var bodyBlockStartPattern = regexp.MustCompile("^ {0,3}(#{1,6}([ \t]|$)|([-+*]|[0-9]{1,9}[.)])([ \t]|$)|`{3,}|~{3,}|([*][ \t]*){3,}$|([-][ \t]*){3,}$|([_][ \t]*){3,}$)")
 
 func classifyMarkers(lines []string) ([]string, bool) {
 	var firstHandle string

@@ -5,11 +5,14 @@ package quest
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 )
 
@@ -209,5 +212,124 @@ func TestFrontendQuestSummaryRevisionConflictAndSafeReplay(t *testing.T) {
 	replay, err = f.commands.UpsertQuestSummary(ctx, f.actor, input, meta)
 	if err != nil || replay.EffectiveBody == nil || *replay.EffectiveBody != "Current authorized projection" {
 		t.Fatalf("replay did not use current Document projection: %+v %v", replay, err)
+	}
+}
+
+func TestQuestSummaryReadsProjectBodyForEveryViewer(t *testing.T) {
+	f := newQuestCloseFixture(t)
+	ctx := context.Background()
+	seedViewer := func(handle string, roles []auth.Role, dmStatus string) auth.Authority {
+		t.Helper()
+		id := uuid.NewString()
+		roleNames := make([]string, len(roles))
+		for i, role := range roles {
+			roleNames[i] = string(role)
+		}
+		if _, err := f.fixture.Pool.Exec(ctx, `INSERT INTO members(public_id,discord_id,handle,display_name,roles)
+			VALUES($1,$2,$2,$2,$3::text[])`, id, handle, roleNames); err != nil {
+			t.Fatal(err)
+		}
+		actor, err := auth.NewAuthorityWithHandle(id, roles, "active", dmStatus, handle)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return actor
+	}
+	member := seedViewer("summary-member", []auth.Role{auth.Player}, "")
+	unrelated := seedViewer("summary-unrelated", []auth.Role{auth.Player}, "")
+	dm := seedViewer("summary-reader", []auth.Role{auth.DM}, "approved")
+	otherDM := seedViewer("summary-other-dm", []auth.Role{auth.DM}, "approved")
+	admin := seedViewer("summary-admin", []auth.Role{auth.Admin}, "")
+	input := f.summaryInput()
+	input.Input.Body = "Public recap.\n\n> [!dm]\n> DM_SENTINEL\n\n> [!dm:@summary-member]\n> MEMBER_SENTINEL"
+	public, err := f.commands.UpsertQuestSummary(ctx, f.actor, input, product.CommandMeta{IdempotencyKey: uuid.NewString()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	input.Input.Title = "Restricted recap"
+	input.Input.Visibility = "restricted"
+	input.Input.Body = "READER_SENTINEL"
+	restricted, err := f.commands.UpsertQuestSummary(ctx, f.actor, input, product.CommandMeta{IdempotencyKey: uuid.NewString()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.fixture.Pool.Exec(ctx, `UPDATE documents SET status='published',published_at=now() WHERE public_id=ANY($1::uuid[])`, []string{public.Id, restricted.Id}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.fixture.Pool.Exec(ctx, `INSERT INTO document_readers(document_id,member_id)
+		SELECT d.id,m.id FROM documents d,members m WHERE d.public_id=$1 AND m.public_id=$2`, restricted.Id, dm.Claims().MemberID); err != nil {
+		t.Fatal(err)
+	}
+	reader, err := NewProductPostgres(f.fixture.Pool)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, viewer := range []struct {
+		name                   string
+		actor                  auth.Authority
+		dm, member, restricted bool
+	}{
+		{"anonymous", auth.Authority{}, false, false, false},
+		{"unrelated player", unrelated, false, false, false},
+		{"addressed member", member, false, true, false},
+		{"approved DM with reader grant", dm, true, false, true},
+		{"approved DM without reader grant", otherDM, true, false, false},
+		{"author", f.actor, true, true, true},
+		{"admin", admin, true, true, true},
+	} {
+		t.Run(viewer.name, func(t *testing.T) {
+			for _, surface := range []string{"questSummaries", "dmSummaries"} {
+				t.Run(surface, func(t *testing.T) {
+					var items []document.DocumentView
+					if surface == "questSummaries" {
+						page, err := reader.ReadQuestSummaries(ctx, viewer.actor, QuestSummariesSpec{QuestId: f.questID, Limit: 50, AsOf: time.Now()})
+						if err != nil {
+							t.Fatal(err)
+						}
+						items = page.Summaries
+					} else {
+						page, err := reader.ReadDmSummaries(ctx, viewer.actor, DmSummariesSpec{Filters: &DmSummaryFiltersFields{QuestId: &f.questID}, Limit: 50, AsOf: time.Now()})
+						if err != nil {
+							t.Fatal(err)
+						}
+						items = page.Items
+						wantTotal := int32(1)
+						if viewer.restricted {
+							wantTotal++
+						}
+						if page.Total != wantTotal {
+							t.Fatalf("total=%d want=%d", page.Total, wantTotal)
+						}
+					}
+					foundPublic, foundRestricted := false, false
+					for _, item := range items {
+						if item.EffectiveBody == nil {
+							t.Fatalf("summary %s has no projected body", item.Id)
+						}
+						switch item.Id {
+						case public.Id:
+							foundPublic = true
+							body := *item.EffectiveBody
+							if !strings.Contains(body, "Public recap.") || strings.Contains(body, "DM_SENTINEL") != viewer.dm || strings.Contains(body, "MEMBER_SENTINEL") != viewer.member {
+								t.Fatalf("body=%q want DM=%t member=%t", body, viewer.dm, viewer.member)
+							}
+							if item.BodyComplete != (viewer.dm && viewer.member) {
+								t.Fatalf("BodyComplete=%t", item.BodyComplete)
+							}
+						case restricted.Id:
+							foundRestricted = true
+							if *item.EffectiveBody != "READER_SENTINEL" {
+								t.Fatalf("restricted body=%q", *item.EffectiveBody)
+							}
+						default:
+							t.Fatalf("unexpected summary %s", item.Id)
+						}
+					}
+					if !foundPublic || foundRestricted != viewer.restricted {
+						t.Fatalf("public=%t restricted=%t want restricted=%t", foundPublic, foundRestricted, viewer.restricted)
+					}
+				})
+			}
+		})
 	}
 }

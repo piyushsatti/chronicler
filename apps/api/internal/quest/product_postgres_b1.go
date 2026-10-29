@@ -116,10 +116,11 @@ func (p *ProductPostgres) ReadQuestSummaries(ctx context.Context, actor auth.Aut
 		}
 		return QuestSummariesResult{}, err
 	}
-	viewer, err := p.documentSQLViewer(ctx, actor)
+	scope, err := document.ViewerScopeWithReaders(ctx, p.queries(), actor)
 	if err != nil {
 		return QuestSummariesResult{}, err
 	}
+	viewer := document.SQLScope(scope)
 	rows, err := p.queries().ProductQuestSummariesPage(ctx, dbgen.ProductQuestSummariesPageParams{
 		ViewerAdmin:  viewer.Admin,
 		ViewerID:     viewer.ID,
@@ -134,7 +135,6 @@ func (p *ProductPostgres) ReadQuestSummaries(ctx context.Context, actor auth.Aut
 	if err != nil {
 		return QuestSummariesResult{}, err
 	}
-	scope := document.ScopeFromAuthority(actor)
 	var total int32
 	summaries := make([]document.DocumentView, 0, len(rows))
 	for i, row := range rows {
@@ -147,7 +147,11 @@ func (p *ProductPostgres) ReadQuestSummaries(ctx context.Context, actor auth.Aut
 		if !row.PublicID.Valid {
 			continue
 		}
-		summaries = append(summaries, mapQuestDmSummaryDocumentRow(dbgen.ProductQuestDmSummariesPageRow(row)))
+		view, err := document.ProjectDocumentView(ctx, scope, mapQuestDmSummaryDocumentRow(dbgen.ProductQuestDmSummariesPageRow(row)), row.Body.String)
+		if err != nil {
+			return QuestSummariesResult{}, err
+		}
+		summaries = append(summaries, view)
 	}
 	_ = total // page total is embedded in document list semantics via summaries length for this surface
 	totals, err := p.questSummaryTotals(ctx, questID)

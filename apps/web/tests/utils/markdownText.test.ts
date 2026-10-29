@@ -35,6 +35,37 @@ describe('markdown previews', () => {
     expect(markdownToPlainText('A \\| pipe and a \\[bracket\\]')).toBe('A | pipe and a [bracket]');
   });
 
+  it('omits spoiler content from excerpts and strips callout headers', () => {
+    const body =
+      'Before\n\n> [!spoiler] The reveal\n> The vizier is the lich.\n\nAfter';
+    expect(markdownToPlainText(body)).toBe('Before After');
+    expect(cardExcerpt(body, 120)).toBe('Before After');
+    expect(
+      markdownToPlainText('Before\n\n- > [!spoiler]\n  > SECRET\n\nAfter'),
+    ).toBe('Before After');
+    expect(
+      markdownToPlainText('Before\n\n> [!spoiler]\n> secret\n# Public heading\nAfter'),
+    ).toBe('Before Public heading After');
+    expect(markdownToPlainText('> [!note] Notice\n> Ordinary text.')).toBe(
+      'Notice Ordinary text.',
+    );
+    expect(markdownToPlainText('> [!redacted]\n> ████████████████████')).toBe(
+      '████████████████████',
+    );
+    expect(markdownToPlainText('`[!spoiler]` and \\[!spoiler] stay literal.')).toBe(
+      '[!spoiler] and [!spoiler] stay literal.',
+    );
+    expect(
+      markdownToPlainText('> ```text\n> [!spoiler]\n> Literal example\n> ```'),
+    ).toContain('[!spoiler] Literal example');
+    expect(
+      markdownToPlainText('```text\n> [!spoiler]\n> Literal example\n```\n\nAfter'),
+    ).toBe('After');
+    expect(cardExcerpt('---\nsummary: "Authored summary."\n---\n' + body, 120)).toBe(
+      'Authored summary.',
+    );
+  });
+
   it('strips before truncating so the cut counts visible words', () => {
     const body = `| Type | City |\n|---|---|\n\n**Lead** ${'word '.repeat(60)}`;
     const excerpt = cardExcerpt(body, 40);
