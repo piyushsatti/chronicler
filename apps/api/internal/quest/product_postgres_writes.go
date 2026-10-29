@@ -560,7 +560,7 @@ func (p *ProductPostgres) StoreCloseQuest(ctx context.Context, write CloseQuestW
 	}
 	if lockedRow.FilledCount > 0 {
 		if _, err := p.queries().ProductQuestIncrementCapacity(ctx, dbgen.ProductQuestIncrementCapacityParams{
-			Delta: -lockedRow.FilledCount, At: at, QuestID: lockedRow.ID,
+			Delta: -lockedRow.FilledCount, QuestID: lockedRow.ID,
 		}); err != nil {
 			return QuestView{}, err
 		}
@@ -637,9 +637,18 @@ func (p *ProductPostgres) StoreDeleteQuest(ctx context.Context, write DeleteQues
 		return product.CommandReceipt{}, err
 	}
 	at := pgtype.Timestamptz{Time: write.At.UTC(), Valid: true}
+	bumped, err := p.queries().ProductQuestBumpDiscordDesired(ctx, dbgen.ProductQuestBumpDiscordDesiredParams{
+		QuestID: questID, At: at,
+	})
+	if err != nil {
+		return product.CommandReceipt{}, err
+	}
 	if _, err := p.queries().ProductQuestSetDeleted(ctx, dbgen.ProductQuestSetDeletedParams{
 		DeletedAt: at, DeletedBy: actor, At: at, QuestID: questID,
 	}); err != nil {
+		return product.CommandReceipt{}, err
+	}
+	if err := p.enqueueQuestDiscord(ctx, bumped.ID, write.ValidatedInput.QuestId, bumped.DiscordDesiredRevision); err != nil {
 		return product.CommandReceipt{}, err
 	}
 	return product.CommandReceipt{}, nil
@@ -750,7 +759,7 @@ func (p *ProductPostgres) storeQuestSignup(ctx context.Context, write SignupForQ
 	var bumpedCharacterID string
 	if participantStatus == "signed_up" {
 		if _, err := p.queries().ProductQuestIncrementCapacity(ctx, dbgen.ProductQuestIncrementCapacityParams{
-			Delta: 1, At: at, QuestID: lockedRow.ID,
+			Delta: 1, QuestID: lockedRow.ID,
 		}); err != nil {
 			return QuestParticipantView{}, "", err
 		}
@@ -849,7 +858,7 @@ func (p *ProductPostgres) StoreWithdrawFromQuest(ctx context.Context, write With
 	_ = updated
 	if previous.Status == "signed_up" {
 		if _, err := p.queries().ProductQuestIncrementCapacity(ctx, dbgen.ProductQuestIncrementCapacityParams{
-			Delta: -1, At: at, QuestID: lockedRow.ID,
+			Delta: -1, QuestID: lockedRow.ID,
 		}); err != nil {
 			return QuestParticipantView{}, err
 		}
@@ -921,7 +930,7 @@ func (p *ProductPostgres) StoreSelectQuestParticipants(ctx context.Context, writ
 		return nil, apierr.New(apierr.Conflict, "quest capacity exceeded")
 	}
 	at := pgtype.Timestamptz{Time: write.At.UTC(), Valid: true}
-	if _, err := p.queries().ProductQuestIncrementCapacity(ctx, dbgen.ProductQuestIncrementCapacityParams{Delta: int32(len(ids)), At: at, QuestID: lockedRow.ID}); err != nil {
+	if _, err := p.queries().ProductQuestIncrementCapacity(ctx, dbgen.ProductQuestIncrementCapacityParams{Delta: int32(len(ids)), QuestID: lockedRow.ID}); err != nil {
 		return nil, err
 	}
 	characterIDs := make([]pgtype.UUID, 0, len(ids))

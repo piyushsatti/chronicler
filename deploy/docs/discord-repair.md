@@ -26,12 +26,12 @@ only the bot's role. A channel overwrite can deny a permission that the role
 allows, and a denied View Channel implicitly denies everything else on that
 channel.
 
-| Where                  | Permission                                                                                                     | Used for                                                                                                                                                   |
-| ---------------------- | -------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Quest announce channel | View Channel, Send Messages                                                                                    | Posting the announcement. Editing the bot's own post needs nothing more.                                                                                   |
-| Quest announce channel | Create Public Threads                                                                                          | Opening the discussion thread on the first post. This step is best effort: a refusal is logged, the delivery still succeeds and the thread is not retried. |
-| Quest voice channel    | Create Events (or Manage Events), View Channel, Connect                                                        | Creating and updating the scheduled event. Only quests with a voice channel and a future start time get an event.                                          |
-| Quest role or bot role | The role allows "Allow anyone to @mention this role", or the bot has "Mention @everyone, @here, and All Roles" | Pinging the quest announcement role. Without either, the post goes out but the role is not notified.                                                       |
+| Where                  | Permission                                                                                                     | Used for                                                                                                                                                                                                            |
+| ---------------------- | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Quest announce channel | View Channel, Send Messages                                                                                    | Posting the announcement. Editing the bot's own post needs nothing more.                                                                                                                                            |
+| Quest announce channel | Create Public Threads                                                                                          | Opening the discussion thread on the first post. This step is best effort: a refusal is logged, the delivery still succeeds and the thread is not retried.                                                          |
+| Quest voice channel    | Create Events (or Manage Events), View Channel, Connect                                                        | Creating and updating the scheduled event. New events require a voice channel, a future start, and a quest that is neither cancelled nor deleted. Terminal synchronization also handles existing past-start events. |
+| Quest role or bot role | The role allows "Allow anyone to @mention this role", or the bot has "Mention @everyone, @here, and All Roles" | Pinging the quest announcement role. Without either, the post goes out but the role is not notified.                                                                                                                |
 
 The worker posts plain message content without embeds and never writes inside
 the thread, so it does not need Embed Links or Send Messages in Threads.
@@ -43,6 +43,11 @@ attempt. The admin delivery panel shows it as **Needs repair** with a
 missing-permission reason. Grant the missing permission, then click **Retry
 delivery** on that row. Other failures still retry with backoff and end as
 `dead` (**Gave up**) after the attempt limit; the same button requeues those.
+
+`ErrDiscordEventState` also parks delivery as `repair_required` immediately.
+Inspect the stored event when its GET returns `404`, its status is absent or
+malformed, or its status is unsupported. A retry cannot resolve that identity
+or state ambiguity by creating a replacement.
 
 ## First response
 
@@ -67,15 +72,26 @@ delivery** on that row. Other failures still retry with backoff and end as
 | `REPAIR_REQUIRED` without stored ID | Creation may have succeeded without a response, or multiple marker matches exist.                                                        | Search Discord by quest marker/backlink and creation time. Adopt one unambiguous object through an owner-reviewed repair; resolve duplicates before retrying. |
 
 A message creation timeout is ambiguous because Discord may have accepted the
-request. The bridge does not guess. The stable nonce protects only Discord's
-recent nonce window. After that window, operator inspection is required before
-any replacement.
+request. Creation sends a stable quest-derived nonce of at most 25 characters
+with `enforce_nonce: true`; edits omit these fields. Discord checks uniqueness
+only within the past few minutes ([Create Message](https://docs.discord.com/developers/resources/message#create-message)).
+A retry after that window can create a duplicate if an earlier response was
+lost. This is not durable exactly-once delivery. Inspect Discord before any
+owner-authorized replacement.
 
-Cancellation does not create a new scheduled event when no event can be found.
-A referenced scheduled event becomes canceled; an active event becomes
-completed, which is Discord's only valid terminal transition from active. An
-already terminal event is unchanged. A missing, malformed, or unsupported
-remote status retains the ID and requires repair; do not create a second event.
+After a successful creation response, the worker persists each returned message,
+event, or thread ID with a detached five-second context. This permits ID storage
+after work cancellation; subsequent remote operations still stop on cancellation.
+
+Cancellation and deletion edit existing announcements with `Status: CANCELLED`
+or `Status: DELETED`. They create no missing message, scheduled event, or thread.
+The worker reads a stored event before checking start time or voice channel.
+A scheduled event becomes canceled; an active event becomes completed, which is
+Discord's valid terminal transition from active. An already terminal event is
+unchanged ([scheduled-event status transitions](https://docs.discord.com/developers/resources/guild-scheduled-event)).
+A missing, malformed, or unsupported remote status retains the ID and requires
+repair; do not create a second event. Quest deletion commits its tombstone,
+desired revision, and cleanup job atomically. See [discord-sensor](/docs/interfaces/discord-sensor.md).
 
 ## Verification after repair
 
@@ -97,4 +113,5 @@ service.name:chronicler-api AND event.action:quest_discord_sync AND
  db.pool.outcome:timeout)
 ```
 
-Automated background retries and new alert delivery are outside this release.
+The delivery worker retries ordinary failures with bounded backoff. Repair
+disposition and provider-side behavior require separate operational verification.

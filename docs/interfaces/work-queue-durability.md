@@ -8,11 +8,18 @@
 
 The API owns durable retryable work in one Postgres work table. Operator alerts must not share a failure domain with the process they watch (for example Discord webhook from a different path than the bot process). The bot’s in-memory or local retry is a transport buffer, not durability.
 
+Daily maintenance uses **idempotent scheduled admission**. `jobs.Store.EnqueueScheduled` inserts each UTC date key once and preserves every field of an existing job, regardless of state. Repeated hourly admission must not revive a terminal job. Admission errors are logged. The same hourly tick prunes heartbeat samples strictly older than seven days; admission failure does not skip pruning. This defines no background-job deletion policy.
+
+The API derives active alerts from job and heartbeat evidence. Failed `agent_question` jobs are excluded from both alert lists and counts. Maintenance and delivery failures remain eligible.
+
 ## Enforcement
 
-| Mechanism                          | Location  | Status           |
-| ---------------------------------- | --------- | ---------------- |
-| Work table + worker contract tests | API tests | **not enforced** |
+| Mechanism                            | Location                                                                                                         | Status           |
+| ------------------------------------ | ---------------------------------------------------------------------------------------------------------------- | ---------------- |
+| Work table + worker contract tests   | API tests                                                                                                        | **not enforced** |
+| Insert-once scheduled admission      | `TestDailyMaintenancePreservesAdmittedStateAndUTCDate`, `TestDailyMaintenanceAdmissionDoesNotReviveTerminalJobs` | **enforced**     |
+| Seven-day heartbeat cutoff           | `TestHourlyMaintenancePrunesOldHeartbeats`                                                                       | **enforced**     |
+| Matching actionable alert list/count | `TestActiveAlertsExcludeQuestionFailuresAndKeepActionableJobs`                                                   | **enforced**     |
 
 ## Provider
 
@@ -26,6 +33,7 @@ A failed activity POST is dropped. There is no bot-local spool: [activity](/apps
 
 - [D23](/docs/decisions/D23-One-Work-Table-Out-Of-Band-Alerts.md)
 - [D10](/docs/decisions/D10-Backup-Location-And-Cadence.md)
+- [D30](/docs/decisions/D30-Deletion-Is-Named-Per-Entity.md)
 
 ## Reopen
 

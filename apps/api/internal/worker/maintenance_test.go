@@ -1,8 +1,13 @@
 package worker_test
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
+	"log/slog"
+	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -167,4 +172,65 @@ func TestEnqueueDailyMaintenanceRetainsKnownKinds(t *testing.T) {
 	if store.Jobs[0].Kind != "gametime_fill" || store.Jobs[1].Kind != "reconcile_dry_run" {
 		t.Fatalf("scheduled kinds=%q,%q", store.Jobs[0].Kind, store.Jobs[1].Kind)
 	}
+}
+
+type failedDailyAdmission struct{ jobs.MemoryStore }
+
+func (*failedDailyAdmission) EnqueueScheduled(context.Context, jobs.Job) (bool, error) {
+	return false, errors.New("admission unavailable")
+}
+
+func TestDailyMaintenancePreservesAdmittedStateAndUTCDate(t *testing.T) {
+	slot := time.Date(2026, 10, 15, 0, 15, 0, 0, time.FixedZone("East", 2*60*60))
+	t.Run("UTC date", func(t *testing.T) {
+		store := &jobs.MemoryStore{}
+		worker.EnqueueDailyMaintenance(context.Background(), store, slot)
+		if len(store.Jobs) != 2 || store.Jobs[0].Key != "maintenance:gametime:2026-10-14" || store.Jobs[1].Key != "maintenance:reconcile:2026-10-14" {
+			t.Fatalf("UTC daily jobs=%+v", store.Jobs)
+		}
+	})
+	slot = slot.UTC()
+	for _, state := range []jobs.State{jobs.Queued, jobs.Running, jobs.RetryWait, jobs.Succeeded, jobs.Dead, jobs.RepairRequired, jobs.Cancelled} {
+		t.Run(string(state), func(t *testing.T) {
+			store := &jobs.MemoryStore{}
+			worker.EnqueueDailyMaintenance(context.Background(), store, slot)
+			if len(store.Jobs) != 2 || store.Jobs[0].Key != "maintenance:gametime:2026-10-14" || store.Jobs[1].Key != "maintenance:reconcile:2026-10-14" {
+				t.Fatalf("UTC daily jobs=%+v", store.Jobs)
+			}
+			for i := range store.Jobs {
+				var payload map[string]string
+				if err := json.Unmarshal(store.Jobs[i].Payload, &payload); err != nil || payload["slot"] != "2026-10-14T22:15" {
+					t.Fatalf("UTC payload=%s error=%v", store.Jobs[i].Payload, err)
+				}
+				store.Jobs[i].State = state
+				store.Jobs[i].Attempts = 7
+				store.Jobs[i].Token = 89
+				store.Jobs[i].ErrorMessage = "retained-error"
+				store.Jobs[i].SafeErrorCode = "RETAINED_CODE"
+				store.Jobs[i].CompletionOperation = "retained"
+				store.Jobs[i].CompletionPayload = []byte(`{"retained":true}`)
+			}
+			before := append([]jobs.Job(nil), store.Jobs...)
+			worker.EnqueueDailyMaintenance(context.Background(), store, slot.Add(time.Hour))
+			if !reflect.DeepEqual(store.Jobs, before) {
+				t.Fatalf("repeat changed admitted %s jobs\nbefore=%+v\nafter=%+v", state, before, store.Jobs)
+			}
+			worker.EnqueueDailyMaintenance(context.Background(), store, slot.Add(24*time.Hour))
+			if len(store.Jobs) != 4 {
+				t.Fatalf("next UTC day did not admit both jobs: %+v", store.Jobs)
+			}
+		})
+	}
+	t.Run("admission failures are logged", func(t *testing.T) {
+		var output bytes.Buffer
+		logger := slog.Default()
+		slog.SetDefault(slog.New(slog.NewTextHandler(&output, nil)))
+		t.Cleanup(func() { slog.SetDefault(logger) })
+		worker.EnqueueDailyMaintenance(context.Background(), &failedDailyAdmission{}, slot)
+		for _, value := range []string{"gametime_fill", "reconcile_dry_run", "admission unavailable"} {
+			if !strings.Contains(output.String(), value) {
+				t.Fatalf("missing %q in admission failure logs: %s", value, output.String())
+			}
+		}
+	})
 }

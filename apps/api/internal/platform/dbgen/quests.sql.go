@@ -13,8 +13,7 @@ import (
 
 const applyQuestDiscordRevision = `-- name: ApplyQuestDiscordRevision :exec
 UPDATE quests
-SET discord_applied_revision = GREATEST(discord_applied_revision, $1),
-    updated_at = now()
+SET discord_applied_revision = GREATEST(discord_applied_revision, $1)
 WHERE public_id = $2
 `
 
@@ -517,7 +516,7 @@ func (q *Queries) MemberInternalID(ctx context.Context, publicID pgtype.UUID) (i
 }
 
 const questDiscordAnnounceSnapshot = `-- name: QuestDiscordAnnounceSnapshot :one
-SELECT q.id, q.public_id, q.short_code, q.status, q.scheduled_at, q.duration_hours,
+SELECT q.id, q.public_id, q.short_code, q.status, q.deleted_at, q.scheduled_at, q.duration_hours,
        q.discord_applied_revision,
        q.discord_message_id, q.discord_event_id, q.discord_thread_id,
        q.discord_voice_channel_id,
@@ -538,6 +537,7 @@ type QuestDiscordAnnounceSnapshotRow struct {
 	PublicID               pgtype.UUID        `json:"public_id"`
 	ShortCode              string             `json:"short_code"`
 	Status                 string             `json:"status"`
+	DeletedAt              pgtype.Timestamptz `json:"deleted_at"`
 	ScheduledAt            pgtype.Timestamptz `json:"scheduled_at"`
 	DurationHours          float64            `json:"duration_hours"`
 	DiscordAppliedRevision int32              `json:"discord_applied_revision"`
@@ -567,6 +567,7 @@ func (q *Queries) QuestDiscordAnnounceSnapshot(ctx context.Context, publicID pgt
 		&i.PublicID,
 		&i.ShortCode,
 		&i.Status,
+		&i.DeletedAt,
 		&i.ScheduledAt,
 		&i.DurationHours,
 		&i.DiscordAppliedRevision,
@@ -652,7 +653,7 @@ func (q *Queries) SetQuestDiscordEvent(ctx context.Context, arg SetQuestDiscordE
 
 const setQuestDiscordMessageID = `-- name: SetQuestDiscordMessageID :exec
 UPDATE quests
-SET discord_message_id = $1, updated_at = now()
+SET discord_message_id = $1
 WHERE public_id = $2
 `
 

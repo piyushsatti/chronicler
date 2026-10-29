@@ -13,6 +13,9 @@ var ErrBadPayload = errors.New("invalid quest discord job payload")
 // channel access. Retrying cannot fix it, so the job is parked for repair.
 var ErrDiscordForbidden = errors.New("discord forbidden")
 
+// ErrDiscordEventState requires operator repair of a stored event identity.
+var ErrDiscordEventState = errors.New("discord event state requires repair")
+
 // SafeCodeDiscordPermission is the safe error code stored on a delivery job
 // parked for a Discord 403. The web maps it to an operator sentence.
 const SafeCodeDiscordPermission = "DISCORD_PERMISSION"

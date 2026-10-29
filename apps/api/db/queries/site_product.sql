@@ -155,6 +155,7 @@ WITH job_alerts AS (
         updated_at AS last_seen_at
     FROM background_jobs
     WHERE state IN ('dead', 'repair_required')
+      AND kind <> 'agent_question'
 ),
 heartbeat_alerts AS (
     SELECT
@@ -189,6 +190,7 @@ WITH job_alerts AS (
     SELECT public_id
     FROM background_jobs
     WHERE state IN ('dead', 'repair_required')
+      AND kind <> 'agent_question'
 ),
 heartbeat_alerts AS (
     SELECT 1

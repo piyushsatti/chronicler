@@ -47,6 +47,7 @@ type Writer interface {
 // Store is the job table used by the worker.
 type Store interface {
 	Enqueue(ctx context.Context, job Job) error
+	EnqueueScheduled(ctx context.Context, job Job) (bool, error)
 	ClaimOne(ctx context.Context, lane string) (Job, error)
 	Renew(ctx context.Context, receipt Receipt) (Lease, error)
 	Succeed(ctx context.Context, receipt Receipt) error

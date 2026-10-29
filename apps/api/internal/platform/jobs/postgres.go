@@ -36,6 +36,14 @@ func (s *PostgresStore) Enqueue(ctx context.Context, j Job) error {
 	}
 	return s.q.EnqueueJob(ctx, dbgen.EnqueueJobParams{JobKey: j.Key, Kind: j.Kind, Lane: j.Lane, Payload: p})
 }
+func (s *PostgresStore) EnqueueScheduled(ctx context.Context, j Job) (bool, error) {
+	p := j.Payload
+	if p == nil {
+		p = []byte(`{}`)
+	}
+	n, err := s.q.EnqueueScheduledJob(ctx, dbgen.EnqueueScheduledJobParams{JobKey: j.Key, Kind: j.Kind, Lane: j.Lane, Payload: p})
+	return n == 1, err
+}
 func fromRow(r dbgen.BackgroundJob) Job {
 	return Job{ID: strconv.FormatInt(r.ID, 10), PublicID: db.UUIDString(r.PublicID), Key: r.JobKey, Kind: r.Kind, Lane: r.Lane, State: State(r.State), Attempts: int(r.Attempts), Payload: r.Payload, NextRunAt: r.NextRunAt.Time, Token: r.LeaseToken, LeaseExpiresAt: r.LeaseExpiresAt.Time, ClaimedAt: r.ClaimedAt.Time, AttemptDeadlineAt: r.AttemptDeadlineAt.Time, QuestionDeadlineAt: r.QuestionDeadlineAt.Time, CompletionOperation: r.CompletionOperation.String, CompletionPayload: r.CompletionPayload, ErrorMessage: r.ErrorMessage.String, SafeErrorCode: r.SafeErrorCode.String}
 }

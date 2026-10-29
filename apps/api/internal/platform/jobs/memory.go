@@ -44,6 +44,26 @@ func (m *MemoryStore) Enqueue(_ context.Context, j Job) error {
 	m.Jobs = append(m.Jobs, j)
 	return nil
 }
+func (m *MemoryStore) EnqueueScheduled(ctx context.Context, j Job) (bool, error) {
+	if err := ctx.Err(); err != nil {
+		return false, err
+	}
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, old := range m.Jobs {
+		if old.Key == j.Key {
+			return false, nil
+		}
+	}
+	j.ID = strconv.Itoa(len(m.Jobs) + 1)
+	j.State = Queued
+	j.NextRunAt = m.now()
+	if j.Payload == nil {
+		j.Payload = []byte(`{}`)
+	}
+	m.Jobs = append(m.Jobs, j)
+	return true, nil
+}
 func (m *MemoryStore) ClaimOne(ctx context.Context, lane string) (Job, error) {
 	if e := ctx.Err(); e != nil {
 		return Job{}, e

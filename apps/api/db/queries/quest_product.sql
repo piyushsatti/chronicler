@@ -401,6 +401,11 @@ UPDATE quests q SET
     scheduled_at = @scheduled_at::timestamptz,
     duration_hours = @duration_hours::double precision,
     slots_max = @slots_max::integer, tags = @tags::text[], genres = @genres::text[],
+    status = CASE
+        WHEN q.status = 'open' AND q.filled_count >= @slots_max::integer THEN 'full'
+        WHEN q.status = 'full' AND q.filled_count < @slots_max::integer THEN 'open'
+        ELSE q.status
+    END,
     avg_party_level = sqlc.narg(apl)::integer, signup_type = sqlc.narg(signup_type)::text,
     discord_voice_channel_id = sqlc.narg(voice_channel_id)::text,
     updated_at = @at::timestamptz
@@ -492,8 +497,7 @@ UPDATE quests q SET filled_count = q.filled_count + @delta::integer,
            WHEN q.status = 'open' AND q.filled_count + @delta::integer >= q.slots_max THEN 'full'
            WHEN q.status = 'full' AND q.filled_count + @delta::integer < q.slots_max THEN 'open'
            ELSE q.status
-       END,
-       updated_at = @at::timestamptz
+       END
 WHERE q.id = @quest_id::bigint
   AND q.filled_count + @delta::integer BETWEEN 0 AND q.slots_max
 RETURNING q.id, q.public_id, q.status, q.slots_max, q.filled_count, q.updated_at;

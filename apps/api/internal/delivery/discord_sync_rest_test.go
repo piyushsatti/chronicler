@@ -3,6 +3,7 @@ package delivery_test
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -84,8 +85,9 @@ type fakeDiscord struct {
 	calls []discordCall
 	fail  func(discordCall) bool
 	// failStatus is the status a failed call answers with; zero means 400.
-	failStatus int
-	srv        *httptest.Server
+	failStatus    int
+	eventResponse string
+	srv           *httptest.Server
 }
 
 func newFakeDiscord(t *testing.T) *fakeDiscord {
@@ -111,6 +113,12 @@ func newFakeDiscord(t *testing.T) *fakeDiscord {
 			return
 		}
 		switch {
+		case r.Method == http.MethodGet && strings.Contains(r.URL.Path, "/scheduled-events/"):
+			body := f.eventResponse
+			if body == "" {
+				body = `{"status":1}`
+			}
+			_, _ = w.Write([]byte(body))
 		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/threads"):
 			_, _ = w.Write([]byte(`{"id":"thread-1"}`))
 		case r.Method == http.MethodPost && strings.HasSuffix(r.URL.Path, "/scheduled-events"):
@@ -238,7 +246,7 @@ func TestLaterSyncsEditOnlyAndNeverStartAThreadAgain(t *testing.T) {
 	if err := newSync(f, quests, fullSettings, nil).SyncQuest(context.Background(), testQuestID, 3); err != nil {
 		t.Fatal(err)
 	}
-	want := "PATCH /channels/" + testChannel + "/messages/msg-9|PATCH /guilds/" + testGuild + "/scheduled-events/evt-9"
+	want := "PATCH /channels/" + testChannel + "/messages/msg-9|GET /guilds/" + testGuild + "/scheduled-events/evt-9|PATCH /guilds/" + testGuild + "/scheduled-events/evt-9"
 	if got := strings.Join(f.summary(), "|"); got != want {
 		t.Fatalf("calls=%s\nwant=%s", got, want)
 	}
@@ -369,6 +377,108 @@ func TestPastQuestGetsNoEvent(t *testing.T) {
 	}
 	if got := f.find(http.MethodPost, "/scheduled-events"); len(got) != 0 {
 		t.Fatalf("discord rejects past start times; got %v", got)
+	}
+}
+
+func TestCancelledQuestUpdatesAnnouncementAndTerminatesExistingEvent(t *testing.T) {
+	for _, remote := range []struct{ status, terminal int }{{1, 4}, {2, 3}, {3, 0}, {4, 0}} {
+		for _, past := range []bool{false, true} {
+			t.Run(fmt.Sprintf("status%d/past%v", remote.status, past), func(t *testing.T) {
+				f := newFakeDiscord(t)
+				f.eventResponse = fmt.Sprintf(`{"status":%d}`, remote.status)
+				q := baseQuest("")
+				q.Status, q.MessageID, q.EventID = "cancelled", "existing-message", "existing-event"
+				quests := &fakeQuests{quest: q}
+				sync := newSync(f, quests, fullSettings, nil)
+				if past {
+					sync.Now = func() time.Time { return testStart.Add(time.Hour) }
+				}
+				if err := sync.SyncQuest(context.Background(), testQuestID, 2); err != nil {
+					t.Fatal(err)
+				}
+				messages := f.find(http.MethodPatch, "/messages/existing-message")
+				if len(messages) != 1 || !strings.Contains(messages[0].Body["content"].(string), "Status: CANCELLED") {
+					t.Fatalf("cancelled announcement=%v", messages)
+				}
+				events := f.find(http.MethodPatch, "/scheduled-events/existing-event")
+				if remote.terminal == 0 {
+					if len(events) != 0 {
+						t.Fatalf("terminal event changed: %v", events)
+					}
+				} else if len(events) != 1 || len(events[0].Body) != 1 || events[0].Body["status"] != float64(remote.terminal) {
+					t.Fatalf("terminal update=%v want status %d only", events, remote.terminal)
+				}
+				for _, call := range f.summary() {
+					if strings.HasPrefix(call, "POST ") {
+						t.Fatalf("terminal quest created object: %v", f.summary())
+					}
+				}
+				if quests.quest.EventID != "existing-event" || quests.events != 0 {
+					t.Fatalf("event identity changed: %+v", quests)
+				}
+			})
+		}
+	}
+}
+
+func TestCancelledOrDeletedQuestDoesNotCreateMissingDiscordObjects(t *testing.T) {
+	for _, state := range []string{"cancelled", "deleted"} {
+		for _, message := range []string{"", "existing-message"} {
+			t.Run(state+"/"+message, func(t *testing.T) {
+				f := newFakeDiscord(t)
+				q := baseQuest(testVoice)
+				q.MessageID = message
+				if state == "deleted" {
+					if err := json.Unmarshal([]byte(`{"DeletedAt":"2030-03-01T18:30:00Z"}`), &q); err != nil {
+						t.Fatal(err)
+					}
+				} else {
+					q.Status = state
+				}
+				if err := newSync(f, &fakeQuests{quest: q}, fullSettings, nil).SyncQuest(context.Background(), testQuestID, 2); err != nil {
+					t.Fatal(err)
+				}
+				calls := f.summary()
+				if message == "" && len(calls) != 0 || message != "" && len(calls) != 1 {
+					t.Fatalf("terminal calls=%v", calls)
+				}
+				if message != "" {
+					messages := f.find(http.MethodPatch, "/messages/existing-message")
+					if len(messages) != 1 || !strings.Contains(messages[0].Body["content"].(string), "Status: "+strings.ToUpper(state)) {
+						t.Fatalf("terminal announcement=%v", messages)
+					}
+				}
+			})
+		}
+	}
+}
+
+func TestUnknownRemoteEventStatusRequiresRepairWithoutReplacement(t *testing.T) {
+	for _, response := range []string{`{"status":9}`, `{}`, `{"status":null}`, `{"status":"1"}`, `{"status":1.5}`, `{`, "missing"} {
+		t.Run(response, func(t *testing.T) {
+			f := newFakeDiscord(t)
+			f.eventResponse = response
+			if response == "missing" {
+				f.failStatus = http.StatusNotFound
+				f.fail = func(c discordCall) bool { return c.Method == http.MethodGet }
+			}
+			q := baseQuest(testVoice)
+			q.Status, q.MessageID, q.EventID = "cancelled", "existing-message", "existing-event"
+			quests := &fakeQuests{quest: q}
+			applier := &fakeApplier{}
+			err := newSync(f, quests, fullSettings, applier).SyncQuest(context.Background(), testQuestID, 2)
+			if err == nil || !strings.Contains(err.Error(), "discord event state requires repair") || len(applier.revisions) != 0 {
+				t.Fatalf("error=%v applied=%v", err, applier.revisions)
+			}
+			for _, call := range f.summary() {
+				if strings.HasPrefix(call, "POST ") {
+					t.Fatalf("repair created replacement: %v", f.summary())
+				}
+			}
+			if quests.quest.EventID != "existing-event" || quests.events != 0 {
+				t.Fatalf("event identity changed: %+v", quests)
+			}
+		})
 	}
 }
 

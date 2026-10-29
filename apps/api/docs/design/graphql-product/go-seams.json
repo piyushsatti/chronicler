@@ -27136,8 +27136,8 @@
       "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
     },
     {
-      "id": "CROSS-worker.ScheduledEnqueuer-EnqueueScheduled",
-      "interface": "worker.ScheduledEnqueuer",
+      "id": "CROSS-jobs.Store-EnqueueScheduled",
+      "interface": "jobs.Store",
       "signature": "EnqueueScheduled(ctx context.Context, job jobs.Job) (bool,error)",
       "provider": "J01",
       "callers": ["WK01"],

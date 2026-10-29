@@ -5,3 +5,6 @@ ON CONFLICT (event_id) DO NOTHING;
 
 -- name: InsertBotHeartbeat :exec
 INSERT INTO bot_heartbeats (payload) VALUES ($1);
+
+-- name: PruneBotHeartbeats :exec
+DELETE FROM bot_heartbeats WHERE received_at < $1;

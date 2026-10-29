@@ -150,8 +150,7 @@ WHERE quest_id = sqlc.arg(quest_id);
 
 -- name: ApplyQuestDiscordRevision :exec
 UPDATE quests
-SET discord_applied_revision = GREATEST(discord_applied_revision, sqlc.arg(desired)),
-    updated_at = now()
+SET discord_applied_revision = GREATEST(discord_applied_revision, sqlc.arg(desired))
 WHERE public_id = sqlc.arg(public_id);
 
 -- name: QuestDiscordRevisions :one
@@ -161,7 +160,7 @@ WHERE public_id = sqlc.arg(public_id);
 
 -- name: SetQuestDiscordMessageID :exec
 UPDATE quests
-SET discord_message_id = sqlc.arg(discord_message_id), updated_at = now()
+SET discord_message_id = sqlc.arg(discord_message_id)
 WHERE public_id = sqlc.arg(public_id);
 
 -- name: MemberInternalID :one
@@ -183,7 +182,7 @@ SELECT id FROM documents WHERE public_id = sqlc.arg(public_id);
 -- name: QuestDiscordAnnounceSnapshot :one
 -- Everything the announcement post needs. The brief is returned raw; the worker
 -- projects it for an ordinary member before use.
-SELECT q.id, q.public_id, q.short_code, q.status, q.scheduled_at, q.duration_hours,
+SELECT q.id, q.public_id, q.short_code, q.status, q.deleted_at, q.scheduled_at, q.duration_hours,
        q.discord_applied_revision,
        q.discord_message_id, q.discord_event_id, q.discord_thread_id,
        q.discord_voice_channel_id,

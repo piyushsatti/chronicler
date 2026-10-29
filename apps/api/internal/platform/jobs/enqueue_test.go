@@ -19,6 +19,9 @@ func (r *recStore) Enqueue(_ context.Context, job jobs.Job) error {
 	r.job = job
 	return nil
 }
+func (r *recStore) EnqueueScheduled(ctx context.Context, job jobs.Job) (bool, error) {
+	return true, r.Enqueue(ctx, job)
+}
 func (r *recStore) ClaimOne(context.Context, string) (jobs.Job, error) { return jobs.Job{}, nil }
 func (r *recStore) Succeed(context.Context, jobs.Receipt) error        { return nil }
 func (r *recStore) Retry(context.Context, jobs.Receipt, time.Duration, string) error {

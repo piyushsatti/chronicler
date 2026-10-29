@@ -381,6 +381,9 @@ type ob05UnitStore struct {
 func (s *ob05UnitStore) Enqueue(context.Context, jobs.Job) error {
 	return errors.New("unexpected unit enqueue")
 }
+func (s *ob05UnitStore) EnqueueScheduled(context.Context, jobs.Job) (bool, error) {
+	return false, errors.New("unexpected unit scheduled enqueue")
+}
 func (s *ob05UnitStore) ClaimOne(_ context.Context, lane string) (jobs.Job, error) {
 	s.lane = lane
 	if s.claimError != nil {

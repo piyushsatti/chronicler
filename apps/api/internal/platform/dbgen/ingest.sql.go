@@ -46,3 +46,12 @@ func (q *Queries) InsertDiscordActivityEvent(ctx context.Context, arg InsertDisc
 	)
 	return err
 }
+
+const pruneBotHeartbeats = `-- name: PruneBotHeartbeats :exec
+DELETE FROM bot_heartbeats WHERE received_at < $1
+`
+
+func (q *Queries) PruneBotHeartbeats(ctx context.Context, receivedAt pgtype.Timestamptz) error {
+	_, err := q.db.Exec(ctx, pruneBotHeartbeats, receivedAt)
+	return err
+}

@@ -446,7 +446,7 @@ func assertQuestSignupCapacityAndRoster(t *testing.T, fixture *dbtest.ProductFix
 	var afterStatus string
 	var afterCount int32
 	if err := fixture.Pool.QueryRow(ctx, productNamedSQL(t, "ProductQuestIncrementCapacity"), pgx.StrictNamedArgs{
-		"quest_id": questDBID, "delta": int32(1), "at": at,
+		"quest_id": questDBID, "delta": int32(1),
 	}).Scan(new(int64), new(string), &afterStatus, new(int32), &afterCount, new(time.Time)); err != nil {
 		t.Fatalf("execute Quest capacity admission: %v", err)
 	}

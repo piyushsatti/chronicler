@@ -74,6 +74,9 @@ func (h *Handler) ProcessOne(ctx context.Context) (bool, error) {
 		if errors.Is(err, ErrDiscordForbidden) {
 			return true, h.store.FailWithCode(ctx, job.Receipt(), jobs.RepairRequired, err.Error(), SafeCodeDiscordPermission)
 		}
+		if errors.Is(err, ErrDiscordEventState) {
+			return true, h.store.Fail(ctx, job.Receipt(), jobs.RepairRequired, err.Error())
+		}
 		if job.Attempts >= jobs.MaxAttempts {
 			return true, h.store.Fail(ctx, job.Receipt(), jobs.Dead, err.Error())
 		}

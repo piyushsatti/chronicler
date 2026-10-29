@@ -3,7 +3,9 @@ package delivery
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -136,25 +138,30 @@ func (s *syncRun) execute(ctx context.Context, revision int) error {
 	q := &s.quest
 	firstPost := q.AppliedRevision == 0 && q.ThreadID == ""
 	created := false
-	if q.MessageID == "" {
+	if q.MessageID == "" && !s.terminal() {
 		id, err := s.postMessage(ctx)
 		if err != nil {
 			return err
 		}
 		q.MessageID, created = id, true
 		slog.InfoContext(ctx, "discord message created", "quest", s.questID, "revision", revision, "message", id)
-	} else if err := s.editMessage(ctx); err != nil {
-		return err
+	} else if q.MessageID != "" {
+		if err := s.editMessage(ctx); err != nil {
+			return err
+		}
 	}
 	// The thread is opened on the first post only, never again. It is best
 	// effort: a missing thread permission must not hold back the event or
 	// leave the delivery failing, so the error is logged and the sync goes on.
-	if firstPost && q.ThreadID == "" {
+	if firstPost && q.ThreadID == "" && !s.terminal() {
 		if id, err := s.startThread(ctx); err != nil {
 			slog.WarnContext(ctx, "discord thread not opened", "quest", s.questID, "message", q.MessageID, "error", err)
 		} else {
 			q.ThreadID = id
 		}
+	}
+	if err := ctx.Err(); err != nil {
+		return err
 	}
 	eventChanged, err := s.syncEvent(ctx)
 	if err != nil {
@@ -167,6 +174,10 @@ func (s *syncRun) execute(ctx context.Context, revision int) error {
 		}
 	}
 	return nil
+}
+
+func (s *syncRun) terminal() bool {
+	return s.quest.Status == "cancelled" || s.quest.DeletedAt != nil
 }
 
 func (s *syncRun) eventURL() string {
@@ -186,8 +197,12 @@ func (s *syncRun) messageLink() string {
 
 func (s *syncRun) messageBody() (map[string]any, error) {
 	q := s.quest
+	status := q.Status
+	if q.DeletedAt != nil {
+		status = "deleted"
+	}
 	content, cut, err := BuildAnnouncement(AnnouncementInput{
-		RoleID: s.roleID, Title: q.Title, ShortCode: q.ShortCode, Body: MemberBriefBody(q.Brief),
+		RoleID: s.roleID, Title: q.Title, Status: status, ShortCode: q.ShortCode, Body: MemberBriefBody(q.Brief),
 		ScheduledAt: q.ScheduledAt, DurationHours: q.DurationHours, DMDiscordID: q.DMDiscordID,
 		VoiceChannelID: q.VoiceChannelID, EventURL: s.eventURL(), SignupURL: s.questURL(),
 	})
@@ -210,6 +225,8 @@ func (s *syncRun) postMessage(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	nonce := sha256.Sum256([]byte(s.questID))
+	body["nonce"], body["enforce_nonce"] = fmt.Sprintf("%x", nonce)[:25], true
 	raw, err := s.call(ctx, http.MethodPost, fmt.Sprintf("/channels/%s/messages", s.channelID), body)
 	if err != nil {
 		return "", fmt.Errorf("discord create message: %w", err)
@@ -218,10 +235,12 @@ func (s *syncRun) postMessage(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := s.Quests.SetDiscordMessageID(ctx, s.questID, id); err != nil {
+	persist, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	if err := s.Quests.SetDiscordMessageID(persist, s.questID, id); err != nil {
 		return "", fmt.Errorf("discord message id persist: %w", err)
 	}
-	return id, nil
+	return id, ctx.Err()
 }
 
 func (s *syncRun) editMessage(ctx context.Context) error {
@@ -247,18 +266,50 @@ func (s *syncRun) startThread(ctx context.Context) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := s.Quests.SetDiscordThread(ctx, s.questID, id); err != nil {
+	persist, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	if err := s.Quests.SetDiscordThread(persist, s.questID, id); err != nil {
 		return "", fmt.Errorf("discord thread id persist: %w", err)
 	}
-	return id, nil
+	return id, ctx.Err()
 }
 
-// syncEvent creates or updates the voice-channel scheduled event. No voice
-// channel means no event. Discord rejects a start time in the past, so a quest
-// that has already begun is left as it is. It reports whether an event was
-// newly created.
+// syncEvent reconciles stored state first; only future voice quests create events.
 func (s *syncRun) syncEvent(ctx context.Context) (bool, error) {
 	q := &s.quest
+	if q.EventID != "" {
+		path := fmt.Sprintf("/guilds/%s/scheduled-events/%s", s.GuildID, q.EventID)
+		raw, err := s.call(ctx, http.MethodGet, path, nil)
+		if err != nil {
+			var remote *DiscordAPIError
+			if errors.As(err, &remote) && remote.Status == http.StatusNotFound {
+				return false, fmt.Errorf("%w: stored event missing", ErrDiscordEventState)
+			}
+			return false, fmt.Errorf("discord get event: %w", err)
+		}
+		var event struct {
+			Status int `json:"status"`
+		}
+		if err := json.Unmarshal(raw, &event); err != nil || event.Status < 1 || event.Status > 4 {
+			return false, fmt.Errorf("%w: missing or unsupported status", ErrDiscordEventState)
+		}
+		if event.Status == 3 || event.Status == 4 {
+			return false, nil
+		}
+		if s.terminal() {
+			status := 4 // SCHEDULED -> CANCELED; ACTIVE -> COMPLETED.
+			if event.Status == 2 {
+				status = 3
+			}
+			if _, err := s.call(ctx, http.MethodPatch, path, map[string]any{"status": status}); err != nil {
+				return false, fmt.Errorf("discord patch event: %w", err)
+			}
+			return false, nil
+		}
+	}
+	if s.terminal() {
+		return false, nil
+	}
 	if q.VoiceChannelID == "" || !q.ScheduledAt.After(s.now()) {
 		return false, nil
 	}
@@ -290,10 +341,12 @@ func (s *syncRun) syncEvent(ctx context.Context) (bool, error) {
 		return false, err
 	}
 	q.EventID = id
-	if err := s.Quests.SetDiscordEvent(ctx, s.questID, id, s.eventURL()); err != nil {
+	persist, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
+	defer cancel()
+	if err := s.Quests.SetDiscordEvent(persist, s.questID, id, s.eventURL()); err != nil {
 		return false, fmt.Errorf("discord event id persist: %w", err)
 	}
-	return true, nil
+	return true, ctx.Err()
 }
 
 func responseID(raw []byte, what string) (string, error) {
@@ -307,6 +360,9 @@ func responseID(raw []byte, what string) (string, error) {
 }
 
 func (s *syncRun) call(ctx context.Context, method, path string, payload any) ([]byte, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	encoded, err := json.Marshal(payload)
 	if err != nil {
 		return nil, err

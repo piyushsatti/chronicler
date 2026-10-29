@@ -103,7 +103,7 @@ func (p *PostgresRevisionApplier) LoadAnnounceQuest(ctx context.Context, questID
 		}
 		return ""
 	}
-	return AnnounceQuest{
+	quest := AnnounceQuest{
 		PublicID:        db.UUIDString(row.PublicID),
 		ShortCode:       row.ShortCode,
 		Status:          row.Status,
@@ -127,7 +127,11 @@ func (p *PostgresRevisionApplier) LoadAnnounceQuest(ctx context.Context, questID
 			Body:       row.DocumentBody,
 			Policy:     row.DocumentPolicy,
 		},
-	}, nil
+	}
+	if row.DeletedAt.Valid {
+		quest.DeletedAt = &row.DeletedAt.Time
+	}
+	return quest, nil
 }
 
 func (p *PostgresRevisionApplier) SetDiscordEvent(ctx context.Context, questID, eventID, eventURL string) error {

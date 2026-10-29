@@ -23,6 +23,7 @@ type AnnounceQuest struct {
 	PublicID        string
 	ShortCode       string
 	Status          string
+	DeletedAt       *time.Time
 	Title           string
 	ScheduledAt     time.Time
 	DurationHours   float64
@@ -60,6 +61,7 @@ func MemberBriefBody(brief document.Document) string {
 type AnnouncementInput struct {
 	RoleID         string
 	Title          string
+	Status         string
 	ShortCode      string
 	Body           string
 	ScheduledAt    time.Time
@@ -96,6 +98,9 @@ func announcementLines(in AnnouncementInput, body string) []string {
 		lines = append(lines, "<@&"+in.RoleID+">")
 	}
 	lines = append(lines, fmt.Sprintf("# %s (%s)", in.Title, in.ShortCode))
+	if in.Status == "cancelled" || in.Status == "deleted" {
+		lines = append(lines, "Status: "+strings.ToUpper(in.Status))
+	}
 	if body != "" {
 		lines = append(lines, body)
 	}

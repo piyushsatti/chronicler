@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -72,6 +73,31 @@ func TestProcessOnePassesEnqueuedRevision(t *testing.T) {
 	}
 	if store.Jobs[0].State != jobs.Succeeded {
 		t.Fatalf("state=%s", store.Jobs[0].State)
+	}
+}
+
+func TestDiscordEventStateFailureParksJobForRepair(t *testing.T) {
+	store := &delivery.MemoryStore{Jobs: []jobs.Job{queuedDiscordJob(t, testQuestID, 2, 0)}}
+	q := baseQuest(testVoice)
+	q.Status, q.MessageID, q.EventID = "cancelled", "existing-message", "existing-event"
+	posts := 0
+	sync := delivery.RESTSync{
+		Token: "tok", GuildID: testGuild, FallbackChannelID: testChannel, FallbackOrigin: testOrigin,
+		Quests: &fakeQuests{quest: q},
+		HTTP: &http.Client{Transport: discordTransport(func(r *http.Request) (*http.Response, error) {
+			if r.Method == http.MethodPost {
+				posts++
+			}
+			return &http.Response{StatusCode: http.StatusOK, Header: http.Header{}, Body: io.NopCloser(strings.NewReader(`{"status":9}`))}, nil
+		})},
+	}
+	ok, err := delivery.NewHandler(store, sync).ProcessOne(context.Background())
+	if err != nil || !ok {
+		t.Fatalf("processed=%v error=%v", ok, err)
+	}
+	job := store.Jobs[0]
+	if job.State != jobs.RepairRequired || job.Attempts != 1 || job.SafeErrorCode != "" || posts != 0 {
+		t.Fatalf("state=%s attempts=%d code=%q creations=%d", job.State, job.Attempts, job.SafeErrorCode, posts)
 	}
 }
 

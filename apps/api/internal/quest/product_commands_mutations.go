@@ -284,6 +284,9 @@ func (s ProductCommands) UpdateQuest(ctx context.Context, actor auth.Authority, 
 			return QuestView{}, err
 		}
 	}
+	if spec.Input.SlotsMax.Set && spec.Input.SlotsMax.Value != nil && (*spec.Input.SlotsMax.Value < 1 || *spec.Input.SlotsMax.Value > 100) {
+		return QuestView{}, apierr.New(apierr.Invalid, "invalid quest schedule")
+	}
 	request, preview, err := s.questDMRequest(ctx, actor, "Mutation.updateQuest", questID)
 	if err != nil {
 		return QuestView{}, err
@@ -303,6 +306,9 @@ func updateQuest(ctx context.Context, repos ProductCommandRepos, fresh auth.Auth
 	}
 	if err := admitLockedQuest(ctx, repos, fresh, request.Operation(), questID, preview.DmId, locked.OwnerID); err != nil {
 		return QuestView{}, err
+	}
+	if spec.Input.SlotsMax.Set && spec.Input.SlotsMax.Value != nil && locked.Before != nil && *spec.Input.SlotsMax.Value < locked.Before.FilledCount {
+		return QuestView{}, apierr.New(apierr.Invalid, "quest capacity exceeded")
 	}
 	if spec.Input.ArcId.Set {
 		if err := admitQuestArc(ctx, repos, fresh, spec.Input.ArcId.Value); err != nil {
@@ -443,11 +449,19 @@ func (s ProductCommands) DeleteQuest(ctx context.Context, actor auth.Authority, 
 		return product.CommandReceipt{}, err
 	}
 	spec.QuestId = questID
-	request, preview, err := s.questDMRequest(ctx, actor, "Mutation.deleteQuest", questID)
-	if err != nil {
-		return product.CommandReceipt{}, err
+	var ownerID string
+	requestFor := func(repos ProductCommandRepos, _ auth.Authority) (auth.Request, error) {
+		locked, err := repos.Quest.LockRestoreQuest(ctx, RestoreQuestSpec{QuestId: questID})
+		if err != nil {
+			return auth.Request{}, err
+		}
+		if locked.OwnerID == "" {
+			return auth.Request{}, apierr.New(apierr.NotFound, "quest not found")
+		}
+		ownerID = locked.OwnerID
+		return auth.ForQuest("Mutation.deleteQuest", auth.QuestFacts{ID: questID, DMID: ownerID})
 	}
-	return runQuestCommand(ctx, s, actor, "deleteQuest", request, spec, meta, questID, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (product.CommandReceipt, error) {
+	return runQuestCommandWithRequest(ctx, s, actor, "deleteQuest", requestFor, spec, meta, questID, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (product.CommandReceipt, error) {
 		locked, err := repos.Quest.LockDeleteQuest(ctx, DeleteQuestSpec{QuestId: questID, AsOf: at})
 		if err != nil {
 			return product.CommandReceipt{}, err
@@ -455,7 +469,7 @@ func (s ProductCommands) DeleteQuest(ctx context.Context, actor auth.Authority, 
 		if !locked.Exists {
 			return product.CommandReceipt{}, apierr.New(apierr.NotFound, "quest not found")
 		}
-		if err := admitLockedQuest(ctx, repos, fresh, request.Operation(), questID, preview.DmId, locked.OwnerID); err != nil {
+		if err := admitLockedQuest(ctx, repos, fresh, "Mutation.deleteQuest", questID, ownerID, locked.OwnerID); err != nil {
 			return product.CommandReceipt{}, err
 		}
 		return repos.Quest.StoreDeleteQuest(ctx, DeleteQuestWrite{

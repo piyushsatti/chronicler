@@ -882,17 +882,15 @@ UPDATE quests q SET filled_count = q.filled_count + $1::integer,
            WHEN q.status = 'open' AND q.filled_count + $1::integer >= q.slots_max THEN 'full'
            WHEN q.status = 'full' AND q.filled_count + $1::integer < q.slots_max THEN 'open'
            ELSE q.status
-       END,
-       updated_at = $2::timestamptz
-WHERE q.id = $3::bigint
+       END
+WHERE q.id = $2::bigint
   AND q.filled_count + $1::integer BETWEEN 0 AND q.slots_max
 RETURNING q.id, q.public_id, q.status, q.slots_max, q.filled_count, q.updated_at
 `
 
 type ProductQuestIncrementCapacityParams struct {
-	Delta   int32              `json:"delta"`
-	At      pgtype.Timestamptz `json:"at"`
-	QuestID int64              `json:"quest_id"`
+	Delta   int32 `json:"delta"`
+	QuestID int64 `json:"quest_id"`
 }
 
 type ProductQuestIncrementCapacityRow struct {
@@ -905,7 +903,7 @@ type ProductQuestIncrementCapacityRow struct {
 }
 
 func (q *Queries) ProductQuestIncrementCapacity(ctx context.Context, arg ProductQuestIncrementCapacityParams) (ProductQuestIncrementCapacityRow, error) {
-	row := q.db.QueryRow(ctx, productQuestIncrementCapacity, arg.Delta, arg.At, arg.QuestID)
+	row := q.db.QueryRow(ctx, productQuestIncrementCapacity, arg.Delta, arg.QuestID)
 	var i ProductQuestIncrementCapacityRow
 	err := row.Scan(
 		&i.ID,
@@ -2867,6 +2865,11 @@ UPDATE quests q SET
     scheduled_at = $4::timestamptz,
     duration_hours = $5::double precision,
     slots_max = $6::integer, tags = $7::text[], genres = $8::text[],
+    status = CASE
+        WHEN q.status = 'open' AND q.filled_count >= $6::integer THEN 'full'
+        WHEN q.status = 'full' AND q.filled_count < $6::integer THEN 'open'
+        ELSE q.status
+    END,
     avg_party_level = $9::integer, signup_type = $10::text,
     discord_voice_channel_id = $11::text,
     updated_at = $12::timestamptz

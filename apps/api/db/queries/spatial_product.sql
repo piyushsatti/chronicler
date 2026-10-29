@@ -247,6 +247,7 @@ WITH target AS (
  FROM target t JOIN quest_regions qr ON qr.region_id=t.id
  JOIN quests q ON q.id=qr.quest_id
  WHERE q.deleted_at IS NULL
+   AND q.scheduled_at + q.duration_hours * interval '1 hour' > sqlc.arg(as_of)::timestamptz
 ), counts AS (
  SELECT count(*) FILTER (WHERE display_status='filling')::int AS filling_count,
         count(*) FILTER (WHERE display_status='scheduled')::int AS scheduled_count,

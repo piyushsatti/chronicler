@@ -139,7 +139,8 @@ func EnqueueDailyMaintenance(ctx context.Context, store jobs.Store, slot time.Ti
 	if store == nil {
 		return
 	}
-	slotKey := slot.UTC().Format("2006-01-02T15:04")
+	slot = slot.UTC()
+	slotKey := slot.Format("2006-01-02T15:04")
 	for _, spec := range []struct {
 		key, kind string
 	}{
@@ -147,8 +148,11 @@ func EnqueueDailyMaintenance(ctx context.Context, store jobs.Store, slot time.Ti
 		{"maintenance:reconcile:" + slot.Format("2006-01-02"), "reconcile_dry_run"},
 	} {
 		payload, _ := json.Marshal(map[string]string{"slot": slotKey})
-		_ = store.Enqueue(ctx, jobs.Job{
+		_, err := store.EnqueueScheduled(ctx, jobs.Job{
 			Key: spec.key, Kind: spec.kind, Lane: LaneMaintenance, Payload: payload,
 		})
+		if err != nil {
+			slog.ErrorContext(ctx, "maintenance admission failed", "kind", spec.kind, "key", spec.key, "error", err)
+		}
 	}
 }
