@@ -62,7 +62,7 @@ The original `mounted-http-013` through `mounted-http-017`, `mounted-http-025` t
 | mounted-http-016    | `POST /v1/quests/{id}/transition`                   | GraphQL Mutation.transitionQuestStatus              | OP-050    |
 | mounted-http-017    | `POST /v1/quests/{id}/close`                        | GraphQL Mutation.closeQuest                         | OP-051    |
 | mounted-http-018    | `GET /v1/me/notifications/unread-count`             | GraphQL Query.myUnreadNotificationCount             | OP-052    |
-| mounted-http-019    | `POST /v1/me/notifications/read`                    | GraphQL Mutation.markNotificationsRead              | OP-053    |
+| mounted-http-019    | `POST /v1/me/notifications/read` (retired)          | GraphQL Mutation.markNotificationsRead              | OP-053    |
 | mounted-http-020    | `POST /v1/me/notifications/acknowledge-suppressed`  | GraphQL Mutation.acknowledgeSuppressedNotifications | OP-054    |
 | mounted-http-021    | `POST /v1/me/personalization/reconcile`             | Retired                                             | OP-055    |
 | mounted-http-022    | `GET /v1/stats`                                     | GraphQL Query.siteStats                             | OP-056    |

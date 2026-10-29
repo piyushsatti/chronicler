@@ -248,99 +248,6 @@ func (q *Queries) CharacterProductAwardQuestPCXP(ctx context.Context, arg Charac
 	return public_id, err
 }
 
-const characterProductBatchByIDs = `-- name: CharacterProductBatchByIDs :many
-WITH requested AS (
-    SELECT requested.public_id, requested.ordinality
-    FROM unnest($1::uuid[]) WITH ORDINALITY AS requested(public_id, ordinality)
-)
-SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
-       c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id, region.public_id AS region_id,
-       c.description, c.background_text, c.ddb_url, c.image_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
-       ddb.payload AS ddb_payload, ddb.synced_at AS ddb_synced_at,
-       c.verification_submitted_at,
-       CASE WHEN c.verification_submitted_at IS NOT NULL
-                  AND (latest.created_at IS NULL OR latest.created_at < c.verification_submitted_at)
-            THEN 'PENDING'
-            ELSE UPPER(COALESCE(latest.verdict, 'unknown')) END AS verification_status
-FROM requested
-JOIN characters c ON c.public_id = requested.public_id AND c.deleted_at IS NULL
-JOIN members owner ON owner.id = c.owner_id
-LEFT JOIN backstories backstory ON backstory.id = c.backstory_id
-LEFT JOIN documents guild ON guild.id = c.guild_document_id
-LEFT JOIN regions region ON region.id = c.region_id
-LEFT JOIN character_ddb_mirrors ddb ON ddb.character_id = c.id
-LEFT JOIN LATERAL (
-    SELECT verification.verdict, verification.created_at
-    FROM verifications verification
-    WHERE verification.subject_type = 'character' AND verification.subject_id = c.id
-    ORDER BY verification.created_at DESC, verification.public_id DESC
-    LIMIT 1
-) latest ON true
-ORDER BY requested.ordinality
-`
-
-type CharacterProductBatchByIDsRow struct {
-	ID                      pgtype.UUID        `json:"id"`
-	ShortCode               string             `json:"short_code"`
-	Name                    string             `json:"name"`
-	OwnerID                 pgtype.UUID        `json:"owner_id"`
-	Status                  string             `json:"status"`
-	BackstoryID             pgtype.UUID        `json:"backstory_id"`
-	GuildID                 pgtype.UUID        `json:"guild_id"`
-	RegionID                pgtype.UUID        `json:"region_id"`
-	Description             pgtype.Text        `json:"description"`
-	BackgroundText          pgtype.Text        `json:"background_text"`
-	DdbUrl                  pgtype.Text        `json:"ddb_url"`
-	ImageUrl                pgtype.Text        `json:"image_url"`
-	Pcxp                    int32              `json:"pcxp"`
-	CreatedAt               pgtype.Timestamptz `json:"created_at"`
-	UpdatedAt               pgtype.Timestamptz `json:"updated_at"`
-	DdbPayload              []byte             `json:"ddb_payload"`
-	DdbSyncedAt             pgtype.Timestamptz `json:"ddb_synced_at"`
-	VerificationSubmittedAt pgtype.Timestamptz `json:"verification_submitted_at"`
-	VerificationStatus      interface{}        `json:"verification_status"`
-}
-
-func (q *Queries) CharacterProductBatchByIDs(ctx context.Context, characterIds []pgtype.UUID) ([]CharacterProductBatchByIDsRow, error) {
-	rows, err := q.db.Query(ctx, characterProductBatchByIDs, characterIds)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []CharacterProductBatchByIDsRow{}
-	for rows.Next() {
-		var i CharacterProductBatchByIDsRow
-		if err := rows.Scan(
-			&i.ID,
-			&i.ShortCode,
-			&i.Name,
-			&i.OwnerID,
-			&i.Status,
-			&i.BackstoryID,
-			&i.GuildID,
-			&i.RegionID,
-			&i.Description,
-			&i.BackgroundText,
-			&i.DdbUrl,
-			&i.ImageUrl,
-			&i.Pcxp,
-			&i.CreatedAt,
-			&i.UpdatedAt,
-			&i.DdbPayload,
-			&i.DdbSyncedAt,
-			&i.VerificationSubmittedAt,
-			&i.VerificationStatus,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const characterProductByID = `-- name: CharacterProductByID :one
 SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
        c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id,
@@ -2299,20 +2206,6 @@ func (q *Queries) CharacterProductSubmitForVerification(ctx context.Context, arg
 	var i CharacterProductSubmitForVerificationRow
 	err := row.Scan(&i.ID, &i.VerificationSubmittedAt, &i.UpdatedAt)
 	return i, err
-}
-
-const characterProductSumProgression = `-- name: CharacterProductSumProgression :one
-SELECT COALESCE(sum(ledger.delta), 0)::int AS total
-FROM character_progression_ledger ledger
-JOIN characters character ON character.id = ledger.character_id
-WHERE character.public_id = $1::uuid
-`
-
-func (q *Queries) CharacterProductSumProgression(ctx context.Context, characterID pgtype.UUID) (int32, error) {
-	row := q.db.QueryRow(ctx, characterProductSumProgression, characterID)
-	var total int32
-	err := row.Scan(&total)
-	return total, err
 }
 
 const characterProductUpdateBackstory = `-- name: CharacterProductUpdateBackstory :one

@@ -360,44 +360,6 @@
     "owner_queries_commands_task": "SPA06"
   },
   {
-    "wire": "Mutation.createRequest",
-    "domain": "member",
-    "aggregate": "Social",
-    "method": "CreateRequest",
-    "spec_type": "CreateRequestSpec",
-    "spec_fields": [
-      {
-        "name": "TargetDmId",
-        "wire_name": "targetDmId",
-        "go_type": "string",
-        "sdl_type": "ID!",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      },
-      {
-        "name": "Kind",
-        "wire_name": "kind",
-        "go_type": "string",
-        "sdl_type": "String!",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      },
-      {
-        "name": "Note",
-        "wire_name": "note",
-        "go_type": "*string",
-        "sdl_type": "String",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      }
-    ],
-    "result_go_type": "member.RequestView",
-    "result_sdl_type": "RequestV2Type!",
-    "signature": "func (s ProductCommands) CreateRequest(ctx context.Context, actor auth.Authority, spec CreateRequestSpec, meta product.CommandMeta) (member.RequestView, error)",
-    "owner_types_task": "MEM01",
-    "owner_queries_commands_task": "MEM06"
-  },
-  {
     "wire": "Mutation.createTimeAnchor",
     "domain": "spatial",
     "aggregate": "Time",
@@ -462,44 +424,6 @@
     "result_go_type": "member.DmProfileView",
     "result_sdl_type": "DmProfileV2Type!",
     "signature": "func (s ProductCommands) DecideDmProfileVerification(ctx context.Context, actor auth.Authority, spec DecideDmProfileVerificationSpec, meta product.CommandMeta) (member.DmProfileView, error)",
-    "owner_types_task": "MEM01",
-    "owner_queries_commands_task": "MEM06"
-  },
-  {
-    "wire": "Mutation.decideRequest",
-    "domain": "member",
-    "aggregate": "Social",
-    "method": "DecideRequest",
-    "spec_type": "DecideRequestSpec",
-    "spec_fields": [
-      {
-        "name": "RequestId",
-        "wire_name": "requestId",
-        "go_type": "string",
-        "sdl_type": "ID!",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      },
-      {
-        "name": "Decision",
-        "wire_name": "decision",
-        "go_type": "string",
-        "sdl_type": "String!",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      },
-      {
-        "name": "Note",
-        "wire_name": "note",
-        "go_type": "*string",
-        "sdl_type": "String",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      }
-    ],
-    "result_go_type": "member.RequestView",
-    "result_sdl_type": "RequestV2Type!",
-    "signature": "func (s ProductCommands) DecideRequest(ctx context.Context, actor auth.Authority, spec DecideRequestSpec, meta product.CommandMeta) (member.RequestView, error)",
     "owner_types_task": "MEM01",
     "owner_queries_commands_task": "MEM06"
   },
@@ -712,28 +636,6 @@
     "owner_queries_commands_task": "DOC06"
   },
   {
-    "wire": "Mutation.followPerson",
-    "domain": "member",
-    "aggregate": "Social",
-    "method": "FollowPerson",
-    "spec_type": "FollowPersonSpec",
-    "spec_fields": [
-      {
-        "name": "MemberId",
-        "wire_name": "memberId",
-        "go_type": "string",
-        "sdl_type": "ID!",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      }
-    ],
-    "result_go_type": "product.CommandReceipt",
-    "result_sdl_type": "CommandReceipt!",
-    "signature": "func (s ProductCommands) FollowPerson(ctx context.Context, actor auth.Authority, spec FollowPersonSpec, meta product.CommandMeta) (product.CommandReceipt, error)",
-    "owner_types_task": "MEM01",
-    "owner_queries_commands_task": "MEM06"
-  },
-  {
     "wire": "Mutation.grantUnlock",
     "domain": "member",
     "aggregate": "Member",
@@ -770,44 +672,6 @@
     "signature": "func (s ProductCommands) GrantUnlock(ctx context.Context, actor auth.Authority, spec GrantUnlockSpec, meta product.CommandMeta) (member.MemberUnlockView, error)",
     "owner_types_task": "MEM01",
     "owner_queries_commands_task": "MEM06"
-  },
-  {
-    "wire": "Mutation.linkHexEntry",
-    "domain": "spatial",
-    "aggregate": "Map",
-    "method": "LinkHexEntry",
-    "spec_type": "LinkHexEntrySpec",
-    "spec_fields": [
-      {
-        "name": "HexId",
-        "wire_name": "hexId",
-        "go_type": "string",
-        "sdl_type": "ID!",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      },
-      {
-        "name": "DocumentId",
-        "wire_name": "documentId",
-        "go_type": "string",
-        "sdl_type": "ID!",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      },
-      {
-        "name": "Relation",
-        "wire_name": "relation",
-        "go_type": "string",
-        "sdl_type": "String!",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      }
-    ],
-    "result_go_type": "spatial.HexEntryLinkView",
-    "result_sdl_type": "HexEntryLinkV2Type!",
-    "signature": "func (s ProductCommands) LinkHexEntry(ctx context.Context, actor auth.Authority, spec LinkHexEntrySpec, meta product.CommandMeta) (spatial.HexEntryLinkView, error)",
-    "owner_types_task": "SPA01",
-    "owner_queries_commands_task": "SPA06"
   },
   {
     "wire": "Mutation.linkPointcrawlEntry",
@@ -1292,36 +1156,6 @@
     "owner_queries_commands_task": "DOC06"
   },
   {
-    "wire": "Mutation.setHexEdge",
-    "domain": "spatial",
-    "aggregate": "Map",
-    "method": "SetHexEdge",
-    "spec_type": "SetHexEdgeSpec",
-    "spec_fields": [
-      {
-        "name": "MapId",
-        "wire_name": "mapId",
-        "go_type": "string",
-        "sdl_type": "ID!",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      },
-      {
-        "name": "Input",
-        "wire_name": "input",
-        "go_type": "spatial.HexEdgeFields",
-        "sdl_type": "HexEdgeInput!",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      }
-    ],
-    "result_go_type": "spatial.HexEdgeView",
-    "result_sdl_type": "HexEdgeV2Type!",
-    "signature": "func (s ProductCommands) SetHexEdge(ctx context.Context, actor auth.Authority, spec SetHexEdgeSpec, meta product.CommandMeta) (spatial.HexEdgeView, error)",
-    "owner_types_task": "SPA01",
-    "owner_queries_commands_task": "SPA06"
-  },
-  {
     "wire": "Mutation.setMemberRoles",
     "domain": "member",
     "aggregate": "Member",
@@ -1720,66 +1554,6 @@
     "owner_queries_commands_task": "SPA06"
   },
   {
-    "wire": "Mutation.unfollowPerson",
-    "domain": "member",
-    "aggregate": "Social",
-    "method": "UnfollowPerson",
-    "spec_type": "UnfollowPersonSpec",
-    "spec_fields": [
-      {
-        "name": "MemberId",
-        "wire_name": "memberId",
-        "go_type": "string",
-        "sdl_type": "ID!",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      }
-    ],
-    "result_go_type": "product.CommandReceipt",
-    "result_sdl_type": "CommandReceipt!",
-    "signature": "func (s ProductCommands) UnfollowPerson(ctx context.Context, actor auth.Authority, spec UnfollowPersonSpec, meta product.CommandMeta) (product.CommandReceipt, error)",
-    "owner_types_task": "MEM01",
-    "owner_queries_commands_task": "MEM06"
-  },
-  {
-    "wire": "Mutation.unlinkHexEntry",
-    "domain": "spatial",
-    "aggregate": "Map",
-    "method": "UnlinkHexEntry",
-    "spec_type": "UnlinkHexEntrySpec",
-    "spec_fields": [
-      {
-        "name": "HexId",
-        "wire_name": "hexId",
-        "go_type": "string",
-        "sdl_type": "ID!",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      },
-      {
-        "name": "DocumentId",
-        "wire_name": "documentId",
-        "go_type": "string",
-        "sdl_type": "ID!",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      },
-      {
-        "name": "Relation",
-        "wire_name": "relation",
-        "go_type": "string",
-        "sdl_type": "String!",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      }
-    ],
-    "result_go_type": "product.CommandReceipt",
-    "result_sdl_type": "CommandReceipt!",
-    "signature": "func (s ProductCommands) UnlinkHexEntry(ctx context.Context, actor auth.Authority, spec UnlinkHexEntrySpec, meta product.CommandMeta) (product.CommandReceipt, error)",
-    "owner_types_task": "SPA01",
-    "owner_queries_commands_task": "SPA06"
-  },
-  {
     "wire": "Mutation.unlinkPointcrawlEntry",
     "domain": "spatial",
     "aggregate": "Map",
@@ -1964,36 +1738,6 @@
     "result_go_type": "spatial.GameCalendarView",
     "result_sdl_type": "GameCalendarV2Type!",
     "signature": "func (s ProductCommands) UpdateGameCalendar(ctx context.Context, actor auth.Authority, spec UpdateGameCalendarSpec, meta product.CommandMeta) (spatial.GameCalendarView, error)",
-    "owner_types_task": "SPA01",
-    "owner_queries_commands_task": "SPA06"
-  },
-  {
-    "wire": "Mutation.updateHex",
-    "domain": "spatial",
-    "aggregate": "Map",
-    "method": "UpdateHex",
-    "spec_type": "UpdateHexSpec",
-    "spec_fields": [
-      {
-        "name": "Id",
-        "wire_name": "id",
-        "go_type": "string",
-        "sdl_type": "ID!",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      },
-      {
-        "name": "Input",
-        "wire_name": "input",
-        "go_type": "spatial.HexEditFields",
-        "sdl_type": "HexEditInput!",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      }
-    ],
-    "result_go_type": "spatial.HexView",
-    "result_sdl_type": "HexV2Type!",
-    "signature": "func (s ProductCommands) UpdateHex(ctx context.Context, actor auth.Authority, spec UpdateHexSpec, meta product.CommandMeta) (spatial.HexView, error)",
     "owner_types_task": "SPA01",
     "owner_queries_commands_task": "SPA06"
   },
@@ -2254,36 +1998,6 @@
     "signature": "func (s ProductCommands) UpsertDowntimeProject(ctx context.Context, actor auth.Authority, spec UpsertDowntimeProjectSpec, meta product.CommandMeta) (character.DowntimeProjectView, error)",
     "owner_types_task": "CHA01",
     "owner_queries_commands_task": "CHA06"
-  },
-  {
-    "wire": "Mutation.upsertPoi",
-    "domain": "spatial",
-    "aggregate": "Map",
-    "method": "UpsertPoi",
-    "spec_type": "UpsertPoiSpec",
-    "spec_fields": [
-      {
-        "name": "HexId",
-        "wire_name": "hexId",
-        "go_type": "string",
-        "sdl_type": "ID!",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      },
-      {
-        "name": "Input",
-        "wire_name": "input",
-        "go_type": "spatial.PoiFields",
-        "sdl_type": "PoiInput!",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      }
-    ],
-    "result_go_type": "spatial.PoiView",
-    "result_sdl_type": "PoiV2Type!",
-    "signature": "func (s ProductCommands) UpsertPoi(ctx context.Context, actor auth.Authority, spec UpsertPoiSpec, meta product.CommandMeta) (spatial.PoiView, error)",
-    "owner_types_task": "SPA01",
-    "owner_queries_commands_task": "SPA06"
   },
   {
     "wire": "Mutation.upsertPointcrawlNode",
@@ -3034,36 +2748,6 @@
     "owner_queries_commands_task": "SIT05"
   },
   {
-    "wire": "Query.dmRequests",
-    "domain": "member",
-    "aggregate": "Social",
-    "method": "DmRequests",
-    "spec_type": "DmRequestsSpec",
-    "spec_fields": [
-      {
-        "name": "Limit",
-        "wire_name": "limit",
-        "go_type": "int32",
-        "sdl_type": "Int!",
-        "default": "50",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      },
-      {
-        "name": "Offset",
-        "wire_name": "offset",
-        "go_type": "int32",
-        "sdl_type": "Int!",
-        "default": "0",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      }
-    ],
-    "result_go_type": "member.RequestPage",
-    "result_sdl_type": "RequestPage!",
-    "signature": "func (s ProductQueries) DmRequests(ctx context.Context, actor auth.Authority, spec DmRequestsSpec) (member.RequestPage, error)",
-    "owner_types_task": "MEM01",
-    "owner_queries_commands_task": "MEM05"
-  },
-  {
     "wire": "Query.dmSessionHistory",
     "domain": "quest",
     "aggregate": "Quest",
@@ -3458,82 +3142,6 @@
     "owner_queries_commands_task": "SPA05"
   },
   {
-    "wire": "Query.hex",
-    "domain": "spatial",
-    "aggregate": "Map",
-    "method": "Hex",
-    "spec_type": "HexSpec",
-    "spec_fields": [
-      {
-        "name": "MapId",
-        "wire_name": "mapId",
-        "go_type": "string",
-        "sdl_type": "ID!",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      },
-      {
-        "name": "Col",
-        "wire_name": "col",
-        "go_type": "int32",
-        "sdl_type": "Int!",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      },
-      {
-        "name": "Row",
-        "wire_name": "row",
-        "go_type": "int32",
-        "sdl_type": "Int!",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      }
-    ],
-    "result_go_type": "*spatial.HexView",
-    "result_sdl_type": "HexV2Type",
-    "signature": "func (s ProductQueries) Hex(ctx context.Context, actor auth.Authority, spec HexSpec) (*spatial.HexView, error)",
-    "owner_types_task": "SPA01",
-    "owner_queries_commands_task": "SPA05"
-  },
-  {
-    "wire": "Query.hexHistory",
-    "domain": "spatial",
-    "aggregate": "Map",
-    "method": "HexHistory",
-    "spec_type": "HexHistorySpec",
-    "spec_fields": [
-      {
-        "name": "HexId",
-        "wire_name": "hexId",
-        "go_type": "string",
-        "sdl_type": "ID!",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      },
-      {
-        "name": "Limit",
-        "wire_name": "limit",
-        "go_type": "int32",
-        "sdl_type": "Int!",
-        "default": "50",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      },
-      {
-        "name": "Offset",
-        "wire_name": "offset",
-        "go_type": "int32",
-        "sdl_type": "Int!",
-        "default": "0",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      }
-    ],
-    "result_go_type": "spatial.HexChangePage",
-    "result_sdl_type": "HexChangePage!",
-    "signature": "func (s ProductQueries) HexHistory(ctx context.Context, actor auth.Authority, spec HexHistorySpec) (spatial.HexChangePage, error)",
-    "owner_types_task": "SPA01",
-    "owner_queries_commands_task": "SPA05"
-  },
-  {
     "wire": "Query.home",
     "domain": "site",
     "aggregate": "Site",
@@ -3565,28 +3173,6 @@
     "signature": "func (s ProductQueries) HomeBanner(ctx context.Context, actor auth.Authority, spec HomeBannerSpec) (site.HomeBannerView, error)",
     "owner_types_task": "SIT01",
     "owner_queries_commands_task": "SIT05"
-  },
-  {
-    "wire": "Query.isFollowing",
-    "domain": "member",
-    "aggregate": "Social",
-    "method": "IsFollowing",
-    "spec_type": "IsFollowingSpec",
-    "spec_fields": [
-      {
-        "name": "MemberId",
-        "wire_name": "memberId",
-        "go_type": "string",
-        "sdl_type": "ID!",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      }
-    ],
-    "result_go_type": "bool",
-    "result_sdl_type": "Boolean!",
-    "signature": "func (s ProductQueries) IsFollowing(ctx context.Context, actor auth.Authority, spec IsFollowingSpec) (bool, error)",
-    "owner_types_task": "MEM01",
-    "owner_queries_commands_task": "MEM05"
   },
   {
     "wire": "Query.lieutenantAssignments",
@@ -3653,44 +3239,6 @@
     "result_go_type": "*spatial.MapView",
     "result_sdl_type": "MapV2Type",
     "signature": "func (s ProductQueries) Map(ctx context.Context, actor auth.Authority, spec MapSpec) (*spatial.MapView, error)",
-    "owner_types_task": "SPA01",
-    "owner_queries_commands_task": "SPA05"
-  },
-  {
-    "wire": "Query.mapView",
-    "domain": "spatial",
-    "aggregate": "Map",
-    "method": "MapView",
-    "spec_type": "MapViewSpec",
-    "spec_fields": [
-      {
-        "name": "AtlasCode",
-        "wire_name": "atlasCode",
-        "go_type": "string",
-        "sdl_type": "String!",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      },
-      {
-        "name": "Limit",
-        "wire_name": "limit",
-        "go_type": "int32",
-        "sdl_type": "Int!",
-        "default": "250",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      },
-      {
-        "name": "Offset",
-        "wire_name": "offset",
-        "go_type": "int32",
-        "sdl_type": "Int!",
-        "default": "0",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      }
-    ],
-    "result_go_type": "*spatial.MapViewView",
-    "result_sdl_type": "MapViewV2Type",
-    "signature": "func (s ProductQueries) MapView(ctx context.Context, actor auth.Authority, spec MapViewSpec) (*spatial.MapViewView, error)",
     "owner_types_task": "SPA01",
     "owner_queries_commands_task": "SPA05"
   },
@@ -4134,36 +3682,6 @@
     "owner_queries_commands_task": "QUE05"
   },
   {
-    "wire": "Query.myRequests",
-    "domain": "member",
-    "aggregate": "Social",
-    "method": "MyRequests",
-    "spec_type": "MyRequestsSpec",
-    "spec_fields": [
-      {
-        "name": "Limit",
-        "wire_name": "limit",
-        "go_type": "int32",
-        "sdl_type": "Int!",
-        "default": "50",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      },
-      {
-        "name": "Offset",
-        "wire_name": "offset",
-        "go_type": "int32",
-        "sdl_type": "Int!",
-        "default": "0",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      }
-    ],
-    "result_go_type": "member.RequestPage",
-    "result_sdl_type": "RequestPage!",
-    "signature": "func (s ProductQueries) MyRequests(ctx context.Context, actor auth.Authority, spec MyRequestsSpec) (member.RequestPage, error)",
-    "owner_types_task": "MEM01",
-    "owner_queries_commands_task": "MEM05"
-  },
-  {
     "wire": "Query.myUnlocks",
     "domain": "member",
     "aggregate": "Member",
@@ -4355,44 +3873,6 @@
     "signature": "func (s ProductQueries) PendingDmProfileVerifications(ctx context.Context, actor auth.Authority, spec PendingDmProfileVerificationsSpec) (member.CommunityDirectoryResult, error)",
     "owner_types_task": "MEM01",
     "owner_queries_commands_task": "MEM05"
-  },
-  {
-    "wire": "Query.poisForHex",
-    "domain": "spatial",
-    "aggregate": "Map",
-    "method": "PoisForHex",
-    "spec_type": "PoisForHexSpec",
-    "spec_fields": [
-      {
-        "name": "HexId",
-        "wire_name": "hexId",
-        "go_type": "string",
-        "sdl_type": "ID!",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      },
-      {
-        "name": "Limit",
-        "wire_name": "limit",
-        "go_type": "int32",
-        "sdl_type": "Int!",
-        "default": "50",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      },
-      {
-        "name": "Offset",
-        "wire_name": "offset",
-        "go_type": "int32",
-        "sdl_type": "Int!",
-        "default": "0",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      }
-    ],
-    "result_go_type": "spatial.PoiPage",
-    "result_sdl_type": "PoiPage!",
-    "signature": "func (s ProductQueries) PoisForHex(ctx context.Context, actor auth.Authority, spec PoisForHexSpec) (spatial.PoiPage, error)",
-    "owner_types_task": "SPA01",
-    "owner_queries_commands_task": "SPA05"
   },
   {
     "wire": "Query.previewBody",
@@ -4808,44 +4288,6 @@
     "result_go_type": "spatial.RealDatePage",
     "result_sdl_type": "RealDatePage!",
     "signature": "func (s ProductQueries) RealDates(ctx context.Context, actor auth.Authority, spec RealDatesSpec) (spatial.RealDatePage, error)",
-    "owner_types_task": "SPA01",
-    "owner_queries_commands_task": "SPA05"
-  },
-  {
-    "wire": "Query.recentHexChanges",
-    "domain": "spatial",
-    "aggregate": "Map",
-    "method": "RecentHexChanges",
-    "spec_type": "RecentHexChangesSpec",
-    "spec_fields": [
-      {
-        "name": "MapId",
-        "wire_name": "mapId",
-        "go_type": "*string",
-        "sdl_type": "ID",
-        "default": "",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      },
-      {
-        "name": "Limit",
-        "wire_name": "limit",
-        "go_type": "int32",
-        "sdl_type": "Int!",
-        "default": "50",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      },
-      {
-        "name": "Offset",
-        "wire_name": "offset",
-        "go_type": "int32",
-        "sdl_type": "Int!",
-        "default": "0",
-        "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-      }
-    ],
-    "result_go_type": "spatial.HexChangePage",
-    "result_sdl_type": "HexChangePage!",
-    "signature": "func (s ProductQueries) RecentHexChanges(ctx context.Context, actor auth.Authority, spec RecentHexChangesSpec) (spatial.HexChangePage, error)",
     "owner_types_task": "SPA01",
     "owner_queries_commands_task": "SPA05"
   },

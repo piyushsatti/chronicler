@@ -196,32 +196,16 @@ func TestFirstMultipleHandleSourceBehaviorPreserved(t *testing.T) {
 	}
 }
 
-func TestBodyProjectionOccursAtEveryDocumentQueryBoundary(t *testing.T) {
-	raw := Document{ID: "doc", Slug: "fixture", AuthorID: "author", Status: StatusPublished, Visibility: VisibilityPublic, Body: "Visible\n> [!DM]\n> RAW-SECRET\n\n> [!note]\n> Visible note"}
-	q := Queries{Repo: policyReadRepo{document: raw}}
+func TestProductDocumentProjectionLeavesSourceBodyUnchanged(t *testing.T) {
+	raw := "Visible\n> [!DM]\n> RAW-SECRET\n\n> [!note]\n> Visible note"
+	source := DocumentView{Id: "doc", Slug: "fixture", AuthorId: "author", Status: "published", Visibility: "public"}
+	projected, err := ProjectDocumentView(context.Background(), ViewerScope{Anonymous: true}, source, raw)
 	expected := "Visible\n> [!redacted]\n" + redactedBars(20) + "\n\n> [!note]\n> Visible note"
-	id, err := q.ByID(context.Background(), "doc")
-	if err != nil || id.Body != expected {
-		t.Fatalf("ByID=%q err=%v", id.Body, err)
+	if err != nil || (projected.EffectiveBody == nil || *projected.EffectiveBody != expected) {
+		t.Fatalf("body=%v err=%v", projected.EffectiveBody, err)
 	}
-	slug, err := q.BySlug(context.Background(), "fixture")
-	if err != nil || slug.Body != expected {
-		t.Fatalf("BySlug=%q err=%v", slug.Body, err)
-	}
-	list, total, err := q.List(context.Background(), ListFilter{})
-	if err != nil || total != 1 || len(list) != 1 || list[0].Body != expected {
-		t.Fatalf("List=%+v total=%d err=%v", list, total, err)
-	}
-	batch, err := (BatchLoader{Queries: q}).LoadMany(context.Background(), []string{"doc"})
-	if err != nil || len(batch) != 1 || batch[0].Body != expected {
-		t.Fatalf("Batch=%+v err=%v", batch, err)
-	}
-	if strings.Contains(id.Body, "RAW-SECRET") || strings.Contains(slug.Body, "RAW-SECRET") || strings.Contains(list[0].Body, "RAW-SECRET") || strings.Contains(batch[0].Body, "RAW-SECRET") {
-		t.Fatal("raw secret escaped query boundary")
-	}
-	// A repository's source is never mutated into a viewer-dependent cache.
-	if q.Repo.(policyReadRepo).document.Body != raw.Body {
-		t.Fatal("repository body was mutated")
+	if source.EffectiveBody != nil || !strings.Contains(raw, "RAW-SECRET") {
+		t.Fatal("projection mutated its source")
 	}
 }
 
@@ -230,11 +214,10 @@ func TestAdminBlockOverrideAuditOmitsProtectedBytes(t *testing.T) {
 	previous := slog.Default()
 	slog.SetDefault(slog.New(slog.NewJSONHandler(&output, nil)))
 	t.Cleanup(func() { slog.SetDefault(previous) })
-	raw := Document{ID: "doc", AuthorID: "author", Status: StatusPublished, Visibility: VisibilityPublic, Body: "> [!dm:@Other]\n> DO-NOT-LOG-SECRET"}
-	q := Queries{Repo: policyReadRepo{document: raw}}
-	d, err := q.ByID(verifiedContext(t, "admin", []auth.Role{auth.Admin}), "doc")
-	if err != nil || d.Body != raw.Body {
-		t.Fatalf("admin body=%q err=%v", d.Body, err)
+	raw := "> [!dm:@Other]\n> DO-NOT-LOG-SECRET"
+	d, err := ProjectDocumentView(context.Background(), ScopeFromAuthority(mustProjectionAuthority(t, "admin", []auth.Role{auth.Admin}, "")), DocumentView{Id: "doc", AuthorId: "author", Status: "published", Visibility: "public"}, raw)
+	if err != nil || (d.EffectiveBody == nil || *d.EffectiveBody != raw) {
+		t.Fatalf("admin body=%v err=%v", d.EffectiveBody, err)
 	}
 	if !strings.Contains(output.String(), "audience.admin_override") || strings.Contains(output.String(), "DO-NOT-LOG-SECRET") || strings.Contains(output.String(), "member:@Other") {
 		t.Fatalf("audit=%s", &output)
@@ -388,4 +371,75 @@ func TestSQLAudienceAuditRequiresPrivilegedActorAndActualActivation(t *testing.T
 			t.Fatalf("audit=%s want=%v", &output, tc.want)
 		}
 	}
+}
+
+func mustProjectionAuthority(t *testing.T, id string, roles []auth.Role, handle string) auth.Authority {
+	t.Helper()
+	actor, err := auth.NewAuthorityWithHandle(id, roles, "active", "approved", handle)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return actor
+}
+
+func TestProductDocumentProjectionUsesCurrentAuthority(t *testing.T) {
+	raw := "Visible\n> [!dm:@Exact-Handle]\n> HANDLE-SECRET\n\n> [!DM]\n> DM-SECRET"
+	for _, policy := range [][]string{nil, {"role:player", "role:dm", "role:archon"}} {
+		for _, tc := range []struct {
+			name, handle string
+			roles        []auth.Role
+			member, dm   bool
+		}{
+			{"current handle", "Exact-Handle", []auth.Role{auth.Player}, true, false},
+			{"renamed handle", "Renamed-Handle", []auth.Role{auth.Player}, false, false},
+			{"current DM", "Other", []auth.Role{auth.DM}, false, true},
+			{"current archon", "Other", []auth.Role{auth.Role("archon")}, false, false},
+		} {
+			t.Run(tc.name, func(t *testing.T) {
+				actor := mustProjectionAuthority(t, "viewer", tc.roles, tc.handle)
+				projected, err := ProjectDocumentView(context.Background(), ScopeFromAuthority(actor), DocumentView{Id: "doc", AuthorId: "author", Status: "published", Visibility: "public", Policy: policy}, raw)
+				if err != nil || projected.EffectiveBody == nil || strings.Contains(*projected.EffectiveBody, "HANDLE-SECRET") != tc.member || strings.Contains(*projected.EffectiveBody, "DM-SECRET") != tc.dm {
+					t.Fatalf("body=%v err=%v", projected.EffectiveBody, err)
+				}
+			})
+		}
+	}
+}
+
+func TestProductDocumentProjectionDeniesOuterDocument(t *testing.T) {
+	revoked := ScopeFromAuthority(mustRevokedProjectionAuthority(t))
+	revoked.ReaderOf = map[string]struct{}{"doc": {}}
+	ctx := auth.WithClaims(context.Background(), auth.Claims{MemberID: "author", Roles: []auth.Role{auth.Admin, auth.DM}})
+	for _, tc := range []struct {
+		name    string
+		view    DocumentView
+		scope   ViewerScope
+		allowed bool
+	}{
+		{name: "authorless draft", view: DocumentView{Id: "doc", Status: "draft"}, scope: ViewerScope{Anonymous: true}},
+		{name: "unverified token identity", view: DocumentView{Id: "doc", Status: "draft", AuthorId: "author"}, scope: ScopeFromAuthority(auth.Authority{})},
+		{name: "document reader grant", view: DocumentView{Id: "doc", Status: "published", Visibility: "restricted", AuthorId: "author"}, scope: ViewerScope{MemberID: "reader", Roles: []auth.Role{auth.DM}, IsDM: true, ReaderOf: map[string]struct{}{"doc": {}}}, allowed: true},
+		{name: "author ID is not reader grant", view: DocumentView{Id: "doc", Status: "published", Visibility: "restricted", AuthorId: "author"}, scope: ViewerScope{MemberID: "reader", Roles: []auth.Role{auth.DM}, IsDM: true, ReaderOf: map[string]struct{}{"author": {}}}},
+		{name: "revoked DM approval", view: DocumentView{Id: "doc", Status: "published", Visibility: "restricted", AuthorId: "author"}, scope: revoked},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			projected, err := ProjectDocumentView(ctx, tc.scope, tc.view, "private")
+			if tc.allowed {
+				if err != nil || (projected.EffectiveBody == nil || *projected.EffectiveBody != "private") {
+					t.Fatalf("body=%v err=%v", projected.EffectiveBody, err)
+				}
+			} else if err != ErrForbidden || projected.EffectiveBody != nil {
+				t.Fatalf("denied body=%v err=%v", projected.EffectiveBody, err)
+			}
+		})
+	}
+}
+
+func mustRevokedProjectionAuthority(t *testing.T) auth.Authority {
+	t.Helper()
+	actor, err := auth.NewAuthority("reader", []auth.Role{auth.DM}, "active", "rejected")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return actor
 }

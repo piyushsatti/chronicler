@@ -21,7 +21,7 @@ export function useCharacterVerifyTab() {
     queryKeys.pendingCharacters,
     authority,
     {},
-    (page, request) => loadCharVerifyQueue({ ...page, ...{} }, request),
+    (page, request) => loadCharVerifyQueue(page, request),
   );
   const [changeRequestId, setChangeRequestId] = useState<string | null>(null);
   const [changeRequestNote, setChangeRequestNote] = useState('');

@@ -3,6 +3,8 @@ package jobs
 import (
 	"context"
 	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type State string
@@ -38,10 +40,6 @@ type Job struct {
 	// SafeErrorCode is a stable, display-safe failure code (no provider text).
 	// Empty means none; only FailWithCode sets it.
 	SafeErrorCode string
-}
-
-type Writer interface {
-	EnqueueDesired(ctx context.Context, questID string, desiredRevision int32, at time.Time) (string, error)
 }
 
 // Store is the job table used by the worker.
@@ -80,4 +78,9 @@ func Backoff(attempt int) time.Duration {
 		return 5 * time.Minute
 	}
 	return d
+}
+
+type ExecutionScope struct {
+	Receipt    Receipt
+	Connection *pgxpool.Conn
 }

@@ -20,10 +20,11 @@ func TestRequestAuthorityReachesDocumentPolicy(t *testing.T) {
 	}
 	want := true
 	h := auth.LiveMiddleware(parse, runtime.Authority, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		scope, err := (document.Queries{}).Scope(r.Context())
-		if err != nil {
-			t.Fatalf("scope: %v", err)
+		live, ok := auth.AuthorityFromContext(r.Context())
+		if !ok {
+			t.Fatal("live authority missing")
 		}
+		scope := document.ScopeFromAuthority(live)
 		if scope.IsAdmin || scope.IsDM != want {
 			t.Fatalf("scope=%+v wantDM=%v", scope, want)
 		}

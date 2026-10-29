@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/piyushsatti/chronicler/apps/api/internal/character"
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/member"
 	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
@@ -30,11 +29,8 @@ type RequestLoaders struct {
 	Members              *Loader[member.IDKey, member.MemberView]
 	Documents            *Loader[document.DocumentKey, document.DocumentView]
 	DmTables             *Loader[document.IDKey, document.DocumentView]
-	Characters           *Loader[character.IDKey, character.CharacterView]
-	Quests               *Loader[quest.IDKey, quest.QuestView]
 	Participants         *Loader[quest.ParticipantsKey, quest.ParticipantList]
 	QuestPointcrawlLinks *Loader[quest.QuestHexesKey, quest.HexList]
-	QuestRegions         *Loader[quest.QuestRegionsKey, quest.RegionIDList]
 	Arcs                 *Loader[quest.IDKey, quest.QuestArcView]
 	ArcQuests            *Loader[quest.ArcQuestsKey, quest.QuestList]
 	Delivery             *Loader[quest.IDKey, quest.QuestDiscordDeliveryView]
@@ -59,11 +55,8 @@ func (l *RequestLoaders) clear() {
 		loaderClear(l.Members),
 		loaderClear(l.Documents),
 		loaderClear(l.DmTables),
-		loaderClear(l.Characters),
-		loaderClear(l.Quests),
 		loaderClear(l.Participants),
 		loaderClear(l.QuestPointcrawlLinks),
-		loaderClear(l.QuestRegions),
 		loaderClear(l.Arcs),
 		loaderClear(l.ArcQuests),
 		loaderClear(l.Delivery),
@@ -96,7 +89,6 @@ func loaderClear[K comparable, V any](loader *Loader[K, V]) func() {
 type BatchProviders struct {
 	Member       *member.ProductQueries
 	Document     *document.ProductQueries
-	Character    *character.ProductQueries
 	Quest        *quest.ProductQueries
 	Notification *notification.ProductQueries
 	Site         *site.ProductQueries
@@ -138,14 +130,9 @@ func NewRequestLoaders(providers BatchProviders, state *RequestState) (*RequestL
 		reg.DocumentReaders = newKeyedLoader(state, providers.Document.BatchReaderIds)
 		reg.DocumentSubjects = newKeyedLoader(state, providers.Document.BatchDocumentSubjects)
 	}
-	if providers.Character != nil {
-		reg.Characters = newKeyedLoader(state, providers.Character.BatchCharacters)
-	}
 	if providers.Quest != nil {
-		reg.Quests = newKeyedLoader(state, providers.Quest.BatchQuests)
 		reg.Participants = newKeyedLoader(state, providers.Quest.BatchParticipants)
 		reg.QuestPointcrawlLinks = newKeyedLoader(state, providers.Quest.BatchQuestPointcrawlLinks)
-		reg.QuestRegions = newKeyedLoader(state, providers.Quest.BatchQuestRegions)
 		reg.Arcs = newKeyedLoader(state, providers.Quest.BatchArcs)
 		reg.ArcQuests = newKeyedLoader(state, providers.Quest.BatchArcQuests)
 		reg.Delivery = newKeyedLoader(state, providers.Quest.BatchDelivery)

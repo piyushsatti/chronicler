@@ -22,20 +22,19 @@ import (
 
 // HTTPDeps are the collaborators Mount needs. Nil read callbacks are replaced
 // with not-found stubs so the OpenAPI surface stays registered without a DB.
-// Notification routes stay registered, but absent read/command dependencies fail internally.
+// Notification unread-count dependencies fail internally when absent.
 type HTTPDeps struct {
-	Resolver        *graph.Resolver
-	Authority       auth.AuthorityResolver
-	Notifications   notification.Queries
-	NotificationCmd notification.Commands
-	Documents       document.Queries
-	SiteStats       func() site.Stats
-	MemberMe        member.MeQuery
-	Login           *login.Service
-	Ingest          *ingest.Handler
-	Agent           *agent.Service
-	SpatialTime     spatial.TimeMap
-	SpatialRead     spatial.ReadAPI
+	Resolver      *graph.Resolver
+	Authority     auth.AuthorityResolver
+	Notifications notification.Queries
+	Documents     document.Queries
+	SiteStats     func() site.Stats
+	MemberMe      member.MeQuery
+	Login         *login.Service
+	Ingest        *ingest.Handler
+	Agent         *agent.Service
+	SpatialTime   spatial.TimeMap
+	SpatialRead   spatial.ReadAPI
 }
 
 // Mount registers the HTTP surface used by cmd/api (health, auth, GraphQL, /v1).
@@ -70,7 +69,6 @@ func Mount(mux httpserver.Router, d HTTPDeps) {
 	}
 	member.Routes(mux, me)
 	notification.Routes(mux, d.Notifications)
-	notification.CommandRoutes(mux, d.NotificationCmd)
 
 	withSpatialReadStubs(d.SpatialRead).Routes(mux)
 
@@ -102,12 +100,11 @@ func MountFromAPI(mux httpserver.Router, runtime API, cfg config.Config) {
 	}
 
 	Mount(mux, HTTPDeps{
-		Resolver:        runtime.Resolver,
-		Authority:       runtime.Authority,
-		Documents:       runtime.Documents,
-		Notifications:   runtime.Notifications,
-		NotificationCmd: runtime.NotificationCmd,
-		SiteStats:       runtime.SiteStats,
+		Resolver:      runtime.Resolver,
+		Authority:     runtime.Authority,
+		Documents:     runtime.Documents,
+		Notifications: runtime.Notifications,
+		SiteStats:     runtime.SiteStats,
 		MemberMe: func(id string) (member.Member, error) {
 			if id == "" {
 				return member.Member{}, apierr.New(apierr.NotFound, "member not found")

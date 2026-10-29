@@ -22,21 +22,9 @@ func TestPhase3TaskSPA01Acceptance(t *testing.T) {
 			reflect.TypeFor[GameCalendarView](),
 			reflect.TypeFor[PointcrawlAdmission](),
 			reflect.TypeFor[GameDayCellView](),
-			reflect.TypeFor[HexChangePage](),
-			reflect.TypeFor[HexChangeView](),
-			reflect.TypeFor[HexEdgeFields](),
-			reflect.TypeFor[HexEdgeView](),
-			reflect.TypeFor[HexEditFields](),
-			reflect.TypeFor[HexEntryLinkView](),
-			reflect.TypeFor[HexView](),
 			reflect.TypeFor[MapCreateFields](),
 			reflect.TypeFor[MapUpdateFields](),
-			reflect.TypeFor[MapPlaceView](),
 			reflect.TypeFor[MapView](),
-			reflect.TypeFor[MapViewView](),
-			reflect.TypeFor[PoiFields](),
-			reflect.TypeFor[PoiPage](),
-			reflect.TypeFor[PoiView](),
 			reflect.TypeFor[PointcrawlEdgeFields](),
 			reflect.TypeFor[PointcrawlEdgeView](),
 			reflect.TypeFor[PointcrawlEntryLinkView](),
@@ -57,33 +45,23 @@ func TestPhase3TaskSPA01Acceptance(t *testing.T) {
 			reflect.TypeFor[CreateRegionSpec](),
 			reflect.TypeFor[CreateTimeAnchorSpec](),
 			reflect.TypeFor[DeleteRegionSpec](),
-			reflect.TypeFor[LinkHexEntrySpec](),
 			reflect.TypeFor[LinkPointcrawlEntrySpec](),
 			reflect.TypeFor[RestoreRegionSpec](),
 			reflect.TypeFor[RevokeArchonSpec](),
-			reflect.TypeFor[SetHexEdgeSpec](),
 			reflect.TypeFor[SetPointcrawlEdgeSpec](),
 			reflect.TypeFor[TransitionRegionSpec](),
-			reflect.TypeFor[UnlinkHexEntrySpec](),
 			reflect.TypeFor[UnlinkPointcrawlEntrySpec](),
 			reflect.TypeFor[UpdateGameCalendarSpec](),
-			reflect.TypeFor[UpdateHexSpec](),
 			reflect.TypeFor[UpdateRegionSpec](),
 			reflect.TypeFor[UpdateTimeAnchorSpec](),
-			reflect.TypeFor[UpsertPoiSpec](),
 			reflect.TypeFor[UpsertPointcrawlNodeSpec](),
 			reflect.TypeFor[SetPointcrawlNodeStateSpec](),
 			reflect.TypeFor[ArchonAssignmentsSpec](),
 			reflect.TypeFor[GameCalendarSpec](),
 			reflect.TypeFor[GameDateSpec](),
-			reflect.TypeFor[HexSpec](),
-			reflect.TypeFor[HexHistorySpec](),
 			reflect.TypeFor[MapSpec](),
-			reflect.TypeFor[MapViewSpec](),
 			reflect.TypeFor[MapsSpec](),
-			reflect.TypeFor[PoisForHexSpec](),
 			reflect.TypeFor[RealDatesSpec](),
-			reflect.TypeFor[RecentHexChangesSpec](),
 			reflect.TypeFor[RegionActivitySpec](),
 			reflect.TypeFor[RegionCountsSpec](),
 			reflect.TypeFor[RegionsSpec](),
@@ -94,20 +72,15 @@ func TestPhase3TaskSPA01Acceptance(t *testing.T) {
 			reflect.TypeFor[CreateRegionState](),
 			reflect.TypeFor[CreateTimeAnchorState](),
 			reflect.TypeFor[DeleteRegionState](),
-			reflect.TypeFor[LinkHexEntryState](),
 			reflect.TypeFor[LinkPointcrawlEntryState](),
 			reflect.TypeFor[RestoreRegionState](),
 			reflect.TypeFor[RevokeArchonState](),
-			reflect.TypeFor[SetHexEdgeState](),
 			reflect.TypeFor[SetPointcrawlEdgeState](),
 			reflect.TypeFor[TransitionRegionState](),
-			reflect.TypeFor[UnlinkHexEntryState](),
 			reflect.TypeFor[UnlinkPointcrawlEntryState](),
 			reflect.TypeFor[UpdateGameCalendarState](),
-			reflect.TypeFor[UpdateHexState](),
 			reflect.TypeFor[UpdateRegionState](),
 			reflect.TypeFor[UpdateTimeAnchorState](),
-			reflect.TypeFor[UpsertPoiState](),
 			reflect.TypeFor[UpsertPointcrawlNodeState](),
 			reflect.TypeFor[SetPointcrawlNodeStateState](),
 			reflect.TypeFor[AssignArchonWrite](),
@@ -116,20 +89,15 @@ func TestPhase3TaskSPA01Acceptance(t *testing.T) {
 			reflect.TypeFor[CreateRegionWrite](),
 			reflect.TypeFor[CreateTimeAnchorWrite](),
 			reflect.TypeFor[DeleteRegionWrite](),
-			reflect.TypeFor[LinkHexEntryWrite](),
 			reflect.TypeFor[LinkPointcrawlEntryWrite](),
 			reflect.TypeFor[RestoreRegionWrite](),
 			reflect.TypeFor[RevokeArchonWrite](),
-			reflect.TypeFor[SetHexEdgeWrite](),
 			reflect.TypeFor[SetPointcrawlEdgeWrite](),
 			reflect.TypeFor[TransitionRegionWrite](),
-			reflect.TypeFor[UnlinkHexEntryWrite](),
 			reflect.TypeFor[UnlinkPointcrawlEntryWrite](),
 			reflect.TypeFor[UpdateGameCalendarWrite](),
-			reflect.TypeFor[UpdateHexWrite](),
 			reflect.TypeFor[UpdateRegionWrite](),
 			reflect.TypeFor[UpdateTimeAnchorWrite](),
-			reflect.TypeFor[UpsertPoiWrite](),
 			reflect.TypeFor[UpsertPointcrawlNodeWrite](),
 			reflect.TypeFor[SetPointcrawlNodeStateWrite](),
 		}
@@ -201,7 +169,7 @@ func TestPhase3TaskSPA01Acceptance(t *testing.T) {
 			return nil
 		}
 		seen := make(map[string]bool)
-		expectedCounts := map[string]int{"dto_registry": 33, "specs": 37, "command_states": 22, "command_writes": 22}
+		expectedCounts := map[string]int{"dto_registry": 21, "specs": 27, "command_states": 17, "command_writes": 17}
 		for section, declarations := range contract {
 			count := 0
 			for _, declaration := range declarations {
@@ -267,8 +235,8 @@ func TestPhase3TaskSPA01Acceptance(t *testing.T) {
 				t.Errorf("PointcrawlAdmission field %d is %s %s, contract requires %s %s", i, actual.Name, actual.Type, field.name, field.typ)
 			}
 		}
-		if len(seen) != 114 || len(types) != 115 {
-			t.Fatalf("contract=%d compiled=%d declarations, want 107 owned plus one additional type", len(seen), len(types))
+		if len(seen) != 82 || len(types) != 83 {
+			t.Fatalf("contract=%d compiled=%d declarations, want 82 owned plus one additional type", len(seen), len(types))
 		}
 		for name := range types {
 			if name == "PointcrawlAdmission" {
@@ -296,31 +264,6 @@ func TestPhase3TaskSPA01Acceptance(t *testing.T) {
 			if _, ok := types[name]; !ok {
 				t.Errorf("source type %s is absent from compiled registry", name)
 			}
-		}
-	})
-	t.Run("hex patch tristate", func(t *testing.T) {
-		value := "temperate"
-		cases := []struct {
-			name    string
-			climate product.Optional[string]
-		}{
-			{name: "omitted"},
-			{name: "null", climate: product.Optional[string]{Set: true}},
-			{name: "value", climate: product.Optional[string]{Set: true, Value: &value}},
-		}
-		fingerprints := make(map[string]string)
-		for _, tc := range cases {
-			t.Run(tc.name, func(t *testing.T) {
-				spec := UpdateHexSpec{Id: "hex-1", Input: HexEditFields{Climate: tc.climate, Note: "weather correction"}}
-				fingerprint, err := product.Fingerprint(spec)
-				if err != nil {
-					t.Fatal(err)
-				}
-				if previous, exists := fingerprints[fingerprint]; exists {
-					t.Errorf("%s patch collapses with %s", tc.name, previous)
-				}
-				fingerprints[fingerprint] = tc.name
-			})
 		}
 	})
 }

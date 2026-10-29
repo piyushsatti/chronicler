@@ -59,9 +59,9 @@ func TestFrontendQuestEditorCreateReadSyncUpdateRoundtrip(t *testing.T) {
 			t.Fatalf("empty participants=%+v", slot)
 		}
 	}
-	regions, err := reader.ReadBatchQuestRegions(ctx, f.actor, []QuestRegionsKey{{ParentID: created.Id, Limit: 20}})
-	if err != nil || len(regions) != 1 || regions[0].Err != nil || regions[0].Value == nil || len(regions[0].Value.Items) != 0 {
-		t.Fatalf("empty regions=%+v err=%v", regions, err)
+	stored, err := reader.ReadQuest(ctx, f.actor, QuestSpec{Id: &created.Id})
+	if err != nil || stored == nil || stored.Regions == nil || len(stored.Regions) != 0 {
+		t.Fatalf("empty regions=%+v err=%v", stored, err)
 	}
 	links, err := reader.ReadBatchQuestHexes(ctx, f.actor, []QuestHexesKey{{ParentID: created.Id, Limit: 20}})
 	if err != nil || len(links) != 1 || links[0].Err != nil || links[0].Value == nil || len(links[0].Value.Items) != 0 {

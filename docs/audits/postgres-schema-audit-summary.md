@@ -28,7 +28,7 @@ Legacy `*.sql` files power **today’s** wired API via [wire.go](../../apps/api/
 
 ### Product SQL is ahead of runtime wiring
 
-Large generated surfaces (`spatial_product`, `quest_product`, `document_product`, …) are exercised heavily in `product_sql_integration_test.go` but not bound in production. [product_uow.go](../../apps/api/internal/app/product_uow.go) remains unimplemented.
+Large generated surfaces (`spatial_product`, `quest_product`, `document_product`, …) are exercised heavily in `product_sql_integration_test.go` but not bound in production. `apps/api/internal/app/product_uow.go` remains unimplemented.
 
 → [Dual-stack analysis](postgres-schema-audit.md#dual-stack-analysis) · [Risks and gaps](postgres-schema-audit.md#risks-and-gaps)
 

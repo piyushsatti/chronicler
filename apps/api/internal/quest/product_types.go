@@ -874,16 +874,6 @@ type QuestList struct {
 	Items []QuestView
 }
 
-type QuestRegionsKey struct {
-	ParentID string
-	Limit    int32
-	Offset   int32
-}
-
-type RegionIDList struct {
-	Items []string
-}
-
 type RewardEntitlementsKey struct {
 	ParentID string
 	Limit    int32

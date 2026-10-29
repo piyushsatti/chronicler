@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import hashlib
 import re
-from collections.abc import Iterable
 from dataclasses import dataclass
 from typing import Final
 
@@ -207,18 +206,6 @@ def chunk_document(
     return tuple(chunks)
 
 
-def chunk_documents(
-    documents: Iterable[PublicDocument],
-    config: ChunkingConfig | None = None,
-) -> tuple[DocumentChunk, ...]:
-    """Chunk documents in stable source-ID order, independent of input order."""
-
-    chunks: list[DocumentChunk] = []
-    for document in sorted(documents, key=lambda item: item.document_id):
-        chunks.extend(chunk_document(document, config))
-    return tuple(chunks)
-
-
 __all__ = [
     "DEFAULT_MAX_BODY_BYTES",
     "DEFAULT_MAX_CHARS",
@@ -226,6 +213,5 @@ __all__ = [
     "ChunkingConfig",
     "ChunkingError",
     "chunk_document",
-    "chunk_documents",
     "public_body_hash",
 ]

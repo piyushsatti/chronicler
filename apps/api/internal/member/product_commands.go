@@ -6,11 +6,9 @@ import (
 	"net/url"
 	"reflect"
 	"slices"
-	"strings"
 	"time"
 	"unicode/utf8"
 
-	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/idempotency"
@@ -324,44 +322,6 @@ func (s ProductCommands) UpdateMyProfile(ctx context.Context, actor auth.Authori
 	})
 }
 
-func (s ProductCommands) FollowPerson(ctx context.Context, actor auth.Authority, spec FollowPersonSpec, meta product.CommandMeta) (product.CommandReceipt, error) {
-	if err := commandID(&spec.MemberId); err != nil {
-		return product.CommandReceipt{}, err
-	}
-	if spec.MemberId == actor.Claims().MemberID {
-		return product.CommandReceipt{}, apierr.New(apierr.Invalid, "cannot follow self")
-	}
-	return runMemberCommand(ctx, s, actor, "followPerson", spec, meta, spec.MemberId, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (product.CommandReceipt, error) {
-		locked, err := repos.Social.LockFollowPerson(ctx, fresh.Claims().MemberID, spec)
-		if err != nil {
-			return product.CommandReceipt{}, err
-		}
-		if !locked.Exists {
-			return product.CommandReceipt{}, apierr.New(apierr.NotFound, "member not found")
-		}
-		return repos.Social.StoreFollowPerson(ctx, FollowPersonWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked})
-	})
-}
-
-func (s ProductCommands) UnfollowPerson(ctx context.Context, actor auth.Authority, spec UnfollowPersonSpec, meta product.CommandMeta) (product.CommandReceipt, error) {
-	if err := commandID(&spec.MemberId); err != nil {
-		return product.CommandReceipt{}, err
-	}
-	if spec.MemberId == actor.Claims().MemberID {
-		return product.CommandReceipt{}, apierr.New(apierr.Invalid, "cannot unfollow self")
-	}
-	return runMemberCommand(ctx, s, actor, "unfollowPerson", spec, meta, spec.MemberId, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (product.CommandReceipt, error) {
-		locked, err := repos.Social.LockUnfollowPerson(ctx, fresh.Claims().MemberID, spec)
-		if err != nil {
-			return product.CommandReceipt{}, err
-		}
-		if !locked.Exists {
-			return product.CommandReceipt{}, apierr.New(apierr.NotFound, "member not found")
-		}
-		return repos.Social.StoreUnfollowPerson(ctx, UnfollowPersonWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked})
-	})
-}
-
 func (s ProductCommands) GrantUnlock(ctx context.Context, actor auth.Authority, spec GrantUnlockSpec, meta product.CommandMeta) (MemberUnlockView, error) {
 	if err := commandID(&spec.MemberId); err != nil {
 		return MemberUnlockView{}, err
@@ -571,143 +531,6 @@ func validateMemberSettingsPatch(input *MemberSettingsPatch) error {
 		}
 	}
 	return nil
-}
-
-func (s ProductCommands) CreateRequest(ctx context.Context, actor auth.Authority, spec CreateRequestSpec, meta product.CommandMeta) (RequestView, error) {
-	if err := commandID(&spec.TargetDmId); err != nil {
-		return RequestView{}, err
-	}
-	if spec.TargetDmId == actor.Claims().MemberID {
-		return RequestView{}, apierr.New(apierr.Invalid, "cannot request self")
-	}
-	if spec.Kind != "quest" && spec.Kind != "seat" {
-		return RequestView{}, apierr.New(apierr.Invalid, "invalid request kind")
-	}
-	if err := commandNote(spec.Note); err != nil {
-		return RequestView{}, err
-	}
-	return runMemberCommand(ctx, s, actor, "createRequest", spec, meta, spec.TargetDmId, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (RequestView, error) {
-		locked, err := repos.Social.LockCreateRequest(ctx, fresh.Claims().MemberID, spec)
-		if err != nil {
-			return RequestView{}, err
-		}
-		if !locked.Exists {
-			return RequestView{}, apierr.New(apierr.Invalid, "request target unavailable")
-		}
-		id := s.IDs()
-		if err := commandID(&id); err != nil {
-			return RequestView{}, err
-		}
-		return repos.Social.StoreCreateRequest(ctx, CreateRequestWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked, RequestID: id})
-	})
-}
-
-func (s ProductCommands) DecideRequest(ctx context.Context, actor auth.Authority, spec DecideRequestSpec, meta product.CommandMeta) (RequestView, error) {
-	var result RequestView
-	if err := commandID(&spec.RequestId); err != nil {
-		return result, err
-	}
-	spec.Decision = strings.ToLower(spec.Decision)
-	if spec.Decision != "approved" && spec.Decision != "declined" {
-		return result, apierr.New(apierr.Invalid, "invalid request decision")
-	}
-	if err := commandNote(spec.Note); err != nil {
-		return result, err
-	}
-	fingerprint, err := product.Fingerprint(spec)
-	if err != nil {
-		return result, err
-	}
-	err = s.Runner.Do(ctx, func(repos ProductCommandRepos) error {
-		admission, err := admitRequestDecision(ctx, repos, actor, spec, meta, fingerprint)
-		if err != nil {
-			return err
-		}
-		if admission.claim.Replay {
-			return json.Unmarshal(admission.claim.Receipt, &result)
-		}
-		if admission.locked.Before.Status != "pending" || admission.locked.PriorDecision != nil {
-			return apierr.New(apierr.Conflict, "request already decided")
-		}
-		at, err := product.UTCNow(s.Clock)
-		if err != nil {
-			return err
-		}
-		id := s.IDs()
-		if err := commandID(&id); err != nil {
-			return err
-		}
-		result, err = storeRequestDecision(ctx, repos, admission, spec, id, at)
-		return err
-	})
-	if err != nil {
-		return RequestView{}, err
-	}
-	return result, nil
-}
-
-type requestDecisionAdmission struct {
-	fresh  auth.Authority
-	locked DecideRequestState
-	claim  idempotency.Claim
-}
-
-func admitRequestDecision(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, spec DecideRequestSpec, meta product.CommandMeta, fingerprint string) (requestDecisionAdmission, error) {
-	var admission requestDecisionAdmission
-	for _, dependency := range []any{repos.Authority, repos.Policy, repos.Replay, repos.Social, repos.Producer} {
-		if product.MissingDependency(dependency) {
-			return admission, apierr.New(apierr.Internal, "request transaction dependencies required")
-		}
-	}
-	fresh, err := repos.Authority(ctx, actor.Claims().MemberID)
-	if err != nil {
-		return admission, err
-	}
-	if fresh.Claims().MemberID == "" || fresh.Claims().MemberID != actor.Claims().MemberID {
-		return admission, apierr.New(apierr.Forbidden, "member authority changed")
-	}
-	locked, err := repos.Social.LockDecideRequest(ctx, spec)
-	if err != nil {
-		return admission, err
-	}
-	if !locked.Exists || locked.Before == nil {
-		return admission, apierr.New(apierr.NotFound, "request not found")
-	}
-	request, err := auth.ForRequestDecision(auth.RequestDecisionFacts{ID: locked.SubjectID, TargetDMID: locked.Parties.TargetDMID})
-	if err != nil {
-		return admission, err
-	}
-	decision, err := repos.Policy.Decide(ctx, fresh, request)
-	if err != nil {
-		return admission, err
-	}
-	if !decision.Allowed {
-		return admission, apierr.New(apierr.Forbidden, "request decision forbidden")
-	}
-	claim, err := repos.Replay.Claim(ctx, fresh.Claims().MemberID, "decideRequest", meta.IdempotencyKey, fingerprint)
-	if err != nil {
-		return admission, err
-	}
-	return requestDecisionAdmission{fresh: fresh, locked: locked, claim: claim}, nil
-}
-
-func storeRequestDecision(ctx context.Context, repos ProductCommandRepos, admission requestDecisionAdmission, spec DecideRequestSpec, id string, at time.Time) (RequestView, error) {
-	key := "request-decision:" + id
-	result, err := repos.Social.StoreDecideRequest(ctx, DecideRequestWrite{ActorID: admission.fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: admission.locked, DecisionID: &id, EventKey: &key})
-	if err != nil {
-		return RequestView{}, err
-	}
-	if err := repos.Producer.Record(ctx, repos.Notice, notification.Event{Key: key, Kind: notification.DMRequestDecided, SubjectType: "request", SubjectID: spec.RequestId, ActorID: admission.fresh.Claims().MemberID, OccurredAt: at, Facts: notification.Facts{Version: 1, EventKind: notification.DMRequestDecided, DecisionID: &id, RequestID: &spec.RequestId, Decision: &spec.Decision}}); err != nil {
-		return RequestView{}, err
-	}
-	receipt, err := json.Marshal(result)
-	if err != nil {
-		return RequestView{}, err
-	}
-	if err := repos.Replay.Complete(ctx, admission.claim, receipt); err != nil {
-		return RequestView{}, err
-	}
-	return result, nil
 }
 
 func dmProfileTableInfo(value *json.RawMessage) error {

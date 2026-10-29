@@ -219,10 +219,6 @@ type PreviewFacts struct {
 
 func (PreviewFacts) policyInput() {}
 
-type RequestDecisionFacts struct{ ID, TargetDMID string }
-
-func (RequestDecisionFacts) policyInput() {}
-
 type DiscordLookupFacts struct{ RequestedDiscordID string }
 
 func (DiscordLookupFacts) policyInput() {}
@@ -369,7 +365,6 @@ const (
 	ruleStaff
 	ruleDMSelf
 	rulePlayerSelf
-	ruleDMInbox
 	ruleDiscord
 	ruleCatalog
 	ruleBackstory
@@ -390,7 +385,6 @@ const (
 	ruleQuestCreate
 	ruleArc
 	ruleSummary
-	ruleRequest
 )
 
 var operationRules = map[Operation]policyRule{
@@ -602,7 +596,7 @@ func policyRequest(op Operation, input policyInput, allowed ...policyRule) (Requ
 	return Request{operation: op, input: input}, nil
 }
 func ForOperation(op Operation) (Request, error) {
-	return policyRequest(op, noPolicyFacts{}, rulePublic, ruleSelf, ruleAdmin, ruleStaff, ruleDMSelf, rulePlayerSelf, ruleDMInbox, ruleCharacterCreate, ruleLieutenantWrite)
+	return policyRequest(op, noPolicyFacts{}, rulePublic, ruleSelf, ruleAdmin, ruleStaff, ruleDMSelf, rulePlayerSelf, ruleCharacterCreate, ruleLieutenantWrite)
 }
 func ForCharacter(op Operation, facts CharacterFacts) (Request, error) {
 	if !canonicalPolicyID(facts.ID) || !canonicalPolicyID(facts.OwnerID) {
@@ -704,12 +698,6 @@ func ForDiscordLookup(facts DiscordLookupFacts) (Request, error) {
 		return Request{}, policyContractError()
 	}
 	return policyRequest("Query.memberByDiscordId", facts, ruleDiscord)
-}
-func ForRequestDecision(facts RequestDecisionFacts) (Request, error) {
-	if !canonicalPolicyID(facts.ID) || !canonicalPolicyID(facts.TargetDMID) {
-		return Request{}, policyContractError()
-	}
-	return policyRequest("Mutation.decideRequest", facts, ruleRequest)
 }
 func ForSummary(facts SummaryFacts) (Request, error) {
 	if !optionalPolicyID(facts.DocumentID) || !optionalPolicyID(facts.AuthorID) || !optionalPolicyID(facts.CharacterID) || (facts.DocumentID == nil) != (facts.AuthorID == nil) || len(facts.QuestIDs) == 0 || !validRegionSet(facts.QuestIDs) {
@@ -830,9 +818,9 @@ func validatePolicyRequest(p *Policy, request Request) error {
 
 func (p *Policy) dispatchRule(ctx context.Context, actor Authority, request Request, rule policyRule, admin, bypass bool) (Decision, error) {
 	switch rule {
-	case rulePublic, ruleSelf, ruleAdmin, ruleStaff, ruleDMSelf, rulePlayerSelf, ruleDMInbox, ruleCharacterCreate, ruleLieutenantWrite, ruleCatalog, ruleBackstory, ruleCharacterHistory:
+	case rulePublic, ruleSelf, ruleAdmin, ruleStaff, ruleDMSelf, rulePlayerSelf, ruleCharacterCreate, ruleLieutenantWrite, ruleCatalog, ruleBackstory, ruleCharacterHistory:
 		return p.decideBaseRule(ctx, actor, request, rule, admin, bypass)
-	case ruleCharacter, ruleSignup, ruleRequest:
+	case ruleCharacter, ruleSignup:
 		return p.decideOwnershipRule(actor, request, rule)
 	case ruleQuestCreate, ruleArc, rulePreview, ruleDiscord, ruleDocumentCreate, ruleDocumentWrite, ruleRevisions:
 		return p.decideContentRule(ctx, actor, request, rule, admin, bypass)
@@ -850,7 +838,7 @@ func (p *Policy) dispatchRule(ctx context.Context, actor Authority, request Requ
 func (p *Policy) decideBaseRule(ctx context.Context, actor Authority, request Request, rule policyRule, admin, bypass bool) (Decision, error) {
 	f := policyFailures{}
 	switch rule {
-	case rulePublic, ruleSelf, ruleAdmin, ruleStaff, ruleDMSelf, rulePlayerSelf, ruleDMInbox, ruleCharacterCreate, ruleLieutenantWrite:
+	case rulePublic, ruleSelf, ruleAdmin, ruleStaff, ruleDMSelf, rulePlayerSelf, ruleCharacterCreate, ruleLieutenantWrite:
 		if _, ok := request.input.(noPolicyFacts); !ok {
 			return Decision{}, policyContractError()
 		}
@@ -889,8 +877,6 @@ func requiredRoleFailure(rule policyRule, actor Authority, admin bool) bool {
 		return !admin && !actor.claims.Has(DM)
 	case rulePlayerSelf:
 		return !admin && !actor.claims.Has(Player) && !actor.claims.Has(Guest)
-	case ruleDMInbox:
-		return !actor.LiveDM()
 	default:
 		return false
 	}
@@ -907,12 +893,6 @@ func (p *Policy) decideOwnershipRule(actor Authority, request Request, rule poli
 			role:      actor.claims.Has(Guest) && !actor.claims.Has(Player) && request.operation == "Mutation.signupForQuest",
 			ownership: facts.OwnerID != actor.claims.MemberID,
 		}, false), nil
-	case ruleRequest:
-		facts, ok := request.input.(RequestDecisionFacts)
-		if !ok {
-			return Decision{}, policyContractError()
-		}
-		return policyResult(policyFailures{role: !actor.LiveDM(), ownership: facts.TargetDMID != actor.claims.MemberID}, false), nil
 	default:
 		return Decision{}, policyContractError()
 	}

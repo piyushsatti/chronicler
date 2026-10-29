@@ -28,13 +28,6 @@ func (p *ProductPostgres) LockAdjustPcxp(ctx context.Context, spec AdjustPcxpSpe
 		return state, err
 	}
 	fillCharacterState(&state, exists, subjectID, ownerID, updatedAt, before)
-	if exists {
-		sum, err := p.queries().CharacterProductSumProgression(ctx, mustUUID(spec.CharacterId))
-		if err != nil {
-			return state, err
-		}
-		state.LedgerSum = sum
-	}
 	return state, nil
 }
 

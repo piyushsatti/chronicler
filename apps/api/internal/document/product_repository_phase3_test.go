@@ -249,14 +249,14 @@ func TestPhase3TaskDOC02Acceptance(t *testing.T) {
 			cross       bool
 			methodCount int
 		}{
-			{"DocumentReadRepository", []int{5}, false, 12},
-			{"DocumentWriteRepository", []int{6}, false, 23},
-			{"ProductBatchRepository", []int{7}, false, 5},
-			{"ReferenceAudienceReader", []int{260}, true, 1},
-			{"MentionMemberReader", []int{404}, true, 1},
-			{"LocationAdmissionReader", []int{410}, true, 1},
-			{"BriefWriter", []int{269, 270}, true, 2},
-			{"SummaryWriter", []int{271}, true, 1},
+			{"DocumentReadRepository", []int{4}, false, 12},
+			{"DocumentWriteRepository", []int{5}, false, 23},
+			{"ProductBatchRepository", []int{6}, false, 5},
+			{"ReferenceAudienceReader", []int{233}, true, 1},
+			{"MentionMemberReader", []int{342}, true, 1},
+			{"LocationAdmissionReader", []int{348}, true, 1},
+			{"BriefWriter", []int{242, 243}, true, 2},
+			{"SummaryWriter", []int{244}, true, 1},
 		}
 		total := 0
 		for _, port := range ports {

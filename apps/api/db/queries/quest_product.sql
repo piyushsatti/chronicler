@@ -335,23 +335,6 @@ page AS (
 )
 SELECT counted.total, page.* FROM counted LEFT JOIN page ON TRUE
 ORDER BY page.created_at DESC NULLS LAST, page.public_id DESC NULLS LAST;
--- name: ProductQuestBatchRead :many
-SELECT input.ordinality::integer AS input_index, input.public_id::uuid AS requested_id,
-       q.id, q.public_id, q.short_code, q.kinds, q.status,
-       coalesce(quest_display_status_at(q.status, q.filled_count, q.scheduled_at, q.duration_hours, @as_of::timestamptz), '')::text AS display_status,
-       dm.public_id AS dm_public_id, arc.public_id AS arc_public_id,
-       q.scheduled_at, q.duration_hours, q.slots_max, q.filled_count,
-       doc.public_id AS document_public_id, q.tags, q.genres, q.avg_party_level AS apl,
-       q.signup_type, q.discord_desired_revision, q.discord_applied_revision,
-       q.discord_message_id, q.discord_event_id, q.event_url, q.discord_voice_channel_id,
-       creator.public_id AS created_by_public_id, q.created_at, q.updated_at
-FROM unnest(@quest_ids::uuid[]) WITH ORDINALITY AS input(public_id, ordinality)
-LEFT JOIN quests q ON q.public_id = input.public_id AND q.deleted_at IS NULL
-LEFT JOIN members dm ON dm.id = q.dm_id
-LEFT JOIN quest_arcs arc ON arc.id = q.arc_id
-LEFT JOIN documents doc ON doc.id = q.document_id
-LEFT JOIN members creator ON creator.id = q.created_by
-ORDER BY input.ordinality;
 -- name: ProductQuestBatchParticipants :many
 SELECT input.ordinality::integer AS input_index, input.quest_id::uuid AS quest_id,
        qp.status AS filter_status, qp.character_id,

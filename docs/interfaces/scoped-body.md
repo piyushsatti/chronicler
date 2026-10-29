@@ -34,6 +34,8 @@ The closed grammar is recorded in [D20](/docs/decisions/D20-One-Closed-Marker-Se
 
 These historical results close the prepared native body assertion boundary for that slice. At that body-slice verification, the repository-wide `scripts/verify` local-cache run stopped at `format:check`; that dated observation is not the current repository verification verdict. Later repository checks have their own source/evidence boundary and do not broaden these body assertions. The renderer/editor consumer remains unverified, as does the original Docker/Testcontainers database lifecycle. Search currently emits title snippets; backlinks and map places emit metadata, and none of those is a body projection. Public archive ingestion, other body-bearing domains and editor/save behavior remain outside this document-body slice.
 
+**Source consolidation, 2026-10-29:** legacy Document ID/slug/list readers, their batch wrapper and request scope cache are removed. Product queries retain direct reads, scoped enumeration, batches and discovery. Backlink assertions use product list/count SQL and the codex entry’s `backlinkCount`. Mounted revision/trash protocols retain their exact author/admin gates. `ProjectDocumentView`, its shared `projectDocument` boundary, `SQLViewer`/`SQLScope` and the live reader-grant query remain. This source change does not renew the historical database execution receipt above.
+
 ## Consumers
 
 Web renderers consume scoped bodies only. Local notes: `apps/web/docs/` (when present).

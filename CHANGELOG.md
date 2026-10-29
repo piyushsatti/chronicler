@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Retire the legacy notification mark-read HTTP command in favor of GraphQL. Keep the block editor and remove unused OpenAPI client, QA, loader and observation implementations.
 - Require explicit Archive model settings and staged read-only CA and tokenizer assets in local Compose, and add the ID-only `archive_documents_v1` view so the local Archive stack can start (D50).
 - Restore the Discord quest announcement layout, create scheduled events for quests without voice channels, and unlock locked hex neighbours when a hex is mapped. Mapped hexes now draw like unlocked hexes on the map.
 - Paginate Codex autocomplete and limit editor undo history to 100 snapshots. Map navigation reads paginated containment metadata for other maps.

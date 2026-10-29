@@ -22,18 +22,15 @@ vi.mock('../../../src/features/editor/adapters/editorAudienceMembers.js', () => 
 /** Parent with the draft's one-entry-per-change history, as useEditorDraft keeps it. */
 function Host({
   initial,
-  variant,
   changes,
 }: {
   initial: string;
-  variant: 'blocks' | 'plain';
   changes: string[];
 }): React.JSX.Element {
   const [history, setHistory] = useState([initial]);
   const value = history[history.length - 1];
   return (
     <LiveEditor
-      variant={variant}
       value={value}
       onChange={(next) => {
         changes.push(next);
@@ -51,12 +48,12 @@ function Host({
   );
 }
 
-function renderEditor(initial: string, variant: 'blocks' | 'plain' = 'blocks') {
+function renderEditor(initial: string) {
   const changes: string[] = [];
   const client = createTestQueryClient();
   const view = render(
     <QueryClientProvider client={client}>
-      <Host initial={initial} variant={variant} changes={changes} />
+      <Host initial={initial} changes={changes} />
     </QueryClientProvider>,
   );
   return { changes, ...view };
@@ -167,21 +164,6 @@ describe('LiveEditor Hide menu', () => {
     await expectEditorFocused();
   });
 
-  it.each([
-    ['DMs only', '> [!dm]'],
-    ['Spoiler', '> [!spoiler]'],
-  ])('%s wraps a multi-line selection in the plain editor', async (item, header) => {
-    const value = 'Intro\nLine one\nLine two\nOutro';
-    const { changes } = renderEditor(value, 'plain');
-    const input = screen.getByRole('textbox', {
-      name: 'Document body',
-    }) as HTMLTextAreaElement;
-    input.setSelectionRange(value.indexOf('one'), value.indexOf('two'));
-    await chooseHide(item);
-    expect(changes).toEqual([`Intro\n\n${header}\n> Line one\n> Line two\n\nOutro`]);
-    await expectEditorFocused();
-  });
-
   it('Only for a member… writes the picked member’s exact handle', async () => {
     const { changes, container } = renderEditor('Intro\n\nOutro');
     editLine(container, 1, 0);
@@ -208,11 +190,8 @@ describe('LiveEditor Hide menu', () => {
 
   it('Only for a member… on a selection replaces an existing marker line', async () => {
     const value = '> [!dm@mortal]\n> Secret';
-    const { changes } = renderEditor(value, 'plain');
-    const input = screen.getByRole('textbox', {
-      name: 'Document body',
-    }) as HTMLTextAreaElement;
-    input.setSelectionRange(value.indexOf('Secret'), value.length);
+    const { changes, container } = renderEditor(value);
+    editLine(container, 1, 2, 8);
     await chooseHide('Only for a member…');
     const picker = await screen.findByRole('dialog', { name: 'Only for a member' });
     await userEvent.type(
@@ -252,11 +231,8 @@ describe('LiveEditor Hide menu', () => {
 
   it('asks before changing who can read member-only text', async () => {
     const value = 'Meet [!dm:@alice] here';
-    const { changes } = renderEditor(value, 'plain');
-    const input = screen.getByRole('textbox', {
-      name: 'Document body',
-    }) as HTMLTextAreaElement;
-    input.setSelectionRange(2, 2);
+    const { changes, container } = renderEditor(value);
+    editLine(container, 0, 2);
     await chooseHide('DMs only');
     const ask = await screen.findByRole('dialog', { name: 'Change hidden text?' });
     expect(ask).toHaveTextContent('Change who can read it to DMs only?');
@@ -269,11 +245,8 @@ describe('LiveEditor Hide menu', () => {
   });
 
   it('is reachable and usable from the keyboard', async () => {
-    const { changes } = renderEditor('Plain text', 'plain');
-    const input = screen.getByRole('textbox', {
-      name: 'Document body',
-    }) as HTMLTextAreaElement;
-    input.setSelectionRange(0, 0);
+    const { changes, container } = renderEditor('Plain text');
+    editLine(container, 0, 0);
     const hide = screen.getByRole('button', { name: 'Hide' });
     act(() => hide.focus());
     await userEvent.keyboard('{Enter}');

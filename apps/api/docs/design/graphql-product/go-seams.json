@@ -4284,452 +4284,6 @@
       "wire_name": "GameDayCellType"
     },
     {
-      "name": "HexChangePage",
-      "package": "spatial",
-      "kind": "OBJECT",
-      "fields": [
-        {
-          "name": "Items",
-          "wire_name": "items",
-          "go_type": "[]spatial.HexChangeView",
-          "wire_type": "[HexChangeV2Type!]!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "Total",
-          "wire_name": "total",
-          "go_type": "int32",
-          "wire_type": "Int!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        }
-      ],
-      "enum_values": [],
-      "primary_task": "SPA01",
-      "meaning": "immutable query/command DTO; repository inner rows never cross aggregate; nested fields resolved by mapped loader when selected",
-      "wire_name": "HexChangePage"
-    },
-    {
-      "name": "HexChangeView",
-      "package": "spatial",
-      "kind": "OBJECT",
-      "fields": [
-        {
-          "name": "CausedByMember",
-          "wire_name": "causedByMember",
-          "go_type": "*string",
-          "wire_type": "ID",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "CausedByQuest",
-          "wire_name": "causedByQuest",
-          "go_type": "*string",
-          "wire_type": "ID",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "HexId",
-          "wire_name": "hexId",
-          "go_type": "string",
-          "wire_type": "ID!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "Id",
-          "wire_name": "id",
-          "go_type": "string",
-          "wire_type": "ID!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "Kind",
-          "wire_name": "kind",
-          "go_type": "string",
-          "wire_type": "String!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "NewValue",
-          "wire_name": "newValue",
-          "go_type": "*string",
-          "wire_type": "String",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "Note",
-          "wire_name": "note",
-          "go_type": "*string",
-          "wire_type": "String",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "OccurredAt",
-          "wire_name": "occurredAt",
-          "go_type": "time.Time",
-          "wire_type": "DateTime!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "OldValue",
-          "wire_name": "oldValue",
-          "go_type": "*string",
-          "wire_type": "String",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        }
-      ],
-      "enum_values": [],
-      "primary_task": "SPA01",
-      "meaning": "immutable query/command DTO; repository inner rows never cross aggregate; nested fields resolved by mapped loader when selected",
-      "wire_name": "HexChangeV2Type"
-    },
-    {
-      "name": "HexEdgeFields",
-      "package": "spatial",
-      "kind": "INPUT_OBJECT",
-      "fields": [
-        {
-          "name": "ASide",
-          "wire_name": "aSide",
-          "go_type": "*string",
-          "wire_type": "String",
-          "resolver_args": [],
-          "kind": "INPUT_OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "DocumentId",
-          "wire_name": "documentId",
-          "go_type": "*string",
-          "wire_type": "ID",
-          "resolver_args": [],
-          "kind": "INPUT_OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "EdgeType",
-          "wire_name": "edgeType",
-          "go_type": "string",
-          "wire_type": "String!",
-          "resolver_args": [],
-          "kind": "INPUT_OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "HexA",
-          "wire_name": "hexA",
-          "go_type": "string",
-          "wire_type": "ID!",
-          "resolver_args": [],
-          "kind": "INPUT_OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "HexB",
-          "wire_name": "hexB",
-          "go_type": "string",
-          "wire_type": "ID!",
-          "resolver_args": [],
-          "kind": "INPUT_OBJECT",
-          "owner": "SPA01"
-        }
-      ],
-      "enum_values": [],
-      "primary_task": "SPA01",
-      "meaning": "immutable query/command DTO; repository inner rows never cross aggregate; nested fields resolved by mapped loader when selected",
-      "wire_name": "HexEdgeInput"
-    },
-    {
-      "name": "HexEdgeView",
-      "package": "spatial",
-      "kind": "OBJECT",
-      "fields": [
-        {
-          "name": "ASide",
-          "wire_name": "aSide",
-          "go_type": "*string",
-          "wire_type": "String",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "DocumentId",
-          "wire_name": "documentId",
-          "go_type": "*string",
-          "wire_type": "ID",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "EdgeType",
-          "wire_name": "edgeType",
-          "go_type": "string",
-          "wire_type": "String!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "HexA",
-          "wire_name": "hexA",
-          "go_type": "string",
-          "wire_type": "ID!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "HexB",
-          "wire_name": "hexB",
-          "go_type": "string",
-          "wire_type": "ID!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "Id",
-          "wire_name": "id",
-          "go_type": "string",
-          "wire_type": "ID!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "MapId",
-          "wire_name": "mapId",
-          "go_type": "string",
-          "wire_type": "ID!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        }
-      ],
-      "enum_values": [],
-      "primary_task": "SPA01",
-      "meaning": "immutable query/command DTO; repository inner rows never cross aggregate; nested fields resolved by mapped loader when selected",
-      "wire_name": "HexEdgeV2Type"
-    },
-    {
-      "name": "HexEditFields",
-      "package": "spatial",
-      "kind": "INPUT_OBJECT",
-      "fields": [
-        {
-          "name": "Climate",
-          "wire_name": "climate",
-          "go_type": "product.Optional[string]",
-          "wire_type": "String",
-          "resolver_args": [],
-          "kind": "INPUT_OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "Elevation",
-          "wire_name": "elevation",
-          "go_type": "product.Optional[string]",
-          "wire_type": "String",
-          "resolver_args": [],
-          "kind": "INPUT_OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "Note",
-          "wire_name": "note",
-          "go_type": "string",
-          "wire_type": "String!",
-          "resolver_args": [],
-          "kind": "INPUT_OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "SubmapId",
-          "wire_name": "submapId",
-          "go_type": "product.Optional[string]",
-          "wire_type": "ID",
-          "resolver_args": [],
-          "kind": "INPUT_OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "Terrain",
-          "wire_name": "terrain",
-          "go_type": "product.Optional[string]",
-          "wire_type": "String",
-          "resolver_args": [],
-          "kind": "INPUT_OBJECT",
-          "owner": "SPA01"
-        }
-      ],
-      "enum_values": [],
-      "primary_task": "SPA01",
-      "meaning": "immutable query/command DTO; repository inner rows never cross aggregate; nested fields resolved by mapped loader when selected",
-      "wire_name": "HexEditInput"
-    },
-    {
-      "name": "HexEntryLinkView",
-      "package": "spatial",
-      "kind": "OBJECT",
-      "fields": [
-        {
-          "name": "DocumentId",
-          "wire_name": "documentId",
-          "go_type": "string",
-          "wire_type": "ID!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "HexId",
-          "wire_name": "hexId",
-          "go_type": "string",
-          "wire_type": "ID!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "Relation",
-          "wire_name": "relation",
-          "go_type": "string",
-          "wire_type": "String!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        }
-      ],
-      "enum_values": [],
-      "primary_task": "SPA01",
-      "meaning": "immutable query/command DTO; repository inner rows never cross aggregate; nested fields resolved by mapped loader when selected",
-      "wire_name": "HexEntryLinkV2Type"
-    },
-    {
-      "name": "HexView",
-      "package": "spatial",
-      "kind": "OBJECT",
-      "fields": [
-        {
-          "name": "Climate",
-          "wire_name": "climate",
-          "go_type": "*string",
-          "wire_type": "String",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "Col",
-          "wire_name": "col",
-          "go_type": "int32",
-          "wire_type": "Int!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "CreatedAt",
-          "wire_name": "createdAt",
-          "go_type": "*time.Time",
-          "wire_type": "DateTime",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "Elevation",
-          "wire_name": "elevation",
-          "go_type": "*string",
-          "wire_type": "String",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "Hexcode",
-          "wire_name": "hexcode",
-          "go_type": "*string",
-          "wire_type": "String",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "Id",
-          "wire_name": "id",
-          "go_type": "string",
-          "wire_type": "ID!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "MapId",
-          "wire_name": "mapId",
-          "go_type": "string",
-          "wire_type": "ID!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "Row",
-          "wire_name": "row",
-          "go_type": "int32",
-          "wire_type": "Int!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "SubmapId",
-          "wire_name": "submapId",
-          "go_type": "*string",
-          "wire_type": "ID",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "Terrain",
-          "wire_name": "terrain",
-          "go_type": "*string",
-          "wire_type": "String",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        }
-      ],
-      "enum_values": [],
-      "primary_task": "SPA01",
-      "meaning": "immutable query/command DTO; repository inner rows never cross aggregate; nested fields resolved by mapped loader when selected",
-      "wire_name": "HexV2Type"
-    },
-    {
       "name": "HomeBannerFields",
       "package": "site",
       "kind": "INPUT_OBJECT",
@@ -5122,71 +4676,6 @@
       "wire_name": "MapCreateInput"
     },
     {
-      "name": "MapPlaceView",
-      "package": "spatial",
-      "kind": "OBJECT",
-      "fields": [
-        {
-          "name": "Category",
-          "wire_name": "category",
-          "go_type": "string",
-          "wire_type": "String!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "DocumentId",
-          "wire_name": "documentId",
-          "go_type": "string",
-          "wire_type": "ID!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "HexId",
-          "wire_name": "hexId",
-          "go_type": "string",
-          "wire_type": "ID!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "Hexcode",
-          "wire_name": "hexcode",
-          "go_type": "string",
-          "wire_type": "String!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "Slug",
-          "wire_name": "slug",
-          "go_type": "string",
-          "wire_type": "String!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "Title",
-          "wire_name": "title",
-          "go_type": "string",
-          "wire_type": "String!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        }
-      ],
-      "enum_values": [],
-      "primary_task": "SPA01",
-      "meaning": "immutable query/command DTO; repository inner rows never cross aggregate; nested fields resolved by mapped loader when selected",
-      "wire_name": "MapPlaceV2Type"
-    },
-    {
       "name": "MapView",
       "package": "spatial",
       "kind": "OBJECT",
@@ -5313,80 +4802,6 @@
       "primary_task": "SPA01",
       "meaning": "immutable query/command DTO; repository inner rows never cross aggregate; nested fields resolved by mapped loader when selected",
       "wire_name": "MapV2Type"
-    },
-    {
-      "name": "MapViewView",
-      "package": "spatial",
-      "kind": "OBJECT",
-      "fields": [
-        {
-          "name": "AtlasCode",
-          "wire_name": "atlasCode",
-          "go_type": "string",
-          "wire_type": "String!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "Cols",
-          "wire_name": "cols",
-          "go_type": "*int32",
-          "wire_type": "Int",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "MapId",
-          "wire_name": "mapId",
-          "go_type": "string",
-          "wire_type": "ID!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "Name",
-          "wire_name": "name",
-          "go_type": "string",
-          "wire_type": "String!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "Places",
-          "wire_name": "places",
-          "go_type": "[]spatial.MapPlaceView",
-          "wire_type": "[MapPlaceV2Type!]!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "Rows",
-          "wire_name": "rows",
-          "go_type": "*int32",
-          "wire_type": "Int",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "TotalPlaces",
-          "wire_name": "totalPlaces",
-          "go_type": "int32",
-          "wire_type": "Int!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        }
-      ],
-      "enum_values": [],
-      "primary_task": "SPA01",
-      "meaning": "immutable query/command DTO; repository inner rows never cross aggregate; nested fields resolved by mapped loader when selected",
-      "wire_name": "MapViewV2Type"
     },
     {
       "name": "MemberActivityStatsView",
@@ -6552,156 +5967,6 @@
       "primary_task": "QUE01",
       "meaning": "immutable query/command DTO; repository inner rows never cross aggregate; nested fields resolved by mapped loader when selected",
       "wire_name": "ParticipationPage"
-    },
-    {
-      "name": "PoiFields",
-      "package": "spatial",
-      "kind": "INPUT_OBJECT",
-      "fields": [
-        {
-          "name": "DiscoveryTier",
-          "wire_name": "discoveryTier",
-          "go_type": "string",
-          "wire_type": "String!",
-          "resolver_args": [],
-          "kind": "INPUT_OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "DocumentId",
-          "wire_name": "documentId",
-          "go_type": "*string",
-          "wire_type": "ID",
-          "resolver_args": [],
-          "kind": "INPUT_OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "Id",
-          "wire_name": "id",
-          "go_type": "*string",
-          "wire_type": "ID",
-          "resolver_args": [],
-          "kind": "INPUT_OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "IsCharterObjective",
-          "wire_name": "isCharterObjective",
-          "go_type": "bool",
-          "wire_type": "Boolean!",
-          "resolver_args": [],
-          "kind": "INPUT_OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "PoiType",
-          "wire_name": "poiType",
-          "go_type": "string",
-          "wire_type": "String!",
-          "resolver_args": [],
-          "kind": "INPUT_OBJECT",
-          "owner": "SPA01"
-        }
-      ],
-      "enum_values": [],
-      "primary_task": "SPA01",
-      "meaning": "immutable query/command DTO; repository inner rows never cross aggregate; nested fields resolved by mapped loader when selected",
-      "wire_name": "PoiInput"
-    },
-    {
-      "name": "PoiPage",
-      "package": "spatial",
-      "kind": "OBJECT",
-      "fields": [
-        {
-          "name": "Items",
-          "wire_name": "items",
-          "go_type": "[]spatial.PoiView",
-          "wire_type": "[PoiV2Type!]!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "Total",
-          "wire_name": "total",
-          "go_type": "int32",
-          "wire_type": "Int!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        }
-      ],
-      "enum_values": [],
-      "primary_task": "SPA01",
-      "meaning": "immutable query/command DTO; repository inner rows never cross aggregate; nested fields resolved by mapped loader when selected",
-      "wire_name": "PoiPage"
-    },
-    {
-      "name": "PoiView",
-      "package": "spatial",
-      "kind": "OBJECT",
-      "fields": [
-        {
-          "name": "DiscoveryTier",
-          "wire_name": "discoveryTier",
-          "go_type": "string",
-          "wire_type": "String!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "DocumentId",
-          "wire_name": "documentId",
-          "go_type": "*string",
-          "wire_type": "ID",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "HexId",
-          "wire_name": "hexId",
-          "go_type": "string",
-          "wire_type": "ID!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "Id",
-          "wire_name": "id",
-          "go_type": "string",
-          "wire_type": "ID!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "IsCharterObjective",
-          "wire_name": "isCharterObjective",
-          "go_type": "bool",
-          "wire_type": "Boolean!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        },
-        {
-          "name": "PoiType",
-          "wire_name": "poiType",
-          "go_type": "string",
-          "wire_type": "String!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "SPA01"
-        }
-      ],
-      "enum_values": [],
-      "primary_task": "SPA01",
-      "meaning": "immutable query/command DTO; repository inner rows never cross aggregate; nested fields resolved by mapped loader when selected",
-      "wire_name": "PoiV2Type"
     },
     {
       "name": "PointcrawlEdgeFields",
@@ -8841,100 +8106,6 @@
       "wire_name": "RegionV2Type"
     },
     {
-      "name": "RequestPage",
-      "package": "member",
-      "kind": "OBJECT",
-      "fields": [
-        {
-          "name": "Items",
-          "wire_name": "items",
-          "go_type": "[]member.RequestView",
-          "wire_type": "[RequestV2Type!]!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "MEM01"
-        },
-        {
-          "name": "Total",
-          "wire_name": "total",
-          "go_type": "int32",
-          "wire_type": "Int!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "MEM01"
-        }
-      ],
-      "enum_values": [],
-      "primary_task": "MEM01",
-      "meaning": "immutable query/command DTO; repository inner rows never cross aggregate; nested fields resolved by mapped loader when selected",
-      "wire_name": "RequestPage"
-    },
-    {
-      "name": "RequestView",
-      "package": "member",
-      "kind": "OBJECT",
-      "fields": [
-        {
-          "name": "Id",
-          "wire_name": "id",
-          "go_type": "string",
-          "wire_type": "ID!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "MEM01"
-        },
-        {
-          "name": "Kind",
-          "wire_name": "kind",
-          "go_type": "string",
-          "wire_type": "String!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "MEM01"
-        },
-        {
-          "name": "Note",
-          "wire_name": "note",
-          "go_type": "*string",
-          "wire_type": "String",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "MEM01"
-        },
-        {
-          "name": "RequesterId",
-          "wire_name": "requesterId",
-          "go_type": "string",
-          "wire_type": "ID!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "MEM01"
-        },
-        {
-          "name": "Status",
-          "wire_name": "status",
-          "go_type": "string",
-          "wire_type": "String!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "MEM01"
-        },
-        {
-          "name": "TargetDmId",
-          "wire_name": "targetDmId",
-          "go_type": "string",
-          "wire_type": "ID!",
-          "resolver_args": [],
-          "kind": "OBJECT",
-          "owner": "MEM01"
-        }
-      ],
-      "enum_values": [],
-      "primary_task": "MEM01",
-      "meaning": "immutable query/command DTO; repository inner rows never cross aggregate; nested fields resolved by mapped loader when selected",
-      "wire_name": "RequestV2Type"
-    },
-    {
       "name": "RewardClaimReceipt",
       "package": "character",
       "kind": "OBJECT",
@@ -10758,37 +9929,6 @@
       "owner": "SPA01"
     },
     {
-      "name": "CreateRequestSpec",
-      "package": "member",
-      "fields": [
-        {
-          "name": "TargetDmId",
-          "wire_name": "targetDmId",
-          "go_type": "string",
-          "sdl_type": "ID!",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        },
-        {
-          "name": "Kind",
-          "wire_name": "kind",
-          "go_type": "string",
-          "sdl_type": "String!",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        },
-        {
-          "name": "Note",
-          "wire_name": "note",
-          "go_type": "*string",
-          "sdl_type": "String",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        }
-      ],
-      "owner": "MEM01"
-    },
-    {
       "name": "CreateTimeAnchorSpec",
       "package": "spatial",
       "fields": [
@@ -10828,37 +9968,6 @@
           "wire_name": "verdict",
           "go_type": "member.VerificationVerdict",
           "sdl_type": "VerificationVerdict!",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        },
-        {
-          "name": "Note",
-          "wire_name": "note",
-          "go_type": "*string",
-          "sdl_type": "String",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        }
-      ],
-      "owner": "MEM01"
-    },
-    {
-      "name": "DecideRequestSpec",
-      "package": "member",
-      "fields": [
-        {
-          "name": "RequestId",
-          "wire_name": "requestId",
-          "go_type": "string",
-          "sdl_type": "ID!",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        },
-        {
-          "name": "Decision",
-          "wire_name": "decision",
-          "go_type": "string",
-          "sdl_type": "String!",
           "default": "",
           "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
         },
@@ -11033,21 +10142,6 @@
       "owner": "DOC01"
     },
     {
-      "name": "FollowPersonSpec",
-      "package": "member",
-      "fields": [
-        {
-          "name": "MemberId",
-          "wire_name": "memberId",
-          "go_type": "string",
-          "sdl_type": "ID!",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        }
-      ],
-      "owner": "MEM01"
-    },
-    {
       "name": "GrantUnlockSpec",
       "package": "member",
       "fields": [
@@ -11077,37 +10171,6 @@
         }
       ],
       "owner": "MEM01"
-    },
-    {
-      "name": "LinkHexEntrySpec",
-      "package": "spatial",
-      "fields": [
-        {
-          "name": "HexId",
-          "wire_name": "hexId",
-          "go_type": "string",
-          "sdl_type": "ID!",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        },
-        {
-          "name": "DocumentId",
-          "wire_name": "documentId",
-          "go_type": "string",
-          "sdl_type": "ID!",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        },
-        {
-          "name": "Relation",
-          "wire_name": "relation",
-          "go_type": "string",
-          "sdl_type": "String!",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        }
-      ],
-      "owner": "SPA01"
     },
     {
       "name": "LinkPointcrawlEntrySpec",
@@ -11480,29 +10543,6 @@
       "owner": "DOC01"
     },
     {
-      "name": "SetHexEdgeSpec",
-      "package": "spatial",
-      "fields": [
-        {
-          "name": "MapId",
-          "wire_name": "mapId",
-          "go_type": "string",
-          "sdl_type": "ID!",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        },
-        {
-          "name": "Input",
-          "wire_name": "input",
-          "go_type": "spatial.HexEdgeFields",
-          "sdl_type": "HexEdgeInput!",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        }
-      ],
-      "owner": "SPA01"
-    },
-    {
       "name": "SetMemberRolesSpec",
       "package": "member",
       "fields": [
@@ -11810,52 +10850,6 @@
       "owner": "SPA01"
     },
     {
-      "name": "UnfollowPersonSpec",
-      "package": "member",
-      "fields": [
-        {
-          "name": "MemberId",
-          "wire_name": "memberId",
-          "go_type": "string",
-          "sdl_type": "ID!",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        }
-      ],
-      "owner": "MEM01"
-    },
-    {
-      "name": "UnlinkHexEntrySpec",
-      "package": "spatial",
-      "fields": [
-        {
-          "name": "HexId",
-          "wire_name": "hexId",
-          "go_type": "string",
-          "sdl_type": "ID!",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        },
-        {
-          "name": "DocumentId",
-          "wire_name": "documentId",
-          "go_type": "string",
-          "sdl_type": "ID!",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        },
-        {
-          "name": "Relation",
-          "wire_name": "relation",
-          "go_type": "string",
-          "sdl_type": "String!",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        }
-      ],
-      "owner": "SPA01"
-    },
-    {
       "name": "UnlinkPointcrawlEntrySpec",
       "package": "spatial",
       "fields": [
@@ -11995,29 +10989,6 @@
           "wire_name": "definition",
           "go_type": "json.RawMessage",
           "sdl_type": "JSON!",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        }
-      ],
-      "owner": "SPA01"
-    },
-    {
-      "name": "UpdateHexSpec",
-      "package": "spatial",
-      "fields": [
-        {
-          "name": "Id",
-          "wire_name": "id",
-          "go_type": "string",
-          "sdl_type": "ID!",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        },
-        {
-          "name": "Input",
-          "wire_name": "input",
-          "go_type": "spatial.HexEditFields",
-          "sdl_type": "HexEditInput!",
           "default": "",
           "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
         }
@@ -12211,29 +11182,6 @@
         }
       ],
       "owner": "CHA01"
-    },
-    {
-      "name": "UpsertPoiSpec",
-      "package": "spatial",
-      "fields": [
-        {
-          "name": "HexId",
-          "wire_name": "hexId",
-          "go_type": "string",
-          "sdl_type": "ID!",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        },
-        {
-          "name": "Input",
-          "wire_name": "input",
-          "go_type": "spatial.PoiFields",
-          "sdl_type": "PoiInput!",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        }
-      ],
-      "owner": "SPA01"
     },
     {
       "name": "UpsertPointcrawlNodeSpec",
@@ -12830,29 +11778,6 @@
       "owner": "SIT01"
     },
     {
-      "name": "DmRequestsSpec",
-      "package": "member",
-      "fields": [
-        {
-          "name": "Limit",
-          "wire_name": "limit",
-          "go_type": "int32",
-          "sdl_type": "Int!",
-          "default": "50",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        },
-        {
-          "name": "Offset",
-          "wire_name": "offset",
-          "go_type": "int32",
-          "sdl_type": "Int!",
-          "default": "0",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        }
-      ],
-      "owner": "MEM01"
-    },
-    {
       "name": "DmSessionHistorySpec",
       "package": "quest",
       "fields": [
@@ -13169,68 +12094,6 @@
       "owner": "SPA01"
     },
     {
-      "name": "HexSpec",
-      "package": "spatial",
-      "fields": [
-        {
-          "name": "MapId",
-          "wire_name": "mapId",
-          "go_type": "string",
-          "sdl_type": "ID!",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        },
-        {
-          "name": "Col",
-          "wire_name": "col",
-          "go_type": "int32",
-          "sdl_type": "Int!",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        },
-        {
-          "name": "Row",
-          "wire_name": "row",
-          "go_type": "int32",
-          "sdl_type": "Int!",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        }
-      ],
-      "owner": "SPA01"
-    },
-    {
-      "name": "HexHistorySpec",
-      "package": "spatial",
-      "fields": [
-        {
-          "name": "HexId",
-          "wire_name": "hexId",
-          "go_type": "string",
-          "sdl_type": "ID!",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        },
-        {
-          "name": "Limit",
-          "wire_name": "limit",
-          "go_type": "int32",
-          "sdl_type": "Int!",
-          "default": "50",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        },
-        {
-          "name": "Offset",
-          "wire_name": "offset",
-          "go_type": "int32",
-          "sdl_type": "Int!",
-          "default": "0",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        }
-      ],
-      "owner": "SPA01"
-    },
-    {
       "name": "HomeSpec",
       "package": "site",
       "fields": [
@@ -13248,21 +12111,6 @@
       "package": "site",
       "fields": [],
       "owner": "SIT01"
-    },
-    {
-      "name": "IsFollowingSpec",
-      "package": "member",
-      "fields": [
-        {
-          "name": "MemberId",
-          "wire_name": "memberId",
-          "go_type": "string",
-          "sdl_type": "ID!",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        }
-      ],
-      "owner": "MEM01"
     },
     {
       "name": "LieutenantAssignmentsSpec",
@@ -13313,37 +12161,6 @@
           "go_type": "string",
           "sdl_type": "String!",
           "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        }
-      ],
-      "owner": "SPA01"
-    },
-    {
-      "name": "MapViewSpec",
-      "package": "spatial",
-      "fields": [
-        {
-          "name": "AtlasCode",
-          "wire_name": "atlasCode",
-          "go_type": "string",
-          "sdl_type": "String!",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        },
-        {
-          "name": "Limit",
-          "wire_name": "limit",
-          "go_type": "int32",
-          "sdl_type": "Int!",
-          "default": "250",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        },
-        {
-          "name": "Offset",
-          "wire_name": "offset",
-          "go_type": "int32",
-          "sdl_type": "Int!",
-          "default": "0",
           "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
         }
       ],
@@ -13684,29 +12501,6 @@
       "owner": "QUE01"
     },
     {
-      "name": "MyRequestsSpec",
-      "package": "member",
-      "fields": [
-        {
-          "name": "Limit",
-          "wire_name": "limit",
-          "go_type": "int32",
-          "sdl_type": "Int!",
-          "default": "50",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        },
-        {
-          "name": "Offset",
-          "wire_name": "offset",
-          "go_type": "int32",
-          "sdl_type": "Int!",
-          "default": "0",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        }
-      ],
-      "owner": "MEM01"
-    },
-    {
       "name": "MyUnlocksSpec",
       "package": "member",
       "fields": [
@@ -13856,37 +12650,6 @@
         }
       ],
       "owner": "MEM01"
-    },
-    {
-      "name": "PoisForHexSpec",
-      "package": "spatial",
-      "fields": [
-        {
-          "name": "HexId",
-          "wire_name": "hexId",
-          "go_type": "string",
-          "sdl_type": "ID!",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        },
-        {
-          "name": "Limit",
-          "wire_name": "limit",
-          "go_type": "int32",
-          "sdl_type": "Int!",
-          "default": "50",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        },
-        {
-          "name": "Offset",
-          "wire_name": "offset",
-          "go_type": "int32",
-          "sdl_type": "Int!",
-          "default": "0",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        }
-      ],
-      "owner": "SPA01"
     },
     {
       "name": "PreviewBodySpec",
@@ -14206,37 +12969,6 @@
           "wire_name": "gameDay",
           "go_type": "int32",
           "sdl_type": "Int!",
-          "default": "",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        },
-        {
-          "name": "Limit",
-          "wire_name": "limit",
-          "go_type": "int32",
-          "sdl_type": "Int!",
-          "default": "50",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        },
-        {
-          "name": "Offset",
-          "wire_name": "offset",
-          "go_type": "int32",
-          "sdl_type": "Int!",
-          "default": "0",
-          "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
-        }
-      ],
-      "owner": "SPA01"
-    },
-    {
-      "name": "RecentHexChangesSpec",
-      "package": "spatial",
-      "fields": [
-        {
-          "name": "MapId",
-          "wire_name": "mapId",
-          "go_type": "*string",
-          "sdl_type": "ID",
           "default": "",
           "optional_semantics": "GraphQL argument nullable missing/null identical unless patch object; patch fields product.Optional distinguishes omission/null"
         },
@@ -14587,10 +13319,6 @@
         {
           "name": "CatalogIDs",
           "go_type": "[]string"
-        },
-        {
-          "name": "LedgerSum",
-          "go_type": "int32"
         }
       ],
       "owner": "CHA01",
@@ -14779,10 +13507,6 @@
         {
           "name": "Entitlements",
           "go_type": "[]character.QuestRewardEntitlementView"
-        },
-        {
-          "name": "LedgerSum",
-          "go_type": "int32"
         }
       ],
       "owner": "CHA01",
@@ -15121,47 +13845,6 @@
       "policy": "owner/current row and state invariant checked by command, never bypassed by repository"
     },
     {
-      "name": "CreateRequestState",
-      "package": "member",
-      "fields": [
-        {
-          "name": "Exists",
-          "go_type": "bool"
-        },
-        {
-          "name": "SubjectID",
-          "go_type": "string"
-        },
-        {
-          "name": "OwnerID",
-          "go_type": "string"
-        },
-        {
-          "name": "Version",
-          "go_type": "int64"
-        },
-        {
-          "name": "UpdatedAt",
-          "go_type": "*time.Time"
-        },
-        {
-          "name": "Before",
-          "go_type": "*member.RequestView"
-        },
-        {
-          "name": "TargetMemberIDs",
-          "go_type": "[]string"
-        },
-        {
-          "name": "ReviewRevision",
-          "go_type": "int64"
-        }
-      ],
-      "owner": "MEM01",
-      "lock_order": "Character UUIDs ascending first then Quest UUIDs ascending for signup/withdraw/retire/delete/selection; candidate plans revalidate under locks, bounded whole-action retry; all other primary aggregate lock then own children orderedUUID",
-      "policy": "owner/current row and state invariant checked by command, never bypassed by repository"
-    },
-    {
       "name": "CreateTimeAnchorState",
       "package": "spatial",
       "fields": [
@@ -15253,55 +13936,6 @@
         {
           "name": "LatestReviewEvent",
           "go_type": "*member.DmProfileReviewEvent"
-        }
-      ],
-      "owner": "MEM01",
-      "lock_order": "Character UUIDs ascending first then Quest UUIDs ascending for signup/withdraw/retire/delete/selection; candidate plans revalidate under locks, bounded whole-action retry; all other primary aggregate lock then own children orderedUUID",
-      "policy": "owner/current row and state invariant checked by command, never bypassed by repository"
-    },
-    {
-      "name": "DecideRequestState",
-      "package": "member",
-      "fields": [
-        {
-          "name": "Exists",
-          "go_type": "bool"
-        },
-        {
-          "name": "SubjectID",
-          "go_type": "string"
-        },
-        {
-          "name": "OwnerID",
-          "go_type": "string"
-        },
-        {
-          "name": "Version",
-          "go_type": "int64"
-        },
-        {
-          "name": "UpdatedAt",
-          "go_type": "*time.Time"
-        },
-        {
-          "name": "Before",
-          "go_type": "*member.RequestView"
-        },
-        {
-          "name": "TargetMemberIDs",
-          "go_type": "[]string"
-        },
-        {
-          "name": "ReviewRevision",
-          "go_type": "int64"
-        },
-        {
-          "name": "Parties",
-          "go_type": "notification.RequestParties"
-        },
-        {
-          "name": "PriorDecision",
-          "go_type": "*member.RequestDecisionRecord"
         }
       ],
       "owner": "MEM01",
@@ -15636,43 +14270,6 @@
       "policy": "owner/current row and state invariant checked by command, never bypassed by repository"
     },
     {
-      "name": "FollowPersonState",
-      "package": "member",
-      "fields": [
-        {
-          "name": "Exists",
-          "go_type": "bool"
-        },
-        {
-          "name": "SubjectID",
-          "go_type": "string"
-        },
-        {
-          "name": "OwnerID",
-          "go_type": "string"
-        },
-        {
-          "name": "Version",
-          "go_type": "int64"
-        },
-        {
-          "name": "UpdatedAt",
-          "go_type": "*time.Time"
-        },
-        {
-          "name": "TargetMemberIDs",
-          "go_type": "[]string"
-        },
-        {
-          "name": "ReviewRevision",
-          "go_type": "int64"
-        }
-      ],
-      "owner": "MEM01",
-      "lock_order": "Character UUIDs ascending first then Quest UUIDs ascending for signup/withdraw/retire/delete/selection; candidate plans revalidate under locks, bounded whole-action retry; all other primary aggregate lock then own children orderedUUID",
-      "policy": "owner/current row and state invariant checked by command, never bypassed by repository"
-    },
-    {
       "name": "GrantUnlockState",
       "package": "member",
       "fields": [
@@ -15718,55 +14315,6 @@
         }
       ],
       "owner": "MEM01",
-      "lock_order": "Character UUIDs ascending first then Quest UUIDs ascending for signup/withdraw/retire/delete/selection; candidate plans revalidate under locks, bounded whole-action retry; all other primary aggregate lock then own children orderedUUID",
-      "policy": "owner/current row and state invariant checked by command, never bypassed by repository"
-    },
-    {
-      "name": "LinkHexEntryState",
-      "package": "spatial",
-      "fields": [
-        {
-          "name": "Exists",
-          "go_type": "bool"
-        },
-        {
-          "name": "SubjectID",
-          "go_type": "string"
-        },
-        {
-          "name": "OwnerID",
-          "go_type": "string"
-        },
-        {
-          "name": "Version",
-          "go_type": "int64"
-        },
-        {
-          "name": "UpdatedAt",
-          "go_type": "*time.Time"
-        },
-        {
-          "name": "Before",
-          "go_type": "*spatial.MapView"
-        },
-        {
-          "name": "MapKind",
-          "go_type": "string"
-        },
-        {
-          "name": "RegionID",
-          "go_type": "*string"
-        },
-        {
-          "name": "EndpointIDs",
-          "go_type": "[]string"
-        },
-        {
-          "name": "LinkedDocumentIDs",
-          "go_type": "[]string"
-        }
-      ],
-      "owner": "SPA01",
       "lock_order": "Character UUIDs ascending first then Quest UUIDs ascending for signup/withdraw/retire/delete/selection; candidate plans revalidate under locks, bounded whole-action retry; all other primary aggregate lock then own children orderedUUID",
       "policy": "owner/current row and state invariant checked by command, never bypassed by repository"
     },
@@ -16519,55 +15067,6 @@
       "policy": "owner/current row and state invariant checked by command, never bypassed by repository"
     },
     {
-      "name": "SetHexEdgeState",
-      "package": "spatial",
-      "fields": [
-        {
-          "name": "Exists",
-          "go_type": "bool"
-        },
-        {
-          "name": "SubjectID",
-          "go_type": "string"
-        },
-        {
-          "name": "OwnerID",
-          "go_type": "string"
-        },
-        {
-          "name": "Version",
-          "go_type": "int64"
-        },
-        {
-          "name": "UpdatedAt",
-          "go_type": "*time.Time"
-        },
-        {
-          "name": "Before",
-          "go_type": "*spatial.MapView"
-        },
-        {
-          "name": "MapKind",
-          "go_type": "string"
-        },
-        {
-          "name": "RegionID",
-          "go_type": "*string"
-        },
-        {
-          "name": "EndpointIDs",
-          "go_type": "[]string"
-        },
-        {
-          "name": "LinkedDocumentIDs",
-          "go_type": "[]string"
-        }
-      ],
-      "owner": "SPA01",
-      "lock_order": "Character UUIDs ascending first then Quest UUIDs ascending for signup/withdraw/retire/delete/selection; candidate plans revalidate under locks, bounded whole-action retry; all other primary aggregate lock then own children orderedUUID",
-      "policy": "owner/current row and state invariant checked by command, never bypassed by repository"
-    },
-    {
       "name": "SetMemberRolesState",
       "package": "member",
       "fields": [
@@ -17149,92 +15648,6 @@
       "policy": "owner/current row and state invariant checked by command, never bypassed by repository"
     },
     {
-      "name": "UnfollowPersonState",
-      "package": "member",
-      "fields": [
-        {
-          "name": "Exists",
-          "go_type": "bool"
-        },
-        {
-          "name": "SubjectID",
-          "go_type": "string"
-        },
-        {
-          "name": "OwnerID",
-          "go_type": "string"
-        },
-        {
-          "name": "Version",
-          "go_type": "int64"
-        },
-        {
-          "name": "UpdatedAt",
-          "go_type": "*time.Time"
-        },
-        {
-          "name": "TargetMemberIDs",
-          "go_type": "[]string"
-        },
-        {
-          "name": "ReviewRevision",
-          "go_type": "int64"
-        }
-      ],
-      "owner": "MEM01",
-      "lock_order": "Character UUIDs ascending first then Quest UUIDs ascending for signup/withdraw/retire/delete/selection; candidate plans revalidate under locks, bounded whole-action retry; all other primary aggregate lock then own children orderedUUID",
-      "policy": "owner/current row and state invariant checked by command, never bypassed by repository"
-    },
-    {
-      "name": "UnlinkHexEntryState",
-      "package": "spatial",
-      "fields": [
-        {
-          "name": "Exists",
-          "go_type": "bool"
-        },
-        {
-          "name": "SubjectID",
-          "go_type": "string"
-        },
-        {
-          "name": "OwnerID",
-          "go_type": "string"
-        },
-        {
-          "name": "Version",
-          "go_type": "int64"
-        },
-        {
-          "name": "UpdatedAt",
-          "go_type": "*time.Time"
-        },
-        {
-          "name": "Before",
-          "go_type": "*spatial.MapView"
-        },
-        {
-          "name": "MapKind",
-          "go_type": "string"
-        },
-        {
-          "name": "RegionID",
-          "go_type": "*string"
-        },
-        {
-          "name": "EndpointIDs",
-          "go_type": "[]string"
-        },
-        {
-          "name": "LinkedDocumentIDs",
-          "go_type": "[]string"
-        }
-      ],
-      "owner": "SPA01",
-      "lock_order": "Character UUIDs ascending first then Quest UUIDs ascending for signup/withdraw/retire/delete/selection; candidate plans revalidate under locks, bounded whole-action retry; all other primary aggregate lock then own children orderedUUID",
-      "policy": "owner/current row and state invariant checked by command, never bypassed by repository"
-    },
-    {
       "name": "UnlinkPointcrawlEntryState",
       "package": "spatial",
       "fields": [
@@ -17522,55 +15935,6 @@
         {
           "name": "Trajectory",
           "go_type": "[]spatial.TimeAnchorView"
-        }
-      ],
-      "owner": "SPA01",
-      "lock_order": "Character UUIDs ascending first then Quest UUIDs ascending for signup/withdraw/retire/delete/selection; candidate plans revalidate under locks, bounded whole-action retry; all other primary aggregate lock then own children orderedUUID",
-      "policy": "owner/current row and state invariant checked by command, never bypassed by repository"
-    },
-    {
-      "name": "UpdateHexState",
-      "package": "spatial",
-      "fields": [
-        {
-          "name": "Exists",
-          "go_type": "bool"
-        },
-        {
-          "name": "SubjectID",
-          "go_type": "string"
-        },
-        {
-          "name": "OwnerID",
-          "go_type": "string"
-        },
-        {
-          "name": "Version",
-          "go_type": "int64"
-        },
-        {
-          "name": "UpdatedAt",
-          "go_type": "*time.Time"
-        },
-        {
-          "name": "Before",
-          "go_type": "*spatial.MapView"
-        },
-        {
-          "name": "MapKind",
-          "go_type": "string"
-        },
-        {
-          "name": "RegionID",
-          "go_type": "*string"
-        },
-        {
-          "name": "EndpointIDs",
-          "go_type": "[]string"
-        },
-        {
-          "name": "LinkedDocumentIDs",
-          "go_type": "[]string"
         }
       ],
       "owner": "SPA01",
@@ -18016,55 +16380,6 @@
         }
       ],
       "owner": "CHA01",
-      "lock_order": "Character UUIDs ascending first then Quest UUIDs ascending for signup/withdraw/retire/delete/selection; candidate plans revalidate under locks, bounded whole-action retry; all other primary aggregate lock then own children orderedUUID",
-      "policy": "owner/current row and state invariant checked by command, never bypassed by repository"
-    },
-    {
-      "name": "UpsertPoiState",
-      "package": "spatial",
-      "fields": [
-        {
-          "name": "Exists",
-          "go_type": "bool"
-        },
-        {
-          "name": "SubjectID",
-          "go_type": "string"
-        },
-        {
-          "name": "OwnerID",
-          "go_type": "string"
-        },
-        {
-          "name": "Version",
-          "go_type": "int64"
-        },
-        {
-          "name": "UpdatedAt",
-          "go_type": "*time.Time"
-        },
-        {
-          "name": "Before",
-          "go_type": "*spatial.MapView"
-        },
-        {
-          "name": "MapKind",
-          "go_type": "string"
-        },
-        {
-          "name": "RegionID",
-          "go_type": "*string"
-        },
-        {
-          "name": "EndpointIDs",
-          "go_type": "[]string"
-        },
-        {
-          "name": "LinkedDocumentIDs",
-          "go_type": "[]string"
-        }
-      ],
-      "owner": "SPA01",
       "lock_order": "Character UUIDs ascending first then Quest UUIDs ascending for signup/withdraw/retire/delete/selection; candidate plans revalidate under locks, bounded whole-action retry; all other primary aggregate lock then own children orderedUUID",
       "policy": "owner/current row and state invariant checked by command, never bypassed by repository"
     },
@@ -18895,54 +17210,6 @@
       "meaning": "command validates andnormalizes Spec intoValidatedInput; repository applies onlyownaggregate writes andreturns actualINSERT/UPDATE IDs/times. No guessed generatedID, no foreignwrite orcommit"
     },
     {
-      "name": "CreateRequestWrite",
-      "package": "member",
-      "fields": [
-        {
-          "name": "ActorID",
-          "go_type": "string"
-        },
-        {
-          "name": "At",
-          "go_type": "time.Time"
-        },
-        {
-          "name": "Input",
-          "go_type": "member.CreateRequestSpec"
-        },
-        {
-          "name": "Locked",
-          "go_type": "member.CreateRequestState"
-        },
-        {
-          "name": "ValidatedInput",
-          "go_type": "member.CreateRequestSpec"
-        },
-        {
-          "name": "RequestID",
-          "go_type": "string"
-        },
-        {
-          "name": "HistoryID",
-          "go_type": "*string"
-        },
-        {
-          "name": "DecisionID",
-          "go_type": "*string"
-        },
-        {
-          "name": "RevisionID",
-          "go_type": "*string"
-        },
-        {
-          "name": "EventKey",
-          "go_type": "*string"
-        }
-      ],
-      "owner": "MEM01",
-      "meaning": "command validates andnormalizes Spec intoValidatedInput; repository applies onlyownaggregate writes andreturns actualINSERT/UPDATE IDs/times. No guessed generatedID, no foreignwrite orcommit"
-    },
-    {
       "name": "CreateTimeAnchorWrite",
       "package": "spatial",
       "fields": [
@@ -19030,50 +17297,6 @@
           "name": "ReviewEvent",
           "go_type": "member.DmProfileReviewEvent",
           "meaning": "exact monotonic next revision/current snapshot, real actor/time; decision links assessment UUID, pending revision in verification is prior revision"
-        }
-      ],
-      "owner": "MEM01",
-      "meaning": "command validates andnormalizes Spec intoValidatedInput; repository applies onlyownaggregate writes andreturns actualINSERT/UPDATE IDs/times. No guessed generatedID, no foreignwrite orcommit"
-    },
-    {
-      "name": "DecideRequestWrite",
-      "package": "member",
-      "fields": [
-        {
-          "name": "ActorID",
-          "go_type": "string"
-        },
-        {
-          "name": "At",
-          "go_type": "time.Time"
-        },
-        {
-          "name": "Input",
-          "go_type": "member.DecideRequestSpec"
-        },
-        {
-          "name": "Locked",
-          "go_type": "member.DecideRequestState"
-        },
-        {
-          "name": "ValidatedInput",
-          "go_type": "member.DecideRequestSpec"
-        },
-        {
-          "name": "HistoryID",
-          "go_type": "*string"
-        },
-        {
-          "name": "DecisionID",
-          "go_type": "*string"
-        },
-        {
-          "name": "RevisionID",
-          "go_type": "*string"
-        },
-        {
-          "name": "EventKey",
-          "go_type": "*string"
         }
       ],
       "owner": "MEM01",
@@ -19402,50 +17625,6 @@
       "meaning": "command validates andnormalizes Spec intoValidatedInput; repository applies onlyownaggregate writes andreturns actualINSERT/UPDATE IDs/times. No guessed generatedID, no foreignwrite orcommit"
     },
     {
-      "name": "FollowPersonWrite",
-      "package": "member",
-      "fields": [
-        {
-          "name": "ActorID",
-          "go_type": "string"
-        },
-        {
-          "name": "At",
-          "go_type": "time.Time"
-        },
-        {
-          "name": "Input",
-          "go_type": "member.FollowPersonSpec"
-        },
-        {
-          "name": "Locked",
-          "go_type": "member.FollowPersonState"
-        },
-        {
-          "name": "ValidatedInput",
-          "go_type": "member.FollowPersonSpec"
-        },
-        {
-          "name": "HistoryID",
-          "go_type": "*string"
-        },
-        {
-          "name": "DecisionID",
-          "go_type": "*string"
-        },
-        {
-          "name": "RevisionID",
-          "go_type": "*string"
-        },
-        {
-          "name": "EventKey",
-          "go_type": "*string"
-        }
-      ],
-      "owner": "MEM01",
-      "meaning": "command validates andnormalizes Spec intoValidatedInput; repository applies onlyownaggregate writes andreturns actualINSERT/UPDATE IDs/times. No guessed generatedID, no foreignwrite orcommit"
-    },
-    {
       "name": "GrantUnlockWrite",
       "package": "member",
       "fields": [
@@ -19487,50 +17666,6 @@
         }
       ],
       "owner": "MEM01",
-      "meaning": "command validates andnormalizes Spec intoValidatedInput; repository applies onlyownaggregate writes andreturns actualINSERT/UPDATE IDs/times. No guessed generatedID, no foreignwrite orcommit"
-    },
-    {
-      "name": "LinkHexEntryWrite",
-      "package": "spatial",
-      "fields": [
-        {
-          "name": "ActorID",
-          "go_type": "string"
-        },
-        {
-          "name": "At",
-          "go_type": "time.Time"
-        },
-        {
-          "name": "Input",
-          "go_type": "spatial.LinkHexEntrySpec"
-        },
-        {
-          "name": "Locked",
-          "go_type": "spatial.LinkHexEntryState"
-        },
-        {
-          "name": "ValidatedInput",
-          "go_type": "spatial.LinkHexEntrySpec"
-        },
-        {
-          "name": "HistoryID",
-          "go_type": "*string"
-        },
-        {
-          "name": "DecisionID",
-          "go_type": "*string"
-        },
-        {
-          "name": "RevisionID",
-          "go_type": "*string"
-        },
-        {
-          "name": "EventKey",
-          "go_type": "*string"
-        }
-      ],
-      "owner": "SPA01",
       "meaning": "command validates andnormalizes Spec intoValidatedInput; repository applies onlyownaggregate writes andreturns actualINSERT/UPDATE IDs/times. No guessed generatedID, no foreignwrite orcommit"
     },
     {
@@ -20237,50 +18372,6 @@
       "meaning": "command validates andnormalizes Spec intoValidatedInput; repository applies onlyownaggregate writes andreturns actualINSERT/UPDATE IDs/times. No guessed generatedID, no foreignwrite orcommit"
     },
     {
-      "name": "SetHexEdgeWrite",
-      "package": "spatial",
-      "fields": [
-        {
-          "name": "ActorID",
-          "go_type": "string"
-        },
-        {
-          "name": "At",
-          "go_type": "time.Time"
-        },
-        {
-          "name": "Input",
-          "go_type": "spatial.SetHexEdgeSpec"
-        },
-        {
-          "name": "Locked",
-          "go_type": "spatial.SetHexEdgeState"
-        },
-        {
-          "name": "ValidatedInput",
-          "go_type": "spatial.SetHexEdgeSpec"
-        },
-        {
-          "name": "HistoryID",
-          "go_type": "*string"
-        },
-        {
-          "name": "DecisionID",
-          "go_type": "*string"
-        },
-        {
-          "name": "RevisionID",
-          "go_type": "*string"
-        },
-        {
-          "name": "EventKey",
-          "go_type": "*string"
-        }
-      ],
-      "owner": "SPA01",
-      "meaning": "command validates andnormalizes Spec intoValidatedInput; repository applies onlyownaggregate writes andreturns actualINSERT/UPDATE IDs/times. No guessed generatedID, no foreignwrite orcommit"
-    },
-    {
       "name": "SetMemberRolesWrite",
       "package": "member",
       "fields": [
@@ -20862,94 +18953,6 @@
       "meaning": "command validates andnormalizes Spec intoValidatedInput; repository applies onlyownaggregate writes andreturns actualINSERT/UPDATE IDs/times. No guessed generatedID, no foreignwrite orcommit"
     },
     {
-      "name": "UnfollowPersonWrite",
-      "package": "member",
-      "fields": [
-        {
-          "name": "ActorID",
-          "go_type": "string"
-        },
-        {
-          "name": "At",
-          "go_type": "time.Time"
-        },
-        {
-          "name": "Input",
-          "go_type": "member.UnfollowPersonSpec"
-        },
-        {
-          "name": "Locked",
-          "go_type": "member.UnfollowPersonState"
-        },
-        {
-          "name": "ValidatedInput",
-          "go_type": "member.UnfollowPersonSpec"
-        },
-        {
-          "name": "HistoryID",
-          "go_type": "*string"
-        },
-        {
-          "name": "DecisionID",
-          "go_type": "*string"
-        },
-        {
-          "name": "RevisionID",
-          "go_type": "*string"
-        },
-        {
-          "name": "EventKey",
-          "go_type": "*string"
-        }
-      ],
-      "owner": "MEM01",
-      "meaning": "command validates andnormalizes Spec intoValidatedInput; repository applies onlyownaggregate writes andreturns actualINSERT/UPDATE IDs/times. No guessed generatedID, no foreignwrite orcommit"
-    },
-    {
-      "name": "UnlinkHexEntryWrite",
-      "package": "spatial",
-      "fields": [
-        {
-          "name": "ActorID",
-          "go_type": "string"
-        },
-        {
-          "name": "At",
-          "go_type": "time.Time"
-        },
-        {
-          "name": "Input",
-          "go_type": "spatial.UnlinkHexEntrySpec"
-        },
-        {
-          "name": "Locked",
-          "go_type": "spatial.UnlinkHexEntryState"
-        },
-        {
-          "name": "ValidatedInput",
-          "go_type": "spatial.UnlinkHexEntrySpec"
-        },
-        {
-          "name": "HistoryID",
-          "go_type": "*string"
-        },
-        {
-          "name": "DecisionID",
-          "go_type": "*string"
-        },
-        {
-          "name": "RevisionID",
-          "go_type": "*string"
-        },
-        {
-          "name": "EventKey",
-          "go_type": "*string"
-        }
-      ],
-      "owner": "SPA01",
-      "meaning": "command validates andnormalizes Spec intoValidatedInput; repository applies onlyownaggregate writes andreturns actualINSERT/UPDATE IDs/times. No guessed generatedID, no foreignwrite orcommit"
-    },
-    {
       "name": "UnlinkPointcrawlEntryWrite",
       "package": "spatial",
       "fields": [
@@ -21202,50 +19205,6 @@
         {
           "name": "ValidatedInput",
           "go_type": "spatial.UpdateGameCalendarSpec"
-        },
-        {
-          "name": "HistoryID",
-          "go_type": "*string"
-        },
-        {
-          "name": "DecisionID",
-          "go_type": "*string"
-        },
-        {
-          "name": "RevisionID",
-          "go_type": "*string"
-        },
-        {
-          "name": "EventKey",
-          "go_type": "*string"
-        }
-      ],
-      "owner": "SPA01",
-      "meaning": "command validates andnormalizes Spec intoValidatedInput; repository applies onlyownaggregate writes andreturns actualINSERT/UPDATE IDs/times. No guessed generatedID, no foreignwrite orcommit"
-    },
-    {
-      "name": "UpdateHexWrite",
-      "package": "spatial",
-      "fields": [
-        {
-          "name": "ActorID",
-          "go_type": "string"
-        },
-        {
-          "name": "At",
-          "go_type": "time.Time"
-        },
-        {
-          "name": "Input",
-          "go_type": "spatial.UpdateHexSpec"
-        },
-        {
-          "name": "Locked",
-          "go_type": "spatial.UpdateHexState"
-        },
-        {
-          "name": "ValidatedInput",
-          "go_type": "spatial.UpdateHexSpec"
         },
         {
           "name": "HistoryID",
@@ -21713,50 +19672,6 @@
       "meaning": "command validates andnormalizes Spec intoValidatedInput; repository applies onlyownaggregate writes andreturns actualINSERT/UPDATE IDs/times. No guessed generatedID, no foreignwrite orcommit"
     },
     {
-      "name": "UpsertPoiWrite",
-      "package": "spatial",
-      "fields": [
-        {
-          "name": "ActorID",
-          "go_type": "string"
-        },
-        {
-          "name": "At",
-          "go_type": "time.Time"
-        },
-        {
-          "name": "Input",
-          "go_type": "spatial.UpsertPoiSpec"
-        },
-        {
-          "name": "Locked",
-          "go_type": "spatial.UpsertPoiState"
-        },
-        {
-          "name": "ValidatedInput",
-          "go_type": "spatial.UpsertPoiSpec"
-        },
-        {
-          "name": "HistoryID",
-          "go_type": "*string"
-        },
-        {
-          "name": "DecisionID",
-          "go_type": "*string"
-        },
-        {
-          "name": "RevisionID",
-          "go_type": "*string"
-        },
-        {
-          "name": "EventKey",
-          "go_type": "*string"
-        }
-      ],
-      "owner": "SPA01",
-      "meaning": "command validates andnormalizes Spec intoValidatedInput; repository applies onlyownaggregate writes andreturns actualINSERT/UPDATE IDs/times. No guessed generatedID, no foreignwrite orcommit"
-    },
-    {
       "name": "UpsertPointcrawlNodeWrite",
       "package": "spatial",
       "fields": [
@@ -22163,42 +20078,6 @@
       "Decision": "*string",
       "RecipientMemberIDs": "[]string"
     },
-    "jobs.StoreOptions": {
-      "Gate": "jobs.CompatibilityGate",
-      "Observer": "jobs.LifecycleObserver"
-    },
-    "jobs.LifecycleFact": {
-      "JobID": "string",
-      "JobKey": "string",
-      "Kind": "string",
-      "BuildID": "string",
-      "State": "jobs.State",
-      "Slot": "*time.Time",
-      "StartedAt": "*time.Time",
-      "FinishedAt": "*time.Time",
-      "LeaseToken": "int64",
-      "Attempt": "int32",
-      "SafeErrorCode": "*string",
-      "EventKind": "jobs.LifecycleEventKind",
-      "EffectCount": "int32"
-    },
-    "observations.ScheduledStatus": {
-      "Kind": "string",
-      "ExpectedSlot": "time.Time",
-      "Outcome": "string",
-      "LastStartedAt": "*time.Time",
-      "LastFinishedAt": "*time.Time",
-      "JobID": "*string",
-      "SafeErrorCode": "*string"
-    },
-    "observations.AlertTransition": {
-      "Key": "string",
-      "Kind": "string",
-      "State": "string",
-      "SafeSummary": "string",
-      "Version": "int64",
-      "ObservedAt": "time.Time"
-    },
     "worker.ConsistencyIssue": {
       "Kind": "string",
       "SubjectID": "string",
@@ -22232,9 +20111,6 @@
       "Client": "*http.Client",
       "Clock": "product.Clock"
     },
-    "idempotency.CompletedReceiptStore": {
-      "DB": "dbgen.DBTX"
-    },
     "notification.Producer": {},
     "document.GuildAdmission": {
       "ID": "string",
@@ -22257,13 +20133,6 @@
       "Status": "string",
       "Version": "int64",
       "UpdatedAt": "time.Time"
-    },
-    "member.RequestDecisionRecord": {
-      "ID": "string",
-      "RequestID": "string",
-      "Decision": "string",
-      "ActorID": "string",
-      "RecordedAt": "time.Time"
     },
     "character.ParticipationView": {
       "QuestID": "string",
@@ -22318,18 +20187,6 @@
     "product.IDGenerator": {
       "function": "func() string"
     },
-    "jobs.LifecycleEventKind": {
-      "underlying": "string",
-      "values": [
-        "ENQUEUED",
-        "CLAIMED",
-        "RETRY_SCHEDULED",
-        "SUCCEEDED",
-        "FAILED",
-        "CANCELLED",
-        "EFFECT_ADMITTED"
-      ]
-    },
     "jobs.ExecutionScope": {
       "Receipt": "jobs.Receipt",
       "Connection": "*pgxpool.Conn"
@@ -22359,17 +20216,6 @@
       "LoadMany": "func(context.Context,[]K)([]product.BatchResult[V],error)",
       "Clear": "func()"
     },
-    "observations.ScheduleSpec": {
-      "Kind": "string",
-      "HourUTC": "int32",
-      "MinuteUTC": "int32",
-      "DeadlineMinutes": "int32"
-    },
-    "observations.AlertMessage": {
-      "Transition": "observations.AlertTransition",
-      "JobID": "*string",
-      "Slot": "*time.Time"
-    },
     "character.DdbSnapshot": {
       "Payload": "json.RawMessage",
       "Level": "*int32",
@@ -22394,17 +20240,8 @@
     "quest.HexList": {
       "Items": "[]quest.QuestHexView"
     },
-    "quest.RegionIDList": {
-      "Items": "[]string"
-    },
     "quest.QuestList": {
       "Items": "[]quest.QuestView"
-    },
-    "spatial.HexList": {
-      "Items": "[]spatial.HexView"
-    },
-    "spatial.EdgeList": {
-      "Items": "[]spatial.HexEdgeView"
     },
     "spatial.NodeList": {
       "Items": "[]spatial.PointcrawlNodeView"
@@ -22412,14 +20249,8 @@
     "spatial.NodeEdgeList": {
       "Items": "[]spatial.PointcrawlEdgeView"
     },
-    "spatial.HexLinkList": {
-      "Items": "[]spatial.HexEntryLinkView"
-    },
     "spatial.NodeLinkList": {
       "Items": "[]spatial.PointcrawlEntryLinkView"
-    },
-    "spatial.PoiList": {
-      "Items": "[]spatial.PoiView"
     },
     "quest.RewardList": {
       "Items": "[]character.QuestRewardEntitlementView"
@@ -22467,22 +20298,7 @@
       "Role": "string",
       "HasRole": "bool"
     },
-    "quest.QuestRegionsKey": {
-      "ParentID": "string",
-      "Limit": "int32",
-      "Offset": "int32"
-    },
     "quest.ArcQuestsKey": {
-      "ParentID": "string",
-      "Limit": "int32",
-      "Offset": "int32"
-    },
-    "spatial.MapHexesKey": {
-      "ParentID": "string",
-      "Limit": "int32",
-      "Offset": "int32"
-    },
-    "spatial.MapEdgesKey": {
       "ParentID": "string",
       "Limit": "int32",
       "Offset": "int32"
@@ -22497,17 +20313,7 @@
       "Limit": "int32",
       "Offset": "int32"
     },
-    "spatial.HexLinksKey": {
-      "ParentID": "string",
-      "Limit": "int32",
-      "Offset": "int32"
-    },
     "spatial.NodeLinksKey": {
-      "ParentID": "string",
-      "Limit": "int32",
-      "Offset": "int32"
-    },
-    "spatial.POIsKey": {
       "ParentID": "string",
       "Limit": "int32",
       "Offset": "int32"
@@ -22545,21 +20351,14 @@
       "Members": "*graph.Loader[member.IDKey,member.MemberView]",
       "Documents": "*graph.Loader[document.DocumentKey,document.DocumentView]",
       "DmTables": "*graph.Loader[document.IDKey,document.DocumentView]",
-      "Characters": "*graph.Loader[character.IDKey,character.CharacterView]",
-      "Quests": "*graph.Loader[quest.IDKey,quest.QuestView]",
       "Participants": "*graph.Loader[quest.ParticipantsKey,quest.ParticipantList]",
       "QuestPointcrawlLinks": "*graph.Loader[quest.QuestHexesKey,quest.HexList]",
-      "QuestRegions": "*graph.Loader[quest.QuestRegionsKey,quest.RegionIDList]",
       "Arcs": "*graph.Loader[quest.IDKey,quest.QuestArcView]",
       "ArcQuests": "*graph.Loader[quest.ArcQuestsKey,quest.QuestList]",
       "Delivery": "*graph.Loader[quest.IDKey,quest.QuestDiscordDeliveryView]",
-      "MapHexes": "*graph.Loader[spatial.MapHexesKey,spatial.HexList]",
-      "MapEdges": "*graph.Loader[spatial.MapEdgesKey,spatial.EdgeList]",
       "MapNodes": "*graph.Loader[spatial.MapNodesKey,spatial.NodeList]",
       "MapNodeEdges": "*graph.Loader[spatial.MapNodeEdgesKey,spatial.NodeEdgeList]",
-      "HexLinks": "*graph.Loader[spatial.HexLinksKey,spatial.HexLinkList]",
       "NodeLinks": "*graph.Loader[spatial.NodeLinksKey,spatial.NodeLinkList]",
-      "POIs": "*graph.Loader[spatial.POIsKey,spatial.PoiList]",
       "SummaryDerived": "*graph.Loader[document.IDKey,document.SummaryDerivedView]",
       "DocumentReaders": "*graph.Loader[document.IDKey,document.ReaderIDList]",
       "NotificationSubjects": "*graph.Loader[notification.SubjectKey,notification.SubjectProjection]",
@@ -22574,7 +20373,6 @@
       "Member": "*member.ProductQueries",
       "Document": "*document.ProductQueries",
       "Spatial": "*spatial.ProductQueries",
-      "Character": "*character.ProductQueries",
       "Quest": "*quest.ProductQueries",
       "Site": "*site.ProductQueries",
       "Notification": "*notification.ProductQueries"
@@ -22614,9 +20412,6 @@
     "spatial.SubjectKey": {
       "SubjectType": "string",
       "SubjectID": "string"
-    },
-    "character.IDKey": {
-      "ID": "string"
     },
     "character.DocumentKey": {
       "ID": "string",
@@ -22677,8 +20472,6 @@
       "Clock": "product.Clock",
       "IDs": "product.IDGenerator",
       "Policy": "*auth.Policy",
-      "Gate": "jobs.CompatibilityGate",
-      "Observer": "jobs.LifecycleObserver",
       "Producer": "*notification.Producer",
       "DDB": "character.DdbClient",
       "OverrideReads": "auth.OverrideReadObserver"
@@ -22689,13 +20482,11 @@
     "member.ProductReadRepos": {
       "Member": "member.MemberReadRepository",
       "Reference": "member.ReferenceReadRepository",
-      "Social": "member.SocialReadRepository",
       "Batch": "member.ProductBatchRepository"
     },
     "member.ProductCommandRepos": {
       "Member": "member.MemberWriteRepository",
       "Reference": "member.ReferenceWriteRepository",
-      "Social": "member.SocialWriteRepository",
       "Policy": "*auth.Policy",
       "Authority": "auth.AuthorityResolver",
       "Replay": "idempotency.Repository",
@@ -22752,8 +20543,7 @@
       "Region": "spatial.RegionReadRepository",
       "Time": "spatial.TimeReadRepository",
       "Batch": "spatial.ProductBatchRepository",
-      "DocumentAudience": "document.ReferenceAudienceReader",
-      "TimeBatch": "spatial.TimeBatchReadRepository"
+      "DocumentAudience": "document.ReferenceAudienceReader"
     },
     "spatial.ProductCommandRepos": {
       "Map": "spatial.MapWriteRepository",
@@ -22788,7 +20578,6 @@
     "character.ProductReadRepos": {
       "Character": "character.CharacterReadRepository",
       "Reference": "character.ReferenceReadRepository",
-      "Batch": "character.ProductBatchRepository",
       "DocumentAudience": "document.ReferenceAudienceReader"
     },
     "character.ProductCommandRepos": {
@@ -22815,12 +20604,7 @@
     "character.ProductCommands": {
       "Runner": "uow.Runner[character.ProductCommandRepos]",
       "Clock": "product.Clock",
-      "IDs": "product.IDGenerator",
-      "Claims": "*character.RewardClaims",
-      "DDB": "character.DdbClient",
-      "Preflight": "character.DdbPreflightReader",
-      "ReplayReader": "idempotency.CompletedReceiptReader",
-      "LiveAuthority": "auth.AuthorityResolver"
+      "IDs": "product.IDGenerator"
     },
     "quest.ProductPostgres": {
       "DB": "dbgen.DBTX"
@@ -22845,7 +20629,6 @@
       "Brief": "document.BriefWriter",
       "Summaries": "document.SummaryWriter",
       "Places": "spatial.PlaceReader",
-      "Jobs": "jobs.Writer",
       "Tags": "quest.TagNormalizer",
       "Withdrawals": "character.QuestWithdrawalWriter",
       "Rewards": "character.QuestRewardWriter",
@@ -22944,7 +20727,7 @@
     },
     "member.PureGrantReconciler": {},
     "quest.LiveTagNormalizer": {
-      "DB": "jobs.SQLExecutor"
+      "DB": "dbgen.DBTX"
     },
     "quest.NormalizedVocabulary": {
       "Tags": "[]string",
@@ -22961,36 +20744,6 @@
       "Runner": "uow.Runner[character.ProductCommandRepos]",
       "Clock": "product.Clock",
       "IDs": "product.IDGenerator"
-    },
-    "observations.ScheduleRegistry": {
-      "Entries": "[]observations.ScheduleSpec"
-    },
-    "worker.Scheduler": {
-      "Store": "worker.ScheduledEnqueuer",
-      "Clock": "product.Clock",
-      "Registry": "observations.ScheduleRegistry"
-    },
-    "worker.SchemaGate": {
-      "Min": "int64",
-      "Max": "int64"
-    },
-    "observations.Postgres": {
-      "DB": "dbgen.DBTX"
-    },
-    "observations.Watchdog": {
-      "Store": "observations.ObservationStore",
-      "Alerts": "observations.TransitionWriter",
-      "Webhook": "observations.WebhookSender",
-      "Outage": "observations.DBOutageMonitor",
-      "Registry": "observations.ScheduleRegistry",
-      "Clock": "product.Clock"
-    },
-    "observations.DiscordWebhook": {
-      "URL": "string",
-      "Client": "*http.Client"
-    },
-    "observations.EphemeralOutageMonitor": {
-      "LastAccepted": "*time.Time"
     },
     "worker.AdvisoryExecutionGate": {
       "Pool": "*pgxpool.Pool",
@@ -23087,21 +20840,11 @@
     },
     "jobs.PostgresStore": {
       "q": "*dbgen.Queries",
-      "pool": "*pgxpool.Pool",
-      "Executor": "jobs.SQLExecutor",
-      "Options": "jobs.StoreOptions"
+      "pool": "*pgxpool.Pool"
     },
     "agent.PostgresStore": {
       "q": "*dbgen.Queries",
       "jobs": "*jobs.PostgresStore"
-    },
-    "observations.TransitionRepos": {
-      "DB": "jobs.SQLExecutor",
-      "Store": "observations.ObservationStore",
-      "Queue": "jobs.UniqueEnqueuer"
-    },
-    "observations.TransitionCoordinator": {
-      "Runner": "uow.Runner[observations.TransitionRepos]"
     },
     "jobs.EffectPermit": {
       "owner": "*jobs.PostgresEffectGuard",
@@ -23202,10 +20945,6 @@
     "notification.HMACCursorCodec": {
       "key": "[]byte"
     },
-    "observations.WorkerHeartbeatStatus": {
-      "CheckedAt": "time.Time",
-      "LastObservedAt": "*time.Time"
-    },
     "auth.Request": {
       "private_fields": {
         "operation": "auth.Operation",
@@ -23256,10 +20995,6 @@
     "auth.PreviewFacts": {
       "Audience": "auth.PreviewAudience",
       "AuthorID": "*string"
-    },
-    "auth.RequestDecisionFacts": {
-      "ID": "string",
-      "TargetDMID": "string"
     },
     "auth.DiscordLookupFacts": {
       "RequestedDiscordID": "string"
@@ -23429,14 +21164,6 @@
       "provider": "CHA04"
     },
     {
-      "name": "character.ProductBatchRepository",
-      "methods": [
-        "ReadBatchCharacters(ctx context.Context, actor auth.Authority, keys []character.IDKey) ([]product.BatchResult[character.CharacterView],error)"
-      ],
-      "owner": "CHA02",
-      "provider": "CHA04"
-    },
-    {
       "name": "character.ReferenceReadRepository",
       "methods": [
         "ReadBackstories(ctx context.Context, actor auth.Authority, spec character.BackstoriesSpec) (character.BackstoryPage, error)",
@@ -23595,31 +21322,6 @@
       "provider": "MEM04"
     },
     {
-      "name": "member.SocialReadRepository",
-      "methods": [
-        "ReadDmRequests(ctx context.Context, actor auth.Authority, spec member.DmRequestsSpec) (member.RequestPage, error)",
-        "ReadIsFollowing(ctx context.Context, actor auth.Authority, spec member.IsFollowingSpec) (bool, error)",
-        "ReadMyRequests(ctx context.Context, actor auth.Authority, spec member.MyRequestsSpec) (member.RequestPage, error)"
-      ],
-      "owner": "MEM02",
-      "provider": "MEM04"
-    },
-    {
-      "name": "member.SocialWriteRepository",
-      "methods": [
-        "LockCreateRequest(ctx context.Context, actorID string, spec member.CreateRequestSpec) (member.CreateRequestState, error)",
-        "StoreCreateRequest(ctx context.Context, write member.CreateRequestWrite) (member.RequestView, error)",
-        "LockDecideRequest(ctx context.Context, spec member.DecideRequestSpec) (member.DecideRequestState, error)",
-        "StoreDecideRequest(ctx context.Context, write member.DecideRequestWrite) (member.RequestView, error)",
-        "LockFollowPerson(ctx context.Context, actorID string, spec member.FollowPersonSpec) (member.FollowPersonState, error)",
-        "StoreFollowPerson(ctx context.Context, write member.FollowPersonWrite) (product.CommandReceipt, error)",
-        "LockUnfollowPerson(ctx context.Context, actorID string, spec member.UnfollowPersonSpec) (member.UnfollowPersonState, error)",
-        "StoreUnfollowPerson(ctx context.Context, write member.UnfollowPersonWrite) (product.CommandReceipt, error)"
-      ],
-      "owner": "MEM02",
-      "provider": "MEM04"
-    },
-    {
       "name": "notification.NotificationReadRepository",
       "methods": [
         "ReadMyNotifications(ctx context.Context, actor auth.Authority, spec notification.MyNotificationsSpec) (notification.NotificationConnection, error)",
@@ -23667,10 +21369,8 @@
     {
       "name": "quest.ProductBatchRepository",
       "methods": [
-        "ReadBatchQuests(ctx context.Context, actor auth.Authority, keys []quest.IDKey) ([]product.BatchResult[quest.QuestView],error)",
         "ReadBatchParticipants(ctx context.Context, actor auth.Authority, keys []quest.ParticipantsKey) ([]product.BatchResult[quest.ParticipantList],error)",
         "ReadBatchQuestHexes(ctx context.Context, actor auth.Authority, keys []quest.QuestHexesKey) ([]product.BatchResult[quest.HexList],error)",
-        "ReadBatchQuestRegions(ctx context.Context, actor auth.Authority, keys []quest.QuestRegionsKey) ([]product.BatchResult[quest.RegionIDList],error)",
         "ReadBatchArcs(ctx context.Context, actor auth.Authority, keys []quest.IDKey) ([]product.BatchResult[quest.QuestArcView],error)",
         "ReadBatchArcQuests(ctx context.Context, actor auth.Authority, keys []quest.ArcQuestsKey) ([]product.BatchResult[quest.QuestList],error)",
         "ReadBatchDelivery(ctx context.Context, actor auth.Authority, keys []quest.IDKey) ([]product.BatchResult[quest.QuestDiscordDeliveryView],error)",
@@ -23789,13 +21489,8 @@
     {
       "name": "spatial.MapReadRepository",
       "methods": [
-        "ReadHex(ctx context.Context, actor auth.Authority, spec spatial.HexSpec) (*spatial.HexView, error)",
-        "ReadHexHistory(ctx context.Context, actor auth.Authority, spec spatial.HexHistorySpec) (spatial.HexChangePage, error)",
         "ReadMap(ctx context.Context, actor auth.Authority, spec spatial.MapSpec) (*spatial.MapView, error)",
-        "ReadMapView(ctx context.Context, actor auth.Authority, spec spatial.MapViewSpec) (*spatial.MapViewView, error)",
-        "ReadMaps(ctx context.Context, actor auth.Authority, spec spatial.MapsSpec) ([]spatial.MapView, error)",
-        "ReadPoisForHex(ctx context.Context, actor auth.Authority, spec spatial.PoisForHexSpec) (spatial.PoiPage, error)",
-        "ReadRecentHexChanges(ctx context.Context, actor auth.Authority, spec spatial.RecentHexChangesSpec) (spatial.HexChangePage, error)"
+        "ReadMaps(ctx context.Context, actor auth.Authority, spec spatial.MapsSpec) ([]spatial.MapView, error)"
       ],
       "owner": "SPA02",
       "provider": "SPA04"
@@ -23807,22 +21502,12 @@
         "StoreCreateMap(ctx context.Context, write spatial.CreateMapWrite) (spatial.MapView, error)",
         "LockUpdateMap(ctx context.Context, spec spatial.UpdateMapSpec) (spatial.UpdateMapState, error)",
         "StoreUpdateMap(ctx context.Context, write spatial.UpdateMapWrite) (spatial.MapView, error)",
-        "LockLinkHexEntry(ctx context.Context, spec spatial.LinkHexEntrySpec) (spatial.LinkHexEntryState, error)",
-        "StoreLinkHexEntry(ctx context.Context, write spatial.LinkHexEntryWrite) (spatial.HexEntryLinkView, error)",
         "LockLinkPointcrawlEntry(ctx context.Context, spec spatial.LinkPointcrawlEntrySpec) (spatial.LinkPointcrawlEntryState, error)",
         "StoreLinkPointcrawlEntry(ctx context.Context, write spatial.LinkPointcrawlEntryWrite) (spatial.PointcrawlEntryLinkView, error)",
-        "LockSetHexEdge(ctx context.Context, spec spatial.SetHexEdgeSpec) (spatial.SetHexEdgeState, error)",
-        "StoreSetHexEdge(ctx context.Context, write spatial.SetHexEdgeWrite) (spatial.HexEdgeView, error)",
         "LockSetPointcrawlEdge(ctx context.Context, spec spatial.SetPointcrawlEdgeSpec) (spatial.SetPointcrawlEdgeState, error)",
         "StoreSetPointcrawlEdge(ctx context.Context, write spatial.SetPointcrawlEdgeWrite) (spatial.PointcrawlEdgeView, error)",
-        "LockUnlinkHexEntry(ctx context.Context, spec spatial.UnlinkHexEntrySpec) (spatial.UnlinkHexEntryState, error)",
-        "StoreUnlinkHexEntry(ctx context.Context, write spatial.UnlinkHexEntryWrite) (product.CommandReceipt, error)",
         "LockUnlinkPointcrawlEntry(ctx context.Context, spec spatial.UnlinkPointcrawlEntrySpec) (spatial.UnlinkPointcrawlEntryState, error)",
         "StoreUnlinkPointcrawlEntry(ctx context.Context, write spatial.UnlinkPointcrawlEntryWrite) (product.CommandReceipt, error)",
-        "LockUpdateHex(ctx context.Context, spec spatial.UpdateHexSpec) (spatial.UpdateHexState, error)",
-        "StoreUpdateHex(ctx context.Context, write spatial.UpdateHexWrite) (spatial.HexView, error)",
-        "LockUpsertPoi(ctx context.Context, spec spatial.UpsertPoiSpec) (spatial.UpsertPoiState, error)",
-        "StoreUpsertPoi(ctx context.Context, write spatial.UpsertPoiWrite) (spatial.PoiView, error)",
         "LockUpsertPointcrawlNode(ctx context.Context, spec spatial.UpsertPointcrawlNodeSpec) (spatial.UpsertPointcrawlNodeState, error)",
         "StoreUpsertPointcrawlNode(ctx context.Context, write spatial.UpsertPointcrawlNodeWrite) (spatial.PointcrawlNodeView, error)",
         "LockSetPointcrawlNodeState(ctx context.Context, spec spatial.SetPointcrawlNodeStateSpec) (spatial.SetPointcrawlNodeStateState, error)",
@@ -23835,13 +21520,9 @@
     {
       "name": "spatial.ProductBatchRepository",
       "methods": [
-        "ReadBatchMapHexes(ctx context.Context, actor auth.Authority, keys []spatial.MapHexesKey) ([]product.BatchResult[spatial.HexList],error)",
-        "ReadBatchMapEdges(ctx context.Context, actor auth.Authority, keys []spatial.MapEdgesKey) ([]product.BatchResult[spatial.EdgeList],error)",
         "ReadBatchMapNodes(ctx context.Context, actor auth.Authority, keys []spatial.MapNodesKey) ([]product.BatchResult[spatial.NodeList],error)",
         "ReadBatchMapNodeEdges(ctx context.Context, actor auth.Authority, keys []spatial.MapNodeEdgesKey) ([]product.BatchResult[spatial.NodeEdgeList],error)",
-        "ReadBatchHexLinks(ctx context.Context, actor auth.Authority, keys []spatial.HexLinksKey) ([]product.BatchResult[spatial.HexLinkList],error)",
-        "ReadBatchNodeLinks(ctx context.Context, actor auth.Authority, keys []spatial.NodeLinksKey) ([]product.BatchResult[spatial.NodeLinkList],error)",
-        "ReadBatchPOIs(ctx context.Context, actor auth.Authority, keys []spatial.POIsKey) ([]product.BatchResult[spatial.PoiList],error)"
+        "ReadBatchNodeLinks(ctx context.Context, actor auth.Authority, keys []spatial.NodeLinksKey) ([]product.BatchResult[spatial.NodeLinkList],error)"
       ],
       "owner": "SPA02",
       "provider": "SPA04"
@@ -24037,7 +21718,7 @@
     {
       "package": "character",
       "name": "NewProductCommands",
-      "signature": "NewProductCommands(runner uow.Runner[character.ProductCommandRepos], clock product.Clock, ids product.IDGenerator, ddb character.DdbClient, claims *character.RewardClaims, preflight character.DdbPreflightReader, replay idempotency.CompletedReceiptReader, authority auth.AuthorityResolver) (*character.ProductCommands,error)",
+      "signature": "NewProductCommands(runner uow.Runner[character.ProductCommandRepos], clock product.Clock, ids product.IDGenerator) (*character.ProductCommands,error)",
       "provider": "CHA06",
       "callers": ["W02"],
       "nil_rule": "return configuration error on any required nil dependency; never fake empty successful implementation"
@@ -24180,14 +21861,6 @@
     },
     {
       "package": "quest",
-      "name": "NewTagNormalizer",
-      "signature": "NewTagNormalizer(db jobs.SQLExecutor) (*quest.LiveTagNormalizer,error)",
-      "provider": "Q08",
-      "callers": ["W01", "QUE04"],
-      "nil_rule": "nil executor rejected; command binding uses exact pgx.Tx; query binding uses task-owned snapshot executor; Go FoldKey sole casefold interpreter"
-    },
-    {
-      "package": "quest",
       "name": "NewTagReadTaskRunner",
       "signature": "NewTagReadTaskRunner(pool *db.Pool) (*quest.PostgresTagReadTasks,error)",
       "provider": "QUE04",
@@ -24211,44 +21884,12 @@
       "nil_rule": "nil dependencies reject; clone client before installing bounded same-host redirect and public-address rules; no mutation of supplied client"
     },
     {
-      "package": "idempotency",
-      "name": "NewCompletedReceiptReader",
-      "signature": "NewCompletedReceiptReader(db dbgen.DBTX) (*idempotency.CompletedReceiptStore,error)",
-      "provider": "P03",
-      "callers": ["W02"],
-      "nil_rule": "nil DB rejects; pure pool-backed completed-receipt lookup only"
-    },
-    {
       "package": "auth",
       "name": "NewAuthorityWithOwner",
       "signature": "NewAuthorityWithOwner(memberID string, roles []auth.Role, status, dmStatus, handle, configuredOwnerID string) (auth.Authority,error)",
       "provider": "P05",
       "callers": ["P06"],
       "nil_rule": "Member must resolve active; configured owner comes only from validated immutable startup configuration, never Claims; compare canonical member UUID equality"
-    },
-    {
-      "package": "worker",
-      "name": "NewScheduler",
-      "signature": "NewScheduler(store worker.ScheduledEnqueuer, clock product.Clock, registry observations.ScheduleRegistry) (*worker.Scheduler,error)",
-      "provider": "WK01",
-      "callers": ["WK04"],
-      "nil_rule": "Required nil dependency rejects construction; empty webhook URL creates explicit unconfigured sender whose Send returns configuration failure; no silent no-op"
-    },
-    {
-      "package": "worker",
-      "name": "NewScheduleRegistry",
-      "signature": "NewScheduleRegistry() observations.ScheduleRegistry",
-      "provider": "WK01",
-      "callers": ["WK04", "WD01"],
-      "nil_rule": "Required nil dependency rejects construction; empty webhook URL creates explicit unconfigured sender whose Send returns configuration failure; no silent no-op"
-    },
-    {
-      "package": "worker",
-      "name": "NewSchemaGate",
-      "signature": "NewSchemaGate(min,max int64) (*worker.SchemaGate,error)",
-      "provider": "WK03",
-      "callers": ["WK04", "WD01", "W02"],
-      "nil_rule": "Required nil dependency rejects construction; empty webhook URL creates explicit unconfigured sender whose Send returns configuration failure; no silent no-op"
     },
     {
       "package": "worker",
@@ -24264,38 +21905,6 @@
       "signature": "NewExecutionGate(pool *pgxpool.Pool, clock product.Clock) (*worker.AdvisoryExecutionGate,error)",
       "provider": "WK05",
       "callers": ["WK04"],
-      "nil_rule": "Required nil dependency rejects construction; empty webhook URL creates explicit unconfigured sender whose Send returns configuration failure; no silent no-op"
-    },
-    {
-      "package": "observations",
-      "name": "NewPostgres",
-      "signature": "NewPostgres(db dbgen.DBTX) (*observations.Postgres,error)",
-      "provider": "OB02",
-      "callers": ["W02", "WK04", "WD01"],
-      "nil_rule": "Required nil dependency rejects construction; empty webhook URL creates explicit unconfigured sender whose Send returns configuration failure; no silent no-op"
-    },
-    {
-      "package": "observations",
-      "name": "NewWatchdog",
-      "signature": "NewWatchdog(store observations.ObservationStore, alerts observations.TransitionWriter, webhook observations.WebhookSender, outage observations.DBOutageMonitor, registry observations.ScheduleRegistry, clock product.Clock) (*observations.Watchdog,error)",
-      "provider": "OB04",
-      "callers": ["WD01"],
-      "nil_rule": "Required nil dependency rejects construction; empty webhook URL creates explicit unconfigured sender whose Send returns configuration failure; no silent no-op"
-    },
-    {
-      "package": "observations",
-      "name": "NewDiscordWebhook",
-      "signature": "NewDiscordWebhook(url string, client *http.Client) (*observations.DiscordWebhook,error)",
-      "provider": "OB05",
-      "callers": ["WK04", "WD01"],
-      "nil_rule": "Required nil dependency rejects construction; empty webhook URL creates explicit unconfigured sender whose Send returns configuration failure; no silent no-op"
-    },
-    {
-      "package": "observations",
-      "name": "NewDBOutageMonitor",
-      "signature": "NewDBOutageMonitor() *observations.EphemeralOutageMonitor",
-      "provider": "OB06",
-      "callers": ["WD01"],
       "nil_rule": "Required nil dependency rejects construction; empty webhook URL creates explicit unconfigured sender whose Send returns configuration failure; no silent no-op"
     },
     {
@@ -24340,19 +21949,19 @@
     },
     {
       "package": "jobs",
-      "name": "NewPostgresStoreWithOptions",
-      "signature": "NewPostgresStoreWithOptions(pool *pgxpool.Pool, opts jobs.StoreOptions) (*jobs.PostgresStore,error)",
+      "name": "NewPostgresStore",
+      "signature": "NewPostgresStore(pool *pgxpool.Pool) *jobs.PostgresStore",
       "provider": "J01",
       "callers": ["W02", "WK04", "LEGJ-03", "LEGJ-04", "LEGJ-05", "LEGJ-06", "LEGJ-07"],
-      "nil_rule": "pool/Gate/Observer all required; old no-options NewPostgresStore removed; no implicit factory/global/test bypass"
+      "nil_rule": "stores the supplied pool and its sqlc queries; constructor performs no nil validation"
     },
     {
       "package": "jobs",
-      "name": "NewFromTx",
-      "signature": "NewFromTx(tx pgx.Tx, opts jobs.StoreOptions) (*jobs.PostgresStore,error)",
+      "name": "NewFromQueries",
+      "signature": "NewFromQueries(q *dbgen.Queries) *jobs.PostgresStore",
       "provider": "J01",
       "callers": ["W01", "LEGJ-02"],
-      "nil_rule": "tx/Gate/Observer required; stores exact tx executor for gate/observer/sqlc; Enqueue allowed; Claim/Renew/Complete/Transaction reject transaction-bound store without pool; never begin/commit nested tx"
+      "nil_rule": "stores the supplied queries without a pool; lease operations requiring Transaction reject this store"
     },
     {
       "package": "agent",
@@ -24369,22 +21978,6 @@
       "provider": "DB01",
       "callers": ["W01", "W02", "LEGJ-03", "LEGJ-04", "LEGJ-06", "LEGJ-08"],
       "nil_rule": "pool/bind required; Do starts tx, binding error rolls back before callback; callback nil commits otherwise rolls back; preserves uow.Runner interface, no nested commit or panic fallback"
-    },
-    {
-      "package": "quest",
-      "name": "NewPostgresRepository",
-      "signature": "NewPostgresRepository(tx pgx.Tx, opts jobs.StoreOptions) (quest.Repository,error)",
-      "provider": "LEGJ-02",
-      "callers": ["W02", "LEGJ-04", "LEGJ-06", "LEGJ-08"],
-      "nil_rule": "tx/options required; wraps exact tx sqlc and checked jobs.NewFromTx; no connection acquisition/commit, old q-only constructor removed"
-    },
-    {
-      "package": "observations",
-      "name": "NewTransitionCoordinator",
-      "signature": "NewTransitionCoordinator(runner uow.Runner[observations.TransitionRepos]) (*observations.TransitionCoordinator,error)",
-      "provider": "OB02",
-      "callers": ["WD01"],
-      "nil_rule": "nil runner rejects; WD01 uses error-returning db.NewProductRunner factory binding NewPostgres(tx)/jobs.NewFromTx(tx,opts); single commit authority"
     },
     {
       "package": "db",
@@ -24416,7 +22009,7 @@
       "signature": "NewRepository(tx pgx.Tx) (idempotency.Repository,error)",
       "provider": "P03",
       "callers": ["W01"],
-      "nil_rule": "nil transaction rejects; require the current business pgx.Tx; return a private concrete store through idempotency.Repository; never acquire a pool connection, open a transaction or commit/rollback. CompletedReceiptReader remains the separate unchanged pool-backed read-only surface."
+      "nil_rule": "nil transaction rejects; require the current business pgx.Tx; return a private concrete store through idempotency.Repository; never acquire a pool connection, open a transaction or commit/rollback."
     },
     {
       "package": "notification",
@@ -24439,7 +22032,6 @@
     "member": {
       "Member": "MemberWriteRepository",
       "Reference": "ReferenceWriteRepository",
-      "Social": "SocialWriteRepository",
       "Policy": "*auth.Policy",
       "Authority": "auth.AuthorityResolver",
       "Replay": "idempotency.Repository",
@@ -24499,7 +22091,6 @@
       "Brief": "document.BriefWriter",
       "Summaries": "document.SummaryWriter",
       "Places": "spatial.PlaceReader",
-      "Jobs": "jobs.Writer",
       "Tags": "quest.TagNormalizer",
       "Withdrawals": "character.QuestWithdrawalWriter",
       "Rewards": "character.QuestRewardWriter",
@@ -24529,7 +22120,6 @@
     "member": {
       "Member": "MemberReadRepository",
       "Reference": "ReferenceReadRepository",
-      "Social": "SocialReadRepository",
       "Batch": "ProductBatchRepository"
     },
     "document": {
@@ -24540,13 +22130,11 @@
       "Map": "MapReadRepository",
       "Region": "RegionReadRepository",
       "Time": "TimeReadRepository",
-      "Batch": "ProductBatchRepository",
-      "TimeBatch": "TimeBatchReadRepository"
+      "Batch": "ProductBatchRepository"
     },
     "character": {
       "Character": "CharacterReadRepository",
-      "Reference": "ReferenceReadRepository",
-      "Batch": "ProductBatchRepository"
+      "Reference": "ReferenceReadRepository"
     },
     "quest": {
       "Arc": "ArcReadRepository",
@@ -24800,24 +22388,6 @@
       "spec_owner": "SPA01"
     },
     {
-      "id": "LOCK-member-CreateRequest",
-      "signature": "LockCreateRequest(ctx context.Context, actorID string, spec member.CreateRequestSpec) (member.CreateRequestState, error)",
-      "interface": "member.SocialWriteRepository",
-      "provider": "MEM04",
-      "callers": ["MEM06"],
-      "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
-      "spec_owner": "MEM01"
-    },
-    {
-      "id": "STORE-member-CreateRequest",
-      "signature": "StoreCreateRequest(ctx context.Context, write member.CreateRequestWrite) (member.RequestView, error)",
-      "interface": "member.SocialWriteRepository",
-      "provider": "MEM04",
-      "callers": ["MEM06"],
-      "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
-      "spec_owner": "MEM01"
-    },
-    {
       "id": "LOCK-spatial-CreateTimeAnchor",
       "signature": "LockCreateTimeAnchor(ctx context.Context, spec spatial.CreateTimeAnchorSpec) (spatial.CreateTimeAnchorState, error)",
       "interface": "spatial.TimeWriteRepository",
@@ -24848,24 +22418,6 @@
       "id": "STORE-member-DecideDmProfileVerification",
       "signature": "StoreDecideDmProfileVerification(ctx context.Context, write member.DecideDmProfileVerificationWrite) (member.DmProfileView, error)",
       "interface": "member.MemberWriteRepository",
-      "provider": "MEM04",
-      "callers": ["MEM06"],
-      "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
-      "spec_owner": "MEM01"
-    },
-    {
-      "id": "LOCK-member-DecideRequest",
-      "signature": "LockDecideRequest(ctx context.Context, spec member.DecideRequestSpec) (member.DecideRequestState, error)",
-      "interface": "member.SocialWriteRepository",
-      "provider": "MEM04",
-      "callers": ["MEM06"],
-      "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
-      "spec_owner": "MEM01"
-    },
-    {
-      "id": "STORE-member-DecideRequest",
-      "signature": "StoreDecideRequest(ctx context.Context, write member.DecideRequestWrite) (member.RequestView, error)",
-      "interface": "member.SocialWriteRepository",
       "provider": "MEM04",
       "callers": ["MEM06"],
       "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
@@ -24998,24 +22550,6 @@
       "spec_owner": "DOC01"
     },
     {
-      "id": "LOCK-member-FollowPerson",
-      "signature": "LockFollowPerson(ctx context.Context, actorID string, spec member.FollowPersonSpec) (member.FollowPersonState, error)",
-      "interface": "member.SocialWriteRepository",
-      "provider": "MEM04",
-      "callers": ["MEM06"],
-      "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
-      "spec_owner": "MEM01"
-    },
-    {
-      "id": "STORE-member-FollowPerson",
-      "signature": "StoreFollowPerson(ctx context.Context, write member.FollowPersonWrite) (product.CommandReceipt, error)",
-      "interface": "member.SocialWriteRepository",
-      "provider": "MEM04",
-      "callers": ["MEM06"],
-      "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
-      "spec_owner": "MEM01"
-    },
-    {
       "id": "LOCK-member-GrantUnlock",
       "signature": "LockGrantUnlock(ctx context.Context, spec member.GrantUnlockSpec) (member.GrantUnlockState, error)",
       "interface": "member.MemberWriteRepository",
@@ -25032,24 +22566,6 @@
       "callers": ["MEM06"],
       "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
       "spec_owner": "MEM01"
-    },
-    {
-      "id": "LOCK-spatial-LinkHexEntry",
-      "signature": "LockLinkHexEntry(ctx context.Context, spec spatial.LinkHexEntrySpec) (spatial.LinkHexEntryState, error)",
-      "interface": "spatial.MapWriteRepository",
-      "provider": "SPA04",
-      "callers": ["SPA06"],
-      "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
-      "spec_owner": "SPA01"
-    },
-    {
-      "id": "STORE-spatial-LinkHexEntry",
-      "signature": "StoreLinkHexEntry(ctx context.Context, write spatial.LinkHexEntryWrite) (spatial.HexEntryLinkView, error)",
-      "interface": "spatial.MapWriteRepository",
-      "provider": "SPA04",
-      "callers": ["SPA06"],
-      "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
-      "spec_owner": "SPA01"
     },
     {
       "id": "LOCK-spatial-LinkPointcrawlEntry",
@@ -25339,24 +22855,6 @@
       "spec_owner": "DOC01"
     },
     {
-      "id": "LOCK-spatial-SetHexEdge",
-      "signature": "LockSetHexEdge(ctx context.Context, spec spatial.SetHexEdgeSpec) (spatial.SetHexEdgeState, error)",
-      "interface": "spatial.MapWriteRepository",
-      "provider": "SPA04",
-      "callers": ["SPA06"],
-      "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
-      "spec_owner": "SPA01"
-    },
-    {
-      "id": "STORE-spatial-SetHexEdge",
-      "signature": "StoreSetHexEdge(ctx context.Context, write spatial.SetHexEdgeWrite) (spatial.HexEdgeView, error)",
-      "interface": "spatial.MapWriteRepository",
-      "provider": "SPA04",
-      "callers": ["SPA06"],
-      "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
-      "spec_owner": "SPA01"
-    },
-    {
       "id": "LOCK-member-SetMemberRoles",
       "signature": "LockSetMemberRoles(ctx context.Context, spec member.SetMemberRolesSpec) (member.SetMemberRolesState, error)",
       "interface": "member.MemberWriteRepository",
@@ -25591,42 +23089,6 @@
       "spec_owner": "SPA01"
     },
     {
-      "id": "LOCK-member-UnfollowPerson",
-      "signature": "LockUnfollowPerson(ctx context.Context, actorID string, spec member.UnfollowPersonSpec) (member.UnfollowPersonState, error)",
-      "interface": "member.SocialWriteRepository",
-      "provider": "MEM04",
-      "callers": ["MEM06"],
-      "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
-      "spec_owner": "MEM01"
-    },
-    {
-      "id": "STORE-member-UnfollowPerson",
-      "signature": "StoreUnfollowPerson(ctx context.Context, write member.UnfollowPersonWrite) (product.CommandReceipt, error)",
-      "interface": "member.SocialWriteRepository",
-      "provider": "MEM04",
-      "callers": ["MEM06"],
-      "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
-      "spec_owner": "MEM01"
-    },
-    {
-      "id": "LOCK-spatial-UnlinkHexEntry",
-      "signature": "LockUnlinkHexEntry(ctx context.Context, spec spatial.UnlinkHexEntrySpec) (spatial.UnlinkHexEntryState, error)",
-      "interface": "spatial.MapWriteRepository",
-      "provider": "SPA04",
-      "callers": ["SPA06"],
-      "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
-      "spec_owner": "SPA01"
-    },
-    {
-      "id": "STORE-spatial-UnlinkHexEntry",
-      "signature": "StoreUnlinkHexEntry(ctx context.Context, write spatial.UnlinkHexEntryWrite) (product.CommandReceipt, error)",
-      "interface": "spatial.MapWriteRepository",
-      "provider": "SPA04",
-      "callers": ["SPA06"],
-      "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
-      "spec_owner": "SPA01"
-    },
-    {
       "id": "LOCK-spatial-UnlinkPointcrawlEntry",
       "signature": "LockUnlinkPointcrawlEntry(ctx context.Context, spec spatial.UnlinkPointcrawlEntrySpec) (spatial.UnlinkPointcrawlEntryState, error)",
       "interface": "spatial.MapWriteRepository",
@@ -25729,24 +23191,6 @@
       "id": "STORE-spatial-UpdateGameCalendar",
       "signature": "StoreUpdateGameCalendar(ctx context.Context, write spatial.UpdateGameCalendarWrite) (spatial.GameCalendarView, error)",
       "interface": "spatial.TimeWriteRepository",
-      "provider": "SPA04",
-      "callers": ["SPA06"],
-      "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
-      "spec_owner": "SPA01"
-    },
-    {
-      "id": "LOCK-spatial-UpdateHex",
-      "signature": "LockUpdateHex(ctx context.Context, spec spatial.UpdateHexSpec) (spatial.UpdateHexState, error)",
-      "interface": "spatial.MapWriteRepository",
-      "provider": "SPA04",
-      "callers": ["SPA06"],
-      "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
-      "spec_owner": "SPA01"
-    },
-    {
-      "id": "STORE-spatial-UpdateHex",
-      "signature": "StoreUpdateHex(ctx context.Context, write spatial.UpdateHexWrite) (spatial.HexView, error)",
-      "interface": "spatial.MapWriteRepository",
       "provider": "SPA04",
       "callers": ["SPA06"],
       "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
@@ -25931,24 +23375,6 @@
       "callers": ["CHA06"],
       "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
       "spec_owner": "CHA01"
-    },
-    {
-      "id": "LOCK-spatial-UpsertPoi",
-      "signature": "LockUpsertPoi(ctx context.Context, spec spatial.UpsertPoiSpec) (spatial.UpsertPoiState, error)",
-      "interface": "spatial.MapWriteRepository",
-      "provider": "SPA04",
-      "callers": ["SPA06"],
-      "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
-      "spec_owner": "SPA01"
-    },
-    {
-      "id": "STORE-spatial-UpsertPoi",
-      "signature": "StoreUpsertPoi(ctx context.Context, write spatial.UpsertPoiWrite) (spatial.PoiView, error)",
-      "interface": "spatial.MapWriteRepository",
-      "provider": "SPA04",
-      "callers": ["SPA06"],
-      "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
-      "spec_owner": "SPA01"
     },
     {
       "id": "LOCK-spatial-UpsertPointcrawlNode",
@@ -26194,15 +23620,6 @@
       "spec_owner": "SIT01"
     },
     {
-      "id": "READ-member-DmRequests",
-      "signature": "ReadDmRequests(ctx context.Context, actor auth.Authority, spec member.DmRequestsSpec) (member.RequestPage, error)",
-      "interface": "member.SocialReadRepository",
-      "provider": "MEM04",
-      "callers": ["MEM05"],
-      "transaction": "pool task connection; readonly; no shared connection/lock",
-      "spec_owner": "MEM01"
-    },
-    {
       "id": "READ-quest-DmSessionHistory",
       "signature": "ReadDmSessionHistory(ctx context.Context, actor auth.Authority, spec quest.DmSessionHistorySpec) (quest.DmSessionHistoryResult, error)",
       "interface": "quest.QuestReadRepository",
@@ -26311,24 +23728,6 @@
       "spec_owner": "SPA01"
     },
     {
-      "id": "READ-spatial-Hex",
-      "signature": "ReadHex(ctx context.Context, actor auth.Authority, spec spatial.HexSpec) (*spatial.HexView, error)",
-      "interface": "spatial.MapReadRepository",
-      "provider": "SPA04",
-      "callers": ["SPA05"],
-      "transaction": "pool task connection; readonly; no shared connection/lock",
-      "spec_owner": "SPA01"
-    },
-    {
-      "id": "READ-spatial-HexHistory",
-      "signature": "ReadHexHistory(ctx context.Context, actor auth.Authority, spec spatial.HexHistorySpec) (spatial.HexChangePage, error)",
-      "interface": "spatial.MapReadRepository",
-      "provider": "SPA04",
-      "callers": ["SPA05"],
-      "transaction": "pool task connection; readonly; no shared connection/lock",
-      "spec_owner": "SPA01"
-    },
-    {
       "id": "READ-site-Home",
       "signature": "ReadHomeCommunity(ctx context.Context, actor auth.Authority, spec site.HomeSpec) (site.CommunityStatsSnapshot, error)",
       "interface": "site.SiteReadRepository",
@@ -26347,15 +23746,6 @@
       "spec_owner": "SIT01"
     },
     {
-      "id": "READ-member-IsFollowing",
-      "signature": "ReadIsFollowing(ctx context.Context, actor auth.Authority, spec member.IsFollowingSpec) (bool, error)",
-      "interface": "member.SocialReadRepository",
-      "provider": "MEM04",
-      "callers": ["MEM05"],
-      "transaction": "pool task connection; readonly; no shared connection/lock",
-      "spec_owner": "MEM01"
-    },
-    {
       "id": "READ-document-LieutenantAssignments",
       "signature": "ReadLieutenantAssignments(ctx context.Context, actor auth.Authority, spec document.LieutenantAssignmentsSpec) (document.LieutenantPage, error)",
       "interface": "document.DocumentReadRepository",
@@ -26367,15 +23757,6 @@
     {
       "id": "READ-spatial-Map",
       "signature": "ReadMap(ctx context.Context, actor auth.Authority, spec spatial.MapSpec) (*spatial.MapView, error)",
-      "interface": "spatial.MapReadRepository",
-      "provider": "SPA04",
-      "callers": ["SPA05"],
-      "transaction": "pool task connection; readonly; no shared connection/lock",
-      "spec_owner": "SPA01"
-    },
-    {
-      "id": "READ-spatial-MapView",
-      "signature": "ReadMapView(ctx context.Context, actor auth.Authority, spec spatial.MapViewSpec) (*spatial.MapViewView, error)",
       "interface": "spatial.MapReadRepository",
       "provider": "SPA04",
       "callers": ["SPA05"],
@@ -26518,15 +23899,6 @@
       "spec_owner": "QUE01"
     },
     {
-      "id": "READ-member-MyRequests",
-      "signature": "ReadMyRequests(ctx context.Context, actor auth.Authority, spec member.MyRequestsSpec) (member.RequestPage, error)",
-      "interface": "member.SocialReadRepository",
-      "provider": "MEM04",
-      "callers": ["MEM05"],
-      "transaction": "pool task connection; readonly; no shared connection/lock",
-      "spec_owner": "MEM01"
-    },
-    {
       "id": "READ-member-MyUnlocks",
       "signature": "ReadMyUnlocks(ctx context.Context, actor auth.Authority, spec member.MyUnlocksSpec) (member.GrantSnapshot, error)",
       "interface": "member.MemberReadRepository",
@@ -26579,15 +23951,6 @@
       "callers": ["MEM05"],
       "transaction": "pool task connection; readonly; no shared connection/lock",
       "spec_owner": "MEM01"
-    },
-    {
-      "id": "READ-spatial-PoisForHex",
-      "signature": "ReadPoisForHex(ctx context.Context, actor auth.Authority, spec spatial.PoisForHexSpec) (spatial.PoiPage, error)",
-      "interface": "spatial.MapReadRepository",
-      "provider": "SPA04",
-      "callers": ["SPA05"],
-      "transaction": "pool task connection; readonly; no shared connection/lock",
-      "spec_owner": "SPA01"
     },
     {
       "id": "READ-document-PreviewBody",
@@ -26683,15 +24046,6 @@
       "id": "READ-spatial-RealDates",
       "signature": "ReadRealDates(ctx context.Context, actor auth.Authority, spec spatial.RealDatesSpec) (spatial.RealDatePage, error)",
       "interface": "spatial.TimeReadRepository",
-      "provider": "SPA04",
-      "callers": ["SPA05"],
-      "transaction": "pool task connection; readonly; no shared connection/lock",
-      "spec_owner": "SPA01"
-    },
-    {
-      "id": "READ-spatial-RecentHexChanges",
-      "signature": "ReadRecentHexChanges(ctx context.Context, actor auth.Authority, spec spatial.RecentHexChangesSpec) (spatial.HexChangePage, error)",
-      "interface": "spatial.MapReadRepository",
       "provider": "SPA04",
       "callers": ["SPA05"],
       "transaction": "pool task connection; readonly; no shared connection/lock",
@@ -26898,14 +24252,6 @@
       "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
     },
     {
-      "id": "CROSS-spatial.TimeBatchReadRepository-ReadGameDates",
-      "interface": "spatial.TimeBatchReadRepository",
-      "signature": "ReadGameDates(ctx context.Context, dates []product.Date) ([]product.BatchResult[spatial.TimeDateSnapshot],error)",
-      "provider": "SPA04",
-      "callers": ["SPA05"],
-      "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
-    },
-    {
       "id": "CROSS-document.ReferenceAudienceReader-ReadableDocumentIDs",
       "interface": "document.ReferenceAudienceReader",
       "signature": "ReadableDocumentIDs(ctx context.Context, actor auth.Authority, documentIDs []string) (map[string]bool,error)",
@@ -27086,14 +24432,6 @@
       "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
     },
     {
-      "id": "CROSS-jobs.Writer-EnqueueDesired",
-      "interface": "jobs.Writer",
-      "signature": "EnqueueDesired(ctx context.Context, questID string, desiredRevision int32, at time.Time) (string,error)",
-      "provider": "J01",
-      "callers": ["QUE06"],
-      "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
-    },
-    {
       "id": "CROSS-quest.TagNormalizer-NormalizeVocabulary",
       "interface": "quest.TagNormalizer",
       "signature": "NormalizeVocabulary(ctx context.Context, tags, genres []string) (quest.NormalizedVocabulary,error)",
@@ -27126,27 +24464,11 @@
       "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
     },
     {
-      "id": "CROSS-jobs.CompatibilityGate-Check",
-      "interface": "jobs.CompatibilityGate",
-      "signature": "Check(ctx context.Context, db jobs.SQLExecutor) error",
-      "provider": "WK03",
-      "callers": ["J01", "W01", "WK01"],
-      "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
-    },
-    {
       "id": "CROSS-db.ConnectionRunnerFactory-Run",
       "interface": "db.ConnectionRunnerFactory",
       "signature": "Run(ctx context.Context, connection *pgxpool.Conn, fn func(pgx.Tx) error) error",
       "provider": "DB01",
       "callers": ["SPA06", "WK02"],
-      "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
-    },
-    {
-      "id": "CROSS-jobs.LifecycleObserver-Record",
-      "interface": "jobs.LifecycleObserver",
-      "signature": "Record(ctx context.Context, db jobs.SQLExecutor, fact jobs.LifecycleFact) error",
-      "provider": "OB02",
-      "callers": ["J01"],
       "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
     },
     {
@@ -27166,14 +24488,6 @@
       "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
     },
     {
-      "id": "CROSS-worker.Scheduler-EnsureSlots",
-      "interface": "worker.Scheduler",
-      "signature": "EnsureSlots(ctx context.Context, from,to time.Time) (int32,error)",
-      "provider": "WK01",
-      "callers": ["WK04"],
-      "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
-    },
-    {
       "id": "CROSS-worker.TimeFillWriter-FillFuture",
       "interface": "worker.TimeFillWriter",
       "signature": "FillFuture(ctx context.Context, scope jobs.ExecutionScope, from product.Date, days int32) (int32,error)",
@@ -27187,78 +24501,6 @@
       "signature": "Check(ctx context.Context, scope jobs.ExecutionScope) (worker.ConsistencyReport,error)",
       "provider": "WK02",
       "callers": ["WK02"],
-      "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
-    },
-    {
-      "id": "CROSS-observations.ObservationStore-RecordLifecycle",
-      "interface": "observations.ObservationStore",
-      "signature": "RecordLifecycle(ctx context.Context, db jobs.SQLExecutor, fact jobs.LifecycleFact) error",
-      "provider": "OB02",
-      "callers": ["J01"],
-      "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
-    },
-    {
-      "id": "CROSS-observations.ObservationStore-ListScheduled",
-      "interface": "observations.ObservationStore",
-      "signature": "ListScheduled(ctx context.Context, actor auth.Authority, page product.Page) ([]observations.ScheduledStatus,error)",
-      "provider": "OB02",
-      "callers": ["SIT05"],
-      "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
-    },
-    {
-      "id": "CROSS-observations.ObservationStore-EvaluateOverdue",
-      "interface": "observations.ObservationStore",
-      "signature": "EvaluateOverdue(ctx context.Context, now time.Time, registry []observations.ScheduleSpec) ([]observations.AlertTransition,error)",
-      "provider": "OB02",
-      "callers": ["OB04"],
-      "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
-    },
-    {
-      "id": "CROSS-observations.ObservationStore-PersistTransition",
-      "interface": "observations.ObservationStore",
-      "signature": "PersistTransition(ctx context.Context, db jobs.SQLExecutor, transition observations.AlertTransition) error",
-      "provider": "OB02",
-      "callers": ["OB04"],
-      "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
-    },
-    {
-      "id": "CROSS-observations.WebhookSender-Send",
-      "interface": "observations.WebhookSender",
-      "signature": "Send(ctx context.Context, message observations.AlertMessage) error",
-      "provider": "OB05",
-      "callers": ["OB04", "OB05"],
-      "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
-    },
-    {
-      "id": "CROSS-observations.DBOutageMonitor-ShouldSend",
-      "interface": "observations.DBOutageMonitor",
-      "signature": "ShouldSend(now time.Time) bool",
-      "provider": "OB06",
-      "callers": ["OB04"],
-      "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
-    },
-    {
-      "id": "CROSS-observations.DBOutageMonitor-MarkAccepted",
-      "interface": "observations.DBOutageMonitor",
-      "signature": "MarkAccepted(now time.Time)",
-      "provider": "OB06",
-      "callers": ["OB04"],
-      "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
-    },
-    {
-      "id": "CROSS-observations.DBOutageMonitor-Reset",
-      "interface": "observations.DBOutageMonitor",
-      "signature": "Reset()",
-      "provider": "OB06",
-      "callers": ["OB04"],
-      "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
-    },
-    {
-      "id": "CROSS-observations.TransitionWriter-ApplyTransitions",
-      "interface": "observations.TransitionWriter",
-      "signature": "ApplyTransitions(ctx context.Context, transitions []observations.AlertTransition) error",
-      "provider": "OB02",
-      "callers": ["OB04"],
       "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
     },
     {
@@ -27318,43 +24560,11 @@
       "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
     },
     {
-      "id": "CROSS-idempotency.CompletedReceiptReader-LookupCompleted",
-      "interface": "idempotency.CompletedReceiptReader",
-      "signature": "LookupCompleted(ctx context.Context, actorID,operation,key,fingerprint string) (json.RawMessage,bool,error)",
-      "provider": "P03",
-      "callers": ["CHA06"],
-      "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
-    },
-    {
       "id": "CROSS-character.DdbClient-Fetch",
       "interface": "character.DdbClient",
       "signature": "Fetch(ctx context.Context, url string) (character.DdbSnapshot,character.DdbProvenance,error)",
       "provider": "C08",
       "callers": ["CHA06"],
-      "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
-    },
-    {
-      "id": "CROSS-jobs.SQLExecutor-Exec",
-      "interface": "jobs.SQLExecutor",
-      "signature": "Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag,error)",
-      "provider": "J02",
-      "callers": ["WK03", "OB02"],
-      "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
-    },
-    {
-      "id": "CROSS-jobs.SQLExecutor-Query",
-      "interface": "jobs.SQLExecutor",
-      "signature": "Query(ctx context.Context, sql string, args ...any) (pgx.Rows,error)",
-      "provider": "J02",
-      "callers": ["WK03", "OB02"],
-      "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
-    },
-    {
-      "id": "CROSS-jobs.SQLExecutor-QueryRow",
-      "interface": "jobs.SQLExecutor",
-      "signature": "QueryRow(ctx context.Context, sql string, args ...any) pgx.Row",
-      "provider": "J02",
-      "callers": ["WK03", "OB02"],
       "transaction": "current business Tx when persistence/recipient/job; remote Fetch/Send outside Tx; read query ownpooltask"
     },
     {
@@ -27491,22 +24701,6 @@
       "transaction": "one task connection per batch/group/chunk, no shared resolver transaction; document predicate currentAuthority"
     },
     {
-      "id": "BATCH-Characters",
-      "interface": "character.ProductBatchReader",
-      "signature": "BatchCharacters(ctx context.Context, actor auth.Authority, keys []character.IDKey) ([]product.BatchResult[character.CharacterView],error)",
-      "provider": "CHA05",
-      "callers": ["G02"],
-      "transaction": "one task connection per batch/group/chunk, no shared resolver transaction; document predicate currentAuthority"
-    },
-    {
-      "id": "BATCH-Quests",
-      "interface": "quest.ProductBatchReader",
-      "signature": "BatchQuests(ctx context.Context, actor auth.Authority, keys []quest.IDKey) ([]product.BatchResult[quest.QuestView],error)",
-      "provider": "QUE05",
-      "callers": ["G02"],
-      "transaction": "one task connection per batch/group/chunk, no shared resolver transaction; document predicate currentAuthority"
-    },
-    {
       "id": "BATCH-Participants",
       "interface": "quest.ProductBatchReader",
       "signature": "BatchParticipants(ctx context.Context, actor auth.Authority, keys []quest.ParticipantsKey) ([]product.BatchResult[quest.ParticipantList],error)",
@@ -27518,14 +24712,6 @@
       "id": "BATCH-QuestPointcrawlLinks",
       "interface": "quest.ProductBatchReader",
       "signature": "BatchQuestPointcrawlLinks(ctx context.Context, actor auth.Authority, keys []quest.QuestHexesKey) ([]product.BatchResult[quest.HexList],error)",
-      "provider": "QUE05",
-      "callers": ["G02"],
-      "transaction": "one task connection per batch/group/chunk, no shared resolver transaction; document predicate currentAuthority"
-    },
-    {
-      "id": "BATCH-QuestRegions",
-      "interface": "quest.ProductBatchReader",
-      "signature": "BatchQuestRegions(ctx context.Context, actor auth.Authority, keys []quest.QuestRegionsKey) ([]product.BatchResult[quest.RegionIDList],error)",
       "provider": "QUE05",
       "callers": ["G02"],
       "transaction": "one task connection per batch/group/chunk, no shared resolver transaction; document predicate currentAuthority"
@@ -27555,22 +24741,6 @@
       "transaction": "one task connection per batch/group/chunk, no shared resolver transaction; document predicate currentAuthority"
     },
     {
-      "id": "BATCH-MapHexes",
-      "interface": "spatial.ProductBatchReader",
-      "signature": "BatchMapHexes(ctx context.Context, actor auth.Authority, keys []spatial.MapHexesKey) ([]product.BatchResult[spatial.HexList],error)",
-      "provider": "SPA05",
-      "callers": ["G02"],
-      "transaction": "one task connection per batch/group/chunk, no shared resolver transaction; document predicate currentAuthority"
-    },
-    {
-      "id": "BATCH-MapEdges",
-      "interface": "spatial.ProductBatchReader",
-      "signature": "BatchMapEdges(ctx context.Context, actor auth.Authority, keys []spatial.MapEdgesKey) ([]product.BatchResult[spatial.EdgeList],error)",
-      "provider": "SPA05",
-      "callers": ["G02"],
-      "transaction": "one task connection per batch/group/chunk, no shared resolver transaction; document predicate currentAuthority"
-    },
-    {
       "id": "BATCH-MapNodes",
       "interface": "spatial.ProductBatchReader",
       "signature": "BatchMapNodes(ctx context.Context, actor auth.Authority, keys []spatial.MapNodesKey) ([]product.BatchResult[spatial.NodeList],error)",
@@ -27587,25 +24757,9 @@
       "transaction": "one task connection per batch/group/chunk, no shared resolver transaction; document predicate currentAuthority"
     },
     {
-      "id": "BATCH-HexLinks",
-      "interface": "spatial.ProductBatchReader",
-      "signature": "BatchHexLinks(ctx context.Context, actor auth.Authority, keys []spatial.HexLinksKey) ([]product.BatchResult[spatial.HexLinkList],error)",
-      "provider": "SPA05",
-      "callers": ["G02"],
-      "transaction": "one task connection per batch/group/chunk, no shared resolver transaction; document predicate currentAuthority"
-    },
-    {
       "id": "BATCH-NodeLinks",
       "interface": "spatial.ProductBatchReader",
       "signature": "BatchNodeLinks(ctx context.Context, actor auth.Authority, keys []spatial.NodeLinksKey) ([]product.BatchResult[spatial.NodeLinkList],error)",
-      "provider": "SPA05",
-      "callers": ["G02"],
-      "transaction": "one task connection per batch/group/chunk, no shared resolver transaction; document predicate currentAuthority"
-    },
-    {
-      "id": "BATCH-POIs",
-      "interface": "spatial.ProductBatchReader",
-      "signature": "BatchPOIs(ctx context.Context, actor auth.Authority, keys []spatial.POIsKey) ([]product.BatchResult[spatial.PoiList],error)",
       "provider": "SPA05",
       "callers": ["G02"],
       "transaction": "one task connection per batch/group/chunk, no shared resolver transaction; document predicate currentAuthority"
@@ -27707,22 +24861,6 @@
       "transaction": "one set SQL task per correlated key group/chunk; no loop over root Read methods; preserve duplicates, actual normalized predicates and errors"
     },
     {
-      "id": "BATCHREPO-Characters",
-      "interface": "character.ProductBatchRepository",
-      "signature": "ReadBatchCharacters(ctx context.Context, actor auth.Authority, keys []character.IDKey) ([]product.BatchResult[character.CharacterView],error)",
-      "provider": "CHA04",
-      "callers": ["CHA05"],
-      "transaction": "one set SQL task per correlated key group/chunk; no loop over root Read methods; preserve duplicates, actual normalized predicates and errors"
-    },
-    {
-      "id": "BATCHREPO-Quests",
-      "interface": "quest.ProductBatchRepository",
-      "signature": "ReadBatchQuests(ctx context.Context, actor auth.Authority, keys []quest.IDKey) ([]product.BatchResult[quest.QuestView],error)",
-      "provider": "QUE04",
-      "callers": ["QUE05"],
-      "transaction": "one set SQL task per correlated key group/chunk; no loop over root Read methods; preserve duplicates, actual normalized predicates and errors"
-    },
-    {
       "id": "BATCHREPO-Participants",
       "interface": "quest.ProductBatchRepository",
       "signature": "ReadBatchParticipants(ctx context.Context, actor auth.Authority, keys []quest.ParticipantsKey) ([]product.BatchResult[quest.ParticipantList],error)",
@@ -27734,14 +24872,6 @@
       "id": "BATCHREPO-QuestHexes",
       "interface": "quest.ProductBatchRepository",
       "signature": "ReadBatchQuestHexes(ctx context.Context, actor auth.Authority, keys []quest.QuestHexesKey) ([]product.BatchResult[quest.HexList],error)",
-      "provider": "QUE04",
-      "callers": ["QUE05"],
-      "transaction": "one set SQL task per correlated key group/chunk; no loop over root Read methods; preserve duplicates, actual normalized predicates and errors"
-    },
-    {
-      "id": "BATCHREPO-QuestRegions",
-      "interface": "quest.ProductBatchRepository",
-      "signature": "ReadBatchQuestRegions(ctx context.Context, actor auth.Authority, keys []quest.QuestRegionsKey) ([]product.BatchResult[quest.RegionIDList],error)",
       "provider": "QUE04",
       "callers": ["QUE05"],
       "transaction": "one set SQL task per correlated key group/chunk; no loop over root Read methods; preserve duplicates, actual normalized predicates and errors"
@@ -27771,22 +24901,6 @@
       "transaction": "one set SQL task per correlated key group/chunk; no loop over root Read methods; preserve duplicates, actual normalized predicates and errors"
     },
     {
-      "id": "BATCHREPO-MapHexes",
-      "interface": "spatial.ProductBatchRepository",
-      "signature": "ReadBatchMapHexes(ctx context.Context, actor auth.Authority, keys []spatial.MapHexesKey) ([]product.BatchResult[spatial.HexList],error)",
-      "provider": "SPA04",
-      "callers": ["SPA05"],
-      "transaction": "one set SQL task per correlated key group/chunk; no loop over root Read methods; preserve duplicates, actual normalized predicates and errors"
-    },
-    {
-      "id": "BATCHREPO-MapEdges",
-      "interface": "spatial.ProductBatchRepository",
-      "signature": "ReadBatchMapEdges(ctx context.Context, actor auth.Authority, keys []spatial.MapEdgesKey) ([]product.BatchResult[spatial.EdgeList],error)",
-      "provider": "SPA04",
-      "callers": ["SPA05"],
-      "transaction": "one set SQL task per correlated key group/chunk; no loop over root Read methods; preserve duplicates, actual normalized predicates and errors"
-    },
-    {
       "id": "BATCHREPO-MapNodes",
       "interface": "spatial.ProductBatchRepository",
       "signature": "ReadBatchMapNodes(ctx context.Context, actor auth.Authority, keys []spatial.MapNodesKey) ([]product.BatchResult[spatial.NodeList],error)",
@@ -27803,25 +24917,9 @@
       "transaction": "one set SQL task per correlated key group/chunk; no loop over root Read methods; preserve duplicates, actual normalized predicates and errors"
     },
     {
-      "id": "BATCHREPO-HexLinks",
-      "interface": "spatial.ProductBatchRepository",
-      "signature": "ReadBatchHexLinks(ctx context.Context, actor auth.Authority, keys []spatial.HexLinksKey) ([]product.BatchResult[spatial.HexLinkList],error)",
-      "provider": "SPA04",
-      "callers": ["SPA05"],
-      "transaction": "one set SQL task per correlated key group/chunk; no loop over root Read methods; preserve duplicates, actual normalized predicates and errors"
-    },
-    {
       "id": "BATCHREPO-NodeLinks",
       "interface": "spatial.ProductBatchRepository",
       "signature": "ReadBatchNodeLinks(ctx context.Context, actor auth.Authority, keys []spatial.NodeLinksKey) ([]product.BatchResult[spatial.NodeLinkList],error)",
-      "provider": "SPA04",
-      "callers": ["SPA05"],
-      "transaction": "one set SQL task per correlated key group/chunk; no loop over root Read methods; preserve duplicates, actual normalized predicates and errors"
-    },
-    {
-      "id": "BATCHREPO-POIs",
-      "interface": "spatial.ProductBatchRepository",
-      "signature": "ReadBatchPOIs(ctx context.Context, actor auth.Authority, keys []spatial.POIsKey) ([]product.BatchResult[spatial.PoiList],error)",
       "provider": "SPA04",
       "callers": ["SPA05"],
       "transaction": "one set SQL task per correlated key group/chunk; no loop over root Read methods; preserve duplicates, actual normalized predicates and errors"
@@ -28073,45 +25171,13 @@
       "transaction": "pure depth12/cost100000/aliases20/text65536/response2097152/body262144"
     },
     {
-      "id": "JOBS-TRANSACTION-OBSERVATION",
-      "interface": "jobs.PostgresStore",
-      "signature": "TransactionWithObservation(ctx context.Context, fn func(*dbgen.Queries) (*jobs.LifecycleFact,error)) error",
-      "provider": "J01",
-      "callers": ["LEGJ-01"],
-      "transaction": "pool-backed only; gate same tx before callback; callback error rolls back; nonnil returned fact recorded via Observer before commit; nil fact replay no observation; observer error rolls back all callback effects"
-    },
-    {
       "id": "WORKER-RUN-SCHEDULED",
       "interface": "worker.ScheduleFunctions",
       "kind": "package_function",
-      "signature": "RunScheduled(ctx context.Context, scheduler *worker.Scheduler) error",
+      "signature": "RunScheduled(ctx context.Context, pool *pgxpool.Pool, jobStore jobs.Store)",
       "provider": "WK01",
       "callers": ["WK04"],
-      "transaction": "startup and hourly ensure; propagate errors, no swallowed enqueue"
-    },
-    {
-      "id": "WATCHDOG-CHECK-ONCE",
-      "interface": "observations.Watchdog",
-      "signature": "CheckOnce(ctx context.Context) error",
-      "provider": "OB04",
-      "callers": ["WD01"],
-      "transaction": "short database tasks/atomic condition+alert admission; direct webhook only after DB task release; no request lock"
-    },
-    {
-      "id": "ALERT-CURRENT-TRANSITION",
-      "interface": "observations.ObservationStore",
-      "signature": "CurrentTransition(ctx context.Context, db jobs.SQLExecutor, key string) (*observations.AlertTransition,error)",
-      "provider": "OB02",
-      "callers": ["OB02"],
-      "transaction": "same coordinator tx; caller holds sorted condition-key advisory locks; missing nil, SQL failure propagated"
-    },
-    {
-      "id": "JOB-INSERT-UNIQUE",
-      "interface": "jobs.UniqueEnqueuer",
-      "signature": "InsertUnique(ctx context.Context, job jobs.Job) (bool,error)",
-      "provider": "J01",
-      "callers": ["OB02"],
-      "transaction": "NewFromTx exact executor; checked insert-on-conflict-do-nothing and new-admission observation; no state reset, begin/commit or remote calls"
+      "transaction": "Calls EnqueueDailyMaintenance to admit daily jobs through EnqueueScheduled and logs admission failures. With a nonnil pool, prunes heartbeat rows older than seven days and logs pruning failures. Returns no result; it does not execute maintenance handlers."
     },
     {
       "id": "JOBS-ADMIT-EFFECT",
@@ -28242,60 +25308,6 @@
       "provider": "P01",
       "callers": ["MEM06", "DOC06", "SPA06", "CHA06", "QUE06", "SIT06", "NOT06"],
       "transaction": "pure deterministic normalized input before DB-state-dependent normalization; command-fingerprint-contract.md canonical bytes; actor/operation/key separate receipt scope"
-    },
-    {
-      "id": "WORKER-HEARTBEAT-RECORD",
-      "interface": "observations.WorkerHeartbeatWriter",
-      "signature": "RecordWorkerHeartbeat(ctx context.Context) (bool,error)",
-      "provider": "OB02",
-      "callers": ["WK04"],
-      "declaration_owner": "OB01",
-      "transaction": "pool-bound atomic immutable sample; one DB clock and minute key; duplicate validation in separate READ COMMITTED statement using returned same key; no business Tx or commit authority"
-    },
-    {
-      "id": "WORKER-HEARTBEAT-READ",
-      "interface": "observations.ObservationStore",
-      "signature": "ReadWorkerHeartbeat(ctx context.Context) (observations.WorkerHeartbeatStatus,error)",
-      "provider": "OB02",
-      "callers": ["OB04"],
-      "declaration_owner": "OB01",
-      "transaction": "one short read statement, one DB CheckedAt and four exact unique-key candidates; no history scan or business clock"
-    },
-    {
-      "id": "OPERATOR-ALERT-PROCESS-ONE",
-      "interface": "observations.DiscordWebhook",
-      "signature": "ProcessOne(ctx context.Context, store jobs.Store) (bool,error)",
-      "provider": "OB05",
-      "callers": ["WK04"],
-      "transaction": "ClaimOne operator_alert only; RunLeased cancellation/renewal joined; Send outside Tx then current fenced Succeed/Retry/Fail with original receipt; native acceptance awaits actual J01 and ROOT-GEN-SQL"
-    },
-    {
-      "id": "ALERT-CONDITION-SPECIFICATION",
-      "kind": "package_function",
-      "interface": "observations.AlertConditionFunctions",
-      "signature": "AlertConditionSpecification() json.RawMessage",
-      "provider": "OB05",
-      "callers": ["SIT04"],
-      "package": "observations",
-      "transaction": "pure fresh copy; standard encoding/json.RawMessage, never a new domain json package/type"
-    },
-    {
-      "id": "ALERT-CURRENT-CONDITION-VERSIONS",
-      "interface": "observations.ObservationStore",
-      "signature": "ReadCurrentConditionVersions(ctx context.Context, keys []string) (map[string]int64,error)",
-      "provider": "OB02",
-      "callers": ["OB04"],
-      "declaration_owner": "OB01",
-      "transaction": "Only four fixed literal keys; dedup/empty noSQL/unknown INVALID; complete map incl0 absent; canonical qualifying version read BEFORE truth; new named SQL shared by CurrentTransition actual tx."
-    },
-    {
-      "id": "OPERATOR-WEBHOOK-CONFIGURED",
-      "interface": "observations.WebhookSender",
-      "signature": "Configured() bool",
-      "provider": "OB05",
-      "callers": ["OB04"],
-      "declaration_owner": "OB01",
-      "transaction": "pure static validated URL presence, noHTTP"
     },
     {
       "id": "CROSS-auth.DocumentAudienceReader-Assess",
@@ -28500,28 +25512,6 @@
       "missing": "nil Value only valid missing nullableentity; listparentmissingNOT_FOUND; exact inputcorrespondence inclduplicates"
     },
     {
-      "name": "Characters",
-      "key": "character.IDKey",
-      "value": "character.CharacterView",
-      "registry_field": "Characters *graph.Loader[character.IDKey,character.CharacterView]",
-      "batch_signature": "BatchCharacters(ctx context.Context, actor auth.Authority, keys []character.IDKey) ([]product.BatchResult[character.CharacterView],error)",
-      "provider": "CHA05",
-      "caller": "G02",
-      "key_owner": "CHA01",
-      "missing": "nil Value only valid missing nullableentity; listparentmissingNOT_FOUND; exact inputcorrespondence inclduplicates"
-    },
-    {
-      "name": "Quests",
-      "key": "quest.IDKey",
-      "value": "quest.QuestView",
-      "registry_field": "Quests *graph.Loader[quest.IDKey,quest.QuestView]",
-      "batch_signature": "BatchQuests(ctx context.Context, actor auth.Authority, keys []quest.IDKey) ([]product.BatchResult[quest.QuestView],error)",
-      "provider": "QUE05",
-      "caller": "G02",
-      "key_owner": "QUE01",
-      "missing": "nil Value only valid missing nullableentity; listparentmissingNOT_FOUND; exact inputcorrespondence inclduplicates"
-    },
-    {
       "name": "Participants",
       "key": "quest.ParticipantsKey",
       "value": "quest.ParticipantList",
@@ -28538,17 +25528,6 @@
       "value": "quest.HexList",
       "registry_field": "QuestPointcrawlLinks *graph.Loader[quest.QuestHexesKey,quest.HexList]",
       "batch_signature": "BatchQuestPointcrawlLinks(ctx context.Context, actor auth.Authority, keys []quest.QuestHexesKey) ([]product.BatchResult[quest.HexList],error)",
-      "provider": "QUE05",
-      "caller": "G02",
-      "key_owner": "QUE01",
-      "missing": "nil Value only valid missing nullableentity; listparentmissingNOT_FOUND; exact inputcorrespondence inclduplicates"
-    },
-    {
-      "name": "QuestRegions",
-      "key": "quest.QuestRegionsKey",
-      "value": "quest.RegionIDList",
-      "registry_field": "QuestRegions *graph.Loader[quest.QuestRegionsKey,quest.RegionIDList]",
-      "batch_signature": "BatchQuestRegions(ctx context.Context, actor auth.Authority, keys []quest.QuestRegionsKey) ([]product.BatchResult[quest.RegionIDList],error)",
       "provider": "QUE05",
       "caller": "G02",
       "key_owner": "QUE01",
@@ -28588,28 +25567,6 @@
       "missing": "nil Value only valid missing nullableentity; listparentmissingNOT_FOUND; exact inputcorrespondence inclduplicates"
     },
     {
-      "name": "MapHexes",
-      "key": "spatial.MapHexesKey",
-      "value": "spatial.HexList",
-      "registry_field": "MapHexes *graph.Loader[spatial.MapHexesKey,spatial.HexList]",
-      "batch_signature": "BatchMapHexes(ctx context.Context, actor auth.Authority, keys []spatial.MapHexesKey) ([]product.BatchResult[spatial.HexList],error)",
-      "provider": "SPA05",
-      "caller": "G02",
-      "key_owner": "SPA01",
-      "missing": "nil Value only valid missing nullableentity; listparentmissingNOT_FOUND; exact inputcorrespondence inclduplicates"
-    },
-    {
-      "name": "MapEdges",
-      "key": "spatial.MapEdgesKey",
-      "value": "spatial.EdgeList",
-      "registry_field": "MapEdges *graph.Loader[spatial.MapEdgesKey,spatial.EdgeList]",
-      "batch_signature": "BatchMapEdges(ctx context.Context, actor auth.Authority, keys []spatial.MapEdgesKey) ([]product.BatchResult[spatial.EdgeList],error)",
-      "provider": "SPA05",
-      "caller": "G02",
-      "key_owner": "SPA01",
-      "missing": "nil Value only valid missing nullableentity; listparentmissingNOT_FOUND; exact inputcorrespondence inclduplicates"
-    },
-    {
       "name": "MapNodes",
       "key": "spatial.MapNodesKey",
       "value": "spatial.NodeList",
@@ -28632,33 +25589,11 @@
       "missing": "nil Value only valid missing nullableentity; listparentmissingNOT_FOUND; exact inputcorrespondence inclduplicates"
     },
     {
-      "name": "HexLinks",
-      "key": "spatial.HexLinksKey",
-      "value": "spatial.HexLinkList",
-      "registry_field": "HexLinks *graph.Loader[spatial.HexLinksKey,spatial.HexLinkList]",
-      "batch_signature": "BatchHexLinks(ctx context.Context, actor auth.Authority, keys []spatial.HexLinksKey) ([]product.BatchResult[spatial.HexLinkList],error)",
-      "provider": "SPA05",
-      "caller": "G02",
-      "key_owner": "SPA01",
-      "missing": "nil Value only valid missing nullableentity; listparentmissingNOT_FOUND; exact inputcorrespondence inclduplicates"
-    },
-    {
       "name": "NodeLinks",
       "key": "spatial.NodeLinksKey",
       "value": "spatial.NodeLinkList",
       "registry_field": "NodeLinks *graph.Loader[spatial.NodeLinksKey,spatial.NodeLinkList]",
       "batch_signature": "BatchNodeLinks(ctx context.Context, actor auth.Authority, keys []spatial.NodeLinksKey) ([]product.BatchResult[spatial.NodeLinkList],error)",
-      "provider": "SPA05",
-      "caller": "G02",
-      "key_owner": "SPA01",
-      "missing": "nil Value only valid missing nullableentity; listparentmissingNOT_FOUND; exact inputcorrespondence inclduplicates"
-    },
-    {
-      "name": "POIs",
-      "key": "spatial.POIsKey",
-      "value": "spatial.PoiList",
-      "registry_field": "POIs *graph.Loader[spatial.POIsKey,spatial.PoiList]",
-      "batch_signature": "BatchPOIs(ctx context.Context, actor auth.Authority, keys []spatial.POIsKey) ([]product.BatchResult[spatial.PoiList],error)",
       "provider": "SPA05",
       "caller": "G02",
       "key_owner": "SPA01",
@@ -28811,8 +25746,8 @@
   "additional_type_ownership": {
     "jobs.ExecutionScope": {
       "owner": "J02",
-      "path": "apps/api/internal/platform/jobs/observations.go",
-      "companion": "apps/api/internal/platform/jobs/observations_contract_test.go",
+      "path": "apps/api/internal/platform/jobs/jobs.go",
+      "companion": "apps/api/internal/platform/jobs/execution_scope_test.go",
       "kind": "struct",
       "source_pointer": "/additional_types/jobs.ExecutionScope"
     },
@@ -28821,7 +25756,7 @@
       "path": "apps/api/internal/worker/execution_gate.go",
       "companion": "apps/api/internal/worker/execution_gate_integration_test.go",
       "kind": "interface",
-      "source_pointer": "/provider_caller_seams/304"
+      "source_pointer": "/provider_caller_seams/264"
     },
     "worker.AdvisoryExecutionGate": {
       "owner": "WK05",
@@ -28851,7 +25786,7 @@
       "path": "apps/api/internal/notification/product_repository.go",
       "companion": "apps/api/internal/notification/product_repository_phase3_test.go",
       "kind": "interface",
-      "source_pointer": "/provider_caller_seams/277"
+      "source_pointer": "/provider_caller_seams/250"
     },
     "notification.RequestParties": {
       "owner": "NOT01",
@@ -28872,7 +25807,7 @@
       "path": "apps/api/internal/notification/product_repository.go",
       "companion": "apps/api/internal/notification/product_repository_phase3_test.go",
       "kind": "interface",
-      "source_pointer": "/provider_caller_seams/431"
+      "source_pointer": "/provider_caller_seams/363"
     },
     "notification.Event": {
       "owner": "NOT01",
@@ -28900,7 +25835,7 @@
       "path": "apps/api/internal/notification/product_repository.go",
       "companion": "apps/api/internal/notification/product_repository_phase3_test.go",
       "kind": "interface",
-      "source_pointer": "/provider_caller_seams/279"
+      "source_pointer": "/provider_caller_seams/252"
     },
     "notification.ProducerRepos": {
       "owner": "NOT02",
@@ -28914,7 +25849,7 @@
       "path": "apps/api/internal/notification/product_repository.go",
       "companion": "apps/api/internal/notification/product_repository_phase3_test.go",
       "kind": "interface",
-      "source_pointer": "/provider_caller_seams/281"
+      "source_pointer": "/provider_caller_seams/254"
     },
     "notification.NotificationCandidate": {
       "owner": "NOT01",
@@ -28942,21 +25877,21 @@
       "path": "apps/api/internal/notification/product_repository.go",
       "companion": "apps/api/internal/notification/product_repository_phase3_test.go",
       "kind": "interface",
-      "source_pointer": "/provider_caller_seams/280"
+      "source_pointer": "/provider_caller_seams/253"
     },
     "notification.QuestRecipientReader": {
       "owner": "NOT02",
       "path": "apps/api/internal/notification/product_repository.go",
       "companion": "apps/api/internal/notification/product_repository_phase3_test.go",
       "kind": "interface",
-      "source_pointer": "/provider_caller_seams/278"
+      "source_pointer": "/provider_caller_seams/251"
     },
     "notification.CharacterRecipientReader": {
       "owner": "NOT02",
       "path": "apps/api/internal/notification/product_repository.go",
       "companion": "apps/api/internal/notification/product_repository_phase3_test.go",
       "kind": "interface",
-      "source_pointer": "/provider_caller_seams/276"
+      "source_pointer": "/provider_caller_seams/249"
     },
     "notification.SubjectKey": {
       "owner": "NOT01",

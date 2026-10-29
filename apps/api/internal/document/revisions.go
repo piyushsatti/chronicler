@@ -16,13 +16,6 @@ type Revision struct {
 	CreatedAt  time.Time
 }
 
-type Link struct {
-	DocumentID string
-	TargetType string
-	TargetID   string
-	Relation   string
-}
-
 type TrashItem struct {
 	ID        string    `json:"id"`
 	Slug      string    `json:"slug"`
@@ -64,26 +57,4 @@ func (q Queries) ListTrash(ctx context.Context, limit, offset int) ([]TrashItem,
 		return nil, nil
 	}
 	return q.Trash(ctx, limit, offset)
-}
-
-func (q Queries) Backlinks(ctx context.Context, slug string) ([]Link, error) {
-	if q.BacklinksFn == nil {
-		return nil, nil
-	}
-	scope, err := q.Scope(ctx)
-	if err != nil {
-		return nil, err
-	}
-	return q.BacklinksFn(ctx, scope, slug)
-}
-
-func (q Queries) CountBacklinks(ctx context.Context, slug string) (int64, error) {
-	if q.BacklinkCountFn == nil {
-		return 0, nil
-	}
-	scope, err := q.Scope(ctx)
-	if err != nil {
-		return 0, err
-	}
-	return q.BacklinkCountFn(ctx, scope, slug)
 }

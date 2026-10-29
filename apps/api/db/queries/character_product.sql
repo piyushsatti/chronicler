@@ -121,35 +121,6 @@ SELECT count(*)::int AS total
 FROM characters c
 JOIN members owner ON owner.id = c.owner_id
 WHERE c.deleted_at IS NULL AND owner.public_id = sqlc.arg(owner_id)::uuid;
--- name: CharacterProductBatchByIDs :many
-WITH requested AS (
-    SELECT requested.public_id, requested.ordinality
-    FROM unnest(sqlc.arg(character_ids)::uuid[]) WITH ORDINALITY AS requested(public_id, ordinality)
-)
-SELECT c.public_id AS id, c.short_code, c.name, owner.public_id AS owner_id,
-       c.status, backstory.public_id AS backstory_id, guild.public_id AS guild_id, region.public_id AS region_id,
-       c.description, c.background_text, c.ddb_url, c.image_url, c.player_xp AS pcxp, c.created_at, c.updated_at,
-       ddb.payload AS ddb_payload, ddb.synced_at AS ddb_synced_at,
-       c.verification_submitted_at,
-       CASE WHEN c.verification_submitted_at IS NOT NULL
-                  AND (latest.created_at IS NULL OR latest.created_at < c.verification_submitted_at)
-            THEN 'PENDING'
-            ELSE UPPER(COALESCE(latest.verdict, 'unknown')) END AS verification_status
-FROM requested
-JOIN characters c ON c.public_id = requested.public_id AND c.deleted_at IS NULL
-JOIN members owner ON owner.id = c.owner_id
-LEFT JOIN backstories backstory ON backstory.id = c.backstory_id
-LEFT JOIN documents guild ON guild.id = c.guild_document_id
-LEFT JOIN regions region ON region.id = c.region_id
-LEFT JOIN character_ddb_mirrors ddb ON ddb.character_id = c.id
-LEFT JOIN LATERAL (
-    SELECT verification.verdict, verification.created_at
-    FROM verifications verification
-    WHERE verification.subject_type = 'character' AND verification.subject_id = c.id
-    ORDER BY verification.created_at DESC, verification.public_id DESC
-    LIMIT 1
-) latest ON true
-ORDER BY requested.ordinality;
 -- name: CharacterProductLockByID :one
 SELECT c.id, c.public_id, c.owner_id, c.status, c.updated_at, c.player_xp,
        c.backstory_id, c.guild_document_id, c.region_id, c.deleted_at,
@@ -707,12 +678,6 @@ WHERE character.public_id = sqlc.arg(character_id)::uuid
   AND document_readable(document.public_id, author.public_id, document.status, document.visibility, document.policy,
       sqlc.narg(viewer_id)::uuid, sqlc.arg(viewer_roles)::text[], sqlc.arg(viewer_handle)::text,
       sqlc.arg(viewer_admin)::boolean, sqlc.arg(viewer_live_dm)::boolean, sqlc.arg(reader_ids)::uuid[]);
--- name: CharacterProductSumProgression :one
-SELECT COALESCE(sum(ledger.delta), 0)::int AS total
-FROM character_progression_ledger ledger
-JOIN characters character ON character.id = ledger.character_id
-WHERE character.public_id = sqlc.arg(character_id)::uuid;
-
 -- name: CharacterProductValidateCreationReferences :one
 SELECT
     (sqlc.narg(backstory_id)::uuid IS NULL OR EXISTS (

@@ -26,6 +26,7 @@ func TestProductionChainPrivilegedSQLSurfaceBypassIsAudited(t *testing.T) {
 	author := f.member(t, auth.Player)
 	private := f.doc(t, "", &author, document.StatusPublished, document.VisibilityPublic)
 	target := f.doc(t, "", nil, document.StatusPublished, document.VisibilityPublic)
+	f.exec(t, `UPDATE documents SET kind='codex_entry' WHERE id=$1`, target.rowID)
 	prefix := "audit-filter-" + uuid.NewString()
 	f.exec(t, `UPDATE documents SET kind='codex_entry',category='location/fixture',title=$2,body='AUDIT-BODY-SECRET',policy='[]'::jsonb WHERE id=$1`, private.rowID, prefix+" AUDIT-TITLE-SECRET")
 	f.exec(t, `INSERT INTO document_links(source_id,document_target_id,relation) VALUES($1,$2,'fixture')`, private.rowID, target.rowID)
@@ -60,9 +61,9 @@ func TestProductionChainPrivilegedSQLSurfaceBypassIsAudited(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	count, err := f.runtime.Documents.CountBacklinks(auth.WithAuthority(context.Background(), a), target.slug)
-	if err != nil || count != 1 {
-		t.Fatalf("admin backlink count=%d err=%v", count, err)
+	entry, err := f.runtime.Resolver.Services.DocumentQueries.CodexEntry(context.Background(), a, document.CodexEntrySpec{Slug: target.slug})
+	if err != nil || entry == nil || entry.BacklinkCount != 1 {
+		t.Fatalf("admin codex backlink count=%+v err=%v", entry, err)
 	}
 	found := map[string]bool{}
 	for _, line := range strings.Split(strings.TrimSpace(audit.String()), "\n") {

@@ -61,14 +61,13 @@ func TestPhase3TaskCHA02Acceptance(t *testing.T) {
 		"document.GuildReader": reflect.TypeFor[document.GuildReader](), "document.ReferenceAudienceReader": reflect.TypeFor[document.ReferenceAudienceReader](),
 		"member.AssessmentWriter": reflect.TypeFor[member.AssessmentWriter](), "member.VerificationView": reflect.TypeFor[member.VerificationView](),
 		"document.DocumentListResult": reflect.TypeFor[document.DocumentListResult](), "member.VerificationPage": reflect.TypeFor[member.VerificationPage](),
-		"product.BatchResult[character.CharacterView]": reflect.TypeFor[product.BatchResult[CharacterView]](),
-		"uow.Runner[character.ProductCommandRepos]":    reflect.TypeFor[uow.Runner[ProductCommandRepos]](),
+		"uow.Runner[character.ProductCommandRepos]": reflect.TypeFor[uow.Runner[ProductCommandRepos]](),
 	}
 	registered := []reflect.Type{
-		reflect.TypeFor[CharacterReadRepository](), reflect.TypeFor[CharacterWriteRepository](), reflect.TypeFor[ProductBatchRepository](),
+		reflect.TypeFor[CharacterReadRepository](), reflect.TypeFor[CharacterWriteRepository](),
 		reflect.TypeFor[ReferenceReadRepository](), reflect.TypeFor[ReferenceWriteRepository](), reflect.TypeFor[AdmissionReader](),
 		reflect.TypeFor[RewardClaimWriter](), reflect.TypeFor[QuestWithdrawalWriter](), reflect.TypeFor[ProductReadRepos](),
-		reflect.TypeFor[ProductCommandRepos](), reflect.TypeFor[RewardClaims](), reflect.TypeFor[IDKey](),
+		reflect.TypeFor[ProductCommandRepos](), reflect.TypeFor[RewardClaims](),
 		reflect.TypeFor[WithdrawalPlan](), reflect.TypeFor[WithdrawalEffects](),
 	}
 	for _, typ := range registered {
@@ -125,7 +124,6 @@ func TestPhase3TaskCHA02Acceptance(t *testing.T) {
 	repositoryNames := map[string]reflect.Type{
 		"character.CharacterReadRepository":  reflect.TypeFor[CharacterReadRepository](),
 		"character.CharacterWriteRepository": reflect.TypeFor[CharacterWriteRepository](),
-		"character.ProductBatchRepository":   reflect.TypeFor[ProductBatchRepository](),
 		"character.ReferenceReadRepository":  reflect.TypeFor[ReferenceReadRepository](),
 		"character.ReferenceWriteRepository": reflect.TypeFor[ReferenceWriteRepository](),
 	}
@@ -165,7 +163,6 @@ func TestPhase3TaskCHA02Acceptance(t *testing.T) {
 		"character.ProductReadRepos":    reflect.TypeFor[ProductReadRepos](),
 		"character.ProductCommandRepos": reflect.TypeFor[ProductCommandRepos](),
 		"character.RewardClaims":        reflect.TypeFor[RewardClaims](),
-		"character.IDKey":               reflect.TypeFor[IDKey](),
 		"character.WithdrawalPlan":      reflect.TypeFor[WithdrawalPlan](),
 		"character.WithdrawalEffects":   reflect.TypeFor[WithdrawalEffects](),
 	} {

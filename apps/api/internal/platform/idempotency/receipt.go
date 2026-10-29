@@ -32,10 +32,6 @@ type CommandOverrideFact struct {
 	At          time.Time `json:"at"`
 }
 
-type CompletedReceiptReader interface {
-	LookupCompleted(ctx context.Context, actorID, operation, key, fingerprint string) (json.RawMessage, bool, error)
-}
-
 type Claim struct {
 	Replay      bool
 	Receipt     json.RawMessage
@@ -56,25 +52,13 @@ type receiptStore struct {
 	claims map[claimIdentity][]CommandOverrideFact
 }
 
-type CompletedReceiptStore struct {
-	DB dbgen.DBTX
-}
-
 var _ Repository = (*receiptStore)(nil)
-var _ CompletedReceiptReader = (*CompletedReceiptStore)(nil)
 
 func NewRepository(tx pgx.Tx) (Repository, error) {
 	if nilDB(tx) {
 		return nil, errors.New("idempotency transaction is required")
 	}
 	return &receiptStore{db: tx, claims: make(map[claimIdentity][]CommandOverrideFact)}, nil
-}
-
-func NewCompletedReceiptReader(db dbgen.DBTX) (*CompletedReceiptStore, error) {
-	if nilDB(db) {
-		return nil, errors.New("completed receipt database is required")
-	}
-	return &CompletedReceiptStore{DB: db}, nil
 }
 
 func nilDB(db dbgen.DBTX) bool {
@@ -247,17 +231,6 @@ func (s *receiptStore) Complete(ctx context.Context, claim Claim, receipt json.R
 	}
 	delete(s.claims, i)
 	return nil
-}
-
-func (s *CompletedReceiptStore) LookupCompleted(ctx context.Context, actorID, operation, key, fingerprint string) (json.RawMessage, bool, error) {
-	i, err := receiptIdentity(actorID, operation, key, fingerprint)
-	if err != nil {
-		return nil, false, err
-	}
-	if s == nil || nilDB(s.DB) {
-		return nil, false, errors.New("completed receipt database is required")
-	}
-	return lookupReceipt(ctx, s.DB, i, false)
 }
 
 func lookupReceipt(ctx context.Context, db dbgen.DBTX, i claimIdentity, lock bool) (json.RawMessage, bool, error) {

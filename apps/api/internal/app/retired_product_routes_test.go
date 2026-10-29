@@ -23,7 +23,7 @@ func (r *retiredRouteRunner) Do(context.Context, func(quest.Repository) error) e
 	return errors.New("retired route reached a write transaction")
 }
 
-func TestRetiredQuestCharacterAndMemberRoutesReturnNotFound(t *testing.T) {
+func TestRetiredQuestCharacterMemberAndNotificationRoutesReturnNotFound(t *testing.T) {
 	runner := &retiredRouteRunner{}
 	mux := http.NewServeMux()
 	app.MountFromAPI(mux, app.API{QuestCmd: quest.NewCommands(runner, time.Now)}, config.Config{})
@@ -33,6 +33,7 @@ func TestRetiredQuestCharacterAndMemberRoutesReturnNotFound(t *testing.T) {
 	}
 	for _, authenticated := range []bool{false, true} {
 		for _, route := range []struct{ method, path, body string }{
+			{"POST", "/v1/me/notifications/read", `{"ids":[]}`},
 			{"POST", "/v1/quests", `{"shortCode":"X","kinds":["standard"],"scheduledAt":"2026-12-01T00:00:00Z"}`},
 			{"POST", "/v1/quests/quest/transition", `{"to":"played"}`},
 			{"POST", "/v1/quests/quest/close", ""},

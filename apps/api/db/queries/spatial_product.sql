@@ -302,12 +302,6 @@ SELECT mapping.game_day,calendar.definition
 FROM (SELECT sqlc.arg(real_date)::date AS real_date) requested
 LEFT JOIN game_time_map mapping ON mapping.real_date=requested.real_date
 LEFT JOIN game_calendar calendar ON calendar.id=1;
--- name: ReadProductGameDates :many
-SELECT k.ordinality, k.real_date, d.game_day, calendar.definition
-FROM unnest(sqlc.arg(real_dates)::date[]) WITH ORDINALITY AS k(real_date, ordinality)
-LEFT JOIN game_time_map d ON d.real_date=k.real_date
-LEFT JOIN game_calendar calendar ON calendar.id=1
-ORDER BY k.ordinality;
 -- name: ListProductRealDates :many
 SELECT real_date FROM game_time_map WHERE game_day=sqlc.arg(game_day)
 ORDER BY real_date LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);

@@ -4,35 +4,13 @@ package character
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
-	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbgen"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbtest"
 )
-
-type characterReadQueryCounter struct {
-	dbgen.DBTX
-	queries int
-}
-
-func (c *characterReadQueryCounter) Query(ctx context.Context, sql string, args ...interface{}) (pgx.Rows, error) {
-	c.queries++
-	return c.DBTX.Query(ctx, sql, args...)
-}
-
-func (c *characterReadQueryCounter) Exec(ctx context.Context, sql string, args ...interface{}) (pgconn.CommandTag, error) {
-	return c.DBTX.Exec(ctx, sql, args...)
-}
-
-func (c *characterReadQueryCounter) QueryRow(ctx context.Context, sql string, args ...interface{}) pgx.Row {
-	return c.DBTX.QueryRow(ctx, sql, args...)
-}
 
 func TestCharacterProductPostgresReadAdapters(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
@@ -136,51 +114,6 @@ func TestCharacterProductPostgresReadAdapters(t *testing.T) {
 	history, err := adapter.ReadCharacterVerificationHistory(ctx, actor, CharacterVerificationHistorySpec{CharacterId: decidedID, Limit: 10})
 	if err != nil || history.Total != 1 || len(history.Items) != 1 || history.Items[0].TargetId != decidedID || history.Items[0].Verdict != "approved" || history.Items[0].VerifiedBy != reviewerID {
 		t.Fatalf("ReadCharacterVerificationHistory = %+v, err=%v", history, err)
-	}
-
-	batchIDs := []string{pendingID, decidedID}
-	for i := 2; i < 50; i++ {
-		var id string
-		short := fmt.Sprintf("C-ADAPTER-%02d", i)
-		if err := fixture.Pool.QueryRow(ctx, `INSERT INTO characters (short_code, name, owner_id, status) SELECT $2, $2, id, 'active' FROM members WHERE public_id = $1::uuid RETURNING public_id::text`, ownerID, short).Scan(&id); err != nil {
-			t.Fatal(err)
-		}
-		batchIDs = append(batchIDs, id)
-	}
-	missingID := "10000000-0000-4000-8000-000000000099"
-	counter := &characterReadQueryCounter{DBTX: fixture.Pool}
-	batchAdapter, err := NewProductPostgres(counter)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, width := range []int{1, 10, 50} {
-		keys := make([]IDKey, width)
-		for i := range keys {
-			keys[i] = IDKey{ID: batchIDs[i]}
-		}
-		counter.queries = 0
-		results, err := batchAdapter.ReadBatchCharacters(ctx, actor, keys)
-		if err != nil || len(results) != width || counter.queries != 1 {
-			t.Fatalf("ReadBatchCharacters width=%d len=%d queries=%d err=%v", width, len(results), counter.queries, err)
-		}
-		for i, result := range results {
-			if result.Value == nil || result.Value.Id != batchIDs[i] {
-				t.Fatalf("ReadBatchCharacters width=%d result[%d]=%+v", width, i, result)
-			}
-		}
-		assertCharacterDDBMirror(t, *results[0].Value, syncedAt)
-	}
-	counter.queries = 0
-	batch, err := batchAdapter.ReadBatchCharacters(ctx, actor, []IDKey{{ID: pendingID}, {ID: missingID}, {ID: pendingID}, {ID: "not-a-uuid"}})
-	if err != nil || len(batch) != 4 || counter.queries != 1 {
-		t.Fatalf("ReadBatchCharacters len=%d queries=%d err=%v", len(batch), counter.queries, err)
-	}
-	if batch[0].Value == nil || batch[0].Value.Id != pendingID || batch[0].Value.BackstoryId == nil || *batch[0].Value.BackstoryId != backstoryID || batch[1].Value != nil || batch[2].Value == nil || batch[2].Value.Id != pendingID || batch[3].Err == nil {
-		t.Fatalf("ReadBatchCharacters positional results = %+v", batch)
-	}
-	contrast, err := batchAdapter.ReadBatchCharacters(ctx, actor, []IDKey{{ID: pendingID}, {ID: decidedID}})
-	if err != nil || len(contrast) != 2 || contrast[0].Value == nil || contrast[0].Value.BackstoryId == nil || *contrast[0].Value.BackstoryId != backstoryID || contrast[1].Value == nil || contrast[1].Value.BackstoryId != nil {
-		t.Fatalf("ReadBatchCharacters stored/null backstories = %+v, err=%v", contrast, err)
 	}
 
 	if _, err := fixture.Pool.Exec(ctx, `INSERT INTO verifications (subject_type, subject_id, verdict, decided_by, note) SELECT 'character', id, 'rejected', (SELECT id FROM members WHERE public_id = $2::uuid), 'needs revision' FROM characters WHERE public_id = $1::uuid`, pendingID, reviewerID); err != nil {

@@ -172,10 +172,10 @@ func TestPhase3TaskDOC01Acceptance(t *testing.T) {
 			declarations []declaration
 			indices      []int
 		}{
-			{"dto_registry", contract.DTOs, []int{18, 30, 31, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 83, 84, 118, 158, 159, 160, 161, 162, 163, 180}},
-			{"specs", contract.Specs, []int{3, 9, 20, 23, 30, 34, 39, 42, 60, 63, 93, 94, 95, 103, 104, 105, 106, 107, 108, 117, 143}},
-			{"command_states", contract.States, []int{3, 9, 20, 23, 30, 34, 39, 42, 60, 63}},
-			{"command_writes", contract.Writes, []int{3, 9, 20, 23, 30, 34, 39, 42, 60, 63}},
+			{"dto_registry", contract.DTOs, []int{18, 30, 31, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, 64, 76, 77, 106, 144, 145, 146, 147, 148, 149, 166}},
+			{"specs", contract.Specs, []int{3, 9, 18, 21, 26, 30, 35, 38, 53, 56, 84, 85, 86, 93, 94, 95, 96, 97, 98, 104, 127}},
+			{"command_states", contract.States, []int{3, 9, 18, 21, 26, 30, 35, 38, 53, 56}},
+			{"command_writes", contract.Writes, []int{3, 9, 18, 21, 26, 30, 35, 38, 53, 56}},
 		}
 		for _, section := range sections {
 			owned := 0

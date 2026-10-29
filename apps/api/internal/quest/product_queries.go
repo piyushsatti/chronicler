@@ -39,10 +39,6 @@ func admittedBatch[K any, V any](s ProductQueries, ctx context.Context, actor au
 	return out, nil
 }
 
-func (s ProductQueries) BatchQuests(ctx context.Context, actor auth.Authority, keys []IDKey) ([]product.BatchResult[QuestView], error) {
-	return admittedBatch(s, ctx, actor, "Query.quest", keys, s.Reads.Batch.ReadBatchQuests)
-}
-
 func (s ProductQueries) BatchParticipants(ctx context.Context, actor auth.Authority, keys []ParticipantsKey) ([]product.BatchResult[ParticipantList], error) {
 	return admittedBatch(s, ctx, actor, "Query.quest", keys, s.Reads.Batch.ReadBatchParticipants)
 }
@@ -54,10 +50,6 @@ func (s ProductQueries) BatchQuestHexes(ctx context.Context, actor auth.Authorit
 // BatchQuestPointcrawlLinks is the N5-aligned loader name for quest↔pointcrawl batch reads.
 func (s ProductQueries) BatchQuestPointcrawlLinks(ctx context.Context, actor auth.Authority, keys []QuestHexesKey) ([]product.BatchResult[HexList], error) {
 	return s.BatchQuestHexes(ctx, actor, keys)
-}
-
-func (s ProductQueries) BatchQuestRegions(ctx context.Context, actor auth.Authority, keys []QuestRegionsKey) ([]product.BatchResult[RegionIDList], error) {
-	return admittedBatch(s, ctx, actor, "Query.quest", keys, s.Reads.Batch.ReadBatchQuestRegions)
 }
 
 func (s ProductQueries) BatchArcs(ctx context.Context, actor auth.Authority, keys []IDKey) ([]product.BatchResult[QuestArcView], error) {

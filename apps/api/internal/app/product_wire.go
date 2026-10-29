@@ -84,14 +84,14 @@ func wireProductServices(pgxPool dbgen.DBTX, pool *db.Pool, memberPool *member.P
 	}
 
 	memberQueries, err := member.NewProductQueries(
-		member.ProductReadRepos{Member: stores.member, Social: stores.member, Reference: stores.member, Batch: stores.member},
+		member.ProductReadRepos{Member: stores.member, Reference: stores.member, Batch: stores.member},
 		policy, clock, observer, member.NewGrantReconciler(),
 	)
 	if err != nil {
 		return graph.Services{}, err
 	}
 	characterQueries, err := character.NewProductQueries(
-		character.ProductReadRepos{Character: stores.character, Reference: stores.character, Batch: stores.character, DocumentAudience: stores.document},
+		character.ProductReadRepos{Character: stores.character, Reference: stores.character, DocumentAudience: stores.document},
 		policy, clock, observer,
 	)
 	if err != nil {
@@ -112,7 +112,7 @@ func wireProductServices(pgxPool dbgen.DBTX, pool *db.Pool, memberPool *member.P
 		return graph.Services{}, err
 	}
 	spatialQueries, err := spatial.NewProductQueries(
-		spatial.ProductReadRepos{Map: stores.spatial, Region: stores.spatial, Time: stores.spatial, Batch: stores.spatial, TimeBatch: stores.spatial},
+		spatial.ProductReadRepos{Map: stores.spatial, Region: stores.spatial, Time: stores.spatial, Batch: stores.spatial},
 		policy, clock, observer,
 	)
 	if err != nil {
@@ -233,7 +233,6 @@ func bindMemberCommandRepos(tx pgx.Tx, policy *auth.Policy, memberPool *member.P
 	return member.ProductCommandRepos{
 		Member:    pg,
 		Reference: pg,
-		Social:    pg,
 		Policy:    policy,
 		Authority: txStore.ResolveAuthority,
 		Replay:    replay,

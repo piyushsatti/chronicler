@@ -40,7 +40,6 @@ var muxOnlyAllowlist = map[string]struct{}{
 	"GET /v1/time/game-date":                           {},
 	"GET /v1/time/real-dates":                          {},
 	"POST /v1/me/notifications/acknowledge-suppressed": {},
-	"POST /v1/me/notifications/read":                   {},
 	"POST /v1/me/personalization/reconcile":            {},
 }
 

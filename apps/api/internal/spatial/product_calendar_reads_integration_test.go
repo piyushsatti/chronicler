@@ -40,7 +40,7 @@ func TestRetainedCalendarReadsUseStoredNamedDatesAndInjectedCurrentUTC(t *testin
 	policy, _ := auth.NewPoolPolicy(f.Pool)
 	observer, _ := auth.NewSafeOverrideObserver(slog.Default())
 	clock := func() time.Time { return time.Date(2026, 10, 14, 23, 0, 0, 0, time.UTC) }
-	queries, err := spatial.NewProductQueries(spatial.ProductReadRepos{Map: pg, Region: pg, Time: pg, Batch: pg, TimeBatch: pg}, policy, clock, observer)
+	queries, err := spatial.NewProductQueries(spatial.ProductReadRepos{Map: pg, Region: pg, Time: pg, Batch: pg}, policy, clock, observer)
 	if err != nil {
 		t.Fatal(err)
 	}

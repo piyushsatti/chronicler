@@ -359,29 +359,6 @@ VALUES ('spa03-actor','spa03-actor','SPA03 actor',ARRAY['admin'],'active') RETUR
 		t.Fatalf("past game day=%d err=%v", historicalDay, err)
 	}
 
-	readDates := productSQL(t, "ReadProductGameDates", ":many")
-	dateRows, err := productQuery(t, pool, ctx, readDates, pgx.StrictNamedArgs{"real_dates": []time.Time{start, start.AddDate(0, 0, 1), start.AddDate(0, 0, 2)}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	var gotDays []sql.NullInt32
-	for dateRows.Next() {
-		var ordinal int64
-		var realDate time.Time
-		var gameDay sql.NullInt32
-		var definition []byte
-		if err := dateRows.Scan(&ordinal, &realDate, &gameDay, &definition); err != nil {
-			t.Fatal(err)
-		}
-		gotDays = append(gotDays, gameDay)
-	}
-	if err := dateRows.Err(); err != nil {
-		t.Fatal(err)
-	}
-	dateRows.Close()
-	if len(gotDays) != 3 || !gotDays[0].Valid || gotDays[0].Int32 != 0 || gotDays[1].Valid || !gotDays[2].Valid || gotDays[2].Int32 != 5 {
-		t.Fatalf("date map values=%v, want [0 null 5]", gotDays)
-	}
 	var singleDay sql.NullInt32
 	var singleDefinition []byte
 	if err := productQueryRow(t, pool, ctx, productSQL(t, "ReadProductGameDate", ":one"), pgx.StrictNamedArgs{"real_date": start}).Scan(&singleDay, &singleDefinition); err != nil || !singleDay.Valid || singleDay.Int32 != 0 {

@@ -109,7 +109,7 @@ func TestSetMyPrivateNotesReceiptOmitsBody(t *testing.T) {
 		policy, _ := auth.NewPoolPolicy(tx)
 		replay, _ := idempotency.NewRepository(tx)
 		store, _ := NewFromDBTX(tx, "")
-		return ProductCommandRepos{Member: pg, Reference: pg, Social: pg, Policy: policy, Authority: store.ResolveAuthority, Replay: replay, Producer: notification.NewProducer()}
+		return ProductCommandRepos{Member: pg, Reference: pg, Policy: policy, Authority: store.ResolveAuthority, Replay: replay, Producer: notification.NewProducer()}
 	})
 	at := time.Date(2026, 10, 22, 5, 0, 0, 0, time.UTC)
 	commands, err := NewProductCommands(runner, func() time.Time { return at }, uuid.NewString)

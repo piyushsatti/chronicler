@@ -6,7 +6,6 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/member"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
-	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
 	"testing"
 	"time"
 )
@@ -18,8 +17,6 @@ type cqRepo struct {
 	calls   int
 	value   *CharacterView
 	err     error
-	batch   []product.BatchResult[CharacterView]
-	keys    []IDKey
 	visible map[string]bool
 }
 
@@ -83,11 +80,6 @@ func (r *cqRepo) ReadPendingCharacterVerifications(_ context.Context, _ auth.Aut
 	r.calls++
 	return AdminCharacterDirectoryView{}, r.err
 }
-func (r *cqRepo) ReadBatchCharacters(_ context.Context, _ auth.Authority, keys []IDKey) ([]product.BatchResult[CharacterView], error) {
-	r.calls++
-	r.keys = keys
-	return r.batch, r.err
-}
 func (r *cqRepo) ReadableDocumentIDs(context.Context, auth.Authority, []string) (map[string]bool, error) {
 	return r.visible, r.err
 }
@@ -126,7 +118,7 @@ func cqService(t *testing.T) (*ProductQueries, *cqRepo, *cqObserver, auth.Author
 	if err != nil {
 		t.Fatal(err)
 	}
-	s, err := NewProductQueries(ProductReadRepos{Character: r, Reference: r, Batch: r, DocumentAudience: r}, policy, func() time.Time { return time.Date(2026, 10, 18, 11, 0, 0, 0, time.UTC) }, o)
+	s, err := NewProductQueries(ProductReadRepos{Character: r, Reference: r, DocumentAudience: r}, policy, func() time.Time { return time.Date(2026, 10, 18, 11, 0, 0, 0, time.UTC) }, o)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -208,28 +200,13 @@ func TestCharacterProductQueriesProjectionAndErrors(t *testing.T) {
 		t.Fatal("missing list parent allowed")
 	}
 }
-func TestCharacterProductQueriesHistoryAndBatch(t *testing.T) {
-	s, r, _, a := cqService(t)
+func TestCharacterProductQueriesHistory(t *testing.T) {
+	s, _, _, a := cqService(t)
 	ctx := context.Background()
 	if _, err := s.CharacterVerificationHistory(ctx, a, CharacterVerificationHistorySpec{CharacterId: cqOther, Limit: 1}); err == nil {
 		t.Fatal("other history allowed")
 	}
-	r.batch = []product.BatchResult[CharacterView]{{Value: r.value}, {}, {Value: r.value}}
-	got, err := s.BatchCharacters(ctx, a, []IDKey{{cqOther}, {"bad"}, {cqSelf}, {cqOther}})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(got) != 4 || got[0].Value == nil || got[1].Err == nil || got[2].Value != nil || got[3].Value == nil || len(r.keys) != 3 {
-		t.Fatal("batch correspondence lost", got)
-	}
-	r.batch = nil
-	if _, err := s.BatchCharacters(ctx, a, []IDKey{{cqOther}}); err == nil {
-		t.Fatal("batch mismatch accepted")
-	}
-	r.err = errors.New("db")
-	if _, err := s.BatchCharacters(ctx, a, []IDKey{{cqOther}}); !errors.Is(err, r.err) {
-		t.Fatal(err)
-	}
+
 }
 func TestCharacterProductQueryConstructor(t *testing.T) {
 	if _, err := NewProductQueries(ProductReadRepos{}, &auth.Policy{}, func() time.Time { return time.Now() }, &cqObserver{}); err == nil {
@@ -237,7 +214,7 @@ func TestCharacterProductQueryConstructor(t *testing.T) {
 	}
 	s, r, o, _ := cqService(t)
 	var nilRepo *cqRepo
-	if _, err := NewProductQueries(ProductReadRepos{Character: nilRepo, Reference: r, Batch: r, DocumentAudience: r}, s.Policy, s.Clock, o); err == nil {
+	if _, err := NewProductQueries(ProductReadRepos{Character: nilRepo, Reference: r, DocumentAudience: r}, s.Policy, s.Clock, o); err == nil {
 		t.Fatal("typed nil accepted")
 	}
 	if characterQueryID(cqSelf) != nil {

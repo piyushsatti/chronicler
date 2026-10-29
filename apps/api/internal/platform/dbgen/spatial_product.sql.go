@@ -1561,46 +1561,6 @@ func (q *Queries) ReadProductGameDate(ctx context.Context, realDate pgtype.Date)
 	return i, err
 }
 
-const readProductGameDates = `-- name: ReadProductGameDates :many
-SELECT k.ordinality, k.real_date, d.game_day, calendar.definition
-FROM unnest($1::date[]) WITH ORDINALITY AS k(real_date, ordinality)
-LEFT JOIN game_time_map d ON d.real_date=k.real_date
-LEFT JOIN game_calendar calendar ON calendar.id=1
-ORDER BY k.ordinality
-`
-
-type ReadProductGameDatesRow struct {
-	Ordinality interface{} `json:"ordinality"`
-	RealDate   interface{} `json:"real_date"`
-	GameDay    pgtype.Int4 `json:"game_day"`
-	Definition []byte      `json:"definition"`
-}
-
-func (q *Queries) ReadProductGameDates(ctx context.Context, realDates []pgtype.Date) ([]ReadProductGameDatesRow, error) {
-	rows, err := q.db.Query(ctx, readProductGameDates, realDates)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []ReadProductGameDatesRow{}
-	for rows.Next() {
-		var i ReadProductGameDatesRow
-		if err := rows.Scan(
-			&i.Ordinality,
-			&i.RealDate,
-			&i.GameDay,
-			&i.Definition,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
-}
-
 const readProductMapReference = `-- name: ReadProductMapReference :one
 SELECT m.public_id AS map_id,r.public_id AS region_id
 FROM maps m LEFT JOIN regions r ON r.id=m.region_id

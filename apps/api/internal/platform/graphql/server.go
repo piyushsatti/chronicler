@@ -11,7 +11,6 @@ import (
 	"github.com/99designs/gqlgen/graphql/handler/extension"
 	"github.com/99designs/gqlgen/graphql/handler/transport"
 
-	"github.com/piyushsatti/chronicler/apps/api/internal/document"
 	"github.com/piyushsatti/chronicler/apps/api/internal/graph"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
@@ -46,8 +45,7 @@ func NewHandler(resolver *graph.Resolver, limits Limits, authority auth.Authorit
 		srv.Use(extension.FixedComplexityLimit(limits.MaxComplexity))
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		ctx := document.WithScopeCache(r.Context())
-		ctx = WithLoaders(ctx, NewLoaderRegistry())
+		ctx := WithLoaders(r.Context(), NewLoaderRegistry())
 		if authority != nil {
 			claims := auth.FromContext(r.Context())
 			var initial *auth.Authority

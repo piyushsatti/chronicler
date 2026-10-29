@@ -21,7 +21,7 @@ type ProductQueries struct {
 }
 
 func NewProductQueries(reads ProductReadRepos, policy *auth.Policy, clock product.Clock, overrideReads auth.OverrideReadObserver) (*ProductQueries, error) {
-	for _, dependency := range []any{reads.Character, reads.Reference, reads.Batch, reads.DocumentAudience, policy, clock, overrideReads} {
+	for _, dependency := range []any{reads.Character, reads.Reference, reads.DocumentAudience, policy, clock, overrideReads} {
 		if product.MissingDependency(dependency) {
 			return nil, apierr.New(apierr.Internal, "character query dependencies required")
 		}
@@ -497,52 +497,4 @@ func (s ProductQueries) PendingCharacterVerifications(ctx context.Context, actor
 	}
 	observe()
 	return value, nil
-}
-
-func (s ProductQueries) BatchCharacters(ctx context.Context, actor auth.Authority, keys []IDKey) ([]product.BatchResult[CharacterView], error) {
-	observe, err := s.publicRead(ctx, actor, "Query.character", "")
-	if err != nil {
-		return nil, err
-	}
-	out := make([]product.BatchResult[CharacterView], len(keys))
-	valid := make([]IDKey, 0, len(keys))
-	positions := make([]int, 0, len(keys))
-	for i, key := range keys {
-		if err := characterQueryID(key.ID); err != nil {
-			out[i].Err = err
-			continue
-		}
-		valid = append(valid, key)
-		positions = append(positions, i)
-	}
-	if len(valid) == 0 {
-		return out, nil
-	}
-	values, err := s.Reads.Batch.ReadBatchCharacters(ctx, actor, valid)
-	if err != nil {
-		return nil, err
-	}
-	if len(values) != len(valid) {
-		return nil, apierr.New(apierr.Internal, "character batch correspondence mismatch")
-	}
-	items := make([]CharacterView, 0, len(values))
-	indices := make([]int, 0, len(values))
-	for i, value := range values {
-		out[positions[i]] = value
-		if value.Err == nil && value.Value != nil {
-			items = append(items, *value.Value)
-			indices = append(indices, positions[i])
-		}
-	}
-	projected, err := s.projectCharacters(ctx, actor, items)
-	if err != nil {
-		return nil, err
-	}
-	for i, value := range projected {
-		out[indices[i]].Value = &value
-	}
-	if len(projected) > 0 {
-		observe()
-	}
-	return out, nil
 }

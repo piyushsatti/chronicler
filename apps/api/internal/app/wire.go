@@ -24,19 +24,18 @@ import (
 )
 
 type API struct {
-	Authority       auth.AuthorityResolver
-	Pool            *db.Pool
-	QuestCmd        quest.Commands
-	Resolver        *graph.Resolver
-	Ingest          ingest.Store
-	Agent           *agent.Service
-	JobStore        jobs.Store
-	Members         *member.PostgresStore
-	Notifications   notification.Queries
-	NotificationCmd notification.Commands
-	Documents       document.Queries
-	SiteStats       func() site.Stats
-	MemberMe        func(string) (member.Member, error)
+	Authority     auth.AuthorityResolver
+	Pool          *db.Pool
+	QuestCmd      quest.Commands
+	Resolver      *graph.Resolver
+	Ingest        ingest.Store
+	Agent         *agent.Service
+	JobStore      jobs.Store
+	Members       *member.PostgresStore
+	Notifications notification.Queries
+	Documents     document.Queries
+	SiteStats     func() site.Stats
+	MemberMe      func(string) (member.Member, error)
 }
 
 func Wire(ctx context.Context, cfg config.Config) API {
@@ -104,11 +103,9 @@ func wirePostgres(ctx context.Context, cfg config.Config, pool *db.Pool, base AP
 	base.Authority = memStore.ResolveAuthority
 	docRepo := document.NewPostgresReadRepo(pgxPool)
 	docQ := document.Queries{
-		Repo:            docRepo,
-		Revisions:       docRepo.ListRevisions,
-		Trash:           docRepo.ListTrash,
-		BacklinksFn:     docRepo.Backlinks,
-		BacklinkCountFn: docRepo.CountBacklinks,
+		Repo:      docRepo,
+		Revisions: docRepo.ListRevisions,
+		Trash:     docRepo.ListTrash,
 	}
 	sitePG := site.NewPostgresStats(pgxPool)
 
@@ -128,9 +125,6 @@ func wirePostgres(ctx context.Context, cfg config.Config, pool *db.Pool, base AP
 	base.Resolver = resolver
 	base.Documents = docQ
 	base.Notifications = notification.Queries{Repo: notification.NewPostgresRepository(q)}
-	base.NotificationCmd = notification.NewCommands(db.NewRunner(pool, func(tx pgx.Tx) notification.CommandRepository {
-		return notification.NewPostgresRepository(dbgen.New(tx))
-	}))
 	base.Ingest = ingest.NewPostgresStore(pgxPool)
 	base.Agent = agent.New(cfg.IngestSecret, agent.NewPostgresStore(pgxPool))
 	base.JobStore = jobStore

@@ -19,7 +19,7 @@ type ProductQueries struct {
 }
 
 func NewProductQueries(reads ProductReadRepos, policy *auth.Policy, clock product.Clock, overrideReads auth.OverrideReadObserver) (*ProductQueries, error) {
-	for _, dep := range []any{reads.Map, reads.Region, reads.Time, reads.Batch, reads.TimeBatch, policy, clock, overrideReads} {
+	for _, dep := range []any{reads.Map, reads.Region, reads.Time, reads.Batch, policy, clock, overrideReads} {
 		if product.MissingDependency(dep) {
 			return nil, apierr.New(apierr.Internal, "spatial query dependencies required")
 		}
@@ -223,38 +223,6 @@ func (s ProductQueries) Maps(ctx context.Context, actor auth.Authority, spec Map
 	return views, nil
 }
 
-func (s ProductQueries) GameDatesForRealDates(ctx context.Context, dates []product.Date) ([]product.BatchResult[product.GameDateView], error) {
-	snapshots, err := s.Reads.TimeBatch.ReadGameDates(ctx, dates)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]product.BatchResult[product.GameDateView], len(snapshots))
-	for i, snap := range snapshots {
-		if snap.Err != nil {
-			out[i].Err = snap.Err
-			continue
-		}
-		if snap.Value == nil {
-			continue
-		}
-		view, err := s.RenderStoredGameDate(snap.Value.GameDay, snap.Value.Definition)
-		if err != nil {
-			out[i].Err = err
-			continue
-		}
-		out[i].Value = view
-	}
-	return out, nil
-}
-
-func (s ProductQueries) BatchMapHexes(ctx context.Context, actor auth.Authority, keys []MapHexesKey) ([]product.BatchResult[HexList], error) {
-	return s.Reads.Batch.ReadBatchMapHexes(ctx, actor, keys)
-}
-
-func (s ProductQueries) BatchMapEdges(ctx context.Context, actor auth.Authority, keys []MapEdgesKey) ([]product.BatchResult[EdgeList], error) {
-	return s.Reads.Batch.ReadBatchMapEdges(ctx, actor, keys)
-}
-
 func (s ProductQueries) BatchMapNodes(ctx context.Context, actor auth.Authority, keys []MapNodesKey) ([]product.BatchResult[NodeList], error) {
 	return s.Reads.Batch.ReadBatchMapNodes(ctx, actor, keys)
 }
@@ -263,23 +231,8 @@ func (s ProductQueries) BatchMapNodeEdges(ctx context.Context, actor auth.Author
 	return s.Reads.Batch.ReadBatchMapNodeEdges(ctx, actor, keys)
 }
 
-func (s ProductQueries) BatchHexLinks(ctx context.Context, actor auth.Authority, keys []HexLinksKey) ([]product.BatchResult[HexLinkList], error) {
-	return s.Reads.Batch.ReadBatchHexLinks(ctx, actor, keys)
-}
-
 func (s ProductQueries) BatchNodeLinks(ctx context.Context, actor auth.Authority, keys []NodeLinksKey) ([]product.BatchResult[NodeLinkList], error) {
 	return s.Reads.Batch.ReadBatchNodeLinks(ctx, actor, keys)
-}
-
-func (s ProductQueries) BatchPOIs(ctx context.Context, actor auth.Authority, keys []POIsKey) ([]product.BatchResult[PoiList], error) {
-	return s.Reads.Batch.ReadBatchPOIs(ctx, actor, keys)
-}
-
-func (s ProductQueries) Hex(ctx context.Context, actor auth.Authority, spec HexSpec) (*HexView, error) {
-	if err := s.admit(ctx, actor, auth.Operation("Query.hex")); err != nil {
-		return nil, err
-	}
-	return s.Reads.Map.ReadHex(ctx, actor, spec)
 }
 
 func (s ProductQueries) Map(ctx context.Context, actor auth.Authority, spec MapSpec) (*MapView, error) {

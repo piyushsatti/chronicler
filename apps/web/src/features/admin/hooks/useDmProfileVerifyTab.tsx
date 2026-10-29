@@ -20,7 +20,7 @@ export function useDmProfileVerifyTab() {
     queryKeys.pendingDmProfiles,
     authority,
     {},
-    (page, request) => loadDmVerifyQueue({ ...page, ...{} }, request),
+    (page, request) => loadDmVerifyQueue(page, request),
   );
   const [noteById, setNoteById] = useState<Record<string, string>>({});
   const [feedback, setFeedback] = useState<string | null>(null);

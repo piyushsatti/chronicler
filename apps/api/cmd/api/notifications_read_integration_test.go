@@ -22,24 +22,32 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/notification"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/db"
-	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbgen"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/uow"
 )
 
-const nativeReadPath = "/v1/me/notifications/read"
+const nativeReadPath = "/v1/graphql"
 
 func readNativeBody(ids ...string) []byte {
 	if ids == nil {
 		ids = []string{}
 	}
-	body, _ := json.Marshal(map[string]any{"ids": ids})
+	body, _ := json.Marshal(map[string]any{"query": `mutation($ids:[ID!]!,$key:String!){markNotificationsRead(ids:$ids,meta:{idempotencyKey:$key}){affectedCount replayed}}`, "variables": map[string]any{"ids": ids, "key": uuid.NewString()}})
 	return body
 }
 func assertNativeReadSuccess(t *testing.T, w *httptest.ResponseRecorder) {
 	t.Helper()
 	assertUnreadNativeCORS(t, w)
-	if w.Code != 204 || w.Body.Len() != 0 {
-		t.Fatalf("mark-read response=%d %s", w.Code, w.Body)
+	var result struct {
+		Data struct {
+			Receipt *struct {
+				AffectedCount int
+				Replayed      bool
+			} `json:"markNotificationsRead"`
+		} `json:"data"`
+		Errors []json.RawMessage `json:"errors"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil || w.Code != 200 || len(result.Errors) != 0 || result.Data.Receipt == nil {
+		t.Fatalf("GraphQL mark-read response=%d %s err=%v", w.Code, w.Body, err)
 	}
 }
 func readNativeNotice(t *testing.T, f *authorityDBFixture, m authorityDBMember, read bool) string {
@@ -88,15 +96,17 @@ func readNativeTimes(t *testing.T, f *authorityDBFixture, ids ...string) map[str
 	}
 	return result
 }
-func readNativeHandler(f *authorityDBFixture, command notification.Commands) http.Handler {
+func readNativeHandler(f *authorityDBFixture, command *notification.ProductCommands) http.Handler {
 	runtime := f.runtime
-	runtime.NotificationCmd = command
+	resolver := *runtime.Resolver
+	resolver.Services.NotificationCommands = command
+	runtime.Resolver = &resolver
 	mux := http.NewServeMux()
 	app.MountFromAPI(mux, runtime, f.cfg)
 	return apiHandler(mux, f.cfg, runtime.Authority)
 }
 
-func TestNotificationsMarkReadProductionRecipientTimestampAndConcurrentRetries(t *testing.T) {
+func TestNotificationsMarkReadGraphQLRecipientTimestampAndConcurrentRetries(t *testing.T) {
 	f := newAuthorityDBFixture(t)
 	a, b := f.member(t, auth.Player), f.member(t, auth.Player)
 	first, second, already, foreign := readNativeNotice(t, f, a, false), readNativeNotice(t, f, a, false), readNativeNotice(t, f, a, true), readNativeNotice(t, f, b, false)
@@ -147,7 +157,7 @@ func TestNotificationsMarkReadProductionRecipientTimestampAndConcurrentRetries(t
 	}
 }
 
-func TestNotificationsMarkReadProductionRejectsWholeInvalidRequest(t *testing.T) {
+func TestNotificationsMarkReadGraphQLRejectsWholeInvalidRequest(t *testing.T) {
 	f := newAuthorityDBFixture(t)
 	a := f.member(t, auth.Player)
 	id := readNativeNotice(t, f, a, false)
@@ -156,17 +166,26 @@ func TestNotificationsMarkReadProductionRejectsWholeInvalidRequest(t *testing.T)
 	for i := range tooMany {
 		tooMany[i] = id
 	}
-	for _, body := range [][]byte{readNativeBody(id, "bad"), readNativeBody(tooMany...), []byte(`{"ids":[],"ids":["` + id + `"]}`), append(readNativeBody(id), []byte(` {}`)...), append(readNativeBody(id), []byte(strings.Repeat(" ", 8192))...)} {
-		w := authorityDBRequest(f.handler, http.MethodPost, nativeReadPath, f.token(t, a.publicID), body)
-		assertNativeUnreadProblem(t, w, 422, "INVALID")
-		var problem map[string]any
-		_ = json.Unmarshal(w.Body.Bytes(), &problem)
-		if problem["title"] != "Invalid notification read request" {
-			t.Fatal("invalid request leaked details")
-		}
-		if after := readNativeSnapshot(t, f, a); after != before {
-			t.Fatal("invalid mixed request changed rows")
-		}
+	for _, tc := range []struct {
+		name, message string
+		ids           []string
+	}{
+		{"malformed scalar", "Invalid ID", []string{id, "bad"}},
+		{"normalizer bound before deduplication", "Invalid notification read request", tooMany},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			w := authorityDBRequest(f.handler, http.MethodPost, nativeReadPath, f.token(t, a.publicID), readNativeBody(tc.ids...))
+			assertGraphReadFailure(t, w, 422, "INVALID")
+			var result struct {
+				Errors []struct{ Message string } `json:"errors"`
+			}
+			if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil || len(result.Errors) != 1 || result.Errors[0].Message != tc.message {
+				t.Fatalf("error response=%s want=%q err=%v", w.Body, tc.message, err)
+			}
+			if after := readNativeSnapshot(t, f, a); after != before {
+				t.Fatal("invalid request changed rows")
+			}
+		})
 	}
 	ids := make([]string, 100)
 	ids[0] = id
@@ -174,7 +193,6 @@ func TestNotificationsMarkReadProductionRejectsWholeInvalidRequest(t *testing.T)
 		ids[i] = readNativeNotice(t, f, a, false)
 	}
 	body := readNativeBody(ids...)
-	body = append(body, []byte(strings.Repeat(" ", 8192-len(body)))...)
 	assertNativeReadSuccess(t, authorityDBRequest(f.handler, http.MethodPost, nativeReadPath, f.token(t, a.publicID), body))
 	times := readNativeTimes(t, f, ids...)
 	for _, at := range times {
@@ -184,7 +202,7 @@ func TestNotificationsMarkReadProductionRejectsWholeInvalidRequest(t *testing.T)
 	}
 }
 
-func TestNotificationsMarkReadProductionCurrentAuthorityBeforeCommand(t *testing.T) {
+func TestNotificationsMarkReadGraphQLCurrentAuthorityBeforeCommand(t *testing.T) {
 	f := newAuthorityDBFixture(t)
 	a := f.member(t, auth.Player)
 	id := readNativeNotice(t, f, a, false)
@@ -196,12 +214,16 @@ func TestNotificationsMarkReadProductionCurrentAuthorityBeforeCommand(t *testing
 	}
 	// Existing live-authority middleware is exercised through the production chain.
 	for _, token := range []string{"", "invalid-bearer", expired} {
-		assertNativeUnreadProblem(t, authorityDBRequest(f.handler, http.MethodPost, nativeReadPath, token, readNativeBody(id)), 401, "UNAUTHENTICATED")
+		w := authorityDBRequest(f.handler, http.MethodPost, nativeReadPath, token, readNativeBody(id))
+		if w.Code != http.StatusOK {
+			t.Fatalf("anonymous GraphQL status=%d body=%s", w.Code, w.Body)
+		}
+		assertGraphReadFailure(t, w, http.StatusForbidden, "FORBIDDEN")
 	}
-	assertNativeUnreadProblem(t, authorityDBRequest(f.handler, http.MethodPost, nativeReadPath, f.token(t, uuid.NewString(), auth.Admin), readNativeBody(id)), 403, "FORBIDDEN")
+	assertGraphReadFailure(t, authorityDBRequest(f.handler, http.MethodPost, nativeReadPath, f.token(t, uuid.NewString(), auth.Admin), readNativeBody(id)), 403, "FORBIDDEN")
 	for _, status := range []string{"inactive", "banned"} {
 		f.exec(t, `UPDATE members SET status=$2 WHERE id=$1`, a.rowID, status)
-		assertNativeUnreadProblem(t, authorityDBRequest(f.handler, http.MethodPost, nativeReadPath, token, readNativeBody(id)), 403, "FORBIDDEN")
+		assertGraphReadFailure(t, authorityDBRequest(f.handler, http.MethodPost, nativeReadPath, token, readNativeBody(id)), 403, "FORBIDDEN")
 	}
 	if after := readNativeSnapshot(t, f, a); after != before {
 		t.Fatal("denied authority changed rows")
@@ -210,7 +232,7 @@ func TestNotificationsMarkReadProductionCurrentAuthorityBeforeCommand(t *testing
 	assertNativeReadSuccess(t, authorityDBRequest(f.handler, http.MethodPost, nativeReadPath, token, readNativeBody(id)))
 }
 
-func TestNotificationsMarkReadProductionWriteDependencyFailure(t *testing.T) {
+func TestNotificationsMarkReadGraphQLWriteDependencyFailure(t *testing.T) {
 	f := newAuthorityDBFixture(t)
 	a := f.member(t, auth.Player)
 	id := readNativeNotice(t, f, a, false)
@@ -220,19 +242,20 @@ func TestNotificationsMarkReadProductionWriteDependencyFailure(t *testing.T) {
 		t.Fatal(err)
 	}
 	writePool.Close()
-	command := notification.NewCommands(db.NewRunner(writePool, func(tx pgx.Tx) notification.CommandRepository {
-		return notification.NewPostgresRepository(dbgen.New(tx))
-	}))
-	for _, candidate := range []notification.Commands{command, {}} {
+	command := &notification.ProductCommands{Clock: time.Now, Runner: db.NewRunner(writePool, func(pgx.Tx) notification.ProductCommandRepos {
+		t.Fatal("closed pool began transaction")
+		return notification.ProductCommandRepos{}
+	})}
+	for _, candidate := range []*notification.ProductCommands{command, nil} {
 		w := authorityDBRequest(readNativeHandler(f, candidate), http.MethodPost, nativeReadPath, f.token(t, a.publicID), readNativeBody(id))
-		assertNativeUnreadProblem(t, w, 500, "INTERNAL")
+		assertGraphReadFailure(t, w, 500, "INTERNAL")
 	}
 	if after := readNativeSnapshot(t, f, a); after != before {
 		t.Fatal("missing/closed write dependency changed rows")
 	}
 }
 
-func TestNotificationsMarkReadProductionStatementAndDeferredCommitFailureRollback(t *testing.T) {
+func TestNotificationsMarkReadGraphQLStatementAndDeferredCommitFailureRollback(t *testing.T) {
 	for _, deferred := range []bool{false, true} {
 		t.Run(fmt.Sprintf("deferred=%v", deferred), func(t *testing.T) {
 			f := newAuthorityDBFixture(t)
@@ -253,7 +276,7 @@ func TestNotificationsMarkReadProductionStatementAndDeferredCommitFailureRollbac
 				f.exec(t, "CREATE TRIGGER "+name+" BEFORE UPDATE ON notifications FOR EACH ROW EXECUTE FUNCTION "+name+"()")
 			}
 			w := authorityDBRequest(f.handler, http.MethodPost, nativeReadPath, f.token(t, a.publicID), readNativeBody(first, second))
-			assertNativeUnreadProblem(t, w, 500, "INTERNAL")
+			assertGraphReadFailure(t, w, 500, "INTERNAL")
 			if strings.Contains(w.Body.String(), "private") {
 				t.Fatal("SQL details escaped")
 			}
@@ -267,10 +290,10 @@ func TestNotificationsMarkReadProductionStatementAndDeferredCommitFailureRollbac
 }
 
 type readCommitAcknowledgementLoss struct {
-	next uow.Runner[notification.CommandRepository]
+	next uow.Runner[notification.ProductCommandRepos]
 }
 
-func (r readCommitAcknowledgementLoss) Do(ctx context.Context, fn func(notification.CommandRepository) error) error {
+func (r readCommitAcknowledgementLoss) Do(ctx context.Context, fn func(notification.ProductCommandRepos) error) error {
 	// Simulate the transport error only after the real transaction has committed.
 	// This is not evidence of a real network-level COMMIT fault injection.
 	if err := r.next.Do(ctx, fn); err != nil {
@@ -279,18 +302,16 @@ func (r readCommitAcknowledgementLoss) Do(ctx context.Context, fn func(notificat
 	return errors.New("simulated lost commit acknowledgement")
 }
 
-func TestNotificationsMarkReadProductionUnknownCommitOutcomeSafeRetry(t *testing.T) {
+func TestNotificationsMarkReadGraphQLUnknownCommitOutcomeSafeRetry(t *testing.T) {
 	f := newAuthorityDBFixture(t)
 	a := f.member(t, auth.Player)
 	id := readNativeNotice(t, f, a, false)
-	runner := db.NewRunner(f.runtime.Pool, func(tx pgx.Tx) notification.CommandRepository {
-		return notification.NewPostgresRepository(dbgen.New(tx))
-	})
-	command := notification.NewCommands(readCommitAcknowledgementLoss{next: runner})
+	command := *f.runtime.Resolver.Services.NotificationCommands
+	command.Runner = readCommitAcknowledgementLoss{next: command.Runner}
 	token := f.token(t, a.publicID)
 	body := readNativeBody(id)
-	w := authorityDBRequest(readNativeHandler(f, command), http.MethodPost, nativeReadPath, token, body)
-	assertNativeUnreadProblem(t, w, 500, "INTERNAL")
+	w := authorityDBRequest(readNativeHandler(f, &command), http.MethodPost, nativeReadPath, token, body)
+	assertGraphReadFailure(t, w, 500, "INTERNAL")
 	committed := readNativeSnapshot(t, f, a)
 	times := readNativeTimes(t, f, id)
 	if times[id] == nil {
@@ -299,5 +320,28 @@ func TestNotificationsMarkReadProductionUnknownCommitOutcomeSafeRetry(t *testing
 	assertNativeReadSuccess(t, authorityDBRequest(f.handler, http.MethodPost, nativeReadPath, token, body))
 	if after := readNativeSnapshot(t, f, a); after != committed {
 		t.Fatal("safe retry moved committed read_at")
+	}
+}
+
+func assertGraphReadFailure(t *testing.T, w *httptest.ResponseRecorder, status int, code string) {
+	t.Helper()
+	assertUnreadNativeCORS(t, w)
+	if w.Code != http.StatusOK {
+		assertNativeUnreadProblem(t, w, status, code)
+		return
+	}
+	var result struct {
+		Data   map[string]json.RawMessage `json:"data"`
+		Errors []struct {
+			Extensions struct {
+				Code string `json:"code"`
+			} `json:"extensions"`
+		} `json:"errors"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil || len(result.Errors) != 1 || result.Errors[0].Extensions.Code != code {
+		t.Fatalf("GraphQL failure=%d %s expected=%s err=%v", w.Code, w.Body, code, err)
+	}
+	if receipt := result.Data["markNotificationsRead"]; len(receipt) > 0 && string(receipt) != "null" {
+		t.Fatalf("failed mutation returned success receipt: %s", w.Body)
 	}
 }

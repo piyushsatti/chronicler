@@ -233,6 +233,7 @@ func TestProductionChainAudienceFullPagesReadableTotalsBacklinksAndMap(t *testin
 	f.exec(t, `UPDATE members SET handle='Exact-Handle' WHERE id=$1`, reader.rowID)
 
 	target := f.doc(t, "", nil, document.StatusPublished, document.VisibilityPublic)
+	f.exec(t, `UPDATE documents SET kind='codex_entry' WHERE id=$1`, target.rowID)
 	for _, source := range docs {
 		f.exec(t, `INSERT INTO document_links(source_id,document_target_id,relation) VALUES($1,$2,'fixture')`, source.rowID, target.rowID)
 	}
@@ -424,8 +425,11 @@ func assertAudienceBacklinkCount(t *testing.T, f *authorityDBFixture, member aut
 	if err != nil {
 		t.Fatal(err)
 	}
-	count, err := f.runtime.Documents.CountBacklinks(auth.WithAuthority(context.Background(), a), slug)
-	if err != nil || count != want {
-		t.Fatalf("scoped backlink count=%d err=%v want=%d", count, err, want)
+	entry, err := f.runtime.Resolver.Services.DocumentQueries.CodexEntry(context.Background(), a, document.CodexEntrySpec{Slug: slug})
+	if err != nil || entry == nil {
+		t.Fatalf("codex entry=%+v err=%v", entry, err)
+	}
+	if int64(entry.BacklinkCount) != want {
+		t.Fatalf("scoped backlink count=%d want=%d", entry.BacklinkCount, want)
 	}
 }
