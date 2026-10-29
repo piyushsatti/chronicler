@@ -217,9 +217,8 @@ class ArchiveService:
             return {"unavailable": True}
         candidates = tuple(
             passage
-            for passage in await self._store.passages()
-            if passage.url == clean_url
-            and passage.embedding_contract == self._embedding_contract
+            for passage in await self._store.url_passages(clean_url)
+            if passage.embedding_contract == self._embedding_contract
         )
         document_ids = tuple(
             dict.fromkeys(passage.document_id for passage in candidates)

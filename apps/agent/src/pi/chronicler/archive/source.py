@@ -60,12 +60,10 @@ class CandidateProjection(Protocol):
 
 
 class FrozenSnapshotSource:
-    """Read a pinned anonymous public snapshot without consulting live data.
+    """Validate a pinned snapshot used to seed Archive candidate identities.
 
-    Production uses this source only while the canonical public projection is
-    being rebuilt.  It is deliberately validated at startup so a missing,
-    truncated, malformed, or swapped snapshot cannot silently become the
-    retrieval corpus.
+    Archive revalidates its candidates through the current anonymous source.
+    Offline reindex utilities may read the validated snapshot directly.
     """
 
     def __init__(
@@ -101,15 +99,9 @@ class FrozenSnapshotSource:
 
     @property
     def document_ids(self) -> frozenset[str]:
-        """Return the exact identities that a live corpus must replace."""
+        """Return the candidate identities available before live promotion."""
 
         return frozenset(self._by_id)
-
-    def matches_documents(self, documents: Sequence[PublicDocument]) -> bool:
-        """Return whether revalidated live documents exactly match the snapshot."""
-
-        live_by_id = {document.document_id: document for document in documents}
-        return len(live_by_id) == len(documents) and live_by_id == self._by_id
 
     @staticmethod
     def _parse(raw: bytes) -> tuple[PublicDocument, ...]:
@@ -305,27 +297,19 @@ class ArchiveSource:
 
     async def all_documents(self) -> tuple[PublicDocument, ...]:
         identifiers = await self._projection.all_document_ids()
-        if self._bootstrap_source is None:
-            return await self._live_documents(identifiers)
-        if self._live_promoted:
-            documents = await self._live_documents(identifiers)
-            if not self._bootstrap_source.matches_documents(documents):
-                raise RuntimeError(
-                    "promoted live corpus drifted from the evaluated bootstrap corpus"
-                )
-            return documents
-        if not self._can_attempt_live_promotion(identifiers):
-            return await self._bootstrap_source.all_documents()
-
-        # Promotion is driven only by a full indexing sync.  Require the exact
-        # frozen identities to survive anonymous public revalidation before
-        # latching live mode for the lifetime of this process.
         documents = await self._live_documents(identifiers)
-        if not self._bootstrap_source.matches_documents(documents):
-            return await self._bootstrap_source.all_documents()
-        self._record_promotion()
-        self._live_promoted = True
-        return documents
+        if self._live_promoted:
+            return documents
+        assert self._bootstrap_source is not None
+        assert self._bootstrap_min_live_documents is not None
+        if len(documents) >= self._bootstrap_min_live_documents:
+            self._record_promotion()
+            self._live_promoted = True
+            return documents
+        snapshot_ids = self._bootstrap_source.document_ids
+        return tuple(
+            document for document in documents if document.document_id in snapshot_ids
+        )
 
     async def _live_documents(
         self, identifiers: Sequence[str]
@@ -340,21 +324,12 @@ class ArchiveSource:
     async def documents(
         self, document_ids: Sequence[str]
     ) -> tuple[PublicDocument, ...]:
+        identifiers = await self._projection.eligible_document_ids(document_ids)
         if not self._live_promoted:
             assert self._bootstrap_source is not None
-            return await self._bootstrap_source.documents(document_ids)
-        identifiers = await self._projection.eligible_document_ids(document_ids)
-        current = await self._public_source.revalidate_projections(identifiers)
-        return tuple(current[item] for item in identifiers if item in current)
-
-    def _can_attempt_live_promotion(self, live_ids: Sequence[str]) -> bool:
-        if self._bootstrap_source is None or self._bootstrap_min_live_documents is None:
-            return False
-        identifiers = set(live_ids)
-        return (
-            len(identifiers) >= self._bootstrap_min_live_documents
-            and identifiers == self._bootstrap_source.document_ids
-        )
+            snapshot_ids = self._bootstrap_source.document_ids
+            identifiers = tuple(item for item in identifiers if item in snapshot_ids)
+        return await self._live_documents(identifiers)
 
     def _promotion_marker_bytes(self) -> bytes:
         assert self._bootstrap_source is not None

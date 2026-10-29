@@ -19,6 +19,10 @@ type AgentQuestion struct {
 	UpdatedAt pgtype.Timestamptz `json:"updated_at"`
 }
 
+type ArchiveDocumentsV1 struct {
+	DocumentID pgtype.UUID `json:"document_id"`
+}
+
 type ArchonAssignment struct {
 	MemberID  int64              `json:"member_id"`
 	RegionID  int64              `json:"region_id"`

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import cast
 
 import httpx
 import pytest
 
+from pi.chronicler.agent import worker
 from pi.chronicler.agent.harness import AgentHarness, Answer, ReplyHistoryMessage
 from pi.chronicler.agent.settings import AgentSettings
 from pi.chronicler.agent.worker import (
@@ -17,6 +19,29 @@ from pi.chronicler.agent.worker import (
     completed_payload,
     parse_job,
 )
+
+
+def test_main_suppresses_httpx_info_and_preserves_worker_info(monkeypatch, caplog):
+    httpx_logger = logging.getLogger("httpx")
+    previous_level = httpx_logger.level
+
+    async def service():
+        httpx_logger.info("idle poll")
+        httpx_logger.warning("http warning")
+        httpx_logger.error("http error")
+        worker.logger.info("worker info")
+
+    monkeypatch.setattr(worker, "_main", service)
+    try:
+        httpx_logger.setLevel(logging.NOTSET)
+        with caplog.at_level(logging.INFO):
+            worker.main()
+        assert "idle poll" not in caplog.messages
+        assert "http warning" in caplog.messages
+        assert "http error" in caplog.messages
+        assert "worker info" in caplog.messages
+    finally:
+        httpx_logger.setLevel(previous_level)
 
 
 def _settings(tmp_path) -> AgentSettings:

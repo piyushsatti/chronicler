@@ -80,6 +80,7 @@ class Store(Protocol):
     async def passages(self) -> tuple[Passage, ...]: ...
     async def document_passages(self, document_id: str) -> tuple[Passage, ...]: ...
     async def slug_passages(self, slug: str) -> tuple[Passage, ...]: ...
+    async def url_passages(self, url: str) -> tuple[Passage, ...]: ...
     async def replace_all(self, passages: Sequence[Passage]) -> None: ...
     async def search(
         self, query: str, vector: Sequence[float], limit: int
@@ -154,6 +155,20 @@ class LanceStore:
                 self._open_or_create()
                 .search()
                 .where(f"slug = '{escaped}'")
+                .limit(None)
+                .to_list()
+            )
+            return tuple(_passage(row) for row in rows)
+
+        return await asyncio.to_thread(read)
+
+    async def url_passages(self, url: str) -> tuple[Passage, ...]:
+        def read() -> tuple[Passage, ...]:
+            escaped = url.replace("'", "''")
+            rows = (
+                self._open_or_create()
+                .search()
+                .where(f"url = '{escaped}'")
                 .limit(None)
                 .to_list()
             )
@@ -360,7 +375,12 @@ class Indexer:
                 for chunk, vector in zip(chunks, vectors, strict=True)
             )
             embedded += 1
-        await self._store.replace_all(output)
+        if previous and not output:
+            raise ValueError("empty sync would replace a nonempty index")
+        if sorted(output, key=lambda p: p.passage_id) != sorted(
+            previous, key=lambda p: p.passage_id
+        ):
+            await self._store.replace_all(output)
         removed = len(set(previous_by_document) - current_ids)
         return SyncResult(
             documents=len(documents),

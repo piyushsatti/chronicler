@@ -9,7 +9,7 @@ When `SNIFFER_ENABLED=true`, `mountActivity` forwards three guild gateway events
 
 ## How it works
 
-`mountActivity` returns immediately unless `config.snifferEnabled` is set. Listeners accept events whose guild is `config.guildId`. Bot-authored activity is skipped. Each accepted payload becomes a `SniffedEvent` and `deliverActivity` calls `postDiscordEvent`.
+`mountActivity` returns immediately unless `config.snifferEnabled` is set. Listeners accept events whose guild is `config.guildId` and whose cached channel permissions grant `@everyone` `ViewChannel`. Unknown channels or permissions and private threads are skipped. Bot-authored activity and Discord system messages are skipped. This authorization check needs no additional setting or Discord fetch. Each accepted payload becomes a `SniffedEvent` and `deliverActivity` calls `postDiscordEvent`.
 
 | Gateway event              | Normalizer                                   | `event_id`                                     | `amount`                     |
 | -------------------------- | -------------------------------------------- | ---------------------------------------------- | ---------------------------- |
@@ -17,7 +17,7 @@ When `SNIFFER_ENABLED=true`, `mountActivity` forwards three guild gateway events
 | `voiceStateUpdate`         | `VoiceSessionTracker.handleVoiceStateUpdate` | `voice:<userId>:<joinedAtMs>`                  | whole minutes in the channel |
 | raw `MESSAGE_REACTION_ADD` | `normalizeReactionDispatch`                  | `reaction:<sessionKey>:<sequence>:<messageId>` | `1`                          |
 
-Voice joins stay in a process-local `VoiceSessionTracker`. A restart forgets open joins. On `ClientReady`, `reconcile` closes sessions missing from the guild voice cache and emits `voice:recovery:…` when at least one minute elapsed. Sessions under one minute produce no event.
+Voice joins stay in a process-local `VoiceSessionTracker`. A restart forgets open joins. Moving from a public channel to a private channel closes the public interval without tracking the private channel. Moving back starts a new public interval. Voice transitions, channel updates, `@everyone` role updates, and readiness reconciliation discard tracked intervals whose channel is now private or has unknown permissions. Permission updates reconcile the cached voice states immediately and start fresh intervals for newly public channels. On `ClientReady`, `reconcile` accepts only public voice states and closes missing public sessions with `voice:recovery:…`. Minutes are rounded, and intervals rounding below one minute produce no event.
 
 `postDiscordEvent` sends `X-Ingest-Secret` and waits 10 seconds. `deliverActivity` allows 8 posts in flight (`MAX_IN_FLIGHT`). Past that cap, or on any non-2xx or network error, the event is logged and dropped.
 

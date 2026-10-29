@@ -41,6 +41,9 @@ class Store:
     async def slug_passages(self, slug: str) -> tuple[Passage, ...]:
         return tuple(p for p in self.value if p.slug == slug)
 
+    async def url_passages(self, url: str) -> tuple[Passage, ...]:
+        return tuple(p for p in self.value if p.url == url)
+
     async def replace_all(self, passages: Sequence[Passage]) -> None:
         self.value = tuple(passages)
 
@@ -138,7 +141,7 @@ async def test_cross_encoder_reranks_hybrid_candidates() -> None:
 
 
 @pytest.mark.asyncio
-async def test_exact_indexed_url_resolves_without_semantic_search() -> None:
+async def test_exact_url_read_does_not_materialize_all_passages() -> None:
     document = PublicDocument(
         "d1", "rule", None, "hehe-rule", "Hehe Rule", "Current public text"
     )
@@ -159,10 +162,14 @@ async def test_exact_indexed_url_resolves_without_semantic_search() -> None:
         async def embed_query(self, text: str) -> list[float]:
             raise AssertionError("exact URL resolution must not embed or search")
 
+    class TargetedStore(Store):
+        async def passages(self) -> tuple[Passage, ...]:
+            raise AssertionError("exact URL resolution must not load all passages")
+
     service = ArchiveService(
         Source(document),
         NoQueryEmbedder(),
-        Store((passage,)),
+        TargetedStore((passage,)),
         "https://example.test",
         "contract",
     )

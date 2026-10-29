@@ -15,11 +15,11 @@ Long-form historical text (gitignored): `.local/docs-quarry/decisions-longform/`
 
 ## Classification
 
-| Kind                   | Records                                                                      |
-| ---------------------- | ---------------------------------------------------------------------------- |
-| Boundary (this folder) | D1, D3, D4, D10–D15, D18–D20, D22–D24, D27–D31, D33, D45, D46, D47, D48, D49 |
-| Local → API            | D2, D5–D9, D16, D17, D25, D26, D32                                           |
-| Local → Web            | D21                                                                          |
+| Kind                   | Records                                                                           |
+| ---------------------- | --------------------------------------------------------------------------------- |
+| Boundary (this folder) | D1, D3, D4, D10–D15, D18–D20, D22–D24, D27–D31, D33, D45, D46, D47, D48, D49, D50 |
+| Local → API            | D2, D5–D9, D16, D17, D25, D26, D32                                                |
+| Local → Web            | D21                                                                               |
 
 ## Index (boundary)
 
@@ -51,3 +51,4 @@ Long-form historical text (gitignored): `.local/docs-quarry/decisions-longform/`
 | [D47](/docs/decisions/D47-Guest-Onboarding-And-Player-Promotion.md)      | New sign-ins are guests until character approval    | [live-authority](/docs/interfaces/live-authority.md)               |
 | [D48](/docs/decisions/D48-Former-DMs-Retain-Owned-Quest-Management.md)   | Former DMs keep management of their owned quests    | [live-authority](/docs/interfaces/live-authority.md)               |
 | [D49](/docs/decisions/D49-Quest-Discord-Terminal-Synchronization.md)     | Terminal quests reconcile existing Discord objects  | [discord-sensor](/docs/interfaces/discord-sensor.md)               |
+| [D50](/docs/decisions/D50-Archive-Uses-Current-Anonymous-Projections.md) | Archive uses IDs and anonymous API bodies           | [agent-qa-http](/docs/interfaces/agent-qa-http.md)                 |

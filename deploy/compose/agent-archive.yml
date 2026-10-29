@@ -1,5 +1,6 @@
 # HTTP-first agent + archive stack (no RabbitMQ).
-# Requires a running API with ingest secret and public GraphQL.
+# Requires API migration 0015's public.archive_documents_v1 ID-eligibility view.
+# Requires staged assets and an API with ingest secret and public GraphQL.
 # Usage:
 #   export INGEST_SECRET=... ARCHIVE_MCP_TOKEN=... LITELLM_BASE_URL=... LITELLM_API_KEY=...
 #   docker compose -f deploy/compose/agent-archive.yml up --build
@@ -7,30 +8,53 @@ name: chronicler-agent-archive
 
 services:
   archive:
+    restart: unless-stopped
     build:
       context: ../../apps/agent
       dockerfile: Dockerfile.archive
       args:
         CHRONICLER_BUILD_SHA: ${CHRONICLER_BUILD_SHA:-unknown}
     environment:
-      PUBLIC_GRAPHQL_URL: ${PUBLIC_GRAPHQL_URL:-http://host.docker.internal:8080/graphql}
+      PUBLIC_GRAPHQL_URL: ${PUBLIC_GRAPHQL_URL:-http://host.docker.internal:8080/v1/graphql}
+      ARCHIVE_DATABASE_URL: ${ARCHIVE_DATABASE_URL:?set ARCHIVE_DATABASE_URL}
+      ARCHIVE_DATABASE_CA_FILE: ${ARCHIVE_DATABASE_CA_FILE:?set ARCHIVE_DATABASE_CA_FILE}
+      ARCHIVE_ALLOWED_HOSTS: ${ARCHIVE_ALLOWED_HOSTS:?set ARCHIVE_ALLOWED_HOSTS}
       PUBLIC_SITE_URL: ${PUBLIC_SITE_URL:-http://localhost:3000}
       ARCHIVE_MCP_TOKEN: ${ARCHIVE_MCP_TOKEN:?set ARCHIVE_MCP_TOKEN}
       LANCEDB_PATH: /var/lib/chronicler/archive/lancedb
       LITELLM_BASE_URL: ${LITELLM_BASE_URL:?set LITELLM_BASE_URL}
       LITELLM_API_KEY: ${LITELLM_API_KEY:?set LITELLM_API_KEY}
-      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-chronicler-embed-v1}
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:?set EMBEDDING_MODEL}
+      EMBEDDING_REVISION: ${EMBEDDING_REVISION:?set EMBEDDING_REVISION}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:?set EMBEDDING_DIMENSIONS}
+      EMBEDDING_TOKENIZER_PATH: ${EMBEDDING_TOKENIZER_PATH:?set EMBEDDING_TOKENIZER_PATH}
+      EMBEDDING_TOKENIZER_SHA256: ${EMBEDDING_TOKENIZER_SHA256:?set EMBEDDING_TOKENIZER_SHA256}
+      EMBEDDING_MAX_INPUT_TOKENS: ${EMBEDDING_MAX_INPUT_TOKENS:?set EMBEDDING_MAX_INPUT_TOKENS}
+      EMBEDDING_QUERY_PREFIX: ${EMBEDDING_QUERY_PREFIX?set EMBEDDING_QUERY_PREFIX, which may be empty}
       ARCHIVE_HOST: 0.0.0.0
       ARCHIVE_PORT: '8000'
       INDEX_INTERVAL_SECONDS: ${INDEX_INTERVAL_SECONDS:-3600}
     volumes:
       - archive-data:/var/lib/chronicler/archive
+      - type: bind
+        source: ${ARCHIVE_DATABASE_CA_FILE:?set ARCHIVE_DATABASE_CA_FILE}
+        target: ${ARCHIVE_DATABASE_CA_FILE:?set ARCHIVE_DATABASE_CA_FILE}
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${EMBEDDING_TOKENIZER_PATH:?set EMBEDDING_TOKENIZER_PATH}
+        target: ${EMBEDDING_TOKENIZER_PATH:?set EMBEDDING_TOKENIZER_PATH}
+        read_only: true
+        bind:
+          create_host_path: false
     ports:
       - '8090:8000'
     extra_hosts:
       - 'host.docker.internal:host-gateway'
 
   agent:
+    restart: unless-stopped
     build:
       context: ../../apps/agent
       dockerfile: Dockerfile
@@ -45,7 +69,7 @@ services:
       LITELLM_API_KEY: ${LITELLM_API_KEY:?set LITELLM_API_KEY}
       AGENT_MODEL: ${AGENT_MODEL:?set AGENT_MODEL}
       AGENT_CONTEXT_FILE: /app/context.md
-      AGENT_TOKENIZER_PATH: ${AGENT_TOKENIZER_PATH:-/model-cache/tokenizer}
+      AGENT_TOKENIZER_PATH: ${AGENT_TOKENIZER_PATH:?set AGENT_TOKENIZER_PATH}
       AGENT_TOKENIZER_SHA256: ${AGENT_TOKENIZER_SHA256:?set AGENT_TOKENIZER_SHA256}
       AGENT_TOKENIZER_CONFIG_SHA256: ${AGENT_TOKENIZER_CONFIG_SHA256:?set AGENT_TOKENIZER_CONFIG_SHA256}
       AGENT_CHAT_TEMPLATE_SHA256: ${AGENT_CHAT_TEMPLATE_SHA256:?set AGENT_CHAT_TEMPLATE_SHA256}
@@ -54,9 +78,13 @@ services:
       - archive
     extra_hosts:
       - 'host.docker.internal:host-gateway'
-    # Mount tokenizer assets in real deploys:
-    # volumes:
-    #   - ${AGENT_TOKENIZER_HOST_PATH}:/model-cache/tokenizer:ro
+    volumes:
+      - type: bind
+        source: ${AGENT_TOKENIZER_PATH:?set AGENT_TOKENIZER_PATH}
+        target: ${AGENT_TOKENIZER_PATH:?set AGENT_TOKENIZER_PATH}
+        read_only: true
+        bind:
+          create_host_path: false
 
 volumes:
   archive-data: {}

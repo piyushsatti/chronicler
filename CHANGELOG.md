@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Require explicit Archive model settings and staged read-only CA and tokenizer assets in local Compose, and add the ID-only `archive_documents_v1` view so the local Archive stack can start (D50).
 - Restore the Discord quest announcement layout, create scheduled events for quests without voice channels, and unlock locked hex neighbours when a hex is mapped. Mapped hexes now draw like unlocked hexes on the map.
 - Paginate Codex autocomplete and limit editor undo history to 100 snapshots. Map navigation reads paginated containment metadata for other maps.
 - GraphQL loaders batch concurrent reads and deduplicate keys within each request. Maintained API DSNs default to a maximum of 10 database connections per pool.
@@ -30,6 +31,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Revalidate Archive bootstrap candidates against current anonymous projections, accept edits and withdrawals after promotion, and batch requested reads. Skip unchanged index rewrites, preserve nonempty indexes on empty syncs, and query exact URLs directly.
+- Preserve model-supplied tool arguments and valid answers for compound shove questions. Keep the interaction checks in evaluation fixtures.
+- Reject malformed Archive bearer bytes with 401 and suppress routine HTTP polling logs while retaining worker INFO logs.
+- Skip Discord system-message activity and activity in channels that `@everyone` cannot view, including voice reconciliation.
 - Preserve editor query and mutation caches after transient member refresh failures, while retaining invalidation for rejected sessions and changed authority.
 - Calendar today and quest windows follow the member's timezone across daylight-saving changes. Game-calendar cells preserve civil dates across process and database timezones.
 - Link hyphenated mentions and keep trailing punctuation outside mention links.

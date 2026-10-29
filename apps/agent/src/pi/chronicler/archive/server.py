@@ -204,16 +204,6 @@ def create_mcp(
         task: asyncio.Task[None] | None = None
         try:
             initial_result = await indexer.sync()
-            if (
-                settings.bootstrap_expected_document_count is not None
-                and source.using_bootstrap
-                and initial_result.documents
-                != settings.bootstrap_expected_document_count
-            ):
-                raise RuntimeError(
-                    "Archive initial sync did not contain the pinned bootstrap "
-                    "document count"
-                )
             logger.info(
                 "Archive initial index sync complete",
                 extra={
@@ -299,7 +289,7 @@ def create_app(settings: ArchiveSettings) -> ASGIApp:
 class BearerTokenMiddleware:
     def __init__(self, app: ASGIApp, token: str) -> None:
         self._app = app
-        self._token = token
+        self._token = f"Bearer {token}".encode()
 
     async def __call__(
         self,
@@ -311,9 +301,8 @@ class BearerTokenMiddleware:
             await self._app(scope, receive, send)
             return
         headers = dict(cast("list[tuple[bytes, bytes]]", scope.get("headers", [])))
-        authorization = headers.get(b"authorization", b"").decode("latin-1")
-        expected = f"Bearer {self._token}"
-        if not compare_digest(authorization, expected):
+        authorization = headers.get(b"authorization", b"")
+        if not compare_digest(authorization, self._token):
             await send(
                 {
                     "type": "http.response.start",

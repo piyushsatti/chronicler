@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+from dataclasses import replace
 
 import pytest
 
@@ -33,11 +34,22 @@ class Embedder:
 class Store:
     def __init__(self, passages: tuple[Passage, ...] = ()) -> None:
         self.value = passages
+        self.replacements = 0
 
     async def passages(self) -> tuple[Passage, ...]:
         return self.value
 
+    async def document_passages(self, document_id: str) -> tuple[Passage, ...]:
+        return tuple(p for p in self.value if p.document_id == document_id)
+
+    async def slug_passages(self, slug: str) -> tuple[Passage, ...]:
+        return tuple(p for p in self.value if p.slug == slug)
+
+    async def url_passages(self, url: str) -> tuple[Passage, ...]:
+        return tuple(p for p in self.value if p.url == url)
+
     async def replace_all(self, passages: Sequence[Passage]) -> None:
+        self.replacements += 1
         self.value = tuple(passages)
 
     async def search(
@@ -140,8 +152,6 @@ async def test_lance_store_fuses_lexical_and_dense_candidates(tmp_path) -> None:
 async def test_disposable_rebuild_metadata_and_contract_invalidation(
     tmp_path, chunker
 ) -> None:
-    from dataclasses import replace
-
     source = Source((document("one", "1 2 3 4 5 6 7 8 9 0 " * 90 + "ENDING"),))
     embedder = Embedder()
     store = LanceStore(str(tmp_path), 3)
@@ -166,9 +176,101 @@ async def test_disposable_rebuild_metadata_and_contract_invalidation(
     )
     assert (await new_contract.sync()).embedded_documents == 1
     assert all(p.embedding_contract == "token-v3" for p in await store.passages())
+    previous = await store.passages()
     source.value = ()
-    assert (await new_contract.sync()).removed_documents == 1
-    assert await store.passages() == ()
+    with pytest.raises(ValueError, match="empty"):
+        await new_contract.sync()
+    assert await store.passages() == previous
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("reverse_order", (False, True))
+async def test_unchanged_sync_does_not_replace_index(chunker, reverse_order) -> None:
+    source = Source((document("one"), document("two")))
+    store = Store()
+    indexer = Indexer(
+        source, Embedder(), store, "https://example.test", "contract", chunker
+    )
+    await indexer.sync()
+    previous = store.value
+    if reverse_order:
+        source.value = tuple(reversed(source.value))
+
+    result = await indexer.sync()
+
+    assert result.reused_documents == 2
+    assert result.embedded_documents == 0
+    assert store.replacements == 1
+    assert store.value == previous
+
+
+@pytest.mark.asyncio
+async def test_empty_sync_preserves_nonempty_index(chunker) -> None:
+    source = Source((document("one"),))
+    store = Store()
+    indexer = Indexer(
+        source, Embedder(), store, "https://example.test", "contract", chunker
+    )
+    await indexer.sync()
+    previous = store.value
+    source.value = ()
+
+    with pytest.raises(ValueError, match="empty"):
+        await indexer.sync()
+
+    assert store.value == previous
+    assert store.replacements == 1
+
+
+@pytest.mark.asyncio
+async def test_empty_initial_sync_is_allowed(chunker) -> None:
+    store = Store()
+    indexer = Indexer(
+        Source(()), Embedder(), store, "https://example.test", "contract", chunker
+    )
+
+    result = await indexer.sync()
+
+    assert result.documents == 0
+    assert result.passages == 0
+    assert store.value == ()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("unsupported_route", (False, True))
+async def test_removed_document_still_updates_nonempty_index(
+    chunker, unsupported_route
+) -> None:
+    source = Source((document("one"), document("two")))
+    store = Store()
+    indexer = Indexer(
+        source, Embedder(), store, "https://example.test", "contract", chunker
+    )
+    await indexer.sync()
+    source.value = (
+        (document("one"), replace(document("two"), kind="unsupported"))
+        if unsupported_route
+        else (document("one"),)
+    )
+
+    await indexer.sync()
+
+    assert {passage.document_id for passage in store.value} == {"one"}
+    assert store.replacements == 2
+
+
+@pytest.mark.asyncio
+async def test_url_passages_filters_exact_url_and_escapes_quotes(tmp_path) -> None:
+    quoted_url = "https://example.test/rules/guides/it's-public"
+    expected = Passage(
+        "p1", "d1", "Title", "Excerpt", quoted_url, "v1", "c1", [1, 0, 0]
+    )
+    other = replace(expected, passage_id="p2", document_id="d2", url=quoted_url + "-2")
+    store = LanceStore(str(tmp_path), 3)
+    await store.replace_all((expected, other))
+
+    assert await store.url_passages(quoted_url) == (expected,)
+    assert await store.url_passages(quoted_url + "' OR 1=1 --") == ()
 
 
 @pytest.mark.asyncio

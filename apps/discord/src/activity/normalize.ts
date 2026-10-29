@@ -6,7 +6,8 @@
  */
 
 import { createHash } from 'node:crypto';
-import type { Message, VoiceState } from 'discord.js';
+import { ChannelType, PermissionFlagsBits } from 'discord.js';
+import type { Channel, Message, VoiceState } from 'discord.js';
 import type { PersistedVoiceSession, SniffedEvent } from './types.js';
 
 export interface ReactionGatewayDispatch {
@@ -20,13 +21,28 @@ export interface ReactionGatewayDispatch {
   };
 }
 
-/** Normalize a MESSAGE_CREATE gateway payload. Returns null for bot authors
- * or a payload missing the fields the backend requires. */
+export function isPublicActivityChannel(channel: Channel | null | undefined): boolean {
+  if (
+    channel == null ||
+    !('guild' in channel) ||
+    channel.type === ChannelType.PrivateThread
+  ) {
+    return false;
+  }
+  const everyone = channel.guild.roles.everyone;
+  return (
+    everyone !== undefined &&
+    channel.permissionsFor(everyone)?.has(PermissionFlagsBits.ViewChannel) === true
+  );
+}
+
+/** Normalize a MESSAGE_CREATE gateway payload. Returns null for bot authors,
+ * system messages, or a payload missing the fields the backend requires. */
 export function normalizeMessageCreate(message: Message): SniffedEvent | null {
   if (message === undefined || message === null || message.id === undefined) {
     return null;
   }
-  if (message.author?.bot === true) {
+  if (message.author?.bot === true || message.system === true) {
     return null;
   }
 
@@ -79,6 +95,7 @@ export function normalizeReactionDispatch(
 
 export interface VoiceSessionTrackerOptions {
   now?: () => number;
+  getChannel: (channelId: string) => Channel | undefined;
 }
 
 /**
@@ -92,9 +109,11 @@ export interface VoiceSessionTrackerOptions {
 export class VoiceSessionTracker {
   private readonly sessions = new Map<string, PersistedVoiceSession>();
   private readonly now: () => number;
+  private readonly getChannel: (channelId: string) => Channel | undefined;
 
-  constructor(options: VoiceSessionTrackerOptions = {}) {
+  constructor(options: VoiceSessionTrackerOptions) {
     this.now = options.now ?? Date.now;
+    this.getChannel = options.getChannel;
   }
 
   sessionCount(): number {
@@ -120,8 +139,19 @@ export class VoiceSessionTracker {
       return null;
     }
 
-    const wasInChannel = oldState.channelId != null;
-    const isInChannel = newState.channelId != null;
+    const session = this.sessions.get(userId);
+    if (
+      session !== undefined &&
+      !isPublicActivityChannel(this.getChannel(session.channelId))
+    ) {
+      this.sessions.delete(userId);
+    }
+    const wasInChannel =
+      oldState.channelId != null &&
+      isPublicActivityChannel(this.getChannel(oldState.channelId));
+    const isInChannel =
+      newState.channelId != null &&
+      isPublicActivityChannel(this.getChannel(newState.channelId));
 
     if (!wasInChannel && isInChannel) {
       this.sessions.set(userId, {
@@ -202,13 +232,22 @@ export class VoiceSessionTracker {
     for (const state of currentStates) {
       const userId = state.id;
       const isBot = state.member?.user?.bot ?? false;
-      if (userId && !isBot && typeof state.channelId === 'string') {
+      if (
+        userId &&
+        !isBot &&
+        typeof state.channelId === 'string' &&
+        isPublicActivityChannel(this.getChannel(state.channelId))
+      ) {
         current.set(userId, state);
       }
     }
 
     const events: SniffedEvent[] = [];
     for (const session of [...this.sessions.values()]) {
+      if (!isPublicActivityChannel(this.getChannel(session.channelId))) {
+        this.sessions.delete(session.userId);
+        continue;
+      }
       const state = current.get(session.userId);
       if (state === undefined) {
         const event = this.closePersistedSession(session, atMs, true);

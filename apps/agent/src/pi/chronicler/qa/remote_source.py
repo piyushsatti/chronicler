@@ -121,14 +121,26 @@ class AnonymousGraphqlSource:
         client: httpx.AsyncClient | None = None,
     ) -> None:
         parsed = urlsplit(url)
+        local_http = parsed.scheme == "http" and parsed.hostname in {
+            "localhost",
+            "127.0.0.1",
+            "::1",
+            "host.docker.internal",
+        }
         if (
-            parsed.scheme != "https"
-            or not parsed.netloc
-            or parsed.username
-            or parsed.password
-            or parsed.path != "/graphql"
-            or parsed.query
-            or parsed.fragment
+            (parsed.scheme != "https" and not local_http)
+            or not parsed.hostname
+            or parsed.port == 0
+            or parsed.username is not None
+            or parsed.password is not None
+            or parsed.path not in {"/v1/graphql", "/graphql"}
+            or "?" in url
+            or "#" in url
+            or "\\" in url
+            or any(
+                character.isspace() or ord(character) < 32 or ord(character) == 127
+                for character in url
+            )
         ):
             raise ValueError(
                 "public GraphQL source must be an anonymous HTTPS /graphql URL"
@@ -158,6 +170,7 @@ class AnonymousGraphqlSource:
                 "POST",
                 self.url,
                 json={"query": query, "variables": dict(variables)},
+                follow_redirects=False,
             ) as response:
                 response.raise_for_status()
                 declared_size = response.headers.get("content-length")

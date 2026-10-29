@@ -13,6 +13,65 @@ from pi.chronicler.agent.evaluation import (
 from pi.chronicler.agent.harness import Answer, AnswerSource, ReplyHistoryMessage
 
 
+@pytest.mark.parametrize(
+    "misconception",
+    [
+        "Knocking the creature Prone moves it out of your reach, so moving away "
+        "cannot provoke an Opportunity Attack.",
+        "Because the target is Prone, it cannot make an Opportunity Attack.",
+        "While Prone, Opportunity Attacks are not possible.",
+        "A prone target has no available Reaction for an Opportunity Attack.",
+        "Prone prevents Opportunity Attacks is not true, but Prone prevents "
+        "Opportunity Attacks.",
+        "Disengage still provokes an Opportunity Attack.",
+        "You do not need to be able to see the target.",
+        "Opportunity Attacks do not require a Reaction.",
+        "A Prone creature does not have Disadvantage on its attack rolls.",
+        "The Opportunity Attack does not have Disadvantage.",
+        "Prone removes the target from your reach.",
+        "Leaving reach does not provoke an Opportunity Attack.",
+    ],
+)
+def test_compound_quality_expectation_lives_in_fixture(misconception: str) -> None:
+    cases = {
+        case.case_id: case
+        for case in load_cases(
+            Path(__file__).parent / "fixtures" / "answer-quality-v1.json"
+        )
+    }
+    case = cases["combat-shove-prone-opportunity"]
+    assert case.accepted_sources == tuple(
+        cases[case_id].accepted_sources[0]
+        for case_id in ("definition-shove", "condition-prone", "combat-opportunity")
+    )
+    sources = tuple(
+        AnswerSource(
+            source.document_id,
+            "Rule source",
+            "https://example.test/rules",
+            source.content_version,
+        )
+        for source in case.accepted_sources
+    )
+    text = (
+        "Shove lets you choose either to push the target 5 feet away or cause it to "
+        "be Prone. Choosing Prone does not move the target or change its reach. "
+        "A Prone creature's movement is restricted to crawling or spending half "
+        "its Speed to stand, and its attack rolls have Disadvantage. If you move "
+        "out of the target's reach while it can see you, it can use its Reaction "
+        "to make an Opportunity Attack; Disengage avoids that Opportunity Attack. "
+        "Prone does not remove the Reaction, but the target's Opportunity Attack "
+        "attack roll is made with Disadvantage."
+    )
+
+    assert score_answer(case, Answer("answered", text, sources), 1).passed
+    score = score_answer(
+        case, Answer("answered", f"{text} {misconception}", sources), 1
+    )
+    assert not score.passed
+    assert any(failure.startswith("forbidden:") for failure in score.failures)
+
+
 def test_load_and_score_grounded_case(tmp_path: Path) -> None:
     corpus = tmp_path / "cases.json"
     corpus.write_text(

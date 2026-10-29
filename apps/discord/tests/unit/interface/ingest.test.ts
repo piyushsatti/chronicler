@@ -5,6 +5,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { ChannelType, PermissionsBitField } from 'discord.js';
 import {
   normalizeMessageCreate,
   normalizeReactionDispatch,
@@ -147,7 +148,15 @@ function messageEvent() {
 
 function voiceEvent() {
   let now = 0;
-  const tracker = new VoiceSessionTracker({ now: () => now });
+  const tracker = new VoiceSessionTracker({
+    now: () => now,
+    getChannel: () =>
+      ({
+        type: ChannelType.GuildVoice,
+        guild: { roles: { everyone: { id: 'guild-1' } } },
+        permissionsFor: () => new PermissionsBitField(['ViewChannel']),
+      }) as never,
+  });
   const member = { user: { bot: false } };
   tracker.handleVoiceStateUpdate(
     { id: 'user-1', channelId: null, member } as never,
