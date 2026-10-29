@@ -39,7 +39,7 @@ func FromEnv() Config {
 		PlatformOwnerDiscordID:    os.Getenv("PLATFORM_OWNER_DISCORD_ID"),
 		OperatorDiscordWebhookURL: os.Getenv("OPERATOR_DISCORD_WEBHOOK_URL"),
 		Addr:                      env("API_ADDR", ":8080"),
-		DatabaseURL:               env("DATABASE_URL", "postgres://chronicler:chronicler@127.0.0.1:5432/chronicler?sslmode=disable"),
+		DatabaseURL:               env("DATABASE_URL", "postgres://chronicler:chronicler@127.0.0.1:5432/chronicler?sslmode=disable&pool_max_conns=10"),
 		JWTSecret:                 env("JWT_SECRET", "dev-only-change-me"),
 		DiscordClientID:           os.Getenv("DISCORD_CLIENT_ID"),
 		DiscordSecret:             os.Getenv("DISCORD_CLIENT_SECRET"),

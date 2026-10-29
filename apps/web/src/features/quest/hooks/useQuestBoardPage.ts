@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { Temporal } from '@js-temporal/polyfill';
 import { useNavigate } from 'react-router-dom';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { queryKeys } from '../../../api/queryKeys.js';
@@ -21,7 +20,7 @@ import {
 import { loadQuestAuthoringAuthority } from '../adapters/questOptionsAdapter.js';
 import { useQuestMutations } from './useQuestMutations.js';
 import { useInfiniteScroll } from '../../../components/primitives/useInfiniteScroll.js';
-import { personLabels } from '../../../utils/format.js';
+import { dayRangeInZone, personLabels } from '../../../utils/format.js';
 import {
   filterQuestBoardItems,
   type BoardSegment,
@@ -40,30 +39,6 @@ const PAGE_SIZE = 50;
 /** Filters from the board's Filter popover: a DM id and a specific civil date (YYYY-MM-DD). */
 export type QuestBoardFilters = { dmId: string; date: string };
 export const NO_BOARD_FILTERS: QuestBoardFilters = { dmId: '', date: '' };
-
-/**
- * scheduledFrom/scheduledTo for one civil day in a zone: the first instant of
- * the day through the last millisecond of it. The end is inclusive-safe, so it
- * holds whether the API compares with < or <=. Null for a malformed date.
- */
-export function dayRangeInZone(
-  date: string,
-  timeZone: string | null,
-): { scheduledFrom: string; scheduledTo: string } | null {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
-  try {
-    const zone = timeZone ?? Temporal.Now.timeZoneId();
-    const day = Temporal.PlainDate.from(date, { overflow: 'reject' });
-    const start = day.toZonedDateTime(zone);
-    const end = day.add({ days: 1 }).toZonedDateTime(zone).subtract({ milliseconds: 1 });
-    return {
-      scheduledFrom: start.toInstant().toString(),
-      scheduledTo: end.toInstant().toString(),
-    };
-  } catch {
-    return null;
-  }
-}
 
 function toServerFilters(filters: QuestBoardFilters, timeZone: string | null): QuestListFilters {
   const range = filters.date ? dayRangeInZone(filters.date, timeZone) : null;

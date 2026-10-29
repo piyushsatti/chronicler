@@ -251,7 +251,7 @@ describe('useMe validated authority lifecycle', () => {
       'forbidden',
     ],
   ] as const)(
-    'masks prior authority and private caches after a %s me response',
+    'masks prior authority and preserves private caches after a %s me response',
     async (_label, restResponse, graphqlData, kind) => {
       signIn();
       const admin = { ...goodMe, roles: ['admin'] };
@@ -270,7 +270,7 @@ describe('useMe validated authority lifecycle', () => {
       expect(result.current.me.error).toMatchObject({ kind });
       expect(result.current.me.data).toBeUndefined();
       expect(result.current.authority.allowed).toBe(false);
-      expect(queryClient.getQueryData(['private-directory'])).toBeUndefined();
+      expect(queryClient.getQueryData(['private-directory'])).toBe('secret');
       expect(result.current.auth.isAuthenticated).toBe(true);
     },
   );

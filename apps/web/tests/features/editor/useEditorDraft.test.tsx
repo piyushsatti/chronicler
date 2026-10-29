@@ -6,6 +6,60 @@ import {
 } from '../../../src/features/editor/hooks/useEditorDraft.js';
 
 describe('useEditorDraft', () => {
+  it('bounds undo history and keeps cursor correct after branching', () => {
+    const { result } = renderHook(() =>
+      useEditorDraft('guide', 'bounded-history', {
+        meta: { title: 'Original' },
+        body: '0',
+      }),
+    );
+    for (let index = 1; index <= 120; index++)
+      act(() => result.current.setBody(String(index)));
+    for (let index = 0; index < 120; index++) act(() => result.current.undo());
+    expect(result.current.body).toBe('21');
+    expect(result.current.canUndo).toBe(false);
+    for (let index = 0; index < 120; index++) act(() => result.current.redo());
+    expect(result.current.body).toBe('120');
+    expect(result.current.canRedo).toBe(false);
+    act(() => result.current.undo());
+    act(() => result.current.undo());
+    act(() => result.current.setBody('Branched'));
+    expect(result.current.canRedo).toBe(false);
+    act(() => result.current.undo());
+    expect(result.current.body).toBe('118');
+    act(() => result.current.redo());
+    expect(result.current.body).toBe('Branched');
+    expect(
+      JSON.parse(
+        localStorage.getItem(draftStorageKey('guide', 'bounded-history')) ?? '{}',
+      ).body,
+    ).toBe('Branched');
+  });
+
+  it('bounds snapshots appended by route-pinned metadata changes', () => {
+    const { result, rerender } = renderHook(
+      ({ series }) =>
+        useEditorDraft(
+          'quest',
+          'bounded-pinned',
+          {
+            meta: { title: 'Original' },
+            body: `Source ${series}`,
+          },
+          { actorId: 'demo', version: 'new', canEditBody: true, pinned: { series } },
+        ),
+      { initialProps: { series: '0' } },
+    );
+    act(() => result.current.setBody('Edited'));
+    for (let index = 1; index <= 120; index++) rerender({ series: String(index) });
+    for (let index = 0; index < 120; index++) act(() => result.current.undo());
+    expect(result.current.meta.series).toBe('21');
+    expect(result.current.canUndo).toBe(false);
+    for (let index = 0; index < 120; index++) act(() => result.current.redo());
+    expect(result.current.meta.series).toBe('120');
+    expect(result.current.canRedo).toBe(false);
+  });
+
   it('restores the saved local draft and marks it dirty against the loaded record', () => {
     localStorage.setItem(
       draftStorageKey('quest', 'quest-id'),

@@ -1,6 +1,7 @@
 import { graphql, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import {
+  loadEntityLinkIndex,
   parseEntityLinkIndex,
   searchEntityLinkFeed,
 } from '../../../src/features/editor/adapters/entityLinkIndexAdapter.js';
@@ -8,6 +9,68 @@ import { parseQuestGenreOptions } from '../../../src/features/editor/adapters/qu
 import { server } from '../../../src/mocks/server.js';
 
 describe('entityLinkIndexAdapter', () => {
+  it('loads codex autocomplete beyond the first page', async () => {
+    const entries = Array.from({ length: 51 }, (_, index) => ({
+      id: `entry-${index}`,
+      slug: `entry-${index}`,
+      title: `Entry ${index}`,
+      category: 'faction',
+    }));
+    const requested: unknown[] = [];
+    server.use(
+      graphql.query('EntityLinkCodexDirectory', ({ variables }) => {
+        requested.push(variables);
+        const offset = Number(variables.offset ?? 0);
+        const limit = Number(variables.limit ?? 50);
+        return HttpResponse.json({
+          data: {
+            codexDirectory: {
+              total: entries.length,
+              items: entries.slice(offset, offset + limit),
+            },
+          },
+        });
+      }),
+    );
+    expect(await loadEntityLinkIndex()).toContainEqual({
+      id: 'entry-50',
+      label: 'Entry 50',
+      kind: 'Codex',
+      href: '/codex/entry-50',
+    });
+    expect(requested).toEqual([
+      { limit: 50, offset: 0 },
+      { limit: 50, offset: 50 },
+    ]);
+  });
+
+  it('rejects a codex page that makes no progress', async () => {
+    server.use(
+      graphql.query('EntityLinkCodexDirectory', () =>
+        HttpResponse.json({
+          data: { codexDirectory: { total: 1, items: [] } },
+        }),
+      ),
+    );
+    await expect(loadEntityLinkIndex()).rejects.toMatchObject({ kind: 'invalid' });
+  });
+
+  it('rejects repeated codex pages instead of a truncated index', async () => {
+    server.use(
+      graphql.query('EntityLinkCodexDirectory', () =>
+        HttpResponse.json({
+          data: {
+            codexDirectory: {
+              total: 2,
+              items: [{ id: 'repeated', title: 'Repeated', category: 'faction' }],
+            },
+          },
+        }),
+      ),
+    );
+    await expect(loadEntityLinkIndex()).rejects.toMatchObject({ kind: 'invalid' });
+  });
+
   it('maps quest codes and codex titles', () => {
     const result = parseEntityLinkIndex({
       quests: [

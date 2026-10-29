@@ -178,14 +178,9 @@ export function useEditorDraft(
       if (JSON.stringify(old.values) !== old.baseline) {
         // Keep the edits, but a value the route pins (a new quest's series) still wins.
         const value = withPinned(old.values, pinned);
-        return value === old.values
-          ? old
-          : {
-              ...old,
-              values: value,
-              history: [...old.history.slice(0, old.cursor + 1), value],
-              cursor: old.cursor + 1,
-            };
+        if (value === old.values) return old;
+        const history = [...old.history.slice(0, old.cursor + 1), value].slice(-100);
+        return { ...old, values: value, history, cursor: history.length - 1 };
       }
       return makeState();
     });
@@ -195,11 +190,12 @@ export function useEditorDraft(
       setState((old) => {
         const base = old.identity === identity ? old : makeState();
         const value = update(base.values);
+        const history = [...base.history.slice(0, base.cursor + 1), value].slice(-100);
         const next = {
           ...base,
           values: value,
-          history: [...base.history.slice(0, base.cursor + 1), value],
-          cursor: base.cursor + 1,
+          history,
+          cursor: history.length - 1,
         };
         persist(base.key, value);
         return next;

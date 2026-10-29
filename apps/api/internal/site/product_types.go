@@ -164,6 +164,7 @@ type DiscordDeliveryModeSpec struct {
 }
 
 type HomeSpec struct {
+	IncludeActivity bool
 }
 
 type HomeBannerSpec struct {
@@ -183,6 +184,7 @@ type SearchableKindsSpec struct {
 }
 
 type SiteStatsSpec struct {
+	IncludeActivity bool
 }
 
 type RedriveDiscordDeliveryState struct {

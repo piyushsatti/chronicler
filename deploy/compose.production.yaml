@@ -38,7 +38,7 @@ services:
     environment:
       CHRONICLER_ENV: production
       API_ADDR: ':8080'
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@chronicler-postgres:5432/${POSTGRES_DB}?sslmode=disable
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@chronicler-postgres:5432/${POSTGRES_DB}?sslmode=disable&pool_max_conns=10
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
       INGEST_SECRET: ${INGEST_SECRET:?set INGEST_SECRET}
       DISCORD_CLIENT_ID: ${DISCORD_CLIENT_ID:-}

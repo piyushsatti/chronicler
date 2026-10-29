@@ -110,7 +110,7 @@ function entityHref(token: string): string {
     : token;
   if (/^Q-\d+$/.test(target)) return `/quests/${encodeURIComponent(target)}`;
   if (/^C-\d+$/.test(target)) return `/characters/${encodeURIComponent(target)}`;
-  if (/^@[\w.]+$/.test(target)) return `/dms/${encodeURIComponent(target)}`;
+  if (/^@[\w.-]*\w$/.test(target)) return `/dms/${encodeURIComponent(target)}`;
   return `/codex?q=${encodeURIComponent(target)}`;
 }
 
@@ -206,7 +206,7 @@ export function remarkContent() {
         }
       }
       if (node.type !== 'text' || index === undefined || !parent) return;
-      const expression = /(\[\[[^\]\n]+\]\]|\bQ-\d+\b|\bC-\d+\b|(?<![\w.])@[\w.]+)/g;
+      const expression = /(\[\[[^\]\n]+\]\]|\bQ-\d+\b|\bC-\d+\b|(?<![\w.])@[\w.-]*\w)/g;
       const replacements: Array<Link | typeof node> = [];
       let offset = 0;
       for (const match of node.value.matchAll(expression)) {

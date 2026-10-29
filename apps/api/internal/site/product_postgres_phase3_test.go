@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/piyushsatti/chronicler/apps/api/internal/member"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbgen"
 )
 
@@ -36,12 +35,12 @@ func TestMapDeliveryUsesCanonicalInternalQuestDestination(t *testing.T) {
 	}
 }
 
-func TestMapCommunitySnapshotMapsStoredTotalsRolesAndActivity(t *testing.T) {
+func TestMapCommunitySnapshotMapsStoredTotalsAndRoles(t *testing.T) {
 	rows := []dbgen.SiteCommunitySnapshotRow{
 		{TotalMembers: 8, ActiveCharacters: 3, TotalMaps: 2, TotalPointcrawlNodes: 9, TotalRegions: 4, TotalQuests: 5, TotalDms: 1,
-			VoiceMinutes: 12.5, Messages: 7, Reactions: 2, Role: "dm", MemberCount: pgtype.Int4{Int32: 2, Valid: true}},
+			Role: "dm", MemberCount: pgtype.Int4{Int32: 2, Valid: true}},
 		{TotalMembers: 8, ActiveCharacters: 3, TotalMaps: 2, TotalPointcrawlNodes: 9, TotalRegions: 4, TotalQuests: 5, TotalDms: 1,
-			VoiceMinutes: 12.5, Messages: 7, Reactions: 2, Role: "player", MemberCount: pgtype.Int4{Int32: 6, Valid: true}},
+			Role: "player", MemberCount: pgtype.Int4{Int32: 6, Valid: true}},
 	}
 	got, err := mapCommunitySnapshot(rows)
 	if err != nil {
@@ -50,7 +49,6 @@ func TestMapCommunitySnapshotMapsStoredTotalsRolesAndActivity(t *testing.T) {
 	want := CommunityStatsSnapshot{
 		TotalMembers: 8, ActiveCharacters: 3, TotalMaps: 2, TotalRegions: 4, TotalQuests: 5, TotalDMs: 1,
 		MembersByRole: []CountByKeyView{{Key: "dm", Count: 2}, {Key: "player", Count: 6}},
-		Activity:      member.ActivitySummaryView{VoiceMinutes: 12.5, Messages: 7, Reactions: 2},
 	}
 	if got.TotalMembers != want.TotalMembers || got.ActiveCharacters != want.ActiveCharacters || got.TotalMaps != want.TotalMaps ||
 		got.TotalRegions != want.TotalRegions || got.TotalQuests != want.TotalQuests ||

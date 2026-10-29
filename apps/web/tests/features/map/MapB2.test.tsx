@@ -365,6 +365,19 @@ describe('B2 atlas', () => {
     const parent = { ...good, pointcrawlNodes: [{ ...first, submapId: child.id }] };
     const maps = [parent, child, nearby, other];
     server.use(
+      graphql.query('MapContainment', ({ variables }) => {
+        const map = maps.find((item) => item.atlasCode === variables.atlasCode);
+        return HttpResponse.json({
+          data: {
+            map: map
+              ? {
+                  id: map.id,
+                  pointcrawlNodes: map.pointcrawlNodes.map(({ submapId }) => ({ submapId })),
+                }
+              : null,
+          },
+        });
+      }),
       graphql.query('MapDirectory', () =>
         HttpResponse.json({ data: { maps, regions: [region] } }),
       ),

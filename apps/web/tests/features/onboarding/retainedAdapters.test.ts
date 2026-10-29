@@ -19,6 +19,34 @@ import { loadRetainedDocument } from '../../../src/features/onboarding/adapters/
 import good from '../../fixtures/wire/onboarding/retained-good.json';
 
 describe('Calendar URL and server reads', () => {
+  it('calendar quest windows use the member zone across DST', async () => {
+    const seen: unknown[] = [];
+    server.use(
+      graphql.query('RetainedCalendarQuests', ({ variables }) => {
+        seen.push(variables);
+        return HttpResponse.json({ data: { quests: { total: 0, items: [] } } });
+      }),
+    );
+    for (const [day, from, to, hours, evening] of [
+      ['2026-10-14', '2026-10-14T05:00:00Z', '2026-10-15T05:00:00Z', 24, '2026-10-15T01:00:00Z'],
+      ['2026-03-08', '2026-03-08T06:00:00Z', '2026-03-09T05:00:00Z', 23, '2026-03-09T01:00:00Z'],
+      ['2026-11-01', '2026-11-01T05:00:00Z', '2026-11-02T06:00:00Z', 25, '2026-11-02T02:00:00Z'],
+    ] as const) {
+      const state = parseCalendarState(new URLSearchParams({ day }), day);
+      if (!state.success) throw state.error;
+      await loadCalendarQuests(state.data, 'America/Chicago');
+      expect(seen.at(-1)).toEqual({
+        filters: { scheduledFrom: from, scheduledTo: to },
+        offset: 0,
+      });
+      expect((Date.parse(to) - Date.parse(from)) / 3_600_000).toBe(hours);
+      expect(Date.parse(evening)).toBeGreaterThanOrEqual(Date.parse(from));
+      expect(Date.parse(evening)).toBeLessThan(Date.parse(to));
+      const lastMillisecond = Date.parse(to) - 1;
+      expect(lastMillisecond).toBeGreaterThanOrEqual(Date.parse(from));
+      expect(lastMillisecond).toBeLessThan(Date.parse(to));
+    }
+  });
   it('restores legacy date/search and every server filter/page without changing civil boundaries', async () => {
     const state = parseCalendarState(
       new URLSearchParams(
@@ -27,7 +55,7 @@ describe('Calendar URL and server reads', () => {
       '2026-01-01',
     );
     if (!state.success) throw state.error;
-    expect(calendarWindow(state.data)).toEqual({
+    expect(calendarWindow(state.data, 'UTC')).toEqual({
       realFrom: '2026-10-01',
       realTo: '2026-11-01',
       selectedDate: '2026-10-14',
@@ -47,7 +75,7 @@ describe('Calendar URL and server reads', () => {
         });
       }),
     );
-    expect(await loadCalendarQuests(state.data)).toEqual({ total: 51, items: [] });
+    expect(await loadCalendarQuests(state.data, 'UTC')).toEqual({ total: 51, items: [] });
     expect(await loadRealDates(-1, 3)).toEqual({ total: 101, items: ['2026-10-14'] });
     expect(seen).toEqual([
       {
@@ -83,7 +111,7 @@ describe('Calendar URL and server reads', () => {
       '2024-01-01',
     );
     if (!leapDay.success) throw leapDay.error;
-    expect(calendarWindow(leapDay.data)).toMatchObject({
+    expect(calendarWindow(leapDay.data, 'UTC')).toMatchObject({
       realFrom: '2024-02-01',
       realTo: '2024-03-01',
       scheduledFrom: '2024-02-29T00:00:00Z',
@@ -95,7 +123,7 @@ describe('Calendar URL and server reads', () => {
       '2026-01-01',
     );
     if (!state.success) throw state.error;
-    expect(calendarWindow(state.data).scheduledTo).toBe('2027-01-01T00:00:00Z');
+    expect(calendarWindow(state.data, 'UTC').scheduledTo).toBe('2027-01-01T00:00:00Z');
   });
   it('keeps zero-day fields and missing mappings from the server, and rejects fabricated/incomplete names', async () => {
     const state = parseCalendarState(

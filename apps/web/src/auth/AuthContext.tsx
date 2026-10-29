@@ -231,10 +231,7 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
         return;
       }
       if (!isMeQuery(event.query.queryKey)) return;
-      if (event.action.type === 'error') {
-        authority = null;
-        clearCachedQueries(true);
-      } else if (event.action.type === 'success') {
+      if (event.action.type === 'success') {
         // The me query stores MemberViewModel only, after the member adapter validates wire.
         const member = event.query.state.data as MemberViewModel;
         const nextAuthority = JSON.stringify([

@@ -25,6 +25,22 @@ function markdown(body: string) {
 }
 
 describe('shared Markdown reader', () => {
+  it('links mentions without swallowing punctuation or truncating hyphens', () => {
+    const { container } = markdown('Thanks @mira. Ask @mary-jane, @mira.rose and @a!');
+    expect(screen.getByRole('link', { name: '@mira' })).toHaveAttribute(
+      'href',
+      '/dms/%40mira',
+    );
+    expect(screen.getByRole('link', { name: '@mira' }).nextSibling?.textContent).toBe('. Ask ');
+    expect(screen.getByRole('link', { name: '@mary-jane' })).toHaveAttribute(
+      'href',
+      '/dms/%40mary-jane',
+    );
+    expect(screen.getByRole('link', { name: '@mary-jane' }).nextSibling?.textContent).toBe(', ');
+    expect(screen.getByRole('link', { name: '@mira.rose' })).toHaveAttribute('href', '/dms/%40mira.rose');
+    expect(screen.getByRole('link', { name: '@a' })).toHaveAttribute('href', '/dms/%40a');
+    expect(container).toHaveTextContent('Thanks @mira. Ask @mary-jane, @mira.rose and @a!');
+  });
   it('renders the real GFM tree, nested formatting, tables, tasks, references and footnotes', () => {
     markdown(
       '## Arrival\n\nA **bold _arrival_** and ~~delay~~.\n\n- [x] Ready\n- [ ] Waiting\n\n| Route | Days |\n| --- | ---: |\n| North | 2 |\n\n[Guide][guide] and a note.[^1]\n\n[guide]: https://example.com/guide\n[^1]: Remember the lamp.',

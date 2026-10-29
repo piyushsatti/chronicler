@@ -2655,7 +2655,7 @@ func (r *queryResolver) Home(ctx context.Context) (*HomeType, error) {
 	if err != nil {
 		return nil, err
 	}
-	view, err := r.Services.SiteQueries.Home(ctx, actor, site.HomeSpec{})
+	view, err := r.Services.SiteQueries.Home(ctx, actor, site.HomeSpec{IncludeActivity: collectedSelection(ctx, "communityStats", "activity")})
 	if err != nil {
 		return nil, err
 	}
@@ -2707,7 +2707,7 @@ func (r *queryResolver) SiteStats(ctx context.Context) (*SiteStatsType, error) {
 	if err != nil {
 		return nil, err
 	}
-	snapshot, err := r.Services.SiteQueries.SiteStats(ctx, actor, site.SiteStatsSpec{})
+	snapshot, err := r.Services.SiteQueries.SiteStats(ctx, actor, site.SiteStatsSpec{IncludeActivity: collectedSelection(ctx, "activity")})
 	if err != nil {
 		return nil, err
 	}

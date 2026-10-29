@@ -43,18 +43,11 @@ func pgDateFromProduct(d product.Date) (pgtype.Date, error) {
 	return out, nil
 }
 
-func productDateFromAny(value any) (product.Date, error) {
-	switch v := value.(type) {
-	case time.Time:
-		return product.Date(v.Format("2006-01-02")), nil
-	case string:
-		if _, err := time.Parse("2006-01-02", v); err != nil {
-			return "", apierr.New(apierr.Invalid, "invalid date")
-		}
-		return product.Date(v), nil
-	default:
+func productDateFromPGDate(value pgtype.Date) (product.Date, error) {
+	if !value.Valid || value.InfinityModifier != pgtype.Finite {
 		return "", apierr.New(apierr.Invalid, "invalid date")
 	}
+	return product.Date(value.Time.Format("2006-01-02")), nil
 }
 
 func pgTimestamptz(t time.Time) pgtype.Timestamptz {

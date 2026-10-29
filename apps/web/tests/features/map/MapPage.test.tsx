@@ -146,6 +146,181 @@ function renderMap(route = `/map/LFC?node=${good.pointcrawlNodes[0]!.id}`) {
   );
 }
 describe('MapPage', () => {
+  it('loads parent containment without loading other full maps', async () => {
+    const regionId = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
+    const parent = {
+      ...good,
+      id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      atlasCode: 'PARENT',
+      name: 'Parent map',
+    };
+    const child = {
+      ...good,
+      id: 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+      atlasCode: 'CHILD',
+      name: 'Child map',
+    };
+    const peer = {
+      ...good,
+      id: 'cccccccc-cccc-4ccc-8ccc-cccccccccccc',
+      atlasCode: 'PEER',
+      name: 'Same region',
+      regionId,
+    };
+    const unrelated = {
+      ...good,
+      id: '11111111-1111-4111-8111-111111111111',
+      atlasCode: 'UNRELATED',
+      name: 'Unrelated map',
+    };
+    const selected = {
+      ...good,
+      regionId,
+      pointcrawlNodes: [{ ...good.pointcrawlNodes[0]!, submapId: child.id }],
+    };
+    const parentNodes = Array.from({ length: 201 }, (_, index) => ({
+      ...good.pointcrawlNodes[0]!,
+      mapId: parent.id,
+      id: `bbbbbbbb-bbbb-4bbb-8bbb-${String(index).padStart(12, '0')}`,
+      submapId: index === 200 ? selected.id : null,
+    }));
+    const maps = [
+      selected,
+      { ...parent, pointcrawlNodes: parentNodes },
+      peer,
+      child,
+      unrelated,
+    ];
+    const fullReads: string[] = [];
+    const parentOffsets: number[] = [];
+    server.use(
+      graphql.query('MapDirectory', () =>
+        HttpResponse.json({ data: { maps, regions: [] } }),
+      ),
+      graphql.query('MapAtlas', ({ variables }) => {
+        fullReads.push(String(variables.atlasCode));
+        const map = maps.find((item) => item.atlasCode === variables.atlasCode);
+        return HttpResponse.json({
+          data: {
+            map: map
+              ? {
+                  ...map,
+                  pointcrawlNodes: map.pointcrawlNodes.slice(
+                    Number(variables.offset),
+                    Number(variables.offset) + 200,
+                  ),
+                }
+              : null,
+          },
+        });
+      }),
+      graphql.query('MapContainment', ({ variables }) => {
+        const map = maps.find((item) => item.atlasCode === variables.atlasCode);
+        if (map?.id === parent.id) parentOffsets.push(Number(variables.offset));
+        return HttpResponse.json({
+          data: {
+            map: map
+              ? {
+                  id: map.id,
+                  pointcrawlNodes: map.pointcrawlNodes
+                    .slice(Number(variables.offset), Number(variables.offset) + 200)
+                    .map(({ submapId }) => ({ submapId })),
+                }
+              : null,
+          },
+        });
+      }),
+    );
+    renderMap('/map/LFC');
+    const navigation = await screen.findByRole('navigation', { name: 'Choose a map' });
+    await within(navigation).findByRole('link', { name: 'Parent map' });
+    expect(
+      within(navigation)
+        .getAllByRole('link')
+        .map((link) => link.textContent),
+    ).toEqual(['Lightfall', 'Parent map', 'Same region', 'Child map']);
+    expect(fullReads).toEqual(['LFC']);
+    expect(parentOffsets).toEqual([0, 200]);
+  });
+
+  it('refreshes sibling navigation after a submap edit', async () => {
+    session();
+    const child = {
+      ...good,
+      id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+      atlasCode: 'OTHER',
+      name: 'Child map',
+      canEdit: true,
+    };
+    let parent: Omit<typeof good, 'pointcrawlNodes'> & {
+      pointcrawlNodes: adapter.MapNode[];
+    } = {
+      ...good,
+      canEdit: true,
+      pointcrawlNodes: [{ ...good.pointcrawlNodes[0]!, submapId: child.id }],
+    };
+    let saved = false;
+    server.use(
+      graphql.query('MapDirectory', () =>
+        HttpResponse.json({ data: { maps: [parent, child], regions: [] } }),
+      ),
+      graphql.query('MapAtlas', ({ variables }) =>
+        HttpResponse.json({
+          data: { map: variables.atlasCode === 'OTHER' ? child : parent },
+        }),
+      ),
+      graphql.query('MapContainment', ({ variables }) => {
+        const map = variables.atlasCode === 'OTHER' ? child : parent;
+        return HttpResponse.json({
+          data: {
+            map: {
+              id: map.id,
+              pointcrawlNodes: map.pointcrawlNodes.map(({ submapId }) => ({ submapId })),
+            },
+          },
+        });
+      }),
+      graphql.mutation('MapSaveNode', ({ variables }) => {
+        expect(variables.input.submapId).toBeNull();
+        parent = {
+          ...parent,
+          pointcrawlNodes: [{ ...parent.pointcrawlNodes[0]!, submapId: null }],
+        };
+        saved = true;
+        return HttpResponse.json({
+          data: { upsertPointcrawlNode: { id: good.pointcrawlNodes[0]!.id } },
+        });
+      }),
+    );
+    renderMap('/map/OTHER');
+    const navigation = await screen.findByRole('navigation', { name: 'Choose a map' });
+    const parentLink = await within(navigation).findByRole('link', { name: 'Lightfall' });
+    const user = userEvent.setup();
+    await user.click(parentLink);
+    await screen.findByRole('group', { name: 'Lightfall map' });
+    fireEvent.click(
+      within(screen.getByRole('group', { name: 'Lightfall map' })).getByRole('button', {
+        name: 'Lightfall Gate',
+      }),
+    );
+    await user.click(await screen.findByRole('button', { name: 'Edit location' }));
+    await user.click(screen.getByRole('button', { name: /^Submap/ }));
+    await user.click(await screen.findByRole('menuitem', { name: 'No submap' }));
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(saved).toBe(true));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    await user.click(screen.getByRole('button', { name: 'Other map' }));
+    await screen.findByRole('group', { name: 'Child map map' });
+    await waitFor(() =>
+      expect(
+        within(screen.getByRole('navigation', { name: 'Choose a map' })).queryByRole(
+          'link',
+          { name: 'Lightfall' },
+        ),
+      ).not.toBeInTheDocument(),
+    );
+  });
+
   it('keeps dense locations and connections fully named without overlapping SVG prose', async () => {
     const names = [
       'The very long complete name of the northern gate overlooking the river',

@@ -158,6 +158,7 @@ export const graphql: FeatureGraphql = {
     HttpResponse.json({
       data: {
         codexDirectory: {
+          total: 1,
           items: [
             {
               id: 'dddddddd-dddd-4ddd-8ddd-dddddddddddd',

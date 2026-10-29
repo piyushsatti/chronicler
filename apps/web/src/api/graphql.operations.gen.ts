@@ -1147,10 +1147,13 @@ export type EditorVoiceChannelsQueryVariables = Exact<{ [key: string]: never; }>
 
 export type EditorVoiceChannelsQuery = { questVoiceChannels: Array<{ name: string, channelId: string }> };
 
-export type EntityLinkCodexDirectoryQueryVariables = Exact<{ [key: string]: never; }>;
+export type EntityLinkCodexDirectoryQueryVariables = Exact<{
+  limit: number;
+  offset: number;
+}>;
 
 
-export type EntityLinkCodexDirectoryQuery = { codexDirectory: { items: Array<{ id: string, slug: string, title: string, category: string | null }> } };
+export type EntityLinkCodexDirectoryQuery = { codexDirectory: { total: number, items: Array<{ id: string, slug: string, title: string, category: string | null }> } };
 
 export type EntityLinkQuestBoardQueryVariables = Exact<{
   limit: number;
@@ -1285,6 +1288,15 @@ export type MapAssignmentsQueryVariables = Exact<{
 
 
 export type MapAssignmentsQuery = { archonAssignments: { total: number, items: Array<{ memberId: string, regionId: string, grantedAt: string }> } };
+
+export type MapContainmentQueryVariables = Exact<{
+  atlasCode: string;
+  limit?: number;
+  offset?: number;
+}>;
+
+
+export type MapContainmentQuery = { map: { id: string, pointcrawlNodes: Array<{ submapId: string | null }> } | null };
 
 export type MapCreateMutationVariables = Exact<{
   input: MapCreateInput;

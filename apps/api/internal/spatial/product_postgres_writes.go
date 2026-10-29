@@ -517,7 +517,7 @@ func (p *ProductPostgres) StoreUpdateGameCalendar(ctx context.Context, write Upd
 	}
 	cells := make([]GameDayCellView, 0, len(rows))
 	for _, cell := range rows {
-		realDate, err := productDateFromAny(cell.RealDate)
+		realDate, err := productDateFromPGDate(cell.RealDate)
 		if err != nil {
 			return GameCalendarView{}, err
 		}

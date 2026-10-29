@@ -1,3 +1,5 @@
+import { Temporal } from '@js-temporal/polyfill';
+
 export type InstantStyle = 'date' | 'dateTime' | 'shortDateTime';
 type Timestamp = string | null | undefined;
 const CIVIL_DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -132,6 +134,25 @@ export function civilDateInZone(
   const part = (type: Intl.DateTimeFormatPartTypes) =>
     parts.find((item) => item.type === type)?.value;
   return `${part('year')}-${part('month')}-${part('day')}`;
+}
+/** First instant through the last millisecond of a civil day; null for an invalid date or zone. */
+export function dayRangeInZone(
+  date: string,
+  timeZone: string | null,
+): { scheduledFrom: string; scheduledTo: string } | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  try {
+    const zone = timeZone ?? Temporal.Now.timeZoneId();
+    const day = Temporal.PlainDate.from(date, { overflow: 'reject' });
+    const start = day.toZonedDateTime(zone);
+    const end = day.add({ days: 1 }).toZonedDateTime(zone).subtract({ milliseconds: 1 });
+    return {
+      scheduledFrom: start.toInstant().toString(),
+      scheduledTo: end.toInstant().toString(),
+    };
+  } catch {
+    return null;
+  }
 }
 /** Compact grid-cell label: "2026-10-22" reads "Thu 22"; anything else is returned as given. */
 export function dayLabel(value: string): string {

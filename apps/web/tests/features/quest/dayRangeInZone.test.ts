@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { dayRangeInZone } from '../../../src/features/quest/hooks/useQuestBoardPage.js';
+import { dayRangeInZone } from '../../../src/utils/format.js';
 
 describe('dayRangeInZone', () => {
   it('spans the local day: first instant through the last millisecond', () => {

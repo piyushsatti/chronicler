@@ -149,3 +149,60 @@ func TestRetainedCalendarReadsUseStoredNamedDatesAndInjectedCurrentUTC(t *testin
 		t.Fatalf("absent singleton facts=%s err=%v", data["gameCalendar"], err)
 	}
 }
+
+func TestCalendarCellsKeepCivilDatesAcrossProcessAndDatabaseZones(t *testing.T) {
+	f := dbtest.NewProductFixture(t)
+	ctx := context.Background()
+	location, err := time.LoadLocation("America/Los_Angeles")
+	if err != nil {
+		t.Fatal(err)
+	}
+	previous := time.Local
+	time.Local = location
+	t.Cleanup(func() { time.Local = previous })
+	tx, err := f.Pool.Begin(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer tx.Rollback(ctx)
+	if _, err := tx.Exec(ctx, `SET LOCAL TIME ZONE 'Pacific/Auckland'`); err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range []struct {
+		date string
+		day  int32
+	}{{"2026-12-31", 1}, {"2027-01-01", 2}, {"2027-01-02", 3}} {
+		if _, err := tx.Exec(ctx, `INSERT INTO game_time_map(real_date,game_day) VALUES($1::date,$2)`, row.date, row.day); err != nil {
+			t.Fatal(err)
+		}
+	}
+	pg, err := spatial.NewProductPostgres(tx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	definition := json.RawMessage(`{"era":{"name":"Pi Era","abbrev":"PI"},"periods":[{"name":"River","type":"month","days":30}],"leap":null}`)
+	spec := spatial.UpdateGameCalendarSpec{Definition: definition}
+	locked, err := pg.LockUpdateGameCalendar(ctx, spec)
+	if err != nil {
+		t.Fatal(err)
+	}
+	at := time.Date(2026, 12, 31, 12, 0, 0, 0, time.UTC)
+	updated, err := pg.StoreUpdateGameCalendar(ctx, spatial.UpdateGameCalendarWrite{Locked: locked, ValidatedInput: spec, At: at})
+	if err != nil {
+		t.Fatal(err)
+	}
+	read, err := pg.ReadGameCalendar(ctx, auth.Authority{}, spatial.GameCalendarSpec{RealFrom: "2026-12-31", RealTo: "2027-01-03", AsOf: at})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, cells := range map[string][]spatial.GameDayCellView{"read": read.Cells, "time setting": updated.MonthGrid} {
+		if len(cells) < 3 {
+			t.Fatalf("%s cells=%+v", name, cells)
+		}
+		for i, want := range []product.Date{"2026-12-31", "2027-01-01", "2027-01-02"} {
+			if cells[i].RealDate != want || cells[i].GameDay == nil || *cells[i].GameDay != int32(i+1) {
+				t.Fatalf("%s cell=%+v, want civil date=%s gameDay=%d", name, cells[i], want, i+1)
+			}
+		}
+	}
+}

@@ -10,6 +10,7 @@ import goodMap from '../../../tests/fixtures/wire/map/good.json';
 export const endpoints = {} as const;
 export const queryKeys = {
   map: (atlasCode: string) => ['map', atlasCode] as const,
+  mapContainment: (atlasCode: string) => ['mapContainment', atlasCode] as const,
   mapDirectory: ['mapDirectory'] as const,
   mapRegionAssignments: (regionId: string) =>
     ['mapRegionAssignments', regionId] as const,
@@ -22,6 +23,23 @@ export const queryKeys = {
   mapQuestTitles: (codes: string[]) => ['mapQuestTitles', ...codes] as const,
 };
 export const graphql: FeatureGraphql = {
+  MapContainment: ({ variables }) =>
+    HttpResponse.json({
+      data: {
+        map:
+          variables?.atlasCode === goodMap.atlasCode
+            ? {
+                id: goodMap.id,
+                pointcrawlNodes: goodMap.pointcrawlNodes
+                  .slice(
+                    Number(variables?.offset ?? 0),
+                    Number(variables?.offset ?? 0) + Number(variables?.limit ?? 200),
+                  )
+                  .map(({ submapId }) => ({ submapId })),
+              }
+            : null,
+      },
+    }),
   MapAtlas: ({ variables }) =>
     HttpResponse.json({
       data: {

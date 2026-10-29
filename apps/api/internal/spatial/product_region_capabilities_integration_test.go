@@ -3,7 +3,13 @@
 package spatial
 
 import (
+	"context"
+	"fmt"
+	"strings"
 	"testing"
+
+	"github.com/jackc/pgx/v5"
+	"github.com/piyushsatti/chronicler/apps/api/internal/platform/dbgen"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 )
@@ -63,3 +69,85 @@ func TestFrontendRegionMapCreationCapability(t *testing.T) {
 	}
 }
 func ptrRegionCapability(value string) *string { return &value }
+
+type capabilityAssignmentCounter struct {
+	dbgen.DBTX
+	lookups int
+}
+
+func (d *capabilityAssignmentCounter) count(query string) {
+	if strings.Contains(query, "archon_assignments") {
+		d.lookups++
+	}
+}
+
+func (d *capabilityAssignmentCounter) Query(ctx context.Context, query string, args ...any) (pgx.Rows, error) {
+	d.count(query)
+	return d.DBTX.Query(ctx, query, args...)
+}
+
+func (d *capabilityAssignmentCounter) QueryRow(ctx context.Context, query string, args ...any) pgx.Row {
+	d.count(query)
+	return d.DBTX.QueryRow(ctx, query, args...)
+}
+
+func TestRegionAndMapCapabilitiesBatchAssignmentsThroughNewPoolPolicy(t *testing.T) {
+	f, ctx, _, resolve := pointcrawlFixture(t)
+	for i, region := range []string{mapNorth, mapNorth, mapSouth} {
+		if _, err := f.Pool.Exec(ctx, `INSERT INTO maps(name,atlas_code,map_kind,region_id)
+			SELECT 'Batch map',$1,'pointcrawl',id FROM regions WHERE public_id=$2::uuid`, fmt.Sprintf("BATCH-%d", i), region); err != nil {
+			t.Fatal(err)
+		}
+	}
+	counter := &capabilityAssignmentCounter{DBTX: f.Pool}
+	reader, err := NewProductPostgres(counter)
+	if err != nil {
+		t.Fatal(err)
+	}
+	policy, err := auth.NewPoolPolicy(counter)
+	if err != nil {
+		t.Fatal(err)
+	}
+	queries := ProductQueries{Reads: ProductReadRepos{Region: reader, Map: reader}, Policy: policy}
+	for _, id := range []string{mapArchon, mapPlayer, mapAdmin} {
+		actor, err := resolve(ctx, id)
+		if err != nil {
+			t.Fatal(err)
+		}
+		counter.lookups = 0
+		regions, err := queries.Regions(ctx, actor, RegionsSpec{Limit: 50})
+		if err != nil || len(regions) != 2 || counter.lookups != 1 {
+			t.Fatalf("actor=%s regions=%+v assignment lookups=%d, want one: %v", id, regions, counter.lookups, err)
+		}
+		for _, region := range regions {
+			want := id == mapAdmin || id == mapArchon && region.Id == mapNorth
+			if region.CanCreateMap != want {
+				t.Fatalf("actor=%s region=%+v, want capability=%v", id, region, want)
+			}
+		}
+		counter.lookups = 0
+		maps, err := queries.Maps(ctx, actor, MapsSpec{Limit: 50})
+		if err != nil || len(maps) != 3 || counter.lookups != 1 {
+			t.Fatalf("actor=%s maps=%+v assignment lookups=%d, want one: %v", id, maps, counter.lookups, err)
+		}
+		for _, view := range maps {
+			want := id == mapAdmin || id == mapArchon && *view.RegionId == mapNorth
+			if view.CanEdit != want {
+				t.Fatalf("actor=%s map=%+v, want capability=%v", id, view, want)
+			}
+		}
+	}
+	if _, err := f.Pool.Exec(ctx, `DELETE FROM archon_assignments WHERE member_id=(SELECT id FROM members WHERE public_id=$1::uuid)`, mapArchon); err != nil {
+		t.Fatal(err)
+	}
+	archon, _ := resolve(ctx, mapArchon)
+	maps, err := queries.Maps(ctx, archon, MapsSpec{Limit: 50})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, view := range maps {
+		if view.CanEdit {
+			t.Fatal("list-local snapshot survived assignment revocation")
+		}
+	}
+}

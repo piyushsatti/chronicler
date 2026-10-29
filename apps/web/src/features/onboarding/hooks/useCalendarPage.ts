@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useDateFormatter } from '../../../hooks/useDateFormatter.js';
+import { civilDateInZone } from '../../../utils/format.js';
 import {
   loadCalendar,
   loadCalendarQuests,
@@ -10,7 +11,9 @@ import { parseCalendarState } from '../calendarState.js';
 
 export function useCalendarPage() {
   const [params, setParams] = useSearchParams();
-  const [today] = useState(() => new Date().toISOString().slice(0, 10));
+  const { timeZone } = useDateFormatter();
+  const now = new Date().toISOString();
+  const today = civilDateInZone(now, timeZone) ?? now.slice(0, 10);
   const parsed = parseCalendarState(params, today);
   const state = parsed.success ? parsed.data : null;
   const calendar = useQuery({
@@ -23,10 +26,10 @@ export function useCalendarPage() {
     retry: false,
   });
   const quests = useQuery({
-    queryKey: ['calendarQuests', state],
+    queryKey: ['calendarQuests', state, timeZone],
     queryFn: () => {
       if (!state) throw new Error('Invalid calendar location');
-      return loadCalendarQuests(state);
+      return loadCalendarQuests(state, timeZone);
     },
     enabled: state !== null,
     retry: false,

@@ -13233,7 +13233,14 @@
     {
       "name": "HomeSpec",
       "package": "site",
-      "fields": [],
+      "fields": [
+        {
+          "name": "IncludeActivity",
+          "go_type": "bool",
+          "internal": true,
+          "meaning": "gqlgen collected selection requests the activity projection; counts-only reads skip its aggregate"
+        }
+      ],
       "owner": "SIT01"
     },
     {
@@ -14406,7 +14413,14 @@
     {
       "name": "SiteStatsSpec",
       "package": "site",
-      "fields": [],
+      "fields": [
+        {
+          "name": "IncludeActivity",
+          "go_type": "bool",
+          "internal": true,
+          "meaning": "gqlgen collected selection requests the activity projection; counts-only reads skip its aggregate"
+        }
+      ],
       "owner": "SIT01"
     },
     {
@@ -28433,6 +28447,22 @@
       "callers": ["SPA06"],
       "transaction": "same command pgx.Tx; repository never commits; foreign writers enumerated separately",
       "spec_owner": "SPA01"
+    },
+    {
+      "id": "CROSS-auth.ArchonBatchReader-ArchonRegions",
+      "interface": "auth.ArchonBatchReader",
+      "signature": "ArchonRegions(ctx context.Context, memberID string, regionIDs []string) (map[string]bool,error)",
+      "provider": "SPA04",
+      "callers": ["P02"],
+      "transaction": "read-only list-local assignment facts through PoolPolicyProviders and Assignments; no global authority cache"
+    },
+    {
+      "id": "CROSS-auth.Policy-WithArchonAssignments",
+      "interface": "auth.Policy",
+      "signature": "WithArchonAssignments(ctx context.Context, actor auth.Authority, regionIDs []string) (*auth.Policy,error)",
+      "provider": "P02",
+      "callers": ["SPA05"],
+      "transaction": "copy policy with immutable list-local assignment facts; retain its ordinary Specification interpreter and lieutenant provider"
     }
   ],
   "loaders": [

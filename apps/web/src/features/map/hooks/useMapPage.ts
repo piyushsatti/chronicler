@@ -2,7 +2,12 @@ import { useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useLayoutEffect, useRef } from 'react';
 import { useAuth } from '../../../auth/AuthContext.js';
 import { useMe } from '../../../hooks/useMe.js';
-import { loadMap, loadMapDirectory, loadMapDocument } from '../adapters/mapAdapter.js';
+import {
+  loadMap,
+  loadMapContainment,
+  loadMapDirectory,
+  loadMapDocument,
+} from '../adapters/mapAdapter.js';
 import { toAppError } from '../../../errors/toAppError.js';
 import { queryKeys } from '../feature.js';
 import type { MapEdit } from './useMapEdit.js';
@@ -30,8 +35,9 @@ export function useMapPage(atlasCode: string) {
     queries: directoryMaps
       .filter((item) => item.atlasCode !== selectedAtlas)
       .map((item) => ({
-        queryKey: queryKeys.map(item.atlasCode),
-        queryFn: () => loadMap(item.atlasCode),
+        queryKey: queryKeys.mapContainment(item.atlasCode),
+        queryFn: () => loadMapContainment(item.atlasCode),
+        staleTime: 60_000,
         enabled: Boolean(selectedAtlas),
       })),
   });
@@ -124,6 +130,7 @@ export function useMapPage(atlasCode: string) {
       await Promise.all([
         client.invalidateQueries({ queryKey: ['me'] }),
         client.invalidateQueries({ queryKey: queryKeys.mapDirectory }),
+        client.invalidateQueries({ queryKey: ['mapContainment'] }),
         client.invalidateQueries({ queryKey: ['mapDocuments'] }),
         client.invalidateQueries({ queryKey: ['mapDocument'] }),
         client.invalidateQueries({ queryKey: queryKeys.map(selectedAtlas) }),

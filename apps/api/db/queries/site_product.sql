@@ -12,12 +12,6 @@ WITH totals AS (
          JOIN members m ON m.id = p.member_id
          WHERE m.status = 'active' AND 'dm' = ANY(m.roles)
            AND p.status = 'approved') AS total_dms
-), activity AS (
-    SELECT
-        coalesce(sum(amount) FILTER (WHERE kind = 'voice'), 0)::double precision AS voice_minutes,
-        coalesce(sum(amount) FILTER (WHERE kind = 'message'), 0)::double precision AS messages,
-        coalesce(sum(amount) FILTER (WHERE kind = 'reaction'), 0)::double precision AS reactions
-    FROM discord_activity_events
 ), role_counts AS (
     SELECT roles.role, count(DISTINCT m.id)::integer AS member_count
     FROM members m
@@ -26,11 +20,16 @@ WITH totals AS (
 )
 SELECT totals.total_members, totals.active_characters, totals.total_maps,
        totals.total_pointcrawl_nodes, totals.total_regions, totals.total_quests,
-       totals.total_dms, activity.voice_minutes, activity.messages,
-       activity.reactions, role_counts.role, role_counts.member_count
-FROM totals CROSS JOIN activity
+       totals.total_dms, role_counts.role, role_counts.member_count
+FROM totals
 LEFT JOIN role_counts ON true
 ORDER BY role_counts.role;
+-- name: SiteActivitySummary :one
+SELECT
+        coalesce(sum(amount) FILTER (WHERE kind = 'voice'), 0)::double precision AS voice_minutes,
+        coalesce(sum(amount) FILTER (WHERE kind = 'message'), 0)::double precision AS messages,
+        coalesce(sum(amount) FILTER (WHERE kind = 'reaction'), 0)::double precision AS reactions
+    FROM discord_activity_events;
 -- name: SiteMemberDiscovery :many
 WITH matching AS MATERIALIZED (
     SELECT public_id, handle, display_name, avatar_url

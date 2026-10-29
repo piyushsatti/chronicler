@@ -39,16 +39,27 @@ func (p *ProductPostgres) queries() *dbgen.Queries {
 	return dbgen.New(p.DB)
 }
 
-func (p *ProductPostgres) ReadHomeCommunity(ctx context.Context, _ auth.Authority, _ HomeSpec) (CommunityStatsSnapshot, error) {
+func (p *ProductPostgres) ReadHomeCommunity(ctx context.Context, _ auth.Authority, spec HomeSpec) (CommunityStatsSnapshot, error) {
 	rows, err := p.queries().SiteCommunitySnapshot(ctx)
 	if err != nil {
 		return CommunityStatsSnapshot{}, err
 	}
-	return mapCommunitySnapshot(rows)
+	snapshot, err := mapCommunitySnapshot(rows)
+	if err != nil || !spec.IncludeActivity {
+		return snapshot, err
+	}
+	activity, err := p.queries().SiteActivitySummary(ctx)
+	if err != nil {
+		return CommunityStatsSnapshot{}, err
+	}
+	snapshot.Activity = member.ActivitySummaryView{
+		VoiceMinutes: activity.VoiceMinutes, Messages: activity.Messages, Reactions: activity.Reactions,
+	}
+	return snapshot, nil
 }
 
 func (p *ProductPostgres) ReadSiteStats(ctx context.Context, actor auth.Authority, spec SiteStatsSpec) (CommunityStatsSnapshot, error) {
-	return p.ReadHomeCommunity(ctx, actor, HomeSpec{})
+	return p.ReadHomeCommunity(ctx, actor, HomeSpec{IncludeActivity: spec.IncludeActivity})
 }
 
 func (p *ProductPostgres) ReadMemberSearch(ctx context.Context, _ auth.Authority, spec SearchSpec) (MemberDiscoveryPage, error) {
@@ -445,10 +456,7 @@ func mapCommunitySnapshot(rows []dbgen.SiteCommunitySnapshotRow) (CommunityStats
 		TotalMembers: first.TotalMembers, ActiveCharacters: first.ActiveCharacters,
 		TotalMaps:    first.TotalMaps,
 		TotalRegions: first.TotalRegions, TotalQuests: first.TotalQuests,
-		TotalDMs: first.TotalDms,
-		Activity: member.ActivitySummaryView{
-			VoiceMinutes: first.VoiceMinutes, Messages: first.Messages, Reactions: first.Reactions,
-		},
+		TotalDMs:      first.TotalDms,
 		MembersByRole: make([]CountByKeyView, 0, len(rows)),
 	}
 	for _, row := range rows {
@@ -471,8 +479,7 @@ func sameCommunitySnapshotTotals(first, row dbgen.SiteCommunitySnapshotRow) bool
 	return row.TotalMembers == first.TotalMembers && row.ActiveCharacters == first.ActiveCharacters &&
 		row.TotalMaps == first.TotalMaps && row.TotalPointcrawlNodes == first.TotalPointcrawlNodes &&
 		row.TotalRegions == first.TotalRegions && row.TotalQuests == first.TotalQuests &&
-		row.TotalDms == first.TotalDms && row.VoiceMinutes == first.VoiceMinutes &&
-		row.Messages == first.Messages && row.Reactions == first.Reactions
+		row.TotalDms == first.TotalDms
 }
 
 func mapMemberDiscovery(rows []dbgen.SiteMemberDiscoveryRow) (MemberDiscoveryPage, error) {

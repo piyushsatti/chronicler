@@ -427,6 +427,40 @@ func (q *Queries) LinkProductPointcrawlEntry(ctx context.Context, arg LinkProduc
 	return i, err
 }
 
+const listProductArchonAssignmentRegions = `-- name: ListProductArchonAssignmentRegions :many
+SELECT r.public_id
+FROM archon_assignments a
+JOIN regions r ON r.id=a.region_id
+JOIN members m ON m.id=a.member_id
+WHERE m.public_id=$1::uuid
+  AND r.public_id=ANY($2::uuid[])
+`
+
+type ListProductArchonAssignmentRegionsParams struct {
+	MemberID  pgtype.UUID   `json:"member_id"`
+	RegionIds []pgtype.UUID `json:"region_ids"`
+}
+
+func (q *Queries) ListProductArchonAssignmentRegions(ctx context.Context, arg ListProductArchonAssignmentRegionsParams) ([]pgtype.UUID, error) {
+	rows, err := q.db.Query(ctx, listProductArchonAssignmentRegions, arg.MemberID, arg.RegionIds)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []pgtype.UUID{}
+	for rows.Next() {
+		var public_id pgtype.UUID
+		if err := rows.Scan(&public_id); err != nil {
+			return nil, err
+		}
+		items = append(items, public_id)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listProductArchonAssignments = `-- name: ListProductArchonAssignments :many
 SELECT r.public_id AS region_id, m.public_id AS member_id, a.created_at AS granted_at,
        grantor.public_id AS granted_by
@@ -484,7 +518,7 @@ func (q *Queries) ListProductArchonAssignments(ctx context.Context, arg ListProd
 }
 
 const listProductCalendarCells = `-- name: ListProductCalendarCells :many
-SELECT requested.real_date,mapping.game_day
+SELECT requested.real_date::date AS real_date,mapping.game_day
 FROM generate_series($1::date,$2::date-1,interval '1 day') requested(real_date)
 LEFT JOIN game_time_map mapping ON mapping.real_date=requested.real_date::date
 ORDER BY requested.real_date
@@ -496,7 +530,7 @@ type ListProductCalendarCellsParams struct {
 }
 
 type ListProductCalendarCellsRow struct {
-	RealDate interface{} `json:"real_date"`
+	RealDate pgtype.Date `json:"real_date"`
 	GameDay  pgtype.Int4 `json:"game_day"`
 }
 

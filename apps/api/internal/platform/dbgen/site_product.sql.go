@@ -127,6 +127,27 @@ func (q *Queries) SiteActiveAlerts(ctx context.Context, arg SiteActiveAlertsPara
 	return items, nil
 }
 
+const siteActivitySummary = `-- name: SiteActivitySummary :one
+SELECT
+        coalesce(sum(amount) FILTER (WHERE kind = 'voice'), 0)::double precision AS voice_minutes,
+        coalesce(sum(amount) FILTER (WHERE kind = 'message'), 0)::double precision AS messages,
+        coalesce(sum(amount) FILTER (WHERE kind = 'reaction'), 0)::double precision AS reactions
+    FROM discord_activity_events
+`
+
+type SiteActivitySummaryRow struct {
+	VoiceMinutes float64 `json:"voice_minutes"`
+	Messages     float64 `json:"messages"`
+	Reactions    float64 `json:"reactions"`
+}
+
+func (q *Queries) SiteActivitySummary(ctx context.Context) (SiteActivitySummaryRow, error) {
+	row := q.db.QueryRow(ctx, siteActivitySummary)
+	var i SiteActivitySummaryRow
+	err := row.Scan(&i.VoiceMinutes, &i.Messages, &i.Reactions)
+	return i, err
+}
+
 const siteAdminDeliveryCounts = `-- name: SiteAdminDeliveryCounts :one
 SELECT count(*) FILTER (WHERE state IN ('queued', 'running', 'retry_wait', 'repair_required'))::integer AS pending_count,
        count(*) FILTER (WHERE state IN ('dead', 'succeeded', 'cancelled'))::integer AS terminal_count,
@@ -282,12 +303,6 @@ WITH totals AS (
          JOIN members m ON m.id = p.member_id
          WHERE m.status = 'active' AND 'dm' = ANY(m.roles)
            AND p.status = 'approved') AS total_dms
-), activity AS (
-    SELECT
-        coalesce(sum(amount) FILTER (WHERE kind = 'voice'), 0)::double precision AS voice_minutes,
-        coalesce(sum(amount) FILTER (WHERE kind = 'message'), 0)::double precision AS messages,
-        coalesce(sum(amount) FILTER (WHERE kind = 'reaction'), 0)::double precision AS reactions
-    FROM discord_activity_events
 ), role_counts AS (
     SELECT roles.role, count(DISTINCT m.id)::integer AS member_count
     FROM members m
@@ -296,9 +311,8 @@ WITH totals AS (
 )
 SELECT totals.total_members, totals.active_characters, totals.total_maps,
        totals.total_pointcrawl_nodes, totals.total_regions, totals.total_quests,
-       totals.total_dms, activity.voice_minutes, activity.messages,
-       activity.reactions, role_counts.role, role_counts.member_count
-FROM totals CROSS JOIN activity
+       totals.total_dms, role_counts.role, role_counts.member_count
+FROM totals
 LEFT JOIN role_counts ON true
 ORDER BY role_counts.role
 `
@@ -311,9 +325,6 @@ type SiteCommunitySnapshotRow struct {
 	TotalRegions         int32       `json:"total_regions"`
 	TotalQuests          int32       `json:"total_quests"`
 	TotalDms             int32       `json:"total_dms"`
-	VoiceMinutes         float64     `json:"voice_minutes"`
-	Messages             float64     `json:"messages"`
-	Reactions            float64     `json:"reactions"`
 	Role                 interface{} `json:"role"`
 	MemberCount          pgtype.Int4 `json:"member_count"`
 }
@@ -335,9 +346,6 @@ func (q *Queries) SiteCommunitySnapshot(ctx context.Context) ([]SiteCommunitySna
 			&i.TotalRegions,
 			&i.TotalQuests,
 			&i.TotalDms,
-			&i.VoiceMinutes,
-			&i.Messages,
-			&i.Reactions,
 			&i.Role,
 			&i.MemberCount,
 		); err != nil {

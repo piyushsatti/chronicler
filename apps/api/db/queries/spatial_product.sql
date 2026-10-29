@@ -284,6 +284,13 @@ SELECT count(*)::int FROM archon_assignments a
 JOIN regions r ON r.id=a.region_id JOIN members m ON m.id=a.member_id
 WHERE (sqlc.narg(region_id)::uuid IS NULL OR r.public_id=sqlc.narg(region_id))
   AND (sqlc.narg(member_id)::uuid IS NULL OR m.public_id=sqlc.narg(member_id));
+-- name: ListProductArchonAssignmentRegions :many
+SELECT r.public_id
+FROM archon_assignments a
+JOIN regions r ON r.id=a.region_id
+JOIN members m ON m.id=a.member_id
+WHERE m.public_id=sqlc.arg(member_id)::uuid
+  AND r.public_id=ANY(sqlc.arg(region_ids)::uuid[]);
 -- name: ReadProductCalendar :one
 SELECT calendar.definition,calendar.updated_at,
        mapping.game_day AS current_game_day
@@ -307,7 +314,7 @@ ORDER BY real_date LIMIT sqlc.arg(row_limit) OFFSET sqlc.arg(row_offset);
 -- name: CountProductRealDates :one
 SELECT count(*)::int FROM game_time_map WHERE game_day=sqlc.arg(game_day);
 -- name: ListProductCalendarCells :many
-SELECT requested.real_date,mapping.game_day
+SELECT requested.real_date::date AS real_date,mapping.game_day
 FROM generate_series(sqlc.arg(real_from)::date,sqlc.arg(real_to)::date-1,interval '1 day') requested(real_date)
 LEFT JOIN game_time_map mapping ON mapping.real_date=requested.real_date::date
 ORDER BY requested.real_date;

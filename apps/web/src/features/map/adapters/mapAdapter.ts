@@ -2,6 +2,7 @@ import { z } from 'zod';
 import type {
   MapDocumentsQuery,
   MapAtlasQuery,
+  MapContainmentQuery,
   MapNodeLinksQuery,
   MapDirectoryQuery,
   MapAssignmentsQuery,
@@ -27,6 +28,7 @@ import { graphqlRequest } from '../../../api/graphql.js';
 import { safeAppError, toAppError } from '../../../errors/toAppError.js';
 import { TransportError } from '../../../errors/types.js';
 import ATLAS from './map.graphql?raw';
+import CONTAINMENT from './mapContainment.graphql?raw';
 import LINKS from './mapNodeLinks.graphql?raw';
 import DIRECTORY from './mapDirectory.graphql?raw';
 import ASSIGNMENTS from './mapAssignments.graphql?raw';
@@ -77,6 +79,10 @@ const nodeSchema = z.object({
   submapId: id.nullable(),
   createdAt: z.string(),
   linkedEntries: z.array(entrySchema),
+});
+const containmentSchema = z.object({
+  id,
+  pointcrawlNodes: z.array(z.object({ submapId: id.nullable() })),
 });
 const edgeSchema = z.object({
   id,
@@ -199,6 +205,20 @@ export async function loadMapDirectory(): Promise<MapDirectory> {
     if (pageMaps.length < 50 && pageRegions.length < 50) break;
   }
   return { maps, regions };
+}
+export async function loadMapContainment(atlasCode: string) {
+  const nodes: z.infer<typeof containmentSchema>['pointcrawlNodes'] = [];
+  for (let offset = 0; ; offset += 200) {
+    const data = await graphqlRequest<MapContainmentQuery>(CONTAINMENT, {
+      atlasCode,
+      limit: 200,
+      offset,
+    });
+    if (!data.map) throw toAppError({ failure: 'NotFound' }, 'map:load');
+    const page = parse(containmentSchema, data.map);
+    nodes.push(...page.pointcrawlNodes);
+    if (page.pointcrawlNodes.length < 200) return { id: page.id, nodes };
+  }
 }
 export async function loadAssignments(filters: {
   memberId?: string;

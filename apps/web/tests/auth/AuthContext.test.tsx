@@ -31,6 +31,7 @@ import lanesBad from '../fixtures/wire/home/lanes-bad-board.json';
 import { App } from '../../src/App.js';
 import goodSettings from '../fixtures/wire/personalize/good.json';
 import { DEFAULT_PREFERENCES, savePrefs } from '../../src/context/theme.utils.js';
+import { useEditorDraft } from '../../src/features/editor/hooks/useEditorDraft.js';
 
 function token(exp = Date.now() / 1000 + 3600): string {
   return `${btoa('{}')}.${btoa(JSON.stringify({ member_id: 'member-one', exp, roles: ['admin'] }))}.test`;
@@ -57,6 +58,95 @@ afterEach(() => {
 });
 
 describe('AuthProvider session lifecycle', () => {
+  it('preserves editor queries and mutations after transient memberMe failure', async () => {
+    localStorage.setItem(TOKEN_KEY, token());
+    const { result, queryClient } = setup();
+    queryClient.setQueryData(['me'], { id: 'member-one', roles: ['player'] });
+    function Draft() {
+      const draft = useEditorDraft('guide', 'transient-session', {
+        meta: { title: 'Guide' },
+        body: 'Original',
+      });
+      return (
+        <>
+          <input
+            aria-label="Editor body"
+            value={draft.body}
+            onChange={(event) => draft.setBody(event.target.value)}
+          />
+          <button onClick={draft.undo} disabled={!draft.canUndo}>
+            Undo draft
+          </button>
+        </>
+      );
+    }
+    function Editor() {
+      const record = useQuery({
+        queryKey: ['editor', 'record'],
+        queryFn: async () => 'Record',
+      });
+      return record.data ? <Draft /> : <p>Loading editor</p>;
+    }
+    render(
+      <QueryClientProvider client={queryClient}>
+        <Editor />
+      </QueryClientProvider>,
+    );
+    fireEvent.change(await screen.findByRole('textbox', { name: 'Editor body' }), {
+      target: { value: 'First edit' },
+    });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Editor body' }), {
+      target: { value: 'Second edit' },
+    });
+    const mutation = queryClient
+      .getMutationCache()
+      .build(queryClient, { mutationKey: ['editor', 'save'] });
+    await act(async () => {
+      await expect(
+        queryClient.fetchQuery({
+          queryKey: ['me'],
+          queryFn: async () => {
+            throw new TransportError('HTTP', { status: 503 });
+          },
+        }),
+      ).rejects.toThrow();
+    });
+    expect(result.current.isAuthenticated).toBe(true);
+    expect(queryClient.getQueryData(['editor', 'record'])).toBe('Record');
+    expect(queryClient.getMutationCache().getAll()).toContain(mutation);
+    expect(screen.getByRole('textbox', { name: 'Editor body' })).toHaveValue(
+      'Second edit',
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Undo draft' }));
+    expect(screen.getByRole('textbox', { name: 'Editor body' })).toHaveValue(
+      'First edit',
+    );
+  });
+
+  it('still clears caches when authority changes after a transient failure', async () => {
+    localStorage.setItem(TOKEN_KEY, token());
+    const { result, queryClient } = setup();
+    queryClient.setQueryData(['me'], { id: 'member-one', roles: ['player', 'dm'] });
+    await act(async () => {
+      await expect(
+        queryClient.fetchQuery({
+          queryKey: ['me'],
+          queryFn: async () => {
+            throw new TransportError('HTTP', { status: 503 });
+          },
+        }),
+      ).rejects.toThrow();
+    });
+    queryClient.setQueryData(['editor', 'record'], 'Previous authority');
+    queryClient
+      .getMutationCache()
+      .build(queryClient, { mutationKey: ['editor', 'save'] });
+    act(() => queryClient.setQueryData(['me'], { id: 'member-one', roles: ['player'] }));
+    expect(result.current.isAuthenticated).toBe(true);
+    expect(queryClient.getQueryData(['editor', 'record'])).toBeUndefined();
+    expect(queryClient.getMutationCache().getAll()).toHaveLength(0);
+  });
+
   it('places the site header outside the page main landmark', async () => {
     vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
     renderWithProviders(<App />, { route: '/settings' });

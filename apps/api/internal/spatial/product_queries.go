@@ -178,6 +178,14 @@ func (s ProductQueries) Regions(ctx context.Context, actor auth.Authority, spec 
 	if err != nil {
 		return nil, err
 	}
+	regionIDs := make([]string, len(views))
+	for i, view := range views {
+		regionIDs[i] = view.Id
+	}
+	s.Policy, err = s.Policy.WithArchonAssignments(ctx, actor, regionIDs)
+	if err != nil {
+		return nil, err
+	}
 	for i := range views {
 		if err := s.setRegionCapability(ctx, actor, &views[i]); err != nil {
 			return nil, err
@@ -194,6 +202,16 @@ func (s ProductQueries) Maps(ctx context.Context, actor auth.Authority, spec Map
 		return nil, err
 	}
 	views, err := s.Reads.Map.ReadMaps(ctx, actor, spec)
+	if err != nil {
+		return nil, err
+	}
+	regionIDs := make([]string, 0, len(views))
+	for _, view := range views {
+		if view.RegionId != nil {
+			regionIDs = append(regionIDs, *view.RegionId)
+		}
+	}
+	s.Policy, err = s.Policy.WithArchonAssignments(ctx, actor, regionIDs)
 	if err != nil {
 		return nil, err
 	}

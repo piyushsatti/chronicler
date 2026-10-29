@@ -64,7 +64,7 @@ func TestProductPostgresReadsSiteSnapshotAndMemberSearch(t *testing.T) {
 		t.Fatalf("construct Site Postgres adapter: %v", err)
 	}
 
-	snapshot, err := adapter.ReadHomeCommunity(ctx, auth.Authority{}, HomeSpec{})
+	snapshot, err := adapter.ReadHomeCommunity(ctx, auth.Authority{}, HomeSpec{IncludeActivity: true})
 	if err != nil {
 		t.Fatalf("read community snapshot: %v", err)
 	}
@@ -78,7 +78,7 @@ func TestProductPostgresReadsSiteSnapshotAndMemberSearch(t *testing.T) {
 	if snapshot.Activity.VoiceMinutes < 5.5 || snapshot.Activity.Messages < 3 || snapshot.Activity.Reactions < 2 {
 		t.Fatalf("activity=%+v, want stored event sums", snapshot.Activity)
 	}
-	stats, err := adapter.ReadSiteStats(ctx, auth.Authority{}, SiteStatsSpec{})
+	stats, err := adapter.ReadSiteStats(ctx, auth.Authority{}, SiteStatsSpec{IncludeActivity: true})
 	if err != nil || !reflect.DeepEqual(stats, snapshot) {
 		t.Fatalf("site stats=%+v err=%v, want same stored snapshot %+v", stats, err, snapshot)
 	}

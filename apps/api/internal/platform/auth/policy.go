@@ -34,6 +34,10 @@ type ArchonReader interface {
 	HasArchon(ctx context.Context, memberID, regionID string) (bool, error)
 }
 
+type ArchonBatchReader interface {
+	ArchonRegions(ctx context.Context, memberID string, regionIDs []string) (map[string]bool, error)
+}
+
 type LieutenantReader interface {
 	HasLieutenant(ctx context.Context, memberID, documentID string) (bool, error)
 }
@@ -57,6 +61,21 @@ func NewAssignments(archons ArchonReader, lieutenants LieutenantReader) (*Assign
 
 func (a *Assignments) HasArchon(ctx context.Context, memberID, regionID string) (bool, error) {
 	return a.Archons.HasArchon(ctx, memberID, regionID)
+}
+
+func (a *Assignments) ArchonRegions(ctx context.Context, memberID string, regionIDs []string) (map[string]bool, error) {
+	if batch, ok := a.Archons.(ArchonBatchReader); ok {
+		return batch.ArchonRegions(ctx, memberID, regionIDs)
+	}
+	facts := make(map[string]bool, len(regionIDs))
+	for _, regionID := range regionIDs {
+		assigned, err := a.Archons.HasArchon(ctx, memberID, regionID)
+		if err != nil {
+			return nil, err
+		}
+		facts[regionID] = assigned
+	}
+	return facts, nil
 }
 
 func (a *Assignments) HasLieutenant(ctx context.Context, memberID, documentID string) (bool, error) {
@@ -301,6 +320,44 @@ func NewPolicy(providers PolicyProviders) (*Policy, error) {
 		}
 	}
 	return &Policy{providers: providers}, nil
+}
+
+type archonSnapshot struct {
+	AssignmentReader
+	memberID string
+	regions  map[string]bool
+}
+
+func (s archonSnapshot) HasArchon(ctx context.Context, memberID, regionID string) (bool, error) {
+	if assigned, ok := s.regions[regionID]; ok && memberID == s.memberID {
+		return assigned, nil
+	}
+	return s.AssignmentReader.HasArchon(ctx, memberID, regionID)
+}
+
+func (p *Policy) WithArchonAssignments(ctx context.Context, actor Authority, regionIDs []string) (*Policy, error) {
+	batch, ok := p.providers.Assignments.(ArchonBatchReader)
+	if !ok || actor.claims.Anonymous() || len(regionIDs) == 0 {
+		return p, nil
+	}
+	regions := make(map[string]bool, len(regionIDs))
+	ids := make([]string, 0, len(regionIDs))
+	for _, id := range regionIDs {
+		if _, exists := regions[id]; !exists {
+			regions[id] = false
+			ids = append(ids, id)
+		}
+	}
+	facts, err := batch.ArchonRegions(ctx, actor.claims.MemberID, ids)
+	if err != nil {
+		return nil, err
+	}
+	for id := range regions {
+		regions[id] = facts[id]
+	}
+	copy := *p
+	copy.providers.Assignments = archonSnapshot{p.providers.Assignments, actor.claims.MemberID, regions}
+	return &copy, nil
 }
 
 type policyRule uint8

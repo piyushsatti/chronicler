@@ -34,6 +34,31 @@ func (p PoolPolicyProviders) HasArchon(ctx context.Context, memberID, regionID s
 	return count > 0, nil
 }
 
+func (p PoolPolicyProviders) ArchonRegions(ctx context.Context, memberID string, regionIDs []string) (map[string]bool, error) {
+	member, err := db.ParseUUID(memberID)
+	if err != nil {
+		return nil, err
+	}
+	regions := make([]pgtype.UUID, len(regionIDs))
+	for i, regionID := range regionIDs {
+		regions[i], err = db.ParseUUID(regionID)
+		if err != nil {
+			return nil, err
+		}
+	}
+	rows, err := dbgen.New(p.DB).ListProductArchonAssignmentRegions(ctx, dbgen.ListProductArchonAssignmentRegionsParams{
+		MemberID: member, RegionIds: regions,
+	})
+	if err != nil {
+		return nil, err
+	}
+	facts := make(map[string]bool, len(rows))
+	for _, region := range rows {
+		facts[db.UUIDString(region)] = true
+	}
+	return facts, nil
+}
+
 func (p PoolPolicyProviders) HasLieutenant(ctx context.Context, memberID, documentID string) (bool, error) {
 	member, err := db.ParseUUID(memberID)
 	if err != nil {

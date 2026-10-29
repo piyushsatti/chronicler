@@ -183,7 +183,7 @@ func (p *ProductPostgres) ReadGameCalendar(ctx context.Context, _ auth.Authority
 		Definition:     rawJSON(cal.Definition),
 	}
 	for _, cell := range cells {
-		realDate, err := productDateFromAny(cell.RealDate)
+		realDate, err := productDateFromPGDate(cell.RealDate)
 		if err != nil {
 			return TimeCalendarSnapshot{}, err
 		}

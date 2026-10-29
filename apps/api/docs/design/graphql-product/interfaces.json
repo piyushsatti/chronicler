@@ -3539,7 +3539,14 @@
     "aggregate": "Site",
     "method": "Home",
     "spec_type": "HomeSpec",
-    "spec_fields": [],
+    "spec_fields": [
+      {
+        "name": "IncludeActivity",
+        "go_type": "bool",
+        "internal": true,
+        "meaning": "gqlgen collected selection requests the activity projection; counts-only reads skip its aggregate"
+      }
+    ],
     "result_go_type": "site.HomeView",
     "result_sdl_type": "HomeV2Type!",
     "signature": "func (s ProductQueries) Home(ctx context.Context, actor auth.Authority, spec HomeSpec) (site.HomeView, error)",
@@ -5041,7 +5048,14 @@
     "aggregate": "Site",
     "method": "SiteStats",
     "spec_type": "SiteStatsSpec",
-    "spec_fields": [],
+    "spec_fields": [
+      {
+        "name": "IncludeActivity",
+        "go_type": "bool",
+        "internal": true,
+        "meaning": "gqlgen collected selection requests the activity projection; counts-only reads skip its aggregate"
+      }
+    ],
     "result_go_type": "site.SiteStatsView",
     "result_sdl_type": "SiteStatsV2Type!",
     "signature": "func (s ProductQueries) SiteStats(ctx context.Context, actor auth.Authority, spec SiteStatsSpec) (site.SiteStatsView, error)",

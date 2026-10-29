@@ -4,7 +4,7 @@ import { QueryClientProvider } from '@tanstack/react-query';
 import { graphql, HttpResponse } from 'msw';
 import type { ReactNode } from 'react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthProvider } from '../../../src/auth/AuthContext.js';
 import { TOKEN_KEY } from '../../../src/auth/storage.js';
 import { createTestQueryClient } from '../../../src/providers.js';
@@ -19,6 +19,8 @@ import { SeriesCreateAction } from '../../../src/components/domain/SeriesCreateA
 import { SeriesRedirect } from '../../../src/features/onboarding/SeriesRedirect.js';
 import { useSeriesPage } from '../../../src/hooks/useSeriesPage.js';
 import { renderWithProviders } from '../../test-utils.js';
+import { useTheme } from '../../../src/context/ThemeContext.js';
+import { DEFAULT_PREFERENCES, savePrefs } from '../../../src/context/theme.utils.js';
 import good from '../../fixtures/wire/onboarding/retained-good.json';
 
 function Location() {
@@ -127,6 +129,44 @@ describe('retained aliases preserve identity and intent', () => {
 });
 
 describe('Calendar page', () => {
+  it('calendar today and refetch follow the selected timezone', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-15T00:30:00Z'));
+    try {
+      savePrefs({ ...DEFAULT_PREFERENCES, timezone: 'America/Chicago' }, null);
+      const seen: unknown[] = [];
+      server.use(
+        graphql.query('RetainedCalendarQuests', ({ variables }) => {
+          seen.push(variables);
+          return HttpResponse.json({ data: { quests: { total: 0, items: [] } } });
+        }),
+      );
+      function ZoneControl() {
+        const { setPreferences } = useTheme();
+        return <button onClick={() => setPreferences({ timezone: 'UTC' })}>Use UTC</button>;
+      }
+      renderWithProviders(<><ZoneControl /><CalendarPage /></>, {
+        route: '/calendar?day=2026-10-14',
+      });
+      const localToday = await screen.findByRole('button', { name: /^14 Oct 2026, game day/ });
+      const utcToday = screen.getByRole('button', { name: '15 Oct 2026, no game day recorded' });
+      expect(localToday).toHaveAttribute('data-today', '1');
+      expect(utcToday).not.toHaveAttribute('data-today');
+      await waitFor(() => expect(seen).toContainEqual({
+        filters: { scheduledFrom: '2026-10-14T05:00:00Z', scheduledTo: '2026-10-15T05:00:00Z' },
+        offset: 0,
+      }));
+      await userEvent.setup().click(screen.getByRole('button', { name: 'Use UTC' }));
+      expect(localToday).not.toHaveAttribute('data-today');
+      expect(utcToday).toHaveAttribute('data-today', '1');
+      await waitFor(() => expect(seen).toContainEqual({
+        filters: { scheduledFrom: '2026-10-14T00:00:00Z', scheduledTo: '2026-10-15T00:00:00Z' },
+        offset: 0,
+      }));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
   it.each(['/calendar?month=2026-10', '/calendar?month=2026-10&status=open', '/calendar?day=2026-10-14'])(
     'labels a wholly empty month without treating a filtered empty result as one: %s',
     async (route) => {
@@ -144,6 +184,7 @@ describe('Calendar page', () => {
     },
   );
   it('restores named dates and full schedule paging, keeps legacy search when changing month', async () => {
+    savePrefs({ ...DEFAULT_PREFERENCES, timezone: 'UTC' }, null);
     const seen: unknown[] = [];
     server.use(
       graphql.query('RetainedCalendarQuests', ({ variables }) => {
