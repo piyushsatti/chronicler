@@ -682,6 +682,14 @@ func decideCharacterVerification(ctx context.Context, repos ProductCommandRepos,
 	if err := commandPublicID(&id); err != nil {
 		return member.VerificationView{}, err
 	}
+	var historyID *string
+	if spec.Verdict == member.VerificationVerdictApproved {
+		value := ids()
+		if err := commandPublicID(&value); err != nil {
+			return member.VerificationView{}, err
+		}
+		historyID = &value
+	}
 	assessment, err := repos.Assessments.AppendAssessment(ctx, member.AssessmentSpec{
 		SubjectType: "character", SubjectID: spec.CharacterId, Verdict: spec.Verdict, ID: id,
 		SubmissionToken: spec.ExpectedSubmittedAt.UTC().Format(time.RFC3339Nano), ActorID: fresh.Claims().MemberID,
@@ -692,7 +700,7 @@ func decideCharacterVerification(ctx context.Context, repos ProductCommandRepos,
 	}
 	result, err := repos.Character.StoreDecideVerification(ctx, DecideVerificationWrite{
 		ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: spec, Locked: locked,
-		DecisionID: &id, Assessment: assessment,
+		DecisionID: &id, HistoryID: historyID, Assessment: assessment,
 	})
 	if err != nil {
 		return member.VerificationView{}, err

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- New Discord sign-ins start as guests; approving their first character grants player eligibility for quest signup. Existing members retain their roles.
 - Agent HTTP-first port: `apps/agent` uv project (`pi.chronicler.agent` / `archive` / `qa`), API claim/complete job pipeline, Archive MCP + LanceDB, deploy compose without RabbitMQ, `agent.yml` CI. Docs: [agent-qa-http](docs/interfaces/agent-qa-http.md), D43.
 - Repo CI scaffold: `.github/workflows/repo.yml` and `scripts/verify-repo` (docs lint, Prettier, Ruff, Pyright). Web and agent apps stay out of that job.
 - Monorepo scaffold: `apps/api`, `apps/web`, `apps/discord`, `apps/agent`, `packages/contracts`.
@@ -25,6 +26,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Enforce GraphQL query depth and list-weighted complexity limits while admitting supported web operations.
+- Apply the Locations category authorization gate when moving a Codex entry into that category.
+- Require production JWT and ingest secrets of at least 32 characters and reject public `/v1/ingest/*` traffic at Caddy.
+- Retire legacy quest HTTP commands and character/member HTTP reads so product authorization runs through GraphQL. Remove the quest-only in-memory rate limiter.
 - Quest and DM summaries apply the Document body projection, and character summary lists and totals omit unreadable documents.
 - Scoped quotes protect unquoted continuation lines until a blank separator or new Markdown block. The editor warns about audience markers inside lists and asks for confirmation before publishing them.
 - Member-addressed DM callouts use DM styling and an exact-handle title while retaining authored titles.

@@ -3,5 +3,7 @@
 # renews the Let's Encrypt certificate automatically.
 {$API_DOMAIN} {
 	encode zstd gzip
+	@ingest path /v1/ingest/*
+	respond @ingest 404
 	reverse_proxy chronicler-api:8080
 }

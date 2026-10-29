@@ -49,11 +49,14 @@ export function BulkRoleBar({
               setTouched(true);
               setForm((f) => ({
                 ...f,
-                baseTier: value === 'Spectator' ? 'Spectator' : 'Player',
+                baseTier: value === 'Guest' || value === 'Player' || value === 'Guest + Player'
+                  ? value : 'Spectator',
               }));
             }}
             options={[
               { value: 'Player', label: 'Player' },
+              { value: 'Guest', label: 'Guest' },
+              { value: 'Guest + Player', label: 'Guest + Player' },
               { value: 'Spectator', label: 'Spectator' },
             ]}
           />

@@ -10,7 +10,7 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/apierr"
 )
 
-// CORS wraps the next handler so rate-limit and app errors still get ACAO headers.
+// CORS wraps the next handler so app errors still get ACAO headers.
 func CORS(origins []string, next http.Handler) http.Handler {
 	allowed := map[string]struct{}{}
 	for _, o := range origins {
@@ -69,50 +69,6 @@ type statusWriter struct {
 func (w *statusWriter) WriteHeader(code int) {
 	w.status = code
 	w.ResponseWriter.WriteHeader(code)
-}
-
-// RateLimit is a minimal in-memory limiter for selected paths.
-// CORS must wrap this so 429 responses still carry ACAO.
-type RateLimit struct {
-	window time.Duration
-	limit  int
-	paths  map[string]struct{}
-	hits   map[string][]time.Time
-}
-
-func NewRateLimit(window time.Duration, limit int, paths ...string) *RateLimit {
-	m := make(map[string]struct{}, len(paths))
-	for _, p := range paths {
-		m[p] = struct{}{}
-	}
-	return &RateLimit{window: window, limit: limit, paths: m, hits: map[string][]time.Time{}}
-}
-
-func (rl *RateLimit) Middleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if _, ok := rl.paths[r.URL.Path]; !ok {
-			next.ServeHTTP(w, r)
-			return
-		}
-		key := r.Header.Get("Authorization")
-		if key == "" {
-			key = r.RemoteAddr
-		}
-		now := time.Now()
-		cutoff := now.Add(-rl.window)
-		kept := rl.hits[key][:0]
-		for _, t := range rl.hits[key] {
-			if t.After(cutoff) {
-				kept = append(kept, t)
-			}
-		}
-		if len(kept) >= rl.limit {
-			apierr.Write(w, r, apierr.New(apierr.Conflict, "rate limit exceeded"))
-			return
-		}
-		rl.hits[key] = append(kept, now)
-		next.ServeHTTP(w, r)
-	})
 }
 
 // Chain applies middleware in request order: first listed is outermost.

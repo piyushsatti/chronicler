@@ -20,7 +20,7 @@ export type CreateActor = { roles: readonly string[]; liveDm: boolean };
  * as closely as the web can see:
  *
  * - quest: LiveDM or admin, as `ruleQuestCreate`.
- * - summary: player, LiveDM or admin, as `ruleSummary` (the server also checks
+ * - summary: guest, player, LiveDM or admin, as `ruleSummary` (the server also checks
  *   the quest and character relationships, which the form handles).
  * - guide, ruling: the rules editors use the server's review proof
  *   (`useCurrentAccess('review')`); this role check is only its fallback.
@@ -50,7 +50,7 @@ export function canCreateRecord(kind: CreateKind, actor: CreateActor | undefined
     case 'ruling':
       return canAccessVerify(roles);
     case 'summary':
-      return hasRole(roles, 'player') || liveDm || isAdmin(roles);
+      return hasRole(roles, 'guest') || hasRole(roles, 'player') || liveDm || isAdmin(roles);
     default:
       return true;
   }

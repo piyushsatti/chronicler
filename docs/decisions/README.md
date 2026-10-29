@@ -15,11 +15,11 @@ Long-form historical text (gitignored): `.local/docs-quarry/decisions-longform/`
 
 ## Classification
 
-| Kind                   | Records                                                       |
-| ---------------------- | ------------------------------------------------------------- |
-| Boundary (this folder) | D1, D3, D4, D10–D15, D18–D20, D22–D24, D27–D31, D33, D45, D46 |
-| Local → API            | D2, D5–D9, D16, D17, D25, D26, D32                            |
-| Local → Web            | D21                                                           |
+| Kind                   | Records                                                                 |
+| ---------------------- | ----------------------------------------------------------------------- |
+| Boundary (this folder) | D1, D3, D4, D10–D15, D18–D20, D22–D24, D27–D31, D33, D45, D46, D47, D48 |
+| Local → API            | D2, D5–D9, D16, D17, D25, D26, D32                                      |
+| Local → Web            | D21                                                                     |
 
 ## Index (boundary)
 
@@ -48,3 +48,5 @@ Long-form historical text (gitignored): `.local/docs-quarry/decisions-longform/`
 | [D33](/docs/decisions/D33-GitHub-Actions-Owns-Production-Releases.md)    | Actions-only production releases                    | [actions-releases](/docs/interfaces/actions-releases.md)           |
 | [D45](/docs/decisions/D45-Redaction-Keeps-Rough-Size.md)                 | Redaction keeps line count and rough size           | [scoped-body](/docs/interfaces/scoped-body.md)                     |
 | [D46](/docs/decisions/D46-Hide-Action-Reads-Markers-Client-Side.md)      | Hide action reads markers client-side (writes only) | [scoped-body](/docs/interfaces/scoped-body.md)                     |
+| [D47](/docs/decisions/D47-Guest-Onboarding-And-Player-Promotion.md)      | New sign-ins are guests until character approval    | [live-authority](/docs/interfaces/live-authority.md)               |
+| [D48](/docs/decisions/D48-Former-DMs-Retain-Owned-Quest-Management.md)   | Former DMs keep management of their owned quests    | [live-authority](/docs/interfaces/live-authority.md)               |

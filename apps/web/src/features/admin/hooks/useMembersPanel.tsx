@@ -17,6 +17,7 @@ import { useBulkRoleBar } from './useBulkRoleBar.js';
 const MEMBERS_KEY = ['adminMembers'] as const;
 
 const ROLE_OPTIONS = [
+  'guest',
   'player',
   'dm',
   'lieutenant',

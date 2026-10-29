@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/app"
 	"github.com/piyushsatti/chronicler/apps/api/internal/login"
@@ -76,7 +75,6 @@ func main() {
 // apiHandler owns production middleware ordering. CORS must wrap every early
 // application rejection so allowed browser clients receive its typed response.
 func apiHandler(mux http.Handler, cfg config.Config, authority auth.AuthorityResolver) http.Handler {
-	limiter := httpserver.NewRateLimit(time.Minute, 30, "/v1/quests")
 	return httpserver.Chain(
 		mux,
 		httpserver.Recover,
@@ -84,7 +82,6 @@ func apiHandler(mux http.Handler, cfg config.Config, authority auth.AuthorityRes
 		func(next http.Handler) http.Handler {
 			return httpserver.CORS(cfg.CORSOrigins, next)
 		},
-		limiter.Middleware,
 		httpserver.MaxBody(1<<20, "/v1/"),
 		func(next http.Handler) http.Handler {
 			return auth.LiveMiddleware(login.Parser(cfg.JWTSecret), authority, next)

@@ -49,6 +49,8 @@ Web and Discord send identity credentials. Web may cache a validated member resp
 - [D29](/docs/decisions/D29-Owner-And-Admin-Bypass-Identity-Predicates.md)
 - [D30](/docs/decisions/D30-Deletion-Is-Named-Per-Entity.md)
 - [D31](/docs/decisions/D31-No-Erasure-Anonymize-In-Place.md)
+- [D47](/docs/decisions/D47-Guest-Onboarding-And-Player-Promotion.md)
+- [D48](/docs/decisions/D48-Former-DMs-Retain-Owned-Quest-Management.md)
 
 ## Reopen
 

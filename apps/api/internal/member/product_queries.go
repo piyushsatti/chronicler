@@ -82,7 +82,7 @@ func queryRole(role *string) error {
 		return nil
 	}
 	switch *role {
-	case "player", "dm", "archon", "lieutenant", "verifier", "admin":
+	case "guest", "player", "dm", "archon", "lieutenant", "verifier", "admin":
 		return nil
 	default:
 		return apierr.New(apierr.Invalid, "invalid member role")

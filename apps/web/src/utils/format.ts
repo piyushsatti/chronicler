@@ -244,6 +244,7 @@ export function statusLabel(value: string | null | undefined): string {
 
 /** Member roles as people say them. */
 export const ROLE_LABELS: Readonly<Record<string, string>> = {
+  guest: 'Guest',
   dm: 'DM',
   admin: 'Admin',
   player: 'Player',

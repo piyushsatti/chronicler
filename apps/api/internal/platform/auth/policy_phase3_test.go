@@ -25,6 +25,96 @@ type phase3AssignmentLookup struct {
 	archonArgs, lieutenantArgs []string
 }
 
+func TestGuestHasPlayerPermissionsExceptSignup(t *testing.T) {
+	p, _, facts := policyTestProvider(t)
+	guest := policyAuthority(t, policyActor, []Role{Role("guest")}, false, false)
+	player := policyAuthority(t, policyActor, []Role{Player}, false, false)
+	if guest.Claims().Has(Player) {
+		t.Fatal("guest acquired the literal player audience role")
+	}
+	availability, err := ForOperation("Mutation.setMyAvailability")
+	policyExpect(t, p, guest, policyMustRequest(t, availability, err), Decision{Allowed: true})
+	summary, err := ForSummary(SummaryFacts{CharacterID: policyPointer(policySubject), QuestIDs: []string{policyRegion}})
+	facts.summary = SummaryEvidence{Relations: []SummaryRelation{{policyRegion, policyOther, policyPointer(policyActor), policyPointer("played")}}, Character: &CharacterFacts{policySubject, policyActor}}
+	policyExpect(t, p, guest, policyMustRequest(t, summary, err), Decision{Allowed: true})
+	for _, operation := range []Operation{"Mutation.signupForQuest", "Mutation.withdrawFromQuest"} {
+		request, err := ForCharacter(operation, CharacterFacts{policySubject, policyActor})
+		request = policyMustRequest(t, request, err)
+		want := Decision{Allowed: true}
+		if operation == "Mutation.signupForQuest" {
+			want = Decision{RuleCode: "ROLE"}
+		}
+		policyExpect(t, p, guest, request, want)
+		policyExpect(t, p, player, request, Decision{Allowed: true})
+		// A guest who also holds player (set by an admin) is a player.
+		guestPlayer := policyAuthority(t, policyActor, []Role{Role("guest"), Player}, false, false)
+		policyExpect(t, p, guestPlayer, request, Decision{Allowed: true})
+		foreign, err := ForCharacter(operation, CharacterFacts{policySubject, policyOther})
+		want = Decision{RuleCode: "OWNERSHIP"}
+		if operation == "Mutation.signupForQuest" {
+			want = Decision{RuleCode: "ROLE"}
+		}
+		policyExpect(t, p, guest, policyMustRequest(t, foreign, err), want)
+	}
+}
+
+func TestLocationsCategoryMovesUseArchonGate(t *testing.T) {
+	p, assignments, _ := policyTestProvider(t)
+	player := policyAuthority(t, policyActor, []Role{Player}, false, false)
+	archon := policyAuthority(t, policyOther, []Role{Archon}, false, false)
+	admin := policyAuthority(t, policyOther, []Role{Admin}, false, false)
+	owner := policyAuthority(t, policyOther, []Role{Player}, false, true)
+	for _, operation := range []Operation{"Mutation.updateDocument", "Mutation.editPublishedDocument"} {
+		for _, test := range []struct {
+			name           string
+			category, next *string
+		}{
+			{"NPC into Locations", policyPointer("NPC"), policyPointer("Locations")},
+			{"uncategorized into Locations", nil, policyPointer("Locations")},
+			{"existing Locations", policyPointer("Locations"), nil},
+			{"Locations into NPC", policyPointer("Locations"), policyPointer("NPC")},
+		} {
+			t.Run(string(operation)+"/"+test.name, func(t *testing.T) {
+				request, err := ForDocumentWrite(operation, DocumentWriteFacts{ID: policySubject, AuthorID: policyActor, Kind: "codex_entry", Category: test.category, NewCategory: test.next, LinkedRegionIDs: []string{policyRegion}})
+				request = policyMustRequest(t, request, err)
+				policyExpect(t, p, player, request, Decision{RuleCode: "ROLE"})
+				policyExpect(t, p, archon, request, Decision{Allowed: true})
+				policyExpect(t, p, owner, request, Decision{true, true, "ROLE"})
+				assignments.archon = false
+				policyExpect(t, p, archon, request, Decision{RuleCode: "ASSIGNMENT"})
+				policyExpect(t, p, admin, request, Decision{true, true, "ASSIGNMENT"})
+				assignments.err = errors.New("assignment unavailable")
+				decision, err := p.Decide(t.Context(), admin, request)
+				if !errors.Is(err, assignments.err) || decision.Allowed {
+					t.Fatalf("assignment failure: %+v %v", decision, err)
+				}
+				assignments.err = nil
+				assignments.archon = true
+			})
+		}
+	}
+}
+
+func TestFormerDMRetainsOwnedQuestManagement(t *testing.T) {
+	p, _, _ := policyTestProvider(t)
+	for _, actor := range []Authority{
+		policyAuthority(t, policyActor, []Role{Player}, true, false),
+		policyAuthority(t, policyActor, []Role{DM}, false, false),
+	} {
+		if actor.LiveDM() {
+			t.Fatal("fixture retained current DM authority")
+		}
+		for _, operation := range []Operation{"Mutation.updateQuest", "Mutation.transitionQuestStatus", "Mutation.closeQuest", "Mutation.selectQuestParticipants", "Mutation.deleteQuest", "Mutation.syncQuestDiscord"} {
+			request, err := ForQuest(operation, QuestFacts{ID: policySubject, DMID: policyActor})
+			policyExpect(t, p, actor, policyMustRequest(t, request, err), Decision{Allowed: true})
+			foreign, err := ForQuest(operation, QuestFacts{ID: policySubject, DMID: policyOther})
+			policyExpect(t, p, actor, policyMustRequest(t, foreign, err), Decision{RuleCode: "OWNERSHIP"})
+		}
+		create, err := ForQuestCreate(QuestCreateFacts{policyActor})
+		policyExpect(t, p, actor, policyMustRequest(t, create, err), Decision{RuleCode: "ROLE"})
+	}
+}
+
 func (a *phase3AssignmentLookup) HasArchon(_ context.Context, memberID, regionID string) (bool, error) {
 	a.archonArgs = []string{memberID, regionID}
 	return a.archon, a.err

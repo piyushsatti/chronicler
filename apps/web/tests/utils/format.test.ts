@@ -9,6 +9,7 @@ import {
   nextCivilDay,
   pluralize,
   statusLabel,
+  roleLabel,
   weekdayLabel,
   weekdayList,
   clockLabel,
@@ -111,6 +112,10 @@ describe('timestamp presentation', () => {
 });
 
 describe('reader-facing labels', () => {
+  it('labels the guest member role', () => {
+    expect(roleLabel('guest')).toBe('Guest');
+  });
+
   it('pluralizes counts', () => {
     expect(pluralize(1, 'result')).toBe('1 result');
     expect(pluralize(0, 'result')).toBe('0 results');

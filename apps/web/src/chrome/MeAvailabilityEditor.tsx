@@ -25,7 +25,7 @@ export function MeAvailabilityEditor({ me }: { me: MemberViewModel }): React.JSX
       <ProfileOwnerActions
         key={profile.data.member.id}
         profile={profile.data}
-        canAvailability={me.roles.includes('player') || me.roles.includes('admin')}
+        canAvailability={me.roles.includes('guest') || me.roles.includes('player') || me.roles.includes('admin')}
         canDm={me.roles.includes('dm') || me.roles.includes('admin')}
         focusAvailability
       />

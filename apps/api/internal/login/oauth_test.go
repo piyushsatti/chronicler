@@ -22,6 +22,13 @@ import (
 
 type oauthDoFunc func(*http.Request) (*http.Response, error)
 
+func TestStaticDiscordMemberStartsGuest(t *testing.T) {
+	_, roles, _, _, err := (StaticMemberStore{}).EnsureFromDiscord(context.Background(), "synthetic-member", "", "")
+	if err != nil || !reflect.DeepEqual(roles, []auth.Role{auth.Role("guest")}) {
+		t.Fatalf("roles=%v err=%v", roles, err)
+	}
+}
+
 func (f oauthDoFunc) Do(r *http.Request) (*http.Response, error) { return f(r) }
 
 type oauthStore struct {

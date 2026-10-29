@@ -42,7 +42,7 @@ type Limits struct {
 }
 
 func DefaultLimits() Limits {
-	return Limits{MaxDepth: 12, MaxComplexity: 250}
+	return Limits{MaxDepth: 12, MaxComplexity: 100000}
 }
 
 // PlaceholderHandler answers until gqlgen codegen lands.

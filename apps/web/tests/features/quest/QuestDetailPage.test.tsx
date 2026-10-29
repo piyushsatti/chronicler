@@ -8,6 +8,7 @@ import { TOKEN_KEY } from '../../../src/auth/storage.js';
 import { QuestDetailPage } from '../../../src/features/quest/pages/QuestDetailPage.js';
 import { server } from '../../../src/mocks/server.js';
 import detailGood from '../../fixtures/wire/quest/detail-good.json';
+import goodMe from '../../fixtures/wire/me/good.json';
 import { renderWithProviders } from '../../test-utils.js';
 
 function seedToken(): void {
@@ -24,6 +25,19 @@ function seedToken(): void {
 describe('QuestDetailPage', () => {
   beforeEach(() => {
     localStorage.clear();
+  });
+
+  it('uses the guest role from MemberMe to explain the signup requirement', async () => {
+    seedToken();
+    server.use(graphql.query('MemberMe', () => HttpResponse.json({
+      data: { memberMe: { ...goodMe, roles: ['guest'] } },
+    })));
+    renderWithProviders(
+      <Routes><Route path="/quests/:code" element={<QuestDetailPage />} /></Routes>,
+      { route: '/quests/Q-101' },
+    );
+    expect(await screen.findByText(/first character approved to unlock quest signup/)).toBeVisible();
+    expect(screen.queryByRole('button', { name: 'Sign up' })).not.toBeInTheDocument();
   });
 
   it('renders summary and roster for a guest without operator delivery status', async () => {

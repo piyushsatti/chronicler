@@ -37,6 +37,8 @@ export function useQuestDetailPage(code: string) {
     charactersError,
     canManage,
     isAuthenticated: auth.isAuthenticated,
+    // A guest who also holds player is a player (D47).
+    isGuest: (me.data?.roles.includes('guest') && !me.data.roles.includes('player')) ?? false,
     memberId: me.data?.id ?? null,
     retryCharacters: () => {
       // Once the member lookup succeeds the character query enables itself.

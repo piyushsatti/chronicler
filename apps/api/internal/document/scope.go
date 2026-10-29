@@ -40,6 +40,10 @@ func ScopeFromAuthority(a auth.Authority) ViewerScope {
 	c := a.Claims()
 	scope := ScopeFromClaims(c)
 	scope.Roles = c.Roles
+	// D47: a guest reads what a player reads; only quest signup waits for approval.
+	if c.Has(auth.Guest) && !c.Has(auth.Player) {
+		scope.Roles = append(slices.Clone(c.Roles), auth.Player)
+	}
 	scope.Handle = a.Handle()
 	scope.IsAdmin = c.Has(auth.Admin)
 	scope.IsDM = a.LiveDM()

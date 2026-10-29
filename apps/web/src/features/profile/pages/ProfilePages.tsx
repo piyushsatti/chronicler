@@ -323,7 +323,7 @@ function ProfileView({
       <ProfileOwnerActions
         key={profile.member.id}
         profile={profile}
-        canAvailability={roles.includes('player') || roles.includes('admin')}
+        canAvailability={roles.includes('guest') || roles.includes('player') || roles.includes('admin')}
         canDm={canDm}
         focusAvailability={edit === 'availability'}
       />
@@ -373,7 +373,7 @@ function ProfileView({
               title={<span className={styles.titleRow}><span aria-hidden="true"><Avatar name={name} src={profile.member.avatarUrl ?? undefined} size="lg" online={false} /></span>{name}</span>}
               actions={owner ? <Button variant="secondary" aria-expanded={editing} onClick={() => setEdit(editing ? '' : 'profile')}>{editing ? 'Close editor' : 'Edit profile'}</Button> : null}
               meta={<>
-                {profile.member.roles.filter((value) => value === 'dm' || value === 'player' || value === 'admin').map((value) => <Chip key={value} size="sm" tone="line">{roleLabel(value)}</Chip>)}
+                {profile.member.roles.filter((value) => value === 'guest' || value === 'dm' || value === 'player' || value === 'admin').map((value) => <Chip key={value} size="sm" tone="line">{roleLabel(value)}</Chip>)}
                 {profile.dmProfile && page.member.isDm ? <Chip size="sm" tone={profile.dmProfile.acceptingPlayers ? 'accent' : 'line'}>{profile.dmProfile.acceptingPlayers ? 'Accepting players' : 'Not accepting players'}</Chip> : null}
                 {profile.availability.map((slot, index) => <Chip key={`${slot.day}-${slot.startTime}-${index}`} size="sm" tone="neutral">{weekdayLabel(slot.day, { plural: true })} {clockLabel(slot.startTime)}–{clockLabel(slot.endTime)}</Chip>)}
               </>}

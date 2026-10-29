@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 type Config struct {
@@ -51,7 +52,7 @@ func FromEnv() Config {
 	}
 }
 
-// ValidateProduction refuses development defaults when Env is production.
+// ValidateProduction requires production credentials and 32-character machine secrets.
 // Errors name the variable, never its value.
 func (c Config) ValidateProduction() error {
 	if c.Env != "production" {
@@ -64,10 +65,10 @@ func (c Config) ValidateProduction() error {
 	if c.DiscordClientID == "" {
 		bad = append(bad, "DISCORD_CLIENT_ID")
 	}
-	if c.JWTSecret == "" || c.JWTSecret == "dev-only-change-me" {
+	if utf8.RuneCountInString(c.JWTSecret) < 32 {
 		bad = append(bad, "JWT_SECRET")
 	}
-	if c.IngestSecret == "" {
+	if utf8.RuneCountInString(c.IngestSecret) < 32 {
 		bad = append(bad, "INGEST_SECRET")
 	}
 	if len(bad) > 0 {

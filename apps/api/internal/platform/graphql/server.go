@@ -22,7 +22,7 @@ func NewHandler(resolver *graph.Resolver, limits Limits, authority auth.Authorit
 	if resolver == nil {
 		return PlaceholderHandler()
 	}
-	srv := handler.New(graph.NewExecutableSchema(graph.Config{Resolvers: resolver}))
+	srv := handler.New(graph.NewExecutableSchema(graph.Config{Resolvers: resolver, Complexity: graph.ListComplexity()}))
 	srv.SetErrorPresenter(func(ctx context.Context, err error) *gqlerror.Error {
 		presented := gql.DefaultErrorPresenter(ctx, err)
 		if expected, ok := errors.AsType[*apierr.Error](err); ok {
@@ -39,10 +39,10 @@ func NewHandler(resolver *graph.Resolver, limits Limits, authority auth.Authorit
 	})
 	srv.AddTransport(transport.POST{})
 	srv.Use(extension.Introspection{})
-	if limits.MaxComplexity > 0 {
-		srv.Use(extension.FixedComplexityLimit(limits.MaxComplexity))
-	}
 	if limits.MaxDepth > 0 {
+		srv.Use(depthLimit{max: limits.MaxDepth})
+	}
+	if limits.MaxComplexity > 0 {
 		srv.Use(extension.FixedComplexityLimit(limits.MaxComplexity))
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

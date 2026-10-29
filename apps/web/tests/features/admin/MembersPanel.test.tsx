@@ -7,10 +7,40 @@ import { AdminPeoplePage } from '../../../src/features/admin/pages/AdminSectionP
 import { server } from '../../../src/mocks/server.js';
 import { renderWithProviders } from '../../test-utils.js';
 import { signIn } from './authority-test-utils.js';
+import members from '../../fixtures/wire/admin/members-good.json';
 
 beforeEach(() => signIn());
 
 describe('MembersPanel', () => {
+  it('keeps guest in the individual editor and offers it in bulk roles', async () => {
+    const roles = ['guest', 'player', 'dm'];
+    const writes: Record<string, unknown>[] = [];
+    server.use(
+      graphql.query('AdminMembers', () => HttpResponse.json({ data: {
+        members: { total: 1, items: [{ ...members.items[0], roles }] },
+      } })),
+      graphql.mutation('SetMemberRoles', ({ variables }) => {
+        writes.push(variables);
+        return HttpResponse.json({ data: { setMemberRoles: { id: members.items[0].id, roles } } });
+      }),
+    );
+    renderWithProviders(<AdminPeoplePage />, { route: '/admin/people' });
+    await userEvent.click(await screen.findByRole('button', { name: /Mira/ }));
+    const editor = screen.getByRole('region', { name: 'Role editor' });
+    expect(within(editor).getByRole('checkbox', { name: 'Guest' })).toBeChecked();
+    await userEvent.click(within(editor).getByRole('button', { name: 'Save roles' }));
+    await waitFor(() => expect(writes).toHaveLength(1));
+    expect(writes[0]).toMatchObject({ roles });
+    await userEvent.click(within(editor).getByRole('button', { name: 'Back to members' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Select members' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Select Mira' }));
+    const baseRole = screen.getByRole('button', { name: /^Base role/ });
+    expect(baseRole).toHaveTextContent('Guest + Player');
+    await userEvent.click(baseRole);
+    expect(await screen.findByRole('menuitem', { name: 'Guest' })).toBeVisible();
+    expect(screen.getByRole('menuitem', { name: 'Guest + Player' })).toBeVisible();
+  });
+
   it('lists members from the admin directory', async () => {
     renderWithProviders(<AdminPeoplePage />);
     expect(

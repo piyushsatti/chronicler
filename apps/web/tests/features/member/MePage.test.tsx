@@ -840,9 +840,9 @@ describe('MePage availability editor', () => {
   beforeEach(() => { Element.prototype.scrollIntoView = scroll; });
   afterEach(() => { delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView; scroll.mockClear(); });
 
-  it('opens the availability form focused for ?edit=availability and closes it', async () => {
+  it.each(['player', 'guest'])('opens the availability form focused for %s and closes it', async (role) => {
     const user = userEvent.setup();
-    signIn(['player']);
+    signIn([role]);
     server.use(graphql.query('MemberProfile', () => HttpResponse.json({ data: { memberProfile: profile } })));
     renderWithProviders(<MePage />, { route: '/me?edit=availability' });
     expect(await screen.findByRole('heading', { name: 'Your availability' })).toBeVisible();

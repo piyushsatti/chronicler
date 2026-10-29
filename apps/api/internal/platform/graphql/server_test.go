@@ -15,6 +15,7 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/graph"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/product"
+	"github.com/piyushsatti/chronicler/apps/api/internal/quest"
 )
 
 type documentErrorRepo struct {
@@ -185,4 +186,49 @@ func TestDocumentGraphQLErrorPresenter(t *testing.T) {
 			}
 		})
 	}
+}
+
+type countingArcRepo struct {
+	quest.ArcReadRepository
+	calls int
+}
+
+func (r *countingArcRepo) ReadQuestArc(context.Context, auth.Authority, quest.QuestArcSpec) (*quest.QuestArcView, error) {
+	r.calls++
+	return nil, nil
+}
+
+func assertArcQueryRejectedBeforeProviders(t *testing.T, query, code string) {
+	t.Helper()
+	repo := &countingArcRepo{}
+	queries := &quest.ProductQueries{
+		Reads:  quest.ProductReadRepos{Arc: repo},
+		Policy: testDocumentQueries(t, documentErrorRepo{}).Policy,
+		Clock:  func() time.Time { return time.Date(2026, 10, 29, 12, 0, 0, 0, time.UTC) },
+	}
+	handler := NewHandler(&graph.Resolver{Services: graph.Services{QuestQueries: queries}}, DefaultLimits(), func(context.Context, string) (auth.Authority, error) {
+		return auth.Authority{}, nil
+	})
+	control := graphQLRequest(t, handler, `{questArc(id:"11111111-1111-4111-8111-111111111111"){id}}`, "", nil)
+	if control.Code != http.StatusOK || repo.calls != 1 || bytes.Contains(control.Body.Bytes(), []byte(`"errors"`)) {
+		t.Fatalf("control status=%d calls=%d body=%s", control.Code, repo.calls, control.Body)
+	}
+	repo.calls = 0
+	w := graphQLRequest(t, handler, query, "", nil)
+	if w.Code != http.StatusOK || !bytes.Contains(w.Body.Bytes(), []byte(`"code":"`+code+`"`)) || repo.calls != 0 {
+		t.Fatalf("status=%d provider calls=%d body=%s", w.Code, repo.calls, w.Body)
+	}
+}
+
+func TestDefaultLimitsRejectDeepArcQuestCycleBeforeResolvers(t *testing.T) {
+	selection := "id"
+	for range 40 {
+		selection = "quests(limit:1){arc{" + selection + "}}"
+	}
+	assertArcQueryRejectedBeforeProviders(t, `{questArc(id:"11111111-1111-4111-8111-111111111111"){`+selection+`}}`, "DEPTH_LIMIT_EXCEEDED")
+}
+
+func TestDefaultLimitsRejectWideNestedArcLists(t *testing.T) {
+	query := `{questArc(id:"11111111-1111-4111-8111-111111111111"){quests(limit:50){arc{quests(limit:50){arc{quests(limit:50){id}}}}}}}`
+	assertArcQueryRejectedBeforeProviders(t, query, "COMPLEXITY_LIMIT_EXCEEDED")
 }

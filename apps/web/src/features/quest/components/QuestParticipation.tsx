@@ -14,6 +14,7 @@ import styles from '../pages/questDetail.module.css';
 export function QuestParticipation({
   quest,
   authenticated,
+  guest,
   memberId,
   characters,
   loading,
@@ -25,6 +26,7 @@ export function QuestParticipation({
 }: {
   quest: QuestDetailView;
   authenticated: boolean;
+  guest: boolean;
   memberId: string | null;
   characters: MyCharacterRef[];
   loading: boolean;
@@ -103,7 +105,12 @@ export function QuestParticipation({
           </Button>
         </div>
       ))}
-      {error ? (
+      {guest ? (
+        <p>
+          Have your first character approved to unlock quest signup.{' '}
+          <Link to="/characters">Your characters</Link>
+        </p>
+      ) : error ? (
         <div className="stack">
           <StatePanel status="error" error={toAppError(error, 'quest:characters')} />
           <Button variant="secondary" onClick={retry}>

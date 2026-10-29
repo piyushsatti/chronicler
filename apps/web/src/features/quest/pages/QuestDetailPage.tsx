@@ -359,6 +359,7 @@ export function QuestDetailPage(): React.JSX.Element {
               key={quest.id}
               quest={quest}
               authenticated={detail.isAuthenticated}
+              guest={detail.isGuest}
               memberId={detail.memberId}
               characters={detail.characters.data ?? []}
               loading={detail.charactersLoading}

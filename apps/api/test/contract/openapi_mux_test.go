@@ -6,7 +6,6 @@ import (
 	"sort"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/agent"
 	"github.com/piyushsatti/chronicler/apps/api/internal/app"
@@ -15,7 +14,6 @@ import (
 	"github.com/piyushsatti/chronicler/apps/api/internal/login"
 	"github.com/piyushsatti/chronicler/apps/api/internal/member"
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/httpserver"
-	"github.com/piyushsatti/chronicler/apps/api/internal/quest"
 	"github.com/piyushsatti/chronicler/apps/api/internal/site"
 	"github.com/piyushsatti/chronicler/apps/api/internal/spatial"
 	"gopkg.in/yaml.v3"
@@ -25,23 +23,17 @@ import (
 var httpMethods = []string{"get", "post", "put", "patch", "delete"}
 
 // muxOnlyAllowlist: product REST routes still mounted on the mux while
- // openapi.yaml is GraphQL-first (product REST removed in 9daaef2). Ingest,
- // agent, and auth paths remain real OpenAPI entries and must NOT appear here.
- // Shrink this list as REST handlers are deleted.
+// openapi.yaml is GraphQL-first (product REST removed in 9daaef2). Ingest,
+// agent, and auth paths remain real OpenAPI entries and must NOT appear here.
+// Shrink this list as REST handlers are deleted.
 var muxOnlyAllowlist = map[string]struct{}{
-	"POST /v1/graphql": {}, // described in openapi info; not a REST path entry
-	"GET /v1/characters/{id}/logs":                     {},
-	"GET /v1/characters/{id}/progression":              {},
-	"GET /v1/characters/{id}/verification-history":     {},
+	"POST /v1/graphql":                                 {}, // described in openapi info; not a REST path entry
 	"GET /v1/documents/{id}/revisions":                 {},
 	"GET /v1/documents/trash":                          {},
 	"GET /v1/hexes/{id}/history":                       {},
 	"GET /v1/maps/{atlasCode}/activity":                {},
 	"GET /v1/me/notifications/unread-count":            {},
-	"GET /v1/members/by-discord/{discordId}":           {},
 	"GET /v1/members/me":                               {},
-	"GET /v1/members/{id}/availability":                {},
-	"GET /v1/members/{id}/role-history":                {},
 	"GET /v1/regions/{id}/counts":                      {},
 	"GET /v1/search/kinds":                             {},
 	"GET /v1/stats":                                    {},
@@ -50,11 +42,6 @@ var muxOnlyAllowlist = map[string]struct{}{
 	"POST /v1/me/notifications/acknowledge-suppressed": {},
 	"POST /v1/me/notifications/read":                   {},
 	"POST /v1/me/personalization/reconcile":            {},
-	"POST /v1/quests":                                  {},
-	"POST /v1/quests/{id}/close":                       {},
-	"POST /v1/quests/{id}/discord/sync":                {},
-	"POST /v1/quests/{id}/signup":                      {},
-	"POST /v1/quests/{id}/transition":                  {},
 }
 
 func TestOpenAPIMatchesMux(t *testing.T) {
@@ -153,10 +140,8 @@ func TestMemberMeCanonicalGraphQLAndMount(t *testing.T) {
 func mountMuxOperations(t *testing.T) []string {
 	t.Helper()
 	mux := httpserver.NewRecordingMux()
-	cmd := quest.NewCommands(quest.MemoryRunner(), time.Now)
 	app.Mount(mux, app.HTTPDeps{
 		Resolver:  &graph.Resolver{},
-		QuestCmd:  cmd,
 		SiteStats: func() site.Stats { return site.Stats{} },
 		MemberMe: func(id string) (member.Member, error) {
 			return member.Member{ID: id, Handle: "me", DisplayName: "Me", Status: member.StatusActive}, nil

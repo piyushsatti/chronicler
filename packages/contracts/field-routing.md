@@ -1,10 +1,12 @@
 # Product field routing
 
-Status: accepted breaking contract; runtime route removal and new GraphQL behavior remain pending. [D40](/apps/api/docs/decisions/D40-GraphQL-Versus-REST.md) replaces the old fixed-read/command REST rule. All164 business roots are declared in split SDL.
+Status: accepted breaking contract. Quest commands and character/member legacy reads now use GraphQL only. Other product REST routes remain mounted during the transition. [D40](/apps/api/docs/decisions/D40-GraphQL-Versus-REST.md) replaces the old fixed-read/command REST rule. All164 business roots are declared in split SDL.
 
 ## Original operation dispositions
 
 Every original identity remains accounted for. Retained HTTP protocol paths keep their existing authentication/error behavior. Product REST paths are removed only by their scheduled implementation owners.
+
+The original `mounted-http-013` through `mounted-http-017`, `mounted-http-025` through `mounted-http-027`, and `mounted-http-031` through `mounted-http-033` routes return 404. Their table identities remain historical; the GraphQL destinations are authoritative. `GET /v1/members/me` remains mounted.
 
 | Identity            | Original operation                                  | Accepted destination                                | Criterion |
 | ------------------- | --------------------------------------------------- | --------------------------------------------------- | --------- |

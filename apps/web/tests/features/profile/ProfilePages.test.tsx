@@ -16,6 +16,24 @@ import { profileActor, signInProfile } from './profileAuth.js';
 import { seriesAuthority } from '../../seriesAuthority.js';
 
 describe('DMProfilePage', () => {
+  it('guest can edit availability on their public profile', async () => {
+    signInProfile();
+    const guest = { ...profile.member, roles: ['guest'] };
+    server.use(
+      graphql.query('MemberMe', () => HttpResponse.json({ data: { memberMe: guest } })),
+      graphql.query('MemberProfile', () => HttpResponse.json({ data: {
+        memberProfile: { ...profile, member: guest, dmProfile: null },
+      } })),
+    );
+    renderWithProviders(
+      <Routes><Route path="/players/:shortCode" element={<PlayerProfilePage />} /></Routes>,
+      { route: '/players/@mira' },
+    );
+    expect(await screen.findByText('Guest', { exact: true })).toBeVisible();
+    await userEvent.click(await screen.findByRole('button', { name: 'Edit profile' }));
+    expect(screen.getByRole('button', { name: 'Save availability' })).toBeVisible();
+  });
+
   it('renders the DM name and accepting status without a handle line', async () => {
     renderWithProviders(
       <Routes>

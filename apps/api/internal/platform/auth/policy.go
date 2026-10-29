@@ -831,7 +831,7 @@ func requiredRoleFailure(rule policyRule, actor Authority, admin bool) bool {
 	case ruleDMSelf:
 		return !admin && !actor.claims.Has(DM)
 	case rulePlayerSelf:
-		return !admin && !actor.claims.Has(Player)
+		return !admin && !actor.claims.Has(Player) && !actor.claims.Has(Guest)
 	case ruleDMInbox:
 		return !actor.LiveDM()
 	default:
@@ -846,7 +846,10 @@ func (p *Policy) decideOwnershipRule(actor Authority, request Request, rule poli
 		if !ok {
 			return Decision{}, policyContractError()
 		}
-		return policyResult(policyFailures{ownership: facts.OwnerID != actor.claims.MemberID}, false), nil
+		return policyResult(policyFailures{
+			role:      actor.claims.Has(Guest) && !actor.claims.Has(Player) && request.operation == "Mutation.signupForQuest",
+			ownership: facts.OwnerID != actor.claims.MemberID,
+		}, false), nil
 	case ruleRequest:
 		facts, ok := request.input.(RequestDecisionFacts)
 		if !ok {
@@ -971,7 +974,7 @@ func (p *Policy) decideDocumentWriteRule(ctx context.Context, actor Authority, r
 	if rule == ruleDocumentWrite && (isHallOfFame(facts.Kind, facts.Category) || isHallOfFame(facts.Kind, facts.NewCategory)) {
 		failures.role = !admin
 	}
-	if facts.Kind == "codex_entry" && facts.Category != nil && *facts.Category == "Locations" {
+	if facts.Kind == "codex_entry" && (facts.Category != nil && *facts.Category == "Locations" || facts.NewCategory != nil && *facts.NewCategory == "Locations") {
 		gates, err := p.locationFailures(ctx, actor, facts.LinkedRegionIDs)
 		if err != nil {
 			return Decision{}, err
@@ -1171,7 +1174,7 @@ func (p *Policy) decideSummaryRule(ctx context.Context, actor Authority, request
 		return Decision{}, err
 	}
 	f := policyFailures{
-		role:      !actor.claims.Has(Player) && !actor.LiveDM() && !admin,
+		role:      !actor.claims.Has(Player) && !actor.claims.Has(Guest) && !actor.LiveDM() && !admin,
 		ownership: characterOwner || relationOwnership || (facts.AuthorID != nil && *facts.AuthorID != actor.claims.MemberID),
 	}
 	return policyResult(f, bypass), nil

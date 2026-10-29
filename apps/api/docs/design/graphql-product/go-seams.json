@@ -19111,7 +19111,7 @@
         }
       ],
       "owner": "CHA01",
-      "meaning": "command validates andnormalizes Spec intoValidatedInput; repository applies onlyownaggregate writes andreturns actualINSERT/UPDATE IDs/times. No guessed generatedID, no foreignwrite orcommit"
+      "meaning": "command validates Spec and allocates assessment and role HistoryID; verification transaction also locks the owning member, replaces guest with player, and appends role history once on approval; repositories never commit"
     },
     {
       "name": "DeleteCharacterWrite",

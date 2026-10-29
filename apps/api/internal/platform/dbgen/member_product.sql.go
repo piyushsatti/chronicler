@@ -627,7 +627,7 @@ func (q *Queries) ProductInsertAvailability(ctx context.Context, arg ProductInse
 
 const productLockDmProfile = `-- name: ProductLockDmProfile :one
 SELECT m.public_id,p.member_id, p.tagline, p.philosophy, p.house_rules, p.table_info, p.accepting_players, p.status, p.review_revision, p.updated_at FROM members m JOIN dm_profiles p ON p.member_id=m.id
-WHERE m.public_id=$1::uuid FOR UPDATE OF m,p
+WHERE m.public_id=$1::uuid FOR NO KEY UPDATE OF m FOR UPDATE OF p
 `
 
 type ProductLockDmProfileRow struct {
@@ -663,7 +663,7 @@ func (q *Queries) ProductLockDmProfile(ctx context.Context, memberID pgtype.UUID
 
 const productLockMembers = `-- name: ProductLockMembers :many
 SELECT public_id,roles,status,updated_at FROM members
-WHERE public_id=ANY($1::uuid[]) ORDER BY public_id FOR UPDATE
+WHERE public_id=ANY($1::uuid[]) ORDER BY public_id FOR NO KEY UPDATE
 `
 
 type ProductLockMembersRow struct {
@@ -1301,7 +1301,7 @@ WITH inputs AS (
  FROM jsonb_array_elements($1::jsonb) j
 ), prior AS MATERIALIZED (
  SELECT m.id,m.public_id,m.roles AS old_roles,i.roles AS new_roles,i.history_id,i.note
- FROM inputs i JOIN members m ON m.public_id=i.member_id ORDER BY m.public_id FOR UPDATE OF m
+ FROM inputs i JOIN members m ON m.public_id=i.member_id ORDER BY m.public_id FOR NO KEY UPDATE OF m
 ), changed AS (
  UPDATE members m SET roles=p.new_roles,updated_at=$2::timestamptz
  FROM prior p WHERE m.id=p.id RETURNING m.id,m.public_id,m.roles,m.updated_at

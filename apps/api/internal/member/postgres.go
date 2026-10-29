@@ -171,7 +171,7 @@ func (s *PostgresStore) EnsureFromDiscord(ctx context.Context, discordID, displa
 		Handle:      handle,
 		DisplayName: displayName,
 		AvatarUrl:   avatar,
-		Roles:       []string{"player"},
+		Roles:       []string{"guest"},
 	})
 	if err != nil {
 		return "", nil, nil, nil, err

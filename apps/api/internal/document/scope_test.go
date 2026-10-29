@@ -2,6 +2,7 @@ package document
 
 import (
 	"encoding/json"
+	"slices"
 	"testing"
 
 	"github.com/piyushsatti/chronicler/apps/api/internal/platform/auth"
@@ -42,6 +43,25 @@ func TestViewerScope(t *testing.T) {
 	owner := ScopeFromClaims(auth.Claims{MemberID: "author"})
 	if !Specify(publishedLegacy(VisibilityRestricted, "doc", "author")).Allows(owner) {
 		t.Fatal("author should read own restricted")
+	}
+}
+
+func TestGuestScopeReadsPlayerAudience(t *testing.T) {
+	doc := publishedLegacy(VisibilityPublic, "doc", "author")
+	doc.Policy = json.RawMessage(`["role:player"]`)
+	guest, err := auth.NewAuthority("00000000-0000-4000-8000-000000000001", []auth.Role{auth.Guest}, "active", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	scope := ScopeFromAuthority(guest)
+	if !Specify(doc).Allows(scope) {
+		t.Fatal("a guest must read a player-audience document (D47)")
+	}
+	if !slices.Contains(SQLScope(scope).Roles, "player") {
+		t.Fatal("the SQL viewer roles must carry player for a guest")
+	}
+	if guest.Claims().Has(auth.Player) {
+		t.Fatal("the guest's claims must not gain player; only the document scope does")
 	}
 }
 
