@@ -244,12 +244,6 @@ describe('useMe validated authority lifecycle', () => {
       null,
       'upstream',
     ],
-    [
-      'forbidden',
-      () => HttpResponse.json({ title: 'private detail' }, { status: 403 }),
-      null,
-      'forbidden',
-    ],
   ] as const)(
     'masks prior authority and preserves private caches after a %s me response',
     async (_label, restResponse, graphqlData, kind) => {
@@ -274,6 +268,28 @@ describe('useMe validated authority lifecycle', () => {
       expect(result.current.auth.isAuthenticated).toBe(true);
     },
   );
+
+  it('masks prior authority and clears private caches after a forbidden me response', async () => {
+    signIn();
+    const admin = { ...goodMe, roles: ['admin'] };
+    mockMemberMe(
+      () => HttpResponse.json(admin),
+      () => admin,
+    );
+    const { result, queryClient } = setup();
+    await waitFor(() => expect(result.current.authority.allowed).toBe(true));
+    queryClient.setQueryData(['private-directory'], 'secret');
+    // A banned or inactive member gets 403: access was revoked, so drop what it loaded.
+    mockMemberMe(() => HttpResponse.json({ title: 'private detail' }, { status: 403 }));
+    await act(async () => {
+      await result.current.me.refetch();
+    });
+    await waitFor(() => expect(result.current.me.isError).toBe(true));
+    expect(result.current.me.error).toMatchObject({ kind: 'forbidden' });
+    expect(result.current.authority.allowed).toBe(false);
+    expect(queryClient.getQueryData(['private-directory'])).toBeUndefined();
+    expect(result.current.auth.isAuthenticated).toBe(true);
+  });
 
   it('ends a 401 me session without retrying or exposing private data', async () => {
     signIn();

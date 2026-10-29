@@ -147,6 +147,25 @@ describe('AuthProvider session lifecycle', () => {
     expect(queryClient.getMutationCache().getAll()).toHaveLength(0);
   });
 
+  it('clears caches when memberMe is FORBIDDEN because access was revoked', async () => {
+    localStorage.setItem(TOKEN_KEY, token());
+    const { result, queryClient } = setup();
+    queryClient.setQueryData(['me'], { id: 'member-one', roles: ['player', 'dm'] });
+    queryClient.setQueryData(['editor', 'record'], 'Loaded under the old access');
+    await act(async () => {
+      await expect(
+        queryClient.fetchQuery({
+          queryKey: ['me'],
+          queryFn: async () => {
+            throw new TransportError('FORBIDDEN', { status: 403 });
+          },
+        }),
+      ).rejects.toThrow();
+    });
+    expect(result.current.isAuthenticated).toBe(true);
+    expect(queryClient.getQueryData(['editor', 'record'])).toBeUndefined();
+  });
+
   it('places the site header outside the page main landmark', async () => {
     vi.spyOn(window, 'scrollTo').mockImplementation(() => undefined);
     renderWithProviders(<App />, { route: '/settings' });

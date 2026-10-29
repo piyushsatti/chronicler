@@ -66,6 +66,20 @@ function isSessionRejection(error: unknown): boolean {
   );
 }
 
+/** A FORBIDDEN member lookup means access was revoked (banned, inactive), not a network blip. */
+function isAuthorityLoss(error: unknown): boolean {
+  const transport =
+    error instanceof TransportError
+      ? error
+      : error && typeof error === 'object' && 'cause' in error
+        ? error.cause
+        : undefined;
+  return (
+    transport instanceof TransportError &&
+    (transport.status === 403 || transport.code === 'FORBIDDEN')
+  );
+}
+
 function storage(): Storage | null {
   try {
     return typeof globalThis.localStorage !== 'undefined'
@@ -231,7 +245,11 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
         return;
       }
       if (!isMeQuery(event.query.queryKey)) return;
-      if (event.action.type === 'success') {
+      if (event.action.type === 'error' && isAuthorityLoss(event.query.state.error)) {
+        // Banned or inactive: drop pages loaded under the old access. Network blips keep the cache.
+        authority = null;
+        clearCachedQueries(true);
+      } else if (event.action.type === 'success') {
         // The me query stores MemberViewModel only, after the member adapter validates wire.
         const member = event.query.state.data as MemberViewModel;
         const nextAuthority = JSON.stringify([
