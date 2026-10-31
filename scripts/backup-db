@@ -3,7 +3,8 @@
 # Usage: scripts/backup-db [-p PROJECT] [-u] [DIR]
 #   -p PROJECT  compose project name (default: $COMPOSE_PROJECT_NAME or chronicler-production)
 #   -u          dump the hosted database named by $DATABASE_URL (production) instead of the
-#               Compose Postgres; pg_dump runs in a pinned PostgreSQL 17 client container
+#               Compose Postgres; pg_dump runs in a pinned PostgreSQL 17 client container and
+#               dumps only the `public` schema, which holds every Chronicler object
 #   DIR         output directory (default: ./backups)
 set -euo pipefail
 umask 077
@@ -74,9 +75,11 @@ if (( hosted )); then
   # The URL percent-encodes reserved characters; PGPASSWORD needs them decoded.
   pass="${pass//\\/\\\\}"
   # `-e NAME` copies each value from this process, so neither is on a command line.
+  # Supabase's managed schemas (auth, storage, ...) are not ours and can refuse a dump or
+  # restore; its restore guide filters to the application schema (owner decision 2026-10-31).
   PGPASSWORD="$(printf '%b' "${pass//%/\\x}")" PG_DUMP_URL="$scheme://$rest" \
     docker run --rm -e PGPASSWORD -e PG_DUMP_URL "$pg_client_image" \
-    sh -c 'exec pg_dump -Fc --dbname="$PG_DUMP_URL"' > "$tmp"
+    sh -c 'exec pg_dump -Fc --schema=public --dbname="$PG_DUMP_URL"' > "$tmp"
 else
   docker compose -p "$project" --profile local-db -f "$root/deploy/compose.production.yaml" \
     exec -T chronicler-postgres \
