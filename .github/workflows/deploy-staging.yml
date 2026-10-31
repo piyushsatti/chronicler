@@ -1,20 +1,11 @@
 name: deploy-staging
 
 # Staging release: push a tag such as `staging-2026.10.25.1` (D33: releases run
-# only through GitHub Actions). The backend deploys to the owner's self-hosted
-# runner with Docker Compose; the frontend deploys to the Vercel staging project.
-#
-# Required in GitHub environment `staging`:
-#   Secrets: POSTGRES_PASSWORD (URL-safe), JWT_SECRET, INGEST_SECRET,
-#            DISCORD_CLIENT_ID, DISCORD_CLIENT_SECRET,
-#            DISCORD_BOT_TOKEN (API worker REST), BOT_DISCORD_TOKEN (gateway bot),
-#            BOT_CLIENT_ID, GUILD_ID, DISCORD_ANNOUNCE_CHANNEL_ID (secret or variable),
-#            VERCEL_TOKEN, VERCEL_ORG_ID, VERCEL_PROJECT_ID
-#   Optional secret: PLATFORM_OWNER_DISCORD_ID (set only after the owner has
-#            signed in once; see deploy/docs/deploy-runbook.md)
-#   Optional variables: POSTGRES_USER, POSTGRES_DB (default `chronicler`)
-# Non-secret constants (project, port, domains, CORS) are fixed in `env` below.
-# Missing required values fail the job before anything is deployed.
+# only through GitHub Actions). The steps live in deploy-release.yml, shared with
+# production (D51). The backend deploys to the owner's self-hosted runner with
+# Docker Compose and its own PostgreSQL; the frontend deploys to the Vercel
+# staging project. Staging keeps the tunnel on its host, so the Compose tunnel
+# profile stays off. Required environment values: see deploy-release.yml.
 
 on:
   push:
@@ -27,226 +18,21 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  PROJECT: chronicler-staging
-  API_PORT: '8081'
-  API_DOMAIN: chronicler-api.piyushsatti.com
-  CORS_ORIGINS: https://chronicler.piyushsatti.com
-  # Discord returns the browser to the web callback page, which POSTs the code
-  # to the API's /auth/discord/callback.
-  DISCORD_REDIRECT_URI: https://chronicler.piyushsatti.com/auth/callback
-  VERCEL_CLI_VERSION: '65.2.0'
-
 jobs:
-  backend:
-    runs-on: [self-hosted, chronicler-staging]
-    timeout-minutes: 30
-    environment: staging
-    steps:
-      - name: Validate tag
-        env:
-          TAG: ${{ github.ref_name }}
-        run: |
-          if [[ ! "$TAG" =~ ^staging-[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9]+$ ]]; then
-            echo "Tag does not match staging-YYYY.MM.DD.N" >&2
-            exit 1
-          fi
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Write environment file
-        env:
-          TAG: ${{ github.ref_name }}
-          POSTGRES_USER: ${{ vars.POSTGRES_USER || 'chronicler' }}
-          POSTGRES_DB: ${{ vars.POSTGRES_DB || 'chronicler' }}
-          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          INGEST_SECRET: ${{ secrets.INGEST_SECRET }}
-          DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
-          DISCORD_CLIENT_SECRET: ${{ secrets.DISCORD_CLIENT_SECRET }}
-          PLATFORM_OWNER_DISCORD_ID: ${{ secrets.PLATFORM_OWNER_DISCORD_ID }}
-          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
-          BOT_DISCORD_TOKEN: ${{ secrets.BOT_DISCORD_TOKEN }}
-          BOT_CLIENT_ID: ${{ secrets.BOT_CLIENT_ID }}
-          GUILD_ID: ${{ secrets.GUILD_ID }}
-          DISCORD_ANNOUNCE_CHANNEL_ID: ${{ secrets.DISCORD_ANNOUNCE_CHANNEL_ID || vars.DISCORD_ANNOUNCE_CHANNEL_ID }}
-        run: |
-          set -euo pipefail
-          umask 077
-          dir="$HOME/.config/chronicler-staging"
-          mkdir -p "$dir"
-          file="$dir/staging.env"
-          tmp="$(mktemp "$dir/.staging.env.XXXXXX")"
-          trap 'rm -f "$tmp"' EXIT
-          missing=()
-          # Values are written single-quoted so Compose does not interpolate them.
-          write() {
-            local name="$1" value="${!1-}"
-            if [[ -z "$value" ]]; then missing+=("$name"); return; fi
-            if [[ "$value" == *"'"* || "$value" == *$'\n'* ]]; then
-              echo "$name contains an unsupported character (quote or newline)" >&2
-              exit 1
-            fi
-            printf "%s='%s'\n" "$name" "$value" >> "$tmp"
-          }
-          for name in POSTGRES_USER POSTGRES_DB POSTGRES_PASSWORD JWT_SECRET INGEST_SECRET \
-            DISCORD_CLIENT_ID DISCORD_CLIENT_SECRET DISCORD_BOT_TOKEN \
-            BOT_DISCORD_TOKEN BOT_CLIENT_ID GUILD_ID DISCORD_ANNOUNCE_CHANNEL_ID \
-            API_DOMAIN CORS_ORIGINS DISCORD_REDIRECT_URI API_PORT; do
-            write "$name"
-          done
-          # Optional: the API refuses to start when the configured owner has no
-          # member record, so leave it unset until the owner has signed in once.
-          if [[ -n "${PLATFORM_OWNER_DISCORD_ID:-}" ]]; then
-            write PLATFORM_OWNER_DISCORD_ID
-          fi
-          if (( ${#missing[@]} )); then
-            rm -f "$tmp"
-            echo "Missing required staging values: ${missing[*]}" >&2
-            exit 1
-          fi
-          mv "$tmp" "$file"
-          trap - EXIT
-          {
-            echo "ENVFILE=$file"
-            echo "COMPOSE_ENV_FILES=$file"
-            echo "COMPOSE_PROJECT_NAME=$PROJECT"
-            echo "API_IMAGE=chronicler-api:$TAG"
-            echo "DISCORD_IMAGE=chronicler-discord:$TAG"
-          } >> "$GITHUB_ENV"
-      - name: Build images
-        run: |
-          set -euo pipefail
-          docker compose -f deploy/compose.production.yaml build chronicler-api chronicler-discord-bot
-      - name: Record rollback target
-        run: |
-          set -euo pipefail
-          compose=(docker compose -f deploy/compose.production.yaml)
-          # Image IDs, not tags: they stay valid even if a tag is later moved.
-          image_of() {
-            local id
-            id="$("${compose[@]}" ps -q "$1" 2>/dev/null | head -n1)"
-            if [[ -n "$id" ]]; then docker inspect --format '{{.Image}}' "$id"; fi
-          }
-          prev_api="$(image_of chronicler-api)"
-          prev_bot="$(image_of chronicler-discord-bot)"
-          echo "PREV_API_IMAGE=$prev_api" >> "$GITHUB_ENV"
-          echo "PREV_DISCORD_IMAGE=$prev_bot" >> "$GITHUB_ENV"
-          echo "Rollback target: api=${prev_api:-none} discord=${prev_bot:-none}"
-      - name: Back up database
-        run: |
-          set -euo pipefail
-          # Skip only on a true first deploy: no data volume exists yet.
-          if ! docker volume inspect "${PROJECT}_chronicler_pg_data" >/dev/null 2>&1; then
-            echo "No ${PROJECT}_chronicler_pg_data volume (first deploy); skipping backup."
-            exit 0
-          fi
-          docker compose -f deploy/compose.production.yaml up -d --wait --wait-timeout 180 chronicler-postgres
-          scripts/backup-db -p "$PROJECT" "$HOME/backups/chronicler-staging"
-      - name: Migrate
-        run: |
-          set -euo pipefail
-          docker compose -f deploy/compose.production.yaml run --rm chronicler-api migrate
-      - name: Start services
-        run: |
-          set -euo pipefail
-          echo "DEPLOY_STARTED=1" >> "$GITHUB_ENV"
-          docker compose -f deploy/compose.production.yaml up -d --wait --wait-timeout 180 --no-build \
-            chronicler-postgres chronicler-api chronicler-discord-bot
-      - name: Check public health
-        run: |
-          set -euo pipefail
-          for attempt in $(seq 1 30); do
-            code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 5 "https://$API_DOMAIN/health" || true)"
-            if [[ "$code" == "204" ]]; then
-              echo "health ok (attempt $attempt)"
-              exit 0
-            fi
-            echo "attempt $attempt: status ${code:-none}"
-            sleep 5
-          done
-          echo "health check failed" >&2
-          exit 1
-      - name: Roll back to previous images
-        if: ${{ (failure() || cancelled()) && env.DEPLOY_STARTED == '1' }}
-        run: |
-          set -euo pipefail
-          services=()
-          overrides=()
-          if [[ -n "${PREV_API_IMAGE:-}" ]]; then
-            services+=(chronicler-api)
-            overrides+=("API_IMAGE=$PREV_API_IMAGE")
-          fi
-          if [[ -n "${PREV_DISCORD_IMAGE:-}" ]]; then
-            services+=(chronicler-discord-bot)
-            overrides+=("DISCORD_IMAGE=$PREV_DISCORD_IMAGE")
-          fi
-          if (( ${#services[@]} == 0 )); then
-            echo "No previous images recorded (first deploy); nothing to roll back to." >&2
-            exit 1
-          fi
-          echo "Rolling back: ${services[*]} (database is not restored)"
-          env "${overrides[@]}" docker compose -f deploy/compose.production.yaml \
-            up -d --wait --wait-timeout 180 --no-build "${services[@]}"
-
-  frontend:
-    needs: backend
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    environment: staging
-    steps:
-      - name: Validate tag and credentials
-        env:
-          TAG: ${{ github.ref_name }}
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: |
-          if [[ ! "$TAG" =~ ^staging-[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9]+$ ]]; then
-            echo "Tag does not match staging-YYYY.MM.DD.N" >&2
-            exit 1
-          fi
-          for name in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
-            if [[ -z "${!name}" ]]; then echo "Missing $name" >&2; exit 1; fi
-          done
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
-        with:
-          bun-version: 1.3.14
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: '22'
-      - name: Install Vercel CLI
-        run: npm install --global "vercel@$VERCEL_CLI_VERSION"
-      # The Vercel project's Root Directory must be apps/web. The CLI runs from
-      # the repository root; --local-config selects the staging routing file.
-      - name: Pull project settings
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: vercel pull --yes --environment=production
-      - name: Build
-        env:
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: vercel build --prod --local-config apps/web/vercel.staging.json
-      - name: Verify staging API routing in build output
-        run: |
-          set -euo pipefail
-          if ! grep -rq 'chronicler-api.piyushsatti.com' .vercel/output/config.json; then
-            echo "Staging API origin missing from build output" >&2
-            exit 1
-          fi
-          if grep -rq 'smokebombstudios.com' .vercel/output/config.json; then
-            echo "Production API origin found in staging build output" >&2
-            exit 1
-          fi
-      - name: Deploy
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
-          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
-        run: vercel deploy --prebuilt --prod --local-config apps/web/vercel.staging.json
+  deploy:
+    uses: ./.github/workflows/deploy-release.yml
+    with:
+      environment: staging
+      runner_labels: '["self-hosted", "chronicler-staging"]'
+      tag_pattern: '^staging-[0-9]{4}\.[0-9]{2}\.[0-9]{2}\.[0-9]+$'
+      tag_format: staging-YYYY.MM.DD.N
+      project: chronicler-staging
+      api_port: '8081'
+      api_domain: chronicler-api.piyushsatti.com
+      other_api_domain: chronicler-prod-api.piyushsatti.com
+      cors_origins: https://chronicler.piyushsatti.com
+      discord_redirect_uri: https://chronicler.piyushsatti.com/auth/callback
+      local_database: true
+      tunnel: false
+      vercel_config: apps/web/vercel.staging.json
+    secrets: inherit

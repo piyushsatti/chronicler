@@ -1,20 +1,23 @@
 {
+  "installCommand": "cd ../.. && bun install --frozen-lockfile",
+  "buildCommand": "cd ../.. && bun run --filter @pi/contracts build && bun run --filter @pi/web build",
+  "outputDirectory": "dist",
   "rewrites": [
     {
       "source": "/v1/:path*",
-      "destination": "https://api.chronicler.smokebombstudios.com/v1/:path*"
+      "destination": "https://chronicler-prod-api.piyushsatti.com/v1/:path*"
     },
     {
       "source": "/auth/discord",
-      "destination": "https://api.chronicler.smokebombstudios.com/auth/discord"
+      "destination": "https://chronicler-prod-api.piyushsatti.com/auth/discord"
     },
     {
       "source": "/auth/discord/:path*",
-      "destination": "https://api.chronicler.smokebombstudios.com/auth/discord/:path*"
+      "destination": "https://chronicler-prod-api.piyushsatti.com/auth/discord/:path*"
     },
     {
       "source": "/health",
-      "destination": "https://api.chronicler.smokebombstudios.com/health"
+      "destination": "https://chronicler-prod-api.piyushsatti.com/health"
     },
     {
       "source": "/(.*)",

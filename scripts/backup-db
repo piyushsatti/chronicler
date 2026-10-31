@@ -1,19 +1,43 @@
 #!/usr/bin/env bash
-# Dump the production Postgres (pg_dump -Fc) into a dated file. Read-only on the DB.
-# Usage: scripts/backup-db [-p PROJECT] [DIR]
+# Dump the release Postgres (pg_dump -Fc) into a dated file. Read-only on the DB.
+# Usage: scripts/backup-db [-p PROJECT] [-u] [DIR]
 #   -p PROJECT  compose project name (default: $COMPOSE_PROJECT_NAME or chronicler-production)
+#   -u          dump the hosted database named by $DATABASE_URL (production) instead of the
+#               Compose Postgres; pg_dump runs in a pinned PostgreSQL 17 client container
 #   DIR         output directory (default: ./backups)
 set -euo pipefail
 umask 077
 
 root="$(cd "$(dirname "$0")/.." && pwd)"
 project="${COMPOSE_PROJECT_NAME:-chronicler-production}"
+hosted=0
 
-while getopts ':p:h' opt; do
+# pg_dump reads servers of its own major version or older, so the client major
+# must be at least the hosted server's. Bump it with the server (D51).
+pg_client_image='postgres:17.10-alpine@sha256:742f40ea20b9ff2ff31db5458d127452988a2164df9e17441e191f3b72252193'
+
+# The API's pgxpool reads pool_* settings from the same DATABASE_URL, but libpq
+# (pg_dump) rejects them as unknown parameters. Drop those; keep the rest.
+strip_pool_params() {
+  local url="$1" base query part out=""
+  local -a parts
+  if [[ "$url" != *\?* ]]; then printf '%s' "$url"; return; fi
+  base="${url%%\?*}"
+  query="${url#*\?}"
+  IFS='&' read -r -a parts <<<"$query"
+  for part in "${parts[@]}"; do
+    if [[ -z "$part" || "$part" == pool_* ]]; then continue; fi
+    out+="${out:+&}$part"
+  done
+  printf '%s%s' "$base" "${out:+?$out}"
+}
+
+while getopts ':p:uh' opt; do
   case "$opt" in
     p) project="$OPTARG" ;;
-    h) sed -n '2,5p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
-    *) echo "usage: scripts/backup-db [-p PROJECT] [DIR]" >&2; exit 2 ;;
+    u) hosted=1 ;;
+    h) sed -n '2,7p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *) echo "usage: scripts/backup-db [-p PROJECT] [-u] [DIR]" >&2; exit 2 ;;
   esac
 done
 shift $((OPTIND - 1))
@@ -24,9 +48,40 @@ out="$dir/chronicler-$(date -u +%Y%m%dT%H%M%SZ).dump"
 tmp="$out.partial"
 trap 'rm -f "$tmp"' EXIT
 
-docker compose -p "$project" -f "$root/deploy/compose.production.yaml" \
-  exec -T chronicler-postgres \
-  sh -c 'pg_dump -Fc -U "$POSTGRES_USER" -d "$POSTGRES_DB"' > "$tmp"
+if (( hosted )); then
+  # Never print the URL: it carries the database password.
+  if [[ -z "${DATABASE_URL:-}" ]]; then
+    echo "backup-db: DATABASE_URL is not set" >&2
+    exit 1
+  fi
+  if [[ "$DATABASE_URL" != postgres://* && "$DATABASE_URL" != postgresql://* ]]; then
+    echo "backup-db: DATABASE_URL must be a postgres:// or postgresql:// URL" >&2
+    exit 1
+  fi
+  # Other host users can read pg_dump's arguments in the process table, so the
+  # password moves to PGPASSWORD and the URL keeps only the user and host.
+  url="$(strip_pool_params "$DATABASE_URL")"
+  scheme="${url%%://*}"
+  rest="${url#*://}"
+  pass=""
+  if [[ "${rest%%/*}" == *@* ]]; then
+    userinfo="${rest%%@*}"
+    if [[ "$userinfo" == *:* ]]; then
+      pass="${userinfo#*:}"
+      rest="${userinfo%%:*}@${rest#*@}"
+    fi
+  fi
+  # The URL percent-encodes reserved characters; PGPASSWORD needs them decoded.
+  pass="${pass//\\/\\\\}"
+  # `-e NAME` copies each value from this process, so neither is on a command line.
+  PGPASSWORD="$(printf '%b' "${pass//%/\\x}")" PG_DUMP_URL="$scheme://$rest" \
+    docker run --rm -e PGPASSWORD -e PG_DUMP_URL "$pg_client_image" \
+    sh -c 'exec pg_dump -Fc --dbname="$PG_DUMP_URL"' > "$tmp"
+else
+  docker compose -p "$project" --profile local-db -f "$root/deploy/compose.production.yaml" \
+    exec -T chronicler-postgres \
+    sh -c 'pg_dump -Fc -U "$POSTGRES_USER" -d "$POSTGRES_DB"' > "$tmp"
+fi
 
 if [[ ! -s "$tmp" ]]; then
   echo "backup-db: dump is empty" >&2

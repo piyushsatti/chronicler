@@ -22,9 +22,9 @@ App implementation notes live in each app's `docs/` directory. Deployment target
 
 ## Deployment plan and evidence boundary
 
-The target staging site is `chronicler.piyushsatti.com`; its API is `chronicler-api.piyushsatti.com` through Cloudflare Tunnel. Production targets `chronicler.smokebombstudios.com` and `api.chronicler.smokebombstudios.com`, with backend services and PostgreSQL on one DigitalOcean droplet.
+The target staging site is `chronicler.piyushsatti.com`; its API is `chronicler-api.piyushsatti.com` through Cloudflare Tunnel. Production targets `chronicler.smokebombstudios.com` and `chronicler-prod-api.piyushsatti.com`, with backend services on one VM behind Cloudflare Tunnel and PostgreSQL on Supabase ([D51](/docs/decisions/D51-Production-On-One-VM-Behind-Cloudflare-Tunnel.md)).
 
-The single production release authority is GitHub Actions. The staging and production deployment workflows are not implemented. Production Compose does not define PostgreSQL, ingress, or migrations. No provider, DNS, tunnel, runner, or live deployment was verified while updating these docs.
+The single production release authority is GitHub Actions. The staging and production deployment workflows exist and share one reusable workflow. No provider, DNS, tunnel, runner, or live deployment was verified while updating these docs.
 
 ## Historical evidence
 
