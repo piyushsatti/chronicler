@@ -59,7 +59,7 @@ func (p *ProductPostgres) ReadHomeCommunity(ctx context.Context, _ auth.Authorit
 }
 
 func (p *ProductPostgres) ReadSiteStats(ctx context.Context, actor auth.Authority, spec SiteStatsSpec) (CommunityStatsSnapshot, error) {
-	return p.ReadHomeCommunity(ctx, actor, HomeSpec{IncludeActivity: spec.IncludeActivity})
+	return p.ReadHomeCommunity(ctx, actor, HomeSpec(spec))
 }
 
 func (p *ProductPostgres) ReadMemberSearch(ctx context.Context, _ auth.Authority, spec SearchSpec) (MemberDiscoveryPage, error) {

@@ -319,9 +319,10 @@ func TestLoaderPreservesPerKeyErrorsAndNullableValues(t *testing.T) {
 		calls.Add(1)
 		out := make([]product.BatchResult[int], len(keys))
 		for i, key := range keys {
-			if key == 1 {
+			switch key {
+			case 1:
 				out[i].Err = forbidden
-			} else if key == 2 {
+			case 2:
 				out[i].Value = &key
 			}
 		}

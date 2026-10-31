@@ -59,17 +59,7 @@ func AuditBody(body string) []BodySpanAudit {
 			if group.Spoiler {
 				records = append(records, span.at(BodySpanSpoiler, firstToken(tokens, func(_ string, _, spoiler, _ bool) bool { return spoiler })))
 			}
-			for i, token := range tokens {
-				handle, dm, spoiler, malformed := classifyMarkerToken(token.markerToken)
-				folded := strings.ToLower(strings.TrimSpace(token.Inner))
-				if handle != "" || dm || spoiler || malformed ||
-					!(strings.HasPrefix(folded, "dm") || strings.HasPrefix(folded, "spoiler")) {
-					continue
-				}
-				lookalike := span.at(BodySpanLookalike, &tokens[i])
-				lookalike.Suggestion = markerSuggestion(token.name())
-				records = append(records, lookalike)
-			}
+			records = append(records, auditLookalikeMarkers(span, tokens)...)
 		case len(group.Policy) == 0:
 			token := firstToken(tokens, func(_ string, _, _, malformed bool) bool { return malformed })
 			malformed := span.at(BodySpanMalformed, token)
@@ -94,6 +84,22 @@ func AuditBody(body string) []BodySpanAudit {
 				records = append(records, warning.at(BodySpanListNested, &tokens[i]))
 			}
 		}
+	}
+	return records
+}
+
+func auditLookalikeMarkers(span BodySpanAudit, tokens []positionedToken) []BodySpanAudit {
+	var records []BodySpanAudit
+	for i, token := range tokens {
+		handle, dm, spoiler, malformed := classifyMarkerToken(token.markerToken)
+		folded := strings.ToLower(strings.TrimSpace(token.Inner))
+		if handle != "" || dm || spoiler || malformed ||
+			!strings.HasPrefix(folded, "dm") && !strings.HasPrefix(folded, "spoiler") {
+			continue
+		}
+		lookalike := span.at(BodySpanLookalike, &tokens[i])
+		lookalike.Suggestion = markerSuggestion(token.name())
+		records = append(records, lookalike)
 	}
 	return records
 }

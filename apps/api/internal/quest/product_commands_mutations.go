@@ -521,24 +521,10 @@ func (s ProductCommands) SignupForQuest(ctx context.Context, actor auth.Authorit
 		return ownedQuestCharacterRequest(ctx, repos, fresh, "Mutation.signupForQuest", characterID)
 	}
 	return runQuestCommandWithRequest(ctx, s, actor, "signupForQuest", requestFor, spec, meta, questID, func(repos ProductCommandRepos, fresh auth.Authority, at time.Time) (QuestParticipantView, error) {
-		admission, err := repos.Characters.LockAdmission(ctx, characterID)
+		locked, err := lockQuestSignup(ctx, repos, fresh, questID, characterID, at)
 		if err != nil {
 			return QuestParticipantView{}, err
 		}
-		if admission.OwnerID != fresh.Claims().MemberID {
-			return QuestParticipantView{}, apierr.New(apierr.Forbidden, "character owner required")
-		}
-		if !eligibleQuestCharacter(admission) {
-			return QuestParticipantView{}, apierr.New(apierr.Conflict, "active approved character required")
-		}
-		locked, err := repos.Quest.LockSignupForQuest(ctx, SignupForQuestSpec{QuestId: questID, CharacterId: characterID, AsOf: at})
-		if err != nil {
-			return QuestParticipantView{}, err
-		}
-		if !locked.Exists {
-			return QuestParticipantView{}, apierr.New(apierr.NotFound, "quest not found")
-		}
-		locked.Character = &admission
 		result, bumpedCharacterID, err := repos.Quest.StoreSignupForQuest(ctx, SignupForQuestWrite{ActorID: fresh.Claims().MemberID, At: at, Input: spec, ValidatedInput: SignupForQuestSpec{QuestId: questID, CharacterId: characterID, AsOf: at}, Locked: locked})
 		if err != nil {
 			return QuestParticipantView{}, err
@@ -560,6 +546,28 @@ func (s ProductCommands) SignupForQuest(ctx context.Context, actor auth.Authorit
 		}
 		return result, nil
 	})
+}
+
+func lockQuestSignup(ctx context.Context, repos ProductCommandRepos, actor auth.Authority, questID, characterID string, at time.Time) (SignupForQuestState, error) {
+	admission, err := repos.Characters.LockAdmission(ctx, characterID)
+	if err != nil {
+		return SignupForQuestState{}, err
+	}
+	if admission.OwnerID != actor.Claims().MemberID {
+		return SignupForQuestState{}, apierr.New(apierr.Forbidden, "character owner required")
+	}
+	if !eligibleQuestCharacter(admission) {
+		return SignupForQuestState{}, apierr.New(apierr.Conflict, "active approved character required")
+	}
+	locked, err := repos.Quest.LockSignupForQuest(ctx, SignupForQuestSpec{QuestId: questID, CharacterId: characterID, AsOf: at})
+	if err != nil {
+		return SignupForQuestState{}, err
+	}
+	if !locked.Exists {
+		return SignupForQuestState{}, apierr.New(apierr.NotFound, "quest not found")
+	}
+	locked.Character = &admission
+	return locked, nil
 }
 
 func (s ProductCommands) WithdrawFromQuest(ctx context.Context, actor auth.Authority, spec WithdrawFromQuestSpec, meta product.CommandMeta) (QuestParticipantView, error) {

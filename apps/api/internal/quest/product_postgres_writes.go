@@ -746,14 +746,10 @@ func (p *ProductPostgres) storeQuestSignup(ctx context.Context, write SignupForQ
 	if lockedRow.FilledCount >= lockedRow.SlotsMax || status == "full" {
 		participantStatus = "waitlisted"
 	}
-	if previous != nil {
-		if _, err := p.queries().ProductQuestRejoinParticipant(ctx, dbgen.ProductQuestRejoinParticipantParams{QuestID: lockedRow.ID, CharacterID: character.ID, Status: participantStatus, At: at}); err != nil {
-			return QuestParticipantView{}, "", err
-		}
-	} else if _, err := p.queries().ProductQuestInsertParticipant(ctx, dbgen.ProductQuestInsertParticipantParams{
+	if err := p.insertOrRejoinQuestParticipant(ctx, dbgen.ProductQuestInsertParticipantParams{
 		QuestID: lockedRow.ID, MemberID: memberID, CharacterID: character.ID,
 		Status: participantStatus, Manual: false, At: at,
-	}); err != nil {
+	}, previous != nil); err != nil {
 		return QuestParticipantView{}, "", err
 	}
 	var bumpedCharacterID string
@@ -783,6 +779,17 @@ func (p *ProductPostgres) storeQuestSignup(ctx context.Context, write SignupForQ
 		CreatedAt:   write.At.UTC(),
 		UpdatedAt:   write.At.UTC(),
 	}, bumpedCharacterID, nil
+}
+
+func (p *ProductPostgres) insertOrRejoinQuestParticipant(ctx context.Context, params dbgen.ProductQuestInsertParticipantParams, rejoining bool) error {
+	if rejoining {
+		_, err := p.queries().ProductQuestRejoinParticipant(ctx, dbgen.ProductQuestRejoinParticipantParams{
+			QuestID: params.QuestID, CharacterID: params.CharacterID, Status: params.Status, At: params.At,
+		})
+		return err
+	}
+	_, err := p.queries().ProductQuestInsertParticipant(ctx, params)
+	return err
 }
 
 func validateQuestSignup(write SignupForQuestWrite) (string, *QuestParticipantView, error) {

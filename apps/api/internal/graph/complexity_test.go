@@ -31,7 +31,7 @@ func TestSupportedWebOperationsFitDefaultComplexityBudget(t *testing.T) {
 		if err != nil {
 			return err
 		}
-		doc, errs := gqlparser.LoadQuery(es.Schema(), string(source))
+		doc, errs := gqlparser.LoadQueryWithRules(es.Schema(), string(source), nil)
 		if len(errs) != 0 {
 			t.Errorf("%s: %v", path, errs)
 			return nil
@@ -161,7 +161,7 @@ func TestListComplexitySaturatesAndChargesPageOnce(t *testing.T) {
 		{`{home{recentByCategory{documents{id}}}}`, 38},
 		{`{questArc(id:"11111111-1111-4111-8111-111111111111"){quests(limit: 2147483647){arc{quests(limit: 2147483647){id shortCode status}}}}}`, int(^uint(0) >> 1)},
 	} {
-		doc, errs := gqlparser.LoadQuery(es.Schema(), tc.query)
+		doc, errs := gqlparser.LoadQueryWithRules(es.Schema(), tc.query, nil)
 		if len(errs) > 0 {
 			t.Fatal(errs)
 		}

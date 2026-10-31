@@ -1011,7 +1011,7 @@ func (p *Policy) decideDocumentWriteRule(ctx context.Context, actor Authority, r
 	if rule == ruleDocumentWrite && (isHallOfFame(facts.Kind, facts.Category) || isHallOfFame(facts.Kind, facts.NewCategory)) {
 		failures.role = !admin
 	}
-	if facts.Kind == "codex_entry" && (facts.Category != nil && *facts.Category == "Locations" || facts.NewCategory != nil && *facts.NewCategory == "Locations") {
+	if isLocationDocument(facts.Kind, facts.Category) || isLocationDocument(facts.Kind, facts.NewCategory) {
 		gates, err := p.locationFailures(ctx, actor, facts.LinkedRegionIDs)
 		if err != nil {
 			return Decision{}, err
@@ -1019,6 +1019,10 @@ func (p *Policy) decideDocumentWriteRule(ctx context.Context, actor Authority, r
 		failures = documentWriteLocationFailures(rule, failures, gates)
 	}
 	return policyResult(failures, bypass), nil
+}
+
+func isLocationDocument(kind string, category *string) bool {
+	return kind == "codex_entry" && category != nil && *category == "Locations"
 }
 
 // isHallOfFame reports the community Document that renders as the site Hall of

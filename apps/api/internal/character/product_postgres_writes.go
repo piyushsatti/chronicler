@@ -531,35 +531,41 @@ func (p *ProductPostgres) StoreDecideVerification(ctx context.Context, write Dec
 		return member.VerificationView{}, err
 	}
 	if write.Input.Verdict == member.VerificationVerdictApproved {
-		ownerID := mustUUID(write.Locked.OwnerID)
-		owners, err := p.queries().ProductLockMembers(ctx, []pgtype.UUID{ownerID})
-		if err != nil {
+		if err := p.promoteVerifiedCharacterOwner(ctx, write); err != nil {
 			return member.VerificationView{}, err
-		}
-		if len(owners) != 1 {
-			return member.VerificationView{}, apierr.New(apierr.NotFound, "member not found")
-		}
-		oldRoles := owners[0].Roles
-		if slices.Contains(oldRoles, "guest") {
-			if write.HistoryID == nil {
-				return member.VerificationView{}, apierr.New(apierr.Internal, "role history ID required")
-			}
-			roles := slices.DeleteFunc(slices.Clone(oldRoles), func(role string) bool { return role == "guest" })
-			if !slices.Contains(roles, "player") {
-				roles = append(roles, "player")
-			}
-			if _, err := p.queries().ProductUpdateMemberRoles(ctx, dbgen.ProductUpdateMemberRolesParams{MemberID: ownerID, Roles: roles, At: pgTime(write.At)}); err != nil {
-				return member.VerificationView{}, err
-			}
-			if _, err := p.queries().ProductAppendRoleHistory(ctx, dbgen.ProductAppendRoleHistoryParams{
-				HistoryID: mustUUID(*write.HistoryID), MemberID: ownerID, OldRoles: oldRoles, NewRoles: roles,
-				ActorID: mustUUID(write.ActorID), At: pgTime(write.At),
-			}); err != nil {
-				return member.VerificationView{}, err
-			}
 		}
 	}
 	return write.Assessment, nil
+}
+
+func (p *ProductPostgres) promoteVerifiedCharacterOwner(ctx context.Context, write DecideVerificationWrite) error {
+	ownerID := mustUUID(write.Locked.OwnerID)
+	owners, err := p.queries().ProductLockMembers(ctx, []pgtype.UUID{ownerID})
+	if err != nil {
+		return err
+	}
+	if len(owners) != 1 {
+		return apierr.New(apierr.NotFound, "member not found")
+	}
+	oldRoles := owners[0].Roles
+	if !slices.Contains(oldRoles, "guest") {
+		return nil
+	}
+	if write.HistoryID == nil {
+		return apierr.New(apierr.Internal, "role history ID required")
+	}
+	roles := slices.DeleteFunc(slices.Clone(oldRoles), func(role string) bool { return role == "guest" })
+	if !slices.Contains(roles, "player") {
+		roles = append(roles, "player")
+	}
+	if _, err := p.queries().ProductUpdateMemberRoles(ctx, dbgen.ProductUpdateMemberRolesParams{MemberID: ownerID, Roles: roles, At: pgTime(write.At)}); err != nil {
+		return err
+	}
+	_, err = p.queries().ProductAppendRoleHistory(ctx, dbgen.ProductAppendRoleHistoryParams{
+		HistoryID: mustUUID(*write.HistoryID), MemberID: ownerID, OldRoles: oldRoles, NewRoles: roles,
+		ActorID: mustUUID(write.ActorID), At: pgTime(write.At),
+	})
+	return err
 }
 
 func (p *ProductPostgres) LockUpsertDowntimeProject(ctx context.Context, spec UpsertDowntimeProjectSpec) (UpsertDowntimeProjectState, error) {

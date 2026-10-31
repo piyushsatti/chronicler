@@ -663,20 +663,8 @@ func decideCharacterVerification(ctx context.Context, repos ProductCommandRepos,
 	if !locked.Exists {
 		return member.VerificationView{}, apierr.New(apierr.NotFound, "character not found")
 	}
-	current, err := repos.Authority(ctx, fresh.Claims().MemberID)
-	if err != nil {
+	if err := admitCharacterVerification(ctx, repos, fresh); err != nil {
 		return member.VerificationView{}, err
-	}
-	request, err := auth.ForOperation("Mutation.decideVerification")
-	if err != nil {
-		return member.VerificationView{}, err
-	}
-	decision, err := repos.Policy.Decide(ctx, current, request)
-	if err != nil {
-		return member.VerificationView{}, err
-	}
-	if current.Claims().MemberID != fresh.Claims().MemberID || !decision.Allowed {
-		return member.VerificationView{}, apierr.New(apierr.Forbidden, "character verification forbidden")
 	}
 	id := ids()
 	if err := commandPublicID(&id); err != nil {
@@ -716,6 +704,25 @@ func decideCharacterVerification(ctx context.Context, repos ProductCommandRepos,
 		return member.VerificationView{}, err
 	}
 	return result, nil
+}
+
+func admitCharacterVerification(ctx context.Context, repos ProductCommandRepos, fresh auth.Authority) error {
+	current, err := repos.Authority(ctx, fresh.Claims().MemberID)
+	if err != nil {
+		return err
+	}
+	request, err := auth.ForOperation("Mutation.decideVerification")
+	if err != nil {
+		return err
+	}
+	decision, err := repos.Policy.Decide(ctx, current, request)
+	if err != nil {
+		return err
+	}
+	if current.Claims().MemberID != fresh.Claims().MemberID || !decision.Allowed {
+		return apierr.New(apierr.Forbidden, "character verification forbidden")
+	}
+	return nil
 }
 
 func (s ProductCommands) SetCharacterGuild(ctx context.Context, actor auth.Authority, spec SetCharacterGuildSpec, meta product.CommandMeta) (CharacterView, error) {

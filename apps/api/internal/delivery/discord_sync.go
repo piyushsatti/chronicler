@@ -137,18 +137,9 @@ type syncRun struct {
 func (s *syncRun) execute(ctx context.Context, revision int) error {
 	q := &s.quest
 	firstPost := q.AppliedRevision == 0 && q.ThreadID == ""
-	created := false
-	if q.MessageID == "" && !s.terminal() {
-		id, err := s.postMessage(ctx)
-		if err != nil {
-			return err
-		}
-		q.MessageID, created = id, true
-		slog.InfoContext(ctx, "discord message created", "quest", s.questID, "revision", revision, "message", id)
-	} else if q.MessageID != "" {
-		if err := s.editMessage(ctx); err != nil {
-			return err
-		}
+	created, err := s.syncMessage(ctx, revision)
+	if err != nil {
+		return err
 	}
 	// The thread is opened on the first post only, never again. It is best
 	// effort: a missing thread permission must not hold back the event or
@@ -174,6 +165,25 @@ func (s *syncRun) execute(ctx context.Context, revision int) error {
 		}
 	}
 	return nil
+}
+
+func (s *syncRun) syncMessage(ctx context.Context, revision int) (bool, error) {
+	q := &s.quest
+	if q.MessageID == "" && !s.terminal() {
+		id, err := s.postMessage(ctx)
+		if err != nil {
+			return false, err
+		}
+		q.MessageID = id
+		slog.InfoContext(ctx, "discord message created", "quest", s.questID, "revision", revision, "message", id)
+		return true, nil
+	}
+	if q.MessageID != "" {
+		if err := s.editMessage(ctx); err != nil {
+			return false, err
+		}
+	}
+	return false, nil
 }
 
 func (s *syncRun) terminal() bool {
@@ -279,33 +289,9 @@ func (s *syncRun) startThread(ctx context.Context) (string, error) {
 func (s *syncRun) syncEvent(ctx context.Context) (bool, error) {
 	q := &s.quest
 	if q.EventID != "" {
-		path := fmt.Sprintf("/guilds/%s/scheduled-events/%s", s.GuildID, q.EventID)
-		raw, err := s.call(ctx, http.MethodGet, path, nil)
-		if err != nil {
-			var remote *DiscordAPIError
-			if errors.As(err, &remote) && remote.Status == http.StatusNotFound {
-				return false, fmt.Errorf("%w: stored event missing", ErrDiscordEventState)
-			}
-			return false, fmt.Errorf("discord get event: %w", err)
-		}
-		var event struct {
-			Status int `json:"status"`
-		}
-		if err := json.Unmarshal(raw, &event); err != nil || event.Status < 1 || event.Status > 4 {
-			return false, fmt.Errorf("%w: missing or unsupported status", ErrDiscordEventState)
-		}
-		if event.Status == 3 || event.Status == 4 {
-			return false, nil
-		}
-		if s.terminal() {
-			status := 4 // SCHEDULED -> CANCELED; ACTIVE -> COMPLETED.
-			if event.Status == 2 {
-				status = 3
-			}
-			if _, err := s.call(ctx, http.MethodPatch, path, map[string]any{"status": status}); err != nil {
-				return false, fmt.Errorf("discord patch event: %w", err)
-			}
-			return false, nil
+		update, err := s.reconcileStoredEvent(ctx)
+		if err != nil || !update {
+			return false, err
 		}
 	}
 	if s.terminal() {
@@ -357,6 +343,38 @@ func (s *syncRun) syncEvent(ctx context.Context) (bool, error) {
 		return false, fmt.Errorf("discord event id persist: %w", err)
 	}
 	return true, ctx.Err()
+}
+
+func (s *syncRun) reconcileStoredEvent(ctx context.Context) (bool, error) {
+	path := fmt.Sprintf("/guilds/%s/scheduled-events/%s", s.GuildID, s.quest.EventID)
+	raw, err := s.call(ctx, http.MethodGet, path, nil)
+	if err != nil {
+		var remote *DiscordAPIError
+		if errors.As(err, &remote) && remote.Status == http.StatusNotFound {
+			return false, fmt.Errorf("%w: stored event missing", ErrDiscordEventState)
+		}
+		return false, fmt.Errorf("discord get event: %w", err)
+	}
+	var event struct {
+		Status int `json:"status"`
+	}
+	if err := json.Unmarshal(raw, &event); err != nil || event.Status < 1 || event.Status > 4 {
+		return false, fmt.Errorf("%w: missing or unsupported status", ErrDiscordEventState)
+	}
+	if event.Status == 3 || event.Status == 4 {
+		return false, nil
+	}
+	if !s.terminal() {
+		return true, nil
+	}
+	status := 4 // SCHEDULED -> CANCELED; ACTIVE -> COMPLETED.
+	if event.Status == 2 {
+		status = 3
+	}
+	if _, err := s.call(ctx, http.MethodPatch, path, map[string]any{"status": status}); err != nil {
+		return false, fmt.Errorf("discord patch event: %w", err)
+	}
+	return false, nil
 }
 
 func responseID(raw []byte, what string) (string, error) {
